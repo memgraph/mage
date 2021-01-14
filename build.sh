@@ -1,11 +1,11 @@
 #!/bin/bash
 
 set -Eeuo pipefail
-script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-QUERY_MODULES_DIRECTORY="$script_dir/dist"
-CPP_DIRECTORY="$script_dir/cpp"
-PY_DIRECTORY="$script_dir/python"
+QUERY_MODULES_DIRECTORY="$SCRIPT_DIR/dist"
+CPP_DIRECTORY="$SCRIPT_DIR/cpp"
+PY_DIRECTORY="$SCRIPT_DIR/python"
 
 mkdir -p "$QUERY_MODULES_DIRECTORY"
 
