@@ -22,7 +22,11 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
 
+function(add_query_module target_name version src)
+  add_library(${target_name} SHARED ${src})
+  set_target_properties(${target_name} PROPERTIES SOVERSION ${version})
+  target_include_directories(${target_name} PRIVATE ${CMAKE_SOURCE_DIR}/include)
+endfunction()
+
 # Available query modules.
-add_library(connectivity_module SHARED connectivity_module.cpp)
-set_target_properties(connectivity_module PROPERTIES SOVERSION 1)
-target_include_directories(connectivity_module PRIVATE include)
+add_subdirectory(connectivity_module)
