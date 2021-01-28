@@ -1,5 +1,6 @@
 #include <queue>
 #include <unordered_map>
+#include <iostream>
 
 #include "mg_procedure.h"
 #include "utils/on_scope_exit.hpp"
@@ -12,10 +13,10 @@ static void weak(const mgp_list *args, const mgp_graph *graph,
   mgp_vertices_iterator *vertices_iterator =
       mgp_graph_iter_vertices(graph, memory);
   if (vertices_iterator == nullptr) {
-    mgp_result_set_error_msg(result, "Not enough memory");
+    mgp_result_set_error_msg(result, "Unable to create vertices iterator");
     return;
   }
-  utils::OnScopeExit([vertices_iterator] {
+  utils::OnScopeExit vertex_iterator_deleter([&vertices_iterator] {
     if (vertices_iterator != nullptr) {
       mgp_vertices_iterator_destroy(vertices_iterator);
     }
@@ -36,10 +37,10 @@ static void weak(const mgp_list *args, const mgp_graph *graph,
     while (!q.empty()) {
       mgp_vertex *v = mgp_graph_get_vertex_by_id(graph, {q.front()}, memory);
       if (v == nullptr) {
-        mgp_result_set_error_msg(result, "Not enough memory");
+        mgp_result_set_error_msg(result, "Unable to get vertex");
         return;
       }
-      utils::OnScopeExit([v] {
+      utils::OnScopeExit v_deleter([&v] {
         if (v != nullptr) {
           mgp_vertex_destroy(v);
         }
@@ -50,7 +51,7 @@ static void weak(const mgp_list *args, const mgp_graph *graph,
       // iterate over inbound edges
       mgp_edges_iterator *edges_iterator = mgp_vertex_iter_in_edges(v, memory);
       if (edges_iterator == nullptr) {
-        mgp_result_set_error_msg(result, "Not enough memory");
+        mgp_result_set_error_msg(result, "Unable to create edges iterator");
         return;
       }
 
@@ -67,7 +68,7 @@ static void weak(const mgp_list *args, const mgp_graph *graph,
       mgp_edges_iterator_destroy(edges_iterator);
       edges_iterator = mgp_vertex_iter_out_edges(v, memory);
       if (edges_iterator == nullptr) {
-        mgp_result_set_error_msg(result, "Not enough memory");
+        mgp_result_set_error_msg(result, "Unable to create edges iterator");
         return;
       }
 
@@ -89,38 +90,38 @@ static void weak(const mgp_list *args, const mgp_graph *graph,
   for (const auto &p : vertex_component) {
     mgp_result_record *record = mgp_result_new_record(result);
     if (record == nullptr) {
-      mgp_result_set_error_msg(result, "Not enough memory");
+      mgp_result_set_error_msg(result, "Unable to allocate record");
       return;
     }
 
-    mgp_value *mem_id_value = mgp_value_make_int(p.first, memory);
-    if (mem_id_value == nullptr) {
-      mgp_result_set_error_msg(result, "Not enough memory");
+    mgp_value *id_value = mgp_value_make_int(p.first, memory);
+    if (id_value == nullptr) {
+      mgp_result_set_error_msg(result, "Unable to allocated id");
       return;
     }
-    utils::OnScopeExit([mem_id_value] {
-      if (mem_id_value != nullptr) {
-        mgp_value_destroy(mem_id_value);
+    utils::OnScopeExit id_value_deleter([&id_value] {
+      if (id_value != nullptr) {
+        mgp_value_destroy(id_value);
       }
     });
 
     mgp_value *comp_value = mgp_value_make_int(p.second, memory);
     if (comp_value == nullptr) {
-      mgp_result_set_error_msg(result, "Not enough memory");
+      mgp_result_set_error_msg(result, "Unable to allocate value");
       return;
     }
-    utils::OnScopeExit([comp_value] {
+    utils::OnScopeExit comp_value_deleter([&comp_value] {
       if (comp_value != nullptr) {
         mgp_value_destroy(comp_value);
       }
     });
 
-    int mem_id_inserted = mgp_result_record_insert(record, "id", mem_id_value);
+    int mem_id_inserted = mgp_result_record_insert(record, "id", id_value);
     int comp_inserted =
         mgp_result_record_insert(record, "component", comp_value);
-
     if (!mem_id_inserted || !comp_inserted) {
-      mgp_result_set_error_msg(result, "Not enough memory");
+      mgp_result_set_error_msg(result,
+                               "Unable to insert id and value to record");
       return;
     }
   }
