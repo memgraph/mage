@@ -31,3 +31,4 @@ endfunction()
 
 # Available query modules.
 add_subdirectory(connectivity_module)
+add_subdirectory(pagerank_module)
