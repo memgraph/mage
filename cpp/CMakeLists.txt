@@ -25,6 +25,7 @@ set(CMAKE_SHARED_LIBRARY_PREFIX "")
 function(add_query_module target_name version src)
   add_library(${target_name} SHARED ${src})
   set_target_properties(${target_name} PROPERTIES SOVERSION ${version})
+  set_target_properties(${target_name} PROPERTIES PREFIX "cpp_")
   target_include_directories(${target_name} PRIVATE ${CMAKE_SOURCE_DIR}/include)
 endfunction()
 
