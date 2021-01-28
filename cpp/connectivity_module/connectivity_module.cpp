@@ -1,6 +1,5 @@
 #include <queue>
 #include <unordered_map>
-#include <iostream>
 
 #include "mg_procedure.h"
 #include "utils/on_scope_exit.hpp"
