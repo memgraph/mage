@@ -4,8 +4,9 @@
 #include "mg_procedure.h"
 #include "utils/on_scope_exit.hpp"
 
-// Finds weakly connected components of a graph.
-// Time complexity: O(|V|+|E|)
+/// Finds weakly connected components of a graph.
+///
+/// Time complexity: O(|V|+|E|)
 static void weak(const mgp_list *args, const mgp_graph *graph,
                  mgp_result *result, mgp_memory *memory) {
   std::unordered_map<int64_t, int64_t> vertex_component;
@@ -29,7 +30,7 @@ static void weak(const mgp_list *args, const mgp_graph *graph,
     if (vertex_component.find(vertex_id.as_int) != vertex_component.end())
       continue;
 
-    // run bfs from current vertex
+    // Run BFS from current vertex.
     std::queue<int64_t> q;
     q.push(vertex_id.as_int);
     vertex_component[vertex_id.as_int] = curr_component;
@@ -47,13 +48,12 @@ static void weak(const mgp_list *args, const mgp_graph *graph,
 
       q.pop();
 
-      // iterate over inbound edges
+      // Iterate over inbound edges.
       mgp_edges_iterator *edges_iterator = mgp_vertex_iter_in_edges(v, memory);
       if (edges_iterator == nullptr) {
         mgp_result_set_error_msg(result, "Unable to create edges iterator");
         return;
       }
-
       for (const mgp_edge *edge = mgp_edges_iterator_get(edges_iterator);
            edge != nullptr; edge = mgp_edges_iterator_next(edges_iterator)) {
         mgp_vertex_id next_id = mgp_vertex_get_id(mgp_edge_get_from(edge));
@@ -63,14 +63,13 @@ static void weak(const mgp_list *args, const mgp_graph *graph,
         q.push(next_id.as_int);
       }
 
-      // iterate over outbound edges
+      // Iterate over outbound edges.
       mgp_edges_iterator_destroy(edges_iterator);
       edges_iterator = mgp_vertex_iter_out_edges(v, memory);
       if (edges_iterator == nullptr) {
         mgp_result_set_error_msg(result, "Unable to create edges iterator");
         return;
       }
-
       for (const mgp_edge *edge = mgp_edges_iterator_get(edges_iterator);
            edge != nullptr; edge = mgp_edges_iterator_next(edges_iterator)) {
         mgp_vertex_id next_id = mgp_vertex_get_id(mgp_edge_get_to(edge));
