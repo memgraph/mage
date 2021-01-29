@@ -1,10 +1,10 @@
-#include "pagerank_algorithm.hpp"
+#include "pagerank.hpp"
 
 #include <stdlib.h>
 #include <numeric>
 #include <queue>
 
-namespace page_rank::parallel {
+namespace pagerank {
     /**
      * Make a PageRank graph data structure from the list of graph edges
      *
@@ -235,4 +235,4 @@ namespace page_rank::parallel {
         return rank;
     }
 
-}  // namespace page_rank::parallel
+}  // namespace pagerank
