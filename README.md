@@ -1,10 +1,10 @@
-# MAGE - Memgraph Advanced Graph Extensions
+# MAGE - Memgraph Advanced Graph Extensions :crystal_ball:
 
 This open-source repository contains all available query modules written by the team behind Memgraph and its users. You can find and contribute implementations of various algorithms in multiple programming languages, all runnable inside Memgraph. This project aims to give everyone the tools they need to tackle the most challenging graph problems. 
 
 ## MAGE Query modules
 
-Memgraph introduces the concept of query modules, user-defined procedures that extend the Cypher query language. These procedures are grouped into modules that can be loaded into Memgraph. You can find more information on query modules in the official [documentation](https://docs.memgraph.com/memgraph/database-functionalities/query-modules).
+Memgraph introduces the concept of **query modules**, user-defined procedures that extend the Cypher query language. These procedures are grouped into modules that can be loaded into Memgraph. You can find more information on query modules in the official [documentation](https://docs.memgraph.com/memgraph/database-functionalities/query-modules).
 
 Query modules implemented in Python:
 * [wcc.py](python/wcc.py): The WCC (Weakly Connected Components) query module can run WCC analysis on a sub-graph of the whole graph.
@@ -16,29 +16,26 @@ Query modules implemented in C/C++:
 
 ## How to install?
 
-To build and install MAGE query modules you will need:
-*Make
-*CMake
-*Clang
+To build and install MAGE query modules you will need: **Make**, **CMake** and **Clang**.
 
-Installing **with Docker**:
+### Installing with Docker
 
-1. Run the `build.sh` script. It will generate a `dist` directory with all the needed files.
-2. Run the following command where `dist` represent the path to your newly created `dist` directory:
+**1.** Run the `build.sh` script. It will generate a `dist` directory with all the needed files.  
+**2.** Run the following command where `dist` represent the path to your newly created `dist` directory:  
 ```
 docker volume create --driver local --opt type=none  --opt device=dist --opt o=bind dist
 ```
-3. Start Memgraph with the following command:
+**3.** Start Memgraph with the following command:  
 ```
 docker run -it --rm -v dist:/usr/lib/memgraph/query_modules -p 7687:7687 memgraph
 ```
 
-Installing **without Docker**:
-1. Run the `build.sh` script. It will generate a `dist` directory with all the needed files.
-2. Copy the contents of the newly created `dist` directory to `/usr/lib/memgraph/query_modules`.
-3. Start Memgraph and enjoy **MAGE**.
+### Installing without Docker
+**1.** Run the `build.sh` script. It will generate a `dist` directory with all the needed files.  
+**2.** Copy the contents of the newly created `dist` directory to `/usr/lib/memgraph/query_modules`.  
+**3.** Start Memgraph and enjoy **MAGE**!  
 
-Note that query modules are laoded into Memgraph on startup so if your instance was already running you will need to execute the following query to load them:
+> Note that query modules are loaded into Memgraph on startup so if your instance was already running you will need to execute the following query to load them:
 ```
 CALL mg.load_all();
 ```
