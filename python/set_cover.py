@@ -162,7 +162,7 @@ class GekkoMatchingProblemCreator(MatchingProblemCreator):
         set_values_distinct = set(set_values)
         sets_by_elements = dict()
 
-        for idx in range(len(element_values)):
+        for element, contained_set in zip(element_values, set_values):
             element = element_values[idx]
             contained_set = set_values[idx]
 
