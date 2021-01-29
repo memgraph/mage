@@ -1,6 +1,7 @@
-#include "mg_procedure.h"
 #include "algorithm/pagerank_algorithm.hpp"
-#include "memgraph_utilities/mg_utility.hpp"
+
+#include <mg_procedure.h>
+#include <utils/mg_utils.hpp>
 
 #include <map>
 #include <optional>

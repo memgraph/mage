@@ -1,8 +1,8 @@
 #include <queue>
 #include <unordered_map>
 
-#include "mg_procedure.h"
-#include "utils/on_scope_exit.hpp"
+#include <mg_procedure.h>
+#include <utils/on_scope_exit.hpp>
 
 /// Finds weakly connected components of a graph.
 ///

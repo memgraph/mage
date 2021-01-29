@@ -1,5 +1,5 @@
 #include "mg_procedure.h"
-#include "mg_utility.hpp"
+#include "mg_utils.hpp"
 
 /**
  * Convert Memgraph list to the edge patterns. Shared nodes are converted into edges.
