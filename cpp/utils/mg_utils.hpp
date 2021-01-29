@@ -1,5 +1,4 @@
-#ifndef MG_UTILITY_H
-#define MG_UTILITY_H
+#pragma once
 
 #include <exception>
 #include <iostream>
@@ -8,6 +7,8 @@
 #include <optional>
 #include <set>
 #include <algorithm>
+
+#include <mg_procedure.h>
 
 // Data structure for saving both mapping ID-Index and Index-ID
 template<typename T, typename U> using PairMap = std::optional<std::pair<std::map<T, U>, std::map<U, T>>>;
@@ -72,4 +73,3 @@ GraphMapping *MapMemgraphGraphWithPatterns(const mgp_list *nodes,
                                                   mgp_memory *memory);
 
 std::vector<std::vector<std::string>> ListToPattern(const mgp_list *edge_patterns);
-#endif //GRAPPOLO_MG_UTILITY_H

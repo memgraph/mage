@@ -1,4 +1,3 @@
-#include "mg_procedure.h"
 #include "mg_utils.hpp"
 
 /**

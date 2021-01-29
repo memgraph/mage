@@ -6,9 +6,9 @@
 #include <future>
 #include <vector>
 
-#include "algorithm/utils/adjacency_list.hpp"
+#include <utils/adjacency_list.hpp>
 
-namespace page_rank::parallel {
+namespace pagerank {
 
 /// A directed, unweighted graph.
 /// Self loops and multiple edges are allowed and they will affect the result.

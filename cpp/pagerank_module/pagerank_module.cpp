@@ -1,11 +1,11 @@
-#include "algorithm/pagerank_algorithm.hpp"
+#include <map>
+#include <optional>
+#include <queue>
 
 #include <mg_procedure.h>
 #include <utils/mg_utils.hpp>
 
-#include <map>
-#include <optional>
-#include <queue>
+#include "pagerank/pagerank.hpp"
 
 /**
  * Memgraph query module implementation of parallel pagerank_module algorithm. PageRank is the algorithm for
@@ -68,9 +68,9 @@ static void ParallelPagerank(const mgp_list *args, const mgp_graph *graph,
         uint32_t number_of_edges = graphMapping->numberOfEdges;
         std::vector<std::pair<uint32_t, uint32_t>> edges = graphMapping->edges;
 //         Make Pagerank graph
-        page_rank::parallel::PageRankGraph pagerankGraph(number_of_nodes, number_of_edges, edges);
+        pagerank::PageRankGraph pagerankGraph(number_of_nodes, number_of_edges, edges);
         // Call pagerank_module calculation
-        auto pagerankResult = page_rank::parallel::ParallelIterativePageRank(pagerankGraph);
+        auto pagerankResult = pagerank::ParallelIterativePageRank(pagerankGraph);
 
         // Here write the results to Memgraph Results
         for (uint32_t i = 0; i < number_of_nodes; ++i) {
