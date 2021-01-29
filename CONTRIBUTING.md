@@ -8,7 +8,7 @@ Everyone participating in this project is governed by the [Code of Conduct](CODE
 
 This section guides you through submitting a bug report for **Memgraph MAGE**. Following these guidelines helps maintainers and the community understand your report, reproduce the behavior, and find related reports.
 
-Before creating a bug report, please check out [GitHub Issues](https://github.com/memgraph/mage/issues) as you might find out that you don't need to create one. When you are creating a bug report, please **include as many details** as possible. Fill out [the required template](https://github.com/atom/.github/blob/master/.github/ISSUE_TEMPLATE/bug_report.md), so we can get all the needed information to resolve the issue.
+Before creating a bug report, please check out [GitHub Issues](https://github.com/memgraph/mage/issues) as you might find out that you don't need to create one. When you are creating a bug report, please **include as many details** as possible. Fill out [the required template](issue_template.md), so we can get all the needed information to resolve the issue.
 
 > **Note:** If you find a **Closed** issue that seems like it is the same thing that you're experiencing, open a new issue and include a link to the original issue in the body of your new one.
 
