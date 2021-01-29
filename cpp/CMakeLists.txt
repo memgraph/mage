@@ -1,8 +1,8 @@
-# Memgraph Query Modules CMake C++ configuration.
+# Memgraph Mage C++ Query Modules CMake configuration.
 
 cmake_minimum_required(VERSION 3.8)
 
-project(memgraph-query-modules)
+project(memgraph-mage)
 
 # Export the compile commands so that we can use clang-tidy. Additional benefit
 # is easier debugging of compilation and linker flags.
