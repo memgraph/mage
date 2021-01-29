@@ -163,4 +163,4 @@ std::vector<double> ParallelIterativePageRank(const PageRankGraph &graph,
                                               double damping_factor = 0.85,
                                               double stop_epsilon = 10e-6);
 
-}  // namespace page_rank::parallel
+}  // namespace pagerank

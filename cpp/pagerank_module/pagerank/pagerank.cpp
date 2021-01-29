@@ -235,4 +235,4 @@ namespace pagerank {
         return rank;
     }
 
-}  // namespace page_rank::parallel
+}  // namespace pagerank
