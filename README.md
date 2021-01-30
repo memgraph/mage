@@ -21,7 +21,7 @@ To build and install MAGE query modules you will need: **Make**, **CMake** and *
 ### Installing with Docker
 
 **1.** Run the `build.sh` script. It will generate a `dist` directory with all the needed files.  
-**2.** Run the following command where `dist` represent the path to your newly created `dist` directory:  
+**2.** Run the following command where `dist` represents the path to your newly created `dist` directory:  
 ```
 docker volume create --driver local --opt type=none  --opt device=dist --opt o=bind dist
 ```
@@ -43,7 +43,7 @@ If you want to find out more about loading query modules, visit [this guide](htt
 
 ## Contributing
 
-We encourage everyone to contribute with their own algorithm implementations and ideas. If you want to contribute or report a bud, please take a look at the [contributions guide](CONTRIBUTING.md).
+We encourage everyone to contribute with their own algorithm implementations and ideas. If you want to contribute or report a bug, please take a look at the [contributions guide](CONTRIBUTING.md).
 
 ## Code of Conduct
 
