@@ -16,23 +16,23 @@
 /// @param memory Memgraph memory storage
 static void ParallelPagerank(const mgp_list *args, const mgp_graph *graph,
                              mgp_result *result, mgp_memory *memory,
-                             bool pattern) {
+                             const bool pattern) {
   try {
     std::map<uint32_t, uint32_t> iterToId;
     std::map<uint32_t, uint32_t> idToIter;
-    GraphMapping *graphMapping;
+    std::optional<utils::GraphMapping> graphMapping;
 
     if (!pattern) {
-      auto idMapping = VertexIdMapping(graph, result, memory);
+      auto idMapping = utils::VertexIdMapping(graph, result, memory);
 
       if (!idMapping) {
         mgp_result_set_error_msg(result, "Not enough memory");
         return;
       }
-      iterToId = idMapping->first;
-      idToIter = idMapping->second;
+      iterToId = std::move(idMapping->first);
+      idToIter = std::move(idMapping->second);
 
-      graphMapping = MapMemgraphGraph(idToIter, graph, memory);
+      graphMapping = utils::MapMemgraphGraph(idToIter, graph, memory);
 
     } else {
       // Get id mapping.
@@ -47,24 +47,23 @@ static void ParallelPagerank(const mgp_list *args, const mgp_graph *graph,
         throw std::runtime_error("Labels list is empty");
       }
 
-      auto patterns = ListToPattern(edge_patterns);
+      auto patterns = utils::ListToPattern(edge_patterns);
 
-      auto idMapping = VertexIdMappingSubgraph(nodes, graph, result, memory);
+      auto idMapping =
+          utils::VertexIdMappingSubgraph(nodes, graph, result, memory);
 
       if (!idMapping) {
         mgp_result_set_error_msg(result, "Not enough memory");
         return;
       }
-      iterToId = idMapping->first;
-      idToIter = idMapping->second;
+      iterToId = std::move(idMapping->first);
+      idToIter = std::move(idMapping->second);
 
-      graphMapping = MapMemgraphGraphWithPatterns(nodes, patterns, idToIter,
-                                                  graph, memory);
+      graphMapping = utils::MapMemgraphGraphWithPatterns(
+          nodes, patterns, idToIter, graph, memory);
     }
 
-    uint32_t number_of_nodes = graphMapping->numberOfVertices;
-    uint32_t number_of_edges = graphMapping->numberOfEdges;
-    std::vector<std::pair<uint32_t, uint32_t>> edges = graphMapping->edges;
+    const auto &[number_of_nodes, number_of_edges, edges] = *graphMapping;
     // Make Pagerank graph.
     pagerank::PageRankGraph pagerankGraph(number_of_nodes, number_of_edges,
                                           edges);
@@ -93,7 +92,8 @@ static void ParallelPagerank(const mgp_list *args, const mgp_graph *graph,
         return;
       }
 
-      int rank_inserted = mgp_result_record_insert(record, "rank", rank_value);
+      const int rank_inserted =
+          mgp_result_record_insert(record, "rank", rank_value);
       mgp_value_destroy(rank_value);
 
       if (!rank_inserted) {
@@ -101,7 +101,7 @@ static void ParallelPagerank(const mgp_list *args, const mgp_graph *graph,
         return;
       }
 
-      int value_inserted =
+      const int value_inserted =
           mgp_result_record_insert(record, "node", vertex_value);
       mgp_value_destroy(vertex_value);
 
@@ -131,14 +131,18 @@ extern "C" int mgp_init_module(struct mgp_module *module,
   struct mgp_proc *pagerank_proc =
       mgp_module_add_read_procedure(module, "pagerank", PagerankWrapper);
 
-  if (!pagerank_proc) return 1;
-  if (!mgp_proc_add_result(pagerank_proc, "node", mgp_type_node())) return 1;
-  if (!mgp_proc_add_result(pagerank_proc, "rank", mgp_type_float())) return 1;
+  if (!pagerank_proc)
+    return 1;
+  if (!mgp_proc_add_result(pagerank_proc, "node", mgp_type_node()))
+    return 1;
+  if (!mgp_proc_add_result(pagerank_proc, "rank", mgp_type_float()))
+    return 1;
 
   struct mgp_proc *subgraph_proc = mgp_module_add_read_procedure(
       module, "pattern_pagerank", PatternPagerankWrapper);
 
-  if (!subgraph_proc) return 1;
+  if (!subgraph_proc)
+    return 1;
   if (!mgp_proc_add_opt_arg(
           subgraph_proc, "transform_nodes", mgp_type_list(mgp_type_node()),
           mgp_value_make_list(mgp_list_make_empty(0, memory))))
@@ -149,8 +153,10 @@ extern "C" int mgp_init_module(struct mgp_module *module,
           mgp_type_list(mgp_type_list(mgp_type_string())),
           mgp_value_make_list(mgp_list_make_empty(0, memory))))
     return 1;
-  if (!mgp_proc_add_result(subgraph_proc, "node", mgp_type_node())) return 1;
-  if (!mgp_proc_add_result(subgraph_proc, "rank", mgp_type_float())) return 1;
+  if (!mgp_proc_add_result(subgraph_proc, "node", mgp_type_node()))
+    return 1;
+  if (!mgp_proc_add_result(subgraph_proc, "rank", mgp_type_float()))
+    return 1;
   return 0;
 }
 

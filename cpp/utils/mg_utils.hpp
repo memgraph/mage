@@ -10,6 +10,7 @@
 #include <set>
 #include <vector>
 
+namespace utils {
 /// Data structure for saving both mapping ID-Index and Index-ID
 template <typename T, typename U>
 using PairMap = std::optional<std::pair<std::map<T, U>, std::map<U, T>>>;
@@ -27,9 +28,8 @@ struct GraphMapping {
 /// @param result Memgraph result storage
 /// @param memory Memgraph memory storage
 /// @return Pair of ID to iter and iter to ID mapping
-PairMap<uint32_t, uint32_t> VertexIdMapping(const mgp_graph *graph,
-                                            mgp_result *result,
-                                            mgp_memory *memory);
+PairMap<uint32_t, uint32_t>
+VertexIdMapping(const mgp_graph *graph, mgp_result *result, mgp_memory *memory);
 
 /// Method for making Memgraph ID to iter index and vice-versa pairs for mapping
 /// the Memgraph instance nodes to the algorithm's third-party library nodes.
@@ -50,14 +50,15 @@ std::set<int64_t> FindPattern(const std::vector<std::string> &pattern,
                               const mgp_vertex *start_vertex,
                               const mgp_graph *graph, mgp_memory *memory);
 
-GraphMapping *MapMemgraphGraph(std::map<uint32_t, uint32_t> idToIter,
-                               const mgp_graph *memgraphGraph,
-                               mgp_memory *memory);
+GraphMapping MapMemgraphGraph(const std::map<uint32_t, uint32_t> &idToIter,
+                              const mgp_graph *memgraphGraph,
+                              mgp_memory *memory);
 
-GraphMapping *MapMemgraphGraphWithPatterns(
+GraphMapping MapMemgraphGraphWithPatterns(
     const mgp_list *nodes, std::vector<std::vector<std::string>> patterns,
-    std::map<uint32_t, uint32_t> idToIter, const mgp_graph *memgraphGraph,
-    mgp_memory *memory);
+    const std::map<uint32_t, uint32_t> &idToIter,
+    const mgp_graph *memgraphGraph, mgp_memory *memory);
 
-std::vector<std::vector<std::string>> ListToPattern(
-    const mgp_list *edge_patterns);
+std::vector<std::vector<std::string>>
+ListToPattern(const mgp_list *edge_patterns);
+} // namespace utils
