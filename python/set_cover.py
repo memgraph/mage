@@ -1,6 +1,7 @@
 import mgp
 import random
 import abc
+from collections import defaultdict
 
 from gekko import GEKKO
 
@@ -130,15 +131,9 @@ class GreedyMatchingProblemCreator(MatchingProblemCreator):
         all_elements = set(element_values)
         all_sets = set(set_values)
 
-        elements_by_sets = dict()
+        elements_by_sets = defaultdict(set)
 
-        for idx in range(len(element_values)):
-            element = element_values[idx]
-            contained_set = set_values[idx]
-
-            if contained_set not in elements_by_sets.keys():
-                elements_by_sets[contained_set] = set()
-
+        for element, contained_set in zip(element_values, set_values):
             elements_by_sets[contained_set].add(element)
 
         return GreedyMatchingProblem(all_elements, all_sets, elements_by_sets)
@@ -160,15 +155,9 @@ class GekkoMatchingProblemCreator(MatchingProblemCreator):
         element_values = [x.id for x in element_vertexes]
         set_values = [x.id for x in set_vertexes]
         set_values_distinct = set(set_values)
-        sets_by_elements = dict()
+        sets_by_elements = defaultdict(set)
 
         for element, contained_set in zip(element_values, set_values):
-            element = element_values[idx]
-            contained_set = set_values[idx]
-
-            if element not in sets_by_elements.keys():
-                sets_by_elements[element] = set()
-
             sets_by_elements[element].add(contained_set)
 
         return GekkoMatchingProblem(set_values_distinct, sets_by_elements)
@@ -208,16 +197,14 @@ class GekkoMPSolver(MatchingProblemSolver):
         set_list = list(matching_problem.containing_sets)
         vars = [m.Var(lb=0, ub=1, integer=True, name=GekkoMPSolver.get_variable_name(i))
                          for i in range(len(set_list))]
-        set_ordinal_map = dict()
 
-        for i in range(len(set_list)):
-            set_ordinal_map[set_list[i]] = i
+        set_ordinal_map = {value: i for i, value in enumerate(set_list)}
 
         for element in matching_problem.sets_by_elements.keys():
             containing_sets = matching_problem.sets_by_elements[element]
             contained_sets_eq = 0
 
-            for contained_set in list(containing_sets):
+            for contained_set in containing_sets:
                 ordinal_number = set_ordinal_map[contained_set]
                 contained_sets_eq = contained_sets_eq + vars[ordinal_number]
 

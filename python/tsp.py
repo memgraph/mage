@@ -2,6 +2,7 @@ import mgp
 import sys
 import numpy as np
 import math
+import itertools
 
 try:
     import networkx as nx
@@ -19,7 +20,7 @@ DEFAULT_SOLVING_METHOD = '1.5_approx'
 KM_MULTIPLIER = 0.001
 LATITUDE = 'lat'
 LONGITUDE = 'lng'
-
+valid_metrics = ['m', 'km']
 
 def calculate_distance_between_points(start, end, metrics='m'):
     '''
@@ -34,7 +35,10 @@ def calculate_distance_between_points(start, end, metrics='m'):
         or LONGITUDE not in start.keys()
         or LATITUDE not in end.keys()
         or LONGITUDE not in end.keys()):
-        return 0
+        return None
+
+    if metrics.lower() not in valid_metrics:
+        return None
 
     lat_1 = start[LATITUDE]
     lng_1 = start[LONGITUDE]
@@ -76,6 +80,8 @@ def create_distance_matrix(points):
     for i in range(0, len(points) - 1):
         for j in range(i + 1, len(points)):
             d = calculate_distance_between_points(points[i], points[j])
+            if d is None:
+                return None
             dm[i][j] = dm[j][i] = d
 
     return dm
@@ -103,7 +109,7 @@ def solve_1_5_approx(dm):
     '''
 
     mst = get_mst(dm)
-    odd_matchings = [x[0] for x in list(filter(lambda x: x[1] % 2 == 1, list(mst.degree)))]
+    odd_matchings = [x[0] for x in filter(lambda x: x[1] % 2 == 1, mst.degree)]
     matches = get_perfect_matchings(odd_matchings)
 
     all_edges = list(mst.edges)
@@ -176,13 +182,15 @@ def solve(context:mgp.ProcCtx,
     CALL tsp_module.solve(points) YIELD sources, destinations;
     '''
 
-    for point in points:
-        if not isinstance(point, mgp.Vertex):
-            return mgp.Record(sources=None, destinations=None)
+    if not all(isinstance(x, mgp.Vertex) for x in points):
+        return mgp.Record(sources=None, destinations=None)
 
     dm = create_distance_matrix(
         [dict(x.properties.items()) for x in points]
     )
+
+    if dm is None:
+        return mgp.Record(sources=None, destinations=None)
 
     if method.lower() not in tsp_solving_methods.keys():
         method = DEFAULT_SOLVING_METHOD

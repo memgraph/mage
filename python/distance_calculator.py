@@ -1,15 +1,16 @@
 import mgp
 import math
+import itertools
 
 KM_MULTIPLIER = 0.001
 LATITUDE = 'lat'
 LONGITUDE = 'lng'
-
+valid_metrics = ['m', 'km']
 
 @mgp.read_proc
 def single(context: mgp.ProcCtx,
-              start: mgp.Nullable[mgp.Any],
-              end: mgp.Nullable[mgp.Any],
+              start: mgp.Nullable[mgp.Vertex],
+              end: mgp.Nullable[mgp.Vertex],
               metrics: str = 'm'
               ) -> mgp.Record(distance=mgp.Number):
     '''
@@ -23,9 +24,6 @@ def single(context: mgp.ProcCtx,
       MATCH (n1:Point), (n2:Point) CALL distance_calculator.procedure(n, 1) YIELD * RETURN *;
     '''
 
-    if not isinstance(start, (mgp.Vertex)) or not isinstance(end, (mgp.Vertex)):
-        return mgp.Record(distance=None)
-
     distance = calculate_distance_between_points(
         dict(start.properties.items()),
         dict(end.properties.items()),
@@ -36,8 +34,8 @@ def single(context: mgp.ProcCtx,
 
 @mgp.read_proc
 def multiple(context: mgp.ProcCtx,
-              start_points: mgp.Nullable[mgp.Any],
-              end_points: mgp.Nullable[mgp.Any],
+              start_points: list,
+              end_points: list,
               metrics: str = 'm'
               ) -> mgp.Record(distances=list):
     '''
@@ -53,15 +51,15 @@ def multiple(context: mgp.ProcCtx,
     if len(start_points) != len(end_points) or len(start_points) == 0:
         return mgp.Record(distances=None)
 
-    for i in range(len(start_points)):
-        if not isinstance(start_points[i], (mgp.Vertex)) or not isinstance(end_points[i], (mgp.Vertex)):
-            return mgp.Record(distances=None)
+    if not all(isinstance(start, mgp.Vertex) and isinstance(end, mgp.Vertex)
+        for start, end in zip(start_points, end_points)):
+        return mgp.Record(distance=None)
 
     distances = []
-    for i in range(len(start_points)):
+    for start_point, end_point in zip(start_points, end_points):
         d = calculate_distance_between_points(
-            dict(start_points[i].properties.items()),
-            dict(end_points[i].properties.items()),
+            dict(start_point.properties.items()),
+            dict(end_point.properties.items()),
             metrics)
 
         distances.append(d)
@@ -82,7 +80,10 @@ def calculate_distance_between_points(start, end, metrics='m'):
         or LONGITUDE not in start.keys()
         or LATITUDE not in end.keys()
         or LONGITUDE not in end.keys()):
-        return 0
+        return None
+
+    if metrics.lower() not in valid_metrics:
+        return None
 
     lat_1 = start[LATITUDE]
     lng_1 = start[LONGITUDE]
