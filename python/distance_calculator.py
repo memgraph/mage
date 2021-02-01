@@ -51,8 +51,7 @@ def multiple(context: mgp.ProcCtx,
     if len(start_points) != len(end_points) or len(start_points) == 0:
         return mgp.Record(distances=None)
 
-    if not all(isinstance(start, mgp.Vertex) and isinstance(end, mgp.Vertex)
-        for start, end in zip(start_points, end_points)):
+    if not all(isinstance(point, mgp.Vertex) for point in itertools.chain(start_points, end_points)):
         return mgp.Record(distance=None)
 
     distances = []
