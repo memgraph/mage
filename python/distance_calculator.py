@@ -1,11 +1,12 @@
 import mgp
 import math
 import itertools
+from typing import List
 
 KM_MULTIPLIER = 0.001
 LATITUDE = 'lat'
 LONGITUDE = 'lng'
-valid_metrics = ['m', 'km']
+VALID_METRICS = ['m', 'km']
 
 @mgp.read_proc
 def single(context: mgp.ProcCtx,
@@ -34,10 +35,10 @@ def single(context: mgp.ProcCtx,
 
 @mgp.read_proc
 def multiple(context: mgp.ProcCtx,
-              start_points: list,
-              end_points: list,
+              start_points: List[mgp.Vertex],
+              end_points: List[mgp.Vertex],
               metrics: str = 'm'
-              ) -> mgp.Record(distances=list):
+              ) -> mgp.Record(distances=List[float]):
     '''
     This distance calculator procedure  for multiple entries returns 1 field.
 
@@ -81,7 +82,7 @@ def calculate_distance_between_points(start, end, metrics='m'):
         or LONGITUDE not in end.keys()):
         return None
 
-    if metrics.lower() not in valid_metrics:
+    if not isinstance(metrics, str) or metrics.lower() not in VALID_METRICS:
         return None
 
     lat_1 = start[LATITUDE]

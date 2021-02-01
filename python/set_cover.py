@@ -2,14 +2,15 @@ import mgp
 import random
 import abc
 from collections import defaultdict
+from typing import List
 
 from gekko import GEKKO
 
 @mgp.read_proc
 def cp_solve(context: mgp.ProcCtx,
-              element_vertexes: list,
-              set_vertexes: list
-              ) -> mgp.Record(resulting_sets=list):
+              element_vertexes: List[mgp.Vertex],
+              set_vertexes: List[mgp.Vertex]
+              ) -> mgp.Record(resulting_sets=List[mgp.Vertex]):
     '''
     This set cover solver method returns 1 filed
 
@@ -42,9 +43,9 @@ def cp_solve(context: mgp.ProcCtx,
 
 @mgp.read_proc
 def greedy(context: mgp.ProcCtx,
-              element_vertexes: list,
-              set_vertexes: list
-              ) -> mgp.Record(resulting_sets=list):
+              element_vertexes: List[mgp.Vertex],
+              set_vertexes: List[mgp.Vertex]
+              ) -> mgp.Record(resulting_sets=List[mgp.Vertex]):
     '''
     This set cover solver method returns 1 filed
 

@@ -2,7 +2,7 @@ import mgp
 import sys
 import numpy as np
 import math
-import itertools
+from typing import List
 
 try:
     import networkx as nx
@@ -20,7 +20,7 @@ DEFAULT_SOLVING_METHOD = '1.5_approx'
 KM_MULTIPLIER = 0.001
 LATITUDE = 'lat'
 LONGITUDE = 'lng'
-valid_metrics = ['m', 'km']
+VALID_METRICS = ['m', 'km']
 
 def calculate_distance_between_points(start, end, metrics='m'):
     '''
@@ -37,7 +37,7 @@ def calculate_distance_between_points(start, end, metrics='m'):
         or LONGITUDE not in end.keys()):
         return None
 
-    if metrics.lower() not in valid_metrics:
+    if not isinstance(metrics, str) or metrics.lower() not in VALID_METRICS:
         return None
 
     lat_1 = start[LATITUDE]
@@ -160,10 +160,10 @@ tsp_solving_methods = {
 
 @mgp.read_proc
 def solve(context:mgp.ProcCtx,
-          points:list,
+          points:List[mgp.Vertex],
           method:str = DEFAULT_SOLVING_METHOD
-          ) -> mgp.Record(sources=list,
-                          destinations=list):
+          ) -> mgp.Record(sources=List[mgp.Vertex],
+                          destinations=List[mgp.Vertex]):
     '''
     The tsp_module solver returns 2 fields whose elements at indexes are correlated
 
