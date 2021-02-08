@@ -1,7 +1,3 @@
-// Observability module
-// Basic query usage:
-// CALL obsmodule.observability() YIELD edge_id, variable, status;
-
 #include <iostream>
 #include <map>
 #include <optional>
@@ -238,8 +234,8 @@ bool InsertRelationshipValue(mgp_result_record *record, const char *field_name,
 bool InsertRelationshipValue(const mgp_graph *graph, mgp_result_record *record,
                              const char *field_name, const int edge_id,
                              mgp_memory *memory) {
+  //TODO: Needs implementation of edge fetching by ID in Memgraph to work.
   return true;
-  // return InsertRelationshipValue(record, field_name, vertex, memory);
 }
 
 void NotEnoughMemory(mgp_result *result) {

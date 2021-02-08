@@ -13,8 +13,11 @@ void BCCDfs(uint32_t node_id, uint32_t parent_id, algorithms::NodeState *state,
   static int tick = 0;
   bool root = node_id == parent_id;
   int ch_cnt = 0;  // needed to handle the special case for root node.
+  
   state->visited[node_id] = true;
-  state->discovery[node_id] = state->low_link[node_id] = ++tick;
+  tick++;
+  state->discovery[node_id] = tick;
+  state->low_link[node_id] = tick;
 
   for (const auto &neigh : G.Neighbours(node_id)) {
     uint32_t next_id = neigh.node_id;
@@ -39,7 +42,7 @@ void BCCDfs(uint32_t node_id, uint32_t parent_id, algorithms::NodeState *state,
     if ((root && ch_cnt > 1) ||  // special case for root
         (!root && state->low_link[next_id] >= state->discovery[node_id])) {
       // obsdata::Edges until (node, next) on stack form a BCC
-      BCC->push_back({});
+      BCC->emplace_back();
       while (edge_stack->top().id != edge.id) {
         BCC->back().push_back(edge_stack->top());
         edge_stack->pop();
@@ -70,7 +73,7 @@ std::vector<std::vector<graphdata::Edge>> GetBiconnectedComponents(
     BCCDfs(node.id, node.id, &state, &edge_stack, &BCC, G);
     // Any edges left on stack form a BCC
     if (!edge_stack.empty()) {
-      BCC.push_back({});
+      BCC.emplace_back();
       while (!edge_stack.empty()) {
         BCC.back().push_back(edge_stack.top());
         edge_stack.pop();

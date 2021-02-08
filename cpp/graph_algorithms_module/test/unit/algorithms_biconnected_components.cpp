@@ -228,7 +228,7 @@ TEST(BCC, HandmadeArticulationPoint) {
 }
 
 TEST(BCC, Performance) {
-  auto G = GenRandomGraph(100000, 250000);
+  auto G = GenRandomGraph(10000, 25000);
   Timer timer;
   auto BCC = algorithms::GetBiconnectedComponents(G);
   auto time_elapsed = timer.Elapsed();

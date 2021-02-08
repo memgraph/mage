@@ -216,7 +216,7 @@ TEST(Bridges, Random100) {
 }
 
 TEST(Bridges, Performance) {
-  auto G = GenRandomGraph(100000, 250000);
+  auto G = GenRandomGraph(10000, 25000);
   Timer timer;
   auto bridges = algorithms::GetBridges(G);
   auto time_elapsed = timer.Elapsed();

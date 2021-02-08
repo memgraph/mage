@@ -6,7 +6,7 @@
 
 #include "algorithms/algorithms.hpp"
 #include "data_structures/graph.hpp"
-#include "interface/mg_interface.hpp"
+#include "mg_interface.hpp"
 #include "mg_procedure.h"
 
 namespace {

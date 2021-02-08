@@ -11,7 +11,9 @@ void BridgeDfs(uint32_t node_id, uint32_t parent_id,
                const graphdata::GraphView &G) {
   static int tick = 0;
   state->visited[node_id] = true;
-  state->discovery[node_id] = state->low_link[node_id] = ++tick;
+  tick++;
+  state->discovery[node_id] = tick;
+  state->low_link[node_id] = tick;
 
   for (const auto &neigh : G.Neighbours(node_id)) {
     uint32_t next_id = neigh.node_id;

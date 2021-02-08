@@ -9,22 +9,13 @@
 #include "data_structures/graph.hpp"
 
 namespace algorithms {
-
-/// Returns true if graph represented by edges is bipartite.
-/// Otherwise false.
-bool IsGraphBipartite(const std::vector<std::pair<uint32_t, uint32_t>> &edges);
-
 /// Returns true if graph is bipartite.
 /// Otherwise returns false.
 bool IsGraphBipartite(const graphdata::GraphView &G);
 
 /// Returns the size of the maximum matching in a given bipartite graph. The
-/// graph is defined by the sizes of two disjoint sets of nodes and by a set of
-/// edges between those two sets of nodes. The nodes in both sets should be
-/// indexed from 1 to `set_size`.
-///
-/// The algorithm runs in O(|V|*|E|) time where V represents a set of nodes and
-/// E represents a set of edges.
+/// graph is defined by the GraphView class. If the graph is bipartite, edge mapping
+/// into 2 disjoint sets is performed and matching method is executed.
 size_t BipartiteMatching(const graphdata::GraphView &G);
 
 /// Returns the size of the maximum matching in a given bipartite graph. The
@@ -72,7 +63,7 @@ std::vector<std::vector<graphdata::Edge>> GetBiconnectedComponents(
 /// which takes about O(2^(|E|-|V|+1)) time, where E represents a set of
 /// edges and V represents a set of vertices.
 ///
-/// TODO(ipaljak): Optimize the algorithm by decomposition into biconnected
+/// TODO(josipmrden): Optimize the algorithm by decomposition into biconnected
 ///                components.
 std::vector<std::vector<graphdata::Node>> GetCycles(
     const graphdata::GraphView &G);

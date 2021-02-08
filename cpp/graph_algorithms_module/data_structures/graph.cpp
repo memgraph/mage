@@ -43,16 +43,14 @@ bool Graph::IsEdgeValid(uint32_t edge_id) const {
 
 std::vector<uint32_t> Graph::GetEdgesBetweenNodes(uint32_t first,
                                                   uint32_t second) const {
-  typedef std::multimap<std::pair<uint32_t, uint32_t>, uint32_t>::const_iterator
-      multimap_itr;
-  typedef std::pair<multimap_itr, multimap_itr> multimap_pair;
   std::vector<uint32_t> ret;
-  multimap_pair range = nodes_to_edge_.equal_range(
-      {std::min(first, second), std::max(first, second)});
-  ret.reserve(std::distance(range.first, range.second));
-  for (auto it = range.first; it != range.second; ++it) {
-    if (!IsEdgeValid(it->second)) continue;
-    ret.push_back(it->second);
+  const auto [range_start, range_end] =
+      nodes_to_edge_.equal_range(std::minmax(first, second));
+  ret.reserve(std::distance(range_start, range_end));
+  for (auto it = range_start; it != range_end; ++it) {
+    if (IsEdgeValid(it->second)) {
+      ret.push_back(it->second);
+    }
   }
   return ret;
 }
@@ -81,40 +79,44 @@ void Graph::EraseEdge(uint32_t u, uint32_t v) {
   assert(u >= 0 && u < nodes_.size());
   assert(v >= 0 && v < nodes_.size());
 
-  auto it = nodes_to_edge_.find({std::min(u, v), std::max(u, v)});
+  auto it = nodes_to_edge_.find(std::minmax(u, v));
   if (it == nodes_to_edge_.end()) return;
   uint32_t edge_id = it->second;
 
   for (auto it = adj_list_[u].begin(); it != adj_list_[u].end(); ++it) {
-    if (edges_[*it].to != v && edges_[*it].from != v) continue;
-    edges_[*it].id = Graph::kDeletedEdgeId;
-    adj_list_[u].erase(it);
-    break;
+    if (edges_[*it].to == v || edges_[*it].from == v) {
+      edges_[*it].id = Graph::kDeletedEdgeId;
+      adj_list_[u].erase(it);
+      break;
+    }
   }
   for (auto it = adj_list_[v].begin(); it != adj_list_[v].end(); ++it) {
-    if (edges_[*it].to != u && edges_[*it].from != u) continue;
-    edges_[*it].id = Graph::kDeletedEdgeId;
-    adj_list_[v].erase(it);
-    break;
+    if (edges_[*it].to == u || edges_[*it].from == u) {
+      edges_[*it].id = Graph::kDeletedEdgeId;
+      adj_list_[v].erase(it);
+      break;
+    }
   }
 
   for (auto it = neighbours_[u].begin(); it != neighbours_[u].end(); ++it) {
-    if (it->edge_id != edge_id) continue;
-    neighbours_[u].erase(it);
-    break;
+    if (it->edge_id == edge_id) {
+      neighbours_[u].erase(it);
+      break;
+    }
   }
   for (auto it = neighbours_[v].begin(); it != neighbours_[v].end(); ++it) {
-    if (it->edge_id != edge_id) continue;
-    neighbours_[v].erase(it);
-    break;
+    if (it->edge_id == edge_id) {
+      neighbours_[v].erase(it);
+      break;
+    }
   }
 }
 
 uint32_t Graph::CreateNode() {
   uint32_t id = nodes_.size();
   nodes_.push_back({id});
-  adj_list_.push_back({});
-  neighbours_.push_back({});
+  adj_list_.emplace_back();
+  neighbours_.emplace_back();
   return id;
 }
 
@@ -127,7 +129,7 @@ uint32_t Graph::CreateEdge(uint32_t from, uint32_t to) {
   adj_list_[to].push_back(id);
   neighbours_[from].emplace_back(to, id);
   neighbours_[to].emplace_back(from, id);
-  nodes_to_edge_.insert({{std::min(from, to), std::max(from, to)}, id});
+  nodes_to_edge_.insert({std::minmax(from, to), id});
   return id;
 }
-}  // namespace obsdata
+}  // namespace graphdata

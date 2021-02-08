@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cassert>
 #include <set>
+#include <unordered_set>
 
 #include "algorithms/algorithms.hpp"
 #include "algorithms/utils.hpp"
@@ -42,7 +43,7 @@ std::vector<uint32_t> FindCycle(uint32_t a, uint32_t b,
 void FindNonSTEdges(uint32_t node_id, const graphdata::GraphView &G,
                     algorithms::NodeState *state,
                     std::set<std::pair<uint32_t, uint32_t>> *non_st_edges) {
-  std::set<uint32_t> unique_neighbour;
+  std::unordered_set<uint32_t> unique_neighbour;
   state->visited[node_id] = true;
   for (const auto &neigh : G.Neighbours(node_id)) {
     uint32_t next_id = neigh.node_id;
@@ -50,8 +51,7 @@ void FindNonSTEdges(uint32_t node_id, const graphdata::GraphView &G,
     if (unique_neighbour.find(next_id) != unique_neighbour.end()) continue;
     unique_neighbour.insert(next_id);
     if (state->visited[next_id]) {
-      std::pair<uint32_t, uint32_t> e = {std::min(node_id, next_id),
-                                         std::max(node_id, next_id)};
+      std::pair<uint32_t, uint32_t> e = std::minmax(node_id, next_id);
       non_st_edges->insert(e);
       continue;
     }
@@ -77,9 +77,8 @@ void SolveMask(int mask,
   for (int i = 0; i < static_cast<int>(fundamental_cycles.size()); ++i) {
     if ((mask & (1 << i)) == 0) continue;
     for (int j = 1; j < static_cast<int>(fundamental_cycles[i].size()); ++j) {
-      std::pair<uint32_t, uint32_t> edge = {
-          std::min(fundamental_cycles[i][j], fundamental_cycles[i][j - 1]),
-          std::max(fundamental_cycles[i][j], fundamental_cycles[i][j - 1])};
+      std::pair<uint32_t, uint32_t> edge =
+          std::minmax(fundamental_cycles[i][j], fundamental_cycles[i][j - 1]);
       edge_cnt[edge]++;
     }
   }
@@ -88,13 +87,13 @@ void SolveMask(int mask,
   std::map<uint32_t, bool> visited;
   std::set<uint32_t> nodes;
 
-  for (const auto &kv : edge_cnt) {
-    if (kv.second % 2 == 0) continue;
-    auto edge = kv.first;
-    adj_list[edge.first].push_back(edge.second);
-    adj_list[edge.second].push_back(edge.first);
-    nodes.insert(edge.first);
-    nodes.insert(edge.second);
+  for (const auto &[key, value] : edge_cnt) {
+    if (value % 2 == 0) continue;
+    auto const [from, to] = key;
+    adj_list[from].push_back(to);
+    adj_list[to].push_back(from);
+    nodes.insert(from);
+    nodes.insert(to);
   }
 
   // deg(v) = 2 for all vertices in a cycle.
@@ -111,11 +110,10 @@ void SolveMask(int mask,
     }
   }
 
-  bool ok = true;
   for (uint32_t node : nodes)
-    if (!visited[node]) ok = false;
+    if (!visited[node]) return;
 
-  if (ok && cycle.size() > 2) cycles->emplace_back(cycle);
+  if (cycle.size() > 2) cycles->emplace_back(cycle);
 }
 
 void GetCyclesFromFundamentals(
@@ -136,7 +134,8 @@ void GetCyclesFromFundamentals(
 
 namespace algorithms {
 
-std::vector<std::vector<graphdata::Node>> GetCycles(const graphdata::GraphView &G) {
+std::vector<std::vector<graphdata::Node>> GetCycles(
+    const graphdata::GraphView &G) {
   NodeState state;
   size_t node_size = G.Nodes().size();
   state.visited.resize(node_size, false);
@@ -146,7 +145,7 @@ std::vector<std::vector<graphdata::Node>> GetCycles(const graphdata::GraphView &
   std::vector<std::vector<graphdata::Node>> cycles;
 
   // Solve for each connected component
-  // TODO(ipaljak) solve for each biconnected component
+  // TODO(josipmrden) solve for each biconnected component
   for (const graphdata::Node &node : G.Nodes()) {
     if (state.visited[node.id]) continue;
 
@@ -171,10 +170,11 @@ std::vector<std::pair<graphdata::Node, graphdata::Node>> GetNeighbourCycles(
   std::vector<std::pair<graphdata::Node, graphdata::Node>> cycles;
   std::set<std::pair<uint32_t, uint32_t>> multi_edges;
   for (const graphdata::Edge &edge : G.Edges()) {
-    uint32_t from = std::min(edge.from, edge.to);
-    uint32_t to = std::max(edge.from, edge.to);
+    const auto [from, to] = std::minmax(edge.from, edge.to);
     std::pair<uint32_t, uint32_t> e = {from, to};
-    if (multi_edges.find(e) != multi_edges.end()) continue;
+    if (multi_edges.find(e) != multi_edges.end()) {
+      continue;
+    }
     multi_edges.insert(e);
     const auto &edges = G.GetEdgesBetweenNodes(from, to);
     if (edges.size() > 1) cycles.push_back({G.GetNode(from), G.GetNode(to)});

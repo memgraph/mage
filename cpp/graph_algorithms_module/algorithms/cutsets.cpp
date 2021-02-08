@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <set>
+#include <unordered_set>
 
 #include "algorithms/algorithms.hpp"
 #include "algorithms/utils.hpp"
@@ -50,9 +51,9 @@ std::set<uint32_t> omega(const std::vector<uint32_t> &U,
 }
 
 bool subset(const std::vector<uint32_t> &A, const std::vector<uint32_t> &B) {
-  std::set<uint32_t> AUB;
-  for (auto x : A) AUB.insert(x);
-  for (auto x : B) AUB.insert(x);
+  std::unordered_set<uint32_t> AUB;
+  AUB.insert(A.cbegin(), A.cend());
+  AUB.insert(B.cbegin(), B.cend());
   return AUB.size() == B.size();
 }
 
