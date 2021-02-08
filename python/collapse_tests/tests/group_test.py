@@ -19,6 +19,13 @@ def db_delete():
     delete_all(db)
 
 
+@pytest.fixture(scope='session', autouse=True)
+def db_delete_after():
+    yield
+    db = Memgraph()
+    delete_all(db)
+
+
 # Test suite 1
 def test_groups_one_level_hierarchy(db, db_delete):
     graph = {
