@@ -4,9 +4,8 @@
 
 #include <filesystem>
 #include <future>
-#include <vector>
-
 #include <utils/adjacency_list.hpp>
+#include <vector>
 
 namespace pagerank {
 
@@ -61,8 +60,7 @@ class PageRankGraph {
 /// @param graph -- graph
 /// @param number_of_threads -- number of threads
 /// @param borders -- vector in which calculated optimal borders will be written
-void CalcualteOptimalBorders(const PageRankGraph &graph,
-                             int number_of_threads,
+void CalcualteOptimalBorders(const PageRankGraph &graph, int number_of_threads,
                              std::vector<uint32_t> *borders);
 
 /// Calculating PageRank block related to [lo, hi> interval of edges
