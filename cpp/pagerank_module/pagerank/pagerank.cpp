@@ -16,7 +16,7 @@ PageRankGraph::PageRankGraph(
       out_degree_(std::vector<uint32_t>(number_of_nodes)) {
   utils::AdjacencyList<uint32_t> in_neighbours;
   in_neighbours.Init(number_of_nodes);
-  for (const auto [from, to] : edges) {
+  for (const auto &[from, to] : edges) {
     // Because PageRank needs a set of nodes that point to a given node.
     in_neighbours.AddAdjacentPair(from, to);
     out_degree_[from] += 1;
