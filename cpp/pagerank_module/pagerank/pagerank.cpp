@@ -55,16 +55,11 @@ void ThreadPageRankIteration(
     const PageRankGraph &graph, const std::vector<double> &old_rank,
     const uint32_t lo, const uint32_t hi,
     std::promise<std::vector<double>> new_rank_promise) {
-  std::vector<double> new_rank;
+  std::vector<double> new_rank(graph.GetNodeCount(), 0);
   // Calculate sums of PR(page)/C(page) scores for the entire block (from lo to
   // hi edges).
   for (size_t edge_id = lo; edge_id < hi; edge_id++) {
     const auto [source, target] = graph.GetOrderedEdges()[edge_id];
-    // Since the score is calculated for the source node, ensure new_rank has
-    // all required node scores initialized.
-    while (new_rank.size() < source + 1) {
-      new_rank.push_back(0);
-    }
     // Add the score of target node to the sum.
     new_rank[source] += old_rank[target] / graph.GetOutDegree(target);
   }
@@ -75,10 +70,6 @@ void AddCurrentBlockToRankNext(const PageRankGraph &graph,
                                const double damping_factor,
                                const std::vector<double> &block,
                                std::vector<double> *rank_next) {
-  // The first time this function is called, rank_next gets initialized.
-  while (rank_next->size() < graph.GetNodeCount()) {
-    rank_next->push_back((1.0 - damping_factor) / graph.GetNodeCount());
-  }
   // The block vector contains partially precalculated sums of PR(page)/C(page)
   // for each node. Node index in the block vector corresponds to the node index
   // in the rank_next vector.
@@ -153,7 +144,8 @@ std::vector<double> ParallelIterativePageRank(const PageRankGraph &graph,
           std::move(page_rank_promise[cluster_id]));
     }
 
-    std::vector<double> rank_next;
+    std::vector<double> rank_next(
+        graph.GetNodeCount(), (1.0 - damping_factor) / graph.GetNodeCount());
     for (size_t cluster_id = 0; cluster_id < number_of_threads; cluster_id++) {
       std::vector<double> block = page_rank_future[cluster_id].get();
       AddCurrentBlockToRankNext(graph, damping_factor, block, &rank_next);
