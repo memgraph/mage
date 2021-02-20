@@ -80,19 +80,15 @@ void ThreadPageRankIteration(
     const PageRankGraph &graph, const std::vector<double> &old_rank, int lo,
     int hi, std::promise<std::vector<double>> new_rank_promise);
 
-/// Merging PageRank blocks from ThreadPageRankIteration
-/// In every iteration function is called in order of cluster_ids.
+/// Merging PageRank blocks from ThreadPageRankIteration.
+///
 /// @param graph -- graph
 /// @param damping_factor -- damping factor
 /// @param block -- PageRank block calculated in ThreadPageRankIteration
-/// @param cluster_id -- id of block we are currently adding to rank_next
-/// @param borders -- vector of borders calculated by CalculateOptimalBorders
-/// @param rank_next -- PageRank which will be updated
+/// @param rank_next -- PageRanks which will be updated
 void AddCurrentBlockToRankNext(const PageRankGraph &graph,
                                double damping_factor,
                                const std::vector<double> &block,
-                               size_t cluster_id,
-                               const std::vector<uint32_t> &borders,
                                std::vector<double> *rank_next);
 
 /// Adds remaining PageRank values

@@ -56,13 +56,17 @@ void ThreadPageRankIteration(
     const uint32_t lo, const uint32_t hi,
     std::promise<std::vector<double>> new_rank_promise) {
   std::vector<double> new_rank;
-
+  // Calculate sums of PR(page)/C(page) scores for the entire block (from lo to
+  // hi edges).
   for (size_t edge_id = lo; edge_id < hi; edge_id++) {
     const auto [source, target] = graph.GetOrderedEdges()[edge_id];
-    while (new_rank.size() < target - graph.GetOrderedEdges()[lo].second + 1) {
+    // Since the score is calculated for the source node, ensure new_rank has
+    // all required node scores initialized.
+    while (new_rank.size() < source + 1) {
       new_rank.push_back(0);
     }
-    new_rank.back() += old_rank[source] / graph.GetOutDegree(source);
+    // Add the score of target node to the sum.
+    new_rank[source] += old_rank[target] / graph.GetOutDegree(target);
   }
   new_rank_promise.set_value(new_rank);
 }
@@ -70,20 +74,16 @@ void ThreadPageRankIteration(
 void AddCurrentBlockToRankNext(const PageRankGraph &graph,
                                const double damping_factor,
                                const std::vector<double> &block,
-                               const size_t cluster_id,
-                               const std::vector<uint32_t> &borders,
                                std::vector<double> *rank_next) {
-  const uint32_t lo = borders[cluster_id];
-  if (lo < graph.GetEdgeCount()) {
-    while (rank_next->size() <= graph.GetOrderedEdges()[lo].second) {
-      rank_next->push_back((1.0 - damping_factor) / graph.GetNodeCount());
-    }
+  // The first time this function is called, rank_next gets initialized.
+  while (rank_next->size() < graph.GetNodeCount()) {
+    rank_next->push_back((1.0 - damping_factor) / graph.GetNodeCount());
   }
-  for (size_t i = 0; i < block.size(); i++) {
-    if (i > 0) {
-      rank_next->push_back((1.0 - damping_factor) / graph.GetNodeCount());
-    }
-    rank_next->back() += damping_factor * block[i];
+  // The block vector contains partially precalculated sums of PR(page)/C(page)
+  // for each node. Node index in the block vector corresponds to the node index
+  // in the rank_next vector.
+  for (size_t node_index = 0; node_index < block.size(); node_index++) {
+    (*rank_next)[node_index] += damping_factor * block[node_index];
   }
 }
 
@@ -156,8 +156,7 @@ std::vector<double> ParallelIterativePageRank(const PageRankGraph &graph,
     std::vector<double> rank_next;
     for (size_t cluster_id = 0; cluster_id < number_of_threads; cluster_id++) {
       std::vector<double> block = page_rank_future[cluster_id].get();
-      AddCurrentBlockToRankNext(graph, damping_factor, block, cluster_id,
-                                borders, &rank_next);
+      AddCurrentBlockToRankNext(graph, damping_factor, block, &rank_next);
     }
     CompleteRankNext(graph, damping_factor, &rank_next);
 

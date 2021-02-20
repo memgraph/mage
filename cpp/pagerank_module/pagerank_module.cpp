@@ -7,6 +7,8 @@
 
 #include "pagerank/pagerank.hpp"
 
+// TODO(gitbuda): Add pagerank e2e module test.
+
 /// Memgraph query module implementation of parallel pagerank_module algorithm.
 /// PageRank is the algorithm for measuring influence of connected nodes.
 ///
