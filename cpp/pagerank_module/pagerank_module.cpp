@@ -143,7 +143,6 @@ extern "C" int mgp_init_module(struct mgp_module *module,
 
   struct mgp_proc *subgraph_proc = mgp_module_add_read_procedure(
       module, "pattern_pagerank", PatternPagerankWrapper);
-
   if (!subgraph_proc) {
     return 1;
   }
@@ -152,7 +151,6 @@ extern "C" int mgp_init_module(struct mgp_module *module,
           mgp_value_make_list(mgp_list_make_empty(0, memory)))) {
     return 1;
   }
-
   if (!mgp_proc_add_opt_arg(
           subgraph_proc, "transform_patterns",
           mgp_type_list(mgp_type_list(mgp_type_string())),
@@ -165,6 +163,7 @@ extern "C" int mgp_init_module(struct mgp_module *module,
   if (!mgp_proc_add_result(subgraph_proc, "rank", mgp_type_float())) {
     return 1;
   }
+
   return 0;
 }
 
