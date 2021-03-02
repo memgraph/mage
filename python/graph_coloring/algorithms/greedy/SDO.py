@@ -1,0 +1,54 @@
+import random
+from queue import PriorityQueue
+from typing import Dict, Any
+from telco.graph import Graph
+from telco.components.individual import Individual
+from telco.algorithms.algorithm import Algorithm
+from telco.framework.parameters_utils import param_value
+from telco.utils.available_colors import available_colors
+from telco.utils.validation import validate
+
+
+class SDO(Algorithm):
+    """A class that represents SDO greedy algorithm. This algorithm sorts nodes considering
+    their saturation degrees and then colors them sequentially. The saturation degree of a
+    node is defined as the number of its differently colored neighbors. If it is not possible
+    to uniquely determine the color, color is chosen randomly. If coloring the node with any
+    possible color would cause conflicts, then the color is chosen randomly."""
+
+    def __str__(self):
+        return "SDO"
+
+    @validate("no_of_colors")
+    def run(
+            self,
+            graph: Graph,
+            parameters: Dict[str, Any] = None) -> Individual:
+        """Returns the Individual that is the result of the SDO algorithm."""
+
+        no_of_colors = param_value(graph, parameters, "no_of_colors")
+
+        processed = [False for _ in graph.nodes]
+        saturation_degrees = [0 for _ in graph.nodes]
+        chromosome = [-1 for _ in graph.nodes]
+        sorted_nodes = PriorityQueue()
+        sorted_nodes.put((0, 0))
+
+        while not sorted_nodes.empty():
+            node = sorted_nodes.get()[1]
+            if not processed[node]:
+                processed[node] = True
+
+                colors = available_colors(graph, no_of_colors, chromosome, node)
+                if len(colors) > 0:
+                    color = random.sample(colors, 1)[0]
+                else:
+                    color = random.randint(0, no_of_colors - 1)
+                chromosome[node] = color
+
+                for neigh in graph[node]:
+                    if not processed[node]:
+                        saturation_degrees[neigh] += 1
+                        sorted_nodes.put((-1 * saturation_degrees[neigh], neigh))
+
+        return Individual(no_of_colors, graph, chromosome)
