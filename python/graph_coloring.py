@@ -1,13 +1,13 @@
 import mgp
 from collections import defaultdict
 from typing import List, Optional
-from telco.graph import Graph
-from telco.algorithms.meta_heuristics.quantum_annealing import QA
-from telco.error_functions.conflict_error import ConflictError
-from telco.operators.simple_mutation import SimpleMutation
-from telco.operators.multiple_mutation import MultipleMutation
-from telco.algorithms.greedy.LDO import LDO
-from telco.algorithms.greedy.SDO import SDO
+from graph_coloring.graph import Graph
+from graph_coloring.algorithms.meta_heuristics.quantum_annealing import QA
+from graph_coloring.error_functions.conflict_error import ConflictError
+from graph_coloring.operators.simple_mutation import SimpleMutation
+from graph_coloring.operators.multiple_mutation import MultipleMutation
+from graph_coloring.algorithms.greedy.LDO import LDO
+from graph_coloring.algorithms.greedy.SDO import SDO
 
 
 @mgp.read_proc
@@ -17,7 +17,7 @@ def QA_graph(
         max_iterations: int) -> mgp.Record(node=str, color=str):
     g = _convert_to_graph(context)
     sol = _run_algorithm(g, no_of_colors, max_iterations)
-    return [mgp.Record(node = str(g.label(node)), color = str(color)) for node, color in enumerate(sol)]
+    return [mgp.Record(node=str(g.label(node)), color=str(color)) for node, color in enumerate(sol)]
 
 
 @mgp.read_proc
@@ -29,10 +29,13 @@ def QA_subgraph(
         max_iterations: int) -> mgp.Record(node=str, color=str):
     g = _convert_to_subgraph(context, vertices, edges)
     sol = _run_algorithm(g, no_of_colors, max_iterations)
-    return [mgp.Record(node = str(g.label(node)), color = str(color)) for node, color in enumerate(sol)]
+    return [mgp.Record(node=str(g.label(node)), color=str(color)) for node, color in enumerate(sol)]
 
 
-def _run_algorithm(graph: Graph, no_of_colors, max_iterations) -> List[int]:
+def _run_algorithm(
+        graph: Graph,
+        no_of_colors: int,
+        max_iterations: int) -> List[int]:
     alg = QA()
     _default_parameters = {
         "no_of_processes": 1,

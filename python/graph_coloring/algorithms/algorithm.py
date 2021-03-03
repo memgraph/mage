@@ -11,6 +11,6 @@ class Algorithm(ABC):
     def run(
             self,
             graph: Graph,
-            parameters: Dict[str, Any]) -> Optional[Individual]:
-        """Runs the algorithm and returns the best individual."""
+            parameters: Dict[str, Any] = None) -> Optional[Individual]:
+        """Runs the algorithm and returns the best individual containing the resulting coloring."""
         pass
