@@ -1,0 +1,8 @@
+query: >
+  MATCH (n:P) WITH COLLECT(n) AS nodes
+  CALL collapse.collapse(nodes, ['Edge', 'Transport'])
+  YIELD from_vertex, path, to_vertex
+  RETURN from_vertex, nodes(path) AS path, to_vertex;
+
+exception: >
+  Nodes are directly connected within a graph

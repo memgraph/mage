@@ -1,0 +1,47 @@
+query: >
+  MATCH (n:P) WITH COLLECT(n) AS nodes
+  CALL collapse.collapse(nodes, ['Edge'])
+  YIELD from_vertex, path, to_vertex
+  RETURN from_vertex, nodes(path) AS path, to_vertex;
+
+output:
+  - from_vertex:
+      labels:
+      - P
+      properties:
+        id: p1
+    path:
+      - labels:
+        - P
+        properties:
+          id: p1
+      - labels:
+        - P
+        properties:
+          id: p2
+    to_vertex:
+      labels:
+      - P
+      properties:
+        id: p2
+
+  - from_vertex:
+      labels:
+      - P
+      properties:
+        id: p2
+    path:
+      - labels:
+        - S
+        properties:
+          id: s2
+      - labels:
+        - S
+        properties:
+          id: s1
+    to_vertex:
+      labels:
+      - P
+      properties:
+        id: p1
+
