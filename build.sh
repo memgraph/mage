@@ -15,7 +15,7 @@ mkdir -p build
 cd build
 cmake ..
 make
-cp ./*.so "$QUERY_MODULES_DIRECTORY"
+cp ./*/*.so "$QUERY_MODULES_DIRECTORY"
 popd
 
 # Build Python.

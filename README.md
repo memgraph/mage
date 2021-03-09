@@ -21,13 +21,10 @@ To build and install MAGE query modules you will need: **Make**, **CMake** and *
 ### Installing with Docker
 
 **1.** Run the `build.sh` script. It will generate a `dist` directory with all the needed files.  
-**2.** Run the following command where `dist` represents the path to your newly created `dist` directory:  
+**2.** Start Memgraph with the following command where `$(pwd)/dist` represents the path to your newly created `dist` directory:  
+
 ```
-docker volume create --driver local --opt type=none  --opt device=dist --opt o=bind dist
-```
-**3.** Start Memgraph with the following command:  
-```
-docker run -it --rm -v dist:/usr/lib/memgraph/query_modules -p 7687:7687 memgraph
+docker run -p 7687:7687 -v $(pwd)/dist:/usr/lib/memgraph/query_modules memgraph
 ```
 
 ### Installing without Docker
