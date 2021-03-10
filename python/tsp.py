@@ -197,8 +197,8 @@ def solve(context:mgp.ProcCtx,
 
     order = tsp_solving_methods[method](dm)
 
-    sources = [points[order[x]] for x in range(len(points) - 1)]
-    destinations = [points[order[x]] for x in range(1, len(points))]
+    sources = [points[order[x]] for x in range(len(order)-1)]
+    destinations = [points[order[x]] for x in range(1, len(order))]
 
     return mgp.Record(sources=sources, destinations=destinations)
 
