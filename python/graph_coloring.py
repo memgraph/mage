@@ -2,12 +2,12 @@ import mgp
 from collections import defaultdict
 from typing import List, Optional
 from graph_coloring.graph import Graph
-from graph_coloring.algorithms.meta_heuristics.quantum_annealing import QA
-from graph_coloring.error_functions.conflict_error import ConflictError
-from graph_coloring.operators.simple_mutation import SimpleMutation
-from graph_coloring.operators.multiple_mutation import MultipleMutation
-from graph_coloring.algorithms.greedy.LDO import LDO
-from graph_coloring.algorithms.greedy.SDO import SDO
+from graph_coloring import QA
+from graph_coloring import ConflictError
+from graph_coloring import SimpleMutation
+from graph_coloring import MultipleMutation
+from graph_coloring import LDO
+from graph_coloring import SDO
 
 
 @mgp.read_proc
