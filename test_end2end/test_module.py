@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from test_end2end.database import Memgraph, Node
+from .database import Memgraph, Node
 
 try:
     from mgclient import Node as ConnectorNode

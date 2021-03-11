@@ -1,7 +1,7 @@
 import os
 from typing import Any, Dict, Iterator, List, Union
-from test_end2end.database.connection import Connection
-from test_end2end.database.models import (
+from .connection import Connection
+from .models import (
     MemgraphConstraintExists,
     MemgraphConstraintUnique,
     MemgraphIndex,

@@ -7,34 +7,38 @@ from typing import List
 try:
     import networkx as nx
 except ImportError as import_error:
-    sys.stderr.write((
-        '\n'
-        'NOTE: Please install networkx to be able to use graph_analyzer '
-        'module. Using Python:\n'
-        + sys.version +
-        '\n'))
+    sys.stderr.write(
+        (
+            "\n"
+            "NOTE: Please install networkx to be able to use graph_analyzer "
+            "module. Using Python:\n" + sys.version + "\n"
+        )
+    )
     raise import_error
 
 
-DEFAULT_SOLVING_METHOD = '1.5_approx'
+DEFAULT_SOLVING_METHOD = "1.5_approx"
 KM_MULTIPLIER = 0.001
-LATITUDE = 'lat'
-LONGITUDE = 'lng'
-VALID_METRICS = ['m', 'km']
+LATITUDE = "lat"
+LONGITUDE = "lng"
+VALID_METRICS = ["m", "km"]
 
-def calculate_distance_between_points(start, end, metrics='m'):
-    '''
+
+def calculate_distance_between_points(start, end, metrics="m"):
+    """
     Returns distance based on the metrics between 2 points.
     :param start: Start node - dictionary with lat and lng
     :param end: End node - dictionary with lat and lng
     :param metrics: m - in metres, km - in kilometres
     :return: float distance
-    '''
+    """
 
-    if (LATITUDE not in start.keys()
+    if (
+        LATITUDE not in start.keys()
         or LONGITUDE not in start.keys()
         or LATITUDE not in end.keys()
-        or LONGITUDE not in end.keys()):
+        or LONGITUDE not in end.keys()
+    ):
         return None
 
     if not isinstance(metrics, str) or metrics.lower() not in VALID_METRICS:
@@ -45,7 +49,7 @@ def calculate_distance_between_points(start, end, metrics='m'):
     lat_2 = end[LATITUDE]
     lng_2 = end[LONGITUDE]
 
-    R = 6371E3
+    R = 6371e3
     pi_radians = math.pi / 180.00
 
     phi_1 = lat_1 * pi_radians
@@ -59,21 +63,21 @@ def calculate_distance_between_points(start, end, metrics='m'):
     a = sin_delta_phi ** 2 + math.cos(phi_1) * math.cos(phi_2) * (sin_delta_lambda ** 2)
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
-    #Distance in metres
+    # Distance in metres
     distance = R * c
 
-    if metrics.lower() == 'km':
+    if metrics.lower() == "km":
         distance *= KM_MULTIPLIER
 
     return distance
 
 
 def create_distance_matrix(points):
-    '''
+    """
     Creates a quadratic matrix of distances between points.
     :param points: List of dictionaries with lat and lng coordinates
     :return: Distance matrix
-    '''
+    """
 
     dm = np.zeros([len(points), len(points)])
 
@@ -88,11 +92,11 @@ def create_distance_matrix(points):
 
 
 def solve_2_approx(dm):
-    '''
+    """
     Solves the tsp_module problem with 2-approximation.
     :param dm: Distance matrix.
     :return: List of indices - path between them (based on distance matrix indexes)
-    '''
+    """
 
     mst = get_mst(dm)
     path = [x for x in nx.dfs_preorder_nodes(mst)]
@@ -102,11 +106,11 @@ def solve_2_approx(dm):
 
 
 def solve_1_5_approx(dm):
-    '''
+    """
     Solves the tsp_module problem with 1.5-approximation (Christofides algorithm).
     :param distance_matrix: Distance matrix.
     :return: List of indices - path between them (based on distance matrix indexes)
-    '''
+    """
 
     mst = get_mst(dm)
     odd_matchings = [x[0] for x in filter(lambda x: x[1] % 2 == 1, mst.degree)]
@@ -122,11 +126,11 @@ def solve_1_5_approx(dm):
 
 
 def solve_greedy(dm):
-    '''
+    """
     Solves the tsp_module problem with greedy method of taking the closest node to the last.
     :param distance_matrix: Distance matrix.
     :return: List of indices - path between them (based on distance matrix indexes)
-    '''
+    """
 
     path = []
     visited_vert = dict()
@@ -139,7 +143,11 @@ def solve_greedy(dm):
 
         for i in range(len(dm)):
             value = dm[last][i]
-            if last != i and (min_index == -1 or min_val > value) and i not in visited_vert.keys():
+            if (
+                last != i
+                and (min_index == -1 or min_val > value)
+                and i not in visited_vert.keys()
+            ):
                 min_index = i
                 min_val = value
 
@@ -152,19 +160,17 @@ def solve_greedy(dm):
 
 
 tsp_solving_methods = {
-    '2_approx':solve_2_approx,
-    'greedy':solve_greedy,
-    DEFAULT_SOLVING_METHOD:solve_1_5_approx,
+    "2_approx": solve_2_approx,
+    "greedy": solve_greedy,
+    DEFAULT_SOLVING_METHOD: solve_1_5_approx,
 }
 
 
 @mgp.read_proc
-def solve(context:mgp.ProcCtx,
-          points:List[mgp.Vertex],
-          method:str = DEFAULT_SOLVING_METHOD
-          ) -> mgp.Record(sources=List[mgp.Vertex],
-                          destinations=List[mgp.Vertex]):
-    '''
+def solve(
+    context: mgp.ProcCtx, points: List[mgp.Vertex], method: str = DEFAULT_SOLVING_METHOD
+) -> mgp.Record(sources=List[mgp.Vertex], destinations=List[mgp.Vertex]):
+    """
     The tsp_module solver returns 2 fields whose elements at indexes are correlated
 
       * `sources` - elements from 1st to n-1th element
@@ -180,14 +186,12 @@ def solve(context:mgp.ProcCtx,
     MATCH (n:Point)
     WITH collect(n) as points
     CALL tsp_module.solve(points) YIELD sources, destinations;
-    '''
+    """
 
     if not all(isinstance(x, mgp.Vertex) for x in points):
         return mgp.Record(sources=None, destinations=None)
 
-    dm = create_distance_matrix(
-        [dict(x.properties.items()) for x in points]
-    )
+    dm = create_distance_matrix([dict(x.properties.items()) for x in points])
 
     if dm is None:
         return mgp.Record(sources=None, destinations=None)
@@ -197,19 +201,19 @@ def solve(context:mgp.ProcCtx,
 
     order = tsp_solving_methods[method](dm)
 
-    sources = [points[order[x]] for x in range(len(order)-1)]
+    sources = [points[order[x]] for x in range(len(order) - 1)]
     destinations = [points[order[x]] for x in range(1, len(order))]
 
     return mgp.Record(sources=sources, destinations=destinations)
 
 
 def get_hamiltonian_circuit(euler_circuit):
-    '''
+    """
     Deletes duplicates of the Euler circuit in order to form hamiltonian circuit where no vertex is
     visited twice or more times
     :param euler_circuit: Eulerian path
     :return:
-    '''
+    """
 
     path = []
     [path.append(x[0]) for x in euler_circuit]
@@ -220,11 +224,11 @@ def get_hamiltonian_circuit(euler_circuit):
 
 
 def get_euler_circuit(tum_edges):
-    '''
+    """
     Uses nx library for finding an Eulerian circuit
     :param tum_edges: Union of mst and matchings edges
     :return: Eulerian path generator
-    '''
+    """
 
     g = nx.MultiGraph()
 
@@ -237,24 +241,27 @@ def get_euler_circuit(tum_edges):
 
 
 def get_perfect_matchings(odd_matchings):
-    '''
+    """
     Dummy perfect matchings method which takes every 2 vertexes and combines them to an edge
     #TODO, real perfect matchings with minimum cost
     :param odd_matchings: List of vertexes with odd degree
     :return: List of matched edges
-    '''
+    """
 
-    matched_edges = [(odd_matchings[i], odd_matchings[i+1]) for i in range(0, len(odd_matchings), 2)]
+    matched_edges = [
+        (odd_matchings[i], odd_matchings[i + 1])
+        for i in range(0, len(odd_matchings), 2)
+    ]
 
     return matched_edges
 
 
 def get_mst(dm):
-    '''
+    """
     Creates the minimum spanning tree using nx.
     :param dm: Distance matrix
     :return: Minimum spanning tree
-    '''
+    """
 
     g = nx.Graph()
 

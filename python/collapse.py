@@ -39,12 +39,16 @@ def collapse(
         RETURN from_vertex, nodes(path), to_vertex;
     """
     union_find = dict()
-    node_to_edge = set(collapse_pseudo_node_labels) if collapse_pseudo_node_labels else None
+    node_to_edge = (
+        set(collapse_pseudo_node_labels) if collapse_pseudo_node_labels else None
+    )
     vertices_id = {v.id for v in vertices}
     vertex_neighbours = []
     visited_global = set()
     for v in vertices:
-        paths, group = _bfs(v, vertices_id, collapse_edge_types, visited_global, node_to_edge)
+        paths, group = _bfs(
+            v, vertices_id, collapse_edge_types, visited_global, node_to_edge
+        )
         visited_global.update([child_id for child_id, _ in group.items()])
         union_find.update(group)
         vertex_neighbours.append((v, paths))
@@ -60,7 +64,9 @@ def collapse(
                 continue
             if to_node is None:
                 continue
-            records.append(mgp.Record(from_vertex=from_node, path=mgp_path, to_vertex=to_node))
+            records.append(
+                mgp.Record(from_vertex=from_node, path=mgp_path, to_vertex=to_node)
+            )
 
     return records
 
@@ -99,14 +105,20 @@ def groups(
         YIELD *
         RETURN top_vertex, collapsed_vertices;
     """
-    node_to_edge = set(collapse_pseudo_node_labels) if collapse_pseudo_node_labels else None
+    node_to_edge = (
+        set(collapse_pseudo_node_labels) if collapse_pseudo_node_labels else None
+    )
     vertices_id = {v.id for v in vertices}
     records = []
     visited_global = set()
     for v in vertices:
-        _, group = _bfs(v, vertices_id, collapse_edge_types,visited_global, node_to_edge)
+        _, group = _bfs(
+            v, vertices_id, collapse_edge_types, visited_global, node_to_edge
+        )
         visited_global.update([child_id for child_id, _ in group.items()])
-        children = [context.graph.get_vertex_by_id(child_id) for child_id, _ in group.items()]
+        children = [
+            context.graph.get_vertex_by_id(child_id) for child_id, _ in group.items()
+        ]
         records.append(mgp.Record(top_vertex=v, collapsed_vertices=children))
 
     return records
@@ -134,15 +146,24 @@ def _bfs(
             out_vertex = out_edge.to_vertex
 
             out_vertex_labels = {o.name for o in out_vertex.labels}
-            if collapse_pseudo_node_labels and collapse_pseudo_node_labels.intersection(
-                out_vertex_labels
+            if (
+                collapse_pseudo_node_labels
+                and collapse_pseudo_node_labels.intersection(out_vertex_labels)
             ):
                 _check_edges(
-                    out_vertex, out_vertex.in_edges, out_vertex.out_edges, collapse_edge_types
+                    out_vertex,
+                    out_vertex.in_edges,
+                    out_vertex.out_edges,
+                    collapse_edge_types,
                 )
-                out_edges.append([next(out_vertex.in_edges), next(out_vertex.out_edges)])
+                out_edges.append(
+                    [next(out_vertex.in_edges), next(out_vertex.out_edges)]
+                )
                 continue
-            if out_edge.type.name not in collapse_edge_types or out_vertex.id in target_vertices_id:
+            if (
+                out_edge.type.name not in collapse_edge_types
+                or out_vertex.id in target_vertices_id
+            ):
                 out_edges.append([out_edge])
                 continue
             if out_vertex.id in visited:
