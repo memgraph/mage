@@ -1,13 +1,13 @@
 import mgp
 from collections import defaultdict
 from typing import List, Optional
-from graph_coloring.graph import Graph
-from graph_coloring import QA
-from graph_coloring import ConflictError
-from graph_coloring import SimpleMutation
-from graph_coloring import MultipleMutation
-from graph_coloring import LDO
-from graph_coloring import SDO
+from graph_coloring_module import Graph
+from graph_coloring_module import QA
+from graph_coloring_module import ConflictError
+from graph_coloring_module import SimpleMutation
+from graph_coloring_module import MultipleMutation
+from graph_coloring_module import LDO
+from graph_coloring_module import SDO
 
 
 @mgp.read_proc

@@ -19,11 +19,11 @@ RUN apt-get install -y git cmake make gcc g++ libssl-dev && \
 # Install pymgclient
 RUN git clone https://github.com/memgraph/pymgclient /pymgclient && \
   cd pymgclient && \
-  python3 setup.py build && \
+  python3 setup.py build&& \
   python3 setup.py install
 
 # Set the working directory in the container
-WORKDIR /python
+WORKDIR /mage
 
 # Copy the dependencies file to the working directory
 #COPY requirements.txt .
@@ -32,10 +32,8 @@ WORKDIR /python
 #RUN pip install -r requirements.txt
 
 # Copy the content of the local src directory to the working directory
-COPY . .
+COPY python/ .
 
-# Copy module to memgraph
-ADD python/graph_coloring.py /usr/lib/memgraph/query_modules
-
+#ADD python/graph_coloring.py /usr/lib/memgraph/query_modules
 # Command to run on container start
-CMD [ "python" ]
+CMD [ "python", "./graph_coloring/test.py" ]
