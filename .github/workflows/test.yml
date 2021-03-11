@@ -8,9 +8,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    - name: Build project
-      run: |
-        docker build -t memgraph:mage .
     - name: Cache Memgraph Docker image
       id: cache-memgraph-docker
       uses: actions/cache@v1
@@ -27,10 +24,12 @@ jobs:
     - name: Load Memgraph Docker image
       run: |
         docker load -i ~/memgraph/memgraph-docker.tar.gz
+    - name: Build project
+      run: |
+        docker build -t memgraph:mage .
     - name: Run Memgraph MAGE image
       run: |
         docker run -d -p 7687:7687 memgraph:mage
-
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
