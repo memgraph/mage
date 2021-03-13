@@ -124,12 +124,12 @@ fn add_read_procedure(
     }
 }
 
-fn add_result_type(
+fn add_int_result_type(
     procedure: *mut mgp_proc,
     name: String,
 ) -> Result<(), MgpAddProcedureParameterTypeError> {
     unsafe {
-        if !mgp_proc_add_result(
+        if mgp_proc_add_result(
             procedure,
             CString::new(name.into_bytes())
                 .expect("A valid argument name.")
@@ -150,22 +150,41 @@ extern "C" fn test_procedure(
     result: *mut mgp_result,
     memory: *mut mgp_memory,
 ) {
-    match make_result_record(result) {
-        Ok(mgp_record) => match make_int_value(0, result, memory) {
-            Ok(mgp_value) => {
-                match insert_result_record(&mgp_record, "a".to_string(), &mgp_value, result) {
-                    Ok(_) => {}
+    for index in 1..10 {
+        match make_result_record(result) {
+            Ok(mgp_record) => {
+                match make_int_value(index, result, memory) {
+                    Ok(mgp_value) => {
+                        match insert_result_record(&mgp_record, "a".to_string(), &mgp_value, result)
+                        {
+                            Ok(_) => {}
+                            Err(_) => {
+                                return;
+                            }
+                        }
+                    }
                     Err(_) => {
                         return;
                     }
-                }
+                };
+                match make_int_value(index * 100, result, memory) {
+                    Ok(mgp_value) => {
+                        match insert_result_record(&mgp_record, "b".to_string(), &mgp_value, result)
+                        {
+                            Ok(_) => {}
+                            Err(_) => {
+                                return;
+                            }
+                        }
+                    }
+                    Err(_) => {
+                        return;
+                    }
+                };
             }
             Err(_) => {
                 return;
             }
-        },
-        Err(_) => {
-            return;
         }
     }
 }
@@ -173,14 +192,19 @@ extern "C" fn test_procedure(
 #[no_mangle]
 pub extern "C" fn mgp_init_module(module: *mut mgp_module, _memory: *mut mgp_memory) -> c_int {
     let procedure = add_read_procedure(test_procedure, "test_procedure".to_string(), module);
-    match add_result_type(procedure, "a".to_string()) {
-        Ok(_) => {
-            return 0;
-        }
+    match add_int_result_type(procedure, "a".to_string()) {
+        Ok(_) => {}
         Err(_) => {
             return 1;
         }
     }
+    match add_int_result_type(procedure, "b".to_string()) {
+        Ok(_) => {}
+        Err(_) => {
+            return 1;
+        }
+    }
+    0
 }
 
 #[no_mangle]
