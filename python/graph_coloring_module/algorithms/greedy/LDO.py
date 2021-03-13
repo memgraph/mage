@@ -22,7 +22,7 @@ class LDO(Algorithm):
             self,
             graph: Graph,
             parameters: Dict[str, Any] = None) -> Individual:
-        """Returns the Individual that is the result of the LDO algorithm."""
+        """Returns the Individual that represents the result of the LDO algorithm."""
 
         no_of_colors = param_value(graph, parameters, "no_of_colors")
 

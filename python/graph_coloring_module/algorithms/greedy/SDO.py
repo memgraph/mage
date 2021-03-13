@@ -8,6 +8,11 @@ from graph_coloring_module.framework.parameters_utils import param_value
 from graph_coloring_module.utils.available_colors import available_colors
 from graph_coloring_module.utils.validation import validate
 
+def _get_non_processed_node(processed):
+    for i, flag in enumerate(processed):
+        if not flag:
+            return i
+    return None
 
 class SDO(Algorithm):
     """A class that represents SDO greedy algorithm. This algorithm sorts nodes considering
@@ -31,24 +36,27 @@ class SDO(Algorithm):
         processed = [False for _ in graph.nodes]
         saturation_degrees = [0 for _ in graph.nodes]
         chromosome = [-1 for _ in graph.nodes]
-        sorted_nodes = PriorityQueue()
-        sorted_nodes.put((0, 0))
 
-        while not sorted_nodes.empty():
-            node = sorted_nodes.get()[1]
-            if not processed[node]:
-                processed[node] = True
+        while _get_non_processed_node(processed) is not None:
+            current_node = _get_non_processed_node(processed)
+            sorted_nodes = PriorityQueue()
+            sorted_nodes.put((saturation_degrees[current_node], current_node))
 
-                colors = available_colors(graph, no_of_colors, chromosome, node)
-                if len(colors) > 0:
-                    color = random.sample(colors, 1)[0]
-                else:
-                    color = random.randint(0, no_of_colors - 1)
-                chromosome[node] = color
+            while not sorted_nodes.empty():
+                node = sorted_nodes.get()[1]
+                if not processed[node]:
+                    processed[node] = True
 
-                for neigh in graph[node]:
-                    if not processed[node]:
-                        saturation_degrees[neigh] += 1
-                        sorted_nodes.put((-1 * saturation_degrees[neigh], neigh))
+                    colors = available_colors(graph, no_of_colors, chromosome, node)
+                    if len(colors) > 0:
+                        color = random.sample(colors, 1)[0]
+                    else:
+                        color = random.randint(0, no_of_colors - 1)
+                    chromosome[node] = color
+
+                    for neigh in graph[node]:
+                        if not processed[neigh]:
+                            saturation_degrees[neigh] += 1
+                            sorted_nodes.put((-1 * saturation_degrees[neigh], neigh))
 
         return Individual(no_of_colors, graph, chromosome)
