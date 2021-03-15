@@ -45,7 +45,7 @@ def error_func(graph, individual):
     return individual.conflicts_weight
 
 
-def test_chain_population_best_individual(chain_population):
+def test_chain_population_best_individual(chain_population, chain_chunk_population):
     result_indv = chain_population.best_individual(error_func)
     expected_indv = chain_population[1]
     assert result_indv == expected_indv
@@ -86,12 +86,14 @@ def test_chain_population_sum_conflicts_weight(chain_population):
     expected_indv = 7
     assert math.fabs(result_indv - expected_indv) < 1e-5
 
+
 def test_chain_population_correlation(chain_population):
     result = chain_population.correlation
     expected = [2, 2, 2]
     assert expected == result
 
-def test_update(chain_population, graph):
+
+def test_set_individual(chain_population, graph):
     new_indv = Individual(no_of_colors=3, graph=graph, chromosome=[1, 2, 2, 2, 1])
     correlation_diff = chain_population.set_individual(1, new_indv, [2])
     assert correlation_diff == -8
