@@ -39,6 +39,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install black neo4j==1.7.3 pyyaml pytest flake8
         pip install pytest-pylint pytest-timeout pytest-cov pytest-benchmark pytest-flake8 pytest-black
+        pip install -r ./python/requirements.txt
 
     - name: Test Python modules
       env:
