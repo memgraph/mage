@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from graph_coloring_module.components.individual import Individual
 from graph_coloring_module.graph import Graph
 from graph_coloring_module.components.population import Population
@@ -26,13 +26,17 @@ class ChainPopulation(Population):
         """Returns the index of the correlation with the next individual in the chain of individuals."""
         return ind
 
-    def get_prev_individual(self, ind: int) -> Individual:
+    def get_prev_individual(self, ind: int) -> Optional[Individual]:
         """Returns the individual that precedes the individual on index ind."""
+        if ind < 0 or ind >= self.size:
+            return None
         prev_ind = ind - 1 if ind - 1 >= 0 else self.size - 1
         return self.individuals[prev_ind]
 
-    def get_next_individual(self, ind: int) -> Individual:
+    def get_next_individual(self, ind: int) -> Optional[Individual]:
         """Returns the individual that follows the individual on index ind."""
+        if ind < 0 or ind >= self.size:
+            return None
         next_ind = ind + 1 if ind + 1 < self.size else 0
         return self.individuals[next_ind]
 

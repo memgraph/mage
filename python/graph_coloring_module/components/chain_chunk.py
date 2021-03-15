@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from graph_coloring_module.components.individual import Individual
 from graph_coloring_module.components.population import Population
 from graph_coloring_module.graph import Graph
@@ -33,14 +33,18 @@ class ChainChunk(Population):
         """Returns the index of the correlation with the next individual in the chain of individuals."""
         return ind
 
-    def get_prev_individual(self, ind: int) -> Individual:
+    def get_prev_individual(self, ind: int) -> Optional[Individual]:
         """Returns the individual that precedes the individual on index ind."""
-        if ind - 1 < 0:
+        if ind < 0 or ind >= self.size:
+            return None
+        if ind == 0:
             return self._prev_indv
         return self.individuals[ind - 1]
 
     def get_next_individual(self, ind: int) -> Individual:
         """Returns the individual that follows the individual on index ind."""
+        if ind < 0 or ind >= self.size:
+            return None
         if ind + 1 == self.size:
             return self._next_indv
         return self.individuals[ind + 1]

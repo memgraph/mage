@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Callable, Tuple
+from typing import List, Callable, Tuple, Optional
 from graph_coloring_module.components.individual import Individual
 from graph_coloring_module.graph import Graph
 
@@ -50,12 +50,12 @@ class Population(ABC):
         pass
 
     @abstractmethod
-    def get_prev_individual(self, ind: int) -> Individual:
+    def get_prev_individual(self, ind: int) -> Optional[Individual]:
         """Returns the individual that precedes the individual on a given index in the individuals chain."""
         pass
 
     @abstractmethod
-    def get_next_individual(self, ind: int) -> Individual:
+    def get_next_individual(self, ind: int) -> Optional[Individual]:
         """Returns the individual following the individual on a given index in the individuals chain."""
         pass
 

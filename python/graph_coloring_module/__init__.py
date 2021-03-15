@@ -6,3 +6,7 @@ from .algorithms.greedy.LDO import LDO
 from .algorithms.greedy.SDO import SDO
 from .algorithms.greedy.random import Random
 from .graph import Graph
+from .components.individual import Individual
+from .components.population import Population
+from .components.chain_chunk import ChainChunk
+from .components.chain_population import ChainPopulation

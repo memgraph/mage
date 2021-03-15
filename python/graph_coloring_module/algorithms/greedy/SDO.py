@@ -8,12 +8,6 @@ from graph_coloring_module.framework.parameters_utils import param_value
 from graph_coloring_module.utils.available_colors import available_colors
 from graph_coloring_module.utils.validation import validate
 
-def _get_non_processed_node(processed):
-    for i, flag in enumerate(processed):
-        if not flag:
-            return i
-    return None
-
 class SDO(Algorithm):
     """A class that represents SDO greedy algorithm. This algorithm sorts nodes considering
     their saturation degrees and then colors them sequentially. The saturation degree of a
@@ -37,8 +31,8 @@ class SDO(Algorithm):
         saturation_degrees = [0 for _ in graph.nodes]
         chromosome = [-1 for _ in graph.nodes]
 
-        while _get_non_processed_node(processed) is not None:
-            current_node = _get_non_processed_node(processed)
+        while self._get_non_processed_node(processed) is not None:
+            current_node = self._get_non_processed_node(processed)
             sorted_nodes = PriorityQueue()
             sorted_nodes.put((saturation_degrees[current_node], current_node))
 
@@ -60,3 +54,9 @@ class SDO(Algorithm):
                             sorted_nodes.put((-1 * saturation_degrees[neigh], neigh))
 
         return Individual(no_of_colors, graph, chromosome)
+    
+    def _get_non_processed_node(self, processed):
+        for i, flag in enumerate(processed):
+            if not flag:
+                return i
+        return None
