@@ -1,6 +1,6 @@
 import random
 from graph_coloring_module.operators.mutation import Mutation
-from graph_coloring_module import Dict, Any, Tuple, List
+from typing import Dict, Any, Tuple, List
 from graph_coloring_module.graph import Graph
 from graph_coloring_module.components.individual import Individual
 
@@ -45,5 +45,4 @@ class MISMutation(Mutation):
             if include:
                 MIS.append(node)
                 MIS_flags[node] = True
-
         return MIS

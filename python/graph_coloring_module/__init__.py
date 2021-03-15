@@ -1,7 +1,5 @@
 from .algorithms.meta_heuristics.quantum_annealing import QA
 from .error_functions.conflict_error import ConflictError
-from .operators.simple_mutation import SimpleMutation
-from .operators.multiple_mutation import MultipleMutation
 from .algorithms.greedy.LDO import LDO
 from .algorithms.greedy.SDO import SDO
 from .algorithms.greedy.random import Random
@@ -10,3 +8,7 @@ from .components.individual import Individual
 from .components.population import Population
 from .components.chain_chunk import ChainChunk
 from .components.chain_population import ChainPopulation
+from .operators.MIS_mutation import MISMutation
+from .operators.multiple_mutation import MultipleMutation
+from .operators.random_mutation import RandomMutation
+from .operators.simple_mutation import SimpleMutation
