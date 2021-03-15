@@ -16,28 +16,13 @@
 #                                    +---------------+
 
 query: >
-  MATCH (n:P) WITH COLLECT(n) AS nodes
-  CALL collapse.collapse(nodes, ["Edge"])
-  YIELD from_vertex, path, to_vertex
-  RETURN from_vertex, nodes(path) AS path, to_vertex
+    MATCH (n:P) WITH COLLECT(n) AS nodes
+    CALL collapse.collapse(nodes, ['Edge'])
+    YIELD from_vertex, path, to_vertex
+    WITH from_vertex.id AS from_vertex, nodes(path) AS path, to_vertex.id AS to_vertex
+    RETURN from_vertex, extract(node IN path | node.id) AS path, to_vertex
 
 output:
-  - from_vertex:
-      labels:
-      - P
-      properties:
-        id: p2
-    path:
-    - labels:
-      - S
-      properties:
-        id: s3
-    - labels:
-      - S
-      properties:
-        id: s2
-    to_vertex:
-      labels:
-      - P
-      properties:
-        id: p1
+  - from_vertex: p2
+    path: [s3, s2]
+    to_vertex: p1

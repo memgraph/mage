@@ -10,7 +10,6 @@ except ImportError:
     from neo4j.types import Node as ConnectorNode
 
 
-
 @pytest.fixture
 def db():
     return Memgraph()
@@ -26,8 +25,8 @@ class TestConstants:
 
 
 def _node_to_dict(data):
-    labels = data.labels if hasattr(data, 'labels') else data._labels
-    properties = data.properties if hasattr(data, 'properties') else data._properties
+    labels = data.labels if hasattr(data, "labels") else data._labels
+    properties = data.properties if hasattr(data, "properties") else data._properties
     return {"labels": list(labels), "properties": properties}
 
 
@@ -46,7 +45,7 @@ def prepare_tests():
     test_path = Path().cwd()
     for module_test_dir in test_path.iterdir():
         if not module_test_dir.is_dir() or not module_test_dir.name.endswith(
-                TestConstants.TEST_DIR_ENDING
+            TestConstants.TEST_DIR_ENDING
         ):
             continue
 

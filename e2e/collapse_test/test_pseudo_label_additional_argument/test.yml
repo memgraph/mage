@@ -1,14 +1,9 @@
 query: >
     MATCH (n:P) WITH COLLECT(n) AS nodes
-    CALL collapse.collapse(nodes, ['Edge'])
+    CALL collapse.collapse(nodes, ['Edge', 'Transport'], ['T'])
     YIELD from_vertex, path, to_vertex
     WITH from_vertex.id AS from_vertex, nodes(path) AS path, to_vertex.id AS to_vertex
     RETURN from_vertex, extract(node IN path | node.id) AS path, to_vertex
 
-output:
-- from_vertex: p1
-  path: [p1, p2]
-  to_vertex: p2
-- from_vertex: p2
-  path: [s2, s1]
-  to_vertex: p1
+exception: >
+    Testing the exception of adding additional pseudo-label argument

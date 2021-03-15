@@ -1,6 +1,6 @@
 import mgp
 import itertools
-from mage.distance_calculator import calculate_distance_between_points
+from mage.geography import calculate_distance_between_points
 from typing import List
 
 

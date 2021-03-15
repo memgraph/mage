@@ -1,4 +1,5 @@
 import math
+from typing import Dict
 
 KM_MULTIPLIER = 0.001
 LATITUDE = "lat"
@@ -6,7 +7,9 @@ LONGITUDE = "lng"
 VALID_METRICS = ["m", "km"]
 
 
-def calculate_distance_between_points(start, end, metrics="m"):
+def calculate_distance_between_points(
+    start: Dict[str, float], end: Dict[str, float], metrics="m"
+):
     """
     Returns distance based on the metrics between 2 points.
     :param start: Start node - dictionary with lat and lng

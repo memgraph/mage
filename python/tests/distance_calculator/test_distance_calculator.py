@@ -1,5 +1,5 @@
 import pytest
-from mage.distance_calculator import calculate_distance_between_points
+from mage.geography import calculate_distance_between_points
 
 
 @pytest.fixture
