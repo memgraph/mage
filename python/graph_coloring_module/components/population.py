@@ -178,15 +178,20 @@ class Population(ABC):
                 self._contains_solution = True
 
     def _update_metrics(self, ind: int, old_indv: Individual) -> None:
+        if self._contains_solution:
+            self._contains_solution = False
+
         indv = self.individuals[ind]
         self._sum_conflicts_weight -= old_indv.conflicts_weight
         self._sum_conflicts_weight += indv.conflicts_weight
-        if indv.conflicts_weight <= 0:
-            self._contains_solution = True
+
         best_conflicts_weight = self._best_individuals[ind].conflicts_weight
         new_conflicts_weight = indv.conflicts_weight
         if new_conflicts_weight < best_conflicts_weight:
             self._best_individuals[ind] = indv
+        for ind in range(self.size):
+            if self.individuals[ind].conflicts_weight == 0:
+                self._contains_solution = True
 
     def _update_correlation(self, ind: int, old_indv: Individual, nodes: List[int]) -> int:
         next_corr_ind = self._get_next_correlation_ind(ind)
