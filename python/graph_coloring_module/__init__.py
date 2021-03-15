@@ -12,3 +12,4 @@ from .operators.MIS_mutation import MISMutation
 from .operators.multiple_mutation import MultipleMutation
 from .operators.random_mutation import RandomMutation
 from .operators.simple_mutation import SimpleMutation
+from .utils.available_colors import available_colors
