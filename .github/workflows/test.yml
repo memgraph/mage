@@ -29,7 +29,7 @@ jobs:
         docker build -t memgraph:mage .
     - name: Run Memgraph MAGE image
       run: |
-        docker run -d -p 7687:7687 memgraph:mage
+        docker run -d -p 7687:7687 memgraph:mage --telemetry-enabled=False
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
