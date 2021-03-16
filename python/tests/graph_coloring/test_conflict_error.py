@@ -2,10 +2,10 @@ import random
 import pytest
 import math
 
-from graph_coloring_module import Individual
-from graph_coloring_module import ChainPopulation
-from graph_coloring_module import ConflictError
-from graph_coloring_module import Graph
+from mage.graph_coloring_module import Individual
+from mage.graph_coloring_module import ChainPopulation
+from mage.graph_coloring_module import ConflictError
+from mage.graph_coloring_module import Graph
 
 
 @pytest.fixture

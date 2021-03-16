@@ -1,7 +1,7 @@
 import random
 import pytest
-from graph_coloring_module import SDO
-from graph_coloring_module import Graph
+from mage.graph_coloring_module import SDO
+from mage.graph_coloring_module import Graph
 
 @pytest.fixture
 def set_seed():

@@ -1,8 +1,8 @@
 import pytest
 
-from graph_coloring_module import Individual
-from graph_coloring_module import ChainPopulation
-from graph_coloring_module import Graph
+from mage.graph_coloring_module import Individual
+from mage.graph_coloring_module import ChainPopulation
+from mage.graph_coloring_module import Graph
 import math
 
 def graph():

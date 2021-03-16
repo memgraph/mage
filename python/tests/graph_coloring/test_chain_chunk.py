@@ -1,8 +1,8 @@
 import pytest
 
-from graph_coloring_module import Individual
-from graph_coloring_module import ChainChunk
-from graph_coloring_module import Graph
+from mage.graph_coloring_module import Individual
+from mage.graph_coloring_module import ChainChunk
+from mage.graph_coloring_module import Graph
 
 @pytest.fixture
 def chain_chunk_population():

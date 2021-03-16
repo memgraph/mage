@@ -1,7 +1,7 @@
 import pytest
 
-from graph_coloring_module import available_colors
-from graph_coloring_module import Graph
+from mage.graph_coloring_module import available_colors
+from mage.graph_coloring_module import Graph
 
 
 @pytest.fixture

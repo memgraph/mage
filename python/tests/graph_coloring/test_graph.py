@@ -1,6 +1,6 @@
 import pytest
 from typing import List, Tuple, Any
-from graph_coloring_module import Graph
+from mage.graph_coloring_module import Graph
 
 
 @pytest.mark.parametrize("node, neighs", [

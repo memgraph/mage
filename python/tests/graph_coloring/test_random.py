@@ -1,7 +1,7 @@
 import random
 import pytest
-from graph_coloring_module import LDO
-from graph_coloring_module import Graph
+from mage.graph_coloring_module import Random
+from mage.graph_coloring_module import Graph
 
 @pytest.fixture
 def set_seed():
@@ -31,23 +31,23 @@ def graph_not_connected():
             4 : [(3, 3)]
         })
 
-def test_LDO(set_seed, graph_1):
-    algorithm = LDO()
+def test_Random(set_seed, graph_1):
+    algorithm = Random()
     individual = algorithm.run(graph_1, {"no_of_colors": 3})
 
-    expected_result = [0, 2, 1, 2, 0]
+    expected_result = [2, 0, 0, 2, 1]
     assert individual.chromosome == expected_result
 
 def test_not_connected_graph(set_seed, graph_not_connected):
-    algorithm = LDO()
+    algorithm = Random()
     individual = algorithm.run(graph_not_connected, {"no_of_colors": 3})
 
-    expected_result = [0, 2, 1, 2, 0]
+    expected_result = [2, 0, 0, 2, 1]
     assert individual.chromosome == expected_result
 
 def test_empty_graph(set_seed):
     graph = Graph([],{})
-    algorithm = LDO()
+    algorithm = Random()
     individual = algorithm.run(graph, {"no_of_colors": 3})
 
     expected_result = []

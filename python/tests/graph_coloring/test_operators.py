@@ -1,12 +1,12 @@
 import random
 import pytest
 
-from graph_coloring_module import Graph
-from graph_coloring_module import Individual
-from graph_coloring_module import MISMutation
-from graph_coloring_module import MultipleMutation
-from graph_coloring_module import RandomMutation
-from graph_coloring_module import SimpleMutation
+from mage.graph_coloring_module import Graph
+from mage.graph_coloring_module import Individual
+from mage.graph_coloring_module import MISMutation
+from mage.graph_coloring_module import MultipleMutation
+from mage.graph_coloring_module import RandomMutation
+from mage.graph_coloring_module import SimpleMutation
 
 @pytest.fixture
 def set_seed():
