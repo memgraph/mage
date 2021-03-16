@@ -49,7 +49,7 @@ def collapse(
         paths, group = _bfs(
             v, vertices_id, collapse_edge_types, visited_global, node_to_edge
         )
-        visited_global.update([child_id for child_id, _ in group.items()])
+        visited_global.update([child_id for child_id in group.keys()])
         union_find.update(group)
         vertex_neighbours.append((v, paths))
 
@@ -115,9 +115,9 @@ def groups(
         _, group = _bfs(
             v, vertices_id, collapse_edge_types, visited_global, node_to_edge
         )
-        visited_global.update([child_id for child_id, _ in group.items()])
+        visited_global.update(group.keys())
         children = [
-            context.graph.get_vertex_by_id(child_id) for child_id, _ in group.items()
+            context.graph.get_vertex_by_id(child_id) for child_id in group.keys()
         ]
         records.append(mgp.Record(top_vertex=v, collapsed_vertices=children))
 

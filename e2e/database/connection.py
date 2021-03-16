@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Iterator
-from .models import Node, Relationship
+from database.models import Node, Relationship
 
 _use_mgclient = True
 try:

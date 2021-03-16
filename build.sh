@@ -22,6 +22,7 @@ popd
 pushd "$PY_DIRECTORY"
 rsync -a --exclude='tests' \
          --exclude='pytest.ini' \
+         --exclude='htmlcov' \
          --exclude='.*' \
          . "$QUERY_MODULES_DIRECTORY"
 popd

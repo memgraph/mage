@@ -7,9 +7,8 @@ try:
 except ImportError as import_error:
     sys.stderr.write(
         (
-            "\n"
-            "NOTE: Please install gekko in order to be able to use set-cover solver"
-            "Using Python:\n" + sys.version + "\n"
+            f"NOTE: Please install gekko in order to be "
+            f"able to use set-cover solver. Using Python: {sys.version}"
         )
     )
     raise import_error

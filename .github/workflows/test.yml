@@ -37,13 +37,12 @@ jobs:
     - name: Install dependencies
       run:
         python -m pip install --upgrade pip
-        pip install black neo4j==1.7.3 pyyaml pytest flake8
-        pip install pytest-pylint pytest-timeout pytest-cov pytest-benchmark pytest-flake8 pytest-black
+        pip install -r ./python/tests/requirements.txt
         pip install -r ./python/requirements.txt
 
     - name: Test Python modules
       env:
-        PYTHONPATH: '$PWD/python'
+        PYTHONPATH: '$PWD/python:$PWD/e2e'
       run: |
         (cd python && python -m pytest .)
     - name: Test End-to-end

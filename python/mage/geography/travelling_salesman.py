@@ -8,9 +8,8 @@ try:
 except ImportError as import_error:
     sys.stderr.write(
         (
-            "\n"
-            "NOTE: Please install networkx to be able to use graph_analyzer "
-            "module. Using Python:\n" + sys.version + "\n"
+            f"NOTE: Please install networkx to be able to"
+            f"use graph_analyzer module. Using Python: {sys.version}"
         )
     )
     raise import_error

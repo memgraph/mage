@@ -8,10 +8,9 @@ try:
 except ImportError as import_error:
     sys.stderr.write(
         (
-            "\n"
-            "NOTE: Please install networkx, numpy, scipy to be able to "
-            "use proxied NetworkX algorithms. E.g., CALL nxalg.pagerank(...).\n"
-            "Using Python:\n" + sys.version + "\n"
+            f"NOTE: Please install networkx, numpy, scipy to be able to "
+            f"use proxied NetworkX algorithms. E.g., CALL nxalg.pagerank(...).\n"
+            f"Using Python:\n{sys.version}\n"
         )
     )
     raise import_error

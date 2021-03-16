@@ -1,8 +1,8 @@
-from pathlib import Path
-
 import pytest
 import yaml
-from .database import Memgraph, Node
+
+from pathlib import Path
+from database import Memgraph, Node
 
 try:
     from mgclient import Node as ConnectorNode
