@@ -1,5 +1,5 @@
 from typing import List
-from graph_coloring_module.graph import Graph
+from mage.graph_coloring_module import Graph
 
 
 def available_colors(

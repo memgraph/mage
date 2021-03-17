@@ -3,11 +3,11 @@ import random
 import logging
 import multiprocessing as mp
 from typing import Dict, Any, List
-from graph_coloring_module.graph import Graph
-from graph_coloring_module.components.population import Population
-from graph_coloring_module.framework.parameters_utils import param_value
-from graph_coloring_module.utils.validation import validate
-from graph_coloring_module.algorithms.meta_heuristics.parallel_algorithm import ParallelAlgorithm
+from mage.graph_coloring_module import Graph
+from mage.graph_coloring_module import Population
+from mage.graph_coloring_module import param_value
+from mage.graph_coloring_module import validate
+from mage.graph_coloring_module import ParallelAlgorithm
 
 
 logger = logging.getLogger('telco')

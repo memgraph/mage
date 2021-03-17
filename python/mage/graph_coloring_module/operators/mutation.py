@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Tuple, List
-from graph_coloring_module.graph import Graph
-from graph_coloring_module.components.individual import Individual
+from mage.graph_coloring_module import Graph
+from mage.graph_coloring_module import Individual
 
 
 class Mutation(ABC):

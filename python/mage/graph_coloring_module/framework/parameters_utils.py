@@ -1,6 +1,6 @@
 import types
 from typing import Dict, Any
-from graph_coloring_module.graph import Graph
+from mage.graph_coloring_module import Graph
 
 
 def param_value(

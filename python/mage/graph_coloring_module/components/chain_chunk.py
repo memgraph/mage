@@ -1,7 +1,7 @@
 from typing import List, Optional
-from graph_coloring_module.components.individual import Individual
-from graph_coloring_module.components.population import Population
-from graph_coloring_module.graph import Graph
+from mage.graph_coloring_module import Individual
+from mage.graph_coloring_module import Population
+from mage.graph_coloring_module import Graph
 
 
 class ChainChunk(Population):

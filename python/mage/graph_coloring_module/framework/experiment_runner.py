@@ -6,9 +6,9 @@ import datetime
 import glob
 import os
 import logging
-from graph_coloring_module.loaders.dimacs_loader import load_dimacs
-from graph_coloring_module.algorithms.algorithm import Algorithm
-from graph_coloring_module.framework.output_functions import write_to_file
+from mage.graph_coloring_module import load_dimacs
+from mage.graph_coloring_module import Algorithm
+from mage.graph_coloring_module import write_to_file
 
 
 logger = logging.getLogger('telco')

@@ -1,14 +1,14 @@
 import logging
 from typing import Dict, Any, Optional, Tuple
-from graph_coloring_module.graph import Graph
-from graph_coloring_module.population_factory import create
-from graph_coloring_module.error_functions.error import Error
-from graph_coloring_module.components.individual import Individual
-from graph_coloring_module.components.population import Population
-from graph_coloring_module.algorithms.algorithm import Algorithm
-from graph_coloring_module.framework.parameters_utils import param_value
-from graph_coloring_module.utils.validation import validate
-from graph_coloring_module.communication.message import Message
+from mage.graph_coloring_module import Graph
+from mage.graph_coloring_module import create
+from mage.graph_coloring_module import Error
+from mage.graph_coloring_module import Individual
+from mage.graph_coloring_module import Population
+from mage.graph_coloring_module import Algorithm
+from mage.graph_coloring_module import param_value
+from mage.graph_coloring_module import validate
+from mage.graph_coloring_module import Message
 import multiprocessing as mp
 from abc import ABC, abstractmethod
 

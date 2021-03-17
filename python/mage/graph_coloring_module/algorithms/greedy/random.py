@@ -1,9 +1,9 @@
 from typing import Dict, Any
-from graph_coloring_module.graph import Graph
-from graph_coloring_module.components.individual import Individual
-from graph_coloring_module.algorithms.algorithm import Algorithm
-from graph_coloring_module.framework.parameters_utils import param_value
-from graph_coloring_module.utils.validation import validate
+from mage.graph_coloring_module import Graph
+from mage.graph_coloring_module import Individual
+from mage.graph_coloring_module import Algorithm
+from mage.graph_coloring_module import param_value
+from mage.graph_coloring_module import validate
 
 
 class Random(Algorithm):

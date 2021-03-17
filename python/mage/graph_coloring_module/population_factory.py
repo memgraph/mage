@@ -1,12 +1,12 @@
 import logging
 from typing import Dict, Any, Optional, List
-from graph_coloring_module.graph import Graph
-from graph_coloring_module.components.population import Population
-from graph_coloring_module.components.individual import Individual
-from graph_coloring_module.components.chain_chunk import ChainChunk
-from graph_coloring_module.components.chain_population import ChainPopulation
-from graph_coloring_module.framework.parameters_utils import param_value
-from graph_coloring_module.utils.validation import validate
+from mage.graph_coloring_module import Graph
+from mage.graph_coloring_module import Population
+from mage.graph_coloring_module import Individual
+from mage.graph_coloring_module import ChainChunk
+from mage.graph_coloring_module import ChainPopulation
+from mage.graph_coloring_module import param_value
+from mage.graph_coloring_module import validate
 
 
 logger = logging.getLogger('telco')

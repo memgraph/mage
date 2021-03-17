@@ -1,6 +1,6 @@
-from graph_coloring_module import query
-from graph_coloring_module.graph import Graph
-from graph_coloring_module.components.individual import Individual
+from mage.graph_coloring_module import query
+from mage.graph_coloring_module import Graph
+from mage.graph_coloring_module import Individual
 
 
 def write_to_memgraph(graph: Graph, indv: Individual) -> None:
