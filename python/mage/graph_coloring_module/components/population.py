@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Callable, Tuple, Optional
-from mage.graph_coloring_module import Individual
-from mage.graph_coloring_module import Graph
+from mage.graph_coloring_module.components.individual import Individual
+from mage.graph_coloring_module.graph import Graph
 
 
 class Population(ABC):

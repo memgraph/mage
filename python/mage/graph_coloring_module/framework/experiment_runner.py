@@ -7,7 +7,7 @@ import glob
 import os
 import logging
 from mage.graph_coloring_module import load_dimacs
-from mage.graph_coloring_module import Algorithm
+from mage.graph_coloring_module.algorithms.algorithm import Algorithm
 from mage.graph_coloring_module import write_to_file
 
 

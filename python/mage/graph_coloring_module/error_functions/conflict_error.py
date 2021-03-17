@@ -1,11 +1,11 @@
 import logging
 from typing import Dict, Any, Optional
-from mage.graph_coloring_module import Graph
-from mage.graph_coloring_module import Individual
-from mage.graph_coloring_module import Population
-from mage.graph_coloring_module import Error
-from mage.graph_coloring_module import param_value
-from mage.graph_coloring_module import validate
+from mage.graph_coloring_module.graph import Graph
+from mage.graph_coloring_module.components.individual import Individual
+from mage.graph_coloring_module.components.population import Population
+from mage.graph_coloring_module.error_functions.error import Error
+from mage.graph_coloring_module.framework.parameters_utils import param_value
+from mage.graph_coloring_module.utils.validation import validate
 
 
 logger = logging.getLogger('telco')

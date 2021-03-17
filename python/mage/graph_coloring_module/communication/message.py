@@ -1,4 +1,4 @@
-from mage.graph_coloring_module import Individual
+from mage.graph_coloring_module.components.individual import Individual
 
 
 class Message:

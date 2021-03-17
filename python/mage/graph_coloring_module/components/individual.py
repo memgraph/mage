@@ -1,6 +1,6 @@
 from random import choice
 from typing import List, Set, Tuple
-from mage.graph_coloring_module import Graph
+from mage.graph_coloring_module.graph import Graph
 
 
 class Individual:

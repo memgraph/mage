@@ -1,7 +1,7 @@
 from typing import Dict, Any
-from mage.graph_coloring_module import Individual
-from mage.graph_coloring_module import Graph
-from mage.graph_coloring_module import param_value
+from mage.graph_coloring_module.components.individual import Individual
+from mage.graph_coloring_module.graph import Graph
+from mage.graph_coloring_module.framework.parameters_utils import param_value
 
 
 def _write_dict_to_file(

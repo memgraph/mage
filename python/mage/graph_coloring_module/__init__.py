@@ -31,7 +31,6 @@ from mage.graph_coloring_module.population_factory import create
 from mage.graph_coloring_module.population_factory import generate_individuals
 
 from mage.graph_coloring_module.utils.validation import validate
-from mage.graph_coloring_module.utils.memgraph_io import write_to_memgraph
 
 from mage.graph_coloring_module.framework.parameters_utils import param_value
 from mage.graph_coloring_module.framework.output_functions import write_to_file

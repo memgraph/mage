@@ -1,8 +1,8 @@
 import random
-from graph_coloring_module.operators.mutation import Mutation
+from mage.graph_coloring_module.operators.mutation import Mutation
 from typing import Dict, Any, Optional, Tuple, List
-from mage.graph_coloring_module import Graph
-from mage.graph_coloring_module import Individual
+from mage.graph_coloring_module.graph import Graph
+from mage.graph_coloring_module.components.individual import Individual
 
 
 class SimpleMutation(Mutation):

@@ -1,11 +1,11 @@
 import random
-from graph_coloring_module.operators.mutation import Mutation
+from mage.graph_coloring_module.operators.mutation import Mutation
 from typing import Dict, Any, Tuple, List
-from mage.graph_coloring_module import Graph
-from mage.graph_coloring_module import Individual
-from mage.graph_coloring_module import param_value
-from mage.graph_coloring_module import validate
-from mage.graph_coloring_module import available_colors
+from mage.graph_coloring_module.graph import Graph
+from mage.graph_coloring_module.components.individual import Individual
+from mage.graph_coloring_module.framework.parameters_utils import param_value
+from mage.graph_coloring_module.utils.validation import validate
+from mage.graph_coloring_module.utils.available_colors import available_colors
 
 
 class RandomMutation(Mutation):
