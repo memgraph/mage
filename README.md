@@ -9,9 +9,9 @@ Memgraph introduces the concept of **query modules**, user-defined procedures th
 Query modules implemented in Python:
 * [nxalg](python/nxalg.py): A module that provides NetworkX integration with Memgraph and implements many NetworkX algorithms.  
 * [graph_analyzer.py](python/graph_analyzer.py): This Graph Analyzer query module offers insights about the stored graph or a subgraph.
-* [distance_calculator.py](python/distance_calculator.py): Module for finding geographical distance between two points defined with 'lng' and 'lat' coordinates.
+* [distance_calculator.py](python/distance_calculator.py): Module for finding the geographical distance between two points defined with 'lng' and 'lat' coordinates.
 * [tsp.py](python/tsp.py): An algorithm for finding the shortest possible route that visits each vertex exactly once.
-* [set_cover.py](python/set_cover.py): The algorithm for finding minimum cost subcollection of sets that covers all elements of universe.
+* [set_cover.py](python/set_cover.py): The algorithm for finding minimum cost subcollection of sets that covers all elements of a universe.
 * [collapse.py](python/collapse.py): Module for collapsing specifically connected graph nodes into different subgraphs.
 
 Query modules implemented in C/C++:
