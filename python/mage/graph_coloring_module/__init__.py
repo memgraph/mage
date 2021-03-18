@@ -16,12 +16,11 @@ from mage.graph_coloring_module.error_functions.conflict_error import ConflictEr
 from mage.graph_coloring_module.error_functions.error import Error
 
 
-
-from mage.graph_coloring_module.operators.mutation import Mutation
-from mage.graph_coloring_module.operators.MIS_mutation import MISMutation
-from mage.graph_coloring_module.operators.multiple_mutation import MultipleMutation
-from mage.graph_coloring_module.operators.random_mutation import RandomMutation
-from mage.graph_coloring_module.operators.simple_mutation import SimpleMutation
+from mage.graph_coloring_module.operators.mutations.mutation import Mutation
+from mage.graph_coloring_module.operators.mutations.MIS_mutation import MISMutation
+from mage.graph_coloring_module.operators.mutations.multiple_mutation import MultipleMutation
+from mage.graph_coloring_module.operators.mutations.random_mutation import RandomMutation
+from mage.graph_coloring_module.operators.mutations.simple_mutation import SimpleMutation
 
 from mage.graph_coloring_module.utils.available_colors import available_colors
 

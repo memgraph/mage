@@ -22,20 +22,8 @@ class Error(ABC):
     def population_err(
             self,
             graph: Graph,
-            pop: Population,
+            population: Population,
             parameters: Dict[str, Any] = None) -> Optional[float]:
         """Calculates the population error.
         If an error occurs None is returned"""
-        pass
-
-    @abstractmethod
-    def delta(
-            self,
-            graph: Graph,
-            old_indv: Individual,
-            new_indv: Individual,
-            correlation_diff: int,
-            parameters: Dict[str, Any] = None) -> Optional[float]:
-        """Calculates the difference of the population error
-        that occurred after the replacement of the individual."""
         pass
