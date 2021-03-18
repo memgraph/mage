@@ -20,5 +20,10 @@ popd
 
 # Build Python.
 pushd "$PY_DIRECTORY"
-cp ./*.py "$QUERY_MODULES_DIRECTORY"
+rsync -a --exclude='tests' \
+         --exclude='pytest.ini' \
+         --exclude='htmlcov' \
+         --exclude='.*' \
+         . "$QUERY_MODULES_DIRECTORY"
 popd
+export PYTHONPATH="$PWD/python"
