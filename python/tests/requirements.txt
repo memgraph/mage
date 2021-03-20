@@ -1,0 +1,11 @@
+pytest
+pyyaml
+black
+flake8
+neo4j==1.7.3
+pytest-pylint
+pytest-timeout
+pytest-cov
+pytest-benchmark
+pytest-flake8
+pytest-black
