@@ -13,6 +13,14 @@ use std::os::raw::c_int;
 // not panic and still operate correctly.
 
 #[derive(Debug, Clone)]
+struct MgpError;
+impl std::fmt::Display for MgpError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "An error inside Rust procedure.")
+    }
+}
+
+#[derive(Debug, Clone)]
 struct MgpAllocationError;
 impl std::fmt::Display for MgpAllocationError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -66,6 +74,65 @@ fn make_int_value(
             return Err(MgpAllocationError);
         }
         return Ok(mg_value);
+    }
+}
+
+struct MgpVerticesIterator {
+    ptr: *mut mgp_vertices_iterator,
+}
+
+impl Drop for MgpVerticesIterator {
+    fn drop(&mut self) {
+        unsafe {
+            mgp_vertices_iterator_destroy(self.ptr);
+        }
+    }
+}
+
+struct MgpVertex {
+    ptr: *const mgp_vertex,
+}
+impl MgpVertex {
+    fn labels_count(&self) -> u64 {
+        unsafe {
+            return mgp_vertex_labels_count(self.ptr);
+        }
+    }
+}
+// TODO(gitbuda): Implement all methods to access vertex data.
+
+fn make_graph_vertices_iterator(
+    graph: *const mgp_graph,
+    result: *mut mgp_result,
+    memory: *mut mgp_memory,
+) -> Result<MgpVerticesIterator, MgpAllocationError> {
+    let unable_alloc_iter_msg = CString::new("Unable to allocate a vertices iterator.")
+        .expect("CString::new failed prior to allocating a vertices iterator.");
+    unsafe {
+        let iterator: MgpVerticesIterator = MgpVerticesIterator {
+            ptr: mgp_graph_iter_vertices(graph, memory),
+        };
+        if iterator.ptr.is_null() {
+            mgp_result_set_error_msg(result, unable_alloc_iter_msg.into_raw());
+            return Err(MgpAllocationError);
+        }
+        return Ok(iterator);
+    }
+}
+
+fn get_iterator_vertex(iterator: &MgpVerticesIterator) -> Result<MgpVertex, MgpError> {
+    unsafe {
+        return Ok(MgpVertex {
+            ptr: mgp_vertices_iterator_get(iterator.ptr),
+        });
+    }
+}
+
+fn get_iterator_vertex_next(iterator: &MgpVerticesIterator) -> Result<MgpVertex, MgpError> {
+    unsafe {
+        return Ok(MgpVertex {
+            ptr: mgp_vertices_iterator_next(iterator.ptr),
+        });
     }
 }
 
@@ -146,45 +213,53 @@ fn add_int_result_type(
 
 extern "C" fn test_procedure(
     _args: *const mgp_list,
-    _graph: *const mgp_graph,
+    graph: *const mgp_graph,
     result: *mut mgp_result,
     memory: *mut mgp_memory,
 ) {
-    for index in 1..10 {
-        match make_result_record(result) {
-            Ok(mgp_record) => {
-                match make_int_value(index, result, memory) {
-                    Ok(mgp_value) => {
-                        match insert_result_record(&mgp_record, "a".to_string(), &mgp_value, result)
-                        {
-                            Ok(_) => {}
+    use std::convert::TryFrom;
+    match make_graph_vertices_iterator(graph, result, memory) {
+        Ok(mgp_graph_iterator) => {
+            for _index in 1..3 {
+                match get_iterator_vertex_next(&mgp_graph_iterator) {
+                    Ok(mgp_vertex) => match make_result_record(result) {
+                        Ok(mgp_record) => match i64::try_from(mgp_vertex.labels_count()) {
+                            Ok(labels_count) => {
+                                match make_int_value(labels_count, result, memory) {
+                                    Ok(mgp_value) => {
+                                        match insert_result_record(
+                                            &mgp_record,
+                                            "labels_count".to_string(),
+                                            &mgp_value,
+                                            result,
+                                        ) {
+                                            Ok(_) => {}
+                                            Err(_) => {
+                                                return;
+                                            }
+                                        }
+                                    }
+                                    Err(_) => {
+                                        return;
+                                    }
+                                };
+                            }
                             Err(_) => {
                                 return;
                             }
+                        },
+                        Err(_) => {
+                            return;
                         }
-                    }
+                    },
                     Err(_) => {
                         return;
                     }
-                };
-                match make_int_value(index * 100, result, memory) {
-                    Ok(mgp_value) => {
-                        match insert_result_record(&mgp_record, "b".to_string(), &mgp_value, result)
-                        {
-                            Ok(_) => {}
-                            Err(_) => {
-                                return;
-                            }
-                        }
-                    }
-                    Err(_) => {
-                        return;
-                    }
-                };
+                }
             }
-            Err(_) => {
-                return;
-            }
+        }
+        Err(_) => {
+            return;
         }
     }
 }
@@ -192,13 +267,7 @@ extern "C" fn test_procedure(
 #[no_mangle]
 pub extern "C" fn mgp_init_module(module: *mut mgp_module, _memory: *mut mgp_memory) -> c_int {
     let procedure = add_read_procedure(test_procedure, "test_procedure".to_string(), module);
-    match add_int_result_type(procedure, "a".to_string()) {
-        Ok(_) => {}
-        Err(_) => {
-            return 1;
-        }
-    }
-    match add_int_result_type(procedure, "b".to_string()) {
+    match add_int_result_type(procedure, "labels_count".to_string()) {
         Ok(_) => {}
         Err(_) => {
             return 1;
