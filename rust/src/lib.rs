@@ -219,10 +219,13 @@ extern "C" fn test_procedure(
 ) {
     use std::convert::TryFrom;
     match make_graph_vertices_iterator(graph, result, memory) {
-        Ok(mgp_graph_iterator) => {
-            for _index in 1..3 {
-                match get_iterator_vertex_next(&mgp_graph_iterator) {
-                    Ok(mgp_vertex) => match make_result_record(result) {
+        Ok(mgp_graph_iterator) => loop {
+            match get_iterator_vertex_next(&mgp_graph_iterator) {
+                Ok(mgp_vertex) => {
+                    if mgp_vertex.ptr.is_null() {
+                        break;
+                    }
+                    match make_result_record(result) {
                         Ok(mgp_record) => match i64::try_from(mgp_vertex.labels_count()) {
                             Ok(labels_count) => {
                                 match make_int_value(labels_count, result, memory) {
@@ -251,13 +254,13 @@ extern "C" fn test_procedure(
                         Err(_) => {
                             return;
                         }
-                    },
-                    Err(_) => {
-                        return;
                     }
                 }
+                Err(_) => {
+                    return;
+                }
             }
-        }
+        },
         Err(_) => {
             return;
         }
