@@ -22,11 +22,18 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
 
+# mg_procedure library
+add_library(mg_procedure INTERFACE)
+target_include_directories(mg_procedure INTERFACE ${CMAKE_SOURCE_DIR}/mg_procedure)
+
+# mg_procedure library
+add_subdirectory(mg_utility)
+
 function(add_query_module target_name version src)
   add_library(${target_name} SHARED ${src})
   set_target_properties(${target_name} PROPERTIES SOVERSION ${version})
   set_target_properties(${target_name} PROPERTIES PREFIX "cpp_")
-  target_include_directories(${target_name} PRIVATE ${CMAKE_SOURCE_DIR}/include)
+  target_link_libraries(${target_name} PRIVATE mg_procedure)
 endfunction()
 
 # Available query modules.
