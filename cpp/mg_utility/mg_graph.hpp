@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include "graph_data.hpp"
-#include "graph_view.hpp"
+#include "data_structures/graph_data.hpp"
+#include "data_structures/graph_view.hpp"
 #include <map>
 #include <unordered_map>
 

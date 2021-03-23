@@ -4,8 +4,8 @@
 #include <sstream>
 #include <unordered_set>
 
-#include "data_structures/graph.hpp"
 #include "mg_exceptions.hpp"
+#include "mg_graph.hpp"
 #include "mg_procedure.h"
 #include "mg_utils.hpp"
 

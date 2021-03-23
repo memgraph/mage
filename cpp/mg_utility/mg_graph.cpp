@@ -1,4 +1,4 @@
-#include "graph.hpp"
+#include "mg_graph.hpp"
 #include "mg_exceptions.hpp"
 #include <algorithm>
 

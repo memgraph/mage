@@ -5,7 +5,7 @@
 /// their properties are implemented.
 #pragma once
 
-#include "data_structures/graph.hpp"
+#include "mg_graph.hpp"
 #include <functional>
 #include <mg_procedure.h>
 
