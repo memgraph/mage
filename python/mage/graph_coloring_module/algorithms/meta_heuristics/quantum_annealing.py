@@ -13,7 +13,7 @@ from mage.graph_coloring_module.algorithms.meta_heuristics.parallel_algorithm im
 logger = logging.getLogger('telco')
 
 
-class ConvergenceDetector():
+class ConvergenceAdapter():
     def __init__(self, population: Population, parameters: Dict[str, Any]):
         self._iteration = 0
         self._population = population
@@ -39,6 +39,12 @@ class ConvergenceDetector():
         self._iteration = 0
         self._best_sol_error = self._population.min_error(error.individual_err)
 
+
+class MatplotlibAdapter():
+    def __init__(self):
+        pass
+
+
 class QA(ParallelAlgorithm):
     """A class that represents quantum annealing algorithm."""
 
@@ -63,10 +69,7 @@ class QA(ParallelAlgorithm):
         error = param_value(graph, parameters, "error")
         communication_delay = param_value(graph, parameters, "communication_delay")
         logging_delay = param_value(graph, parameters, "logging_delay")
-
-
-        best_sol_error = population.solution_error()
-        iterations_passed = 0
+        iteration_adapters = param_value(graph, parameters, "iteration_adapter")
     
         for iteration in range(max_iterations):
             if population.contains_solution or self._read_msgs(my_q, population):
@@ -77,6 +80,9 @@ class QA(ParallelAlgorithm):
                 self._markow_chain(graph, population, i, parameters)
             
             self._write_msgs(communication_delay, iteration, next_q, prev_q, population[i])
+
+            for adapter in iteration_adapters:
+                adapter.update()
 
             if iteration % logging_delay == 0:
                 logger.info('Id: {} Iteration: {} Error: {}'.format(
