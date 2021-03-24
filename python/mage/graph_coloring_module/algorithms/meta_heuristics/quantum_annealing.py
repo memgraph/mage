@@ -46,7 +46,7 @@ class ConvergenceAdapter:
                 if random.random() < self._convergence_probability:
                     action.run()
         self._iteration = 0
-        self._best_sol_error = self._population.min_error(error.individual_err)
+        self._best_sol_error = self._population.min_error(self.error.individual_err)
 
 
 class MatplotlibAdapter:

@@ -1,5 +1,8 @@
 from mage.graph_coloring_module.utils.parameters_utils import param_value
 from mage.graph_coloring_module.utils.validation import validate
+from mage.graph_coloring_module.graph imp Graph
+from mage.graph_coloring_module.components.population import Population
+from typing import Dict, Any
 
 
 @validate("max_attempts_tunneling", "mutation_tunneling")

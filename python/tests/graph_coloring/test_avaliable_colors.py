@@ -6,15 +6,16 @@ from mage.graph_coloring_module import Graph
 
 @pytest.fixture
 def graph():
-    return  Graph (
+    return Graph(
         [0, 1, 2, 3, 4],
         {
-            0 : [(1, 2), (2, 3)],
-            1 : [(0, 2), (2, 2), (4, 5)],
-            2 : [(0, 3), (1, 2), (3, 3)],
-            3 : [(2, 3)],
-            4 : [(1, 5)]
-        })
+            0: [(1, 2), (2, 3)],
+            1: [(0, 2), (2, 2), (4, 5)],
+            2: [(0, 3), (1, 2), (3, 3)],
+            3: [(2, 3)],
+            4: [(1, 5)],
+        },
+    )
 
 
 def test_no_available_colors(graph):
