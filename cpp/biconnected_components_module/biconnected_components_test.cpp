@@ -67,7 +67,7 @@ inline mg_graph::Graph *GenRandomTree(uint32_t nodes) {
       std::chrono::high_resolution_clock::now().time_since_epoch().count();
   std::mt19937 rng(seed);
   std::vector<std::pair<uint32_t, uint32_t>> edges;
-  for (int i = 1; i < nodes; ++i) {
+  for (uint32_t i = 1; i < nodes; ++i) {
     std::uniform_int_distribution<uint32_t> dist(0, i - 1);
     uint32_t dad = dist(rng);
     edges.emplace_back(dad, i);
@@ -295,7 +295,7 @@ TEST(BCC, Performance) {
   Timer timer;
   auto BCC = bcc_algorithm::GetBiconnectedComponents(G);
   auto time_elapsed = timer.Elapsed();
-  ASSERT_TRUE(timer.Elapsed() < std::chrono::seconds(1));
+  ASSERT_TRUE(time_elapsed < std::chrono::seconds(1));
 }
 
 int main(int argc, char **argv) {

@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Cache Memgraph Docker image
       id: cache-memgraph-docker
       uses: actions/cache@v1
@@ -30,6 +30,10 @@ jobs:
     - name: Run Memgraph MAGE image
       run: |
         docker run -d -p 7687:7687 memgraph:mage --telemetry-enabled=False
+    - name: Set up C++
+      run: |
+        apt update
+        apt install -y build-essential cmake
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
@@ -50,4 +54,6 @@ jobs:
         (cd e2e && python -m pytest .)
     - name: C++ Modules unit tests
       run: |
-        for f in cpp/build/*/*_test; do $f; done
+        mkdir -p cpp/build
+        (cd cpp/build && cmake .. && make -j8)
+        for f in ./cpp/build/*/*_test; do $f; done
