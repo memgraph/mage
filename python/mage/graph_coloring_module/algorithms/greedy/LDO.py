@@ -18,16 +18,15 @@ class LDO(Algorithm):
         return "LDO"
 
     @validate("no_of_colors")
-    def run(
-            self,
-            graph: Graph,
-            parameters: Dict[str, Any] = None) -> Individual:
+    def run(self, graph: Graph, parameters: Dict[str, Any] = None) -> Individual:
         """Returns the Individual that represents the result of the LDO algorithm."""
 
         no_of_colors = param_value(graph, parameters, "no_of_colors")
 
         chromosome = [-1 for _ in graph.nodes]
-        sorted_nodes = sorted(list(graph.nodes), key=lambda n: graph.degree(n), reverse=True)
+        sorted_nodes = sorted(
+            list(graph.nodes), key=lambda n: graph.degree(n), reverse=True
+        )
 
         for node in sorted_nodes:
             colors = available_colors(graph, no_of_colors, chromosome, node)

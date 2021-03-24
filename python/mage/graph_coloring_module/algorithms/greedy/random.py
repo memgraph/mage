@@ -14,9 +14,6 @@ class Random(Algorithm):
         return "Random"
 
     @validate("no_of_colors")
-    def run(
-            self,
-            graph: Graph,
-            parameters: Dict[str, Any] = None) -> Individual:
+    def run(self, graph: Graph, parameters: Dict[str, Any] = None) -> Individual:
         no_of_colors = param_value(graph, parameters, "no_of_colors")
         return Individual(no_of_colors, graph)

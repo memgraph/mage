@@ -20,10 +20,7 @@ class SDO(Algorithm):
         return "SDO"
 
     @validate("no_of_colors")
-    def run(
-            self,
-            graph: Graph,
-            parameters: Dict[str, Any] = None) -> Individual:
+    def run(self, graph: Graph, parameters: Dict[str, Any] = None) -> Individual:
         """Returns the Individual that is the result of the SDO algorithm."""
 
         no_of_colors = param_value(graph, parameters, "no_of_colors")
