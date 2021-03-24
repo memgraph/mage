@@ -10,10 +10,16 @@ def validate(*params_name):
                     parameters = arg
             for param in params_name:
                 if parameters is None:
-                    raise MissingParametersException("Missing parameters in function {}".format(f.__name__))
+                    raise MissingParametersException(
+                        "Missing parameters in function {}".format(f.__name__)
+                    )
                 if parameters.get(param) is None:
-                    raise MissingParametersException("Missing parameter {} in function {}".format(param, f.__name__))
+                    raise MissingParametersException(
+                        "Missing parameter {} in function {}".format(param, f.__name__)
+                    )
             return f(*args, **kwds)
+
         new_f.__name__ = f.__name__
         return new_f
+
     return check_accepts

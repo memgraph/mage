@@ -4,11 +4,12 @@ from mage.graph_coloring_module.utils.validation import validate
 
 @validate("max_attempts_tunneling", "mutation_tunneling")
 def tunneling(
-        self,
-        ind: int,
-        graph: Graph,
-        population: Population,
-        parameters: Dict[str, Any] = None) -> None:
+    self,
+    ind: int,
+    graph: Graph,
+    population: Population,
+    parameters: Dict[str, Any] = None,
+) -> None:
 
     max_attempts_tunneling = param_value(graph, parameters, "max_attempts_tunneling")
     mutation = param_value(graph, parameters, "mutation_tunneling")

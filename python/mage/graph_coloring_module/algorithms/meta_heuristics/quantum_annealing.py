@@ -17,7 +17,9 @@ logger = logging.getLogger("telco")
 
 class ConvergenceAdapter:
     @validate("convergence_tolerance", "convergence_probability", "error")
-    def __init__(self, graph: Graph, population: Population, parameters: Dict[str, Any]):
+    def __init__(
+        self, graph: Graph, population: Population, parameters: Dict[str, Any]
+    ):
         self._iteration = 0
         self._population = population
         self._actions = []
