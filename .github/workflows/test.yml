@@ -32,8 +32,8 @@ jobs:
         docker run -d -p 7687:7687 memgraph:mage --telemetry-enabled=False
     - name: Set up C++
       run: |
-        apt update
-        apt install -y build-essential cmake
+        sudo apt update
+        sudo apt install -y build-essential cmake
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
