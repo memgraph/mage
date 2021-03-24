@@ -13,17 +13,14 @@ import multiprocessing as mp
 from abc import ABC, abstractmethod
 
 
-logger = logging.getLogger('telco')
+logger = logging.getLogger("telco")
 
 
 class ParallelAlgorithm(Algorithm, ABC):
     """A class that represents abstract parallel algorithm."""
 
     @validate("no_of_processes", "no_of_chunks", "error")
-    def run(
-            self,
-            graph: Graph,
-            parameters: Dict[str, Any]) -> Individual:
+    def run(self, graph: Graph, parameters: Dict[str, Any]) -> Individual:
         """Runs the algorithm in a given number of processes and returns the best individual.
 
         Parameters that must be specified:
@@ -48,7 +45,8 @@ class ParallelAlgorithm(Algorithm, ABC):
             my_q, prev_q, next_q = self._get_queues(i, no_of_chunks, queues)
             p = mp.Process(
                 target=self.algorithm,
-                args=(i, graph, population, my_q, prev_q, next_q, results, parameters))
+                args=(i, graph, population, my_q, prev_q, next_q, results, parameters),
+            )
             processes.append(p)
             p.start()
         for p in processes:
@@ -60,23 +58,22 @@ class ParallelAlgorithm(Algorithm, ABC):
 
     @abstractmethod
     def algorithm(
-            self,
-            proc_id: int,
-            graph: Graph,
-            population: Population,
-            my_q: mp.Queue,
-            prev_q: mp.Queue,
-            next_q: mp.Queue,
-            results: mp.Queue,
-            parameters: Dict[str, Any]) -> None:
+        self,
+        proc_id: int,
+        graph: Graph,
+        population: Population,
+        my_q: mp.Queue,
+        prev_q: mp.Queue,
+        next_q: mp.Queue,
+        results: mp.Queue,
+        parameters: Dict[str, Any],
+    ) -> None:
         """A function that executes an algorithm."""
         pass
 
     def _get_queues(
-            self,
-            ind: int,
-            no_of_chunks: int,
-            queues: mp.Queue) -> Tuple[Optional[mp.Queue], Optional[mp.Queue], Optional[mp.Queue]]:
+        self, ind: int, no_of_chunks: int, queues: mp.Queue
+    ) -> Tuple[Optional[mp.Queue], Optional[mp.Queue], Optional[mp.Queue]]:
         """Returns my_q, prev_q, next_q for the process on a given index."""
         if no_of_chunks == 1:
             return None, None, None
@@ -88,30 +85,24 @@ class ParallelAlgorithm(Algorithm, ABC):
         return my_q, prev_q, next_q
 
     def _write_msg(
-            self,
-            communication_delay: int,
-            iteration: int,
-            queue: mp.Queue,
-            indv: Individual,
-            msg_type: int) -> None:
+        self,
+        communication_delay: int,
+        iteration: int,
+        queue: mp.Queue,
+        indv: Individual,
+        msg_type: int,
+    ) -> None:
         """Sends the individual to the previous and next part of the population."""
         if next_q is not None and prev_q is not None:
             if iteration % communication_delay == 0:
                 queue.put(Message(indv, msg_type))
 
-    def _write_stop(
-            self,
-            prev_q: mp.Queue,
-            next_q: mp.Queue,
-            indv: Individual) -> None:
+    def _write_stop(self, prev_q: mp.Queue, next_q: mp.Queue, indv: Individual) -> None:
         if next_q is not None and prev_q is not None:
             next_q.put(Message(indv, 0))
             prev_q.put(Message(indv, 0))
 
-    def _read_msgs(
-            self,
-            my_q: mp.Queue,
-            population: Population) -> None:
+    def _read_msgs(self, my_q: mp.Queue, population: Population) -> None:
         """Reads messages from the queue and sets the previous or next individual of the population."""
         if my_q is not None:
             while not my_q.empty():
@@ -124,15 +115,13 @@ class ParallelAlgorithm(Algorithm, ABC):
                     return True
         return False
 
-    def _find_best(
-            self,
-            graph: Graph,
-            results: mp.Queue,
-            error: Error) -> Individual:
+    def _find_best(self, graph: Graph, results: mp.Queue, error: Error) -> Individual:
         """Finds the individual with the smallest error in the results queue."""
         individuals = []
         while not results.empty():
             pop = results.get()
             individuals.extend(pop.best_individuals)
-        best_individual = min(individuals, key=lambda indv: error.individual_err(graph, indv))
+        best_individual = min(
+            individuals, key=lambda indv: error.individual_err(graph, indv)
+        )
         return best_individual

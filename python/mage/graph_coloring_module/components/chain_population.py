@@ -10,10 +10,7 @@ class ChainPopulation(Population):
     individual is followed by the first individual, and the
     predecessor of the first individual is the last.."""
 
-    def __init__(
-            self,
-            graph: Graph,
-            individuals: List[Individual]):
+    def __init__(self, graph: Graph, individuals: List[Individual]):
 
         super().__init__(graph, individuals)
         self._set_correlations()

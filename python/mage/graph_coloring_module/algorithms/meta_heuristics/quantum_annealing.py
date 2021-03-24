@@ -7,19 +7,26 @@ from mage.graph_coloring_module.graph import Graph
 from mage.graph_coloring_module.components.population import Population
 from mage.graph_coloring_module.utils.parameters_utils import param_value
 from mage.graph_coloring_module.utils.validation import validate
-from mage.graph_coloring_module.algorithms.meta_heuristics.parallel_algorithm import ParallelAlgorithm
+from mage.graph_coloring_module.algorithms.meta_heuristics.parallel_algorithm import (
+    ParallelAlgorithm,
+)
 
 
-logger = logging.getLogger('telco')
+logger = logging.getLogger("telco")
 
 
-class ConvergenceAdapter():
+class ConvergenceAdapter:
+    @validate("convergence_tolerance", "convergence_probability", "error")
     def __init__(self, population: Population, parameters: Dict[str, Any]):
         self._iteration = 0
         self._population = population
         self._actions = []
-        self._convergence_tolerance = param_value(graph, parameters, "convergence_tolerance")
-        self._convergence_probability = param_value(graph, parameters, "convergence_probability")
+        self._convergence_tolerance = param_value(
+            graph, parameters, "convergence_tolerance"
+        )
+        self._convergence_probability = param_value(
+            graph, parameters, "convergence_probability"
+        )
         error = param_value(graph, parameters, "error")
         self._best_sol_error = population.min_error(error.individual_err)
 
@@ -40,7 +47,7 @@ class ConvergenceAdapter():
         self._best_sol_error = self._population.min_error(error.individual_err)
 
 
-class MatplotlibAdapter():
+class MatplotlibAdapter:
     def __init__(self):
         pass
 
@@ -51,17 +58,18 @@ class QA(ParallelAlgorithm):
     def __str__(self):
         return "QA"
 
-    @validate("max_iterations", "error", "communication_delay")
+    @validate("max_iterations", "error", "communication_delay, iteration_adapter")
     def algorithm(
-            self,
-            proc_id: int,
-            graph: Graph,
-            population: Population,
-            my_q: mp.Queue,
-            prev_q: mp.Queue,
-            next_q: mp.Queue,
-            results: mp.Queue,
-            parameters: Dict[str, Any]) -> None:
+        self,
+        proc_id: int,
+        graph: Graph,
+        population: Population,
+        my_q: mp.Queue,
+        prev_q: mp.Queue,
+        next_q: mp.Queue,
+        results: mp.Queue,
+        parameters: Dict[str, Any],
+    ) -> None:
         """A function that executes a QA algorithm. The resulting population
         is written to the queue results."""
 
@@ -80,25 +88,35 @@ class QA(ParallelAlgorithm):
                 self._markow_chain(graph, population, i, parameters)
 
             self._write_msg(communication_delay, iteration, prev_q, population[0], -1)
-            self._write_msg(communication_delay, iteration, next_q, population[population.size() - 1], 1)
+            self._write_msg(
+                communication_delay,
+                iteration,
+                next_q,
+                population[population.size() - 1],
+                1,
+            )
 
             for adapter in iteration_adapters:
                 adapter.update()
 
             if iteration % logging_delay == 0:
-                logger.info('Id: {} Iteration: {} Error: {}'.format(
-                            proc_id, iteration, population.min_error(error.individual_err)))
+                logger.info(
+                    "Id: {} Iteration: {} Error: {}".format(
+                        proc_id, iteration, population.min_error(error.individual_err)
+                    )
+                )
 
-        logger.info('Id: {} Iteration: {} Error: {}'.format(proc_id, iteration, population.solution_error()))
+        logger.info(
+            "Id: {} Iteration: {} Error: {}".format(
+                proc_id, iteration, population.solution_error()
+            )
+        )
         results.put(population)
 
     @validate("temperature", "max_steps", "mutation", "error")
     def _markow_chain(
-            self,
-            graph: Graph,
-            population: Population,
-            ind: int,
-            parameters: Dict[str, Any]) -> None:
+        self, graph: Graph, population: Population, ind: int, parameters: Dict[str, Any]
+    ) -> None:
 
         temperature = param_value(graph, parameters, "temperature")
         max_steps = param_value(graph, parameters, "max_steps")
@@ -109,7 +127,9 @@ class QA(ParallelAlgorithm):
             indv = population[ind]
             pop_error_old = error.population_err(graph, population, parameters)
             new_indv, diff_nodes = mutation.mutate(graph, indv, parameters)
-            delta_h_pot = error.individual_err(graph, new_indv) - error.individual_err(graph, indv)
+            delta_h_pot = error.individual_err(graph, new_indv) - error.individual_err(
+                graph, indv
+            )
             population.set_individual(ind, new_indv, diff_nodes)
             pop_error_new = error.population_err(graph, population, parameters)
             delta_error = pop_error_new - pop_error_old

@@ -9,10 +9,7 @@ class Population(ABC):
     contains individuals that are placed in a chain and exchange
     information with individuals that are located next to it."""
 
-    def __init__(
-            self,
-            graph: Graph,
-            individuals: List[Individual]):
+    def __init__(self, graph: Graph, individuals: List[Individual]):
 
         self._size = len(individuals)
         self._individuals = individuals
@@ -113,7 +110,7 @@ class Population(ABC):
 
     def set_individual(self, ind: int, indv: Individual, diff_nodes: List[int]) -> int:
         """Sets the individual on the index ind to the given individual indv.
-        Returns None if the wrong index is given. """
+        Returns None if the wrong index is given."""
         if not 0 <= ind < self.size:
             return None
         old_indv = self._individuals[ind]
@@ -128,25 +125,35 @@ class Population(ABC):
     def solution_error(self) -> float:
         return self._solution._conflicts_weight
 
-    def best_individual_index(self, error_func: Callable[[Graph, Individual], float]) -> int:
+    def best_individual_index(
+        self, error_func: Callable[[Graph, Individual], float]
+    ) -> int:
         """Returns the index of the individual with the least error."""
         errors = self.individuals_errors(error_func)
         return min(range(len(errors)), key=errors.__getitem__)
 
-    def worst_individual_index(self, error_func: Callable[[Graph, Individual], float]) -> int:
+    def worst_individual_index(
+        self, error_func: Callable[[Graph, Individual], float]
+    ) -> int:
         """Returns the index of the individual with the largest error."""
         errors = self.individuals_errors(error_func)
         return max(range(len(errors)), key=errors.__getitem__)
 
-    def best_individual(self, error_func: Callable[[Graph, Individual], float]) -> Individual:
+    def best_individual(
+        self, error_func: Callable[[Graph, Individual], float]
+    ) -> Individual:
         """Returns the individual with the least error."""
         return self._individuals[self.best_individual_index(error_func)]
 
-    def worst_individual(self, error_func: Callable[[Graph, Individual], float]) -> Individual:
+    def worst_individual(
+        self, error_func: Callable[[Graph, Individual], float]
+    ) -> Individual:
         """Returns the individual with the largest error."""
         return self._individuals[self.worst_individual_index(error_func)]
 
-    def individuals_errors(self, error_func: Callable[[Graph, Individual], float]) -> List[float]:
+    def individuals_errors(
+        self, error_func: Callable[[Graph, Individual], float]
+    ) -> List[float]:
         """Returns a list of individuals errors."""
         return [error_func(self._graph, indv) for indv in self.individuals]
 
@@ -192,7 +199,9 @@ class Population(ABC):
         if new_conflicts_weight < best_conflicts_weight:
             self._best_individuals[ind] = new_indv
 
-    def _update_correlation(self, ind: int, old_indv: Individual, nodes: List[int]) -> int:
+    def _update_correlation(
+        self, ind: int, old_indv: Individual, nodes: List[int]
+    ) -> int:
         next_corr_ind = self._get_next_correlation_ind(ind)
         prev_corr_ind = self._get_prev_correlation_ind(ind)
 

@@ -12,19 +12,22 @@ class Individual:
     of the current individual."""
 
     def __init__(
-            self,
-            no_of_colors: int,
-            graph: Graph,
-            chromosome: List[int] = None,
-            conflicts_weight: int = None,
-            conflict_nodes: Set[int] = None,
-            conflicts_counter: List[int] = None):
+        self,
+        no_of_colors: int,
+        graph: Graph,
+        chromosome: List[int] = None,
+        conflicts_weight: int = None,
+        conflict_nodes: Set[int] = None,
+        conflicts_counter: List[int] = None,
+    ):
 
         self._graph = graph
         self._no_of_units = len(graph)
         self._no_of_colors = no_of_colors
         if chromosome is None:
-            self._chromosome = list(choice(range(0, no_of_colors)) for _ in range(len(graph)))
+            self._chromosome = list(
+                choice(range(0, no_of_colors)) for _ in range(len(graph))
+            )
         else:
             self._chromosome = chromosome
 
@@ -89,7 +92,7 @@ class Individual:
     def replace_units(self, inds: List[int], colors: List[int]):
         """Sets the colors of the nodes with the corresponding indices to the given colors and
         returns a new individual if the given coloring is correct. If the given coloring
-        is not correct then the function returns None. """
+        is not correct then the function returns None."""
 
         if len(inds) != len(colors):
             return None
@@ -110,7 +113,8 @@ class Individual:
                 color=color,
                 conflict_edges=conflict_edges,
                 conflicts_counter=conflicts_counter,
-                conflict_nodes=conflict_nodes)
+                conflict_nodes=conflict_nodes,
+            )
             new_chromosome[ind] = color
 
         new_indv = Individual(
@@ -119,18 +123,20 @@ class Individual:
             chromosome=new_chromosome,
             conflicts_weight=conflict_edges,
             conflict_nodes=conflict_nodes,
-            conflicts_counter=conflicts_counter)
+            conflicts_counter=conflicts_counter,
+        )
 
         return new_indv
 
     def _calculate_diff(
-            self,
-            chromosome: List[int],
-            node: int,
-            color: int,
-            conflict_edges: int,
-            conflicts_counter: List[int],
-            conflict_nodes: Set[int]) -> Tuple[int, List[int], Set[int]]:
+        self,
+        chromosome: List[int],
+        node: int,
+        color: int,
+        conflict_edges: int,
+        conflicts_counter: List[int],
+        conflict_nodes: Set[int],
+    ) -> Tuple[int, List[int], Set[int]]:
 
         diff = 0
         for neigh, weight in self.graph.weighted_neighbors(node):

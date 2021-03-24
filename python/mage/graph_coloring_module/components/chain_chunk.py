@@ -14,11 +14,12 @@ class ChainChunk(Population):
     with the first in the next piece of the population."""
 
     def __init__(
-            self,
-            graph: Graph,
-            individuals: List[Individual],
-            prev_indv: Individual,
-            next_indv: Individual):
+        self,
+        graph: Graph,
+        individuals: List[Individual],
+        prev_indv: Individual,
+        next_indv: Individual,
+    ):
 
         super().__init__(graph, individuals)
         self._prev_indv = prev_indv
@@ -55,7 +56,9 @@ class ChainChunk(Population):
                 c = self._calculate_correlation(self.individuals[0], self._prev_indv)
                 self._correlation.append(c)
             else:
-                next_indv = self.individuals[i + 1] if i + 1 < self.size else self._next_indv
+                next_indv = (
+                    self.individuals[i + 1] if i + 1 < self.size else self._next_indv
+                )
                 c = self._calculate_correlation(self.individuals[i], next_indv)
                 self._correlation.append(c)
                 self._cumulative_correlation += c
@@ -63,13 +66,17 @@ class ChainChunk(Population):
     def set_prev_individual(self, indv: Individual) -> None:
         """Sets the unit that precedes the current piece of chain."""
         self._cumulative_correlation -= self._correlation[self.size]
-        self._correlation[self.size] = self._calculate_correlation(indv, self.individuals[0])
+        self._correlation[self.size] = self._calculate_correlation(
+            indv, self.individuals[0]
+        )
         self._cumulative_correlation += self._correlation[self.size]
         self._prev_indv = indv
 
     def set_next_individual(self, indv: Individual) -> None:
         """Sets the individual that follows the current piece of chain."""
         self._cumulative_correlation -= self._correlation[self.size - 1]
-        self._correlation[self.size - 1] = self._calculate_correlation(self.individuals[self.size - 1], indv)
+        self._correlation[self.size - 1] = self._calculate_correlation(
+            self.individuals[self.size - 1], indv
+        )
         self._cumulative_correlation += self._correlation[self.size - 1]
         self._next_indv = indv

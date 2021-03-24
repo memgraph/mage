@@ -8,10 +8,7 @@ class Message:
     the next chunk of the population and -1 if it was sent from the process containing the
     preceding one population chunk."""
 
-    def __init__(
-            self,
-            data: Individual,
-            msg_type: int):
+    def __init__(self, data: Individual, msg_type: int):
         self._data = data
         self._msg_type = msg_type
 
