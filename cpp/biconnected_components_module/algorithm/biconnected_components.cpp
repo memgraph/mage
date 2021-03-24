@@ -15,9 +15,9 @@ void bcc_utility::BccDfs(uint32_t node_id, uint32_t parent_id,
   state->discovery[node_id] = tick;
   state->low_link[node_id] = tick;
 
-  for (const auto &neigh : (*graph).Neighbours(node_id)) {
+  for (const auto &neigh : graph->Neighbours(node_id)) {
     uint32_t next_id = neigh.node_id;
-    const auto &edge = (*graph).GetEdge(neigh.edge_id);
+    const auto &edge = graph->GetEdge(neigh.edge_id);
     if (state->visited[next_id]) {
       if (next_id != parent_id) {
         state->low_link[node_id] =
@@ -52,7 +52,7 @@ void bcc_utility::BccDfs(uint32_t node_id, uint32_t parent_id,
 std::vector<std::vector<mg_graph::Edge>>
 bcc_algorithm::GetBiconnectedComponents(const mg_graph::GraphView *graph) {
   bcc_utility::NodeState state;
-  size_t node_size = (*graph).Nodes().size();
+  size_t node_size = graph->Nodes().size();
   state.visited.resize(node_size, false);
   state.discovery.resize(node_size, 0);
   state.low_link.resize(node_size, 0);
@@ -60,7 +60,7 @@ bcc_algorithm::GetBiconnectedComponents(const mg_graph::GraphView *graph) {
   std::vector<std::vector<mg_graph::Edge>> bcc;
   std::stack<mg_graph::Edge> edge_stack;
 
-  for (const mg_graph::Node &node : (*graph).Nodes()) {
+  for (const mg_graph::Node &node : graph->Nodes()) {
     if (state.visited[node.id]) {
       continue;
     }
