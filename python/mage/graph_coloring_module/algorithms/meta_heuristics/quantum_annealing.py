@@ -5,7 +5,7 @@ import multiprocessing as mp
 from typing import Dict, Any, List
 from mage.graph_coloring_module.graph import Graph
 from mage.graph_coloring_module.components.population import Population
-from mage.graph_coloring_module.framework.parameters_utils import param_value
+from mage.graph_coloring_module.utils.parameters_utils import param_value
 from mage.graph_coloring_module.utils.validation import validate
 from mage.graph_coloring_module.algorithms.meta_heuristics.parallel_algorithm import ParallelAlgorithm
 
@@ -34,7 +34,7 @@ class ConvergenceAdapter():
     def _convergence_detected(self):
         for action in self._actions:
             for indv in self._population:
-                if random.random() < self,_convergence_probability:
+                if random.random() < self._convergence_probability:
                     action.run()
         self._iteration = 0
         self._best_sol_error = self._population.min_error(error.individual_err)
@@ -73,13 +73,14 @@ class QA(ParallelAlgorithm):
     
         for iteration in range(max_iterations):
             if population.contains_solution or self._read_msgs(my_q, population):
-                self._write_msgs(communication_delay, iteration, next_q, prev_q, population.solution(), True)
+                self._write_stop(prev_q, next_q, population.solution())
                 break
 
             for i in range(len(population)):
                 self._markow_chain(graph, population, i, parameters)
             
-            self._write_msgs(communication_delay, iteration, next_q, prev_q, population[i])
+            self._write_msg(communication_delay, iteration, prev_q, population[0], -1)
+            self._write_msg(communication_delay, iteration, next_q, population[population.size() - 1], 1)
 
             for adapter in iteration_adapters:
                 adapter.update()

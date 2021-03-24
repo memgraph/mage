@@ -6,7 +6,7 @@ from mage.graph_coloring_module.error_functions.error import Error
 from mage.graph_coloring_module.components.individual import Individual
 from mage.graph_coloring_module.components.population import Population
 from mage.graph_coloring_module.algorithms.algorithm import Algorithm
-from mage.graph_coloring_module.framework.parameters_utils import param_value
+from mage.graph_coloring_module.utils.parameters_utils import param_value
 from mage.graph_coloring_module.utils.validation import validate
 from mage.graph_coloring_module.communication.message import Message
 import multiprocessing as mp
@@ -87,22 +87,26 @@ class ParallelAlgorithm(Algorithm, ABC):
         my_q = queues[ind]
         return my_q, prev_q, next_q
 
-    def _write_msgs(
+    def _write_msg(
             self,
             communication_delay: int,
             iteration: int,
-            next_q: mp.Queue,
-            prev_q: mp.Queue,
+            queue: mp.Queue,
             indv: Individual,
-            stop: bool = False) -> None:
+            msg_type: int) -> None:
         """Sends the individual to the previous and next part of the population."""
         if next_q is not None and prev_q is not None:
-            if stop:
-                next_q.put(Message(indv, 0))
-                prev_q.put(Message(indv, 0))
-            elif iteration % communication_delay == 0:
-                next_q.put(Message(indv, 1))
-                prev_q.put(Message(indv, -1))
+            if iteration % communication_delay == 0:
+                queue.put(Message(indv, msg_type))
+
+    def _write_stop(
+            self, 
+            prev_q: mp.Queue,
+            next_q: mp.Queue,
+            indv: Individual) -> None:
+        if next_q is not None and prev_q is not None:
+            next_q.put(Message(indv, 0))
+            prev_q.put(Message(indv, 0))
 
     def _read_msgs(
             self,

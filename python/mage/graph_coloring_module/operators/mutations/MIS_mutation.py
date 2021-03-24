@@ -1,5 +1,5 @@
 import random
-from mage.graph_coloring_module.operators.mutation import Mutation
+from mage.graph_coloring_module.operators.mutations.mutation import Mutation
 from typing import Dict, Any, Tuple, List
 from mage.graph_coloring_module.graph import Graph
 from mage.graph_coloring_module.components.individual import Individual
@@ -19,10 +19,12 @@ class MISMutation(Mutation):
             parameters: Dict[str, Any] = None) -> Tuple[Individual, List[int]]:
         """Mutate the given individual and returns the new individual and nodes that were changed."""
         nodes = self._MIS(graph)
-        color = indv[nodes[0]]
-        colors = [color for _ in range(len(nodes))]
-        mutated_indv = indv.replace_units(nodes, colors)
-        return mutated_indv, nodes
+        if len(nodes) > 0:
+            color = indv[nodes[0]]
+            colors = [color for _ in range(len(nodes))]
+            mutated_indv = indv.replace_units(nodes, colors)
+            return mutated_indv, nodes
+        return indv, []
 
     def _MIS(
             self,
@@ -41,8 +43,8 @@ class MISMutation(Mutation):
                 if MIS_flags[neigh]:
                     include = False
                     break
-
             if include:
                 MIS.append(node)
                 MIS_flags[node] = True
+
         return MIS

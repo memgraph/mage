@@ -1,9 +1,9 @@
 import random
-from mage.graph_coloring_module.operators.mutation import Mutation
+from mage.graph_coloring_module.operators.mutations.mutation import Mutation
 from typing import Dict, Any, Tuple, List
 from mage.graph_coloring_module.graph import Graph
 from mage.graph_coloring_module.components.individual import Individual
-from mage.graph_coloring_module.framework.parameters_utils import param_value
+from mage.graph_coloring_module.utils.parameters_utils import param_value
 from mage.graph_coloring_module.utils.validation import validate
 
 

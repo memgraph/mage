@@ -31,5 +31,4 @@ from mage.graph_coloring_module.population_factory import generate_individuals
 
 from mage.graph_coloring_module.utils.validation import validate
 
-from mage.graph_coloring_module.framework.parameters_utils import param_value
-from mage.graph_coloring_module.framework.output_functions import write_to_file
+from mage.graph_coloring_module.utils.parameters_utils import param_value

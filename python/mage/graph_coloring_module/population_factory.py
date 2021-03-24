@@ -5,8 +5,9 @@ from mage.graph_coloring_module.components.population import Population
 from mage.graph_coloring_module.components.individual import Individual
 from mage.graph_coloring_module.components.chain_chunk import ChainChunk
 from mage.graph_coloring_module.components.chain_population import ChainPopulation
-from mage.graph_coloring_module.framework.parameters_utils import param_value
+from mage.graph_coloring_module.utils.parameters_utils import param_value
 from mage.graph_coloring_module.utils.validation import validate
+from mage.graph_coloring_module.exceptions import PopulationCreationException
 
 
 logger = logging.getLogger('telco')
@@ -29,7 +30,7 @@ def generate_individuals(
             indv = algorithm.run(graph, parameters)
             if indv is None:
                 logger.error('Population creation has not succeeded.')
-                return None
+                raise PopulationCreationException('Population creation has not succeeded.')
             if len(individuals) < population_size:
                 individuals.append(indv)
 
