@@ -1,0 +1,1 @@
+MERGE (a:P {id: "p1"}) MERGE (b:P {id: "p1"}) CREATE (a)-[e:Edge]->(b);

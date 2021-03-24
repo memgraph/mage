@@ -1,39 +1,34 @@
-# Set base image (host OS)
-FROM python:3.8
+FROM memgraph:latest AS memgraph-mage
 
-# Install CMake
+FROM memgraph-mage
+USER root
+
 RUN apt-get update && \
-  apt-get --yes install cmake
+    apt-get --yes install rsync cmake clang && \
+    apt-get install -y python3-dev && \
+    cd /usr/local/bin && \
+    ln -s /usr/bin/python3 python && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Install mgclient
-RUN apt-get install -y git cmake make gcc g++ libssl-dev && \
-  git clone https://github.com/memgraph/mgclient.git /mgclient && \
-  cd mgclient && \
-  git checkout dd5dcaaed5d7c8b275fbfd5d2ecbfc5006fa5826 && \
-  mkdir build && \
-  cd build && \
-  cmake .. && \
-  make && \
-  make install
-
-# Install pymgclient
-RUN git clone https://github.com/memgraph/pymgclient /pymgclient && \
-  cd pymgclient && \
-  python3 setup.py build&& \
-  python3 setup.py install
-
-# Set the working directory in the container
+# Set mage as working directory
 WORKDIR /mage
+COPY . /mage
 
-# Copy the dependencies file to the working directory
-#COPY requirements.txt .
+# Build all necessary modules
+RUN /bin/bash build.sh
+RUN cp -r /mage/dist/* /usr/lib/memgraph/query_modules/
 
-# Install dependencies
-#RUN pip install -r requirements.txt
+# It's required to install python3 because auth module scripts are going to be
+# written in python3.
+RUN python3 -m  pip install -r /mage/python/requirements.txt
 
-# Copy the content of the local src directory to the working directory
-COPY python/ .
+USER memgraph
+ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
+# Memgraph listens for Bolt Protocol on this port by default.
+EXPOSE 7687
+# Snapshots and logging volumes
+VOLUME /var/log/memgraph
+VOLUME /var/lib/memgraph
+VOLUME /etc/memgraph
 
-#ADD python/graph_coloring.py /usr/lib/memgraph/query_modules
-# Command to run on container start
-CMD [ "python", "./graph_coloring/test.py" ]
+WORKDIR /usr/lib/memgraph/query_modules
