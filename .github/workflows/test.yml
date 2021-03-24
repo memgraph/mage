@@ -48,3 +48,6 @@ jobs:
     - name: Test End-to-end
       run: |
         (cd e2e && python -m pytest .)
+    - name: C++ Modules unit tests
+      run: |
+        for f in cpp/build/*/*_test; do $f; done
