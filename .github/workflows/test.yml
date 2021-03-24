@@ -38,22 +38,25 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: '3.7'
-    - name: Install dependencies
-      run:
-        python -m pip install --upgrade pip
-        pip install -r ./python/tests/requirements.txt
-        pip install -r ./python/requirements.txt
-
-    - name: Test Python modules
-      env:
-        PYTHONPATH: '$PWD/python:$PWD/e2e'
-      run: |
-        (cd python && python -m pytest .)
-    - name: Test End-to-end
-      run: |
-        (cd e2e && python -m pytest .)
-    - name: C++ Modules unit tests
+    - name: Build C++ modules
       run: |
         mkdir -p cpp/build
         (cd cpp/build && cmake .. && make -j8)
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r ./python/tests/requirements.txt
+        pip install -r ./python/requirements.txt
+    - name: C++ Modules unit tests
+      run: |
         for f in ./cpp/build/*/*_test; do $f; done
+    - name: Python modules unit tests
+      env:
+        PYTHONPATH: '$PWD/python'
+      run: |
+        (cd python && python -m pytest .)
+    - name: Test End-to-end
+      env:
+        PYTHONPATH: '$PWD/python'
+      run: |
+        (cd e2e && python -m pytest .)
