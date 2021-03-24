@@ -55,7 +55,7 @@ class SDO(Algorithm):
                             sorted_nodes.put((-1 * saturation_degrees[neigh], neigh))
 
         return Individual(no_of_colors, graph, chromosome)
-    
+
     def _get_non_processed_node(self, processed):
         for i, flag in enumerate(processed):
             if not flag:

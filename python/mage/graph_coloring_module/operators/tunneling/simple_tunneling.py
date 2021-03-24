@@ -1,6 +1,7 @@
 from mage.graph_coloring_module.utils.parameters_utils import param_value
 from mage.graph_coloring_module.utils.validation import validate
 
+
 @validate("max_attempts_tunneling", "mutation_tunneling")
 def tunneling(
         self,

@@ -11,7 +11,9 @@ class Graph:
 
     """
 
-    def __init__(self, nodes: List[Any], adj: Dict[Any, List[Tuple[Any, float]]], name: str = ""):
+    def __init__(
+        self, nodes: List[Any], adj: Dict[Any, List[Tuple[Any, float]]], name: str = ""
+    ):
         self._ind_to_label = nodes
         self._label_to_ind = dict((label, ind) for ind, label in enumerate(nodes))
         self._nodes_count = len(nodes)
@@ -21,7 +23,9 @@ class Graph:
         self._name = name
 
         for i in range(self._nodes_count):
-            self._neighbors.extend([self._label_to_ind[x[0]] for x in adj[self._ind_to_label[i]]])
+            self._neighbors.extend(
+                [self._label_to_ind[x[0]] for x in adj[self._ind_to_label[i]]]
+            )
             self._weights.extend([x[1] for x in adj[self._ind_to_label[i]]])
             self._neigh_position.append(len(self._neighbors))
 
@@ -83,4 +87,7 @@ class Graph:
         return self._ind_to_label[node]
 
     def _neigh_weight_tuples(self, start: int, end: int) -> Iterator[Tuple[int, Any]]:
-        return zip((self._neighbors[i] for i in range(start, end)), (self._weights[i] for i in range(start, end)))
+        return zip(
+            (self._neighbors[i] for i in range(start, end)),
+            (self._weights[i] for i in range(start, end)),
+        )

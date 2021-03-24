@@ -47,8 +47,8 @@ class ParallelAlgorithm(Algorithm, ABC):
         for i, population in enumerate(populations):
             my_q, prev_q, next_q = self._get_queues(i, no_of_chunks, queues)
             p = mp.Process(
-                target = self.algorithm,
-                args = (i, graph, population, my_q, prev_q, next_q, results, parameters))
+                target=self.algorithm,
+                args=(i, graph, population, my_q, prev_q, next_q, results, parameters))
             processes.append(p)
             p.start()
         for p in processes:
@@ -100,7 +100,7 @@ class ParallelAlgorithm(Algorithm, ABC):
                 queue.put(Message(indv, msg_type))
 
     def _write_stop(
-            self, 
+            self,
             prev_q: mp.Queue,
             next_q: mp.Queue,
             indv: Individual) -> None:
@@ -134,5 +134,5 @@ class ParallelAlgorithm(Algorithm, ABC):
         while not results.empty():
             pop = results.get()
             individuals.extend(pop.best_individuals)
-        best_individual = min(individuals, key = lambda indv: error.individual_err(graph, indv))
+        best_individual = min(individuals, key=lambda indv: error.individual_err(graph, indv))
         return best_individual

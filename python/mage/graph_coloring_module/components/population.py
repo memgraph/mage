@@ -167,12 +167,12 @@ class Population(ABC):
                 correlation += S_first * S_second
         return correlation
 
-    def _calculate_metrics(self) -> None:	
-        for individual in self.individuals:	
-            self._sum_conflicts_weight += individual.conflicts_weight	
-            if individual.conflicts_weight == 0:	
-                self._contains_solution = True	
-                self._solution = individual	
+    def _calculate_metrics(self) -> None:
+        for individual in self.individuals:
+            self._sum_conflicts_weight += individual.conflicts_weight
+            if individual.conflicts_weight == 0:
+                self._contains_solution = True
+                self._solution = individual
 
     def _update_metrics(self, ind: int, old_indv: Individual) -> None:
         if self._contains_solution and self._solution == old_indv:

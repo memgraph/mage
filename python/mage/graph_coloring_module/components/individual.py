@@ -105,21 +105,21 @@ class Individual:
             if not (0 <= ind < self.no_of_units):
                 return None
             conflict_edges, conflicts_counter, conflict_nodes = self._calculate_diff(
-                chromosome = new_chromosome,
-                node = ind,
-                color = color,
-                conflict_edges = conflict_edges,
-                conflicts_counter = conflicts_counter,
-                conflict_nodes = conflict_nodes)
+                chromosome=new_chromosome,
+                node=ind,
+                color=color,
+                conflict_edges=conflict_edges,
+                conflicts_counter=conflicts_counter,
+                conflict_nodes=conflict_nodes)
             new_chromosome[ind] = color
 
         new_indv = Individual(
-            no_of_colors = self.no_of_colors,
-            graph = self.graph,
-            chromosome = new_chromosome,
-            conflicts_weight = conflict_edges,
-            conflict_nodes = conflict_nodes,
-            conflicts_counter = conflicts_counter)
+            no_of_colors=self.no_of_colors,
+            graph=self.graph,
+            chromosome=new_chromosome,
+            conflicts_weight=conflict_edges,
+            conflict_nodes=conflict_nodes,
+            conflicts_counter=conflicts_counter)
 
         return new_indv
 

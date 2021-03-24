@@ -1,5 +1,6 @@
 from mage.graph_coloring_module.exceptions import MissingParametersException
 
+
 def validate(*params_name):
     def check_accepts(f):
         def new_f(*args, **kwds):

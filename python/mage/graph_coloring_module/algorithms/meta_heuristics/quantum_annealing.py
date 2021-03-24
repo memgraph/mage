@@ -22,7 +22,7 @@ class ConvergenceAdapter():
         self._convergence_probability = param_value(graph, parameters, "convergence_probability")
         error = param_value(graph, parameters, "error")
         self._best_sol_error = population.min_error(error.individual_err)
-        
+
     def update(self):
         self._iteration += 1
         if self._population.min_error(error.individual_err) < self._best_sol_error:
@@ -30,7 +30,7 @@ class ConvergenceAdapter():
             self._iteration = 0
         if self._iteration == self._convergence_tolerance:
             self._convergence_detected()
-    
+
     def _convergence_detected(self):
         for action in self._actions:
             for indv in self._population:
@@ -70,7 +70,7 @@ class QA(ParallelAlgorithm):
         communication_delay = param_value(graph, parameters, "communication_delay")
         logging_delay = param_value(graph, parameters, "logging_delay")
         iteration_adapters = param_value(graph, parameters, "iteration_adapter")
-    
+
         for iteration in range(max_iterations):
             if population.contains_solution or self._read_msgs(my_q, population):
                 self._write_stop(prev_q, next_q, population.solution())
@@ -78,7 +78,7 @@ class QA(ParallelAlgorithm):
 
             for i in range(len(population)):
                 self._markow_chain(graph, population, i, parameters)
-            
+
             self._write_msg(communication_delay, iteration, prev_q, population[0], -1)
             self._write_msg(communication_delay, iteration, next_q, population[population.size() - 1], 1)
 
