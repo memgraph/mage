@@ -93,7 +93,7 @@ class ParallelAlgorithm(Algorithm, ABC):
         msg_type: int,
     ) -> None:
         """Sends the individual to the previous and next part of the population."""
-        if next_q is not None and prev_q is not None:
+        if queue is not None:
             if iteration % communication_delay == 0:
                 queue.put(Message(indv, msg_type))
 

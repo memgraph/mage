@@ -13,10 +13,8 @@ class MISMutation(Mutation):
         return "MISMutation"
 
     def mutate(
-            self,
-            graph: Graph,
-            indv: Individual,
-            parameters: Dict[str, Any] = None) -> Tuple[Individual, List[int]]:
+        self, graph: Graph, indv: Individual, parameters: Dict[str, Any] = None
+    ) -> Tuple[Individual, List[int]]:
         """Mutate the given individual and returns the new individual and nodes that were changed."""
         nodes = self._MIS(graph)
         if len(nodes) > 0:
@@ -26,9 +24,7 @@ class MISMutation(Mutation):
             return mutated_indv, nodes
         return indv, []
 
-    def _MIS(
-            self,
-            graph: Graph) -> List[int]:
+    def _MIS(self, graph: Graph) -> List[int]:
         """Finds the maximal independent set by shuffling the nodes and adding the first node to the MIs,
         and then sequentially adding all those nodes that do not have neighbors in the MIS."""
 

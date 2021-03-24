@@ -9,9 +9,7 @@ class Mutation(ABC):
 
     @abstractmethod
     def mutate(
-            self,
-            graph: Graph,
-            indv: Individual,
-            parameters: Dict[str, Any] = None) -> Tuple[Individual, List[int]]:
+        self, graph: Graph, indv: Individual, parameters: Dict[str, Any] = None
+    ) -> Tuple[Individual, List[int]]:
         """Mutate the given individual and returns the new individual and nodes that was changed."""
         pass

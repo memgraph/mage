@@ -19,14 +19,16 @@ class RandomMutation(Mutation):
 
     @validate("random_mutation_probability", "no_of_colors")
     def mutate(
-            self,
-            graph: Graph,
-            indv: Individual,
-            parameters: Dict[str, Any] = None) -> Tuple[Individual, List[int]]:
+        self, graph: Graph, indv: Individual, parameters: Dict[str, Any] = None
+    ) -> Tuple[Individual, List[int]]:
         """Mutate the given individual and returns the new individual and nodes that were changed."""
 
-        random_mutation_probability = param_value(graph, parameters, "random_mutation_probability")
-        random_mutation_probability_2 = param_value(graph, parameters, "random_mutation_probability_2")
+        random_mutation_probability = param_value(
+            graph, parameters, "random_mutation_probability"
+        )
+        random_mutation_probability_2 = param_value(
+            graph, parameters, "random_mutation_probability_2"
+        )
         no_of_colors = param_value(graph, parameters, "no_of_colors")
 
         conflict_nodes = indv.conflict_nodes

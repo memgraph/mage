@@ -14,10 +14,8 @@ class SimpleMutation(Mutation):
         return "SimpleMutation"
 
     def mutate(
-            self,
-            graph: Graph,
-            indv: Individual,
-            parameters: Dict[str, Any] = None) -> Optional[Tuple[Individual, List[int]]]:
+        self, graph: Graph, indv: Individual, parameters: Dict[str, Any] = None
+    ) -> Optional[Tuple[Individual, List[int]]]:
         """Mutate the given individual and returns the new individual and nodes that were changed."""
         conflict_nodes = indv.conflict_nodes
         if len(conflict_nodes) == 0:

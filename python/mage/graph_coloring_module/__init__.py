@@ -1,80 +1,80 @@
-from mage.graph_coloring_module.algorithms.meta_heuristics.quantum_annealing import (
+from mage.graph_coloring_module.algorithms.meta_heuristics.quantum_annealing import (  # noqa: F401, F402, F403
     QA,
-)  # noqa: F401, F402, F403
-from mage.graph_coloring_module.algorithms.algorithm import (
+)
+from mage.graph_coloring_module.algorithms.algorithm import (  # noqa: F401, F402, F403
     Algorithm,
-)  # noqa: F401, F402, F403
-from mage.graph_coloring_module.algorithms.meta_heuristics.parallel_algorithm import (
+)
+from mage.graph_coloring_module.algorithms.meta_heuristics.parallel_algorithm import (  # noqa: F401, F402, F403
     ParallelAlgorithm,
-)  # noqa: F401, F402, F403
-from mage.graph_coloring_module.algorithms.greedy.LDO import (
+)
+from mage.graph_coloring_module.algorithms.greedy.LDO import (  # noqa: F401, F402, F403
     LDO,
-)  # noqa: F401, F402, F403
-from mage.graph_coloring_module.algorithms.greedy.SDO import (
+)
+from mage.graph_coloring_module.algorithms.greedy.SDO import (  # noqa: F401, F402, F403
     SDO,
-)  # noqa: F401, F402, F403
-from mage.graph_coloring_module.algorithms.greedy.random import (
+)
+from mage.graph_coloring_module.algorithms.greedy.random import (  # noqa: F401, F402, F403
     Random,
-)  # noqa: F401, F402, F403
+)
 
-from mage.graph_coloring_module.communication.message import (
+from mage.graph_coloring_module.communication.message import (  # noqa: F401, F402, F403
     Message,
-)  # noqa: F401, F402, F403
+)
 
-from mage.graph_coloring_module.components.individual import (
+from mage.graph_coloring_module.components.individual import (  # noqa: F401, F402, F403
     Individual,
-)  # noqa: F401, F402, F403
-from mage.graph_coloring_module.components.population import (
+)
+from mage.graph_coloring_module.components.population import (  # noqa: F401, F402, F403
     Population,
-)  # noqa: F401, F402, F403
-from mage.graph_coloring_module.components.chain_chunk import (
+)
+from mage.graph_coloring_module.components.chain_chunk import (  # noqa: F401, F402, F403
     ChainChunk,
-)  # noqa: F401, F402, F403
-from mage.graph_coloring_module.components.chain_population import (
+)
+from mage.graph_coloring_module.components.chain_population import (  # noqa: F401, F402, F403
     ChainPopulation,
-)  # noqa: F401, F402, F403
+)
 
-from mage.graph_coloring_module.error_functions.conflict_error import (
+from mage.graph_coloring_module.error_functions.conflict_error import (  # noqa: F401, F402, F403
     ConflictError,
-)  # noqa: F401, F402, F403
-from mage.graph_coloring_module.error_functions.error import (
+)
+from mage.graph_coloring_module.error_functions.error import (  # noqa: F401, F402, F403
     Error,
-)  # noqa: F401, F402, F403
+)
 
 
-from mage.graph_coloring_module.operators.mutations.mutation import (
+from mage.graph_coloring_module.operators.mutations.mutation import (  # noqa: F401, F402, F403
     Mutation,
-)  # noqa: F401, F402, F403
-from mage.graph_coloring_module.operators.mutations.MIS_mutation import (
+)
+from mage.graph_coloring_module.operators.mutations.MIS_mutation import (  # noqa: F401, F402, F403
     MISMutation,
-)  # noqa: F401, F402, F403
-from mage.graph_coloring_module.operators.mutations.multiple_mutation import (
+)
+from mage.graph_coloring_module.operators.mutations.multiple_mutation import (  # noqa: F401, F402, F403
     MultipleMutation,
-)  # noqa: F401, F402, F403
-from mage.graph_coloring_module.operators.mutations.random_mutation import (
+)
+from mage.graph_coloring_module.operators.mutations.random_mutation import (  # noqa: F401, F402, F403
     RandomMutation,
-)  # noqa: F401, F402, F403
-from mage.graph_coloring_module.operators.mutations.simple_mutation import (
+)
+from mage.graph_coloring_module.operators.mutations.simple_mutation import (  # noqa: F401, F402, F403
     SimpleMutation,
-)  # noqa: F401, F402, F403
+)
 
-from mage.graph_coloring_module.utils.available_colors import (
+from mage.graph_coloring_module.utils.available_colors import (  # noqa: F401, F402, F403
     available_colors,
-)  # noqa: F401, F402, F403
+)
 
 from mage.graph_coloring_module.graph import Graph  # noqa: F401, F402, F403
 
-from mage.graph_coloring_module.population_factory import (
+from mage.graph_coloring_module.population_factory import (  # noqa: F401, F402, F403
     create,
-)  # noqa: F401, F402, F403
-from mage.graph_coloring_module.population_factory import (
+)
+from mage.graph_coloring_module.population_factory import (  # noqa: F401, F402, F403
     generate_individuals,
-)  # noqa: F401, F402, F403
+)
 
-from mage.graph_coloring_module.utils.validation import (
+from mage.graph_coloring_module.utils.validation import (  # noqa: F401, F402, F403
     validate,
-)  # noqa: F401, F402, F403
+)
 
-from mage.graph_coloring_module.utils.parameters_utils import (
+from mage.graph_coloring_module.utils.parameters_utils import (  # noqa: F401, F402, F403
     param_value,
-)  # noqa: F401, F402, F403
+)

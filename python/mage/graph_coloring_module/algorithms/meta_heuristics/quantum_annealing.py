@@ -2,7 +2,7 @@ import math
 import random
 import logging
 import multiprocessing as mp
-from typing import Dict, Any, List
+from typing import Dict, Any
 from mage.graph_coloring_module.graph import Graph
 from mage.graph_coloring_module.components.population import Population
 from mage.graph_coloring_module.utils.parameters_utils import param_value
@@ -17,7 +17,7 @@ logger = logging.getLogger("telco")
 
 class ConvergenceAdapter:
     @validate("convergence_tolerance", "convergence_probability", "error")
-    def __init__(self, population: Population, parameters: Dict[str, Any]):
+    def __init__(self, graph: Graph, population: Population, parameters: Dict[str, Any]):
         self._iteration = 0
         self._population = population
         self._actions = []
@@ -27,13 +27,13 @@ class ConvergenceAdapter:
         self._convergence_probability = param_value(
             graph, parameters, "convergence_probability"
         )
-        error = param_value(graph, parameters, "error")
-        self._best_sol_error = population.min_error(error.individual_err)
+        self.error = param_value(graph, parameters, "error")
+        self._best_sol_error = population.min_error(self.error.individual_err)
 
     def update(self):
         self._iteration += 1
-        if self._population.min_error(error.individual_err) < self._best_sol_error:
-            self._best_sol_error = self._population.min_error(error.individual_err)
+        if self._population.min_error(self.error.individual_err) < self._best_sol_error:
+            self._best_sol_error = self._population.min_error(self.error.individual_err)
             self._iteration = 0
         if self._iteration == self._convergence_tolerance:
             self._convergence_detected()
