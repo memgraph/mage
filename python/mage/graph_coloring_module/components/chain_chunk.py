@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 from mage.graph_coloring_module.components.individual import Individual
 from mage.graph_coloring_module.components.population import Population
 from mage.graph_coloring_module.graph import Graph
