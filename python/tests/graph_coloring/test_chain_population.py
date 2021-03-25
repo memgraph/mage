@@ -3,7 +3,6 @@ import pytest
 from mage.graph_coloring_module import Individual
 from mage.graph_coloring_module import ChainPopulation
 from mage.graph_coloring_module import Graph
-import math
 
 
 @pytest.fixture
