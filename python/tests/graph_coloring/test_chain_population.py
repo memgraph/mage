@@ -37,7 +37,7 @@ def test_previous_individual(chain_population):
 
 def test_previous_negative_index(chain_population):
     with pytest.raises(IndexError):
-        result_indv = chain_population.get_prev_individual(-2)
+        chain_population.get_prev_individual(-2)
 
 
 def test_previous_out_of_range(chain_population):
