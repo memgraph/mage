@@ -190,11 +190,11 @@ def test_replace_units(
     expected_coloring,
 ):
     indv = Individual(no_of_colors=no_of_colors, graph=graph, chromosome=chromosome)
-    new_indv = indv.replace_units(inds, colors)
-
     if is_none:
-        assert new_indv is None
+        with pytest.raises(Exception):
+            new_indv = indv.replace_units(inds, colors)
     else:
+        new_indv = indv.replace_units(inds, colors)
         assert new_indv.chromosome == expected_chromosome
         assert new_indv.conflict_nodes == expected_conflicts
         assert new_indv.conflicts_weight == expected_weights

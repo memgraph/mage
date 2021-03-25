@@ -48,12 +48,12 @@ class Population(ABC):
         pass
 
     @abstractmethod
-    def get_prev_individual(self, ind: int) -> Optional[Individual]:
+    def get_prev_individual(self, ind: int) -> Individual:
         """Returns the individual that precedes the individual on a given index in the individuals chain."""
         pass
 
     @abstractmethod
-    def get_next_individual(self, ind: int) -> Optional[Individual]:
+    def get_next_individual(self, ind: int) -> Individual:
         """Returns the individual following the individual on a given index in the individuals chain."""
         pass
 
@@ -111,8 +111,6 @@ class Population(ABC):
     def set_individual(self, ind: int, indv: Individual, diff_nodes: List[int]) -> int:
         """Sets the individual on the index ind to the given individual indv.
         Returns None if the wrong index is given."""
-        if not 0 <= ind < self.size:
-            return None
         old_indv = self._individuals[ind]
         self._individuals[ind] = indv
         correlation_diff = self._update_correlation(ind, old_indv, diff_nodes)

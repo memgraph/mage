@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Coverage report</title>
+    <link rel="icon" sizes="32x32" href="favicon_32.png">
+    <link rel="stylesheet" href="style.css" type="text/css">
+    <script type="text/javascript" src="jquery.min.js"></script>
+    <script type="text/javascript" src="jquery.ba-throttle-debounce.min.js"></script>
+    <script type="text/javascript" src="jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="jquery.hotkeys.js"></script>
+    <script type="text/javascript" src="coverage_html.js"></script>
+    <script type="text/javascript">
+        jQuery(document).ready(coverage.index_ready);
+    </script>
+</head>
+<body class="indexfile">
+<div id="header">
+    <div class="content">
+        <h1>Coverage report:
+            <span class="pc_cov">18%</span>
+        </h1>
+        <img id="keyboard_icon" src="keybd_closed.png" alt="Show keyboard shortcuts" />
+        <form id="filter_container">
+            <input id="filter" type="text" value="" placeholder="filter..." />
+        </form>
+    </div>
+</div>
+<div class="help_panel">
+    <img id="panel_icon" src="keybd_open.png" alt="Hide keyboard shortcuts" />
+    <p class="legend">Hot-keys on this page</p>
+    <div>
+    <p class="keyhelp">
+        <span class="key">n</span>
+        <span class="key">s</span>
+        <span class="key">m</span>
+        <span class="key">x</span>
+        <span class="key">b</span>
+        <span class="key">p</span>
+        <span class="key">c</span> &nbsp; change column sorting
+    </p>
+    </div>
+</div>
+<div id="index">
+    <table class="index">
+        <thead>
+            <tr class="tablehead" title="Click to sort">
+                <th class="name left headerSortDown shortkey_n">Module</th>
+                <th class="shortkey_s">statements</th>
+                <th class="shortkey_m">missing</th>
+                <th class="shortkey_x">excluded</th>
+                <th class="shortkey_b">branches</th>
+                <th class="shortkey_p">partial</th>
+                <th class="right shortkey_c">coverage</th>
+            </tr>
+        </thead>
+        <tfoot>
+            <tr class="total">
+                <td class="name left">Total</td>
+                <td>2194</td>
+                <td>1705</td>
+                <td>21</td>
+                <td>592</td>
+                <td>0</td>
+                <td class="right" data-ratio="497 2786">18%</td>
+            </tr>
+        </tfoot>
+        <tbody>
+            <tr class="file">
+                <td class="name left"><a href="collapse_py.html">collapse.py</a></td>
+                <td>73</td>
+                <td>73</td>
+                <td>0</td>
+                <td>42</td>
+                <td>0</td>
+                <td class="right" data-ratio="0 115">0%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="distance_calculator_py.html">distance_calculator.py</a></td>
+                <td>19</td>
+                <td>19</td>
+                <td>0</td>
+                <td>7</td>
+                <td>0</td>
+                <td class="right" data-ratio="0 26">0%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="graph_analyzer_py.html">graph_analyzer.py</a></td>
+                <td>115</td>
+                <td>115</td>
+                <td>0</td>
+                <td>30</td>
+                <td>0</td>
+                <td class="right" data-ratio="0 145">0%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="graph_coloring_py.html">graph_coloring.py</a></td>
+                <td>50</td>
+                <td>50</td>
+                <td>0</td>
+                <td>14</td>
+                <td>0</td>
+                <td class="right" data-ratio="0 64">0%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_constraint_programming_solver_py.html">mage/constraint_programming/solver.py</a></td>
+                <td>59</td>
+                <td>59</td>
+                <td>0</td>
+                <td>14</td>
+                <td>0</td>
+                <td class="right" data-ratio="0 73">0%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_geography_distance_calculator_py.html">mage/geography/distance_calculator.py</a></td>
+                <td>29</td>
+                <td>22</td>
+                <td>0</td>
+                <td>6</td>
+                <td>0</td>
+                <td class="right" data-ratio="7 35">20%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_geography_travelling_salesman_py.html">mage/geography/travelling_salesman.py</a></td>
+                <td>71</td>
+                <td>62</td>
+                <td>0</td>
+                <td>26</td>
+                <td>0</td>
+                <td class="right" data-ratio="9 97">9%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_algorithms_algorithm_py.html">mage/graph_coloring_module/algorithms/algorithm.py</a></td>
+                <td>8</td>
+                <td>1</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="right" data-ratio="7 8">88%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_algorithms_greedy_LDO_py.html">mage/graph_coloring_module/algorithms/greedy/LDO.py</a></td>
+                <td>21</td>
+                <td>10</td>
+                <td>2</td>
+                <td>8</td>
+                <td>0</td>
+                <td class="right" data-ratio="11 29">38%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_algorithms_greedy_SDO_py.html">mage/graph_coloring_module/algorithms/greedy/SDO.py</a></td>
+                <td>39</td>
+                <td>26</td>
+                <td>2</td>
+                <td>22</td>
+                <td>0</td>
+                <td class="right" data-ratio="13 61">21%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_algorithms_greedy_random_py.html">mage/graph_coloring_module/algorithms/greedy/random.py</a></td>
+                <td>11</td>
+                <td>2</td>
+                <td>2</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="right" data-ratio="9 11">82%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_algorithms_meta_heuristics_parallel_algorithm_py.html">mage/graph_coloring_module/algorithms/meta_heuristics/parallel_algorithm.py</a></td>
+                <td>74</td>
+                <td>50</td>
+                <td>0</td>
+                <td>28</td>
+                <td>0</td>
+                <td class="right" data-ratio="24 102">24%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_algorithms_meta_heuristics_quantum_annealing_py.html">mage/graph_coloring_module/algorithms/meta_heuristics/quantum_annealing.py</a></td>
+                <td>81</td>
+                <td>58</td>
+                <td>2</td>
+                <td>26</td>
+                <td>0</td>
+                <td class="right" data-ratio="23 107">21%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_communication_message_py.html">mage/graph_coloring_module/communication/message.py</a></td>
+                <td>11</td>
+                <td>4</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="right" data-ratio="7 11">64%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_components_chain_chunk_py.html">mage/graph_coloring_module/components/chain_chunk.py</a></td>
+                <td>41</td>
+                <td>28</td>
+                <td>0</td>
+                <td>8</td>
+                <td>0</td>
+                <td class="right" data-ratio="13 49">27%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_components_chain_population_py.html">mage/graph_coloring_module/components/chain_population.py</a></td>
+                <td>24</td>
+                <td>13</td>
+                <td>0</td>
+                <td>2</td>
+                <td>0</td>
+                <td class="right" data-ratio="11 26">42%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_components_individual_py.html">mage/graph_coloring_module/components/individual.py</a></td>
+                <td>96</td>
+                <td>72</td>
+                <td>0</td>
+                <td>46</td>
+                <td>0</td>
+                <td class="right" data-ratio="24 142">17%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_components_population_py.html">mage/graph_coloring_module/components/population.py</a></td>
+                <td>143</td>
+                <td>93</td>
+                <td>0</td>
+                <td>26</td>
+                <td>0</td>
+                <td class="right" data-ratio="50 169">30%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_error_functions_conflict_error_py.html">mage/graph_coloring_module/error_functions/conflict_error.py</a></td>
+                <td>28</td>
+                <td>13</td>
+                <td>2</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="right" data-ratio="15 28">54%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_error_functions_error_py.html">mage/graph_coloring_module/error_functions/error.py</a></td>
+                <td>12</td>
+                <td>2</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="right" data-ratio="10 12">83%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_exceptions_py.html">mage/graph_coloring_module/exceptions.py</a></td>
+                <td>15</td>
+                <td>5</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="right" data-ratio="10 15">67%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_graph_py.html">mage/graph_coloring_module/graph.py</a></td>
+                <td>49</td>
+                <td>22</td>
+                <td>3</td>
+                <td>16</td>
+                <td>0</td>
+                <td class="right" data-ratio="35 65">54%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_operators_mutations_MIS_mutation_py.html">mage/graph_coloring_module/operators/mutations/MIS_mutation.py</a></td>
+                <td>29</td>
+                <td>21</td>
+                <td>2</td>
+                <td>14</td>
+                <td>0</td>
+                <td class="right" data-ratio="8 43">19%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_operators_mutations_multiple_mutation_py.html">mage/graph_coloring_module/operators/mutations/multiple_mutation.py</a></td>
+                <td>16</td>
+                <td>6</td>
+                <td>2</td>
+                <td>4</td>
+                <td>0</td>
+                <td class="right" data-ratio="10 20">50%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_operators_mutations_mutation_py.html">mage/graph_coloring_module/operators/mutations/mutation.py</a></td>
+                <td>8</td>
+                <td>1</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="right" data-ratio="7 8">88%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_operators_mutations_random_mutation_py.html">mage/graph_coloring_module/operators/mutations/random_mutation.py</a></td>
+                <td>29</td>
+                <td>18</td>
+                <td>2</td>
+                <td>8</td>
+                <td>0</td>
+                <td class="right" data-ratio="11 37">30%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_operators_mutations_simple_mutation_py.html">mage/graph_coloring_module/operators/mutations/simple_mutation.py</a></td>
+                <td>14</td>
+                <td>7</td>
+                <td>2</td>
+                <td>2</td>
+                <td>0</td>
+                <td class="right" data-ratio="7 16">44%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_population_factory_py.html">mage/graph_coloring_module/population_factory.py</a></td>
+                <td>46</td>
+                <td>30</td>
+                <td>0</td>
+                <td>16</td>
+                <td>0</td>
+                <td class="right" data-ratio="16 62">26%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_utils_available_colors_py.html">mage/graph_coloring_module/utils/available_colors.py</a></td>
+                <td>13</td>
+                <td>10</td>
+                <td>0</td>
+                <td>10</td>
+                <td>0</td>
+                <td class="right" data-ratio="3 23">13%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_utils_parameters_utils_py.html">mage/graph_coloring_module/utils/parameters_utils.py</a></td>
+                <td>16</td>
+                <td>12</td>
+                <td>0</td>
+                <td>10</td>
+                <td>0</td>
+                <td class="right" data-ratio="4 26">15%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mage_graph_coloring_module_utils_validation_py.html">mage/graph_coloring_module/utils/validation.py</a></td>
+                <td>17</td>
+                <td>10</td>
+                <td>0</td>
+                <td>10</td>
+                <td>0</td>
+                <td class="right" data-ratio="7 27">26%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="mgp_networkx_py.html">mgp_networkx.py</a></td>
+                <td>165</td>
+                <td>165</td>
+                <td>0</td>
+                <td>62</td>
+                <td>0</td>
+                <td class="right" data-ratio="0 227">0%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="nxalg_py.html">nxalg.py</a></td>
+                <td>285</td>
+                <td>285</td>
+                <td>0</td>
+                <td>92</td>
+                <td>0</td>
+                <td class="right" data-ratio="0 377">0%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="set_cover_py.html">set_cover.py</a></td>
+                <td>43</td>
+                <td>43</td>
+                <td>0</td>
+                <td>16</td>
+                <td>0</td>
+                <td class="right" data-ratio="0 59">0%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="tests_distance_calculator_test_distance_calculator_py.html">tests/distance_calculator/test_distance_calculator.py</a></td>
+                <td>20</td>
+                <td>18</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="right" data-ratio="2 20">10%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="tests_graph_coloring_test_LDO_py.html">tests/graph_coloring/test_LDO.py</a></td>
+                <td>26</td>
+                <td>16</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="right" data-ratio="10 26">38%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="tests_graph_coloring_test_SDO_py.html">tests/graph_coloring/test_SDO.py</a></td>
+                <td>26</td>
+                <td>16</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="right" data-ratio="10 26">38%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="tests_graph_coloring_test_avaliable_colors_py.html">tests/graph_coloring/test_avaliable_colors.py</a></td>
+                <td>13</td>
+                <td>7</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="right" data-ratio="6 13">46%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="tests_graph_coloring_test_chain_chunk_py.html">tests/graph_coloring/test_chain_chunk.py</a></td>
+                <td>45</td>
+                <td>32</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="right" data-ratio="13 45">29%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="tests_graph_coloring_test_chain_population_py.html">tests/graph_coloring/test_chain_population.py</a></td>
+                <td>43</td>
+                <td>30</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="right" data-ratio="13 43">30%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="tests_graph_coloring_test_conflict_error_py.html">tests/graph_coloring/test_conflict_error.py</a></td>
+                <td>33</td>
+                <td>17</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="right" data-ratio="16 33">48%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="tests_graph_coloring_test_graph_py.html">tests/graph_coloring/test_graph.py</a></td>
+                <td>41</td>
+                <td>23</td>
+                <td>0</td>
+                <td>12</td>
+                <td>0</td>
+                <td class="right" data-ratio="18 53">34%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="tests_graph_coloring_test_individual_py.html">tests/graph_coloring/test_individual.py</a></td>
+                <td>34</td>
+                <td>21</td>
+                <td>0</td>
+                <td>2</td>
+                <td>0</td>
+                <td class="right" data-ratio="13 36">36%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="tests_graph_coloring_test_operators_py.html">tests/graph_coloring/test_operators.py</a></td>
+                <td>54</td>
+                <td>38</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="right" data-ratio="16 54">30%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="tests_graph_coloring_test_population_py.html">tests/graph_coloring/test_population.py</a></td>
+                <td>65</td>
+                <td>46</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="right" data-ratio="19 65">29%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="tests_graph_coloring_test_random_py.html">tests/graph_coloring/test_random.py</a></td>
+                <td>26</td>
+                <td>16</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="right" data-ratio="10 26">38%</td>
+            </tr>
+            <tr class="file">
+                <td class="name left"><a href="tsp_py.html">tsp.py</a></td>
+                <td>18</td>
+                <td>18</td>
+                <td>0</td>
+                <td>13</td>
+                <td>0</td>
+                <td class="right" data-ratio="0 31">0%</td>
+            </tr>
+        </tbody>
+    </table>
+    <p id="no_rows">
+        No items found using the specified filter.
+    </p>
+</div>
+<div id="footer">
+    <div class="content">
+        <p>
+            <a class="nav" href="https://coverage.readthedocs.io">coverage.py v5.5</a>,
+            created at 2021-03-25 07:28 +0100
+        </p>
+    </div>
+</div>
+</body>
+</html>

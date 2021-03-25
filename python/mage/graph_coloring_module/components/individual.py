@@ -1,6 +1,11 @@
 from random import choice
 from typing import List, Set, Tuple
 from mage.graph_coloring_module.graph import Graph
+from mage.graph_coloring_module.exceptions import (
+    WrongColoringException,
+    IllegalColorException,
+    IllegalNodeException,
+)
 
 
 class Individual:
@@ -95,7 +100,9 @@ class Individual:
         is not correct then the function returns None."""
 
         if len(inds) != len(colors):
-            return None
+            raise WrongColoringException(
+                "The number of given nodes must be equal to the number of given colors!"
+            )
 
         new_chromosome = self._chromosome[:]
         conflicts_counter = self._conflicts_counter[:]
@@ -104,9 +111,11 @@ class Individual:
 
         for (ind, color) in zip(inds, colors):
             if not (0 <= color < self._no_of_colors):
-                return None
+                raise IllegalColorException(
+                    "The given color is not in the range of allowed colors!"
+                )
             if not (0 <= ind < self.no_of_units):
-                return None
+                raise IllegalNodeException("The given node does not exist!")
             conflict_edges, conflicts_counter, conflict_nodes = self._calculate_diff(
                 chromosome=new_chromosome,
                 node=ind,

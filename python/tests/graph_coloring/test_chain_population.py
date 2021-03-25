@@ -36,17 +36,13 @@ def test_previous_individual(chain_population):
 
 
 def test_previous_negative_index(chain_population):
-    result_indv = chain_population.get_prev_individual(-2)
-    expected_indv = None
-
-    assert result_indv == expected_indv
+    with pytest.raises(IndexError):
+        result_indv = chain_population.get_prev_individual(-2)
 
 
 def test_previous_out_of_range(chain_population):
-    result_indv = chain_population.get_prev_individual(10)
-    expected_indv = None
-
-    assert result_indv == expected_indv
+    with pytest.raises(IndexError):
+        chain_population.get_prev_individual(10)
 
 
 def test_previous_first_item(chain_population):
@@ -71,10 +67,8 @@ def test_next_individual_last_item(chain_population):
 
 
 def test_next_negative_index(chain_population):
-    result_indv = chain_population.get_next_individual(-2)
-    expected_indv = None
-
-    assert result_indv == expected_indv
+    with pytest.raises(IndexError):
+        chain_population.get_next_individual(-2)
 
 
 def test_next_out_of_range(chain_population):
