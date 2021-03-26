@@ -32,7 +32,7 @@ class ConvergenceCallback:
             self._best_sol_error = population.min_error(error.individual_err)
             self._iteration = 0
         if self._iteration == convergence_tolerance:
-            self._convergence_detected()
+            self._convergence_detected(graph, population, parameters)
 
     @validate("error", "convergence_callback_actions, convergence_probability")
     def _convergence_detected(self, graph: Graph, population: Population, parameters: Dict[str, Any]):
