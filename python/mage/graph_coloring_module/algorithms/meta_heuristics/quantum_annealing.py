@@ -60,7 +60,7 @@ class QA(ParallelAlgorithm):
     def __str__(self):
         return "QA"
 
-    @validate("max_iterations", "error", "communication_delay, iteration_adapter")
+    @validate("max_iterations", "error", "communication_delay, iteration_adapters")
     def algorithm(
         self,
         proc_id: int,
@@ -79,7 +79,7 @@ class QA(ParallelAlgorithm):
         error = param_value(graph, parameters, "error")
         communication_delay = param_value(graph, parameters, "communication_delay")
         logging_delay = param_value(graph, parameters, "logging_delay")
-        iteration_adapters = param_value(graph, parameters, "iteration_adapter")
+        iteration_adapters = param_value(graph, parameters, "iteration_callbacks")
 
         for iteration in range(max_iterations):
             if population.contains_solution or self._read_msgs(my_q, population):

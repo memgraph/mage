@@ -11,7 +11,7 @@ from mage.graph_coloring_module import SDO
 
 
 @mgp.read_proc
-def QA_graph(
+def color_graph(
     context: mgp.ProcCtx, no_of_colors: int, max_iterations: int
 ) -> mgp.Record(node=str, color=str):
     g = _convert_to_graph(context)
@@ -23,7 +23,7 @@ def QA_graph(
 
 
 @mgp.read_proc
-def QA_subgraph(
+def color_subgraph(
     context: mgp.ProcCtx,
     vertices: mgp.List[mgp.Vertex],
     edges: mgp.List[mgp.Edge],
