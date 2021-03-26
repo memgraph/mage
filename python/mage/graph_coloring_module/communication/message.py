@@ -1,4 +1,5 @@
 from mage.graph_coloring_module.components.individual import Individual
+from mage.graph_coloring_module.communication.message_type import MessageType
 
 
 class Message:
@@ -8,7 +9,7 @@ class Message:
     the next chunk of the population and -1 if it was sent from the process containing the
     preceding one population chunk."""
 
-    def __init__(self, data: Individual, msg_type: int):
+    def __init__(self, data: Individual, msg_type: MessageType):
         self._data = data
         self._msg_type = msg_type
 
@@ -18,7 +19,7 @@ class Message:
         return self._data
 
     @property
-    def msg_type(self) -> int:
+    def msg_type(self) -> MessageType:
         """Returns the message type. The message type is 1 if the message was sent from the
         next chunkof the population and -1 if it was sent from the preceding one."""
         return self._msg_type

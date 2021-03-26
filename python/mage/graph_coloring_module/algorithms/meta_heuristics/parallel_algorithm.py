@@ -11,6 +11,8 @@ from mage.graph_coloring_module.utils.validation import validate
 from mage.graph_coloring_module.communication.message import Message
 import multiprocessing as mp
 from abc import ABC, abstractmethod
+from mage.graph_coloring_module.parameters import Parameter
+from mage.graph_coloring_module.communication.message_type import MessageType
 
 
 logger = logging.getLogger("telco")
@@ -19,7 +21,7 @@ logger = logging.getLogger("telco")
 class ParallelAlgorithm(Algorithm, ABC):
     """A class that represents abstract parallel algorithm."""
 
-    @validate("no_of_processes", "no_of_chunks", "error")
+    @validate(Parameter.NO_OF_PROCESSES, Parameter.NO_OF_CHUNKS, Parameter.ERROR)
     def run(self, graph: Graph, parameters: Dict[str, Any]) -> Individual:
         """Runs the algorithm in a given number of processes and returns the best individual.
 
@@ -29,9 +31,9 @@ class ParallelAlgorithm(Algorithm, ABC):
         Each population chunk has approximately population_size / no_of_chunks individuals.
         :error: a function that defines an error"""
 
-        no_of_processes = param_value(graph, parameters, "no_of_processes")
-        no_of_chunks = param_value(graph, parameters, "no_of_chunks")
-        error = param_value(graph, parameters, "error")
+        no_of_processes = param_value(graph, parameters, Parameter.NO_OF_PROCESSES)
+        no_of_chunks = param_value(graph, parameters, Parameter.NO_OF_CHUNKS)
+        error = param_value(graph, parameters, Parameter.ERROR)
 
         populations = create(graph, parameters)
 
@@ -90,7 +92,7 @@ class ParallelAlgorithm(Algorithm, ABC):
         iteration: int,
         queue: mp.Queue,
         indv: Individual,
-        msg_type: int,
+        msg_type: MessageType,
     ) -> None:
         """Sends the individual to the previous and next part of the population."""
         if queue is not None:
@@ -99,19 +101,19 @@ class ParallelAlgorithm(Algorithm, ABC):
 
     def _write_stop(self, prev_q: mp.Queue, next_q: mp.Queue, indv: Individual) -> None:
         if next_q is not None and prev_q is not None:
-            next_q.put(Message(indv, 0))
-            prev_q.put(Message(indv, 0))
+            next_q.put(Message(indv, MessageType.STOP))
+            prev_q.put(Message(indv, MessageType.STOP))
 
     def _read_msgs(self, my_q: mp.Queue, population: Population) -> None:
         """Reads messages from the queue and sets the previous or next individual of the population."""
         if my_q is not None:
             while not my_q.empty():
                 msg = my_q.get()
-                if msg.msg_type == 1:
+                if msg.msg_type == MessageType.FROM_NEXT_CHUNK:
                     population.set_next_individual(msg.data)
-                elif msg.msg_type == -1:
+                elif msg.msg_type == MessageType.FROM_PREV_CHUNK:
                     population.set_prev_individual(msg.data)
-                elif msg.msg_type == 0:
+                elif msg.msg_type == MessageType.STOP:
                     return True
         return False
 

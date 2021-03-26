@@ -1,6 +1,6 @@
 import mgp
 from collections import defaultdict
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from mage.graph_coloring_module import Graph
 from mage.graph_coloring_module import QA
 from mage.graph_coloring_module import ConflictError
@@ -12,10 +12,10 @@ from mage.graph_coloring_module import SDO
 
 @mgp.read_proc
 def color_graph(
-    context: mgp.ProcCtx, no_of_colors: int, max_iterations: int
+    context: mgp.ProcCtx, parameters: mgp.Map
 ) -> mgp.Record(node=str, color=str):
     g = _convert_to_graph(context)
-    sol = _run_algorithm(g, no_of_colors, max_iterations)
+    sol = _run_algorithm(g, parameters)
     return [
         mgp.Record(node=str(g.label(node)), color=str(color))
         for node, color in enumerate(sol)
@@ -27,18 +27,17 @@ def color_subgraph(
     context: mgp.ProcCtx,
     vertices: mgp.List[mgp.Vertex],
     edges: mgp.List[mgp.Edge],
-    no_of_colors: int,
-    max_iterations: int,
+    parameters: mgp.Map,
 ) -> mgp.Record(node=str, color=str):
     g = _convert_to_subgraph(context, vertices, edges)
-    sol = _run_algorithm(g, no_of_colors, max_iterations)
+    sol = _run_algorithm(g, parameters)
     return [
         mgp.Record(node=str(g.label(node)), color=str(color))
         for node, color in enumerate(sol)
     ]
 
 
-def _run_algorithm(graph: Graph, no_of_colors: int, max_iterations: int) -> List[int]:
+def _run_algorithm(graph: Graph, parameters) -> List[int]:
     alg = QA()
     _default_parameters = {
         "no_of_processes": 1,

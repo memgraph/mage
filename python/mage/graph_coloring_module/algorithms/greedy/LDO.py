@@ -6,6 +6,7 @@ from mage.graph_coloring_module.algorithms.algorithm import Algorithm
 from mage.graph_coloring_module.utils.parameters_utils import param_value
 from mage.graph_coloring_module.utils.available_colors import available_colors
 from mage.graph_coloring_module.utils.validation import validate
+from mage.graph_coloring_module.parameters import Parameter
 
 
 class LDO(Algorithm):
@@ -17,11 +18,11 @@ class LDO(Algorithm):
     def __str__(self):
         return "LDO"
 
-    @validate("no_of_colors")
+    @validate(Parameter.NO_OF_COLORS)
     def run(self, graph: Graph, parameters: Dict[str, Any] = None) -> Individual:
         """Returns the Individual that represents the result of the LDO algorithm."""
 
-        no_of_colors = param_value(graph, parameters, "no_of_colors")
+        no_of_colors = param_value(graph, parameters, Parameter.NO_OF_COLORS)
 
         chromosome = [-1 for _ in graph.nodes]
         sorted_nodes = sorted(

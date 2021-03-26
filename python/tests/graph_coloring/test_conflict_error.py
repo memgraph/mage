@@ -6,6 +6,7 @@ from mage.graph_coloring_module import Individual
 from mage.graph_coloring_module import ChainPopulation
 from mage.graph_coloring_module import ConflictError
 from mage.graph_coloring_module import Graph
+from mage.graph_coloring_module import Parameter
 
 
 @pytest.fixture
@@ -74,7 +75,9 @@ def test_individual_error_no_setting(
 def test_population_error(set_seed, chain_population):
 
     error = ConflictError().population_err(
-        graph, chain_population, {"alpha": 0.5, "beta": 0.5}
+        graph,
+        chain_population,
+        {Parameter.CONFLICT_ERR_ALPHA: 0.5, Parameter.CONFLICT_ERR_BETA: 0.5},
     )
 
     expected_error = 6.5
@@ -88,7 +91,7 @@ def test_delta_error_function():
         Individual(no_of_colors=3, graph=g, chromosome=[1, 2, 0, 2, 1]),
         Individual(no_of_colors=3, graph=g, chromosome=[1, 2, 2, 2, 1]),
         -8,
-        {"alpha": 0.5, "beta": 0.5},
+        {Parameter.CONFLICT_ERR_ALPHA: 0.5, Parameter.CONFLICT_ERR_BETA: 0.5},
     )
 
     expected_error = -1.5

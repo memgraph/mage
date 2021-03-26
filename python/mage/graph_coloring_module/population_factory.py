@@ -8,21 +8,22 @@ from mage.graph_coloring_module.components.chain_population import ChainPopulati
 from mage.graph_coloring_module.utils.parameters_utils import param_value
 from mage.graph_coloring_module.utils.validation import validate
 from mage.graph_coloring_module.exceptions import PopulationCreationException
+from mage.graph_coloring_module.parameters import Parameter
 
 
 logger = logging.getLogger("telco")
 
 
-@validate("population_size", "no_of_colors")
+@validate(Parameter.POPULATION_SIZE, Parameter.NO_OF_COLORS)
 def generate_individuals(
     graph: Graph, parameters: Dict[str, Any] = None
 ) -> List[Individual]:
     """Creates a list of individuals in which some individuals are the result of the given algorithms.
     If more algorithms are given than the population size, then the excess is ignored."""
 
-    population_size = param_value(graph, parameters, "population_size")
-    no_of_colors = param_value(graph, parameters, "no_of_colors")
-    algorithms = param_value(graph, parameters, "algorithms")
+    population_size = param_value(graph, parameters, Parameter.POPULATION_SIZE)
+    no_of_colors = param_value(graph, parameters, Parameter.NO_OF_COLORS)
+    algorithms = param_value(graph, parameters, Parameter.INIT_ALGORITHMS)
 
     individuals = []
     if algorithms is not None:
@@ -45,12 +46,12 @@ def generate_individuals(
     return individuals
 
 
-@validate("population_size", "no_of_chunks")
+@validate(Parameter.POPULATION_SIZE, Parameter.NO_OF_CHUNKS)
 def create(graph: Graph, parameters: Dict[str, Any] = None) -> Optional[Population]:
     """Returns a list of no_of_chunks populations that have an equal number of individuals."""
 
-    population_size = param_value(graph, parameters, "population_size")
-    no_of_chunks = param_value(graph, parameters, "no_of_chunks")
+    population_size = param_value(graph, parameters, Parameter.POPULATION_SIZE)
+    no_of_chunks = param_value(graph, parameters, Parameter.NO_OF_CHUNKS)
 
     individuals = generate_individuals(graph, parameters)
     populations = []

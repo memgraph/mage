@@ -5,6 +5,7 @@ from mage.graph_coloring_module.graph import Graph
 from mage.graph_coloring_module.components.individual import Individual
 from mage.graph_coloring_module.utils.parameters_utils import param_value
 from mage.graph_coloring_module.utils.validation import validate
+from mage.graph_coloring_module.parameters import Parameter
 
 
 class MultipleMutation(Mutation):
@@ -14,16 +15,16 @@ class MultipleMutation(Mutation):
     def __str__(self):
         return "MultipleMutation"
 
-    @validate("multiple_mutation_no_of_nodes", "no_of_colors")
+    @validate(Parameter.MULTIPLE_MUTATION_NODES_NO_OF_NODES, Parameter.NO_OF_COLORS)
     def mutate(
         self, graph: Graph, indv: Individual, parameters: Dict[str, Any] = None
     ) -> Tuple[Individual, List[int]]:
         """Mutate the given individual and returns the new individual and nodes that were changed."""
 
         no_of_nodes_to_mutate = param_value(
-            graph, parameters, "multiple_mutation_no_of_nodes"
+            graph, parameters, Parameter.MULTIPLE_MUTATION_NODES_NO_OF_NODES
         )
-        no_of_colors = param_value(graph, parameters, "no_of_colors")
+        no_of_colors = param_value(graph, parameters, Parameter.NO_OF_COLORS)
 
         nodes = [
             random.randint(0, len(graph) - 1) for _ in range(no_of_nodes_to_mutate)

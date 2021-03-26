@@ -6,6 +6,7 @@ from mage.graph_coloring_module.components.population import Population
 from mage.graph_coloring_module.error_functions.error import Error
 from mage.graph_coloring_module.utils.parameters_utils import param_value
 from mage.graph_coloring_module.utils.validation import validate
+from mage.graph_coloring_module.parameters import Parameter
 
 
 logger = logging.getLogger("telco")
@@ -24,15 +25,15 @@ class ConflictError(Error):
         """Calculates the error of the individual as the number of conflicting edges."""
         return indv.conflicts_weight
 
-    @validate("alpha", "beta")
+    @validate(Parameter.CONFLICT_ERR_ALPHA, Parameter.CONFLICT_ERR_BETA)
     def population_err(
         self, graph: Graph, pop: Population, parameters: Dict[str, Any] = None
     ) -> Optional[float]:
         """Calculates the population error as the sum of potential and kinetic energy.
         If an error occurs None is returned, otherwise the total error of the population is returned."""
 
-        alpha = param_value(graph, parameters, "alpha")
-        beta = param_value(graph, parameters, "beta")
+        alpha = param_value(graph, parameters, Parameter.CONFLICT_ERR_ALPHA)
+        beta = param_value(graph, parameters, Parameter.CONFLICT_ERR_BETA)
 
         potential_energy = alpha * pop.sum_conflicts_weight
         correlation = pop.cumulative_correlation
@@ -40,7 +41,7 @@ class ConflictError(Error):
         error = potential_energy - kinetic_energy
         return error
 
-    @validate("alpha", "beta")
+    @validate(Parameter.CONFLICT_ERR_ALPHA, Parameter.CONFLICT_ERR_BETA)
     def delta(
         self,
         graph: Graph,
@@ -52,8 +53,8 @@ class ConflictError(Error):
         """Calculates the difference of the population error
         that occurred after the replacement of the individual."""
 
-        alpha = param_value(graph, parameters, "alpha")
-        beta = param_value(graph, parameters, "beta")
+        alpha = param_value(graph, parameters, Parameter.CONFLICT_ERR_ALPHA)
+        beta = param_value(graph, parameters, Parameter.CONFLICT_ERR_BETA)
 
         potential_delta = alpha * (
             new_indv.conflicts_weight - old_indv.conflicts_weight

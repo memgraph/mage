@@ -121,7 +121,10 @@ class Population(ABC):
         return self._solution
 
     def solution_error(self) -> float:
-        return self._solution._conflicts_weight
+        if self._solution is not None:
+            return self._solution._conflicts_weight
+        else:
+            return min([indv.conflicts_weight for indv in self.individuals])
 
     def best_individual_index(
         self, error_func: Callable[[Graph, Individual], float]

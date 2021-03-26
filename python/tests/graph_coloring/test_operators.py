@@ -7,6 +7,7 @@ from mage.graph_coloring_module import MISMutation
 from mage.graph_coloring_module import MultipleMutation
 from mage.graph_coloring_module import RandomMutation
 from mage.graph_coloring_module import SimpleMutation
+from mage.graph_coloring_module import Parameter
 
 
 @pytest.fixture
@@ -41,7 +42,9 @@ def test_mis_mutation(set_seed, graph):
 def test_multiple_mutation(set_seed, graph):
     individual = Individual(no_of_colors=3, graph=graph, chromosome=[0, 1, 0, 2, 0])
     mutated_indv, nodes = MultipleMutation().mutate(
-        graph, individual, {"multiple_mutation_no_of_nodes": 2, "no_of_colors": 3}
+        graph,
+        individual,
+        {Parameter.MULTIPLE_MUTATION_NODES_NO_OF_NODES: 2, Parameter.NO_OF_COLORS: 3},
     )
 
     expected_mutated_indv_chromosome = [1, 1, 0, 2, 0]
@@ -56,9 +59,8 @@ def test_random_mutation_no_conflict(set_seed, graph):
         graph,
         individual,
         {
-            "random_mutation_probability": 0.5,
-            "random_mutation_probability_2": 0.5,
-            "no_of_colors": 3,
+            Parameter.RANDOM_MUTATION_PROBABILITY: 0.5,
+            Parameter.NO_OF_COLORS: 3,
         },
     )
     expected_mutated_indv_chromosome = [0, 1, 2, 1, 0]
@@ -75,9 +77,8 @@ def test_random_mutation(set_seed, graph):
         graph,
         individual,
         {
-            "random_mutation_probability": 0.5,
-            "random_mutation_probability_2": 0.5,
-            "no_of_colors": 3,
+            Parameter.RANDOM_MUTATION_PROBABILITY: 0.5,
+            Parameter.NO_OF_COLORS: 3,
         },
     )
     expected_mutated_indv_chromosome = [2, 1, 0, 2, 0]

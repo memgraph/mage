@@ -78,3 +78,15 @@ from mage.graph_coloring_module.utils.validation import (  # noqa: F401, F402, F
 from mage.graph_coloring_module.utils.parameters_utils import (  # noqa: F401, F402, F403
     param_value,
 )
+
+from mage.graph_coloring_module.iteration_callbacks.convergence_callback import (  # noqa: F401, F402, F403
+    ConvergenceCallback,
+)
+
+from mage.graph_coloring_module.iteration_callbacks.callback_actions.simple_tunneling import (  # noqa: F401, F402, F403
+    SimpleTunneling,
+)
+
+from mage.graph_coloring_module.parameters import (  # noqa: F401, F402, F403
+    Parameter,
+)
