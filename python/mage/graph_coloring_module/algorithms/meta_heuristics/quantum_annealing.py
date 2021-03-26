@@ -15,41 +15,40 @@ from mage.graph_coloring_module.algorithms.meta_heuristics.parallel_algorithm im
 logger = logging.getLogger("telco")
 
 
-class ConvergenceAdapter:
-    @validate("convergence_tolerance", "convergence_probability", "error")
-    def __init__(
-        self, graph: Graph, population: Population, parameters: Dict[str, Any]
-    ):
-        self._iteration = 0
-        self._population = population
-        self._actions = []
-        self._convergence_tolerance = param_value(
-            graph, parameters, "convergence_tolerance"
-        )
-        self._convergence_probability = param_value(
-            graph, parameters, "convergence_probability"
-        )
-        self.error = param_value(graph, parameters, "error")
-        self._best_sol_error = population.min_error(self.error.individual_err)
+class ConvergenceCallback:
 
-    def update(self):
+    def __init__(
+            self):
+        self._iteration = 0
+        self._best_sol_error = float('inf')
+
+    @validate("error", "convergence_tolerance)
+    def update(self, graph: Graph, population: Population, parameters: Dict[str, Any]):
+        error = param_value(graph, parameters, "error")
+        convergence_tolerance = param_value(graph, parameters, "convergence_tolerance")
+
         self._iteration += 1
-        if self._population.min_error(self.error.individual_err) < self._best_sol_error:
-            self._best_sol_error = self._population.min_error(self.error.individual_err)
+        if population.min_error(error.individual_err) < self._best_sol_error:
+            self._best_sol_error = population.min_error(error.individual_err)
             self._iteration = 0
-        if self._iteration == self._convergence_tolerance:
+        if self._iteration == convergence_tolerance:
             self._convergence_detected()
 
-    def _convergence_detected(self):
-        for action in self._actions:
-            for indv in self._population:
-                if random.random() < self._convergence_probability:
-                    action.run()
+    @validate("error", "convergence_callback_actions, convergence_probability")
+    def _convergence_detected(self, graph: Graph, population: Population, parameters: Dict[str, Any]):
+        error = param_value(graph, parameters, "error")
+        convergence_callback_actions = param_value(graph, parameters, "convergence_callback_actions")
+        convergence_probability = param_value(graph, parameters, "convergence_probability")
+
+        for action in convergence_callback_actions:
+            for i, _ in enumerate(population.individuals):
+                if random.random() < convergence_probability:
+                    action.run(i, graph, population, parameters)
         self._iteration = 0
-        self._best_sol_error = self._population.min_error(self.error.individual_err)
+        self._best_sol_error = population.min_error(error.individual_err)
 
 
-class MatplotlibAdapter:
+class MatplotlibCallback:
     def __init__(self):
         pass
 
@@ -79,7 +78,7 @@ class QA(ParallelAlgorithm):
         error = param_value(graph, parameters, "error")
         communication_delay = param_value(graph, parameters, "communication_delay")
         logging_delay = param_value(graph, parameters, "logging_delay")
-        iteration_adapters = param_value(graph, parameters, "iteration_callbacks")
+        iteration_callbacks = param_value(graph, parameters, "iteration_callbacks")
 
         for iteration in range(max_iterations):
             if population.contains_solution or self._read_msgs(my_q, population):
@@ -98,8 +97,8 @@ class QA(ParallelAlgorithm):
                 1,
             )
 
-            for adapter in iteration_adapters:
-                adapter.update()
+            for callback in iteration_callbacks:
+                callback.update(graph, population, parameters)
 
             if iteration % logging_delay == 0:
                 logger.info(
