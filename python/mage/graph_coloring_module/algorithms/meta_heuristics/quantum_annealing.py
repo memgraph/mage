@@ -16,11 +16,9 @@ logger = logging.getLogger("telco")
 
 
 class ConvergenceCallback:
-
-    def __init__(
-            self):
+    def __init__(self):
         self._iteration = 0
-        self._best_sol_error = float('inf')
+        self._best_sol_error = float("inf")
 
     @validate("error", "convergence_tolerance")
     def update(self, graph: Graph, population: Population, parameters: Dict[str, Any]):
@@ -35,10 +33,16 @@ class ConvergenceCallback:
             self._convergence_detected(graph, population, parameters)
 
     @validate("error", "convergence_callback_actions, convergence_probability")
-    def _convergence_detected(self, graph: Graph, population: Population, parameters: Dict[str, Any]):
+    def _convergence_detected(
+        self, graph: Graph, population: Population, parameters: Dict[str, Any]
+    ):
         error = param_value(graph, parameters, "error")
-        convergence_callback_actions = param_value(graph, parameters, "convergence_callback_actions")
-        convergence_probability = param_value(graph, parameters, "convergence_probability")
+        convergence_callback_actions = param_value(
+            graph, parameters, "convergence_callback_actions"
+        )
+        convergence_probability = param_value(
+            graph, parameters, "convergence_probability"
+        )
 
         for action in convergence_callback_actions:
             for i, _ in enumerate(population.individuals):
