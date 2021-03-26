@@ -63,6 +63,7 @@ def _run_algorithm(graph: Graph, no_of_colors: int, max_iterations: int) -> List
         "multiple_mutation_no_of_nodes": 5,
         "random_mutation_probability": 0.1,
         "random_mutation_probability_2": 0.5,
+        "iteration_adapters": [ConvergenceAdapter()]
     }
     sol = alg.run(graph, _default_parameters)
     return sol.chromosome

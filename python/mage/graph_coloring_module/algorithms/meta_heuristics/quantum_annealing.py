@@ -22,7 +22,7 @@ class ConvergenceCallback:
         self._iteration = 0
         self._best_sol_error = float('inf')
 
-    @validate("error", "convergence_tolerance)
+    @validate("error", "convergence_tolerance")
     def update(self, graph: Graph, population: Population, parameters: Dict[str, Any]):
         error = param_value(graph, parameters, "error")
         convergence_tolerance = param_value(graph, parameters, "convergence_tolerance")
