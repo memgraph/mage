@@ -1,6 +1,6 @@
 import mgp
 from collections import defaultdict
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from mage.graph_coloring_module import Graph
 from mage.graph_coloring_module import QA
 from mage.graph_coloring_module import ConflictError
@@ -43,9 +43,9 @@ def _run_algorithm(graph: Graph, parameters) -> List[int]:
         "no_of_processes": 1,
         "no_of_chunks": 1,
         "communication_delay": 10,
-        "max_iterations": max_iterations,
+        "max_iterations": 10,
         "population_size": 7,
-        "no_of_colors": no_of_colors,
+        "no_of_colors": 3,
         "max_steps": 25,
         "temperature": 0.035,
         "mutation": SimpleMutation(),

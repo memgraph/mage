@@ -1,5 +1,3 @@
-import math
-import random
 from typing import Dict, Any
 from mage.graph_coloring_module.graph import Graph
 from mage.graph_coloring_module.components.population import Population

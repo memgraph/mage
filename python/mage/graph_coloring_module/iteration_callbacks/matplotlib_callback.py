@@ -6,7 +6,7 @@ from mage.graph_coloring_module.iteration_callbacks.iteration_callback import (
 )
 
 
-class MatplotlibCallback:
+class MatplotlibCallback(IterationCallback):
     def __init__(self):
         super().__init__()
 
