@@ -4,14 +4,12 @@
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
-use std::ffi::CString;
+use std::ffi::CStr;
 use std::os::raw::c_int;
+#[macro_use]
+extern crate c_str_macro;
 
 //// START "library" part.
-
-// TODO(gitbuda): The expect is panicking (after CString::new), being in panic is not good in
-// general, but in this particular case it will affect Memgraph (take it down). Figure out how to
-// not panic and still operate correctly.
 
 #[derive(Debug, Clone)]
 struct MgpError;
@@ -64,14 +62,13 @@ fn make_int_value(
     result: *mut mgp_result,
     memory: *mut mgp_memory,
 ) -> Result<MgpValue, MgpAllocationError> {
-    let unable_alloc_value_msg = CString::new("Unable to allocate an integer.")
-        .expect("CString::new failed prior to allocating an integer value.");
+    let unable_alloc_value_msg = c_str!("Unable to allocate an integer.");
     unsafe {
         let mg_value: MgpValue = MgpValue {
             value: mgp_value_make_int(value, memory),
         };
         if mg_value.value.is_null() {
-            mgp_result_set_error_msg(result, unable_alloc_value_msg.into_raw());
+            mgp_result_set_error_msg(result, unable_alloc_value_msg.as_ptr());
             return Err(MgpAllocationError);
         }
         return Ok(mg_value);
@@ -87,7 +84,7 @@ impl Default for MgpVerticesIterator {
         return Self {
             ptr: std::ptr::null_mut(),
             is_first: true,
-        }
+        };
     }
 }
 impl Drop for MgpVerticesIterator {
@@ -140,15 +137,14 @@ fn make_graph_vertices_iterator(
     result: *mut mgp_result,
     memory: *mut mgp_memory,
 ) -> Result<MgpVerticesIterator, MgpAllocationError> {
-    let unable_alloc_iter_msg = CString::new("Unable to allocate a vertices iterator.")
-        .expect("CString::new failed prior to allocating a vertices iterator.");
+    let unable_alloc_iter_msg = c_str!("Unable to allocate a vertices iterator.");
     unsafe {
         let iterator: MgpVerticesIterator = MgpVerticesIterator {
             ptr: mgp_graph_iter_vertices(graph, memory),
             ..Default::default()
         };
         if iterator.ptr.is_null() {
-            mgp_result_set_error_msg(result, unable_alloc_iter_msg.into_raw());
+            mgp_result_set_error_msg(result, unable_alloc_iter_msg.as_ptr());
             return Err(MgpAllocationError);
         }
         return Ok(iterator);
@@ -160,12 +156,11 @@ struct MgpResultRecord {
 }
 
 fn make_result_record(result: *mut mgp_result) -> Result<MgpResultRecord, MgpAllocationError> {
-    let record_fail_msg = CString::new("Unable to allocate record")
-        .expect("CString::new failed on record allocation");
+    let record_fail_msg = c_str!("Unable to allocate record");
     unsafe {
         let record = mgp_result_new_record(result);
         if record.is_null() {
-            mgp_result_set_error_msg(result, record_fail_msg.into_raw());
+            mgp_result_set_error_msg(result, record_fail_msg.as_ptr());
             return Err(MgpAllocationError);
         }
         Ok(MgpResultRecord { record: record })
@@ -174,20 +169,16 @@ fn make_result_record(result: *mut mgp_result) -> Result<MgpResultRecord, MgpAll
 
 fn insert_result_record(
     mgp_record: &MgpResultRecord,
-    mgp_name: String,
+    mgp_name: &CStr,
     mgp_value: &MgpValue,
     result: *mut mgp_result,
 ) -> Result<(), MgpPreparingResultError> {
-    let name =
-        CString::new(mgp_name.into_bytes()).expect("CString::new failed on allocating a name");
-    let name_not_inserted_msg = CString::new("Unable to insert record to the result.")
-        .expect("CString::new failed prior to inserting record.");
-
+    let name_not_inserted_msg = c_str!("Unable to insert record to the result.");
     unsafe {
         let inserted =
-            mgp_result_record_insert(mgp_record.record, name.into_raw(), mgp_value.value);
+            mgp_result_record_insert(mgp_record.record, mgp_name.as_ptr(), mgp_value.value);
         if inserted == 0 {
-            mgp_result_set_error_msg(result, name_not_inserted_msg.into_raw());
+            mgp_result_set_error_msg(result, name_not_inserted_msg.as_ptr());
             return Err(MgpPreparingResultError);
         }
         return Ok(());
@@ -196,33 +187,20 @@ fn insert_result_record(
 
 fn add_read_procedure(
     proc_ptr: extern "C" fn(*const mgp_list, *const mgp_graph, *mut mgp_result, *mut mgp_memory),
-    name: String,
+    name: &CStr,
     module: *mut mgp_module,
 ) -> *mut mgp_proc {
     unsafe {
-        return mgp_module_add_read_procedure(
-            module,
-            CString::new(name.into_bytes())
-                .expect("A valid procedure name.")
-                .into_raw(),
-            Some(proc_ptr),
-        );
+        return mgp_module_add_read_procedure(module, name.as_ptr(), Some(proc_ptr));
     }
 }
 
 fn add_int_result_type(
     procedure: *mut mgp_proc,
-    name: String,
+    name: &CStr,
 ) -> Result<(), MgpAddProcedureParameterTypeError> {
     unsafe {
-        if mgp_proc_add_result(
-            procedure,
-            CString::new(name.into_bytes())
-                .expect("A valid argument name.")
-                .into_raw(),
-            mgp_type_int(),
-        ) == 0
-        {
+        if mgp_proc_add_result(procedure, name.as_ptr(), mgp_type_int()) == 0 {
             return Err(MgpAddProcedureParameterTypeError);
         }
         return Ok(());
@@ -248,7 +226,7 @@ extern "C" fn test_procedure(
                                 Ok(mgp_value) => {
                                     match insert_result_record(
                                         &mgp_record,
-                                        "labels_count".to_string(),
+                                        c_str!("labels_count"),
                                         &mgp_value,
                                         result,
                                     ) {
@@ -281,8 +259,8 @@ extern "C" fn test_procedure(
 
 #[no_mangle]
 pub extern "C" fn mgp_init_module(module: *mut mgp_module, _memory: *mut mgp_memory) -> c_int {
-    let procedure = add_read_procedure(test_procedure, "test_procedure".to_string(), module);
-    match add_int_result_type(procedure, "labels_count".to_string()) {
+    let procedure = add_read_procedure(test_procedure, c_str!("test_procedure"), module);
+    match add_int_result_type(procedure, c_str!("labels_count")) {
         Ok(_) => {}
         Err(_) => {
             return 1;
