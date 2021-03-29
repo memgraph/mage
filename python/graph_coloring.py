@@ -1,9 +1,9 @@
 import mgp
-import sys
 from collections import defaultdict
 from typing import List, Optional, Dict, Any
 import mage.graph_coloring_module
-from mage.graph_coloring_module import *
+from mage.graph_coloring_module import Parameter
+from mage.graph_coloring_module import Graph
 
 
 def _str2Class(name):
