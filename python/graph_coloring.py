@@ -6,17 +6,13 @@ from mage.graph_coloring_module import Parameter
 from mage.graph_coloring_module import Graph
 
 
-def _str2Class(name):
-    return getattr(mage.graph_coloring_module, name)
-
-
 @mgp.read_proc
 def color_graph(
-    context: mgp.ProcCtx, parameters: mgp.Map
+    context: mgp.ProcCtx, parameters: mgp.Map = {}
 ) -> mgp.Record(node=str, color=str):
     """
     Example:
-    CALL graph_coloring.color_graph({}) YIELD *;
+    CALL graph_coloring.color_graph() YIELD *;
     """
     g = _convert_to_graph(context)
     sol = _run_algorithm(g, parameters)
@@ -31,7 +27,7 @@ def color_subgraph(
     context: mgp.ProcCtx,
     vertices: mgp.List[mgp.Vertex],
     edges: mgp.List[mgp.Edge],
-    parameters: mgp.Map,
+    parameters: mgp.Map = {},
 ) -> mgp.Record(node=str, color=str):
     """
     Example:
@@ -47,6 +43,10 @@ def color_subgraph(
         mgp.Record(node=str(g.label(node)), color=str(color))
         for node, color in enumerate(sol)
     ]
+
+
+def _str2Class(name):
+    return getattr(mage.graph_coloring_module, name)
 
 
 def _get_parameters(params: Dict[str, Any]) -> Dict[str, Any]:

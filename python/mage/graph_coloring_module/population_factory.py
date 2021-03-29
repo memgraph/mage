@@ -11,7 +11,7 @@ from mage.graph_coloring_module.exceptions import PopulationCreationException
 from mage.graph_coloring_module.parameters import Parameter
 
 
-logger = logging.getLogger("telco")
+logger = logging.getLogger("graph_coloring")
 
 
 @validate(Parameter.POPULATION_SIZE, Parameter.NO_OF_COLORS)

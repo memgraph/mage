@@ -14,7 +14,7 @@ from mage.graph_coloring_module.algorithms.meta_heuristics.parallel_algorithm im
 )
 
 
-logger = logging.getLogger("telco")
+logger = logging.getLogger("graph_coloring")
 
 
 class QA(ParallelAlgorithm):

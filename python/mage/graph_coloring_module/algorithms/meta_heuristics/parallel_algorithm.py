@@ -15,7 +15,7 @@ from mage.graph_coloring_module.parameters import Parameter
 from mage.graph_coloring_module.communication.message_type import MessageType
 
 
-logger = logging.getLogger("telco")
+logger = logging.getLogger("graph_coloring")
 
 
 class ParallelAlgorithm(Algorithm, ABC):

@@ -54,14 +54,13 @@ class ChainChunk(Population):
         for i in range(self.size + 1):
             if i == self.size:
                 c = self._calculate_correlation(self.individuals[0], self._prev_indv)
-                self._correlation.append(c)
             else:
                 next_indv = (
                     self.individuals[i + 1] if i + 1 < self.size else self._next_indv
                 )
                 c = self._calculate_correlation(self.individuals[i], next_indv)
-                self._correlation.append(c)
-                self._cumulative_correlation += c
+            self._correlation.append(c)
+            self._cumulative_correlation += c
 
     def set_prev_individual(self, indv: Individual) -> None:
         """Sets the unit that precedes the current piece of chain."""

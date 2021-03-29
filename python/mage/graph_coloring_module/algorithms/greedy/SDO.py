@@ -42,7 +42,7 @@ class SDO(Algorithm):
 
                     colors = available_colors(graph, no_of_colors, chromosome, node)
                     if len(colors) > 0:
-                        color = random.sample(colors, 1)[0]
+                        color = random.choice(colors)
                     else:
                         color = random.randint(0, no_of_colors - 1)
                     chromosome[node] = color

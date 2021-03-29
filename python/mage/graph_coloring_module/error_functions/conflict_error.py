@@ -9,7 +9,7 @@ from mage.graph_coloring_module.utils.validation import validate
 from mage.graph_coloring_module.parameters import Parameter
 
 
-logger = logging.getLogger("telco")
+logger = logging.getLogger("graph_coloring")
 
 
 class ConflictError(Error):
