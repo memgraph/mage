@@ -4,7 +4,9 @@
 #include <mg_exceptions.hpp>
 #include <mg_procedure.h>
 #include <mg_utils.hpp>
+
 namespace {
+
 const char *field_component_id = "component_id";
 const char *field_vertex = "node";
 
@@ -29,28 +31,27 @@ void InsertWeaklyComponentResult(const mgp_graph *graph, mgp_result *result,
 static void Weak(const mgp_list *args, const mgp_graph *memgraph_graph,
                  mgp_result *result, mgp_memory *memory) {
   try {
-    std::unordered_map<uint32_t, uint32_t> vertex_component;
+    mg_graph::Graph<uint64_t> *graph =
+        mg_utility::GetGraphView<uint64_t>(memgraph_graph, result, memory);
 
-    mg_graph::Graph *graph =
-        mg_utility::GetGraphView(memgraph_graph, result, memory);
-
+    std::unordered_map<uint64_t, uint64_t> vertex_component;
     int64_t curr_component = 0;
     for (mg_graph::Node vertex : graph->Nodes()) {
       if (vertex_component.find(vertex.id) != vertex_component.end())
         continue;
 
       // Run BFS from current vertex.
-      std::queue<uint32_t> q;
+      std::queue<uint64_t> q;
 
       q.push(vertex.id);
       vertex_component[vertex.id] = curr_component;
       while (!q.empty()) {
-        uint32_t v_id = q.front();
+        uint64_t v_id = q.front();
         q.pop();
 
         // Iterate over inbound edges.
         for (mg_graph::Neighbour neihgbor : graph->Neighbours(v_id)) {
-          uint32_t next_id = neihgbor.node_id;
+          uint64_t next_id = neihgbor.node_id;
 
           if (vertex_component.find(next_id) != vertex_component.end()) {
             continue;
@@ -65,8 +66,8 @@ static void Weak(const mgp_list *args, const mgp_graph *memgraph_graph,
 
     for (const auto &p : vertex_component) {
 
-      uint32_t vertex_id = graph->GetMemgraphNodeId(p.first);
-      uint32_t component_id = p.second;
+      uint64_t vertex_id = graph->GetMemgraphNodeId(p.first);
+      uint64_t component_id = p.second;
 
       InsertWeaklyComponentResult(memgraph_graph, result, memory, component_id,
                                   vertex_id);
