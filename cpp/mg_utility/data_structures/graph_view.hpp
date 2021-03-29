@@ -13,11 +13,11 @@ namespace mg_graph {
 /// SetVariableState and SetVariableValue
 template <typename TSize = uint64_t> class GraphView {
 
+public:
   using TNode = Node<TSize>;
   using TEdge = Edge<TSize>;
   using TNeighbour = Neighbour<TSize>;
 
-public:
   /// Destroys the object.
   virtual ~GraphView() = 0;
 

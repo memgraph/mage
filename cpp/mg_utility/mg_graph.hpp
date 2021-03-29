@@ -16,9 +16,9 @@ namespace mg_graph {
 /// Graph representation.
 template <typename TSize = uint64_t> class Graph : public GraphView<TSize> {
 
-  using TNode = Node<TSize>;
-  using TEdge = Edge<TSize>;
-  using TNeighbour = Neighbour<TSize>;
+  using typename GraphView<TSize>::TNode;
+  using typename GraphView<TSize>::TEdge;
+  using typename GraphView<TSize>::TNeighbour;
 
   static_assert(
       std::is_unsigned_v<TSize>,

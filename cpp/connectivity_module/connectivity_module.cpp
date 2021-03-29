@@ -31,12 +31,11 @@ void InsertWeaklyComponentResult(const mgp_graph *graph, mgp_result *result,
 static void Weak(const mgp_list *args, const mgp_graph *memgraph_graph,
                  mgp_result *result, mgp_memory *memory) {
   try {
-    mg_graph::Graph<> *graph =
-        mg_utility::GetGraphView(memgraph_graph, result, memory);
+    auto *graph = mg_utility::GetGraphView(memgraph_graph, result, memory);
 
     std::unordered_map<uint64_t, uint64_t> vertex_component;
-    int64_t curr_component = 0;
-    for (mg_graph::Node vertex : graph->Nodes()) {
+    uint64_t curr_component = 0;
+    for (auto vertex : graph->Nodes()) {
       if (vertex_component.find(vertex.id) != vertex_component.end())
         continue;
 
@@ -46,12 +45,12 @@ static void Weak(const mgp_list *args, const mgp_graph *memgraph_graph,
       q.push(vertex.id);
       vertex_component[vertex.id] = curr_component;
       while (!q.empty()) {
-        uint64_t v_id = q.front();
+        auto v_id = q.front();
         q.pop();
 
         // Iterate over inbound edges.
-        for (mg_graph::Neighbour neihgbor : graph->Neighbours(v_id)) {
-          uint64_t next_id = neihgbor.node_id;
+        for (auto neihgbor : graph->Neighbours(v_id)) {
+          auto next_id = neihgbor.node_id;
 
           if (vertex_component.find(next_id) != vertex_component.end()) {
             continue;
@@ -66,8 +65,8 @@ static void Weak(const mgp_list *args, const mgp_graph *memgraph_graph,
 
     for (const auto &p : vertex_component) {
 
-      uint64_t vertex_id = graph->GetMemgraphNodeId(p.first);
-      uint64_t component_id = p.second;
+      auto vertex_id = graph->GetMemgraphNodeId(p.first);
+      auto component_id = p.second;
 
       InsertWeaklyComponentResult(memgraph_graph, result, memory, component_id,
                                   vertex_id);
