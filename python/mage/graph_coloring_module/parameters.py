@@ -2,6 +2,7 @@ from enum import Enum
 
 
 class Parameter(Enum):
+    ALGORITHM = "algorithm"
     NO_OF_COLORS = "no_of_colors"
 
     NO_OF_PROCESSES = "no_of_processes"
