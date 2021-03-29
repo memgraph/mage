@@ -14,7 +14,7 @@
 namespace mg_graph {
 
 /// Graph representation.
-template <typename TSize> class Graph : public GraphView<TSize> {
+template <typename TSize = uint64_t> class Graph : public GraphView<TSize> {
 
   using TNode = Node<TSize>;
   using TEdge = Edge<TSize>;

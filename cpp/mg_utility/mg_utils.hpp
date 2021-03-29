@@ -70,7 +70,7 @@ private:
 ///@param memory Memgraph storage object
 ///@return mg_graph::Graph
 ///
-template <typename TSize>
+template <typename TSize = uint64_t>
 mg_graph::Graph<TSize> *GetGraphView(const mgp_graph *memgraph_graph,
                                      mgp_result *result, mgp_memory *memory) {
   mg_graph::Graph<TSize> *graph = new mg_graph::Graph<TSize>();

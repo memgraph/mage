@@ -11,7 +11,7 @@ namespace mg_graph {
 /// Interface provides methods for fetching graph data.
 /// There are two methods for changing variables on the edges:
 /// SetVariableState and SetVariableValue
-template <typename TSize> class GraphView {
+template <typename TSize = uint64_t> class GraphView {
 
   using TNode = Node<TSize>;
   using TEdge = Edge<TSize>;

@@ -31,8 +31,8 @@ void InsertWeaklyComponentResult(const mgp_graph *graph, mgp_result *result,
 static void Weak(const mgp_list *args, const mgp_graph *memgraph_graph,
                  mgp_result *result, mgp_memory *memory) {
   try {
-    mg_graph::Graph<uint64_t> *graph =
-        mg_utility::GetGraphView<uint64_t>(memgraph_graph, result, memory);
+    mg_graph::Graph<> *graph =
+        mg_utility::GetGraphView(memgraph_graph, result, memory);
 
     std::unordered_map<uint64_t, uint64_t> vertex_component;
     int64_t curr_component = 0;
