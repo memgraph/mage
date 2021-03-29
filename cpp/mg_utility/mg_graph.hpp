@@ -21,10 +21,7 @@ template <typename TSize> class Graph : public GraphView<TSize> {
   using TNeighbour = Neighbour<TSize>;
 
   static_assert(
-      std::is_same<TSize, uint8_t>::value ||
-          std::is_same<TSize, uint16_t>::value ||
-          std::is_same<TSize, uint32_t>::value ||
-          std::is_same<TSize, uint64_t>::value,
+      std::is_unsigned_v<TSize>,
       "mg_graph::Graph expects the type to be an unsigned integer type\n"
       "only (uint8_t, uint16_t, uint32_t, or uint64_t).");
 
@@ -117,8 +114,8 @@ public:
     adj_list_.emplace_back();
     neighbours_.emplace_back();
 
-    inner_to_memgraph_id_.insert(std::pair(id, memgraph_id));
-    memgraph_to_inner_id_.insert(std::pair(memgraph_id, id));
+    inner_to_memgraph_id_.emplace(id, memgraph_id);
+    memgraph_to_inner_id_.emplace(memgraph_id, id);
     return id;
   }
 
@@ -156,7 +153,7 @@ public:
     std::vector<TEdge> output;
     output.reserve(edges_.size());
     for (const auto &edge : edges_) {
-      if (edge.id == Graph::kDeletedEdgeId)
+      if (edge.id == Graph::k_deleted_edge_id_)
         continue;
       output.push_back(edge);
     }
@@ -171,7 +168,7 @@ public:
   bool IsEdgeValid(TSize edge_id) const {
     if (edge_id < 0 || edge_id >= edges_.size())
       return false;
-    if (edges_[edge_id].id == kDeletedEdgeId)
+    if (edges_[edge_id].id == k_deleted_edge_id_)
       return false;
     return true;
   }
@@ -195,14 +192,14 @@ public:
 
     for (auto it = adj_list_[u].begin(); it != adj_list_[u].end(); ++it) {
       if (edges_[*it].to == v || edges_[*it].from == v) {
-        edges_[*it].id = Graph::kDeletedEdgeId;
+        edges_[*it].id = Graph::k_deleted_edge_id_;
         adj_list_[u].erase(it);
         break;
       }
     }
     for (auto it = adj_list_[v].begin(); it != adj_list_[v].end(); ++it) {
       if (edges_[*it].to == u || edges_[*it].from == u) {
-        edges_[*it].id = Graph::kDeletedEdgeId;
+        edges_[*it].id = Graph::k_deleted_edge_id_;
         adj_list_[v].erase(it);
         break;
       }
@@ -249,7 +246,8 @@ public:
 private:
   // Constant is used for marking deleted edges.
   // If edge id is equal to constant, edge is deleted.
-  static const TSize kDeletedEdgeId = std::numeric_limits<TSize>::max();
+  static constexpr inline TSize k_deleted_edge_id_ =
+      std::numeric_limits<TSize>::max();
 
   std::vector<std::vector<TSize>> adj_list_;
   std::vector<std::vector<TNeighbour>> neighbours_;
