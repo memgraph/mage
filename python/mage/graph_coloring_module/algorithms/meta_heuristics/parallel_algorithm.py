@@ -24,7 +24,7 @@ class ParallelAlgorithm(Algorithm, ABC):
         Parameter.NO_OF_PROCESSES,
         Parameter.NO_OF_CHUNKS,
         Parameter.ERROR,
-        Parameter.POPULATION_TYPE,
+        Parameter.POPULATION_FACTORY,
     )
     def run(self, graph: Graph, parameters: Dict[str, Any]) -> Individual:
         """Runs the algorithm in a given number of processes and returns the best individual.
@@ -38,9 +38,11 @@ class ParallelAlgorithm(Algorithm, ABC):
         no_of_processes = param_value(graph, parameters, Parameter.NO_OF_PROCESSES)
         no_of_chunks = param_value(graph, parameters, Parameter.NO_OF_CHUNKS)
         error = param_value(graph, parameters, Parameter.ERROR)
-        population_type = param_value(graph, parameters, Parameter.POPULATION_TYPE)
+        population_factory = param_value(
+            graph, parameters, Parameter.POPULATION_FACTORY
+        )
 
-        populations = population_type.create(graph, parameters)
+        populations = population_factory.create(graph, parameters)
 
         pool = mp.Pool(no_of_processes)
         m = mp.Manager()
@@ -61,6 +63,7 @@ class ParallelAlgorithm(Algorithm, ABC):
 
         best_individual = self._find_best(graph, results, error)
         pool.close()
+
         return best_individual
 
     @abstractmethod
@@ -99,7 +102,6 @@ class ParallelAlgorithm(Algorithm, ABC):
         indv: Individual,
         msg_type: MessageType,
     ) -> None:
-        """Sends the individual to the previous and next part of the population."""
         if queue is not None:
             if iteration % communication_delay == 0:
                 queue.put(Message(indv, msg_type))

@@ -1,56 +1,8 @@
-import mgp
 from collections import defaultdict
 from typing import Optional, Dict, Any
 import mage.graph_coloring_module
 from mage.graph_coloring_module import Parameter
 from mage.graph_coloring_module import Graph
-
-
-@mgp.read_proc
-def color_graph(
-    context: mgp.ProcCtx, parameters: mgp.Map = {}, edge_property: str = "weight"
-) -> mgp.Record(node=str, color=str):
-    """
-    Example:
-    CALL graph_coloring.color_graph() YIELD *;
-    """
-    params = _get_parameters(parameters)
-    g = _convert_to_graph(context, edge_property)
-    alg = params[Parameter.ALGORITHM]
-    sol_indv = alg.run(g, params)
-    sol = sol_indv.chromosome
-
-    return [
-        mgp.Record(node=str(g.label(node)), color=str(color))
-        for node, color in enumerate(sol)
-    ]
-
-
-@mgp.read_proc
-def color_subgraph(
-    context: mgp.ProcCtx,
-    vertices: mgp.List[mgp.Vertex],
-    edges: mgp.List[mgp.Edge],
-    parameters: mgp.Map = {},
-    edge_property: str = "weight",
-) -> mgp.Record(node=str, color=str):
-    """
-    Example:
-    MATCH (a:Cell)-[e:CLOSE_TO]->(b:Cell)
-    WITH collect(a) as nodes, collect (e) as edges
-    CALL graph_coloring.color_subgraph(nodes, edges, {no_of_colors: 2})
-    YIELD color, node
-    RETURN color, node;
-    """
-    params = _get_parameters(parameters)
-    g = _convert_to_subgraph(context, vertices, edges, edge_property)
-    alg = params[Parameter.ALGORITHM]
-    sol_indv = alg.run(g, params)
-    sol = sol_indv.chromosome
-    return [
-        mgp.Record(node=str(g.label(node)), color=str(color))
-        for node, color in enumerate(sol)
-    ]
 
 
 def _str2Class(name: str):
@@ -61,7 +13,7 @@ def _map_parameters(params: Dict[str, Any]) -> Dict[str, Any]:
     for key in params:
         if isinstance(params[key], str):
             params[key] = _str2Class(params[key])()
-        if isinstance(params[key], tuple) or isinstance(params[key], list):
+        if isinstance(params[key], list):
             new_list = []
             for val in params[key]:
                 if isinstance(val, str):
@@ -76,11 +28,11 @@ def _get_parameters(parameters: Dict[str, Any]) -> Dict[str, Any]:
     params = _map_parameters(
         {
             Parameter.ALGORITHM: parameters.get(Parameter.ALGORITHM.value, "QA"),
-            Parameter.NO_OF_COLORS: parameters.get(Parameter.NO_OF_COLORS.value, 10),
+            Parameter.NO_OF_COLORS: parameters.get(Parameter.NO_OF_COLORS.value, 1),
             Parameter.NO_OF_PROCESSES: parameters.get(
-                Parameter.NO_OF_PROCESSES.value, 1
+                Parameter.NO_OF_PROCESSES.value, 2
             ),
-            Parameter.NO_OF_CHUNKS: parameters.get(Parameter.NO_OF_CHUNKS.value, 1),
+            Parameter.NO_OF_CHUNKS: parameters.get(Parameter.NO_OF_CHUNKS.value, 2),
             Parameter.POPULATION_SIZE: parameters.get(
                 Parameter.POPULATION_SIZE.value, 10
             ),
@@ -88,11 +40,11 @@ def _get_parameters(parameters: Dict[str, Any]) -> Dict[str, Any]:
                 Parameter.INIT_ALGORITHMS.value, ["SDO", "LDO"]
             ),
             Parameter.POPULATION_FACTORY: parameters.get(
-                Parameter.POPULATION_FACTORY.value, "ChainPopulationFactory"
+                Parameter.POPULATION_FACTORY.value, "ChainChunkFactory"
             ),
             Parameter.ERROR: parameters.get(Parameter.ERROR.value, "ConflictError"),
             Parameter.MAX_ITERATIONS: parameters.get(
-                Parameter.MAX_ITERATIONS.value, 10
+                Parameter.MAX_ITERATIONS.value, 10000
             ),
             Parameter.ITERATION_CALLBACKS: parameters.get(
                 Parameter.ITERATION_CALLBACKS.value, []
@@ -100,7 +52,7 @@ def _get_parameters(parameters: Dict[str, Any]) -> Dict[str, Any]:
             Parameter.COMMUNICATION_DALAY: parameters.get(
                 Parameter.COMMUNICATION_DALAY.value, 10
             ),
-            Parameter.LOGGING_DELAY: parameters.get(Parameter.LOGGING_DELAY.value, 10),
+            Parameter.LOGGING_DELAY: parameters.get(Parameter.LOGGING_DELAY.value, 1),
             Parameter.QA_TEMPERATURE: parameters.get(Parameter.QA_TEMPERATURE.value, 1),
             Parameter.QA_MAX_STEPS: parameters.get(Parameter.QA_MAX_STEPS.value, 10),
             Parameter.CONFLICT_ERR_ALPHA: parameters.get(
@@ -141,47 +93,18 @@ def _get_parameters(parameters: Dict[str, Any]) -> Dict[str, Any]:
     return params
 
 
-def _convert_to_graph(context: mgp.ProcCtx, edge_property: str) -> Graph:
-    nodes = []
-    adj_list = defaultdict(list)
-
-    for v in context.graph.vertices:
-        context.check_must_abort()
-        nodes.append(v.id)
-
-    for v in context.graph.vertices:
-        context.check_must_abort()
-        for e in v.out_edges:
-            weight = e.properties.get(edge_property, 1)
-            adj_list[e.from_vertex.id].append((e.to_vertex.id, weight))
-            adj_list[e.to_vertex.id].append((e.from_vertex.id, weight))
-
-    return Graph(nodes, adj_list)
-
-
-def _convert_to_subgraph(
-    context: mgp.ProcCtx,
-    vertices: mgp.List[mgp.Vertex],
-    edges: mgp.List[mgp.Edge],
-    edge_property: str,
-) -> Optional[Graph]:
-    vertices, edges = map(set, [vertices, edges])
-
-    nodes = []
-    adj_list = defaultdict(list)
-
-    for v in vertices:
-        context.check_must_abort()
-        nodes.append(v.id)
-
-    for e in edges:
-        context.check_must_abort()
-        weight = e.properties.get(edge_property, 1)
-        if e.from_vertex.id not in nodes:
-            nodes.append(e.from_vertex.id)
-        if e.to_vertex.id not in nodes:
-            nodes.append(e.to_vertex.id)
-        adj_list[e.from_vertex.id].append((e.to_vertex.id, weight))
-        adj_list[e.to_vertex.id].append((e.from_vertex.id, weight))
-
-    return Graph(nodes, adj_list)
+params = _get_parameters(dict())
+g = Graph(
+    [0, 1, 2, 3, 4],
+    {
+        0: [(1, 2), (2, 3)],
+        1: [(0, 2), (2, 2), (4, 5)],
+        2: [(0, 3), (1, 2), (3, 3)],
+        3: [(2, 3)],
+        4: [(1, 5)],
+    },
+)
+alg = params[Parameter.ALGORITHM]
+sol_indv = alg.run(g, params)
+sol = sol_indv.chromosome
+print(sol)

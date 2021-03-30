@@ -9,7 +9,7 @@ class Parameter(Enum):
     NO_OF_CHUNKS = "no_of_chunks"
 
     POPULATION_SIZE = "population_size"
-    POPULATION_TYPE = "population_type"
+    POPULATION_FACTORY = "population_factory"
     INIT_ALGORITHMS = "init_algorithms"
 
     ERROR = "error"
