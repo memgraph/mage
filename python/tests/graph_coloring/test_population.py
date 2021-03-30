@@ -79,12 +79,6 @@ def test_chain_population_max_error(chain_population):
     assert math.fabs(result_indv - expected_indv) < 1e-5
 
 
-def test_chain_population_solution(chain_population):
-    result_indv = chain_population.solution()
-    expected_indv = chain_population[1]
-    assert result_indv == expected_indv
-
-
 def test_chain_population_mean_conflicts_weights(chain_population):
     result_indv = chain_population.mean_conflicts_weight
     expected_indv = 7 / 3
@@ -106,7 +100,6 @@ def test_chain_population_correlation(chain_population):
 def test_set_individual(chain_population, graph):
     new_indv = Individual(no_of_colors=3, graph=graph, chromosome=[1, 2, 2, 2, 1])
     chain_population.set_individual(1, new_indv, [2])
-    assert chain_population.contains_solution is False
     assert chain_population.correlation == [-2, -2, 2]
     assert chain_population.sum_conflicts_weight == 12
     assert chain_population.cumulative_correlation == -2

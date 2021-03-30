@@ -16,10 +16,7 @@ class Population(ABC):
         self._best_individuals = self._individuals[:]
         self._graph = graph
 
-        self._contains_solution = False
-        self._solution = None
         self._sum_conflicts_weight = 0
-
         self._calculate_metrics()
 
     def __len__(self) -> int:
@@ -67,27 +64,12 @@ class Population(ABC):
         in individuals contained in population"""
         return self._sum_conflicts_weight
 
-    @property
-    def contains_solution(self) -> bool:
-        """Returns True if population contains an individual with no conflicting edges,
-        otherwise returns False."""
-        return self._contains_solution
-
     def set_individual(self, ind: int, indv: Individual, diff_nodes: List[int]) -> int:
         """Sets the individual on the index ind to the given individual indv.
         Returns None if the wrong index is given."""
         old_indv = self._individuals[ind]
         self._individuals[ind] = indv
         self._update_metrics(ind, old_indv)
-
-    def solution(self) -> Individual:
-        return self._solution
-
-    def solution_error(self) -> float:
-        if self._solution is not None:
-            return self._solution._conflicts_weight
-        else:
-            return min([indv.conflicts_weight for indv in self.individuals])
 
     def best_individual_index(
         self, error_func: Callable[[Graph, Individual], float]
@@ -132,19 +114,8 @@ class Population(ABC):
     def _calculate_metrics(self) -> None:
         for individual in self.individuals:
             self._sum_conflicts_weight += individual.conflicts_weight
-            if individual.conflicts_weight == 0:
-                self._contains_solution = True
-                self._solution = individual
 
     def _update_metrics(self, ind: int, old_indv: Individual) -> None:
-        if self._contains_solution and self._solution == old_indv:
-            self._contains_solution = False
-            self._solution = None
-            for individual in self.individuals:
-                if individual.conflicts_weight == 0:
-                    self._contains_solution = True
-                    self._solution = individual
-
         new_indv = self.individuals[ind]
         self._sum_conflicts_weight -= old_indv.conflicts_weight
         self._sum_conflicts_weight += new_indv.conflicts_weight

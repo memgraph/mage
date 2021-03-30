@@ -49,8 +49,12 @@ class QA(ParallelAlgorithm):
         )
 
         for iteration in range(max_iterations):
-            if population.contains_solution or self._read_msgs(my_q, population):
-                self._write_stop(prev_q, next_q, population.solution())
+            if math.fabs(
+                population.min_error(error.individual_err)
+            ) < 1e-5 or self._read_msgs(my_q, population):
+                self._write_stop(
+                    prev_q, next_q, population.best_individual(error.individual_err)
+                )
                 break
 
             for i in range(len(population)):
@@ -83,7 +87,7 @@ class QA(ParallelAlgorithm):
 
         logger.info(
             "Id: {} Iteration: {} Error: {}".format(
-                proc_id, iteration, population.solution_error()
+                proc_id, iteration, population.min_error(error.individual_err)
             )
         )
         results.put(population)
