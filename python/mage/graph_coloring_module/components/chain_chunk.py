@@ -1,10 +1,48 @@
-from typing import List
+from typing import List, Dict, Any, Optional
 from mage.graph_coloring_module.components.individual import Individual
-from mage.graph_coloring_module.components.population import Population
+from mage.graph_coloring_module.components.correlation_population import CorrelationPopulation
 from mage.graph_coloring_module.graph import Graph
+from mage.graph_coloring_module.utils.generate_individuals import generate_individuals
+from mage.graph_coloring_module.utils.validation import validate
+from mage.graph_coloring_module.parameters import Parameter
+from mage.graph_coloring_module.components.population import Population
+from mage.graph_coloring_module.utils.parameters_utils import param_value
 
 
-class ChainChunk(Population):
+class ChainChunkFactory:
+    @staticmethod
+    @validate(Parameter.POPULATION_SIZE, Parameter.NO_OF_CHUNKS)
+    def create(graph: Graph, parameters: Dict[str, Any] = None) -> Optional[List[Population]]:
+        """Returns a list of no_of_chunks populations that have an equal number of individuals."""
+
+        population_size = param_value(graph, parameters, Parameter.POPULATION_SIZE)
+        no_of_chunks = param_value(graph, parameters, Parameter.NO_OF_CHUNKS)
+
+        individuals = generate_individuals(graph, parameters)
+        populations = []
+        chunks = _list_chunks(individuals, population_size, no_of_chunks)
+
+        for i, chunk in enumerate(chunks):
+            prev_chunk = i - 1 if i - 1 > 0 else no_of_chunks - 1
+            next_chunk = i + 1 if i + 1 < no_of_chunks else 0
+            populations.append(
+                ChainChunk(graph, chunk, chunks[prev_chunk][-1], chunks[next_chunk][0])
+            )
+        return populations
+
+    @staticmethod
+    def _list_chunks(
+        individuals: List[Individual], population_size: int, no_of_chunks: int
+    ) -> List[List[Individual]]:
+        """Splits a list into equal parts."""
+        k, m = divmod(population_size, no_of_chunks)
+        chunks = [
+            list(individuals[i * k + min(i, m) : (i + 1) * k + min(i + 1, m)])
+            for i in range(no_of_chunks)
+        ]
+        return chunks
+
+class ChainChunk(CorrelationPopulation):
     """A class that represents a population that is just a part
     of the whole population. First and last individuals of this
     population exchange information with individuals located in

@@ -9,6 +9,7 @@ class Parameter(Enum):
     NO_OF_CHUNKS = "no_of_chunks"
 
     POPULATION_SIZE = "population_size"
+    POPULATION_TYPE = 'population_type'
     INIT_ALGORITHMS = "init_algorithms"
 
     ERROR = "error"
@@ -33,3 +34,5 @@ class Parameter(Enum):
 
     CONVERGENCE_CALLBACK_TOLERANCE = "convergence_callback_tolerance"
     CONVERGENCE_CALLBACK_ACTIONS = "convergence_callback_actions"
+
+    EDGE_PROPERTY = "edge_property"

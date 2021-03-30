@@ -29,9 +29,11 @@ from mage.graph_coloring_module.components.population import (  # noqa: F401, F4
 )
 from mage.graph_coloring_module.components.chain_chunk import (  # noqa: F401, F402, F403
     ChainChunk,
+    ChainChunkFactory,
 )
 from mage.graph_coloring_module.components.chain_population import (  # noqa: F401, F402, F403
     ChainPopulation,
+    ChainPopulationFactory,
 )
 
 from mage.graph_coloring_module.error_functions.conflict_error import (  # noqa: F401, F402, F403
@@ -64,13 +66,6 @@ from mage.graph_coloring_module.utils.available_colors import (  # noqa: F401, F
 
 from mage.graph_coloring_module.graph import Graph  # noqa: F401, F402, F403
 
-from mage.graph_coloring_module.population_factory import (  # noqa: F401, F402, F403
-    create,
-)
-from mage.graph_coloring_module.population_factory import (  # noqa: F401, F402, F403
-    generate_individuals,
-)
-
 from mage.graph_coloring_module.utils.validation import (  # noqa: F401, F402, F403
     validate,
 )
@@ -89,4 +84,8 @@ from mage.graph_coloring_module.iteration_callbacks.callback_actions.simple_tunn
 
 from mage.graph_coloring_module.parameters import (  # noqa: F401, F402, F403
     Parameter,
+)
+
+from mage.graph_coloring_module.components.correlation_population import (  # noqa: F401, F402, F403
+    CorrelationPopulation,
 )

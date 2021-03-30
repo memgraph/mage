@@ -1,7 +1,6 @@
 import logging
 from typing import Dict, Any, Optional, Tuple
 from mage.graph_coloring_module.graph import Graph
-from mage.graph_coloring_module.population_factory import create
 from mage.graph_coloring_module.error_functions.error import Error
 from mage.graph_coloring_module.components.individual import Individual
 from mage.graph_coloring_module.components.population import Population
@@ -21,7 +20,7 @@ logger = logging.getLogger("graph_coloring")
 class ParallelAlgorithm(Algorithm, ABC):
     """A class that represents abstract parallel algorithm."""
 
-    @validate(Parameter.NO_OF_PROCESSES, Parameter.NO_OF_CHUNKS, Parameter.ERROR)
+    @validate(Parameter.NO_OF_PROCESSES, Parameter.NO_OF_CHUNKS, Parameter.ERROR, Parameter.POPULATION_TYPE)
     def run(self, graph: Graph, parameters: Dict[str, Any]) -> Individual:
         """Runs the algorithm in a given number of processes and returns the best individual.
 
@@ -34,8 +33,9 @@ class ParallelAlgorithm(Algorithm, ABC):
         no_of_processes = param_value(graph, parameters, Parameter.NO_OF_PROCESSES)
         no_of_chunks = param_value(graph, parameters, Parameter.NO_OF_CHUNKS)
         error = param_value(graph, parameters, Parameter.ERROR)
+        population_type = param_value(graph, parameters, Parameter.POPULATION_TYPE)
 
-        populations = create(graph, parameters)
+        populations = population_type.create(graph, parameters)
 
         pool = mp.Pool(no_of_processes)
         m = mp.Manager()

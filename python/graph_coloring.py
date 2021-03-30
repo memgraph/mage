@@ -14,8 +14,12 @@ def color_graph(
     Example:
     CALL graph_coloring.color_graph() YIELD *;
     """
-    g = _convert_to_graph(context)
-    sol = _run_algorithm(g, parameters)
+    params = _get_parameters(parameters)
+    g = _convert_to_graph(context, params)
+    alg = params[Parameter.ALGORITHM]
+    sol_indv = alg.run(g, params)
+    sol = sol_indv.chromosome
+
     return [
         mgp.Record(node=str(g.label(node)), color=str(color))
         for node, color in enumerate(sol)
@@ -37,19 +41,22 @@ def color_subgraph(
     YIELD color, node
     RETURN color, node;
     """
-    g = _convert_to_subgraph(context, vertices, edges)
-    sol = _run_algorithm(g, parameters)
+    params = _get_parameters(parameters)
+    g = _convert_to_subgraph(context, vertices, edges, params)
+    alg = params[Parameter.ALGORITHM]
+    sol_indv = alg.run(g, params)
+    sol = sol_indv.chromosome
     return [
         mgp.Record(node=str(g.label(node)), color=str(color))
         for node, color in enumerate(sol)
     ]
 
 
-def _str2Class(name):
+def _str2Class(name: str):
     return getattr(mage.graph_coloring_module, name)
 
 
-def _get_parameters(params: Dict[str, Any]) -> Dict[str, Any]:
+def _map_parameters(params: Dict[str, Any]) -> Dict[str, Any]:
     for key in params:
         if isinstance(params[key], str):
             params[key] = _str2Class(params[key])()
@@ -64,8 +71,8 @@ def _get_parameters(params: Dict[str, Any]) -> Dict[str, Any]:
     return params
 
 
-def _run_algorithm(graph: Graph, parameters) -> List[int]:
-    params = _get_parameters(
+def _get_parameters(parameters: Dict[str, Any]) -> List[int]:
+    params = _map_parameters(
         {
             Parameter.ALGORITHM: parameters.get(Parameter.ALGORITHM.value, "QA"),
             Parameter.NO_OF_COLORS: parameters.get(Parameter.NO_OF_COLORS.value, 10),
@@ -78,6 +85,9 @@ def _run_algorithm(graph: Graph, parameters) -> List[int]:
             ),
             Parameter.INIT_ALGORITHMS: parameters.get(
                 Parameter.INIT_ALGORITHMS.value, ["SDO", "LDO"]
+            ),
+            Parameter.POPULATION_TYPE: parameters.get(
+                Parameter.POPULATION_TYPE.value, "ChainPopulationFactory"
             ),
             Parameter.ERROR: parameters.get(Parameter.ERROR.value, "ConflictError"),
             Parameter.MAX_ITERATIONS: parameters.get(
@@ -127,12 +137,11 @@ def _run_algorithm(graph: Graph, parameters) -> List[int]:
             ),
         }
     )
-    alg = params[Parameter.ALGORITHM]
-    sol = alg.run(graph, params)
-    return sol.chromosome
+    return params
 
 
-def _convert_to_graph(context: mgp.ProcCtx) -> Graph:
+def _convert_to_graph(context: mgp.ProcCtx, parameters: Dict[str, Any]) -> Graph:
+    edge_property = 'weight'
     nodes = []
     adj_list = defaultdict(list)
 
@@ -143,7 +152,7 @@ def _convert_to_graph(context: mgp.ProcCtx) -> Graph:
     for v in context.graph.vertices:
         context.check_must_abort()
         for e in v.out_edges:
-            weight = e.properties.get("weight", 1)
+            weight = e.properties.get(edge_property, 1)
             adj_list[e.from_vertex.id].append((e.to_vertex.id, weight))
             adj_list[e.to_vertex.id].append((e.from_vertex.id, weight))
 
@@ -151,9 +160,9 @@ def _convert_to_graph(context: mgp.ProcCtx) -> Graph:
 
 
 def _convert_to_subgraph(
-    context: mgp.ProcCtx, vertices: mgp.List[mgp.Vertex], edges: mgp.List[mgp.Edge]
+    context: mgp.ProcCtx, vertices: mgp.List[mgp.Vertex], edges: mgp.List[mgp.Edge], parameters: Dict[str, Any]
 ) -> Optional[Graph]:
-
+    edge_property = 'weight'
     vertices, edges = map(set, [vertices, edges])
 
     nodes = []
@@ -165,7 +174,7 @@ def _convert_to_subgraph(
 
     for e in edges:
         context.check_must_abort()
-        weight = e.properties.get("weight", 1)
+        weight = e.properties.get(edge_property, 1)
         if e.from_vertex.id not in nodes:
             nodes.append(e.from_vertex.id)
         if e.to_vertex.id not in nodes:
