@@ -45,7 +45,6 @@ class ParallelAlgorithm(Algorithm, ABC):
         populations = population_factory.create(graph, parameters)
 
         pool = mp.Pool(no_of_processes)
-        m = mp.Manager()
         results = mp.Queue()
         queues = [mp.Queue() for _ in range(no_of_chunks)]
 
