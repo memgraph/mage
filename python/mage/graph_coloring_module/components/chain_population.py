@@ -5,7 +5,6 @@ from mage.graph_coloring_module.components.correlation_population import (
     CorrelationPopulation,
 )
 from mage.graph_coloring_module.utils.generate_individuals import generate_individuals
-from mage.graph_coloring_module.parameters import Parameter
 from mage.graph_coloring_module.components.population import Population
 
 

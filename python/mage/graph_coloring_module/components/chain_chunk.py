@@ -24,7 +24,9 @@ class ChainChunkFactory:
 
         individuals = generate_individuals(graph, parameters)
         populations = []
-        chunks = ChainChunkFactory._list_chunks(individuals, population_size, no_of_chunks)
+        chunks = ChainChunkFactory._list_chunks(
+            individuals, population_size, no_of_chunks
+        )
 
         for i, chunk in enumerate(chunks):
             prev_chunk = i - 1 if i - 1 > 0 else no_of_chunks - 1
