@@ -1,0 +1,67 @@
+#include <iostream>
+#include <map>
+#include <optional>
+#include <sstream>
+#include <unordered_set>
+
+#include <mg_procedure.h>
+#include <mg_exceptions.hpp>
+#include <mg_utils.hpp>
+
+#include "algorithm/bridges.hpp"
+
+namespace {
+
+// const char *fieldEdgeID = "edge_id";
+const char *fieldNodeFrom = "node_from";
+const char *fieldNodeTo = "node_to";
+
+void InsertBridgeRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *memory, const int node_from_id,
+                        const int node_to_id) {
+  mgp_result_record *record = mgp_result_new_record(result);
+  if (record == nullptr) {
+    throw mg_exception::NotEnoughMemoryException();
+  }
+
+  mg_utility::InsertNodeValueResult(graph, record, fieldNodeFrom, node_from_id, memory);
+  mg_utility::InsertNodeValueResult(graph, record, fieldNodeTo, node_to_id, memory);
+}
+
+void GetBridges(const mgp_list *args, const mgp_graph *graph, mgp_result *result, mgp_memory *memory) {
+  try {
+    auto *g = mg_utility::GetGraphView(graph, result, memory);
+    auto bridges = bridges_alg::GetBridges(g);
+
+    for (const auto &bridge_edge : bridges) {
+      InsertBridgeRecord(graph, result, memory, g->GetMemgraphNodeId(bridge_edge.from),
+                         g->GetMemgraphNodeId(bridge_edge.to));
+    }
+  } catch (const std::exception &e) {
+    // We must not let any exceptions out of our module.
+    mgp_result_set_error_msg(result, e.what());
+    return;
+  }
+}
+}  // namespace
+
+// Each module needs to define mgp_init_module function.
+// Here you can register multiple procedures your module supports.
+extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
+  mgp_proc *proc = mgp_module_add_read_procedure(module, "get", GetBridges);
+
+  if (!proc) return 1;
+  // if (!mgp_proc_add_result(proc, fieldEdgeID, mgp_type_int()))
+  // return 1;
+  if (!mgp_proc_add_result(proc, fieldNodeFrom, mgp_type_node())) return 1;
+  if (!mgp_proc_add_result(proc, fieldNodeTo, mgp_type_node())) return 1;
+
+  return 0;
+}
+
+// This is an optional function if you need to release any resources before the
+// module is unloaded. You will probably need this if you acquired some
+// resources in mgp_init_module.
+extern "C" int mgp_shutdown_module() {
+  // Return 0 to indicate success.
+  return 0;
+}
