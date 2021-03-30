@@ -105,7 +105,7 @@ def test_chain_population_correlation(chain_population):
 
 def test_set_individual(chain_population, graph):
     new_indv = Individual(no_of_colors=3, graph=graph, chromosome=[1, 2, 2, 2, 1])
-    correlation_diff = chain_population.set_individual(1, new_indv, [2])
+    chain_population.set_individual(1, new_indv, [2])
     assert chain_population.contains_solution is False
     assert chain_population.correlation == [-2, -2, 2]
     assert chain_population.sum_conflicts_weight == 12

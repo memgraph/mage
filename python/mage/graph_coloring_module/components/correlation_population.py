@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import List, Tuple
 from mage.graph_coloring_module.components.population import Population
 from mage.graph_coloring_module.components.individual import Individual

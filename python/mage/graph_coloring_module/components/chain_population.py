@@ -5,19 +5,15 @@ from mage.graph_coloring_module.components.correlation_population import (
     CorrelationPopulation,
 )
 from mage.graph_coloring_module.utils.generate_individuals import generate_individuals
-from mage.graph_coloring_module.utils.validation import validate
 from mage.graph_coloring_module.parameters import Parameter
 from mage.graph_coloring_module.components.population import Population
-from mage.graph_coloring_module.utils.parameters_utils import param_value
 
 
 class ChainPopulationFactory:
     @staticmethod
-    @validate(Parameter.POPULATION_SIZE)
     def create(
         graph: Graph, parameters: Dict[str, Any] = None
     ) -> Optional[List[Population]]:
-        population_size = param_value(graph, parameters, Parameter.POPULATION_SIZE)
         individuals = generate_individuals(graph, parameters)
         return [ChainPopulation(graph, individuals)]
 

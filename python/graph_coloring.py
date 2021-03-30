@@ -1,6 +1,6 @@
 import mgp
 from collections import defaultdict
-from typing import List, Optional, Dict, Any
+from typing import Optional, Dict, Any
 import mage.graph_coloring_module
 from mage.graph_coloring_module import Parameter
 from mage.graph_coloring_module import Graph
