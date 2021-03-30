@@ -46,8 +46,8 @@ class ParallelAlgorithm(Algorithm, ABC):
 
         pool = mp.Pool(no_of_processes)
         m = mp.Manager()
-        results = m.Queue()
-        queues = [m.Queue() for _ in range(no_of_chunks)]
+        results = mp.Queue()
+        queues = [mp.Queue() for _ in range(no_of_chunks)]
 
         processes = []
         for i, population in enumerate(populations):
@@ -58,11 +58,18 @@ class ParallelAlgorithm(Algorithm, ABC):
             )
             processes.append(p)
             p.start()
+
         for p in processes:
             p.join()
 
         best_individual = self._find_best(graph, results, error)
+
+        for q in queues:
+            q.close()
+        results.close()
+
         pool.close()
+        pool.join()
 
         return best_individual
 
@@ -113,6 +120,7 @@ class ParallelAlgorithm(Algorithm, ABC):
 
     def _read_msgs(self, my_q: mp.Queue, population: Population) -> None:
         """Reads messages from the queue and sets the previous or next individual of the population."""
+        flag = False
         if my_q is not None:
             while not my_q.empty():
                 msg = my_q.get()
@@ -121,8 +129,8 @@ class ParallelAlgorithm(Algorithm, ABC):
                 elif msg.msg_type == MessageType.FROM_PREV_CHUNK:
                     population.set_prev_individual(msg.data)
                 elif msg.msg_type == MessageType.STOP:
-                    return True
-        return False
+                    flag = True
+        return flag
 
     def _find_best(self, graph: Graph, results: mp.Queue, error: Error) -> Individual:
         """Finds the individual with the smallest error in the results queue."""
