@@ -8,14 +8,14 @@ from mage.graph_coloring_module import Graph
 
 @mgp.read_proc
 def color_graph(
-    context: mgp.ProcCtx, parameters: mgp.Map = {}
+    context: mgp.ProcCtx, parameters: mgp.Map = {}, edge_property: str = "weight"
 ) -> mgp.Record(node=str, color=str):
     """
     Example:
     CALL graph_coloring.color_graph() YIELD *;
     """
     params = _get_parameters(parameters)
-    g = _convert_to_graph(context, params)
+    g = _convert_to_graph(context, edge_property)
     alg = params[Parameter.ALGORITHM]
     sol_indv = alg.run(g, params)
     sol = sol_indv.chromosome
@@ -32,6 +32,7 @@ def color_subgraph(
     vertices: mgp.List[mgp.Vertex],
     edges: mgp.List[mgp.Edge],
     parameters: mgp.Map = {},
+    edge_property: str = "weight",
 ) -> mgp.Record(node=str, color=str):
     """
     Example:
@@ -42,7 +43,7 @@ def color_subgraph(
     RETURN color, node;
     """
     params = _get_parameters(parameters)
-    g = _convert_to_subgraph(context, vertices, edges, params)
+    g = _convert_to_subgraph(context, vertices, edges, edge_property)
     alg = params[Parameter.ALGORITHM]
     sol_indv = alg.run(g, params)
     sol = sol_indv.chromosome
@@ -71,7 +72,7 @@ def _map_parameters(params: Dict[str, Any]) -> Dict[str, Any]:
     return params
 
 
-def _get_parameters(parameters: Dict[str, Any]) -> List[int]:
+def _get_parameters(parameters: Dict[str, Any]) -> Dict[str, Any]:
     params = _map_parameters(
         {
             Parameter.ALGORITHM: parameters.get(Parameter.ALGORITHM.value, "QA"),
@@ -140,8 +141,7 @@ def _get_parameters(parameters: Dict[str, Any]) -> List[int]:
     return params
 
 
-def _convert_to_graph(context: mgp.ProcCtx, parameters: Dict[str, Any]) -> Graph:
-    edge_property = 'weight'
+def _convert_to_graph(context: mgp.ProcCtx, edge_property: str) -> Graph:
     nodes = []
     adj_list = defaultdict(list)
 
@@ -160,9 +160,11 @@ def _convert_to_graph(context: mgp.ProcCtx, parameters: Dict[str, Any]) -> Graph
 
 
 def _convert_to_subgraph(
-    context: mgp.ProcCtx, vertices: mgp.List[mgp.Vertex], edges: mgp.List[mgp.Edge], parameters: Dict[str, Any]
+    context: mgp.ProcCtx,
+    vertices: mgp.List[mgp.Vertex],
+    edges: mgp.List[mgp.Edge],
+    edge_property: str,
 ) -> Optional[Graph]:
-    edge_property = 'weight'
     vertices, edges = map(set, [vertices, edges])
 
     nodes = []

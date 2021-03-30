@@ -4,8 +4,8 @@ from mage.graph_coloring_module.components.population import Population
 from mage.graph_coloring_module.components.individual import Individual
 from mage.graph_coloring_module.graph import Graph
 
-class CorrelationPopulation(Population):
 
+class CorrelationPopulation(Population):
     def __init__(self, graph: Graph, individuals: List[Individual]):
         super().__init__(graph, individuals)
         self._cumulative_correlation = 0
@@ -44,14 +44,14 @@ class CorrelationPopulation(Population):
         If the population represents a piece of chain then cumulative correlation
         does not include correlation with the individual from the previous piece of chain."""
         return self._cumulative_correlation
-    
+
     @property
     def correlations(self, ind: int) -> Tuple[int, int]:
         """Returns correlations between a given individual and the previous or next individual."""
         prev_ind = self._get_prev_correlation_ind(ind)
         next_ind = self._get_next_correlation_ind(ind)
         return self._correlation[prev_ind], self._correlation[next_ind]
-    
+
     def _calculate_correlation(self, first: Individual, second: Individual) -> float:
         correlation = 0
         for node_1 in self._graph.nodes:

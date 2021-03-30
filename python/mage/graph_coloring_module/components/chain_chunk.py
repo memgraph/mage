@@ -1,6 +1,8 @@
 from typing import List, Dict, Any, Optional
 from mage.graph_coloring_module.components.individual import Individual
-from mage.graph_coloring_module.components.correlation_population import CorrelationPopulation
+from mage.graph_coloring_module.components.correlation_population import (
+    CorrelationPopulation,
+)
 from mage.graph_coloring_module.graph import Graph
 from mage.graph_coloring_module.utils.generate_individuals import generate_individuals
 from mage.graph_coloring_module.utils.validation import validate
@@ -12,7 +14,9 @@ from mage.graph_coloring_module.utils.parameters_utils import param_value
 class ChainChunkFactory:
     @staticmethod
     @validate(Parameter.POPULATION_SIZE, Parameter.NO_OF_CHUNKS)
-    def create(graph: Graph, parameters: Dict[str, Any] = None) -> Optional[List[Population]]:
+    def create(
+        graph: Graph, parameters: Dict[str, Any] = None
+    ) -> Optional[List[Population]]:
         """Returns a list of no_of_chunks populations that have an equal number of individuals."""
 
         population_size = param_value(graph, parameters, Parameter.POPULATION_SIZE)
@@ -41,6 +45,7 @@ class ChainChunkFactory:
             for i in range(no_of_chunks)
         ]
         return chunks
+
 
 class ChainChunk(CorrelationPopulation):
     """A class that represents a population that is just a part

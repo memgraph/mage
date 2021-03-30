@@ -20,7 +20,12 @@ logger = logging.getLogger("graph_coloring")
 class ParallelAlgorithm(Algorithm, ABC):
     """A class that represents abstract parallel algorithm."""
 
-    @validate(Parameter.NO_OF_PROCESSES, Parameter.NO_OF_CHUNKS, Parameter.ERROR, Parameter.POPULATION_TYPE)
+    @validate(
+        Parameter.NO_OF_PROCESSES,
+        Parameter.NO_OF_CHUNKS,
+        Parameter.ERROR,
+        Parameter.POPULATION_TYPE,
+    )
     def run(self, graph: Graph, parameters: Dict[str, Any]) -> Individual:
         """Runs the algorithm in a given number of processes and returns the best individual.
 
