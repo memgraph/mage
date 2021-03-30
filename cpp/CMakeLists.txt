@@ -60,7 +60,6 @@ add_subdirectory(mg_utility)
 function(add_query_module target_name version src)
   add_library(${target_name} SHARED ${src})
   set_target_properties(${target_name} PROPERTIES SOVERSION ${version})
-  set_target_properties(${target_name} PROPERTIES PREFIX "cpp_")
   target_link_libraries(${target_name} PRIVATE mg_procedure)
 endfunction()
 
