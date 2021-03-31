@@ -66,5 +66,3 @@ endfunction()
 # Available query modules.
 add_subdirectory(connectivity_module)
 add_subdirectory(bipartite_matching_module)
-add_subdirectory(cutsets_module)
-add_subdirectory(cycles_module)
