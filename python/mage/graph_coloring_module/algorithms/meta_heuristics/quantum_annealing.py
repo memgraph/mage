@@ -36,7 +36,7 @@ class QA(ParallelAlgorithm):
         parameters: Dict[str, Any],
     ) -> None:
         """A function that executes a QA algorithm. The resulting population
-        is written to the queue results."""
+        is written to the queue named results."""
 
         max_iterations = param_value(graph, parameters, Parameter.MAX_ITERATIONS)
         error = param_value(graph, parameters, Parameter.ERROR)
@@ -47,18 +47,52 @@ class QA(ParallelAlgorithm):
         iteration_callbacks = param_value(
             graph, parameters, Parameter.ITERATION_CALLBACKS
         )
+        no_of_chunks = param_value(graph, parameters, Parameter.NO_OF_CHUNKS)
 
         for iteration in range(max_iterations):
-            if math.fabs(
-                population.min_error(error.individual_err)
-            ) < 1e-5 or self._read_msgs(my_q, population):
-                self._write_stop(
-                    prev_q, next_q, population.best_individual(error.individual_err)
-                )
+            flag, pid = self._read_msgs(my_q, population)
+            if flag:
+                if self._prev_chunk(proc_id) != pid:
+                    self._write_msg(
+                        communication_delay,
+                        iteration,
+                        prev_q,
+                        population.best_individual(error.individual_err),
+                        MessageType.STOP,
+                        proc_id,
+                    )
+                if self._next_chunk(proc_id) != pid:
+                    self._write_msg(
+                        communication_delay,
+                        iteration,
+                        next_q,
+                        population.best_individual(error.individual_err),
+                        MessageType.STOP,
+                        proc_id,
+                    )
                 break
 
             for i in range(len(population)):
                 self._markow_chain(graph, population, i, parameters)
+
+            if math.fabs(population.min_error(error.individual_err)) < 1e-5:
+                self._write_msg(
+                    communication_delay,
+                    iteration,
+                    prev_q,
+                    population.best_individual(error.individual_err),
+                    MessageType.STOP,
+                    proc_id,
+                )
+                self._write_msg(
+                    communication_delay,
+                    iteration,
+                    next_q,
+                    population.best_individual(error.individual_err),
+                    MessageType.STOP,
+                    proc_id,
+                )
+                break
 
             self._write_msg(
                 communication_delay,
@@ -66,13 +100,16 @@ class QA(ParallelAlgorithm):
                 prev_q,
                 population[0],
                 MessageType.FROM_PREV_CHUNK,
+                proc_id,
             )
+
             self._write_msg(
                 communication_delay,
                 iteration,
                 next_q,
                 population[-1],
                 MessageType.FROM_NEXT_CHUNK,
+                proc_id,
             )
 
             for callback in iteration_callbacks:
@@ -90,6 +127,10 @@ class QA(ParallelAlgorithm):
                 proc_id, iteration, population.min_error(error.individual_err)
             )
         )
+
+        for callback in iteration_callbacks:
+            callback.end(graph, population, parameters)
+
         results.put(population)
 
     @validate(

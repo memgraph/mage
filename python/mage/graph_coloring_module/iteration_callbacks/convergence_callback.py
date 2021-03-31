@@ -35,6 +35,9 @@ class ConvergenceCallback(IterationCallback):
         if self._iteration == convergence_callback_tolerance:
             self._convergence_detected(graph, population, parameters)
 
+    def end(self, graph: Graph, population: Population, parameters: Dict[str, Any]):
+        pass
+
     @validate(Parameter.ERROR, Parameter.CONVERGENCE_CALLBACK_ACTIONS)
     def _convergence_detected(
         self, graph: Graph, population: Population, parameters: Dict[str, Any]
