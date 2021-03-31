@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Cache Memgraph Docker image
       id: cache-memgraph-docker
       uses: actions/cache@v1
@@ -30,21 +30,33 @@ jobs:
     - name: Run Memgraph MAGE image
       run: |
         docker run -d -p 7687:7687 memgraph:mage --telemetry-enabled=False
+    - name: Set up C++
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential cmake
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
         python-version: '3.7'
-    - name: Install dependencies
-      run:
+    - name: Build C++ modules
+      run: |
+        mkdir -p cpp/build
+        (cd cpp/build && cmake .. && make -j8)
+    - name: Install Python dependencies
+      run: |
         python -m pip install --upgrade pip
         pip install -r ./python/tests/requirements.txt
         pip install -r ./python/requirements.txt
-
-    - name: Test Python modules
+    - name: C++ Modules unit tests
+      run: |
+        for f in ./cpp/build/*/*_test; do $f; done
+    - name: Python modules unit tests
       env:
-        PYTHONPATH: '$PWD/python:$PWD/e2e'
+        PYTHONPATH: '$PWD/python'
       run: |
         (cd python && python -m pytest .)
     - name: Test End-to-end
+      env:
+        PYTHONPATH: '$PWD/python'
       run: |
         (cd e2e && python -m pytest .)
