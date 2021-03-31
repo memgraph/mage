@@ -52,7 +52,7 @@ class QA(ParallelAlgorithm):
         for iteration in range(max_iterations):
             flag, pid = self._read_msgs(my_q, population)
             if flag:
-                if self._prev_chunk(proc_id) != pid:
+                if self._prev_chunk(proc_id, no_of_chunks) != pid:
                     self._write_msg(
                         communication_delay,
                         iteration,
@@ -61,7 +61,7 @@ class QA(ParallelAlgorithm):
                         MessageType.STOP,
                         proc_id,
                     )
-                if self._next_chunk(proc_id) != pid:
+                if self._next_chunk(proc_id, no_of_chunks) != pid:
                     self._write_msg(
                         communication_delay,
                         iteration,

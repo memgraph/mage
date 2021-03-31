@@ -13,6 +13,5 @@ class MatplotlibCallback(IterationCallback):
     def update(self, graph: Graph, population: Population, parameters: Dict[str, Any]):
         pass
 
-    @abstractmethod
     def end(self, graph: Graph, population: Population, parameters: Dict[str, Any]):
         pass
