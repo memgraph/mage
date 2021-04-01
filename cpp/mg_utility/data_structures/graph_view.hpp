@@ -11,7 +11,12 @@ namespace mg_graph {
 /// Interface provides methods for fetching graph data.
 /// There are two methods for changing variables on the edges:
 /// SetVariableState and SetVariableValue
-template <typename TSize = uint64_t> class GraphView {
+template <typename TSize = std::uint64_t> class GraphView {
+
+  static_assert(
+      std::is_unsigned_v<TSize>,
+      "mg_graph::GraphView expects the type to be an unsigned integer type\n"
+      "only (uint8_t, uint16_t, uint32_t, or uint64_t).");
 
 public:
   using TNode = Node<TSize>;
