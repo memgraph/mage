@@ -13,7 +13,7 @@
 namespace {
 
 const char *fieldBiconnectedComponentID = "bcc_id";
-const char *fieldEdgeID = "edge_id";
+// const char *fieldEdgeID = "edge_id";
 const char *fieldNodeFrom = "node_from";
 const char *fieldNodeTo = "node_to";
 
@@ -34,11 +34,11 @@ void InsertBiconnectedComponentRecord(const mgp_graph *graph, mgp_result *result
 void GetBiconnectedComponents(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result,
                               mgp_memory *memory) {
   try {
-    auto *graph = mg_utility::GetGraphView(memgraph_graph, result, memory);
+    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory);
 
-    auto bccs = bcc_algorithm::GetBiconnectedComponents(graph);
+    auto bccs = bcc_algorithm::GetBiconnectedComponents(graph.get());
 
-    for (uint32_t bcc_id = 0; bcc_id < bccs.size(); bcc_id++) {
+    for (std::uint64_t bcc_id = 0; bcc_id < bccs.size(); bcc_id++) {
       for (const auto &edge : bccs[bcc_id]) {
         InsertBiconnectedComponentRecord(memgraph_graph, result, memory, bcc_id, edge.id,
                                          graph->GetMemgraphNodeId(edge.from), graph->GetMemgraphNodeId(edge.to));
