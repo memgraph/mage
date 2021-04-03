@@ -257,7 +257,6 @@ extern "C" fn test_procedure(
     result: *mut mgp_result,
     memory: *mut mgp_memory,
 ) {
-    use std::convert::TryFrom;
     match make_graph_vertices_iterator(graph, result, memory) {
         Ok(mgp_graph_iterator) => {
             for mgp_vertex in mgp_graph_iterator {
