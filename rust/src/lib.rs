@@ -5,6 +5,7 @@
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 use std::ffi::CStr;
+use std::ffi::CString;
 use std::os::raw::c_int;
 #[macro_use]
 extern crate c_str_macro;
@@ -75,6 +76,24 @@ fn make_int_value(
     }
 }
 
+fn make_bool_value(
+    value: bool,
+    result: *mut mgp_result,
+    memory: *mut mgp_memory,
+) -> Result<MgpValue, MgpAllocationError> {
+    let unable_alloc_value_msg = c_str!("Unable to allocate boolean value.");
+    unsafe {
+        let mg_value: MgpValue = MgpValue {
+            value: mgp_value_make_bool(if value == false { 0 } else { 1 }, memory),
+        };
+        if mg_value.value.is_null() {
+            mgp_result_set_error_msg(result, unable_alloc_value_msg.as_ptr());
+            return Err(MgpAllocationError);
+        }
+        return Ok(mg_value);
+    }
+}
+
 struct MgpVerticesIterator {
     ptr: *mut mgp_vertices_iterator,
     is_first: bool,
@@ -127,6 +146,17 @@ impl MgpVertex {
     fn labels_count(&self) -> u64 {
         unsafe {
             return mgp_vertex_labels_count(self.ptr);
+        }
+    }
+
+    fn has_label(&self, name: &str) -> bool {
+        // TODO(gitbuda): Deal with additional allocation + panic.
+        let c_str = CString::new(name).unwrap();
+        unsafe {
+            let c_mgp_label = mgp_label {
+                name: c_str.as_ptr(),
+            };
+            return mgp_vertex_has_label(self.ptr, c_mgp_label) != 0;
         }
     }
 }
@@ -207,6 +237,18 @@ fn add_int_result_type(
     }
 }
 
+fn add_bool_result_type(
+    procedure: *mut mgp_proc,
+    name: &CStr,
+) -> Result<(), MgpAddProcedureParameterTypeError> {
+    unsafe {
+        if mgp_proc_add_result(procedure, name.as_ptr(), mgp_type_bool()) == 0 {
+            return Err(MgpAddProcedureParameterTypeError);
+        }
+        return Ok(());
+    }
+}
+
 //// END "library" part.
 
 extern "C" fn test_procedure(
@@ -220,31 +262,27 @@ extern "C" fn test_procedure(
         Ok(mgp_graph_iterator) => {
             for mgp_vertex in mgp_graph_iterator {
                 match make_result_record(result) {
-                    Ok(mgp_record) => match i64::try_from(mgp_vertex.labels_count()) {
-                        Ok(labels_count) => {
-                            match make_int_value(labels_count, result, memory) {
-                                Ok(mgp_value) => {
-                                    match insert_result_record(
-                                        &mgp_record,
-                                        c_str!("labels_count"),
-                                        &mgp_value,
-                                        result,
-                                    ) {
-                                        Ok(_) => {}
-                                        Err(_) => {
-                                            return;
-                                        }
+                    Ok(mgp_record) => {
+                        let has_label = mgp_vertex.has_label("L3");
+                        match make_bool_value(has_label, result, memory) {
+                            Ok(mgp_value) => {
+                                match insert_result_record(
+                                    &mgp_record,
+                                    c_str!("has_label"),
+                                    &mgp_value,
+                                    result,
+                                ) {
+                                    Ok(_) => {}
+                                    Err(_) => {
+                                        return;
                                     }
                                 }
-                                Err(_) => {
-                                    return;
-                                }
-                            };
-                        }
-                        Err(_) => {
-                            return;
-                        }
-                    },
+                            }
+                            Err(_) => {
+                                return;
+                            }
+                        };
+                    }
                     Err(_) => {
                         return;
                     }
@@ -260,7 +298,7 @@ extern "C" fn test_procedure(
 #[no_mangle]
 pub extern "C" fn mgp_init_module(module: *mut mgp_module, _memory: *mut mgp_memory) -> c_int {
     let procedure = add_read_procedure(test_procedure, c_str!("test_procedure"), module);
-    match add_int_result_type(procedure, c_str!("labels_count")) {
+    match add_bool_result_type(procedure, c_str!("has_label")) {
         Ok(_) => {}
         Err(_) => {
             return 1;
