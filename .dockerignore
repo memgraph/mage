@@ -5,4 +5,4 @@ htmlcov
 dist
 **/__pycache__
 **/*.pyc
-**/build
+cpp/build
