@@ -14,61 +14,59 @@ jobs:
       with:
         path: ~/memgraph
         key: cache-memgraph-v1.3.0-docker-image
-    # - name: Download Memgraph Docker image
-    #   if: steps.cache-memgraph-docker.outputs.cache-hit != 'true'
-    #   env:
-    #     MG_VERSION: '1.4.0'
-    #   run: |
-    #     mkdir ~/memgraph
-    #     curl -L https://memgraph.com/download/memgraph/v$MG_VERSION/docker/memgraph-$MG_VERSION-community-docker.tar.gz > ~/memgraph/memgraph-docker.tar.gz
-    # - name: Load Memgraph Docker image
-    #   run: |
-    #     docker load -i ~/memgraph/memgraph-docker.tar.gz
+    - name: Download Memgraph Docker image
+      if: steps.cache-memgraph-docker.outputs.cache-hit != 'true'
+      env:
+        MG_VERSION: '1.4.0'
+      run: |
+        mkdir ~/memgraph
+        curl -L https://memgraph.com/download/memgraph/v$MG_VERSION/docker/memgraph-$MG_VERSION-community-docker.tar.gz > ~/memgraph/memgraph-docker.tar.gz
+    - name: Load Memgraph Docker image
+      run: |
+        docker load -i ~/memgraph/memgraph-docker.tar.gz
     - name: Build project
       run: |
         docker build -t memgraph:mage .
     - name: Run Memgraph MAGE image
       run: |
         docker run -d -p 7687:7687 memgraph:mage --telemetry-enabled=False
-    # - name: Set up C++
-    #   run: |
-    #     sudo apt update
-    #     sudo apt install -y build-essential cmake
+    - name: Set up C++
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential cmake
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
         python-version: '3.7'
-    # - name: Build C++ modules
-    #   run: |
-    #     mkdir -p cpp/build
-    #     pushd cpp/build
-    #     cmake ..
-    #     make -j8
-    #     popd
+    - name: Build C++ modules
+      run: |
+        mkdir -p cpp/build
+        pushd cpp/build
+        cmake ..
+        make -j8
+        popd
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r ./python/tests/requirements.txt
         pip install -r ./python/requirements.txt
-    # - name: C++ Modules unit tests
-    #   run: |
-    #     pushd cpp/build
-    #     ls
-    #     ctest
-    #     popd
-    # - name: Python modules unit tests
-    #   env:
-    #     PYTHONPATH: '$PWD/python'
-    #   run: |
-    #     pushd python
-    #     python -m pytest .
-    #     popd
+    - name: C++ Modules unit tests
+      run: |
+        pushd cpp/build
+        ls
+        ctest
+        popd
+    - name: Python modules unit tests
+      env:
+        PYTHONPATH: '$PWD/python'
+      run: |
+        pushd python
+        python -m pytest .
+        popd
     - name: Test End-to-end
       env:
         PYTHONPATH: '$PWD/e2e'
       run: |
-        pwd
         pushd e2e
-        pwd
         python -m pytest .
         popd
