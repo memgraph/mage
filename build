@@ -4,8 +4,8 @@ import os
 import subprocess
 import shutil
 import glob
-import re
 import fnmatch
+import multiprocessing as mp
 
 WORK_DIRECTORY = os.getcwd()
 QUERY_MODULES_DIRECTORY = f"{WORK_DIRECTORY}/dist"
@@ -60,7 +60,8 @@ os.makedirs(CPP_BUILD_DIRECTORY, exist_ok=True)
 os.chdir(CPP_BUILD_DIRECTORY)
 subprocess.run(["ls", "-l"])
 subprocess.run(["cmake", ".."])
-subprocess.run(["make"])
+core_count = mp.cpu_count()
+subprocess.run(["make", f"-j{core_count}"])
 
 # Transfer files to the query modules directory
 so_files = glob.glob("**/*.so", recursive=True)

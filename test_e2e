@@ -7,7 +7,7 @@ WORK_DIRECTORY = os.getcwd()
 E2E_DIRECTORY = f"{WORK_DIRECTORY}/e2e"
 
 #################################################
-#           Unit Test Python modules            #
+#                End to end tests               #
 #################################################
 
 os.environ["PYTHONPATH"] = E2E_DIRECTORY

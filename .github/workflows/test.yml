@@ -1,5 +1,8 @@
 name: Build and Test
 
+env:
+  MG_VERSION: '1.4.0'
+
 on: [push]
 
 jobs:
@@ -13,14 +16,12 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/memgraph
-        key: cache-memgraph-v1.3.0-docker-image
+        key: cache-memgraph-v${{env.MG_VERSION}}-docker-image
     - name: Download Memgraph Docker image
       if: steps.cache-memgraph-docker.outputs.cache-hit != 'true'
-      env:
-        MG_VERSION: '1.4.0'
       run: |
         mkdir ~/memgraph
-        curl -L https://memgraph.com/download/memgraph/v$MG_VERSION/docker/memgraph-$MG_VERSION-community-docker.tar.gz > ~/memgraph/memgraph-docker.tar.gz
+        curl -L https://memgraph.com/download/memgraph/v${{env.MG_VERSION}}/docker/memgraph-${{env.MG_VERSION}}-community-docker.tar.gz > ~/memgraph/memgraph-docker.tar.gz
     - name: Load Memgraph Docker image
       run: |
         docker load -i ~/memgraph/memgraph-docker.tar.gz
@@ -44,7 +45,6 @@ jobs:
         pushd cpp/build
         cmake ..
         make -j8
-        popd
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
@@ -62,11 +62,9 @@ jobs:
       run: |
         pushd python
         python -m pytest .
-        popd
     - name: Test End-to-end
       env:
         PYTHONPATH: '$PWD/e2e'
       run: |
         pushd e2e
         python -m pytest .
-        popd
