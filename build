@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+
+import os
+import subprocess
+import shutil
+import glob
+import re
+import fnmatch
+
+WORK_DIRECTORY = os.getcwd()
+QUERY_MODULES_DIRECTORY = f"{WORK_DIRECTORY}/dist"
+CPP_DIRECTORY = f"{WORK_DIRECTORY}/cpp"
+PY_DIRECTORY = f"{WORK_DIRECTORY}/python"
+
+shutil.rmtree(QUERY_MODULES_DIRECTORY, ignore_errors=True)
+os.makedirs(QUERY_MODULES_DIRECTORY)
+
+#################################################
+#                Copy Utility                   #
+#################################################
+
+
+def copytree(src, dst, ignore_patterns=[]):
+    _check_ignore = lambda x: any(
+        [bool(fnmatch.fnmatch(x, pattern)) for pattern in ignore_patterns]
+    )
+
+    def _copytree(rel_path=""):
+        curr_dir = os.path.join(src, rel_path)
+        for item in os.listdir(curr_dir):
+            if _check_ignore(item):
+                continue
+
+            abs_item = os.path.join(curr_dir, item)
+            rel_item = os.path.join(rel_path, item)
+
+            if os.path.isdir(abs_item):
+                _copytree(rel_item)
+                continue
+
+            destination = os.path.dirname(
+                os.path.join(dst, rel_item)
+            )  # Joining the tree-based name
+
+            os.makedirs(destination, exist_ok=True)
+            shutil.copy2(abs_item, destination)
+
+    _copytree()
+
+
+#################################################
+#              Load C++ modules                 #
+#################################################
+
+# Make build directory
+CPP_BUILD_DIRECTORY = f"{CPP_DIRECTORY}/build"
+os.makedirs(CPP_BUILD_DIRECTORY, exist_ok=True)
+
+# Start CMake building
+os.chdir(CPP_BUILD_DIRECTORY)
+subprocess.run(["ls", "-l"])
+subprocess.run(["cmake", ".."])
+subprocess.run(["make"])
+
+# Transfer files to the query modules directory
+so_files = glob.glob("**/*.so", recursive=True)
+for file in so_files:
+    shutil.copy2(file, QUERY_MODULES_DIRECTORY)
+
+#################################################
+#             Load Python modules               #
+#################################################
+
+os.chdir(PY_DIRECTORY)
+ignore_list = [
+    "tests",
+    "requirements.txt",
+    "pytest.ini",
+    "htmlcov",
+    "__pycache__",
+    ".*",
+]
+
+# Copy python repository tree inside dist folder
+copytree(PY_DIRECTORY, QUERY_MODULES_DIRECTORY, ignore_list)
+os.environ["PYTHONPATH"] = PY_DIRECTORY

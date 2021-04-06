@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+
+import os
+import subprocess
+
+WORK_DIRECTORY = os.getcwd()
+E2E_DIRECTORY = f"{WORK_DIRECTORY}/e2e"
+
+#################################################
+#           Unit Test Python modules            #
+#################################################
+
+os.environ["PYTHONPATH"] = E2E_DIRECTORY
+os.chdir(E2E_DIRECTORY)
+subprocess.run(["pytest", "."])
