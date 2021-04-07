@@ -64,5 +64,7 @@ function(add_query_module target_name version src)
 endfunction()
 
 # Available query modules.
+include(CTest)
+enable_testing()
 add_subdirectory(connectivity_module)
 add_subdirectory(biconnected_components_module)
