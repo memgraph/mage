@@ -2,6 +2,8 @@ name: Build and Test
 
 env:
   MG_VERSION: '1.4.0'
+  PY_VERSION: '3.7'
+  CORE_COUNT: '8'
 
 on: [push]
 
@@ -16,12 +18,12 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/memgraph
-        key: cache-memgraph-v${{env.MG_VERSION}}-docker-image
+        key: cache-memgraph-v${{ env.MG_VERSION }}-docker-image
     - name: Download Memgraph Docker image
       if: steps.cache-memgraph-docker.outputs.cache-hit != 'true'
       run: |
         mkdir ~/memgraph
-        curl -L https://memgraph.com/download/memgraph/v${{env.MG_VERSION}}/docker/memgraph-${{env.MG_VERSION}}-community-docker.tar.gz > ~/memgraph/memgraph-docker.tar.gz
+        curl -L https://memgraph.com/download/memgraph/v${{ env.MG_VERSION }}/docker/memgraph-${{ env.MG_VERSION }}-community-docker.tar.gz > ~/memgraph/memgraph-docker.tar.gz
     - name: Load Memgraph Docker image
       run: |
         docker load -i ~/memgraph/memgraph-docker.tar.gz
@@ -38,13 +40,13 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: '3.7'
+        python-version: ${{ env.PY_VERSION }}
     - name: Build C++ modules
       run: |
         mkdir -p cpp/build
-        pushd cpp/build
+        cd cpp/build
         cmake ..
-        make -j8
+        make -j${{ env.CORE_COUNT }}
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
@@ -52,17 +54,17 @@ jobs:
         pip install -r ./python/requirements.txt
     - name: C++ Modules unit tests
       run: |
-        pushd cpp/build
-        ctest
+        cd cpp/build
+        ctest -j${{ env.CORE_COUNT }}
     - name: Python modules unit tests
       env:
         PYTHONPATH: '$PWD/python'
       run: |
-        pushd python
+        cd python
         python -m pytest .
     - name: Test End-to-end
       env:
         PYTHONPATH: '$PWD/e2e'
       run: |
-        pushd e2e
+        cd e2e
         python -m pytest .
