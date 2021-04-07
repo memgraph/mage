@@ -53,9 +53,7 @@ jobs:
     - name: C++ Modules unit tests
       run: |
         pushd cpp/build
-        ls
         ctest
-        popd
     - name: Python modules unit tests
       env:
         PYTHONPATH: '$PWD/python'

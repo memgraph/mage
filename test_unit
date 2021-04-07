@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import multiprocessing as mp
 
 WORK_DIRECTORY = os.getcwd()
 CPP_DIRECTORY = f"{WORK_DIRECTORY}/cpp"
@@ -17,7 +18,8 @@ if not os.path.exists(CPP_BUILD_DIRECTORY):
 
 # Run ctest
 os.chdir(CPP_BUILD_DIRECTORY)
-subprocess.run(["ctest"])
+core_count = mp.cpu_count()
+subprocess.run(["ctest", f"-j{core_count}"])
 
 #################################################
 #           Unit Test Python modules            #
