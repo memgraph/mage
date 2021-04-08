@@ -41,7 +41,7 @@ struct NodeState {
 ///
 void BccDFS(std::uint64_t node_id, std::uint64_t parent_id, bcc_utility::NodeState *state,
             std::stack<mg_graph::Edge<>> *edge_stack, std::vector<std::vector<mg_graph::Edge<>>> *bcc,
-            const mg_graph::GraphView<> *graph);
+            const mg_graph::GraphView<> &graph);
 
 }  // namespace bcc_utility
 
@@ -53,6 +53,6 @@ namespace bcc_algorithm {
 ///@param graph GraphView object
 ///@return std::vector<std::vector<mg_graph::Edge<>>>
 ///
-std::vector<std::vector<mg_graph::Edge<>>> GetBiconnectedComponents(const mg_graph::GraphView<> *graph);
+std::vector<std::vector<mg_graph::Edge<>>> GetBiconnectedComponents(const mg_graph::GraphView<> &graph);
 
 }  // namespace bcc_algorithm

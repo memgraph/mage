@@ -37,13 +37,15 @@ std::unique_ptr<mg_graph::Graph<>> BuildGraph(std::uint64_t nodes,
 /// Generates random undirected graph with a given numer of nodes and edges.
 /// The generated graph is not picked out of a uniform distribution.
 std::unique_ptr<mg_graph::Graph<>> GenRandomGraph(std::uint64_t nodes, std::uint64_t edges) {
+  using IntPair = std::pair<std::uint64_t, std::uint64_t>;
+
   auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
   std::mt19937 rng(seed);
   std::uniform_int_distribution<std::uint64_t> dist(0, nodes - 1);
-  std::set<std::pair<std::uint64_t, std::uint64_t>> E;
 
+  std::set<IntPair> E;
   for (std::uint64_t i = 0; i < edges; ++i) {
-    std::optional<std::pair<std::uint64_t, std::uint64_t>> edge;
+    std::optional<IntPair> edge;
     do {
       edge = std::minmax(dist(rng), dist(rng));
     } while (edge->first == edge->second || E.find(*edge) != E.end());
@@ -94,19 +96,19 @@ bool CheckBCC(std::vector<std::vector<mg_graph::Edge<>>> user,
 
 TEST(BCC, EmptyGraph) {
   auto G = BuildGraph(0, {});
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(G.get());
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
   ASSERT_TRUE(CheckBCC(BCC, {}));
 }
 
 TEST(BCC, SingleNode) {
   auto G = BuildGraph(1, {});
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(G.get());
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
   ASSERT_TRUE(CheckBCC(BCC, {}));
 }
 
 TEST(BCC, DisconnectedNodes) {
   auto G = BuildGraph(100, {});
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(G.get());
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
   ASSERT_TRUE(CheckBCC(BCC, {}));
 }
 
@@ -117,7 +119,7 @@ TEST(BCC, Cycle) {
     E.emplace_back(i, (i + 1) % n);
   }
   auto G = BuildGraph(n, E);
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(G.get());
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
   ASSERT_TRUE(CheckBCC(BCC, {E}));
 }
 
@@ -128,7 +130,7 @@ TEST(BCC, Cycle) {
 /// (0)(3)   (5)
 TEST(BCC, SmallTree) {
   auto G = BuildGraph(6, {{2, 4}, {1, 4}, {0, 2}, {1, 3}, {1, 5}});
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(G.get());
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
   ASSERT_TRUE(CheckBCC(BCC, {{{2, 4}}, {{1, 4}}, {{0, 2}}, {{1, 3}}, {{1, 5}}}));
 }
 
@@ -138,7 +140,7 @@ TEST(BCC, RandomTree) {
   for (const auto &edge : G->Edges()) {
     if (edge.from < edge.to) correct_bcc.push_back({{edge.from, edge.to}});
   }
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(G.get());
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
   ASSERT_TRUE(CheckBCC(BCC, correct_bcc));
 }
 
@@ -149,7 +151,7 @@ TEST(BCC, RandomTree) {
 ///    (2)     (6)
 TEST(BCC, HandmadeConnectedGraph1) {
   auto G = BuildGraph(8, {{0, 1}, {0, 2}, {1, 2}, {1, 3}, {3, 4}, {3, 7}, {4, 5}, {4, 6}, {5, 6}});
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(G.get());
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
   ASSERT_TRUE(CheckBCC(BCC, {{{0, 1}, {1, 2}, {2, 0}}, {{1, 3}}, {{3, 7}}, {{3, 4}}, {{4, 5}, {5, 6}, {4, 6}}}));
 }
 
@@ -177,7 +179,7 @@ TEST(BCC, HandmadeConnectedGraph2) {
                            {11, 12},
                            {12, 13},
                            {13, 14}});
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(G.get());
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
   ASSERT_TRUE(CheckBCC(BCC, {{{0, 1}, {1, 2}, {2, 0}},
                              {{1, 3}},
                              {{3, 7}, {7, 5}, {5, 4}, {3, 4}, {4, 6}, {5, 6}},
@@ -202,7 +204,7 @@ TEST(BCC, HandmadeDisconnectedGraph) {
       26, {{0, 1},   {0, 2},   {1, 4},   {1, 3},   {3, 5},   {4, 5},   {2, 6},   {2, 7},   {6, 7},   {8, 9},
            {10, 11}, {11, 12}, {12, 13}, {13, 14}, {10, 14}, {10, 15}, {15, 16}, {16, 17}, {15, 17}, {13, 18},
            {18, 19}, {18, 21}, {18, 20}, {21, 25}, {20, 22}, {22, 23}, {23, 24}, {22, 24}});
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(G.get());
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
   ASSERT_TRUE(CheckBCC(BCC, {{{0, 1}},
                              {{0, 2}},
                              {{1, 4}, {1, 3}, {4, 5}, {3, 5}},
@@ -229,7 +231,7 @@ TEST(BCC, HandmadeCrossEdge) {
   auto G = BuildGraph(
       14, {{0, 1}, {0, 3}, {1, 3}, {1, 4}, {1, 2}, {3, 4},  {2, 4},   {2, 3},   {2, 5},   {5, 9},   {9, 8},
            {8, 7}, {6, 7}, {6, 8}, {9, 6}, {5, 6}, {7, 10}, {10, 13}, {10, 11}, {10, 12}, {13, 11}, {11, 12}});
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(G.get());
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
   ASSERT_TRUE(CheckBCC(BCC, {{{0, 1}, {1, 3}, {0, 3}, {1, 4}, {1, 2}, {2, 4}, {3, 4}, {2, 3}},
                              {{2, 5}},
                              {{5, 6}, {6, 7}, {7, 8}, {8, 9}, {9, 5}, {9, 6}, {6, 8}},
@@ -261,7 +263,7 @@ TEST(BCC, HandmadeArticulationPoint) {
                            {6, 9},
                            {9, 10},
                            {6, 10}});
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(G.get());
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
   ASSERT_TRUE(CheckBCC(BCC, {{{0, 1}, {1, 2}, {2, 0}},
                              {{2, 3}, {2, 4}, {3, 4}},
                              {{4, 5}, {4, 6}, {5, 6}, {5, 8}, {6, 8}},
@@ -271,7 +273,7 @@ TEST(BCC, HandmadeArticulationPoint) {
 TEST(BCC, Performance) {
   auto G = GenRandomGraph(10000, 25000);
   Timer timer;
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(G.get());
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
   auto time_elapsed = timer.Elapsed();
   ASSERT_TRUE(time_elapsed < std::chrono::seconds(1));
 }

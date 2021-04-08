@@ -1,9 +1,3 @@
-#include <iostream>
-#include <map>
-#include <optional>
-#include <sstream>
-#include <unordered_set>
-
 #include <mg_procedure.h>
 #include <mg_exceptions.hpp>
 #include <mg_utils.hpp>
@@ -36,7 +30,7 @@ void GetBiconnectedComponents(const mgp_list *args, const mgp_graph *memgraph_gr
   try {
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory);
 
-    auto bccs = bcc_algorithm::GetBiconnectedComponents(graph.get());
+    auto bccs = bcc_algorithm::GetBiconnectedComponents(*graph);
 
     for (std::uint64_t bcc_id = 0; bcc_id < bccs.size(); bcc_id++) {
       for (const auto &edge : bccs[bcc_id]) {
