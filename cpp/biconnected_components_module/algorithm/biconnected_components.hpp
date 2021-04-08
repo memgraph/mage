@@ -12,7 +12,21 @@ struct NodeState {
   std::vector<bool> visited;
   std::vector<std::uint64_t> discovery, low_link, depth;
   std::vector<std::uint64_t> parent;
-  uint32_t counter;
+  uint64_t counter;
+
+  NodeState(std::uint64_t number_of_nodes) {
+    visited.resize(number_of_nodes, false);
+    discovery.resize(number_of_nodes, 0);
+    low_link.resize(number_of_nodes, 0);
+    counter = 0;
+  }
+
+  void Update(std::uint64_t node_id) {
+    counter++;
+    visited[node_id] = true;
+    discovery[node_id] = counter;
+    low_link[node_id] = counter;
+  }
 };
 
 ///
