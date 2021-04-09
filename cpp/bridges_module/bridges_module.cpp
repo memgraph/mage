@@ -1,9 +1,3 @@
-#include <iostream>
-#include <map>
-#include <optional>
-#include <sstream>
-#include <unordered_set>
-
 #include <mg_procedure.h>
 #include <mg_exceptions.hpp>
 #include <mg_utils.hpp>
@@ -16,8 +10,8 @@ namespace {
 const char *fieldNodeFrom = "node_from";
 const char *fieldNodeTo = "node_to";
 
-void InsertBridgeRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *memory, const int node_from_id,
-                        const int node_to_id) {
+void InsertBridgeRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *memory,
+                        const std::uint64_t node_from_id, const std::uint64_t node_to_id) {
   mgp_result_record *record = mgp_result_new_record(result);
   if (record == nullptr) {
     throw mg_exception::NotEnoughMemoryException();
@@ -27,14 +21,14 @@ void InsertBridgeRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *
   mg_utility::InsertNodeValueResult(graph, record, fieldNodeTo, node_to_id, memory);
 }
 
-void GetBridges(const mgp_list *args, const mgp_graph *graph, mgp_result *result, mgp_memory *memory) {
+void GetBridges(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    auto *g = mg_utility::GetGraphView(graph, result, memory);
-    auto bridges = bridges_alg::GetBridges(g);
+    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory);
+    auto bridges = bridges_alg::GetBridges(*graph);
 
     for (const auto &bridge_edge : bridges) {
-      InsertBridgeRecord(graph, result, memory, g->GetMemgraphNodeId(bridge_edge.from),
-                         g->GetMemgraphNodeId(bridge_edge.to));
+      InsertBridgeRecord(memgraph_graph, result, memory, graph->GetMemgraphNodeId(bridge_edge.from),
+                         graph->GetMemgraphNodeId(bridge_edge.to));
     }
   } catch (const std::exception &e) {
     // We must not let any exceptions out of our module.
