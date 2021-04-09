@@ -14,7 +14,8 @@
 namespace mg_graph {
 
 /// Graph representation.
-template <typename TSize = uint64_t> class Graph : public GraphView<TSize> {
+template <typename TSize = std::uint64_t>
+class Graph : public GraphView<TSize> {
 
   using typename GraphView<TSize>::TNode;
   using typename GraphView<TSize>::TEdge;
@@ -55,24 +56,26 @@ public:
   /// @return     Iterator range
   std::vector<TSize> GetEdgesBetweenNodes(TSize first,
                                           TSize second) const override {
-    std::vector<TSize> ret;
+    std::vector<TSize> edge_ids;
     const auto [range_start, range_end] =
         nodes_to_edge_.equal_range(std::minmax(first, second));
-    ret.reserve(std::distance(range_start, range_end));
+    edge_ids.reserve(std::distance(range_start, range_end));
     for (auto it = range_start; it != range_end; ++it) {
       if (IsEdgeValid(it->second)) {
-        ret.push_back(it->second);
+        edge_ids.push_back(it->second);
       }
     }
-    return ret;
+    return edge_ids;
   }
 
   /// Gets all incident edges ids.
   ///
   /// @return all incident edges
   const std::vector<TSize> &IncidentEdges(TSize node_id) const override {
-    if (node_id < 0 && node_id >= nodes_.size())
+    if (node_id < 0 && node_id >= nodes_.size()) {
       throw mg_exception::InvalidIDException();
+    }
+
     return adj_list_[node_id];
   }
 
@@ -82,8 +85,10 @@ public:
   ///
   /// @return vector of neighbours
   const std::vector<TNeighbour> &Neighbours(TSize node_id) const override {
-    if (node_id < 0 && node_id >= nodes_.size())
+    if (node_id < 0 && node_id >= nodes_.size()) {
       throw mg_exception::InvalidIDException();
+    }
+
     return neighbours_[node_id];
   }
 
@@ -93,8 +98,10 @@ public:
   ///
   /// @return target Node struct
   const TNode &GetNode(TSize node_id) const override {
-    if (node_id < 0 && node_id >= nodes_.size())
+    if (node_id < 0 && node_id >= nodes_.size()) {
       throw mg_exception::InvalidIDException();
+    }
+
     return nodes_[node_id];
   }
 
@@ -103,13 +110,18 @@ public:
   /// @param[in] edge_id edge id
   ///
   /// @return Edge struct
-  const TEdge &GetEdge(TSize edge_id) const override { return edges_[edge_id]; }
+  const TEdge &GetEdge(TSize edge_id) const override {
+    if (edge_id < 0 && edge_id >= edges_.size()) {
+      throw mg_exception::InvalidIDException();
+    }
+    return edges_[edge_id];
+  }
 
   /// Creates a node.
   ///
   /// @return     Created node id
-  TSize CreateNode(uint64_t memgraph_id) {
-    TSize id = nodes_.size();
+  TSize CreateNode(std::uint64_t memgraph_id) {
+    auto id = nodes_.size();
     nodes_.push_back({id});
     adj_list_.emplace_back();
     neighbours_.emplace_back();
@@ -128,13 +140,15 @@ public:
   /// @param[in]  to    The to node identifier
   ///
   /// @return     Created edge id
-  TSize CreateEdge(uint64_t memgraph_id_from, uint64_t memgraph_id_to) {
-    TSize from = memgraph_to_inner_id_[memgraph_id_from];
-    TSize to = memgraph_to_inner_id_[memgraph_id_to];
+  TSize CreateEdge(std::uint64_t memgraph_id_from,
+                   std::uint64_t memgraph_id_to) {
+    auto from = memgraph_to_inner_id_[memgraph_id_from];
+    auto to = memgraph_to_inner_id_[memgraph_id_to];
+
     if (from < 0 || to < 0 || from >= nodes_.size() || to >= nodes_.size()) {
       throw mg_exception::InvalidIDException();
     }
-    TSize id = edges_.size();
+    auto id = edges_.size();
     edges_.push_back({id, from, to});
     adj_list_[from].push_back(id);
     adj_list_[to].push_back(id);
@@ -150,14 +164,14 @@ public:
   ///
   /// @return Vector of valid edges
   std::vector<TEdge> ExistingEdges() const {
-    std::vector<TEdge> output;
-    output.reserve(edges_.size());
+    std::vector<TEdge> edges_out;
+    edges_out.reserve(edges_.size());
     for (const auto &edge : edges_) {
       if (edge.id == Graph::k_deleted_edge_id_)
         continue;
-      output.push_back(edge);
+      edges_out.push_back(edge);
     }
-    return output;
+    return edges_out;
   }
 
   /// Checks if edge is valid.
@@ -166,10 +180,12 @@ public:
   ///
   /// @return true if edge is valid, otherwise returns false
   bool IsEdgeValid(TSize edge_id) const {
-    if (edge_id < 0 || edge_id >= edges_.size())
+    if (edge_id < 0 || edge_id >= edges_.size()) {
       return false;
-    if (edges_[edge_id].id == k_deleted_edge_id_)
+    }
+    if (edges_[edge_id].id == k_deleted_edge_id_) {
       return false;
+    }
     return true;
   }
 
@@ -177,43 +193,55 @@ public:
   ///
   /// Recommendation is to use this method only in the tests.
   ///
-  /// @param[in] u node id of node on same edge
-  /// @param[in] v node id of node on same edge
-  void EraseEdge(TSize u, TSize v) {
-    if (u < 0 && u >= nodes_.size())
+  /// @param[in] node_from node id of node on same edge
+  /// @param[in] node_to node id of node on same edge
+  void EraseEdge(TSize node_from, TSize node_to) {
+    if (node_from < 0 && node_from >= nodes_.size()) {
       throw mg_exception::InvalidIDException();
-    if (v < 0 && v >= nodes_.size())
+    }
+    if (node_to < 0 && node_to >= nodes_.size()) {
       throw mg_exception::InvalidIDException();
+    }
 
-    auto it = nodes_to_edge_.find(std::minmax(u, v));
-    if (it == nodes_to_edge_.end())
+    auto it = nodes_to_edge_.find(std::minmax(node_from, node_to));
+    if (it == nodes_to_edge_.end()) {
       return;
-    TSize edge_id = it->second;
-
-    for (auto it = adj_list_[u].begin(); it != adj_list_[u].end(); ++it) {
-      if (edges_[*it].to == v || edges_[*it].from == v) {
-        edges_[*it].id = Graph::k_deleted_edge_id_;
-        adj_list_[u].erase(it);
-        break;
-      }
-    }
-    for (auto it = adj_list_[v].begin(); it != adj_list_[v].end(); ++it) {
-      if (edges_[*it].to == u || edges_[*it].from == u) {
-        edges_[*it].id = Graph::k_deleted_edge_id_;
-        adj_list_[v].erase(it);
-        break;
-      }
     }
 
-    for (auto it = neighbours_[u].begin(); it != neighbours_[u].end(); ++it) {
-      if (it->edge_id == edge_id) {
-        neighbours_[u].erase(it);
+    auto edge_id = it->second;
+
+    for (auto it = adj_list_[node_from].begin();
+         it != adj_list_[node_from].end(); ++it) {
+
+      if (edges_[*it].to == node_to || edges_[*it].from == node_to) {
+        edges_[*it].id = Graph::k_deleted_edge_id_;
+        adj_list_[node_from].erase(it);
         break;
       }
     }
-    for (auto it = neighbours_[v].begin(); it != neighbours_[v].end(); ++it) {
+    for (auto it = adj_list_[node_to].begin(); it != adj_list_[node_to].end();
+         ++it) {
+
+      if (edges_[*it].to == node_from || edges_[*it].from == node_from) {
+        edges_[*it].id = Graph::k_deleted_edge_id_;
+        adj_list_[node_to].erase(it);
+        break;
+      }
+    }
+
+    for (auto it = neighbours_[node_from].begin();
+         it != neighbours_[node_from].end(); ++it) {
+
       if (it->edge_id == edge_id) {
-        neighbours_[v].erase(it);
+        neighbours_[node_from].erase(it);
+        break;
+      }
+    }
+    for (auto it = neighbours_[node_to].begin();
+         it != neighbours_[node_to].end(); ++it) {
+
+      if (it->edge_id == edge_id) {
+        neighbours_[node_to].erase(it);
         break;
       }
     }
@@ -224,7 +252,7 @@ public:
   ///
   /// @param node_id view's inner ID
   ///
-  TSize GetMemgraphNodeId(uint64_t node_id) {
+  TSize GetMemgraphNodeId(std::uint64_t node_id) {
     if (inner_to_memgraph_id_.find(node_id) == inner_to_memgraph_id_.end()) {
       throw mg_exception::InvalidIDException();
     }
@@ -254,8 +282,8 @@ private:
 
   std::vector<TNode> nodes_;
   std::vector<TEdge> edges_;
-  std::unordered_map<TSize, uint64_t> inner_to_memgraph_id_;
-  std::unordered_map<uint64_t, TSize> memgraph_to_inner_id_;
+  std::unordered_map<TSize, std::uint64_t> inner_to_memgraph_id_;
+  std::unordered_map<std::uint64_t, TSize> memgraph_to_inner_id_;
 
   std::multimap<std::pair<TSize, TSize>, TSize> nodes_to_edge_;
 };
