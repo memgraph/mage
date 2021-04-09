@@ -42,7 +42,7 @@ void bcc_utility::BccDFS(std::uint64_t node_id, std::uint64_t parent_id, bcc_uti
 }
 
 std::vector<std::vector<mg_graph::Edge<>>> bcc_algorithm::GetBiconnectedComponents(const mg_graph::GraphView<> &graph) {
-  size_t number_of_nodes = graph.Nodes().size();
+  auto number_of_nodes = graph.Nodes().size();
   bcc_utility::NodeState state(number_of_nodes);
 
   std::vector<std::vector<mg_graph::Edge<>>> bcc;
