@@ -14,7 +14,7 @@ struct NodeState {
   std::vector<std::uint64_t> parent;
   uint64_t counter;
 
-  NodeState(std::uint64_t number_of_nodes) {
+  explicit NodeState(std::uint64_t number_of_nodes) {
     visited.resize(number_of_nodes, false);
     discovery.resize(number_of_nodes, 0);
     low_link.resize(number_of_nodes, 0);

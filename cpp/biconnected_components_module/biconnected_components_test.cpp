@@ -29,7 +29,7 @@ std::unique_ptr<mg_graph::Graph<>> BuildGraph(std::uint64_t nodes,
                                               std::vector<std::pair<std::uint64_t, std::uint64_t>> edges) {
   auto G = std::make_unique<mg_graph::Graph<>>();
   for (std::uint64_t i = 0; i < nodes; ++i) G->CreateNode(i);
-  for (auto &p : edges) G->CreateEdge(p.first, p.second);
+  for (const auto [from, to] : edges) G->CreateEdge(from, to);
 
   return G;
 }
