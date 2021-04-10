@@ -9,43 +9,22 @@ use std::ffi::CString;
 use std::os::raw::c_int;
 #[macro_use]
 extern crate c_str_macro;
+use snafu::Snafu;
 
 //// START "library" part.
 
-#[derive(Debug, Clone)]
-struct MgpError;
-impl std::fmt::Display for MgpError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "An error inside Rust procedure.")
-    }
+#[derive(Debug, Snafu)]
+enum MgpError {
+    #[snafu_display("An error inside Rust procedure.")]
+    MgpDefaultError,
+    #[snafu_display("Unable to allocate memory inside Rust procedure.")]
+    MgpAllocationError,
+    #[snafu_display("Unable to prepare result within Rust procedure.")]
+    MgpPreparingResultError,
+    #[snafu_display("Unable to add a type of procedure paramater in Rust Module.")]
+    MgpAddProcedureParameterTypeError,
 }
-
-#[derive(Debug, Clone)]
-struct MgpAllocationError;
-impl std::fmt::Display for MgpAllocationError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Unable to allocate memory inside Rust procedure.")
-    }
-}
-
-#[derive(Debug, Clone)]
-struct MgpPreparingResultError;
-impl std::fmt::Display for MgpPreparingResultError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Unable to prepare result within Rust procedure.")
-    }
-}
-
-#[derive(Debug, Clone)]
-struct MgpAddProcedureParameterTypeError;
-impl std::fmt::Display for MgpAddProcedureParameterTypeError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(
-            f,
-            "Unable to add a type of procedure paramater in Rust Module."
-        )
-    }
-}
+type MgpResult<T, E = MgpError> = std::result::Result<T, E>;
 
 struct MgpValue {
     value: *mut mgp_value,
@@ -62,7 +41,7 @@ fn make_int_value(
     value: i64,
     result: *mut mgp_result,
     memory: *mut mgp_memory,
-) -> Result<MgpValue, MgpAllocationError> {
+) -> MgpResult<MgpValue> {
     let unable_alloc_value_msg = c_str!("Unable to allocate an integer.");
     unsafe {
         let mg_value: MgpValue = MgpValue {
@@ -70,7 +49,7 @@ fn make_int_value(
         };
         if mg_value.value.is_null() {
             mgp_result_set_error_msg(result, unable_alloc_value_msg.as_ptr());
-            return Err(MgpAllocationError);
+            return Err(MgpError::MgpAllocationError);
         }
         return Ok(mg_value);
     }
@@ -80,7 +59,7 @@ fn make_bool_value(
     value: bool,
     result: *mut mgp_result,
     memory: *mut mgp_memory,
-) -> Result<MgpValue, MgpAllocationError> {
+) -> MgpResult<MgpValue> {
     let unable_alloc_value_msg = c_str!("Unable to allocate boolean value.");
     unsafe {
         let mg_value: MgpValue = MgpValue {
@@ -88,7 +67,7 @@ fn make_bool_value(
         };
         if mg_value.value.is_null() {
             mgp_result_set_error_msg(result, unable_alloc_value_msg.as_ptr());
-            return Err(MgpAllocationError);
+            return Err(MgpError::MgpAllocationError);
         }
         return Ok(mg_value);
     }
@@ -166,7 +145,7 @@ fn make_graph_vertices_iterator(
     graph: *const mgp_graph,
     result: *mut mgp_result,
     memory: *mut mgp_memory,
-) -> Result<MgpVerticesIterator, MgpAllocationError> {
+) -> MgpResult<MgpVerticesIterator> {
     let unable_alloc_iter_msg = c_str!("Unable to allocate a vertices iterator.");
     unsafe {
         let iterator: MgpVerticesIterator = MgpVerticesIterator {
@@ -175,7 +154,7 @@ fn make_graph_vertices_iterator(
         };
         if iterator.ptr.is_null() {
             mgp_result_set_error_msg(result, unable_alloc_iter_msg.as_ptr());
-            return Err(MgpAllocationError);
+            return Err(MgpError::MgpAllocationError);
         }
         return Ok(iterator);
     }
@@ -185,13 +164,13 @@ struct MgpResultRecord {
     record: *mut mgp_result_record,
 }
 
-fn make_result_record(result: *mut mgp_result) -> Result<MgpResultRecord, MgpAllocationError> {
+fn make_result_record(result: *mut mgp_result) -> MgpResult<MgpResultRecord> {
     let record_fail_msg = c_str!("Unable to allocate record");
     unsafe {
         let record = mgp_result_new_record(result);
         if record.is_null() {
             mgp_result_set_error_msg(result, record_fail_msg.as_ptr());
-            return Err(MgpAllocationError);
+            return Err(MgpError::MgpAllocationError);
         }
         Ok(MgpResultRecord { record: record })
     }
@@ -202,14 +181,14 @@ fn insert_result_record(
     mgp_name: &CStr,
     mgp_value: &MgpValue,
     result: *mut mgp_result,
-) -> Result<(), MgpPreparingResultError> {
+) -> MgpResult<()> {
     let name_not_inserted_msg = c_str!("Unable to insert record to the result.");
     unsafe {
         let inserted =
             mgp_result_record_insert(mgp_record.record, mgp_name.as_ptr(), mgp_value.value);
         if inserted == 0 {
             mgp_result_set_error_msg(result, name_not_inserted_msg.as_ptr());
-            return Err(MgpPreparingResultError);
+            return Err(MgpError::MgpPreparingResultError);
         }
         return Ok(());
     }
@@ -251,52 +230,39 @@ fn add_bool_result_type(
 
 //// END "library" part.
 
-extern "C" fn test_procedure(
+fn test_procedure(
     _args: *const mgp_list,
     graph: *const mgp_graph,
     result: *mut mgp_result,
     memory: *mut mgp_memory,
+) -> Result<(), MgpError> {
+    let mgp_graph_iterator = make_graph_vertices_iterator(graph, result, memory)?;
+    for mgp_vertex in mgp_graph_iterator {
+        let mgp_record = make_result_record(result)?;
+        let has_label = mgp_vertex.has_label("L3");
+        let mgp_value = make_bool_value(has_label, result, memory)?;
+        insert_result_record(&mgp_record, c_str!("has_label"), &mgp_value, result)?;
+    }
+    Ok(())
+}
+
+extern "C" fn test_procedure_c(
+    args: *const mgp_list,
+    graph: *const mgp_graph,
+    result: *mut mgp_result,
+    memory: *mut mgp_memory,
 ) {
-    match make_graph_vertices_iterator(graph, result, memory) {
-        Ok(mgp_graph_iterator) => {
-            for mgp_vertex in mgp_graph_iterator {
-                match make_result_record(result) {
-                    Ok(mgp_record) => {
-                        let has_label = mgp_vertex.has_label("L3");
-                        match make_bool_value(has_label, result, memory) {
-                            Ok(mgp_value) => {
-                                match insert_result_record(
-                                    &mgp_record,
-                                    c_str!("has_label"),
-                                    &mgp_value,
-                                    result,
-                                ) {
-                                    Ok(_) => {}
-                                    Err(_) => {
-                                        return;
-                                    }
-                                }
-                            }
-                            Err(_) => {
-                                return;
-                            }
-                        };
-                    }
-                    Err(_) => {
-                        return;
-                    }
-                }
-            }
-        }
-        Err(_) => {
-            return;
+    match test_procedure(args, graph, result, memory) {
+        Ok(_) => (),
+        Err(e) => {
+            println!("{}", e);
         }
     }
 }
 
 #[no_mangle]
 pub extern "C" fn mgp_init_module(module: *mut mgp_module, _memory: *mut mgp_memory) -> c_int {
-    let procedure = add_read_procedure(test_procedure, c_str!("test_procedure"), module);
+    let procedure = add_read_procedure(test_procedure_c, c_str!("test_procedure"), module);
     match add_bool_result_type(procedure, c_str!("has_label")) {
         Ok(_) => {}
         Err(_) => {
