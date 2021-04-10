@@ -10,6 +10,7 @@ use std::os::raw::c_int;
 #[macro_use]
 extern crate c_str_macro;
 use snafu::Snafu;
+use std::panic;
 
 //// START "library" part.
 
@@ -252,10 +253,21 @@ extern "C" fn test_procedure_c(
     result: *mut mgp_result,
     memory: *mut mgp_memory,
 ) {
-    match test_procedure(args, graph, result, memory) {
-        Ok(_) => (),
-        Err(e) => {
-            println!("{}", e);
+    let prev_hook = panic::take_hook();
+    panic::set_hook(Box::new(|_| { /* Do nothing. */ }));
+    let procedure_result =
+        panic::catch_unwind(|| match test_procedure(args, graph, result, memory) {
+            Ok(_) => (),
+            Err(e) => {
+                println!("{}", e);
+            }
+        });
+    panic::set_hook(prev_hook);
+    let procedure_panic_msg = c_str!("Procedure panic!");
+    if procedure_result.is_err() {
+        println!("Procedure panic!");
+        unsafe {
+            mgp_result_set_error_msg(result, procedure_panic_msg.as_ptr());
         }
     }
 }
