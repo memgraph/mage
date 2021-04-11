@@ -34,7 +34,7 @@ def chain_population(graph):
     return population
 
 
-def test_no_available_colors(graph, chain_population):
+def test_convergance_callback(graph, chain_population):
     conv_callback = ConvergenceCallback()
     params = {
         Parameter.ERROR: ConflictError(),
@@ -43,7 +43,7 @@ def test_no_available_colors(graph, chain_population):
     }
     conv_callback.update(graph, chain_population, params)
     assert conv_callback._iteration == 1
-    assert conv_callback._best_sol_error == 2
+    assert conv_callback._best_solution_error == 2
 
     conv_callback.update(graph, chain_population, params)
     assert conv_callback._iteration == 2
@@ -57,4 +57,4 @@ def test_no_available_colors(graph, chain_population):
     chain_population.set_individual(1, new_indv, [3])
     conv_callback.update(graph, chain_population, params)
     assert conv_callback._iteration == 0
-    assert conv_callback._best_sol_error == 0
+    assert conv_callback._best_solution_error == 0
