@@ -18,35 +18,37 @@ class ChainPopulationFactory:
 
 
 class ChainPopulation(CorrelationPopulation):
-    """A class that represents a population that contains
-    all possible individuals. In this population, the last
-    individual is followed by the first individual, and the
-    predecessor of the first individual is the last.."""
+    """A class that represents a chain population. In this
+    population, the last individual is followed by the first
+    individual, and the predecessor of the first individual
+    is the last individual."""
 
     def __init__(self, graph: Graph, individuals: List[Individual]):
         super().__init__(graph, individuals)
         self._set_correlations()
 
-    def _get_prev_correlation_ind(self, ind: int) -> int:
-        """Returns the index of the correlation with the previous individual in the chain of individuals."""
-        return ind - 1 if ind - 1 >= 0 else self.size - 1
+    def _get_prev_correlation_index(self, index: int) -> int:
+        """Returns the index of the correlation with the previous
+        individual in the chain of individuals."""
+        return index - 1 if index - 1 >= 0 else self.size - 1
 
-    def _get_next_correlation_ind(self, ind: int) -> int:
-        """Returns the index of the correlation with the next individual in the chain of individuals."""
-        return ind
+    def _get_next_correlation_index(self, index: int) -> int:
+        """Returns the index of the correlation with the next
+        individual in the chain of individuals."""
+        return index
 
-    def get_prev_individual(self, ind: int) -> Individual:
-        """Returns the individual that precedes the individual on index ind."""
-        if ind < 0 or ind >= self.size:
+    def get_prev_individual(self, index: int) -> Individual:
+        """Returns the individual that precedes the individual on the given index."""
+        if index < 0 or index >= self.size:
             raise IndexError()
-        prev_ind = ind - 1 if ind - 1 >= 0 else self.size - 1
+        prev_ind = index - 1 if index - 1 >= 0 else self.size - 1
         return self.individuals[prev_ind]
 
-    def get_next_individual(self, ind: int) -> Individual:
-        """Returns the individual that follows the individual on index ind."""
-        if ind < 0 or ind >= self.size:
+    def get_next_individual(self, index: int) -> Individual:
+        """Returns the individual that follows the individual on the given index."""
+        if index < 0 or index >= self.size:
             raise IndexError()
-        next_ind = ind + 1 if ind + 1 < self.size else 0
+        next_ind = index + 1 if index + 1 < self.size else 0
         return self.individuals[next_ind]
 
     def _set_correlations(self) -> None:

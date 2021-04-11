@@ -15,8 +15,10 @@ logger = logging.getLogger("graph_coloring")
 def generate_individuals(
     graph: Graph, parameters: Dict[str, Any] = None
 ) -> List[Individual]:
-    """Creates a list of individuals in which some individuals are the result of the given algorithms.
-    If more algorithms are given than the population size, then the excess is ignored."""
+    """A function that creates a list of individuals in which some individuals
+    are the results of the given algorithms. If more algorithms are given than
+    the population size, then the remainder is ignored. If population creation has failed,
+    an exception is raised."""
 
     population_size = param_value(graph, parameters, Parameter.POPULATION_SIZE)
     no_of_colors = param_value(graph, parameters, Parameter.NO_OF_COLORS)
@@ -25,14 +27,14 @@ def generate_individuals(
     individuals = []
     if algorithms is not None:
         for algorithm in algorithms:
-            indv = algorithm.run(graph, parameters)
-            if indv is None:
+            individual = algorithm.run(graph, parameters)
+            if individual is None:
                 logger.error("Population creation has not succeeded.")
                 raise PopulationCreationException(
                     "Population creation has not succeeded."
                 )
             if len(individuals) < population_size:
-                individuals.append(indv)
+                individuals.append(individual)
 
     individuals.extend(
         [

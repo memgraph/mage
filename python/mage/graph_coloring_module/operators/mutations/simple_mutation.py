@@ -6,21 +6,22 @@ from mage.graph_coloring_module.components.individual import Individual
 
 
 class SimpleMutation(Mutation):
-    """A class that represents a simple mutation that takes
-    one node in a graph that is involved in conflicts and change
-    it to a new randomly selected color."""
+    """A class that represents the Simple Mutation. This mutation
+    randomly chooses one node in a graph that is involved in a conflict
+    and changes its color to a new randomly selected color."""
 
     def __str__(self):
         return "SimpleMutation"
 
     def mutate(
-        self, graph: Graph, indv: Individual, parameters: Dict[str, Any] = None
+        self, graph: Graph, individual: Individual, parameters: Dict[str, Any] = None
     ) -> Optional[Tuple[Individual, List[int]]]:
-        """Mutate the given individual and returns the new individual and nodes that were changed."""
-        conflict_nodes = indv.conflict_nodes
+        """A function that mutates the given individual and
+        returns the new individual and nodes that were changed."""
+        conflict_nodes = individual.conflict_nodes
         if len(conflict_nodes) == 0:
-            return indv, []
-        node = random.sample(conflict_nodes, 1)[0]
-        color = random.randint(0, indv.no_of_colors - 1)
-        mutated_indv = indv.replace_unit(node, color)
+            return individual, []
+        node = random.choice(list(conflict_nodes))
+        color = random.randint(0, individual.no_of_colors - 1)
+        mutated_indv = individual.replace_unit(node, color)
         return mutated_indv, [node]

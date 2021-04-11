@@ -6,27 +6,34 @@ from mage.graph_coloring_module.components.individual import Individual
 
 
 class MISMutation(Mutation):
-    """A class that represents a mutation that finds one maximal independent set
-    and changes colors of all nodes in the set to the same color."""
+    """A class that represents the maximal independent set mutation.
+    This mutation finds one maximal independent set and changes
+    colors of all nodes in the set to the same color."""
 
     def __str__(self):
         return "MISMutation"
 
     def mutate(
-        self, graph: Graph, indv: Individual, parameters: Dict[str, Any] = None
+        self, graph: Graph, individual: Individual, parameters: Dict[str, Any] = None
     ) -> Tuple[Individual, List[int]]:
-        """Mutate the given individual and returns the new individual and nodes that were changed."""
-        nodes = self._MIS(graph)
-        if len(nodes) > 0:
-            color = indv[nodes[0]]
-            colors = [color for _ in range(len(nodes))]
-            mutated_indv = indv.replace_units(nodes, colors)
-            return mutated_indv, nodes
-        return indv, []
+        """A function that mutates the given individual and
+        returns the new individual and nodes that were changed."""
+
+        maximal_independent_set = self._MIS(graph)
+        if len(maximal_independent_set) > 0:
+            color = individual[maximal_independent_set[0]]
+            colors = [color for _ in range(len(maximal_independent_set))]
+            mutated_individual = individual.replace_units(
+                maximal_independent_set, colors
+            )
+            return mutated_individual, maximal_independent_set
+        return individual, []
 
     def _MIS(self, graph: Graph) -> List[int]:
-        """Finds the maximal independent set by shuffling the nodes and adding the first node to the MIs,
-        and then sequentially adding all those nodes that do not have neighbors in the MIS."""
+        """A function that finds the maximal independent set. The first step
+        is to shuffle nodes and add the first node to the maximal independent set.
+        After that, all those nodes that do not have neighbors in the MIS are
+        sequentially added to the MIS. ."""
 
         nodes = list(graph.nodes)
         random.shuffle(nodes)

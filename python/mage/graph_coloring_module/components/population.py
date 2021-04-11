@@ -23,18 +23,20 @@ class Population(ABC):
         """Returns size of the population."""
         return self._size
 
-    def __getitem__(self, ind: int) -> Individual:
-        """Returns an individual that is placed on a given index."""
-        return self._individuals[ind]
+    def __getitem__(self, index: int) -> Individual:
+        """Returns an individual that is placed on the given index."""
+        return self._individuals[index]
 
     @abstractmethod
-    def get_prev_individual(self, ind: int) -> Individual:
-        """Returns the individual that precedes the individual on a given index in the individuals chain."""
+    def get_prev_individual(self, index: int) -> Individual:
+        """Returns the individual that precedes the individual
+        on the given index in the chain of individuals."""
         pass
 
     @abstractmethod
-    def get_next_individual(self, ind: int) -> Individual:
-        """Returns the individual following the individual on a given index in the individuals chain."""
+    def get_next_individual(self, index: int) -> Individual:
+        """Returns the individual that follows the individual
+        on the given index in the chain of individuals."""
         pass
 
     @property
@@ -44,12 +46,13 @@ class Population(ABC):
 
     @property
     def best_individuals(self) -> List[Individual]:
-        """Returns a list of individuals that had the smallest error through iterations."""
+        """Returns a list of individuals that had
+        the smallest error through iterations."""
         return self._best_individuals
 
     @property
     def size(self) -> int:
-        """Returns size of the population."""
+        """Returns the size of the population."""
         return self._size
 
     @property
@@ -64,52 +67,56 @@ class Population(ABC):
         in individuals contained in population"""
         return self._sum_conflicts_weight
 
-    def set_individual(self, ind: int, indv: Individual, diff_nodes: List[int]) -> int:
-        """Sets the individual on the index ind to the given individual indv.
-        Returns None if the wrong index is given."""
-        old_indv = self._individuals[ind]
-        self._individuals[ind] = indv
-        self._update_metrics(ind, old_indv)
+    def set_individual(
+        self, index: int, individual: Individual, diff_nodes: List[int]
+    ) -> int:
+        """Sets the individual on the specified index to the given individual
+        and updates appropriate correlations and metrics."""
+        old_individual = self._individuals[index]
+        self._individuals[index] = individual
+        self._update_metrics(index, old_individual)
 
     def best_individual_index(
-        self, error_func: Callable[[Graph, Individual], float]
+        self, error_function: Callable[[Graph, Individual], float]
     ) -> int:
-        """Returns the index of the individual with the least error."""
-        errors = self.individuals_errors(error_func)
+        """Returns the index of the individual with the smallest error."""
+        errors = self.individuals_errors(error_function)
         return min(range(len(errors)), key=errors.__getitem__)
 
     def worst_individual_index(
-        self, error_func: Callable[[Graph, Individual], float]
+        self, error_function: Callable[[Graph, Individual], float]
     ) -> int:
         """Returns the index of the individual with the largest error."""
-        errors = self.individuals_errors(error_func)
+        errors = self.individuals_errors(error_function)
         return max(range(len(errors)), key=errors.__getitem__)
 
     def best_individual(
-        self, error_func: Callable[[Graph, Individual], float]
+        self, error_function: Callable[[Graph, Individual], float]
     ) -> Individual:
-        """Returns the individual with the least error."""
-        return self._individuals[self.best_individual_index(error_func)]
+        """Returns the individual with the smallest error."""
+        return self._individuals[self.best_individual_index(error_function)]
 
     def worst_individual(
-        self, error_func: Callable[[Graph, Individual], float]
+        self, error_function: Callable[[Graph, Individual], float]
     ) -> Individual:
         """Returns the individual with the largest error."""
-        return self._individuals[self.worst_individual_index(error_func)]
+        return self._individuals[self.worst_individual_index(error_function)]
 
     def individuals_errors(
-        self, error_func: Callable[[Graph, Individual], float]
+        self, error_function: Callable[[Graph, Individual], float]
     ) -> List[float]:
         """Returns a list of individuals errors."""
-        return [error_func(self._graph, indv) for indv in self.individuals]
+        return [
+            error_function(self._graph, individual) for individual in self.individuals
+        ]
 
-    def min_error(self, error_func: Callable[[Graph, Individual], float]) -> float:
+    def min_error(self, error_function: Callable[[Graph, Individual], float]) -> float:
         """Returns the smallest error in the population."""
-        return min(self.individuals_errors(error_func))
+        return min(self.individuals_errors(error_function))
 
-    def max_error(self, error_func: Callable[[Graph, Individual], float]) -> float:
+    def max_error(self, error_function: Callable[[Graph, Individual], float]) -> float:
         """Returns the largest error in the population."""
-        return max(self.individuals_errors(error_func))
+        return max(self.individuals_errors(error_function))
 
     def _calculate_metrics(self) -> None:
         for individual in self.individuals:

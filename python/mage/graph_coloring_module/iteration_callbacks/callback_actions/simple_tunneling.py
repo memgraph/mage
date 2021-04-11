@@ -11,6 +11,18 @@ from typing import Dict, Any
 
 
 class SimpleTunneling(Action):
+    """
+    A class that represents SimpleTunneling. This action changes
+    individuals of a given population. The probability of changing
+    an individual is given as a parameter simple_tunneling_probability.
+    The parameter simple_tunneling_mutation defines a mutation that changes
+    individuals. The mutated individual is accepted only if its error is less
+    than the error of the old individual multiplied by the parameter
+    simple_tunneling_error_correction. The maximum number of mutation attempts
+    until the individual is accepted is defined as a parameter
+    simple_tunneling_max_attempts.
+    """
+
     @validate(
         Parameter.SIMPLE_TUNNELING_MUTATION,
         Parameter.SIMPLE_TUNNELING_PROBABILITY,
@@ -37,15 +49,16 @@ class SimpleTunneling(Action):
             graph, parameters, Parameter.SIMPLE_TUNNELING_ERROR_CORRECTION
         )
 
-        for i, old_indv in enumerate(population.individuals):
+        for i, old_individual in enumerate(population.individuals):
             if random.random() < simple_tunneling_probability:
-                old_indv_error = old_indv.conflicts_weight
+                old_individual_error = old_individual.conflicts_weight
                 for _ in range(simple_tunneling_max_attempts):
-                    new_indv, diff_nodes = simple_tunneling_mutation.mutate(
-                        graph, old_indv, parameters
+                    new_individual, diff_nodes = simple_tunneling_mutation.mutate(
+                        graph, old_individual, parameters
                     )
                     if (
-                        new_indv.conflicts_weight
-                        <= simple_tunneling_error_correction * old_indv_error
+                        new_individual.conflicts_weight
+                        <= simple_tunneling_error_correction * old_individual_error
                     ):
-                        population.set_individual(i, new_indv, diff_nodes)
+                        population.set_individual(i, new_individual, diff_nodes)
+                        break

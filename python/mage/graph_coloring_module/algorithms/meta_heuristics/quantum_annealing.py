@@ -18,7 +18,7 @@ logger = logging.getLogger("graph_coloring")
 
 
 class QA(ParallelAlgorithm):
-    """A class that represents quantum annealing algorithm."""
+    """A class that represents the quantum annealing algorithm."""
 
     def __str__(self):
         return "QA"
@@ -35,7 +35,7 @@ class QA(ParallelAlgorithm):
         results: mp.Queue,
         parameters: Dict[str, Any],
     ) -> None:
-        """A function that executes a QA algorithm. The resulting population
+        """Function that executes the QA algorithm. The resulting population
         is written to the queue named results."""
 
         max_iterations = param_value(graph, parameters, Parameter.MAX_ITERATIONS)
@@ -140,7 +140,11 @@ class QA(ParallelAlgorithm):
         Parameter.ERROR,
     )
     def _markow_chain(
-        self, graph: Graph, population: Population, ind: int, parameters: Dict[str, Any]
+        self,
+        graph: Graph,
+        population: Population,
+        index: int,
+        parameters: Dict[str, Any],
     ) -> None:
 
         temperature = param_value(graph, parameters, Parameter.QA_TEMPERATURE)
@@ -149,20 +153,22 @@ class QA(ParallelAlgorithm):
         error = param_value(graph, parameters, Parameter.ERROR)
 
         for _ in range(max_steps):
-            indv = population[ind]
-            pop_error_old = error.population_err(graph, population, parameters)
-            new_indv, diff_nodes = mutation.mutate(graph, indv, parameters)
-            delta_h_pot = error.individual_err(graph, new_indv) - error.individual_err(
-                graph, indv
-            )
-            population.set_individual(ind, new_indv, diff_nodes)
-            pop_error_new = error.population_err(graph, population, parameters)
-            delta_error = pop_error_new - pop_error_old
+            individual = population[index]
+            population_error_old = error.population_err(graph, population, parameters)
+            new_individual, diff_nodes = mutation.mutate(graph, individual, parameters)
+            delta_individual_error = error.individual_err(
+                graph, new_individual
+            ) - error.individual_err(graph, individual)
+            population.set_individual(index, new_individual, diff_nodes)
+            population_error_new = error.population_err(graph, population, parameters)
+            delta_population_error = population_error_new - population_error_old
 
-            if delta_h_pot > 0 or delta_error > 0:
+            if delta_individual_error > 0 or delta_population_error > 0:
                 try:
-                    probability = 1 - math.exp((-1 * delta_error) / temperature)
+                    probability = 1 - math.exp(
+                        (-1 * delta_population_error) / temperature
+                    )
                 except OverflowError:
                     probability = 1
                 if random.random() <= probability:
-                    population.set_individual(ind, indv, diff_nodes)
+                    population.set_individual(index, individual, diff_nodes)

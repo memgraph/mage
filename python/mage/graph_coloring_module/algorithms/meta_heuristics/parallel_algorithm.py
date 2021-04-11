@@ -18,7 +18,7 @@ logger = logging.getLogger("graph_coloring")
 
 
 class ParallelAlgorithm(Algorithm, ABC):
-    """A class that represents abstract parallel algorithm."""
+    """A class that represents an abstract parallel algorithm."""
 
     @validate(
         Parameter.NO_OF_PROCESSES,
@@ -32,7 +32,7 @@ class ParallelAlgorithm(Algorithm, ABC):
         Parameters that must be specified:
         :no_of_processes: the number of processes to run an algorithm in
         :no_of_chunks: The number of pieces into which the population is divided.
-        Each population chunk has approximately population_size / no_of_chunks individuals.
+            Each population chunk has approximately population_size / no_of_chunks individuals.
         :error: a function that defines an error"""
 
         no_of_processes = param_value(graph, parameters, Parameter.NO_OF_PROCESSES)
@@ -87,26 +87,26 @@ class ParallelAlgorithm(Algorithm, ABC):
         """A function that executes an algorithm."""
         pass
 
-    def _prev_chunk(self, ind: int, no_of_chunks: int):
-        prev_chunk = ind - 1 if ind - 1 > 0 else no_of_chunks - 1
+    def _prev_chunk(self, index: int, no_of_chunks: int):
+        prev_chunk = index - 1 if index - 1 > 0 else no_of_chunks - 1
         return prev_chunk
 
-    def _next_chunk(self, ind: int, no_of_chunks: int):
-        next_chunk = ind + 1 if ind + 1 < no_of_chunks else 0
+    def _next_chunk(self, index: int, no_of_chunks: int):
+        next_chunk = index + 1 if index + 1 < no_of_chunks else 0
         return next_chunk
 
     def _get_queues(
-        self, ind: int, no_of_chunks: int, queues: mp.Queue
+        self, index: int, no_of_chunks: int, queues: mp.Queue
     ) -> Tuple[Optional[mp.Queue], Optional[mp.Queue], Optional[mp.Queue]]:
-        """Returns my_q, prev_q, next_q for the process on a given index."""
+        """Returns my_q, prev_q, next_q for the process on the given index."""
         if no_of_chunks == 1:
             return None, None, None
 
-        prev_chunk = self._prev_chunk(ind, no_of_chunks)
-        next_chunk = self._next_chunk(ind, no_of_chunks)
+        prev_chunk = self._prev_chunk(index, no_of_chunks)
+        next_chunk = self._next_chunk(index, no_of_chunks)
         prev_q = queues[prev_chunk]
         next_q = queues[next_chunk]
-        my_q = queues[ind]
+        my_q = queues[index]
         return my_q, prev_q, next_q
 
     def _write_msg(
@@ -114,15 +114,15 @@ class ParallelAlgorithm(Algorithm, ABC):
         communication_delay: int,
         iteration: int,
         queue: mp.Queue,
-        indv: Individual,
+        individual: Individual,
         msg_type: MessageType,
-        proc_id: int,
+        process_id: int,
     ) -> None:
         if queue is not None:
             if msg_type == MessageType.STOP:
-                queue.put(Message(indv, MessageType.STOP, proc_id))
+                queue.put(Message(individual, MessageType.STOP, process_id))
             elif iteration % communication_delay == 0:
-                queue.put(Message(indv, msg_type, proc_id))
+                queue.put(Message(individual, msg_type, process_id))
 
     def _read_msgs(self, my_q: mp.Queue, population: Population) -> None:
         """Reads messages from the queue and sets the previous or next individual of the population."""
@@ -137,7 +137,7 @@ class ParallelAlgorithm(Algorithm, ABC):
                     population.set_prev_individual(msg.data)
                 elif msg.msg_type == MessageType.STOP:
                     flag = True
-                    proc_id = msg.proc_id
+                    proc_id = msg.process_id
         return flag, proc_id
 
     def _find_best(self, graph: Graph, results: mp.Queue, error: Error) -> Individual:
@@ -148,6 +148,6 @@ class ParallelAlgorithm(Algorithm, ABC):
             individuals.extend(pop.best_individuals)
 
         best_individual = min(
-            individuals, key=lambda indv: error.individual_err(graph, indv)
+            individuals, key=lambda individual: error.individual_err(graph, individual)
         )
         return best_individual

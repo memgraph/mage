@@ -10,44 +10,48 @@ from mage.graph_coloring_module.parameters import Parameter
 
 
 class RandomMutation(Mutation):
-    """A mutation that changes the color of a random node
-    in a graph with a random_mutation_probability probability,
-    and with probability 1 - random_mutation_probability changes
-    the color of a conflict node in a graph."""
+    """A class that represents the Random Mutation. This mutation
+    changes the color of exactly one selected node. The selected node
+    can be a random node in the graph or a node that is in conflict.
+    The probability that a random node is selected is given as a parameter
+    named random_mutation_probability. If a random node is not selected, then
+    one of the conflicting nodes is selected."""
 
     def __str__(self):
         return "RandomMutation"
 
     @validate(Parameter.RANDOM_MUTATION_PROBABILITY, Parameter.NO_OF_COLORS)
     def mutate(
-        self, graph: Graph, indv: Individual, parameters: Dict[str, Any] = None
+        self, graph: Graph, individual: Individual, parameters: Dict[str, Any] = None
     ) -> Tuple[Individual, List[int]]:
-        """Mutate the given individual and returns the new individual and nodes that were changed."""
+        """A function that mutates the given individual and
+        returns the new individual and nodes that were changed."""
 
         random_mutation_probability = param_value(
             graph, parameters, Parameter.RANDOM_MUTATION_PROBABILITY
         )
         no_of_colors = param_value(graph, parameters, Parameter.NO_OF_COLORS)
 
-        conflict_nodes = indv.conflict_nodes
+        conflict_nodes = individual.conflict_nodes
         non_conflict_nodes = []
         for node in graph.nodes:
             if node not in conflict_nodes:
                 non_conflict_nodes.append(node)
 
         if len(conflict_nodes) == 0:
-            return indv, []
+            return individual, []
 
-        if random.random() < random_mutation_probability:
-            node = random.sample(non_conflict_nodes, 1)[0]
-            color = random.randint(0, no_of_colors - 1)
-        else:
-            node = random.sample(conflict_nodes, 1)[0]
-            colors = available_colors(graph, no_of_colors, indv.chromosome, node)
-            if len(colors) > 0:
-                color = random.sample(colors, 1)[0]
-            else:
-                color = random.randint(0, no_of_colors - 1)
+        node = (
+            random.choice(non_conflict_nodes)
+            if random.random() < random_mutation_probability
+            else random.choice(list(conflict_nodes))
+        )
+        colors = available_colors(graph, no_of_colors, individual.chromosome, node)
+        color = (
+            random.choice(colors)
+            if len(colors) > 0
+            else random.randint(0, no_of_colors - 1)
+        )
 
-        mutated_indv = indv.replace_unit(node, color)
-        return mutated_indv, [node]
+        mutated_individual = individual.replace_unit(node, color)
+        return mutated_individual, [node]

@@ -1,6 +1,6 @@
 import random
 from queue import PriorityQueue
-from typing import Dict, Any
+from typing import Dict, Any, List
 from mage.graph_coloring_module.graph import Graph
 from mage.graph_coloring_module.components.individual import Individual
 from mage.graph_coloring_module.algorithms.algorithm import Algorithm
@@ -11,7 +11,7 @@ from mage.graph_coloring_module.parameters import Parameter
 
 
 class SDO(Algorithm):
-    """A class that represents SDO greedy algorithm. This algorithm sorts nodes considering
+    """A class that represents the SDO greedy algorithm. This algorithm sorts nodes considering
     their saturation degrees and then colors them sequentially. The saturation degree of a
     node is defined as the number of its differently colored neighbors. If it is not possible
     to uniquely determine the color, color is chosen randomly. If coloring the node with any
@@ -22,7 +22,7 @@ class SDO(Algorithm):
 
     @validate(Parameter.NO_OF_COLORS)
     def run(self, graph: Graph, parameters: Dict[str, Any] = None) -> Individual:
-        """Returns the Individual that is the result of the SDO algorithm."""
+        """Returns the individual that represents the result of the SDO algorithm."""
 
         no_of_colors = param_value(graph, parameters, Parameter.NO_OF_COLORS)
 
@@ -54,7 +54,7 @@ class SDO(Algorithm):
 
         return Individual(no_of_colors, graph, chromosome)
 
-    def _get_non_processed_node(self, processed):
+    def _get_non_processed_node(self, processed: List[bool]) -> bool:
         for i, flag in enumerate(processed):
             if not flag:
                 return i

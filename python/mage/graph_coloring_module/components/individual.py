@@ -10,8 +10,8 @@ from mage.graph_coloring_module.exceptions import (
 
 class Individual:
     """A class that represents an individual. The individual represents
-    one possible coloring of the graph. It contains data about conflicts,
-    like the sum of weights of conflict edges, and set of conflict nodes.
+    one possible coloring of the graph. Individual also contains data about
+    conflicts, like the sum of weights of conflict edges, and set of conflict nodes.
     If a new individual is created by changing the color of some nodes of
     the current individual then this data is calculated based on the data
     of the current individual."""
@@ -43,13 +43,13 @@ class Individual:
         if conflicts_weight is None or conflict_nodes is None:
             self._calculate_conflicts()
 
-    def __getitem__(self, ind: int) -> int:
-        """Returns the color found on a given index."""
-        return self._chromosome[ind]
+    def __getitem__(self, index: int) -> int:
+        """Returns the color stored on the given index."""
+        return self._chromosome[index]
 
     @property
     def chromosome(self) -> List[int]:
-        """Returns a list representing the coloring of the graph."""
+        """Returns the list representing the coloring of the graph."""
         return self._chromosome
 
     @property
@@ -81,25 +81,31 @@ class Individual:
 
     def check_coloring(self) -> bool:
         """Checks that the coloring represented by the individual is correct.
-        Returns True if the coloring is correct, otherwise returns False."""
+        The coloring is correct if it does not color two nodes connected with
+        an edge with the same color. The function returns True if the coloring
+        is correct, otherwise returns False."""
         for node in self.graph.nodes:
             for neigh in self.graph[node]:
                 if self.chromosome[node] == self.chromosome[neigh]:
                     return False
         return True
 
-    def replace_unit(self, ind: int, color: int):
-        """Sets the color of the node with the index ind to the given color and
-        returns a new individual if the given color is correct. If the given color
-        or node are not correct then the function returns None."""
-        return self.replace_units([ind], [color])
+    def replace_unit(self, index: int, color: int):
+        """Sets the color of the node on the given index to the given color and
+        returns a new individual if the given arguments are correct. If the given
+        color is not allowed then the IllegalColorException exception is raised.
+        If the given node does not exist then the IllegalNodeException is raised."""
+        return self.replace_units([index], [color])
 
-    def replace_units(self, inds: List[int], colors: List[int]):
-        """Sets the colors of the nodes with the corresponding indices to the given colors and
-        returns a new individual if the given coloring is correct. If the given coloring
-        is not correct then the function returns None."""
+    def replace_units(self, indices: List[int], colors: List[int]):
+        """Sets the colors of the nodes with the corresponding indices to the given
+        colors and returns a new individual if the given coloring is correct. If any
+        of the given colors is not allowed then the IllegalColorException exception is
+        raised. If any of the given nodes does not exist then the IllegalNodeException
+        is raised. If the number of given nodes is not equal to the number of given colors
+        then the WrongColoringException is raised."""
 
-        if len(inds) != len(colors):
+        if len(indices) != len(colors):
             raise WrongColoringException(
                 "The number of given nodes must be equal to the number of given colors!"
             )
@@ -109,22 +115,22 @@ class Individual:
         conflict_nodes = self._conflict_nodes.copy()
         conflict_edges = self.conflicts_weight
 
-        for (ind, color) in zip(inds, colors):
+        for (index, color) in zip(indices, colors):
             if not (0 <= color < self._no_of_colors):
                 raise IllegalColorException(
                     "The given color is not in the range of allowed colors!"
                 )
-            if not (0 <= ind < self.no_of_units):
+            if not (0 <= index < self.no_of_units):
                 raise IllegalNodeException("The given node does not exist!")
             conflict_edges, conflicts_counter, conflict_nodes = self._calculate_diff(
                 chromosome=new_chromosome,
-                node=ind,
+                node=index,
                 color=color,
                 conflict_edges=conflict_edges,
                 conflicts_counter=conflicts_counter,
                 conflict_nodes=conflict_nodes,
             )
-            new_chromosome[ind] = color
+            new_chromosome[index] = color
 
         new_indv = Individual(
             no_of_colors=self.no_of_colors,

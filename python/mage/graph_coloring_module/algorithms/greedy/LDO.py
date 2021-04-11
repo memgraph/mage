@@ -10,7 +10,7 @@ from mage.graph_coloring_module.parameters import Parameter
 
 
 class LDO(Algorithm):
-    """A class that represents LDO greedy algorithm. This algorithm sorts nodes
+    """A class that represents the LDO greedy algorithm. This algorithm sorts nodes
     considering their degrees and then colors them sequentially. If it is not possible
     to uniquely determine the color, color is chosen randomly. If coloring the node with
     any possible color would cause conflicts, then the color is chosen randomly."""
@@ -20,13 +20,13 @@ class LDO(Algorithm):
 
     @validate(Parameter.NO_OF_COLORS)
     def run(self, graph: Graph, parameters: Dict[str, Any] = None) -> Individual:
-        """Returns the Individual that represents the result of the LDO algorithm."""
+        """Returns the individual that represents the result of the LDO algorithm."""
 
         no_of_colors = param_value(graph, parameters, Parameter.NO_OF_COLORS)
 
         chromosome = [-1 for _ in graph.nodes]
         sorted_nodes = sorted(
-            list(graph.nodes), key=lambda n: graph.degree(n), reverse=True
+            list(graph.nodes), key=lambda node: graph.degree(node), reverse=True
         )
 
         for node in sorted_nodes:

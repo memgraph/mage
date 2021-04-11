@@ -10,9 +10,19 @@ from mage.graph_coloring_module.parameters import Parameter
 
 
 class ConvergenceCallback(IterationCallback):
+    """
+    A class that represents Convergence Callback. This iteration
+    callback after each iteration checks whether the algorithm has
+    found a better solution than the existing one. If the algorithm
+    did not find a better solution, the number of iterations in which
+    a better solution was not found increases. When that number of
+    iterations reaches the default number, defined actions are called
+    and the iterations counter is set to zero.
+    """
+
     def __init__(self):
         self._iteration = 0
-        self._best_sol_error = float("inf")
+        self._best_solution_error = float("inf")
         super().__init__()
 
     @validate(Parameter.ERROR, Parameter.CONVERGENCE_CALLBACK_TOLERANCE)
@@ -22,15 +32,14 @@ class ConvergenceCallback(IterationCallback):
             graph, parameters, Parameter.CONVERGENCE_CALLBACK_TOLERANCE
         )
 
-        if self._best_sol_error == float("inf"):
+        if self._best_solution_error == float("inf"):
             self._iteration = 1
-            self._best_sol_error = population.min_error(error.individual_err)
-            return
-
-        self._iteration += 1
-        if population.min_error(error.individual_err) < self._best_sol_error:
-            self._best_sol_error = population.min_error(error.individual_err)
-            self._iteration = 0
+            self._best_solution_error = population.min_error(error.individual_err)
+        else:
+            self._iteration += 1
+            if population.min_error(error.individual_err) < self._best_solution_error:
+                self._best_solution_error = population.min_error(error.individual_err)
+                self._iteration = 0
 
         if self._iteration == convergence_callback_tolerance:
             self._convergence_detected(graph, population, parameters)
@@ -51,4 +60,4 @@ class ConvergenceCallback(IterationCallback):
             action.execute(graph, population, parameters)
 
         self._iteration = 0
-        self._best_sol_error = population.min_error(error.individual_err)
+        self._best_solution_error = population.min_error(error.individual_err)
