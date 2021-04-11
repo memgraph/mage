@@ -76,9 +76,7 @@ def _get_parameters(parameters: Dict[str, Any]) -> Dict[str, Any]:
     params = _map_parameters(
         {
             Parameter.ALGORITHM: parameters.get(Parameter.ALGORITHM.value, "QA"),
-            Parameter.NO_OF_COLORS: parameters.get(
-                Parameter.NO_OF_COLORS.value, 10
-            ),
+            Parameter.NO_OF_COLORS: parameters.get(Parameter.NO_OF_COLORS.value, 10),
             Parameter.NO_OF_PROCESSES: parameters.get(
                 Parameter.NO_OF_PROCESSES.value, 3
             ),
@@ -102,15 +100,11 @@ def _get_parameters(parameters: Dict[str, Any]) -> Dict[str, Any]:
             Parameter.COMMUNICATION_DALAY: parameters.get(
                 Parameter.COMMUNICATION_DALAY.value, 10
             ),
-            Parameter.LOGGING_DELAY: parameters.get(
-                Parameter.LOGGING_DELAY.value, 10
-            ),
+            Parameter.LOGGING_DELAY: parameters.get(Parameter.LOGGING_DELAY.value, 10),
             Parameter.QA_TEMPERATURE: parameters.get(
                 Parameter.QA_TEMPERATURE.value, 0.035
             ),
-            Parameter.QA_MAX_STEPS: parameters.get(
-                Parameter.QA_MAX_STEPS.value, 10
-            ),
+            Parameter.QA_MAX_STEPS: parameters.get(Parameter.QA_MAX_STEPS.value, 10),
             Parameter.CONFLICT_ERR_ALPHA: parameters.get(
                 Parameter.CONFLICT_ERR_ALPHA.value, 0.1
             ),
