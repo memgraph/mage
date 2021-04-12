@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include <mg_generate.hpp>
 #include <mg_graph.hpp>
 #include <mg_test_utils.hpp>
 
@@ -39,19 +40,19 @@ bool CheckBCC(std::vector<std::vector<mg_graph::Edge<>>> user,
 }  // namespace test_bcc
 
 TEST(BCC, EmptyGraph) {
-  auto G = mg_test_utility::BuildGraph(0, {});
+  auto G = mg_generate::BuildGraph(0, {});
   auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
   ASSERT_TRUE(test_bcc::CheckBCC(BCC, {}));
 }
 
 TEST(BCC, SingleNode) {
-  auto G = mg_test_utility::BuildGraph(1, {});
+  auto G = mg_generate::BuildGraph(1, {});
   auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
   ASSERT_TRUE(test_bcc::CheckBCC(BCC, {}));
 }
 
 TEST(BCC, DisconnectedNodes) {
-  auto G = mg_test_utility::BuildGraph(100, {});
+  auto G = mg_generate::BuildGraph(100, {});
   auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
   ASSERT_TRUE(test_bcc::CheckBCC(BCC, {}));
 }
@@ -62,7 +63,7 @@ TEST(BCC, Cycle) {
   for (std::uint64_t i = 0; i < n; ++i) {
     E.emplace_back(i, (i + 1) % n);
   }
-  auto G = mg_test_utility::BuildGraph(n, E);
+  auto G = mg_generate::BuildGraph(n, E);
   auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
   ASSERT_TRUE(test_bcc::CheckBCC(BCC, {E}));
 }
@@ -73,13 +74,13 @@ TEST(BCC, Cycle) {
 ///  |   /   \
 /// (0)(3)   (5)
 TEST(BCC, SmallTree) {
-  auto G = mg_test_utility::BuildGraph(6, {{2, 4}, {1, 4}, {0, 2}, {1, 3}, {1, 5}});
+  auto G = mg_generate::BuildGraph(6, {{2, 4}, {1, 4}, {0, 2}, {1, 3}, {1, 5}});
   auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
   ASSERT_TRUE(test_bcc::CheckBCC(BCC, {{{2, 4}}, {{1, 4}}, {{0, 2}}, {{1, 3}}, {{1, 5}}}));
 }
 
 TEST(BCC, RandomTree) {
-  auto G = mg_test_utility::GenRandomTree(10000);
+  auto G = mg_generate::GenRandomTree(10000);
   std::vector<std::vector<std::pair<std::uint64_t, std::uint64_t>>> correct_bcc;
   for (const auto &edge : G->Edges()) {
     if (edge.from < edge.to) correct_bcc.push_back({{edge.from, edge.to}});
@@ -94,7 +95,7 @@ TEST(BCC, RandomTree) {
 ///   \ |     \  /
 ///    (2)     (6)
 TEST(BCC, HandmadeConnectedGraph1) {
-  auto G = mg_test_utility::BuildGraph(8, {{0, 1}, {0, 2}, {1, 2}, {1, 3}, {3, 4}, {3, 7}, {4, 5}, {4, 6}, {5, 6}});
+  auto G = mg_generate::BuildGraph(8, {{0, 1}, {0, 2}, {1, 2}, {1, 3}, {3, 4}, {3, 7}, {4, 5}, {4, 6}, {5, 6}});
   auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
   ASSERT_TRUE(
       test_bcc::CheckBCC(BCC, {{{0, 1}, {1, 2}, {2, 0}}, {{1, 3}}, {{3, 7}}, {{3, 4}}, {{4, 5}, {5, 6}, {4, 6}}}));
@@ -106,24 +107,24 @@ TEST(BCC, HandmadeConnectedGraph1) {
 ///   \ |     \  / \    \   /
 ///    (2)     (6) (8)   (11)
 TEST(BCC, HandmadeConnectedGraph2) {
-  auto G = mg_test_utility::BuildGraph(15, {{0, 1},
-                                            {0, 2},
-                                            {1, 2},
-                                            {1, 3},
-                                            {3, 4},
-                                            {3, 7},
-                                            {4, 5},
-                                            {4, 6},
-                                            {5, 6},
-                                            {5, 7},
-                                            {5, 8},
-                                            {5, 9},
-                                            {9, 10},
-                                            {9, 11},
-                                            {10, 12},
-                                            {11, 12},
-                                            {12, 13},
-                                            {13, 14}});
+  auto G = mg_generate::BuildGraph(15, {{0, 1},
+                                        {0, 2},
+                                        {1, 2},
+                                        {1, 3},
+                                        {3, 4},
+                                        {3, 7},
+                                        {4, 5},
+                                        {4, 6},
+                                        {5, 6},
+                                        {5, 7},
+                                        {5, 8},
+                                        {5, 9},
+                                        {9, 10},
+                                        {9, 11},
+                                        {10, 12},
+                                        {11, 12},
+                                        {12, 13},
+                                        {13, 14}});
   auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
   ASSERT_TRUE(test_bcc::CheckBCC(BCC, {{{0, 1}, {1, 2}, {2, 0}},
                                        {{1, 3}},
@@ -145,7 +146,7 @@ TEST(BCC, HandmadeConnectedGraph2) {
 ///      \  /                    \    /
 ///       (7)                     (17)
 TEST(BCC, HandmadeDisconnectedGraph) {
-  auto G = mg_test_utility::BuildGraph(
+  auto G = mg_generate::BuildGraph(
       26, {{0, 1},   {0, 2},   {1, 4},   {1, 3},   {3, 5},   {4, 5},   {2, 6},   {2, 7},   {6, 7},   {8, 9},
            {10, 11}, {11, 12}, {12, 13}, {13, 14}, {10, 14}, {10, 15}, {15, 16}, {16, 17}, {15, 17}, {13, 18},
            {18, 19}, {18, 21}, {18, 20}, {21, 25}, {20, 22}, {22, 23}, {23, 24}, {22, 24}});
@@ -173,7 +174,7 @@ TEST(BCC, HandmadeDisconnectedGraph) {
 ///    \ | /\ |    |/   |/       \    /
 ///     (3)--(4)  (9)--(8)        (12)
 TEST(BCC, HandmadeCrossEdge) {
-  auto G = mg_test_utility::BuildGraph(
+  auto G = mg_generate::BuildGraph(
       14, {{0, 1}, {0, 3}, {1, 3}, {1, 4}, {1, 2}, {3, 4},  {2, 4},   {2, 3},   {2, 5},   {5, 9},   {9, 8},
            {8, 7}, {6, 7}, {6, 8}, {9, 6}, {5, 6}, {7, 10}, {10, 13}, {10, 11}, {10, 12}, {13, 11}, {11, 12}});
   auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
@@ -194,20 +195,20 @@ TEST(BCC, HandmadeCrossEdge) {
 ///        \   /
 ///         (8)
 TEST(BCC, HandmadeArticulationPoint) {
-  auto G = mg_test_utility::BuildGraph(11, {{0, 1},
-                                            {0, 2},
-                                            {1, 2},
-                                            {2, 3},
-                                            {2, 4},
-                                            {3, 4},
-                                            {4, 5},
-                                            {5, 8},
-                                            {6, 8},
-                                            {4, 6},
-                                            {5, 6},
-                                            {6, 9},
-                                            {9, 10},
-                                            {6, 10}});
+  auto G = mg_generate::BuildGraph(11, {{0, 1},
+                                        {0, 2},
+                                        {1, 2},
+                                        {2, 3},
+                                        {2, 4},
+                                        {3, 4},
+                                        {4, 5},
+                                        {5, 8},
+                                        {6, 8},
+                                        {4, 6},
+                                        {5, 6},
+                                        {6, 9},
+                                        {9, 10},
+                                        {6, 10}});
   auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
   ASSERT_TRUE(test_bcc::CheckBCC(BCC, {{{0, 1}, {1, 2}, {2, 0}},
                                        {{2, 3}, {2, 4}, {3, 4}},
@@ -216,7 +217,7 @@ TEST(BCC, HandmadeArticulationPoint) {
 }
 
 TEST(BCC, Performance) {
-  auto G = mg_test_utility::GenRandomGraph(10000, 25000);
+  auto G = mg_generate::GenRandomGraph(10000, 25000);
   mg_test_utility::Timer timer;
   auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
   auto time_elapsed = timer.Elapsed();
