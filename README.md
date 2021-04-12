@@ -4,7 +4,7 @@ This open-source repository contains all available query modules written by the 
 
 ## MAGE Query modules
 
-Memgraph introduces the concept of **query modules**, user-defined procedures that extend the Cypher query language. These procedures are grouped into modules that can be loaded into Memgraph. You can find more information on query modules in the official [documentation](https://docs.memgraph.com/memgraph/database-functionalities/query-modules).
+Memgraph introduces the concept of **query modules**, user-defined procedures that extend the Cypher query language. These procedures are grouped into modules that can be loaded into Memgraph. You can find more information on query modules in the official [documentation](https://docs.memgraph.com/memgraph/database-functionalities/query-modules/built-in-query-modules).
 
 Query modules implemented in Python:
 * [nxalg](python/nxalg.py): A module that provides NetworkX integration with Memgraph and implements many NetworkX algorithms.  
