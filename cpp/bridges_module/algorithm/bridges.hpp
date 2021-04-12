@@ -8,8 +8,7 @@ namespace bridges_util {
 /// DFS traversal.
 struct NodeState {
   std::vector<bool> visited;
-  std::vector<std::uint64_t> discovery, low_link, depth;
-  std::vector<std::uint64_t> parent;
+  std::vector<std::uint64_t> discovery, low_link;
   std::uint64_t counter;
 
   explicit NodeState(std::uint64_t number_of_nodes) {
