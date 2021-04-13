@@ -18,13 +18,7 @@ def color_graph(
     parameters = _get_parameters(parameters)
     graph = _convert_to_graph(context, edge_property)
     algorithm = parameters[Parameter.ALGORITHM]
-
-    try:
-        solution = algorithm.run(graph, parameters)
-    except Exception as exception:
-        sys.stderr.write((str(exception)))
-        raise exception
-
+    solution = algorithm.run(graph, parameters)
     return [
         mgp.Record(node=str(graph.label(node)), color=str(color))
         for node, color in enumerate(solution.chromosome)
@@ -50,12 +44,7 @@ def color_subgraph(
     parameters = _get_parameters(parameters)
     graph = _convert_to_subgraph(context, vertices, edges, edge_property)
     algorithm = parameters[Parameter.ALGORITHM]
-    try:
-        solution = algorithm.run(graph, parameters)
-    except Exception as exception:
-        sys.stderr.write((str(exception)))
-        raise exception
-
+    solution = algorithm.run(graph, parameters)
     return [
         mgp.Record(node=str(graph.label(node)), color=str(color))
         for node, color in enumerate(solution.chromosome)
@@ -82,83 +71,73 @@ def _map_parameters(parameters: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _get_parameters(parameters: Dict[str, Any]) -> Dict[str, Any]:
-    try:
-        params = _map_parameters(
-            {
-                Parameter.ALGORITHM: parameters.get(Parameter.ALGORITHM.value, "QA"),
-                Parameter.NO_OF_COLORS: parameters.get(
-                    Parameter.NO_OF_COLORS.value, 10
-                ),
-                Parameter.NO_OF_PROCESSES: parameters.get(
-                    Parameter.NO_OF_PROCESSES.value, 3
-                ),
-                Parameter.NO_OF_CHUNKS: parameters.get(Parameter.NO_OF_CHUNKS.value, 3),
-                Parameter.POPULATION_SIZE: parameters.get(
-                    Parameter.POPULATION_SIZE.value, 15
-                ),
-                Parameter.INIT_ALGORITHMS: parameters.get(
-                    Parameter.INIT_ALGORITHMS.value, ["SDO", "LDO"]
-                ),
-                Parameter.POPULATION_FACTORY: parameters.get(
-                    Parameter.POPULATION_FACTORY.value, "ChainChunkFactory"
-                ),
-                Parameter.ERROR: parameters.get(Parameter.ERROR.value, "ConflictError"),
-                Parameter.MAX_ITERATIONS: parameters.get(
-                    Parameter.MAX_ITERATIONS.value, 10
-                ),
-                Parameter.ITERATION_CALLBACKS: parameters.get(
-                    Parameter.ITERATION_CALLBACKS.value, []
-                ),
-                Parameter.COMMUNICATION_DALAY: parameters.get(
-                    Parameter.COMMUNICATION_DALAY.value, 10
-                ),
-                Parameter.LOGGING_DELAY: parameters.get(
-                    Parameter.LOGGING_DELAY.value, 10
-                ),
-                Parameter.QA_TEMPERATURE: parameters.get(
-                    Parameter.QA_TEMPERATURE.value, 0.035
-                ),
-                Parameter.QA_MAX_STEPS: parameters.get(
-                    Parameter.QA_MAX_STEPS.value, 10
-                ),
-                Parameter.CONFLICT_ERR_ALPHA: parameters.get(
-                    Parameter.CONFLICT_ERR_ALPHA.value, 0.1
-                ),
-                Parameter.CONFLICT_ERR_BETA: parameters.get(
-                    Parameter.CONFLICT_ERR_BETA.value, 0.001
-                ),
-                Parameter.MUTATION: parameters.get(
-                    Parameter.MUTATION.value, "SimpleMutation"
-                ),
-                Parameter.MULTIPLE_MUTATION_NODES_NO_OF_NODES: parameters.get(
-                    Parameter.MULTIPLE_MUTATION_NODES_NO_OF_NODES.value, 2
-                ),
-                Parameter.RANDOM_MUTATION_PROBABILITY: parameters.get(
-                    Parameter.RANDOM_MUTATION_PROBABILITY.value, 0.1
-                ),
-                Parameter.SIMPLE_TUNNELING_MUTATION: parameters.get(
-                    Parameter.SIMPLE_TUNNELING_MUTATION.value, "MultipleMutation"
-                ),
-                Parameter.SIMPLE_TUNNELING_PROBABILITY: parameters.get(
-                    Parameter.SIMPLE_TUNNELING_PROBABILITY.value, 0.5
-                ),
-                Parameter.SIMPLE_TUNNELING_ERROR_CORRECTION: parameters.get(
-                    Parameter.SIMPLE_TUNNELING_ERROR_CORRECTION.value, 2
-                ),
-                Parameter.SIMPLE_TUNNELING_MAX_ATTEMPTS: parameters.get(
-                    Parameter.SIMPLE_TUNNELING_MAX_ATTEMPTS.value, 25
-                ),
-                Parameter.CONVERGENCE_CALLBACK_TOLERANCE: parameters.get(
-                    Parameter.CONVERGENCE_CALLBACK_TOLERANCE.value, 500
-                ),
-                Parameter.CONVERGENCE_CALLBACK_ACTIONS: parameters.get(
-                    Parameter.CONVERGENCE_CALLBACK_ACTIONS.value, ["SimpleTunneling"]
-                ),
-            }
-        )
-    except Exception as exception:
-        sys.stderr.write((f"NOTE: Parameters are set incorrectly."))
-        raise exception
+    params = _map_parameters(
+        {
+            Parameter.ALGORITHM: parameters.get(Parameter.ALGORITHM.value, "QA"),
+            Parameter.NO_OF_COLORS: parameters.get(Parameter.NO_OF_COLORS.value, 10),
+            Parameter.NO_OF_PROCESSES: parameters.get(
+                Parameter.NO_OF_PROCESSES.value, 3
+            ),
+            Parameter.NO_OF_CHUNKS: parameters.get(Parameter.NO_OF_CHUNKS.value, 3),
+            Parameter.POPULATION_SIZE: parameters.get(
+                Parameter.POPULATION_SIZE.value, 15
+            ),
+            Parameter.INIT_ALGORITHMS: parameters.get(
+                Parameter.INIT_ALGORITHMS.value, ["SDO", "LDO"]
+            ),
+            Parameter.POPULATION_FACTORY: parameters.get(
+                Parameter.POPULATION_FACTORY.value, "ChainChunkFactory"
+            ),
+            Parameter.ERROR: parameters.get(Parameter.ERROR.value, "ConflictError"),
+            Parameter.MAX_ITERATIONS: parameters.get(
+                Parameter.MAX_ITERATIONS.value, 10
+            ),
+            Parameter.ITERATION_CALLBACKS: parameters.get(
+                Parameter.ITERATION_CALLBACKS.value, []
+            ),
+            Parameter.COMMUNICATION_DALAY: parameters.get(
+                Parameter.COMMUNICATION_DALAY.value, 10
+            ),
+            Parameter.LOGGING_DELAY: parameters.get(Parameter.LOGGING_DELAY.value, 10),
+            Parameter.QA_TEMPERATURE: parameters.get(
+                Parameter.QA_TEMPERATURE.value, 0.035
+            ),
+            Parameter.QA_MAX_STEPS: parameters.get(Parameter.QA_MAX_STEPS.value, 10),
+            Parameter.CONFLICT_ERR_ALPHA: parameters.get(
+                Parameter.CONFLICT_ERR_ALPHA.value, 0.1
+            ),
+            Parameter.CONFLICT_ERR_BETA: parameters.get(
+                Parameter.CONFLICT_ERR_BETA.value, 0.001
+            ),
+            Parameter.MUTATION: parameters.get(
+                Parameter.MUTATION.value, "SimpleMutation"
+            ),
+            Parameter.MULTIPLE_MUTATION_NODES_NO_OF_NODES: parameters.get(
+                Parameter.MULTIPLE_MUTATION_NODES_NO_OF_NODES.value, 2
+            ),
+            Parameter.RANDOM_MUTATION_PROBABILITY: parameters.get(
+                Parameter.RANDOM_MUTATION_PROBABILITY.value, 0.1
+            ),
+            Parameter.SIMPLE_TUNNELING_MUTATION: parameters.get(
+                Parameter.SIMPLE_TUNNELING_MUTATION.value, "MultipleMutation"
+            ),
+            Parameter.SIMPLE_TUNNELING_PROBABILITY: parameters.get(
+                Parameter.SIMPLE_TUNNELING_PROBABILITY.value, 0.5
+            ),
+            Parameter.SIMPLE_TUNNELING_ERROR_CORRECTION: parameters.get(
+                Parameter.SIMPLE_TUNNELING_ERROR_CORRECTION.value, 2
+            ),
+            Parameter.SIMPLE_TUNNELING_MAX_ATTEMPTS: parameters.get(
+                Parameter.SIMPLE_TUNNELING_MAX_ATTEMPTS.value, 25
+            ),
+            Parameter.CONVERGENCE_CALLBACK_TOLERANCE: parameters.get(
+                Parameter.CONVERGENCE_CALLBACK_TOLERANCE.value, 500
+            ),
+            Parameter.CONVERGENCE_CALLBACK_ACTIONS: parameters.get(
+                Parameter.CONVERGENCE_CALLBACK_ACTIONS.value, ["SimpleTunneling"]
+            ),
+        }
+    )
 
     return params
 
