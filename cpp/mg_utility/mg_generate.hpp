@@ -14,7 +14,7 @@ namespace mg_generate {
 /// Nodes should be 0-indexed and each edge should be provided in both
 /// directions.
 std::unique_ptr<mg_graph::Graph<>> BuildGraph(std::uint64_t num_nodes,
-                                              std::vector<std::pair<std::uint64_t, std::uint64_t>> edges) {
+                                              const std::vector<std::pair<std::uint64_t, std::uint64_t>> &edges) {
   auto G = std::make_unique<mg_graph::Graph<>>();
   for (std::uint64_t i = 0; i < num_nodes; ++i) G->CreateNode(i);
   for (const auto [from, to] : edges) G->CreateEdge(from, to);

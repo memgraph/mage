@@ -7,7 +7,7 @@
 
 #include "algorithm/bridges.hpp"
 
-namespace bruteforce_alg {
+namespace {
 
 std::uint64_t CountComponents(const mg_graph::Graph<> &graph) {
   std::uint64_t n_components = 0;
@@ -34,7 +34,7 @@ std::uint64_t CountComponents(const mg_graph::Graph<> &graph) {
   return n_components;
 }
 
-std::vector<std::pair<std::uint64_t, std::uint64_t>> GetBridges(mg_graph::Graph<> *graph) {
+std::vector<std::pair<std::uint64_t, std::uint64_t>> GetBridgesBruteforce(mg_graph::Graph<> *graph) {
   using IntPair = std::pair<std::uint64_t, std::uint64_t>;
 
   std::uint64_t comp_cnt = CountComponents(*graph);
@@ -52,9 +52,6 @@ std::vector<std::pair<std::uint64_t, std::uint64_t>> GetBridges(mg_graph::Graph<
   return bridges;
 }
 
-}  // namespace bruteforce_alg
-
-namespace test_bridges {
 /// Checks if obtained list of bridges is correct.
 bool CheckBridges(std::vector<mg_graph::Edge<>> user, std::vector<std::pair<std::uint64_t, std::uint64_t>> correct) {
   std::set<std::pair<std::uint64_t, std::uint64_t>> user_bridge_set, correct_bridge_set;
@@ -69,24 +66,24 @@ bool CheckBridges(std::vector<mg_graph::Edge<>> user, std::vector<std::pair<std:
   return user_bridge_set == correct_bridge_set;
 }
 
-}  // namespace test_bridges
+}  // namespace
 
 TEST(Bridges, EmptyGraph) {
   auto graph = mg_generate::BuildGraph(0, {});
   auto bridges = bridges_alg::GetBridges(*graph);
-  ASSERT_TRUE(test_bridges::CheckBridges(bridges, {}));
+  ASSERT_TRUE(CheckBridges(bridges, {}));
 }
 
 TEST(Bridges, SingleNode) {
   auto graph = mg_generate::BuildGraph(1, {});
   auto bridges = bridges_alg::GetBridges(*graph);
-  ASSERT_TRUE(test_bridges::CheckBridges(bridges, {}));
+  ASSERT_TRUE(CheckBridges(bridges, {}));
 }
 
 TEST(Bridges, DisconnectedNodes) {
   auto graph = mg_generate::BuildGraph(100, {});
   auto bridges = bridges_alg::GetBridges(*graph);
-  ASSERT_TRUE(test_bridges::CheckBridges(bridges, {}));
+  ASSERT_TRUE(CheckBridges(bridges, {}));
 }
 
 TEST(Bridges, Cycle) {
@@ -97,7 +94,7 @@ TEST(Bridges, Cycle) {
   }
   auto graph = mg_generate::BuildGraph(n, edges);
   auto bridges = bridges_alg::GetBridges(*graph);
-  ASSERT_TRUE(test_bridges::CheckBridges(bridges, {}));
+  ASSERT_TRUE(CheckBridges(bridges, {}));
 }
 
 TEST(Bridges, SmallTree) {
@@ -108,7 +105,7 @@ TEST(Bridges, SmallTree) {
   // (0)(3)   (5)
   auto graph = mg_generate::BuildGraph(6, {{2, 4}, {1, 4}, {0, 2}, {1, 3}, {1, 5}});
   auto bridges = bridges_alg::GetBridges(*graph);
-  ASSERT_TRUE(test_bridges::CheckBridges(bridges, {{2, 4}, {1, 4}, {0, 2}, {1, 3}, {1, 5}}));
+  ASSERT_TRUE(CheckBridges(bridges, {{2, 4}, {1, 4}, {0, 2}, {1, 3}, {1, 5}}));
 }
 
 TEST(Bridges, RandomTree) {
@@ -118,7 +115,7 @@ TEST(Bridges, RandomTree) {
   for (const auto &edge : graph->Edges()) edges.emplace_back(edge.from, edge.to);
 
   auto bridges = bridges_alg::GetBridges(*graph);
-  ASSERT_TRUE(test_bridges::CheckBridges(bridges, edges));
+  ASSERT_TRUE(CheckBridges(bridges, edges));
 }
 
 TEST(Bridges, HandmadeConnectedGraph1) {
@@ -129,7 +126,7 @@ TEST(Bridges, HandmadeConnectedGraph1) {
   //    (2)     (6)
   auto graph = mg_generate::BuildGraph(8, {{0, 1}, {0, 2}, {1, 2}, {1, 3}, {3, 4}, {3, 7}, {4, 5}, {4, 6}, {5, 6}});
   auto bridges = bridges_alg::GetBridges(*graph);
-  ASSERT_TRUE(test_bridges::CheckBridges(bridges, {{1, 3}, {3, 4}, {3, 7}}));
+  ASSERT_TRUE(CheckBridges(bridges, {{1, 3}, {3, 4}, {3, 7}}));
 }
 
 TEST(Bridges, HandmadeConnectedGraph2) {
@@ -157,7 +154,7 @@ TEST(Bridges, HandmadeConnectedGraph2) {
                                             {12, 13},
                                             {13, 14}});
   auto bridges = bridges_alg::GetBridges(*graph);
-  ASSERT_TRUE(test_bridges::CheckBridges(bridges, {{1, 3}, {5, 8}, {5, 9}, {12, 13}, {13, 14}}));
+  ASSERT_TRUE(CheckBridges(bridges, {{1, 3}, {5, 8}, {5, 9}, {12, 13}, {13, 14}}));
 }
 
 TEST(Bridges, HandmadeDisconnectedGraph) {
@@ -175,7 +172,7 @@ TEST(Bridges, HandmadeDisconnectedGraph) {
            {10, 11}, {11, 12}, {12, 13}, {13, 14}, {10, 14}, {10, 15}, {15, 16}, {16, 17}, {15, 17}, {13, 18},
            {18, 19}, {18, 21}, {18, 20}, {21, 25}, {20, 22}, {22, 23}, {23, 24}, {22, 24}});
   auto bridges = bridges_alg::GetBridges(*graph);
-  ASSERT_TRUE(test_bridges::CheckBridges(
+  ASSERT_TRUE(CheckBridges(
       bridges, {{0, 1}, {0, 2}, {8, 9}, {10, 15}, {13, 18}, {18, 19}, {18, 20}, {18, 21}, {21, 25}, {20, 22}}));
 }
 
@@ -196,8 +193,8 @@ TEST(Bridges, Random100) {
   for (std::uint16_t t = 0; t < 100; ++t) {
     auto graph = mg_generate::GenRandomGraph(10, 20);
     auto algo_bridges = bridges_alg::GetBridges(*graph);
-    auto bf_bridges = bruteforce_alg::GetBridges(graph.get());
-    ASSERT_TRUE(test_bridges::CheckBridges(algo_bridges, bf_bridges));
+    auto bf_bridges = GetBridgesBruteforce(graph.get());
+    ASSERT_TRUE(CheckBridges(algo_bridges, bf_bridges));
   }
 }
 
