@@ -89,3 +89,7 @@ from mage.graph_coloring_module.parameters import (  # noqa: F401, F402, F403
 from mage.graph_coloring_module.components.correlation_population import (  # noqa: F401, F402, F403
     CorrelationPopulation,
 )
+
+from mage.graph_coloring_module.exceptions import (  # noqa: F401, F402, F403
+    IncorrectParametersException,
+)

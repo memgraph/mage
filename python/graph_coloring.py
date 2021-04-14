@@ -4,6 +4,7 @@ from typing import Optional, Dict, Any
 import mage.graph_coloring_module
 from mage.graph_coloring_module import Parameter
 from mage.graph_coloring_module import Graph
+from mage.graph_coloring_module import IncorrectParametersException
 
 
 @mgp.read_proc
@@ -51,6 +52,8 @@ def color_subgraph(
 
 
 def _str2Class(name: str):
+    if name not in dir(mage.graph_coloring_module):
+        raise IncorrectParametersException(f"Parameter {name} is incorrect.")
     return getattr(mage.graph_coloring_module, name)
 
 

@@ -21,3 +21,8 @@ class IllegalColorException(Exception):
 class IllegalNodeException(Exception):
     def __init__(self, message):
         super().__init__(message)
+
+
+class IncorrectParametersException(Exception):
+    def __init__(self, message):
+        super().__init__(message)
