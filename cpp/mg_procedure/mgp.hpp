@@ -1,319 +1,327 @@
-#include <functional>
-#include <iostream>
+#pragma once
+
+#include <cstring>
+#include <map>
+#include <set>
 #include <string>
 
 #include "mg_procedure.h"
 
-// TODO:jmatak Remove redundancy with other modules
 namespace mgp {
 
-class ValueException : public std::exception {
- public:
-  explicit ValueException(const std::string &message) : message_(message){};
-  const char *what() const noexcept override { return message_.c_str(); }
+namespace util {
+// uint to int conversion in C++ is a bit tricky. Take a look here
+// https://stackoverflow.com/questions/14623266/why-cant-i-reinterpret-cast-uint-to-int
+// for more details.
+template <typename TDest, typename TSrc>
+TDest MemcpyCast(TSrc src) {
+  TDest dest;
+  static_assert(sizeof(dest) == sizeof(src), "MemcpyCast expects source and destination to be of same size");
+  static_assert(std::is_arithmetic<TSrc>::value, "MemcpyCast expects source is an arithmetic type");
+  static_assert(std::is_arithmetic<TDest>::value, "MemcpyCast expects destination is an arithmetic type");
+  std::memcpy(&dest, &src, sizeof(src));
+  return dest;
+}
+}  // namespace util
 
- private:
-  std::string message_;
-};
+// Forward declarations
+class ImmutableVertex;
+class ImmutableValue;
 
-class NotEnoughMemoryException : public std::exception {
- public:
-  const char *what() const throw() { return "Not enough memory!"; }
-};
-
-class OnScopeExit {
- public:
-  explicit OnScopeExit(const std::function<void()> &function) : function_(function) {}
-  ~OnScopeExit() { function_(); }
-
- private:
-  std::function<void()> function_;
-};
-}  // namespace mgp
-
-namespace mgp {
-
-class Vertex;
-class Edge;
-
-class Label {
- public:
-  explicit Label(std::string name) : name_(name){};
-
-  bool operator==(const Label &other) const { return name_ == other.name_; }
-
-  std::string name_;
-};
-
-template <typename T>
-class Properties {
- public:
-  T vertex_or_edge_;
-};
-
-class Vertex {
-  friend class Record;
-
- public:
-  explicit Vertex() = delete;
-  explicit Vertex(mgp_vertex *vertex) : vertex_(vertex){};
-  explicit Vertex(const mgp_vertex *vertex) : vertex_(const_cast<mgp_vertex *>(vertex)){};
-
-  std::uint64_t Id() const { return mgp_vertex_get_id(vertex_).as_int; }
-  static Vertex *FromList(const mgp_list *list, int index) {
-    return new Vertex(mgp_value_get_vertex(mgp_list_at(list, index)));
+#define CREATE_ITERATOR(container, element)                                                                         \
+  class Iterator {                                                                                                  \
+   private:                                                                                                         \
+    friend class container;                                                                                         \
+                                                                                                                    \
+   public:                                                                                                          \
+    bool operator==(const Iterator &other) const { return iterable_ == other.iterable_ && index_ == other.index_; } \
+                                                                                                                    \
+    bool operator!=(const Iterator &other) const { return !(*this == other); }                                      \
+                                                                                                                    \
+    Iterator &operator++() {                                                                                        \
+      index_++;                                                                                                     \
+      return *this;                                                                                                 \
+    }                                                                                                               \
+                                                                                                                    \
+    element operator*() const;                                                                                      \
+                                                                                                                    \
+   private:                                                                                                         \
+    Iterator(const container *iterable, size_t index) : iterable_(iterable), index_(index) {}                       \
+                                                                                                                    \
+    const container *iterable_;                                                                                     \
+    size_t index_;                                                                                                  \
   }
 
-  bool operator==(const mgp::Vertex &other) { return Id() == other.Id(); }
+/// Wrapper for int64_t ID to prevent dangerous implicit conversions.
+class Id {
+ public:
+  Id() = default;
+
+  /// Construct Id from uint64_t
+  static Id FromUint(uint64_t id) { return Id(util::MemcpyCast<int64_t>(id)); }
+
+  /// Construct Id from int64_t
+  static Id FromInt(int64_t id) { return Id(id); }
+
+  int64_t AsInt() const { return id_; }
+  uint64_t AsUint() const { return util::MemcpyCast<uint64_t>(id_); }
+
+  bool operator==(const Id &other) const { return id_ == other.id_; }
+  bool operator!=(const Id &other) const { return !(*this == other); }
 
  private:
-  mgp_vertex *vertex_;
+  explicit Id(int64_t id) : id_(id) {}
+
+  int64_t id_;
 };
 
-class Edge {
-  friend class Path;
-  friend class Record;
+////////////////////////////////////////////////////////////////////////////////
+// Properties:
+
+class Properties final {
+ private:
+  using KeyValuePair = std::pair<std::string_view, ImmutableValue>;
 
  public:
-  explicit Edge() = delete;
-  explicit Edge(mgp_edge *edge) : edge_(edge) { SetVertices(); };
-  explicit Edge(const mgp_edge *edge) : edge_(const_cast<mgp_edge *>(edge)) { SetVertices(); };
+  explicit Properties(mgp_properties_iterator *properties_iterator, mgp_memory *memory);
 
-  std::uint64_t Id() const { return mgp_edge_get_id(edge_).as_int; }
+  size_t size() const { return property_map_.size(); }
 
-  bool operator==(const mgp::Edge &other) { return Id() == other.Id(); }
+  bool empty() const { return size() == 0; }
 
-  mgp::Vertex *FromVertex() const { return from_vertex_; }
+  /// \brief Returns the value associated with the given `key`.
+  /// Behaves undefined if there is no such a value.
+  /// \note
+  /// Each key-value pair has to be checked, resulting with O(n)
+  /// time complexity.
+  ImmutableValue operator[](const std::string_view key) const;
 
-  mgp::Vertex *ToVertex() const { return to_vertex_; }
+  std::map<std::string_view, ImmutableValue>::const_iterator begin() const { return property_map_.begin(); }
+  std::map<std::string_view, ImmutableValue>::const_iterator end() const { return property_map_.end(); }
 
- private:
-  void SetVertices() {
-    from_vertex_ = new mgp::Vertex(mgp_edge_get_from(edge_));
-    to_vertex_ = new mgp::Vertex(mgp_edge_get_to(edge_));
+  /// \brief Returns the key-value iterator for the given `key`.
+  /// In the case there is no such pair, end iterator is returned.
+  /// \note
+  /// Each key-value pair has to be checked, resulting with O(n) time
+  /// complexity.
+  std::map<std::string_view, ImmutableValue>::const_iterator find(const std::string_view key) const {
+    return property_map_.find(key);
   }
 
-  mgp_edge *edge_;
-  Vertex *from_vertex_;
-  Vertex *to_vertex_;
+  /// \exception std::runtime_error map contains value with unknown type
+  bool operator==(const Properties &other) const;
+  /// \exception std::runtime_error map contains value with unknown type
+  bool operator!=(const Properties &other) const { return !(*this == other); }
+
+ private:
+  std::map<const std::string_view, ImmutableValue> property_map_;
 };
 
-class Vertices {
+////////////////////////////////////////////////////////////////////////////////
+// Labels:
+
+/// \brief View of the node's labels
+class Labels final {
  public:
-  explicit Vertices(const mgp_graph *graph, mgp_memory *memory) : graph_(graph), memory_(memory){};
+  CREATE_ITERATOR(Labels, std::string_view);
 
-  class Iterator {
-   public:
-    Iterator(mgp_vertices_iterator *vertices_iterator) {
-      if (vertices_iterator != nullptr) {
-        vertices_iterator_ = vertices_iterator;
-        auto mgp_v = mgp_vertices_iterator_get(vertices_iterator);
-        vertex_ = new mgp::Vertex(mgp_v);
-      } else {
-        vertex_ = nullptr;
-      }
-    };
-    Iterator &operator++() {
-      auto v = mgp_vertices_iterator_next(vertices_iterator_);
-      if (v != nullptr) {
-        vertex_ = new mgp::Vertex(v);
-      } else {
-        vertex_ = nullptr;
-      }
-      return *this;
-    }
-    Iterator operator++(int) {
-      Iterator retval = *this;
-      ++(*this);
-      return retval;
-    }
-    bool operator==(Iterator other) const {
-      if (other.vertex_ == nullptr && vertex_ == nullptr) return true;
-      if (other.vertex_ == nullptr || vertex_ == nullptr) return false;
-      return vertex_ == other.vertex_;
-    }
-    bool operator!=(Iterator other) const { return !(*this == other); }
-    mgp::Vertex operator*() { return *vertex_; }
-    // iterator traits
-    using difference_type = mgp::Vertex;
-    using value_type = mgp::Vertex;
-    using pointer = const mgp::Vertex *;
-    using reference = const mgp::Vertex &;
-    using iterator_category = std::forward_iterator_tag;
+  explicit Labels(const mgp_vertex *vertex_ptr) : vertex_ptr_(vertex_ptr) {}
 
-   private:
-    mgp::Vertex *vertex_;
-    mgp_vertices_iterator *vertices_iterator_;
-  };
-  Iterator begin() {
-    auto *vertices_it = mgp_graph_iter_vertices(graph_, memory_);
-    if (vertices_it == nullptr) {
-      throw mg_exception::NotEnoughMemoryException();
-    }
+  size_t size() const { return mgp_vertex_labels_count(vertex_ptr_); }
 
-    mgp::OnScopeExit delete_vertices_it([&vertices_it] {
-      if (vertices_it != nullptr) {
-        mgp_vertices_iterator_destroy(vertices_it);
-      }
-    });
-    return Iterator(vertices_it);
-  }
-  Iterator end() { return Iterator(nullptr); }
+  /// \brief Return node's label at the `index` position.
+  std::string_view operator[](size_t index) const;
+
+  Iterator begin() { return Iterator(this, 0); }
+  Iterator end() { return Iterator(this, size()); }
 
  private:
-  const mgp_graph *graph_;
+  const mgp_vertex *vertex_ptr_;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// Vertex:
+
+/// \brief Wrapper class for \ref mgp_node
+class Vertex final {
+ public:
+  friend class ImmutableVertex;
+
+  explicit Vertex(mgp_vertex *ptr, mgp_memory *memory) : ptr_(ptr), memory_(memory) {}
+
+  /// \brief Create a Node from a copy of the given \ref mgp_node.
+  explicit Vertex(const mgp_vertex *const_ptr, mgp_memory *memory)
+      : Vertex(mgp_vertex_copy(const_ptr, memory), memory) {}
+
+  Vertex(const Vertex &other, mgp_memory *memory);
+  Vertex(Vertex &&other);
+  Vertex &operator=(const Vertex &other) = delete;
+  Vertex &operator=(Vertex &&other) = delete;
+  ~Vertex();
+
+  explicit Vertex(const ImmutableVertex &vertex);
+
+  Id id() const { return Id::FromInt(mgp_vertex_get_id(ptr_).as_int); }
+
+  Labels labels() const { return Labels(ptr_); }
+
+  Properties properties() const { return Properties(mgp_vertex_iter_properties(ptr_, memory_), memory_); }
+
+  ImmutableVertex AsConstVertex() const;
+
+  /// \exception std::runtime_error node property contains value with unknown type
+  bool operator==(const Vertex &other) const;
+  /// \exception std::runtime_error node property contains value with unknown type
+  bool operator==(const ImmutableVertex &other) const;
+  /// \exception std::runtime_error node property contains value with unknown type
+  bool operator!=(const Vertex &other) const { return !(*this == other); }
+  /// \exception std::runtime_error node property contains value with unknown type
+  bool operator!=(const ImmutableVertex &other) const { return !(*this == other); }
+
+ private:
+  mgp_vertex *ptr_;
   mgp_memory *memory_;
 };
 
-class Path {
-  friend class Record;
-
+class ImmutableVertex final {
  public:
-  explicit Path(mgp_path *path) : path_(path) {
-    auto path_size = mgp_path_size(path);
-    // There is 1 edge fewer than number of vertices
-    for (std::uint32_t i; i < path_size - 1; i++) {
-      auto v = mgp_path_vertex_at(path, i);
-      auto e = mgp_path_edge_at(path, i);
+  friend class Vertex;
 
-      vertices_.emplace_back(new mgp::Vertex(v));
-      edges_.emplace_back(new mgp::Edge(e));
-    }
-    vertices_.emplace_back(new mgp::Vertex(mgp_path_vertex_at(path, path_size - 1)));
-  };
-  explicit Path(mgp_vertex *vertex, mgp_memory *memory) : path_(mgp_path_make_with_start(vertex, memory)) {
-    vertices_.emplace_back(new mgp::Vertex(vertex));
-  };
+  explicit ImmutableVertex(const mgp_vertex *const_ptr, mgp_memory *memory) : const_ptr_(const_ptr), memory_(memory) {}
 
-  void Expand(const mgp::Edge &edge) {
-    auto last_vertex = vertices_[vertices_.size() - 1];
-    if (last_vertex != edge.FromVertex()) {
-      throw mgp::ValueException("Last vertex in edge is not part of given edge");
-    }
+  Id id() const { return Id::FromInt(mgp_vertex_get_id(const_ptr_).as_int); }
 
-    mgp_path_expand(path_, edge.edge_);
-    vertices_.emplace_back(edge.ToVertex());
-    edges_.emplace_back(&edge);
-  }
+  Labels labels() const { return Labels(const_ptr_); }
 
-  std::vector<const mgp::Vertex *> Vertices() { return vertices_; }
+  Properties properties() const { return Properties(mgp_vertex_iter_properties(const_ptr_, memory_), memory_); }
 
-  std::vector<const mgp::Edge *> Edges() { return edges_; }
+  /// \exception std::runtime_error node property contains value with unknown type
+  bool operator==(const ImmutableVertex &other) const;
+  /// \exception std::runtime_error node property contains value with unknown type
+  bool operator==(const Vertex &other) const;
+  /// \exception std::runtime_error node property contains value with unknown type
+  bool operator!=(const ImmutableVertex &other) const { return !(*this == other); }
+  /// \exception std::runtime_error node property contains value with
+  /// unknown type
+  bool operator!=(const Vertex &other) const { return !(*this == other); }
 
  private:
-  mgp_path *path_;
-  std::vector<const mgp::Vertex *> vertices_;
-  std::vector<const mgp::Edge *> edges_;
-};
-
-///
-///@brief Wrapper around state of the graph database
-///
-///
-class Graph {
- public:
-  explicit Graph(const mgp_graph *graph, mgp_memory *memory) : graph_(graph), memory_(memory){};
-
-  mgp::Vertex GetVertexById(std::int64_t vertex_id) {
-    auto vertex = mgp_graph_get_vertex_by_id(graph_, mgp_vertex_id{.as_int = vertex_id}, memory_);
-    return Vertex(vertex);
-  }
-
-  mgp::Vertices Vertices() const { return mgp::Vertices(graph_, memory_); }
-
-  const mgp_graph *graph_;
+  const mgp_vertex *const_ptr_;
   mgp_memory *memory_;
 };
 
-class Record {
- public:
-  explicit Record() = delete;
-  explicit Record(mgp_result *result, mgp_memory *memory) : memory_(memory) {
-    record_ = mgp_result_new_record(result);
-    if (record_ == nullptr) {
-      throw mgp::NotEnoughMemoryException();
-    }
-  }
+////////////////////////////////////////////////////////////////////////////////
+// Value Type:
 
-  void Insert(const char *field_name, const mgp::Edge &edge_value) const {
-    auto *value = mgp_value_make_edge(edge_value.edge_);
-    if (value == nullptr) {
-      throw mg_exception::NotEnoughMemoryException();
-    }
-    auto result_inserted = mgp_result_record_insert(record_, field_name, value);
-
-    // TODO:jmatak Make memory management better
-    // mgp_value_destroy(value);
-    if (!result_inserted) {
-      throw mg_exception::NotEnoughMemoryException();
-    }
-  }
-
-  void Insert(const char *field_name, const mgp::Vertex &vertex_value) const {
-    auto *value = mgp_value_make_vertex(vertex_value.vertex_);
-    if (value == nullptr) {
-      throw mg_exception::NotEnoughMemoryException();
-    }
-    auto result_inserted = mgp_result_record_insert(record_, field_name, value);
-
-    // mgp_value_destroy(value);
-    if (!result_inserted) {
-      throw mg_exception::NotEnoughMemoryException();
-    }
-  }
-
-  void Insert(const char *field_name, const char *string_value) const {
-    auto *value = mgp_value_make_string(string_value, memory_);
-    if (value == nullptr) {
-      throw mg_exception::NotEnoughMemoryException();
-    }
-    auto result_inserted = mgp_result_record_insert(record_, field_name, value);
-
-    // mgp_value_destroy(value);
-    if (!result_inserted) {
-      throw mg_exception::NotEnoughMemoryException();
-    }
-  }
-
-  void Insert(const char *field_name, const int int_value) const {
-    auto *value = mgp_value_make_int(int_value, memory_);
-    if (value == nullptr) {
-      throw mg_exception::NotEnoughMemoryException();
-    }
-    auto result_inserted = mgp_result_record_insert(record_, field_name, value);
-
-    // mgp_value_destroy(value);
-    if (!result_inserted) {
-      throw mg_exception::NotEnoughMemoryException();
-    }
-  }
-
- private:
-  mgp_result_record *record_;
-  mgp_memory *memory_;
+enum class ValueType : uint8_t {
+  Null,
+  Bool,
+  Int,
+  Double,
+  String,
+  List,
+  Map,
+  Vertex,
+  Edge,
+  Path,
 };
 
-class RecordFactory {
- public:
-  static RecordFactory &GetInstance(mgp_result *result, mgp_memory *memory) {
-    static RecordFactory instance(result, memory);
-    return instance;
-  }
+////////////////////////////////////////////////////////////////////////////////
+// Value:
 
-  mgp::Record *NewRecord() const {
-    auto *record = new mgp::Record(result_, memory_);
-    mgp::OnScopeExit delete_record([&record] { free(record); });
-    return record;
-  }
-
+/// Wrapper class for \ref mgp_value
+class ImmutableValue final {
  public:
-  // RecordFactory(RecordFactory const &) = delete;
-  void operator=(RecordFactory const &) = delete;
+  explicit ImmutableValue(const mgp_value *const_ptr) : const_ptr_(const_ptr) {}
+
+  /// \pre value type is Type::Bool
+  bool ValueBool() const;
+  /// \pre value type is Type::Int
+  int64_t ValueInt() const;
+  /// \pre value type is Type::Double
+  double ValueDouble() const;
+  /// \pre value type is Type::String
+  std::string_view ValueString() const;
+
+  /// \exception std::runtime_error the value type is unknown
+  ValueType type() const;
+
+  /// \exception std::runtime_error the value type is unknown
+  bool operator==(const ImmutableValue &other) const;
+  /// \exception std::runtime_error the value type is unknown
+  bool operator!=(const ImmutableValue &other) const { return !(*this == other); }
+
+  const mgp_value *ptr() const { return const_ptr_; }
 
  private:
-  RecordFactory(mgp_result *result, mgp_memory *memory) : result_(result), memory_(memory){};
-  mgp_result *result_;
-  mgp_memory *memory_;
+  const mgp_value *const_ptr_;
 };
 
+namespace util {
+inline bool VerticesEquals(const mgp_vertex *node1, const mgp_vertex *node2) {
+  // In query module scenario, vertices are same once they have similar ID
+  if (node1 == node2) {
+    return true;
+  }
+  if (mgp_vertex_get_id(node1).as_int != mgp_vertex_get_id(node2).as_int) {
+    return false;
+  }
+  return true;
+}
+
+}  // namespace util
+
+////////////////////////////////////////////////////////////////////////////////
+// Vertex:
+
+inline std::string_view Labels::Iterator::operator*() const { return (*iterable_)[index_]; }
+
+inline std::string_view Labels::operator[](size_t index) const { return mgp_vertex_label_at(vertex_ptr_, index).name; }
+
+inline Vertex::Vertex(const Vertex &other, mgp_memory *memory) : Vertex(mgp_vertex_copy(other.ptr_, memory), memory) {}
+
+inline Vertex::Vertex(Vertex &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
+
+inline Vertex::~Vertex() {
+  if (ptr_ != nullptr) {
+    mgp_vertex_destroy(ptr_);
+  }
+}
+
+inline bool Vertex::operator==(const Vertex &other) const { return util::VerticesEquals(ptr_, other.ptr_); }
+
+inline bool Vertex::operator==(const ImmutableVertex &other) const {
+  return util::VerticesEquals(ptr_, other.const_ptr_);
+}
+
+// inline ImmutableVertex Vertex::AsConstVertex() const { return ImmutableVertex(ptr_); }
+
+inline bool ImmutableVertex::operator==(const ImmutableVertex &other) const {
+  return util::VerticesEquals(const_ptr_, other.const_ptr_);
+}
+
+inline bool ImmutableVertex::operator==(const Vertex &other) const {
+  return util::VerticesEquals(const_ptr_, other.ptr_);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Properties:
+
+inline Properties::Properties(mgp_properties_iterator *properties_iterator, mgp_memory *memory) {
+  for (const auto *property = mgp_properties_iterator_get(properties_iterator); property;
+       property = mgp_properties_iterator_next(properties_iterator)) {
+    auto value = ImmutableValue(property->value);
+    property_map_.emplace(property->name, value);
+  }
+  mgp_properties_iterator_destroy(properties_iterator);
+}
+
+inline ImmutableValue Properties::operator[](const std::string_view key) const { return property_map_.at(key); }
+
+inline bool Properties::operator==(const Properties &other) const { return property_map_ == other.property_map_; }
+
+////////////////////////////////////////////////////////////////////////////////
+// ImmutableValue:
+
+inline std::string_view ImmutableValue::ValueString() const { return mgp_value_get_string(const_ptr_); }
 }  // namespace mgp
