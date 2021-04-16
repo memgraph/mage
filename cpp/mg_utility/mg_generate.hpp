@@ -13,10 +13,10 @@ namespace mg_generate {
 /// Builds the graph from a given number of nodes and a list of edges.
 /// Nodes should be 0-indexed and each edge should be provided in both
 /// directions.
-std::unique_ptr<mg_graph::Graph<>> BuildGraph(std::uint64_t num_nodes,
+std::unique_ptr<mg_graph::Graph<>> BuildGraph(std::size_t num_nodes,
                                               const std::vector<std::pair<std::uint64_t, std::uint64_t>> &edges) {
   auto G = std::make_unique<mg_graph::Graph<>>();
-  for (std::uint64_t i = 0; i < num_nodes; ++i) G->CreateNode(i);
+  for (std::size_t i = 0; i < num_nodes; ++i) G->CreateNode(i);
   for (const auto [from, to] : edges) G->CreateEdge(from, to);
 
   return G;
@@ -24,7 +24,7 @@ std::unique_ptr<mg_graph::Graph<>> BuildGraph(std::uint64_t num_nodes,
 
 /// Generates random undirected graph with a given numer of nodes and edges.
 /// The generated graph is not picked out of a uniform distribution.
-std::unique_ptr<mg_graph::Graph<>> GenRandomGraph(std::uint64_t num_nodes, std::uint64_t num_edges) {
+std::unique_ptr<mg_graph::Graph<>> GenRandomGraph(std::size_t num_nodes, std::size_t num_edges) {
   using IntPair = std::pair<std::uint64_t, std::uint64_t>;
 
   auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
@@ -32,7 +32,7 @@ std::unique_ptr<mg_graph::Graph<>> GenRandomGraph(std::uint64_t num_nodes, std::
   std::uniform_int_distribution<std::uint64_t> dist(0, num_nodes - 1);
 
   std::set<IntPair> rand_edges;
-  for (std::uint64_t i = 0; i < num_edges; ++i) {
+  for (std::size_t i = 0; i < num_edges; ++i) {
     std::optional<IntPair> edge;
     do {
       edge = std::minmax(dist(rng), dist(rng));
@@ -44,11 +44,11 @@ std::unique_ptr<mg_graph::Graph<>> GenRandomGraph(std::uint64_t num_nodes, std::
 
 /// Generates a random undirected tree with a given number of nodes.
 /// The generated tree is not picked out of a uniform distribution.
-std::unique_ptr<mg_graph::Graph<>> GenRandomTree(std::uint64_t num_nodes) {
+std::unique_ptr<mg_graph::Graph<>> GenRandomTree(std::size_t num_nodes) {
   auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
   std::mt19937 rng(seed);
   std::vector<std::pair<std::uint64_t, std::uint64_t>> edges;
-  for (std::uint64_t i = 1; i < num_nodes; ++i) {
+  for (std::size_t i = 1; i < num_nodes; ++i) {
     std::uniform_int_distribution<std::uint64_t> dist(0, i - 1);
     edges.emplace_back(dist(rng), i);
   }

@@ -40,9 +40,7 @@ std::vector<std::pair<std::uint64_t, std::uint64_t>> GetBridgesBruteforce(mg_gra
   std::uint64_t comp_cnt = CountComponents(*graph);
   std::vector<IntPair> bridges;
   auto edges = graph->ExistingEdges();
-  for (const auto &edge : edges) {
-    auto from = edge.from, to = edge.to;
-
+  for (const auto [id, from, to] : edges) {
     graph->EraseEdge(from, to);
     auto new_comp_cnt = CountComponents(*graph);
 
@@ -55,13 +53,13 @@ std::vector<std::pair<std::uint64_t, std::uint64_t>> GetBridgesBruteforce(mg_gra
 /// Checks if obtained list of bridges is correct.
 bool CheckBridges(std::vector<mg_graph::Edge<>> user, std::vector<std::pair<std::uint64_t, std::uint64_t>> correct) {
   std::set<std::pair<std::uint64_t, std::uint64_t>> user_bridge_set, correct_bridge_set;
-  for (auto &p : correct) {
-    correct_bridge_set.insert(p);
-    correct_bridge_set.insert({p.second, p.first});
+  for (auto [from, to] : correct) {
+    correct_bridge_set.emplace(from, to);
+    correct_bridge_set.emplace(to, from);
   }
-  for (auto &edge : user) {
-    user_bridge_set.insert({edge.from, edge.to});
-    user_bridge_set.insert({edge.to, edge.from});
+  for (auto [id, from, to] : user) {
+    user_bridge_set.emplace(from, to);
+    user_bridge_set.emplace(to, from);
   }
   return user_bridge_set == correct_bridge_set;
 }
