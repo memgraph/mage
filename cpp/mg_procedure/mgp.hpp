@@ -9,6 +9,20 @@
 
 namespace mgp {
 
+class ValueException : public std::exception {
+ public:
+  explicit ValueException(const std::string &message) : message_(message){};
+  const char *what() const noexcept override { return message_.c_str(); }
+
+ private:
+  std::string message_;
+};
+
+class NotEnoughMemoryException : public std::exception {
+ public:
+  const char *what() const throw() { return "Not enough memory!"; }
+};
+
 namespace util {
 // uint to int conversion in C++ is a bit tricky. Take a look here
 // https://stackoverflow.com/questions/14623266/why-cant-i-reinterpret-cast-uint-to-int
@@ -26,7 +40,7 @@ TDest MemcpyCast(TSrc src) {
 
 // Forward declarations
 class ImmutableVertex;
-class ImmutableValue;
+class Value;
 
 #define CREATE_ITERATOR(container, element)                                                                         \
   class Iterator {                                                                                                  \
@@ -80,7 +94,7 @@ class Id {
 
 class Properties final {
  private:
-  using KeyValuePair = std::pair<std::string_view, ImmutableValue>;
+  using KeyValuePair = std::pair<std::string_view, Value>;
 
  public:
   explicit Properties(mgp_properties_iterator *properties_iterator, mgp_memory *memory);
@@ -94,17 +108,17 @@ class Properties final {
   /// \note
   /// Each key-value pair has to be checked, resulting with O(n)
   /// time complexity.
-  ImmutableValue operator[](const std::string_view key) const;
+  Value operator[](const std::string_view key) const;
 
-  std::map<std::string_view, ImmutableValue>::const_iterator begin() const { return property_map_.begin(); }
-  std::map<std::string_view, ImmutableValue>::const_iterator end() const { return property_map_.end(); }
+  std::map<std::string_view, Value>::const_iterator begin() const { return property_map_.begin(); }
+  std::map<std::string_view, Value>::const_iterator end() const { return property_map_.end(); }
 
   /// \brief Returns the key-value iterator for the given `key`.
   /// In the case there is no such pair, end iterator is returned.
   /// \note
   /// Each key-value pair has to be checked, resulting with O(n) time
   /// complexity.
-  std::map<std::string_view, ImmutableValue>::const_iterator find(const std::string_view key) const {
+  std::map<std::string_view, Value>::const_iterator find(const std::string_view key) const {
     return property_map_.find(key);
   }
 
@@ -114,7 +128,7 @@ class Properties final {
   bool operator!=(const Properties &other) const { return !(*this == other); }
 
  private:
-  std::map<const std::string_view, ImmutableValue> property_map_;
+  std::map<const std::string_view, Value> property_map_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -146,6 +160,8 @@ class Labels final {
 class Vertex final {
  public:
   friend class ImmutableVertex;
+  friend class Value;
+  friend class Record;
 
   explicit Vertex(mgp_vertex *ptr, mgp_memory *memory) : ptr_(ptr), memory_(memory) {}
 
@@ -186,6 +202,7 @@ class Vertex final {
 class ImmutableVertex final {
  public:
   friend class Vertex;
+  friend class Value;
 
   explicit ImmutableVertex(const mgp_vertex *const_ptr, mgp_memory *memory) : const_ptr_(const_ptr), memory_(memory) {}
 
@@ -202,7 +219,6 @@ class ImmutableVertex final {
   /// \exception std::runtime_error node property contains value with unknown type
   bool operator!=(const ImmutableVertex &other) const { return !(*this == other); }
   /// \exception std::runtime_error node property contains value with
-  /// unknown type
   bool operator!=(const Vertex &other) const { return !(*this == other); }
 
  private:
@@ -230,9 +246,32 @@ enum class ValueType : uint8_t {
 // Value:
 
 /// Wrapper class for \ref mgp_value
-class ImmutableValue final {
+class Value final {
  public:
-  explicit ImmutableValue(const mgp_value *const_ptr) : const_ptr_(const_ptr) {}
+  friend class Record;
+
+  explicit Value(mgp_value *ptr_, mgp_memory *memory) : ptr_(ptr_), memory_(memory){};
+  ~Value();
+
+  // Constructors for primitive types:
+  explicit Value(bool value, mgp_memory *memory) : Value(mgp_value_make_bool(value, memory), memory){};
+  explicit Value(int value, mgp_memory *memory) : Value(mgp_value_make_int(value, memory), memory){};
+  explicit Value(int64_t value, mgp_memory *memory) : Value(mgp_value_make_int(value, memory), memory){};
+  explicit Value(double value, mgp_memory *memory) : Value(mgp_value_make_double(value, memory), memory){};
+
+  // Constructors for string:
+  explicit Value(const std::string_view value, mgp_memory *memory)
+      : Value(mgp_value_make_string(value.data(), memory), memory){};
+  explicit Value(const char *value, mgp_memory *memory) : Value(mgp_value_make_string(value, memory), memory){};
+
+  /// \brief Constructs a vertex value and takes the ownership of the given
+  /// `vertex`. \note Behaviour of accessing the `vertex` after performing this
+  /// operation is considered undefined.
+  explicit Value(Vertex &&vertex, mgp_memory *memory) {
+    Value(mgp_value_make_vertex(vertex.ptr_), memory);
+    delete &vertex;
+    vertex.ptr_ = nullptr;
+  };
 
   /// \pre value type is Type::Bool
   bool ValueBool() const;
@@ -242,20 +281,120 @@ class ImmutableValue final {
   double ValueDouble() const;
   /// \pre value type is Type::String
   std::string_view ValueString() const;
+  /// \pre value type is Type::Node
+  const ImmutableVertex ValueVertex() const;
 
   /// \exception std::runtime_error the value type is unknown
   ValueType type() const;
 
   /// \exception std::runtime_error the value type is unknown
-  bool operator==(const ImmutableValue &other) const;
+  bool operator==(const Value &other) const;
   /// \exception std::runtime_error the value type is unknown
-  bool operator!=(const ImmutableValue &other) const { return !(*this == other); }
+  bool operator!=(const Value &other) const { return !(*this == other); }
 
-  const mgp_value *ptr() const { return const_ptr_; }
+  const mgp_value *ptr() const { return ptr_; }
 
  private:
-  const mgp_value *const_ptr_;
+  mgp_value *ptr_;
+  mgp_memory *memory_;
 };
+
+/// Wrapper class for \ref mgp_value
+class ImmutableValue final {
+ public:
+  explicit ImmutableValue(const mgp_value *ptr_, mgp_memory *memory) : ptr_(ptr_), memory_(memory){};
+  ~ImmutableValue();
+
+  /// \pre value type is Type::Bool
+  bool ValueBool() const;
+  /// \pre value type is Type::Int
+  int64_t ValueInt() const;
+  /// \pre value type is Type::Double
+  double ValueDouble() const;
+  /// \pre value type is Type::String
+  std::string_view ValueString() const;
+  /// \pre value type is Type::Node
+  const ImmutableVertex ValueVertex() const;
+
+  /// \exception std::runtime_error the value type is unknown
+  ValueType type() const;
+
+  /// \exception std::runtime_error the value type is unknown
+  bool operator==(const Value &other) const;
+  /// \exception std::runtime_error the value type is unknown
+  bool operator!=(const Value &other) const { return !(*this == other); }
+
+  const mgp_value *ptr() const { return ptr_; }
+
+ private:
+  const mgp_value *ptr_;
+  mgp_memory *memory_;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// Record:
+class Record {
+ public:
+  explicit Record(mgp_result_record *record, mgp_memory *memory) : record_(record), memory_(memory){};
+
+  ///
+  ///@brief After inserting value into record, value is deleted
+  ///
+  ///@param field_name
+  ///@param value
+  ///
+  void Insert(const char *field_name, const char *value);
+
+  ///
+  ///@brief After inserting value into record, value is deleted
+  ///
+  ///@param field_name
+  ///@param value
+  ///
+  void Insert(const char *field_name, std::int64_t value);
+
+  ///
+  ///@brief After inserting value into record, value is deleted
+  ///
+  ///@param field_name
+  ///@param value
+  ///
+  void Insert(const char *field_name, double value);
+
+  ///
+  ///@brief After inserting value into record, value is deleted
+  ///
+  ///@param field_name
+  ///@param value
+  ///
+  void Insert(const char *field_name, const Vertex &value);
+
+ private:
+  void Insert(const char *field_name, const Value &value);
+  mgp_result_record *record_;
+  mgp_memory *memory_;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// RecordFactory:
+
+class RecordFactory {
+ public:
+  static RecordFactory &GetInstance(mgp_result *result, mgp_memory *memory);
+
+  const mgp::Record NewRecord() const;
+
+  // TODO: Prevent implicit object creation
+  // RecordFactory(RecordFactory const &) = delete;
+  void operator=(RecordFactory const &) = delete;
+
+ private:
+  RecordFactory(mgp_result *result, mgp_memory *memory) : result_(result), memory_(memory){};
+  mgp_result *result_;
+  mgp_memory *memory_;
+};
+
+////////////////////////////////////////////////////////////////////////////////
 
 namespace util {
 inline bool VerticesEquals(const mgp_vertex *node1, const mgp_vertex *node2) {
@@ -267,6 +406,34 @@ inline bool VerticesEquals(const mgp_vertex *node1, const mgp_vertex *node2) {
     return false;
   }
   return true;
+}
+
+inline ValueType ConvertType(mgp_value_type type) {
+  switch (type) {
+    case MGP_VALUE_TYPE_NULL:
+      return ValueType::Null;
+    case MGP_VALUE_TYPE_BOOL:
+      return ValueType::Bool;
+    case MGP_VALUE_TYPE_INT:
+      return ValueType::Int;
+    case MGP_VALUE_TYPE_DOUBLE:
+      return ValueType::Double;
+    case MGP_VALUE_TYPE_STRING:
+      return ValueType::String;
+    case MGP_VALUE_TYPE_LIST:
+      return ValueType::List;
+    case MGP_VALUE_TYPE_MAP:
+      return ValueType::Map;
+    case MGP_VALUE_TYPE_VERTEX:
+      return ValueType::Vertex;
+    case MGP_VALUE_TYPE_EDGE:
+      return ValueType::Edge;
+    case MGP_VALUE_TYPE_PATH:
+      return ValueType::Path;
+    default:
+      break;
+  }
+  throw ValueException("Unknown type error!");
 }
 
 }  // namespace util
@@ -310,18 +477,119 @@ inline bool ImmutableVertex::operator==(const Vertex &other) const {
 inline Properties::Properties(mgp_properties_iterator *properties_iterator, mgp_memory *memory) {
   for (const auto *property = mgp_properties_iterator_get(properties_iterator); property;
        property = mgp_properties_iterator_next(properties_iterator)) {
-    auto value = ImmutableValue(property->value);
+    auto value = Value(property->value, memory);
     property_map_.emplace(property->name, value);
   }
   mgp_properties_iterator_destroy(properties_iterator);
 }
 
-inline ImmutableValue Properties::operator[](const std::string_view key) const { return property_map_.at(key); }
+inline Value Properties::operator[](const std::string_view key) const { return property_map_.at(key); }
 
 inline bool Properties::operator==(const Properties &other) const { return property_map_ == other.property_map_; }
 
 ////////////////////////////////////////////////////////////////////////////////
-// ImmutableValue:
+// Value:
 
-inline std::string_view ImmutableValue::ValueString() const { return mgp_value_get_string(const_ptr_); }
+inline ValueType Value::type() const { return util::ConvertType(mgp_value_get_type(ptr_)); }
+
+inline std::string_view Value::ValueString() const {
+  if (type() != ValueType::String) {
+    throw ValueException("Type of value is wrong: expected String.");
+  }
+  return mgp_value_get_string(ptr_);
+}
+inline bool Value::ValueBool() const {
+  if (type() != ValueType::Bool) {
+    throw ValueException("Type of value is wrong: expected Bool.");
+  }
+  return mgp_value_get_bool(ptr_);
+}
+inline std::int64_t Value::ValueInt() const {
+  if (type() != ValueType::Int) {
+    throw ValueException("Type of value is wrong: expected Int.");
+  }
+  return mgp_value_get_int(ptr_);
+}
+inline const ImmutableVertex Value::ValueVertex() const {
+  if (type() != ValueType::Vertex) {
+    throw ValueException("Type of value is wrong: expected Vertex.");
+  }
+  return ImmutableVertex(mgp_value_get_vertex(ptr_), memory_);
+}
+
+inline Value::~Value() {
+  if (ptr_ != nullptr) {
+    mgp_value_destroy(ptr_);
+  }
+}
+
+inline ValueType ImmutableValue::type() const { return util::ConvertType(mgp_value_get_type(ptr_)); }
+
+inline std::string_view ImmutableValue::ValueString() const {
+  if (type() != ValueType::String) {
+    throw ValueException("Type of value is wrong: expected String.");
+  }
+  return mgp_value_get_string(ptr_);
+}
+inline bool ImmutableValue::ValueBool() const {
+  if (type() != ValueType::Bool) {
+    throw ValueException("Type of value is wrong: expected Bool.");
+  }
+  return mgp_value_get_bool(ptr_);
+}
+inline std::int64_t ImmutableValue::ValueInt() const {
+  if (type() != ValueType::Int) {
+    throw ValueException("Type of value is wrong: expected Int.");
+  }
+  return mgp_value_get_int(ptr_);
+}
+inline const ImmutableVertex ImmutableValue::ValueVertex() const {
+  if (type() != ValueType::Vertex) {
+    throw ValueException("Type of value is wrong: expected Vertex.");
+  }
+  return ImmutableVertex(mgp_value_get_vertex(ptr_), memory_);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Record:
+
+inline void Record::Insert(const char *field_name, const char *value) { Insert(field_name, Value(value, memory_)); }
+
+inline void Record::Insert(const char *field_name, std::int64_t value) { Insert(field_name, Value(value, memory_)); }
+
+inline void Record::Insert(const char *field_name, double value) { Insert(field_name, Value(value, memory_)); }
+
+inline void Record::Insert(const char *field_name, const Vertex &vertex) {
+  mgp_value *value = mgp_value_make_vertex(vertex.ptr_);
+  if (value == nullptr) {
+    throw mg_exception::NotEnoughMemoryException();
+  }
+  auto result_inserted = mgp_result_record_insert(record_, field_name, value);
+  if (!result_inserted) {
+    throw mg_exception::NotEnoughMemoryException();
+  }
+}
+
+inline void Record::Insert(const char *field_name, const Value &value) {
+  auto result_inserted = mgp_result_record_insert(record_, field_name, value.ptr_);
+  if (!result_inserted) {
+    throw NotEnoughMemoryException();
+  };
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// RecordFactory:
+
+inline RecordFactory &RecordFactory::GetInstance(mgp_result *result, mgp_memory *memory) {
+  static RecordFactory instance(result, memory);
+  return instance;
+}
+
+inline const Record RecordFactory::NewRecord() const {
+  mgp_result_record *record = mgp_result_new_record(result_);
+  if (record == nullptr) {
+    throw NotEnoughMemoryException();
+  }
+  return Record(record, memory_);
+}
 }  // namespace mgp

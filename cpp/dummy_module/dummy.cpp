@@ -28,17 +28,23 @@ const char *field_vertex_id = "node_id";
 
 static void CWrapper(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
+    auto record_factory = mgp::RecordFactory::GetInstance(result, memory);
+
     auto vertex = mgp::Vertex(mgp_value_get_vertex(mgp_list_at(args, 0)), memory);
-    std::cout << std::to_string(vertex.id().AsUint()) << std::endl;
-    for (auto label : vertex.labels()) {
-      std::cout << label << std::endl;
-    }
 
-    for (auto [key, value] : vertex.properties()) {
-      std::cout << key << ": " << value.ValueString() << std::endl;
-    }
+    // std::cout << std::to_string(vertex.id().AsUint()) << std::endl;
+    // for (auto label : vertex.labels()) {
+    //   std::cout << label << std::endl;
+    // }
+    // std::cout << vertex.properties()["name"].ValueString() << std::endl;
 
-    std::cout << vertex.properties()["name"].ValueString() << std::endl;
+    // for (auto [key, value] : vertex.properties()) {
+    //   std::cout << key << ": " << value.ValueString() << std::endl;
+    // }
+
+    auto record = record_factory.NewRecord();
+    record.Insert(field_vertex, vertex);
+    record.Insert(field_vertex_id, vertex.id().AsInt());
   } catch (const std::exception &e) {
     // We must not let any exceptions out of our module.
     mgp_result_set_error_msg(result, e.what());
