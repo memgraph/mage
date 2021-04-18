@@ -1,10 +1,10 @@
-FROM memgraph:latest AS memgraph-mage
+FROM memgraph/memgraph:latest AS memgraph-mage
 
 FROM memgraph-mage
 USER root
 
 RUN apt-get update && \
-    apt-get --yes install rsync cmake clang && \
+    apt-get --yes install git cmake clang && \
     apt-get install -y python3-dev && \
     cd /usr/local/bin && \
     ln -s /usr/bin/python3 python && \
@@ -15,7 +15,7 @@ WORKDIR /mage
 COPY . /mage
 
 # Build all necessary modules
-RUN /bin/bash build.sh
+RUN python3 build
 RUN cp -r /mage/dist/* /usr/lib/memgraph/query_modules/
 
 # It's required to install python3 because auth module scripts are going to be
