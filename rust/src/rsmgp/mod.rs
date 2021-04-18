@@ -135,7 +135,6 @@ impl MgpVertex {
         }
     }
 }
-// TODO(gitbuda): Implement all methods to access vertex data.
 
 pub fn make_graph_vertices_iterator(
     graph: *const mgp_graph,

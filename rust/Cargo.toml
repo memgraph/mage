@@ -11,7 +11,6 @@ snafu = "0.6.10"
 [build-dependencies]
 bindgen = "0.57.0"
 
-# TODO(gitbuda): Add workspace or implement custom build process.
 [lib]
 name = "rust_example_query_module"
 crate-type = ["cdylib"]

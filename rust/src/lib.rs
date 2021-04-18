@@ -44,7 +44,6 @@ extern "C" fn test_procedure_c(
     let procedure_panic_msg = c_str!("Procedure panic!");
     if procedure_result.is_err() {
         println!("Procedure panic!");
-        // TODO(gitbuda): Implement set_error_msg.
         unsafe {
             mgp_result_set_error_msg(result, procedure_panic_msg.as_ptr());
         }
@@ -53,7 +52,6 @@ extern "C" fn test_procedure_c(
 
 #[no_mangle]
 pub extern "C" fn mgp_init_module(module: *mut mgp_module, _memory: *mut mgp_memory) -> c_int {
-    // TODO(gitbuda): Add catch_unwind.
     let procedure = add_read_procedure(test_procedure_c, c_str!("test_procedure"), module);
     match add_bool_result_type(procedure, c_str!("has_label")) {
         Ok(_) => {}
@@ -66,6 +64,5 @@ pub extern "C" fn mgp_init_module(module: *mut mgp_module, _memory: *mut mgp_mem
 
 #[no_mangle]
 pub extern "C" fn mgp_shutdown_module() -> c_int {
-    // TODO(gitbuda): Add catch_unwind.
     0
 }
