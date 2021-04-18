@@ -4,8 +4,7 @@
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
-use std::ffi::CStr;
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::os::raw::c_int;
 #[macro_use]
 extern crate c_str_macro;
@@ -130,7 +129,6 @@ impl MgpVertex {
     }
 
     fn has_label(&self, name: &str) -> bool {
-        // TODO(gitbuda): Deal with additional allocation + panic.
         let c_str = CString::new(name).unwrap();
         unsafe {
             let c_mgp_label = mgp_label {
