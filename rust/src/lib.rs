@@ -2,14 +2,14 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+mod mgp;
 
+use c_str_macro::c_str;
+use mgp::*;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_int;
-#[macro_use]
-extern crate c_str_macro;
-use snafu::Snafu;
 use std::panic;
+use snafu::Snafu;
 
 //// START "library" part.
 
