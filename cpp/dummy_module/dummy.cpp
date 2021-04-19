@@ -10,8 +10,6 @@ namespace {
 const char *field_vertex = "node";
 const char *field_vertex_id = "node_id";
 
-/// Finds weakly connected components of a graph.
-///
 /// Time complexity: O(|V|+|E|)
 // static void DummyFunc(const mgp::Graph &graph, const mgp::RecordFactory &record_factory, const mgp::Vertex &vertex) {
 //   std::cout << "Mirko vertex ID: " << std::to_string(vertex.Id()) << '\n';
@@ -28,19 +26,19 @@ const char *field_vertex_id = "node_id";
 
 static void CWrapper(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    auto record_factory = mgp::RecordFactory::GetInstance(result, memory);
-
+    auto record_factory = mgp::RecordFactory(result, memory);
+    auto list = mgp::ImmutableList(args, memory);
     auto vertex = mgp::Vertex(mgp_value_get_vertex(mgp_list_at(args, 0)), memory);
 
-    // std::cout << std::to_string(vertex.id().AsUint()) << std::endl;
-    // for (auto label : vertex.labels()) {
-    //   std::cout << label << std::endl;
-    // }
-    // std::cout << vertex.properties()["name"].ValueString() << std::endl;
+    std::cout << std::to_string(vertex.id().AsUint()) << std::endl;
+    for (auto label : vertex.labels()) {
+      std::cout << label << std::endl;
+    }
 
-    // for (auto [key, value] : vertex.properties()) {
-    //   std::cout << key << ": " << value.ValueString() << std::endl;
-    // }
+    for (auto [key, value] : vertex.properties()) {
+      std::cout << key << ": " << value.ValueString() << std::endl;
+    }
+    std::cout << vertex.properties()["name"].ValueString() << std::endl;
 
     auto record = record_factory.NewRecord();
     record.Insert(field_vertex, vertex);
