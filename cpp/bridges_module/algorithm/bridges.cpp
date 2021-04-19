@@ -2,22 +2,24 @@
 
 #include "bridges.hpp"
 
-bridges_util::NodeState::NodeState(std::size_t number_of_nodes) {
+namespace bridges_util {
+
+NodeState::NodeState(std::size_t number_of_nodes) {
   visited.resize(number_of_nodes, false);
   discovery.resize(number_of_nodes, 0);
   low_link.resize(number_of_nodes, 0);
   counter = 0;
 }
 
-void bridges_util::NodeState::Update(std::uint64_t node_id) {
+void NodeState::Update(std::uint64_t node_id) {
   counter++;
   visited[node_id] = true;
   discovery[node_id] = counter;
   low_link[node_id] = counter;
 }
 
-void bridges_util::BridgeDfs(std::uint64_t node_id, std::uint64_t parent_id, bridges_util::NodeState *state,
-                             std::vector<mg_graph::Edge<>> *bridges, const mg_graph::GraphView<> &graph) {
+void BridgeDfs(std::uint64_t node_id, std::uint64_t parent_id, NodeState *state, std::vector<mg_graph::Edge<>> *bridges,
+               const mg_graph::GraphView<> &graph) {
   state->Update(node_id);
 
   for (const auto &neigh : graph.Neighbours(node_id)) {
@@ -29,7 +31,7 @@ void bridges_util::BridgeDfs(std::uint64_t node_id, std::uint64_t parent_id, bri
       continue;
     }
 
-    bridges_util::BridgeDfs(next_id, node_id, state, bridges, graph);
+    BridgeDfs(next_id, node_id, state, bridges, graph);
     state->low_link[node_id] = std::min(state->low_link[node_id], state->low_link[next_id]);
 
     const auto &edge = graph.GetEdge(neigh.edge_id);
@@ -39,9 +41,9 @@ void bridges_util::BridgeDfs(std::uint64_t node_id, std::uint64_t parent_id, bri
   }
 }
 
-std::vector<mg_graph::Edge<>> bridges_alg::GetBridges(const mg_graph::GraphView<> &graph) {
+std::vector<mg_graph::Edge<>> GetBridges(const mg_graph::GraphView<> &graph) {
   auto number_of_nodes = graph.Nodes().size();
-  bridges_util::NodeState state(number_of_nodes);
+  NodeState state(number_of_nodes);
 
   std::vector<mg_graph::Edge<>> bridges;
   for (const auto &node : graph.Nodes()) {
@@ -51,3 +53,5 @@ std::vector<mg_graph::Edge<>> bridges_alg::GetBridges(const mg_graph::GraphView<
   }
   return bridges;
 }
+
+}  // namespace bridges_util

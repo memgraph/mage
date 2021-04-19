@@ -181,7 +181,7 @@ TEST(Bridges, SimpleNeighborCycle) {
 }
 
 TEST(Bridges, NeighborCycle) {
-  auto graph = mg_generate::BuildGraph(6, {{0, 1}, {1, 2}, {2, 3}, {3, 0}, {3, 4}, {3, 4}, {4, 5}});
+  auto graph = mg_generate::BuildGraph(6, {{0, 1}, {1, 2}, {2, 3}, {3, 0}, {3, 4}, {4, 5}});
   auto bridges = bridges_alg::GetBridges(*graph);
   ASSERT_EQ(1, bridges.size());
   ASSERT_EQ(bridges[0].id, 6);
