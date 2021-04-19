@@ -41,6 +41,8 @@ TDest MemcpyCast(TSrc src) {
 // Forward declarations
 class ImmutableVertex;
 class ImmutableEdge;
+class ImmutableValue;
+class ImmutableList;
 class Value;
 
 #define CREATE_ITERATOR(container, element)                                                                         \
@@ -88,6 +90,106 @@ class Id {
   explicit Id(int64_t id) : id_(id) {}
 
   int64_t id_;
+};
+
+/// \brief Wrapper class for \ref mgp_list.
+class List final {
+ private:
+  friend class Value;
+  friend class ImmutableList;
+
+ public:
+  CREATE_ITERATOR(List, ImmutableValue);
+
+  explicit List(mgp_list *ptr, mgp_memory *memory) : ptr_(ptr), memory_(memory) {}
+
+  List(List &&other);
+  List &operator=(const List &other) = delete;
+  List &operator=(List &&other) = delete;
+
+  ~List();
+
+  /// \brief Constructs a list that can hold at most \p capacity elements.
+  /// \param capacity The maximum number of elements that the newly constructed
+  ///                 list can hold.
+  explicit List(size_t capacity, mgp_memory *memory) : List(mgp_list_make_empty(capacity, memory), memory) {}
+
+  explicit List(const std::vector<Value> &values, mgp_memory *memory);
+
+  explicit List(std::vector<Value> &&values, mgp_memory *memory);
+
+  List(std::initializer_list<Value> list, mgp_memory *memory);
+
+  size_t size() const { return mgp_list_size(ptr_); }
+
+  bool empty() const { return size() == 0; }
+
+  /// \brief Returns the value at the given `index`.
+  const ImmutableValue operator[](size_t index) const;
+
+  Iterator begin() const { return Iterator(this, 0); }
+  Iterator end() const { return Iterator(this, size()); }
+
+  /// \brief Appends the given `value` to the list.
+  /// The `value` is copied.
+  bool Append(const Value &value);
+
+  /// \brief Appends the given `value` to the list.
+  /// The `value` is copied.
+  bool Append(const ImmutableValue &value);
+
+  /// \brief Appends the given `value` to the list.
+  /// \note
+  /// It takes the ownership of the `value` by moving it.
+  /// Behaviour of accessing the `value` after performing this operation is
+  /// considered undefined.
+  bool Append(Value &&value);
+
+  const ImmutableList AsImmutableList() const;
+
+  /// \exception std::runtime_error list contains value with unknown type
+  bool operator==(const List &other) const;
+  /// \exception std::runtime_error list contains value with unknown type
+  bool operator==(const ImmutableList &other) const;
+  /// \exception std::runtime_error list contains value with unknown type
+  bool operator!=(const List &other) const { return !(*this == other); }
+  /// \exception std::runtime_error list contains value with unknown type
+  bool operator!=(const ImmutableList &other) const { return !(*this == other); }
+
+ private:
+  mgp_list *ptr_;
+  mgp_memory *memory_;
+};
+
+class ImmutableList final {
+ public:
+  friend class List;
+
+  CREATE_ITERATOR(ImmutableList, ImmutableValue);
+
+  explicit ImmutableList(const mgp_list *const_ptr, mgp_memory *memory) : const_ptr_(const_ptr), memory_(memory) {}
+
+  size_t size() const { return mgp_list_size(const_ptr_); }
+  bool empty() const { return size() == 0; }
+
+  /// \brief Returns the value at the given `index`.
+  const ImmutableValue operator[](size_t index) const;
+
+  Iterator begin() const { return Iterator(this, 0); }
+  Iterator end() const { return Iterator(this, size()); }
+
+  /// \exception std::runtime_error list contains value with unknown type
+  bool operator==(const ImmutableList &other) const;
+  /// \exception std::runtime_error list contains value with unknown type
+  bool operator==(const List &other) const;
+  /// \exception std::runtime_error list contains value with unknown type
+  bool operator!=(const ImmutableList &other) const { return !(*this == other); }
+  /// \exception std::runtime_error list contains value with unknown type
+  bool operator!=(const List &other) const { return !(*this == other); }
+
+ private:
+  const mgp_list *const_ptr_;
+  mgp_memory *memory_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -340,6 +442,7 @@ enum class ValueType : uint8_t {
 /// Wrapper class for \ref mgp_value
 class Value final {
  public:
+  friend class List;
   friend class Record;
 
   explicit Value(mgp_value *ptr_, mgp_memory *memory) : ptr_(ptr_), memory_(memory){};
@@ -489,6 +592,9 @@ class RecordFactory {
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace util {
+
+inline bool AreValuesEqual(const mgp_value *value1, const mgp_value *value2);
+
 inline bool VerticesEquals(const mgp_vertex *node1, const mgp_vertex *node2) {
   // In query module scenario, vertices are same once they have similar ID
   if (node1 == node2) {
@@ -507,6 +613,22 @@ inline bool EdgeEquals(const mgp_edge *edge1, const mgp_edge *edge2) {
   }
   if (mgp_edge_get_id(edge1).as_int != mgp_edge_get_id(edge2).as_int) {
     return false;
+  }
+  return true;
+}
+
+inline bool ListEquals(const mgp_list *list1, const mgp_list *list2) {
+  if (list1 == list2) {
+    return true;
+  }
+  if (mgp_list_size(list1) != mgp_list_size(list2)) {
+    return false;
+  }
+  const size_t len = mgp_list_size(list1);
+  for (size_t i = 0; i < len; ++i) {
+    if (!util::AreValuesEqual(mgp_list_at(list1, i), mgp_list_at(list2, i))) {
+      return false;
+    }
   }
   return true;
 }
@@ -539,7 +661,101 @@ inline ValueType ConvertType(mgp_value_type type) {
   throw ValueException("Unknown type error!");
 }
 
+inline bool AreValuesEqual(const mgp_value *value1, const mgp_value *value2) {
+  if (value1 == value2) {
+    return true;
+  }
+  if (mgp_value_get_type(value1) != mgp_value_get_type(value2)) {
+    return false;
+  }
+  switch (mgp_value_get_type(value1)) {
+    case MGP_VALUE_TYPE_NULL:
+      return true;
+    case MGP_VALUE_TYPE_BOOL:
+      return mgp_value_get_bool(value1) == mgp_value_get_bool(value2);
+    case MGP_VALUE_TYPE_INT:
+      return mgp_value_get_int(value1) == mgp_value_get_int(value2);
+    case MGP_VALUE_TYPE_DOUBLE:
+      return mgp_value_get_double(value1) == mgp_value_get_double(value2);
+    case MGP_VALUE_TYPE_STRING:
+      return std::string_view(mgp_value_get_string(value1)) == std::string_view(mgp_value_get_string(value2));
+    case MGP_VALUE_TYPE_LIST:
+      return util::ListEquals(mgp_value_get_list(value1), mgp_value_get_list(value2));
+    // TODO: implement for maps
+    // case MGP_VALUE_TYPE_MAP:
+    // return util::MapsEquals(mgp_value_map(value1), mgp_value_map(value2));
+    case MGP_VALUE_TYPE_VERTEX:
+      return util::VerticesEquals(mgp_value_get_vertex(value1), mgp_value_get_vertex(value2));
+    case MGP_VALUE_TYPE_EDGE:
+      return util::EdgeEquals(mgp_value_get_edge(value1), mgp_value_get_edge(value2));
+  }
+  throw ValueException("Value is invalid, it does not match any of Memgraph supported types.");
+}
 }  // namespace util
+
+////////////////////////////////////////////////////////////////////////////////
+// List:
+
+inline ImmutableValue List::Iterator::operator*() const { return (*iterable_)[index_]; }
+
+inline List::List(List &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
+
+inline List::~List() {
+  if (ptr_ != nullptr) {
+    mgp_list_destroy(ptr_);
+  }
+}
+
+inline List::List(const std::vector<Value> &values, mgp_memory *memory) : List(values.size(), memory) {
+  for (const auto &value : values) {
+    Append(value);
+  }
+}
+
+inline List::List(std::vector<Value> &&values, mgp_memory *memory) : List(values.size(), memory) {
+  for (auto &value : values) {
+    Append(std::move(value));
+  }
+}
+
+inline List::List(std::initializer_list<Value> values, mgp_memory *memory) : List(values.size(), memory) {
+  for (const auto &value : values) {
+    Append(value);
+  }
+}
+
+inline const ImmutableValue List::operator[](size_t index) const {
+  return ImmutableValue(mgp_list_at(ptr_, index), memory_);
+}
+
+// TODO: Implement safe value copying
+// inline bool List::Append(const Value &value) { return mgp_list_append(ptr_, mgp_value_copy(value.ptr())) == 0; }
+
+// inline bool List::Append(const ConstValue &value) { return mgp_list_append(ptr_, mgp_value_copy(value.ptr_)) == 0; }
+
+inline bool List::Append(Value &&value) {
+  bool result = mgp_list_append(ptr_, value.ptr_) == 0;
+  value.ptr_ = nullptr;
+  return result;
+}
+
+inline const ImmutableList List::AsImmutableList() const { return ImmutableList(ptr_, memory_); }
+
+inline bool List::operator==(const List &other) const { return util::ListEquals(ptr_, other.ptr_); }
+
+inline bool List::operator==(const ImmutableList &other) const { return util::ListEquals(ptr_, other.const_ptr_); }
+
+inline ImmutableValue ImmutableList::Iterator::operator*() const { return (*iterable_)[index_]; }
+
+inline const ImmutableValue ImmutableList::operator[](size_t index) const {
+  return ImmutableValue(mgp_list_at(const_ptr_, index), memory_);
+}
+
+inline bool ImmutableList::operator==(const ImmutableList &other) const {
+  return util::ListEquals(const_ptr_, other.const_ptr_);
+}
+
+inline bool ImmutableList::operator==(const List &other) const { return util::ListEquals(const_ptr_, other.ptr_); }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Vertex:
