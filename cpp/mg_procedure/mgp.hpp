@@ -40,6 +40,7 @@ TDest MemcpyCast(TSrc src) {
 
 // Forward declarations
 class ImmutableVertex;
+class ImmutableEdge;
 class Value;
 
 #define CREATE_ITERATOR(container, element)                                                                         \
@@ -229,6 +230,97 @@ class ImmutableVertex final {
 ////////////////////////////////////////////////////////////////////////////////
 // Value Type:
 
+/// \brief Wrapper class for \ref mg_relationship.
+class Edge final {
+ private:
+  friend class Value;
+  friend class ImmutableEdge;
+
+ public:
+  explicit Edge(mgp_edge *ptr, mgp_memory *memory) : ptr_(ptr), memory_(memory) {}
+
+  /// \brief Create a Relationship from a copy the given \ref mg_relationship.
+  explicit Edge(const mgp_edge *const_ptr, mgp_memory *memory) : Edge(mgp_edge_copy(const_ptr, memory), memory) {}
+
+  Edge(const Edge &other);
+  Edge(Edge &&other);
+  Edge &operator=(const Edge &other) = delete;
+  Edge &operator=(Edge &&other) = delete;
+  ~Edge();
+
+  explicit Edge(const ImmutableEdge &rel);
+
+  Id id() const { return Id::FromInt(mgp_edge_get_id(ptr_).as_int); }
+
+  /// \brief Return the Id of the node that is at the start of the relationship.
+  Id from() const { return Id::FromInt(mgp_vertex_get_id(mgp_edge_get_from(ptr_)).as_int); }
+
+  /// \brief Return the Id of the node that is at the end of the relationship.
+  Id to() const { return Id::FromInt(mgp_vertex_get_id(mgp_edge_get_to(ptr_)).as_int); }
+
+  std::string_view type() const;
+
+  Properties properties() const { return Properties(mgp_edge_iter_properties(ptr_, memory_), memory_); }
+
+  ImmutableEdge AsImmutableEdge() const;
+
+  /// \exception std::runtime_error relationship property contains value with
+  /// unknown type
+  bool operator==(const Edge &other) const;
+  /// \exception std::runtime_error relationship property contains value with
+  /// unknown type
+  bool operator==(const ImmutableEdge &other) const;
+  /// \exception std::runtime_error relationship property contains value with
+  /// unknown type
+  bool operator!=(const Edge &other) const { return !(*this == other); }
+  /// \exception std::runtime_error relationship property contains value with
+  /// unknown type
+  bool operator!=(const ImmutableEdge &other) const { return !(*this == other); }
+
+ private:
+  mgp_edge *ptr_;
+  mgp_memory *memory_;
+};
+
+class ImmutableEdge final {
+ public:
+  friend class Edge;
+
+  explicit ImmutableEdge(const mgp_edge *const_ptr, mgp_memory *memory) : const_ptr_(const_ptr), memory_(memory) {}
+
+  Id id() const { return Id::FromInt(mgp_edge_get_id(const_ptr_).as_int); }
+
+  /// \brief Return the Id of the node that is at the start of the relationship.
+  Id from() const { return Id::FromInt(mgp_vertex_get_id(mgp_edge_get_from(const_ptr_)).as_int); }
+
+  /// \brief Return the Id of the node that is at the end of the relationship.
+  Id to() const { return Id::FromInt(mgp_vertex_get_id(mgp_edge_get_to(const_ptr_)).as_int); }
+
+  std::string_view type() const;
+
+  Properties properties() const { return Properties(mgp_edge_iter_properties(const_ptr_, memory_), memory_); }
+
+  /// \exception std::runtime_error relationship property contains value with
+  /// unknown type
+  bool operator==(const ImmutableEdge &other) const;
+  /// \exception std::runtime_error relationship property contains value with
+  /// unknown type
+  bool operator==(const Edge &other) const;
+  /// \exception std::runtime_error relationship property contains value with
+  /// unknown type
+  bool operator!=(const ImmutableEdge &other) const { return !(*this == other); }
+  /// \exception std::runtime_error relationship property contains value with
+  /// unknown type
+  bool operator!=(const Edge &other) const { return !(*this == other); }
+
+ private:
+  const mgp_edge *const_ptr_;
+  mgp_memory *memory_;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// Value Type:
+
 enum class ValueType : uint8_t {
   Null,
   Bool,
@@ -408,6 +500,17 @@ inline bool VerticesEquals(const mgp_vertex *node1, const mgp_vertex *node2) {
   return true;
 }
 
+inline bool EdgeEquals(const mgp_edge *edge1, const mgp_edge *edge2) {
+  // In query module scenario, edges are same once they have similar ID
+  if (edge1 == edge2) {
+    return true;
+  }
+  if (mgp_edge_get_id(edge1).as_int != mgp_edge_get_id(edge2).as_int) {
+    return false;
+  }
+  return true;
+}
+
 inline ValueType ConvertType(mgp_value_type type) {
   switch (type) {
     case MGP_VALUE_TYPE_NULL:
@@ -549,6 +652,37 @@ inline const ImmutableVertex ImmutableValue::ValueVertex() const {
   }
   return ImmutableVertex(mgp_value_get_vertex(ptr_), memory_);
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Edge:
+
+inline Edge::Edge(const Edge &other) : Edge(mgp_edge_copy(other.ptr_, memory_), memory_) {}
+
+inline Edge::Edge(Edge &&other) : Edge(other.ptr_, memory_) { other.ptr_ = nullptr; }
+
+inline Edge::~Edge() {
+  if (ptr_ != nullptr) {
+    mgp_edge_destroy(ptr_);
+  }
+}
+
+inline Edge::Edge(const ImmutableEdge &rel) : ptr_(mgp_edge_copy(rel.const_ptr_, memory_)), memory_(rel.memory_) {}
+
+inline std::string_view Edge::type() const { return mgp_edge_get_type(ptr_).name; }
+
+inline ImmutableEdge Edge::AsImmutableEdge() const { return ImmutableEdge(ptr_, memory_); }
+
+inline bool Edge::operator==(const Edge &other) const { return util::EdgeEquals(ptr_, other.ptr_); }
+
+inline bool Edge::operator==(const ImmutableEdge &other) const { return util::EdgeEquals(ptr_, other.const_ptr_); }
+
+inline std::string_view ImmutableEdge::type() const { return mgp_edge_get_type(const_ptr_).name; }
+
+inline bool ImmutableEdge::operator==(const ImmutableEdge &other) const {
+  return util::EdgeEquals(const_ptr_, other.const_ptr_);
+}
+
+inline bool ImmutableEdge::operator==(const Edge &other) const { return util::EdgeEquals(const_ptr_, other.ptr_); }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Record:
