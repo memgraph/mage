@@ -41,17 +41,21 @@ void BridgeDfs(std::uint64_t node_id, std::uint64_t parent_id, NodeState *state,
   }
 }
 
+}  // namespace bridges_util
+
+namespace bridges_alg {
+
 std::vector<mg_graph::Edge<>> GetBridges(const mg_graph::GraphView<> &graph) {
   auto number_of_nodes = graph.Nodes().size();
-  NodeState state(number_of_nodes);
+  bridges_util::NodeState state(number_of_nodes);
 
   std::vector<mg_graph::Edge<>> bridges;
   for (const auto &node : graph.Nodes()) {
     if (!state.visited[node.id]) {
-      BridgeDfs(node.id, node.id, &state, &bridges, graph);
+      bridges_util::BridgeDfs(node.id, node.id, &state, &bridges, graph);
     }
   }
   return bridges;
 }
 
-}  // namespace bridges_util
+}  // namespace bridges_alg
