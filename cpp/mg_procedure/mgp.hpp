@@ -43,7 +43,9 @@ class ImmutableVertex;
 class ImmutableEdge;
 class ImmutableList;
 class ImmutableValue;
+class Vertex;
 class Value;
+class Vertices;
 
 #define CREATE_ITERATOR(container, element)                                                                         \
   class Iterator {                                                                                                  \
@@ -92,8 +94,26 @@ class Id {
   int64_t id_;
 };
 
+////////////////////////////////////////////////////////////////////////////////
+// Graph:
+
+class Graph {
+ public:
+  explicit Graph(const mgp_graph *graph, mgp_memory *memory) : graph_(graph), memory_(memory){};
+
+  Vertex GetVertexById(std::int64_t vertex_id);
+
+  Vertices vertices() const;
+
+  const mgp_graph *graph_;
+  mgp_memory *memory_;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// List:
+
 /// \brief Wrapper class for \ref mgp_list.
-class List final {
+class List {
  private:
   friend class Value;
   friend class ImmutableList;
@@ -161,7 +181,10 @@ class List final {
   mgp_memory *memory_;
 };
 
-class ImmutableList final {
+////////////////////////////////////////////////////////////////////////////////
+// ImmutableList:
+
+class ImmutableList {
  public:
   friend class List;
 
@@ -195,7 +218,7 @@ class ImmutableList final {
 ////////////////////////////////////////////////////////////////////////////////
 // Properties:
 
-class Properties final {
+class Properties {
  private:
   using KeyValuePair = std::pair<std::string_view, Value>;
 
@@ -238,7 +261,7 @@ class Properties final {
 // Labels:
 
 /// \brief View of the node's labels
-class Labels final {
+class Labels {
  public:
   CREATE_ITERATOR(Labels, std::string_view);
 
@@ -260,7 +283,7 @@ class Labels final {
 // Vertex:
 
 /// \brief Wrapper class for \ref mgp_node
-class Vertex final {
+class Vertex {
  public:
   friend class ImmutableVertex;
   friend class Value;
@@ -302,10 +325,11 @@ class Vertex final {
   mgp_memory *memory_;
 };
 
-class ImmutableVertex final {
+class ImmutableVertex {
  public:
   friend class Vertex;
   friend class Value;
+  friend class Record;
 
   explicit ImmutableVertex(const mgp_vertex *const_ptr, mgp_memory *memory) : const_ptr_(const_ptr), memory_(memory) {}
 
@@ -333,7 +357,7 @@ class ImmutableVertex final {
 // Value Type:
 
 /// \brief Wrapper class for \ref mg_relationship.
-class Edge final {
+class Edge {
  private:
   friend class Value;
   friend class ImmutableEdge;
@@ -384,7 +408,7 @@ class Edge final {
   mgp_memory *memory_;
 };
 
-class ImmutableEdge final {
+class ImmutableEdge {
  public:
   friend class Edge;
 
@@ -421,6 +445,46 @@ class ImmutableEdge final {
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+// Vertices:
+
+class Vertices {
+ public:
+  explicit Vertices(const mgp_graph *graph, mgp_memory *memory) : graph_(graph), memory_(memory){};
+
+  class Iterator {
+   public:
+    friend class Vertices;
+
+    Iterator(mgp_vertices_iterator *vertices_iterator, mgp_memory *memory)
+        : vertices_iterator_(vertices_iterator), memory_(memory){};
+    ~Iterator();
+    Iterator &operator++();
+    Iterator operator++(int);
+    bool operator==(Iterator other) const;
+    bool operator!=(Iterator other) const { return !(*this == other); }
+    ImmutableVertex operator*();
+    // iterator traits
+    using difference_type = ImmutableVertex;
+    using value_type = ImmutableVertex;
+    using pointer = const ImmutableVertex *;
+    using reference = const ImmutableVertex &;
+    using iterator_category = std::forward_iterator_tag;
+
+   private:
+    mgp_memory *memory_;
+    mgp_vertices_iterator *vertices_iterator_ = nullptr;
+    size_t index_ = 0;
+  };
+
+  Iterator begin();
+  Iterator end();
+
+ private:
+  const mgp_graph *graph_;
+  mgp_memory *memory_;
+};
+
+////////////////////////////////////////////////////////////////////////////////
 // Value Type:
 
 enum class ValueType : uint8_t {
@@ -440,7 +504,7 @@ enum class ValueType : uint8_t {
 // Value:
 
 /// Wrapper class for \ref mgp_value
-class Value final {
+class Value {
  public:
   friend class List;
   friend class Record;
@@ -500,7 +564,7 @@ class Value final {
 };
 
 /// Wrapper class for \ref mgp_value
-class ImmutableValue final {
+class ImmutableValue {
  public:
   friend class Properties;
 
@@ -540,37 +604,17 @@ class Record {
  public:
   explicit Record(mgp_result_record *record, mgp_memory *memory) : record_(record), memory_(memory){};
 
-  ///
-  ///@brief After inserting value into record, value is deleted
-  ///
-  ///@param field_name
-  ///@param value
-  ///
   void Insert(const char *field_name, const char *value);
 
-  ///
-  ///@brief After inserting value into record, value is deleted
-  ///
-  ///@param field_name
-  ///@param value
-  ///
+  void Insert(const char *field_name, std::string_view value);
+
   void Insert(const char *field_name, std::int64_t value);
 
-  ///
-  ///@brief After inserting value into record, value is deleted
-  ///
-  ///@param field_name
-  ///@param value
-  ///
   void Insert(const char *field_name, double value);
 
-  ///
-  ///@brief After inserting value into record, value is deleted
-  ///
-  ///@param field_name
-  ///@param value
-  ///
   void Insert(const char *field_name, const Vertex &vertex);
+
+  void Insert(const char *field_name, const ImmutableVertex &vertex);
 
  private:
   void Insert(const char *field_name, Value &&value);
@@ -705,6 +749,72 @@ inline bool ValuesEquals(const mgp_value *value1, const mgp_value *value2) {
 }  // namespace util
 
 ////////////////////////////////////////////////////////////////////////////////
+// Graph:
+inline Vertex Graph::GetVertexById(std::int64_t vertex_id) {
+  auto vertex = mgp_graph_get_vertex_by_id(graph_, mgp_vertex_id{.as_int = vertex_id}, memory_);
+  return Vertex(vertex, memory_);
+}
+
+inline Vertices Graph::vertices() const { return Vertices(graph_, memory_); }
+
+////////////////////////////////////////////////////////////////////////////////
+// Vertices:
+
+inline Vertices::Iterator::~Iterator() {
+  if (vertices_iterator_ != nullptr) {
+    mgp_vertices_iterator_destroy(vertices_iterator_);
+  }
+}
+
+inline Vertices::Iterator &Vertices::Iterator::operator++() {
+  if (vertices_iterator_ != nullptr) {
+    auto next = mgp_vertices_iterator_next(vertices_iterator_);
+
+    if (next == nullptr) {
+      mgp_vertices_iterator_destroy(vertices_iterator_);
+      vertices_iterator_ = nullptr;
+      return *this;
+    }
+    index_++;
+  }
+  return *this;
+}
+
+inline Vertices::Iterator Vertices::Iterator::operator++(int) {
+  Vertices::Iterator retval = *this;
+  ++(*this);
+  return retval;
+}
+inline bool Vertices::Iterator::operator==(Iterator other) const {
+  if (vertices_iterator_ == nullptr && other.vertices_iterator_ == nullptr) {
+    return true;
+  }
+  if (vertices_iterator_ == nullptr || other.vertices_iterator_ == nullptr) {
+    return false;
+  }
+  return mgp_vertex_equal(mgp_vertices_iterator_get(vertices_iterator_),
+                          mgp_vertices_iterator_get(other.vertices_iterator_)) &&
+         index_ == other.index_;
+}
+
+inline ImmutableVertex Vertices::Iterator::operator*() {
+  if (vertices_iterator_ == nullptr) return mgp::ImmutableVertex(nullptr, memory_);
+
+  auto vertex = mgp::ImmutableVertex(mgp_vertices_iterator_get(vertices_iterator_), memory_);
+  return vertex;
+}
+
+inline Vertices::Iterator Vertices::begin() {
+  auto *vertices_it = mgp_graph_iter_vertices(graph_, memory_);
+  if (vertices_it == nullptr) {
+    throw mg_exception::NotEnoughMemoryException();
+  }
+  return Iterator(vertices_it, memory_);
+}
+
+inline Vertices::Iterator Vertices::end() { return Iterator(nullptr, memory_); }
+
+////////////////////////////////////////////////////////////////////////////////
 // List:
 
 inline ImmutableValue List::Iterator::operator*() const { return (*iterable_)[index_]; }
@@ -742,7 +852,8 @@ inline const ImmutableValue List::operator[](size_t index) const {
 // TODO: Implement safe value copying
 // inline bool List::Append(const Value &value) { return mgp_list_append(ptr_, mgp_value_copy(value.ptr())) == 0; }
 
-// inline bool List::Append(const ConstValue &value) { return mgp_list_append(ptr_, mgp_value_copy(value.ptr_)) == 0; }
+// inline bool List::Append(const ConstValue &value) { return mgp_list_append(ptr_, mgp_value_copy(value.ptr_)) == 0;
+// }
 
 inline bool List::Append(Value &&value) {
   bool result = mgp_list_append(ptr_, value.ptr_) == 0;
@@ -925,12 +1036,20 @@ inline bool ImmutableEdge::operator==(const Edge &other) const { return util::Ed
 
 inline void Record::Insert(const char *field_name, const char *value) { Insert(field_name, Value(value, memory_)); }
 
+inline void Record::Insert(const char *field_name, std::string_view value) {
+  Insert(field_name, Value(value, memory_));
+}
+
 inline void Record::Insert(const char *field_name, std::int64_t value) { Insert(field_name, Value(value, memory_)); }
 
 inline void Record::Insert(const char *field_name, double value) { Insert(field_name, Value(value, memory_)); }
 
 inline void Record::Insert(const char *field_name, const Vertex &vertex) {
   Insert(field_name, Value(mgp_value_make_vertex(mgp_vertex_copy(vertex.ptr_, vertex.memory_)), memory_));
+}
+
+inline void Record::Insert(const char *field_name, const ImmutableVertex &vertex) {
+  Insert(field_name, Value(mgp_value_make_vertex(mgp_vertex_copy(vertex.const_ptr_, vertex.memory_)), memory_));
 }
 
 inline void Record::Insert(const char *field_name, Value &&value) {
