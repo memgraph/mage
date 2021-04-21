@@ -3,65 +3,28 @@
 #include <random>
 
 #include <gtest/gtest.h>
+#include <mg_generate.hpp>
 #include <mg_graph.hpp>
 
 #include "algorithm/cycles.hpp"
 
-/// Builds the graph from a given number of nodes and a list of edges.
-/// Nodes should be 0-indexed and each edge should be provided in both
-/// directions.
-inline mg_graph::Graph<> *BuildGraph(uint64_t nodes, std::vector<std::pair<uint64_t, uint64_t>> edges) {
-  auto *G = new mg_graph::Graph<>();
-  for (uint32_t i = 0; i < nodes; ++i) G->CreateNode(i);
-  for (auto &p : edges) G->CreateEdge(p.first, p.second);
-
-  return G;
-}
-
-/// Generates random undirected graph with a given numer of nodes and edges.
-/// The generated graph is not picked out of a uniform distribution.
-inline mg_graph::Graph<> *GenRandomGraph(uint64_t nodes, uint64_t edges) {
-  auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-  std::mt19937 rng(seed);
-  std::uniform_int_distribution<uint64_t> dist(0, nodes - 1);
-  std::set<std::pair<uint64_t, uint64_t>> E;
-  for (uint64_t i = 0; i < edges; ++i) {
-    int64_t u, v;
-    do {
-      u = dist(rng);
-      v = dist(rng);
-      if (u > v) std::swap(u, v);
-    } while (u == v || E.find({u, v}) != E.end());
-    E.insert({u, v});
-  }
-  return BuildGraph(nodes, std::vector<std::pair<uint64_t, uint64_t>>(E.begin(), E.end()));
-}
-
-/// Generates a random undirected tree with a given number of nodes.
-/// The generated tree is not picked out of a uniform distribution.
-inline mg_graph::Graph<> *GenRandomTree(uint64_t nodes) {
-  auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-  std::mt19937 rng(seed);
-  std::vector<std::pair<uint64_t, uint64_t>> edges;
-  for (uint64_t i = 1; i < nodes; ++i) {
-    std::uniform_int_distribution<uint64_t> dist(0, i - 1);
-    uint64_t dad = dist(rng);
-    edges.emplace_back(dad, i);
-  }
-  return BuildGraph(nodes, edges);
-}
-
-bool CheckCycles(std::vector<std::vector<mg_graph::Node<>>> user, std::vector<std::vector<uint64_t>> correct) {
+namespace {
+bool CheckCycles(std::vector<std::vector<mg_graph::Node<>>> user,
+                 std::vector<std::vector<uint64_t>> correct) {
   // normalize cycles
   for (auto &cycle : correct) {
-    std::rotate(cycle.begin(), std::min_element(cycle.begin(), cycle.end()), cycle.end());
+    std::rotate(cycle.begin(), std::min_element(cycle.begin(), cycle.end()),
+                cycle.end());
   }
 
   std::vector<std::vector<uint64_t>> user_cycles;
   for (const auto &cycle : user) {
     std::vector<uint64_t> user_cycle;
-    for (const auto &node : cycle) user_cycle.push_back(node.id);
-    std::rotate(user_cycle.begin(), std::min_element(user_cycle.begin(), user_cycle.end()), user_cycle.end());
+    for (const auto &node : cycle)
+      user_cycle.push_back(node.id);
+    std::rotate(user_cycle.begin(),
+                std::min_element(user_cycle.begin(), user_cycle.end()),
+                user_cycle.end());
     user_cycles.push_back(user_cycle);
   }
 
@@ -74,7 +37,8 @@ bool CheckCycles(std::vector<std::vector<mg_graph::Node<>>> user, std::vector<st
     correct[i].push_back(*correct[i].begin());
     if (user_cycles[i][1] > user_cycles[i][user_cycles[i].size() - 2])
       std::reverse(user_cycles[i].begin(), user_cycles[i].end());
-    if (correct[i][1] > correct[i][correct[i].size() - 2]) std::reverse(correct[i].begin(), correct[i].end());
+    if (correct[i][1] > correct[i][correct[i].size() - 2])
+      std::reverse(correct[i].begin(), correct[i].end());
   }
 
   std::sort(correct.begin(), correct.end());
@@ -83,21 +47,23 @@ bool CheckCycles(std::vector<std::vector<mg_graph::Node<>>> user, std::vector<st
   return user_cycles == correct;
 }
 
+} // namespace
+
 TEST(Cycles, EmptyGraph) {
-  auto *G = BuildGraph(0, {});
-  auto cycles = cycles_alg::GetCycles(G);
+  auto graph = mg_generate::BuildGraph(0, {});
+  auto cycles = cycles_alg::GetCycles(*graph);
   ASSERT_TRUE(CheckCycles(cycles, {}));
 }
 
 TEST(Cycles, SingleNode) {
-  auto *G = BuildGraph(1, {});
-  auto cycles = cycles_alg::GetCycles(G);
+  auto graph = mg_generate::BuildGraph(1, {});
+  auto cycles = cycles_alg::GetCycles(*graph);
   ASSERT_TRUE(CheckCycles(cycles, {}));
 }
 
 TEST(Cycles, DisconnectedNodes) {
-  auto *G = BuildGraph(100, {});
-  auto cycles = cycles_alg::GetCycles(G);
+  auto graph = mg_generate::BuildGraph(100, {});
+  auto cycles = cycles_alg::GetCycles(*graph);
   ASSERT_TRUE(CheckCycles(cycles, {}));
 }
 
@@ -107,20 +73,21 @@ TEST(Cycles, SmallTree) {
   // (2)   (1)
   //  |   /   \
   // (0)(3)   (5)
-  auto *G = BuildGraph(6, {{2, 4}, {1, 4}, {0, 2}, {1, 3}, {1, 5}});
-  auto cycles = cycles_alg::GetCycles(G);
+  auto graph =
+      mg_generate::BuildGraph(6, {{2, 4}, {1, 4}, {0, 2}, {1, 3}, {1, 5}});
+  auto cycles = cycles_alg::GetCycles(*graph);
   ASSERT_TRUE(CheckCycles(cycles, {}));
 }
 
 TEST(Cycles, RandomTree) {
-  auto *G = GenRandomTree(10000);
-  auto cycles = cycles_alg::GetCycles(G);
+  auto graph = mg_generate::GenRandomTree(10000);
+  auto cycles = cycles_alg::GetCycles(*graph);
   ASSERT_TRUE(CheckCycles(cycles, {}));
 }
 
 TEST(Cycles, Triangle) {
-  auto *G = BuildGraph(3, {{0, 1}, {1, 2}, {0, 2}});
-  auto cycles = cycles_alg::GetCycles(G);
+  auto graph = mg_generate::BuildGraph(3, {{0, 1}, {1, 2}, {0, 2}});
+  auto cycles = cycles_alg::GetCycles(*graph);
   ASSERT_TRUE(CheckCycles(cycles, {{0, 1, 2}}));
 }
 
@@ -132,13 +99,14 @@ TEST(Cycles, BigCycle) {
   }
   edges.emplace_back(0, nodes - 1);
 
-  auto *G = BuildGraph(nodes, edges);
+  auto graph = mg_generate::BuildGraph(nodes, edges);
 
-  auto cycles = cycles_alg::GetCycles(G);
+  auto cycles = cycles_alg::GetCycles(*graph);
 
   std::vector<std::vector<uint64_t>> correct;
   correct.push_back({});
-  for (int i = 0; i < nodes; ++i) correct.back().push_back(i);
+  for (int i = 0; i < nodes; ++i)
+    correct.back().push_back(i);
 
   ASSERT_TRUE(CheckCycles(cycles, correct));
 }
@@ -149,8 +117,10 @@ TEST(Cycles, HandmadeConnectedGraph1) {
   // (0) |   (4)--(5)
   //   \ |     \  /
   //    (2)     (6)
-  auto *G = BuildGraph(8, {{0, 1}, {0, 2}, {1, 2}, {1, 3}, {3, 4}, {3, 7}, {4, 5}, {4, 6}, {5, 6}});
-  auto cycles = cycles_alg::GetCycles(G);
+  auto graph = mg_generate::BuildGraph(
+      8,
+      {{0, 1}, {0, 2}, {1, 2}, {1, 3}, {3, 4}, {3, 7}, {4, 5}, {4, 6}, {5, 6}});
+  auto cycles = cycles_alg::GetCycles(*graph);
   ASSERT_TRUE(CheckCycles(cycles, {{0, 1, 2}, {4, 5, 6}}));
 }
 
@@ -160,26 +130,28 @@ TEST(Cycles, HandmadeConnectedGraph2) {
   // (0) |   (4)--(5)--(9)   (12)--(13)
   //   \ |     \  / \    \   /
   //    (2)     (6) (8)   (11)
-  auto *G = BuildGraph(15, {{0, 1},
-                            {0, 2},
-                            {1, 2},
-                            {1, 3},
-                            {3, 4},
-                            {3, 7},
-                            {4, 5},
-                            {4, 6},
-                            {5, 6},
-                            {5, 7},
-                            {5, 8},
-                            {5, 9},
-                            {9, 10},
-                            {9, 11},
-                            {10, 12},
-                            {11, 12},
-                            {12, 13},
-                            {13, 14}});
-  auto cycles = cycles_alg::GetCycles(G);
-  ASSERT_TRUE(CheckCycles(cycles, {{0, 1, 2}, {3, 7, 5, 4}, {4, 5, 6}, {3, 7, 5, 6, 4}, {9, 10, 12, 11}}));
+  auto graph = mg_generate::BuildGraph(15, {{0, 1},
+                                            {0, 2},
+                                            {1, 2},
+                                            {1, 3},
+                                            {3, 4},
+                                            {3, 7},
+                                            {4, 5},
+                                            {4, 6},
+                                            {5, 6},
+                                            {5, 7},
+                                            {5, 8},
+                                            {5, 9},
+                                            {9, 10},
+                                            {9, 11},
+                                            {10, 12},
+                                            {11, 12},
+                                            {12, 13},
+                                            {13, 14}});
+  auto cycles = cycles_alg::GetCycles(*graph);
+  ASSERT_TRUE(CheckCycles(
+      cycles,
+      {{0, 1, 2}, {3, 7, 5, 4}, {4, 5, 6}, {3, 7, 5, 6, 4}, {9, 10, 12, 11}}));
 }
 
 TEST(Cycles, DisconnectedCycles) {
@@ -188,8 +160,9 @@ TEST(Cycles, DisconnectedCycles) {
   // (0) |    |     |
   //   \ |    |     |
   //    (2)  (5)---(6)
-  auto *G = BuildGraph(7, {{0, 1}, {0, 2}, {1, 2}, {3, 4}, {3, 5}, {4, 6}, {5, 6}});
-  auto cycles = cycles_alg::GetCycles(G);
+  auto graph = mg_generate::BuildGraph(
+      7, {{0, 1}, {0, 2}, {1, 2}, {3, 4}, {3, 5}, {4, 6}, {5, 6}});
+  auto cycles = cycles_alg::GetCycles(*graph);
   ASSERT_TRUE(CheckCycles(cycles, {{0, 1, 2}, {3, 4, 6, 5}}));
 }
 
@@ -203,12 +176,18 @@ TEST(Cycles, HandmadeDisconnectedGraph) {
   //    (2)--(6)               (15)----(16)
   //      \  /                    \    /
   //       (7)                     (17)
-  auto *G = BuildGraph(
-      26, {{0, 1},   {0, 2},   {1, 4},   {1, 3},   {3, 5},   {4, 5},   {2, 6},   {2, 7},   {6, 7},   {8, 9},
-           {10, 11}, {11, 12}, {12, 13}, {13, 14}, {10, 14}, {10, 15}, {15, 16}, {16, 17}, {15, 17}, {13, 18},
-           {18, 19}, {18, 21}, {18, 20}, {21, 25}, {20, 22}, {22, 23}, {23, 24}, {22, 24}});
-  auto cycles = cycles_alg::GetCycles(G);
-  ASSERT_TRUE(CheckCycles(cycles, {{1, 3, 5, 4}, {2, 6, 7}, {10, 11, 12, 13, 14}, {15, 16, 17}, {22, 23, 24}}));
+  auto graph = mg_generate::BuildGraph(
+      26,
+      {{0, 1},   {0, 2},   {1, 4},   {1, 3},   {3, 5},   {4, 5},   {2, 6},
+       {2, 7},   {6, 7},   {8, 9},   {10, 11}, {11, 12}, {12, 13}, {13, 14},
+       {10, 14}, {10, 15}, {15, 16}, {16, 17}, {15, 17}, {13, 18}, {18, 19},
+       {18, 21}, {18, 20}, {21, 25}, {20, 22}, {22, 23}, {23, 24}, {22, 24}});
+  auto cycles = cycles_alg::GetCycles(*graph);
+  ASSERT_TRUE(CheckCycles(cycles, {{1, 3, 5, 4},
+                                   {2, 6, 7},
+                                   {10, 11, 12, 13, 14},
+                                   {15, 16, 17},
+                                   {22, 23, 24}}));
 }
 
 TEST(Cycles, HandmadeArticulationPoint) {
@@ -221,22 +200,24 @@ TEST(Cycles, HandmadeArticulationPoint) {
   //      (5)---(6)--(10)
   //        \   /
   //         (8)
-  auto *G = BuildGraph(11, {{0, 1},
-                            {0, 2},
-                            {1, 2},
-                            {2, 3},
-                            {2, 4},
-                            {3, 4},
-                            {4, 5},
-                            {5, 8},
-                            {6, 8},
-                            {4, 6},
-                            {5, 6},
-                            {6, 9},
-                            {9, 10},
-                            {6, 10}});
-  auto cycles = cycles_alg::GetCycles(G);
-  ASSERT_TRUE(CheckCycles(cycles, {{0, 1, 2}, {2, 3, 4}, {4, 5, 6}, {5, 6, 8}, {4, 5, 8, 6}, {6, 9, 10}}));
+  auto graph = mg_generate::BuildGraph(11, {{0, 1},
+                                            {0, 2},
+                                            {1, 2},
+                                            {2, 3},
+                                            {2, 4},
+                                            {3, 4},
+                                            {4, 5},
+                                            {5, 8},
+                                            {6, 8},
+                                            {4, 6},
+                                            {5, 6},
+                                            {6, 9},
+                                            {9, 10},
+                                            {6, 10}});
+  auto cycles = cycles_alg::GetCycles(*graph);
+  ASSERT_TRUE(CheckCycles(
+      cycles,
+      {{0, 1, 2}, {2, 3, 4}, {4, 5, 6}, {5, 6, 8}, {4, 5, 8, 6}, {6, 9, 10}}));
 }
 
 TEST(Cycles, HandmadeComplexCycle) {
@@ -263,8 +244,8 @@ TEST(Cycles, HandmadeComplexCycle) {
   edges.emplace_back(6, 11);
   edges.emplace_back(1, 10);
 
-  auto *G = BuildGraph(nodes, edges);
-  auto cycles = cycles_alg::GetCycles(G);
+  auto graph = mg_generate::BuildGraph(nodes, edges);
+  auto cycles = cycles_alg::GetCycles(*graph);
   ASSERT_TRUE(CheckCycles(cycles, {{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
                                    {1, 2, 3, 4},
                                    {0, 1, 4, 5},
@@ -290,27 +271,28 @@ TEST(Cycles, HandmadeComplexCycle) {
 }
 
 TEST(Cycles, NeighbouringCycles) {
-  auto *G = new mg_graph::Graph<>();
-  uint64_t node_1 = G->CreateNode(0);
-  uint64_t node_2 = G->CreateNode(1);
-  uint64_t node_3 = G->CreateNode(2);
-  uint64_t node_4 = G->CreateNode(3);
+  auto graph = new mg_graph::Graph<>();
+  uint64_t node_1 = graph->CreateNode(0);
+  uint64_t node_2 = graph->CreateNode(1);
+  uint64_t node_3 = graph->CreateNode(2);
+  uint64_t node_4 = graph->CreateNode(3);
 
-  G->CreateEdge(node_1, node_2);
-  G->CreateEdge(node_1, node_2);
+  graph->CreateEdge(node_1, node_2);
+  graph->CreateEdge(node_1, node_2);
 
-  G->CreateEdge(node_1, node_4);
+  graph->CreateEdge(node_1, node_4);
 
-  G->CreateEdge(node_2, node_3);
-  G->CreateEdge(node_2, node_3);
-  G->CreateEdge(node_2, node_3);
+  graph->CreateEdge(node_2, node_3);
+  graph->CreateEdge(node_2, node_3);
+  graph->CreateEdge(node_2, node_3);
 
-  const auto &pairs = cycles_alg::GetNeighbourCycles(G);
+  const auto &pairs = cycles_alg::GetNeighbourCycles(*graph);
 
   std::set<std::pair<uint64_t, uint64_t>> sol = {{1, 2}, {2, 3}};
   ASSERT_EQ(sol.size(), pairs.size());
   for (const auto &node_pair : pairs) {
-    std::pair<uint64_t, uint64_t> pair = {node_pair.first.id + 1, node_pair.second.id + 1};
+    std::pair<uint64_t, uint64_t> pair = {node_pair.first.id + 1,
+                                          node_pair.second.id + 1};
     ASSERT_TRUE(sol.find(pair) != sol.end());
   }
 }
