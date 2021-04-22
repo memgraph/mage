@@ -14,6 +14,6 @@ set(bridges_test_src
     bridges_test.cpp
     algorithm/bridges.cpp)
 
-add_executable(bridges_test  "${bridges_test_src}")
+add_executable(bridges_test "${bridges_test_src}")
 target_link_libraries(bridges_test PRIVATE mg_utility gtest)
 gtest_add_tests(TARGET bridges_test)

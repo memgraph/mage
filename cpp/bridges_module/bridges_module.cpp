@@ -7,8 +7,8 @@
 namespace {
 
 // const char *fieldEdgeID = "edge_id";
-const char *fieldNodeFrom = "node_from";
-const char *fieldNodeTo = "node_to";
+const char *k_field_node_from = "node_from";
+const char *k_field_node_to = "node_to";
 
 void InsertBridgeRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *memory,
                         const std::uint64_t node_from_id, const std::uint64_t node_to_id) {
@@ -17,8 +17,8 @@ void InsertBridgeRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *
     throw mg_exception::NotEnoughMemoryException();
   }
 
-  mg_utility::InsertNodeValueResult(graph, record, fieldNodeFrom, node_from_id, memory);
-  mg_utility::InsertNodeValueResult(graph, record, fieldNodeTo, node_to_id, memory);
+  mg_utility::InsertNodeValueResult(graph, record, k_field_node_from, node_from_id, memory);
+  mg_utility::InsertNodeValueResult(graph, record, k_field_node_to, node_to_id, memory);
 }
 
 void GetBridges(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
@@ -46,8 +46,8 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
   if (!proc) return 1;
   // if (!mgp_proc_add_result(proc, fieldEdgeID, mgp_type_int()))
   // return 1;
-  if (!mgp_proc_add_result(proc, fieldNodeFrom, mgp_type_node())) return 1;
-  if (!mgp_proc_add_result(proc, fieldNodeTo, mgp_type_node())) return 1;
+  if (!mgp_proc_add_result(proc, k_field_node_from, mgp_type_node())) return 1;
+  if (!mgp_proc_add_result(proc, k_field_node_to, mgp_type_node())) return 1;
 
   return 0;
 }
