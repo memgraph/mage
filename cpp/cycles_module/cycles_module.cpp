@@ -11,23 +11,21 @@
 
 namespace {
 
-const char *field_cycle_id = "cycle_id";
-const char *field_node = "node";
+const char *k_field_cycle_id = "cycle_id";
+const char *k_field_node = "node";
 
-void InsertCycleRecord(const mgp_graph *graph, mgp_result *result,
-                       mgp_memory *memory, const int cycle_id,
+void InsertCycleRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *memory, const int cycle_id,
                        const int node_id) {
   auto *record = mgp_result_new_record(result);
   if (record == nullptr) {
     throw mg_exception::NotEnoughMemoryException();
   }
 
-  mg_utility::InsertIntValueResult(record, field_cycle_id, cycle_id, memory);
-  mg_utility::InsertNodeValueResult(graph, record, field_node, node_id, memory);
+  mg_utility::InsertIntValueResult(record, k_field_cycle_id, cycle_id, memory);
+  mg_utility::InsertNodeValueResult(graph, record, k_field_node, node_id, memory);
 }
 
-void GetCycles(const mgp_list *args, const mgp_graph *memgraph_graph,
-               mgp_result *result, mgp_memory *memory) {
+void GetCycles(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory);
     auto cycles = cycles_alg::GetCycles(*graph);
@@ -35,8 +33,7 @@ void GetCycles(const mgp_list *args, const mgp_graph *memgraph_graph,
     for (size_t cycle_id = 0; cycle_id < cycles.size(); cycle_id++) {
       // Insert each node on the cycle
       for (const auto &node : cycles[cycle_id]) {
-        InsertCycleRecord(memgraph_graph, result, memory, cycle_id,
-                          graph->GetMemgraphNodeId(node.id));
+        InsertCycleRecord(memgraph_graph, result, memory, cycle_id, graph->GetMemgraphNodeId(node.id));
       }
     }
   } catch (const std::exception &e) {
@@ -45,20 +42,17 @@ void GetCycles(const mgp_list *args, const mgp_graph *memgraph_graph,
     return;
   }
 }
-} // namespace
+}  // namespace
 
 // Each module needs to define mgp_init_module function.
 // Here you can register multiple procedures your module supports.
 extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
   mgp_proc *proc = mgp_module_add_read_procedure(module, "cycles", GetCycles);
 
-  if (!proc)
-    return 1;
+  if (!proc) return 1;
 
-  if (!mgp_proc_add_result(proc, field_cycle_id, mgp_type_int()))
-    return 1;
-  if (!mgp_proc_add_result(proc, field_node, mgp_type_node()))
-    return 1;
+  if (!mgp_proc_add_result(proc, k_field_cycle_id, mgp_type_int())) return 1;
+  if (!mgp_proc_add_result(proc, k_field_node, mgp_type_node())) return 1;
 
   return 0;
 }

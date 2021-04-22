@@ -13,5 +13,5 @@ set(cycles_test_src
     cycles_test.cpp
     algorithm/cycles.cpp)
 
-add_executable(cycles_test  "${cycles_test_src}")
+add_executable(cycles_test "${cycles_test_src}")
 target_link_libraries(cycles_test PRIVATE mg_utility gtest)
