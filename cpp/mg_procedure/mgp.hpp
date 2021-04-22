@@ -46,6 +46,7 @@ class ImmutableValue;
 class Vertex;
 class Value;
 class Vertices;
+class Edges;
 
 #define CREATE_ITERATOR(container, element)                                                                         \
   class Iterator {                                                                                                  \
@@ -309,7 +310,11 @@ class Vertex {
 
   Properties properties() const { return Properties(mgp_vertex_iter_properties(ptr_, memory_), memory_); }
 
-  ImmutableVertex AsConstVertex() const;
+  Edges in_edges() const;
+
+  Edges out_edges() const;
+
+  ImmutableVertex AsImmutableVertex() const;
 
   /// \exception std::runtime_error node property contains value with unknown type
   bool operator==(const Vertex &other) const;
@@ -339,6 +344,10 @@ class ImmutableVertex {
 
   Properties properties() const { return Properties(mgp_vertex_iter_properties(const_ptr_, memory_), memory_); }
 
+  Edges in_edges() const;
+
+  Edges out_edges() const;
+
   /// \exception std::runtime_error node property contains value with unknown type
   bool operator==(const ImmutableVertex &other) const;
   /// \exception std::runtime_error node property contains value with unknown type
@@ -348,7 +357,6 @@ class ImmutableVertex {
   /// \exception std::runtime_error node property contains value with
   bool operator!=(const Vertex &other) const { return !(*this == other); }
 
- private:
   const mgp_vertex *const_ptr_;
   mgp_memory *memory_;
 };
@@ -411,6 +419,7 @@ class Edge {
 class ImmutableEdge {
  public:
   friend class Edge;
+  friend class Record;
 
   explicit ImmutableEdge(const mgp_edge *const_ptr, mgp_memory *memory) : const_ptr_(const_ptr), memory_(memory) {}
 
@@ -447,16 +456,56 @@ class ImmutableEdge {
 ////////////////////////////////////////////////////////////////////////////////
 // Vertices:
 
+class Edges {
+ public:
+  explicit Edges(mgp_edges_iterator *edges_iterator, mgp_memory *memory)
+      : edges_iterator_(edges_iterator), memory_(memory){};
+
+  class Iterator {
+   public:
+    friend class Edges;
+
+    Iterator(mgp_edges_iterator *edges_iterator, mgp_memory *memory);
+    ~Iterator();
+    Iterator &operator++();
+    Iterator operator++(int);
+    bool operator==(Iterator other) const;
+    bool operator!=(Iterator other) const { return !(*this == other); }
+    ImmutableEdge operator*();
+    // iterator traits
+    using difference_type = ImmutableEdge;
+    using value_type = ImmutableEdge;
+    using pointer = const ImmutableEdge *;
+    using reference = const ImmutableEdge &;
+    using iterator_category = std::forward_iterator_tag;
+
+   private:
+    mgp_edges_iterator *edges_iterator_ = nullptr;
+    mgp_memory *memory_;
+    size_t index_ = 0;
+  };
+
+  Iterator begin();
+  Iterator end();
+
+ private:
+  mgp_edges_iterator *edges_iterator_ = nullptr;
+  mgp_memory *memory_;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// Vertices:
+
 class Vertices {
  public:
-  explicit Vertices(const mgp_graph *graph, mgp_memory *memory) : graph_(graph), memory_(memory){};
+  explicit Vertices(mgp_vertices_iterator *vertices_iterator, mgp_memory *memory)
+      : vertices_iterator_(vertices_iterator), memory_(memory){};
 
   class Iterator {
    public:
     friend class Vertices;
 
-    Iterator(mgp_vertices_iterator *vertices_iterator, mgp_memory *memory)
-        : vertices_iterator_(vertices_iterator), memory_(memory){};
+    Iterator(mgp_vertices_iterator *vertices_iterator, mgp_memory *memory);
     ~Iterator();
     Iterator &operator++();
     Iterator operator++(int);
@@ -480,7 +529,7 @@ class Vertices {
   Iterator end();
 
  private:
-  const mgp_graph *graph_;
+  mgp_vertices_iterator *vertices_iterator_ = nullptr;
   mgp_memory *memory_;
 };
 
@@ -600,6 +649,7 @@ class ImmutableValue {
 
 ////////////////////////////////////////////////////////////////////////////////
 // Record:
+
 class Record {
  public:
   explicit Record(mgp_result_record *record, mgp_memory *memory) : record_(record), memory_(memory){};
@@ -615,6 +665,8 @@ class Record {
   void Insert(const char *field_name, const Vertex &vertex);
 
   void Insert(const char *field_name, const ImmutableVertex &vertex);
+
+  void Insert(const char *field_name, const ImmutableEdge &edge);
 
  private:
   void Insert(const char *field_name, Value &&value);
@@ -755,10 +807,85 @@ inline Vertex Graph::GetVertexById(std::int64_t vertex_id) {
   return Vertex(vertex, memory_);
 }
 
-inline Vertices Graph::vertices() const { return Vertices(graph_, memory_); }
+inline Vertices Graph::vertices() const {
+  auto *vertices_it = mgp_graph_iter_vertices(graph_, memory_);
+  if (vertices_it == nullptr) {
+    throw mg_exception::NotEnoughMemoryException();
+  }
+  return Vertices(vertices_it, memory_);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Edges:
+
+inline Edges::Iterator::Iterator(mgp_edges_iterator *edges_iterator, mgp_memory *memory)
+    : edges_iterator_(edges_iterator), memory_(memory) {
+  if (edges_iterator_ == nullptr) return;
+  if (mgp_edges_iterator_get(edges_iterator_) == nullptr) {
+    mgp_edges_iterator_destroy(edges_iterator_);
+    edges_iterator_ = nullptr;
+  }
+}
+
+inline Edges::Iterator::~Iterator() {
+  if (edges_iterator_ != nullptr) {
+    mgp_edges_iterator_destroy(edges_iterator_);
+  }
+}
+
+inline Edges::Iterator &Edges::Iterator::operator++() {
+  if (edges_iterator_ != nullptr) {
+    auto next = mgp_edges_iterator_next(edges_iterator_);
+
+    if (next == nullptr) {
+      mgp_edges_iterator_destroy(edges_iterator_);
+      edges_iterator_ = nullptr;
+      return *this;
+    }
+    index_++;
+  }
+  return *this;
+}
+
+inline Edges::Iterator Edges::Iterator::operator++(int) {
+  Edges::Iterator retval = *this;
+  ++(*this);
+  return retval;
+}
+
+inline bool Edges::Iterator::operator==(Iterator other) const {
+  if (edges_iterator_ == nullptr && other.edges_iterator_ == nullptr) {
+    return true;
+  }
+  if (edges_iterator_ == nullptr || other.edges_iterator_ == nullptr) {
+    return false;
+  }
+  return mgp_edge_equal(mgp_edges_iterator_get(edges_iterator_), mgp_edges_iterator_get(other.edges_iterator_)) &&
+         index_ == other.index_;
+}
+
+inline ImmutableEdge Edges::Iterator::operator*() {
+  if (edges_iterator_ == nullptr) return ImmutableEdge(nullptr, memory_);
+
+  auto vertex = ImmutableEdge(mgp_edges_iterator_get(edges_iterator_), memory_);
+  return vertex;
+}
+
+inline Edges::Iterator Edges::begin() { return Iterator(edges_iterator_, memory_); }
+
+inline Edges::Iterator Edges::end() { return Iterator(nullptr, memory_); }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Vertices:
+
+inline Vertices::Iterator::Iterator(mgp_vertices_iterator *vertices_iterator, mgp_memory *memory)
+    : vertices_iterator_(vertices_iterator), memory_(memory) {
+  if (vertices_iterator_ == nullptr) return;
+  if (mgp_vertices_iterator_get(vertices_iterator_) == nullptr) {
+    mgp_vertices_iterator_destroy(vertices_iterator_);
+    vertices_iterator_ = nullptr;
+  }
+}
 
 inline Vertices::Iterator::~Iterator() {
   if (vertices_iterator_ != nullptr) {
@@ -798,19 +925,13 @@ inline bool Vertices::Iterator::operator==(Iterator other) const {
 }
 
 inline ImmutableVertex Vertices::Iterator::operator*() {
-  if (vertices_iterator_ == nullptr) return mgp::ImmutableVertex(nullptr, memory_);
+  if (vertices_iterator_ == nullptr) return ImmutableVertex(nullptr, memory_);
 
-  auto vertex = mgp::ImmutableVertex(mgp_vertices_iterator_get(vertices_iterator_), memory_);
+  auto vertex = ImmutableVertex(mgp_vertices_iterator_get(vertices_iterator_), memory_);
   return vertex;
 }
 
-inline Vertices::Iterator Vertices::begin() {
-  auto *vertices_it = mgp_graph_iter_vertices(graph_, memory_);
-  if (vertices_it == nullptr) {
-    throw mg_exception::NotEnoughMemoryException();
-  }
-  return Iterator(vertices_it, memory_);
-}
+inline Vertices::Iterator Vertices::begin() { return Iterator(vertices_iterator_, memory_); }
 
 inline Vertices::Iterator Vertices::end() { return Iterator(nullptr, memory_); }
 
@@ -852,8 +973,7 @@ inline const ImmutableValue List::operator[](size_t index) const {
 // TODO: Implement safe value copying
 // inline bool List::Append(const Value &value) { return mgp_list_append(ptr_, mgp_value_copy(value.ptr())) == 0; }
 
-// inline bool List::Append(const ConstValue &value) { return mgp_list_append(ptr_, mgp_value_copy(value.ptr_)) == 0;
-// }
+// inline bool List::Append(const ConstValue &value) { return mgp_list_append(ptr_, mgp_value_copy(value.ptr_)) == 0; }
 
 inline bool List::Append(Value &&value) {
   bool result = mgp_list_append(ptr_, value.ptr_) == 0;
@@ -896,13 +1016,48 @@ inline Vertex::~Vertex() {
   }
 }
 
+inline Edges Vertex::in_edges() const {
+  auto edge_iterator = mgp_vertex_iter_in_edges(ptr_, memory_);
+  if (edge_iterator == nullptr) {
+    throw NotEnoughMemoryException();
+  }
+  return Edges(edge_iterator, memory_);
+}
+
+inline Edges Vertex::out_edges() const {
+  auto edge_iterator = mgp_vertex_iter_out_edges(ptr_, memory_);
+  if (edge_iterator == nullptr) {
+    throw NotEnoughMemoryException();
+  }
+  return Edges(edge_iterator, memory_);
+}
+
 inline bool Vertex::operator==(const Vertex &other) const { return util::VerticesEquals(ptr_, other.ptr_); }
 
 inline bool Vertex::operator==(const ImmutableVertex &other) const {
   return util::VerticesEquals(ptr_, other.const_ptr_);
 }
 
-// inline ImmutableVertex Vertex::AsConstVertex() const { return ImmutableVertex(ptr_); }
+inline ImmutableVertex Vertex::AsImmutableVertex() const { return ImmutableVertex(ptr_, memory_); }
+
+////////////////////////////////////////////////////////////////////////////////
+// ImmutableVertex:
+
+inline Edges ImmutableVertex::in_edges() const {
+  auto edge_iterator = mgp_vertex_iter_in_edges(const_ptr_, memory_);
+  if (edge_iterator == nullptr) {
+    throw NotEnoughMemoryException();
+  }
+  return Edges(edge_iterator, memory_);
+}
+
+inline Edges ImmutableVertex::out_edges() const {
+  auto edge_iterator = mgp_vertex_iter_out_edges(const_ptr_, memory_);
+  if (edge_iterator == nullptr) {
+    throw NotEnoughMemoryException();
+  }
+  return Edges(edge_iterator, memory_);
+}
 
 inline bool ImmutableVertex::operator==(const ImmutableVertex &other) const {
   return util::VerticesEquals(const_ptr_, other.const_ptr_);
@@ -1050,6 +1205,10 @@ inline void Record::Insert(const char *field_name, const Vertex &vertex) {
 
 inline void Record::Insert(const char *field_name, const ImmutableVertex &vertex) {
   Insert(field_name, Value(mgp_value_make_vertex(mgp_vertex_copy(vertex.const_ptr_, vertex.memory_)), memory_));
+}
+
+inline void Record::Insert(const char *field_name, const ImmutableEdge &edge) {
+  Insert(field_name, Value(mgp_value_make_edge(mgp_edge_copy(edge.const_ptr_, edge.memory_)), memory_));
 }
 
 inline void Record::Insert(const char *field_name, Value &&value) {
