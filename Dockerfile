@@ -1,4 +1,4 @@
-FROM memgraph:latest AS memgraph-mage
+FROM memgraph/memgraph:latest AS memgraph-mage
 
 FROM memgraph-mage
 USER root
