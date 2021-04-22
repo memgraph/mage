@@ -4,7 +4,7 @@ This open-source repository contains all available query modules written by the 
 
 ## MAGE Query modules
 
-Memgraph introduces the concept of **query modules**, user-defined procedures that extend the Cypher query language. These procedures are grouped into modules that can be loaded into Memgraph. You can find more information on query modules in the official [documentation](https://docs.memgraph.com/memgraph/database-functionalities/query-modules).
+Memgraph introduces the concept of **query modules**, user-defined procedures that extend the Cypher query language. These procedures are grouped into modules that can be loaded into Memgraph. You can find more information on query modules in the official [documentation](https://docs.memgraph.com/memgraph/database-functionalities/query-modules/built-in-query-modules).
 
 Query modules implemented in Python:
 * [nxalg](python/nxalg.py): A module that provides NetworkX integration with Memgraph and implements many NetworkX algorithms.  
@@ -16,10 +16,11 @@ Query modules implemented in Python:
 
 Query modules implemented in C/C++:
 * [connectivity_module.cpp](cpp/connectivity_module/connectivity_module.cpp): A module that finds weakly connected components in a graph.
+* [biconnected_components_module.cpp](cpp/biconnected_components_module/biconnected_components_module.cpp): Module for finding biconnected components of the graph.
 
 ## How to install?
 
-To build and install MAGE query modules you will need: **Make**, **CMake** and **Clang**.
+To build and install MAGE query modules you will need: **Python3**, **Make**, **CMake** and **Clang**.
 
 ### Installing with Docker
 
@@ -35,7 +36,11 @@ docker run -p 7687:7687 memgraph:mage
 ```
 
 ### Installing without Docker
-**1.** Run the `build.sh` script. It will generate a `dist` directory with all the needed files.  
+**1.** Run the `build` script. It will generate a `dist` directory with all the needed files.  
+```
+python3 build
+```
+
 **2.** Copy the contents of the newly created `dist` directory to `/usr/lib/memgraph/query_modules`.  
 **3.** Start Memgraph and enjoy **MAGE**!  
 
@@ -45,6 +50,16 @@ CALL mg.load_all();
 ```
 If you want to find out more about loading query modules, visit [this guide](https://docs.memgraph.com/memgraph/database-functionalities/query-modules/load-call-query-modules).
 
+
+## Testing the MAGE
+To test that everything is built, loaded, and working correctly, a python script can be run. Make sure that the Memgraph instance with **MAGE** is up and running. 
+```
+# Running unit tests for C++ and Python
+python3 test_unit
+
+# Running end-to-end tests
+python3 test_e2e
+```
 ## Contributing
 
 We encourage everyone to contribute with their own algorithm implementations and ideas. If you want to contribute or report a bug, please take a look at the [contributions guide](CONTRIBUTING.md).
