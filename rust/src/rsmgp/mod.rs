@@ -5,9 +5,15 @@
 pub mod mgp;
 
 use c_str_macro::c_str;
-use mgp::*;
 use snafu::Snafu;
 use std::ffi::{CStr, CString};
+
+// Import all structs, functions are in the mgp::ffi module.
+use mgp::*;
+// All mgp_ functions are mocked.
+#[double]
+use mgp::ffi;
+use mockall_double::double;
 
 #[derive(Debug, Snafu)]
 #[snafu(visibility = "pub")]
@@ -29,7 +35,9 @@ pub struct MgpValue {
 impl Drop for MgpValue {
     fn drop(&mut self) {
         unsafe {
-            mgp_value_destroy(self.value);
+            if !self.value.is_null() {
+                ffi::mgp_value_destroy(self.value);
+            }
         }
     }
 }
@@ -42,10 +50,10 @@ pub fn make_int_value(
     let unable_alloc_value_msg = c_str!("Unable to allocate an integer.");
     unsafe {
         let mg_value: MgpValue = MgpValue {
-            value: mgp_value_make_int(value, memory),
+            value: ffi::mgp_value_make_int(value, memory),
         };
         if mg_value.value.is_null() {
-            mgp_result_set_error_msg(result, unable_alloc_value_msg.as_ptr());
+            ffi::mgp_result_set_error_msg(result, unable_alloc_value_msg.as_ptr());
             return Err(MgpError::MgpAllocationError);
         }
         return Ok(mg_value);
@@ -60,10 +68,10 @@ pub fn make_bool_value(
     let unable_alloc_value_msg = c_str!("Unable to allocate boolean value.");
     unsafe {
         let mg_value: MgpValue = MgpValue {
-            value: mgp_value_make_bool(if value == false { 0 } else { 1 }, memory),
+            value: ffi::mgp_value_make_bool(if value == false { 0 } else { 1 }, memory),
         };
         if mg_value.value.is_null() {
-            mgp_result_set_error_msg(result, unable_alloc_value_msg.as_ptr());
+            ffi::mgp_result_set_error_msg(result, unable_alloc_value_msg.as_ptr());
             return Err(MgpError::MgpAllocationError);
         }
         return Ok(mg_value);
@@ -85,7 +93,7 @@ impl Default for MgpVerticesIterator {
 impl Drop for MgpVerticesIterator {
     fn drop(&mut self) {
         unsafe {
-            mgp_vertices_iterator_destroy(self.ptr);
+            ffi::mgp_vertices_iterator_destroy(self.ptr);
         }
     }
 }
@@ -95,7 +103,7 @@ impl Iterator for MgpVerticesIterator {
         if self.is_first {
             self.is_first = false;
             unsafe {
-                let data = mgp_vertices_iterator_get(self.ptr);
+                let data = ffi::mgp_vertices_iterator_get(self.ptr);
                 if data.is_null() {
                     return None;
                 } else {
@@ -104,7 +112,7 @@ impl Iterator for MgpVerticesIterator {
             }
         } else {
             unsafe {
-                let data = mgp_vertices_iterator_next(self.ptr);
+                let data = ffi::mgp_vertices_iterator_next(self.ptr);
                 if data.is_null() {
                     return None;
                 } else {
@@ -121,7 +129,7 @@ pub struct MgpVertex {
 impl MgpVertex {
     pub fn labels_count(&self) -> u64 {
         unsafe {
-            return mgp_vertex_labels_count(self.ptr);
+            return ffi::mgp_vertex_labels_count(self.ptr);
         }
     }
 
@@ -131,7 +139,7 @@ impl MgpVertex {
             let c_mgp_label = mgp_label {
                 name: c_str.as_ptr(),
             };
-            return mgp_vertex_has_label(self.ptr, c_mgp_label) != 0;
+            return ffi::mgp_vertex_has_label(self.ptr, c_mgp_label) != 0;
         }
     }
 }
@@ -144,11 +152,11 @@ pub fn make_graph_vertices_iterator(
     let unable_alloc_iter_msg = c_str!("Unable to allocate a vertices iterator.");
     unsafe {
         let iterator: MgpVerticesIterator = MgpVerticesIterator {
-            ptr: mgp_graph_iter_vertices(graph, memory),
+            ptr: ffi::mgp_graph_iter_vertices(graph, memory),
             ..Default::default()
         };
         if iterator.ptr.is_null() {
-            mgp_result_set_error_msg(result, unable_alloc_iter_msg.as_ptr());
+            ffi::mgp_result_set_error_msg(result, unable_alloc_iter_msg.as_ptr());
             return Err(MgpError::MgpAllocationError);
         }
         return Ok(iterator);
@@ -162,9 +170,9 @@ pub struct MgpResultRecord {
 pub fn make_result_record(result: *mut mgp_result) -> MgpResult<MgpResultRecord> {
     let record_fail_msg = c_str!("Unable to allocate record");
     unsafe {
-        let record = mgp_result_new_record(result);
+        let record = ffi::mgp_result_new_record(result);
         if record.is_null() {
-            mgp_result_set_error_msg(result, record_fail_msg.as_ptr());
+            ffi::mgp_result_set_error_msg(result, record_fail_msg.as_ptr());
             return Err(MgpError::MgpAllocationError);
         }
         Ok(MgpResultRecord { record: record })
@@ -180,9 +188,9 @@ pub fn insert_result_record(
     let name_not_inserted_msg = c_str!("Unable to insert record to the result.");
     unsafe {
         let inserted =
-            mgp_result_record_insert(mgp_record.record, mgp_name.as_ptr(), mgp_value.value);
+            ffi::mgp_result_record_insert(mgp_record.record, mgp_name.as_ptr(), mgp_value.value);
         if inserted == 0 {
-            mgp_result_set_error_msg(result, name_not_inserted_msg.as_ptr());
+            ffi::mgp_result_set_error_msg(result, name_not_inserted_msg.as_ptr());
             return Err(MgpError::MgpPreparingResultError);
         }
         return Ok(());
@@ -195,7 +203,7 @@ pub fn add_read_procedure(
     module: *mut mgp_module,
 ) -> *mut mgp_proc {
     unsafe {
-        return mgp_module_add_read_procedure(module, name.as_ptr(), Some(proc_ptr));
+        return ffi::mgp_module_add_read_procedure(module, name.as_ptr(), Some(proc_ptr));
     }
 }
 
@@ -204,7 +212,7 @@ pub fn add_int_result_type(
     name: &CStr,
 ) -> Result<(), MgpAddProcedureParameterTypeError> {
     unsafe {
-        if mgp_proc_add_result(procedure, name.as_ptr(), mgp_type_int()) == 0 {
+        if ffi::mgp_proc_add_result(procedure, name.as_ptr(), ffi::mgp_type_int()) == 0 {
             return Err(MgpAddProcedureParameterTypeError);
         }
         return Ok(());
@@ -216,9 +224,38 @@ pub fn add_bool_result_type(
     name: &CStr,
 ) -> Result<(), MgpAddProcedureParameterTypeError> {
     unsafe {
-        if mgp_proc_add_result(procedure, name.as_ptr(), mgp_type_bool()) == 0 {
+        if ffi::mgp_proc_add_result(procedure, name.as_ptr(), ffi::mgp_type_bool()) == 0 {
             return Err(MgpAddProcedureParameterTypeError);
         }
         return Ok(());
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    fn print_type_of<T>(_: &T) {
+        println!("{}", std::any::type_name::<T>())
+    }
+
+    #[test]
+    fn simple_test() {
+        use crate::mock_ffi::*;
+        let ctx_1 = mgp_value_make_int_context();
+        ctx_1.expect().times(1).returning(|value, _| {
+            assert_eq!(value, 0);
+            std::ptr::null_mut()
+        });
+        let ctx_2 = mgp_result_set_error_msg_context();
+        ctx_2.expect().times(1).returning(|result, msg| unsafe {
+            print_type_of(&result);
+            println!("{}", std::ffi::CStr::from_ptr(msg).to_str().unwrap());
+            0
+        });
+        // NOTE: Sending null pointers around might actually be a nice way of testing for errors!
+
+        let int_value = make_int_value(0, std::ptr::null_mut(), std::ptr::null_mut());
+        assert!(int_value.is_err());
     }
 }

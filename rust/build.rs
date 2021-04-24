@@ -1,6 +1,7 @@
 extern crate bindgen;
 
 use std::env;
+use std::fs;
 use std::path::PathBuf;
 
 fn main() {
@@ -11,20 +12,28 @@ fn main() {
     // to bindgen, and lets you build up options for
     // the resulting bindings.
     let bindings = bindgen::Builder::default()
-        // The input header we would like to generate
-        // bindings for.
         .header("../cpp/mg_procedure/mg_procedure.h")
-        // Tell cargo to invalidate the built crate whenever any of the
-        // included header files changed.
+        .blacklist_function("mgp_*")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
-        // Finish the builder and generate the bindings.
         .generate()
-        // Unwrap the Result and panic on failure.
-        .expect("Unable to generate bindings");
+        .expect("Unable to generate bindings")
+        .to_string();
+
+    let mut bindings_string = "#[cfg(test)] use mockall::automock;\n".to_owned();
+    bindings_string.push_str("#[cfg_attr(test, automock)]\npub(crate) mod ffi {\nuse super::*;\n");
+    bindings_string.push_str(
+        &bindgen::Builder::default()
+            .header("../cpp/mg_procedure/mg_procedure.h")
+            .blacklist_type(".*")
+            .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+            .generate()
+            .expect("Unable to generate bindings")
+            .to_string(),
+    );
+    bindings_string.push_str("}\n");
+    bindings_string.push_str(&bindings);
 
     // Write the bindings to the $OUT_DIR/bindings.rs file.
-    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-    bindings
-        .write_to_file(out_path.join("bindings.rs"))
-        .expect("Couldn't write bindings!");
+    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("bindings.rs");
+    fs::write(out_path, bindings_string.as_bytes()).expect("Couldn't write bindings!");
 }

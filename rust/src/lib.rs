@@ -1,8 +1,8 @@
 mod rsmgp;
 
 use c_str_macro::c_str;
-use rsmgp::*;
 use rsmgp::mgp::*;
+use rsmgp::*;
 use std::os::raw::c_int;
 use std::panic;
 
