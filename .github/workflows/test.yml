@@ -68,3 +68,16 @@ jobs:
       run: |
         cd e2e
         python -m pytest .
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+    - name: Rust library tests
+      run: |
+        cd rust/rsmgp-sys
+        cargo fmt -- --check
+        cargo test
+    - name: Rust example build
+      run: |
+        cd rust/rsmgp-example
+        cargo fmt -- --check
+        cargo build
