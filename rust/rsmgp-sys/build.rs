@@ -5,14 +5,19 @@ use std::fs;
 use std::path::PathBuf;
 
 fn main() {
+    let mg_procedure_path = "../../cpp/mg_procedure/mg_procedure.h";
+
     // Tell cargo to invalidate the built crate whenever the wrapper changes
-    println!("cargo:rerun-if-changed=../cpp/mg_procedure/mg_procedure.h");
+    println!(
+        "{}",
+        format!("{}{}", "cargo:rerun-if-changed=", mg_procedure_path)
+    );
 
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
     // the resulting bindings.
     let bindings = bindgen::Builder::default()
-        .header("../cpp/mg_procedure/mg_procedure.h")
+        .header(mg_procedure_path)
         .blacklist_function("mgp_*")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .generate()
@@ -23,7 +28,7 @@ fn main() {
     bindings_string.push_str("#[cfg_attr(test, automock)]\npub(crate) mod ffi {\nuse super::*;\n");
     bindings_string.push_str(
         &bindgen::Builder::default()
-            .header("../cpp/mg_procedure/mg_procedure.h")
+            .header(mg_procedure_path)
             .blacklist_type(".*")
             .parse_callbacks(Box::new(bindgen::CargoCallbacks))
             .generate()

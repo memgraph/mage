@@ -1,20 +1,13 @@
 [package]
-name = "mage"
+name = "rsmgp-example"
 version = "0.1.0"
 authors = ["Marko Budiselic <marko.budiselic@memgraph.com>"]
 edition = "2018"
 
 [dependencies]
 c_str_macro = "1.0.2"
-snafu = "0.6.10"
-mockall_double = "0.2.0"
-
-[dev-dependencies]
-mockall = "0.9.1"
-
-[build-dependencies]
-bindgen = "0.57.0"
+rsmgp-sys = { path = "../rsmgp-sys" }
 
 [lib]
-name = "rust_example_query_module"
+name = "memgraph_query_module_in_rust_example"
 crate-type = ["cdylib"]

@@ -2,17 +2,15 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-pub mod mgp;
-
 use c_str_macro::c_str;
 use snafu::Snafu;
 use std::ffi::{CStr, CString};
 
 // Import all structs, functions are in the mgp::ffi module.
-use mgp::*;
-// All mgp_ functions are mocked.
+use crate::mgp::*;
+// All mgp_ functions are also mocked.
 #[double]
-use mgp::ffi;
+use crate::mgp::ffi;
 use mockall_double::double;
 
 #[derive(Debug, Snafu)]
@@ -241,7 +239,7 @@ mod test {
 
     #[test]
     fn simple_test() {
-        use crate::mock_ffi::*;
+        use crate::rsmgp::mock_ffi::*;
         let ctx_1 = mgp_value_make_int_context();
         ctx_1.expect().times(1).returning(|value, _| {
             assert_eq!(value, 0);
