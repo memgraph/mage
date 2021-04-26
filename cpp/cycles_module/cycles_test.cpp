@@ -29,9 +29,9 @@ bool CheckCycles(std::vector<std::vector<mg_graph::Node<>>> user, std::vector<st
     return false;
   }
 
-  for (size_t i = 0; i < user_cycles.size(); ++i) {
-    user_cycles[i].push_back(*user_cycles[i].begin());
-    correct[i].push_back(*correct[i].begin());
+  for (std::size_t i = 0; i < user_cycles.size(); ++i) {
+    user_cycles[i].push_back(user_cycles[i][0]);
+    correct[i].push_back(correct[i][0]);
 
     if (user_cycles[i][1] > user_cycles[i][user_cycles[i].size() - 2]) {
       std::reverse(user_cycles[i].begin(), user_cycles[i].end());

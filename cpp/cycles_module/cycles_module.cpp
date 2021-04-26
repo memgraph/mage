@@ -30,7 +30,7 @@ void GetCycles(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory);
     auto cycles = cycles_alg::GetCycles(*graph);
 
-    for (size_t cycle_id = 0; cycle_id < cycles.size(); cycle_id++) {
+    for (std::size_t cycle_id = 0; cycle_id < cycles.size(); cycle_id++) {
       // Insert each node on the cycle
       for (const auto &node : cycles[cycle_id]) {
         InsertCycleRecord(memgraph_graph, result, memory, cycle_id, graph->GetMemgraphNodeId(node.id));
