@@ -13,7 +13,7 @@ class Random(Algorithm):
     def __str__(self):
         return "Random"
 
-    @validate(Parameter.NO_OF_COLORS)
+    @validate(Parameter.NUM_OF_COLORS)
     def run(self, graph: Graph, parameters: Dict[str, Any] = None) -> Individual:
-        no_of_colors = param_value(graph, parameters, Parameter.NO_OF_COLORS)
-        return Individual(no_of_colors, graph)
+        num_of_colors = param_value(graph, parameters, Parameter.NUM_OF_COLORS)
+        return Individual(num_of_colors, graph)

@@ -20,11 +20,11 @@ class SDO(Algorithm):
     def __str__(self):
         return "SDO"
 
-    @validate(Parameter.NO_OF_COLORS)
+    @validate(Parameter.NUM_OF_COLORS)
     def run(self, graph: Graph, parameters: Dict[str, Any] = None) -> Individual:
         """Returns the individual that represents the result of the SDO algorithm."""
 
-        no_of_colors = param_value(graph, parameters, Parameter.NO_OF_COLORS)
+        num_of_colors = param_value(graph, parameters, Parameter.NUM_OF_COLORS)
 
         processed = [False for _ in graph.nodes]
         saturation_degrees = [0 for _ in graph.nodes]
@@ -40,11 +40,11 @@ class SDO(Algorithm):
                 if not processed[node]:
                     processed[node] = True
 
-                    colors = available_colors(graph, no_of_colors, chromosome, node)
+                    colors = available_colors(graph, num_of_colors, chromosome, node)
                     if len(colors) > 0:
                         color = random.choice(colors)
                     else:
-                        color = random.randint(0, no_of_colors - 1)
+                        color = random.randint(0, num_of_colors - 1)
                     chromosome[node] = color
 
                     for neigh in graph[node]:
@@ -52,7 +52,7 @@ class SDO(Algorithm):
                             saturation_degrees[neigh] += 1
                             sorted_nodes.put((-1 * saturation_degrees[neigh], neigh))
 
-        return Individual(no_of_colors, graph, chromosome)
+        return Individual(num_of_colors, graph, chromosome)
 
     def _get_non_processed_node(self, processed: List[bool]) -> bool:
         for i, flag in enumerate(processed):

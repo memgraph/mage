@@ -17,10 +17,6 @@ from mage.graph_coloring_module.algorithms.greedy.random import (  # noqa: F401,
     Random,
 )
 
-from mage.graph_coloring_module.communication.message import (  # noqa: F401, F402, F403
-    Message,
-)
-
 from mage.graph_coloring_module.components.individual import (  # noqa: F401, F402, F403
     Individual,
 )

@@ -40,7 +40,7 @@ def graph_not_connected():
 
 def test_Random(set_seed, graph_1):
     algorithm = Random()
-    individual = algorithm.run(graph_1, {Parameter.NO_OF_COLORS: 3})
+    individual = algorithm.run(graph_1, {Parameter.NUM_OF_COLORS: 3})
 
     expected_result = [2, 0, 0, 2, 1]
     assert individual.chromosome == expected_result
@@ -48,7 +48,7 @@ def test_Random(set_seed, graph_1):
 
 def test_not_connected_graph(set_seed, graph_not_connected):
     algorithm = Random()
-    individual = algorithm.run(graph_not_connected, {Parameter.NO_OF_COLORS: 3})
+    individual = algorithm.run(graph_not_connected, {Parameter.NUM_OF_COLORS: 3})
 
     expected_result = [2, 0, 0, 2, 1]
     assert individual.chromosome == expected_result
@@ -57,7 +57,7 @@ def test_not_connected_graph(set_seed, graph_not_connected):
 def test_empty_graph(set_seed):
     graph = Graph([], {})
     algorithm = Random()
-    individual = algorithm.run(graph, {Parameter.NO_OF_COLORS: 3})
+    individual = algorithm.run(graph, {Parameter.NUM_OF_COLORS: 3})
 
     expected_result = []
     assert individual.chromosome == expected_result

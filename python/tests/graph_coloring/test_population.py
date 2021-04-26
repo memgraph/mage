@@ -24,11 +24,11 @@ def graph():
 @pytest.fixture
 def chain_population(graph):
     indv_1 = Individual(
-        no_of_colors=3, graph=graph, chromosome=[1, 1, 0, 2, 0], conflict_nodes={0, 1}
+        num_of_colors=3, graph=graph, chromosome=[1, 1, 0, 2, 0], conflict_nodes={0, 1}
     )
-    indv_2 = Individual(no_of_colors=3, graph=graph, chromosome=[1, 2, 0, 2, 1])
+    indv_2 = Individual(num_of_colors=3, graph=graph, chromosome=[1, 2, 0, 2, 1])
     indv_3 = Individual(
-        no_of_colors=3, graph=graph, chromosome=[2, 1, 0, 2, 1], conflict_nodes={1, 4}
+        num_of_colors=3, graph=graph, chromosome=[2, 1, 0, 2, 1], conflict_nodes={1, 4}
     )
     population = ChainPopulation(graph, [indv_1, indv_2, indv_3])
     return population
@@ -37,16 +37,16 @@ def chain_population(graph):
 @pytest.fixture
 def chain_chunk_population(graph):
     indv_1 = Individual(
-        no_of_colors=3, graph=graph, chromosome=[1, 1, 0, 2, 0], conflict_nodes={0, 1}
+        num_of_colors=3, graph=graph, chromosome=[1, 1, 0, 2, 0], conflict_nodes={0, 1}
     )
-    indv_2 = Individual(no_of_colors=3, graph=graph, chromosome=[1, 2, 0, 2, 1])
+    indv_2 = Individual(num_of_colors=3, graph=graph, chromosome=[1, 2, 0, 2, 1])
     indv_3 = Individual(
-        no_of_colors=3, graph=graph, chromosome=[2, 1, 0, 2, 1], conflict_nodes={1, 4}
+        num_of_colors=3, graph=graph, chromosome=[2, 1, 0, 2, 1], conflict_nodes={1, 4}
     )
     indv_prev = Individual(
-        no_of_colors=3, graph=graph, chromosome=[2, 1, 0, 0, 0], conflict_nodes={2, 3}
+        num_of_colors=3, graph=graph, chromosome=[2, 1, 0, 0, 0], conflict_nodes={2, 3}
     )
-    indv_next = Individual(no_of_colors=3, graph=graph, chromosome=[0, 1, 2, 1, 0])
+    indv_next = Individual(num_of_colors=3, graph=graph, chromosome=[0, 1, 2, 1, 0])
     chain_chunk = ChainChunk(graph, [indv_1, indv_2, indv_3], indv_prev, indv_next)
     return chain_chunk
 
@@ -98,7 +98,7 @@ def test_chain_population_correlation(chain_population):
 
 
 def test_set_individual(chain_population, graph):
-    new_indv = Individual(no_of_colors=3, graph=graph, chromosome=[1, 2, 2, 2, 1])
+    new_indv = Individual(num_of_colors=3, graph=graph, chromosome=[1, 2, 2, 2, 1])
     chain_population.set_individual(1, new_indv, [2])
     assert chain_population.correlation == [-2, -2, 2]
     assert chain_population.sum_conflicts_weight == 12

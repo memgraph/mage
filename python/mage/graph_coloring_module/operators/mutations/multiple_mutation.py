@@ -17,23 +17,23 @@ class MultipleMutation(Mutation):
     def __str__(self):
         return "MultipleMutation"
 
-    @validate(Parameter.MULTIPLE_MUTATION_NODES_NO_OF_NODES, Parameter.NO_OF_COLORS)
+    @validate(Parameter.MULTIPLE_MUTATION_NODES_NUM_OF_NODES, Parameter.NUM_OF_COLORS)
     def mutate(
         self, graph: Graph, individual: Individual, parameters: Dict[str, Any] = None
     ) -> Tuple[Individual, List[int]]:
         """A function that mutates the given individual and returns
         the new individual and nodes that were changed."""
 
-        no_of_nodes_to_mutate = param_value(
-            graph, parameters, Parameter.MULTIPLE_MUTATION_NODES_NO_OF_NODES
+        num_of_nodes_to_mutate = param_value(
+            graph, parameters, Parameter.MULTIPLE_MUTATION_NODES_NUM_OF_NODES
         )
-        no_of_colors = param_value(graph, parameters, Parameter.NO_OF_COLORS)
+        num_of_colors = param_value(graph, parameters, Parameter.NUM_OF_COLORS)
 
         nodes = [
-            random.randint(0, len(graph) - 1) for _ in range(no_of_nodes_to_mutate)
+            random.randint(0, len(graph) - 1) for _ in range(num_of_nodes_to_mutate)
         ]
         colors = [
-            random.randint(0, no_of_colors - 1) for _ in range(no_of_nodes_to_mutate)
+            random.randint(0, num_of_colors - 1) for _ in range(num_of_nodes_to_mutate)
         ]
         mutated_individual = individual.replace_units(nodes, colors)
         return mutated_individual, nodes

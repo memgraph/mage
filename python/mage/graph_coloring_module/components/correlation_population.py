@@ -81,7 +81,7 @@ class CorrelationPopulation(Population):
 
         correlation_prev_delta = 0
         correlation_next_delta = 0
-        processed = [False for _ in range(old_individual.no_of_units)]
+        processed = [False for _ in range(old_individual.num_of_units)]
 
         for node in nodes:
             for neigh in self._graph[node]:

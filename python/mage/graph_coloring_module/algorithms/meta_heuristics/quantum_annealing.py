@@ -8,7 +8,7 @@ from mage.graph_coloring_module.graph import Graph
 from mage.graph_coloring_module.components.population import Population
 from mage.graph_coloring_module.utils.parameters_utils import param_value
 from mage.graph_coloring_module.utils.validation import validate
-from mage.graph_coloring_module.communication.message_type import MessageType
+from mage.graph_coloring_module.components.individual import Individual
 from mage.graph_coloring_module.algorithms.meta_heuristics.parallel_algorithm import (
     ParallelAlgorithm,
 )
@@ -23,16 +23,23 @@ class QA(ParallelAlgorithm):
     def __str__(self):
         return "QA"
 
-    @validate(Parameter.MAX_ITERATIONS, Parameter.ERROR, Parameter.COMMUNICATION_DALAY)
+    @validate(
+        Parameter.MAX_ITERATIONS,
+        Parameter.ERROR,
+        Parameter.COMMUNICATION_DALAY,
+        Parameter.LOGGING_DELAY,
+        Parameter.ITERATION_CALLBACKS,
+        Parameter.NUM_OF_PROCESSES,
+    )
     def algorithm(
         self,
-        proc_id: int,
+        pid: int,
         graph: Graph,
         population: Population,
-        my_q: mp.Queue,
-        prev_q: mp.Queue,
-        next_q: mp.Queue,
-        results: mp.Queue,
+        best_solutions: Dict[int, Individual],
+        first_individuals: Dict[int, Individual],
+        last_individuals: Dict[int, Individual],
+        running_flag,
         parameters: Dict[str, Any],
     ) -> None:
         """Function that executes the QA algorithm. The resulting population
@@ -47,70 +54,29 @@ class QA(ParallelAlgorithm):
         iteration_callbacks = param_value(
             graph, parameters, Parameter.ITERATION_CALLBACKS
         )
-        no_of_chunks = param_value(graph, parameters, Parameter.NO_OF_CHUNKS)
+        num_of_processes = param_value(graph, parameters, Parameter.NUM_OF_PROCESSES)
 
         for iteration in range(max_iterations):
-            flag, pid = self._read_msgs(my_q, population)
-            if flag:
-                if self._prev_chunk(proc_id, no_of_chunks) != pid:
-                    self._write_msg(
-                        communication_delay,
-                        iteration,
-                        prev_q,
-                        population.best_individual(error.individual_err),
-                        MessageType.STOP,
-                        proc_id,
-                    )
-                if self._next_chunk(proc_id, no_of_chunks) != pid:
-                    self._write_msg(
-                        communication_delay,
-                        iteration,
-                        next_q,
-                        population.best_individual(error.individual_err),
-                        MessageType.STOP,
-                        proc_id,
-                    )
-                break
+            if running_flag == 0:
+                return
 
             for i in range(len(population)):
                 self._markow_chain(graph, population, i, parameters)
 
             if math.fabs(population.min_error(error.individual_err)) < 1e-5:
-                self._write_msg(
-                    communication_delay,
-                    iteration,
-                    prev_q,
-                    population.best_individual(error.individual_err),
-                    MessageType.STOP,
-                    proc_id,
-                )
-                self._write_msg(
-                    communication_delay,
-                    iteration,
-                    next_q,
-                    population.best_individual(error.individual_err),
-                    MessageType.STOP,
-                    proc_id,
-                )
-                break
+                with running_flag.get_lock():
+                    running_flag = 0
+                best_solutions[pid] = population.best_individual(error.individual_err)
+                return
 
-            self._write_msg(
-                communication_delay,
-                iteration,
-                prev_q,
-                population[0],
-                MessageType.FROM_PREV_CHUNK,
-                proc_id,
-            )
+            if iteration % communication_delay == 0:
+                first_individuals[pid] = population[0]
+                last_individuals[pid] = population[-1]
 
-            self._write_msg(
-                communication_delay,
-                iteration,
-                next_q,
-                population[-1],
-                MessageType.FROM_NEXT_CHUNK,
-                proc_id,
-            )
+                population.set_next_individual(first_individuals[self._next_pid(pid)])
+                population.set_prev_individual(
+                    last_individuals[self._previous_pid(pid)]
+                )
 
             for callback in iteration_callbacks:
                 callback.update(graph, population, parameters)
@@ -118,20 +84,20 @@ class QA(ParallelAlgorithm):
             if iteration % logging_delay == 0:
                 logger.info(
                     "Id: {} Iteration: {} Error: {}".format(
-                        proc_id, iteration, population.min_error(error.individual_err)
+                        pid, iteration, population.min_error(error.individual_err)
                     )
                 )
 
         logger.info(
             "Id: {} Iteration: {} Error: {}".format(
-                proc_id, iteration, population.min_error(error.individual_err)
+                pid, iteration, population.min_error(error.individual_err)
             )
         )
 
         for callback in iteration_callbacks:
             callback.end(graph, population, parameters)
 
-        results.put(population)
+        return
 
     @validate(
         Parameter.QA_TEMPERATURE,

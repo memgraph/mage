@@ -22,6 +22,6 @@ class SimpleMutation(Mutation):
         if len(conflict_nodes) == 0:
             return individual, []
         node = random.choice(list(conflict_nodes))
-        color = random.randint(0, individual.no_of_colors - 1)
+        color = random.randint(0, individual.num_of_colors - 1)
         mutated_indv = individual.replace_unit(node, color)
         return mutated_indv, [node]

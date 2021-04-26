@@ -1,6 +1,6 @@
 query: >
     CALL graph_coloring.color_graph(
-        {no_of_colors: 2,
+        {num_of_colors: 2,
         mutation: "RandomMutation",
         random_mutation_probability: 0.5})
         YIELD node, color

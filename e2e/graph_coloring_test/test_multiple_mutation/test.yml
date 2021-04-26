@@ -1,8 +1,8 @@
 query: >
     CALL graph_coloring.color_graph(
-        {no_of_colors: 2,
+        {num_of_colors: 2,
         mutation: "MultipleMutation",
-        multiple_mutation_no_of_nodes: 3})
+        multiple_mutation_num_of_nodes: 3})
         YIELD node, color
     MATCH (a:Cell) WHERE toString(id(a)) = node 
     RETURN COUNT(a.id) AS id_count, COUNT(color) AS color_count;

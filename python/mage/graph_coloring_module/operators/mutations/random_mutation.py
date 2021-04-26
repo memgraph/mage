@@ -20,7 +20,7 @@ class RandomMutation(Mutation):
     def __str__(self):
         return "RandomMutation"
 
-    @validate(Parameter.RANDOM_MUTATION_PROBABILITY, Parameter.NO_OF_COLORS)
+    @validate(Parameter.RANDOM_MUTATION_PROBABILITY, Parameter.NUM_OF_COLORS)
     def mutate(
         self, graph: Graph, individual: Individual, parameters: Dict[str, Any] = None
     ) -> Tuple[Individual, List[int]]:
@@ -30,7 +30,7 @@ class RandomMutation(Mutation):
         random_mutation_probability = param_value(
             graph, parameters, Parameter.RANDOM_MUTATION_PROBABILITY
         )
-        no_of_colors = param_value(graph, parameters, Parameter.NO_OF_COLORS)
+        num_of_colors = param_value(graph, parameters, Parameter.NUM_OF_COLORS)
 
         conflict_nodes = individual.conflict_nodes
         non_conflict_nodes = []
@@ -46,11 +46,11 @@ class RandomMutation(Mutation):
             if random.random() < random_mutation_probability
             else random.choice(list(conflict_nodes))
         )
-        colors = available_colors(graph, no_of_colors, individual.chromosome, node)
+        colors = available_colors(graph, num_of_colors, individual.chromosome, node)
         color = (
             random.choice(colors)
             if len(colors) > 0
-            else random.randint(0, no_of_colors - 1)
+            else random.randint(0, num_of_colors - 1)
         )
 
         mutated_individual = individual.replace_unit(node, color)

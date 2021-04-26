@@ -18,7 +18,7 @@ class Individual:
 
     def __init__(
         self,
-        no_of_colors: int,
+        num_of_colors: int,
         graph: Graph,
         chromosome: List[int] = None,
         conflicts_weight: int = None,
@@ -27,11 +27,11 @@ class Individual:
     ):
 
         self._graph = graph
-        self._no_of_units = len(graph)
-        self._no_of_colors = no_of_colors
+        self._num_of_units = len(graph)
+        self._num_of_colors = num_of_colors
         if chromosome is None:
             self._chromosome = list(
-                choice(range(0, no_of_colors)) for _ in range(len(graph))
+                choice(range(0, num_of_colors)) for _ in range(len(graph))
             )
         else:
             self._chromosome = chromosome
@@ -64,14 +64,14 @@ class Individual:
         return self._graph
 
     @property
-    def no_of_colors(self) -> int:
+    def num_of_colors(self) -> int:
         """Returns the allowed number of colors."""
-        return self._no_of_colors
+        return self._num_of_colors
 
     @property
-    def no_of_units(self) -> int:
+    def num_of_units(self) -> int:
         """Returns the size of the chromosome."""
-        return self._no_of_units
+        return self._num_of_units
 
     @property
     def conflicts_weight(self) -> int:
@@ -116,11 +116,11 @@ class Individual:
         conflict_edges = self.conflicts_weight
 
         for (index, color) in zip(indices, colors):
-            if not (0 <= color < self._no_of_colors):
+            if not (0 <= color < self._num_of_colors):
                 raise IllegalColorException(
                     "The given color is not in the range of allowed colors!"
                 )
-            if not (0 <= index < self.no_of_units):
+            if not (0 <= index < self.num_of_units):
                 raise IllegalNodeException("The given node does not exist!")
             conflict_edges, conflicts_counter, conflict_nodes = self._calculate_diff(
                 chromosome=new_chromosome,
@@ -133,7 +133,7 @@ class Individual:
             new_chromosome[index] = color
 
         new_indv = Individual(
-            no_of_colors=self.no_of_colors,
+            num_of_colors=self.num_of_colors,
             graph=self.graph,
             chromosome=new_chromosome,
             conflicts_weight=conflict_edges,

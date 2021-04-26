@@ -18,16 +18,16 @@ def chain_chunk_population():
         },
     )
     indv_1 = Individual(
-        no_of_colors=3, graph=graph, chromosome=[1, 1, 0, 2, 0], conflict_nodes={0, 1}
+        num_of_colors=3, graph=graph, chromosome=[1, 1, 0, 2, 0], conflict_nodes={0, 1}
     )
-    indv_2 = Individual(no_of_colors=3, graph=graph, chromosome=[1, 2, 0, 2, 1])
+    indv_2 = Individual(num_of_colors=3, graph=graph, chromosome=[1, 2, 0, 2, 1])
     indv_3 = Individual(
-        no_of_colors=3, graph=graph, chromosome=[2, 1, 0, 2, 1], conflict_nodes={1, 4}
+        num_of_colors=3, graph=graph, chromosome=[2, 1, 0, 2, 1], conflict_nodes={1, 4}
     )
     indv_prev = Individual(
-        no_of_colors=3, graph=graph, chromosome=[2, 1, 0, 0, 0], conflict_nodes={2, 3}
+        num_of_colors=3, graph=graph, chromosome=[2, 1, 0, 0, 0], conflict_nodes={2, 3}
     )
-    indv_next = Individual(no_of_colors=3, graph=graph, chromosome=[0, 1, 2, 1, 0])
+    indv_next = Individual(num_of_colors=3, graph=graph, chromosome=[0, 1, 2, 1, 0])
     chain_chunk = ChainChunk(graph, [indv_1, indv_2, indv_3], indv_prev, indv_next)
     return chain_chunk
 

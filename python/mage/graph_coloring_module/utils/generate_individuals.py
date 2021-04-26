@@ -11,7 +11,7 @@ from mage.graph_coloring_module.parameters import Parameter
 logger = logging.getLogger("graph_coloring")
 
 
-@validate(Parameter.POPULATION_SIZE, Parameter.NO_OF_COLORS)
+@validate(Parameter.POPULATION_SIZE, Parameter.NUM_OF_COLORS)
 def generate_individuals(
     graph: Graph, parameters: Dict[str, Any] = None
 ) -> List[Individual]:
@@ -21,7 +21,7 @@ def generate_individuals(
     an exception is raised."""
 
     population_size = param_value(graph, parameters, Parameter.POPULATION_SIZE)
-    no_of_colors = param_value(graph, parameters, Parameter.NO_OF_COLORS)
+    num_of_colors = param_value(graph, parameters, Parameter.NUM_OF_COLORS)
     algorithms = param_value(graph, parameters, Parameter.INIT_ALGORITHMS)
 
     individuals = []
@@ -38,7 +38,7 @@ def generate_individuals(
 
     individuals.extend(
         [
-            Individual(no_of_colors, graph)
+            Individual(num_of_colors, graph)
             for _ in range(population_size - len(individuals))
         ]
     )

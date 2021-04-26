@@ -3,10 +3,9 @@ from enum import Enum
 
 class Parameter(Enum):
     ALGORITHM = "algorithm"
-    NO_OF_COLORS = "no_of_colors"
+    NUM_OF_COLORS = "num_of_colors"
 
-    NO_OF_PROCESSES = "no_of_processes"
-    NO_OF_CHUNKS = "no_of_chunks"
+    NUM_OF_PROCESSES = "num_of_processes"
 
     POPULATION_SIZE = "population_size"
     POPULATION_FACTORY = "population_factory"
@@ -24,7 +23,7 @@ class Parameter(Enum):
     CONFLICT_ERR_BETA = "conflict_err_beta"
 
     MUTATION = "mutation"
-    MULTIPLE_MUTATION_NODES_NO_OF_NODES = "multiple_mutation_no_of_nodes"
+    MULTIPLE_MUTATION_NODES_NUM_OF_NODES = "multiple_mutation_num_of_nodes"
     RANDOM_MUTATION_PROBABILITY = "random_mutation_probability"
 
     SIMPLE_TUNNELING_MUTATION = "simple_tunneling_mutation"

@@ -18,7 +18,7 @@ def graph():
     )
 
 
-def test_no_available_colors(graph):
+def test_num_available_colors(graph):
     colors = available_colors(graph, 3, [0, 1, 0, 2, 1], 2)
     expected_colors = []
     assert sorted(colors) == sorted(expected_colors)

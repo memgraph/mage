@@ -1,4 +1,5 @@
 import mgp
+import multiprocessing
 from collections import defaultdict
 from typing import Optional, Dict, Any
 import mage.graph_coloring_module
@@ -76,11 +77,10 @@ def _get_parameters(parameters: Dict[str, Any]) -> Dict[str, Any]:
     params = _map_parameters(
         {
             Parameter.ALGORITHM: parameters.get(Parameter.ALGORITHM.value, "QA"),
-            Parameter.NO_OF_COLORS: parameters.get(Parameter.NO_OF_COLORS.value, 10),
-            Parameter.NO_OF_PROCESSES: parameters.get(
-                Parameter.NO_OF_PROCESSES.value, 3
+            Parameter.NUM_OF_COLORS: parameters.get(Parameter.NUM_OF_COLORS.value, 10),
+            Parameter.NUM_OF_PROCESSES: parameters.get(
+                Parameter.NUM_OF_PROCESSES.value, multiprocessing.cpu_count() - 1
             ),
-            Parameter.NO_OF_CHUNKS: parameters.get(Parameter.NO_OF_CHUNKS.value, 3),
             Parameter.POPULATION_SIZE: parameters.get(
                 Parameter.POPULATION_SIZE.value, 15
             ),
@@ -114,8 +114,8 @@ def _get_parameters(parameters: Dict[str, Any]) -> Dict[str, Any]:
             Parameter.MUTATION: parameters.get(
                 Parameter.MUTATION.value, "SimpleMutation"
             ),
-            Parameter.MULTIPLE_MUTATION_NODES_NO_OF_NODES: parameters.get(
-                Parameter.MULTIPLE_MUTATION_NODES_NO_OF_NODES.value, 2
+            Parameter.MULTIPLE_MUTATION_NODES_NUM_OF_NODES: parameters.get(
+                Parameter.MULTIPLE_MUTATION_NODES_NUM_OF_NODES.value, 2
             ),
             Parameter.RANDOM_MUTATION_PROBABILITY: parameters.get(
                 Parameter.RANDOM_MUTATION_PROBABILITY.value, 0.1
