@@ -1,4 +1,5 @@
 import mgp
+import multiprocessing
 from collections import defaultdict
 from typing import Optional, Dict, Any
 import mage.graph_coloring_module
@@ -78,9 +79,8 @@ def _get_parameters(parameters: Dict[str, Any]) -> Dict[str, Any]:
             Parameter.ALGORITHM: parameters.get(Parameter.ALGORITHM.value, "QA"),
             Parameter.NO_OF_COLORS: parameters.get(Parameter.NO_OF_COLORS.value, 10),
             Parameter.NO_OF_PROCESSES: parameters.get(
-                Parameter.NO_OF_PROCESSES.value, 3
+                Parameter.NO_OF_PROCESSES.value, multiprocessing.cpu_count() - 1
             ),
-            Parameter.NO_OF_CHUNKS: parameters.get(Parameter.NO_OF_CHUNKS.value, 3),
             Parameter.POPULATION_SIZE: parameters.get(
                 Parameter.POPULATION_SIZE.value, 15
             ),
@@ -92,7 +92,7 @@ def _get_parameters(parameters: Dict[str, Any]) -> Dict[str, Any]:
             ),
             Parameter.ERROR: parameters.get(Parameter.ERROR.value, "ConflictError"),
             Parameter.MAX_ITERATIONS: parameters.get(
-                Parameter.MAX_ITERATIONS.value, 10
+                Parameter.MAX_ITERATIONS.value, 50
             ),
             Parameter.ITERATION_CALLBACKS: parameters.get(
                 Parameter.ITERATION_CALLBACKS.value, []
