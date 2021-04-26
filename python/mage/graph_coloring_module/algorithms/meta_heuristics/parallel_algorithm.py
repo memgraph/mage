@@ -1,7 +1,6 @@
 import logging
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any
 from mage.graph_coloring_module.graph import Graph
-from mage.graph_coloring_module.error_functions.error import Error
 from mage.graph_coloring_module.components.individual import Individual
 from mage.graph_coloring_module.components.population import Population
 from mage.graph_coloring_module.algorithms.algorithm import Algorithm
@@ -49,7 +48,10 @@ class ParallelAlgorithm(Algorithm, ABC):
                 best_solutions[pid] = populations[pid].best_individual(
                     error.individual_err
                 )
-                if error.individual_err(graph, best_solutions[pid], parameters):
+                if (
+                    error.individual_err(graph, best_solutions[pid], parameters)
+                    < 10 - 5
+                ):
                     running_flag = 0
                 last_individuals[pid] = populations[pid][-1]
                 first_individuals[pid] = populations[pid][0]

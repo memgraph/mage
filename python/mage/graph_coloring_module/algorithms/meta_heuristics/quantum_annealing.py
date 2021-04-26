@@ -1,7 +1,6 @@
 import math
 import random
 import logging
-import multiprocessing as mp
 from typing import Dict, Any
 from mage.graph_coloring_module.parameters import Parameter
 from mage.graph_coloring_module.graph import Graph
@@ -58,6 +57,7 @@ class QA(ParallelAlgorithm):
 
         for iteration in range(max_iterations):
             if running_flag == 0:
+                print("zero")
                 return
 
             for i in range(len(population)):
@@ -73,9 +73,11 @@ class QA(ParallelAlgorithm):
                 first_individuals[pid] = population[0]
                 last_individuals[pid] = population[-1]
 
-                population.set_next_individual(first_individuals[self._next_pid(pid)])
+                population.set_next_individual(
+                    first_individuals[self._next_pid(pid, num_of_processes)]
+                )
                 population.set_prev_individual(
-                    last_individuals[self._previous_pid(pid)]
+                    last_individuals[self._previous_pid(pid, num_of_processes)]
                 )
 
             for callback in iteration_callbacks:
