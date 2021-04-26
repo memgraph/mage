@@ -12,7 +12,7 @@ namespace cycles_util {
 
 NodeState::NodeState(std::size_t number_of_nodes) {
   visited.resize(number_of_nodes, false);
-  parent.resize(number_of_nodes, 0);
+  parent.resize(number_of_nodes, -1);
   depth.resize(number_of_nodes, 0);
 }
 
@@ -28,13 +28,14 @@ void NodeState::SetDepth(std::uint64_t node_id, std::uint64_t node_depth) { dept
 
 std::uint64_t NodeState::GetDepth(std::uint64_t node_id) const { return depth[node_id]; }
 
-void FindNonSTEdges(std::uint64_t node_id, const mg_graph::GraphView<> &graph, NodeState *state,
-                    std::set<std::pair<uint64_t, uint64_t>> *non_st_edges) {
+void FindNonSpanningTreeEdges(std::uint64_t node_id, const mg_graph::GraphView<> &graph, NodeState *state,
+                              std::set<std::pair<uint64_t, uint64_t>> *non_st_edges) {
   std::unordered_set<std::uint64_t> unique_neighbour;
   state->SetVisited(node_id);
   for (const auto &neigh : graph.Neighbours(node_id)) {
     auto next_id = neigh.node_id;
 
+    // Check if is returning edge or already visited neighbour
     if (next_id == state->GetParent(node_id) || unique_neighbour.find(next_id) != unique_neighbour.end()) {
       continue;
     }
@@ -46,20 +47,22 @@ void FindNonSTEdges(std::uint64_t node_id, const mg_graph::GraphView<> &graph, N
       non_st_edges->insert(sorted_edge);
       continue;
     }
+
+    // Set depth and parent for the next ST iteration
     state->SetParent(next_id, node_id);
     state->SetDepth(next_id, state->GetDepth(node_id) + 1);
-    FindNonSTEdges(next_id, graph, state, non_st_edges);
+    FindNonSpanningTreeEdges(next_id, graph, state, non_st_edges);
   }
 }
 
 void FindFundamentalCycles(const std::set<std::pair<std::uint64_t, std::uint64_t>> &non_st_edges,
                            const NodeState &state, std::vector<std::vector<std::uint64_t>> *fundamental_cycles) {
   for (const auto [from, to] : non_st_edges) {
-    fundamental_cycles->emplace_back(FindCycle(from, to, state));
+    fundamental_cycles->emplace_back(FindFundametalCycle(from, to, state));
   }
 }
 
-std::vector<std::uint64_t> FindCycle(std::uint64_t node_a, std::uint64_t node_b, const NodeState &state) {
+std::vector<std::uint64_t> FindFundametalCycle(std::uint64_t node_a, std::uint64_t node_b, const NodeState &state) {
   std::vector<std::uint64_t> cycle;
   if (state.depth[node_a] < state.depth[node_b]) {
     std::swap(node_a, node_b);
@@ -82,12 +85,13 @@ std::vector<std::uint64_t> FindCycle(std::uint64_t node_a, std::uint64_t node_b,
     throw std::runtime_error("There should be no cross edges in DFS tree of an undirected graph.");
   }
 
+  // Close the cycle
   cycle.emplace_back(cycle[0]);
   return cycle;
 }
 
-void SolveMask(int mask, const std::vector<std::vector<std::uint64_t>> &fundamental_cycles,
-               const mg_graph::GraphView<> &graph, std::vector<std::vector<mg_graph::Node<>>> *cycles) {
+void CombineCycles(int mask, const std::vector<std::vector<std::uint64_t>> &fundamental_cycles,
+                   const mg_graph::GraphView<> &graph, std::vector<std::vector<mg_graph::Node<>>> *cycles) {
   std::map<std::pair<std::uint64_t, std::uint64_t>, std::uint64_t> edge_cnt;
   for (std::size_t i = 0; i < fundamental_cycles.size(); ++i) {
     if ((mask & (1 << i)) == 0) continue;
@@ -139,9 +143,11 @@ void SolveMask(int mask, const std::vector<std::vector<std::uint64_t>> &fundamen
 
 void GetCyclesFromFundamentals(const std::vector<std::vector<uint64_t>> &fundamental_cycles,
                                const mg_graph::GraphView<> &graph, std::vector<std::vector<mg_graph::Node<>>> *cycles) {
-  // find cycles obtained from xoring each subset of fundamental cycles.
-  for (int mask = 1; mask < (1 << fundamental_cycles.size()); ++mask) {
-    cycles_util::SolveMask(mask, fundamental_cycles, graph, cycles);
+  // Find cycles obtained from xoring each subset of fundamental cycles.
+  // Maximum mask size is 2 ^ fundamental_cycles_size
+  auto size = 1 << fundamental_cycles.size();
+  for (std::int32_t mask = 1; mask < size; ++mask) {
+    CombineCycles(mask, fundamental_cycles, graph, cycles);
   }
 }
 
@@ -167,11 +173,13 @@ std::vector<std::vector<mg_graph::Node<>>> GetCycles(const mg_graph::GraphView<>
     std::set<std::pair<std::uint64_t, std::uint64_t>> non_st_edges;
 
     state.SetParent(node.id, node.id);
-    cycles_util::FindNonSTEdges(node.id, graph, &state, &non_st_edges);
+    cycles_util::FindNonSpanningTreeEdges(node.id, graph, &state, &non_st_edges);
 
+    // After finding non spanning-tree edges, we obtain fundamental cycles
     std::vector<std::vector<std::uint64_t>> fundamental_cycles;
     cycles_util::FindFundamentalCycles(non_st_edges, state, &fundamental_cycles);
 
+    // Getting elementary cycles from the subset of fundamental ones
     cycles_util::GetCyclesFromFundamentals(fundamental_cycles, graph, &cycles);
   }
 

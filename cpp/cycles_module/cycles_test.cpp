@@ -269,13 +269,13 @@ TEST(Cycles, NeighbouringCycles) {
   graph->CreateEdge(node_2, node_3);
   graph->CreateEdge(node_2, node_3);
 
-  const auto &pairs = cycles_alg::GetNeighbourCycles(*graph);
+  const auto &cycles = cycles_alg::GetNeighbourCycles(*graph);
 
-  std::set<std::pair<std::uint64_t, std::uint64_t>> sol = {{1, 2}, {2, 3}};
-  ASSERT_EQ(sol.size(), pairs.size());
-  for (const auto &node_pair : pairs) {
-    std::pair<std::uint64_t, std::uint64_t> pair = {node_pair.first.id + 1, node_pair.second.id + 1};
-    ASSERT_TRUE(sol.find(pair) != sol.end());
+  std::set<std::pair<std::uint64_t, std::uint64_t>> expected_cycles = {{1, 2}, {2, 3}};
+  ASSERT_EQ(expected_cycles.size(), cycles.size());
+  for (const auto [node_a, node_b] : cycles) {
+    std::pair<std::uint64_t, std::uint64_t> pair = {node_a.id + 1, node_b.id + 1};
+    ASSERT_TRUE(expected_cycles.find(pair) != expected_cycles.end());
   }
 }
 
