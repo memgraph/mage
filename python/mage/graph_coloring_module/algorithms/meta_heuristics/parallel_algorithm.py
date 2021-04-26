@@ -46,10 +46,7 @@ class ParallelAlgorithm(Algorithm, ABC):
                 best_solutions[pid] = populations[pid].best_individual(
                     error.individual_err
                 )
-                if (
-                    error.individual_err(graph, best_solutions[pid], parameters)
-                    < 10 - 5
-                ):
+                if error.individual_err(graph, best_solutions[pid], parameters) < 1e-5:
                     running_flag = 0
                 last_individuals[pid] = populations[pid][-1]
                 first_individuals[pid] = populations[pid][0]
