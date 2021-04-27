@@ -1,5 +1,4 @@
 import mgp
-import multiprocessing
 from collections import defaultdict
 from typing import Optional, Dict, Any
 import mage.graph_coloring_module
