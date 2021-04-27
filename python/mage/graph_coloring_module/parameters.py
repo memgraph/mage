@@ -6,7 +6,6 @@ class Parameter(Enum):
     NO_OF_COLORS = "no_of_colors"
 
     NO_OF_PROCESSES = "no_of_processes"
-    NO_OF_CHUNKS = "no_of_chunks"
 
     POPULATION_SIZE = "population_size"
     POPULATION_FACTORY = "population_factory"
