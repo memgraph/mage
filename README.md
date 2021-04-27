@@ -12,7 +12,6 @@ Query modules implemented in Python:
 * [distance_calculator.py](python/distance_calculator.py): Module for finding the geographical distance between two points defined with 'lng' and 'lat' coordinates.
 * [tsp.py](python/tsp.py): An algorithm for finding the shortest possible route that visits each vertex exactly once.
 * [set_cover.py](python/set_cover.py): The algorithm for finding minimum cost subcollection of sets that covers all elements of a universe.
-* [collapse.py](python/collapse.py): Module for collapsing specifically connected graph nodes into different subgraphs.
 
 Query modules implemented in C/C++:
 * [connectivity_module.cpp](cpp/connectivity_module/connectivity_module.cpp): A module that finds weakly connected components in a graph.
