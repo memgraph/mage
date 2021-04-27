@@ -79,7 +79,7 @@ def _get_parameters(parameters: Dict[str, Any]) -> Dict[str, Any]:
             Parameter.ALGORITHM: parameters.get(Parameter.ALGORITHM.value, "QA"),
             Parameter.NO_OF_COLORS: parameters.get(Parameter.NO_OF_COLORS.value, 10),
             Parameter.NO_OF_PROCESSES: parameters.get(
-                Parameter.NO_OF_PROCESSES.value, multiprocessing.cpu_count() - 1
+                Parameter.NO_OF_PROCESSES.value, 1
             ),
             Parameter.POPULATION_SIZE: parameters.get(
                 Parameter.POPULATION_SIZE.value, 15
