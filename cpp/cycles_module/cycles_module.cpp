@@ -5,8 +5,8 @@
 
 namespace {
 
-const char *kFieldCycleId = "cycle_id";
-const char *kFieldNode = "node";
+constexpr char const *kFieldCycleId = "cycle_id";
+constexpr char const *kFieldNode = "node";
 
 void InsertCycleRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *memory, const int cycle_id,
                        const int node_id) {
