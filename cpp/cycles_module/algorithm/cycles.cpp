@@ -98,8 +98,8 @@ void CombineCycles(int mask, const std::vector<std::vector<std::uint64_t>> &fund
     }
   }
 
-  std::map<std::uint64_t, std::vector<std::uint64_t>> adj_list;
-  std::set<std::uint64_t> nodes;
+  std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> adj_list;
+  std::unordered_set<std::uint64_t> nodes;
   for (const auto [key, value] : edge_cnt) {
     if (value % 2 == 0) continue;
 
@@ -115,20 +115,20 @@ void CombineCycles(int mask, const std::vector<std::vector<std::uint64_t>> &fund
     if (adj_list[node].size() != 2) return;
   }
 
-  std::map<std::uint64_t, bool> visited;
+  std::unordered_set<std::uint64_t> visited;
   std::vector<mg_graph::Node<>> cycle;
   auto curr_node = *nodes.begin();
 
-  while (!visited[curr_node]) {
+  while (visited.find(curr_node) == visited.end()) {
     cycle.push_back({curr_node});
-    visited[curr_node] = true;
+    visited.insert(curr_node);
     for (const auto next_node : adj_list[curr_node]) {
-      if (!visited[next_node]) curr_node = next_node;
+      if (visited.find(curr_node) == visited.end()) curr_node = next_node;
     }
   }
 
   for (const auto node : nodes) {
-    if (!visited[node]) {
+    if (visited.find(curr_node) == visited.end()) {
       return;
     }
   }
