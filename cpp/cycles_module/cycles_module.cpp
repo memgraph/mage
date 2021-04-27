@@ -1,9 +1,3 @@
-#include <iostream>
-#include <map>
-#include <optional>
-#include <sstream>
-#include <unordered_set>
-
 #include <mg_procedure.h>
 #include <mg_utils.hpp>
 
@@ -11,8 +5,8 @@
 
 namespace {
 
-const char *k_field_cycle_id = "cycle_id";
-const char *k_field_node = "node";
+const char *kFieldCycleId = "cycle_id";
+const char *kFieldNode = "node";
 
 void InsertCycleRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *memory, const int cycle_id,
                        const int node_id) {
@@ -21,8 +15,8 @@ void InsertCycleRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *m
     throw mg_exception::NotEnoughMemoryException();
   }
 
-  mg_utility::InsertIntValueResult(record, k_field_cycle_id, cycle_id, memory);
-  mg_utility::InsertNodeValueResult(graph, record, k_field_node, node_id, memory);
+  mg_utility::InsertIntValueResult(record, kFieldCycleId, cycle_id, memory);
+  mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
 }
 
 void GetCycles(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
@@ -47,12 +41,12 @@ void GetCycles(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result
 // Each module needs to define mgp_init_module function.
 // Here you can register multiple procedures your module supports.
 extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
-  mgp_proc *proc = mgp_module_add_read_procedure(module, "cycles", GetCycles);
+  mgp_proc *proc = mgp_module_add_read_procedure(module, "get", GetCycles);
 
   if (!proc) return 1;
 
-  if (!mgp_proc_add_result(proc, k_field_cycle_id, mgp_type_int())) return 1;
-  if (!mgp_proc_add_result(proc, k_field_node, mgp_type_node())) return 1;
+  if (!mgp_proc_add_result(proc, kFieldCycleId, mgp_type_int())) return 1;
+  if (!mgp_proc_add_result(proc, kFieldNode, mgp_type_node())) return 1;
 
   return 0;
 }

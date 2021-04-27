@@ -1,6 +1,3 @@
-#include <algorithm>
-#include <cassert>
-#include <set>
 #include <unordered_set>
 
 #include <mg_exceptions.hpp>
@@ -106,7 +103,7 @@ void CombineCycles(int mask, const std::vector<std::vector<std::uint64_t>> &fund
   for (const auto [key, value] : edge_cnt) {
     if (value % 2 == 0) continue;
 
-    auto const [from, to] = key;
+    const auto [from, to] = key;
     adj_list[from].push_back(to);
     adj_list[to].push_back(from);
     nodes.insert(from);
@@ -114,7 +111,7 @@ void CombineCycles(int mask, const std::vector<std::vector<std::uint64_t>> &fund
   }
 
   // deg(v) = 2 for all vertices in a cycle.
-  for (auto node : nodes) {
+  for (const auto node : nodes) {
     if (adj_list[node].size() != 2) return;
   }
 
@@ -125,12 +122,12 @@ void CombineCycles(int mask, const std::vector<std::vector<std::uint64_t>> &fund
   while (!visited[curr_node]) {
     cycle.push_back({curr_node});
     visited[curr_node] = true;
-    for (auto next_node : adj_list[curr_node]) {
+    for (const auto next_node : adj_list[curr_node]) {
       if (!visited[next_node]) curr_node = next_node;
     }
   }
 
-  for (auto node : nodes) {
+  for (const auto node : nodes) {
     if (!visited[node]) {
       return;
     }
@@ -143,8 +140,6 @@ void CombineCycles(int mask, const std::vector<std::vector<std::uint64_t>> &fund
 
 void GetCyclesFromFundamentals(const std::vector<std::vector<uint64_t>> &fundamental_cycles,
                                const mg_graph::GraphView<> &graph, std::vector<std::vector<mg_graph::Node<>>> *cycles) {
-  // Find cycles obtained from xoring each subset of fundamental cycles.
-  // Maximum mask size is 2 ^ fundamental_cycles_size
   auto size = 1 << fundamental_cycles.size();
   for (std::int32_t mask = 1; mask < size; ++mask) {
     CombineCycles(mask, fundamental_cycles, graph, cycles);
@@ -161,7 +156,7 @@ std::vector<std::vector<mg_graph::Node<>>> GetCycles(const mg_graph::GraphView<>
   cycles_util::NodeState state(number_of_nodes);
 
   std::vector<std::vector<mg_graph::Node<>>> cycles;
-  // Solve for each connected component
+  // TODO: Solve for each connected component
   for (const auto &node : graph.Nodes()) {
     if (state.IsVisited(node.id)) {
       continue;
@@ -170,9 +165,8 @@ std::vector<std::vector<mg_graph::Node<>>> GetCycles(const mg_graph::GraphView<>
     // First we find edges that do not lie on a DFS tree (basically,
     // backedges and crossedges). From those edges we expand into the
     // spanning tree to obtain all fundamental cycles.
-    std::set<std::pair<std::uint64_t, std::uint64_t>> non_st_edges;
-
     state.SetParent(node.id, node.id);
+    std::set<std::pair<std::uint64_t, std::uint64_t>> non_st_edges;
     cycles_util::FindNonSpanningTreeEdges(node.id, graph, &state, &non_st_edges);
 
     // After finding non spanning-tree edges, we obtain fundamental cycles
@@ -191,7 +185,7 @@ std::vector<std::pair<mg_graph::Node<>, mg_graph::Node<>>> GetNeighbourCycles(co
   std::set<std::pair<std::uint64_t, std::uint64_t>> multi_edges;
   for (const auto &edge : graph.Edges()) {
     const auto [from, to] = std::minmax(edge.from, edge.to);
-    std::pair<std::uint64_t, std::uint64_t> e = {from, to};
+    std::pair<std::uint64_t, std::uint64_t> e{from, to};
     if (multi_edges.find(e) != multi_edges.end()) {
       continue;
     }
