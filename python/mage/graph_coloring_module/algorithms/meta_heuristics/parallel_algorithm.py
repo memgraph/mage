@@ -80,6 +80,7 @@ class ParallelAlgorithm(Algorithm, ABC):
                     graph, individual, parameters
                 ),
             )
+
             return best_individual
 
     @abstractmethod

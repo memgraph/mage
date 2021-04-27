@@ -92,7 +92,7 @@ def _get_parameters(parameters: Dict[str, Any]) -> Dict[str, Any]:
             ),
             Parameter.ERROR: parameters.get(Parameter.ERROR.value, "ConflictError"),
             Parameter.MAX_ITERATIONS: parameters.get(
-                Parameter.MAX_ITERATIONS.value, 50
+                Parameter.MAX_ITERATIONS.value, 10
             ),
             Parameter.ITERATION_CALLBACKS: parameters.get(
                 Parameter.ITERATION_CALLBACKS.value, []

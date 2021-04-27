@@ -62,10 +62,18 @@ class QA(ParallelAlgorithm):
             for i in range(len(population)):
                 self._markow_chain(graph, population, i, parameters)
 
-            if math.fabs(population.min_error(error.individual_err)) < 1e-5:
+            best_individual = population.best_individual(error.individual_err)
+            if error.individual_err(
+                graph, best_individual, parameters
+            ) < error.individual_err(graph, best_solutions[pid], parameters):
+                best_solutions[pid] = best_individual
+
+            if (
+                math.fabs(error.individual_err(graph, best_individual, parameters))
+                < 1e-5
+            ):
                 with running_flag.get_lock():
                     running_flag = 0
-                best_solutions[pid] = population.best_individual(error.individual_err)
                 return
 
             if iteration % communication_delay == 0:
