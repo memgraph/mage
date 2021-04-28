@@ -123,12 +123,12 @@ void CombineCycles(int mask, const std::vector<std::vector<std::uint64_t>> &fund
     cycle.push_back({curr_node});
     visited.insert(curr_node);
     for (const auto next_node : adj_list[curr_node]) {
-      if (visited.find(curr_node) == visited.end()) curr_node = next_node;
+      if (visited.find(next_node) == visited.end()) curr_node = next_node;
     }
   }
 
   for (const auto node : nodes) {
-    if (visited.find(curr_node) == visited.end()) {
+    if (visited.find(node) == visited.end()) {
       return;
     }
   }
