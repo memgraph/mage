@@ -254,7 +254,7 @@ TEST(Cycles, HandmadeComplexCycle) {
 }
 
 TEST(Cycles, NeighbouringCycles) {
-  auto graph = new mg_graph::Graph<>();
+  auto graph = std::make_unique<mg_graph::Graph<>>();
   auto node_1 = graph->CreateNode(0);
   auto node_2 = graph->CreateNode(1);
   auto node_3 = graph->CreateNode(2);

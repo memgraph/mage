@@ -87,7 +87,7 @@ std::vector<std::uint64_t> FindFundametalCycle(std::uint64_t node_a, std::uint64
   return cycle;
 }
 
-void CombineCycles(int mask, const std::vector<std::vector<std::uint64_t>> &fundamental_cycles,
+void CombineCycles(std::uint32_t mask, const std::vector<std::vector<std::uint64_t>> &fundamental_cycles,
                    const mg_graph::GraphView<> &graph, std::vector<std::vector<mg_graph::Node<>>> *cycles) {
   std::map<std::pair<std::uint64_t, std::uint64_t>, std::uint64_t> edge_cnt;
   for (std::size_t i = 0; i < fundamental_cycles.size(); ++i) {
@@ -123,7 +123,10 @@ void CombineCycles(int mask, const std::vector<std::vector<std::uint64_t>> &fund
     cycle.push_back({curr_node});
     visited.insert(curr_node);
     for (const auto next_node : adj_list[curr_node]) {
-      if (visited.find(next_node) == visited.end()) curr_node = next_node;
+      if (visited.find(next_node) == visited.end()) {
+        curr_node = next_node;
+        break;
+      }
     }
   }
 
@@ -140,8 +143,8 @@ void CombineCycles(int mask, const std::vector<std::vector<std::uint64_t>> &fund
 
 void GetCyclesFromFundamentals(const std::vector<std::vector<uint64_t>> &fundamental_cycles,
                                const mg_graph::GraphView<> &graph, std::vector<std::vector<mg_graph::Node<>>> *cycles) {
-  auto size = 1 << fundamental_cycles.size();
-  for (std::int32_t mask = 1; mask < size; ++mask) {
+  std::uint32_t size = 1 << fundamental_cycles.size();
+  for (std::uint32_t mask = 1; mask < size; ++mask) {
     CombineCycles(mask, fundamental_cycles, graph, cycles);
   }
 }

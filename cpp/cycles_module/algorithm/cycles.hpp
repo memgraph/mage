@@ -73,7 +73,7 @@ void FindFundamentalCycles(const std::set<std::pair<std::uint64_t, std::uint64_t
 ///@param graph Graph for exploration
 ///@param cycles Elementary final graph cycles
 ///
-void CombineCycles(int mask, const std::vector<std::vector<std::uint64_t>> &fundamental_cycles,
+void CombineCycles(std::uint32_t mask, const std::vector<std::vector<std::uint64_t>> &fundamental_cycles,
                    const mg_graph::GraphView<> &graph, std::vector<std::vector<mg_graph::Node<>>> *cycles);
 
 ///
@@ -104,6 +104,8 @@ namespace cycles_alg {
 /// algorithm's runtime is spent on finding all subsets of fundamental cycles
 /// which takes about O(2^(|E|-|V|+1)) time, where E represents a set of
 /// edges and V represents a set of vertices.
+///
+/// TODO: Add neighbor cycles inside this method
 ///
 ///@param graph Graph for exploration
 ///@return std::vector<std::vector<mg_graph::Node<>>> Cycles represented with Node
