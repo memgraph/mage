@@ -9,7 +9,7 @@ namespace cycles_util {
 
 NodeState::NodeState(std::size_t number_of_nodes) {
   visited.resize(number_of_nodes, false);
-  parent.resize(number_of_nodes, -1);
+  parent.resize(number_of_nodes, std::nullopt);
   depth.resize(number_of_nodes, 0);
 }
 
@@ -19,7 +19,7 @@ bool NodeState::IsVisited(std::uint64_t node_id) const { return visited[node_id]
 
 void NodeState::SetParent(std::uint64_t parent_id, std::uint64_t node_id) { parent[parent_id] = node_id; }
 
-std::uint64_t NodeState::GetParent(std::uint64_t node_id) const { return parent[node_id]; }
+std::optional<std::uint64_t> NodeState::GetParent(std::uint64_t node_id) const { return parent[node_id]; }
 
 void NodeState::SetDepth(std::uint64_t node_id, std::uint64_t node_depth) { depth[node_id] = node_depth; }
 
@@ -33,7 +33,8 @@ void FindNonSpanningTreeEdges(std::uint64_t node_id, const mg_graph::GraphView<>
     auto next_id = neigh.node_id;
 
     // Check if is returning edge or already visited neighbour
-    if (next_id == state->GetParent(node_id) || unique_neighbour.find(next_id) != unique_neighbour.end()) {
+    if (state->GetParent(node_id) != std::nullopt &&
+        (next_id == state->GetParent(node_id) || unique_neighbour.find(next_id) != unique_neighbour.end())) {
       continue;
     }
 
@@ -74,7 +75,10 @@ std::vector<std::uint64_t> FindFundametalCycle(std::uint64_t node_a, std::uint64
   // (a)  ()           ()   ()
   cycle.emplace_back(node_a);
   while (state.depth[node_a] > state.depth[node_b]) {
-    node_a = state.parent[node_a];
+    if (state.GetParent(node_a) == std::nullopt) {
+      throw mg_exception::InvalidIDException();
+    }
+    node_a = state.GetParent(node_a).value();
     cycle.emplace_back(node_a);
   }
 

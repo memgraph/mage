@@ -11,7 +11,7 @@ namespace cycles_util {
 struct NodeState {
   std::vector<bool> visited;
   std::vector<std::uint64_t> discovery, depth;
-  std::vector<std::int64_t> parent;
+  std::vector<std::optional<std::uint64_t>> parent;
 
   explicit NodeState(std::size_t number_of_nodes);
 
@@ -21,7 +21,7 @@ struct NodeState {
 
   void SetParent(std::uint64_t parent_id, std::uint64_t node_id);
 
-  std::uint64_t GetParent(std::uint64_t node_id) const;
+  std::optional<std::uint64_t> GetParent(std::uint64_t node_id) const;
 
   void SetDepth(std::uint64_t node_id, std::uint64_t node_depth);
 
