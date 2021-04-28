@@ -34,7 +34,7 @@ void FindNonSpanningTreeEdges(std::uint64_t node_id, const mg_graph::GraphView<>
 
     // Check if is returning edge or already visited neighbour
     if (const auto parent = state->GetParent(node_id);
-        parent && (next_id == parent || unique_neighbour.find(next_id) != unique_neighbour.end())) {
+        parent && (next_id == *parent || unique_neighbour.find(next_id) != unique_neighbour.end())) {
       continue;
     }
 
@@ -75,10 +75,11 @@ std::vector<std::uint64_t> FindFundametalCycle(std::uint64_t node_a, std::uint64
   // (a)  ()           ()   ()
   cycle.emplace_back(node_a);
   while (state.depth[node_a] > state.depth[node_b]) {
-    if (!state.GetParent(node_a)) {
+    const auto maybe_parent = state.GetParent(node_a);
+    if (!maybe_parent) {
       throw mg_exception::InvalidIDException();
     }
-    node_a = state.GetParent(node_a).value();
+    node_a = *maybe_parent;
     cycle.emplace_back(node_a);
   }
 
