@@ -14,7 +14,8 @@
 namespace mg_graph {
 
 /// Graph representation.
-template <typename TSize = uint64_t> class Graph : public GraphView<TSize> {
+template <typename TSize = std::uint64_t>
+class Graph : public GraphView<TSize> {
 
   using typename GraphView<TSize>::TNode;
   using typename GraphView<TSize>::TEdge;
@@ -119,7 +120,7 @@ public:
   /// Creates a node.
   ///
   /// @return     Created node id
-  TSize CreateNode(uint64_t memgraph_id) {
+  TSize CreateNode(std::uint64_t memgraph_id) {
     auto id = nodes_.size();
     nodes_.push_back({id});
     adj_list_.emplace_back();
@@ -139,7 +140,8 @@ public:
   /// @param[in]  to    The to node identifier
   ///
   /// @return     Created edge id
-  TSize CreateEdge(uint64_t memgraph_id_from, uint64_t memgraph_id_to) {
+  TSize CreateEdge(std::uint64_t memgraph_id_from,
+                   std::uint64_t memgraph_id_to) {
     auto from = memgraph_to_inner_id_[memgraph_id_from];
     auto to = memgraph_to_inner_id_[memgraph_id_to];
 
@@ -250,7 +252,7 @@ public:
   ///
   /// @param node_id view's inner ID
   ///
-  TSize GetMemgraphNodeId(uint64_t node_id) {
+  TSize GetMemgraphNodeId(std::uint64_t node_id) {
     if (inner_to_memgraph_id_.find(node_id) == inner_to_memgraph_id_.end()) {
       throw mg_exception::InvalidIDException();
     }
@@ -280,8 +282,8 @@ private:
 
   std::vector<TNode> nodes_;
   std::vector<TEdge> edges_;
-  std::unordered_map<TSize, uint64_t> inner_to_memgraph_id_;
-  std::unordered_map<uint64_t, TSize> memgraph_to_inner_id_;
+  std::unordered_map<TSize, std::uint64_t> inner_to_memgraph_id_;
+  std::unordered_map<std::uint64_t, TSize> memgraph_to_inner_id_;
 
   std::multimap<std::pair<TSize, TSize>, TSize> nodes_to_edge_;
 };

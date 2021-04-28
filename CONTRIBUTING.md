@@ -16,4 +16,4 @@ Before creating a bug report, please check out [GitHub Issues](https://github.co
 
 Please send a GitHub [Pull Request](https://github.com/memgraph/mage/pulls) with a clear list of what you've done. Make sure all of your commits are atomic (one feature per commit).
 
-If you need information on how Memgraph query modules work and how to implement them, take a look at our [documentation](https://docs.memgraph.com/memgraph/database-functionalities/query-modules) and specifically this [reference guide section](https://docs.memgraph.com/memgraph/reference-guide/query-modules).
+If you need information on how Memgraph query modules work and how to implement them, take a look at our [documentation](https://docs.memgraph.com/memgraph/database-functionalities/query-modules/built-in-query-modules/) and specifically this [reference guide section](https://docs.memgraph.com/memgraph/reference-guide/query-modules).
