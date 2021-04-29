@@ -255,15 +255,14 @@ TEST(Cycles, HandmadeComplexCycle) {
 
 TEST(Cycles, NeighbouringCycles) {
   auto graph = mg_generate::BuildGraph(4, {{0, 1}, {0, 1}, {0, 3}, {1, 2}, {1, 2}, {1, 2}});
+  auto cycles = cycles_alg::GetCycles(*graph);
+  ASSERT_TRUE(CheckCycles(cycles, {{0, 1}, {1, 2}}));
+}
 
-  const auto &cycles = cycles_alg::GetNeighbourCycles(*graph);
-
-  std::set<std::pair<std::uint64_t, std::uint64_t>> expected_cycles = {{0, 1}, {1, 2}};
-  ASSERT_EQ(expected_cycles.size(), cycles.size());
-  for (const auto [node_a, node_b] : cycles) {
-    std::pair<std::uint64_t, std::uint64_t> pair = {node_a.id, node_b.id};
-    ASSERT_TRUE(expected_cycles.find(pair) != expected_cycles.end());
-  }
+TEST(Cycles, SelfLoops) {
+  auto graph = mg_generate::BuildGraph(4, {{0, 1}, {1, 2}, {2, 3}, {1, 1}});
+  auto cycles = cycles_alg::GetCycles(*graph);
+  ASSERT_TRUE(CheckCycles(cycles, {{1, 1}}));
 }
 
 int main(int argc, char **argv) {

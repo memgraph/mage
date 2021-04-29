@@ -185,24 +185,22 @@ std::vector<std::vector<mg_graph::Node<>>> GetCycles(const mg_graph::GraphView<>
     cycles_util::GetCyclesFromFundamentals(fundamental_cycles, graph, &cycles);
   }
 
-  return cycles;
-}
-
-std::vector<std::pair<mg_graph::Node<>, mg_graph::Node<>>> GetNeighbourCycles(const mg_graph::GraphView<> &graph) {
-  std::vector<std::pair<mg_graph::Node<>, mg_graph::Node<>>> cycles;
   std::set<std::pair<std::uint64_t, std::uint64_t>> multi_edges;
   for (const auto &edge : graph.Edges()) {
-    const auto [from, to] = std::minmax(edge.from, edge.to);
-    std::pair<std::uint64_t, std::uint64_t> e{from, to};
-    if (multi_edges.find(e) != multi_edges.end()) {
+    const auto sorted_edge = std::minmax(edge.from, edge.to);
+    if (multi_edges.find(sorted_edge) != multi_edges.end()) {
       continue;
     }
-    multi_edges.insert(e);
+    multi_edges.insert(sorted_edge);
+
+    const auto [from, to] = sorted_edge;
     const auto &edges = graph.GetEdgesBetweenNodes(from, to);
-    if (edges.size() > 1) {
+    // Add neighbor cycles and self-loops
+    if (edges.size() > 1 || from == to) {
       cycles.push_back({{from}, {to}});
     }
   }
+
   return cycles;
 }
 

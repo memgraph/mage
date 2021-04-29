@@ -92,7 +92,8 @@ void GetCyclesFromFundamentals(const std::vector<std::vector<std::uint64_t>> &fu
 namespace cycles_alg {
 
 /// @brief Returns a list of all simple cycles of an undirected graph G. Each simple
-/// cycle is represented by a list of nodes in cycle order.
+/// cycle is represented by a list of nodes in cycle order. Cycles can be double connected neighboring nodes or self
+/// loops.
 ///
 /// There is no other guarantee on the order of the nodes in a cycle.
 ///
@@ -105,19 +106,9 @@ namespace cycles_alg {
 /// which takes about O(2^(|E|-|V|+1)) time, where E represents a set of
 /// edges and V represents a set of vertices.
 ///
-/// TODO: Add neighbor cycles inside this method
-///
 ///@param graph Graph for exploration
 ///@return std::vector<std::vector<mg_graph::Node<>>> Cycles represented with Node
 ///
 std::vector<std::vector<mg_graph::Node<>>> GetCycles(const mg_graph::GraphView<> &graph);
-
-///
-///@brief Returns the list of cycles from the edges between two adjacent nodes.
-///
-///@param graph Graph for exploration
-///@return std::vector<std::pair<mg_graph::Node<>, mg_graph::Node<>>> Cycles represented with Node pairs
-///
-std::vector<std::pair<mg_graph::Node<>, mg_graph::Node<>>> GetNeighbourCycles(const mg_graph::GraphView<> &graph);
 
 }  // namespace cycles_alg
