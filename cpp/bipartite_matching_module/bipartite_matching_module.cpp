@@ -1,9 +1,3 @@
-#include <iostream>
-#include <map>
-#include <optional>
-#include <sstream>
-#include <unordered_set>
-
 #include <mg_procedure.h>
 #include <mg_exceptions.hpp>
 #include <mg_utils.hpp>
@@ -12,22 +6,22 @@
 
 namespace {
 
-const char *fieldMatchingNumber = "maximum_bipartite_matching";
+constexpr char const *kFieldMatchingNumber = "maximum_bipartite_matching";
 
 void InsertBipartiteMatchingRecord(mgp_result *result, mgp_memory *memory, const int matching_number) {
-  mgp_result_record *record = mgp_result_new_record(result);
+  auto *record = mgp_result_new_record(result);
   if (record == nullptr) {
     throw mg_exception::NotEnoughMemoryException();
   }
 
-  mg_utility::InsertIntValueResult(record, fieldMatchingNumber, matching_number, memory);
+  mg_utility::InsertIntValueResult(record, kFieldMatchingNumber, matching_number, memory);
 }
 
 void GetMaximumBipartiteMatching(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result,
                                  mgp_memory *memory) {
   try {
-    auto *graph = mg_utility::GetGraphView(memgraph_graph, result, memory);
-    auto maximum_bipartite_matching = bipartite_matching_alg::BipartiteMatching(graph);
+    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory);
+    auto maximum_bipartite_matching = bipartite_matching_alg::BipartiteMatching(*graph);
 
     InsertBipartiteMatchingRecord(result, memory, maximum_bipartite_matching);
   } catch (const std::exception &e) {
@@ -41,11 +35,10 @@ void GetMaximumBipartiteMatching(const mgp_list *args, const mgp_graph *memgraph
 // Each module needs to define mgp_init_module function.
 // Here you can register multiple procedures your module supports.
 extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
-  mgp_proc *proc = mgp_module_add_read_procedure(module, "get", GetMaximumBipartiteMatching);
-
+  mgp_proc *proc = mgp_module_add_read_procedure(module, "max", GetMaximumBipartiteMatching);
   if (!proc) return 1;
 
-  if (!mgp_proc_add_result(proc, fieldMatchingNumber, mgp_type_int())) return 1;
+  if (!mgp_proc_add_result(proc, kFieldMatchingNumber, mgp_type_int())) return 1;
 
   return 0;
 }
