@@ -43,7 +43,8 @@ class RandomMutation(Mutation):
 
         node = (
             random.choice(non_conflict_nodes)
-            if random.random() < random_mutation_probability
+            if len(non_conflict_nodes) > 0
+            and random.random() < random_mutation_probability
             else random.choice(list(conflict_nodes))
         )
         colors = available_colors(graph, no_of_colors, individual.chromosome, node)
