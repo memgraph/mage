@@ -68,6 +68,7 @@ jobs:
       run: |
         cd e2e
         python -m pytest .
+
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
@@ -76,6 +77,15 @@ jobs:
         cd rust/rsmgp-sys
         cargo fmt -- --check
         cargo test
+    - name: Run code coverage
+      uses: actions-rs/tarpaulin@v0.1.3
+      with:
+        args: '--out Html --ignore-tests'
+    - name: Archive code coverage results
+      uses: actions/upload-artifact@v1
+      with:
+        name: rust-code-coverage-report
+        path: tarpaulin-report.html
     - name: Rust example build
       run: |
         cd rust/rsmgp-example
