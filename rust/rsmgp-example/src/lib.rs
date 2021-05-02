@@ -3,6 +3,7 @@ use rsmgp_sys::mgp::*;
 use rsmgp_sys::result::*;
 use rsmgp_sys::rsmgp::*;
 use rsmgp_sys::value::*;
+use rsmgp_sys::vertex::*;
 use std::os::raw::c_int;
 use std::panic;
 
@@ -16,7 +17,7 @@ fn test_procedure(
     let mgp_graph_iterator = make_graph_vertices_iterator(graph, result, memory)?;
     for mgp_vertex in mgp_graph_iterator {
         let mgp_record = make_result_record(result)?;
-        let has_label = mgp_vertex.has_label("L3");
+        let has_label = mgp_vertex.has_label(c_str!("L3"));
         let mgp_value = make_bool_value(has_label, result, memory)?;
         insert_result_record(&mgp_record, c_str!("has_label"), &mgp_value, result)?;
     }

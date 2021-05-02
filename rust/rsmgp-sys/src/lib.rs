@@ -7,3 +7,4 @@ pub mod mgp;
 pub mod result;
 pub mod rsmgp;
 pub mod value;
+pub mod vertex;
