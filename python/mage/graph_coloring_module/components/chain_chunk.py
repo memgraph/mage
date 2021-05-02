@@ -13,25 +13,25 @@ from mage.graph_coloring_module.utils.parameters_utils import param_value
 
 class ChainChunkFactory:
     @staticmethod
-    @validate(Parameter.POPULATION_SIZE, Parameter.NO_OF_CHUNKS)
+    @validate(Parameter.POPULATION_SIZE, Parameter.NO_OF_PROCESSES)
     def create(
         graph: Graph, parameters: Dict[str, Any] = None
     ) -> Optional[List[Population]]:
-        """Returns a list of no_of_chunks populations that have approximately
-        population_size / no_of_chunks individuals."""
+        """Returns a list of no_of_processes populations that have approximately
+        population_size / no_of_processes individuals."""
 
         population_size = param_value(graph, parameters, Parameter.POPULATION_SIZE)
-        no_of_chunks = param_value(graph, parameters, Parameter.NO_OF_CHUNKS)
+        no_of_processes = param_value(graph, parameters, Parameter.NO_OF_PROCESSES)
 
         individuals = generate_individuals(graph, parameters)
         populations = []
         chunks = ChainChunkFactory._list_chunks(
-            individuals, population_size, no_of_chunks
+            individuals, population_size, no_of_processes
         )
 
         for i, chunk in enumerate(chunks):
-            prev_chunk = i - 1 if i - 1 > 0 else no_of_chunks - 1
-            next_chunk = i + 1 if i + 1 < no_of_chunks else 0
+            prev_chunk = i - 1 if i - 1 > 0 else no_of_processes - 1
+            next_chunk = i + 1 if i + 1 < no_of_processes else 0
             populations.append(
                 ChainChunk(graph, chunk, chunks[prev_chunk][-1], chunks[next_chunk][0])
             )
