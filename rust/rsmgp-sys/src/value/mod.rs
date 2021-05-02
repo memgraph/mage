@@ -22,12 +22,27 @@ impl Drop for MgpValue {
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn make_null_value(result: *mut mgp_result, memory: *mut mgp_memory) -> MgpResult<MgpValue> {
+    let unable_alloc_value_msg = c_str!("Unable to allocate null.");
+    unsafe {
+        let mg_value: MgpValue = MgpValue {
+            value: ffi::mgp_value_make_null(memory),
+        };
+        if mg_value.value.is_null() {
+            ffi::mgp_result_set_error_msg(result, unable_alloc_value_msg.as_ptr());
+            return Err(MgpError::MgpAllocationError);
+        }
+        Ok(mg_value)
+    }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn make_bool_value(
     value: bool,
     result: *mut mgp_result,
     memory: *mut mgp_memory,
 ) -> MgpResult<MgpValue> {
-    let unable_alloc_value_msg = c_str!("Unable to allocate boolean value.");
+    let unable_alloc_value_msg = c_str!("Unable to allocate bool.");
     unsafe {
         let mg_value: MgpValue = MgpValue {
             value: ffi::mgp_value_make_bool(if !value { 0 } else { 1 }, memory),
