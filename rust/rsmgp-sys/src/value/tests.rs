@@ -1,11 +1,13 @@
-use crate::mgp::mock_ffi::*;
 use super::*;
+use crate::mgp::mock_ffi::*;
+use serial_test::serial;
 
 fn print_type_of<T>(_: &T) {
     println!("{}", std::any::type_name::<T>())
 }
 
 #[test]
+#[serial]
 fn test_make_true_bool_value() {
     let ctx_1 = mgp_value_make_bool_context();
     ctx_1.expect().times(1).returning(|value, _| {
@@ -24,6 +26,7 @@ fn test_make_true_bool_value() {
 }
 
 #[test]
+#[serial]
 fn test_make_int_value() {
     let ctx_1 = mgp_value_make_int_context();
     ctx_1.expect().times(1).returning(|value, _| {
@@ -42,8 +45,9 @@ fn test_make_int_value() {
 }
 
 #[test]
+#[serial]
 fn test_make_string_value() {
-    use std::ffi::{CStr};
+    use std::ffi::CStr;
 
     let ctx_1 = mgp_value_make_string_context();
     ctx_1.expect().times(1).returning(|value, _| unsafe {
@@ -66,6 +70,7 @@ fn test_make_string_value() {
 }
 
 #[test]
+#[serial]
 fn test_make_double_value() {
     let ctx_1 = mgp_value_make_double_context();
     ctx_1.expect().times(1).returning(|value, _| {

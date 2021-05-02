@@ -11,6 +11,12 @@ mockall_double = "0.2.0"
 
 [dev-dependencies]
 mockall = "0.9.1"
+serial_test = "0.5.1"
 
 [build-dependencies]
 bindgen = "0.57.0"
+
+[dev-dependencies.cargo-husky]
+version = "1"
+default-features = false
+features = ["user-hooks"]

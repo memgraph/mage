@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -Eeuo pipefail
+MAGE_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/../.."
+
+check() {
+   cargo clippy
+   cargo fmt
+}
+
+cd "$MAGE_ROOT" || exit 1
+for project in "$MAGE_ROOT"/rust/*; do
+    if [ -d "$project" ]; then
+        cd "$project" || exit 1
+        check
+    fi
+done

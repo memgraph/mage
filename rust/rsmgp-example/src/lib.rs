@@ -1,8 +1,8 @@
 use c_str_macro::c_str;
 use rsmgp_sys::mgp::*;
 use rsmgp_sys::result::*;
-use rsmgp_sys::value::*;
 use rsmgp_sys::rsmgp::*;
+use rsmgp_sys::value::*;
 use std::os::raw::c_int;
 use std::panic;
 
