@@ -125,9 +125,9 @@ TEST(BipartiteMatching, Performance) {
   auto num_of_nodes = 250;
   auto num_of_edges = num_of_nodes * num_of_nodes / 5;
 
+  std::uniform_int_distribution<> dist(1, num_of_nodes);
   std::set<std::pair<uint64_t, uint64_t>> edges;
   for (int i = 0; i < num_of_edges; ++i) {
-    std::uniform_int_distribution<> dist(1, num_of_nodes);
     auto from = dist(rng), to = dist(rng);
     edges.insert({from, to});
   }
@@ -135,7 +135,7 @@ TEST(BipartiteMatching, Performance) {
   mg_test_utility::Timer timer;
   bipartite_matching_util::MaximumMatching(std::vector<std::pair<uint64_t, uint64_t>>(edges.begin(), edges.end()));
   auto time_elapsed = timer.Elapsed();
-  ASSERT_TRUE(timer.Elapsed() < std::chrono::seconds(1));
+  ASSERT_TRUE(time_elapsed < std::chrono::seconds(1));
 }
 
 int main(int argc, char **argv) {

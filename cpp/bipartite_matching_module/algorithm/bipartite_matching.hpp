@@ -15,7 +15,7 @@ namespace bipartite_matching_util {
 ///@return true If bipartite matching DFS can be ran
 ///@return false If bipartite matching DFS cannot be ran
 ///
-bool BipartiteMatchingDFS(std::uint64_t node, const std::vector<std::vector<std::uint64_t>> &adj_list,
+bool BipartiteMatchingDFS(const std::uint64_t node, const std::vector<std::vector<std::uint64_t>> &adj_list,
                           std::vector<bool> &visited, std::vector<std::optional<std::uint64_t>> &matched);
 
 ///
@@ -39,7 +39,7 @@ bool IsGraphBipartite(const mg_graph::GraphView<> &graph);
 ///@return false
 ///
 bool IsSubgraphBipartite(const mg_graph::GraphView<> &graph, std::vector<std::int8_t> &colors,
-                         std::uint64_t node_index);
+                         const std::uint64_t node_index);
 
 ///
 /// @brief Returns the size of the maximum matching in a given bipartite graph. The

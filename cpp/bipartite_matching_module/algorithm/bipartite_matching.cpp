@@ -4,13 +4,13 @@
 #include "bipartite_matching.hpp"
 
 namespace bipartite_matching_util {
-bool BipartiteMatchingDFS(std::uint64_t node, const std::vector<std::vector<std::uint64_t>> &adj_list,
+bool BipartiteMatchingDFS(const std::uint64_t node, const std::vector<std::vector<std::uint64_t>> &adj_list,
                           std::vector<bool> &visited, std::vector<std::optional<std::uint64_t>> &matched) {
   if (visited[node]) return false;
 
   visited[node] = true;
-  for (auto next : adj_list[node]) {
-    if (auto matched_next = matched[next];
+  for (const auto next : adj_list[node]) {
+    if (const auto matched_next = matched[next];
         !matched_next || BipartiteMatchingDFS(*matched_next, adj_list, visited, matched)) {
       matched[next] = node;
       return true;
@@ -25,7 +25,7 @@ bool IsGraphBipartite(const mg_graph::GraphView<> &graph) {
   // -1 to indicate that color is not set to that node
   std::vector<std::int8_t> colors(node_size, -1);
 
-  for (std::size_t i = 0; i < node_size; i++) {
+  for (std::uint64_t i = 0; i < node_size; i++) {
     if (colors[i] == -1) {
       if (!IsSubgraphBipartite(graph, colors, i)) {
         return false;
@@ -37,7 +37,7 @@ bool IsGraphBipartite(const mg_graph::GraphView<> &graph) {
 }
 
 bool IsSubgraphBipartite(const mg_graph::GraphView<> &graph, std::vector<std::int8_t> &colors,
-                         std::uint64_t node_index) {
+                         const std::uint64_t node_index) {
   // Data structure used in BFS
   std::queue<std::uint64_t> unvisited;
 
@@ -65,8 +65,8 @@ bool IsSubgraphBipartite(const mg_graph::GraphView<> &graph, std::vector<std::in
 }
 
 std::uint64_t MaximumMatching(const std::vector<std::pair<std::uint64_t, std::uint64_t>> &disjoint_edges) {
-  std::set<uint64_t> group_a;
-  std::set<uint64_t> group_b;
+  std::set<std::uint64_t> group_a;
+  std::set<std::uint64_t> group_b;
 
   for (const auto [from, to] : disjoint_edges) {
     group_a.insert(from);
