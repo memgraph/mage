@@ -9,6 +9,15 @@
 
 namespace mgp {
 
+class IndexException : public std::exception {
+ public:
+  explicit IndexException(const std::string &message) : message_(message){};
+  const char *what() const noexcept override { return message_.c_str(); }
+
+ private:
+  std::string message_;
+};
+
 class ValueException : public std::exception {
  public:
   explicit ValueException(const std::string &message) : message_(message){};
@@ -43,10 +52,12 @@ class ImmutableVertex;
 class ImmutableEdge;
 class ImmutableList;
 class ImmutableValue;
+class ImmutablePath;
 class Vertex;
 class Value;
 class Vertices;
 class Edges;
+class Path;
 
 #define CREATE_ITERATOR(container, element)                                                                         \
   class Iterator {                                                                                                  \
@@ -289,6 +300,7 @@ class Vertex {
   friend class ImmutableVertex;
   friend class Value;
   friend class Record;
+  friend class Path;
 
   explicit Vertex(mgp_vertex *ptr, mgp_memory *memory) : ptr_(ptr), memory_(memory) {}
 
@@ -335,6 +347,7 @@ class ImmutableVertex {
   friend class Vertex;
   friend class Value;
   friend class Record;
+  friend class Path;
 
   explicit ImmutableVertex(const mgp_vertex *const_ptr, mgp_memory *memory) : const_ptr_(const_ptr), memory_(memory) {}
 
@@ -369,6 +382,8 @@ class Edge {
  private:
   friend class Value;
   friend class ImmutableEdge;
+  friend class Path;
+  friend class Record;
 
  public:
   explicit Edge(mgp_edge *ptr, mgp_memory *memory) : ptr_(ptr), memory_(memory) {}
@@ -387,10 +402,10 @@ class Edge {
   Id id() const { return Id::FromInt(mgp_edge_get_id(ptr_).as_int); }
 
   /// \brief Return the Id of the node that is at the start of the relationship.
-  Id from() const { return Id::FromInt(mgp_vertex_get_id(mgp_edge_get_from(ptr_)).as_int); }
+  ImmutableVertex from() const { return ImmutableVertex(mgp_edge_get_from(ptr_), memory_); }
 
   /// \brief Return the Id of the node that is at the end of the relationship.
-  Id to() const { return Id::FromInt(mgp_vertex_get_id(mgp_edge_get_to(ptr_)).as_int); }
+  ImmutableVertex to() const { return ImmutableVertex(mgp_edge_get_to(ptr_), memory_); }
 
   std::string_view type() const;
 
@@ -420,16 +435,17 @@ class ImmutableEdge {
  public:
   friend class Edge;
   friend class Record;
+  friend class Path;
 
   explicit ImmutableEdge(const mgp_edge *const_ptr, mgp_memory *memory) : const_ptr_(const_ptr), memory_(memory) {}
 
   Id id() const { return Id::FromInt(mgp_edge_get_id(const_ptr_).as_int); }
 
   /// \brief Return the Id of the node that is at the start of the relationship.
-  Id from() const { return Id::FromInt(mgp_vertex_get_id(mgp_edge_get_from(const_ptr_)).as_int); }
+  ImmutableVertex from() const { return ImmutableVertex(mgp_edge_get_from(const_ptr_), memory_); }
 
   /// \brief Return the Id of the node that is at the end of the relationship.
-  Id to() const { return Id::FromInt(mgp_vertex_get_id(mgp_edge_get_to(const_ptr_)).as_int); }
+  ImmutableVertex to() const { return ImmutableVertex(mgp_edge_get_to(const_ptr_), memory_); }
 
   std::string_view type() const;
 
@@ -454,7 +470,99 @@ class ImmutableEdge {
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-// Vertices:
+// Path:
+class Path final {
+ private:
+  friend class Value;
+  friend class ImmutablePath;
+  friend class Record;
+
+ public:
+  explicit Path(mgp_path *ptr, mgp_memory *memory) : ptr_(ptr), memory_(memory){};
+
+  /// \brief Create a Path from a copy of the given \ref mg_path.
+  explicit Path(const mgp_path *const_ptr, mgp_memory *memory) : Path(mgp_path_copy(const_ptr, memory), memory_) {}
+
+  explicit Path(const Vertex &start_vertex);
+
+  explicit Path(const ImmutableVertex &start_vertex);
+
+  Path(const Path &other);
+  Path(Path &&other);
+  Path &operator=(const Path &other);
+  Path &operator=(Path &&other);
+  ~Path();
+
+  explicit Path(const ImmutablePath &path);
+
+  /// Length of the path is number of edges.
+  size_t length() const { return mgp_path_size(ptr_); }
+
+  /// \brief Returns the vertex at the given `index`.
+  /// \pre `index` should be less than or equal to length of the path.
+  ImmutableVertex GetVertexAt(size_t index) const;
+
+  /// \brief Returns the edge at the given `index`.
+  /// \pre `index` should be less than length of the path.
+  ImmutableEdge GetEdgeAt(size_t index) const;
+
+  void Expand(const Edge &edge);
+
+  void Expand(const ImmutableEdge &edge);
+
+  ImmutablePath AsImmutablePath() const;
+
+  /// \exception std::runtime_error path contains elements with unknown value
+  bool operator==(const Path &other) const;
+  /// \exception std::runtime_error path contains elements with unknown value
+  bool operator==(const ImmutablePath &other) const;
+  /// \exception std::runtime_error path contains elements with unknown value
+  bool operator!=(const Path &other) const { return !(*this == other); }
+  /// \exception std::runtime_error path contains elements with unknown value
+  bool operator!=(const ImmutablePath &other) const { return !(*this == other); }
+
+ private:
+  mgp_path *ptr_;
+  mgp_memory *memory_;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// Edges:
+class ImmutablePath final {
+ private:
+  friend class Path;
+  friend class Record;
+
+ public:
+  explicit ImmutablePath(const mgp_path *const_ptr, mgp_memory *memory) : const_ptr_(const_ptr), memory_(memory){};
+
+  /// Length of the path in number of edges.
+  size_t length() const { return mgp_path_size(const_ptr_); }
+
+  /// \brief Returns the vertex at the given `index`.
+  /// \pre `index` should be less than or equal to length of the path.
+  ImmutableVertex GetVertexAt(size_t index) const;
+
+  /// \brief Returns the edge at the given `index`.
+  /// \pre `index` should be less than length of the path.
+  ImmutableEdge GetEdgeAt(size_t index) const;
+
+  /// \exception std::runtime_error path contains elements with unknown value
+  bool operator==(const ImmutablePath &other) const;
+  /// \exception std::runtime_error path contains elements with unknown value
+  bool operator==(const Path &other) const;
+  /// \exception std::runtime_error path contains elements with unknown value
+  bool operator!=(const ImmutablePath &other) const { return !(*this == other); }
+  /// \exception std::runtime_error path contains elements with unknown value
+  bool operator!=(const Path &other) const { return !(*this == other); }
+
+ private:
+  const mgp_path *const_ptr_;
+  mgp_memory *memory_;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// Edges:
 
 class Edges {
  public:
@@ -666,7 +774,13 @@ class Record {
 
   void Insert(const char *field_name, const ImmutableVertex &vertex);
 
+  void Insert(const char *field_name, const Edge &edge);
+
   void Insert(const char *field_name, const ImmutableEdge &edge);
+
+  void Insert(const char *field_name, const Path &path);
+
+  void Insert(const char *field_name, const ImmutablePath &path);
 
  private:
   void Insert(const char *field_name, Value &&value);
@@ -718,6 +832,26 @@ inline bool EdgeEquals(const mgp_edge *edge1, const mgp_edge *edge2) {
     return false;
   }
   return true;
+}
+
+inline bool PathEquals(const mgp_path *path1, const mgp_path *path2) {
+  // In query module scenario, paths are same once they have similar ID
+  if (path1 == path2) {
+    return true;
+  }
+  if (mgp_path_size(path1) != mgp_path_size(path2)) {
+    return false;
+  }
+  const auto path_size = mgp_path_size(path1);
+  for (size_t i = 0; i < path_size; ++i) {
+    if (!util::VerticesEquals(mgp_path_vertex_at(path1, i), mgp_path_vertex_at(path2, i))) {
+      return false;
+    }
+    if (!util::EdgeEquals(mgp_path_edge_at(path1, i), mgp_path_edge_at(path2, i))) {
+      return false;
+    }
+  }
+  return util::VerticesEquals(mgp_path_vertex_at(path1, path_size), mgp_path_vertex_at(path2, path_size));
 }
 
 inline bool ListEquals(const mgp_list *list1, const mgp_list *list2) {
@@ -1187,6 +1321,86 @@ inline bool ImmutableEdge::operator==(const ImmutableEdge &other) const {
 inline bool ImmutableEdge::operator==(const Edge &other) const { return util::EdgeEquals(const_ptr_, other.ptr_); }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Path:
+
+inline Path::Path(const Path &other) : ptr_(mgp_path_copy(other.ptr_, other.memory_)), memory_(other.memory_){};
+
+inline Path::Path(Path &&other) : ptr_(other.ptr_), memory_(other.memory_) { other.ptr_ = nullptr; }
+
+inline Path::Path(const Vertex &start_vertex)
+    : ptr_(mgp_path_make_with_start(start_vertex.ptr_, start_vertex.memory_)), memory_(start_vertex.memory_) {}
+
+inline Path::Path(const ImmutableVertex &start_vertex)
+    : ptr_(mgp_path_make_with_start(start_vertex.const_ptr_, start_vertex.memory_)), memory_(start_vertex.memory_) {}
+
+inline Path::~Path() {
+  if (ptr_ != nullptr) {
+    mgp_path_destroy(ptr_);
+  }
+}
+
+inline Path::Path(const ImmutablePath &path)
+    : ptr_(mgp_path_copy(path.const_ptr_, path.memory_)), memory_(path.memory_) {}
+
+inline ImmutableVertex Path::GetVertexAt(size_t index) const {
+  auto vertex_ptr = mgp_path_vertex_at(ptr_, index);
+  if (vertex_ptr == nullptr) {
+    throw IndexException("Index value out of bounds.");
+  }
+  return ImmutableVertex(vertex_ptr, memory_);
+}
+
+inline ImmutableEdge Path::GetEdgeAt(size_t index) const {
+  auto edge_ptr = mgp_path_edge_at(ptr_, index);
+  if (edge_ptr == nullptr) {
+    throw IndexException("Index value out of bounds.");
+  }
+  return ImmutableEdge(edge_ptr, memory_);
+}
+
+inline void Path::Expand(const Edge &edge) {
+  auto success = mgp_path_expand(ptr_, edge.ptr_);
+  if (!success) {
+    throw ValueException("Current last index is not part of the path!");
+  }
+}
+
+inline void Path::Expand(const ImmutableEdge &edge) {
+  auto success = mgp_path_expand(ptr_, edge.const_ptr_);
+  if (!success) {
+    throw ValueException("Current last index is not part of the path!");
+  }
+}
+
+inline ImmutablePath Path::AsImmutablePath() const { return ImmutablePath(ptr_, memory_); }
+
+inline bool Path::operator==(const Path &other) const { return util::PathEquals(ptr_, other.ptr_); }
+
+inline bool Path::operator==(const ImmutablePath &other) const { return util::PathEquals(ptr_, other.const_ptr_); }
+
+inline ImmutableVertex ImmutablePath::GetVertexAt(size_t index) const {
+  auto vertex_ptr = mgp_path_vertex_at(const_ptr_, index);
+  if (vertex_ptr == nullptr) {
+    throw IndexException("Index value out of bounds.");
+  }
+  return ImmutableVertex(vertex_ptr, memory_);
+}
+
+inline ImmutableEdge ImmutablePath::GetEdgeAt(size_t index) const {
+  auto edge_ptr = mgp_path_edge_at(const_ptr_, index);
+  if (edge_ptr == nullptr) {
+    throw IndexException("Index value out of bounds.");
+  }
+  return ImmutableEdge(edge_ptr, memory_);
+}
+
+inline bool ImmutablePath::operator==(const ImmutablePath &other) const {
+  return util::PathEquals(const_ptr_, other.const_ptr_);
+}
+
+inline bool ImmutablePath::operator==(const Path &other) const { return util::PathEquals(const_ptr_, other.ptr_); }
+
+////////////////////////////////////////////////////////////////////////////////
 // Record:
 
 inline void Record::Insert(const char *field_name, const char *value) { Insert(field_name, Value(value, memory_)); }
@@ -1207,8 +1421,20 @@ inline void Record::Insert(const char *field_name, const ImmutableVertex &vertex
   Insert(field_name, Value(mgp_value_make_vertex(mgp_vertex_copy(vertex.const_ptr_, vertex.memory_)), memory_));
 }
 
+inline void Record::Insert(const char *field_name, const Edge &edge) {
+  Insert(field_name, Value(mgp_value_make_edge(mgp_edge_copy(edge.ptr_, edge.memory_)), memory_));
+}
+
 inline void Record::Insert(const char *field_name, const ImmutableEdge &edge) {
   Insert(field_name, Value(mgp_value_make_edge(mgp_edge_copy(edge.const_ptr_, edge.memory_)), memory_));
+}
+
+inline void Record::Insert(const char *field_name, const Path &path) {
+  Insert(field_name, Value(mgp_value_make_path(mgp_path_copy(path.ptr_, path.memory_)), memory_));
+}
+
+inline void Record::Insert(const char *field_name, const ImmutablePath &path) {
+  Insert(field_name, Value(mgp_value_make_path(mgp_path_copy(path.const_ptr_, path.memory_)), memory_));
 }
 
 inline void Record::Insert(const char *field_name, Value &&value) {
