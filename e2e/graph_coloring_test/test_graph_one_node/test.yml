@@ -1,0 +1,9 @@
+query: >
+    CALL graph_coloring.color_graph(
+        {no_of_colors: 1})
+        YIELD node, color
+    MATCH (a:Cell) WHERE toString(id(a)) = node 
+    RETURN a.id AS id, color;
+output:
+    - id: 0
+      color: "0"
