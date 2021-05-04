@@ -1,12 +1,19 @@
-set(pagerank_module_src
+set(pagerank_module_src 
     pagerank_module.cpp
-    pagerank/pagerank.cpp)
+    algorithm/pagerank.cpp)
 
-add_query_module(pagerank_module 1 "${pagerank_module_src}")
-target_link_libraries(pagerank_module PUBLIC utils)
-target_include_directories(pagerank_module PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+add_query_module(pagerank 1 "${pagerank_module_src}")
 
-find_package(Threads REQUIRED)
-add_executable(pagerank_test pagerank/pagerank.cpp pagerank/pagerank_test.cpp)
-target_link_libraries(pagerank_test PRIVATE utils Threads::Threads)
-target_include_directories(pagerank_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+# Link external libraries
+target_link_libraries(pagerank PRIVATE mg_utility)
+target_include_directories(pagerank PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+# Module tests
+include(GoogleTest)
+set(pagerank_test_src 
+    pagerank_test.cpp
+    algorithm/pagerank.cpp)
+
+add_executable(pagerank_test "${pagerank_test_src}")
+target_link_libraries(pagerank_test PRIVATE mg_utility gtest)
+gtest_add_tests(TARGET pagerank_test)

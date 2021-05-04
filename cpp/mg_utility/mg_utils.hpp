@@ -23,15 +23,13 @@ void CreateGraphNode(mg_graph::Graph<TSize> *graph, const mgp_vertex *vertex) {
 }
 
 template <typename TSize>
-void CreateGraphEdge(mg_graph::Graph<TSize> *graph,
-                     const mgp_vertex *vertex_from,
-                     const mgp_vertex *vertex_to) {
+void CreateGraphEdge(mg_graph::Graph<TSize> *graph, const mgp_vertex *vertex_from, const mgp_vertex *vertex_to) {
   // Get Memgraph internal ID property
   auto memgraph_id_from = mgp_vertex_get_id(vertex_from).as_int;
   auto memgraph_id_to = mgp_vertex_get_id(vertex_to).as_int;
   graph->CreateEdge(memgraph_id_from, memgraph_id_to);
 }
-} // namespace mg_graph
+}  // namespace mg_graph
 
 namespace mg_utility {
 
@@ -53,12 +51,11 @@ namespace mg_utility {
 ///   // long block of code, might trow an exception
 /// }
 class OnScopeExit {
-public:
-  explicit OnScopeExit(const std::function<void()> &function)
-      : function_(function) {}
+ public:
+  explicit OnScopeExit(const std::function<void()> &function) : function_(function) {}
   ~OnScopeExit() { function_(); }
 
-private:
+ private:
   std::function<void()> function_;
 };
 
@@ -72,9 +69,8 @@ private:
 ///@return mg_graph::Graph
 ///
 template <typename TSize = std::uint64_t>
-std::unique_ptr<mg_graph::Graph<TSize>>
-GetGraphView(const mgp_graph *memgraph_graph, mgp_result *result,
-             mgp_memory *memory) {
+std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(const mgp_graph *memgraph_graph, mgp_result *result,
+                                                     mgp_memory *memory) {
   auto graph = std::make_unique<mg_graph::Graph<TSize>>();
 
   ///
@@ -109,9 +105,8 @@ GetGraphView(const mgp_graph *memgraph_graph, mgp_result *result,
     throw mg_exception::NotEnoughMemoryException();
   }
 
-  for (const auto *vertex_from = mgp_vertices_iterator_get(vertices_it);
-       vertex_from; vertex_from = mgp_vertices_iterator_next(vertices_it)) {
-
+  for (const auto *vertex_from = mgp_vertices_iterator_get(vertices_it); vertex_from;
+       vertex_from = mgp_vertices_iterator_next(vertices_it)) {
     // Safe creation of edges iterator
     auto *edges_it = mgp_vertex_iter_out_edges(vertex_from, memory);
 
@@ -136,8 +131,8 @@ GetGraphView(const mgp_graph *memgraph_graph, mgp_result *result,
 
 /// Inserts a string of value string_value to the field field_name of
 /// the record mgp_result_record record.
-void InsertStringValueResult(mgp_result_record *record, const char *field_name,
-                             const char *string_value, mgp_memory *memory) {
+void InsertStringValueResult(mgp_result_record *record, const char *field_name, const char *string_value,
+                             mgp_memory *memory) {
   mgp_value *value = mgp_value_make_string(string_value, memory);
   if (value == nullptr) {
     throw mg_exception::NotEnoughMemoryException();
@@ -153,9 +148,25 @@ void InsertStringValueResult(mgp_result_record *record, const char *field_name,
 
 /// Inserts an integer of value int_value to the field field_name of
 /// the record mgp_result_record record.
-void InsertIntValueResult(mgp_result_record *record, const char *field_name,
-                          const int int_value, mgp_memory *memory) {
+void InsertIntValueResult(mgp_result_record *record, const char *field_name, const int int_value, mgp_memory *memory) {
   mgp_value *value = mgp_value_make_int(int_value, memory);
+  if (value == nullptr) {
+    throw mg_exception::NotEnoughMemoryException();
+  }
+
+  auto result_inserted = mgp_result_record_insert(record, field_name, value);
+
+  mgp_value_destroy(value);
+  if (!result_inserted) {
+    throw mg_exception::NotEnoughMemoryException();
+  }
+}
+
+/// Inserts an integer of value double_value to the field field_name of
+/// the record mgp_result_record record.
+void InsertDoubleValue(mgp_result_record *record, const char *field_name, const double double_value,
+                       mgp_memory *memory) {
+  mgp_value *value = mgp_value_make_double(double_value, memory);
   if (value == nullptr) {
     throw mg_exception::NotEnoughMemoryException();
   }
@@ -170,8 +181,8 @@ void InsertIntValueResult(mgp_result_record *record, const char *field_name,
 
 /// Inserts a node of value vertex_value to the field field_name of
 /// the record mgp_result_record record.
-void InsertNodeValueResult(mgp_result_record *record, const char *field_name,
-                           mgp_vertex *vertex_value, mgp_memory *memory) {
+void InsertNodeValueResult(mgp_result_record *record, const char *field_name, mgp_vertex *vertex_value,
+                           mgp_memory *memory) {
   mgp_value *value = mgp_value_make_vertex(vertex_value);
   if (value == nullptr) {
     throw mg_exception::NotEnoughMemoryException();
@@ -186,26 +197,21 @@ void InsertNodeValueResult(mgp_result_record *record, const char *field_name,
 
 /// Inserts a node with its ID node_id to create a vertex and insert
 /// the node to the field field_name of the record mgp_result_record record.
-void InsertNodeValueResult(const mgp_graph *graph, mgp_result_record *record,
-                           const char *field_name, const int node_id,
+void InsertNodeValueResult(const mgp_graph *graph, mgp_result_record *record, const char *field_name, const int node_id,
                            mgp_memory *memory) {
-  mgp_vertex *vertex = mgp_graph_get_vertex_by_id(
-      graph, mgp_vertex_id{.as_int = node_id}, memory);
+  mgp_vertex *vertex = mgp_graph_get_vertex_by_id(graph, mgp_vertex_id{.as_int = node_id}, memory);
 
   InsertNodeValueResult(record, field_name, vertex, memory);
 }
 
 /// Inserts a relationship of value edge_value to the field field_name of
 /// the record mgp_result_record record.
-void InsertRelationshipValueResult(mgp_result_record *record,
-                                   const char *field_name, mgp_edge *edge_value,
+void InsertRelationshipValueResult(mgp_result_record *record, const char *field_name, mgp_edge *edge_value,
                                    mgp_memory *memory);
 
 /// Inserts a relationship with its ID edge_id to create a relationship and
 /// insert the edge to the field field_name of the record mgp_result_record
 /// record.
-void InsertRelationshipValueResult(const mgp_graph *graph,
-                                   mgp_result_record *record,
-                                   const char *field_name, const int edge_id,
-                                   mgp_memory *memory);
-} // namespace mg_utility
+void InsertRelationshipValueResult(const mgp_graph *graph, mgp_result_record *record, const char *field_name,
+                                   const int edge_id, mgp_memory *memory);
+}  // namespace mg_utility

@@ -1,11 +1,20 @@
-#include <mg_procedure.h>
+#include <mg_utils.hpp>
 
-#include <map>
-#include <optional>
-#include <queue>
-#include <utils/mg_utils.hpp>
+#include "algorithm/pagerank.hpp"
 
-#include "pagerank/pagerank.hpp"
+const char *k_field_node = "node";
+const char *k_field_rank = "rank";
+
+void InsertPagerankRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
+                          double rank) {
+  auto *record = mgp_result_new_record(result);
+  if (record == nullptr) {
+    throw mg_exception::NotEnoughMemoryException();
+  }
+
+  mg_utility::InsertNodeValueResult(graph, record, k_field_node, node_id, memory);
+  mg_utility::InsertDoubleValue(record, k_field_rank, rank, memory);
+}
 
 // TODO(gitbuda): Add pagerank e2e module test.
 
@@ -16,155 +25,44 @@
 /// @param memgraphGraph Memgraph graph instance
 /// @param result Memgraph result storage
 /// @param memory Memgraph memory storage
-static void ParallelPagerank(const mgp_list *args, const mgp_graph *graph,
-                             mgp_result *result, mgp_memory *memory,
-                             const bool pattern) {
+void PagerankWrapper(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    std::map<uint32_t, uint32_t> iterToId;
-    std::map<uint32_t, uint32_t> idToIter;
-    std::optional<utils::GraphMapping> graphMapping;
+    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory);
 
-    if (!pattern) {
-      auto idMapping = utils::VertexIdMapping(graph, result, memory);
+    auto graph_edges = graph->Edges();
+    std::vector<std::pair<std::uint64_t, std::uint64_t>> pagerank_edges;
+    std::transform(graph_edges.begin(), graph_edges.end(), std::back_inserter(pagerank_edges),
+                   [](const mg_graph::Edge<uint64_t> &edge) -> std::pair<std::uint64_t, std::uint64_t> {
+                     return {edge.from, edge.to};
+                   });
 
-      if (!idMapping) {
-        mgp_result_set_error_msg(result, "Not enough memory");
-        return;
-      }
-      iterToId = std::move(idMapping->first);
-      idToIter = std::move(idMapping->second);
+    // for (const auto [id, from, to] : graph_edges) {
+    //   pagerank_edges.emplace_back(from, to);
+    // }
 
-      graphMapping = utils::MapMemgraphGraph(idToIter, graph, memory);
+    auto number_of_nodes = graph->Nodes().size();
+    auto graph_nodes = graph->Nodes();
 
-    } else {
-      // Get id mapping.
-      const mgp_list *nodes = mgp_value_get_list(mgp_list_at(args, 0));
+    auto pagerank_graph = pagerank_alg::PageRankGraph(number_of_nodes, pagerank_edges.size(), pagerank_edges);
+    auto pageranks = pagerank_alg::ParallelIterativePageRank(pagerank_graph);
 
-      if (nodes == nullptr || !mgp_list_size(nodes)) {
-        throw std::runtime_error("Nodes list is empty.");
-      }
-
-      const mgp_list *edge_patterns = mgp_value_get_list(mgp_list_at(args, 1));
-      if (edge_patterns == nullptr || !mgp_list_size(edge_patterns)) {
-        throw std::runtime_error("Labels list is empty");
-      }
-
-      auto patterns = utils::ListToPattern(edge_patterns);
-
-      auto idMapping =
-          utils::VertexIdMappingSubgraph(nodes, graph, result, memory);
-
-      if (!idMapping) {
-        mgp_result_set_error_msg(result, "Not enough memory");
-        return;
-      }
-      iterToId = std::move(idMapping->first);
-      idToIter = std::move(idMapping->second);
-
-      graphMapping = utils::MapMemgraphGraphWithPatterns(
-          nodes, patterns, idToIter, graph, memory);
+    for (std::uint64_t node_id = 0; node_id < number_of_nodes; ++node_id) {
+      InsertPagerankRecord(memgraph_graph, result, memory, graph->GetMemgraphNodeId(node_id), pageranks[node_id]);
     }
-
-    const auto &[number_of_nodes, number_of_edges, edges] = *graphMapping;
-    // Make Pagerank graph.
-    pagerank::PageRankGraph pagerankGraph(number_of_nodes, number_of_edges,
-                                          edges);
-    // Call pagerank_module calculation.
-    auto pagerankResult = pagerank::ParallelIterativePageRank(pagerankGraph);
-
-    // Write results.
-    for (uint32_t i = 0; i < number_of_nodes; ++i) {
-      mgp_result_record *record = mgp_result_new_record(result);
-      if (record == nullptr) {
-        mgp_result_set_error_msg(result, "Not enough memory");
-        return;
-      }
-
-      mgp_value *rank_value = mgp_value_make_double(pagerankResult[i], memory);
-      if (rank_value == nullptr) {
-        mgp_result_set_error_msg(result, "Not enough memory");
-        return;
-      }
-
-      mgp_vertex *vertex = mgp_graph_get_vertex_by_id(
-          graph, mgp_vertex_id{.as_int = iterToId[i]}, memory);
-      mgp_value *vertex_value = mgp_value_make_vertex(vertex);
-      if (vertex_value == nullptr) {
-        mgp_result_set_error_msg(result, "Not enough memory");
-        return;
-      }
-
-      const int rank_inserted =
-          mgp_result_record_insert(record, "rank", rank_value);
-      mgp_value_destroy(rank_value);
-
-      if (!rank_inserted) {
-        mgp_result_set_error_msg(result, "Not enough memory");
-        return;
-      }
-
-      const int value_inserted =
-          mgp_result_record_insert(record, "node", vertex_value);
-      mgp_value_destroy(vertex_value);
-
-      if (!value_inserted) {
-        mgp_result_set_error_msg(result, "Not enough memory");
-      }
-    }
-
   } catch (const std::exception &e) {
+    // We must not let any exceptions out of our module.
     mgp_result_set_error_msg(result, e.what());
     return;
   }
 }
 
-void PagerankWrapper(const mgp_list *args, const mgp_graph *graph,
-                     mgp_result *result, mgp_memory *memory) {
-  ParallelPagerank(args, graph, result, memory, false);
-}
+extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
+  struct mgp_proc *pagerank_proc = mgp_module_add_read_procedure(module, "get", PagerankWrapper);
 
-void PatternPagerankWrapper(const mgp_list *args, const mgp_graph *graph,
-                            mgp_result *result, mgp_memory *memory) {
-  ParallelPagerank(args, graph, result, memory, true);
-}
+  if (!pagerank_proc) return 1;
 
-extern "C" int mgp_init_module(struct mgp_module *module,
-                               struct mgp_memory *memory) {
-  struct mgp_proc *pagerank_proc =
-      mgp_module_add_read_procedure(module, "pagerank", PagerankWrapper);
-
-  if (!pagerank_proc) {
-    return 1;
-  }
-  if (!mgp_proc_add_result(pagerank_proc, "node", mgp_type_node())) {
-    return 1;
-  }
-  if (!mgp_proc_add_result(pagerank_proc, "rank", mgp_type_float())) {
-    return 1;
-  }
-
-  struct mgp_proc *subgraph_proc = mgp_module_add_read_procedure(
-      module, "pattern_pagerank", PatternPagerankWrapper);
-  if (!subgraph_proc) {
-    return 1;
-  }
-  if (!mgp_proc_add_opt_arg(
-          subgraph_proc, "transform_nodes", mgp_type_list(mgp_type_node()),
-          mgp_value_make_list(mgp_list_make_empty(0, memory)))) {
-    return 1;
-  }
-  if (!mgp_proc_add_opt_arg(
-          subgraph_proc, "transform_patterns",
-          mgp_type_list(mgp_type_list(mgp_type_string())),
-          mgp_value_make_list(mgp_list_make_empty(0, memory)))) {
-    return 1;
-  }
-  if (!mgp_proc_add_result(subgraph_proc, "node", mgp_type_node())) {
-    return 1;
-  }
-  if (!mgp_proc_add_result(subgraph_proc, "rank", mgp_type_float())) {
-    return 1;
-  }
+  if (!mgp_proc_add_result(pagerank_proc, "node", mgp_type_node())) return 1;
+  if (!mgp_proc_add_result(pagerank_proc, "rank", mgp_type_float())) return 1;
 
   return 0;
 }
