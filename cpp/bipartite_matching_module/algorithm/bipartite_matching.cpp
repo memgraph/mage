@@ -1,5 +1,6 @@
 #include <queue>
-#include <set>
+#include <unordered_map>
+#include <unordered_set>
 
 #include "bipartite_matching.hpp"
 
@@ -26,10 +27,8 @@ bool IsGraphBipartite(const mg_graph::GraphView<> &graph) {
   std::vector<std::int8_t> colors(node_size, -1);
 
   for (std::uint64_t i = 0; i < node_size; i++) {
-    if (colors[i] == -1) {
-      if (!IsSubgraphBipartite(graph, colors, i)) {
-        return false;
-      }
+    if (colors[i] == -1 && !IsSubgraphBipartite(graph, colors, i)) {
+      return false;
     }
   }
 
@@ -65,8 +64,8 @@ bool IsSubgraphBipartite(const mg_graph::GraphView<> &graph, std::vector<std::in
 }
 
 std::uint64_t MaximumMatching(const std::vector<std::pair<std::uint64_t, std::uint64_t>> &bipartite_edges) {
-  std::set<std::uint64_t> group_a;
-  std::set<std::uint64_t> group_b;
+  std::unordered_set<std::uint64_t> group_a;
+  std::unordered_set<std::uint64_t> group_b;
 
   for (const auto [from, to] : bipartite_edges) {
     group_a.insert(from);
@@ -102,8 +101,8 @@ std::uint64_t BipartiteMatching(const mg_graph::GraphView<> &graph) {
 
   std::vector<std::pair<std::uint64_t, std::uint64_t>> disjoint_edges;
 
-  std::map<std::uint64_t, std::uint64_t> first_set;
-  std::map<std::uint64_t, std::uint64_t> second_set;
+  std::unordered_map<std::uint64_t, std::uint64_t> first_set;
+  std::unordered_map<std::uint64_t, std::uint64_t> second_set;
 
   for (const auto [id, from, to] : graph.Edges()) {
     if (first_set.find(from) == first_set.end()) {
