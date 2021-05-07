@@ -20,14 +20,11 @@ bool BipartiteMatchingDFS(const std::uint64_t node, const std::vector<std::vecto
   return false;
 }
 
-bool IsGraphBipartite(const mg_graph::GraphView<> &graph) {
+bool IsGraphBipartiteColoring(const mg_graph::GraphView<> &graph, std::vector<std::int8_t> &colors) {
   auto node_size = graph.Nodes().size();
 
-  // -1 to indicate that color is not set to that node
-  std::vector<std::int8_t> colors(node_size, -1);
-
   for (std::uint64_t i = 0; i < node_size; i++) {
-    if (colors[i] == -1 && !IsSubgraphBipartite(graph, colors, i)) {
+    if (colors[i] == -1 && !IsSubgraphBipartiteColoring(graph, colors, i)) {
       return false;
     }
   }
@@ -35,8 +32,8 @@ bool IsGraphBipartite(const mg_graph::GraphView<> &graph) {
   return true;
 }
 
-bool IsSubgraphBipartite(const mg_graph::GraphView<> &graph, std::vector<std::int8_t> &colors,
-                         const std::uint64_t node_index) {
+bool IsSubgraphBipartiteColoring(const mg_graph::GraphView<> &graph, std::vector<std::int8_t> &colors,
+                                 const std::uint64_t node_index) {
   // Data structure used in BFS
   std::queue<std::uint64_t> unvisited;
 
@@ -97,22 +94,31 @@ std::uint64_t MaximumMatching(const std::vector<std::pair<std::uint64_t, std::ui
 namespace bipartite_matching_alg {
 
 std::uint64_t BipartiteMatching(const mg_graph::GraphView<> &graph) {
-  if (!bipartite_matching_util::IsGraphBipartite(graph)) return 0;
+  // -1 to indicate that color is not set to that node
+  std::vector<std::int8_t> colors(graph.Nodes().size(), -1);
+
+  if (!bipartite_matching_util::IsGraphBipartiteColoring(graph, colors)) return 0;
 
   std::vector<std::pair<std::uint64_t, std::uint64_t>> disjoint_edges;
 
-  std::unordered_map<std::uint64_t, std::uint64_t> first_set;
-  std::unordered_map<std::uint64_t, std::uint64_t> second_set;
+  std::unordered_map<std::uint64_t, std::uint64_t> left_subset;
+  std::unordered_map<std::uint64_t, std::uint64_t> right_subset;
 
   for (const auto [id, from, to] : graph.Edges()) {
-    if (first_set.find(from) == first_set.end()) {
-      first_set[from] = first_set.size() + 1;
+    auto left_edge = colors[from] == 0 ? from : to;
+    auto right_edge = colors[from] == 1 ? from : to;
+
+    if (left_subset.find(left_edge) == left_subset.end()) {
+      left_subset[left_edge] = left_subset.size() + 1;
     }
-    if (second_set.find(to) == second_set.end()) {
-      second_set[to] = second_set.size() + 1;
+    if (right_subset.find(right_edge) == right_subset.end()) {
+      right_subset[right_edge] = right_subset.size() + 1;
     }
 
-    disjoint_edges.emplace_back(first_set[from], second_set[to]);
+    auto subset_from = left_subset[left_edge];
+    auto subset_to = right_subset[right_edge];
+
+    disjoint_edges.emplace_back(subset_from, subset_to);
   }
 
   return bipartite_matching_util::MaximumMatching(disjoint_edges);

@@ -29,25 +29,33 @@ TEST(BipartiteMatching, RandomCompleteBipartiteGraphs) {
 TEST(BipartiteMatching, NotBipartiteGraph) {
   auto graph =
       mg_generate::BuildGraph(5, {{0, 1}, {0, 2}, {0, 3}, {0, 4}, {1, 2}, {1, 3}, {1, 4}, {2, 3}, {2, 4}, {3, 4}});
-  auto is_graph_bipartite = bipartite_matching_util::IsGraphBipartite(*graph);
+
+  std::vector<std::int8_t> colors(graph->Nodes().size(), -1);
+  auto is_graph_bipartite = bipartite_matching_util::IsGraphBipartiteColoring(*graph, colors);
   ASSERT_FALSE(is_graph_bipartite);
 }
 
 TEST(BipartiteMatching, BipartiteGraph) {
   auto graph = mg_generate::BuildGraph(4, {{0, 1}, {1, 2}, {2, 3}, {3, 0}});
-  auto is_graph_bipartite = bipartite_matching_util::IsGraphBipartite(*graph);
+
+  std::vector<std::int8_t> colors(graph->Nodes().size(), -1);
+  auto is_graph_bipartite = bipartite_matching_util::IsGraphBipartiteColoring(*graph, colors);
   ASSERT_TRUE(is_graph_bipartite);
 }
 
 TEST(BipartiteMatching, BipartiteGraphWith2Components) {
   auto graph = mg_generate::BuildGraph(5, {{0, 1}, {1, 2}, {3, 4}});
-  auto is_graph_bipartite = bipartite_matching_util::IsGraphBipartite(*graph);
+
+  std::vector<std::int8_t> colors(graph->Nodes().size(), -1);
+  auto is_graph_bipartite = bipartite_matching_util::IsGraphBipartiteColoring(*graph, colors);
   ASSERT_TRUE(is_graph_bipartite);
 }
 
 TEST(BipartiteMatching, NotBipartiteGraphWithSelfLoop) {
   auto graph = mg_generate::BuildGraph(5, {{0, 1}, {1, 2}, {2, 3}, {0, 0}});
-  auto is_graph_bipartite = bipartite_matching_util::IsGraphBipartite(*graph);
+
+  std::vector<std::int8_t> colors(graph->Nodes().size(), -1);
+  auto is_graph_bipartite = bipartite_matching_util::IsGraphBipartiteColoring(*graph, colors);
   ASSERT_FALSE(is_graph_bipartite);
 }
 
@@ -119,6 +127,18 @@ TEST(BipartiteMatching, HandmadeGraph5) {
                                    {7, 13}, {7, 14}, {8, 12}, {8, 15}, {8, 19}, {9, 10}, {9, 17}, {9, 18}});
   auto max_match = bipartite_matching_alg::BipartiteMatching(*graph);
   ASSERT_EQ(max_match, 9);
+}
+
+TEST(BipartiteMatching, ChainGraph) {
+  auto graph = mg_generate::BuildGraph(5, {{0, 1}, {1, 2}, {2, 3}, {3, 4}});
+  auto max_match = bipartite_matching_alg::BipartiteMatching(*graph);
+  ASSERT_EQ(max_match, 2);
+}
+
+TEST(BipartiteMatching, CycleGraph) {
+  auto graph = mg_generate::BuildGraph(6, {{0, 1}, {1, 2}, {2, 3}, {3, 4}, {4, 5}, {5, 0}});
+  auto max_match = bipartite_matching_alg::BipartiteMatching(*graph);
+  ASSERT_EQ(max_match, 3);
 }
 
 TEST(BipartiteMatching, Performance) {

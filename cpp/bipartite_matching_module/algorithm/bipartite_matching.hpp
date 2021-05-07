@@ -23,10 +23,11 @@ bool BipartiteMatchingDFS(const std::uint64_t node, const std::vector<std::vecto
 /// divided into two disjoint and independent sets U and V such that every edge connects a vertex in U to one in V.
 ///
 ///@param graph Graph to explore
+///@param colors Coloring structure for the graph
 ///@return true If graph is bipartite
 ///@return false If graph is not bipartite
 ///
-bool IsGraphBipartite(const mg_graph::GraphView<> &graph);
+bool IsGraphBipartiteColoring(const mg_graph::GraphView<> &graph, std::vector<std::int8_t> &colors);
 
 ///
 ///@brief The method runs a BFS algorithm and colors the graph in 2 colors. The graph is bipartite if for any vertex all
@@ -38,8 +39,8 @@ bool IsGraphBipartite(const mg_graph::GraphView<> &graph);
 ///@return true
 ///@return false
 ///
-bool IsSubgraphBipartite(const mg_graph::GraphView<> &graph, std::vector<std::int8_t> &colors,
-                         const std::uint64_t node_index);
+bool IsSubgraphBipartiteColoring(const mg_graph::GraphView<> &graph, std::vector<std::int8_t> &colors,
+                                 const std::uint64_t node_index);
 
 ///
 /// @brief Returns the size of the maximum matching in a given bipartite graph. The
