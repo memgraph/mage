@@ -12,9 +12,11 @@ TEST(BipartiteMatching, RandomCompleteBipartiteGraphs) {
   auto seed = 42;
   auto num_of_experiments = 200;
   std::mt19937 rng(seed);
+
+  auto max_size = 250;
+  std::uniform_int_distribution<> dist(1, max_size);
+
   for (int t = 0; t < num_of_experiments; ++t) {
-    auto max_size = 250;
-    std::uniform_int_distribution<> dist(1, max_size);
     auto size_a = dist(rng), size_b = dist(rng);
 
     std::vector<std::pair<uint64_t, uint64_t>> bipartite_edges;
