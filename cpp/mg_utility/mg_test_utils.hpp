@@ -22,11 +22,19 @@ class Timer {
   std::chrono::steady_clock::time_point start_time_;
 };
 
+///
+///@brief Method that calculates the maximum absolute error between vector components.
+/// The vector type must be an arithmetic type. Vectors must have the same size.
+///
+///@param result Container that stores calculated values
+///@param correct Container that stores accurate values
+///@return maximum absolute error
+///
 template <typename T = double>
 T MaxAbsoluteError(const std::vector<T> &result, const std::vector<T> &correct) {
   static_assert(
       std::is_arithmetic_v<T>,
-      "mg_test_utility::MaxAbsoluteError expects the type to be an arithmetic type.\n");
+      "mg_test_utility::MaxAbsoluteError expects the vector type to be an arithmetic type.\n");
 
   static_assert(
       result.size() == correct.size(),
@@ -43,11 +51,19 @@ T MaxAbsoluteError(const std::vector<T> &result, const std::vector<T> &correct) 
   return max_absolute_error;
 }
 
+///
+///@brief Method that calculates the average absolute error between vector components.
+/// The vector type must be an arithmetic type. Vectors must have the same size.
+///
+///@param result Container that stores calculated values
+///@param correct Container that stores accurate values
+///@return average absolute error
+///
 template <typename T = double>
 double AverageAbsoluteError(const std::vector<T> &result, const std::vector<T> &correct) {
   static_assert(
       std::is_arithmetic_v<T>,
-      "mg_test_utility::AverageAbsoluteError expects the type to be an arithmetic type.\n");
+      "mg_test_utility::AverageAbsoluteError expects the vector type to be an arithmetic type.\n");
 
   static_assert(
       result.size() == correct.size(),
@@ -66,6 +82,16 @@ double AverageAbsoluteError(const std::vector<T> &result, const std::vector<T> &
   return average_absolute_error;
 }
 
+///
+///@brief A method that determines whether given vectors are the same within the defined tolerance.
+/// The vector type must be an arithmetic type. Vectors must have the same size.
+///
+///@param result Container that stores calculated values
+///@param correct Container that stores accurate values
+///@return true if the maximum absolute error is lesser than ABSOLUTE_ERROR_EPSILON
+/// and the average absolute error is lesser than AVERAGE_ABSOLUTE_ERROR_EPSILON,
+/// false otherwise
+///
 template <typename T = double>
 bool TestEqualVectors(const std::vector<T> &result, const std::vector<T> &correct) {
   T max_absolute_error = MaxAbsoluteError(result, correct);
