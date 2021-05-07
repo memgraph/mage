@@ -168,6 +168,23 @@ void InsertIntValueResult(mgp_result_record *record, const char *field_name,
   }
 }
 
+/// Inserts an integer of value double_value to the field field_name of
+/// the record mgp_result_record record.
+void InsertDoubleValue(mgp_result_record *record, const char *field_name, const double double_value,
+                       mgp_memory *memory) {
+  mgp_value *value = mgp_value_make_double(double_value, memory);
+  if (value == nullptr) {
+    throw mg_exception::NotEnoughMemoryException();
+  }
+
+  auto result_inserted = mgp_result_record_insert(record, field_name, value);
+
+  mgp_value_destroy(value);
+  if (!result_inserted) {
+    throw mg_exception::NotEnoughMemoryException();
+  }
+}
+
 /// Inserts a node of value vertex_value to the field field_name of
 /// the record mgp_result_record record.
 void InsertNodeValueResult(mgp_result_record *record, const char *field_name,
