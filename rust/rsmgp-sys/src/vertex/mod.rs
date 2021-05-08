@@ -116,6 +116,7 @@ impl MgpVertex {
         }
     }
 
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn properties(&self, memory: *mut mgp_memory) -> MgpPropertiesIterator {
         unsafe {
             MgpPropertiesIterator {

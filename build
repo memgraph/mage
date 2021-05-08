@@ -11,6 +11,7 @@ WORK_DIRECTORY = os.getcwd()
 QUERY_MODULES_DIRECTORY = f"{WORK_DIRECTORY}/dist"
 CPP_DIRECTORY = f"{WORK_DIRECTORY}/cpp"
 PY_DIRECTORY = f"{WORK_DIRECTORY}/python"
+RS_DIRECTORY = f"{WORK_DIRECTORY}/rust"
 
 shutil.rmtree(QUERY_MODULES_DIRECTORY, ignore_errors=True)
 os.makedirs(QUERY_MODULES_DIRECTORY)
@@ -85,3 +86,15 @@ ignore_list = [
 # Copy python repository tree inside dist folder
 copytree(PY_DIRECTORY, QUERY_MODULES_DIRECTORY, ignore_list)
 os.environ["PYTHONPATH"] = PY_DIRECTORY
+
+#################################################
+#              Load Rust modules                #
+#################################################
+
+RS_EXAMPLE_DIRECTORY = f"{RS_DIRECTORY}/rsmgp-example"
+os.chdir(RS_EXAMPLE_DIRECTORY)
+subprocess.run(["cargo", "build", "--release"])
+# TODO(gitbuda): Filter out mockall and snafu so files.
+so_files = glob.glob("**/*_example.so", recursive=True)
+for file in so_files:
+    shutil.copy2(file, QUERY_MODULES_DIRECTORY)

@@ -27,33 +27,23 @@ impl Drop for MgpValue {
 
 impl MgpValue {
     pub fn is_null(&self) -> bool {
-        unsafe {
-            return ffi::mgp_value_is_null(self.value) != 0;
-        }
+        unsafe { ffi::mgp_value_is_null(self.value) != 0 }
     }
 
     pub fn is_int(&self) -> bool {
-        unsafe {
-            return ffi::mgp_value_is_int(self.value) != 0;
-        }
+        unsafe { ffi::mgp_value_is_int(self.value) != 0 }
     }
 
     pub fn is_bool(&self) -> bool {
-        unsafe {
-            return ffi::mgp_value_is_bool(self.value) != 0;
-        }
+        unsafe { ffi::mgp_value_is_bool(self.value) != 0 }
     }
 
     pub fn is_string(&self) -> bool {
-        unsafe {
-            return ffi::mgp_value_is_string(self.value) != 0;
-        }
+        unsafe { ffi::mgp_value_is_string(self.value) != 0 }
     }
 
     pub fn is_double(&self) -> bool {
-        unsafe {
-            return ffi::mgp_value_is_double(self.value) != 0;
-        }
+        unsafe { ffi::mgp_value_is_double(self.value) != 0 }
     }
 }
 
@@ -67,15 +57,11 @@ pub struct MgpConstValue {
 
 impl MgpConstValue {
     pub fn is_null(&self) -> bool {
-        unsafe {
-            return ffi::mgp_value_is_null(self.value) != 0;
-        }
+        unsafe { ffi::mgp_value_is_null(self.value) != 0 }
     }
 
     pub fn is_int(&self) -> bool {
-        unsafe {
-            return ffi::mgp_value_is_int(self.value) != 0;
-        }
+        unsafe { ffi::mgp_value_is_int(self.value) != 0 }
     }
 
     pub fn int(&self) -> Option<i64> {
@@ -88,9 +74,7 @@ impl MgpConstValue {
     }
 
     pub fn is_bool(&self) -> bool {
-        unsafe {
-            return ffi::mgp_value_is_bool(self.value) != 0;
-        }
+        unsafe { ffi::mgp_value_is_bool(self.value) != 0 }
     }
 
     pub fn bool(&self) -> Option<bool> {
@@ -103,9 +87,7 @@ impl MgpConstValue {
     }
 
     pub fn is_string(&self) -> bool {
-        unsafe {
-            return ffi::mgp_value_is_string(self.value) != 0;
-        }
+        unsafe { ffi::mgp_value_is_string(self.value) != 0 }
     }
 
     pub fn string(&self) -> Option<&CStr> {
@@ -118,9 +100,7 @@ impl MgpConstValue {
     }
 
     pub fn is_double(&self) -> bool {
-        unsafe {
-            return ffi::mgp_value_is_double(self.value) != 0;
-        }
+        unsafe { ffi::mgp_value_is_double(self.value) != 0 }
     }
 
     pub fn double(&self) -> Option<f64> {

@@ -41,6 +41,10 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ env.PY_VERSION }}
+    - name: Set up Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
     - name: Build C++ modules
       run: |
         mkdir -p cpp/build
@@ -69,9 +73,6 @@ jobs:
         cd e2e
         python -m pytest .
 
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
     - name: Rust library tests
       run: |
         cd rust/rsmgp-sys
