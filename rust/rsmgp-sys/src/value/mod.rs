@@ -8,7 +8,10 @@ use crate::result::*;
 use crate::mgp::ffi;
 use mockall_double::double;
 
+#[derive(Debug)]
 pub struct MgpValue {
+    // It's not wise to create a new MgpValue out of the existing value pointer because drop with a
+    // valid pointer will be called multiple times -> double free problem.
     pub value: *mut mgp_value,
 }
 impl Drop for MgpValue {

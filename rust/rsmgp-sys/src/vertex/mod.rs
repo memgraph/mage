@@ -3,6 +3,7 @@ use std::ffi::CStr;
 
 use crate::mgp::*;
 use crate::result::*;
+use crate::value::*;
 // Required here, if not present tests linking fails.
 #[double]
 use crate::mgp::ffi;
@@ -11,20 +12,8 @@ use mockall_double::double;
 #[derive(Debug)]
 pub struct MgpProperty<'a> {
     pub name: &'a CStr,
-    // TODO(gitbuda): Replace with MgpValue.
-    pub value: *mut mgp_value,
+    pub value: MgpValue,
 }
-
-// TODO(gitbuda): Figure out why this crashes Memgraph.
-// impl<'a> Drop for MgpProperty<'a> {
-//     fn drop(&mut self) {
-//         unsafe {
-//             if !self.value.is_null() {
-//                 ffi::mgp_value_destroy(self.value);
-//             }
-//         }
-//     }
-// }
 
 pub struct MgpVerticesIterator {
     ptr: *mut mgp_vertices_iterator,
@@ -127,7 +116,7 @@ impl MgpVertex {
             }
             Ok(MgpProperty {
                 name,
-                value: mgp_value,
+                value: MgpValue { value: mgp_value },
             })
         }
     }

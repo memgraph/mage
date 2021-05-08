@@ -17,14 +17,28 @@ fn test_procedure(
     let mgp_graph_iterator = make_graph_vertices_iterator(graph, result, memory)?;
     for mgp_vertex in mgp_graph_iterator {
         let mgp_record = make_result_record(result)?;
+        let labels_count = mgp_vertex.labels_count();
+        insert_result_record(
+            &mgp_record,
+            c_str!("labels_count"),
+            &make_int_value(labels_count as i64, result, memory)?,
+            result,
+        )?;
+        if labels_count > 0 {
+            let first_label = make_string_value(mgp_vertex.label_at(0)?, result, memory)?;
+            insert_result_record(&mgp_record, c_str!("first_label"), &first_label, result)?;
+        } else {
+            insert_result_record(
+                &mgp_record,
+                c_str!("first_label"),
+                &make_string_value(c_str!(""), result, memory)?,
+                result,
+            )?;
+        }
         let has_label = mgp_vertex.has_label(c_str!("L3"));
         let mgp_value = make_bool_value(has_label, result, memory)?;
-        let first_label = make_string_value(mgp_vertex.label_at(0)?, result, memory)?;
-        let name_property = MgpValue {
-            value: mgp_vertex.property(c_str!("name"), memory)?.value,
-        };
-        insert_result_record(&mgp_record, c_str!("has_label"), &mgp_value, result)?;
-        insert_result_record(&mgp_record, c_str!("first_label"), &first_label, result)?;
+        let name_property = mgp_vertex.property(c_str!("name"), memory)?.value;
+        insert_result_record(&mgp_record, c_str!("has_L3_label"), &mgp_value, result)?;
         insert_result_record(&mgp_record, c_str!("name_property"), &name_property, result)?;
     }
     Ok(())
@@ -60,7 +74,13 @@ extern "C" fn test_procedure_c(
 #[no_mangle]
 pub extern "C" fn mgp_init_module(module: *mut mgp_module, _memory: *mut mgp_memory) -> c_int {
     let procedure = add_read_procedure(test_procedure_c, c_str!("test_procedure"), module);
-    match add_bool_result_type(procedure, c_str!("has_label")) {
+    match add_int_result_type(procedure, c_str!("labels_count")) {
+        Ok(_) => {}
+        Err(_) => {
+            return 1;
+        }
+    }
+    match add_bool_result_type(procedure, c_str!("has_L3_label")) {
         Ok(_) => {}
         Err(_) => {
             return 1;
