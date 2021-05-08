@@ -2,18 +2,13 @@ use c_str_macro::c_str;
 use std::ffi::CStr;
 
 use crate::mgp::*;
+use crate::property::*;
 use crate::result::*;
 use crate::value::*;
 // Required here, if not present tests linking fails.
 #[double]
 use crate::mgp::ffi;
 use mockall_double::double;
-
-#[derive(Debug)]
-pub struct MgpProperty<'a> {
-    pub name: &'a CStr,
-    pub value: MgpValue,
-}
 
 pub struct MgpVerticesIterator {
     ptr: *mut mgp_vertices_iterator,
@@ -118,6 +113,15 @@ impl MgpVertex {
                 name,
                 value: MgpValue { value: mgp_value },
             })
+        }
+    }
+
+    pub fn properties(&self, memory: *mut mgp_memory) -> MgpPropertiesIterator {
+        unsafe {
+            MgpPropertiesIterator {
+                ptr: ffi::mgp_vertex_iter_properties(self.ptr, memory),
+                ..Default::default()
+            }
         }
     }
 }
