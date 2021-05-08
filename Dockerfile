@@ -3,12 +3,15 @@ FROM memgraph/memgraph:latest AS memgraph-mage
 FROM memgraph-mage
 USER root
 
-RUN apt-get update && \
-    apt-get --yes install git cmake clang && \
-    apt-get install -y python3-dev && \
+RUN apt update && \
+    apt install -y curl git cmake clang python3-dev && \
     cd /usr/local/bin && \
     ln -s /usr/bin/python3 python && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Install Rust
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Set mage as working directory
 WORKDIR /mage
