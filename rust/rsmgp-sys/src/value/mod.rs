@@ -23,6 +23,37 @@ impl Drop for MgpValue {
         }
     }
 }
+impl MgpValue {
+    pub fn is_null(&self) -> bool {
+        unsafe {
+            return ffi::mgp_value_is_null(self.value) != 0;
+        }
+    }
+
+    pub fn is_int(&self) -> bool {
+        unsafe {
+            return ffi::mgp_value_is_int(self.value) != 0;
+        }
+    }
+
+    pub fn is_bool(&self) -> bool {
+        unsafe {
+            return ffi::mgp_value_is_bool(self.value) != 0;
+        }
+    }
+
+    pub fn is_string(&self) -> bool {
+        unsafe {
+            return ffi::mgp_value_is_string(self.value) != 0;
+        }
+    }
+
+    pub fn is_double(&self) -> bool {
+        unsafe {
+            return ffi::mgp_value_is_double(self.value) != 0;
+        }
+    }
+}
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn make_null_value(result: *mut mgp_result, memory: *mut mgp_memory) -> MgpResult<MgpValue> {

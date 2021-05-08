@@ -17,6 +17,7 @@ fn test_procedure(
     let mgp_graph_iterator = make_graph_vertices_iterator(graph, result, memory)?;
     for mgp_vertex in mgp_graph_iterator {
         let mgp_record = make_result_record(result)?;
+
         let labels_count = mgp_vertex.labels_count();
         insert_result_record(
             &mgp_record,
@@ -24,6 +25,7 @@ fn test_procedure(
             &make_int_value(labels_count as i64, result, memory)?,
             result,
         )?;
+
         if labels_count > 0 {
             let first_label = make_string_value(mgp_vertex.label_at(0)?, result, memory)?;
             insert_result_record(&mgp_record, c_str!("first_label"), &first_label, result)?;
@@ -35,11 +37,18 @@ fn test_procedure(
                 result,
             )?;
         }
+
+        let name_property = mgp_vertex.property(c_str!("name"), memory)?.value;
+        if name_property.is_null() {
+            let unknown_name = make_string_value(c_str!("unknown"), result, memory)?;
+            insert_result_record(&mgp_record, c_str!("name_property"), &unknown_name, result)?;
+        } else {
+            insert_result_record(&mgp_record, c_str!("name_property"), &name_property, result)?;
+        }
+
         let has_label = mgp_vertex.has_label(c_str!("L3"));
         let mgp_value = make_bool_value(has_label, result, memory)?;
-        let name_property = mgp_vertex.property(c_str!("name"), memory)?.value;
         insert_result_record(&mgp_record, c_str!("has_L3_label"), &mgp_value, result)?;
-        insert_result_record(&mgp_record, c_str!("name_property"), &name_property, result)?;
     }
     Ok(())
 }
