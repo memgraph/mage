@@ -19,7 +19,13 @@ fn test_procedure(
         let mgp_record = make_result_record(result)?;
         let has_label = mgp_vertex.has_label(c_str!("L3"));
         let mgp_value = make_bool_value(has_label, result, memory)?;
+        let first_label = make_string_value(mgp_vertex.label_at(0)?, result, memory)?;
+        let name_property = MgpValue {
+            value: mgp_vertex.property(c_str!("name"), memory)?.value,
+        };
         insert_result_record(&mgp_record, c_str!("has_label"), &mgp_value, result)?;
+        insert_result_record(&mgp_record, c_str!("first_label"), &first_label, result)?;
+        insert_result_record(&mgp_record, c_str!("name_property"), &name_property, result)?;
     }
     Ok(())
 }
@@ -55,6 +61,18 @@ extern "C" fn test_procedure_c(
 pub extern "C" fn mgp_init_module(module: *mut mgp_module, _memory: *mut mgp_memory) -> c_int {
     let procedure = add_read_procedure(test_procedure_c, c_str!("test_procedure"), module);
     match add_bool_result_type(procedure, c_str!("has_label")) {
+        Ok(_) => {}
+        Err(_) => {
+            return 1;
+        }
+    }
+    match add_string_result_type(procedure, c_str!("first_label")) {
+        Ok(_) => {}
+        Err(_) => {
+            return 1;
+        }
+    }
+    match add_string_result_type(procedure, c_str!("name_property")) {
         Ok(_) => {}
         Err(_) => {
             return 1;

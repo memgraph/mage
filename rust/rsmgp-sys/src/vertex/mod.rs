@@ -8,6 +8,24 @@ use crate::result::*;
 use crate::mgp::ffi;
 use mockall_double::double;
 
+#[derive(Debug)]
+pub struct MgpProperty<'a> {
+    pub name: &'a CStr,
+    // TODO(gitbuda): Replace with MgpValue.
+    pub value: *mut mgp_value,
+}
+
+// TODO(gitbuda): Figure out why this crashes Memgraph.
+// impl<'a> Drop for MgpProperty<'a> {
+//     fn drop(&mut self) {
+//         unsafe {
+//             if !self.value.is_null() {
+//                 ffi::mgp_value_destroy(self.value);
+//             }
+//         }
+//     }
+// }
+
 pub struct MgpVerticesIterator {
     ptr: *mut mgp_vertices_iterator,
     is_first: bool,
@@ -75,12 +93,42 @@ impl MgpVertex {
         }
     }
 
+    // TODO(gitbuda): Figure out the correct lifetime.
+    pub fn label_at(&self, index: u64) -> MgpResult<&CStr> {
+        unsafe {
+            let c_label = ffi::mgp_vertex_label_at(self.ptr, index);
+            if c_label.name.is_null() {
+                return Err(MgpError::MgpOutOfBoundLabelIndex);
+            }
+            Ok(CStr::from_ptr(c_label.name))
+        }
+    }
+
     pub fn has_label(&self, name: &CStr) -> bool {
         unsafe {
             let c_mgp_label = mgp_label {
                 name: name.as_ptr(),
             };
             ffi::mgp_vertex_has_label(self.ptr, c_mgp_label) != 0
+        }
+    }
+
+    // TODO(gitbuda): This lifetime is probably problematic.
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    pub fn property<'a>(
+        &self,
+        name: &'a CStr,
+        memory: *mut mgp_memory,
+    ) -> MgpResult<MgpProperty<'a>> {
+        unsafe {
+            let mgp_value = ffi::mgp_vertex_get_property(self.ptr, name.as_ptr(), memory);
+            if mgp_value.is_null() {
+                return Err(MgpError::MgpAllocationError);
+            }
+            Ok(MgpProperty {
+                name,
+                value: mgp_value,
+            })
         }
     }
 }

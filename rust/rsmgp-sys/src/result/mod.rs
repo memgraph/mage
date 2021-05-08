@@ -1,6 +1,6 @@
 use snafu::Snafu;
 
-#[derive(Debug, Snafu)]
+#[derive(Debug, PartialEq, Snafu)]
 #[snafu(visibility = "pub")]
 pub enum MgpError {
     #[snafu(display("An error inside Rust procedure."))]
@@ -11,6 +11,8 @@ pub enum MgpError {
     MgpPreparingResultError,
     #[snafu(display("Unable to add a type of procedure paramater in Rust Module."))]
     MgpAddProcedureParameterTypeError,
+    #[snafu(display("Out of bound label index."))]
+    MgpOutOfBoundLabelIndex,
 }
 
 pub type MgpResult<T, E = MgpError> = std::result::Result<T, E>;
