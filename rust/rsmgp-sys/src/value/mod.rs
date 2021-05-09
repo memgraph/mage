@@ -47,8 +47,22 @@ impl MgpValue {
     }
 }
 
-// TODO(gitbuda): MgpValue and MgpConstValue are duplicated code.
-// TODO(gitbuda): Figure out how to unify MgpValue+MgpConstValue (maybe enum or const generics).
+// TODO(gitbuda): Unify MgpValue and MgpConstValue.
+//
+// mgp_value used to return data is non-const, owned by the module code. Function to delete
+// mgp_value is non-const.
+// mgp_value containing data from Memgraph is const.
+//
+// `make` functions return non-const value that has to be deleted.
+// `get_property` functions return non-const copied value that has to be deleted.
+// `mgp_property` holds *const mgp_value.
+//
+// `*mut mgp_value` + `*const mgp_value` possible solutions:
+//   * An enum containing *mut and *const can work but the implementation would also contain
+//   duplicated code.
+//   * A generic data type seems complex to implement https://stackoverflow.com/questions/40317860.
+//   * Holding a *const mgp_value + an ownership flag + convert to *mut when delete function has to
+//   be called.
 
 #[derive(Debug)]
 pub struct MgpConstValue {

@@ -13,7 +13,7 @@ pub struct MgpProperty<'a> {
     pub name: &'a CStr,
     pub value: MgpValue,
 }
-
+// TODO(gitbuda): Once proper MgpValue is in place, implement one MgpProperty.
 #[derive(Debug)]
 pub struct MgpConstProperty<'a> {
     pub name: &'a CStr,
@@ -57,6 +57,7 @@ impl<'a> Iterator for MgpPropertiesIterator<'a> {
                 if data.is_null() {
                     None
                 } else {
+                    // TODO(gitbuda): Check if this unwrap is OK.
                     let data_ref = data.as_ref().unwrap();
                     Some(MgpConstProperty {
                         name: CStr::from_ptr(data_ref.name),
@@ -72,6 +73,7 @@ impl<'a> Iterator for MgpPropertiesIterator<'a> {
                 if data.is_null() {
                     None
                 } else {
+                    // TODO(gitbuda): Check if this unwrap is OK.
                     let data_ref = data.as_ref().unwrap();
                     Some(MgpConstProperty {
                         name: CStr::from_ptr(data_ref.name),
