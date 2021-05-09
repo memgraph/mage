@@ -57,12 +57,16 @@ impl MgpValue {
 // `get_property` functions return non-const copied value that has to be deleted.
 // `mgp_property` holds *const mgp_value.
 //
-// `*mut mgp_value` + `*const mgp_value` possible solutions:
+// Possible solutions:
 //   * An enum containing *mut and *const can work but the implementation would also contain
 //   duplicated code.
 //   * A generic data type seems complex to implement https://stackoverflow.com/questions/40317860.
 //   * Holding a *const mgp_value + an ownership flag + convert to *mut when delete function has to
 //   be called.
+//   * Hold only *mut mgp_value... as soon as there is *const mgp_value, make a copy (own *mut
+//   mgp_value). The same applies for all other data types, e.g. mgp_edge, mgp_vertex.
+//   mgp_value_make_vertex accepts *mut mgp_vartex (required to return user data), but data from
+//   the graph is all *const T.
 
 #[derive(Debug)]
 pub struct MgpConstValue {
