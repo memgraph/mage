@@ -76,7 +76,7 @@ double AverageAbsoluteError(const std::vector<T> &result, const std::vector<T> &
   }
 
   double average_absolute_error = 0;
-  if (size > 0) average_absolute_error = (double)manhattan_distance / size;
+  if (size > 0) average_absolute_error = static_cast<double>(manhattan_distance) / size;
   return average_absolute_error;
 }
 
