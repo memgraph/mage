@@ -10,20 +10,32 @@
 
 namespace mg_generate {
 
-/// Builds the graph from a given number of nodes and a list of edges.
+///
+/// @brief Builds the undirected graph from a given number of nodes and a list of edges.
 /// Nodes should be 0-indexed and each edge should be provided in both
 /// directions.
+///
+///@param num_nodes Number of nodes in graph
+///@param edges Edges in newly built graph
+///@return std::unique_ptr<mg_graph::Graph<>> Pointer to the created graph
+///
 std::unique_ptr<mg_graph::Graph<>> BuildGraph(std::size_t num_nodes,
                                               const std::vector<std::pair<std::uint64_t, std::uint64_t>> &edges) {
   auto G = std::make_unique<mg_graph::Graph<>>();
   for (std::size_t i = 0; i < num_nodes; ++i) G->CreateNode(i);
-  for (const auto [from, to] : edges) G->CreateEdge(from, to);
+  for (const auto [from, to] : edges) G->CreateUndirectedEdge(from, to);
 
   return G;
 }
 
-/// Generates random undirected graph with a given numer of nodes and edges.
+///
+/// @brief Generates random undirected graph with a given numer of nodes and edges.
 /// The generated graph is not picked out of a uniform distribution.
+///
+///@param num_nodes Number of nodes in graph
+///@param num_edges Number of edges in graph
+///@return std::unique_ptr<mg_graph::Graph<>> Pointer to the created graph
+///
 std::unique_ptr<mg_graph::Graph<>> GenRandomGraph(std::size_t num_nodes, std::size_t num_edges) {
   using IntPair = std::pair<std::uint64_t, std::uint64_t>;
 
@@ -42,8 +54,13 @@ std::unique_ptr<mg_graph::Graph<>> GenRandomGraph(std::size_t num_nodes, std::si
   return BuildGraph(num_nodes, {rand_edges.begin(), rand_edges.end()});
 }
 
-/// Generates a random undirected tree with a given number of nodes.
+///
+/// @brief Generates a random undirected tree with a given number of nodes.
 /// The generated tree is not picked out of a uniform distribution.
+///
+///@param num_nodes Number of nodes in graph
+///@return std::unique_ptr<mg_graph::Graph<>> Pointer to the created graph
+///
 std::unique_ptr<mg_graph::Graph<>> GenRandomTree(std::size_t num_nodes) {
   auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
   std::mt19937 rng(seed);
