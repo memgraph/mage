@@ -13,20 +13,20 @@
 
 namespace mg_graph {
 
+enum class GraphType : std::uint8_t { kDirectedGraph, kUndirectedGraph };
+
 /// Graph representation.
 template <typename TSize = std::uint64_t>
 class Graph : public GraphView<TSize> {
-
   using typename GraphView<TSize>::TNode;
   using typename GraphView<TSize>::TEdge;
   using typename GraphView<TSize>::TNeighbour;
 
-  static_assert(
-      std::is_unsigned_v<TSize>,
-      "mg_graph::Graph expects the type to be an unsigned integer type\n"
-      "only (uint8_t, uint16_t, uint32_t, or uint64_t).");
+  static_assert(std::is_unsigned_v<TSize>,
+                "mg_graph::Graph expects the type to be an unsigned integer type\n"
+                "only (uint8_t, uint16_t, uint32_t, or uint64_t).");
 
-public:
+ public:
   /// Create object Graph
   explicit Graph() = default;
 
@@ -54,11 +54,9 @@ public:
   /// @param[in] second node id
   ///
   /// @return     Iterator range
-  std::vector<TSize> GetEdgesBetweenNodes(TSize first,
-                                          TSize second) const override {
+  std::vector<TSize> GetEdgesBetweenNodes(TSize first, TSize second) const override {
     std::vector<TSize> edge_ids;
-    const auto [range_start, range_end] =
-        nodes_to_edge_.equal_range(std::minmax(first, second));
+    const auto [range_start, range_end] = nodes_to_edge_.equal_range(std::minmax(first, second));
     edge_ids.reserve(std::distance(range_start, range_end));
     for (auto it = range_start; it != range_end; ++it) {
       if (IsEdgeValid(it->second)) {
@@ -134,14 +132,13 @@ public:
   /// Creates an edge.
   ///
   /// Creates an undirected edge in the graph, but edge will contain information
-  /// about the original directed property.
+  /// about the original directed property. Throws exception if node id's are not contained in  graph.
   ///
   /// @param[in]  from  The from node identifier
   /// @param[in]  to    The to node identifier
   ///
   /// @return     Created edge id
-  TSize CreateEdge(std::uint64_t memgraph_id_from,
-                   std::uint64_t memgraph_id_to) {
+  TSize CreateUndirectedEdge(std::uint64_t memgraph_id_from, std::uint64_t memgraph_id_to) {
     auto from = memgraph_to_inner_id_[memgraph_id_from];
     auto to = memgraph_to_inner_id_[memgraph_id_to];
 
@@ -158,6 +155,30 @@ public:
     return id;
   }
 
+  /// Creates an edge.
+  ///
+  /// Creates an directed edge in the graph. Edge will contain information
+  /// about the original node ID's. Throws exception if nodes are not contained in  graph.
+  ///
+  /// @param[in]  from  The from node identifier
+  /// @param[in]  to    The to node identifier
+  ///
+  /// @return     Created edge id
+  TSize CreateDirectedEdge(std::uint64_t memgraph_id_from, std::uint64_t memgraph_id_to) {
+    auto from = memgraph_to_inner_id_[memgraph_id_from];
+    auto to = memgraph_to_inner_id_[memgraph_id_to];
+
+    if (from < 0 || to < 0 || from >= nodes_.size() || to >= nodes_.size()) {
+      throw mg_exception::InvalidIDException();
+    }
+    auto id = edges_.size();
+    edges_.push_back({id, from, to});
+    adj_list_[from].push_back(id);
+    neighbours_[from].emplace_back(to, id);
+    nodes_to_edge_.insert({std::minmax(from, to), id});
+    return id;
+  }
+
   /// Gets all valid edges.
   ///
   /// Edge is valid if is not deleted with EraseEdge method.
@@ -167,8 +188,7 @@ public:
     std::vector<TEdge> edges_out;
     edges_out.reserve(edges_.size());
     for (const auto &edge : edges_) {
-      if (edge.id == Graph::k_deleted_edge_id_)
-        continue;
+      if (edge.id == k_deleted_edge_id_) continue;
       edges_out.push_back(edge);
     }
     return edges_out;
@@ -210,18 +230,14 @@ public:
 
     auto edge_id = it->second;
 
-    for (auto it = adj_list_[node_from].begin();
-         it != adj_list_[node_from].end(); ++it) {
-
+    for (auto it = adj_list_[node_from].begin(); it != adj_list_[node_from].end(); ++it) {
       if (edges_[*it].to == node_to || edges_[*it].from == node_to) {
         edges_[*it].id = Graph::k_deleted_edge_id_;
         adj_list_[node_from].erase(it);
         break;
       }
     }
-    for (auto it = adj_list_[node_to].begin(); it != adj_list_[node_to].end();
-         ++it) {
-
+    for (auto it = adj_list_[node_to].begin(); it != adj_list_[node_to].end(); ++it) {
       if (edges_[*it].to == node_from || edges_[*it].from == node_from) {
         edges_[*it].id = Graph::k_deleted_edge_id_;
         adj_list_[node_to].erase(it);
@@ -229,17 +245,13 @@ public:
       }
     }
 
-    for (auto it = neighbours_[node_from].begin();
-         it != neighbours_[node_from].end(); ++it) {
-
+    for (auto it = neighbours_[node_from].begin(); it != neighbours_[node_from].end(); ++it) {
       if (it->edge_id == edge_id) {
         neighbours_[node_from].erase(it);
         break;
       }
     }
-    for (auto it = neighbours_[node_to].begin();
-         it != neighbours_[node_to].end(); ++it) {
-
+    for (auto it = neighbours_[node_to].begin(); it != neighbours_[node_to].end(); ++it) {
       if (it->edge_id == edge_id) {
         neighbours_[node_to].erase(it);
         break;
@@ -271,11 +283,10 @@ public:
     inner_to_memgraph_id_.clear();
   }
 
-private:
+ private:
   // Constant is used for marking deleted edges.
   // If edge id is equal to constant, edge is deleted.
-  static constexpr inline TSize k_deleted_edge_id_ =
-      std::numeric_limits<TSize>::max();
+  static constexpr inline TSize k_deleted_edge_id_ = std::numeric_limits<TSize>::max();
 
   std::vector<std::vector<TSize>> adj_list_;
   std::vector<std::vector<TNeighbour>> neighbours_;
@@ -287,4 +298,4 @@ private:
 
   std::multimap<std::pair<TSize, TSize>, TSize> nodes_to_edge_;
 };
-} // namespace mg_graph
+}  // namespace mg_graph
