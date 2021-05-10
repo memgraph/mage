@@ -139,19 +139,12 @@ class Graph : public GraphView<TSize> {
   ///
   /// @return     Created edge id
   TSize CreateUndirectedEdge(std::uint64_t memgraph_id_from, std::uint64_t memgraph_id_to) {
-    auto from = memgraph_to_inner_id_[memgraph_id_from];
-    auto to = memgraph_to_inner_id_[memgraph_id_to];
+    auto from = GetInnerNodeId(memgraph_id_from);
+    auto to = GetInnerNodeId(memgraph_id_to);
 
-    if (from < 0 || to < 0 || from >= nodes_.size() || to >= nodes_.size()) {
-      throw mg_exception::InvalidIDException();
-    }
-    auto id = edges_.size();
-    edges_.push_back({id, from, to});
-    adj_list_[from].push_back(id);
+    auto id = CreateDirectedEdge(memgraph_id_from, memgraph_id_to);
     adj_list_[to].push_back(id);
-    neighbours_[from].emplace_back(to, id);
     neighbours_[to].emplace_back(from, id);
-    nodes_to_edge_.insert({std::minmax(from, to), id});
     return id;
   }
 
@@ -165,12 +158,9 @@ class Graph : public GraphView<TSize> {
   ///
   /// @return     Created edge id
   TSize CreateDirectedEdge(std::uint64_t memgraph_id_from, std::uint64_t memgraph_id_to) {
-    auto from = memgraph_to_inner_id_[memgraph_id_from];
-    auto to = memgraph_to_inner_id_[memgraph_id_to];
+    auto from = GetInnerNodeId(memgraph_id_from);
+    auto to = GetInnerNodeId(memgraph_id_to);
 
-    if (from < 0 || to < 0 || from >= nodes_.size() || to >= nodes_.size()) {
-      throw mg_exception::InvalidIDException();
-    }
     auto id = edges_.size();
     edges_.push_back({id, from, to});
     adj_list_[from].push_back(id);
@@ -260,11 +250,23 @@ class Graph : public GraphView<TSize> {
   }
 
   ///
+  /// Returns the GraphView ID from Memgraph's internal ID
+  ///
+  /// @param node_id Memgraphs's inner ID
+  ///
+  TSize GetInnerNodeId(std::uint64_t memgraph_id) {
+    if (memgraph_to_inner_id_.find(memgraph_id) == memgraph_to_inner_id_.end()) {
+      throw mg_exception::InvalidIDException();
+    }
+    return memgraph_to_inner_id_[memgraph_id];
+  }
+
+  ///
   /// Returns the Memgraph database ID from graph view
   ///
   /// @param node_id view's inner ID
   ///
-  TSize GetMemgraphNodeId(std::uint64_t node_id) {
+  std::uint64_t GetMemgraphNodeId(TSize node_id) {
     if (inner_to_memgraph_id_.find(node_id) == inner_to_memgraph_id_.end()) {
       throw mg_exception::InvalidIDException();
     }

@@ -12,18 +12,28 @@ namespace mg_generate {
 
 ///
 /// @brief Builds the undirected graph from a given number of nodes and a list of edges.
-/// Nodes should be 0-indexed and each edge should be provided in both
-/// directions.
+/// Nodes should be 0-indexed and each edge should represent an undirected connection between specified nodes.
 ///
 ///@param num_nodes Number of nodes in graph
 ///@param edges Edges in newly built graph
 ///@return std::unique_ptr<mg_graph::Graph<>> Pointer to the created graph
 ///
-std::unique_ptr<mg_graph::Graph<>> BuildGraph(std::size_t num_nodes,
-                                              const std::vector<std::pair<std::uint64_t, std::uint64_t>> &edges) {
+std::unique_ptr<mg_graph::Graph<>> BuildGraph(
+    std::size_t num_nodes, const std::vector<std::pair<std::uint64_t, std::uint64_t>> &edges,
+    const mg_graph::GraphType graph_type = mg_graph::GraphType::kUndirectedGraph) {
   auto G = std::make_unique<mg_graph::Graph<>>();
   for (std::size_t i = 0; i < num_nodes; ++i) G->CreateNode(i);
-  for (const auto [from, to] : edges) G->CreateUndirectedEdge(from, to);
+
+  switch (graph_type) {
+    case mg_graph::GraphType::kUndirectedGraph:
+      for (const auto [from, to] : edges) G->CreateUndirectedEdge(from, to);
+      break;
+    case mg_graph::GraphType::kDirectedGraph:
+      for (const auto [from, to] : edges) G->CreateDirectedEdge(from, to);
+      break;
+    default:
+      throw std::runtime_error("Graph type not supported.");
+  }
 
   return G;
 }
@@ -36,7 +46,9 @@ std::unique_ptr<mg_graph::Graph<>> BuildGraph(std::size_t num_nodes,
 ///@param num_edges Number of edges in graph
 ///@return std::unique_ptr<mg_graph::Graph<>> Pointer to the created graph
 ///
-std::unique_ptr<mg_graph::Graph<>> GenRandomGraph(std::size_t num_nodes, std::size_t num_edges) {
+std::unique_ptr<mg_graph::Graph<>> GenRandomGraph(
+    std::size_t num_nodes, std::size_t num_edges,
+    const mg_graph::GraphType graph_type = mg_graph::GraphType::kUndirectedGraph) {
   using IntPair = std::pair<std::uint64_t, std::uint64_t>;
 
   auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
@@ -51,7 +63,7 @@ std::unique_ptr<mg_graph::Graph<>> GenRandomGraph(std::size_t num_nodes, std::si
     } while (edge->first == edge->second || rand_edges.find(*edge) != rand_edges.end());
     rand_edges.insert(*edge);
   }
-  return BuildGraph(num_nodes, {rand_edges.begin(), rand_edges.end()});
+  return BuildGraph(num_nodes, {rand_edges.begin(), rand_edges.end()}, graph_type);
 }
 
 ///
@@ -61,7 +73,8 @@ std::unique_ptr<mg_graph::Graph<>> GenRandomGraph(std::size_t num_nodes, std::si
 ///@param num_nodes Number of nodes in graph
 ///@return std::unique_ptr<mg_graph::Graph<>> Pointer to the created graph
 ///
-std::unique_ptr<mg_graph::Graph<>> GenRandomTree(std::size_t num_nodes) {
+std::unique_ptr<mg_graph::Graph<>> GenRandomTree(
+    std::size_t num_nodes, const mg_graph::GraphType graph_type = mg_graph::GraphType::kUndirectedGraph) {
   auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
   std::mt19937 rng(seed);
   std::vector<std::pair<std::uint64_t, std::uint64_t>> edges;
@@ -69,7 +82,7 @@ std::unique_ptr<mg_graph::Graph<>> GenRandomTree(std::size_t num_nodes) {
     std::uniform_int_distribution<std::uint64_t> dist(0, i - 1);
     edges.emplace_back(dist(rng), i);
   }
-  return BuildGraph(num_nodes, edges);
+  return BuildGraph(num_nodes, edges, graph_type);
 }
 
 }  // namespace mg_generate
