@@ -1,6 +1,8 @@
 #pragma once
 
 #include <stack>
+#include <vector>
+
 #include <mg_graph.hpp>
 
 namespace betweenness_centrality_util {
@@ -14,7 +16,7 @@ void BFS(const std::uint64_t source_node, const mg_graph::GraphView<> &graph,
 
 namespace betweenness_centrality_alg {
 
-std::vector<double> BetweennessCentralityUnweighted(const mg_graph::GraphView<> &graph, bool directed=true);
+std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bool directed=true);
 
 }  // namespace betweenness_centrality_alg
 

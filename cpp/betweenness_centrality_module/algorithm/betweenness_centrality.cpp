@@ -1,7 +1,6 @@
-#include <unordered_map>
 #include <stack>
+#include <vector>
 #include <queue>
-#include <unordered_set>
 
 #include "betweenness_centrality.hpp"
 
@@ -37,7 +36,7 @@ void BFS(const std::uint64_t source_node, const mg_graph::GraphView<> &graph,
             }
 
             //shortest path from node to neighbor_id goes through current_node 
-            if (distance[neighbor_id] = distance[current_node_id] + 1) {
+            if (distance[neighbor_id] == distance[current_node_id] + 1) {
                 shortest_paths_counter[neighbor_id] += shortest_paths_counter[current_node_id];
                 predecessors[neighbor_id].emplace_back(current_node_id);
             }
@@ -49,7 +48,8 @@ void BFS(const std::uint64_t source_node, const mg_graph::GraphView<> &graph,
 
 
 namespace betweenness_centrality_alg {
-std::vector<double> BetweennessCentralityUnweighted(const mg_graph::GraphView<> &graph, bool directed=true){
+
+std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bool directed){
     auto number_of_nodes = graph.Nodes().size();
     std::vector<double> betweenness_centrality (number_of_nodes, 0);
 

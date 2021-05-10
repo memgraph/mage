@@ -19,10 +19,10 @@ void InsertBCRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *memo
   mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
 }
 
-void BetweennessCentrality(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void GetBetweennessCentrality(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory);
-    auto BC = betweenness_centrality_alg::BetweennessCentralityUnweighted(*graph);
+    auto BC = betweenness_centrality_alg::BetweennessCentrality(*graph);
 
     auto number_of_nodes = graph->Nodes().size();
     for (std::uint64_t node_id = 0; node_id < number_of_nodes; ++node_id) {
@@ -39,7 +39,7 @@ void BetweennessCentrality(const mgp_list *args, const mgp_graph *memgraph_graph
 // Each module needs to define mgp_init_module function.
 // Here you can register multiple procedures your module supports.
 extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
-  mgp_proc *proc = mgp_module_add_read_procedure(module, "get", BetweennessCentrality);
+  mgp_proc *proc = mgp_module_add_read_procedure(module, "get", GetBetweennessCentrality);
 
   if (!proc) return 1;
 
