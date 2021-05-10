@@ -2,6 +2,8 @@
 
 #include <chrono>
 #include <cmath>
+#include <vector>
+#include <cassert>
 
 namespace mg_test_utility {
 
@@ -36,9 +38,7 @@ T MaxAbsoluteError(const std::vector<T> &result, const std::vector<T> &correct) 
       std::is_arithmetic_v<T>,
       "mg_test_utility::MaxAbsoluteError expects the vector type to be an arithmetic type.\n");
 
-  static_assert(
-      result.size() == correct.size(),
-      "mg_test_utility::MaxAbsoluteError expects the arguments to be of equal size.\n");
+  assert (result.size() == correct.size());
 
   auto size = correct.size();
   T max_absolute_error = 0;
@@ -65,9 +65,7 @@ double AverageAbsoluteError(const std::vector<T> &result, const std::vector<T> &
       std::is_arithmetic_v<T>,
       "mg_test_utility::AverageAbsoluteError expects the vector type to be an arithmetic type.\n");
 
-  static_assert(
-      result.size() == correct.size(),
-      "mg_test_utility::AverageAbsoluteError expects the arguments to be of equal size.\n");
+  assert (result.size() == correct.size());
 
   auto size = correct.size();
   T manhattan_distance = 0;
