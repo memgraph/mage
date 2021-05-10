@@ -168,7 +168,11 @@ void InsertIntValueResult(mgp_result_record *record, const char *field_name,
   }
 }
 
+<<<<<<< HEAD
 /// Inserts an integer of value double_value to the field field_name of
+=======
+/// Inserts a double of value double_value to the field field_name of
+>>>>>>> vector-results-comparison-mg-test-utility
 /// the record mgp_result_record record.
 void InsertDoubleValue(mgp_result_record *record, const char *field_name, const double double_value,
                        mgp_memory *memory) {
