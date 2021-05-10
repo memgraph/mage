@@ -32,7 +32,7 @@ class Timer {
 ///@param correct Container that stores accurate values
 ///@return maximum absolute error
 ///
-template <typename T = double>
+template <typename T>
 T MaxAbsoluteError(const std::vector<T> &result, const std::vector<T> &correct) {
   static_assert(
       std::is_arithmetic_v<T>,
@@ -59,7 +59,7 @@ T MaxAbsoluteError(const std::vector<T> &result, const std::vector<T> &correct) 
 ///@param correct Container that stores accurate values
 ///@return average absolute error
 ///
-template <typename T = double>
+template <typename T>
 double AverageAbsoluteError(const std::vector<T> &result, const std::vector<T> &correct) {
   static_assert(
       std::is_arithmetic_v<T>,
@@ -90,7 +90,7 @@ double AverageAbsoluteError(const std::vector<T> &result, const std::vector<T> &
 /// and the average absolute error is lesser than AVERAGE_ABSOLUTE_ERROR_EPSILON,
 /// false otherwise
 ///
-template <typename T = double>
+template <typename T>
 bool TestEqualVectors(const std::vector<T> &result, const std::vector<T> &correct) {
   T max_absolute_error = MaxAbsoluteError(result, correct);
   double average_absolute_error = AverageAbsoluteError(result, correct);
