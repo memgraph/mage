@@ -21,7 +21,7 @@ void InsertBCRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *memo
 
 void GetBetweennessCentrality(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory);
+    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
     auto BC = betweenness_centrality_alg::BetweennessCentrality(*graph);
 
     auto number_of_nodes = graph->Nodes().size();

@@ -16,7 +16,7 @@ void BFS(const std::uint64_t source_node, const mg_graph::GraphView<> &graph,
 
 namespace betweenness_centrality_alg {
 
-std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bool directed=true);
+std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bool directed=true, bool normalized=true);
 
 }  // namespace betweenness_centrality_alg
 
