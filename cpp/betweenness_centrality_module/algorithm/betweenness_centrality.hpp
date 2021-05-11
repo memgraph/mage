@@ -18,7 +18,7 @@ void normalize (std::vector<double> &vec, double constant);
 
 namespace betweenness_centrality_alg {
 
-std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bool directed=true, bool normalized=true);
+std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bool directed, bool normalized);
 
 }  // namespace betweenness_centrality_alg
 
