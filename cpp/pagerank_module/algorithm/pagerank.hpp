@@ -9,12 +9,12 @@ template <typename T>
 class AdjacencyList {
  public:
   AdjacencyList() = default;
-  explicit AdjacencyList(int64_t node_count) : list_(node_count) {}
+  explicit AdjacencyList(std::uint64_t node_count) : list_(node_count) {}
 
   /// If adjacency list size is unknown at the construction time this method
   /// can be used to reserve the required space. The method will also clear
   /// underlying storage if it contains something.
-  void Init(int64_t node_count) {
+  void Init(std::uint64_t node_count) {
     list_.clear();
     list_.resize(node_count);
   }
@@ -25,7 +25,9 @@ class AdjacencyList {
   /// because they represent position in the underlying std::vector.
   void AddAdjacentPair(T left_node_id, T right_node_id, bool undirected = false) {
     list_[left_node_id].push_back(right_node_id);
-    if (undirected) list_[right_node_id].push_back(left_node_id);
+    if (undirected) {
+      list_[right_node_id].push_back(left_node_id);
+    }
   }
 
   /// Be careful and don't call AddAdjacentPair while you have reference to this
@@ -119,7 +121,7 @@ void ThreadPageRankIteration(const PageRankGraph &graph, const std::vector<doubl
 /// @param block -- PageRank block calculated in ThreadPageRankIteration
 /// @param rank_next -- PageRanks which will be updated
 void AddCurrentBlockToRankNext(const PageRankGraph &graph, double damping_factor, const std::vector<double> &block,
-                               std::vector<double> *rank_next);
+                               std::vector<double> &rank_next);
 
 /// Adds remaining PageRank values
 /// Adds PageRank values of nodes that haven't been added by
@@ -129,7 +131,7 @@ void AddCurrentBlockToRankNext(const PageRankGraph &graph, double damping_factor
 /// @param graph -- graph
 /// @param damping_factor -- damping factor
 /// @param rank_next -- PageRank which will be updated
-void CompleteRankNext(const PageRankGraph &graph, double damping_factor, std::vector<double> *rank_next);
+void CompleteRankNext(const PageRankGraph &graph, double damping_factor, std::vector<double> &rank_next);
 
 /// Checks whether PageRank algorithm should continue iterating
 /// Checks if maximal number of iterations was reached or
@@ -148,7 +150,7 @@ bool CheckContinueIterate(const std::vector<double> &rank, const std::vector<dou
 /// Divides all values with sum of the values to get their sum equal 1
 ///
 /// @param rank -- PageRank
-void NormalizeRank(std::vector<double> *rank);
+void NormalizeRank(std::vector<double> &rank);
 
 /// If we present nodes as pages and directed edges between them as links the
 /// PageRank algorithm outputs a probability distribution used to represent the

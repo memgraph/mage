@@ -36,10 +36,6 @@ void PagerankWrapper(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_
                      return {edge.from, edge.to};
                    });
 
-    // for (const auto [id, from, to] : graph_edges) {
-    //   pagerank_edges.emplace_back(from, to);
-    // }
-
     auto number_of_nodes = graph->Nodes().size();
     auto graph_nodes = graph->Nodes();
 

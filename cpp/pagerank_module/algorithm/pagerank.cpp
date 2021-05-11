@@ -57,18 +57,18 @@ void ThreadPageRankIteration(const PageRankGraph &graph, const std::vector<doubl
 }
 
 void AddCurrentBlockToRankNext(const PageRankGraph &graph, const double damping_factor,
-                               const std::vector<double> &block, std::vector<double> *rank_next) {
+                               const std::vector<double> &block, std::vector<double> &rank_next) {
   // The block vector contains partially precalculated sums of PR(page)/C(page)
   // for each node. Node index in the block vector corresponds to the node index
   // in the rank_next vector.
   for (std::size_t node_index = 0; node_index < block.size(); node_index++) {
-    (*rank_next)[node_index] += damping_factor * block[node_index];
+    rank_next[node_index] += damping_factor * block[node_index];
   }
 }
 
-void CompleteRankNext(const PageRankGraph &graph, const double damping_factor, std::vector<double> *rank_next) {
-  while (rank_next->size() < graph.GetNodeCount()) {
-    rank_next->push_back((1.0 - damping_factor) / graph.GetNodeCount());
+void CompleteRankNext(const PageRankGraph &graph, const double damping_factor, std::vector<double> &rank_next) {
+  while (rank_next.size() < graph.GetNodeCount()) {
+    rank_next.push_back((1.0 - damping_factor) / graph.GetNodeCount());
   }
 }
 
@@ -124,9 +124,9 @@ std::vector<double> ParallelIterativePageRank(const PageRankGraph &graph, std::s
     std::vector<double> rank_next(graph.GetNodeCount(), (1.0 - damping_factor) / graph.GetNodeCount());
     for (std::size_t cluster_id = 0; cluster_id < number_of_threads; cluster_id++) {
       std::vector<double> block = page_rank_future[cluster_id].get();
-      AddCurrentBlockToRankNext(graph, damping_factor, block, &rank_next);
+      AddCurrentBlockToRankNext(graph, damping_factor, block, rank_next);
     }
-    CompleteRankNext(graph, damping_factor, &rank_next);
+    CompleteRankNext(graph, damping_factor, rank_next);
 
     for (std::uint64_t i = 0; i < number_of_threads; i++) {
       if (my_threads[i].joinable()) {
