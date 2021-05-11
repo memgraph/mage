@@ -58,7 +58,7 @@ namespace betweenness_centrality_alg {
 std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bool directed, bool normalized){
     auto number_of_nodes = graph.Nodes().size();
     std::vector<double> betweenness_centrality (number_of_nodes, 0);
-
+    std::cout << number_of_nodes;
     // perform bfs for every node in the graph 
     for (std::uint64_t node_id = 0; node_id < number_of_nodes; node_id++) {
 
@@ -88,11 +88,13 @@ std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bo
     }
 
     if (normalized){
+        //normalized by dividing the value by the number of pairs of nodes not including node the node whose value we normalize
+        auto number_of_pairs = (number_of_nodes-1) * (number_of_nodes-2);
         if (directed) {
-            double constant = static_cast<double>(1) / ((number_of_nodes-1) * (number_of_nodes-2));
+            double constant = number_of_nodes > 2 ? static_cast<double>(1) / number_of_pairs : 1.0;
             betweenness_centrality_util::normalize(betweenness_centrality, constant);
         } else{
-            double constant = static_cast<double>(2) / ((number_of_nodes-1) * (number_of_nodes-2));
+            double constant = number_of_nodes > 2 ? static_cast<double>(2) / number_of_pairs : 1.0;
             betweenness_centrality_util::normalize(betweenness_centrality, constant);
         }
         

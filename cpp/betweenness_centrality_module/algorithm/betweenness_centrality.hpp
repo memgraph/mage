@@ -11,6 +11,8 @@ void BFS(const std::uint64_t source_node, const mg_graph::GraphView<> &graph,
         std::stack<std::uint64_t> &visited, std::vector<std::vector<std::uint64_t>> &predecessors,
         std::vector<std::uint64_t> &shortest_paths_counter);
 
+void normalize (std::vector<double> &vec, double constant);
+
 }  // namespace betweenness_centrality_util
 
 

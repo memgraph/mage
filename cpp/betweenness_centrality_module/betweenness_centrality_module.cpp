@@ -14,18 +14,30 @@ void InsertBCRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *memo
   if (record == nullptr) {
     throw mg_exception::NotEnoughMemoryException();
   }
-
-  mg_utility::InsertDoubleValue(record, kFieldBCScore, betweeenness_centrality, memory);
   mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
+  mg_utility::InsertDoubleValue(record, kFieldBCScore, betweeenness_centrality, memory);
 }
 
 void GetBetweennessCentrality(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
-    auto BC = betweenness_centrality_alg::BetweennessCentrality(*graph);
+    //const mgp_value *directed_mgp_value = mgp_list_at(args, 0);
+    //const mgp_value * normalized_mgp_value = mgp_list_at(args, 1);
+
+    //auto directed = mgp_value_get_bool(directed_mgp_value);
+    //auto normalized = mgp_value_get_bool(normalized_mgp_value);
+
+    bool directed = false;
+    bool normalized = false;
+
+    auto graph_type = mg_graph::GraphType::kUndirectedGraph;
+    if (directed) graph_type = mg_graph::GraphType::kDirectedGraph;
+
+    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, graph_type);
+    auto BC = betweenness_centrality_alg::BetweennessCentrality(*graph, directed, normalized);
 
     auto number_of_nodes = graph->Nodes().size();
     for (std::uint64_t node_id = 0; node_id < number_of_nodes; ++node_id) {
+      std::cout << node_id << " ";
       InsertBCRecord(memgraph_graph, result, memory, BC[node_id], graph->GetMemgraphNodeId(node_id));
     }
   } catch (const std::exception &e) {
@@ -44,7 +56,7 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
   if (!proc) return 1;
 
   if (!mgp_proc_add_result(proc, "node", mgp_type_node())) return 1;
-  if (!mgp_proc_add_result(proc, "betweenness", mgp_type_float())) return 1;
+  if (!mgp_proc_add_result(proc, "betweenness", mgp_type_number())) return 1;
 
   return 0;
 }
