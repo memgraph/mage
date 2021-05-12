@@ -3,4 +3,4 @@ query: >
     YIELD node, betweeenness_centrality
     RETURN betweeenness_centrality, node.id AS node_id;
 
-output:
+output: []
