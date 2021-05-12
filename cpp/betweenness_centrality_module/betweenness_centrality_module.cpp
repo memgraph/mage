@@ -23,12 +23,9 @@ void InsertBCRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *memo
 
 void GetBetweennessCentrality(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    auto directed_value = mgp_list_at(args, 0);
-    auto normalized_value = mgp_list_at(args, 1);
+    auto directed = mgp_value_get_bool(mgp_list_at(args, 0));
+    auto normalized = mgp_value_get_bool(mgp_list_at(args, 1));
 
-    auto directed = mgp_value_get_bool(directed_value);
-    auto normalized = mgp_value_get_int(normalized_value);
-  
     auto graph_type = mg_graph::GraphType::kUndirectedGraph;
     if (directed) graph_type = mg_graph::GraphType::kDirectedGraph;
 
@@ -53,9 +50,10 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
   mgp_proc *proc = mgp_module_add_read_procedure(module, "get", GetBetweennessCentrality);
   if (!proc) return 1;
 
+  // Query module arguments
   auto bool_value_directed = mgp_value_make_bool(true, memory);
   auto bool_value_normalized =  mgp_value_make_bool(true, memory);
-  // Query module arguments
+
   if (!mgp_proc_add_opt_arg(proc, kArgumentDirected, mgp_type_bool(), bool_value_directed))
     return 1;
   if (!mgp_proc_add_opt_arg(proc, kArgumentNormalized, mgp_type_bool(), bool_value_normalized))
