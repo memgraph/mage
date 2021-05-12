@@ -88,7 +88,7 @@ std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bo
     }
 
     if (normalized){
-        //normalized by dividing the value by the number of pairs of nodes not including node the node whose value we normalize
+        //normalized by dividing the value by the number of pairs of nodes not including the node whose value we normalize
         auto number_of_pairs = (number_of_nodes-1) * (number_of_nodes-2);
         if (directed) {
             double constant = number_of_nodes > 2 ? static_cast<double>(1) / number_of_pairs : 1.0;
