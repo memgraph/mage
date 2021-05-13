@@ -4,11 +4,6 @@ import yaml
 from pathlib import Path
 from database import Memgraph, Node
 
-try:
-    from mgclient import Node as ConnectorNode
-except ImportError:
-    from neo4j.types import Node as ConnectorNode
-
 
 @pytest.fixture
 def db():
@@ -23,6 +18,8 @@ class TestConstants:
     OUTPUT = "output"
     EXCEPTION = "exception"
 
+    ABSOLUTE_TOLERANCE = 1e-3
+
 
 def _node_to_dict(data):
     labels = data.labels if hasattr(data, "labels") else data._labels
@@ -35,6 +32,8 @@ def _replace(data, match_classes):
         return {k: _replace(v, match_classes) for k, v in data.items()}
     elif isinstance(data, list):
         return [_replace(i, match_classes) for i in data]
+    elif isinstance(data, float):
+        return pytest.approx(data, abs=TestConstants.ABSOLUTE_TOLERANCE)
     else:
         return _node_to_dict(data) if isinstance(data, match_classes) else data
 
@@ -83,13 +82,13 @@ def test_end2end(test_dir, db):
 
     if output_test:
         result_query = list(db.execute_and_fetch(test_query))
-        result = _replace(result_query, (Node, ConnectorNode))
+        result = _replace(result_query, Node)
 
         expected = test_dict[TestConstants.OUTPUT]
-        assert expected == result
+        assert result == expected
 
     if exception_test:
-        # TODO: Implement for different kinds of errors, fix Neo4j Driver
+        # TODO: Implement for different kinds of errors
         try:
             result = db.execute_and_fetch(test_query)
             assert result is None

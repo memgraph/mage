@@ -2,7 +2,7 @@ pytest
 pyyaml
 black
 flake8
-neo4j==1.7.3
+pymgclient
 pytest-pylint
 pytest-timeout
 pytest-cov
