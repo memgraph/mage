@@ -99,44 +99,4 @@ bool TestEqualVectors(const std::vector<T> &result, const std::vector<T> &correc
 
   return true;
 }
-
-///
-///@brief A method that determines whether given vectors
-/// have the exact same values on all indices.
-///
-///@param result Vector that stores calculated values
-///@param correct Vector that stores accurate values
-///@return true if all values are same, false otherwise
-///
-template <typename T>
-bool TestExactEqualVectors(const std::vector<T> &result, const std::vector<T> &correct) {
-  if (result.size() != correct.size()) return false;
-  for (auto index = 0; index < result.size(); index++) {
-    if (result[index] != correct[index]) return false;
-  }
-  return true;
-}
-
-///
-///@brief An in-place method that determines whether given stacks
-/// have the exact same values on all indices.
-///
-///@param result Stack that stores calculated values
-///@param correct Stack that stores accurate values
-///@return true if all values are same, false otherwise
-///
-template <typename T>
-bool TestExactEqualStacks(std::stack<T> &result, std::stack<T> &correct) {
-  if (result.size() != correct.size()) return false;
-
-  while (!result.empty()) {
-    auto result_value = result.top();
-    result.pop();
-    auto correct_value = correct.top();
-    correct.pop();
-    if (result_value != correct_value) return false;
-  }
-
-  return true;
-}
 }  // namespace mg_test_utility
