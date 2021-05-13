@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cmath>
 #include <vector>
+#include <stack>
 
 namespace mg_test_utility {
 
