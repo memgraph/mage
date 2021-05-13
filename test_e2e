@@ -12,4 +12,4 @@ E2E_DIRECTORY = f"{WORK_DIRECTORY}/e2e"
 
 os.environ["PYTHONPATH"] = E2E_DIRECTORY
 os.chdir(E2E_DIRECTORY)
-subprocess.run(["pytest", "."])
+subprocess.run(["pytest", ".", "-vv"])
