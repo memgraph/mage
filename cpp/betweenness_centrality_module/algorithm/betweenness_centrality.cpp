@@ -44,7 +44,7 @@ void BFS(const std::uint64_t source_node, const mg_graph::GraphView<> &graph,
     }
 }
 
-void normalize (std::vector<double> &vec, double constant){
+void Normalize (std::vector<double> &vec, double constant){
     for(auto index = 0; index < vec.size(); index++){
         vec[index] *= constant;
     }
