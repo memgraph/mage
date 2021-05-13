@@ -11,8 +11,8 @@ constexpr char const *kFieldNode = "node";
 constexpr char const *kArgumentDirected = "directed";
 constexpr char const *kArgumentNormalized = "normalized";
 
-void InsertBCRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *memory, const double betweeenness_centrality,
-                       const int node_id) {
+void InsertBCRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *memory,
+                    const double betweeenness_centrality, const int node_id) {
   auto *record = mgp_result_new_record(result);
   if (record == nullptr) {
     throw mg_exception::NotEnoughMemoryException();
@@ -21,7 +21,8 @@ void InsertBCRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *memo
   mg_utility::InsertDoubleValue(record, kFieldBCScore, betweeenness_centrality, memory);
 }
 
-void GetBetweennessCentrality(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void GetBetweennessCentrality(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result,
+                              mgp_memory *memory) {
   try {
     auto directed = mgp_value_get_bool(mgp_list_at(args, 0));
     auto normalized = mgp_value_get_bool(mgp_list_at(args, 1));
@@ -35,7 +36,7 @@ void GetBetweennessCentrality(const mgp_list *args, const mgp_graph *memgraph_gr
     auto number_of_nodes = graph->Nodes().size();
     for (std::uint64_t node_id = 0; node_id < number_of_nodes; ++node_id)
       InsertBCRecord(memgraph_graph, result, memory, BC[node_id], graph->GetMemgraphNodeId(node_id));
-  
+
   } catch (const std::exception &e) {
     // We must not let any exceptions out of our module.
     mgp_result_set_error_msg(result, e.what());
@@ -52,13 +53,11 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
 
   // Query module arguments
   auto bool_value_directed = mgp_value_make_bool(true, memory);
-  auto bool_value_normalized =  mgp_value_make_bool(true, memory);
+  auto bool_value_normalized = mgp_value_make_bool(true, memory);
 
-  if (!mgp_proc_add_opt_arg(proc, kArgumentDirected, mgp_type_bool(), bool_value_directed))
-    return 1;
-  if (!mgp_proc_add_opt_arg(proc, kArgumentNormalized, mgp_type_bool(), bool_value_normalized))
-    return 1;
-  
+  if (!mgp_proc_add_opt_arg(proc, kArgumentDirected, mgp_type_bool(), bool_value_directed)) return 1;
+  if (!mgp_proc_add_opt_arg(proc, kArgumentNormalized, mgp_type_bool(), bool_value_normalized)) return 1;
+
   mgp_value_destroy(bool_value_directed);
   mgp_value_destroy(bool_value_normalized);
 
