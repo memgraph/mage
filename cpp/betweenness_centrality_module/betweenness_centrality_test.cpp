@@ -52,7 +52,7 @@ TEST(BetweennessCentralityUtilBFS, DisconnectedUndirectedGraph) {
   betweenness_centrality_util::BFS(0, *graph, visited, predecessors, shortest_paths_counter);
 
   std::stack<uint64_t> expected_visited({0, 1, 2});
-  ASSERT_TRUE(mg_test_utility::TestExactEqualStacks(visited, expected_visited));
+  ASSERT_EQ(visited, expected_visited);
 
   std::vector<std::vector<uint64_t>> expected_predecessors({{}, {0}, {0}, {}, {}, {}, {}});
   for (auto node_id = 0; node_id < number_of_nodes; node_id++) {
