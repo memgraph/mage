@@ -7,30 +7,6 @@
 
 #include "algorithm/betweenness_centrality.hpp"
 
-namespace betweenness_centrality_test_util {
-template <typename T>
-bool TestExactEqualVectors(const std::vector<T> &result, const std::vector<T> &correct) {
-  if (result.size() != correct.size()) return false;
-  for (auto index = 0; index < result.size(); index++) {
-    if (result[index] != correct[index]) return false;
-  }
-  return true;
-}
-
-template <typename T>
-bool TestExactEqualStacks(std::stack<T> &result, std::stack<T> &correct) {
-  if (result.size() != correct.size()) return false;
-  while (!result.empty()) {
-    auto result_value = result.top();
-    result.pop();
-    auto correct_value = correct.top();
-    correct.pop();
-    if (result_value != correct_value) return false;
-  }
-  return true;
-}
-}  // namespace betweenness_centrality_test_util
-
 TEST(BetweennessCentralityUtilBFS, UndirectedTree) {
   //    (4)
   //   /   \
@@ -48,17 +24,17 @@ TEST(BetweennessCentralityUtilBFS, UndirectedTree) {
   betweenness_centrality_util::BFS(0, *graph, visited, predecessors, shortest_paths_counter);
 
   std::stack<uint64_t> expected_visited({0, 2, 4, 1, 3, 5});
-  ASSERT_TRUE(betweenness_centrality_test_util::TestExactEqualStacks(visited, expected_visited));
+  ASSERT_TRUE(mg_test_utility::TestExactEqualStacks(visited, expected_visited));
 
   std::vector<std::vector<uint64_t>> expected_predecessors({{}, {4}, {0}, {1}, {2}, {1}});
   for (auto node_id = 0; node_id < number_of_nodes; node_id++) {
     ASSERT_TRUE(
-        betweenness_centrality_test_util::TestExactEqualVectors(predecessors[node_id], expected_predecessors[node_id]));
+        mg_test_utility::TestExactEqualVectors(predecessors[node_id], expected_predecessors[node_id]));
   }
 
   std::vector<uint64_t> expected_shortest_paths_counter({1, 1, 1, 1, 1, 1});
   ASSERT_TRUE(
-      betweenness_centrality_test_util::TestExactEqualVectors(shortest_paths_counter, expected_shortest_paths_counter));
+      mg_test_utility::TestExactEqualVectors(shortest_paths_counter, expected_shortest_paths_counter));
 }
 
 TEST(BetweennessCentralityUtilBFS, DisconnectedUndirectedGraph) {
@@ -78,17 +54,17 @@ TEST(BetweennessCentralityUtilBFS, DisconnectedUndirectedGraph) {
   betweenness_centrality_util::BFS(0, *graph, visited, predecessors, shortest_paths_counter);
 
   std::stack<uint64_t> expected_visited({0, 1, 2});
-  ASSERT_TRUE(betweenness_centrality_test_util::TestExactEqualStacks(visited, expected_visited));
+  ASSERT_TRUE(mg_test_utility::TestExactEqualStacks(visited, expected_visited));
 
   std::vector<std::vector<uint64_t>> expected_predecessors({{}, {0}, {0}, {}, {}, {}, {}});
   for (auto node_id = 0; node_id < number_of_nodes; node_id++) {
     ASSERT_TRUE(
-        betweenness_centrality_test_util::TestExactEqualVectors(predecessors[node_id], expected_predecessors[node_id]));
+        mg_test_utility::TestExactEqualVectors(predecessors[node_id], expected_predecessors[node_id]));
   }
 
   std::vector<uint64_t> expected_shortest_paths_counter({1, 1, 1, 0, 0, 0, 0});
   ASSERT_TRUE(
-      betweenness_centrality_test_util::TestExactEqualVectors(shortest_paths_counter, expected_shortest_paths_counter));
+      mg_test_utility::TestExactEqualVectors(shortest_paths_counter, expected_shortest_paths_counter));
 }
 
 TEST(BetweennessCentralityUtilBFS, UndirectedCyclicGraph) {
@@ -108,17 +84,17 @@ TEST(BetweennessCentralityUtilBFS, UndirectedCyclicGraph) {
   betweenness_centrality_util::BFS(0, *graph, visited, predecessors, shortest_paths_counter);
 
   std::stack<uint64_t> expected_visited({0, 1, 2, 3, 4, 5});
-  ASSERT_TRUE(betweenness_centrality_test_util::TestExactEqualStacks(visited, expected_visited));
+  ASSERT_TRUE(mg_test_utility::TestExactEqualStacks(visited, expected_visited));
 
   std::vector<std::vector<uint64_t>> expected_predecessors({{}, {0}, {0}, {1}, {2}, {3, 4}});
   for (auto node_id = 0; node_id < number_of_nodes; node_id++) {
     ASSERT_TRUE(
-        betweenness_centrality_test_util::TestExactEqualVectors(predecessors[node_id], expected_predecessors[node_id]));
+        mg_test_utility::TestExactEqualVectors(predecessors[node_id], expected_predecessors[node_id]));
   }
 
   std::vector<uint64_t> expected_shortest_paths_counter({1, 1, 1, 1, 1, 2});
   ASSERT_TRUE(
-      betweenness_centrality_test_util::TestExactEqualVectors(shortest_paths_counter, expected_shortest_paths_counter));
+      mg_test_utility::TestExactEqualVectors(shortest_paths_counter, expected_shortest_paths_counter));
 }
 
 TEST(BetweennessCentralityUtilBFS, UndirectedMultipleShortestPaths) {
@@ -139,17 +115,17 @@ TEST(BetweennessCentralityUtilBFS, UndirectedMultipleShortestPaths) {
   betweenness_centrality_util::BFS(0, *graph, visited, predecessors, shortest_paths_counter);
 
   std::stack<uint64_t> expected_visited({0, 1, 2, 3, 4, 5, 6, 7, 8});
-  ASSERT_TRUE(betweenness_centrality_test_util::TestExactEqualStacks(visited, expected_visited));
+  ASSERT_TRUE(mg_test_utility::TestExactEqualStacks(visited, expected_visited));
 
   std::vector<std::vector<uint64_t>> expected_predecessors({{}, {0}, {0}, {1, 2}, {3}, {4}, {4}, {5, 6}, {7}});
   for (auto node_id = 0; node_id < number_of_nodes; node_id++) {
     ASSERT_TRUE(
-        betweenness_centrality_test_util::TestExactEqualVectors(predecessors[node_id], expected_predecessors[node_id]));
+        mg_test_utility::TestExactEqualVectors(predecessors[node_id], expected_predecessors[node_id]));
   }
 
   std::vector<uint64_t> expected_shortest_paths_counter({1, 1, 1, 2, 2, 2, 2, 4, 4});
   ASSERT_TRUE(
-      betweenness_centrality_test_util::TestExactEqualVectors(shortest_paths_counter, expected_shortest_paths_counter));
+      mg_test_utility::TestExactEqualVectors(shortest_paths_counter, expected_shortest_paths_counter));
 }
 
 TEST(BetweennessCentrality, EmptyGraph) {
