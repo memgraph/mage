@@ -38,8 +38,8 @@ std::uint64_t PageRankGraph::GetOutDegree(const std::uint64_t node_id) const { r
 
 void CalculateOptimalBorders(const PageRankGraph &graph, const int number_of_threads,
                              std::vector<std::uint64_t> *borders) {
-  for (int i = 0; i <= number_of_threads; i++) {
-    borders->push_back(static_cast<uint64_t>(i) * graph.GetEdgeCount() / number_of_threads);
+  for (std::uint64_t border_index = 0; border_index <= number_of_threads; border_index++) {
+    borders->push_back(border_index * graph.GetEdgeCount() / number_of_threads);
   }
 }
 
@@ -101,11 +101,9 @@ std::vector<double> ParallelIterativePageRank(const PageRankGraph &graph, std::s
   CalculateOptimalBorders(graph, number_of_threads, &borders);
 
   std::vector<double> rank(graph.GetNodeCount(), 1.0 / graph.GetNodeCount());
-  bool continue_iterate = true;
   // Because we increment number_of_iterations at the end of while loop.
-  if (max_iterations == 0) {
-    continue_iterate = false;
-  }
+  bool continue_iterate = max_iterations != 0;
+
   std::size_t number_of_iterations = 0;
   while (continue_iterate) {
     std::vector<std::promise<std::vector<double>>> page_rank_promise(number_of_threads);
