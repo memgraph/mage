@@ -1,4 +1,25 @@
-# MAGE - Memgraph Advanced Graph Extensions :crystal_ball:
+<p align="right">
+    <img src="https://i.imgur.com/fStSEcL.png"
+        height="130">
+</p>
+
+# MAGE
+
+<p align="center">
+    <a href="https://github.com/memgraph/mage/actions" alt="Actions">
+        <img src="https://img.shields.io/github/workflow/status/memgraph/mage/Build%20and%20Test?label=build%20and%20test" /></a>
+            <a href="https://github.com/memgraph/mage/blob/main/LICENSE" alt="Licence">
+        <img src="https://img.shields.io/github/license/memgraph/mage" /></a>
+            <a href="https://github.com/memgraph/mage" alt="Languages">
+        <img src="https://img.shields.io/github/languages/count/memgraph/mage" /></a>
+                    <a href="https://docs.memgraph.com/mage/" alt="Documentation">
+        <img src="https://img.shields.io/badge/documentation-MAGE-orange" /></a>
+            <a href="https://github.com/memgraph/mage/stargazers" alt="Stargazers">
+        <img src="https://img.shields.io/github/stars/memgraph/mage?style=social" /></a>
+
+</p>
+
+## Memgraph Advanced Graph Extensions :crystal_ball:
 
 This open-source repository contains all available query modules written by the team behind Memgraph and its users. You can find and contribute implementations of various algorithms in multiple programming languages, all runnable inside Memgraph. This project aims to give everyone the tools they need to tackle the most challenging graph problems. 
 
@@ -6,16 +27,6 @@ This open-source repository contains all available query modules written by the 
 
 Memgraph introduces the concept of **query modules**, user-defined procedures that extend the Cypher query language. These procedures are grouped into modules that can be loaded into Memgraph. You can find more information on query modules in the official [documentation](https://docs.memgraph.com/memgraph/database-functionalities/query-modules/built-in-query-modules).
 
-Query modules implemented in Python:
-* [nxalg](python/nxalg.py): A module that provides NetworkX integration with Memgraph and implements many NetworkX algorithms.  
-* [graph_analyzer.py](python/graph_analyzer.py): This Graph Analyzer query module offers insights about the stored graph or a subgraph.
-* [distance_calculator.py](python/distance_calculator.py): Module for finding the geographical distance between two points defined with 'lng' and 'lat' coordinates.
-* [tsp.py](python/tsp.py): An algorithm for finding the shortest possible route that visits each vertex exactly once.
-* [set_cover.py](python/set_cover.py): The algorithm for finding minimum cost subcollection of sets that covers all elements of a universe.
-
-Query modules implemented in C/C++:
-* [connectivity_module.cpp](cpp/connectivity_module/connectivity_module.cpp): A module that finds weakly connected components in a graph.
-* [biconnected_components_module.cpp](cpp/biconnected_components_module/biconnected_components_module.cpp): Module for finding biconnected components of the graph.
 
 ## How to install?
 
@@ -59,6 +70,22 @@ python3 test_unit
 # Running end-to-end tests
 python3 test_e2e
 ```
+## MAGE Spells
+
+| Algorithms | Lang | Description |
+| --- | --- | --- |
+| [nxalg](python/nxalg.py) | Python| A module that provides NetworkX integration with Memgraph and implements many NetworkX algorithms |
+| [graph_analyzer](python/graph_analyzer.py) | Python | This Graph Analyzer query module offers insights about the stored graph or a subgraph. |
+| [distance_calculator](python/distance_calculator.py) | Python | Module for finding the geographical distance between two points defined with 'lng' and 'lat' coordinates. |
+| [tsp](python/tsp.py) | Python | An algorithm for finding the shortest possible route that visits each vertex exactly once. |
+| [set_cover](python/set_cover.py) | Python | The algorithm for finding minimum cost subcollection of sets that covers all elements of a universe. |
+| [graph_coloring](python/graph_coloring.py) | Python | Algorithm for assigning labels to the graph elements subject to certain constraints. In this form, it is a way of coloring the graph vertices such that no two adjacent vertices are of the same color. |
+| [weakly_connected_components](cpp/connectivity_module/connectivity_module.cpp) | C++ | A module that finds weakly connected components in a graph. |
+| [biconnected_components](cpp/biconnected_components_module/biconnected_components_module.cpp) | C++ | Algorithm for calculating maximal biconnected subgraph. A biconnected subgraph is a subgraph with a property that if any vertex were to be removed, the graph will remain connected. |
+| [bipartite_matching](cpp/bipartite_matching_module/bipartite_matching_module.cpp) | C++ | Algorithm for calculating maximum bipartite matching, where matching is a set of nodes chosen in such a way that no two edges share an endpoint. |
+| [cycles](cpp/cycles_module/cycles_module.cpp) | C++ | Algorithm for detecting cycles on graphs |
+| [bridges](cpp/bridges_module/bridges_module.cpp) | C++ | A bridge is an edge, which when deleted, increases the number of connected components. Goal of this algorithm is to detect edges which are bridges in graph. |
+
 ## Contributing
 
 We encourage everyone to contribute with their own algorithm implementations and ideas. If you want to contribute or report a bug, please take a look at the [contributions guide](CONTRIBUTING.md).
