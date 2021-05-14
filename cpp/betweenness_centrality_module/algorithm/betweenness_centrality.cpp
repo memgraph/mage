@@ -43,9 +43,7 @@ void BFS(const std::uint64_t source_node, const mg_graph::GraphView<> &graph, st
 }
 
 void Normalize(std::vector<double> &vec, double constant) {
-  for (auto index = 0; index < vec.size(); index++) {
-    vec[index] *= constant;
-  }
+  for (auto &value : vec) value *= constant;
 }
 
 }  // namespace betweenness_centrality_util
@@ -71,7 +69,7 @@ std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bo
       visited.pop();
 
       for (auto p : predecessors[current_node]) {
-        double fraction = (double)shortest_paths_counter[p] / shortest_paths_counter[current_node];
+        double fraction = static_cast<double>(shortest_paths_counter[p]) / shortest_paths_counter[current_node];
         dependency[p] += fraction * (1 + dependency[current_node]);
       }
 
@@ -85,15 +83,12 @@ std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bo
   }
 
   if (normalized) {
-    // normalized by dividing the value by the number of pairs of nodes not including the node whose value we normalize
+    // normalized by dividing the value by the number of pairs of nodes
+    // not including the node whose value we normalize
     auto number_of_pairs = (number_of_nodes - 1) * (number_of_nodes - 2);
-    if (directed) {
-      double constant = number_of_nodes > 2 ? static_cast<double>(1) / number_of_pairs : 1.0;
-      betweenness_centrality_util::Normalize(betweenness_centrality, constant);
-    } else {
-      double constant = number_of_nodes > 2 ? static_cast<double>(2) / number_of_pairs : 1.0;
-      betweenness_centrality_util::Normalize(betweenness_centrality, constant);
-    }
+    const auto numerator = directed ? 1.0 : 2.0;
+    double constant = number_of_nodes > 2 ? numerator / number_of_pairs : 1.0;
+    betweenness_centrality_util::Normalize(betweenness_centrality, constant);
   }
 
   return betweenness_centrality;

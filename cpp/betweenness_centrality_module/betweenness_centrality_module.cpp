@@ -27,8 +27,7 @@ void GetBetweennessCentrality(const mgp_list *args, const mgp_graph *memgraph_gr
     auto directed = mgp_value_get_bool(mgp_list_at(args, 0));
     auto normalized = mgp_value_get_bool(mgp_list_at(args, 1));
 
-    auto graph_type = mg_graph::GraphType::kUndirectedGraph;
-    if (directed) graph_type = mg_graph::GraphType::kDirectedGraph;
+    auto graph_type = directed ? mg_graph::GraphType::kDirectedGraph : mg_graph::GraphType::kUndirectedGraph;
 
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, graph_type);
     auto BC = betweenness_centrality_alg::BetweennessCentrality(*graph, directed, normalized);
