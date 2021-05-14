@@ -1,9 +1,10 @@
-<p align="right">
-    <img src="https://i.imgur.com/fStSEcL.png"
-        height="130">
-</p>
-
-# MAGE
+<h1 align="center">
+  <br>
+  <a href="https://raw.githubusercontent.com/memgraph/mage/documentation-fix/img/wizard.png" alt="MAGE" width="100"></a>
+  <br>
+  MAGE
+  <br>
+</h1>
 
 <p align="center">
     <a href="https://github.com/memgraph/mage/actions" alt="Actions">
