@@ -1,6 +1,6 @@
 <h1 align="center">
   <br>
-  <a href="https://raw.githubusercontent.com/memgraph/mage/documentation-fix/img/wizard.png" alt="MAGE" width="100"></a>
+  <a href="https://github.com/memgraph/mage"> <img src="https://github.com/memgraph/mage/blob/documentation-fix/img/wizard.png?raw=true" alt="MAGE" width="180"></a>
   <br>
   MAGE
   <br>
