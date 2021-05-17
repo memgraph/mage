@@ -131,33 +131,15 @@ class Graph : public GraphView<TSize> {
 
   /// Creates an edge.
   ///
-  /// Creates an undirected edge in the graph, but edge will contain information
-  /// about the original directed property. Throws exception if node id's are not contained in  graph.
-  ///
-  /// @param[in]  from  The from node identifier
-  /// @param[in]  to    The to node identifier
-  ///
-  /// @return     Created edge id
-  TSize CreateUndirectedEdge(std::uint64_t memgraph_id_from, std::uint64_t memgraph_id_to) {
-    auto from = GetInnerNodeId(memgraph_id_from);
-    auto to = GetInnerNodeId(memgraph_id_to);
-
-    auto id = CreateDirectedEdge(memgraph_id_from, memgraph_id_to);
-    adj_list_[to].push_back(id);
-    neighbours_[to].emplace_back(from, id);
-    return id;
-  }
-
-  /// Creates an edge.
-  ///
-  /// Creates an directed edge in the graph. Edge will contain information
+  /// Creates an directed/undirected edge in the graph depending on graph type. Edge will contain information
   /// about the original node ID's. Throws exception if nodes are not contained in  graph.
   ///
   /// @param[in]  from  The from node identifier
   /// @param[in]  to    The to node identifier
   ///
   /// @return     Created edge id
-  TSize CreateDirectedEdge(std::uint64_t memgraph_id_from, std::uint64_t memgraph_id_to) {
+  TSize CreateEdge(std::uint64_t memgraph_id_from, std::uint64_t memgraph_id_to,
+                   const GraphType graph_type = GraphType::kDirectedGraph) {
     auto from = GetInnerNodeId(memgraph_id_from);
     auto to = GetInnerNodeId(memgraph_id_to);
 
@@ -166,6 +148,11 @@ class Graph : public GraphView<TSize> {
     adj_list_[from].push_back(id);
     neighbours_[from].emplace_back(to, id);
     nodes_to_edge_.insert({std::minmax(from, to), id});
+
+    if (graph_type == GraphType::kUndirectedGraph) {
+      adj_list_[to].push_back(id);
+      neighbours_[to].emplace_back(from, id);
+    }
     return id;
   }
 

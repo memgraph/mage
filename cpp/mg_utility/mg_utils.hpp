@@ -46,16 +46,8 @@ void CreateGraphEdge(mg_graph::Graph<TSize> *graph, const mgp_vertex *vertex_fro
   // Get Memgraph internal ID property
   auto memgraph_id_from = mgp_vertex_get_id(vertex_from).as_int;
   auto memgraph_id_to = mgp_vertex_get_id(vertex_to).as_int;
-  switch (graph_type) {
-    case mg_graph::GraphType::kUndirectedGraph:
-      graph->CreateUndirectedEdge(memgraph_id_from, memgraph_id_to);
-      break;
-    case mg_graph::GraphType::kDirectedGraph:
-      graph->CreateDirectedEdge(memgraph_id_from, memgraph_id_to);
-      break;
-    default:
-      throw std::runtime_error("Graph type not supported.");
-  }
+
+  graph->CreateEdge(memgraph_id_from, memgraph_id_to, graph_type);
 }
 
 }  // namespace mg_graph

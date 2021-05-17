@@ -23,17 +23,7 @@ std::unique_ptr<mg_graph::Graph<>> BuildGraph(
     const mg_graph::GraphType graph_type = mg_graph::GraphType::kUndirectedGraph) {
   auto G = std::make_unique<mg_graph::Graph<>>();
   for (std::size_t i = 0; i < num_nodes; ++i) G->CreateNode(i);
-
-  switch (graph_type) {
-    case mg_graph::GraphType::kUndirectedGraph:
-      for (const auto [from, to] : edges) G->CreateUndirectedEdge(from, to);
-      break;
-    case mg_graph::GraphType::kDirectedGraph:
-      for (const auto [from, to] : edges) G->CreateDirectedEdge(from, to);
-      break;
-    default:
-      throw std::runtime_error("Graph type not supported.");
-  }
+  for (const auto [from, to] : edges) G->CreateEdge(from, to, graph_type);
 
   return G;
 }
