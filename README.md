@@ -1,6 +1,6 @@
 <h1 align="center">
   <br>
-  <a href="https://github.com/memgraph/mage"> <img src="https://github.com/memgraph/mage/blob/documentation-fix/img/wizard.png" alt="MAGE" width=40%></a>
+  <a href="https://github.com/memgraph/mage"> <img src="https://github.com/memgraph/mage/blob/documentation-fix/img/wizard.png?raw=true" alt="MAGE" width=15%></a>
   <br>
   MAGE
   <br>
@@ -70,10 +70,9 @@ CALL weakly_connected_components.get() YIELD node, component
 RETURN node, component;
 ```
 
-<p float="left">
-  <img src="https://github.com/memgraph/mage/blob/documentation-fix/img/graph_input.png" width=50% />
-  <img src="https://github.com/memgraph/mage/blob/documentation-fix/img/graph_output.png" width=50% /> 
-</p>
+Graph input           |  MAGE output
+:-------------------------:|:-------------------------:
+![](img/graph_input.png)  |  ![](img/graph_output.png)
 
 
 ## Testing the MAGE
