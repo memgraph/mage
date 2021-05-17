@@ -94,3 +94,6 @@ def test_end2end(test_dir, db):
             assert result is None
         except Exception:
             assert True
+
+    # Clean database once testing module is finished
+    db.drop_database()
