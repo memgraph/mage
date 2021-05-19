@@ -26,7 +26,7 @@ void InsertWeaklyComponentResult(const mgp_graph *graph, mgp_result *result, mgp
 /// Time complexity: O(|V|+|E|)
 void Weak(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory);
+    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
 
     std::unordered_map<std::uint64_t, std::uint64_t> vertex_component;
     std::uint64_t curr_component = 0;
