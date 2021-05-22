@@ -7,6 +7,7 @@ use rsmgp_sys::vertex::*;
 use std::ffi::CString;
 use std::os::raw::c_int;
 use std::panic;
+use backtrace::Backtrace;
 
 // TODO(gitbuda): If double free occures, Memgraph crashes -> prevent/ensure somehow.
 
@@ -22,16 +23,13 @@ fn test_procedure(
         let mgp_record = make_result_record(result)?;
 
         let properties_string = mgp_vertex
-            .properties(memory)
+            .properties()
             .map(|prop| {
                 let prop_name = prop.name.to_str().unwrap();
-                if prop.value.is_string() {
-                    let prop_value = prop.value.string().unwrap();
-                    return format!("{}: {}", prop_name, prop_value.to_str().unwrap());
-                } else if prop.value.is_int() {
-                    return format!("{}: {}", prop_name, prop.value.int().unwrap());
+                if let Value::Int(value) = prop.value {
+                    return format!("{}: {}", prop_name, value);
                 } else {
-                    return format!("");
+                    return format!(",");
                 }
             })
             .collect::<Vec<String>>()
@@ -69,12 +67,13 @@ fn test_procedure(
             )?;
         }
 
-        let name_property = mgp_vertex.property(c_str!("name"), memory)?.value;
-        if name_property.is_null() {
+        let name_property = mgp_vertex.property(c_str!("name"))?.value;
+        if let Value::Null = name_property {
             let unknown_name = make_string_value(c_str!("unknown"), result, memory)?;
             insert_result_record(&mgp_record, c_str!("name_property"), &unknown_name, result)?;
         } else {
-            insert_result_record(&mgp_record, c_str!("name_property"), &name_property, result)?;
+            let known_name = make_string_value(c_str!("known"), result, memory)?;
+            insert_result_record(&mgp_record, c_str!("name_property"), &known_name, result)?;
         }
 
         let has_label = mgp_vertex.has_label(c_str!("L3"));
@@ -105,6 +104,8 @@ extern "C" fn test_procedure_c(
     let procedure_panic_msg = c_str!("Procedure panic!");
     if procedure_result.is_err() {
         println!("Procedure panic!");
+        // TODO(gitbuda): Fix backtrace print which is almost useless.
+        println!("{:?}", Backtrace::new());
         unsafe {
             mgp_result_set_error_msg(result, procedure_panic_msg.as_ptr());
         }

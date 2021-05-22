@@ -1,2 +1,2 @@
 MATCH (n) DETACH DELETE n;
-CREATE ({age: 30}), (:L1 {name: "name1"}), (:L2:L3 {name: "name2"}), (:L4:L5:L6 {name: "bla"})
+CREATE ({age: 29}), (:L1 {age: 31}), (:L2:L3 {age: 10}), (:L4:L5:L6 {age: 20});

@@ -10,21 +10,25 @@ use crate::value::*;
 use crate::mgp::ffi;
 use mockall_double::double;
 
-pub struct MgpVerticesIterator {
+pub struct VerticesIterator {
     ptr: *mut mgp_vertices_iterator,
     is_first: bool,
+    result: *mut mgp_result,
+    memory: *mut mgp_memory,
 }
 
-impl Default for MgpVerticesIterator {
+impl Default for VerticesIterator {
     fn default() -> Self {
         Self {
             ptr: std::ptr::null_mut(),
             is_first: true,
+            result: std::ptr::null_mut(),
+            memory: std::ptr::null_mut(),
         }
     }
 }
 
-impl Drop for MgpVerticesIterator {
+impl Drop for VerticesIterator {
     fn drop(&mut self) {
         unsafe {
             if !self.ptr.is_null() {
@@ -34,10 +38,10 @@ impl Drop for MgpVerticesIterator {
     }
 }
 
-impl Iterator for MgpVerticesIterator {
-    type Item = MgpVertex;
+impl Iterator for VerticesIterator {
+    type Item = Vertex;
 
-    fn next(&mut self) -> Option<MgpVertex> {
+    fn next(&mut self) -> Option<Vertex> {
         if self.is_first {
             self.is_first = false;
             unsafe {
@@ -45,7 +49,13 @@ impl Iterator for MgpVerticesIterator {
                 if data.is_null() {
                     None
                 } else {
-                    Some(MgpVertex { ptr: data })
+                    // TODO(gitbuda): Handle error.
+                    let vertex_copy = ffi::mgp_vertex_copy(data, self.memory);
+                    Some(Vertex {
+                        ptr: vertex_copy,
+                        result: self.result,
+                        memory: self.memory,
+                    })
                 }
             }
         } else {
@@ -54,18 +64,37 @@ impl Iterator for MgpVerticesIterator {
                 if data.is_null() {
                     None
                 } else {
-                    Some(MgpVertex { ptr: data })
+                    // TODO(gitbuda): Handle error.
+                    let vertex_copy = ffi::mgp_vertex_copy(data, self.memory);
+                    Some(Vertex {
+                        ptr: vertex_copy,
+                        result: self.result,
+                        memory: self.memory,
+                    })
                 }
             }
         }
     }
 }
 
-pub struct MgpVertex {
-    ptr: *const mgp_vertex,
+#[derive(Debug)]
+pub struct Vertex {
+    pub ptr: *mut mgp_vertex,
+    pub result: *mut mgp_result,
+    pub memory: *mut mgp_memory,
 }
 
-impl MgpVertex {
+impl Drop for Vertex {
+    fn drop(&mut self) {
+        unsafe {
+            if !self.ptr.is_null() {
+                ffi::mgp_vertex_destroy(self.ptr);
+            }
+        }
+    }
+}
+
+impl Vertex {
     pub fn id(&self) -> i64 {
         unsafe { ffi::mgp_vertex_get_id(self.ptr).as_int }
     }
@@ -99,28 +128,27 @@ impl MgpVertex {
 
     // TODO(gitbuda): This lifetime is probably problematic.
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
-    pub fn property<'a>(
-        &self,
-        name: &'a CStr,
-        memory: *mut mgp_memory,
-    ) -> MgpResult<MgpProperty<'a>> {
+    pub fn property<'a>(&self, name: &'a CStr) -> MgpResult<Property<'a>> {
         unsafe {
-            let mgp_value = ffi::mgp_vertex_get_property(self.ptr, name.as_ptr(), memory);
+            let mgp_value = ffi::mgp_vertex_get_property(self.ptr, name.as_ptr(), self.memory);
             if mgp_value.is_null() {
                 return Err(MgpError::MgpAllocationError);
             }
-            Ok(MgpProperty {
+            Ok(Property {
                 name,
-                value: MgpValue { value: mgp_value },
+                value: mgp_value_to_value(mgp_value, self.result, self.memory)?,
             })
         }
     }
 
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
-    pub fn properties(&self, memory: *mut mgp_memory) -> MgpPropertiesIterator {
+    pub fn properties(&self) -> PropertiesIterator {
         unsafe {
-            MgpPropertiesIterator {
-                ptr: ffi::mgp_vertex_iter_properties(self.ptr, memory),
+            PropertiesIterator {
+                // TODO(gitbuda): Handle errors.
+                ptr: ffi::mgp_vertex_iter_properties(self.ptr, self.memory),
+                memory: self.memory,
+                result: self.result,
                 ..Default::default()
             }
         }
@@ -132,11 +160,14 @@ pub fn make_graph_vertices_iterator(
     graph: *const mgp_graph,
     result: *mut mgp_result,
     memory: *mut mgp_memory,
-) -> MgpResult<MgpVerticesIterator> {
+) -> MgpResult<VerticesIterator> {
     let unable_alloc_iter_msg = c_str!("Unable to allocate vertices iterator.");
     unsafe {
-        let iterator: MgpVerticesIterator = MgpVerticesIterator {
+        let iterator: VerticesIterator = VerticesIterator {
+            // TODO(gitbuda): Handle error.
             ptr: ffi::mgp_graph_iter_vertices(graph, memory),
+            memory,
+            result,
             ..Default::default()
         };
         if iterator.ptr.is_null() {

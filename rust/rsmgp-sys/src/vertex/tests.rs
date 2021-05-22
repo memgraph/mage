@@ -10,8 +10,10 @@ fn test_vertex_id() {
     ctx_1.expect().times(1).returning(|_| {
         return mgp_vertex_id { as_int: 72 };
     });
-    let vertex = MgpVertex {
+    let vertex = Vertex {
         ptr: std::ptr::null_mut(),
+        result: std::ptr::null_mut(),
+        memory: std::ptr::null_mut(),
     };
     assert_eq!(vertex.id(), 72);
 }
@@ -21,8 +23,10 @@ fn test_vertex_id() {
 fn test_vertex_labels_count() {
     let ctx_1 = mgp_vertex_labels_count_context();
     ctx_1.expect().times(1).returning(|_| 2);
-    let vertex = MgpVertex {
+    let vertex = Vertex {
         ptr: std::ptr::null_mut(),
+        result: std::ptr::null_mut(),
+        memory: std::ptr::null_mut(),
     };
     assert_eq!(vertex.labels_count(), 2);
 }
@@ -36,8 +40,10 @@ fn test_vertex_has_label() {
         assert_eq!(CStr::from_ptr(label.name), c_str!("labela"));
         1
     });
-    let vertex = MgpVertex {
+    let vertex = Vertex {
         ptr: std::ptr::null_mut(),
+        result: std::ptr::null_mut(),
+        memory: std::ptr::null_mut(),
     };
     assert_eq!(vertex.has_label(c_str!("labela")), true);
 }
@@ -53,8 +59,10 @@ fn test_vertex_label_at() {
             name: test_label.as_ref().unwrap().as_ptr(),
         };
     });
-    let vertex = MgpVertex {
+    let vertex = Vertex {
         ptr: std::ptr::null_mut(),
+        result: std::ptr::null_mut(),
+        memory: std::ptr::null_mut(),
     };
     assert_eq!(vertex.label_at(5).unwrap(), c_str!("test"));
 }
@@ -72,14 +80,13 @@ fn test_vertex_property() {
             assert_eq!(memory, std::ptr::null_mut());
             std::ptr::null_mut()
         });
-    let vertex = MgpVertex {
+    let vertex = Vertex {
         ptr: std::ptr::null_mut(),
+        result: std::ptr::null_mut(),
+        memory: std::ptr::null_mut(),
     };
     assert_eq!(
-        vertex
-            .property(c_str!("test"), std::ptr::null_mut())
-            .err()
-            .unwrap(),
+        vertex.property(c_str!("test")).err().unwrap(),
         MgpError::MgpAllocationError
     );
 }

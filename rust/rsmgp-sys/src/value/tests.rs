@@ -4,7 +4,7 @@ use serial_test::serial;
 
 #[test]
 #[serial]
-fn test_make_null_value() {
+fn test_make_null_mgp_value() {
     let ctx_1 = mgp_value_make_null_context();
     ctx_1.expect().times(1).returning(|_| std::ptr::null_mut());
 
@@ -20,7 +20,7 @@ fn test_make_null_value() {
 
 #[test]
 #[serial]
-fn test_make_false_bool_value() {
+fn test_make_false_bool_mgp_value() {
     let ctx_1 = mgp_value_make_bool_context();
     ctx_1.expect().times(1).returning(|value, _| {
         assert_eq!(value, 0);
@@ -39,7 +39,7 @@ fn test_make_false_bool_value() {
 
 #[test]
 #[serial]
-fn test_make_true_bool_value() {
+fn test_make_true_bool_mgp_value() {
     let ctx_1 = mgp_value_make_bool_context();
     ctx_1.expect().times(1).returning(|value, _| {
         assert_eq!(value, 1);
@@ -58,7 +58,7 @@ fn test_make_true_bool_value() {
 
 #[test]
 #[serial]
-fn test_make_int_value() {
+fn test_make_int_mgp_value() {
     let ctx_1 = mgp_value_make_int_context();
     ctx_1.expect().times(1).returning(|value, _| {
         assert_eq!(value, 100);
@@ -77,7 +77,7 @@ fn test_make_int_value() {
 
 #[test]
 #[serial]
-fn test_make_string_value() {
+fn test_make_string_mgp_value() {
     use std::ffi::CStr;
 
     let ctx_1 = mgp_value_make_string_context();
@@ -98,7 +98,7 @@ fn test_make_string_value() {
 
 #[test]
 #[serial]
-fn test_make_double_value() {
+fn test_make_double_mgp_value() {
     let ctx_1 = mgp_value_make_double_context();
     ctx_1.expect().times(1).returning(|value, _| {
         assert_eq!(value, 0.0);
@@ -117,7 +117,7 @@ fn test_make_double_value() {
 
 #[test]
 #[serial]
-fn test_value_for_the_right_type() {
+fn test_mgp_value_for_the_right_type() {
     let ctx_is_null = mgp_value_is_null_context();
     ctx_is_null.expect().times(1).returning(|value| {
         assert_eq!(value, std::ptr::null_mut());
@@ -155,7 +155,7 @@ fn test_value_for_the_right_type() {
 
 #[test]
 #[serial]
-fn test_value_for_the_wrong_type() {
+fn test_mgp_value_for_the_wrong_type() {
     let ctx_is_null = mgp_value_is_null_context();
     ctx_is_null.expect().times(1).returning(|value| {
         assert_eq!(value, std::ptr::null_mut());
@@ -189,4 +189,22 @@ fn test_value_for_the_wrong_type() {
     assert!(!value.is_int());
     assert!(!value.is_string());
     assert!(!value.is_double());
+}
+
+#[test]
+#[serial]
+fn test_to_result_mgp_value() {
+    let ctx_1 = mgp_value_make_null_context();
+    ctx_1.expect().times(1).returning(|_| std::ptr::null_mut());
+
+    let ctx_2 = mgp_result_set_error_msg_context();
+    ctx_2.expect().times(1).returning(|_, msg| unsafe {
+        assert_eq!(CStr::from_ptr(msg), c_str!("Unable to allocate null."));
+        0
+    });
+
+    let value = Value::Null;
+    let mgp_value = value.to_result_mgp_value(std::ptr::null_mut(), std::ptr::null_mut());
+
+    assert!(mgp_value.is_err());
 }

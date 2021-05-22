@@ -9,34 +9,32 @@ use crate::mgp::ffi;
 use mockall_double::double;
 
 #[derive(Debug)]
-pub struct MgpProperty<'a> {
+pub struct Property<'a> {
     pub name: &'a CStr,
-    pub value: MgpValue,
-}
-// TODO(gitbuda): Once proper MgpValue is in place, implement one MgpProperty.
-#[derive(Debug)]
-pub struct MgpConstProperty<'a> {
-    pub name: &'a CStr,
-    pub value: MgpConstValue,
+    pub value: Value,
 }
 
-pub struct MgpPropertiesIterator<'a> {
+pub struct PropertiesIterator<'a> {
     pub ptr: *mut mgp_properties_iterator,
     pub is_first: bool,
+    pub result: *mut mgp_result,
+    pub memory: *mut mgp_memory,
     pub phantom: PhantomData<&'a mgp_properties_iterator>,
 }
 
-impl<'a> Default for MgpPropertiesIterator<'a> {
+impl<'a> Default for PropertiesIterator<'a> {
     fn default() -> Self {
         Self {
             ptr: std::ptr::null_mut(),
             is_first: true,
+            result: std::ptr::null_mut(),
+            memory: std::ptr::null_mut(),
             phantom: PhantomData,
         }
     }
 }
 
-impl<'a> Drop for MgpPropertiesIterator<'a> {
+impl<'a> Drop for PropertiesIterator<'a> {
     fn drop(&mut self) {
         unsafe {
             if !self.ptr.is_null() {
@@ -46,10 +44,10 @@ impl<'a> Drop for MgpPropertiesIterator<'a> {
     }
 }
 
-impl<'a> Iterator for MgpPropertiesIterator<'a> {
-    type Item = MgpConstProperty<'a>;
+impl<'a> Iterator for PropertiesIterator<'a> {
+    type Item = Property<'a>;
 
-    fn next(&mut self) -> Option<MgpConstProperty<'a>> {
+    fn next(&mut self) -> Option<Property<'a>> {
         if self.is_first {
             self.is_first = false;
             unsafe {
@@ -59,10 +57,11 @@ impl<'a> Iterator for MgpPropertiesIterator<'a> {
                 } else {
                     // TODO(gitbuda): Check if this unwrap is OK.
                     let data_ref = data.as_ref().unwrap();
-                    Some(MgpConstProperty {
+                    Some(Property {
                         name: CStr::from_ptr(data_ref.name),
-                        value: MgpConstValue {
-                            value: data_ref.value,
+                        value: match mgp_value_to_value(data_ref.value, self.result, self.memory) {
+                            Ok(value) => value,
+                            Err(_) => Value::Null,
                         },
                     })
                 }
@@ -75,10 +74,11 @@ impl<'a> Iterator for MgpPropertiesIterator<'a> {
                 } else {
                     // TODO(gitbuda): Check if this unwrap is OK.
                     let data_ref = data.as_ref().unwrap();
-                    Some(MgpConstProperty {
+                    Some(Property {
                         name: CStr::from_ptr(data_ref.name),
-                        value: MgpConstValue {
-                            value: data_ref.value,
+                        value: match mgp_value_to_value(data_ref.value, self.result, self.memory) {
+                            Ok(value) => value,
+                            Err(_) => Value::Null,
                         },
                     })
                 }
