@@ -14,7 +14,7 @@ pub struct MgpResultRecord {
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn make_result_record(context: Memgraph) -> MgpResult<MgpResultRecord> {
+pub fn make_result_record(context: &Memgraph) -> MgpResult<MgpResultRecord> {
     let record_fail_msg = c_str!("Unable to allocate record");
     unsafe {
         let record = ffi::mgp_result_new_record(context.result());
@@ -31,7 +31,7 @@ pub fn insert_result_record(
     mgp_record: &MgpResultRecord,
     mgp_name: &CStr,
     mgp_value: &MgpValue,
-    context: Memgraph,
+    context: &Memgraph,
 ) -> MgpResult<()> {
     let name_not_inserted_msg = c_str!("Unable to insert record to the result.");
     unsafe {

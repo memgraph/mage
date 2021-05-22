@@ -57,7 +57,7 @@ pub enum Value {
 impl Value {
     // TODO(gitbuda): Remove to_result_mgp_value dead code.
     #[allow(dead_code)]
-    fn to_result_mgp_value(&self, context: Memgraph) -> MgpResult<MgpValue> {
+    fn to_result_mgp_value(&self, context: &Memgraph) -> MgpResult<MgpValue> {
         match self {
             Value::Null => Ok(make_null_value(context)?),
             Value::Bool(x) => Ok(make_bool_value(*x, context)?),
@@ -69,7 +69,7 @@ impl Value {
     }
 }
 
-pub fn mgp_value_to_value(value: *const mgp_value, context: Memgraph) -> MgpResult<Value> {
+pub fn mgp_value_to_value(value: *const mgp_value, context: &Memgraph) -> MgpResult<Value> {
     unsafe {
         #[allow(non_upper_case_globals)]
         match ffi::mgp_value_get_type(value) {
@@ -86,7 +86,7 @@ pub fn mgp_value_to_value(value: *const mgp_value, context: Memgraph) -> MgpResu
                 // TODO(gitbuda): Handle error.
                 Ok(Value::Vertex(Vertex {
                     ptr: ffi::mgp_vertex_copy(vertex, context.memory()),
-                    context,
+                    context: context.clone(),
                 }))
             }
             _ => {
@@ -119,7 +119,7 @@ impl MgpValue {
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn make_null_value(context: Memgraph) -> MgpResult<MgpValue> {
+pub fn make_null_value(context: &Memgraph) -> MgpResult<MgpValue> {
     let unable_alloc_value_msg = c_str!("Unable to allocate null.");
     unsafe {
         let mg_value: MgpValue = MgpValue {
@@ -134,7 +134,7 @@ pub fn make_null_value(context: Memgraph) -> MgpResult<MgpValue> {
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn make_bool_value(value: bool, context: Memgraph) -> MgpResult<MgpValue> {
+pub fn make_bool_value(value: bool, context: &Memgraph) -> MgpResult<MgpValue> {
     let unable_alloc_value_msg = c_str!("Unable to allocate bool.");
     unsafe {
         let mg_value: MgpValue = MgpValue {
@@ -149,7 +149,7 @@ pub fn make_bool_value(value: bool, context: Memgraph) -> MgpResult<MgpValue> {
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn make_int_value(value: i64, context: Memgraph) -> MgpResult<MgpValue> {
+pub fn make_int_value(value: i64, context: &Memgraph) -> MgpResult<MgpValue> {
     let unable_alloc_value_msg = c_str!("Unable to allocate integer.");
     unsafe {
         let mg_value: MgpValue = MgpValue {
@@ -164,7 +164,7 @@ pub fn make_int_value(value: i64, context: Memgraph) -> MgpResult<MgpValue> {
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn make_string_value(value: &CStr, context: Memgraph) -> MgpResult<MgpValue> {
+pub fn make_string_value(value: &CStr, context: &Memgraph) -> MgpResult<MgpValue> {
     let unable_alloc_value_msg = c_str!("Unable to allocate string.");
     unsafe {
         let mg_value: MgpValue = MgpValue {
@@ -179,7 +179,7 @@ pub fn make_string_value(value: &CStr, context: Memgraph) -> MgpResult<MgpValue>
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn make_double_value(value: f64, context: Memgraph) -> MgpResult<MgpValue> {
+pub fn make_double_value(value: f64, context: &Memgraph) -> MgpResult<MgpValue> {
     let unable_alloc_value_msg = c_str!("Unable to allocate double.");
     unsafe {
         let mg_value: MgpValue = MgpValue {

@@ -134,6 +134,6 @@ fn test_make_graph_vertices_iterator() {
         ..Default::default()
     };
 
-    let value = make_graph_vertices_iterator(ctx_mg);
+    let value = make_graph_vertices_iterator(&ctx_mg);
     assert!(value.is_err());
 }

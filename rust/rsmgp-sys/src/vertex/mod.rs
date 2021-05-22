@@ -135,7 +135,7 @@ impl Vertex {
             }
             Ok(Property {
                 name,
-                value: mgp_value_to_value(mgp_value, self.context.clone())?,
+                value: mgp_value_to_value(mgp_value, &self.context)?,
             })
         }
     }
@@ -154,7 +154,7 @@ impl Vertex {
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn make_graph_vertices_iterator(context: Memgraph) -> MgpResult<VerticesIterator> {
+pub fn make_graph_vertices_iterator(context: &Memgraph) -> MgpResult<VerticesIterator> {
     let unable_alloc_iter_msg = c_str!("Unable to allocate vertices iterator.");
     unsafe {
         let iterator: VerticesIterator = VerticesIterator {

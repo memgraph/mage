@@ -15,9 +15,9 @@ use std::rc::Rc;
 
 // Required because we want to be able to propagate Result by using ? operator.
 fn test_procedure(context: Memgraph) -> Result<(), MgpError> {
-    let mgp_graph_iterator = make_graph_vertices_iterator(context.clone())?;
+    let mgp_graph_iterator = make_graph_vertices_iterator(&context)?;
     for mgp_vertex in mgp_graph_iterator {
-        let mgp_record = make_result_record(context.clone())?;
+        let mgp_record = make_result_record(&context)?;
 
         let properties_string = mgp_vertex
             .properties()
@@ -39,63 +39,48 @@ fn test_procedure(context: Memgraph) -> Result<(), MgpError> {
                 CString::new(properties_string.into_bytes())
                     .unwrap()
                     .as_c_str(),
-                context.clone(),
+                &context,
             )?,
-            context.clone(),
+            &context,
         )?;
 
         let labels_count = mgp_vertex.labels_count();
         insert_result_record(
             &mgp_record,
             c_str!("labels_count"),
-            &make_int_value(labels_count as i64, context.clone())?,
-            context.clone(),
+            &make_int_value(labels_count as i64, &context)?,
+            &context,
         )?;
 
         if labels_count > 0 {
-            let first_label = make_string_value(mgp_vertex.label_at(0)?, context.clone())?;
-            insert_result_record(
-                &mgp_record,
-                c_str!("first_label"),
-                &first_label,
-                context.clone(),
-            )?;
+            let first_label = make_string_value(mgp_vertex.label_at(0)?, &context)?;
+            insert_result_record(&mgp_record, c_str!("first_label"), &first_label, &context)?;
         } else {
             insert_result_record(
                 &mgp_record,
                 c_str!("first_label"),
-                &make_string_value(c_str!(""), context.clone())?,
-                context.clone(),
+                &make_string_value(c_str!(""), &context)?,
+                &context,
             )?;
         }
 
         let name_property = mgp_vertex.property(c_str!("name"))?.value;
         if let Value::Null = name_property {
-            let unknown_name = make_string_value(c_str!("unknown"), context.clone())?;
+            let unknown_name = make_string_value(c_str!("unknown"), &context)?;
             insert_result_record(
                 &mgp_record,
                 c_str!("name_property"),
                 &unknown_name,
-                context.clone(),
+                &context,
             )?;
         } else {
-            let known_name = make_string_value(c_str!("known"), context.clone())?;
-            insert_result_record(
-                &mgp_record,
-                c_str!("name_property"),
-                &known_name,
-                context.clone(),
-            )?;
+            let known_name = make_string_value(c_str!("known"), &context)?;
+            insert_result_record(&mgp_record, c_str!("name_property"), &known_name, &context)?;
         }
 
         let has_label = mgp_vertex.has_label(c_str!("L3"));
-        let mgp_value = make_bool_value(has_label, context.clone())?;
-        insert_result_record(
-            &mgp_record,
-            c_str!("has_L3_label"),
-            &mgp_value,
-            context.clone(),
-        )?;
+        let mgp_value = make_bool_value(has_label, &context)?;
+        insert_result_record(&mgp_record, c_str!("has_L3_label"), &mgp_value, &context)?;
     }
     Ok(())
 }
