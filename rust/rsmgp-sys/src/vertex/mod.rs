@@ -1,6 +1,7 @@
 use c_str_macro::c_str;
 use std::ffi::CStr;
 
+use crate::context::*;
 use crate::mgp::*;
 use crate::property::*;
 use crate::result::*;
@@ -13,8 +14,7 @@ use mockall_double::double;
 pub struct VerticesIterator {
     ptr: *mut mgp_vertices_iterator,
     is_first: bool,
-    result: *mut mgp_result,
-    memory: *mut mgp_memory,
+    context: Memgraph,
 }
 
 impl Default for VerticesIterator {
@@ -22,8 +22,9 @@ impl Default for VerticesIterator {
         Self {
             ptr: std::ptr::null_mut(),
             is_first: true,
-            result: std::ptr::null_mut(),
-            memory: std::ptr::null_mut(),
+            context: Memgraph {
+                ..Default::default()
+            },
         }
     }
 }
@@ -50,11 +51,10 @@ impl Iterator for VerticesIterator {
                     None
                 } else {
                     // TODO(gitbuda): Handle error.
-                    let vertex_copy = ffi::mgp_vertex_copy(data, self.memory);
+                    let vertex_copy = ffi::mgp_vertex_copy(data, self.context.memory());
                     Some(Vertex {
                         ptr: vertex_copy,
-                        result: self.result,
-                        memory: self.memory,
+                        context: self.context.clone(),
                     })
                 }
             }
@@ -65,11 +65,10 @@ impl Iterator for VerticesIterator {
                     None
                 } else {
                     // TODO(gitbuda): Handle error.
-                    let vertex_copy = ffi::mgp_vertex_copy(data, self.memory);
+                    let vertex_copy = ffi::mgp_vertex_copy(data, self.context.memory());
                     Some(Vertex {
                         ptr: vertex_copy,
-                        result: self.result,
-                        memory: self.memory,
+                        context: self.context.clone(),
                     })
                 }
             }
@@ -80,8 +79,7 @@ impl Iterator for VerticesIterator {
 #[derive(Debug)]
 pub struct Vertex {
     pub ptr: *mut mgp_vertex,
-    pub result: *mut mgp_result,
-    pub memory: *mut mgp_memory,
+    pub context: Memgraph,
 }
 
 impl Drop for Vertex {
@@ -130,13 +128,14 @@ impl Vertex {
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn property<'a>(&self, name: &'a CStr) -> MgpResult<Property<'a>> {
         unsafe {
-            let mgp_value = ffi::mgp_vertex_get_property(self.ptr, name.as_ptr(), self.memory);
+            let mgp_value =
+                ffi::mgp_vertex_get_property(self.ptr, name.as_ptr(), self.context.memory());
             if mgp_value.is_null() {
                 return Err(MgpError::MgpAllocationError);
             }
             Ok(Property {
                 name,
-                value: mgp_value_to_value(mgp_value, self.result, self.memory)?,
+                value: mgp_value_to_value(mgp_value, self.context.clone())?,
             })
         }
     }
@@ -146,9 +145,8 @@ impl Vertex {
         unsafe {
             PropertiesIterator {
                 // TODO(gitbuda): Handle errors.
-                ptr: ffi::mgp_vertex_iter_properties(self.ptr, self.memory),
-                memory: self.memory,
-                result: self.result,
+                ptr: ffi::mgp_vertex_iter_properties(self.ptr, self.context.memory()),
+                context: self.context.clone(),
                 ..Default::default()
             }
         }
@@ -156,22 +154,17 @@ impl Vertex {
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn make_graph_vertices_iterator(
-    graph: *const mgp_graph,
-    result: *mut mgp_result,
-    memory: *mut mgp_memory,
-) -> MgpResult<VerticesIterator> {
+pub fn make_graph_vertices_iterator(context: Memgraph) -> MgpResult<VerticesIterator> {
     let unable_alloc_iter_msg = c_str!("Unable to allocate vertices iterator.");
     unsafe {
         let iterator: VerticesIterator = VerticesIterator {
             // TODO(gitbuda): Handle error.
-            ptr: ffi::mgp_graph_iter_vertices(graph, memory),
-            memory,
-            result,
+            ptr: ffi::mgp_graph_iter_vertices(context.graph(), context.memory()),
+            context: context.clone(),
             ..Default::default()
         };
         if iterator.ptr.is_null() {
-            ffi::mgp_result_set_error_msg(result, unable_alloc_iter_msg.as_ptr());
+            ffi::mgp_result_set_error_msg(context.result(), unable_alloc_iter_msg.as_ptr());
             return Err(MgpError::MgpAllocationError);
         }
         Ok(iterator)

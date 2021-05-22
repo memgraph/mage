@@ -1,4 +1,5 @@
 use super::*;
+use crate::context::Memgraph;
 use crate::mgp::mock_ffi::*;
 use serial_test::serial;
 
@@ -14,7 +15,11 @@ fn test_make_null_mgp_value() {
         0
     });
 
-    let value = make_null_value(std::ptr::null_mut(), std::ptr::null_mut());
+    let ctx_mg = Memgraph {
+        ..Default::default()
+    };
+
+    let value = make_null_value(ctx_mg);
     assert!(value.is_err());
 }
 
@@ -33,7 +38,11 @@ fn test_make_false_bool_mgp_value() {
         0
     });
 
-    let value = make_bool_value(false, std::ptr::null_mut(), std::ptr::null_mut());
+    let ctx_mg = Memgraph {
+        ..Default::default()
+    };
+
+    let value = make_bool_value(false, ctx_mg);
     assert!(value.is_err());
 }
 
@@ -52,7 +61,11 @@ fn test_make_true_bool_mgp_value() {
         0
     });
 
-    let value = make_bool_value(true, std::ptr::null_mut(), std::ptr::null_mut());
+    let ctx_mg = Memgraph {
+        ..Default::default()
+    };
+
+    let value = make_bool_value(true, ctx_mg);
     assert!(value.is_err());
 }
 
@@ -71,7 +84,11 @@ fn test_make_int_mgp_value() {
         0
     });
 
-    let value = make_int_value(100, std::ptr::null_mut(), std::ptr::null_mut());
+    let ctx_mg = Memgraph {
+        ..Default::default()
+    };
+
+    let value = make_int_value(100, ctx_mg);
     assert!(value.is_err());
 }
 
@@ -92,7 +109,11 @@ fn test_make_string_mgp_value() {
         0
     });
 
-    let value = make_string_value(c_str!("test"), std::ptr::null_mut(), std::ptr::null_mut());
+    let ctx_mg = Memgraph {
+        ..Default::default()
+    };
+
+    let value = make_string_value(c_str!("test"), ctx_mg);
     assert!(value.is_err());
 }
 
@@ -111,7 +132,11 @@ fn test_make_double_mgp_value() {
         0
     });
 
-    let value = make_double_value(0.0, std::ptr::null_mut(), std::ptr::null_mut());
+    let ctx_mg = Memgraph {
+        ..Default::default()
+    };
+
+    let value = make_double_value(0.0, ctx_mg);
     assert!(value.is_err());
 }
 
@@ -203,8 +228,12 @@ fn test_to_result_mgp_value() {
         0
     });
 
+    let ctx_mg = Memgraph {
+        ..Default::default()
+    };
+
     let value = Value::Null;
-    let mgp_value = value.to_result_mgp_value(std::ptr::null_mut(), std::ptr::null_mut());
+    let mgp_value = value.to_result_mgp_value(ctx_mg);
 
     assert!(mgp_value.is_err());
 }

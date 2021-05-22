@@ -1,6 +1,7 @@
 use std::ffi::CStr;
 use std::marker::PhantomData;
 
+use crate::context::*;
 use crate::mgp::*;
 use crate::value::*;
 // Required here, if not present tests linking fails.
@@ -17,8 +18,7 @@ pub struct Property<'a> {
 pub struct PropertiesIterator<'a> {
     pub ptr: *mut mgp_properties_iterator,
     pub is_first: bool,
-    pub result: *mut mgp_result,
-    pub memory: *mut mgp_memory,
+    pub context: Memgraph,
     pub phantom: PhantomData<&'a mgp_properties_iterator>,
 }
 
@@ -27,8 +27,9 @@ impl<'a> Default for PropertiesIterator<'a> {
         Self {
             ptr: std::ptr::null_mut(),
             is_first: true,
-            result: std::ptr::null_mut(),
-            memory: std::ptr::null_mut(),
+            context: Memgraph {
+                ..Default::default()
+            },
             phantom: PhantomData,
         }
     }
@@ -59,7 +60,7 @@ impl<'a> Iterator for PropertiesIterator<'a> {
                     let data_ref = data.as_ref().unwrap();
                     Some(Property {
                         name: CStr::from_ptr(data_ref.name),
-                        value: match mgp_value_to_value(data_ref.value, self.result, self.memory) {
+                        value: match mgp_value_to_value(data_ref.value, self.context.clone()) {
                             Ok(value) => value,
                             Err(_) => Value::Null,
                         },
@@ -76,7 +77,7 @@ impl<'a> Iterator for PropertiesIterator<'a> {
                     let data_ref = data.as_ref().unwrap();
                     Some(Property {
                         name: CStr::from_ptr(data_ref.name),
-                        value: match mgp_value_to_value(data_ref.value, self.result, self.memory) {
+                        value: match mgp_value_to_value(data_ref.value, self.context.clone()) {
                             Ok(value) => value,
                             Err(_) => Value::Null,
                         },
