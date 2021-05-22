@@ -1,3 +1,4 @@
+use backtrace::Backtrace;
 use c_str_macro::c_str;
 use rsmgp_sys::mgp::*;
 use rsmgp_sys::result::*;
@@ -7,7 +8,6 @@ use rsmgp_sys::vertex::*;
 use std::ffi::CString;
 use std::os::raw::c_int;
 use std::panic;
-use backtrace::Backtrace;
 
 // TODO(gitbuda): If double free occures, Memgraph crashes -> prevent/ensure somehow.
 
