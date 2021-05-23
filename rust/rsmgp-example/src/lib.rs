@@ -27,6 +27,8 @@ fn test_procedure(context: Memgraph) -> Result<(), MgpError> {
                     return format!("{}: {}", prop_name, value);
                 } else if let Value::String(value) = prop.value {
                     return format!("{}: {}", prop_name, value.to_str().unwrap());
+                } else if let Value::Float(value) = prop.value {
+                    return format!("{}: {}", prop_name, value);
                 } else {
                     ",".to_string()
                 }

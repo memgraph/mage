@@ -69,8 +69,8 @@ impl Value {
             Value::Bool(x) => Ok(make_bool_value(*x, context)?),
             Value::Int(x) => Ok(make_int_value(*x, context)?),
             Value::String(x) => Ok(make_string_value(&*x.as_c_str(), context)?),
-            // TODO(gitbuda): Implement float and vertex conversion.
-            Value::Float(_) => Ok(make_null_value(context)?),
+            Value::Float(x) => Ok(make_double_value(*x, context)?),
+            // TODO(gitbuda): Implement full from vertex to mgp_value conversion.
             Value::Vertex(_) => Ok(make_null_value(context)?),
         }
     }

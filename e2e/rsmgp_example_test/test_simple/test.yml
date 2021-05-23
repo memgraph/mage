@@ -10,8 +10,8 @@ output:
     - first_label: "L1"
       has_L3_label: false
       labels_count: 1
-      name_property: "John"
-      properties_string: "age: 31, name: John"
+      name_property: "unknown"
+      properties_string: "age: 31.3"
     - first_label: "L2"
       has_L3_label: true
       labels_count: 2
