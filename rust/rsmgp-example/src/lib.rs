@@ -25,6 +25,8 @@ fn test_procedure(context: Memgraph) -> Result<(), MgpError> {
                 let prop_name = prop.name.to_str().unwrap();
                 if let Value::Int(value) = prop.value {
                     return format!("{}: {}", prop_name, value);
+                } else if let Value::String(value) = prop.value {
+                    return format!("{}: {}", prop_name, value.to_str().unwrap());
                 } else {
                     ",".to_string()
                 }
@@ -73,9 +75,17 @@ fn test_procedure(context: Memgraph) -> Result<(), MgpError> {
                 &unknown_name,
                 &context,
             )?;
+        } else if let Value::String(value) = name_property {
+            let mgp_value = make_string_value(value.as_c_str(), &context)?;
+            insert_result_record(&mgp_record, c_str!("name_property"), &mgp_value, &context)?;
         } else {
-            let known_name = make_string_value(c_str!("known"), &context)?;
-            insert_result_record(&mgp_record, c_str!("name_property"), &known_name, &context)?;
+            let unknown_type = make_string_value(c_str!("not null and not string"), &context)?;
+            insert_result_record(
+                &mgp_record,
+                c_str!("name_property"),
+                &unknown_type,
+                &context,
+            )?;
         }
 
         let has_label = mgp_vertex.has_label(c_str!("L3"));

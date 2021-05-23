@@ -1,5 +1,5 @@
 use c_str_macro::c_str;
-use std::ffi::CStr;
+use std::ffi::{CStr, CString};
 
 use crate::context::*;
 use crate::mgp::*;
@@ -29,12 +29,15 @@ use mockall_double::double;
 //   mgp_value_make_vertex accepts *mut mgp_vartex (required to return user data), but data from
 //   the graph is all *const T.
 
+/// Useful to hold user created `mgp_value` but also to store values coming from Memgraph, e.g.,
+/// property `mgp_value`s.
 #[derive(Debug)]
 pub struct MgpValue {
     // It's not wise to create a new Vertex out of the existing value pointer because drop with a
     // valid pointer will be called multiple times -> double free problem.
     pub ptr: *mut mgp_value,
 }
+
 impl Drop for MgpValue {
     fn drop(&mut self) {
         unsafe {
@@ -45,14 +48,18 @@ impl Drop for MgpValue {
     }
 }
 
+// CString is Box<[u8]>.
+
 #[derive(Debug)]
 pub enum Value {
     Null,
     Bool(bool),
     Int(i64),
     Float(f64),
+    String(CString),
     Vertex(Vertex),
 }
+
 impl Value {
     // TODO(gitbuda): Remove to_result_mgp_value dead code.
     #[allow(dead_code)]
@@ -61,6 +68,7 @@ impl Value {
             Value::Null => Ok(make_null_value(context)?),
             Value::Bool(x) => Ok(make_bool_value(*x, context)?),
             Value::Int(x) => Ok(make_int_value(*x, context)?),
+            Value::String(x) => Ok(make_string_value(&*x.as_c_str(), context)?),
             // TODO(gitbuda): Implement float and vertex conversion.
             Value::Float(_) => Ok(make_null_value(context)?),
             Value::Vertex(_) => Ok(make_null_value(context)?),
@@ -79,6 +87,14 @@ pub unsafe fn mgp_raw_value_to_value(
         mgp_value_type_MGP_VALUE_TYPE_NULL => Ok(Value::Null),
         mgp_value_type_MGP_VALUE_TYPE_BOOL => Ok(Value::Bool(ffi::mgp_value_get_bool(value) == 0)),
         mgp_value_type_MGP_VALUE_TYPE_INT => Ok(Value::Int(ffi::mgp_value_get_int(value))),
+        mgp_value_type_MGP_VALUE_TYPE_STRING => {
+            let mgp_string = ffi::mgp_value_get_string(value);
+            let c_string = CString::new(CStr::from_ptr(mgp_string).to_bytes());
+            match c_string {
+                Ok(value) => Ok(Value::String(value)),
+                Err(_) => Err(MgpError::MgpCreationOfCStringError),
+            }
+        }
         mgp_value_type_MGP_VALUE_TYPE_DOUBLE => Ok(Value::Float(ffi::mgp_value_get_double(value))),
         mgp_value_type_MGP_VALUE_TYPE_VERTEX => {
             let vertex = ffi::mgp_value_get_vertex(value);
@@ -89,6 +105,7 @@ pub unsafe fn mgp_raw_value_to_value(
             }))
         }
         _ => {
+            println!("Uncovered mgp_value type!");
             panic!()
         } // TODO(gitbuda): Handle mgp_value_type unhandeled values.
     }

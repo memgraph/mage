@@ -11,6 +11,7 @@ use mockall_double::double;
 
 #[derive(Debug)]
 pub struct Property<'a> {
+    // TODO(gitbuda): Property name should also be an owned CString.
     pub name: &'a CStr,
     pub value: Value,
 }
@@ -59,6 +60,7 @@ impl<'a> Iterator for PropertiesIterator<'a> {
                     // TODO(gitbuda): Check if this unwrap is OK.
                     let data_ref = data.as_ref().unwrap();
                     Some(Property {
+                        // TODO(gitbuda): This is just a wrapper for the underlying ptr.
                         name: CStr::from_ptr(data_ref.name),
                         value: match mgp_raw_value_to_value(data_ref.value, &self.context) {
                             Ok(value) => value,
