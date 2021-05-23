@@ -15,6 +15,10 @@ pub enum MgpError {
     MgpOutOfBoundLabelIndex,
     #[snafu(display("Unable to create Rust CString based on Memgraph value."))]
     MgpCreationOfCStringError,
+    #[snafu(display("Unable to create Rust Vertex based on Memgraph value."))]
+    MgpCreationOfVertexError,
+    #[snafu(display("Unable to create result Memgraph Vertex (allocation error)."))]
+    MgpResultVertexAllocationError,
 }
 
 pub type MgpResult<T, E = MgpError> = std::result::Result<T, E>;

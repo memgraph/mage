@@ -60,18 +60,32 @@ pub enum Value {
     Vertex(Vertex),
 }
 
+pub fn make_vertex_value(vertex: &Vertex, context: &Memgraph) -> MgpResult<MgpValue> {
+    unsafe {
+        let mgp_vertex_copy = ffi::mgp_vertex_copy(vertex.ptr, context.memory());
+        if mgp_vertex_copy.is_null() {
+            return Err(MgpError::MgpResultVertexAllocationError);
+        }
+        let mgp_value = ffi::mgp_value_make_vertex(mgp_vertex_copy);
+        if mgp_value.is_null() {
+            ffi::mgp_vertex_destroy(mgp_vertex_copy);
+            return Err(MgpError::MgpResultVertexAllocationError);
+        }
+        Ok(MgpValue { ptr: mgp_value })
+    }
+}
+
 impl Value {
     // TODO(gitbuda): Remove to_result_mgp_value dead code.
     #[allow(dead_code)]
     fn to_result_mgp_value(&self, context: &Memgraph) -> MgpResult<MgpValue> {
         match self {
-            Value::Null => Ok(make_null_value(context)?),
-            Value::Bool(x) => Ok(make_bool_value(*x, context)?),
-            Value::Int(x) => Ok(make_int_value(*x, context)?),
-            Value::String(x) => Ok(make_string_value(&*x.as_c_str(), context)?),
-            Value::Float(x) => Ok(make_double_value(*x, context)?),
-            // TODO(gitbuda): Implement full from vertex to mgp_value conversion.
-            Value::Vertex(_) => Ok(make_null_value(context)?),
+            Value::Null => make_null_value(context),
+            Value::Bool(x) => make_bool_value(*x, context),
+            Value::Int(x) => make_int_value(*x, context),
+            Value::String(x) => make_string_value(&*x.as_c_str(), context),
+            Value::Float(x) => make_double_value(*x, context),
+            Value::Vertex(x) => make_vertex_value(&x, context),
         }
     }
 }
@@ -97,17 +111,21 @@ pub unsafe fn mgp_raw_value_to_value(
         }
         mgp_value_type_MGP_VALUE_TYPE_DOUBLE => Ok(Value::Float(ffi::mgp_value_get_double(value))),
         mgp_value_type_MGP_VALUE_TYPE_VERTEX => {
-            let vertex = ffi::mgp_value_get_vertex(value);
-            // TODO(gitbuda): Handle error.
+            let mgp_vertex = ffi::mgp_value_get_vertex(value);
+            let mgp_vertex_copy = ffi::mgp_vertex_copy(mgp_vertex, context.memory());
+            if mgp_vertex_copy.is_null() {
+                return Err(MgpError::MgpCreationOfVertexError);
+            }
             Ok(Value::Vertex(Vertex {
-                ptr: ffi::mgp_vertex_copy(vertex, context.memory()),
+                ptr: mgp_vertex_copy,
                 context: context.clone(),
             }))
         }
+        // TODO(gitbuda): Handle mgp_value_type unhandeled values.
         _ => {
             println!("Uncovered mgp_value type!");
             panic!()
-        } // TODO(gitbuda): Handle mgp_value_type unhandeled values.
+        }
     }
 }
 

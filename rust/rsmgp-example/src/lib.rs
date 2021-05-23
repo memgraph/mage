@@ -93,6 +93,10 @@ fn test_procedure(context: Memgraph) -> Result<(), MgpError> {
         let has_label = mgp_vertex.has_label(c_str!("L3"));
         let mgp_value = make_bool_value(has_label, &context)?;
         insert_result_record(&mgp_record, c_str!("has_L3_label"), &mgp_value, &context)?;
+
+        // TODO(gitbuda): Figure out how to test vertex e2e.
+        // let vertex_value = make_vertex_value(&mgp_vertex, &context)?;
+        // insert_result_record(&mgp_record, c_str!("vertex"), &vertex_value, &context)?;
     }
     Ok(())
 }
@@ -168,6 +172,12 @@ pub extern "C" fn mgp_init_module(module: *mut mgp_module, _memory: *mut mgp_mem
             return 1;
         }
     }
+    // match add_vertex_result_type(procedure, c_str!("vertex")) {
+    //     Ok(_) => {}
+    //     Err(_) => {
+    //         return 1;
+    //     }
+    // }
     0
 }
 

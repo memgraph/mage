@@ -91,6 +91,32 @@ pub fn add_string_result_type(
     }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn add_double_result_type(
+    procedure: *mut mgp_proc,
+    name: &CStr,
+) -> Result<(), MgpAddProcedureParameterTypeError> {
+    unsafe {
+        if ffi::mgp_proc_add_result(procedure, name.as_ptr(), ffi::mgp_type_float()) == 0 {
+            return Err(MgpAddProcedureParameterTypeError);
+        }
+        Ok(())
+    }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn add_vertex_result_type(
+    procedure: *mut mgp_proc,
+    name: &CStr,
+) -> Result<(), MgpAddProcedureParameterTypeError> {
+    unsafe {
+        if ffi::mgp_proc_add_result(procedure, name.as_ptr(), ffi::mgp_type_node()) == 0 {
+            return Err(MgpAddProcedureParameterTypeError);
+        }
+        Ok(())
+    }
+}
+
 #[allow(unused_imports)]
 #[cfg(test)]
 mod tests {

@@ -7,16 +7,19 @@ output:
       labels_count: 0
       name_property: "unknown"
       properties_string: "age: 29"
+
     - first_label: "L1"
       has_L3_label: false
       labels_count: 1
       name_property: "unknown"
       properties_string: "age: 31.3"
+
     - first_label: "L2"
       has_L3_label: true
       labels_count: 2
       name_property: "Phil"
       properties_string: "name: Phil"
+
     - first_label: "L4"
       has_L3_label: false
       labels_count: 3
