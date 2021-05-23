@@ -26,7 +26,7 @@ fn test_procedure(context: Memgraph) -> Result<(), MgpError> {
                 if let Value::Int(value) = prop.value {
                     return format!("{}: {}", prop_name, value);
                 } else {
-                    return format!(",");
+                    ",".to_string()
                 }
             })
             .collect::<Vec<String>>()

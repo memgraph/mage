@@ -98,10 +98,7 @@ impl Vertex {
     }
 
     pub fn labels_count(&self) -> u64 {
-        unsafe {
-            // TODO(gitbuda): Figure out why this is not clippy::not_unsafe_ptr_arg_deref.
-            ffi::mgp_vertex_labels_count(self.ptr)
-        }
+        unsafe { ffi::mgp_vertex_labels_count(self.ptr) }
     }
 
     // TODO(gitbuda): Figure out the correct lifetime.
@@ -125,22 +122,19 @@ impl Vertex {
     }
 
     // TODO(gitbuda): This lifetime is probably problematic.
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn property<'a>(&self, name: &'a CStr) -> MgpResult<Property<'a>> {
         unsafe {
-            let mgp_value =
-                ffi::mgp_vertex_get_property(self.ptr, name.as_ptr(), self.context.memory());
-            if mgp_value.is_null() {
+            let mgp_value = MgpValue {
+                ptr: ffi::mgp_vertex_get_property(self.ptr, name.as_ptr(), self.context.memory()),
+            };
+            if mgp_value.ptr.is_null() {
                 return Err(MgpError::MgpAllocationError);
             }
-            Ok(Property {
-                name,
-                value: mgp_value_to_value(mgp_value, &self.context)?,
-            })
+            let value = mgp_value_to_value(&mgp_value, &self.context)?;
+            Ok(Property { name, value })
         }
     }
 
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn properties(&self) -> PropertiesIterator {
         unsafe {
             PropertiesIterator {
@@ -153,7 +147,6 @@ impl Vertex {
     }
 }
 
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn make_graph_vertices_iterator(context: &Memgraph) -> MgpResult<VerticesIterator> {
     let unable_alloc_iter_msg = c_str!("Unable to allocate vertices iterator.");
     unsafe {

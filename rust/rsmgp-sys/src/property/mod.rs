@@ -60,7 +60,7 @@ impl<'a> Iterator for PropertiesIterator<'a> {
                     let data_ref = data.as_ref().unwrap();
                     Some(Property {
                         name: CStr::from_ptr(data_ref.name),
-                        value: match mgp_value_to_value(data_ref.value, &self.context) {
+                        value: match mgp_raw_value_to_value(data_ref.value, &self.context) {
                             Ok(value) => value,
                             Err(_) => Value::Null,
                         },
@@ -77,7 +77,7 @@ impl<'a> Iterator for PropertiesIterator<'a> {
                     let data_ref = data.as_ref().unwrap();
                     Some(Property {
                         name: CStr::from_ptr(data_ref.name),
-                        value: match mgp_value_to_value(data_ref.value, &self.context) {
+                        value: match mgp_raw_value_to_value(data_ref.value, &self.context) {
                             Ok(value) => value,
                             Err(_) => Value::Null,
                         },

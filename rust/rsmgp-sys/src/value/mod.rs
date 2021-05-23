@@ -33,13 +33,13 @@ use mockall_double::double;
 pub struct MgpValue {
     // It's not wise to create a new Vertex out of the existing value pointer because drop with a
     // valid pointer will be called multiple times -> double free problem.
-    pub value: *mut mgp_value,
+    pub ptr: *mut mgp_value,
 }
 impl Drop for MgpValue {
     fn drop(&mut self) {
         unsafe {
-            if !self.value.is_null() {
-                ffi::mgp_value_destroy(self.value);
+            if !self.ptr.is_null() {
+                ffi::mgp_value_destroy(self.ptr);
             }
         }
     }
@@ -53,7 +53,6 @@ pub enum Value {
     Float(f64),
     Vertex(Vertex),
 }
-
 impl Value {
     // TODO(gitbuda): Remove to_result_mgp_value dead code.
     #[allow(dead_code)]
@@ -69,127 +68,125 @@ impl Value {
     }
 }
 
-pub fn mgp_value_to_value(value: *const mgp_value, context: &Memgraph) -> MgpResult<Value> {
-    unsafe {
-        #[allow(non_upper_case_globals)]
-        match ffi::mgp_value_get_type(value) {
-            mgp_value_type_MGP_VALUE_TYPE_NULL => Ok(Value::Null),
-            mgp_value_type_MGP_VALUE_TYPE_BOOL => {
-                Ok(Value::Bool(ffi::mgp_value_get_bool(value) == 0))
-            }
-            mgp_value_type_MGP_VALUE_TYPE_INT => Ok(Value::Int(ffi::mgp_value_get_int(value))),
-            mgp_value_type_MGP_VALUE_TYPE_DOUBLE => {
-                Ok(Value::Float(ffi::mgp_value_get_double(value)))
-            }
-            mgp_value_type_MGP_VALUE_TYPE_VERTEX => {
-                let vertex = ffi::mgp_value_get_vertex(value);
-                // TODO(gitbuda): Handle error.
-                Ok(Value::Vertex(Vertex {
-                    ptr: ffi::mgp_vertex_copy(vertex, context.memory()),
-                    context: context.clone(),
-                }))
-            }
-            _ => {
-                panic!()
-            } // TODO(gitbuda): Handle mgp_value_type unhandeled values.
+/// # Safety
+/// TODO(gitbuda): Write section about safety.
+pub unsafe fn mgp_raw_value_to_value(
+    value: *const mgp_value,
+    context: &Memgraph,
+) -> MgpResult<Value> {
+    #[allow(non_upper_case_globals)]
+    match ffi::mgp_value_get_type(value) {
+        mgp_value_type_MGP_VALUE_TYPE_NULL => Ok(Value::Null),
+        mgp_value_type_MGP_VALUE_TYPE_BOOL => Ok(Value::Bool(ffi::mgp_value_get_bool(value) == 0)),
+        mgp_value_type_MGP_VALUE_TYPE_INT => Ok(Value::Int(ffi::mgp_value_get_int(value))),
+        mgp_value_type_MGP_VALUE_TYPE_DOUBLE => Ok(Value::Float(ffi::mgp_value_get_double(value))),
+        mgp_value_type_MGP_VALUE_TYPE_VERTEX => {
+            let vertex = ffi::mgp_value_get_vertex(value);
+            // TODO(gitbuda): Handle error.
+            Ok(Value::Vertex(Vertex {
+                ptr: ffi::mgp_vertex_copy(vertex, context.memory()),
+                context: context.clone(),
+            }))
         }
+        _ => {
+            panic!()
+        } // TODO(gitbuda): Handle mgp_value_type unhandeled values.
     }
+}
+
+pub fn mgp_value_to_value(value: &MgpValue, context: &Memgraph) -> MgpResult<Value> {
+    unsafe { mgp_raw_value_to_value(value.ptr, context) }
 }
 
 impl MgpValue {
     pub fn is_null(&self) -> bool {
-        unsafe { ffi::mgp_value_is_null(self.value) != 0 }
+        unsafe { ffi::mgp_value_is_null(self.ptr) != 0 }
     }
 
     pub fn is_int(&self) -> bool {
-        unsafe { ffi::mgp_value_is_int(self.value) != 0 }
+        unsafe { ffi::mgp_value_is_int(self.ptr) != 0 }
     }
 
     pub fn is_bool(&self) -> bool {
-        unsafe { ffi::mgp_value_is_bool(self.value) != 0 }
+        unsafe { ffi::mgp_value_is_bool(self.ptr) != 0 }
     }
 
     pub fn is_string(&self) -> bool {
-        unsafe { ffi::mgp_value_is_string(self.value) != 0 }
+        unsafe { ffi::mgp_value_is_string(self.ptr) != 0 }
     }
 
     pub fn is_double(&self) -> bool {
-        unsafe { ffi::mgp_value_is_double(self.value) != 0 }
+        unsafe { ffi::mgp_value_is_double(self.ptr) != 0 }
     }
 }
 
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn make_null_value(context: &Memgraph) -> MgpResult<MgpValue> {
     let unable_alloc_value_msg = c_str!("Unable to allocate null.");
     unsafe {
-        let mg_value: MgpValue = MgpValue {
-            value: ffi::mgp_value_make_null(context.memory()),
+        let mgp_value = MgpValue {
+            ptr: ffi::mgp_value_make_null(context.memory()),
         };
-        if mg_value.value.is_null() {
+        if mgp_value.ptr.is_null() {
             ffi::mgp_result_set_error_msg(context.result(), unable_alloc_value_msg.as_ptr());
             return Err(MgpError::MgpAllocationError);
         }
-        Ok(mg_value)
+        Ok(mgp_value)
     }
 }
 
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn make_bool_value(value: bool, context: &Memgraph) -> MgpResult<MgpValue> {
     let unable_alloc_value_msg = c_str!("Unable to allocate bool.");
     unsafe {
-        let mg_value: MgpValue = MgpValue {
-            value: ffi::mgp_value_make_bool(if !value { 0 } else { 1 }, context.memory()),
+        let mgp_value = MgpValue {
+            ptr: ffi::mgp_value_make_bool(if !value { 0 } else { 1 }, context.memory()),
         };
-        if mg_value.value.is_null() {
+        if mgp_value.ptr.is_null() {
             ffi::mgp_result_set_error_msg(context.result(), unable_alloc_value_msg.as_ptr());
             return Err(MgpError::MgpAllocationError);
         }
-        Ok(mg_value)
+        Ok(mgp_value)
     }
 }
 
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn make_int_value(value: i64, context: &Memgraph) -> MgpResult<MgpValue> {
     let unable_alloc_value_msg = c_str!("Unable to allocate integer.");
     unsafe {
-        let mg_value: MgpValue = MgpValue {
-            value: ffi::mgp_value_make_int(value, context.memory()),
+        let mgp_value = MgpValue {
+            ptr: ffi::mgp_value_make_int(value, context.memory()),
         };
-        if mg_value.value.is_null() {
+        if mgp_value.ptr.is_null() {
             ffi::mgp_result_set_error_msg(context.result(), unable_alloc_value_msg.as_ptr());
             return Err(MgpError::MgpAllocationError);
         }
-        Ok(mg_value)
+        Ok(mgp_value)
     }
 }
 
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn make_string_value(value: &CStr, context: &Memgraph) -> MgpResult<MgpValue> {
     let unable_alloc_value_msg = c_str!("Unable to allocate string.");
     unsafe {
-        let mg_value: MgpValue = MgpValue {
-            value: ffi::mgp_value_make_string(value.as_ptr(), context.memory()),
+        let mgp_value = MgpValue {
+            ptr: ffi::mgp_value_make_string(value.as_ptr(), context.memory()),
         };
-        if mg_value.value.is_null() {
+        if mgp_value.ptr.is_null() {
             ffi::mgp_result_set_error_msg(context.result(), unable_alloc_value_msg.as_ptr());
             return Err(MgpError::MgpAllocationError);
         }
-        Ok(mg_value)
+        Ok(mgp_value)
     }
 }
 
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn make_double_value(value: f64, context: &Memgraph) -> MgpResult<MgpValue> {
     let unable_alloc_value_msg = c_str!("Unable to allocate double.");
     unsafe {
-        let mg_value: MgpValue = MgpValue {
-            value: ffi::mgp_value_make_double(value, context.memory()),
+        let mgp_value = MgpValue {
+            ptr: ffi::mgp_value_make_double(value, context.memory()),
         };
-        if mg_value.value.is_null() {
+        if mgp_value.ptr.is_null() {
             ffi::mgp_result_set_error_msg(context.result(), unable_alloc_value_msg.as_ptr());
             return Err(MgpError::MgpAllocationError);
         }
-        Ok(mg_value)
+        Ok(mgp_value)
     }
 }
 
