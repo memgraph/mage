@@ -1,4 +1,4 @@
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
 
 use crate::context::*;
 use crate::mgp::*;
@@ -69,19 +69,16 @@ impl Iterator for PropertiesIterator {
                 // whole procedure should be stopped. Returning empty Option is not an option
                 // because it's not correct. The same applies in case of the property value.
                 let data_ref = data.as_ref().unwrap();
-                return Some(Property {
-                    name: match CString::new(CStr::from_ptr(data_ref.name).to_bytes()) {
+                Some(Property {
+                    name: match create_cstring(data_ref.name, &self.context) {
                         Ok(v) => v,
                         Err(_) => panic!("Unable to provide next property. Name creation problem."),
                     },
                     value: match mgp_raw_value_to_value(data_ref.value, &self.context) {
                         Ok(v) => v,
-                        Err(e) => panic!(format!(
-                            "Unable to provide next property. Value problem: {}",
-                            e
-                        )),
+                        Err(_) => panic!("Unable to provide next property. Value create problem."),
                     },
-                });
+                })
             }
         }
     }

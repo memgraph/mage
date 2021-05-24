@@ -2,6 +2,7 @@ use c_str_macro::c_str;
 use std::ffi::{CStr, CString};
 
 use crate::context::*;
+use crate::edge::*;
 use crate::mgp::*;
 use crate::result::*;
 use crate::vertex::*;
@@ -48,93 +49,6 @@ impl Drop for MgpValue {
     }
 }
 
-// CString is Box<[u8]>.
-
-#[derive(Debug)]
-pub enum Value {
-    Null,
-    Bool(bool),
-    Int(i64),
-    Float(f64),
-    String(CString),
-    Vertex(Vertex),
-}
-
-pub fn make_vertex_value(vertex: &Vertex, context: &Memgraph) -> MgpResult<MgpValue> {
-    unsafe {
-        let mgp_vertex_copy = ffi::mgp_vertex_copy(vertex.ptr, context.memory());
-        if mgp_vertex_copy.is_null() {
-            return Err(MgpError::MgpResultVertexAllocationError);
-        }
-        let mgp_value = ffi::mgp_value_make_vertex(mgp_vertex_copy);
-        if mgp_value.is_null() {
-            ffi::mgp_vertex_destroy(mgp_vertex_copy);
-            return Err(MgpError::MgpResultVertexAllocationError);
-        }
-        Ok(MgpValue { ptr: mgp_value })
-    }
-}
-
-impl Value {
-    // TODO(gitbuda): Remove to_result_mgp_value dead code.
-    #[allow(dead_code)]
-    fn to_result_mgp_value(&self, context: &Memgraph) -> MgpResult<MgpValue> {
-        match self {
-            Value::Null => make_null_value(context),
-            Value::Bool(x) => make_bool_value(*x, context),
-            Value::Int(x) => make_int_value(*x, context),
-            Value::String(x) => make_string_value(&*x.as_c_str(), context),
-            Value::Float(x) => make_double_value(*x, context),
-            Value::Vertex(x) => make_vertex_value(&x, context),
-        }
-    }
-}
-
-// TODO(gitbuda): Implement copy_vertex + use it for: value, from, to.
-
-/// # Safety
-/// TODO(gitbuda): Write section about safety.
-pub unsafe fn mgp_raw_value_to_value(
-    value: *const mgp_value,
-    context: &Memgraph,
-) -> MgpResult<Value> {
-    #[allow(non_upper_case_globals)]
-    match ffi::mgp_value_get_type(value) {
-        mgp_value_type_MGP_VALUE_TYPE_NULL => Ok(Value::Null),
-        mgp_value_type_MGP_VALUE_TYPE_BOOL => Ok(Value::Bool(ffi::mgp_value_get_bool(value) == 0)),
-        mgp_value_type_MGP_VALUE_TYPE_INT => Ok(Value::Int(ffi::mgp_value_get_int(value))),
-        mgp_value_type_MGP_VALUE_TYPE_STRING => {
-            let mgp_string = ffi::mgp_value_get_string(value);
-            let c_string = CString::new(CStr::from_ptr(mgp_string).to_bytes());
-            match c_string {
-                Ok(value) => Ok(Value::String(value)),
-                Err(_) => Err(MgpError::MgpCreationOfCStringError),
-            }
-        }
-        mgp_value_type_MGP_VALUE_TYPE_DOUBLE => Ok(Value::Float(ffi::mgp_value_get_double(value))),
-        mgp_value_type_MGP_VALUE_TYPE_VERTEX => {
-            let mgp_vertex = ffi::mgp_value_get_vertex(value);
-            let mgp_vertex_copy = ffi::mgp_vertex_copy(mgp_vertex, context.memory());
-            if mgp_vertex_copy.is_null() {
-                return Err(MgpError::MgpCreationOfVertexError);
-            }
-            Ok(Value::Vertex(Vertex {
-                ptr: mgp_vertex_copy,
-                context: context.clone(),
-            }))
-        }
-        // TODO(gitbuda): Handle mgp_value_type unhandeled values.
-        _ => {
-            println!("Uncovered mgp_value type!");
-            panic!()
-        }
-    }
-}
-
-pub fn mgp_value_to_value(value: &MgpValue, context: &Memgraph) -> MgpResult<Value> {
-    unsafe { mgp_raw_value_to_value(value.ptr, context) }
-}
-
 impl MgpValue {
     pub fn is_null(&self) -> bool {
         unsafe { ffi::mgp_value_is_null(self.ptr) != 0 }
@@ -154,6 +68,14 @@ impl MgpValue {
 
     pub fn is_double(&self) -> bool {
         unsafe { ffi::mgp_value_is_double(self.ptr) != 0 }
+    }
+
+    pub fn is_vertex(&self) -> bool {
+        unsafe { ffi::mgp_value_is_vertex(self.ptr) != 0 }
+    }
+
+    pub fn is_edge(&self) -> bool {
+        unsafe { ffi::mgp_value_is_edge(self.ptr) != 0 }
     }
 }
 
@@ -224,6 +146,132 @@ pub fn make_double_value(value: f64, context: &Memgraph) -> MgpResult<MgpValue> 
             return Err(MgpError::MgpAllocationError);
         }
         Ok(mgp_value)
+    }
+}
+
+pub fn make_vertex_value(vertex: &Vertex, context: &Memgraph) -> MgpResult<MgpValue> {
+    unsafe {
+        let mgp_copy = ffi::mgp_vertex_copy(vertex.ptr, context.memory());
+        if mgp_copy.is_null() {
+            return Err(MgpError::MgpResultVertexAllocationError);
+        }
+        let mgp_value = ffi::mgp_value_make_vertex(mgp_copy);
+        if mgp_value.is_null() {
+            ffi::mgp_vertex_destroy(mgp_copy);
+            return Err(MgpError::MgpResultVertexAllocationError);
+        }
+        Ok(MgpValue { ptr: mgp_value })
+    }
+}
+
+pub fn make_edge_value(edge: &Edge, context: &Memgraph) -> MgpResult<MgpValue> {
+    unsafe {
+        let mgp_copy = ffi::mgp_edge_copy(edge.ptr, context.memory());
+        if mgp_copy.is_null() {
+            return Err(MgpError::MgpResultVertexAllocationError);
+        }
+        let mgp_value = ffi::mgp_value_make_edge(mgp_copy);
+        if mgp_value.is_null() {
+            ffi::mgp_edge_destroy(mgp_copy);
+            return Err(MgpError::MgpResultVertexAllocationError);
+        }
+        Ok(MgpValue { ptr: mgp_value })
+    }
+}
+
+#[derive(Debug)]
+pub enum Value {
+    Null,
+    Bool(bool),
+    Int(i64),
+    Float(f64),
+    String(CString),
+    Vertex(Vertex),
+    Edge(Edge),
+}
+
+impl Value {
+    // TODO(gitbuda): Remove to_result_mgp_value dead code.
+    #[allow(dead_code)]
+    fn to_result_mgp_value(&self, context: &Memgraph) -> MgpResult<MgpValue> {
+        match self {
+            Value::Null => make_null_value(context),
+            Value::Bool(x) => make_bool_value(*x, context),
+            Value::Int(x) => make_int_value(*x, context),
+            Value::String(x) => make_string_value(&*x.as_c_str(), context),
+            Value::Float(x) => make_double_value(*x, context),
+            Value::Vertex(x) => make_vertex_value(&x, context),
+            Value::Edge(x) => make_edge_value(&x, context),
+        }
+    }
+}
+
+/// # Safety
+/// TODO(gitbuda): Write section about safety.
+pub unsafe fn make_vertex_copy(
+    mgp_vertex: *const mgp_vertex,
+    context: &Memgraph,
+) -> MgpResult<Vertex> {
+    assert!(
+        !mgp_vertex.is_null(),
+        "Unable to make vertex copy because vertex is null."
+    );
+    let mgp_vertex_copy = ffi::mgp_vertex_copy(mgp_vertex, context.memory());
+    if mgp_vertex_copy.is_null() {
+        return Err(MgpError::MgpCreationOfVertexError);
+    }
+    Ok(Vertex {
+        ptr: mgp_vertex_copy,
+        context: context.clone(),
+    })
+}
+
+/// # Safety
+/// TODO(gitbuda): Write section about safety.
+pub unsafe fn mgp_raw_value_to_value(
+    value: *const mgp_value,
+    context: &Memgraph,
+) -> MgpResult<Value> {
+    #[allow(non_upper_case_globals)]
+    match ffi::mgp_value_get_type(value) {
+        mgp_value_type_MGP_VALUE_TYPE_NULL => Ok(Value::Null),
+        mgp_value_type_MGP_VALUE_TYPE_BOOL => Ok(Value::Bool(ffi::mgp_value_get_bool(value) == 0)),
+        mgp_value_type_MGP_VALUE_TYPE_INT => Ok(Value::Int(ffi::mgp_value_get_int(value))),
+        mgp_value_type_MGP_VALUE_TYPE_STRING => {
+            let mgp_string = ffi::mgp_value_get_string(value);
+            match create_cstring(mgp_string, &context) {
+                Ok(value) => Ok(Value::String(value)),
+                Err(_) => Err(MgpError::MgpCreationOfCStringError),
+            }
+        }
+        mgp_value_type_MGP_VALUE_TYPE_DOUBLE => Ok(Value::Float(ffi::mgp_value_get_double(value))),
+        mgp_value_type_MGP_VALUE_TYPE_VERTEX => {
+            let mgp_vertex = ffi::mgp_value_get_vertex(value);
+            let vertex = make_vertex_copy(mgp_vertex, &context)?;
+            Ok(Value::Vertex(vertex))
+        }
+        // TODO(gitbuda): Handle mgp_value_type unhandeled values.
+        _ => {
+            println!("Uncovered mgp_value type!");
+            panic!()
+        }
+    }
+}
+
+pub fn mgp_value_to_value(value: &MgpValue, context: &Memgraph) -> MgpResult<Value> {
+    unsafe { mgp_raw_value_to_value(value.ptr, context) }
+}
+
+/// # Safety
+/// TODO(gitbuda): Write section about safety.
+pub unsafe fn create_cstring(c_char_ptr: *const i8, context: &Memgraph) -> MgpResult<CString> {
+    let unable_alloc_msg = c_str!("Unable to create/allocate new CString.");
+    match CString::new(CStr::from_ptr(c_char_ptr).to_bytes()) {
+        Ok(v) => Ok(v),
+        Err(_) => {
+            ffi::mgp_result_set_error_msg(context.result(), unable_alloc_msg.as_ptr());
+            Err(MgpError::MgpAllocationError)
+        }
     }
 }
 

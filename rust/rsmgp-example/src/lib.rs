@@ -101,7 +101,7 @@ fn test_procedure(context: Memgraph) -> Result<(), MgpError> {
         match mgp_vertex.out_edges()?.next() {
             Some(edge) => {
                 let edge_type = edge.edge_type()?;
-                let mgp_value = make_string_value(edge_type, &context)?;
+                let mgp_value = make_string_value(&edge_type, &context)?;
                 insert_result_record(&mgp_record, c_str!("first_edge_type"), &mgp_value, &context)?;
             }
             None => {
@@ -140,13 +140,15 @@ extern "C" fn test_procedure_c(
         }
     });
     panic::set_hook(prev_hook);
-    let procedure_panic_msg = c_str!("Procedure panic!");
-    if procedure_result.is_err() {
-        println!("Procedure panic!");
-        // TODO(gitbuda): Fix backtrace print which is almost useless.
-        println!("{:?}", Backtrace::new());
-        unsafe {
-            mgp_result_set_error_msg(result, procedure_panic_msg.as_ptr());
+    match procedure_result {
+        Ok(_) => {}
+        // TODO(gitbuda): Take cause on panic and pass to mgp_result_set_error_msg.
+        // Until figuring out how to take info from panic object, set error in-place.
+        // As far as I know iterator can't return Result object and set error in-place.
+        Err(_) => {
+            println!("Procedure panic!");
+            // TODO(gitbuda): Fix backtrace somehow.
+            println!("{:?}", Backtrace::new());
         }
     }
 }

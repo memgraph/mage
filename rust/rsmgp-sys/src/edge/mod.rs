@@ -90,72 +90,58 @@ impl Edge {
         unsafe { ffi::mgp_edge_get_id(self.ptr).as_int }
     }
 
-    // TODO(gitbuda): Figure out the correct lifetime. CString should be used.
-    pub fn edge_type(&self) -> MgpResult<&CStr> {
+    pub fn edge_type(&self) -> MgpResult<CString> {
         unsafe {
             let mgp_edge_type = ffi::mgp_edge_get_type(self.ptr);
-            Ok(CStr::from_ptr(mgp_edge_type.name))
+            create_cstring(mgp_edge_type.name, &self.context)
         }
     }
 
     pub fn from_vertex(&self) -> MgpResult<Vertex> {
         unsafe {
             let mgp_vertex = ffi::mgp_edge_get_from(self.ptr);
-            assert!(!mgp_vertex.is_null(), "Unable to get from vertex.");
-            let mgp_vertex_copy = ffi::mgp_vertex_copy(mgp_vertex, self.context.memory());
-            if mgp_vertex_copy.is_null() {
-                return Err(MgpError::MgpCreationOfVertexError);
-            }
-            Ok(Vertex {
-                ptr: mgp_vertex_copy,
-                context: self.context.clone(),
-            })
+            let vertex = make_vertex_copy(mgp_vertex, &self.context)?;
+            Ok(vertex)
         }
     }
 
     pub fn to_vertex(&self) -> MgpResult<Vertex> {
         unsafe {
             let mgp_vertex = ffi::mgp_edge_get_to(self.ptr);
-            assert!(!mgp_vertex.is_null(), "Unable to get to vertex.");
-            let mgp_vertex_copy = ffi::mgp_vertex_copy(mgp_vertex, self.context.memory());
-            if mgp_vertex_copy.is_null() {
-                return Err(MgpError::MgpCreationOfVertexError);
-            }
-            Ok(Vertex {
-                ptr: mgp_vertex_copy,
-                context: self.context.clone(),
-            })
+            let vertex = make_vertex_copy(mgp_vertex, &self.context)?;
+            Ok(vertex)
         }
     }
 
     pub fn property(&self, name: &CStr) -> MgpResult<Property> {
+        let unable_alloc_msg = c_str!("Unable to allocate edge property.");
         unsafe {
-            let mgp_value = MgpValue {
-                ptr: ffi::mgp_edge_get_property(self.ptr, name.as_ptr(), self.context.memory()),
-            };
-            if mgp_value.ptr.is_null() {
+            let mgp_value =
+                ffi::mgp_edge_get_property(self.ptr, name.as_ptr(), self.context.memory());
+            if mgp_value.is_null() {
+                ffi::mgp_result_set_error_msg(self.context.result(), unable_alloc_msg.as_ptr());
                 return Err(MgpError::MgpAllocationError);
             }
-            let value = mgp_value_to_value(&mgp_value, &self.context)?;
+            let value = mgp_value_to_value(&MgpValue { ptr: mgp_value }, &self.context)?;
             match CString::new(name.to_bytes()) {
                 Ok(c_string) => Ok(Property {
                     name: c_string,
                     value,
                 }),
-                Err(_) => Err(MgpError::MgpCreationOfCStringError),
+                Err(_) => {
+                    ffi::mgp_result_set_error_msg(self.context.result(), unable_alloc_msg.as_ptr());
+                    Err(MgpError::MgpCreationOfCStringError)
+                }
             }
         }
     }
 
     pub fn properties(&self) -> MgpResult<PropertiesIterator> {
-        let unable_alloc_iter_msg = c_str!("Unable to allocate properties iterator on edge.");
+        let unable_alloc_msg = c_str!("Unable to allocate edge properties iterator.");
         unsafe {
             let mgp_iterator = ffi::mgp_edge_iter_properties(self.ptr, self.context.memory());
             if mgp_iterator.is_null() {
-                ffi::mgp_result_set_error_msg(
-                    self.context.result(),
-                    unable_alloc_iter_msg.as_ptr(),
-                );
+                ffi::mgp_result_set_error_msg(self.context.result(), unable_alloc_msg.as_ptr());
                 return Err(MgpError::MgpAllocationError);
             }
             Ok(PropertiesIterator {
