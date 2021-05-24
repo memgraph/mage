@@ -90,6 +90,8 @@ impl Value {
     }
 }
 
+// TODO(gitbuda): Implement copy_vertex + use it for: value, from, to.
+
 /// # Safety
 /// TODO(gitbuda): Write section about safety.
 pub unsafe fn mgp_raw_value_to_value(

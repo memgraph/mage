@@ -2,6 +2,7 @@ use c_str_macro::c_str;
 use std::ffi::{CStr, CString};
 
 use crate::context::*;
+use crate::edge::*;
 use crate::mgp::*;
 use crate::property::*;
 use crate::result::*;
@@ -43,34 +44,26 @@ impl Iterator for VerticesIterator {
     type Item = Vertex;
 
     fn next(&mut self) -> Option<Vertex> {
-        if self.is_first {
-            self.is_first = false;
-            unsafe {
-                let data = ffi::mgp_vertices_iterator_get(self.ptr);
-                if data.is_null() {
-                    None
-                } else {
-                    // TODO(gitbuda): Handle error.
-                    let vertex_copy = ffi::mgp_vertex_copy(data, self.context.memory());
-                    Some(Vertex {
-                        ptr: vertex_copy,
-                        context: self.context.clone(),
-                    })
-                }
+        unsafe {
+            let data: *const mgp_vertex;
+            if self.is_first {
+                self.is_first = false;
+                data = ffi::mgp_vertices_iterator_get(self.ptr);
+            } else {
+                data = ffi::mgp_vertices_iterator_next(self.ptr);
             }
-        } else {
-            unsafe {
-                let data = ffi::mgp_vertices_iterator_next(self.ptr);
-                if data.is_null() {
-                    None
-                } else {
-                    // TODO(gitbuda): Handle error.
-                    let vertex_copy = ffi::mgp_vertex_copy(data, self.context.memory());
-                    Some(Vertex {
-                        ptr: vertex_copy,
-                        context: self.context.clone(),
-                    })
+
+            if data.is_null() {
+                None
+            } else {
+                let copy_ptr = ffi::mgp_vertex_copy(data, self.context.memory());
+                if copy_ptr.is_null() {
+                    panic!("Unable to allocate new vertex during vertex iteration.");
                 }
+                Some(Vertex {
+                    ptr: copy_ptr,
+                    context: self.context.clone(),
+                })
             }
         }
     }
@@ -101,7 +94,7 @@ impl Vertex {
         unsafe { ffi::mgp_vertex_labels_count(self.ptr) }
     }
 
-    // TODO(gitbuda): Figure out the correct lifetime.
+    // TODO(gitbuda): Figure out the correct lifetime. CString should be used.
     pub fn label_at(&self, index: u64) -> MgpResult<&CStr> {
         unsafe {
             let c_label = ffi::mgp_vertex_label_at(self.ptr, index);
@@ -140,14 +133,60 @@ impl Vertex {
         }
     }
 
-    pub fn properties(&self) -> PropertiesIterator {
+    pub fn properties(&self) -> MgpResult<PropertiesIterator> {
+        let unable_alloc_iter_msg = c_str!("Unable to allocate properties iterator on vertex.");
         unsafe {
-            PropertiesIterator {
-                // TODO(gitbuda): Handle errors.
-                ptr: ffi::mgp_vertex_iter_properties(self.ptr, self.context.memory()),
+            let mgp_iterator = ffi::mgp_vertex_iter_properties(self.ptr, self.context.memory());
+            if mgp_iterator.is_null() {
+                ffi::mgp_result_set_error_msg(
+                    self.context.result(),
+                    unable_alloc_iter_msg.as_ptr(),
+                );
+                return Err(MgpError::MgpAllocationError);
+            }
+            Ok(PropertiesIterator {
+                ptr: mgp_iterator,
                 context: self.context.clone(),
                 ..Default::default()
+            })
+        }
+    }
+
+    pub fn in_edges(&self) -> MgpResult<EdgesIterator> {
+        let unable_alloc_iter_msg = c_str!("Unable to allocate in_edges iterator.");
+        unsafe {
+            let mgp_iterator = ffi::mgp_vertex_iter_in_edges(self.ptr, self.context.memory());
+            if mgp_iterator.is_null() {
+                ffi::mgp_result_set_error_msg(
+                    self.context.result(),
+                    unable_alloc_iter_msg.as_ptr(),
+                );
+                return Err(MgpError::MgpAllocationError);
             }
+            Ok(EdgesIterator {
+                ptr: mgp_iterator,
+                context: self.context.clone(),
+                ..Default::default()
+            })
+        }
+    }
+
+    pub fn out_edges(&self) -> MgpResult<EdgesIterator> {
+        let unable_alloc_iter_msg = c_str!("Unable to allocate out_edges iterator.");
+        unsafe {
+            let mgp_iterator = ffi::mgp_vertex_iter_out_edges(self.ptr, self.context.memory());
+            if mgp_iterator.is_null() {
+                ffi::mgp_result_set_error_msg(
+                    self.context.result(),
+                    unable_alloc_iter_msg.as_ptr(),
+                );
+                return Err(MgpError::MgpAllocationError);
+            }
+            Ok(EdgesIterator {
+                ptr: mgp_iterator,
+                context: self.context.clone(),
+                ..Default::default()
+            })
         }
     }
 }
@@ -155,17 +194,16 @@ impl Vertex {
 pub fn make_graph_vertices_iterator(context: &Memgraph) -> MgpResult<VerticesIterator> {
     let unable_alloc_iter_msg = c_str!("Unable to allocate vertices iterator.");
     unsafe {
-        let iterator: VerticesIterator = VerticesIterator {
-            // TODO(gitbuda): Handle error.
-            ptr: ffi::mgp_graph_iter_vertices(context.graph(), context.memory()),
-            context: context.clone(),
-            ..Default::default()
-        };
-        if iterator.ptr.is_null() {
+        let mgp_iterator = ffi::mgp_graph_iter_vertices(context.graph(), context.memory());
+        if mgp_iterator.is_null() {
             ffi::mgp_result_set_error_msg(context.result(), unable_alloc_iter_msg.as_ptr());
             return Err(MgpError::MgpAllocationError);
         }
-        Ok(iterator)
+        Ok(VerticesIterator {
+            ptr: mgp_iterator,
+            context: context.clone(),
+            ..Default::default()
+        })
     }
 }
 

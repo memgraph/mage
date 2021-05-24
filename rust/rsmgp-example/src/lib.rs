@@ -20,7 +20,7 @@ fn test_procedure(context: Memgraph) -> Result<(), MgpError> {
         let mgp_record = make_result_record(&context)?;
 
         let properties_string = mgp_vertex
-            .properties()
+            .properties()?
             .map(|prop| {
                 let prop_name = prop.name.to_str().unwrap();
                 if let Value::Int(value) = prop.value {
@@ -97,6 +97,18 @@ fn test_procedure(context: Memgraph) -> Result<(), MgpError> {
         // TODO(gitbuda): Figure out how to test vertex e2e.
         // let vertex_value = make_vertex_value(&mgp_vertex, &context)?;
         // insert_result_record(&mgp_record, c_str!("vertex"), &vertex_value, &context)?;
+
+        match mgp_vertex.out_edges()?.next() {
+            Some(edge) => {
+                let edge_type = edge.edge_type()?;
+                let mgp_value = make_string_value(edge_type, &context)?;
+                insert_result_record(&mgp_record, c_str!("first_edge_type"), &mgp_value, &context)?;
+            }
+            None => {
+                let mgp_value = make_string_value(c_str!("unknown_edge_type"), &context)?;
+                insert_result_record(&mgp_record, c_str!("first_edge_type"), &mgp_value, &context)?;
+            }
+        }
     }
     Ok(())
 }
@@ -178,6 +190,12 @@ pub extern "C" fn mgp_init_module(module: *mut mgp_module, _memory: *mut mgp_mem
     //         return 1;
     //     }
     // }
+    match add_string_result_type(procedure, c_str!("first_edge_type")) {
+        Ok(_) => {}
+        Err(_) => {
+            return 1;
+        }
+    }
     0
 }
 
