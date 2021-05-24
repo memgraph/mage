@@ -57,7 +57,7 @@ fn test_procedure(context: Memgraph) -> Result<(), MgpError> {
         )?;
 
         if labels_count > 0 {
-            let first_label = make_string_value(mgp_vertex.label_at(0)?, &context)?;
+            let first_label = make_string_value(&mgp_vertex.label_at(0)?, &context)?;
             insert_result_record(&mgp_record, c_str!("first_label"), &first_label, &context)?;
         } else {
             insert_result_record(

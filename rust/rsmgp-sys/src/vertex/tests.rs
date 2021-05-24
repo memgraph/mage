@@ -81,7 +81,7 @@ fn test_vertex_label_at() {
         ptr: std::ptr::null_mut(),
         context: ctx_mg,
     };
-    assert_eq!(vertex.label_at(5).unwrap(), c_str!("test"));
+    assert_eq!(vertex.label_at(5).unwrap(), CString::new("test").unwrap());
 }
 
 #[test]
@@ -97,6 +97,15 @@ fn test_vertex_property() {
             assert_eq!(memory, std::ptr::null_mut());
             std::ptr::null_mut()
         });
+
+    let ctx_2 = mgp_result_set_error_msg_context();
+    ctx_2.expect().times(1).returning(|_, msg| unsafe {
+        assert_eq!(
+            CStr::from_ptr(msg),
+            c_str!("Unable to allocate vertex property.")
+        );
+        0
+    });
 
     let ctx_mg = Memgraph {
         ..Default::default()

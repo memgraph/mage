@@ -17,6 +17,8 @@ pub enum MgpError {
     MgpCreationOfCStringError,
     #[snafu(display("Unable to create Rust Vertex based on Memgraph value."))]
     MgpCreationOfVertexError,
+    #[snafu(display("Unable to create Rust Edge based on Memgraph value."))]
+    MgpCreationOfEdgeError,
     #[snafu(display("Unable to create result Memgraph Vertex (allocation error)."))]
     MgpResultVertexAllocationError,
 }

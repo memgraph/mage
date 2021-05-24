@@ -94,14 +94,15 @@ impl Vertex {
         unsafe { ffi::mgp_vertex_labels_count(self.ptr) }
     }
 
-    // TODO(gitbuda): Figure out the correct lifetime. CString should be used.
-    pub fn label_at(&self, index: u64) -> MgpResult<&CStr> {
+    pub fn label_at(&self, index: u64) -> MgpResult<CString> {
+        let mgp_result_error_msg = c_str!("Out of bound label index.");
         unsafe {
             let c_label = ffi::mgp_vertex_label_at(self.ptr, index);
             if c_label.name.is_null() {
+                ffi::mgp_result_set_error_msg(self.context.result(), mgp_result_error_msg.as_ptr());
                 return Err(MgpError::MgpOutOfBoundLabelIndex);
             }
-            Ok(CStr::from_ptr(c_label.name))
+            create_cstring(c_label.name, &self.context)
         }
     }
 
@@ -115,14 +116,15 @@ impl Vertex {
     }
 
     pub fn property(&self, name: &CStr) -> MgpResult<Property> {
+        let unable_alloc_msg = c_str!("Unable to allocate vertex property.");
         unsafe {
-            let mgp_value = MgpValue {
-                ptr: ffi::mgp_vertex_get_property(self.ptr, name.as_ptr(), self.context.memory()),
-            };
-            if mgp_value.ptr.is_null() {
+            let mgp_value =
+                ffi::mgp_vertex_get_property(self.ptr, name.as_ptr(), self.context.memory());
+            if mgp_value.is_null() {
+                ffi::mgp_result_set_error_msg(self.context.result(), unable_alloc_msg.as_ptr());
                 return Err(MgpError::MgpAllocationError);
             }
-            let value = mgp_value_to_value(&mgp_value, &self.context)?;
+            let value = mgp_value_to_value(&MgpValue { ptr: mgp_value }, &self.context)?;
             match CString::new(name.to_bytes()) {
                 Ok(c_string) => Ok(Property {
                     name: c_string,

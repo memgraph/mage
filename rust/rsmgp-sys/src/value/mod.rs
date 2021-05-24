@@ -218,10 +218,35 @@ pub unsafe fn make_vertex_copy(
     );
     let mgp_vertex_copy = ffi::mgp_vertex_copy(mgp_vertex, context.memory());
     if mgp_vertex_copy.is_null() {
+        ffi::mgp_result_set_error_msg(
+            context.result(),
+            c_str!("Unable to make vertex copy.").as_ptr(),
+        );
         return Err(MgpError::MgpCreationOfVertexError);
     }
     Ok(Vertex {
         ptr: mgp_vertex_copy,
+        context: context.clone(),
+    })
+}
+
+/// # Safety
+/// TODO(gitbuda): Write section about safety.
+pub unsafe fn make_edge_copy(mgp_edge: *const mgp_edge, context: &Memgraph) -> MgpResult<Edge> {
+    assert!(
+        !mgp_edge.is_null(),
+        "Unable to make edge copy because edge is null."
+    );
+    let mgp_edge_copy = ffi::mgp_edge_copy(mgp_edge, context.memory());
+    if mgp_edge_copy.is_null() {
+        ffi::mgp_result_set_error_msg(
+            context.result(),
+            c_str!("Unable to make edge copy.").as_ptr(),
+        );
+        return Err(MgpError::MgpCreationOfEdgeError);
+    }
+    Ok(Edge {
+        ptr: mgp_edge_copy,
         context: context.clone(),
     })
 }
@@ -249,6 +274,11 @@ pub unsafe fn mgp_raw_value_to_value(
             let mgp_vertex = ffi::mgp_value_get_vertex(value);
             let vertex = make_vertex_copy(mgp_vertex, &context)?;
             Ok(Value::Vertex(vertex))
+        }
+        mgp_value_type_MGP_VALUE_TYPE_EDGE => {
+            let mgp_edge = ffi::mgp_value_get_edge(value);
+            let edge = make_edge_copy(mgp_edge, &context)?;
+            Ok(Value::Edge(edge))
         }
         // TODO(gitbuda): Handle mgp_value_type unhandeled values.
         _ => {
