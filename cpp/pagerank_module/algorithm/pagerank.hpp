@@ -45,6 +45,9 @@ class AdjacencyList {
 
 namespace pagerank_alg {
 
+// Defines edge's from and to node index. Just an alias for user convenience.
+using EdgePair = std::pair<std::uint64_t, std::uint64_t>;
+
 /// A directed, unweighted graph.
 /// Self loops and multiple edges are allowed and they will affect the result.
 /// Node ids are integers from interval [0, number of nodes in graph - 1].
@@ -58,8 +61,7 @@ class PageRankGraph {
   /// @param number_of_nodes -- number of nodes in graph
   /// @param number_of_edges -- number of edges in graph
   /// @param edges -- pairs (source, target) representing directed edges
-  PageRankGraph(std::uint64_t number_of_nodes, std::uint64_t number_of_edges,
-                const std::vector<std::pair<std::uint64_t, std::uint64_t>> &edges);
+  PageRankGraph(std::uint64_t number_of_nodes, std::uint64_t number_of_edges, const std::vector<EdgePair> &edges);
 
   /// @return -- number of nodes in graph
   std::uint64_t GetNodeCount() const;
@@ -68,7 +70,7 @@ class PageRankGraph {
   std::uint64_t GetEdgeCount() const;
 
   /// @return -- a reference to ordered ordered vector of edges
-  const std::vector<std::pair<std::uint64_t, std::uint64_t>> &GetOrderedEdges() const;
+  const std::vector<EdgePair> &GetOrderedEdges() const;
 
   /// Returns out degree of node node_id
   /// @param node_id -- node name
@@ -81,7 +83,7 @@ class PageRankGraph {
   /// edge_count equals number of edges in graph
   std::uint64_t edge_count_;
   /// directed edges (source, target) (source -> target) ordered by target
-  std::vector<std::pair<std::uint64_t, std::uint64_t>> ordered_edges_;
+  std::vector<EdgePair> ordered_edges_;
   /// out degree for each node in graph because it is required in calculating
   /// PageRank
   std::vector<std::uint64_t> out_degree_;

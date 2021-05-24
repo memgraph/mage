@@ -36,14 +36,13 @@ void PagerankWrapper(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory);
 
     auto graph_edges = graph->Edges();
-    std::vector<std::pair<std::uint64_t, std::uint64_t>> pagerank_edges;
+    std::vector<pagerank_alg::EdgePair> pagerank_edges;
     std::transform(graph_edges.begin(), graph_edges.end(), std::back_inserter(pagerank_edges),
-                   [](const mg_graph::Edge<uint64_t> &edge) -> std::pair<std::uint64_t, std::uint64_t> {
+                   [](const mg_graph::Edge<uint64_t> &edge) -> pagerank_alg::EdgePair {
                      return {edge.from, edge.to};
                    });
 
     auto number_of_nodes = graph->Nodes().size();
-    auto graph_nodes = graph->Nodes();
 
     auto pagerank_graph = pagerank_alg::PageRankGraph(number_of_nodes, pagerank_edges.size(), pagerank_edges);
     auto pageranks =

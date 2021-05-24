@@ -7,7 +7,7 @@
 namespace pagerank_alg {
 
 PageRankGraph::PageRankGraph(const std::uint64_t number_of_nodes, const std::uint64_t number_of_edges,
-                             const std::vector<std::pair<std::uint64_t, std::uint64_t>> &edges)
+                             const std::vector<EdgePair> &edges)
     : node_count_(number_of_nodes),
       edge_count_(number_of_edges),
       out_degree_(std::vector<std::uint64_t>(number_of_nodes)) {
@@ -30,9 +30,7 @@ std::uint64_t PageRankGraph::GetNodeCount() const { return node_count_; }
 
 std::uint64_t PageRankGraph::GetEdgeCount() const { return edge_count_; }
 
-const std::vector<std::pair<std::uint64_t, std::uint64_t>> &PageRankGraph::GetOrderedEdges() const {
-  return ordered_edges_;
-}
+const std::vector<EdgePair> &PageRankGraph::GetOrderedEdges() const { return ordered_edges_; }
 
 std::uint64_t PageRankGraph::GetOutDegree(const std::uint64_t node_id) const { return out_degree_[node_id]; }
 
