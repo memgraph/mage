@@ -1,5 +1,5 @@
 use c_str_macro::c_str;
-use std::ffi::CStr;
+use std::ffi::{CStr, CString};
 
 use crate::context::*;
 use crate::mgp::*;
@@ -121,8 +121,7 @@ impl Vertex {
         }
     }
 
-    // TODO(gitbuda): This lifetime is probably problematic.
-    pub fn property<'a>(&self, name: &'a CStr) -> MgpResult<Property<'a>> {
+    pub fn property(&self, name: &CStr) -> MgpResult<Property> {
         unsafe {
             let mgp_value = MgpValue {
                 ptr: ffi::mgp_vertex_get_property(self.ptr, name.as_ptr(), self.context.memory()),
@@ -131,7 +130,13 @@ impl Vertex {
                 return Err(MgpError::MgpAllocationError);
             }
             let value = mgp_value_to_value(&mgp_value, &self.context)?;
-            Ok(Property { name, value })
+            match CString::new(name.to_bytes()) {
+                Ok(c_string) => Ok(Property {
+                    name: c_string,
+                    value,
+                }),
+                Err(_) => Err(MgpError::MgpCreationOfCStringError),
+            }
         }
     }
 
