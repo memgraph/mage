@@ -1,6 +1,7 @@
 set(pagerank_module_src 
     pagerank_module.cpp
-    algorithm/pagerank.cpp)
+    algorithm/pagerank.cpp
+    algorithm_approx/pagerank.cpp)
 
 add_query_module(pagerank 1 "${pagerank_module_src}")
 

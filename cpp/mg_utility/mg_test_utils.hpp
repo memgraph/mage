@@ -1,14 +1,15 @@
 #pragma once
 
+#include <cassert>
 #include <chrono>
 #include <cmath>
 #include <vector>
-#include <cassert>
+#include <stack>
 
 namespace mg_test_utility {
 
-constexpr double ABSOLUTE_ERROR_EPSILON { 10e-4 };
-constexpr double AVERAGE_ABSOLUTE_ERROR_EPSILON { 10e-5 };
+constexpr double ABSOLUTE_ERROR_EPSILON{10e-4};
+constexpr double AVERAGE_ABSOLUTE_ERROR_EPSILON{10e-5};
 
 /// This class is threadsafe
 class Timer {
@@ -34,11 +35,10 @@ class Timer {
 ///
 template <typename T>
 T MaxAbsoluteError(const std::vector<T> &result, const std::vector<T> &correct) {
-  static_assert(
-      std::is_arithmetic_v<T>,
-      "mg_test_utility::MaxAbsoluteError expects the vector type to be an arithmetic type.\n");
+  static_assert(std::is_arithmetic_v<T>,
+                "mg_test_utility::MaxAbsoluteError expects the vector type to be an arithmetic type.\n");
 
-  assert (result.size() == correct.size());
+  assert(result.size() == correct.size());
 
   auto size = correct.size();
   T max_absolute_error = 0;
@@ -61,11 +61,10 @@ T MaxAbsoluteError(const std::vector<T> &result, const std::vector<T> &correct) 
 ///
 template <typename T>
 double AverageAbsoluteError(const std::vector<T> &result, const std::vector<T> &correct) {
-  static_assert(
-      std::is_arithmetic_v<T>,
-      "mg_test_utility::AverageAbsoluteError expects the vector type to be an arithmetic type.\n");
+  static_assert(std::is_arithmetic_v<T>,
+                "mg_test_utility::AverageAbsoluteError expects the vector type to be an arithmetic type.\n");
 
-  assert (result.size() == correct.size());
+  assert(result.size() == correct.size());
 
   auto size = correct.size();
   T manhattan_distance = 0;
@@ -92,9 +91,12 @@ double AverageAbsoluteError(const std::vector<T> &result, const std::vector<T> &
 ///
 template <typename T>
 bool TestEqualVectors(const std::vector<T> &result, const std::vector<T> &correct) {
-  T max_absolute_error = MaxAbsoluteError(result, correct);
-  double average_absolute_error = AverageAbsoluteError(result, correct);
-  return (max_absolute_error < ABSOLUTE_ERROR_EPSILON && average_absolute_error < AVERAGE_ABSOLUTE_ERROR_EPSILON);
-}
+  auto max_absolute_error = MaxAbsoluteError(result, correct);
+  if (max_absolute_error >= ABSOLUTE_ERROR_EPSILON) return false;
 
+  auto average_absolute_error = AverageAbsoluteError(result, correct);
+  if (average_absolute_error >= AVERAGE_ABSOLUTE_ERROR_EPSILON) return false;
+
+  return true;
+}
 }  // namespace mg_test_utility

@@ -20,7 +20,7 @@ void InsertBipartiteMatchingRecord(mgp_result *result, mgp_memory *memory, const
 void GetMaximumBipartiteMatching(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result,
                                  mgp_memory *memory) {
   try {
-    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory);
+    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
     auto maximum_bipartite_matching = bipartite_matching_alg::BipartiteMatching(*graph);
 
     InsertBipartiteMatchingRecord(result, memory, maximum_bipartite_matching);
