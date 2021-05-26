@@ -115,6 +115,16 @@ pub fn add_edge_result_type(procedure: *mut mgp_proc, name: &CStr) -> MgpResult<
     }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn add_path_result_type(procedure: *mut mgp_proc, name: &CStr) -> MgpResult<()> {
+    unsafe {
+        if ffi::mgp_proc_add_result(procedure, name.as_ptr(), ffi::mgp_type_path()) == 0 {
+            return Err(MgpError::AddProcedureParameterTypeError);
+        }
+        Ok(())
+    }
+}
+
 #[allow(unused_imports)]
 #[cfg(test)]
 mod tests {

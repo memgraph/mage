@@ -65,6 +65,15 @@ pub enum MgpError {
 
     #[snafu(display("Out of bound label index."))]
     OutOfBoundLabelIndexError,
+
+    #[snafu(display("Out of bound path vertex index."))]
+    OutOfBoundPathVertexIndex,
+
+    #[snafu(display("Out of bound path edge index."))]
+    OutOfBoundPathEdgeIndex,
+
+    #[snafu(display("Unable to allocate path value."))]
+    UnableToAllocatePathValue,
 }
 
 pub type MgpResult<T, E = MgpError> = std::result::Result<T, E>;

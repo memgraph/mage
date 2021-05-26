@@ -3,6 +3,7 @@ use std::ffi::{CStr, CString};
 use crate::context::*;
 use crate::edge::*;
 use crate::mgp::*;
+use crate::path::*;
 use crate::result::*;
 use crate::vertex::*;
 // Required here, if not present tests linking fails.
@@ -168,6 +169,21 @@ pub fn make_edge_value(edge: &Edge, context: &Memgraph) -> MgpResult<MgpValue> {
     }
 }
 
+pub fn make_path_value(path: &Path, context: &Memgraph) -> MgpResult<MgpValue> {
+    unsafe {
+        let mgp_copy = ffi::mgp_path_copy(path.ptr, context.memory());
+        if mgp_copy.is_null() {
+            return Err(MgpError::UnableToAllocatePathValue);
+        }
+        let mgp_value = ffi::mgp_value_make_path(mgp_copy);
+        if mgp_value.is_null() {
+            ffi::mgp_path_destroy(mgp_copy);
+            return Err(MgpError::UnableToAllocatePathValue);
+        }
+        Ok(MgpValue { ptr: mgp_value })
+    }
+}
+
 #[derive(Debug)]
 pub enum Value {
     Null,
@@ -177,6 +193,7 @@ pub enum Value {
     String(CString),
     Vertex(Vertex),
     Edge(Edge),
+    Path(Path),
 }
 
 impl Value {
@@ -191,6 +208,7 @@ impl Value {
             Value::Float(x) => make_double_value(*x, context),
             Value::Vertex(x) => make_vertex_value(&x, context),
             Value::Edge(x) => make_edge_value(&x, context),
+            Value::Path(x) => make_path_value(&x, context),
         }
     }
 }
@@ -234,6 +252,23 @@ pub unsafe fn make_edge_copy(mgp_edge: *const mgp_edge, context: &Memgraph) -> M
 
 /// # Safety
 /// TODO(gitbuda): Write section about safety.
+pub unsafe fn make_path_copy(mgp_path: *const mgp_path, context: &Memgraph) -> MgpResult<Path> {
+    assert!(
+        !mgp_path.is_null(),
+        "Unable to make path copy because path is null."
+    );
+    let mgp_path_copy = ffi::mgp_path_copy(mgp_path, context.memory());
+    if mgp_path_copy.is_null() {
+        return Err(MgpError::UnableToAllocatePathValue);
+    }
+    Ok(Path {
+        ptr: mgp_path_copy,
+        context: context.clone(),
+    })
+}
+
+/// # Safety
+/// TODO(gitbuda): Write section about safety.
 pub unsafe fn mgp_raw_value_to_value(
     value: *const mgp_value,
     context: &Memgraph,
@@ -260,6 +295,11 @@ pub unsafe fn mgp_raw_value_to_value(
             let mgp_edge = ffi::mgp_value_get_edge(value);
             let edge = make_edge_copy(mgp_edge, &context)?;
             Ok(Value::Edge(edge))
+        }
+        mgp_value_type_MGP_VALUE_TYPE_PATH => {
+            let mgp_path = ffi::mgp_value_get_path(value);
+            let path = make_path_copy(mgp_path, &context)?;
+            Ok(Value::Path(path))
         }
         // TODO(gitbuda): Handle mgp_value_type unhandeled values.
         _ => {
