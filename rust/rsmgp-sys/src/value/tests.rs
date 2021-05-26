@@ -1,6 +1,7 @@
 use super::*;
 use crate::context::Memgraph;
 use crate::mgp::mock_ffi::*;
+use c_str_macro::c_str;
 use serial_test::serial;
 
 #[test]
@@ -8,12 +9,6 @@ use serial_test::serial;
 fn test_make_null_mgp_value() {
     let ctx_1 = mgp_value_make_null_context();
     ctx_1.expect().times(1).returning(|_| std::ptr::null_mut());
-
-    let ctx_2 = mgp_result_set_error_msg_context();
-    ctx_2.expect().times(1).returning(|_, msg| unsafe {
-        assert_eq!(CStr::from_ptr(msg), c_str!("Unable to allocate null."));
-        0
-    });
 
     let ctx_mg = Memgraph {
         ..Default::default()
@@ -30,12 +25,6 @@ fn test_make_false_bool_mgp_value() {
     ctx_1.expect().times(1).returning(|value, _| {
         assert_eq!(value, 0);
         std::ptr::null_mut()
-    });
-
-    let ctx_2 = mgp_result_set_error_msg_context();
-    ctx_2.expect().times(1).returning(|_, msg| unsafe {
-        assert_eq!(CStr::from_ptr(msg), c_str!("Unable to allocate bool."));
-        0
     });
 
     let ctx_mg = Memgraph {
@@ -55,12 +44,6 @@ fn test_make_true_bool_mgp_value() {
         std::ptr::null_mut()
     });
 
-    let ctx_2 = mgp_result_set_error_msg_context();
-    ctx_2.expect().times(1).returning(|_, msg| unsafe {
-        assert_eq!(CStr::from_ptr(msg), c_str!("Unable to allocate bool."));
-        0
-    });
-
     let ctx_mg = Memgraph {
         ..Default::default()
     };
@@ -76,12 +59,6 @@ fn test_make_int_mgp_value() {
     ctx_1.expect().times(1).returning(|value, _| {
         assert_eq!(value, 100);
         std::ptr::null_mut()
-    });
-
-    let ctx_2 = mgp_result_set_error_msg_context();
-    ctx_2.expect().times(1).returning(|_, msg| unsafe {
-        assert_eq!(CStr::from_ptr(msg), c_str!("Unable to allocate integer."));
-        0
     });
 
     let ctx_mg = Memgraph {
@@ -103,12 +80,6 @@ fn test_make_string_mgp_value() {
         std::ptr::null_mut()
     });
 
-    let ctx_2 = mgp_result_set_error_msg_context();
-    ctx_2.expect().times(1).returning(|_, msg| unsafe {
-        assert_eq!(CStr::from_ptr(msg), c_str!("Unable to allocate string."));
-        0
-    });
-
     let ctx_mg = Memgraph {
         ..Default::default()
     };
@@ -124,12 +95,6 @@ fn test_make_double_mgp_value() {
     ctx_1.expect().times(1).returning(|value, _| {
         assert_eq!(value, 0.0);
         std::ptr::null_mut()
-    });
-
-    let ctx_2 = mgp_result_set_error_msg_context();
-    ctx_2.expect().times(1).returning(|_, msg| unsafe {
-        assert_eq!(CStr::from_ptr(msg), c_str!("Unable to allocate double."));
-        0
     });
 
     let ctx_mg = Memgraph {
@@ -221,12 +186,6 @@ fn test_mgp_value_for_the_wrong_type() {
 fn test_to_result_mgp_value() {
     let ctx_1 = mgp_value_make_null_context();
     ctx_1.expect().times(1).returning(|_| std::ptr::null_mut());
-
-    let ctx_2 = mgp_result_set_error_msg_context();
-    ctx_2.expect().times(1).returning(|_, msg| unsafe {
-        assert_eq!(CStr::from_ptr(msg), c_str!("Unable to allocate null."));
-        0
-    });
 
     let ctx_mg = Memgraph {
         ..Default::default()

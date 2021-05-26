@@ -1,4 +1,3 @@
-use c_str_macro::c_str;
 use std::ffi::CStr;
 
 use crate::context::*;
@@ -14,12 +13,10 @@ pub struct MgpResultRecord {
 }
 
 pub fn make_result_record(context: &Memgraph) -> MgpResult<MgpResultRecord> {
-    let record_fail_msg = c_str!("Unable to allocate record");
     unsafe {
         let record = ffi::mgp_result_new_record(context.result());
         if record.is_null() {
-            ffi::mgp_result_set_error_msg(context.result(), record_fail_msg.as_ptr());
-            return Err(MgpError::MgpAllocationError);
+            return Err(MgpError::UnableToCreateResultRecord);
         }
         Ok(MgpResultRecord { record })
     }
@@ -29,17 +26,23 @@ pub fn insert_result_record(
     mgp_record: &MgpResultRecord,
     mgp_name: &CStr,
     mgp_value: &MgpValue,
-    context: &Memgraph,
 ) -> MgpResult<()> {
-    let name_not_inserted_msg = c_str!("Unable to insert record to the result.");
     unsafe {
         let inserted =
             ffi::mgp_result_record_insert(mgp_record.record, mgp_name.as_ptr(), mgp_value.ptr);
         if inserted == 0 {
-            ffi::mgp_result_set_error_msg(context.result(), name_not_inserted_msg.as_ptr());
-            return Err(MgpError::MgpPreparingResultError);
+            return Err(MgpError::PreparingResultError);
         }
         Ok(())
+    }
+}
+
+pub fn set_memgraph_error_msg(msg: &CStr, context: &Memgraph) {
+    unsafe {
+        let status = ffi::mgp_result_set_error_msg(context.result(), msg.as_ptr());
+        if status == 0 {
+            panic!("Unable to pass error message to the Memgraph engine.");
+        }
     }
 }
 
@@ -53,65 +56,60 @@ pub fn add_read_procedure(
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn add_int_result_type(
-    procedure: *mut mgp_proc,
-    name: &CStr,
-) -> Result<(), MgpAddProcedureParameterTypeError> {
+pub fn add_int_result_type(procedure: *mut mgp_proc, name: &CStr) -> MgpResult<()> {
     unsafe {
         if ffi::mgp_proc_add_result(procedure, name.as_ptr(), ffi::mgp_type_int()) == 0 {
-            return Err(MgpAddProcedureParameterTypeError);
+            return Err(MgpError::AddProcedureParameterTypeError);
         }
         Ok(())
     }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn add_bool_result_type(
-    procedure: *mut mgp_proc,
-    name: &CStr,
-) -> Result<(), MgpAddProcedureParameterTypeError> {
+pub fn add_bool_result_type(procedure: *mut mgp_proc, name: &CStr) -> MgpResult<()> {
     unsafe {
         if ffi::mgp_proc_add_result(procedure, name.as_ptr(), ffi::mgp_type_bool()) == 0 {
-            return Err(MgpAddProcedureParameterTypeError);
+            return Err(MgpError::AddProcedureParameterTypeError);
         }
         Ok(())
     }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn add_string_result_type(
-    procedure: *mut mgp_proc,
-    name: &CStr,
-) -> Result<(), MgpAddProcedureParameterTypeError> {
+pub fn add_string_result_type(procedure: *mut mgp_proc, name: &CStr) -> MgpResult<()> {
     unsafe {
         if ffi::mgp_proc_add_result(procedure, name.as_ptr(), ffi::mgp_type_string()) == 0 {
-            return Err(MgpAddProcedureParameterTypeError);
+            return Err(MgpError::AddProcedureParameterTypeError);
         }
         Ok(())
     }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn add_double_result_type(
-    procedure: *mut mgp_proc,
-    name: &CStr,
-) -> Result<(), MgpAddProcedureParameterTypeError> {
+pub fn add_double_result_type(procedure: *mut mgp_proc, name: &CStr) -> MgpResult<()> {
     unsafe {
         if ffi::mgp_proc_add_result(procedure, name.as_ptr(), ffi::mgp_type_float()) == 0 {
-            return Err(MgpAddProcedureParameterTypeError);
+            return Err(MgpError::AddProcedureParameterTypeError);
         }
         Ok(())
     }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn add_vertex_result_type(
-    procedure: *mut mgp_proc,
-    name: &CStr,
-) -> Result<(), MgpAddProcedureParameterTypeError> {
+pub fn add_vertex_result_type(procedure: *mut mgp_proc, name: &CStr) -> MgpResult<()> {
     unsafe {
         if ffi::mgp_proc_add_result(procedure, name.as_ptr(), ffi::mgp_type_node()) == 0 {
-            return Err(MgpAddProcedureParameterTypeError);
+            return Err(MgpError::AddProcedureParameterTypeError);
+        }
+        Ok(())
+    }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn add_edge_result_type(procedure: *mut mgp_proc, name: &CStr) -> MgpResult<()> {
+    unsafe {
+        if ffi::mgp_proc_add_result(procedure, name.as_ptr(), ffi::mgp_type_relationship()) == 0 {
+            return Err(MgpError::AddProcedureParameterTypeError);
         }
         Ok(())
     }

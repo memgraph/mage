@@ -1,4 +1,3 @@
-use c_str_macro::c_str;
 use std::ffi::{CStr, CString};
 
 use crate::context::*;
@@ -93,7 +92,7 @@ impl Edge {
     pub fn edge_type(&self) -> MgpResult<CString> {
         unsafe {
             let mgp_edge_type = ffi::mgp_edge_get_type(self.ptr);
-            create_cstring(mgp_edge_type.name, &self.context)
+            create_cstring(mgp_edge_type.name)
         }
     }
 
@@ -114,35 +113,31 @@ impl Edge {
     }
 
     pub fn property(&self, name: &CStr) -> MgpResult<Property> {
-        let unable_alloc_msg = c_str!("Unable to allocate edge property.");
         unsafe {
             let mgp_value =
                 ffi::mgp_edge_get_property(self.ptr, name.as_ptr(), self.context.memory());
             if mgp_value.is_null() {
-                ffi::mgp_result_set_error_msg(self.context.result(), unable_alloc_msg.as_ptr());
-                return Err(MgpError::MgpAllocationError);
+                return Err(MgpError::UnableToReturnEdgePropertyValueAllocationError);
             }
-            let value = mgp_value_to_value(&MgpValue { ptr: mgp_value }, &self.context)?;
+            let value = match mgp_value_to_value(&MgpValue { ptr: mgp_value }, &self.context) {
+                Ok(v) => v,
+                Err(_) => return Err(MgpError::UnableToReturnEdgePropertyValueCreationError),
+            };
             match CString::new(name.to_bytes()) {
                 Ok(c_string) => Ok(Property {
                     name: c_string,
                     value,
                 }),
-                Err(_) => {
-                    ffi::mgp_result_set_error_msg(self.context.result(), unable_alloc_msg.as_ptr());
-                    Err(MgpError::MgpCreationOfCStringError)
-                }
+                Err(_) => Err(MgpError::UnableToReturnEdgePropertyNameAllocationError),
             }
         }
     }
 
     pub fn properties(&self) -> MgpResult<PropertiesIterator> {
-        let unable_alloc_msg = c_str!("Unable to allocate edge properties iterator.");
         unsafe {
             let mgp_iterator = ffi::mgp_edge_iter_properties(self.ptr, self.context.memory());
             if mgp_iterator.is_null() {
-                ffi::mgp_result_set_error_msg(self.context.result(), unable_alloc_msg.as_ptr());
-                return Err(MgpError::MgpAllocationError);
+                return Err(MgpError::UnableToReturnEdgePropertiesIterator);
             }
             Ok(PropertiesIterator {
                 ptr: mgp_iterator,

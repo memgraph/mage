@@ -70,7 +70,7 @@ impl Iterator for PropertiesIterator {
                 // because it's not correct. The same applies in case of the property value.
                 let data_ref = data.as_ref().unwrap();
                 Some(Property {
-                    name: match create_cstring(data_ref.name, &self.context) {
+                    name: match create_cstring(data_ref.name) {
                         Ok(v) => v,
                         Err(_) => panic!("Unable to provide next property. Name creation problem."),
                     },

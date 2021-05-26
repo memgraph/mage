@@ -117,7 +117,7 @@ fn test_vertex_property() {
     };
     assert_eq!(
         vertex.property(c_str!("test")).err().unwrap(),
-        MgpError::MgpAllocationError
+        MgpError::UnableToReturnVertexPropertyValueAllocationError
     );
 }
 
@@ -129,15 +129,6 @@ fn test_make_graph_vertices_iterator() {
         .expect()
         .times(1)
         .returning(|_, _| std::ptr::null_mut());
-
-    let ctx_2 = mgp_result_set_error_msg_context();
-    ctx_2.expect().times(1).returning(|_, msg| unsafe {
-        assert_eq!(
-            CStr::from_ptr(msg),
-            c_str!("Unable to allocate vertices iterator.")
-        );
-        0
-    });
 
     let ctx_mg = Memgraph {
         ..Default::default()

@@ -1,4 +1,3 @@
-use c_str_macro::c_str;
 use std::ffi::{CStr, CString};
 
 use crate::context::*;
@@ -80,70 +79,60 @@ impl MgpValue {
 }
 
 pub fn make_null_value(context: &Memgraph) -> MgpResult<MgpValue> {
-    let unable_alloc_value_msg = c_str!("Unable to allocate null.");
     unsafe {
         let mgp_value = MgpValue {
             ptr: ffi::mgp_value_make_null(context.memory()),
         };
         if mgp_value.ptr.is_null() {
-            ffi::mgp_result_set_error_msg(context.result(), unable_alloc_value_msg.as_ptr());
-            return Err(MgpError::MgpAllocationError);
+            return Err(MgpError::UnableToAllocateNullValue);
         }
         Ok(mgp_value)
     }
 }
 
 pub fn make_bool_value(value: bool, context: &Memgraph) -> MgpResult<MgpValue> {
-    let unable_alloc_value_msg = c_str!("Unable to allocate bool.");
     unsafe {
         let mgp_value = MgpValue {
             ptr: ffi::mgp_value_make_bool(if !value { 0 } else { 1 }, context.memory()),
         };
         if mgp_value.ptr.is_null() {
-            ffi::mgp_result_set_error_msg(context.result(), unable_alloc_value_msg.as_ptr());
-            return Err(MgpError::MgpAllocationError);
+            return Err(MgpError::UnableToAllocateBoolValue);
         }
         Ok(mgp_value)
     }
 }
 
 pub fn make_int_value(value: i64, context: &Memgraph) -> MgpResult<MgpValue> {
-    let unable_alloc_value_msg = c_str!("Unable to allocate integer.");
     unsafe {
         let mgp_value = MgpValue {
             ptr: ffi::mgp_value_make_int(value, context.memory()),
         };
         if mgp_value.ptr.is_null() {
-            ffi::mgp_result_set_error_msg(context.result(), unable_alloc_value_msg.as_ptr());
-            return Err(MgpError::MgpAllocationError);
+            return Err(MgpError::UnableToAllocateIntegerValue);
         }
         Ok(mgp_value)
     }
 }
 
 pub fn make_string_value(value: &CStr, context: &Memgraph) -> MgpResult<MgpValue> {
-    let unable_alloc_value_msg = c_str!("Unable to allocate string.");
     unsafe {
         let mgp_value = MgpValue {
             ptr: ffi::mgp_value_make_string(value.as_ptr(), context.memory()),
         };
         if mgp_value.ptr.is_null() {
-            ffi::mgp_result_set_error_msg(context.result(), unable_alloc_value_msg.as_ptr());
-            return Err(MgpError::MgpAllocationError);
+            return Err(MgpError::UnableToAllocateStringValue);
         }
         Ok(mgp_value)
     }
 }
 
 pub fn make_double_value(value: f64, context: &Memgraph) -> MgpResult<MgpValue> {
-    let unable_alloc_value_msg = c_str!("Unable to allocate double.");
     unsafe {
         let mgp_value = MgpValue {
             ptr: ffi::mgp_value_make_double(value, context.memory()),
         };
         if mgp_value.ptr.is_null() {
-            ffi::mgp_result_set_error_msg(context.result(), unable_alloc_value_msg.as_ptr());
-            return Err(MgpError::MgpAllocationError);
+            return Err(MgpError::UnableToAllocateDoubleValue);
         }
         Ok(mgp_value)
     }
@@ -153,12 +142,12 @@ pub fn make_vertex_value(vertex: &Vertex, context: &Memgraph) -> MgpResult<MgpVa
     unsafe {
         let mgp_copy = ffi::mgp_vertex_copy(vertex.ptr, context.memory());
         if mgp_copy.is_null() {
-            return Err(MgpError::MgpResultVertexAllocationError);
+            return Err(MgpError::UnableToAllocateVertexValue);
         }
         let mgp_value = ffi::mgp_value_make_vertex(mgp_copy);
         if mgp_value.is_null() {
             ffi::mgp_vertex_destroy(mgp_copy);
-            return Err(MgpError::MgpResultVertexAllocationError);
+            return Err(MgpError::UnableToAllocateVertexValue);
         }
         Ok(MgpValue { ptr: mgp_value })
     }
@@ -168,12 +157,12 @@ pub fn make_edge_value(edge: &Edge, context: &Memgraph) -> MgpResult<MgpValue> {
     unsafe {
         let mgp_copy = ffi::mgp_edge_copy(edge.ptr, context.memory());
         if mgp_copy.is_null() {
-            return Err(MgpError::MgpResultVertexAllocationError);
+            return Err(MgpError::UnableToAllocateEdgeValue);
         }
         let mgp_value = ffi::mgp_value_make_edge(mgp_copy);
         if mgp_value.is_null() {
             ffi::mgp_edge_destroy(mgp_copy);
-            return Err(MgpError::MgpResultVertexAllocationError);
+            return Err(MgpError::UnableToAllocateEdgeValue);
         }
         Ok(MgpValue { ptr: mgp_value })
     }
@@ -218,11 +207,7 @@ pub unsafe fn make_vertex_copy(
     );
     let mgp_vertex_copy = ffi::mgp_vertex_copy(mgp_vertex, context.memory());
     if mgp_vertex_copy.is_null() {
-        ffi::mgp_result_set_error_msg(
-            context.result(),
-            c_str!("Unable to make vertex copy.").as_ptr(),
-        );
-        return Err(MgpError::MgpCreationOfVertexError);
+        return Err(MgpError::UnableToAllocateVertexValue);
     }
     Ok(Vertex {
         ptr: mgp_vertex_copy,
@@ -239,11 +224,7 @@ pub unsafe fn make_edge_copy(mgp_edge: *const mgp_edge, context: &Memgraph) -> M
     );
     let mgp_edge_copy = ffi::mgp_edge_copy(mgp_edge, context.memory());
     if mgp_edge_copy.is_null() {
-        ffi::mgp_result_set_error_msg(
-            context.result(),
-            c_str!("Unable to make edge copy.").as_ptr(),
-        );
-        return Err(MgpError::MgpCreationOfEdgeError);
+        return Err(MgpError::UnableToAllocateEdgeValue);
     }
     Ok(Edge {
         ptr: mgp_edge_copy,
@@ -264,9 +245,9 @@ pub unsafe fn mgp_raw_value_to_value(
         mgp_value_type_MGP_VALUE_TYPE_INT => Ok(Value::Int(ffi::mgp_value_get_int(value))),
         mgp_value_type_MGP_VALUE_TYPE_STRING => {
             let mgp_string = ffi::mgp_value_get_string(value);
-            match create_cstring(mgp_string, &context) {
+            match create_cstring(mgp_string) {
                 Ok(value) => Ok(Value::String(value)),
-                Err(_) => Err(MgpError::MgpCreationOfCStringError),
+                Err(_) => Err(MgpError::UnableToCreateCString),
             }
         }
         mgp_value_type_MGP_VALUE_TYPE_DOUBLE => Ok(Value::Float(ffi::mgp_value_get_double(value))),
@@ -294,14 +275,10 @@ pub fn mgp_value_to_value(value: &MgpValue, context: &Memgraph) -> MgpResult<Val
 
 /// # Safety
 /// TODO(gitbuda): Write section about safety.
-pub unsafe fn create_cstring(c_char_ptr: *const i8, context: &Memgraph) -> MgpResult<CString> {
-    let unable_alloc_msg = c_str!("Unable to create/allocate new CString.");
+pub unsafe fn create_cstring(c_char_ptr: *const i8) -> MgpResult<CString> {
     match CString::new(CStr::from_ptr(c_char_ptr).to_bytes()) {
         Ok(v) => Ok(v),
-        Err(_) => {
-            ffi::mgp_result_set_error_msg(context.result(), unable_alloc_msg.as_ptr());
-            Err(MgpError::MgpAllocationError)
-        }
+        Err(_) => Err(MgpError::UnableToCreateCString),
     }
 }
 

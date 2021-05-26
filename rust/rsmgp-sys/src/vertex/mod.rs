@@ -95,14 +95,12 @@ impl Vertex {
     }
 
     pub fn label_at(&self, index: u64) -> MgpResult<CString> {
-        let mgp_result_error_msg = c_str!("Out of bound label index.");
         unsafe {
             let c_label = ffi::mgp_vertex_label_at(self.ptr, index);
             if c_label.name.is_null() {
-                ffi::mgp_result_set_error_msg(self.context.result(), mgp_result_error_msg.as_ptr());
-                return Err(MgpError::MgpOutOfBoundLabelIndex);
+                return Err(MgpError::OutOfBoundLabelIndexError);
             }
-            create_cstring(c_label.name, &self.context)
+            create_cstring(c_label.name)
         }
     }
 
@@ -122,7 +120,7 @@ impl Vertex {
                 ffi::mgp_vertex_get_property(self.ptr, name.as_ptr(), self.context.memory());
             if mgp_value.is_null() {
                 ffi::mgp_result_set_error_msg(self.context.result(), unable_alloc_msg.as_ptr());
-                return Err(MgpError::MgpAllocationError);
+                return Err(MgpError::UnableToReturnVertexPropertyValueAllocationError);
             }
             let value = mgp_value_to_value(&MgpValue { ptr: mgp_value }, &self.context)?;
             match CString::new(name.to_bytes()) {
@@ -130,21 +128,16 @@ impl Vertex {
                     name: c_string,
                     value,
                 }),
-                Err(_) => Err(MgpError::MgpCreationOfCStringError),
+                Err(_) => Err(MgpError::UnableToCreateCString),
             }
         }
     }
 
     pub fn properties(&self) -> MgpResult<PropertiesIterator> {
-        let unable_alloc_iter_msg = c_str!("Unable to allocate properties iterator on vertex.");
         unsafe {
             let mgp_iterator = ffi::mgp_vertex_iter_properties(self.ptr, self.context.memory());
             if mgp_iterator.is_null() {
-                ffi::mgp_result_set_error_msg(
-                    self.context.result(),
-                    unable_alloc_iter_msg.as_ptr(),
-                );
-                return Err(MgpError::MgpAllocationError);
+                return Err(MgpError::UnableToReturnVertexPropertiesIterator);
             }
             Ok(PropertiesIterator {
                 ptr: mgp_iterator,
@@ -155,15 +148,10 @@ impl Vertex {
     }
 
     pub fn in_edges(&self) -> MgpResult<EdgesIterator> {
-        let unable_alloc_iter_msg = c_str!("Unable to allocate in_edges iterator.");
         unsafe {
             let mgp_iterator = ffi::mgp_vertex_iter_in_edges(self.ptr, self.context.memory());
             if mgp_iterator.is_null() {
-                ffi::mgp_result_set_error_msg(
-                    self.context.result(),
-                    unable_alloc_iter_msg.as_ptr(),
-                );
-                return Err(MgpError::MgpAllocationError);
+                return Err(MgpError::UnableToReturnVertexInEdgesIterator);
             }
             Ok(EdgesIterator {
                 ptr: mgp_iterator,
@@ -174,15 +162,10 @@ impl Vertex {
     }
 
     pub fn out_edges(&self) -> MgpResult<EdgesIterator> {
-        let unable_alloc_iter_msg = c_str!("Unable to allocate out_edges iterator.");
         unsafe {
             let mgp_iterator = ffi::mgp_vertex_iter_out_edges(self.ptr, self.context.memory());
             if mgp_iterator.is_null() {
-                ffi::mgp_result_set_error_msg(
-                    self.context.result(),
-                    unable_alloc_iter_msg.as_ptr(),
-                );
-                return Err(MgpError::MgpAllocationError);
+                return Err(MgpError::UnableToReturnVertexOutEdgesIterator);
             }
             Ok(EdgesIterator {
                 ptr: mgp_iterator,
@@ -194,12 +177,10 @@ impl Vertex {
 }
 
 pub fn make_graph_vertices_iterator(context: &Memgraph) -> MgpResult<VerticesIterator> {
-    let unable_alloc_iter_msg = c_str!("Unable to allocate vertices iterator.");
     unsafe {
         let mgp_iterator = ffi::mgp_graph_iter_vertices(context.graph(), context.memory());
         if mgp_iterator.is_null() {
-            ffi::mgp_result_set_error_msg(context.result(), unable_alloc_iter_msg.as_ptr());
-            return Err(MgpError::MgpAllocationError);
+            return Err(MgpError::UnableToCreateGraphVerticesIterator);
         }
         Ok(VerticesIterator {
             ptr: mgp_iterator,
