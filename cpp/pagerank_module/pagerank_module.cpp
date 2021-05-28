@@ -33,7 +33,7 @@ void PagerankWrapper(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_
     auto damping_factor = mgp_value_get_double(mgp_list_at(args, 1));
     auto stop_epsilon = mgp_value_get_double(mgp_list_at(args, 2));
 
-    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory);
+    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
 
     auto graph_edges = graph->Edges();
     std::vector<pagerank_alg::EdgePair> pagerank_edges;

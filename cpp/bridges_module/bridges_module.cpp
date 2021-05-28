@@ -23,7 +23,7 @@ void InsertBridgeRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *
 
 void GetBridges(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory);
+    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
     auto bridges = bridges_alg::GetBridges(*graph);
 
     for (const auto &bridge_edge : bridges) {
