@@ -11,12 +11,14 @@ def db():
 
 
 class TestConstants:
-    INPUT_FILE = "input.cyp"
-    TEST_FILE = "test.yml"
-    TEST_DIR_ENDING = "_test"
-    QUERY = "query"
-    OUTPUT = "output"
+    ABSOLUTE_TOLERANCE = 1e-3
+
     EXCEPTION = "exception"
+    INPUT_FILE = "input.cyp"
+    OUTPUT = "output"
+    QUERY = "query"
+    TEST_DIR_ENDING = "_test"
+    TEST_FILE = "test.yml"
 
     ABSOLUTE_TOLERANCE = 1e-3
 
@@ -94,3 +96,6 @@ def test_end2end(test_dir, db):
             assert result is None
         except Exception:
             assert True
+
+    # Clean database once testing module is finished
+    db.drop_database()

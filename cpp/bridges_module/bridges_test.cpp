@@ -45,7 +45,7 @@ std::vector<std::pair<std::uint64_t, std::uint64_t>> GetBridgesBruteforce(mg_gra
     auto new_comp_cnt = CountComponents(*graph);
 
     if (new_comp_cnt > comp_cnt) bridges.emplace_back(from, to);
-    graph->CreateUndirectedEdge(from, to);
+    graph->CreateEdge(from, to, mg_graph::GraphType::kUndirectedGraph);
   }
   return bridges;
 }
