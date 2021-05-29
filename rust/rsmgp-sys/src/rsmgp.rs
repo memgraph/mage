@@ -55,6 +55,46 @@ pub fn add_read_procedure(
     unsafe { ffi::mgp_module_add_read_procedure(module, name.as_ptr(), Some(proc_ptr)) }
 }
 
+pub fn get_type_any() -> *const mgp_type {
+    unsafe { ffi::mgp_type_any() }
+}
+
+pub fn get_type_bool() -> *const mgp_type {
+    unsafe { ffi::mgp_type_bool() }
+}
+
+pub fn get_type_string() -> *const mgp_type {
+    unsafe { ffi::mgp_type_string() }
+}
+
+pub fn get_type_int() -> *const mgp_type {
+    unsafe { ffi::mgp_type_int() }
+}
+
+pub fn get_type_float() -> *const mgp_type {
+    unsafe { ffi::mgp_type_float() }
+}
+
+pub fn get_type_number() -> *const mgp_type {
+    unsafe { ffi::mgp_type_number() }
+}
+
+pub fn get_type_map() -> *const mgp_type {
+    unsafe { ffi::mgp_type_map() }
+}
+
+pub fn get_type_vertex() -> *const mgp_type {
+    unsafe { ffi::mgp_type_node() }
+}
+
+pub fn get_type_edge() -> *const mgp_type {
+    unsafe { ffi::mgp_type_relationship() }
+}
+
+pub fn get_type_path() -> *const mgp_type {
+    unsafe { ffi::mgp_type_path() }
+}
+
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn add_int_result_type(procedure: *mut mgp_proc, name: &CStr) -> MgpResult<()> {
     unsafe {
@@ -119,6 +159,20 @@ pub fn add_edge_result_type(procedure: *mut mgp_proc, name: &CStr) -> MgpResult<
 pub fn add_path_result_type(procedure: *mut mgp_proc, name: &CStr) -> MgpResult<()> {
     unsafe {
         if ffi::mgp_proc_add_result(procedure, name.as_ptr(), ffi::mgp_type_path()) == 0 {
+            return Err(MgpError::AddProcedureParameterTypeError);
+        }
+        Ok(())
+    }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn add_list_result_type(
+    procedure: *mut mgp_proc,
+    name: &CStr,
+    item_type: *const mgp_type,
+) -> MgpResult<()> {
+    unsafe {
+        if ffi::mgp_proc_add_result(procedure, name.as_ptr(), ffi::mgp_type_list(item_type)) == 0 {
             return Err(MgpError::AddProcedureParameterTypeError);
         }
         Ok(())

@@ -2,6 +2,7 @@ use std::ffi::{CStr, CString};
 
 use crate::context::*;
 use crate::edge::*;
+use crate::list::*;
 use crate::mgp::*;
 use crate::path::*;
 use crate::result::*;
@@ -76,6 +77,10 @@ impl MgpValue {
 
     pub fn is_edge(&self) -> bool {
         unsafe { ffi::mgp_value_is_edge(self.ptr) != 0 }
+    }
+
+    pub fn is_list(&self) -> bool {
+        unsafe { ffi::mgp_value_is_list(self.ptr) != 0 }
     }
 }
 
@@ -184,6 +189,25 @@ pub fn make_path_value(path: &Path, context: &Memgraph) -> MgpResult<MgpValue> {
     }
 }
 
+pub fn make_list_value(list: &List, context: &Memgraph) -> MgpResult<MgpValue> {
+    unsafe {
+        let mgp_list = ffi::mgp_list_make_empty(list.size(), context.memory());
+        for item in list.iterator()? {
+            let mgp_value = item.to_result_mgp_value(&context)?;
+            if ffi::mgp_list_append(mgp_list, mgp_value.ptr) == 0 {
+                ffi::mgp_list_destroy(mgp_list);
+                return Err(MgpError::UnableToCreateList);
+            }
+        }
+        let mgp_value = ffi::mgp_value_make_list(mgp_list);
+        if mgp_value.is_null() {
+            ffi::mgp_list_destroy(mgp_list);
+            return Err(MgpError::UnableToCreateList);
+        }
+        Ok(MgpValue { ptr: mgp_value })
+    }
+}
+
 #[derive(Debug)]
 pub enum Value {
     Null,
@@ -194,8 +218,8 @@ pub enum Value {
     Vertex(Vertex),
     Edge(Edge),
     Path(Path),
+    List(List),
 }
-
 impl Value {
     // TODO(gitbuda): Remove to_result_mgp_value dead code.
     #[allow(dead_code)]
@@ -209,6 +233,7 @@ impl Value {
             Value::Vertex(x) => make_vertex_value(&x, context),
             Value::Edge(x) => make_edge_value(&x, context),
             Value::Path(x) => make_path_value(&x, context),
+            Value::List(x) => make_list_value(&x, context),
         }
     }
 }
@@ -300,6 +325,22 @@ pub unsafe fn mgp_raw_value_to_value(
             let mgp_path = ffi::mgp_value_get_path(value);
             let path = make_path_copy(mgp_path, &context)?;
             Ok(Value::Path(path))
+        }
+        mgp_value_type_MGP_VALUE_TYPE_LIST => {
+            let mgp_list = ffi::mgp_value_get_list(value);
+            let size = ffi::mgp_list_size(mgp_list);
+            let mgp_list_copy = ffi::mgp_list_make_empty(size, context.memory());
+            for index in 0..size {
+                let mgp_value = ffi::mgp_list_at(mgp_list, index);
+                if ffi::mgp_list_append(mgp_list_copy, mgp_value) == 0 {
+                    ffi::mgp_list_destroy(mgp_list_copy);
+                    return Err(MgpError::UnableToCreateList);
+                }
+            }
+            Ok(Value::List(List {
+                ptr: mgp_list_copy,
+                context: context.clone(),
+            }))
         }
         // TODO(gitbuda): Handle mgp_value_type unhandeled values.
         _ => {

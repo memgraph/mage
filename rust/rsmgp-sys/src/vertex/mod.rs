@@ -1,4 +1,3 @@
-use c_str_macro::c_str;
 use std::ffi::{CStr, CString};
 
 use crate::context::*;
@@ -114,12 +113,10 @@ impl Vertex {
     }
 
     pub fn property(&self, name: &CStr) -> MgpResult<Property> {
-        let unable_alloc_msg = c_str!("Unable to allocate vertex property.");
         unsafe {
             let mgp_value =
                 ffi::mgp_vertex_get_property(self.ptr, name.as_ptr(), self.context.memory());
             if mgp_value.is_null() {
-                ffi::mgp_result_set_error_msg(self.context.result(), unable_alloc_msg.as_ptr());
                 return Err(MgpError::UnableToReturnVertexPropertyValueAllocationError);
             }
             let value = mgp_value_to_value(&MgpValue { ptr: mgp_value }, &self.context)?;

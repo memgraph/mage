@@ -1,8 +1,10 @@
+use c_str_macro::c_str;
+use serial_test::serial;
+use std::ffi::{CStr, CString};
+
 use super::*;
 use crate::context::Memgraph;
 use crate::mgp::mock_ffi::*;
-use serial_test::serial;
-use std::ffi::{CStr, CString};
 
 #[test]
 #[serial]
@@ -97,15 +99,6 @@ fn test_vertex_property() {
             assert_eq!(memory, std::ptr::null_mut());
             std::ptr::null_mut()
         });
-
-    let ctx_2 = mgp_result_set_error_msg_context();
-    ctx_2.expect().times(1).returning(|_, msg| unsafe {
-        assert_eq!(
-            CStr::from_ptr(msg),
-            c_str!("Unable to allocate vertex property.")
-        );
-        0
-    });
 
     let ctx_mg = Memgraph {
         ..Default::default()

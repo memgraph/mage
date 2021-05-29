@@ -3,6 +3,18 @@ use snafu::Snafu;
 #[derive(Debug, PartialEq, Snafu)]
 #[snafu(visibility = "pub")]
 pub enum MgpError {
+    #[snafu(display("Unable to create list."))]
+    UnableToCreateList,
+
+    #[snafu(display("Unable to append list value."))]
+    UnableToAppendListValue,
+
+    #[snafu(display("Unable to append extend list value."))]
+    UnableToAppendExtendListValue,
+
+    #[snafu(display("Unable to access list value by index."))]
+    UnableToAccessListValueByIndex,
+
     #[snafu(display("Unable to create graph vertices iterator."))]
     UnableToCreateGraphVerticesIterator,
 

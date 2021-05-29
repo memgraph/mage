@@ -94,6 +94,12 @@ fn test_procedure(context: &Memgraph) -> Result<(), MgpError> {
                 insert_result_record(&mgp_record, c_str!("first_edge_type"), &mgp_value)?;
             }
         }
+
+        let list_property = mgp_vertex.property(c_str!("list"))?.value;
+        if let Value::List(list) = list_property {
+            let mgp_value = make_list_value(&list, &context)?;
+            insert_result_record(&mgp_record, c_str!("list"), &mgp_value)?;
+        }
     }
     Ok(())
 }
@@ -184,6 +190,12 @@ pub extern "C" fn mgp_init_module(module: *mut mgp_module, _memory: *mut mgp_mem
     //     }
     // }
     match add_string_result_type(procedure, c_str!("first_edge_type")) {
+        Ok(_) => {}
+        Err(_) => {
+            return 1;
+        }
+    }
+    match add_list_result_type(procedure, c_str!("list"), get_type_any()) {
         Ok(_) => {}
         Err(_) => {
             return 1;

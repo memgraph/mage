@@ -50,3 +50,6 @@ impl Path {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

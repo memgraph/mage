@@ -5,6 +5,7 @@ extern crate mockall_double;
 
 pub mod context;
 pub mod edge;
+pub mod list;
 pub mod mgp;
 pub mod path;
 pub mod property;
