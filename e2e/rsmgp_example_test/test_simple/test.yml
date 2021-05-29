@@ -8,7 +8,7 @@ output:
       labels_count: 0
       list: [1]
       name_property: "unknown"
-      properties_string: ",, age: 29"
+      properties_string: "age: 29, ,"
 
     - first_edge_type: "unknown_edge_type"
       first_label: "L1"
@@ -16,7 +16,7 @@ output:
       labels_count: 1
       list: [2]
       name_property: "unknown"
-      properties_string: ",, age: 31.3"
+      properties_string: "age: 31.3, ,"
 
     - first_edge_type: "unknown_edge_type"
       first_label: "L2"

@@ -2,6 +2,7 @@ use backtrace::Backtrace;
 use c_str_macro::c_str;
 use rsmgp_sys::context::*;
 use rsmgp_sys::mgp::*;
+use rsmgp_sys::property::*;
 use rsmgp_sys::result::*;
 use rsmgp_sys::rsmgp::*;
 use rsmgp_sys::value::*;
@@ -17,13 +18,19 @@ fn test_procedure(context: &Memgraph) -> Result<(), MgpError> {
     for mgp_vertex in mgp_graph_iterator {
         let mgp_record = make_result_record(&context)?;
 
-        let properties_string = mgp_vertex
-            .properties()?
+        let mut properties: Vec<Property> = mgp_vertex.properties()?.collect();
+        properties.sort_by(|a, b| {
+            let a_name = a.name.to_str().unwrap();
+            let b_name = b.name.to_str().unwrap();
+            a_name.cmp(&b_name)
+        });
+        let properties_string = properties
+            .iter()
             .map(|prop| {
                 let prop_name = prop.name.to_str().unwrap();
                 if let Value::Int(value) = prop.value {
                     return format!("{}: {}", prop_name, value);
-                } else if let Value::String(value) = prop.value {
+                } else if let Value::String(value) = &prop.value {
                     return format!("{}: {}", prop_name, value.to_str().unwrap());
                 } else if let Value::Float(value) = prop.value {
                     return format!("{}: {}", prop_name, value);
