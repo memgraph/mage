@@ -3,6 +3,7 @@ use std::ffi::{CStr, CString};
 use crate::context::*;
 use crate::edge::*;
 use crate::list::*;
+use crate::map::*;
 use crate::mgp::*;
 use crate::path::*;
 use crate::result::*;
@@ -192,7 +193,7 @@ pub fn make_path_value(path: &Path, context: &Memgraph) -> MgpResult<MgpValue> {
 pub fn make_list_value(list: &List, context: &Memgraph) -> MgpResult<MgpValue> {
     unsafe {
         let mgp_list = ffi::mgp_list_make_empty(list.size(), context.memory());
-        for item in list.iterator()? {
+        for item in list.iter()? {
             let mgp_value = item.to_result_mgp_value(&context)?;
             if ffi::mgp_list_append(mgp_list, mgp_value.ptr) == 0 {
                 ffi::mgp_list_destroy(mgp_list);
@@ -203,6 +204,31 @@ pub fn make_list_value(list: &List, context: &Memgraph) -> MgpResult<MgpValue> {
         if mgp_value.is_null() {
             ffi::mgp_list_destroy(mgp_list);
             return Err(MgpError::UnableToCreateList);
+        }
+        Ok(MgpValue { ptr: mgp_value })
+    }
+}
+
+pub fn make_map_value(map: &Map, context: &Memgraph) -> MgpResult<MgpValue> {
+    unsafe {
+        let mgp_map = ffi::mgp_map_make_empty(context.memory());
+        for item in map.iter()? {
+            let mgp_value = match item.value.to_result_mgp_value(&context) {
+                Ok(v) => v,
+                Err(_) => {
+                    ffi::mgp_map_destroy(mgp_map);
+                    return Err(MgpError::UnableToCreateMapValueObject);
+                }
+            };
+            if ffi::mgp_map_insert(mgp_map, item.key.as_ptr(), mgp_value.ptr) == 0 {
+                ffi::mgp_map_destroy(mgp_map);
+                return Err(MgpError::UnableToCreateMapValueObject);
+            }
+        }
+        let mgp_value = ffi::mgp_value_make_map(mgp_map);
+        if mgp_value.is_null() {
+            ffi::mgp_map_destroy(mgp_map);
+            return Err(MgpError::UnableToCreateMapValueObject);
         }
         Ok(MgpValue { ptr: mgp_value })
     }
@@ -219,11 +245,13 @@ pub enum Value {
     Edge(Edge),
     Path(Path),
     List(List),
+    Map(Map),
 }
+
 impl Value {
     // TODO(gitbuda): Remove to_result_mgp_value dead code.
     #[allow(dead_code)]
-    fn to_result_mgp_value(&self, context: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn to_result_mgp_value(&self, context: &Memgraph) -> MgpResult<MgpValue> {
         match self {
             Value::Null => make_null_value(context),
             Value::Bool(x) => make_bool_value(*x, context),
@@ -234,6 +262,7 @@ impl Value {
             Value::Edge(x) => make_edge_value(&x, context),
             Value::Path(x) => make_path_value(&x, context),
             Value::List(x) => make_list_value(&x, context),
+            Value::Map(x) => make_map_value(&x, context),
         }
     }
 }
@@ -339,6 +368,32 @@ pub unsafe fn mgp_raw_value_to_value(
             }
             Ok(Value::List(List {
                 ptr: mgp_list_copy,
+                context: context.clone(),
+            }))
+        }
+        mgp_value_type_MGP_VALUE_TYPE_MAP => {
+            // TODO(gitbuda): Simplify via the Map struct if possible.
+            let mgp_map = ffi::mgp_value_get_map(value);
+            let mgp_map_copy = ffi::mgp_map_make_empty(context.memory());
+            let mgp_map_iterator = ffi::mgp_map_iter_items(mgp_map, context.memory());
+            if mgp_map_iterator.is_null() {
+                ffi::mgp_map_destroy(mgp_map_copy);
+                return Err(MgpError::UnableToCreateMap);
+            }
+            let map_iterator = MapIterator {
+                ptr: mgp_map_iterator,
+                context: context.clone(),
+                ..Default::default()
+            };
+            for item in map_iterator {
+                let mgp_value = item.value.to_result_mgp_value(&context)?;
+                if ffi::mgp_map_insert(mgp_map_copy, item.key.as_ptr(), mgp_value.ptr) == 0 {
+                    ffi::mgp_map_destroy(mgp_map_copy);
+                    return Err(MgpError::UnableToCreateMap);
+                }
+            }
+            Ok(Value::Map(Map {
+                ptr: mgp_map_copy,
                 context: context.clone(),
             }))
         }

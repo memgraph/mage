@@ -107,6 +107,12 @@ fn test_procedure(context: &Memgraph) -> Result<(), MgpError> {
             let mgp_value = make_list_value(&list, &context)?;
             insert_result_record(&mgp_record, c_str!("list"), &mgp_value)?;
         }
+
+        // let map_property = mgp_vertex.property(c_str!("map"))?.value;
+        // if let Value::Map(map) = map_property {
+        //     let mgp_value = make_map_value(&map, &context)?;
+        //     insert_result_record(&mgp_record, c_str!("map"), &mgp_value)?;
+        // }
     }
     Ok(())
 }
@@ -202,6 +208,12 @@ pub extern "C" fn mgp_init_module(module: *mut mgp_module, _memory: *mut mgp_mem
             return 1;
         }
     }
+    // match add_map_result_type(procedure, c_str!("map")) {
+    //     Ok(_) => {}
+    //     Err(_) => {
+    //         return 1;
+    //     }
+    // }
     match add_list_result_type(procedure, c_str!("list"), get_type_any()) {
         Ok(_) => {}
         Err(_) => {

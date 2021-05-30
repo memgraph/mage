@@ -166,6 +166,16 @@ pub fn add_path_result_type(procedure: *mut mgp_proc, name: &CStr) -> MgpResult<
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn add_map_result_type(procedure: *mut mgp_proc, name: &CStr) -> MgpResult<()> {
+    unsafe {
+        if ffi::mgp_proc_add_result(procedure, name.as_ptr(), ffi::mgp_type_map()) == 0 {
+            return Err(MgpError::AddProcedureParameterTypeError);
+        }
+        Ok(())
+    }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn add_list_result_type(
     procedure: *mut mgp_proc,
     name: &CStr,
@@ -178,6 +188,8 @@ pub fn add_list_result_type(
         Ok(())
     }
 }
+
+// TODO(gitbuda): Add nullable result type.
 
 #[allow(unused_imports)]
 #[cfg(test)]

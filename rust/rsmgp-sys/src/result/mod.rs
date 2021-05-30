@@ -3,6 +3,21 @@ use snafu::Snafu;
 #[derive(Debug, PartialEq, Snafu)]
 #[snafu(visibility = "pub")]
 pub enum MgpError {
+    #[snafu(display("Unable to insert map value."))]
+    UnableToInsertMapValue,
+
+    #[snafu(display("Unable to access map value."))]
+    UnableToAccessMapValue,
+
+    #[snafu(display("Unable to create map iterator."))]
+    UnableToCreateMapIterator,
+
+    #[snafu(display("Unable to create map value object."))]
+    UnableToCreateMapValueObject,
+
+    #[snafu(display("Unable to create map."))]
+    UnableToCreateMap,
+
     #[snafu(display("Unable to create list."))]
     UnableToCreateList,
 

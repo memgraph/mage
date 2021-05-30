@@ -45,11 +45,15 @@ impl<'a> Iterator for ListIterator<'a> {
 }
 
 impl List {
+    // TODO(gitbuda): Add ability to create empty list object.
+
     pub fn append(_: Value) -> MgpResult<()> {
+        // TODO(gitbuda): Implement list.append().
         Err(MgpError::UnableToAppendListValue)
     }
 
     pub fn append_extend(_: Value) -> MgpResult<()> {
+        // TODO(gitbuda): Implement list.append_extend().
         Err(MgpError::UnableToAppendExtendListValue)
     }
 
@@ -71,7 +75,7 @@ impl List {
         }
     }
 
-    pub fn iterator(&self) -> MgpResult<ListIterator> {
+    pub fn iter(&self) -> MgpResult<ListIterator> {
         Ok(ListIterator {
             list: self,
             position: 0,
