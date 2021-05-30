@@ -191,6 +191,8 @@ pub fn add_list_result_type(
 
 // TODO(gitbuda): Add nullable result type.
 
+// TODO(gitbuda): Add transaction management (abort) stuff.
+
 #[allow(unused_imports)]
 #[cfg(test)]
 mod tests {

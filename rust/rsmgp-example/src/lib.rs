@@ -6,16 +6,13 @@ use rsmgp_sys::property::*;
 use rsmgp_sys::result::*;
 use rsmgp_sys::rsmgp::*;
 use rsmgp_sys::value::*;
-use rsmgp_sys::vertex::*;
 use std::ffi::CString;
 use std::os::raw::c_int;
 use std::panic;
-use std::rc::Rc;
 
 // Required because we want to be able to propagate Result by using ? operator.
 fn test_procedure(context: &Memgraph) -> Result<(), MgpError> {
-    let mgp_graph_iterator = make_graph_vertices_iterator(&context)?;
-    for mgp_vertex in mgp_graph_iterator {
+    for mgp_vertex in context.vertices_iter()? {
         let mgp_record = make_result_record(&context)?;
 
         let mut properties: Vec<Property> = mgp_vertex.properties()?.collect();
@@ -129,14 +126,7 @@ extern "C" fn test_procedure_c(
     panic::set_hook(Box::new(|_| { /* Do nothing. */ }));
 
     let procedure_result = panic::catch_unwind(|| {
-        let context = Memgraph {
-            context: Rc::new(MgpMemgraph {
-                args,
-                graph,
-                result,
-                memory,
-            }),
-        };
+        let context = Memgraph::new(args, graph, result, memory);
         match test_procedure(&context) {
             Ok(_) => (),
             Err(e) => {

@@ -113,20 +113,3 @@ fn test_vertex_property() {
         MgpError::UnableToReturnVertexPropertyValueAllocationError
     );
 }
-
-#[test]
-#[serial]
-fn test_make_graph_vertices_iterator() {
-    let ctx_1 = mgp_graph_iter_vertices_context();
-    ctx_1
-        .expect()
-        .times(1)
-        .returning(|_, _| std::ptr::null_mut());
-
-    let ctx_mg = Memgraph {
-        ..Default::default()
-    };
-
-    let value = make_graph_vertices_iterator(&ctx_mg);
-    assert!(value.is_err());
-}

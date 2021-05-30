@@ -1,15 +1,19 @@
-use crate::mgp::*;
 use std::rc::Rc;
 
-// TODO(gitbuda): Memgraph can't be copied implicitly, consider borrow.
-// TODO(gitbuda): Explain why MgpMemgraph and Memgraph with Rc.
+use crate::mgp::*;
+use crate::result::*;
+use crate::vertex::{Vertex, VerticesIterator};
+// Required here, if not present, tests linking fails.
+#[double]
+use crate::mgp::ffi;
+use mockall_double::double;
 
 #[derive(Debug)]
 pub struct MgpMemgraph {
-    pub args: *const mgp_list,
-    pub graph: *const mgp_graph,
-    pub result: *mut mgp_result,
-    pub memory: *mut mgp_memory,
+    args: *const mgp_list,
+    graph: *const mgp_graph,
+    result: *mut mgp_result,
+    memory: *mut mgp_memory,
 }
 
 impl Default for MgpMemgraph {
@@ -39,6 +43,22 @@ impl Default for Memgraph {
 }
 
 impl Memgraph {
+    pub fn new(
+        args: *const mgp_list,
+        graph: *const mgp_graph,
+        result: *mut mgp_result,
+        memory: *mut mgp_memory,
+    ) -> Memgraph {
+        Memgraph {
+            context: Rc::new(MgpMemgraph {
+                args,
+                graph,
+                result,
+                memory,
+            }),
+        }
+    }
+
     pub fn args(&self) -> *const mgp_list {
         self.context.args
     }
@@ -54,4 +74,38 @@ impl Memgraph {
     pub fn memory(&self) -> *mut mgp_memory {
         self.context.memory
     }
+
+    pub fn vertices_iter(&self) -> MgpResult<VerticesIterator> {
+        unsafe {
+            let mgp_iterator = ffi::mgp_graph_iter_vertices(self.graph(), self.memory());
+            if mgp_iterator.is_null() {
+                return Err(MgpError::UnableToCreateGraphVerticesIterator);
+            }
+            Ok(VerticesIterator {
+                ptr: mgp_iterator,
+                context: self.clone(),
+                ..Default::default()
+            })
+        }
+    }
+
+    pub fn vertex_by_id(&self, id: i64) -> MgpResult<Vertex> {
+        unsafe {
+            let mgp_vertex = ffi::mgp_graph_get_vertex_by_id(
+                self.graph(),
+                mgp_vertex_id { as_int: id },
+                self.memory(),
+            );
+            if mgp_vertex.is_null() {
+                return Err(MgpError::UnableToFindVertexById);
+            }
+            Ok(Vertex {
+                ptr: mgp_vertex,
+                context: self.clone(),
+            })
+        }
+    }
 }
+
+#[cfg(test)]
+mod tests;

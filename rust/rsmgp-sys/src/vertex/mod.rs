@@ -12,9 +12,9 @@ use crate::mgp::ffi;
 use mockall_double::double;
 
 pub struct VerticesIterator {
-    ptr: *mut mgp_vertices_iterator,
-    is_first: bool,
-    context: Memgraph,
+    pub ptr: *mut mgp_vertices_iterator,
+    pub is_first: bool,
+    pub context: Memgraph,
 }
 
 impl Default for VerticesIterator {
@@ -170,20 +170,6 @@ impl Vertex {
                 ..Default::default()
             })
         }
-    }
-}
-
-pub fn make_graph_vertices_iterator(context: &Memgraph) -> MgpResult<VerticesIterator> {
-    unsafe {
-        let mgp_iterator = ffi::mgp_graph_iter_vertices(context.graph(), context.memory());
-        if mgp_iterator.is_null() {
-            return Err(MgpError::UnableToCreateGraphVerticesIterator);
-        }
-        Ok(VerticesIterator {
-            ptr: mgp_iterator,
-            context: context.clone(),
-            ..Default::default()
-        })
     }
 }
 

@@ -33,6 +33,9 @@ pub enum MgpError {
     #[snafu(display("Unable to create graph vertices iterator."))]
     UnableToCreateGraphVerticesIterator,
 
+    #[snafu(display("Unable to find vertex by id."))]
+    UnableToFindVertexById,
+
     #[snafu(display("Unable to return vertex property because of value allocation error."))]
     UnableToReturnVertexPropertyValueAllocationError,
 
