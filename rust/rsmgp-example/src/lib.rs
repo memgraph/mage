@@ -145,8 +145,16 @@ extern "C" fn test_procedure_c(
         // TODO(gitbuda): Take cause on panic and pass to mgp_result_set_error_msg.
         // Until figuring out how to take info from panic object, set error in-place.
         // As far as I know iterator can't return Result object and set error in-place.
-        Err(_) => {
+        Err(e) => {
             println!("Procedure panic!");
+            match e.downcast::<&str>() {
+                Ok(panic_msg) => {
+                    println!("{}", panic_msg);
+                }
+                Err(_) => {
+                    println!("Unknown type of panic!.");
+                }
+            }
             // TODO(gitbuda): Fix backtrace somehow.
             println!("{:?}", Backtrace::new());
         }

@@ -150,11 +150,7 @@ impl Vertex {
             if mgp_iterator.is_null() {
                 return Err(MgpError::UnableToReturnVertexInEdgesIterator);
             }
-            Ok(EdgesIterator {
-                ptr: mgp_iterator,
-                context: self.context.clone(),
-                ..Default::default()
-            })
+            Ok(EdgesIterator::new(mgp_iterator, &self.context))
         }
     }
 
@@ -164,11 +160,7 @@ impl Vertex {
             if mgp_iterator.is_null() {
                 return Err(MgpError::UnableToReturnVertexOutEdgesIterator);
             }
-            Ok(EdgesIterator {
-                ptr: mgp_iterator,
-                context: self.context.clone(),
-                ..Default::default()
-            })
+            Ok(EdgesIterator::new(mgp_iterator, &self.context))
         }
     }
 }

@@ -1,6 +1,6 @@
 use std::ffi::{CStr, CString};
 
-use crate::context::*;
+use crate::context::Memgraph;
 use crate::mgp::*;
 use crate::property::*;
 use crate::result::*;
@@ -12,19 +12,17 @@ use crate::mgp::ffi;
 use mockall_double::double;
 
 pub struct EdgesIterator {
-    pub ptr: *mut mgp_edges_iterator,
-    pub is_first: bool,
-    pub context: Memgraph,
+    ptr: *mut mgp_edges_iterator,
+    is_first: bool,
+    context: Memgraph,
 }
 
-impl Default for EdgesIterator {
-    fn default() -> Self {
-        Self {
-            ptr: std::ptr::null_mut(),
+impl EdgesIterator {
+    pub fn new(ptr: *mut mgp_edges_iterator, context: &Memgraph) -> EdgesIterator {
+        EdgesIterator {
+            ptr,
             is_first: true,
-            context: Memgraph {
-                ..Default::default()
-            },
+            context: context.clone(),
         }
     }
 }
@@ -70,8 +68,8 @@ impl Iterator for EdgesIterator {
 
 #[derive(Debug)]
 pub struct Edge {
-    pub ptr: *mut mgp_edge,
-    pub context: Memgraph,
+    ptr: *mut mgp_edge,
+    context: Memgraph,
 }
 
 impl Drop for Edge {
@@ -85,6 +83,35 @@ impl Drop for Edge {
 }
 
 impl Edge {
+    pub fn new(ptr: *mut mgp_edge, context: &Memgraph) -> Edge {
+        Edge {
+            ptr,
+            context: context.clone(),
+        }
+    }
+
+    pub(crate) unsafe fn mgp_copy(ptr: *const mgp_edge, context: &Memgraph) -> MgpResult<Edge> {
+        // Test passes null ptr because nothing else is possible.
+        #[cfg(not(test))]
+        assert!(
+            !ptr.is_null(),
+            "Unable to make edge copy because edge is null."
+        );
+        let mgp_copy = ffi::mgp_edge_copy(ptr, context.memory());
+        if mgp_copy.is_null() {
+            return Err(MgpError::UnableToAllocateEdgeValue);
+        }
+        Ok(Edge::new(mgp_copy, &context))
+    }
+
+    pub fn mgp_ptr(&self) -> *const mgp_edge {
+        self.ptr
+    }
+
+    pub fn copy(&self) -> MgpResult<Edge> {
+        unsafe { Edge::mgp_copy(self.ptr, &self.context) }
+    }
+
     pub fn id(&self) -> i64 {
         unsafe { ffi::mgp_edge_get_id(self.ptr).as_int }
     }

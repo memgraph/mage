@@ -46,7 +46,7 @@ impl Path {
             if mgp_edge.is_null() {
                 return Err(MgpError::OutOfBoundPathEdgeIndex);
             }
-            make_edge_copy(mgp_edge, &self.context)
+            Edge::mgp_copy(mgp_edge, &self.context)
         }
     }
 }

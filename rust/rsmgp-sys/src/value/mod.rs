@@ -160,9 +160,12 @@ pub fn make_vertex_value(vertex: &Vertex, context: &Memgraph) -> MgpResult<MgpVa
     }
 }
 
+/// Required because Edge implements Drop which destroys the undrlying edge object. MgpValue takes
+/// the ownership of the edge which means copy has to be created + if all goes well the edge object
+/// shouldn't be deleted.
 pub fn make_edge_value(edge: &Edge, context: &Memgraph) -> MgpResult<MgpValue> {
     unsafe {
-        let mgp_copy = ffi::mgp_edge_copy(edge.ptr, context.memory());
+        let mgp_copy = ffi::mgp_edge_copy(edge.mgp_ptr(), context.memory());
         if mgp_copy.is_null() {
             return Err(MgpError::UnableToAllocateEdgeValue);
         }
@@ -273,6 +276,8 @@ pub unsafe fn make_vertex_copy(
     mgp_vertex: *const mgp_vertex,
     context: &Memgraph,
 ) -> MgpResult<Vertex> {
+    // Test passes null ptr because nothing else is possible.
+    #[cfg(not(test))]
     assert!(
         !mgp_vertex.is_null(),
         "Unable to make vertex copy because vertex is null."
@@ -283,23 +288,6 @@ pub unsafe fn make_vertex_copy(
     }
     Ok(Vertex {
         ptr: mgp_vertex_copy,
-        context: context.clone(),
-    })
-}
-
-/// # Safety
-/// TODO(gitbuda): Write section about safety.
-pub unsafe fn make_edge_copy(mgp_edge: *const mgp_edge, context: &Memgraph) -> MgpResult<Edge> {
-    assert!(
-        !mgp_edge.is_null(),
-        "Unable to make edge copy because edge is null."
-    );
-    let mgp_edge_copy = ffi::mgp_edge_copy(mgp_edge, context.memory());
-    if mgp_edge_copy.is_null() {
-        return Err(MgpError::UnableToAllocateEdgeValue);
-    }
-    Ok(Edge {
-        ptr: mgp_edge_copy,
         context: context.clone(),
     })
 }
@@ -347,8 +335,7 @@ pub unsafe fn mgp_raw_value_to_value(
         }
         mgp_value_type_MGP_VALUE_TYPE_EDGE => {
             let mgp_edge = ffi::mgp_value_get_edge(value);
-            let edge = make_edge_copy(mgp_edge, &context)?;
-            Ok(Value::Edge(edge))
+            Ok(Value::Edge(Edge::mgp_copy(mgp_edge, &context)?))
         }
         mgp_value_type_MGP_VALUE_TYPE_PATH => {
             let mgp_path = ffi::mgp_value_get_path(value);
