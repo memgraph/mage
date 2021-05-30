@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::mgp::*;
 use crate::result::*;
-use crate::vertex::{Vertex, VerticesIterator};
+use crate::vertex::*;
 // Required here, if not present, tests linking fails.
 #[double]
 use crate::mgp::ffi;

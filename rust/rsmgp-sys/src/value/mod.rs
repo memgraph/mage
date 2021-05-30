@@ -193,6 +193,9 @@ pub fn make_path_value(path: &Path, context: &Memgraph) -> MgpResult<MgpValue> {
     }
 }
 
+/// Required because List implements Drop which destroys the undrlying list object. MgpValue takes
+/// the ownership of the list which means copy has to be created + if all goes well the list object
+/// shouldn't be deleted.
 pub fn make_list_value(list: &List, context: &Memgraph) -> MgpResult<MgpValue> {
     unsafe {
         let mgp_list = ffi::mgp_list_make_empty(list.size(), context.memory());
@@ -344,19 +347,7 @@ pub unsafe fn mgp_raw_value_to_value(
         }
         mgp_value_type_MGP_VALUE_TYPE_LIST => {
             let mgp_list = ffi::mgp_value_get_list(value);
-            let size = ffi::mgp_list_size(mgp_list);
-            let mgp_list_copy = ffi::mgp_list_make_empty(size, context.memory());
-            for index in 0..size {
-                let mgp_value = ffi::mgp_list_at(mgp_list, index);
-                if ffi::mgp_list_append(mgp_list_copy, mgp_value) == 0 {
-                    ffi::mgp_list_destroy(mgp_list_copy);
-                    return Err(MgpError::UnableToCreateList);
-                }
-            }
-            Ok(Value::List(List {
-                ptr: mgp_list_copy,
-                context: context.clone(),
-            }))
+            Ok(Value::List(List::mgp_copy(mgp_list, &context)?))
         }
         mgp_value_type_MGP_VALUE_TYPE_MAP => {
             // TODO(gitbuda): Simplify via the Map struct if possible.
