@@ -11,14 +11,6 @@ class AdjacencyList {
   AdjacencyList() = default;
   explicit AdjacencyList(std::uint64_t node_count) : list_(node_count) {}
 
-  /// If adjacency list size is unknown at the construction time this method
-  /// can be used to reserve the required space. The method will also clear
-  /// underlying storage if it contains something.
-  void Init(std::uint64_t node_count) {
-    list_.clear();
-    list_.resize(node_count);
-  }
-
   auto GetNodeCount() const { return list_.size(); }
 
   /// AdjacentPair is a pair of T. Values of T have to be >= 0 and < node_count

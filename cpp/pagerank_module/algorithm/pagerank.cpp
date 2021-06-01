@@ -11,16 +11,16 @@ PageRankGraph::PageRankGraph(const std::uint64_t number_of_nodes, const std::uin
     : node_count_(number_of_nodes),
       edge_count_(number_of_edges),
       out_degree_(std::vector<std::uint64_t>(number_of_nodes)) {
-  pagerank_util::AdjacencyList<std::uint64_t> in_neighbours;
-  in_neighbours.Init(number_of_nodes);
-  for (const auto &[from, to] : edges) {
+  pagerank_util::AdjacencyList<std::uint64_t> in_neighbours(number_of_nodes);
+
+  for (const auto [from, to] : edges) {
     // Because PageRank needs a set of nodes that point to a given node.
     in_neighbours.AddAdjacentPair(from, to);
     out_degree_[from] += 1;
   }
   for (std::size_t node_id = 0; node_id < number_of_nodes; node_id++) {
     const auto &adjacent_nodes = in_neighbours.GetAdjacentNodes(node_id);
-    for (const auto &adjacent_node : adjacent_nodes) {
+    for (const auto adjacent_node : adjacent_nodes) {
       ordered_edges_.emplace_back(adjacent_node, node_id);
     }
   }
@@ -34,10 +34,14 @@ const std::vector<EdgePair> &PageRankGraph::GetOrderedEdges() const { return ord
 
 std::uint64_t PageRankGraph::GetOutDegree(const std::uint64_t node_id) const { return out_degree_[node_id]; }
 
-void CalculateOptimalBorders(const PageRankGraph &graph, const int number_of_threads,
-                             std::vector<std::uint64_t> *borders) {
+void CalculateOptimalBorders(const PageRankGraph &graph, const std::uint64_t number_of_threads,
+                             std::vector<std::uint64_t> &borders) {
+  if (number_of_threads == 0) {
+    throw std::runtime_error("Number of threads can't be zero (0)!");
+  }
+
   for (std::uint64_t border_index = 0; border_index <= number_of_threads; border_index++) {
-    borders->push_back(border_index * graph.GetEdgeCount() / number_of_threads);
+    borders.push_back(border_index * graph.GetEdgeCount() / number_of_threads);
   }
 }
 
@@ -84,9 +88,9 @@ bool CheckContinueIterate(const std::vector<double> &rank, const std::vector<dou
   return false;
 }
 
-void NormalizeRank(std::vector<double> *rank) {
-  const double sum = std::accumulate(rank->begin(), rank->end(), 0.0);
-  for (double &value : *rank) {
+void NormalizeRank(std::vector<double> &rank) {
+  const double sum = std::accumulate(rank.begin(), rank.end(), 0.0);
+  for (double &value : rank) {
     value /= sum;
   }
 }
@@ -96,7 +100,7 @@ std::vector<double> ParallelIterativePageRank(const PageRankGraph &graph, std::s
   const std::uint64_t number_of_threads = std::thread::hardware_concurrency();
 
   std::vector<std::uint64_t> borders;
-  CalculateOptimalBorders(graph, number_of_threads, &borders);
+  CalculateOptimalBorders(graph, number_of_threads, borders);
 
   std::vector<double> rank(graph.GetNodeCount(), 1.0 / graph.GetNodeCount());
   // Because we increment number_of_iterations at the end of while loop.
@@ -105,8 +109,11 @@ std::vector<double> ParallelIterativePageRank(const PageRankGraph &graph, std::s
   std::size_t number_of_iterations = 0;
   while (continue_iterate) {
     std::vector<std::promise<std::vector<double>>> page_rank_promise(number_of_threads);
-    std::vector<std::future<std::vector<double>>> page_rank_future(number_of_threads);
-    std::transform(page_rank_promise.begin(), page_rank_promise.end(), page_rank_future.begin(),
+
+    std::vector<std::future<std::vector<double>>> page_rank_future;
+    page_rank_future.reserve(number_of_threads);
+
+    std::transform(page_rank_promise.begin(), page_rank_promise.end(), std::back_inserter(page_rank_future),
                    [](auto &pr_promise) { return pr_promise.get_future(); });
 
     std::vector<std::thread> my_threads;
@@ -133,7 +140,7 @@ std::vector<double> ParallelIterativePageRank(const PageRankGraph &graph, std::s
     number_of_iterations++;
     continue_iterate = CheckContinueIterate(rank, rank_next, max_iterations, stop_epsilon, number_of_iterations);
   }
-  NormalizeRank(&rank);
+  NormalizeRank(rank);
   return rank;
 }
 
