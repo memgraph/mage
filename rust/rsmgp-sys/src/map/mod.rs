@@ -11,8 +11,8 @@ use mockall_double::double;
 
 #[derive(Debug)]
 pub struct Map {
-    pub ptr: *mut mgp_map,
-    pub context: Memgraph,
+    ptr: *mut mgp_map,
+    context: Memgraph,
 }
 
 impl Drop for Map {
@@ -91,7 +91,51 @@ impl Iterator for MapIterator {
 }
 
 impl Map {
-    // TODO(gitbuda): Add ability to create empty Map object.
+    pub fn new(ptr: *mut mgp_map, context: &Memgraph) -> Map {
+        Map {
+            ptr,
+            context: context.clone(),
+        }
+    }
+
+    pub(crate) unsafe fn mgp_copy(ptr: *const mgp_map, context: &Memgraph) -> MgpResult<Map> {
+        // Test passes null ptr because nothing else is possible.
+        #[cfg(not(test))]
+        assert!(
+            !ptr.is_null(),
+            "Unable to make map copy because map pointer is null."
+        );
+        let mgp_map_copy = ffi::mgp_map_make_empty(context.memory());
+        let mgp_map_iterator = ffi::mgp_map_iter_items(ptr, context.memory());
+        if mgp_map_iterator.is_null() {
+            ffi::mgp_map_destroy(mgp_map_copy);
+            return Err(MgpError::UnableToCreateMap);
+        }
+        let map_iterator = MapIterator {
+            ptr: mgp_map_iterator,
+            context: context.clone(),
+            ..Default::default()
+        };
+        for item in map_iterator {
+            let mgp_value = item.value.to_result_mgp_value(&context)?;
+            if ffi::mgp_map_insert(mgp_map_copy, item.key.as_ptr(), mgp_value.ptr) == 0 {
+                ffi::mgp_map_destroy(mgp_map_copy);
+                return Err(MgpError::UnableToCreateMap);
+            }
+        }
+        Ok(Map::new(mgp_map_copy, &context))
+    }
+
+    pub fn make_empty(context: &Memgraph) -> MgpResult<Map> {
+        unsafe {
+            let mgp_ptr = ffi::mgp_map_make_empty(context.memory());
+            if mgp_ptr.is_null() {
+                return Err(MgpError::UnableToCreateEmptyMap);
+            }
+            Ok(Map::new(mgp_ptr, &context))
+        }
+    }
+
     pub fn insert(&self, key: &CStr, value: &Value) -> MgpResult<()> {
         unsafe {
             let mgp_value = value.to_result_mgp_value(&self.context)?;

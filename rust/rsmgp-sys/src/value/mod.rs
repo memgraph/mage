@@ -350,30 +350,8 @@ pub unsafe fn mgp_raw_value_to_value(
             Ok(Value::List(List::mgp_copy(mgp_list, &context)?))
         }
         mgp_value_type_MGP_VALUE_TYPE_MAP => {
-            // TODO(gitbuda): Simplify via the Map struct if possible.
             let mgp_map = ffi::mgp_value_get_map(value);
-            let mgp_map_copy = ffi::mgp_map_make_empty(context.memory());
-            let mgp_map_iterator = ffi::mgp_map_iter_items(mgp_map, context.memory());
-            if mgp_map_iterator.is_null() {
-                ffi::mgp_map_destroy(mgp_map_copy);
-                return Err(MgpError::UnableToCreateMap);
-            }
-            let map_iterator = MapIterator {
-                ptr: mgp_map_iterator,
-                context: context.clone(),
-                ..Default::default()
-            };
-            for item in map_iterator {
-                let mgp_value = item.value.to_result_mgp_value(&context)?;
-                if ffi::mgp_map_insert(mgp_map_copy, item.key.as_ptr(), mgp_value.ptr) == 0 {
-                    ffi::mgp_map_destroy(mgp_map_copy);
-                    return Err(MgpError::UnableToCreateMap);
-                }
-            }
-            Ok(Value::Map(Map {
-                ptr: mgp_map_copy,
-                context: context.clone(),
-            }))
+            Ok(Value::Map(Map::mgp_copy(mgp_map, &context)?))
         }
         // TODO(gitbuda): Handle mgp_value_type unhandeled values.
         _ => {

@@ -95,7 +95,7 @@ impl Edge {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
-            "Unable to make edge copy because edge is null."
+            "Unable to make edge copy because edge pointer is null."
         );
         let mgp_copy = ffi::mgp_edge_copy(ptr, context.memory());
         if mgp_copy.is_null() {

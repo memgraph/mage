@@ -18,6 +18,9 @@ pub enum MgpError {
     #[snafu(display("Unable to create map."))]
     UnableToCreateMap,
 
+    #[snafu(display("Unable to create empty map."))]
+    UnableToCreateEmptyMap,
+
     #[snafu(display("Unable to create empty list."))]
     UnableToCreateEmptyList,
 

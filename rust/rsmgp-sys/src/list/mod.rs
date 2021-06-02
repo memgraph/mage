@@ -68,7 +68,7 @@ impl List {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
-            "Unable to make edge copy because edge is null."
+            "Unable to make list copy because list pointer is null."
         );
         let size = ffi::mgp_list_size(ptr);
         // TODO(gitbuda): List::make_empty could be used but we have to inject the error context.
