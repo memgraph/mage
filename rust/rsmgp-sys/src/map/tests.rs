@@ -12,8 +12,10 @@ fn test_mgp_copy() {
         .expect()
         .times(1)
         .returning(|_, _| std::ptr::null_mut());
+
     let ctx_2 = mgp_map_make_empty_context();
     ctx_2.expect().times(1).returning(|_| std::ptr::null_mut());
+
     let ctx_3 = mgp_map_destroy_context();
     ctx_3.expect().times(1).returning(|_| ());
 
@@ -39,8 +41,8 @@ fn test_make_empty() {
     assert!(value.is_err());
 }
 
-// TODO(gitbuda): Figure out how + test map mgp_copy because it's quite complex.
-// TODO(gitbuda): Figure out how + test map insert.
+// TODO(gitbuda): Figure out how + test properly map mgp_copy because it's quite complex.
+// TODO(gitbuda): Figure out how + test properly map insert.
 
 #[test]
 #[serial]

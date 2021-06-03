@@ -41,7 +41,7 @@ fn test_procedure(context: &Memgraph) -> Result<(), MgpError> {
         insert_result_record(
             &mgp_record,
             c_str!("properties_string"),
-            &make_string_value(
+            &MgpValue::make_string(
                 CString::new(properties_string.into_bytes())
                     .unwrap()
                     .as_c_str(),
@@ -53,34 +53,34 @@ fn test_procedure(context: &Memgraph) -> Result<(), MgpError> {
         insert_result_record(
             &mgp_record,
             c_str!("labels_count"),
-            &make_int_value(labels_count as i64, &context)?,
+            &MgpValue::make_int(labels_count as i64, &context)?,
         )?;
 
         if labels_count > 0 {
-            let first_label = make_string_value(&mgp_vertex.label_at(0)?, &context)?;
+            let first_label = MgpValue::make_string(&mgp_vertex.label_at(0)?, &context)?;
             insert_result_record(&mgp_record, c_str!("first_label"), &first_label)?;
         } else {
             insert_result_record(
                 &mgp_record,
                 c_str!("first_label"),
-                &make_string_value(c_str!(""), &context)?,
+                &MgpValue::make_string(c_str!(""), &context)?,
             )?;
         }
 
         let name_property = mgp_vertex.property(c_str!("name"))?.value;
         if let Value::Null = name_property {
-            let unknown_name = make_string_value(c_str!("unknown"), &context)?;
+            let unknown_name = MgpValue::make_string(c_str!("unknown"), &context)?;
             insert_result_record(&mgp_record, c_str!("name_property"), &unknown_name)?;
         } else if let Value::String(value) = name_property {
-            let mgp_value = make_string_value(value.as_c_str(), &context)?;
+            let mgp_value = MgpValue::make_string(value.as_c_str(), &context)?;
             insert_result_record(&mgp_record, c_str!("name_property"), &mgp_value)?;
         } else {
-            let unknown_type = make_string_value(c_str!("not null and not string"), &context)?;
+            let unknown_type = MgpValue::make_string(c_str!("not null and not string"), &context)?;
             insert_result_record(&mgp_record, c_str!("name_property"), &unknown_type)?;
         }
 
         let has_label = mgp_vertex.has_label(c_str!("L3"));
-        let mgp_value = make_bool_value(has_label, &context)?;
+        let mgp_value = MgpValue::make_bool(has_label, &context)?;
         insert_result_record(&mgp_record, c_str!("has_L3_label"), &mgp_value)?;
 
         // TODO(gitbuda): Figure out how to test vertex e2e.
@@ -90,18 +90,18 @@ fn test_procedure(context: &Memgraph) -> Result<(), MgpError> {
         match mgp_vertex.out_edges()?.next() {
             Some(edge) => {
                 let edge_type = edge.edge_type()?;
-                let mgp_value = make_string_value(&edge_type, &context)?;
+                let mgp_value = MgpValue::make_string(&edge_type, &context)?;
                 insert_result_record(&mgp_record, c_str!("first_edge_type"), &mgp_value)?;
             }
             None => {
-                let mgp_value = make_string_value(c_str!("unknown_edge_type"), &context)?;
+                let mgp_value = MgpValue::make_string(c_str!("unknown_edge_type"), &context)?;
                 insert_result_record(&mgp_record, c_str!("first_edge_type"), &mgp_value)?;
             }
         }
 
         let list_property = mgp_vertex.property(c_str!("list"))?.value;
         if let Value::List(list) = list_property {
-            let mgp_value = make_list_value(&list, &context)?;
+            let mgp_value = MgpValue::make_list(&list, &context)?;
             insert_result_record(&mgp_record, c_str!("list"), &mgp_value)?;
         }
 

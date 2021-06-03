@@ -32,7 +32,7 @@ impl<'a> Iterator for ListIterator<'a> {
     type Item = Value;
 
     fn next(&mut self) -> Option<Value> {
-        // TODO(gitbuda): Implement ListIterator::next using mgp primitive methods.
+        // TODO(gitbuda): Implement ListIterator::next using mgp primitive methods (optimal).
         if self.position == self.list.size() {
             return None;
         }
@@ -70,6 +70,7 @@ impl List {
             !ptr.is_null(),
             "Unable to make list copy because list pointer is null."
         );
+
         let size = ffi::mgp_list_size(ptr);
         // TODO(gitbuda): List::make_empty could be used but we have to inject the error context.
         let mgp_copy = ffi::mgp_list_make_empty(size, context.memory());
@@ -96,8 +97,8 @@ impl List {
 
     pub fn append(&self, value: &Value) -> MgpResult<()> {
         unsafe {
-            let mgp_value = value.to_result_mgp_value(&self.context)?;
-            if ffi::mgp_list_append(self.ptr, mgp_value.ptr) == 0 {
+            let mgp_value = value.to_mgp_value(&self.context)?;
+            if ffi::mgp_list_append(self.ptr, mgp_value.mgp_ptr()) == 0 {
                 return Err(MgpError::UnableToAppendListValue);
             }
             Ok(())
@@ -108,8 +109,8 @@ impl List {
     /// memory and any references to them will be invalid.
     pub fn append_extend(&self, value: &Value) -> MgpResult<()> {
         unsafe {
-            let mgp_value = value.to_result_mgp_value(&self.context)?;
-            if ffi::mgp_list_append_extend(self.ptr, mgp_value.ptr) == 0 {
+            let mgp_value = value.to_mgp_value(&self.context)?;
+            if ffi::mgp_list_append_extend(self.ptr, mgp_value.mgp_ptr()) == 0 {
                 return Err(MgpError::UnableToAppendExtendListValue);
             }
             Ok(())

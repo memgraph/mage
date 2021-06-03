@@ -13,6 +13,17 @@ use crate::vertex::*;
 use crate::mgp::ffi;
 use mockall_double::double;
 
+/// # Safety
+/// TODO(gitbuda): Write section about safety.
+pub(crate) unsafe fn create_cstring(c_char_ptr: *const i8) -> MgpResult<CString> {
+    match CString::new(CStr::from_ptr(c_char_ptr).to_bytes()) {
+        Ok(v) => Ok(v),
+        Err(_) => Err(MgpError::UnableToMakeCString),
+    }
+}
+
+// NOTE on why mutable pointer to mgp_value has to be owned by this code.
+//
 // mgp_value used to return data is non-const, owned by the module code. Function to delete
 // mgp_value is non-const.
 // mgp_value containing data from Memgraph is const.
@@ -31,14 +42,16 @@ use mockall_double::double;
 //   mgp_value). The same applies for all other data types, e.g. mgp_edge, mgp_vertex.
 //   mgp_value_make_vertex accepts *mut mgp_vartex (required to return user data), but data from
 //   the graph is all *const T.
+//
+// The decision is to move on with a copy of mgp_value because it's cheap to make the copy.
 
-/// Useful to hold user created `mgp_value` but also to store values coming from Memgraph, e.g.,
-/// property `mgp_value`s.
+/// Useful to own `mgp_value` coming from / going into Memgraph as a result.
+/// Underlying pointer object is going to be automatically deleted.
 #[derive(Debug)]
 pub struct MgpValue {
-    // It's not wise to create a new Vertex out of the existing value pointer because drop with a
+    // It's not wise to create a new MgpValue out of the existing value pointer because drop with a
     // valid pointer will be called multiple times -> double free problem.
-    pub ptr: *mut mgp_value,
+    ptr: *mut mgp_value,
 }
 
 impl Drop for MgpValue {
@@ -52,194 +65,215 @@ impl Drop for MgpValue {
 }
 
 impl MgpValue {
+    pub fn new(ptr: *mut mgp_value) -> MgpValue {
+        MgpValue { ptr }
+    }
+
+    pub fn mgp_ptr(&self) -> *const mgp_value {
+        self.ptr
+    }
+
+    pub fn to_value(&self, context: &Memgraph) -> MgpResult<Value> {
+        unsafe { mgp_raw_value_to_value(self.mgp_ptr(), &context) }
+    }
+
+    pub fn make_null(context: &Memgraph) -> MgpResult<MgpValue> {
+        unsafe {
+            let mgp_ptr = ffi::mgp_value_make_null(context.memory());
+            if mgp_ptr.is_null() {
+                return Err(MgpError::UnableToMakeNullValue);
+            }
+            Ok(MgpValue::new(mgp_ptr))
+        }
+    }
+
     pub fn is_null(&self) -> bool {
         unsafe { ffi::mgp_value_is_null(self.ptr) != 0 }
     }
 
-    pub fn is_int(&self) -> bool {
-        unsafe { ffi::mgp_value_is_int(self.ptr) != 0 }
+    pub fn make_bool(value: bool, context: &Memgraph) -> MgpResult<MgpValue> {
+        unsafe {
+            let mgp_ptr = ffi::mgp_value_make_bool(if !value { 0 } else { 1 }, context.memory());
+            if mgp_ptr.is_null() {
+                return Err(MgpError::UnableToMakeBoolValue);
+            }
+            Ok(MgpValue::new(mgp_ptr))
+        }
     }
 
     pub fn is_bool(&self) -> bool {
         unsafe { ffi::mgp_value_is_bool(self.ptr) != 0 }
     }
 
-    pub fn is_string(&self) -> bool {
-        unsafe { ffi::mgp_value_is_string(self.ptr) != 0 }
+    pub fn make_int(value: i64, context: &Memgraph) -> MgpResult<MgpValue> {
+        unsafe {
+            let mgp_ptr = ffi::mgp_value_make_int(value, context.memory());
+            if mgp_ptr.is_null() {
+                return Err(MgpError::UnableToMakeIntegerValue);
+            }
+            Ok(MgpValue::new(mgp_ptr))
+        }
+    }
+
+    pub fn is_int(&self) -> bool {
+        unsafe { ffi::mgp_value_is_int(self.ptr) != 0 }
+    }
+
+    pub fn make_double(value: f64, context: &Memgraph) -> MgpResult<MgpValue> {
+        unsafe {
+            let mgp_ptr = ffi::mgp_value_make_double(value, context.memory());
+            if mgp_ptr.is_null() {
+                return Err(MgpError::UnableToMakeDoubleValue);
+            }
+            Ok(MgpValue::new(mgp_ptr))
+        }
     }
 
     pub fn is_double(&self) -> bool {
         unsafe { ffi::mgp_value_is_double(self.ptr) != 0 }
     }
 
+    pub fn make_string(value: &CStr, context: &Memgraph) -> MgpResult<MgpValue> {
+        unsafe {
+            let mgp_ptr = ffi::mgp_value_make_string(value.as_ptr(), context.memory());
+            if mgp_ptr.is_null() {
+                return Err(MgpError::UnableToMakeMemgraphStringValue);
+            }
+            Ok(MgpValue::new(mgp_ptr))
+        }
+    }
+
+    pub fn is_string(&self) -> bool {
+        unsafe { ffi::mgp_value_is_string(self.ptr) != 0 }
+    }
+
+    /// Required because List implements Drop which destroys the underlying list object. MgpValue
+    /// takes the ownership of the list which means copy has to be created + if all goes well the
+    /// list object shouldn't be deleted.
+    pub fn make_list(list: &List, context: &Memgraph) -> MgpResult<MgpValue> {
+        unsafe {
+            let mgp_list = ffi::mgp_list_make_empty(list.size(), context.memory());
+            for item in list.iter()? {
+                let mgp_value = item.to_mgp_value(&context)?;
+                if ffi::mgp_list_append(mgp_list, mgp_value.ptr) == 0 {
+                    ffi::mgp_list_destroy(mgp_list);
+                    return Err(MgpError::UnableToMakeListValue);
+                }
+            }
+            let mgp_value = ffi::mgp_value_make_list(mgp_list);
+            if mgp_value.is_null() {
+                ffi::mgp_list_destroy(mgp_list);
+                return Err(MgpError::UnableToMakeListValue);
+            }
+            Ok(MgpValue::new(mgp_value))
+        }
+    }
+
+    pub fn is_list(&self) -> bool {
+        unsafe { ffi::mgp_value_is_list(self.ptr) != 0 }
+    }
+
+    /// Required because Map implements Drop which destroys the underlying map object. MgpValue
+    /// takes the ownership of the map which means copy has to be created + if all goes well the
+    /// map object shouldn't be deleted.
+    pub fn make_map(map: &Map, context: &Memgraph) -> MgpResult<MgpValue> {
+        unsafe {
+            let mgp_map = ffi::mgp_map_make_empty(context.memory());
+            for item in map.iter()? {
+                let mgp_value = match item.value.to_mgp_value(&context) {
+                    Ok(v) => v,
+                    Err(_) => {
+                        ffi::mgp_map_destroy(mgp_map);
+                        return Err(MgpError::UnableToMakeMapValue);
+                    }
+                };
+                if ffi::mgp_map_insert(mgp_map, item.key.as_ptr(), mgp_value.ptr) == 0 {
+                    ffi::mgp_map_destroy(mgp_map);
+                    return Err(MgpError::UnableToMakeMapValue);
+                }
+            }
+            let mgp_value = ffi::mgp_value_make_map(mgp_map);
+            if mgp_value.is_null() {
+                ffi::mgp_map_destroy(mgp_map);
+                return Err(MgpError::UnableToMakeMapValue);
+            }
+            Ok(MgpValue::new(mgp_value))
+        }
+    }
+
+    pub fn is_map(&self) -> bool {
+        unsafe { ffi::mgp_value_is_map(self.ptr) != 0 }
+    }
+
+    /// Required because Vertex implements Drop which destroys the undrlying vertex object.
+    /// MgpValue takes the ownership of the vertex which means copy has to be created + if all goes
+    /// well the vertex object shouldn't be deleted.
+    pub fn make_vertex(vertex: &Vertex, context: &Memgraph) -> MgpResult<MgpValue> {
+        unsafe {
+            let mgp_copy = ffi::mgp_vertex_copy(vertex.mgp_ptr(), context.memory());
+            if mgp_copy.is_null() {
+                return Err(MgpError::UnableToMakeVertexValue);
+            }
+            let mgp_value = ffi::mgp_value_make_vertex(mgp_copy);
+            if mgp_value.is_null() {
+                ffi::mgp_vertex_destroy(mgp_copy);
+                return Err(MgpError::UnableToMakeVertexValue);
+            }
+            Ok(MgpValue::new(mgp_value))
+        }
+    }
+
     pub fn is_vertex(&self) -> bool {
         unsafe { ffi::mgp_value_is_vertex(self.ptr) != 0 }
+    }
+
+    /// Required because Edge implements Drop which destroys the undrlying edge object. MgpValue
+    /// takes the ownership of the edge which means copy has to be created + if all goes well the
+    /// edge object shouldn't be deleted.
+    pub fn make_edge(edge: &Edge, context: &Memgraph) -> MgpResult<MgpValue> {
+        unsafe {
+            let mgp_copy = ffi::mgp_edge_copy(edge.mgp_ptr(), context.memory());
+            if mgp_copy.is_null() {
+                return Err(MgpError::UnableToMakeEdgeValue);
+            }
+            let mgp_value = ffi::mgp_value_make_edge(mgp_copy);
+            if mgp_value.is_null() {
+                ffi::mgp_edge_destroy(mgp_copy);
+                return Err(MgpError::UnableToMakeEdgeValue);
+            }
+            Ok(MgpValue::new(mgp_value))
+        }
     }
 
     pub fn is_edge(&self) -> bool {
         unsafe { ffi::mgp_value_is_edge(self.ptr) != 0 }
     }
 
-    pub fn is_list(&self) -> bool {
-        unsafe { ffi::mgp_value_is_list(self.ptr) != 0 }
-    }
-}
-
-pub fn make_null_value(context: &Memgraph) -> MgpResult<MgpValue> {
-    unsafe {
-        let mgp_value = MgpValue {
-            ptr: ffi::mgp_value_make_null(context.memory()),
-        };
-        if mgp_value.ptr.is_null() {
-            return Err(MgpError::UnableToAllocateNullValue);
-        }
-        Ok(mgp_value)
-    }
-}
-
-pub fn make_bool_value(value: bool, context: &Memgraph) -> MgpResult<MgpValue> {
-    unsafe {
-        let mgp_value = MgpValue {
-            ptr: ffi::mgp_value_make_bool(if !value { 0 } else { 1 }, context.memory()),
-        };
-        if mgp_value.ptr.is_null() {
-            return Err(MgpError::UnableToAllocateBoolValue);
-        }
-        Ok(mgp_value)
-    }
-}
-
-pub fn make_int_value(value: i64, context: &Memgraph) -> MgpResult<MgpValue> {
-    unsafe {
-        let mgp_value = MgpValue {
-            ptr: ffi::mgp_value_make_int(value, context.memory()),
-        };
-        if mgp_value.ptr.is_null() {
-            return Err(MgpError::UnableToAllocateIntegerValue);
-        }
-        Ok(mgp_value)
-    }
-}
-
-pub fn make_string_value(value: &CStr, context: &Memgraph) -> MgpResult<MgpValue> {
-    unsafe {
-        let mgp_value = MgpValue {
-            ptr: ffi::mgp_value_make_string(value.as_ptr(), context.memory()),
-        };
-        if mgp_value.ptr.is_null() {
-            return Err(MgpError::UnableToAllocateStringValue);
-        }
-        Ok(mgp_value)
-    }
-}
-
-pub fn make_double_value(value: f64, context: &Memgraph) -> MgpResult<MgpValue> {
-    unsafe {
-        let mgp_value = MgpValue {
-            ptr: ffi::mgp_value_make_double(value, context.memory()),
-        };
-        if mgp_value.ptr.is_null() {
-            return Err(MgpError::UnableToAllocateDoubleValue);
-        }
-        Ok(mgp_value)
-    }
-}
-
-pub fn make_vertex_value(vertex: &Vertex, context: &Memgraph) -> MgpResult<MgpValue> {
-    unsafe {
-        let mgp_copy = ffi::mgp_vertex_copy(vertex.ptr, context.memory());
-        if mgp_copy.is_null() {
-            return Err(MgpError::UnableToAllocateVertexValue);
-        }
-        let mgp_value = ffi::mgp_value_make_vertex(mgp_copy);
-        if mgp_value.is_null() {
-            ffi::mgp_vertex_destroy(mgp_copy);
-            return Err(MgpError::UnableToAllocateVertexValue);
-        }
-        Ok(MgpValue { ptr: mgp_value })
-    }
-}
-
-/// Required because Edge implements Drop which destroys the undrlying edge object. MgpValue takes
-/// the ownership of the edge which means copy has to be created + if all goes well the edge object
-/// shouldn't be deleted.
-pub fn make_edge_value(edge: &Edge, context: &Memgraph) -> MgpResult<MgpValue> {
-    unsafe {
-        let mgp_copy = ffi::mgp_edge_copy(edge.mgp_ptr(), context.memory());
-        if mgp_copy.is_null() {
-            return Err(MgpError::UnableToAllocateEdgeValue);
-        }
-        let mgp_value = ffi::mgp_value_make_edge(mgp_copy);
-        if mgp_value.is_null() {
-            ffi::mgp_edge_destroy(mgp_copy);
-            return Err(MgpError::UnableToAllocateEdgeValue);
-        }
-        Ok(MgpValue { ptr: mgp_value })
-    }
-}
-
-pub fn make_path_value(path: &Path, context: &Memgraph) -> MgpResult<MgpValue> {
-    unsafe {
-        let mgp_copy = ffi::mgp_path_copy(path.ptr, context.memory());
-        if mgp_copy.is_null() {
-            return Err(MgpError::UnableToAllocatePathValue);
-        }
-        let mgp_value = ffi::mgp_value_make_path(mgp_copy);
-        if mgp_value.is_null() {
-            ffi::mgp_path_destroy(mgp_copy);
-            return Err(MgpError::UnableToAllocatePathValue);
-        }
-        Ok(MgpValue { ptr: mgp_value })
-    }
-}
-
-/// Required because List implements Drop which destroys the undrlying list object. MgpValue takes
-/// the ownership of the list which means copy has to be created + if all goes well the list object
-/// shouldn't be deleted.
-pub fn make_list_value(list: &List, context: &Memgraph) -> MgpResult<MgpValue> {
-    unsafe {
-        let mgp_list = ffi::mgp_list_make_empty(list.size(), context.memory());
-        for item in list.iter()? {
-            let mgp_value = item.to_result_mgp_value(&context)?;
-            if ffi::mgp_list_append(mgp_list, mgp_value.ptr) == 0 {
-                ffi::mgp_list_destroy(mgp_list);
-                return Err(MgpError::UnableToCreateList);
+    /// Required because Path implements Drop which destroys the undrlying path object. MgpValue
+    /// takes the ownership of the path which means copy has to be created + if all goes well the
+    /// path object shouldn't be deleted.
+    pub fn make_path(path: &Path, context: &Memgraph) -> MgpResult<MgpValue> {
+        unsafe {
+            let mgp_copy = ffi::mgp_path_copy(path.mgp_ptr(), context.memory());
+            if mgp_copy.is_null() {
+                return Err(MgpError::UnableToMakePathValue);
             }
-        }
-        let mgp_value = ffi::mgp_value_make_list(mgp_list);
-        if mgp_value.is_null() {
-            ffi::mgp_list_destroy(mgp_list);
-            return Err(MgpError::UnableToCreateList);
-        }
-        Ok(MgpValue { ptr: mgp_value })
-    }
-}
-
-pub fn make_map_value(map: &Map, context: &Memgraph) -> MgpResult<MgpValue> {
-    unsafe {
-        let mgp_map = ffi::mgp_map_make_empty(context.memory());
-        for item in map.iter()? {
-            let mgp_value = match item.value.to_result_mgp_value(&context) {
-                Ok(v) => v,
-                Err(_) => {
-                    ffi::mgp_map_destroy(mgp_map);
-                    return Err(MgpError::UnableToCreateMapValueObject);
-                }
-            };
-            if ffi::mgp_map_insert(mgp_map, item.key.as_ptr(), mgp_value.ptr) == 0 {
-                ffi::mgp_map_destroy(mgp_map);
-                return Err(MgpError::UnableToCreateMapValueObject);
+            let mgp_value = ffi::mgp_value_make_path(mgp_copy);
+            if mgp_value.is_null() {
+                ffi::mgp_path_destroy(mgp_copy);
+                return Err(MgpError::UnableToMakePathValue);
             }
+            Ok(MgpValue { ptr: mgp_value })
         }
-        let mgp_value = ffi::mgp_value_make_map(mgp_map);
-        if mgp_value.is_null() {
-            ffi::mgp_map_destroy(mgp_map);
-            return Err(MgpError::UnableToCreateMapValueObject);
-        }
-        Ok(MgpValue { ptr: mgp_value })
+    }
+
+    pub fn is_path(&self) -> bool {
+        unsafe { ffi::mgp_value_is_path(self.ptr) != 0 }
     }
 }
 
+/// Object containing/owning concrete underlying mgp objects (e.g., mgp_vertex).
+/// User code should mostly deal with these objects.
 #[derive(Debug)]
 pub enum Value {
     Null,
@@ -255,66 +289,25 @@ pub enum Value {
 }
 
 impl Value {
-    // TODO(gitbuda): Remove to_result_mgp_value dead code.
-    #[allow(dead_code)]
-    pub fn to_result_mgp_value(&self, context: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn to_mgp_value(&self, context: &Memgraph) -> MgpResult<MgpValue> {
         match self {
-            Value::Null => make_null_value(context),
-            Value::Bool(x) => make_bool_value(*x, context),
-            Value::Int(x) => make_int_value(*x, context),
-            Value::String(x) => make_string_value(&*x.as_c_str(), context),
-            Value::Float(x) => make_double_value(*x, context),
-            Value::Vertex(x) => make_vertex_value(&x, context),
-            Value::Edge(x) => make_edge_value(&x, context),
-            Value::Path(x) => make_path_value(&x, context),
-            Value::List(x) => make_list_value(&x, context),
-            Value::Map(x) => make_map_value(&x, context),
+            Value::Null => MgpValue::make_null(&context),
+            Value::Bool(x) => MgpValue::make_bool(*x, context),
+            Value::Int(x) => MgpValue::make_int(*x, context),
+            Value::Float(x) => MgpValue::make_double(*x, context),
+            Value::String(x) => MgpValue::make_string(&*x.as_c_str(), context),
+            Value::List(x) => MgpValue::make_list(&x, context),
+            Value::Map(x) => MgpValue::make_map(&x, context),
+            Value::Vertex(x) => MgpValue::make_vertex(&x, context),
+            Value::Edge(x) => MgpValue::make_edge(&x, context),
+            Value::Path(x) => MgpValue::make_path(&x, context),
         }
     }
 }
 
 /// # Safety
 /// TODO(gitbuda): Write section about safety.
-pub unsafe fn make_vertex_copy(
-    mgp_vertex: *const mgp_vertex,
-    context: &Memgraph,
-) -> MgpResult<Vertex> {
-    // Test passes null ptr because nothing else is possible.
-    #[cfg(not(test))]
-    assert!(
-        !mgp_vertex.is_null(),
-        "Unable to make vertex copy because vertex is null."
-    );
-    let mgp_vertex_copy = ffi::mgp_vertex_copy(mgp_vertex, context.memory());
-    if mgp_vertex_copy.is_null() {
-        return Err(MgpError::UnableToAllocateVertexValue);
-    }
-    Ok(Vertex {
-        ptr: mgp_vertex_copy,
-        context: context.clone(),
-    })
-}
-
-/// # Safety
-/// TODO(gitbuda): Write section about safety.
-pub unsafe fn make_path_copy(mgp_path: *const mgp_path, context: &Memgraph) -> MgpResult<Path> {
-    assert!(
-        !mgp_path.is_null(),
-        "Unable to make path copy because path is null."
-    );
-    let mgp_path_copy = ffi::mgp_path_copy(mgp_path, context.memory());
-    if mgp_path_copy.is_null() {
-        return Err(MgpError::UnableToAllocatePathValue);
-    }
-    Ok(Path {
-        ptr: mgp_path_copy,
-        context: context.clone(),
-    })
-}
-
-/// # Safety
-/// TODO(gitbuda): Write section about safety.
-pub unsafe fn mgp_raw_value_to_value(
+pub(crate) unsafe fn mgp_raw_value_to_value(
     value: *const mgp_value,
     context: &Memgraph,
 ) -> MgpResult<Value> {
@@ -327,14 +320,13 @@ pub unsafe fn mgp_raw_value_to_value(
             let mgp_string = ffi::mgp_value_get_string(value);
             match create_cstring(mgp_string) {
                 Ok(value) => Ok(Value::String(value)),
-                Err(_) => Err(MgpError::UnableToCreateCString),
+                Err(_) => Err(MgpError::UnableToMakeValueString),
             }
         }
         mgp_value_type_MGP_VALUE_TYPE_DOUBLE => Ok(Value::Float(ffi::mgp_value_get_double(value))),
         mgp_value_type_MGP_VALUE_TYPE_VERTEX => {
             let mgp_vertex = ffi::mgp_value_get_vertex(value);
-            let vertex = make_vertex_copy(mgp_vertex, &context)?;
-            Ok(Value::Vertex(vertex))
+            Ok(Value::Vertex(Vertex::mgp_copy(mgp_vertex, &context)?))
         }
         mgp_value_type_MGP_VALUE_TYPE_EDGE => {
             let mgp_edge = ffi::mgp_value_get_edge(value);
@@ -342,8 +334,7 @@ pub unsafe fn mgp_raw_value_to_value(
         }
         mgp_value_type_MGP_VALUE_TYPE_PATH => {
             let mgp_path = ffi::mgp_value_get_path(value);
-            let path = make_path_copy(mgp_path, &context)?;
-            Ok(Value::Path(path))
+            Ok(Value::Path(Path::mgp_copy(mgp_path, &context)?))
         }
         mgp_value_type_MGP_VALUE_TYPE_LIST => {
             let mgp_list = ffi::mgp_value_get_list(value);
@@ -353,24 +344,9 @@ pub unsafe fn mgp_raw_value_to_value(
             let mgp_map = ffi::mgp_value_get_map(value);
             Ok(Value::Map(Map::mgp_copy(mgp_map, &context)?))
         }
-        // TODO(gitbuda): Handle mgp_value_type unhandeled values.
         _ => {
-            println!("Uncovered mgp_value type!");
-            panic!()
+            panic!("Unable to create Value object because of uncovered mgp_value type.");
         }
-    }
-}
-
-pub fn mgp_value_to_value(value: &MgpValue, context: &Memgraph) -> MgpResult<Value> {
-    unsafe { mgp_raw_value_to_value(value.ptr, context) }
-}
-
-/// # Safety
-/// TODO(gitbuda): Write section about safety.
-pub unsafe fn create_cstring(c_char_ptr: *const i8) -> MgpResult<CString> {
-    match CString::new(CStr::from_ptr(c_char_ptr).to_bytes()) {
-        Ok(v) => Ok(v),
-        Err(_) => Err(MgpError::UnableToCreateCString),
     }
 }
 

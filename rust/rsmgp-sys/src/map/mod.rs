@@ -25,15 +25,16 @@ impl Drop for Map {
     }
 }
 
+/// MapItem has public fields because they are user facing object + they are easier to access.
 pub struct MapItem {
     pub key: CString,
     pub value: Value,
 }
 
 pub struct MapIterator {
-    pub ptr: *mut mgp_map_items_iterator,
-    pub is_first: bool,
-    pub context: Memgraph,
+    ptr: *mut mgp_map_items_iterator,
+    is_first: bool,
+    context: Memgraph,
 }
 
 impl Default for MapIterator {
@@ -103,8 +104,9 @@ impl Map {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
-            "Unable to make map copy because map pointer is null."
+            "Unable to create map copy because map pointer is null."
         );
+
         let mgp_map_copy = ffi::mgp_map_make_empty(context.memory());
         let mgp_map_iterator = ffi::mgp_map_iter_items(ptr, context.memory());
         if mgp_map_iterator.is_null() {
@@ -117,8 +119,8 @@ impl Map {
             ..Default::default()
         };
         for item in map_iterator {
-            let mgp_value = item.value.to_result_mgp_value(&context)?;
-            if ffi::mgp_map_insert(mgp_map_copy, item.key.as_ptr(), mgp_value.ptr) == 0 {
+            let mgp_value = item.value.to_mgp_value(&context)?;
+            if ffi::mgp_map_insert(mgp_map_copy, item.key.as_ptr(), mgp_value.mgp_ptr()) == 0 {
                 ffi::mgp_map_destroy(mgp_map_copy);
                 return Err(MgpError::UnableToCreateMap);
             }
@@ -138,9 +140,9 @@ impl Map {
 
     pub fn insert(&self, key: &CStr, value: &Value) -> MgpResult<()> {
         unsafe {
-            let mgp_value = value.to_result_mgp_value(&self.context)?;
+            let mgp_value = value.to_mgp_value(&self.context)?;
             // TODO(gitbuda): Check the Map ptr for null.
-            if ffi::mgp_map_insert(self.ptr, key.as_ptr(), mgp_value.ptr) == 0 {
+            if ffi::mgp_map_insert(self.ptr, key.as_ptr(), mgp_value.mgp_ptr()) == 0 {
                 return Err(MgpError::UnableToInsertMapValue);
             }
             Ok(())

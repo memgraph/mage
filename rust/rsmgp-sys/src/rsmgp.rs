@@ -28,8 +28,11 @@ pub fn insert_result_record(
     mgp_value: &MgpValue,
 ) -> MgpResult<()> {
     unsafe {
-        let inserted =
-            ffi::mgp_result_record_insert(mgp_record.record, mgp_name.as_ptr(), mgp_value.ptr);
+        let inserted = ffi::mgp_result_record_insert(
+            mgp_record.record,
+            mgp_name.as_ptr(),
+            mgp_value.mgp_ptr(),
+        );
         if inserted == 0 {
             return Err(MgpError::PreparingResultError);
         }

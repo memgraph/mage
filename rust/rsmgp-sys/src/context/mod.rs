@@ -81,11 +81,7 @@ impl Memgraph {
             if mgp_iterator.is_null() {
                 return Err(MgpError::UnableToCreateGraphVerticesIterator);
             }
-            Ok(VerticesIterator {
-                ptr: mgp_iterator,
-                context: self.clone(),
-                ..Default::default()
-            })
+            Ok(VerticesIterator::new(mgp_iterator, &self))
         }
     }
 
@@ -99,12 +95,16 @@ impl Memgraph {
             if mgp_vertex.is_null() {
                 return Err(MgpError::UnableToFindVertexById);
             }
-            Ok(Vertex {
-                ptr: mgp_vertex,
-                context: self.clone(),
-            })
+            Ok(Vertex::new(mgp_vertex, &self))
         }
     }
+
+    // TODO(gitbuda): Implement Memgraph insert functions.
+    // Insert name is a bit misleading because data is not inserted to the graph.
+    // Data is returned to the client! return_xyz is a better name.
+    pub fn insert_mgp_value() {}
+    pub fn insert_value() {}
+    pub fn insert_null() {}
 }
 
 #[cfg(test)]

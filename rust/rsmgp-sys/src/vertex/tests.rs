@@ -110,6 +110,6 @@ fn test_vertex_property() {
     };
     assert_eq!(
         vertex.property(c_str!("test")).err().unwrap(),
-        MgpError::UnableToReturnVertexPropertyValueAllocationError
+        MgpError::UnableToGetVertexProperty
     );
 }

@@ -53,13 +53,9 @@ impl Iterator for EdgesIterator {
             if data.is_null() {
                 None
             } else {
-                let copy_ptr = ffi::mgp_edge_copy(data, self.context.memory());
-                if copy_ptr.is_null() {
-                    panic!("Unable to allocate new vertex during vertex iteration.");
-                }
-                Some(Edge {
-                    ptr: copy_ptr,
-                    context: self.context.clone(),
+                Some(match Edge::mgp_copy(data, &self.context) {
+                    Ok(v) => v,
+                    Err(_) => panic!("Unable to create new edge during edges iteration."),
                 })
             }
         }
@@ -97,9 +93,10 @@ impl Edge {
             !ptr.is_null(),
             "Unable to make edge copy because edge pointer is null."
         );
+
         let mgp_copy = ffi::mgp_edge_copy(ptr, context.memory());
         if mgp_copy.is_null() {
-            return Err(MgpError::UnableToAllocateEdgeValue);
+            return Err(MgpError::UnableToMakeEdgeCopy);
         }
         Ok(Edge::new(mgp_copy, &context))
     }
@@ -126,16 +123,14 @@ impl Edge {
     pub fn from_vertex(&self) -> MgpResult<Vertex> {
         unsafe {
             let mgp_vertex = ffi::mgp_edge_get_from(self.ptr);
-            let vertex = make_vertex_copy(mgp_vertex, &self.context)?;
-            Ok(vertex)
+            Vertex::mgp_copy(mgp_vertex, &self.context)
         }
     }
 
     pub fn to_vertex(&self) -> MgpResult<Vertex> {
         unsafe {
             let mgp_vertex = ffi::mgp_edge_get_to(self.ptr);
-            let vertex = make_vertex_copy(mgp_vertex, &self.context)?;
-            Ok(vertex)
+            Vertex::mgp_copy(mgp_vertex, &self.context)
         }
     }
 
@@ -146,7 +141,7 @@ impl Edge {
             if mgp_value.is_null() {
                 return Err(MgpError::UnableToReturnEdgePropertyValueAllocationError);
             }
-            let value = match mgp_value_to_value(&MgpValue { ptr: mgp_value }, &self.context) {
+            let value = match MgpValue::to_value(&MgpValue::new(mgp_value), &self.context) {
                 Ok(v) => v,
                 Err(_) => return Err(MgpError::UnableToReturnEdgePropertyValueCreationError),
             };
@@ -166,11 +161,7 @@ impl Edge {
             if mgp_iterator.is_null() {
                 return Err(MgpError::UnableToReturnEdgePropertiesIterator);
             }
-            Ok(PropertiesIterator {
-                ptr: mgp_iterator,
-                context: self.context.clone(),
-                ..Default::default()
-            })
+            Ok(PropertiesIterator::new(mgp_iterator, &self.context))
         }
     }
 }

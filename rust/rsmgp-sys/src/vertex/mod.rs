@@ -12,19 +12,17 @@ use crate::mgp::ffi;
 use mockall_double::double;
 
 pub struct VerticesIterator {
-    pub ptr: *mut mgp_vertices_iterator,
-    pub is_first: bool,
-    pub context: Memgraph,
+    ptr: *mut mgp_vertices_iterator,
+    is_first: bool,
+    context: Memgraph,
 }
 
-impl Default for VerticesIterator {
-    fn default() -> Self {
-        Self {
-            ptr: std::ptr::null_mut(),
+impl VerticesIterator {
+    pub fn new(ptr: *mut mgp_vertices_iterator, context: &Memgraph) -> VerticesIterator {
+        VerticesIterator {
+            ptr,
             is_first: true,
-            context: Memgraph {
-                ..Default::default()
-            },
+            context: context.clone(),
         }
     }
 }
@@ -55,13 +53,9 @@ impl Iterator for VerticesIterator {
             if data.is_null() {
                 None
             } else {
-                let copy_ptr = ffi::mgp_vertex_copy(data, self.context.memory());
-                if copy_ptr.is_null() {
-                    panic!("Unable to allocate new vertex during vertex iteration.");
-                }
-                Some(Vertex {
-                    ptr: copy_ptr,
-                    context: self.context.clone(),
+                Some(match Vertex::mgp_copy(data, &self.context) {
+                    Ok(v) => v,
+                    Err(_) => panic!("Unable to create new vertex during vertices iteration."),
                 })
             }
         }
@@ -70,8 +64,8 @@ impl Iterator for VerticesIterator {
 
 #[derive(Debug)]
 pub struct Vertex {
-    pub ptr: *mut mgp_vertex,
-    pub context: Memgraph,
+    ptr: *mut mgp_vertex,
+    context: Memgraph,
 }
 
 impl Drop for Vertex {
@@ -85,6 +79,35 @@ impl Drop for Vertex {
 }
 
 impl Vertex {
+    pub fn new(ptr: *mut mgp_vertex, context: &Memgraph) -> Vertex {
+        Vertex {
+            ptr,
+            context: context.clone(),
+        }
+    }
+
+    pub(crate) unsafe fn mgp_copy(
+        mgp_vertex: *const mgp_vertex,
+        context: &Memgraph,
+    ) -> MgpResult<Vertex> {
+        // Test passes null ptr because nothing else is possible.
+        #[cfg(not(test))]
+        assert!(
+            !mgp_vertex.is_null(),
+            "Unable to make vertex copy because vertex pointer is null."
+        );
+
+        let mgp_copy = ffi::mgp_vertex_copy(mgp_vertex, context.memory());
+        if mgp_copy.is_null() {
+            return Err(MgpError::UnableToMakeVertexCopy);
+        }
+        Ok(Vertex::new(mgp_copy, &context))
+    }
+
+    pub fn mgp_ptr(&self) -> *const mgp_vertex {
+        self.ptr
+    }
+
     pub fn id(&self) -> i64 {
         unsafe { ffi::mgp_vertex_get_id(self.ptr).as_int }
     }
@@ -117,15 +140,16 @@ impl Vertex {
             let mgp_value =
                 ffi::mgp_vertex_get_property(self.ptr, name.as_ptr(), self.context.memory());
             if mgp_value.is_null() {
-                return Err(MgpError::UnableToReturnVertexPropertyValueAllocationError);
+                return Err(MgpError::UnableToGetVertexProperty);
             }
-            let value = mgp_value_to_value(&MgpValue { ptr: mgp_value }, &self.context)?;
+            // TODO(gitbuda): Figure out how to pass Snafu context here.
+            let value = MgpValue::to_value(&MgpValue::new(mgp_value), &self.context)?;
             match CString::new(name.to_bytes()) {
                 Ok(c_string) => Ok(Property {
                     name: c_string,
                     value,
                 }),
-                Err(_) => Err(MgpError::UnableToCreateCString),
+                Err(_) => Err(MgpError::UnableToReturnVertexPropertyMakeNameEror),
             }
         }
     }
@@ -136,11 +160,7 @@ impl Vertex {
             if mgp_iterator.is_null() {
                 return Err(MgpError::UnableToReturnVertexPropertiesIterator);
             }
-            Ok(PropertiesIterator {
-                ptr: mgp_iterator,
-                context: self.context.clone(),
-                ..Default::default()
-            })
+            Ok(PropertiesIterator::new(mgp_iterator, &self.context))
         }
     }
 

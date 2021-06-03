@@ -14,7 +14,7 @@ fn test_make_null_mgp_value() {
         ..Default::default()
     };
 
-    let value = make_null_value(&ctx_mg);
+    let value = MgpValue::make_null(&ctx_mg);
     assert!(value.is_err());
 }
 
@@ -31,7 +31,7 @@ fn test_make_false_bool_mgp_value() {
         ..Default::default()
     };
 
-    let value = make_bool_value(false, &ctx_mg);
+    let value = MgpValue::make_bool(false, &ctx_mg);
     assert!(value.is_err());
 }
 
@@ -48,7 +48,7 @@ fn test_make_true_bool_mgp_value() {
         ..Default::default()
     };
 
-    let value = make_bool_value(true, &ctx_mg);
+    let value = MgpValue::make_bool(true, &ctx_mg);
     assert!(value.is_err());
 }
 
@@ -65,7 +65,24 @@ fn test_make_int_mgp_value() {
         ..Default::default()
     };
 
-    let value = make_int_value(100, &ctx_mg);
+    let value = MgpValue::make_int(100, &ctx_mg);
+    assert!(value.is_err());
+}
+
+#[test]
+#[serial]
+fn test_make_double_mgp_value() {
+    let ctx_1 = mgp_value_make_double_context();
+    ctx_1.expect().times(1).returning(|value, _| {
+        assert_eq!(value, 0.0);
+        std::ptr::null_mut()
+    });
+
+    let ctx_mg = Memgraph {
+        ..Default::default()
+    };
+
+    let value = MgpValue::make_double(0.0, &ctx_mg);
     assert!(value.is_err());
 }
 
@@ -84,24 +101,109 @@ fn test_make_string_mgp_value() {
         ..Default::default()
     };
 
-    let value = make_string_value(c_str!("test"), &ctx_mg);
+    let value = MgpValue::make_string(c_str!("test"), &ctx_mg);
     assert!(value.is_err());
 }
 
 #[test]
 #[serial]
-fn test_make_double_mgp_value() {
-    let ctx_1 = mgp_value_make_double_context();
-    ctx_1.expect().times(1).returning(|value, _| {
-        assert_eq!(value, 0.0);
-        std::ptr::null_mut()
-    });
+fn test_make_list_mgp_value() {
+    let ctx_1 = mgp_list_size_context();
+    ctx_1.expect().times(2).returning(|_| 0);
+
+    let ctx_2 = mgp_list_make_empty_context();
+    ctx_2
+        .expect()
+        .times(1)
+        .returning(|_, _| std::ptr::null_mut());
+
+    let ctx_3 = mgp_value_make_list_context();
+    ctx_3.expect().times(1).returning(|_| std::ptr::null_mut());
+
+    let ctx_4 = mgp_list_destroy_context();
+    ctx_4.expect().times(1).returning(|_| {});
 
     let ctx_mg = Memgraph {
         ..Default::default()
     };
 
-    let value = make_double_value(0.0, &ctx_mg);
+    let list = List::new(std::ptr::null_mut(), &ctx_mg);
+    let value = MgpValue::make_list(&list, &ctx_mg);
+    assert!(value.is_err());
+}
+
+#[test]
+#[serial]
+fn test_make_map_mgp_value() {
+    let ctx_1 = mgp_map_make_empty_context();
+    ctx_1.expect().times(1).returning(|_| std::ptr::null_mut());
+
+    let ctx_2 = mgp_map_iter_items_context();
+    ctx_2
+        .expect()
+        .times(1)
+        .returning(|_, _| std::ptr::null_mut());
+
+    let ctx_mg = Memgraph {
+        ..Default::default()
+    };
+
+    let map = Map::new(std::ptr::null_mut(), &ctx_mg);
+    let value = MgpValue::make_map(&map, &ctx_mg);
+    assert!(value.is_err());
+}
+
+#[test]
+#[serial]
+fn test_make_vertex_mgp_value() {
+    let ctx_1 = mgp_vertex_copy_context();
+    ctx_1
+        .expect()
+        .times(1)
+        .returning(|_, _| std::ptr::null_mut());
+
+    let ctx_mg = Memgraph {
+        ..Default::default()
+    };
+
+    let vertex = Vertex::new(std::ptr::null_mut(), &ctx_mg);
+    let value = MgpValue::make_vertex(&vertex, &ctx_mg);
+    assert!(value.is_err());
+}
+
+#[test]
+#[serial]
+fn test_make_edge_mgp_value() {
+    let ctx_1 = mgp_edge_copy_context();
+    ctx_1
+        .expect()
+        .times(1)
+        .returning(|_, _| std::ptr::null_mut());
+
+    let ctx_mg = Memgraph {
+        ..Default::default()
+    };
+
+    let edge = Edge::new(std::ptr::null_mut(), &ctx_mg);
+    let value = MgpValue::make_edge(&edge, &ctx_mg);
+    assert!(value.is_err());
+}
+
+#[test]
+#[serial]
+fn test_make_path_mgp_value() {
+    let ctx_1 = mgp_path_copy_context();
+    ctx_1
+        .expect()
+        .times(1)
+        .returning(|_, _| std::ptr::null_mut());
+
+    let ctx_mg = Memgraph {
+        ..Default::default()
+    };
+
+    let path = Path::new(std::ptr::null_mut(), &ctx_mg);
+    let value = MgpValue::make_path(&path, &ctx_mg);
     assert!(value.is_err());
 }
 
@@ -113,34 +215,75 @@ fn test_mgp_value_for_the_right_type() {
         assert_eq!(value, std::ptr::null_mut());
         1
     });
+
     let ctx_is_bool = mgp_value_is_bool_context();
     ctx_is_bool.expect().times(1).returning(|value| {
         assert_eq!(value, std::ptr::null_mut());
         1
     });
+
     let ctx_is_int = mgp_value_is_int_context();
     ctx_is_int.expect().times(1).returning(|value| {
         assert_eq!(value, std::ptr::null_mut());
         1
     });
-    let ctx_is_string = mgp_value_is_string_context();
-    ctx_is_string.expect().times(1).returning(|value| {
-        assert_eq!(value, std::ptr::null_mut());
-        1
-    });
+
     let ctx_is_double = mgp_value_is_double_context();
     ctx_is_double.expect().times(1).returning(|value| {
         assert_eq!(value, std::ptr::null_mut());
         1
     });
+
+    let ctx_is_string = mgp_value_is_string_context();
+    ctx_is_string.expect().times(1).returning(|value| {
+        assert_eq!(value, std::ptr::null_mut());
+        1
+    });
+
+    let ctx_is_list = mgp_value_is_list_context();
+    ctx_is_list.expect().times(1).returning(|value| {
+        assert_eq!(value, std::ptr::null_mut());
+        1
+    });
+
+    let ctx_is_map = mgp_value_is_map_context();
+    ctx_is_map.expect().times(1).returning(|value| {
+        assert_eq!(value, std::ptr::null_mut());
+        1
+    });
+
+    let ctx_is_vertex = mgp_value_is_vertex_context();
+    ctx_is_vertex.expect().times(1).returning(|value| {
+        assert_eq!(value, std::ptr::null_mut());
+        1
+    });
+
+    let ctx_is_edge = mgp_value_is_edge_context();
+    ctx_is_edge.expect().times(1).returning(|value| {
+        assert_eq!(value, std::ptr::null_mut());
+        1
+    });
+
+    let ctx_is_path = mgp_value_is_path_context();
+    ctx_is_path.expect().times(1).returning(|value| {
+        assert_eq!(value, std::ptr::null_mut());
+        1
+    });
+
     let value = MgpValue {
         ptr: std::ptr::null_mut(),
     };
+
     assert!(value.is_null());
     assert!(value.is_bool());
     assert!(value.is_int());
-    assert!(value.is_string());
     assert!(value.is_double());
+    assert!(value.is_string());
+    assert!(value.is_list());
+    assert!(value.is_map());
+    assert!(value.is_vertex());
+    assert!(value.is_edge());
+    assert!(value.is_path());
 }
 
 #[test]
@@ -151,39 +294,80 @@ fn test_mgp_value_for_the_wrong_type() {
         assert_eq!(value, std::ptr::null_mut());
         0
     });
+
     let ctx_is_bool = mgp_value_is_bool_context();
     ctx_is_bool.expect().times(1).returning(|value| {
         assert_eq!(value, std::ptr::null_mut());
         0
     });
+
     let ctx_is_int = mgp_value_is_int_context();
     ctx_is_int.expect().times(1).returning(|value| {
         assert_eq!(value, std::ptr::null_mut());
         0
     });
-    let ctx_is_string = mgp_value_is_string_context();
-    ctx_is_string.expect().times(1).returning(|value| {
-        assert_eq!(value, std::ptr::null_mut());
-        0
-    });
+
     let ctx_is_double = mgp_value_is_double_context();
     ctx_is_double.expect().times(1).returning(|value| {
         assert_eq!(value, std::ptr::null_mut());
         0
     });
+
+    let ctx_is_string = mgp_value_is_string_context();
+    ctx_is_string.expect().times(1).returning(|value| {
+        assert_eq!(value, std::ptr::null_mut());
+        0
+    });
+
+    let ctx_is_list = mgp_value_is_list_context();
+    ctx_is_list.expect().times(1).returning(|value| {
+        assert_eq!(value, std::ptr::null_mut());
+        0
+    });
+
+    let ctx_is_map = mgp_value_is_map_context();
+    ctx_is_map.expect().times(1).returning(|value| {
+        assert_eq!(value, std::ptr::null_mut());
+        0
+    });
+
+    let ctx_is_vertex = mgp_value_is_vertex_context();
+    ctx_is_vertex.expect().times(1).returning(|value| {
+        assert_eq!(value, std::ptr::null_mut());
+        0
+    });
+
+    let ctx_is_edge = mgp_value_is_edge_context();
+    ctx_is_edge.expect().times(1).returning(|value| {
+        assert_eq!(value, std::ptr::null_mut());
+        0
+    });
+
+    let ctx_is_path = mgp_value_is_path_context();
+    ctx_is_path.expect().times(1).returning(|value| {
+        assert_eq!(value, std::ptr::null_mut());
+        0
+    });
+
     let value = MgpValue {
         ptr: std::ptr::null_mut(),
     };
+
     assert!(!value.is_null());
     assert!(!value.is_bool());
     assert!(!value.is_int());
-    assert!(!value.is_string());
     assert!(!value.is_double());
+    assert!(!value.is_string());
+    assert!(!value.is_list());
+    assert!(!value.is_map());
+    assert!(!value.is_vertex());
+    assert!(!value.is_edge());
+    assert!(!value.is_path());
 }
 
 #[test]
 #[serial]
-fn test_to_result_mgp_value() {
+fn test_to_mgp_value() {
     let ctx_1 = mgp_value_make_null_context();
     ctx_1.expect().times(1).returning(|_| std::ptr::null_mut());
 
@@ -192,7 +376,7 @@ fn test_to_result_mgp_value() {
     };
 
     let value = Value::Null;
-    let mgp_value = value.to_result_mgp_value(&ctx_mg);
+    let mgp_value = value.to_mgp_value(&ctx_mg);
 
     assert!(mgp_value.is_err());
 }

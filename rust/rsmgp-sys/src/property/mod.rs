@@ -8,13 +8,13 @@ use crate::value::*;
 use crate::mgp::ffi;
 use mockall_double::double;
 
-// Property is used in the following contexts:
-//   * Return Property from PropertiesIterator.
-//   * Return Property directly from vertex/edge.
-//
-// Property owns CString and Value bacause the underlying C string or value could be deleted during
-// the lifetime of the property. In other words, Property stores copies of underlying name and
-// value.
+/// Property is used in the following contexts:
+///   * return Property from PropertiesIterator
+///   * return Property directly from vertex/edge.
+///
+/// Property owns CString and Value bacause the underlying C string or value could be deleted during
+/// the lifetime of the property. In other words, Property stores copies of underlying name and
+/// value.
 #[derive(Debug)]
 pub struct Property {
     pub name: CString,
@@ -22,19 +22,17 @@ pub struct Property {
 }
 
 pub struct PropertiesIterator {
-    pub ptr: *mut mgp_properties_iterator,
-    pub is_first: bool,
-    pub context: Memgraph,
+    ptr: *mut mgp_properties_iterator,
+    is_first: bool,
+    context: Memgraph,
 }
 
-impl Default for PropertiesIterator {
-    fn default() -> Self {
-        Self {
-            ptr: std::ptr::null_mut(),
+impl PropertiesIterator {
+    pub fn new(ptr: *mut mgp_properties_iterator, context: &Memgraph) -> PropertiesIterator {
+        PropertiesIterator {
+            ptr,
             is_first: true,
-            context: Memgraph {
-                ..Default::default()
-            },
+            context: context.clone(),
         }
     }
 }
