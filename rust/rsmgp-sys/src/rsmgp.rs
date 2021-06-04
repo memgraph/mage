@@ -5,40 +5,7 @@ use crate::context::*;
 use crate::mgp::ffi;
 use crate::mgp::*;
 use crate::result::*;
-use crate::value::*;
 use mockall_double::double;
-
-pub struct MgpResultRecord {
-    record: *mut mgp_result_record,
-}
-
-pub fn make_result_record(context: &Memgraph) -> MgpResult<MgpResultRecord> {
-    unsafe {
-        let record = ffi::mgp_result_new_record(context.result());
-        if record.is_null() {
-            return Err(MgpError::UnableToCreateResultRecord);
-        }
-        Ok(MgpResultRecord { record })
-    }
-}
-
-pub fn insert_result_record(
-    mgp_record: &MgpResultRecord,
-    mgp_name: &CStr,
-    mgp_value: &MgpValue,
-) -> MgpResult<()> {
-    unsafe {
-        let inserted = ffi::mgp_result_record_insert(
-            mgp_record.record,
-            mgp_name.as_ptr(),
-            mgp_value.mgp_ptr(),
-        );
-        if inserted == 0 {
-            return Err(MgpError::PreparingResultError);
-        }
-        Ok(())
-    }
-}
 
 pub fn set_memgraph_error_msg(msg: &CStr, context: &Memgraph) {
     unsafe {

@@ -13,7 +13,7 @@ use std::panic;
 // Required because we want to be able to propagate Result by using ? operator.
 fn test_procedure(context: &Memgraph) -> Result<(), MgpError> {
     for mgp_vertex in context.vertices_iter()? {
-        let mgp_record = make_result_record(&context)?;
+        let result = context.result_record()?;
 
         let mut properties: Vec<Property> = mgp_vertex.properties()?.collect();
         properties.sort_by(|a, b| {
@@ -37,79 +37,46 @@ fn test_procedure(context: &Memgraph) -> Result<(), MgpError> {
             })
             .collect::<Vec<String>>()
             .join(", ");
-        // TODO(gitbuda): Combine insert and make value.
-        insert_result_record(
-            &mgp_record,
+        result.insert_string(
             c_str!("properties_string"),
-            &MgpValue::make_string(
-                CString::new(properties_string.into_bytes())
-                    .unwrap()
-                    .as_c_str(),
-                &context,
-            )?,
+            CString::new(properties_string.into_bytes())
+                .unwrap()
+                .as_c_str(),
         )?;
 
         let labels_count = mgp_vertex.labels_count();
-        insert_result_record(
-            &mgp_record,
-            c_str!("labels_count"),
-            &MgpValue::make_int(labels_count as i64, &context)?,
-        )?;
-
+        result.insert_int(c_str!("labels_count"), labels_count as i64)?;
         if labels_count > 0 {
-            let first_label = MgpValue::make_string(&mgp_vertex.label_at(0)?, &context)?;
-            insert_result_record(&mgp_record, c_str!("first_label"), &first_label)?;
+            result.insert_string(c_str!("first_label"), &mgp_vertex.label_at(0)?)?;
         } else {
-            insert_result_record(
-                &mgp_record,
-                c_str!("first_label"),
-                &MgpValue::make_string(c_str!(""), &context)?,
-            )?;
+            result.insert_string(c_str!("first_label"), c_str!(""))?;
         }
 
         let name_property = mgp_vertex.property(c_str!("name"))?.value;
         if let Value::Null = name_property {
-            let unknown_name = MgpValue::make_string(c_str!("unknown"), &context)?;
-            insert_result_record(&mgp_record, c_str!("name_property"), &unknown_name)?;
+            result.insert_string(c_str!("name_property"), c_str!("unknown"))?;
         } else if let Value::String(value) = name_property {
-            let mgp_value = MgpValue::make_string(value.as_c_str(), &context)?;
-            insert_result_record(&mgp_record, c_str!("name_property"), &mgp_value)?;
+            result.insert_string(c_str!("name_property"), &value)?;
         } else {
-            let unknown_type = MgpValue::make_string(c_str!("not null and not string"), &context)?;
-            insert_result_record(&mgp_record, c_str!("name_property"), &unknown_type)?;
+            result.insert_string(c_str!("name_property"), c_str!("not null and not string"))?
         }
 
-        let has_label = mgp_vertex.has_label(c_str!("L3"));
-        let mgp_value = MgpValue::make_bool(has_label, &context)?;
-        insert_result_record(&mgp_record, c_str!("has_L3_label"), &mgp_value)?;
-
-        // TODO(gitbuda): Figure out how to test vertex e2e.
-        // let vertex_value = make_vertex_value(&mgp_vertex, &context)?;
-        // insert_result_record(&mgp_record, c_str!("vertex"), &vertex_value, &context)?;
+        result.insert_bool(c_str!("has_L3_label"), mgp_vertex.has_label(c_str!("L3")))?;
 
         match mgp_vertex.out_edges()?.next() {
             Some(edge) => {
                 let edge_type = edge.edge_type()?;
-                let mgp_value = MgpValue::make_string(&edge_type, &context)?;
-                insert_result_record(&mgp_record, c_str!("first_edge_type"), &mgp_value)?;
+                result.insert_string(c_str!("first_edge_type"), &edge_type)?;
             }
             None => {
-                let mgp_value = MgpValue::make_string(c_str!("unknown_edge_type"), &context)?;
-                insert_result_record(&mgp_record, c_str!("first_edge_type"), &mgp_value)?;
+                result.insert_string(c_str!("first_edge_type"), c_str!("unknown_edge_type"))?;
             }
         }
 
         let list_property = mgp_vertex.property(c_str!("list"))?.value;
         if let Value::List(list) = list_property {
-            let mgp_value = MgpValue::make_list(&list, &context)?;
-            insert_result_record(&mgp_record, c_str!("list"), &mgp_value)?;
+            result.insert_list(c_str!("list"), &list)?;
         }
-
-        // let map_property = mgp_vertex.property(c_str!("map"))?.value;
-        // if let Value::Map(map) = map_property {
-        //     let mgp_value = make_map_value(&map, &context)?;
-        //     insert_result_record(&mgp_record, c_str!("map"), &mgp_value)?;
-        // }
     }
     Ok(())
 }
@@ -194,24 +161,12 @@ pub extern "C" fn mgp_init_module(module: *mut mgp_module, _memory: *mut mgp_mem
             return 1;
         }
     }
-    // match add_vertex_result_type(procedure, c_str!("vertex")) {
-    //     Ok(_) => {}
-    //     Err(_) => {
-    //         return 1;
-    //     }
-    // }
     match add_string_result_type(procedure, c_str!("first_edge_type")) {
         Ok(_) => {}
         Err(_) => {
             return 1;
         }
     }
-    // match add_map_result_type(procedure, c_str!("map")) {
-    //     Ok(_) => {}
-    //     Err(_) => {
-    //         return 1;
-    //     }
-    // }
     match add_list_result_type(procedure, c_str!("list"), get_type_any()) {
         Ok(_) => {}
         Err(_) => {

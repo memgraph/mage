@@ -1,4 +1,91 @@
 use snafu::Snafu;
+use std::ffi::CStr;
+
+use crate::context::*;
+use crate::edge::*;
+use crate::list::*;
+use crate::map::*;
+use crate::mgp::*;
+use crate::path::*;
+use crate::value::*;
+use crate::vertex::*;
+
+pub struct MgpResultRecord {
+    ptr: *mut mgp_result_record,
+    context: Memgraph,
+}
+
+impl MgpResultRecord {
+    pub fn new(context: &Memgraph) -> MgpResult<MgpResultRecord> {
+        unsafe {
+            let mgp_ptr = ffi::mgp_result_new_record(context.result());
+            if mgp_ptr.is_null() {
+                return Err(MgpError::UnableToCreateResultRecord);
+            }
+            Ok(MgpResultRecord {
+                ptr: mgp_ptr,
+                context: context.clone(),
+            })
+        }
+    }
+
+    pub fn mgp_ptr(&self) -> *mut mgp_result_record {
+        self.ptr
+    }
+
+    pub fn insert_mgp_value(&self, field: &CStr, value: &MgpValue) -> MgpResult<()> {
+        unsafe {
+            let inserted = ffi::mgp_result_record_insert(self.ptr, field.as_ptr(), value.mgp_ptr());
+            if inserted == 0 {
+                return Err(MgpError::PreparingResultError);
+            }
+            Ok(())
+        }
+    }
+
+    // TODO(gitbuda): Allow insertion of multiple values.
+    pub fn insert_mgp_values() {}
+
+    pub fn insert_null(&self, field: &CStr) -> MgpResult<()> {
+        self.insert_mgp_value(&field, &MgpValue::make_null(&self.context)?)
+    }
+
+    pub fn insert_bool(&self, field: &CStr, value: bool) -> MgpResult<()> {
+        self.insert_mgp_value(&field, &MgpValue::make_bool(value, &self.context)?)
+    }
+
+    pub fn insert_int(&self, field: &CStr, value: i64) -> MgpResult<()> {
+        self.insert_mgp_value(&field, &MgpValue::make_int(value, &self.context)?)
+    }
+
+    pub fn insert_double(&self, field: &CStr, value: f64) -> MgpResult<()> {
+        self.insert_mgp_value(&field, &MgpValue::make_double(value, &self.context)?)
+    }
+
+    pub fn insert_string(&self, field: &CStr, value: &CStr) -> MgpResult<()> {
+        self.insert_mgp_value(&field, &MgpValue::make_string(&value, &self.context)?)
+    }
+
+    pub fn insert_list(&self, field: &CStr, value: &List) -> MgpResult<()> {
+        self.insert_mgp_value(&field, &MgpValue::make_list(&value, &self.context)?)
+    }
+
+    pub fn insert_map(&self, field: &CStr, value: &Map) -> MgpResult<()> {
+        self.insert_mgp_value(&field, &MgpValue::make_map(&value, &self.context)?)
+    }
+
+    pub fn insert_vertex(&self, field: &CStr, value: &Vertex) -> MgpResult<()> {
+        self.insert_mgp_value(&field, &MgpValue::make_vertex(&value, &self.context)?)
+    }
+
+    pub fn insert_edge(&self, field: &CStr, value: &Edge) -> MgpResult<()> {
+        self.insert_mgp_value(&field, &MgpValue::make_edge(&value, &self.context)?)
+    }
+
+    pub fn insert_path(&self, field: &CStr, value: &Path) -> MgpResult<()> {
+        self.insert_mgp_value(&field, &MgpValue::make_path(&value, &self.context)?)
+    }
+}
 
 // TODO(gitbuda): Polish error messages.
 

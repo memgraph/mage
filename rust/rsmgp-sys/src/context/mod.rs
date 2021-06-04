@@ -99,6 +99,10 @@ impl Memgraph {
         }
     }
 
+    pub fn result_record(&self) -> MgpResult<MgpResultRecord> {
+        MgpResultRecord::new(&self)
+    }
+
     // TODO(gitbuda): Implement Memgraph insert functions.
     // Insert name is a bit misleading because data is not inserted to the graph.
     // Data is returned to the client! return_xyz is a better name.
