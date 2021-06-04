@@ -16,6 +16,10 @@ TEST_P(PagerankTests, ParametrizedTest) {
 
 INSTANTIATE_TEST_SUITE_P(
     Pagerank, PagerankTests,
+    ///
+    ///@brief Parametrized test consists out of tuple. First value represents the pagerank algorithm entry graph, while
+    /// second value stands for the expected value.
+    ///
     testing::Values(
         std::make_tuple(pagerank_alg::PageRankGraph(1, 0, {}), std::vector<double>{1.00}),
         std::make_tuple(pagerank_alg::PageRankGraph(2, 1, {{0, 1}}), std::vector<double>{0.350877362, 0.649122638}),
