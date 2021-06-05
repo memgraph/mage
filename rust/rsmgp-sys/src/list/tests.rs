@@ -1,4 +1,6 @@
+use libc::malloc;
 use serial_test::serial;
+use std::mem::size_of;
 
 use super::*;
 use crate::mgp::mock_ffi::*;
@@ -35,8 +37,30 @@ fn test_make_empty() {
     assert!(value.is_err());
 }
 
-// TODO(gitbuda): Figure out how + test list mgp_copy because it's quite complex.
-// TODO(gitbuda): Figure out how + test list append and append_extend methods.
+// TODO(gitbuda): Test list mgp_copy.
+// TODO(gitbuda): Test list append_extend.
+
+#[test]
+#[serial]
+fn test_append() {
+    let ctx_1 = mgp_list_append_context();
+    ctx_1.expect().times(1).returning(|_, _| 0);
+
+    let ctx_2 = mgp_value_make_null_context();
+    ctx_2
+        .expect()
+        .times(1)
+        .returning(|_| unsafe { malloc(size_of::<mgp_value>()) as *mut mgp_value });
+
+    let ctx_3 = mgp_value_destroy_context();
+    ctx_3.expect().times(1).returning(|_| ());
+
+    let memgraph = Memgraph::new_default();
+    let value = Value::Null;
+    let list = List::new(std::ptr::null_mut(), &memgraph);
+    let result = list.append(&value);
+    assert!(result.is_err());
+}
 
 #[test]
 #[serial]
