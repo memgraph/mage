@@ -47,43 +47,43 @@ impl MgpResultRecord {
     pub fn insert_mgp_values() {}
 
     pub fn insert_null(&self, field: &CStr) -> MgpResult<()> {
-        self.insert_mgp_value(&field, &MgpValue::make_null(&self.memgraph)?)
+        self.insert_mgp_value(field, &MgpValue::make_null(&self.memgraph)?)
     }
 
     pub fn insert_bool(&self, field: &CStr, value: bool) -> MgpResult<()> {
-        self.insert_mgp_value(&field, &MgpValue::make_bool(value, &self.memgraph)?)
+        self.insert_mgp_value(field, &MgpValue::make_bool(value, &self.memgraph)?)
     }
 
     pub fn insert_int(&self, field: &CStr, value: i64) -> MgpResult<()> {
-        self.insert_mgp_value(&field, &MgpValue::make_int(value, &self.memgraph)?)
+        self.insert_mgp_value(field, &MgpValue::make_int(value, &self.memgraph)?)
     }
 
     pub fn insert_double(&self, field: &CStr, value: f64) -> MgpResult<()> {
-        self.insert_mgp_value(&field, &MgpValue::make_double(value, &self.memgraph)?)
+        self.insert_mgp_value(field, &MgpValue::make_double(value, &self.memgraph)?)
     }
 
     pub fn insert_string(&self, field: &CStr, value: &CStr) -> MgpResult<()> {
-        self.insert_mgp_value(&field, &MgpValue::make_string(&value, &self.memgraph)?)
+        self.insert_mgp_value(field, &MgpValue::make_string(value, &self.memgraph)?)
     }
 
     pub fn insert_list(&self, field: &CStr, value: &List) -> MgpResult<()> {
-        self.insert_mgp_value(&field, &MgpValue::make_list(&value, &self.memgraph)?)
+        self.insert_mgp_value(field, &MgpValue::make_list(value, &self.memgraph)?)
     }
 
     pub fn insert_map(&self, field: &CStr, value: &Map) -> MgpResult<()> {
-        self.insert_mgp_value(&field, &MgpValue::make_map(&value, &self.memgraph)?)
+        self.insert_mgp_value(field, &MgpValue::make_map(value, &self.memgraph)?)
     }
 
     pub fn insert_vertex(&self, field: &CStr, value: &Vertex) -> MgpResult<()> {
-        self.insert_mgp_value(&field, &MgpValue::make_vertex(&value, &self.memgraph)?)
+        self.insert_mgp_value(field, &MgpValue::make_vertex(value, &self.memgraph)?)
     }
 
     pub fn insert_edge(&self, field: &CStr, value: &Edge) -> MgpResult<()> {
-        self.insert_mgp_value(&field, &MgpValue::make_edge(&value, &self.memgraph)?)
+        self.insert_mgp_value(field, &MgpValue::make_edge(value, &self.memgraph)?)
     }
 
     pub fn insert_path(&self, field: &CStr, value: &Path) -> MgpResult<()> {
-        self.insert_mgp_value(&field, &MgpValue::make_path(&value, &self.memgraph)?)
+        self.insert_mgp_value(field, &MgpValue::make_path(value, &self.memgraph)?)
     }
 }
 

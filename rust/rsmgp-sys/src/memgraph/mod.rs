@@ -100,7 +100,7 @@ impl Memgraph {
     }
 
     pub fn result_record(&self) -> MgpResult<MgpResultRecord> {
-        MgpResultRecord::new(&self)
+        MgpResultRecord::new(self)
     }
 
     pub fn add_read_procedure(
