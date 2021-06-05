@@ -3,10 +3,10 @@ extern crate mockall;
 
 extern crate mockall_double;
 
-pub mod context;
 pub mod edge;
 pub mod list;
 pub mod map;
+pub mod memgraph;
 pub mod mgp;
 pub mod path;
 pub mod property;

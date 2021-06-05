@@ -1,6 +1,6 @@
 use std::ffi::CStr;
 
-use crate::context::*;
+use crate::memgraph::*;
 #[double]
 use crate::mgp::ffi;
 use mockall_double::double;
@@ -20,8 +20,8 @@ macro_rules! define_procedure {
             panic::set_hook(Box::new(|_| { /* Do nothing. */ }));
 
             let procedure_result = panic::catch_unwind(|| {
-                let context = Memgraph::new(args, graph, result, memory, std::ptr::null_mut());
-                match $rs_func(&context) {
+                let memgraph = Memgraph::new(args, graph, result, memory, std::ptr::null_mut());
+                match $rs_func(&memgraph) {
                     Ok(_) => (),
                     Err(e) => {
                         println!("{}", e);
@@ -29,7 +29,7 @@ macro_rules! define_procedure {
                         println!("{}", msg);
                         let c_msg =
                             CString::new(msg).expect("Unable to create Memgraph error message!");
-                        set_memgraph_error_msg(&c_msg, &context);
+                        set_memgraph_error_msg(&c_msg, &memgraph);
                     }
                 }
             });
@@ -122,9 +122,9 @@ macro_rules! define_type {
     };
 }
 
-pub fn set_memgraph_error_msg(msg: &CStr, context: &Memgraph) {
+pub fn set_memgraph_error_msg(msg: &CStr, memgraph: &Memgraph) {
     unsafe {
-        let status = ffi::mgp_result_set_error_msg(context.result(), msg.as_ptr());
+        let status = ffi::mgp_result_set_error_msg(memgraph.result(), msg.as_ptr());
         if status == 0 {
             panic!("Unable to pass error message to the Memgraph engine.");
         }

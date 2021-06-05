@@ -3,7 +3,7 @@ use serial_test::serial;
 use std::ffi::{CStr, CString};
 
 use super::*;
-use crate::context::Memgraph;
+use crate::memgraph::Memgraph;
 use crate::mgp::mock_ffi::*;
 
 #[test]
@@ -18,7 +18,7 @@ fn test_vertex_id() {
 
     let vertex = Vertex {
         ptr: std::ptr::null_mut(),
-        context: memgraph,
+        memgraph: memgraph,
     };
     assert_eq!(vertex.id(), 72);
 }
@@ -33,7 +33,7 @@ fn test_vertex_labels_count() {
 
     let vertex = Vertex {
         ptr: std::ptr::null_mut(),
-        context: memgraph,
+        memgraph: memgraph,
     };
     assert_eq!(vertex.labels_count(), 2);
 }
@@ -52,7 +52,7 @@ fn test_vertex_has_label() {
 
     let vertex = Vertex {
         ptr: std::ptr::null_mut(),
-        context: memgraph,
+        memgraph: memgraph,
     };
     assert_eq!(vertex.has_label(c_str!("labela")), true);
 }
@@ -73,7 +73,7 @@ fn test_vertex_label_at() {
 
     let vertex = Vertex {
         ptr: std::ptr::null_mut(),
-        context: memgraph,
+        memgraph: memgraph,
     };
     assert_eq!(vertex.label_at(5).unwrap(), CString::new("test").unwrap());
 }
@@ -96,7 +96,7 @@ fn test_vertex_property() {
 
     let vertex = Vertex {
         ptr: std::ptr::null_mut(),
-        context: memgraph,
+        memgraph: memgraph,
     };
     assert_eq!(
         vertex.property(c_str!("test")).err().unwrap(),

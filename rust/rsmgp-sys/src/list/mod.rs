@@ -1,4 +1,4 @@
-use crate::context::*;
+use crate::memgraph::*;
 use crate::mgp::*;
 use crate::result::*;
 use crate::value::*;
@@ -10,7 +10,7 @@ use mockall_double::double;
 #[derive(Debug)]
 pub struct List {
     ptr: *mut mgp_list,
-    context: Memgraph,
+    memgraph: Memgraph,
 }
 
 impl Drop for List {
@@ -46,24 +46,24 @@ impl<'a> Iterator for ListIterator<'a> {
 }
 
 impl List {
-    pub fn new(ptr: *mut mgp_list, context: &Memgraph) -> List {
+    pub fn new(ptr: *mut mgp_list, memgraph: &Memgraph) -> List {
         List {
             ptr,
-            context: context.clone(),
+            memgraph: memgraph.clone(),
         }
     }
 
-    pub fn make_empty(capacity: u64, context: &Memgraph) -> MgpResult<List> {
+    pub fn make_empty(capacity: u64, memgraph: &Memgraph) -> MgpResult<List> {
         unsafe {
-            let mgp_ptr = ffi::mgp_list_make_empty(capacity, context.memory());
+            let mgp_ptr = ffi::mgp_list_make_empty(capacity, memgraph.memory());
             if mgp_ptr.is_null() {
                 return Err(MgpError::UnableToCreateEmptyList);
             }
-            Ok(List::new(mgp_ptr, &context))
+            Ok(List::new(mgp_ptr, &memgraph))
         }
     }
 
-    pub(crate) unsafe fn mgp_copy(ptr: *const mgp_list, context: &Memgraph) -> MgpResult<List> {
+    pub(crate) unsafe fn mgp_copy(ptr: *const mgp_list, memgraph: &Memgraph) -> MgpResult<List> {
         // Test passes null ptr because nothing else is possible.
         #[cfg(not(test))]
         assert!(
@@ -72,8 +72,8 @@ impl List {
         );
 
         let size = ffi::mgp_list_size(ptr);
-        // TODO(gitbuda): List::make_empty could be used but we have to inject the error context.
-        let mgp_copy = ffi::mgp_list_make_empty(size, context.memory());
+        // TODO(gitbuda): List::make_empty could be used but we have to inject the error memgraph.
+        let mgp_copy = ffi::mgp_list_make_empty(size, memgraph.memory());
         if mgp_copy.is_null() {
             return Err(MgpError::UnableToCopyList);
         }
@@ -84,7 +84,7 @@ impl List {
                 return Err(MgpError::UnableToCopyList);
             }
         }
-        Ok(List::new(mgp_copy, &context))
+        Ok(List::new(mgp_copy, &memgraph))
     }
 
     pub fn mgp_ptr(&self) -> *const mgp_list {
@@ -92,12 +92,12 @@ impl List {
     }
 
     pub fn copy(&self) -> MgpResult<List> {
-        unsafe { List::mgp_copy(self.ptr, &self.context) }
+        unsafe { List::mgp_copy(self.ptr, &self.memgraph) }
     }
 
     pub fn append(&self, value: &Value) -> MgpResult<()> {
         unsafe {
-            let mgp_value = value.to_mgp_value(&self.context)?;
+            let mgp_value = value.to_mgp_value(&self.memgraph)?;
             if ffi::mgp_list_append(self.ptr, mgp_value.mgp_ptr()) == 0 {
                 return Err(MgpError::UnableToAppendListValue);
             }
@@ -109,7 +109,7 @@ impl List {
     /// memory and any references to them will be invalid.
     pub fn append_extend(&self, value: &Value) -> MgpResult<()> {
         unsafe {
-            let mgp_value = value.to_mgp_value(&self.context)?;
+            let mgp_value = value.to_mgp_value(&self.memgraph)?;
             if ffi::mgp_list_append_extend(self.ptr, mgp_value.mgp_ptr()) == 0 {
                 return Err(MgpError::UnableToAppendExtendListValue);
             }
@@ -133,7 +133,7 @@ impl List {
             if c_value.is_null() {
                 return Err(MgpError::UnableToAccessListValueByIndex);
             }
-            mgp_raw_value_to_value(c_value, &self.context)
+            mgp_raw_value_to_value(c_value, &self.memgraph)
         }
     }
 

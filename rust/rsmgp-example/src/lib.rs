@@ -1,6 +1,6 @@
 use backtrace::Backtrace;
 use c_str_macro::c_str;
-use rsmgp_sys::context::*;
+use rsmgp_sys::memgraph::*;
 use rsmgp_sys::mgp::*;
 use rsmgp_sys::property::*;
 use rsmgp_sys::result::*;
@@ -30,9 +30,9 @@ init_module!(|memgraph: &Memgraph| -> MgpResult<()> {
 
 define_procedure!(
     test_procedure,
-    |context: &Memgraph| -> Result<(), MgpError> {
-        for mgp_vertex in context.vertices_iter()? {
-            let result = context.result_record()?;
+    |memgraph: &Memgraph| -> Result<(), MgpError> {
+        for mgp_vertex in memgraph.vertices_iter()? {
+            let result = memgraph.result_record()?;
 
             let mut properties: Vec<Property> = mgp_vertex.properties()?.collect();
             properties.sort_by(|a, b| {

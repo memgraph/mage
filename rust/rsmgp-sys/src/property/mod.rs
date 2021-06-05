@@ -1,6 +1,6 @@
 use std::ffi::CString;
 
-use crate::context::*;
+use crate::memgraph::*;
 use crate::mgp::*;
 use crate::value::*;
 // Required here, if not present tests linking fails.
@@ -8,7 +8,7 @@ use crate::value::*;
 use crate::mgp::ffi;
 use mockall_double::double;
 
-/// Property is used in the following contexts:
+/// Property is used in the following memgraphs:
 ///   * return Property from PropertiesIterator
 ///   * return Property directly from vertex/edge.
 ///
@@ -24,15 +24,15 @@ pub struct Property {
 pub struct PropertiesIterator {
     ptr: *mut mgp_properties_iterator,
     is_first: bool,
-    context: Memgraph,
+    memgraph: Memgraph,
 }
 
 impl PropertiesIterator {
-    pub fn new(ptr: *mut mgp_properties_iterator, context: &Memgraph) -> PropertiesIterator {
+    pub fn new(ptr: *mut mgp_properties_iterator, memgraph: &Memgraph) -> PropertiesIterator {
         PropertiesIterator {
             ptr,
             is_first: true,
-            context: context.clone(),
+            memgraph: memgraph.clone(),
         }
     }
 }
@@ -72,7 +72,7 @@ impl Iterator for PropertiesIterator {
                         Ok(v) => v,
                         Err(_) => panic!("Unable to provide next property. Name creation problem."),
                     },
-                    value: match mgp_raw_value_to_value(data_ref.value, &self.context) {
+                    value: match mgp_raw_value_to_value(data_ref.value, &self.memgraph) {
                         Ok(v) => v,
                         Err(_) => panic!("Unable to provide next property. Value create problem."),
                     },

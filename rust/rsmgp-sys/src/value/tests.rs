@@ -1,5 +1,5 @@
 use super::*;
-use crate::context::Memgraph;
+use crate::memgraph::Memgraph;
 use crate::mgp::mock_ffi::*;
 use c_str_macro::c_str;
 use serial_test::serial;

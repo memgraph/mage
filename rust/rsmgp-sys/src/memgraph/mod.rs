@@ -21,7 +21,7 @@ struct MgpMemgraph {
 
 #[derive(Debug, Clone)]
 pub struct Memgraph {
-    context: Rc<MgpMemgraph>,
+    memgraph: Rc<MgpMemgraph>,
 }
 
 impl Memgraph {
@@ -33,7 +33,7 @@ impl Memgraph {
         module: *mut mgp_module,
     ) -> Memgraph {
         Memgraph {
-            context: Rc::new(MgpMemgraph {
+            memgraph: Rc::new(MgpMemgraph {
                 args,
                 graph,
                 result,
@@ -45,7 +45,7 @@ impl Memgraph {
 
     pub fn new_default() -> Memgraph {
         Memgraph {
-            context: Rc::new(MgpMemgraph {
+            memgraph: Rc::new(MgpMemgraph {
                 args: std::ptr::null(),
                 graph: std::ptr::null(),
                 result: std::ptr::null_mut(),
@@ -56,23 +56,23 @@ impl Memgraph {
     }
 
     pub fn args(&self) -> *const mgp_list {
-        self.context.args
+        self.memgraph.args
     }
 
     pub fn graph(&self) -> *const mgp_graph {
-        self.context.graph
+        self.memgraph.graph
     }
 
     pub fn result(&self) -> *mut mgp_result {
-        self.context.result
+        self.memgraph.result
     }
 
     pub fn memory(&self) -> *mut mgp_memory {
-        self.context.memory
+        self.memgraph.memory
     }
 
     pub fn module(&self) -> *mut mgp_module {
-        self.context.module
+        self.memgraph.module
     }
 
     pub fn vertices_iter(&self) -> MgpResult<VerticesIterator> {

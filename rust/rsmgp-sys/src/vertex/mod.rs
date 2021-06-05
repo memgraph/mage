@@ -1,7 +1,7 @@
 use std::ffi::{CStr, CString};
 
-use crate::context::*;
 use crate::edge::*;
+use crate::memgraph::*;
 use crate::mgp::*;
 use crate::property::*;
 use crate::result::*;
@@ -14,15 +14,15 @@ use mockall_double::double;
 pub struct VerticesIterator {
     ptr: *mut mgp_vertices_iterator,
     is_first: bool,
-    context: Memgraph,
+    memgraph: Memgraph,
 }
 
 impl VerticesIterator {
-    pub fn new(ptr: *mut mgp_vertices_iterator, context: &Memgraph) -> VerticesIterator {
+    pub fn new(ptr: *mut mgp_vertices_iterator, memgraph: &Memgraph) -> VerticesIterator {
         VerticesIterator {
             ptr,
             is_first: true,
-            context: context.clone(),
+            memgraph: memgraph.clone(),
         }
     }
 }
@@ -53,7 +53,7 @@ impl Iterator for VerticesIterator {
             if data.is_null() {
                 None
             } else {
-                Some(match Vertex::mgp_copy(data, &self.context) {
+                Some(match Vertex::mgp_copy(data, &self.memgraph) {
                     Ok(v) => v,
                     Err(_) => panic!("Unable to create new vertex during vertices iteration."),
                 })
@@ -65,7 +65,7 @@ impl Iterator for VerticesIterator {
 #[derive(Debug)]
 pub struct Vertex {
     ptr: *mut mgp_vertex,
-    context: Memgraph,
+    memgraph: Memgraph,
 }
 
 impl Drop for Vertex {
@@ -79,16 +79,16 @@ impl Drop for Vertex {
 }
 
 impl Vertex {
-    pub fn new(ptr: *mut mgp_vertex, context: &Memgraph) -> Vertex {
+    pub fn new(ptr: *mut mgp_vertex, memgraph: &Memgraph) -> Vertex {
         Vertex {
             ptr,
-            context: context.clone(),
+            memgraph: memgraph.clone(),
         }
     }
 
     pub(crate) unsafe fn mgp_copy(
         mgp_vertex: *const mgp_vertex,
-        context: &Memgraph,
+        memgraph: &Memgraph,
     ) -> MgpResult<Vertex> {
         // Test passes null ptr because nothing else is possible.
         #[cfg(not(test))]
@@ -97,11 +97,11 @@ impl Vertex {
             "Unable to make vertex copy because vertex pointer is null."
         );
 
-        let mgp_copy = ffi::mgp_vertex_copy(mgp_vertex, context.memory());
+        let mgp_copy = ffi::mgp_vertex_copy(mgp_vertex, memgraph.memory());
         if mgp_copy.is_null() {
             return Err(MgpError::UnableToMakeVertexCopy);
         }
-        Ok(Vertex::new(mgp_copy, &context))
+        Ok(Vertex::new(mgp_copy, &memgraph))
     }
 
     pub fn mgp_ptr(&self) -> *const mgp_vertex {
@@ -138,12 +138,12 @@ impl Vertex {
     pub fn property(&self, name: &CStr) -> MgpResult<Property> {
         unsafe {
             let mgp_value =
-                ffi::mgp_vertex_get_property(self.ptr, name.as_ptr(), self.context.memory());
+                ffi::mgp_vertex_get_property(self.ptr, name.as_ptr(), self.memgraph.memory());
             if mgp_value.is_null() {
                 return Err(MgpError::UnableToGetVertexProperty);
             }
-            // TODO(gitbuda): Figure out how to pass Snafu context here.
-            let value = MgpValue::to_value(&MgpValue::new(mgp_value), &self.context)?;
+            // TODO(gitbuda): Figure out how to pass Snafu memgraph here.
+            let value = MgpValue::to_value(&MgpValue::new(mgp_value), &self.memgraph)?;
             match CString::new(name.to_bytes()) {
                 Ok(c_string) => Ok(Property {
                     name: c_string,
@@ -156,31 +156,31 @@ impl Vertex {
 
     pub fn properties(&self) -> MgpResult<PropertiesIterator> {
         unsafe {
-            let mgp_iterator = ffi::mgp_vertex_iter_properties(self.ptr, self.context.memory());
+            let mgp_iterator = ffi::mgp_vertex_iter_properties(self.ptr, self.memgraph.memory());
             if mgp_iterator.is_null() {
                 return Err(MgpError::UnableToReturnVertexPropertiesIterator);
             }
-            Ok(PropertiesIterator::new(mgp_iterator, &self.context))
+            Ok(PropertiesIterator::new(mgp_iterator, &self.memgraph))
         }
     }
 
     pub fn in_edges(&self) -> MgpResult<EdgesIterator> {
         unsafe {
-            let mgp_iterator = ffi::mgp_vertex_iter_in_edges(self.ptr, self.context.memory());
+            let mgp_iterator = ffi::mgp_vertex_iter_in_edges(self.ptr, self.memgraph.memory());
             if mgp_iterator.is_null() {
                 return Err(MgpError::UnableToReturnVertexInEdgesIterator);
             }
-            Ok(EdgesIterator::new(mgp_iterator, &self.context))
+            Ok(EdgesIterator::new(mgp_iterator, &self.memgraph))
         }
     }
 
     pub fn out_edges(&self) -> MgpResult<EdgesIterator> {
         unsafe {
-            let mgp_iterator = ffi::mgp_vertex_iter_out_edges(self.ptr, self.context.memory());
+            let mgp_iterator = ffi::mgp_vertex_iter_out_edges(self.ptr, self.memgraph.memory());
             if mgp_iterator.is_null() {
                 return Err(MgpError::UnableToReturnVertexOutEdgesIterator);
             }
-            Ok(EdgesIterator::new(mgp_iterator, &self.context))
+            Ok(EdgesIterator::new(mgp_iterator, &self.memgraph))
         }
     }
 }

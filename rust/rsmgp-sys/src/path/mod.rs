@@ -1,5 +1,5 @@
-use crate::context::*;
 use crate::edge::*;
+use crate::memgraph::*;
 use crate::mgp::*;
 use crate::result::*;
 use crate::vertex::*;
@@ -11,7 +11,7 @@ use mockall_double::double;
 #[derive(Debug)]
 pub struct Path {
     ptr: *mut mgp_path,
-    context: Memgraph,
+    memgraph: Memgraph,
 }
 impl Drop for Path {
     fn drop(&mut self) {
@@ -24,16 +24,16 @@ impl Drop for Path {
 }
 
 impl Path {
-    pub fn new(ptr: *mut mgp_path, context: &Memgraph) -> Path {
+    pub fn new(ptr: *mut mgp_path, memgraph: &Memgraph) -> Path {
         Path {
             ptr,
-            context: context.clone(),
+            memgraph: memgraph.clone(),
         }
     }
 
     pub(crate) unsafe fn mgp_copy(
         mgp_path: *const mgp_path,
-        context: &Memgraph,
+        memgraph: &Memgraph,
     ) -> MgpResult<Path> {
         // Test passes null ptr because nothing else is possible.
         #[cfg(not(test))]
@@ -42,11 +42,11 @@ impl Path {
             "Unable to make path copy because path pointer is null."
         );
 
-        let mgp_copy = ffi::mgp_path_copy(mgp_path, context.memory());
+        let mgp_copy = ffi::mgp_path_copy(mgp_path, memgraph.memory());
         if mgp_copy.is_null() {
             return Err(MgpError::UnableToMakePathCopy);
         }
-        Ok(Path::new(mgp_copy, &context))
+        Ok(Path::new(mgp_copy, &memgraph))
     }
 
     pub fn mgp_ptr(&self) -> *const mgp_path {
@@ -57,13 +57,13 @@ impl Path {
         unsafe { ffi::mgp_path_size(self.ptr) }
     }
 
-    pub fn make_with_start(vertex: &Vertex, context: &Memgraph) -> MgpResult<Path> {
+    pub fn make_with_start(vertex: &Vertex, memgraph: &Memgraph) -> MgpResult<Path> {
         unsafe {
-            let mgp_path = ffi::mgp_path_make_with_start(vertex.mgp_ptr(), context.memory());
+            let mgp_path = ffi::mgp_path_make_with_start(vertex.mgp_ptr(), memgraph.memory());
             if mgp_path.is_null() {
                 return Err(MgpError::UnableToCreatePathWithStartVertex);
             }
-            Ok(Path::new(mgp_path, &context))
+            Ok(Path::new(mgp_path, &memgraph))
         }
     }
 
@@ -85,7 +85,7 @@ impl Path {
             if mgp_vertex.is_null() {
                 return Err(MgpError::OutOfBoundPathVertexIndex);
             }
-            Vertex::mgp_copy(mgp_vertex, &self.context)
+            Vertex::mgp_copy(mgp_vertex, &self.memgraph)
         }
     }
 
@@ -95,7 +95,7 @@ impl Path {
             if mgp_edge.is_null() {
                 return Err(MgpError::OutOfBoundPathEdgeIndex);
             }
-            Edge::mgp_copy(mgp_edge, &self.context)
+            Edge::mgp_copy(mgp_edge, &self.memgraph)
         }
     }
 }
