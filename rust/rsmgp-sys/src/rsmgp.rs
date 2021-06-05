@@ -68,7 +68,10 @@ macro_rules! init_module {
             memory: *mut mgp_memory,
         ) -> c_int {
             // TODO(gitbuda): Add error handling (catch_unwind, etc.).
-            $init_func(module, memory)
+            match $init_func(module, memory) {
+                Ok(_) => 0,
+                Err(_) => 1,
+            }
         }
     };
 }
@@ -84,7 +87,7 @@ macro_rules! close_module {
     };
 }
 
-pub enum SimpleType {
+pub enum FieldType {
     Any,
     Bool,
     Number,
@@ -95,30 +98,23 @@ pub enum SimpleType {
     Vertex,
     Edge,
     Path,
-}
-
-pub enum ComplexType {
     Nullable,
     List,
 }
 
-pub struct ResultFieldType {
-    pub simple_type: SimpleType,
-    pub complex_type: Option<ComplexType>,
-}
-
-impl Default for ResultFieldType {
-    fn default() -> Self {
-        Self {
-            simple_type: SimpleType::Any,
-            complex_type: None,
-        }
-    }
-}
-
-pub struct ResultField<'a> {
+pub struct ResultFieldType<'a> {
     pub name: &'a CStr,
-    pub field_type: ResultFieldType,
+    pub types: &'a [FieldType],
+}
+
+#[macro_export]
+macro_rules! define_type {
+    ($name:literal, $($types:expr),+) => {
+        ResultFieldType {
+            name: &c_str!($name),
+            types: &[$($types),*],
+        }
+    };
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -126,7 +122,7 @@ pub fn add_read_procedure(
     proc_ptr: extern "C" fn(*const mgp_list, *const mgp_graph, *mut mgp_result, *mut mgp_memory),
     name: &CStr,
     module: *mut mgp_module,
-    result_fields: &[ResultField],
+    result_fields: &[ResultFieldType],
 ) -> MgpResult<()> {
     unsafe {
         let procedure = ffi::mgp_module_add_read_procedure(module, name.as_ptr(), Some(proc_ptr));
@@ -134,22 +130,21 @@ pub fn add_read_procedure(
             return Err(MgpError::UnableToRegisterReadProcedure);
         }
         for result_field in result_fields {
-            let mut mgp_type = match &result_field.field_type.simple_type {
-                SimpleType::Any => ffi::mgp_type_any(),
-                SimpleType::Bool => ffi::mgp_type_bool(),
-                SimpleType::Number => ffi::mgp_type_number(),
-                SimpleType::Int => ffi::mgp_type_int(),
-                SimpleType::Double => ffi::mgp_type_float(),
-                SimpleType::String => ffi::mgp_type_string(),
-                SimpleType::Map => ffi::mgp_type_map(),
-                SimpleType::Vertex => ffi::mgp_type_node(),
-                SimpleType::Edge => ffi::mgp_type_relationship(),
-                SimpleType::Path => ffi::mgp_type_path(),
-            };
-            if let Some(value) = &result_field.field_type.complex_type {
-                mgp_type = match value {
-                    ComplexType::List => ffi::mgp_type_list(mgp_type),
-                    ComplexType::Nullable => ffi::mgp_type_nullable(mgp_type),
+            let mut mgp_type: *const mgp_type = std::ptr::null_mut();
+            for field_type in result_field.types.iter().rev() {
+                mgp_type = match field_type {
+                    FieldType::Any => ffi::mgp_type_any(),
+                    FieldType::Bool => ffi::mgp_type_bool(),
+                    FieldType::Number => ffi::mgp_type_number(),
+                    FieldType::Int => ffi::mgp_type_int(),
+                    FieldType::Double => ffi::mgp_type_float(),
+                    FieldType::String => ffi::mgp_type_string(),
+                    FieldType::Map => ffi::mgp_type_map(),
+                    FieldType::Vertex => ffi::mgp_type_node(),
+                    FieldType::Edge => ffi::mgp_type_relationship(),
+                    FieldType::Path => ffi::mgp_type_path(),
+                    FieldType::Nullable => ffi::mgp_type_nullable(mgp_type),
+                    FieldType::List => ffi::mgp_type_list(mgp_type),
                 };
             }
             if ffi::mgp_proc_add_result(procedure, result_field.name.as_ptr(), mgp_type) == 0 {

@@ -6,67 +6,30 @@ use rsmgp_sys::property::*;
 use rsmgp_sys::result::*;
 use rsmgp_sys::rsmgp::*;
 use rsmgp_sys::value::*;
-use rsmgp_sys::{close_module, define_procedure, init_module};
+use rsmgp_sys::{close_module, define_procedure, define_type, init_module};
 use std::ffi::CString;
 use std::os::raw::c_int;
 use std::panic;
 
-init_module!(|module: *mut mgp_module, _: *mut mgp_memory| -> c_int {
-    let fields = vec![
-        ResultField {
-            name: c_str!("labels_count"),
-            field_type: ResultFieldType {
-                simple_type: SimpleType::Int,
-                complex_type: None,
-            },
-        },
-        ResultField {
-            name: c_str!("has_L3_label"),
-            field_type: ResultFieldType {
-                simple_type: SimpleType::Bool,
-                complex_type: None,
-            },
-        },
-        ResultField {
-            name: c_str!("first_label"),
-            field_type: ResultFieldType {
-                simple_type: SimpleType::String,
-                complex_type: None,
-            },
-        },
-        ResultField {
-            name: c_str!("name_property"),
-            field_type: ResultFieldType {
-                simple_type: SimpleType::String,
-                complex_type: None,
-            },
-        },
-        ResultField {
-            name: c_str!("properties_string"),
-            field_type: ResultFieldType {
-                simple_type: SimpleType::String,
-                complex_type: None,
-            },
-        },
-        ResultField {
-            name: c_str!("first_edge_type"),
-            field_type: ResultFieldType {
-                simple_type: SimpleType::String,
-                complex_type: None,
-            },
-        },
-        ResultField {
-            name: c_str!("list"),
-            field_type: ResultFieldType {
-                simple_type: SimpleType::Any,
-                complex_type: Some(ComplexType::List),
-            },
-        },
-    ];
-    let _ = add_read_procedure(test_procedure, c_str!("test_procedure"), module, &fields);
-    // TODO(gitbuda): Handle add read procedure error.
-    0
-});
+init_module!(
+    |module: *mut mgp_module, _: *mut mgp_memory| -> MgpResult<()> {
+        add_read_procedure(
+            test_procedure,
+            c_str!("test_procedure"),
+            module,
+            &vec![
+                define_type!("labels_count", FieldType::Int),
+                define_type!("has_L3_label", FieldType::Bool),
+                define_type!("first_label", FieldType::String),
+                define_type!("name_property", FieldType::String),
+                define_type!("properties_string", FieldType::String),
+                define_type!("first_edge_type", FieldType::String),
+                define_type!("list", FieldType::List, FieldType::Int),
+            ],
+        )?;
+        Ok(())
+    }
+);
 
 define_procedure!(
     test_procedure,
