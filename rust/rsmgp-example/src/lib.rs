@@ -12,49 +12,59 @@ use std::os::raw::c_int;
 use std::panic;
 
 init_module!(|module: *mut mgp_module, _: *mut mgp_memory| -> c_int {
-    let procedure = add_read_procedure(test_procedure, c_str!("test_procedure"), module);
-    match add_int_result_type(procedure, c_str!("labels_count")) {
-        Ok(_) => {}
-        Err(_) => {
-            return 1;
-        }
-    }
-    match add_bool_result_type(procedure, c_str!("has_L3_label")) {
-        Ok(_) => {}
-        Err(_) => {
-            return 1;
-        }
-    }
-    match add_string_result_type(procedure, c_str!("first_label")) {
-        Ok(_) => {}
-        Err(_) => {
-            return 1;
-        }
-    }
-    match add_string_result_type(procedure, c_str!("name_property")) {
-        Ok(_) => {}
-        Err(_) => {
-            return 1;
-        }
-    }
-    match add_string_result_type(procedure, c_str!("properties_string")) {
-        Ok(_) => {}
-        Err(_) => {
-            return 1;
-        }
-    }
-    match add_string_result_type(procedure, c_str!("first_edge_type")) {
-        Ok(_) => {}
-        Err(_) => {
-            return 1;
-        }
-    }
-    match add_list_result_type(procedure, c_str!("list"), get_type_any()) {
-        Ok(_) => {}
-        Err(_) => {
-            return 1;
-        }
-    }
+    let fields = vec![
+        ResultField {
+            name: c_str!("labels_count"),
+            field_type: ResultFieldType {
+                simple_type: SimpleType::Int,
+                complex_type: None,
+            },
+        },
+        ResultField {
+            name: c_str!("has_L3_label"),
+            field_type: ResultFieldType {
+                simple_type: SimpleType::Bool,
+                complex_type: None,
+            },
+        },
+        ResultField {
+            name: c_str!("first_label"),
+            field_type: ResultFieldType {
+                simple_type: SimpleType::String,
+                complex_type: None,
+            },
+        },
+        ResultField {
+            name: c_str!("name_property"),
+            field_type: ResultFieldType {
+                simple_type: SimpleType::String,
+                complex_type: None,
+            },
+        },
+        ResultField {
+            name: c_str!("properties_string"),
+            field_type: ResultFieldType {
+                simple_type: SimpleType::String,
+                complex_type: None,
+            },
+        },
+        ResultField {
+            name: c_str!("first_edge_type"),
+            field_type: ResultFieldType {
+                simple_type: SimpleType::String,
+                complex_type: None,
+            },
+        },
+        ResultField {
+            name: c_str!("list"),
+            field_type: ResultFieldType {
+                simple_type: SimpleType::Any,
+                complex_type: Some(ComplexType::List),
+            },
+        },
+    ];
+    let _ = add_read_procedure(test_procedure, c_str!("test_procedure"), module, &fields);
+    // TODO(gitbuda): Handle add read procedure error.
     0
 });
 

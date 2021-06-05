@@ -92,6 +92,9 @@ impl MgpResultRecord {
 #[derive(Debug, PartialEq, Snafu)]
 #[snafu(visibility = "pub")]
 pub enum MgpError {
+    #[snafu(display("Unable to register read procedure."))]
+    UnableToRegisterReadProcedure,
+
     #[snafu(display("Unable to insert map value."))]
     UnableToInsertMapValue,
 
