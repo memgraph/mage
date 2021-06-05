@@ -12,10 +12,7 @@ fn test_mgp_copy() {
         .times(1)
         .returning(|_, _| std::ptr::null_mut());
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
-
+    let memgraph = Memgraph::new_default();
     unsafe {
         let path = Path::mgp_copy(std::ptr::null_mut(), &memgraph);
         assert!(path.is_err());
@@ -25,9 +22,7 @@ fn test_mgp_copy() {
 #[test]
 #[serial]
 fn test_mgp_ptr() {
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
 
     let path = Path::new(std::ptr::null_mut(), &memgraph);
     let ptr = path.mgp_ptr();
@@ -40,10 +35,7 @@ fn test_size() {
     let ctx_1 = mgp_path_size_context();
     ctx_1.expect().times(1).returning(|_| 0);
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
-
+    let memgraph = Memgraph::new_default();
     let path = Path::new(std::ptr::null_mut(), &memgraph);
     assert_eq!(path.size(), 0);
 }
@@ -57,10 +49,7 @@ fn test_make_with_start() {
         .times(1)
         .returning(|_, _| std::ptr::null_mut());
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
-
+    let memgraph = Memgraph::new_default();
     let vertex = Vertex::new(std::ptr::null_mut(), &memgraph);
     assert!(Path::make_with_start(&vertex, &memgraph).is_err());
 }
@@ -71,10 +60,7 @@ fn test_expand() {
     let ctx_1 = mgp_path_expand_context();
     ctx_1.expect().times(1).returning(|_, _| 0);
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
-
+    let memgraph = Memgraph::new_default();
     let edge = Edge::new(std::ptr::null_mut(), &memgraph);
     let path = Path::new(std::ptr::null_mut(), &memgraph);
     assert!(path.expand(&edge).is_err());
@@ -89,10 +75,7 @@ fn test_vertex_at() {
         .times(1)
         .returning(|_, _| std::ptr::null_mut());
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
-
+    let memgraph = Memgraph::new_default();
     let path = Path::new(std::ptr::null_mut(), &memgraph);
     assert!(path.vertex_at(0).is_err());
 }
@@ -106,10 +89,7 @@ fn test_edge_at() {
         .times(1)
         .returning(|_, _| std::ptr::null_mut());
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
-
+    let memgraph = Memgraph::new_default();
     let path = Path::new(std::ptr::null_mut(), &memgraph);
     assert!(path.edge_at(0).is_err());
 }

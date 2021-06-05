@@ -3,8 +3,6 @@ use std::ffi::CStr;
 use crate::context::*;
 #[double]
 use crate::mgp::ffi;
-use crate::mgp::*;
-use crate::result::*;
 use mockall_double::double;
 
 // Required because we want to use catch_unwind to control panics.
@@ -22,7 +20,7 @@ macro_rules! define_procedure {
             panic::set_hook(Box::new(|_| { /* Do nothing. */ }));
 
             let procedure_result = panic::catch_unwind(|| {
-                let context = Memgraph::new(args, graph, result, memory);
+                let context = Memgraph::new(args, graph, result, memory, std::ptr::null_mut());
                 match $rs_func(&context) {
                     Ok(_) => (),
                     Err(e) => {
@@ -68,7 +66,14 @@ macro_rules! init_module {
             memory: *mut mgp_memory,
         ) -> c_int {
             // TODO(gitbuda): Add error handling (catch_unwind, etc.).
-            match $init_func(module, memory) {
+            let memgraph = Memgraph::new(
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                memory,
+                module,
+            );
+            match $init_func(&memgraph) {
                 Ok(_) => 0,
                 Err(_) => 1,
             }
@@ -117,44 +122,6 @@ macro_rules! define_type {
     };
 }
 
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn add_read_procedure(
-    proc_ptr: extern "C" fn(*const mgp_list, *const mgp_graph, *mut mgp_result, *mut mgp_memory),
-    name: &CStr,
-    module: *mut mgp_module,
-    result_fields: &[ResultFieldType],
-) -> MgpResult<()> {
-    unsafe {
-        let procedure = ffi::mgp_module_add_read_procedure(module, name.as_ptr(), Some(proc_ptr));
-        if procedure.is_null() {
-            return Err(MgpError::UnableToRegisterReadProcedure);
-        }
-        for result_field in result_fields {
-            let mut mgp_type: *const mgp_type = std::ptr::null_mut();
-            for field_type in result_field.types.iter().rev() {
-                mgp_type = match field_type {
-                    FieldType::Any => ffi::mgp_type_any(),
-                    FieldType::Bool => ffi::mgp_type_bool(),
-                    FieldType::Number => ffi::mgp_type_number(),
-                    FieldType::Int => ffi::mgp_type_int(),
-                    FieldType::Double => ffi::mgp_type_float(),
-                    FieldType::String => ffi::mgp_type_string(),
-                    FieldType::Map => ffi::mgp_type_map(),
-                    FieldType::Vertex => ffi::mgp_type_node(),
-                    FieldType::Edge => ffi::mgp_type_relationship(),
-                    FieldType::Path => ffi::mgp_type_path(),
-                    FieldType::Nullable => ffi::mgp_type_nullable(mgp_type),
-                    FieldType::List => ffi::mgp_type_list(mgp_type),
-                };
-            }
-            if ffi::mgp_proc_add_result(procedure, result_field.name.as_ptr(), mgp_type) == 0 {
-                return Err(MgpError::AddProcedureParameterTypeError);
-            }
-        }
-        Ok(())
-    }
-}
-
 pub fn set_memgraph_error_msg(msg: &CStr, context: &Memgraph) {
     unsafe {
         let status = ffi::mgp_result_set_error_msg(context.result(), msg.as_ptr());
@@ -165,6 +132,8 @@ pub fn set_memgraph_error_msg(msg: &CStr, context: &Memgraph) {
 }
 
 // TODO(gitbuda): Add transaction management (abort) stuff.
+// TODO(gitbuda): Deal with optional arguments.
+// TODO(gitbuda): Add support for depricated arguments.
 
 #[allow(unused_imports)]
 #[cfg(test)]

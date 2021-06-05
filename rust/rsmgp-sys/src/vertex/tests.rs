@@ -14,13 +14,11 @@ fn test_vertex_id() {
         return mgp_vertex_id { as_int: 72 };
     });
 
-    let ctx_mg = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
 
     let vertex = Vertex {
         ptr: std::ptr::null_mut(),
-        context: ctx_mg,
+        context: memgraph,
     };
     assert_eq!(vertex.id(), 72);
 }
@@ -31,13 +29,11 @@ fn test_vertex_labels_count() {
     let ctx_1 = mgp_vertex_labels_count_context();
     ctx_1.expect().times(1).returning(|_| 2);
 
-    let ctx_mg = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
 
     let vertex = Vertex {
         ptr: std::ptr::null_mut(),
-        context: ctx_mg,
+        context: memgraph,
     };
     assert_eq!(vertex.labels_count(), 2);
 }
@@ -52,13 +48,11 @@ fn test_vertex_has_label() {
         1
     });
 
-    let ctx_mg = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
 
     let vertex = Vertex {
         ptr: std::ptr::null_mut(),
-        context: ctx_mg,
+        context: memgraph,
     };
     assert_eq!(vertex.has_label(c_str!("labela")), true);
 }
@@ -75,13 +69,11 @@ fn test_vertex_label_at() {
         };
     });
 
-    let ctx_mg = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
 
     let vertex = Vertex {
         ptr: std::ptr::null_mut(),
-        context: ctx_mg,
+        context: memgraph,
     };
     assert_eq!(vertex.label_at(5).unwrap(), CString::new("test").unwrap());
 }
@@ -100,13 +92,11 @@ fn test_vertex_property() {
             std::ptr::null_mut()
         });
 
-    let ctx_mg = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
 
     let vertex = Vertex {
         ptr: std::ptr::null_mut(),
-        context: ctx_mg,
+        context: memgraph,
     };
     assert_eq!(
         vertex.property(c_str!("test")).err().unwrap(),

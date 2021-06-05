@@ -14,9 +14,7 @@ fn test_mgp_copy() {
         .times(1)
         .returning(|_, _| std::ptr::null_mut());
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
     unsafe {
         let value = List::mgp_copy(std::ptr::null_mut(), &memgraph);
         assert!(value.is_err());
@@ -32,9 +30,7 @@ fn test_make_empty() {
         .times(1)
         .returning(|_, _| std::ptr::null_mut());
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
     let value = List::make_empty(0, &memgraph);
     assert!(value.is_err());
 }
@@ -48,9 +44,7 @@ fn test_size() {
     let ctx_1 = mgp_list_size_context();
     ctx_1.expect().times(1).returning(|_| 0);
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
     let list = List::new(std::ptr::null_mut(), &memgraph);
     let value = list.size();
     assert_eq!(value, 0);
@@ -62,9 +56,7 @@ fn test_capacity() {
     let ctx_1 = mgp_list_capacity_context();
     ctx_1.expect().times(1).returning(|_| 0);
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
     let list = List::new(std::ptr::null_mut(), &memgraph);
     let value = list.capacity();
     assert_eq!(value, 0);
@@ -79,9 +71,7 @@ fn test_value_at() {
         .times(1)
         .returning(|_, _| std::ptr::null_mut());
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
     let list = List::new(std::ptr::null_mut(), &memgraph);
     let value = list.value_at(0);
     assert!(value.is_err());
@@ -93,9 +83,7 @@ fn test_empty_list_iter() {
     let ctx_1 = mgp_list_size_context();
     ctx_1.expect().times(1).returning(|_| 0);
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
     let list = List::new(std::ptr::null_mut(), &memgraph);
     let iter = list.iter();
     assert!(iter.is_ok());

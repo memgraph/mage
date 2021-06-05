@@ -12,10 +12,7 @@ fn test_memgraph_vertices_iterator() {
         .times(1)
         .returning(|_, _| std::ptr::null_mut());
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
-
+    let memgraph = Memgraph::new_default();
     let value = memgraph.vertices_iter();
     assert!(value.is_err());
 }
@@ -29,10 +26,7 @@ fn test_memgraph_vertex_by_id() {
         .times(1)
         .returning(|_, _, _| std::ptr::null_mut());
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
-
+    let memgraph = Memgraph::new_default();
     let value = memgraph.vertex_by_id(0);
     assert!(value.is_err());
 }

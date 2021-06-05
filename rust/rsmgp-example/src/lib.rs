@@ -11,25 +11,22 @@ use std::ffi::CString;
 use std::os::raw::c_int;
 use std::panic;
 
-init_module!(
-    |module: *mut mgp_module, _: *mut mgp_memory| -> MgpResult<()> {
-        add_read_procedure(
-            test_procedure,
-            c_str!("test_procedure"),
-            module,
-            &vec![
-                define_type!("labels_count", FieldType::Int),
-                define_type!("has_L3_label", FieldType::Bool),
-                define_type!("first_label", FieldType::String),
-                define_type!("name_property", FieldType::String),
-                define_type!("properties_string", FieldType::String),
-                define_type!("first_edge_type", FieldType::String),
-                define_type!("list", FieldType::List, FieldType::Int),
-            ],
-        )?;
-        Ok(())
-    }
-);
+init_module!(|memgraph: &Memgraph| -> MgpResult<()> {
+    memgraph.add_read_procedure(
+        test_procedure,
+        c_str!("test_procedure"),
+        &[
+            define_type!("labels_count", FieldType::Int),
+            define_type!("has_L3_label", FieldType::Bool),
+            define_type!("first_label", FieldType::String),
+            define_type!("name_property", FieldType::String),
+            define_type!("properties_string", FieldType::String),
+            define_type!("first_edge_type", FieldType::String),
+            define_type!("list", FieldType::List, FieldType::Int),
+        ],
+    )?;
+    Ok(())
+});
 
 define_procedure!(
     test_procedure,

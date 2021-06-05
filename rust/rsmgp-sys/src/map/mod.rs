@@ -37,14 +37,12 @@ pub struct MapIterator {
     context: Memgraph,
 }
 
-impl Default for MapIterator {
-    fn default() -> Self {
-        Self {
-            ptr: std::ptr::null_mut(),
+impl MapIterator {
+    pub fn new(ptr: *mut mgp_map_items_iterator, context: &Memgraph) -> MapIterator {
+        MapIterator {
+            ptr,
             is_first: true,
-            context: Memgraph {
-                ..Default::default()
-            },
+            context: context.clone(),
         }
     }
 }
@@ -113,11 +111,7 @@ impl Map {
             ffi::mgp_map_destroy(mgp_map_copy);
             return Err(MgpError::UnableToCreateMap);
         }
-        let map_iterator = MapIterator {
-            ptr: mgp_map_iterator,
-            context: context.clone(),
-            ..Default::default()
-        };
+        let map_iterator = MapIterator::new(mgp_map_iterator, &context);
         for item in map_iterator {
             let mgp_value = item.value.to_mgp_value(&context)?;
             if ffi::mgp_map_insert(mgp_map_copy, item.key.as_ptr(), mgp_value.mgp_ptr()) == 0 {
@@ -169,11 +163,7 @@ impl Map {
             if mgp_iterator.is_null() {
                 return Err(MgpError::UnableToCreateMapIterator);
             }
-            Ok(MapIterator {
-                ptr: mgp_iterator,
-                context: self.context.clone(),
-                ..Default::default()
-            })
+            Ok(MapIterator::new(mgp_iterator, &self.context))
         }
     }
 }

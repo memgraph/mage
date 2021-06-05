@@ -13,9 +13,7 @@ fn test_mgp_copy() {
         .times(1)
         .returning(|_, _| std::ptr::null_mut());
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
     unsafe {
         let value = Edge::mgp_copy(std::ptr::null_mut(), &memgraph);
         assert!(value.is_err());
@@ -31,9 +29,7 @@ fn test_id() {
         .times(1)
         .returning(|_| mgp_edge_id { as_int: 0 });
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
     let edge = Edge::new(std::ptr::null_mut(), &memgraph);
 
     let value = edge.id();
@@ -49,9 +45,7 @@ fn test_edge_type() {
         name: edge_type.as_ptr(),
     });
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
     let edge = Edge::new(std::ptr::null_mut(), &memgraph);
 
     let value = edge.edge_type().unwrap();
@@ -69,9 +63,7 @@ fn test_from_vertex() {
         .times(1)
         .returning(|_, _| std::ptr::null_mut());
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
     let edge = Edge::new(std::ptr::null_mut(), &memgraph);
 
     let value = edge.from_vertex();
@@ -89,9 +81,7 @@ fn test_to_vertex() {
         .times(1)
         .returning(|_, _| std::ptr::null_mut());
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
     let edge = Edge::new(std::ptr::null_mut(), &memgraph);
 
     let value = edge.to_vertex();
@@ -107,9 +97,7 @@ fn test_property() {
         .times(1)
         .returning(|_, _, _| std::ptr::null_mut());
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
     let edge = Edge::new(std::ptr::null_mut(), &memgraph);
 
     let value = edge.property(c_str!("prop"));
@@ -125,9 +113,7 @@ fn test_properties_iterator() {
         .times(1)
         .returning(|_, _| std::ptr::null_mut());
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
     let edge = Edge::new(std::ptr::null_mut(), &memgraph);
 
     let value = edge.properties();
@@ -142,9 +128,7 @@ fn test_edges_iterator() {
     let ctx_2 = mgp_edges_iterator_next_context();
     ctx_2.expect().times(1).returning(|_| std::ptr::null_mut());
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
     let mut iterator = EdgesIterator::new(std::ptr::null_mut(), &memgraph);
 
     let value_1 = iterator.next();

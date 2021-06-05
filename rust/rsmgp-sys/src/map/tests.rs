@@ -19,9 +19,7 @@ fn test_mgp_copy() {
     let ctx_3 = mgp_map_destroy_context();
     ctx_3.expect().times(1).returning(|_| ());
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
     unsafe {
         let value = Map::mgp_copy(std::ptr::null_mut(), &memgraph);
         assert!(value.is_err());
@@ -34,9 +32,7 @@ fn test_make_empty() {
     let ctx_1 = mgp_map_make_empty_context();
     ctx_1.expect().times(1).returning(|_| std::ptr::null_mut());
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
     let value = Map::make_empty(&memgraph);
     assert!(value.is_err());
 }
@@ -50,9 +46,7 @@ fn test_size() {
     let ctx_1 = mgp_map_size_context();
     ctx_1.expect().times(1).returning(|_| 0);
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
     let map = Map::new(std::ptr::null_mut(), &memgraph);
     let value = map.size();
     assert_eq!(value, 0);
@@ -67,9 +61,7 @@ fn test_at() {
         .times(1)
         .returning(|_, _| std::ptr::null_mut());
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
     let map = Map::new(std::ptr::null_mut(), &memgraph);
     let value = map.at(c_str!("key"));
     assert!(value.is_err());
@@ -84,9 +76,7 @@ fn test_empty_map_iter() {
         .times(1)
         .returning(|_, _| std::ptr::null_mut());
 
-    let memgraph = Memgraph {
-        ..Default::default()
-    };
+    let memgraph = Memgraph::new_default();
     let map = Map::new(std::ptr::null_mut(), &memgraph);
     let iter = map.iter();
     assert!(iter.is_err());

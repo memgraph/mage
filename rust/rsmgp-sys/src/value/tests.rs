@@ -10,11 +10,8 @@ fn test_make_null_mgp_value() {
     let ctx_1 = mgp_value_make_null_context();
     ctx_1.expect().times(1).returning(|_| std::ptr::null_mut());
 
-    let ctx_mg = Memgraph {
-        ..Default::default()
-    };
-
-    let value = MgpValue::make_null(&ctx_mg);
+    let memgraph = Memgraph::new_default();
+    let value = MgpValue::make_null(&memgraph);
     assert!(value.is_err());
 }
 
@@ -27,11 +24,8 @@ fn test_make_false_bool_mgp_value() {
         std::ptr::null_mut()
     });
 
-    let ctx_mg = Memgraph {
-        ..Default::default()
-    };
-
-    let value = MgpValue::make_bool(false, &ctx_mg);
+    let memgraph = Memgraph::new_default();
+    let value = MgpValue::make_bool(false, &memgraph);
     assert!(value.is_err());
 }
 
@@ -44,11 +38,8 @@ fn test_make_true_bool_mgp_value() {
         std::ptr::null_mut()
     });
 
-    let ctx_mg = Memgraph {
-        ..Default::default()
-    };
-
-    let value = MgpValue::make_bool(true, &ctx_mg);
+    let memgraph = Memgraph::new_default();
+    let value = MgpValue::make_bool(true, &memgraph);
     assert!(value.is_err());
 }
 
@@ -61,11 +52,8 @@ fn test_make_int_mgp_value() {
         std::ptr::null_mut()
     });
 
-    let ctx_mg = Memgraph {
-        ..Default::default()
-    };
-
-    let value = MgpValue::make_int(100, &ctx_mg);
+    let memgraph = Memgraph::new_default();
+    let value = MgpValue::make_int(100, &memgraph);
     assert!(value.is_err());
 }
 
@@ -78,11 +66,8 @@ fn test_make_double_mgp_value() {
         std::ptr::null_mut()
     });
 
-    let ctx_mg = Memgraph {
-        ..Default::default()
-    };
-
-    let value = MgpValue::make_double(0.0, &ctx_mg);
+    let memgraph = Memgraph::new_default();
+    let value = MgpValue::make_double(0.0, &memgraph);
     assert!(value.is_err());
 }
 
@@ -97,11 +82,8 @@ fn test_make_string_mgp_value() {
         std::ptr::null_mut()
     });
 
-    let ctx_mg = Memgraph {
-        ..Default::default()
-    };
-
-    let value = MgpValue::make_string(c_str!("test"), &ctx_mg);
+    let memgraph = Memgraph::new_default();
+    let value = MgpValue::make_string(c_str!("test"), &memgraph);
     assert!(value.is_err());
 }
 
@@ -123,12 +105,9 @@ fn test_make_list_mgp_value() {
     let ctx_4 = mgp_list_destroy_context();
     ctx_4.expect().times(1).returning(|_| {});
 
-    let ctx_mg = Memgraph {
-        ..Default::default()
-    };
-
-    let list = List::new(std::ptr::null_mut(), &ctx_mg);
-    let value = MgpValue::make_list(&list, &ctx_mg);
+    let memgraph = Memgraph::new_default();
+    let list = List::new(std::ptr::null_mut(), &memgraph);
+    let value = MgpValue::make_list(&list, &memgraph);
     assert!(value.is_err());
 }
 
@@ -144,12 +123,9 @@ fn test_make_map_mgp_value() {
         .times(1)
         .returning(|_, _| std::ptr::null_mut());
 
-    let ctx_mg = Memgraph {
-        ..Default::default()
-    };
-
-    let map = Map::new(std::ptr::null_mut(), &ctx_mg);
-    let value = MgpValue::make_map(&map, &ctx_mg);
+    let memgraph = Memgraph::new_default();
+    let map = Map::new(std::ptr::null_mut(), &memgraph);
+    let value = MgpValue::make_map(&map, &memgraph);
     assert!(value.is_err());
 }
 
@@ -162,12 +138,9 @@ fn test_make_vertex_mgp_value() {
         .times(1)
         .returning(|_, _| std::ptr::null_mut());
 
-    let ctx_mg = Memgraph {
-        ..Default::default()
-    };
-
-    let vertex = Vertex::new(std::ptr::null_mut(), &ctx_mg);
-    let value = MgpValue::make_vertex(&vertex, &ctx_mg);
+    let memgraph = Memgraph::new_default();
+    let vertex = Vertex::new(std::ptr::null_mut(), &memgraph);
+    let value = MgpValue::make_vertex(&vertex, &memgraph);
     assert!(value.is_err());
 }
 
@@ -180,12 +153,9 @@ fn test_make_edge_mgp_value() {
         .times(1)
         .returning(|_, _| std::ptr::null_mut());
 
-    let ctx_mg = Memgraph {
-        ..Default::default()
-    };
-
-    let edge = Edge::new(std::ptr::null_mut(), &ctx_mg);
-    let value = MgpValue::make_edge(&edge, &ctx_mg);
+    let memgraph = Memgraph::new_default();
+    let edge = Edge::new(std::ptr::null_mut(), &memgraph);
+    let value = MgpValue::make_edge(&edge, &memgraph);
     assert!(value.is_err());
 }
 
@@ -198,12 +168,9 @@ fn test_make_path_mgp_value() {
         .times(1)
         .returning(|_, _| std::ptr::null_mut());
 
-    let ctx_mg = Memgraph {
-        ..Default::default()
-    };
-
-    let path = Path::new(std::ptr::null_mut(), &ctx_mg);
-    let value = MgpValue::make_path(&path, &ctx_mg);
+    let memgraph = Memgraph::new_default();
+    let path = Path::new(std::ptr::null_mut(), &memgraph);
+    let value = MgpValue::make_path(&path, &memgraph);
     assert!(value.is_err());
 }
 
@@ -371,12 +338,9 @@ fn test_to_mgp_value() {
     let ctx_1 = mgp_value_make_null_context();
     ctx_1.expect().times(1).returning(|_| std::ptr::null_mut());
 
-    let ctx_mg = Memgraph {
-        ..Default::default()
-    };
-
+    let memgraph = Memgraph::new_default();
     let value = Value::Null;
-    let mgp_value = value.to_mgp_value(&ctx_mg);
+    let mgp_value = value.to_mgp_value(&memgraph);
 
     assert!(mgp_value.is_err());
 }
