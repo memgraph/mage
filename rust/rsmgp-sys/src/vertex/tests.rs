@@ -15,11 +15,7 @@ fn test_vertex_id() {
     });
 
     let memgraph = Memgraph::new_default();
-
-    let vertex = Vertex {
-        ptr: std::ptr::null_mut(),
-        memgraph: memgraph,
-    };
+    let vertex = Vertex::new(std::ptr::null_mut(), &memgraph);
     assert_eq!(vertex.id(), 72);
 }
 
@@ -30,11 +26,7 @@ fn test_vertex_labels_count() {
     ctx_1.expect().times(1).returning(|_| 2);
 
     let memgraph = Memgraph::new_default();
-
-    let vertex = Vertex {
-        ptr: std::ptr::null_mut(),
-        memgraph: memgraph,
-    };
+    let vertex = Vertex::new(std::ptr::null_mut(), &memgraph);
     assert_eq!(vertex.labels_count(), 2);
 }
 
@@ -49,11 +41,7 @@ fn test_vertex_has_label() {
     });
 
     let memgraph = Memgraph::new_default();
-
-    let vertex = Vertex {
-        ptr: std::ptr::null_mut(),
-        memgraph: memgraph,
-    };
+    let vertex = Vertex::new(std::ptr::null_mut(), &memgraph);
     assert_eq!(vertex.has_label(c_str!("labela")), true);
 }
 
@@ -70,11 +58,7 @@ fn test_vertex_label_at() {
     });
 
     let memgraph = Memgraph::new_default();
-
-    let vertex = Vertex {
-        ptr: std::ptr::null_mut(),
-        memgraph: memgraph,
-    };
+    let vertex = Vertex::new(std::ptr::null_mut(), &memgraph);
     assert_eq!(vertex.label_at(5).unwrap(), CString::new("test").unwrap());
 }
 
@@ -93,11 +77,7 @@ fn test_vertex_property() {
         });
 
     let memgraph = Memgraph::new_default();
-
-    let vertex = Vertex {
-        ptr: std::ptr::null_mut(),
-        memgraph: memgraph,
-    };
+    let vertex = Vertex::new(std::ptr::null_mut(), &memgraph);
     assert_eq!(
         vertex.property(c_str!("test")).err().unwrap(),
         MgpError::UnableToGetVertexProperty

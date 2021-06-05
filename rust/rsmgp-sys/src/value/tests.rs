@@ -237,9 +237,7 @@ fn test_mgp_value_for_the_right_type() {
         1
     });
 
-    let value = MgpValue {
-        ptr: std::ptr::null_mut(),
-    };
+    let value = MgpValue::new(std::ptr::null_mut());
 
     assert!(value.is_null());
     assert!(value.is_bool());
@@ -316,9 +314,7 @@ fn test_mgp_value_for_the_wrong_type() {
         0
     });
 
-    let value = MgpValue {
-        ptr: std::ptr::null_mut(),
-    };
+    let value = MgpValue::new(std::ptr::null_mut());
 
     assert!(!value.is_null());
     assert!(!value.is_bool());
