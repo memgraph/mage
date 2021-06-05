@@ -83,3 +83,48 @@ fn test_vertex_property() {
         MgpError::UnableToGetVertexProperty
     );
 }
+
+#[test]
+#[serial]
+fn test_properties() {
+    let ctx_1 = mgp_vertex_iter_properties_context();
+    ctx_1
+        .expect()
+        .times(1)
+        .returning(|_, _| std::ptr::null_mut());
+
+    let memgraph = Memgraph::new_default();
+    let vertex = Vertex::new(std::ptr::null_mut(), &memgraph);
+    let iter = vertex.properties();
+    assert!(iter.is_err());
+}
+
+#[test]
+#[serial]
+fn test_in_edges() {
+    let ctx_1 = mgp_vertex_iter_in_edges_context();
+    ctx_1
+        .expect()
+        .times(1)
+        .returning(|_, _| std::ptr::null_mut());
+
+    let memgraph = Memgraph::new_default();
+    let vertex = Vertex::new(std::ptr::null_mut(), &memgraph);
+    let iter = vertex.in_edges();
+    assert!(iter.is_err());
+}
+
+#[test]
+#[serial]
+fn test_out_edges() {
+    let ctx_1 = mgp_vertex_iter_out_edges_context();
+    ctx_1
+        .expect()
+        .times(1)
+        .returning(|_, _| std::ptr::null_mut());
+
+    let memgraph = Memgraph::new_default();
+    let vertex = Vertex::new(std::ptr::null_mut(), &memgraph);
+    let iter = vertex.out_edges();
+    assert!(iter.is_err());
+}

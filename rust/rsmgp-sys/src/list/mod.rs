@@ -72,7 +72,6 @@ impl List {
         );
 
         let size = ffi::mgp_list_size(ptr);
-        // TODO(gitbuda): List::make_empty could be used but we have to inject the error memgraph.
         let mgp_copy = ffi::mgp_list_make_empty(size, memgraph.memory());
         if mgp_copy.is_null() {
             return Err(MgpError::UnableToCopyList);

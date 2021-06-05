@@ -3,6 +3,8 @@ extern crate mockall;
 
 extern crate mockall_double;
 
+mod testing;
+
 pub mod edge;
 pub mod list;
 pub mod map;
