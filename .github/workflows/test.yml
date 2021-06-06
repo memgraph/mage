@@ -12,17 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-    - name: Install Cargo tarpaulin
-      run: |
-          cargo install cargo-tarpaulin
-    - name: Run code coverage
-      run: |
-        cd rust/rsmgp-sys
-        RUST_BACKTRACE=1 cargo tarpaulin --out Html --ignore-tests
     - name: Cache Memgraph Docker image
       id: cache-memgraph-docker
       uses: actions/cache@v1
@@ -88,7 +77,7 @@ jobs:
         cd rust/rsmgp-sys
         cargo fmt -- --check
         cargo test
-    - name: Install Cargo tarpaulin
+    - name: Install Cargo tarpaulin # Unable to run https://github.com/actions-rs/tarpaulin from subdirectory.
       run: |
           cargo install cargo-tarpaulin
     - name: Run code coverage
