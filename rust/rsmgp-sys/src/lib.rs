@@ -19,14 +19,25 @@ extern crate mockall_double;
 
 mod testing;
 
+/// All edge related.
 pub mod edge;
+/// All list related.
 pub mod list;
+/// All map related.
 pub mod map;
+/// Abstraction to interact with Memgraph.
 pub mod memgraph;
+/// Auto-generated bindings (don't use directly, except top-level pointer data types).
 pub mod mgp;
+/// All path related.
 pub mod path;
+/// All property related.
 pub mod property;
+/// Simplifies returning results to Memgraph and then to the client.
 pub mod result;
+/// Mostly macro definitions.
 pub mod rsmgp;
+/// All value related.
 pub mod value;
+/// All vertex related.
 pub mod vertex;
