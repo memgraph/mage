@@ -117,7 +117,7 @@ macro_rules! define_type {
     ($name:literal, $($types:expr),+) => {
         ResultFieldType {
             name: &c_str!($name),
-            types: &[$($types),*],
+            types: &[$($types),+],
         }
     };
 }
@@ -135,9 +135,22 @@ pub fn set_memgraph_error_msg(msg: &CStr, memgraph: &Memgraph) {
 // TODO(gitbuda): Deal with optional arguments.
 // TODO(gitbuda): Add support for depricated arguments.
 
-#[allow(unused_imports)]
 #[cfg(test)]
 mod tests {
+    use c_str_macro::c_str;
+    use serial_test::serial;
+
     use super::*;
     use crate::mgp::mock_ffi::*;
+    use crate::{mock_mgp_once, with_dummy};
+
+    #[test]
+    #[serial]
+    fn test_set_error_msg() {
+        mock_mgp_once!(mgp_result_set_error_msg_context, |_, _| 1);
+
+        with_dummy!(|memgraph: &Memgraph| {
+            set_memgraph_error_msg(c_str!("test_error"), &memgraph);
+        });
+    }
 }

@@ -1,139 +1,100 @@
 use c_str_macro::c_str;
 use serial_test::serial;
+use std::ptr::null_mut;
 
 use super::*;
+use crate::memgraph::Memgraph;
 use crate::mgp::mock_ffi::*;
+use crate::{mock_mgp_once, with_dummy};
 
 #[test]
 #[serial]
 fn test_mgp_copy() {
-    let ctx_1 = mgp_edge_copy_context();
-    ctx_1
-        .expect()
-        .times(1)
-        .returning(|_, _| std::ptr::null_mut());
+    mock_mgp_once!(mgp_edge_copy_context, |_, _| null_mut());
 
-    let memgraph = Memgraph::new_default();
-    unsafe {
-        let value = Edge::mgp_copy(std::ptr::null_mut(), &memgraph);
-        assert!(value.is_err());
-    }
+    with_dummy!(|memgraph: &Memgraph| {
+        unsafe {
+            let value = Edge::mgp_copy(null_mut(), &memgraph);
+            assert!(value.is_err());
+        }
+    });
 }
 
 #[test]
 #[serial]
 fn test_id() {
-    let ctx_1 = mgp_edge_get_id_context();
-    ctx_1
-        .expect()
-        .times(1)
-        .returning(|_| mgp_edge_id { as_int: 0 });
+    mock_mgp_once!(mgp_edge_get_id_context, |_| mgp_edge_id { as_int: 0 });
 
-    let memgraph = Memgraph::new_default();
-    let edge = Edge::new(std::ptr::null_mut(), &memgraph);
-
-    let value = edge.id();
-    assert_eq!(value, 0);
+    with_dummy!(Edge, |edge: &Edge| {
+        assert_eq!(edge.id(), 0);
+    });
 }
 
 #[test]
 #[serial]
 fn test_edge_type() {
     let edge_type = CString::new("type").unwrap();
-    let ctx_1 = mgp_edge_get_type_context();
-    ctx_1.expect().times(1).returning(move |_| mgp_edge_type {
+    mock_mgp_once!(mgp_edge_get_type_context, move |_| mgp_edge_type {
         name: edge_type.as_ptr(),
     });
 
-    let memgraph = Memgraph::new_default();
-    let edge = Edge::new(std::ptr::null_mut(), &memgraph);
-
-    let value = edge.edge_type().unwrap();
-    assert_eq!(value, CString::new("type").unwrap());
+    with_dummy!(Edge, |edge: &Edge| {
+        let value = edge.edge_type().unwrap();
+        assert_eq!(value, CString::new("type").unwrap());
+    });
 }
 
 #[test]
 #[serial]
 fn test_from_vertex() {
-    let ctx_1 = mgp_edge_get_from_context();
-    ctx_1.expect().times(1).returning(|_| std::ptr::null_mut());
-    let ctx_2 = mgp_vertex_copy_context();
-    ctx_2
-        .expect()
-        .times(1)
-        .returning(|_, _| std::ptr::null_mut());
+    mock_mgp_once!(mgp_edge_get_from_context, |_| null_mut());
+    mock_mgp_once!(mgp_vertex_copy_context, |_, _| null_mut());
 
-    let memgraph = Memgraph::new_default();
-    let edge = Edge::new(std::ptr::null_mut(), &memgraph);
-
-    let value = edge.from_vertex();
-    assert!(value.is_err());
+    with_dummy!(Edge, |edge: &Edge| {
+        assert!(edge.from_vertex().is_err());
+    });
 }
 
 #[test]
 #[serial]
 fn test_to_vertex() {
-    let ctx_1 = mgp_edge_get_to_context();
-    ctx_1.expect().times(1).returning(|_| std::ptr::null_mut());
-    let ctx_2 = mgp_vertex_copy_context();
-    ctx_2
-        .expect()
-        .times(1)
-        .returning(|_, _| std::ptr::null_mut());
+    mock_mgp_once!(mgp_edge_get_to_context, |_| null_mut());
+    mock_mgp_once!(mgp_vertex_copy_context, |_, _| null_mut());
 
-    let memgraph = Memgraph::new_default();
-    let edge = Edge::new(std::ptr::null_mut(), &memgraph);
-
-    let value = edge.to_vertex();
-    assert!(value.is_err());
+    with_dummy!(Edge, |edge: &Edge| {
+        assert!(edge.to_vertex().is_err());
+    });
 }
 
 #[test]
 #[serial]
 fn test_property() {
-    let ctx_1 = mgp_edge_get_property_context();
-    ctx_1
-        .expect()
-        .times(1)
-        .returning(|_, _, _| std::ptr::null_mut());
+    mock_mgp_once!(mgp_edge_get_property_context, |_, _, _| null_mut());
 
-    let memgraph = Memgraph::new_default();
-    let edge = Edge::new(std::ptr::null_mut(), &memgraph);
-
-    let value = edge.property(c_str!("prop"));
-    assert!(value.is_err());
+    with_dummy!(Edge, |edge: &Edge| {
+        assert!(edge.property(c_str!("prop")).is_err());
+    });
 }
 
 #[test]
 #[serial]
 fn test_properties_iterator() {
-    let ctx_1 = mgp_edge_iter_properties_context();
-    ctx_1
-        .expect()
-        .times(1)
-        .returning(|_, _| std::ptr::null_mut());
+    mock_mgp_once!(mgp_edge_iter_properties_context, |_, _| null_mut());
 
-    let memgraph = Memgraph::new_default();
-    let edge = Edge::new(std::ptr::null_mut(), &memgraph);
-
-    let value = edge.properties();
-    assert!(value.is_err());
+    with_dummy!(Edge, |edge: &Edge| {
+        assert!(edge.properties().is_err());
+    });
 }
 
 #[test]
 #[serial]
 fn test_edges_iterator() {
-    let ctx_1 = mgp_edges_iterator_get_context();
-    ctx_1.expect().times(1).returning(|_| std::ptr::null_mut());
-    let ctx_2 = mgp_edges_iterator_next_context();
-    ctx_2.expect().times(1).returning(|_| std::ptr::null_mut());
+    mock_mgp_once!(mgp_edges_iterator_get_context, |_| null_mut());
+    mock_mgp_once!(mgp_edges_iterator_next_context, |_| null_mut());
 
-    let memgraph = Memgraph::new_default();
-    let mut iterator = EdgesIterator::new(std::ptr::null_mut(), &memgraph);
-
-    let value_1 = iterator.next();
-    assert!(value_1.is_none());
-
-    let value_2 = iterator.next();
-    assert!(value_2.is_none());
+    with_dummy!(|memgraph: &Memgraph| {
+        let mut iterator = EdgesIterator::new(null_mut(), &memgraph);
+        assert!(iterator.next().is_none());
+        assert!(iterator.next().is_none());
+    });
 }

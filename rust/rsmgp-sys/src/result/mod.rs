@@ -9,6 +9,10 @@ use crate::mgp::*;
 use crate::path::*;
 use crate::value::*;
 use crate::vertex::*;
+// Required here, if not present tests linking fails.
+#[double]
+use crate::mgp::ffi;
+use mockall_double::double;
 
 pub struct MgpResultRecord {
     ptr: *mut mgp_result_record,
@@ -42,9 +46,6 @@ impl MgpResultRecord {
             Ok(())
         }
     }
-
-    // TODO(gitbuda): Allow insertion of multiple values.
-    pub fn insert_mgp_values() {}
 
     pub fn insert_null(&self, field: &CStr) -> MgpResult<()> {
         self.insert_mgp_value(field, &MgpValue::make_null(&self.memgraph)?)
