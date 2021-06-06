@@ -19,6 +19,7 @@ jobs:
         toolchain: stable
     - name: Test Cargo tarpaulin
       run: |
+          cargo install cargo-tarpaulin
           cargo tarpaulin --help
     - name: Cache Memgraph Docker image
       id: cache-memgraph-docker
