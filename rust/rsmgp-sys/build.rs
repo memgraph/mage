@@ -5,7 +5,7 @@ use std::fs;
 use std::path::PathBuf;
 
 fn main() {
-    let mg_procedure_path = "../../cpp/mg_procedure/mg_procedure.h";
+    let mg_procedure_path = "mgp/mg_procedure.h";
 
     // Tell cargo to invalidate the built crate whenever the wrapper changes
     println!(
