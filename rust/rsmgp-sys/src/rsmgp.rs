@@ -1,3 +1,17 @@
+// Copyright (c) 2016-2021 Memgraph Ltd. [https://memgraph.com]
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use std::ffi::CStr;
 
 use crate::memgraph::*;
@@ -5,7 +19,22 @@ use crate::memgraph::*;
 use crate::mgp::ffi;
 use mockall_double::double;
 
-// Required because we want to use catch_unwind to control panics.
+/// Defines a new procedure callable by Memgraph engine.
+///
+/// Wraps call to the Rust function provided as a second argument. In addition to the function
+/// call, it also sets the catch_unwind hook and properly handles execution errors. The first macro
+/// argument is the exact name of the C procedure Memgraph will be able to run (the exact same name
+/// has to be registered inside [init_module] phase. The second argument has to be a function
+/// accepting reference [Memgraph]. The [Memgraph] object could be used to interact with Memgraph
+/// instance.
+///
+/// Example
+///
+/// ```no run
+/// define_procedure!(procedure_name, |memgraph: &Memgraph| -> Result<(), MgpError> {
+///     // Implementation
+/// }
+/// ```
 #[macro_export]
 macro_rules! define_procedure {
     ($c_name:ident, $rs_func:expr) => {
@@ -57,6 +86,21 @@ macro_rules! define_procedure {
         }
     };
 }
+
+/// Initializes Memgraph query module.
+///
+/// Example
+///
+/// ```no run
+/// init_module!(|memgraph: &Memgraph| -> MgpResult<()> {
+///     memgraph.add_read_procedure(
+///         procedure_name,
+///         c_str!("procedure_name"),
+///         &[define_type!("list", FieldType::List, FieldType::Int),],
+///     )?;
+///     Ok(())
+/// });
+/// ```
 #[macro_export]
 macro_rules! init_module {
     ($init_func:expr) => {
@@ -81,6 +125,7 @@ macro_rules! init_module {
     };
 }
 
+/// Closes Memgraph query module.
 #[macro_export]
 macro_rules! close_module {
     ($close_func:expr) => {
@@ -92,6 +137,7 @@ macro_rules! close_module {
     };
 }
 
+/// Used to pass expected result field types during procedure registration.
 pub enum FieldType {
     Any,
     Bool,
@@ -107,11 +153,23 @@ pub enum FieldType {
     List,
 }
 
+/// Used to pass expected result field types during procedure registration.
+///
+/// Each procedure can have multiple returning fields, each one is represented by this struct.
+/// Return type is deduced by processing types field from left to right. E.g., [FieldType::Any]
+/// means any return type, [FieldType::List], [FieldType::Int] means a list of integer values.
 pub struct ResultFieldType<'a> {
     pub name: &'a CStr,
     pub types: &'a [FieldType],
 }
 
+/// Defines single result field type.
+///
+/// Example of defining the field as a list of integers.
+///
+/// ```no run
+/// define_type!("name", FieldType::List, FieldType::Int);
+/// ```
 #[macro_export]
 macro_rules! define_type {
     ($name:literal, $($types:expr),+) => {
