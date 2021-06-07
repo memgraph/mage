@@ -2,39 +2,6 @@
 
 #include <future>
 
-namespace pagerank_util {
-
-/// @tparam T Node ID data type.
-template <typename T>
-class AdjacencyList {
- public:
-  AdjacencyList() = default;
-  explicit AdjacencyList(std::uint64_t node_count) : list_(node_count) {}
-
-  auto GetNodeCount() const { return list_.size(); }
-
-  /// AdjacentPair is a pair of T. Values of T have to be >= 0 and < node_count
-  /// because they represent position in the underlying std::vector.
-  void AddAdjacentPair(T left_node_id, T right_node_id, bool undirected = false) {
-    list_[left_node_id].push_back(right_node_id);
-    if (undirected) {
-      list_[right_node_id].push_back(left_node_id);
-    }
-  }
-
-  /// Be careful and don't call AddAdjacentPair while you have reference to this
-  /// vector because the referenced vector could be resized (moved) which means
-  /// that the reference is going to become invalid.
-  ///
-  /// @return A reference to std::vector of adjecent node ids.
-  const auto &GetAdjacentNodes(T node_id) const { return list_[node_id]; }
-
- private:
-  std::vector<std::vector<T>> list_;
-};
-
-}  // namespace pagerank_util
-
 namespace pagerank_alg {
 
 // Defines edge's from and to node index. Just an alias for user convenience.
@@ -80,71 +47,6 @@ class PageRankGraph {
   /// PageRank
   std::vector<std::uint64_t> out_degree_;
 };
-
-/// Calculates optimal borders for dividing edges in number_of_threads
-/// consecutive partitions (blocks) such that the maximal block size is minimal
-/// For example: if number_of_edges = 10 and number_of_threads = 3:
-/// optimal borders = {0, 3, 6, 10} so obtained blocks of edges
-/// are [0, 3>, [3, 6> and [6, 10>.
-///
-/// @param graph -- graph
-/// @param number_of_threads -- number of threads
-/// @param borders -- vector in which calculated optimal borders will be written
-void CalcualteOptimalBorders(const PageRankGraph &graph, int number_of_threads, std::vector<std::uint64_t> *borders);
-
-/// Calculating PageRank block related to [lo, hi> interval of edges
-/// Graph edges are ordered by target node ids so target nodes of an interval
-/// of edges also form an interval of nodes.
-/// Required PageRank values of nodes from this interval will be sent
-/// as vector of values using new_rank_promise.
-///
-/// @param graph -- graph
-/// @param old_rank -- rank of nodes after previous iterations
-/// @param damping_factor -- damping factor
-/// @param lo -- left bound of interval of edges
-/// @param hi -- right bound of interval of edges
-/// @param new_rank_promise -- used for sending information about calculated new
-/// PageRank block
-void ThreadPageRankIteration(const PageRankGraph &graph, const std::vector<double> &old_rank, int lo, int hi,
-                             std::promise<std::vector<double>> new_rank_promise);
-
-/// Merging PageRank blocks from ThreadPageRankIteration.
-///
-/// @param graph -- graph
-/// @param damping_factor -- damping factor
-/// @param block -- PageRank block calculated in ThreadPageRankIteration
-/// @param rank_next -- PageRanks which will be updated
-void AddCurrentBlockToRankNext(const PageRankGraph &graph, double damping_factor, const std::vector<double> &block,
-                               std::vector<double> &rank_next);
-
-/// Adds remaining PageRank values
-/// Adds PageRank values of nodes that haven't been added by
-/// AddCurrentBlockToRankNext. That are nodes whose id is greater
-/// than id of target node of the last edge in ordered edge list.
-///
-/// @param graph -- graph
-/// @param damping_factor -- damping factor
-/// @param rank_next -- PageRank which will be updated
-void CompleteRankNext(const PageRankGraph &graph, double damping_factor, std::vector<double> &rank_next);
-
-/// Checks whether PageRank algorithm should continue iterating
-/// Checks if maximal number of iterations was reached or
-/// if difference between every component of previous and current PageRank
-/// was less than stop_epsilon.
-///
-/// @param rank -- PageRank before the last iteration
-/// @param rank_next -- PageRank after the last iteration
-/// @param max_iterations -- maximal number of iterations
-/// @param stop_epsilon -- stop epsilon
-/// @param number_of_iterations -- current number of operations
-bool CheckContinueIterate(const std::vector<double> &rank, const std::vector<double> &rank_next, size_t max_iterations,
-                          double stop_epsilon, size_t number_of_iterations);
-
-/// Normalizing PageRank
-/// Divides all values with sum of the values to get their sum equal 1
-///
-/// @param rank -- PageRank
-void NormalizeRank(std::vector<double> &rank);
 
 /// If we present nodes as pages and directed edges between them as links the
 /// PageRank algorithm outputs a probability distribution used to represent the
