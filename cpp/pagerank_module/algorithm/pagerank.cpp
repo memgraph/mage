@@ -80,7 +80,7 @@ void ThreadPageRankIteration(const PageRankGraph &graph, const std::vector<doubl
     // Add the score of target node to the sum.
     new_rank[source] += old_rank[target] / graph.GetOutDegree(target);
   }
-  new_rank_promise.set_value(new_rank);
+  new_rank_promise.set_value(std::move(new_rank));
 }
 
 /// Merging PageRank blocks from ThreadPageRankIteration.
