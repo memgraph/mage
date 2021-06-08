@@ -20,6 +20,8 @@ class TestConstants:
     TEST_DIR_ENDING = "_test"
     TEST_FILE = "test.yml"
 
+    ABSOLUTE_TOLERANCE = 1e-3
+
 
 def _node_to_dict(data):
     labels = data.labels if hasattr(data, "labels") else data._labels
