@@ -22,14 +22,6 @@ namespace betweenness_centrality_util {
 void BFS(const std::uint64_t source_node, const mg_graph::GraphView<> &graph, std::stack<std::uint64_t> &visited,
          std::vector<std::vector<std::uint64_t>> &predecessors, std::vector<std::uint64_t> &shortest_paths_counter);
 
-///
-///@brief An in-place method that normalizes a vector by multiplying each component by a given constant.
-///
-///@param vec The vector that should be normalized
-///@param constant The constant with which the components of a vector are multiplied
-///
-void Normalize(std::vector<double> &vec, double constant);
-
 }  // namespace betweenness_centrality_util
 
 namespace betweenness_centrality_alg {

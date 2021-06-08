@@ -41,12 +41,19 @@ void BFS(const std::uint64_t source_node, const mg_graph::GraphView<> &graph, st
     }
   }
 }
-
-void Normalize(std::vector<double> &vec, double constant) {
-  for (auto &value : vec) value *= constant;
-}
-
 }  // namespace betweenness_centrality_util
+
+namespace {
+  ///
+  ///@brief An in-place method that normalizes a vector by multiplying each component by a given constant.
+  ///
+  ///@param vec The vector that should be normalized
+  ///@param constant The constant with which the components of a vector are multiplied
+  ///
+  void Normalize(std::vector<double> &vec, double constant) {
+    for (auto &value : vec) value *= constant;
+  }
+}  // namespace
 
 namespace betweenness_centrality_alg {
 
@@ -88,7 +95,7 @@ std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bo
     auto number_of_pairs = (number_of_nodes - 1) * (number_of_nodes - 2);
     const auto numerator = directed ? 1.0 : 2.0;
     double constant = number_of_nodes > 2 ? numerator / number_of_pairs : 1.0;
-    betweenness_centrality_util::Normalize(betweenness_centrality, constant);
+    Normalize(betweenness_centrality, constant);
   }
 
   return betweenness_centrality;
