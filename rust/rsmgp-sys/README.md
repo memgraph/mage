@@ -7,10 +7,24 @@ Adding a new Rust Memgraph query module is simple, just add the following to
 your `Cargo.toml` project file.
 
 ```
+[dependencies]
+c_str_macro = "1.0.2"
+rsmgp-sys = "^0.1.0"
+
 [lib]
 name = "query_module_name"
 crate-type = ["cdylib"]
 ```
+
+## Usage and Implementation Details
+
+In the module/procedure code, it's preferred to use `Edge`, `List`, `Map`,
+`Memgraph`, `Path`, `Property`, `Value`, `Vertex` structures. Structures
+prefixed by `Mgp` are there to be a bridge between the procedure code and
+Memgraph.  `Mgp` prefixed structures should be used to return data to Memgraph
+/ client.  Underlying pointers prefixed by `mgp_` are exposed but shouldn't be
+directly manipulated in the procedure call. The whole point of this library is
+to hide that complexity as much as possible.
 
 Memgraph Rust query modules API uses
 [CStr](https://doc.rust-lang.org/std/ffi/struct.CStr.html) (`&CStr`) becuase

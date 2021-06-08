@@ -109,15 +109,20 @@ macro_rules! init_module {
             module: *mut mgp_module,
             memory: *mut mgp_memory,
         ) -> c_int {
-            // TODO(gitbuda): Add error handling (catch_unwind, etc.).
-            let memgraph = Memgraph::new(
-                std::ptr::null_mut(),
-                std::ptr::null_mut(),
-                std::ptr::null_mut(),
-                memory,
-                module,
-            );
-            match $init_func(&memgraph) {
+            let prev_hook = panic::take_hook();
+            panic::set_hook(Box::new(|_| { /* Do nothing. */ }));
+            let result = panic::catch_unwind(|| {
+                let memgraph = Memgraph::new(
+                    std::ptr::null_mut(),
+                    std::ptr::null_mut(),
+                    std::ptr::null_mut(),
+                    memory,
+                    module,
+                );
+                $init_func(&memgraph)
+            });
+            panic::set_hook(prev_hook);
+            match result {
                 Ok(_) => 0,
                 Err(_) => 1,
             }
@@ -131,8 +136,14 @@ macro_rules! close_module {
     ($close_func:expr) => {
         #[no_mangle]
         pub extern "C" fn mgp_shutdown_module() -> c_int {
-            // TODO(gitbuda): Add error handling (catch_unwind, etc.).
-            $close_func()
+            let prev_hook = panic::take_hook();
+            panic::set_hook(Box::new(|_| { /* Do nothing. */ }));
+            let result = panic::catch_unwind(|| $close_func());
+            panic::set_hook(prev_hook);
+            match result {
+                Ok(_) => 0,
+                Err(_) => 1,
+            }
         }
     };
 }

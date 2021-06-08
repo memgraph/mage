@@ -11,7 +11,7 @@ use std::ffi::CString;
 use std::os::raw::c_int;
 use std::panic;
 
-init_module!(|memgraph: &Memgraph| -> MgpResult<()> {
+init_module!(|memgraph: &Memgraph| -> Result<(), MgpError> {
     memgraph.add_read_procedure(
         test_procedure,
         c_str!("test_procedure"),
@@ -101,4 +101,4 @@ define_procedure!(
     }
 );
 
-close_module!(|| { 0 });
+close_module!(|| -> Result<(), MgpError> { Ok(()) });
