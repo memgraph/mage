@@ -8,7 +8,7 @@ SINK_INDEX = -2
 
 
 @mgp.read_proc
-def routing(
+def route(
     context: mgp.ProcCtx,
     number_of_vehicles: mgp.Nullable[int] = None,
     depot_label: mgp.Nullable[str] = "Depot",
