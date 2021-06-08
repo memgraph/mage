@@ -100,6 +100,7 @@ impl Edge {
         }
     }
 
+    /// Creates a new Edge based on [mgp_edge].
     pub(crate) unsafe fn mgp_copy(ptr: *const mgp_edge, memgraph: &Memgraph) -> MgpResult<Edge> {
         // Test passes null ptr because nothing else is possible.
         #[cfg(not(test))]
@@ -115,7 +116,8 @@ impl Edge {
         Ok(Edge::new(mgp_copy, &memgraph))
     }
 
-    pub fn mgp_ptr(&self) -> *const mgp_edge {
+    /// Returns the underlying [mgp_edge] pointer.
+    pub(crate) fn mgp_ptr(&self) -> *const mgp_edge {
         self.ptr
     }
 

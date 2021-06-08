@@ -47,10 +47,6 @@ impl MgpResultRecord {
         }
     }
 
-    pub fn mgp_ptr(&self) -> *mut mgp_result_record {
-        self.ptr
-    }
-
     pub fn insert_mgp_value(&self, field: &CStr, value: &MgpValue) -> MgpResult<()> {
         unsafe {
             let inserted = ffi::mgp_result_record_insert(self.ptr, field.as_ptr(), value.mgp_ptr());

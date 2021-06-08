@@ -77,6 +77,7 @@ impl List {
         }
     }
 
+    /// Creates a new List based on [mgp_list].
     pub(crate) unsafe fn mgp_copy(ptr: *const mgp_list, memgraph: &Memgraph) -> MgpResult<List> {
         // Test passes null ptr because nothing else is possible.
         #[cfg(not(test))]
@@ -100,14 +101,11 @@ impl List {
         Ok(List::new(mgp_copy, &memgraph))
     }
 
-    pub fn mgp_ptr(&self) -> *const mgp_list {
-        self.ptr
-    }
-
     pub fn copy(&self) -> MgpResult<List> {
         unsafe { List::mgp_copy(self.ptr, &self.memgraph) }
     }
 
+    /// Appends value to the list, but if there is no place, returns an error.
     pub fn append(&self, value: &Value) -> MgpResult<()> {
         unsafe {
             let mgp_value = value.to_mgp_value(&self.memgraph)?;

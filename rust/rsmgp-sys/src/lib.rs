@@ -19,25 +19,25 @@ extern crate mockall_double;
 
 mod testing;
 
-/// All edge related.
+/// All edge (relationship) related.
 pub mod edge;
-/// All list related.
+/// All related to the list datatype.
 pub mod list;
-/// All map related.
+/// All related to the map (dictionary) datatype.
 pub mod map;
 /// Abstraction to interact with Memgraph.
 pub mod memgraph;
 /// Auto-generated bindings (don't use directly, except top-level pointer data types).
 pub mod mgp;
-/// All path related.
+/// All related to a graph path.
 pub mod path;
-/// All property related.
+/// All related to the property graph property (data key-value pair).
 pub mod property;
 /// Simplifies returning results to Memgraph and then to the client.
 pub mod result;
-/// Mostly macro definitions.
+/// Macro definitions and top level data structures.
 pub mod rsmgp;
-/// All value related.
+/// All related the the value (container for any data type).
 pub mod value;
-/// All vertex related.
+/// All vertex (node) related.
 pub mod vertex;

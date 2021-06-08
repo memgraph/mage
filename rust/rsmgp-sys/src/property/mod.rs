@@ -22,13 +22,15 @@ use crate::value::*;
 use crate::mgp::ffi;
 use mockall_double::double;
 
-/// Property is used in the following memgraphs:
+/// All related to the property graph property (data key-value pair).
+///
+/// Property is used in the following contexts:
 ///   * return Property from PropertiesIterator
 ///   * return Property directly from vertex/edge.
 ///
-/// Property owns CString and Value bacause the underlying C string or value could be deleted during
-/// the lifetime of the property. In other words, Property stores copies of underlying name and
-/// value.
+/// Property owns CString and Value bacause the underlying C string or value could be deleted
+/// during the lifetime of the property. In other words, Property stores copies of underlying name
+/// and value.
 #[derive(Debug)]
 pub struct Property {
     pub name: CString,

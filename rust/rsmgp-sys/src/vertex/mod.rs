@@ -100,6 +100,7 @@ impl Vertex {
         }
     }
 
+    /// Creates a new Vertex based on [mgp_vertex].
     pub(crate) unsafe fn mgp_copy(
         mgp_vertex: *const mgp_vertex,
         memgraph: &Memgraph,
@@ -118,7 +119,7 @@ impl Vertex {
         Ok(Vertex::new(mgp_copy, &memgraph))
     }
 
-    pub fn mgp_ptr(&self) -> *const mgp_vertex {
+    pub(crate) fn mgp_ptr(&self) -> *const mgp_vertex {
         self.ptr
     }
 

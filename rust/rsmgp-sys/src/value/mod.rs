@@ -60,6 +60,7 @@ pub(crate) unsafe fn create_cstring(c_char_ptr: *const i8) -> MgpResult<CString>
 // The decision is to move on with a copy of mgp_value because it's cheap to make the copy.
 
 /// Useful to own `mgp_value` coming from / going into Memgraph as a result.
+///
 /// Underlying pointer object is going to be automatically deleted.
 #[derive(Debug)]
 pub struct MgpValue {
@@ -83,7 +84,7 @@ impl MgpValue {
         MgpValue { ptr }
     }
 
-    pub fn mgp_ptr(&self) -> *const mgp_value {
+    pub(crate) fn mgp_ptr(&self) -> *const mgp_value {
         self.ptr
     }
 
@@ -287,6 +288,7 @@ impl MgpValue {
 }
 
 /// Object containing/owning concrete underlying mgp objects (e.g., mgp_vertex).
+///
 /// User code should mostly deal with these objects.
 #[derive(Debug)]
 pub enum Value {

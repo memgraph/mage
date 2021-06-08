@@ -45,6 +45,7 @@ impl Path {
         }
     }
 
+    /// Creates a new Path based on [mgp_path].
     pub(crate) unsafe fn mgp_copy(
         mgp_path: *const mgp_path,
         memgraph: &Memgraph,
@@ -63,7 +64,8 @@ impl Path {
         Ok(Path::new(mgp_copy, &memgraph))
     }
 
-    pub fn mgp_ptr(&self) -> *const mgp_path {
+    /// Returns the underlying [mgp_path] pointer.
+    pub(crate) fn mgp_ptr(&self) -> *const mgp_path {
         self.ptr
     }
 
@@ -71,6 +73,7 @@ impl Path {
         unsafe { ffi::mgp_path_size(self.ptr) }
     }
 
+    /// Makes a new [Path] based on the starting [Vertex] object.
     pub fn make_with_start(vertex: &Vertex, memgraph: &Memgraph) -> MgpResult<Path> {
         unsafe {
             let mgp_path = ffi::mgp_path_make_with_start(vertex.mgp_ptr(), memgraph.memory());

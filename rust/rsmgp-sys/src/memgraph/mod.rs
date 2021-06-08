@@ -33,6 +33,7 @@ struct MgpMemgraph {
     module: *mut mgp_module,
 }
 
+/// Main object to interact with Memgraph instance.
 #[derive(Debug, Clone)]
 pub struct Memgraph {
     memgraph: Rc<MgpMemgraph>,
@@ -57,6 +58,7 @@ impl Memgraph {
         }
     }
 
+    /// Creates a new object with all underlying data set to null. Used for the testing purposes.
     pub fn new_default() -> Memgraph {
         Memgraph {
             memgraph: Rc::new(MgpMemgraph {
@@ -69,22 +71,29 @@ impl Memgraph {
         }
     }
 
+    // TODO(gitbuda): Implement args abstraction.
+
+    /// Returns pointer to the object with all arguments passed to the procedure call.
     pub fn args(&self) -> *const mgp_list {
         self.memgraph.args
     }
 
+    /// Returns pointer to the object with graph data.
     pub fn graph(&self) -> *const mgp_graph {
         self.memgraph.graph
     }
 
+    /// Returns pointer to the object where results could be stored.
     pub fn result(&self) -> *mut mgp_result {
         self.memgraph.result
     }
 
+    /// Returns pointer to the memory object for advanced memory control.
     pub fn memory(&self) -> *mut mgp_memory {
         self.memgraph.memory
     }
 
+    /// Returns pointer to the module object.
     pub fn module(&self) -> *mut mgp_module {
         self.memgraph.module
     }
@@ -113,10 +122,19 @@ impl Memgraph {
         }
     }
 
+    /// Creates a new result record.
+    ///
+    /// Keep this object on the stack and add data that will be returned to Memgraph / client
+    /// during/after the procedure call.
     pub fn result_record(&self) -> MgpResult<MgpResultRecord> {
         MgpResultRecord::new(self)
     }
 
+    /// Registers a new read procedure.
+    ///
+    /// * `proc_ptr` - Identifier of the top level C function that represents the procedure.
+    /// * `name` - A string that will be registered as a procedure name inside Memgraph instance.
+    /// * `result_fields` - An array of all [ResultFieldType]s, each one define by [FieldType].
     pub fn add_read_procedure(
         &self,
         proc_ptr: extern "C" fn(
