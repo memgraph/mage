@@ -85,7 +85,7 @@ impl Path {
     }
 
     /// Fails if the current last vertex in the path is not part of the given edge or if there is
-    /// not memory to expand the path.
+    /// no memory to expand the path.
     pub fn expand(&self, edge: &Edge) -> MgpResult<()> {
         unsafe {
             let mgp_result = ffi::mgp_path_expand(self.ptr, edge.mgp_ptr());
