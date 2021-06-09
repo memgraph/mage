@@ -21,7 +21,10 @@ def get_distance_matrix(vertices):
     vertex_positions: List[Dict[str, float]] = []
     for vertex in vertices:
         vertex_positions.append(
-            {LATITUDE: vertex.properties.get(LATITUDE), LONGITUDE: vertex.properties.get(LONGITUDE)}
+            {
+                LATITUDE: vertex.properties.get(LATITUDE),
+                LONGITUDE: vertex.properties.get(LONGITUDE),
+            }
         )
 
     __distance_matrix = create_distance_matrix(vertex_positions)
@@ -74,9 +77,14 @@ def route(
     distance_matrix = get_distance_matrix(vertices)
     depot_index = get_depot_index(vertices, depot_label)
 
-    solver = VRPConstraintProgrammingSolver(number_of_vehicles, distance_matrix, depot_index)
+    solver = VRPConstraintProgrammingSolver(
+        number_of_vehicles, distance_matrix, depot_index
+    )
     solver.solve()
 
     result = solver.get_result()
 
-    return [mgp.Record(from_vertex=vertices[x.from_vertex], to_vertex=vertices[x.to_vertex]) for x in result.vrp_paths]
+    return [
+        mgp.Record(from_vertex=vertices[x.from_vertex], to_vertex=vertices[x.to_vertex])
+        for x in result.vrp_paths
+    ]

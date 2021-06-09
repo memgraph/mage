@@ -1,5 +1,5 @@
 from gekko import GEKKO
-from mage.geography.vehicle_routing import VRPPath, VRPResult, VRPSolver
+from mage.geography import VRPPath, VRPResult, VRPSolver
 from typing import List, Tuple
 import numpy as np
 
@@ -21,7 +21,9 @@ class VRPConstraintProgrammingSolver(VRPSolver):
 
         self._edge_chosen_vars = dict()
         self._time_vars = dict()
-        self._location_node_ids = [x for x in range(len(distance_matrix)) if x != self.depot_index]
+        self._location_node_ids = [
+            x for x in range(len(distance_matrix)) if x != self.depot_index
+        ]
 
         self._initialize()
 
@@ -35,7 +37,10 @@ class VRPConstraintProgrammingSolver(VRPSolver):
     def get_result(self) -> VRPResult:
         return VRPResult(
             [
-                VRPPath(key[0] if key[0] >= 0 else self.depot_index, key[1] if key[1] >= 0 else self.depot_index)
+                VRPPath(
+                    key[0] if key[0] >= 0 else self.depot_index,
+                    key[1] if key[1] >= 0 else self.depot_index,
+                )
                 for key, var in self._edge_chosen_vars.items()
                 if int(var.value[0]) == 1
             ]
@@ -44,14 +49,13 @@ class VRPConstraintProgrammingSolver(VRPSolver):
     def get_distance(self, edge: Tuple[int, int]) -> float:
         node_from, node_to = edge
 
-        if (
-            node_from
-            in [
-                VRPConstraintProgrammingSolver.SINK_INDEX,
-                VRPConstraintProgrammingSolver.SOURCE_INDEX,
-            ]
-            or node_to in [VRPConstraintProgrammingSolver.SINK_INDEX, VRPConstraintProgrammingSolver.SOURCE_INDEX]
-        ):
+        if node_from in [
+            VRPConstraintProgrammingSolver.SINK_INDEX,
+            VRPConstraintProgrammingSolver.SOURCE_INDEX,
+        ] or node_to in [
+            VRPConstraintProgrammingSolver.SINK_INDEX,
+            VRPConstraintProgrammingSolver.SOURCE_INDEX,
+        ]:
             return 0
 
         return self.distance_matrix[node_from][node_to]
@@ -81,15 +85,25 @@ class VRPConstraintProgrammingSolver(VRPSolver):
         # Either it was a beginning node, or a vehicle has visited it in the drive.
         if len(out_vars) > 0:
             self._model.Equation(
-                self._edge_chosen_vars[(node_index, VRPConstraintProgrammingSolver.SINK_INDEX)] + sum(out_vars) == 1
+                self._edge_chosen_vars[
+                    (node_index, VRPConstraintProgrammingSolver.SINK_INDEX)
+                ]
+                + sum(out_vars)
+                == 1
             )
 
         if len(in_vars) > 0:
             self._model.Equation(
-                self._edge_chosen_vars[(VRPConstraintProgrammingSolver.SOURCE_INDEX, node_index)] + sum(in_vars) == 1
+                self._edge_chosen_vars[
+                    (VRPConstraintProgrammingSolver.SOURCE_INDEX, node_index)
+                ]
+                + sum(in_vars)
+                == 1
             )
 
-    def _add_adjacent_edge_variables(self, node_index: int, input: bool = False) -> List[Tuple[int, int]]:
+    def _add_adjacent_edge_variables(
+        self, node_index: int, input: bool = False
+    ) -> List[Tuple[int, int]]:
         edges_vars = []
 
         for adjacent_node in range(len(self.distance_matrix)):
@@ -128,7 +142,8 @@ class VRPConstraintProgrammingSolver(VRPSolver):
                 continue
 
             self._model.Equation(
-                (self._time_vars[from_node] + self.distance_matrix[from_node][to_node]) * self._edge_chosen_vars[edge]
+                (self._time_vars[from_node] + self.distance_matrix[from_node][to_node])
+                * self._edge_chosen_vars[edge]
                 <= self._time_vars[to_node]
             )
 
@@ -146,14 +161,19 @@ class VRPConstraintProgrammingSolver(VRPSolver):
         """
         Add total number of paths (edges) that needs to be present.
         """
-        self._model.Equation(sum(self._edge_chosen_vars.values()) == len(self._location_node_ids) + self.no_vehicles)
+        self._model.Equation(
+            sum(self._edge_chosen_vars.values())
+            == len(self._location_node_ids) + self.no_vehicles
+        )
 
     def _add_no_backtracking_constraint(self, from_node: int, to_node: int):
         """
         Add rule that nodes can't go back in paths.
         """
         self._model.Equation(
-            self._edge_chosen_vars[(from_node, to_node)] + self._edge_chosen_vars[(to_node, from_node)] <= 1
+            self._edge_chosen_vars[(from_node, to_node)]
+            + self._edge_chosen_vars[(to_node, from_node)]
+            <= 1
         )
 
     def _add_no_3_node_cycle_constraint(self):
@@ -168,7 +188,9 @@ class VRPConstraintProgrammingSolver(VRPSolver):
                     if c == a or c == b:
                         continue
                     self._model.Equation(
-                        self._edge_chosen_vars[(a, b)] + self._edge_chosen_vars[(b, c)] + self._edge_chosen_vars[(c, a)]
+                        self._edge_chosen_vars[(a, b)]
+                        + self._edge_chosen_vars[(b, c)]
+                        + self._edge_chosen_vars[(c, a)]
                         <= 2
                     )
 
@@ -183,7 +205,10 @@ class VRPConstraintProgrammingSolver(VRPSolver):
 
     def _add_end_in_sink_node(self):
         self._model.Equation(
-            sum(self._edge_chosen_vars[(n, VRPConstraintProgrammingSolver.SINK_INDEX)] for n in self._location_node_ids)
+            sum(
+                self._edge_chosen_vars[(n, VRPConstraintProgrammingSolver.SINK_INDEX)]
+                for n in self._location_node_ids
+            )
             == self.no_vehicles
         )
 
