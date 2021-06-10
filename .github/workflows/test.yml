@@ -44,6 +44,9 @@ jobs:
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
+    - name: Set up Rust - install Cargo tarpaulin # Unable to run https://github.com/actions-rs/tarpaulin from subdirectory.
+      run: |
+          cargo install cargo-tarpaulin
     - name: Build C++ modules
       run: |
         mkdir -p cpp/build
@@ -77,13 +80,8 @@ jobs:
         cd rust/rsmgp-sys
         cargo fmt -- --check
         cargo test
-    - name: Install Cargo tarpaulin # Unable to run https://github.com/actions-rs/tarpaulin from subdirectory.
-      run: |
-          cargo install cargo-tarpaulin
-    - name: Run code coverage
-      run: |
-        cd rust/rsmgp-sys
         RUST_BACKTRACE=1 cargo tarpaulin --out Html --ignore-tests
+
     - name: Rust example build
       run: |
         cd rust/rsmgp-example
