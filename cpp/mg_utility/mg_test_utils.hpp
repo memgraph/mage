@@ -3,8 +3,8 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
-#include <vector>
 #include <stack>
+#include <vector>
 
 namespace mg_test_utility {
 
