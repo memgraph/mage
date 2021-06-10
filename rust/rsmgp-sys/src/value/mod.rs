@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//! All related the the value (container for any data type).
+//! All related to the value (container for any data type).
 
 use std::ffi::{CStr, CString};
 
@@ -337,6 +337,13 @@ impl Value {
 }
 
 /// Creates copy of [mgp_value] object as a [Value] object.
+///
+/// NOTE: If would be more optimal not to copy [mgp_list], [mgp_map] and [mgp_path], but that's not
+/// possible at this point because of the way how C API iterators are implemented. E.g., after each
+/// `mgp_properties_iterator_next()` call, the previous `mgp_value` pointer shouldn't be used.
+/// There is no known way of defining the right lifetime of the returned `MgpValue` object. A
+/// solution would be to change the C API to preserve underlying values of the returned pointers
+/// during the lifetime of the Rust iterator.
 ///
 /// # Safety
 ///
