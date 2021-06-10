@@ -82,7 +82,6 @@ impl Iterator for EdgesIterator {
     }
 }
 
-#[derive(Debug)]
 pub struct Edge {
     ptr: *mut mgp_edge,
     memgraph: Memgraph,

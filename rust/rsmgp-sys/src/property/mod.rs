@@ -32,7 +32,6 @@ use mockall_double::double;
 /// Property owns CString and Value bacause the underlying C string or value could be deleted
 /// during the lifetime of the property. In other words, Property stores copies of underlying name
 /// and value.
-#[derive(Debug)]
 pub struct Property {
     pub name: CString,
     pub value: Value,

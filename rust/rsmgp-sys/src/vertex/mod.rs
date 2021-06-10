@@ -82,7 +82,6 @@ impl Iterator for VerticesIterator {
     }
 }
 
-#[derive(Debug)]
 pub struct Vertex {
     ptr: *mut mgp_vertex,
     memgraph: Memgraph,

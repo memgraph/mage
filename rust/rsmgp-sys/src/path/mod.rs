@@ -23,7 +23,6 @@ use crate::vertex::*;
 use crate::mgp::ffi;
 use mockall_double::double;
 
-#[derive(Debug)]
 pub struct Path {
     ptr: *mut mgp_path,
     memgraph: Memgraph,

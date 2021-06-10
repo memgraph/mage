@@ -25,7 +25,7 @@ use crate::mgp::ffi;
 use mockall_double::double;
 
 /// Main object to interact with Memgraph instance.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Memgraph {
     args: *const mgp_list,
     graph: *const mgp_graph,

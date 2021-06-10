@@ -24,7 +24,6 @@ use crate::value::*;
 use crate::mgp::ffi;
 use mockall_double::double;
 
-#[derive(Debug)]
 pub struct Map {
     ptr: *mut mgp_map,
     memgraph: Memgraph,

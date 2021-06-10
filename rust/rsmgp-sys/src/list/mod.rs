@@ -22,7 +22,6 @@ use crate::value::*;
 use crate::mgp::ffi;
 use mockall_double::double;
 
-#[derive(Debug)]
 pub struct List {
     ptr: *mut mgp_list,
     memgraph: Memgraph,

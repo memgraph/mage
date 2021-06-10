@@ -66,7 +66,6 @@ pub(crate) unsafe fn create_cstring(c_char_ptr: *const i8) -> MgpResult<CString>
 /// Useful to own `mgp_value` coming from / going into Memgraph as a result.
 ///
 /// Underlying pointer object is going to be automatically deleted.
-#[derive(Debug)]
 pub struct MgpValue {
     // It's not wise to create a new MgpValue out of the existing value pointer because drop with a
     // valid pointer will be called multiple times -> double free problem.
@@ -305,7 +304,6 @@ impl MgpValue {
 /// Object containing/owning concrete underlying mgp objects (e.g., mgp_vertex).
 ///
 /// User code should mostly deal with these objects.
-#[derive(Debug)]
 pub enum Value {
     Null,
     Bool(bool),
