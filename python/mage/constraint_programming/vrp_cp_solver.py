@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from gekko import GEKKO
-from mage.geography import VRPPath, VRPResult, VRPSolver
+from mage.geography import VRPPath, VRPResult, VRPSolver, InvalidDepotException
 from typing import List, Tuple
 import numpy as np
 
@@ -14,6 +14,9 @@ class VRPConstraintProgrammingSolver(VRPSolver):
     SINK_INDEX = -2
 
     def __init__(self, no_vehicles: int, distance_matrix: np.array, depot_index: int):
+        if depot_index < 0 or depot_index >= len(distance_matrix):
+            raise InvalidDepotException("Depot index outside the range of locations!")
+
         self._model = GEKKO(remote=False)
 
         self.no_vehicles = no_vehicles
@@ -91,12 +94,6 @@ class VRPConstraintProgrammingSolver(VRPSolver):
             return 0
 
         return self.distance_matrix[node_from][node_to]
-
-    def print_results(self):
-        # Results
-        print("\nResults")
-        print(f"Obj={self._model.options.objfcnval}")
-        self.print_time_vars()
 
     def _initialize(self):
         for node_index in range(len(self.distance_matrix)):
@@ -183,14 +180,6 @@ class VRPConstraintProgrammingSolver(VRPSolver):
 
     def _add_options(self):
         self._model.options.SOLVER = 1
-
-    def print_time_vars(self):
-        for time, variable in self._time_vars.items():
-            print(f"{time}={variable.value}")
-
-    def print_edge_chosen_vars(self):
-        for edge, variable in self._edge_chosen_vars.items():
-            print(f"{edge}={variable.value}")
 
 
 class VRPConstraint(ABC):

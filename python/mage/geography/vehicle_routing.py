@@ -35,3 +35,7 @@ class VRPSolver(ABC):
         Extract results from solved problem.
         """
         pass
+
+
+class InvalidDepotException(Exception):
+    pass

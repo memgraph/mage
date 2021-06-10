@@ -1,5 +1,10 @@
-from mage.geography import create_distance_matrix, LATITUDE, LONGITUDE
+from mage.geography import (
+    create_distance_matrix,
+    LATITUDE,
+    LONGITUDE,
+)
 from mage.constraint_programming import VRPConstraintProgrammingSolver
+
 from typing import Dict, List
 
 import mgp
@@ -32,7 +37,7 @@ def get_distance_matrix(vertices):
     return __distance_matrix
 
 
-def get_depot_index(vertices, depot_label):
+def get_depot_index(vertices: mgp.Vertices, depot_node: mgp.Vertex):
     """
     Assigns depot index global variable or returns if its already there.
     """
@@ -42,12 +47,12 @@ def get_depot_index(vertices, depot_label):
         return __depot_index
 
     for i, vertex in enumerate(vertices):
-        if depot_label in vertex.labels:
+        if vertex == depot_node:
             __depot_index = i
             break
 
     if __depot_index is None:
-        raise DepotUnspecifiedException("No depot specified!")
+        raise DepotUnspecifiedException("No depot location specified!")
 
     return __depot_index
 
@@ -55,8 +60,8 @@ def get_depot_index(vertices, depot_label):
 @mgp.read_proc
 def route(
     context: mgp.ProcCtx,
+    depot_node: mgp.Vertex,
     number_of_vehicles: mgp.Nullable[int] = None,
-    depot_label: mgp.Nullable[str] = "Depot",
 ) -> mgp.Record(from_vertex=mgp.Vertex, to_vertex=mgp.Vertex):
     """
     The VRP routing returns 2 fields.
@@ -75,7 +80,7 @@ def route(
 
     vertices = [v for v in context.graph.vertices]
     distance_matrix = get_distance_matrix(vertices)
-    depot_index = get_depot_index(vertices, depot_label)
+    depot_index = get_depot_index(vertices, depot_node)
 
     solver = VRPConstraintProgrammingSolver(
         number_of_vehicles, distance_matrix, depot_index

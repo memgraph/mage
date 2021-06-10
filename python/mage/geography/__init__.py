@@ -2,6 +2,8 @@ from mage.geography.distance_calculator import (  # noqa: F401, F402, F403
     LATITUDE,
     LONGITUDE,
     calculate_distance_between_points,
+    InvalidCoordinatesException,
+    InvalidMetricException,
 )
 
 
@@ -17,4 +19,5 @@ from mage.geography.vehicle_routing import (  # noqa: F401, F402, F403
     VRPPath,
     VRPResult,
     VRPSolver,
+    InvalidDepotException,
 )
