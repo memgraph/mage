@@ -115,7 +115,7 @@ python3 test_e2e
 | [biconnected_components](cpp/biconnected_components_module/biconnected_components_module.cpp) | C++ | Algorithm for calculating maximal biconnected subgraph. A biconnected subgraph is a subgraph with a property that if any vertex were to be removed, the graph will remain connected. |
 | [bipartite_matching](cpp/bipartite_matching_module/bipartite_matching_module.cpp) | C++ | Algorithm for calculating maximum bipartite matching, where matching is a set of nodes chosen in such a way that no two edges share an endpoint. |
 | [cycles](cpp/cycles_module/cycles_module.cpp) | C++ | Algorithm for detecting cycles on graphs |
-| [bridges](cpp/bridges_module/bridges_module.cpp) | C++ | A bridge is an edge, which when deleted, increases the number of connected components. Goal of this algorithm is to detect edges which are bridges in graph. |
+| [bridges](cpp/bridges_module/bridges_module.cpp) | C++ | A bridge is an edge, which when deleted, increases the number of connected components. The goal of this algorithm is to detect edges that are bridges in a graph. |
 | [betweenness centrality](cpp/betweenness_centrality_module/betweenness_centrality_module.cpp) | C++ | The betweenness centrality of a node is defined as the sum of the of all-pairs shortest paths that pass through the node divided by the number of all-pairs shortest paths in the graph. The algorithm has O(nm) time complexity. |
 
 ## Contributing
