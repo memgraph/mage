@@ -11,6 +11,19 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! Macro definitions and top level data structures.
+//!
+//! [define_procedure], [init_module], [close_module] all accept a function accepting [Memgraph]
+//! and returning `Result<(), MgpError>` because that allows using `?` operator which is a very
+//! convenient way of propagating execution errors.
+//!
+//! Example
+//!
+//! ```no run
+//! |memgraph: &Memgraph| -> Result<(), MgpError> {
+//!     // Implementation
+//! }
+//! ```
 
 use std::ffi::CStr;
 
@@ -131,6 +144,13 @@ macro_rules! init_module {
 }
 
 /// Closes Memgraph query module.
+///
+/// Example
+///
+/// ```no run
+/// close_module!(|memgraph: &Memgraph| -> Result<(), MgpError> {
+///     // Implementation
+/// }
 #[macro_export]
 macro_rules! close_module {
     ($close_func:expr) => {

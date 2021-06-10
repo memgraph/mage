@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! All related to the map (dictionary) datatype.
 
 use std::ffi::{CStr, CString};
 
@@ -76,13 +77,12 @@ impl Iterator for MapIterator {
 
     fn next(&mut self) -> Option<MapItem> {
         unsafe {
-            let data: *const mgp_map_item;
-            if self.is_first {
+            let data = if self.is_first {
                 self.is_first = false;
-                data = ffi::mgp_map_items_iterator_get(self.ptr);
+                ffi::mgp_map_items_iterator_get(self.ptr)
             } else {
-                data = ffi::mgp_map_items_iterator_next(self.ptr);
-            }
+                ffi::mgp_map_items_iterator_next(self.ptr)
+            };
 
             if data.is_null() {
                 None
@@ -105,6 +105,12 @@ impl Iterator for MapIterator {
 
 impl Map {
     pub fn new(ptr: *mut mgp_map, memgraph: &Memgraph) -> Map {
+        #[cfg(not(test))]
+        assert!(
+            !ptr.is_null(),
+            "Unable to create a new Map because pointer is null."
+        );
+
         Map {
             ptr,
             memgraph: memgraph.clone(),
@@ -112,7 +118,6 @@ impl Map {
     }
 
     pub(crate) unsafe fn mgp_copy(ptr: *const mgp_map, memgraph: &Memgraph) -> MgpResult<Map> {
-        // Test passes null ptr because nothing else is possible.
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),

@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! All related the the value (container for any data type).
 
 use std::ffi::{CStr, CString};
 
@@ -27,8 +28,11 @@ use crate::vertex::*;
 use crate::mgp::ffi;
 use mockall_double::double;
 
+/// Creates a copy of the provided string.
+///
 /// # Safety
-/// TODO(gitbuda): Write section about safety.
+///
+/// The caller has provided a pointer that points to a valid C string. More here [CStr::from_ptr].
 pub(crate) unsafe fn create_cstring(c_char_ptr: *const i8) -> MgpResult<CString> {
     match CString::new(CStr::from_ptr(c_char_ptr).to_bytes()) {
         Ok(v) => Ok(v),
@@ -36,7 +40,7 @@ pub(crate) unsafe fn create_cstring(c_char_ptr: *const i8) -> MgpResult<CString>
     }
 }
 
-// NOTE on why mutable pointer to mgp_value has to be owned by this code.
+// NOTE: on why mutable pointer to mgp_value has to be owned by this code.
 //
 // mgp_value used to return data is non-const, owned by the module code. Function to delete
 // mgp_value is non-const.
@@ -81,6 +85,12 @@ impl Drop for MgpValue {
 
 impl MgpValue {
     pub fn new(ptr: *mut mgp_value) -> MgpValue {
+        #[cfg(not(test))]
+        assert!(
+            !ptr.is_null(),
+            "Unable to create a new MgpValue because pointer is null."
+        );
+
         MgpValue { ptr }
     }
 
@@ -162,11 +172,12 @@ impl MgpValue {
         unsafe { ffi::mgp_value_is_string(self.ptr) != 0 }
     }
 
-    /// Required because List implements Drop which destroys the underlying list object. MgpValue
-    /// takes the ownership of the list which means copy has to be created + if all goes well the
-    /// list object shouldn't be deleted.
+    /// Makes a copy of the given object returning the [MgpValue] object. [MgpValue] objects owns
+    /// the new object.
     pub fn make_list(list: &List, memgraph: &Memgraph) -> MgpResult<MgpValue> {
         unsafe {
+            // The new object should be manually destroyed in case something within this function
+            // fails.
             let mgp_list = ffi::mgp_list_make_empty(list.size(), memgraph.memory());
             for item in list.iter()? {
                 let mgp_value = item.to_mgp_value(&memgraph)?;
@@ -188,11 +199,12 @@ impl MgpValue {
         unsafe { ffi::mgp_value_is_list(self.ptr) != 0 }
     }
 
-    /// Required because Map implements Drop which destroys the underlying map object. MgpValue
-    /// takes the ownership of the map which means copy has to be created + if all goes well the
-    /// map object shouldn't be deleted.
+    /// Makes a copy of the given object returning the [MgpValue] object. [MgpValue] objects owns
+    /// the new object.
     pub fn make_map(map: &Map, memgraph: &Memgraph) -> MgpResult<MgpValue> {
         unsafe {
+            // The new object should be manually destroyed in case something within this function
+            // fails.
             let mgp_map = ffi::mgp_map_make_empty(memgraph.memory());
             for item in map.iter()? {
                 let mgp_value = match item.value.to_mgp_value(&memgraph) {
@@ -220,11 +232,12 @@ impl MgpValue {
         unsafe { ffi::mgp_value_is_map(self.ptr) != 0 }
     }
 
-    /// Required because Vertex implements Drop which destroys the undrlying vertex object.
-    /// MgpValue takes the ownership of the vertex which means copy has to be created + if all goes
-    /// well the vertex object shouldn't be deleted.
+    /// Makes a copy of the given object returning the [MgpValue] object. [MgpValue] objects owns
+    /// the new object.
     pub fn make_vertex(vertex: &Vertex, memgraph: &Memgraph) -> MgpResult<MgpValue> {
         unsafe {
+            // The new object should be manually destroyed in case something within this function
+            // fails.
             let mgp_copy = ffi::mgp_vertex_copy(vertex.mgp_ptr(), memgraph.memory());
             if mgp_copy.is_null() {
                 return Err(MgpError::UnableToMakeVertexValue);
@@ -242,11 +255,12 @@ impl MgpValue {
         unsafe { ffi::mgp_value_is_vertex(self.ptr) != 0 }
     }
 
-    /// Required because Edge implements Drop which destroys the undrlying edge object. MgpValue
-    /// takes the ownership of the edge which means copy has to be created + if all goes well the
-    /// edge object shouldn't be deleted.
+    /// Makes a copy of the given object returning the [MgpValue] object. [MgpValue] objects owns
+    /// the new object.
     pub fn make_edge(edge: &Edge, memgraph: &Memgraph) -> MgpResult<MgpValue> {
         unsafe {
+            // The new object should be manually destroyed in case something within this function
+            // fails.
             let mgp_copy = ffi::mgp_edge_copy(edge.mgp_ptr(), memgraph.memory());
             if mgp_copy.is_null() {
                 return Err(MgpError::UnableToMakeEdgeValue);
@@ -264,11 +278,12 @@ impl MgpValue {
         unsafe { ffi::mgp_value_is_edge(self.ptr) != 0 }
     }
 
-    /// Required because Path implements Drop which destroys the undrlying path object. MgpValue
-    /// takes the ownership of the path which means copy has to be created + if all goes well the
-    /// path object shouldn't be deleted.
+    /// Makes a copy of the given object returning the [MgpValue] object. [MgpValue] objects owns
+    /// the new object.
     pub fn make_path(path: &Path, memgraph: &Memgraph) -> MgpResult<MgpValue> {
         unsafe {
+            // The new object should be manually destroyed in case something within this function
+            // fails.
             let mgp_copy = ffi::mgp_path_copy(path.mgp_ptr(), memgraph.memory());
             if mgp_copy.is_null() {
                 return Err(MgpError::UnableToMakePathValue);
@@ -321,8 +336,12 @@ impl Value {
     }
 }
 
+/// Creates copy of [mgp_value] object as a [Value] object.
+///
 /// # Safety
-/// TODO(gitbuda): Write section about safety.
+///
+/// Calls C API unsafe functions. The provided [mgp_value] object has to be a valid non-null
+/// pointer.
 pub(crate) unsafe fn mgp_raw_value_to_value(
     value: *const mgp_value,
     memgraph: &Memgraph,

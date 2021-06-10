@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! All vertex (node) related.
 
 use std::ffi::{CStr, CString};
 
@@ -33,6 +34,12 @@ pub struct VerticesIterator {
 
 impl VerticesIterator {
     pub fn new(ptr: *mut mgp_vertices_iterator, memgraph: &Memgraph) -> VerticesIterator {
+        #[cfg(not(test))]
+        assert!(
+            !ptr.is_null(),
+            "Unable to create a new VerticesIterator because pointer is null."
+        );
+
         VerticesIterator {
             ptr,
             is_first: true,
@@ -56,13 +63,12 @@ impl Iterator for VerticesIterator {
 
     fn next(&mut self) -> Option<Vertex> {
         unsafe {
-            let data: *const mgp_vertex;
-            if self.is_first {
+            let data = if self.is_first {
                 self.is_first = false;
-                data = ffi::mgp_vertices_iterator_get(self.ptr);
+                ffi::mgp_vertices_iterator_get(self.ptr)
             } else {
-                data = ffi::mgp_vertices_iterator_next(self.ptr);
-            }
+                ffi::mgp_vertices_iterator_next(self.ptr)
+            };
 
             if data.is_null() {
                 None
@@ -94,6 +100,12 @@ impl Drop for Vertex {
 
 impl Vertex {
     pub fn new(ptr: *mut mgp_vertex, memgraph: &Memgraph) -> Vertex {
+        #[cfg(not(test))]
+        assert!(
+            !ptr.is_null(),
+            "Unable to create a new Vertex because pointer is null."
+        );
+
         Vertex {
             ptr,
             memgraph: memgraph.clone(),
@@ -105,7 +117,6 @@ impl Vertex {
         mgp_vertex: *const mgp_vertex,
         memgraph: &Memgraph,
     ) -> MgpResult<Vertex> {
-        // Test passes null ptr because nothing else is possible.
         #[cfg(not(test))]
         assert!(
             !mgp_vertex.is_null(),
@@ -157,8 +168,7 @@ impl Vertex {
             if mgp_value.is_null() {
                 return Err(MgpError::UnableToGetVertexProperty);
             }
-            // TODO(gitbuda): Figure out how to pass Snafu memgraph here.
-            let value = MgpValue::to_value(&MgpValue::new(mgp_value), &self.memgraph)?;
+            let value = MgpValue::new(mgp_value).to_value(&self.memgraph)?;
             match CString::new(name.to_bytes()) {
                 Ok(c_string) => Ok(Property {
                     name: c_string,

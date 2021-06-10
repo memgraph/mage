@@ -26,7 +26,7 @@ Memgraph.  `Mgp` prefixed structures should be used to return data to Memgraph
 directly manipulated in the procedure call. The whole point of this library is
 to hide that complexity as much as possible.
 
-Memgraph Rust query modules API uses
+Memgraph Rust Query Modules API uses
 [CStr](https://doc.rust-lang.org/std/ffi/struct.CStr.html) (`&CStr`) becuase
 that's the most compatible type between Rust and Memgraph engine. [Rust
 String](https://doc.rust-lang.org/std/string/struct.String.html) can validly

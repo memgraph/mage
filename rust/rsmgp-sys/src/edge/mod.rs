@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! All edge (relationship) related.
 
 use std::ffi::{CStr, CString};
 
@@ -33,6 +34,12 @@ pub struct EdgesIterator {
 
 impl EdgesIterator {
     pub fn new(ptr: *mut mgp_edges_iterator, memgraph: &Memgraph) -> EdgesIterator {
+        #[cfg(not(test))]
+        assert!(
+            !ptr.is_null(),
+            "Unable to create a new EdgeIterator because pointer is null."
+        );
+
         EdgesIterator {
             ptr,
             is_first: true,
@@ -56,13 +63,12 @@ impl Iterator for EdgesIterator {
 
     fn next(&mut self) -> Option<Edge> {
         unsafe {
-            let data: *const mgp_edge;
-            if self.is_first {
+            let data = if self.is_first {
                 self.is_first = false;
-                data = ffi::mgp_edges_iterator_get(self.ptr);
+                ffi::mgp_edges_iterator_get(self.ptr)
             } else {
-                data = ffi::mgp_edges_iterator_next(self.ptr);
-            }
+                ffi::mgp_edges_iterator_next(self.ptr)
+            };
 
             if data.is_null() {
                 None
@@ -94,6 +100,12 @@ impl Drop for Edge {
 
 impl Edge {
     pub fn new(ptr: *mut mgp_edge, memgraph: &Memgraph) -> Edge {
+        #[cfg(not(test))]
+        assert!(
+            !ptr.is_null(),
+            "Unable to create a new Edge because pointer is null."
+        );
+
         Edge {
             ptr,
             memgraph: memgraph.clone(),
@@ -102,7 +114,6 @@ impl Edge {
 
     /// Creates a new Edge based on [mgp_edge].
     pub(crate) unsafe fn mgp_copy(ptr: *const mgp_edge, memgraph: &Memgraph) -> MgpResult<Edge> {
-        // Test passes null ptr because nothing else is possible.
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
@@ -157,7 +168,7 @@ impl Edge {
             if mgp_value.is_null() {
                 return Err(MgpError::UnableToReturnEdgePropertyValueAllocationError);
             }
-            let value = match MgpValue::to_value(&MgpValue::new(mgp_value), &self.memgraph) {
+            let value = match MgpValue::new(mgp_value).to_value(&self.memgraph) {
                 Ok(v) => v,
                 Err(_) => return Err(MgpError::UnableToReturnEdgePropertyValueCreationError),
             };

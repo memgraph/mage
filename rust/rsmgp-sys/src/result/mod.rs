@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! Simplifies returning results to Memgraph and then to the client.
 
 use snafu::Snafu;
 use std::ffi::CStr;
@@ -34,7 +35,7 @@ pub struct MgpResultRecord {
 }
 
 impl MgpResultRecord {
-    pub fn new(memgraph: &Memgraph) -> MgpResult<MgpResultRecord> {
+    pub fn create(memgraph: &Memgraph) -> MgpResult<MgpResultRecord> {
         unsafe {
             let mgp_ptr = ffi::mgp_result_new_record(memgraph.result());
             if mgp_ptr.is_null() {

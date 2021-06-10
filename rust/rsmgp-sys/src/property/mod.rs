@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! All related to the property graph property (data key-value pair).
 
 use std::ffi::CString;
 
@@ -45,6 +46,12 @@ pub struct PropertiesIterator {
 
 impl PropertiesIterator {
     pub fn new(ptr: *mut mgp_properties_iterator, memgraph: &Memgraph) -> PropertiesIterator {
+        #[cfg(not(test))]
+        assert!(
+            !ptr.is_null(),
+            "Unable to create a new PropertiesIterator because pointer is null."
+        );
+
         PropertiesIterator {
             ptr,
             is_first: true,
@@ -68,13 +75,12 @@ impl Iterator for PropertiesIterator {
 
     fn next(&mut self) -> Option<Property> {
         unsafe {
-            let data: *const mgp_property;
-            if self.is_first {
+            let data = if self.is_first {
                 self.is_first = false;
-                data = ffi::mgp_properties_iterator_get(self.ptr);
+                ffi::mgp_properties_iterator_get(self.ptr)
             } else {
-                data = ffi::mgp_properties_iterator_next(self.ptr);
-            }
+                ffi::mgp_properties_iterator_next(self.ptr)
+            };
 
             if data.is_null() {
                 None

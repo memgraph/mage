@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! All related to a graph path.
 
 use crate::edge::*;
 use crate::memgraph::*;
@@ -39,6 +40,12 @@ impl Drop for Path {
 
 impl Path {
     pub fn new(ptr: *mut mgp_path, memgraph: &Memgraph) -> Path {
+        #[cfg(not(test))]
+        assert!(
+            !ptr.is_null(),
+            "Unable to create a new Path because pointer is null."
+        );
+
         Path {
             ptr,
             memgraph: memgraph.clone(),
@@ -50,7 +57,6 @@ impl Path {
         mgp_path: *const mgp_path,
         memgraph: &Memgraph,
     ) -> MgpResult<Path> {
-        // Test passes null ptr because nothing else is possible.
         #[cfg(not(test))]
         assert!(
             !mgp_path.is_null(),

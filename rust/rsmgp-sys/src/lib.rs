@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! A library to simplify implementation of Memgraph Query Modules.
 
 #[cfg(test)]
 extern crate mockall;
@@ -19,25 +20,14 @@ extern crate mockall_double;
 
 mod testing;
 
-/// All edge (relationship) related.
 pub mod edge;
-/// All related to the list datatype.
 pub mod list;
-/// All related to the map (dictionary) datatype.
 pub mod map;
-/// Abstraction to interact with Memgraph.
 pub mod memgraph;
-/// Auto-generated bindings (don't use directly, except top-level pointer data types).
 pub mod mgp;
-/// All related to a graph path.
 pub mod path;
-/// All related to the property graph property (data key-value pair).
 pub mod property;
-/// Simplifies returning results to Memgraph and then to the client.
 pub mod result;
-/// Macro definitions and top level data structures.
 pub mod rsmgp;
-/// All related the the value (container for any data type).
 pub mod value;
-/// All vertex (node) related.
 pub mod vertex;

@@ -24,11 +24,11 @@ use crate::{mock_mgp_once, with_dummy};
 
 #[test]
 #[serial]
-fn test_new_record() {
+fn test_create_record() {
     mock_mgp_once!(mgp_result_new_record_context, |_| { null_mut() });
 
     with_dummy!(|memgraph: &Memgraph| {
-        let result_record = MgpResultRecord::new(&memgraph);
+        let result_record = MgpResultRecord::create(&memgraph);
         assert!(result_record.is_err());
     });
 }
@@ -95,7 +95,7 @@ fn test_insert_value() {
     ctx_destroy.expect().times(10).returning(|_| {});
 
     with_dummy!(|memgraph: &Memgraph| {
-        let result_record = MgpResultRecord::new(&memgraph).unwrap();
+        let result_record = MgpResultRecord::create(&memgraph).unwrap();
         assert!(result_record.insert_null(c_str!("field")).is_err());
         assert!(result_record.insert_bool(c_str!("field"), true).is_err());
         assert!(result_record.insert_int(c_str!("field"), 1).is_err());

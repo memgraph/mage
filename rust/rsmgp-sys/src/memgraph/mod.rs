@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! Abstraction to interact with Memgraph.
 
 use std::ffi::CStr;
 use std::rc::Rc;
@@ -127,7 +128,7 @@ impl Memgraph {
     /// Keep this object on the stack and add data that will be returned to Memgraph / client
     /// during/after the procedure call.
     pub fn result_record(&self) -> MgpResult<MgpResultRecord> {
-        MgpResultRecord::new(self)
+        MgpResultRecord::create(self)
     }
 
     /// Registers a new read procedure.

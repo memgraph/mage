@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! All related to the list datatype.
 
 use crate::memgraph::*;
 use crate::mgp::*;
@@ -46,8 +47,7 @@ impl<'a> Iterator for ListIterator<'a> {
     type Item = Value;
 
     fn next(&mut self) -> Option<Value> {
-        // TODO(gitbuda): Implement ListIterator::next using mgp primitive methods (optimal).
-        if self.position == self.list.size() {
+        if self.position >= self.list.size() {
             return None;
         }
         let value = match self.list.value_at(self.position) {
@@ -61,6 +61,12 @@ impl<'a> Iterator for ListIterator<'a> {
 
 impl List {
     pub fn new(ptr: *mut mgp_list, memgraph: &Memgraph) -> List {
+        #[cfg(not(test))]
+        assert!(
+            !ptr.is_null(),
+            "Unable to create a new List because pointer is null."
+        );
+
         List {
             ptr,
             memgraph: memgraph.clone(),
@@ -79,7 +85,6 @@ impl List {
 
     /// Creates a new List based on [mgp_list].
     pub(crate) unsafe fn mgp_copy(ptr: *const mgp_list, memgraph: &Memgraph) -> MgpResult<List> {
-        // Test passes null ptr because nothing else is possible.
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),

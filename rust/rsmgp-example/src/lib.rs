@@ -25,6 +25,18 @@ init_module!(|memgraph: &Memgraph| -> Result<(), MgpError> {
             define_type!("list", FieldType::List, FieldType::Int),
         ],
     )?;
+
+    memgraph.add_read_procedure(
+        basic,
+        c_str!("basic"),
+        &[define_type!("input_string", FieldType::String)],
+    )?;
+    Ok(())
+});
+
+define_procedure!(basic, |memgraph: &Memgraph| -> Result<(), MgpError> {
+    let result = memgraph.result_record()?;
+    result.insert_string(c_str!("input_string"), c_str!("TODO: Add input param."))?;
     Ok(())
 });
 

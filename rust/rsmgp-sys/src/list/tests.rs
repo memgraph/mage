@@ -23,17 +23,6 @@ use crate::{mock_mgp_once, with_dummy};
 
 #[test]
 #[serial]
-fn test_new_record() {
-    mock_mgp_once!(mgp_result_new_record_context, |_| { null_mut() });
-
-    with_dummy!(|memgraph: &Memgraph| {
-        let result_record = MgpResultRecord::new(&memgraph);
-        assert!(result_record.is_err());
-    });
-}
-
-#[test]
-#[serial]
 fn test_mgp_copy() {
     mock_mgp_once!(mgp_list_size_context, |_| 1);
     mock_mgp_once!(mgp_list_make_empty_context, |_, _| unsafe {
