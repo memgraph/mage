@@ -43,11 +43,11 @@ def get_depot_index(vertices, depot_label):
 
     for i, vertex in enumerate(vertices):
         if depot_label in vertex.labels:
-            __depot_index = vertices[i].id
+            __depot_index = i
             break
 
     if __depot_index is None:
-        raise Exception("No depot specified!")
+        raise DepotUnspecifiedException("No depot specified!")
 
     return __depot_index
 
@@ -88,3 +88,7 @@ def route(
         mgp.Record(from_vertex=vertices[x.from_vertex], to_vertex=vertices[x.to_vertex])
         for x in result.vrp_paths
     ]
+
+
+class DepotUnspecifiedException(Exception):
+    pass
