@@ -14,7 +14,6 @@
 //! Abstraction to interact with Memgraph.
 
 use std::ffi::CStr;
-use std::rc::Rc;
 
 use crate::mgp::*;
 use crate::result::*;
@@ -25,19 +24,14 @@ use crate::vertex::*;
 use crate::mgp::ffi;
 use mockall_double::double;
 
-#[derive(Debug)]
-struct MgpMemgraph {
+/// Main object to interact with Memgraph instance.
+#[derive(Debug, Clone)]
+pub struct Memgraph {
     args: *const mgp_list,
     graph: *const mgp_graph,
     result: *mut mgp_result,
     memory: *mut mgp_memory,
     module: *mut mgp_module,
-}
-
-/// Main object to interact with Memgraph instance.
-#[derive(Debug, Clone)]
-pub struct Memgraph {
-    memgraph: Rc<MgpMemgraph>,
 }
 
 impl Memgraph {
@@ -49,26 +43,23 @@ impl Memgraph {
         module: *mut mgp_module,
     ) -> Memgraph {
         Memgraph {
-            memgraph: Rc::new(MgpMemgraph {
-                args,
-                graph,
-                result,
-                memory,
-                module,
-            }),
+            args,
+            graph,
+            result,
+            memory,
+            module,
         }
     }
 
     /// Creates a new object with all underlying data set to null. Used for the testing purposes.
-    pub fn new_default() -> Memgraph {
+    #[cfg(test)]
+    pub(crate) fn new_default() -> Memgraph {
         Memgraph {
-            memgraph: Rc::new(MgpMemgraph {
-                args: std::ptr::null(),
-                graph: std::ptr::null(),
-                result: std::ptr::null_mut(),
-                memory: std::ptr::null_mut(),
-                module: std::ptr::null_mut(),
-            }),
+            args: std::ptr::null(),
+            graph: std::ptr::null(),
+            result: std::ptr::null_mut(),
+            memory: std::ptr::null_mut(),
+            module: std::ptr::null_mut(),
         }
     }
 
@@ -76,27 +67,27 @@ impl Memgraph {
 
     /// Returns pointer to the object with all arguments passed to the procedure call.
     pub fn args(&self) -> *const mgp_list {
-        self.memgraph.args
+        self.args
     }
 
     /// Returns pointer to the object with graph data.
     pub fn graph(&self) -> *const mgp_graph {
-        self.memgraph.graph
+        self.graph
     }
 
     /// Returns pointer to the object where results could be stored.
     pub fn result(&self) -> *mut mgp_result {
-        self.memgraph.result
+        self.result
     }
 
     /// Returns pointer to the memory object for advanced memory control.
     pub fn memory(&self) -> *mut mgp_memory {
-        self.memgraph.memory
+        self.memory
     }
 
     /// Returns pointer to the module object.
     pub fn module(&self) -> *mut mgp_module {
-        self.memgraph.module
+        self.module
     }
 
     pub fn vertices_iter(&self) -> MgpResult<VerticesIterator> {
