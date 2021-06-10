@@ -49,7 +49,6 @@ void CreateGraphEdge(mg_graph::Graph<TSize> *graph, const mgp_vertex *vertex_fro
 
   graph->CreateEdge(memgraph_id_from, memgraph_id_to, graph_type);
 }
-
 }  // namespace mg_graph
 
 namespace mg_utility {
