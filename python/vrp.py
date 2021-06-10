@@ -46,7 +46,7 @@ def get_depot_index(vertices, depot_label):
             __depot_index = vertices[i].id
             break
 
-    if __depot_index == None:
+    if __depot_index is None:
         raise Exception("No depot specified!")
 
     return __depot_index

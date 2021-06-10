@@ -49,13 +49,10 @@ class VRPConstraintProgrammingSolver(VRPSolver):
     def get_distance(self, edge: Tuple[int, int]) -> float:
         node_from, node_to = edge
 
-        if node_from in [
-            VRPConstraintProgrammingSolver.SINK_INDEX,
-            VRPConstraintProgrammingSolver.SOURCE_INDEX,
-        ] or node_to in [
-            VRPConstraintProgrammingSolver.SINK_INDEX,
-            VRPConstraintProgrammingSolver.SOURCE_INDEX,
-        ]:
+        if any(
+            node in [self.SOURCE_INDEX, self.SINK_INDEX]
+            for node in [node_from, node_to]
+        ):
             return 0
 
         return self.distance_matrix[node_from][node_to]
@@ -101,8 +98,26 @@ class VRPConstraintProgrammingSolver(VRPSolver):
                 == 1
             )
 
-    def _add_adjacent_edge_variables(
-        self, node_index: int, input: bool = False
+    def _add_adjacent_output_edge_variables(
+        self, node_index: int
+    ) -> List[Tuple[int, int]]:
+        edges_vars = []
+
+        for adjacent_node in range(len(self.distance_matrix)):
+            if adjacent_node == self.depot_index:
+                continue
+
+            edge = (node_index, adjacent_node)
+            if input:
+                edge = (adjacent_node, node_index)
+
+            var = self._add_variable(edge)
+            edges_vars.append(var)
+
+        return edges_vars
+
+    def _add_adjacent_input_edge_variables(
+        self, node_index: int
     ) -> List[Tuple[int, int]]:
         edges_vars = []
 
