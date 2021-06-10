@@ -84,11 +84,6 @@ jobs:
       run: |
         cd rust/rsmgp-sys
         RUST_BACKTRACE=1 cargo tarpaulin --out Html --ignore-tests
-    - name: Archive code coverage results
-      uses: actions/upload-artifact@v1
-      with:
-        name: rsmgp-sys-coverage-report
-        path: rust/rsmgp-sys/tarpaulin-report.html
     - name: Rust example build
       run: |
         cd rust/rsmgp-example
