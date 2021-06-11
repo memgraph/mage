@@ -167,7 +167,7 @@ impl Edge {
             if mgp_value.is_null() {
                 return Err(MgpError::UnableToReturnEdgePropertyValueAllocationError);
             }
-            let value = match MgpValue::new(mgp_value).to_value(&self.memgraph) {
+            let value = match MgpValue::new(mgp_value, &self.memgraph).to_value() {
                 Ok(v) => v,
                 Err(_) => return Err(MgpError::UnableToReturnEdgePropertyValueCreationError),
             };

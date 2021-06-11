@@ -182,17 +182,19 @@ fn test_mgp_value_for_the_right_type() {
     mock_mgp_once!(mgp_value_is_edge_context, |_| 1);
     mock_mgp_once!(mgp_value_is_path_context, |_| 1);
 
-    let value = MgpValue::new(null_mut());
-    assert!(value.is_null());
-    assert!(value.is_bool());
-    assert!(value.is_int());
-    assert!(value.is_double());
-    assert!(value.is_string());
-    assert!(value.is_list());
-    assert!(value.is_map());
-    assert!(value.is_vertex());
-    assert!(value.is_edge());
-    assert!(value.is_path());
+    with_dummy!(|memgraph: &Memgraph| {
+        let value = MgpValue::new(null_mut(), &memgraph);
+        assert!(value.is_null());
+        assert!(value.is_bool());
+        assert!(value.is_int());
+        assert!(value.is_double());
+        assert!(value.is_string());
+        assert!(value.is_list());
+        assert!(value.is_map());
+        assert!(value.is_vertex());
+        assert!(value.is_edge());
+        assert!(value.is_path());
+    });
 }
 
 #[test]
@@ -209,17 +211,19 @@ fn test_mgp_value_for_the_wrong_type() {
     mock_mgp_once!(mgp_value_is_edge_context, |_| 0);
     mock_mgp_once!(mgp_value_is_path_context, |_| 0);
 
-    let value = MgpValue::new(null_mut());
-    assert!(!value.is_null());
-    assert!(!value.is_bool());
-    assert!(!value.is_int());
-    assert!(!value.is_double());
-    assert!(!value.is_string());
-    assert!(!value.is_list());
-    assert!(!value.is_map());
-    assert!(!value.is_vertex());
-    assert!(!value.is_edge());
-    assert!(!value.is_path());
+    with_dummy!(|memgraph: &Memgraph| {
+        let value = MgpValue::new(null_mut(), &memgraph);
+        assert!(!value.is_null());
+        assert!(!value.is_bool());
+        assert!(!value.is_int());
+        assert!(!value.is_double());
+        assert!(!value.is_string());
+        assert!(!value.is_list());
+        assert!(!value.is_map());
+        assert!(!value.is_vertex());
+        assert!(!value.is_edge());
+        assert!(!value.is_path());
+    });
 }
 
 #[test]

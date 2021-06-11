@@ -167,7 +167,7 @@ impl Vertex {
             if mgp_value.is_null() {
                 return Err(MgpError::UnableToGetVertexProperty);
             }
-            let value = MgpValue::new(mgp_value).to_value(&self.memgraph)?;
+            let value = MgpValue::new(mgp_value, &self.memgraph).to_value()?;
             match CString::new(name.to_bytes()) {
                 Ok(c_string) => Ok(Property {
                     name: c_string,

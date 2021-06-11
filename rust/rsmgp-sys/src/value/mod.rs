@@ -13,6 +13,7 @@
 // limitations under the License.
 //! All related to the value (container for any data type).
 
+use std::convert::From;
 use std::ffi::{CStr, CString};
 
 use crate::edge::*;
@@ -66,10 +67,14 @@ pub(crate) unsafe fn create_cstring(c_char_ptr: *const i8) -> MgpResult<CString>
 /// Useful to own `mgp_value` coming from / going into Memgraph as a result.
 ///
 /// Underlying pointer object is going to be automatically deleted.
+///
+/// NOTE: Implementing From<Value> for MgpValue is not simple because not all Value objects can
+/// contain Memgraph object (primitive types).
 pub struct MgpValue {
     // It's not wise to create a new MgpValue out of the existing value pointer because drop with a
     // valid pointer will be called multiple times -> double free problem.
     ptr: *mut mgp_value,
+    memgraph: Memgraph,
 }
 
 impl Drop for MgpValue {
@@ -83,22 +88,25 @@ impl Drop for MgpValue {
 }
 
 impl MgpValue {
-    pub fn new(ptr: *mut mgp_value) -> MgpValue {
+    pub fn new(ptr: *mut mgp_value, memgraph: &Memgraph) -> MgpValue {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
             "Unable to create a new MgpValue because pointer is null."
         );
 
-        MgpValue { ptr }
+        MgpValue {
+            ptr,
+            memgraph: memgraph.clone(),
+        }
     }
 
     pub(crate) fn mgp_ptr(&self) -> *const mgp_value {
         self.ptr
     }
 
-    pub fn to_value(&self, memgraph: &Memgraph) -> MgpResult<Value> {
-        unsafe { mgp_raw_value_to_value(self.mgp_ptr(), &memgraph) }
+    pub fn to_value(&self) -> MgpResult<Value> {
+        unsafe { mgp_raw_value_to_value(self.mgp_ptr(), &self.memgraph) }
     }
 
     pub fn make_null(memgraph: &Memgraph) -> MgpResult<MgpValue> {
@@ -107,7 +115,7 @@ impl MgpValue {
             if mgp_ptr.is_null() {
                 return Err(MgpError::UnableToMakeNullValue);
             }
-            Ok(MgpValue::new(mgp_ptr))
+            Ok(MgpValue::new(mgp_ptr, &memgraph))
         }
     }
 
@@ -121,7 +129,7 @@ impl MgpValue {
             if mgp_ptr.is_null() {
                 return Err(MgpError::UnableToMakeBoolValue);
             }
-            Ok(MgpValue::new(mgp_ptr))
+            Ok(MgpValue::new(mgp_ptr, &memgraph))
         }
     }
 
@@ -135,7 +143,7 @@ impl MgpValue {
             if mgp_ptr.is_null() {
                 return Err(MgpError::UnableToMakeIntegerValue);
             }
-            Ok(MgpValue::new(mgp_ptr))
+            Ok(MgpValue::new(mgp_ptr, &memgraph))
         }
     }
 
@@ -149,7 +157,7 @@ impl MgpValue {
             if mgp_ptr.is_null() {
                 return Err(MgpError::UnableToMakeDoubleValue);
             }
-            Ok(MgpValue::new(mgp_ptr))
+            Ok(MgpValue::new(mgp_ptr, &memgraph))
         }
     }
 
@@ -163,7 +171,7 @@ impl MgpValue {
             if mgp_ptr.is_null() {
                 return Err(MgpError::UnableToMakeMemgraphStringValue);
             }
-            Ok(MgpValue::new(mgp_ptr))
+            Ok(MgpValue::new(mgp_ptr, &memgraph))
         }
     }
 
@@ -190,7 +198,7 @@ impl MgpValue {
                 ffi::mgp_list_destroy(mgp_list);
                 return Err(MgpError::UnableToMakeListValue);
             }
-            Ok(MgpValue::new(mgp_value))
+            Ok(MgpValue::new(mgp_value, &memgraph))
         }
     }
 
@@ -223,7 +231,7 @@ impl MgpValue {
                 ffi::mgp_map_destroy(mgp_map);
                 return Err(MgpError::UnableToMakeMapValue);
             }
-            Ok(MgpValue::new(mgp_value))
+            Ok(MgpValue::new(mgp_value, &memgraph))
         }
     }
 
@@ -246,7 +254,7 @@ impl MgpValue {
                 ffi::mgp_vertex_destroy(mgp_copy);
                 return Err(MgpError::UnableToMakeVertexValue);
             }
-            Ok(MgpValue::new(mgp_value))
+            Ok(MgpValue::new(mgp_value, &memgraph))
         }
     }
 
@@ -269,7 +277,7 @@ impl MgpValue {
                 ffi::mgp_edge_destroy(mgp_copy);
                 return Err(MgpError::UnableToMakeEdgeValue);
             }
-            Ok(MgpValue::new(mgp_value))
+            Ok(MgpValue::new(mgp_value, &memgraph))
         }
     }
 
@@ -292,7 +300,7 @@ impl MgpValue {
                 ffi::mgp_path_destroy(mgp_copy);
                 return Err(MgpError::UnableToMakePathValue);
             }
-            Ok(MgpValue { ptr: mgp_value })
+            Ok(MgpValue::new(mgp_value, &memgraph))
         }
     }
 
@@ -330,6 +338,15 @@ impl Value {
             Value::Vertex(x) => MgpValue::make_vertex(&x, &memgraph),
             Value::Edge(x) => MgpValue::make_edge(&x, &memgraph),
             Value::Path(x) => MgpValue::make_path(&x, &memgraph),
+        }
+    }
+}
+
+impl From<MgpValue> for Value {
+    fn from(item: MgpValue) -> Self {
+        match item.to_value() {
+            Ok(v) => v,
+            Err(_) => panic!("Unable to create Value from MgpValue."),
         }
     }
 }
