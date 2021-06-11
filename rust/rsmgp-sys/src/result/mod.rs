@@ -37,7 +37,7 @@ pub struct MgpResultRecord {
 impl MgpResultRecord {
     pub fn create(memgraph: &Memgraph) -> MgpResult<MgpResultRecord> {
         unsafe {
-            let mgp_ptr = ffi::mgp_result_new_record(memgraph.result());
+            let mgp_ptr = ffi::mgp_result_new_record(memgraph.result_ptr());
             if mgp_ptr.is_null() {
                 return Err(MgpError::UnableToCreateResultRecord);
             }

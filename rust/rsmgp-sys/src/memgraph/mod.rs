@@ -15,6 +15,7 @@
 
 use std::ffi::CStr;
 
+use crate::list::*;
 use crate::mgp::*;
 use crate::result::*;
 use crate::rsmgp::*;
@@ -63,36 +64,39 @@ impl Memgraph {
         }
     }
 
-    // TODO(gitbuda): Implement args abstraction.
+    pub fn args(&self) -> MgpResult<List> {
+        // TODO(gitbuda): Avoid list copy when accessing args.
+        unsafe { List::mgp_copy(self.args_ptr(), &self) }
+    }
 
     /// Returns pointer to the object with all arguments passed to the procedure call.
-    pub fn args(&self) -> *const mgp_list {
+    pub(crate) fn args_ptr(&self) -> *const mgp_list {
         self.args
     }
 
     /// Returns pointer to the object with graph data.
-    pub fn graph(&self) -> *const mgp_graph {
+    pub(crate) fn graph_ptr(&self) -> *const mgp_graph {
         self.graph
     }
 
     /// Returns pointer to the object where results could be stored.
-    pub fn result(&self) -> *mut mgp_result {
+    pub(crate) fn result_ptr(&self) -> *mut mgp_result {
         self.result
     }
 
     /// Returns pointer to the memory object for advanced memory control.
-    pub fn memory(&self) -> *mut mgp_memory {
+    pub(crate) fn memory_ptr(&self) -> *mut mgp_memory {
         self.memory
     }
 
     /// Returns pointer to the module object.
-    pub fn module(&self) -> *mut mgp_module {
+    pub fn module_ptr(&self) -> *mut mgp_module {
         self.module
     }
 
     pub fn vertices_iter(&self) -> MgpResult<VerticesIterator> {
         unsafe {
-            let mgp_iterator = ffi::mgp_graph_iter_vertices(self.graph(), self.memory());
+            let mgp_iterator = ffi::mgp_graph_iter_vertices(self.graph_ptr(), self.memory_ptr());
             if mgp_iterator.is_null() {
                 return Err(MgpError::UnableToCreateGraphVerticesIterator);
             }
@@ -103,9 +107,9 @@ impl Memgraph {
     pub fn vertex_by_id(&self, id: i64) -> MgpResult<Vertex> {
         unsafe {
             let mgp_vertex = ffi::mgp_graph_get_vertex_by_id(
-                self.graph(),
+                self.graph_ptr(),
                 mgp_vertex_id { as_int: id },
-                self.memory(),
+                self.memory_ptr(),
             );
             if mgp_vertex.is_null() {
                 return Err(MgpError::UnableToFindVertexById);
@@ -139,8 +143,11 @@ impl Memgraph {
         result_fields: &[ResultFieldType],
     ) -> MgpResult<()> {
         unsafe {
-            let procedure =
-                ffi::mgp_module_add_read_procedure(self.module(), name.as_ptr(), Some(proc_ptr));
+            let procedure = ffi::mgp_module_add_read_procedure(
+                self.module_ptr(),
+                name.as_ptr(),
+                Some(proc_ptr),
+            );
             if procedure.is_null() {
                 return Err(MgpError::UnableToRegisterReadProcedure);
             }
@@ -169,6 +176,8 @@ impl Memgraph {
             Ok(())
         }
     }
+
+    // TODO(gitbuda): Add required and optional argument registration.
 }
 
 #[cfg(test)]

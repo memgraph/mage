@@ -123,8 +123,8 @@ impl Map {
             "Unable to create map copy because map pointer is null."
         );
 
-        let mgp_map_copy = ffi::mgp_map_make_empty(memgraph.memory());
-        let mgp_map_iterator = ffi::mgp_map_iter_items(ptr, memgraph.memory());
+        let mgp_map_copy = ffi::mgp_map_make_empty(memgraph.memory_ptr());
+        let mgp_map_iterator = ffi::mgp_map_iter_items(ptr, memgraph.memory_ptr());
         if mgp_map_iterator.is_null() {
             ffi::mgp_map_destroy(mgp_map_copy);
             return Err(MgpError::UnableToCreateMap);
@@ -142,7 +142,7 @@ impl Map {
 
     pub fn make_empty(memgraph: &Memgraph) -> MgpResult<Map> {
         unsafe {
-            let mgp_ptr = ffi::mgp_map_make_empty(memgraph.memory());
+            let mgp_ptr = ffi::mgp_map_make_empty(memgraph.memory_ptr());
             if mgp_ptr.is_null() {
                 return Err(MgpError::UnableToCreateEmptyMap);
             }
@@ -177,7 +177,7 @@ impl Map {
 
     pub fn iter(&self) -> MgpResult<MapIterator> {
         unsafe {
-            let mgp_iterator = ffi::mgp_map_iter_items(self.ptr, self.memgraph.memory());
+            let mgp_iterator = ffi::mgp_map_iter_items(self.ptr, self.memgraph.memory_ptr());
             if mgp_iterator.is_null() {
                 return Err(MgpError::UnableToCreateMapIterator);
             }

@@ -213,7 +213,7 @@ macro_rules! define_type {
 
 pub fn set_memgraph_error_msg(msg: &CStr, memgraph: &Memgraph) {
     unsafe {
-        let status = ffi::mgp_result_set_error_msg(memgraph.result(), msg.as_ptr());
+        let status = ffi::mgp_result_set_error_msg(memgraph.result_ptr(), msg.as_ptr());
         if status == 0 {
             panic!("Unable to pass error message to the Memgraph engine.");
         }

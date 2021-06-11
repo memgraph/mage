@@ -122,7 +122,7 @@ impl Vertex {
             "Unable to make vertex copy because vertex pointer is null."
         );
 
-        let mgp_copy = ffi::mgp_vertex_copy(mgp_vertex, memgraph.memory());
+        let mgp_copy = ffi::mgp_vertex_copy(mgp_vertex, memgraph.memory_ptr());
         if mgp_copy.is_null() {
             return Err(MgpError::UnableToMakeVertexCopy);
         }
@@ -163,7 +163,7 @@ impl Vertex {
     pub fn property(&self, name: &CStr) -> MgpResult<Property> {
         unsafe {
             let mgp_value =
-                ffi::mgp_vertex_get_property(self.ptr, name.as_ptr(), self.memgraph.memory());
+                ffi::mgp_vertex_get_property(self.ptr, name.as_ptr(), self.memgraph.memory_ptr());
             if mgp_value.is_null() {
                 return Err(MgpError::UnableToGetVertexProperty);
             }
@@ -180,7 +180,8 @@ impl Vertex {
 
     pub fn properties(&self) -> MgpResult<PropertiesIterator> {
         unsafe {
-            let mgp_iterator = ffi::mgp_vertex_iter_properties(self.ptr, self.memgraph.memory());
+            let mgp_iterator =
+                ffi::mgp_vertex_iter_properties(self.ptr, self.memgraph.memory_ptr());
             if mgp_iterator.is_null() {
                 return Err(MgpError::UnableToReturnVertexPropertiesIterator);
             }
@@ -190,7 +191,7 @@ impl Vertex {
 
     pub fn in_edges(&self) -> MgpResult<EdgesIterator> {
         unsafe {
-            let mgp_iterator = ffi::mgp_vertex_iter_in_edges(self.ptr, self.memgraph.memory());
+            let mgp_iterator = ffi::mgp_vertex_iter_in_edges(self.ptr, self.memgraph.memory_ptr());
             if mgp_iterator.is_null() {
                 return Err(MgpError::UnableToReturnVertexInEdgesIterator);
             }
@@ -200,7 +201,7 @@ impl Vertex {
 
     pub fn out_edges(&self) -> MgpResult<EdgesIterator> {
         unsafe {
-            let mgp_iterator = ffi::mgp_vertex_iter_out_edges(self.ptr, self.memgraph.memory());
+            let mgp_iterator = ffi::mgp_vertex_iter_out_edges(self.ptr, self.memgraph.memory_ptr());
             if mgp_iterator.is_null() {
                 return Err(MgpError::UnableToReturnVertexOutEdgesIterator);
             }

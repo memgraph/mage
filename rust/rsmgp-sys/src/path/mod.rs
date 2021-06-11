@@ -62,7 +62,7 @@ impl Path {
             "Unable to make path copy because path pointer is null."
         );
 
-        let mgp_copy = ffi::mgp_path_copy(mgp_path, memgraph.memory());
+        let mgp_copy = ffi::mgp_path_copy(mgp_path, memgraph.memory_ptr());
         if mgp_copy.is_null() {
             return Err(MgpError::UnableToMakePathCopy);
         }
@@ -81,7 +81,7 @@ impl Path {
     /// Makes a new [Path] based on the starting [Vertex] object.
     pub fn make_with_start(vertex: &Vertex, memgraph: &Memgraph) -> MgpResult<Path> {
         unsafe {
-            let mgp_path = ffi::mgp_path_make_with_start(vertex.mgp_ptr(), memgraph.memory());
+            let mgp_path = ffi::mgp_path_make_with_start(vertex.mgp_ptr(), memgraph.memory_ptr());
             if mgp_path.is_null() {
                 return Err(MgpError::UnableToCreatePathWithStartVertex);
             }

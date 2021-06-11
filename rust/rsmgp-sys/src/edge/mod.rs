@@ -119,7 +119,7 @@ impl Edge {
             "Unable to make edge copy because edge pointer is null."
         );
 
-        let mgp_copy = ffi::mgp_edge_copy(ptr, memgraph.memory());
+        let mgp_copy = ffi::mgp_edge_copy(ptr, memgraph.memory_ptr());
         if mgp_copy.is_null() {
             return Err(MgpError::UnableToMakeEdgeCopy);
         }
@@ -163,7 +163,7 @@ impl Edge {
     pub fn property(&self, name: &CStr) -> MgpResult<Property> {
         unsafe {
             let mgp_value =
-                ffi::mgp_edge_get_property(self.ptr, name.as_ptr(), self.memgraph.memory());
+                ffi::mgp_edge_get_property(self.ptr, name.as_ptr(), self.memgraph.memory_ptr());
             if mgp_value.is_null() {
                 return Err(MgpError::UnableToReturnEdgePropertyValueAllocationError);
             }
@@ -183,7 +183,7 @@ impl Edge {
 
     pub fn properties(&self) -> MgpResult<PropertiesIterator> {
         unsafe {
-            let mgp_iterator = ffi::mgp_edge_iter_properties(self.ptr, self.memgraph.memory());
+            let mgp_iterator = ffi::mgp_edge_iter_properties(self.ptr, self.memgraph.memory_ptr());
             if mgp_iterator.is_null() {
                 return Err(MgpError::UnableToReturnEdgePropertiesIterator);
             }

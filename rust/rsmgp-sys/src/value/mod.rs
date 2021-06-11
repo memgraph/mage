@@ -111,7 +111,7 @@ impl MgpValue {
 
     pub fn make_null(memgraph: &Memgraph) -> MgpResult<MgpValue> {
         unsafe {
-            let mgp_ptr = ffi::mgp_value_make_null(memgraph.memory());
+            let mgp_ptr = ffi::mgp_value_make_null(memgraph.memory_ptr());
             if mgp_ptr.is_null() {
                 return Err(MgpError::UnableToMakeNullValue);
             }
@@ -125,7 +125,8 @@ impl MgpValue {
 
     pub fn make_bool(value: bool, memgraph: &Memgraph) -> MgpResult<MgpValue> {
         unsafe {
-            let mgp_ptr = ffi::mgp_value_make_bool(if !value { 0 } else { 1 }, memgraph.memory());
+            let mgp_ptr =
+                ffi::mgp_value_make_bool(if !value { 0 } else { 1 }, memgraph.memory_ptr());
             if mgp_ptr.is_null() {
                 return Err(MgpError::UnableToMakeBoolValue);
             }
@@ -139,7 +140,7 @@ impl MgpValue {
 
     pub fn make_int(value: i64, memgraph: &Memgraph) -> MgpResult<MgpValue> {
         unsafe {
-            let mgp_ptr = ffi::mgp_value_make_int(value, memgraph.memory());
+            let mgp_ptr = ffi::mgp_value_make_int(value, memgraph.memory_ptr());
             if mgp_ptr.is_null() {
                 return Err(MgpError::UnableToMakeIntegerValue);
             }
@@ -153,7 +154,7 @@ impl MgpValue {
 
     pub fn make_double(value: f64, memgraph: &Memgraph) -> MgpResult<MgpValue> {
         unsafe {
-            let mgp_ptr = ffi::mgp_value_make_double(value, memgraph.memory());
+            let mgp_ptr = ffi::mgp_value_make_double(value, memgraph.memory_ptr());
             if mgp_ptr.is_null() {
                 return Err(MgpError::UnableToMakeDoubleValue);
             }
@@ -167,7 +168,7 @@ impl MgpValue {
 
     pub fn make_string(value: &CStr, memgraph: &Memgraph) -> MgpResult<MgpValue> {
         unsafe {
-            let mgp_ptr = ffi::mgp_value_make_string(value.as_ptr(), memgraph.memory());
+            let mgp_ptr = ffi::mgp_value_make_string(value.as_ptr(), memgraph.memory_ptr());
             if mgp_ptr.is_null() {
                 return Err(MgpError::UnableToMakeMemgraphStringValue);
             }
@@ -185,7 +186,7 @@ impl MgpValue {
         unsafe {
             // The new object should be manually destroyed in case something within this function
             // fails.
-            let mgp_list = ffi::mgp_list_make_empty(list.size(), memgraph.memory());
+            let mgp_list = ffi::mgp_list_make_empty(list.size(), memgraph.memory_ptr());
             for item in list.iter()? {
                 let mgp_value = item.to_mgp_value(&memgraph)?;
                 if ffi::mgp_list_append(mgp_list, mgp_value.ptr) == 0 {
@@ -212,7 +213,7 @@ impl MgpValue {
         unsafe {
             // The new object should be manually destroyed in case something within this function
             // fails.
-            let mgp_map = ffi::mgp_map_make_empty(memgraph.memory());
+            let mgp_map = ffi::mgp_map_make_empty(memgraph.memory_ptr());
             for item in map.iter()? {
                 let mgp_value = match item.value.to_mgp_value(&memgraph) {
                     Ok(v) => v,
@@ -245,7 +246,7 @@ impl MgpValue {
         unsafe {
             // The new object should be manually destroyed in case something within this function
             // fails.
-            let mgp_copy = ffi::mgp_vertex_copy(vertex.mgp_ptr(), memgraph.memory());
+            let mgp_copy = ffi::mgp_vertex_copy(vertex.mgp_ptr(), memgraph.memory_ptr());
             if mgp_copy.is_null() {
                 return Err(MgpError::UnableToMakeVertexValue);
             }
@@ -268,7 +269,7 @@ impl MgpValue {
         unsafe {
             // The new object should be manually destroyed in case something within this function
             // fails.
-            let mgp_copy = ffi::mgp_edge_copy(edge.mgp_ptr(), memgraph.memory());
+            let mgp_copy = ffi::mgp_edge_copy(edge.mgp_ptr(), memgraph.memory_ptr());
             if mgp_copy.is_null() {
                 return Err(MgpError::UnableToMakeEdgeValue);
             }
@@ -291,7 +292,7 @@ impl MgpValue {
         unsafe {
             // The new object should be manually destroyed in case something within this function
             // fails.
-            let mgp_copy = ffi::mgp_path_copy(path.mgp_ptr(), memgraph.memory());
+            let mgp_copy = ffi::mgp_path_copy(path.mgp_ptr(), memgraph.memory_ptr());
             if mgp_copy.is_null() {
                 return Err(MgpError::UnableToMakePathValue);
             }
