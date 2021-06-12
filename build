@@ -22,7 +22,7 @@ os.makedirs(QUERY_MODULES_DIRECTORY)
 
 
 def copytree(src, dst, ignore_patterns=[]):
-    _check_ignore = lambda x: any(
+    def _check_ignore(x): return any(
         [bool(fnmatch.fnmatch(x, pattern)) for pattern in ignore_patterns]
     )
 
@@ -91,10 +91,18 @@ os.environ["PYTHONPATH"] = PY_DIRECTORY
 #              Load Rust modules                #
 #################################################
 
-RS_EXAMPLE_DIRECTORY = f"{RS_DIRECTORY}/rsmgp-example"
-os.chdir(RS_EXAMPLE_DIRECTORY)
-subprocess.run(["cargo", "build", "--release"])
-# TODO(gitbuda): Filter out mockall and snafu so files.
-so_files = glob.glob("**/*_example.so", recursive=True)
-for file in so_files:
-    shutil.copy2(file, QUERY_MODULES_DIRECTORY)
+# List all build modules in a list explicitly.
+# NOTE: Cargo prefixes `.so` files with the `lib` prefix (not possible to
+#       change).
+# NOTE: There are more files with the suffix `libmodule_name.so` under the Rust
+#       build directory.
+RS_MODULES = [
+    (f"{RS_DIRECTORY}/rsmgp-example", "librust_example.so", "rust_example.so")
+]
+for rs_module in RS_MODULES:
+    proj_dir, build_lib_name, dist_lib_name = rs_module
+    os.chdir(proj_dir)
+    subprocess.run(["cargo", "build", "--release"])
+    build_lib_path = os.path.join(
+        proj_dir, "target", "release", build_lib_name)
+    shutil.copy2(build_lib_path, f"{QUERY_MODULES_DIRECTORY}/{dist_lib_name}")

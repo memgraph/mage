@@ -1,5 +1,5 @@
 query: >
-    CALL libmemgraph_query_module_in_rust_example.test_procedure() YIELD *;
+    CALL rust_example.test_procedure() YIELD *;
 
 output:
     - first_edge_type: "E1"

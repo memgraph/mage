@@ -6,9 +6,8 @@ edition = "2018"
 
 [dependencies]
 c_str_macro = "1.0.2"
-rsmgp-sys = { path = "../rsmgp-sys" }
-# TODO(gitbuda): Add rsmgp-sys = "1.0.0"
+rsmgp-sys = "^0.1.0"
 
 [lib]
-name = "memgraph_query_module_in_rust_example"
+name = "rust_example"
 crate-type = ["cdylib"]
