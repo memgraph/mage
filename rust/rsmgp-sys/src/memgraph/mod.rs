@@ -25,6 +25,29 @@ use crate::vertex::*;
 use crate::mgp::ffi;
 use mockall_double::double;
 
+fn resolve_mgp_type(types: &[Type]) -> *const mgp_type {
+    unsafe {
+        let mut mgp_type: *const mgp_type = std::ptr::null_mut();
+        for field_type in types.iter().rev() {
+            mgp_type = match field_type {
+                Type::Any => ffi::mgp_type_any(),
+                Type::Bool => ffi::mgp_type_bool(),
+                Type::Number => ffi::mgp_type_number(),
+                Type::Int => ffi::mgp_type_int(),
+                Type::Double => ffi::mgp_type_float(),
+                Type::String => ffi::mgp_type_string(),
+                Type::Map => ffi::mgp_type_map(),
+                Type::Vertex => ffi::mgp_type_node(),
+                Type::Edge => ffi::mgp_type_relationship(),
+                Type::Path => ffi::mgp_type_path(),
+                Type::Nullable => ffi::mgp_type_nullable(mgp_type),
+                Type::List => ffi::mgp_type_list(mgp_type),
+            };
+        }
+        mgp_type
+    }
+}
+
 /// Main object to interact with Memgraph instance.
 #[derive(Clone)]
 pub struct Memgraph {
@@ -130,7 +153,9 @@ impl Memgraph {
     ///
     /// * `proc_ptr` - Identifier of the top level C function that represents the procedure.
     /// * `name` - A string that will be registered as a procedure name inside Memgraph instance.
-    /// * `result_fields` - An array of all [ResultFieldType]s, each one define by [FieldType].
+    /// * `required_input_types` - An array of all [NamedType]s, each one define by name and an array of [Type]s.
+    /// * `optional_input_types` - An array of all [OptionalNamedType]s, each one define by name, an array of [Type]s, and default value.
+    /// * `result_field_types` - An array of all [NamedType]s, each one define by name and an array of [Type]s.
     pub fn add_read_procedure(
         &self,
         proc_ptr: extern "C" fn(
@@ -140,7 +165,9 @@ impl Memgraph {
             *mut mgp_memory,
         ),
         name: &CStr,
-        result_fields: &[ResultFieldType],
+        required_input_types: &[NamedType],
+        optional_input_types: &[OptionalNamedType],
+        result_field_types: &[NamedType],
     ) -> MgpResult<()> {
         unsafe {
             let procedure = ffi::mgp_module_add_read_procedure(
@@ -151,25 +178,41 @@ impl Memgraph {
             if procedure.is_null() {
                 return Err(MgpError::UnableToRegisterReadProcedure);
             }
-            for result_field in result_fields {
-                let mut mgp_type: *const mgp_type = std::ptr::null_mut();
-                for field_type in result_field.types.iter().rev() {
-                    mgp_type = match field_type {
-                        FieldType::Any => ffi::mgp_type_any(),
-                        FieldType::Bool => ffi::mgp_type_bool(),
-                        FieldType::Number => ffi::mgp_type_number(),
-                        FieldType::Int => ffi::mgp_type_int(),
-                        FieldType::Double => ffi::mgp_type_float(),
-                        FieldType::String => ffi::mgp_type_string(),
-                        FieldType::Map => ffi::mgp_type_map(),
-                        FieldType::Vertex => ffi::mgp_type_node(),
-                        FieldType::Edge => ffi::mgp_type_relationship(),
-                        FieldType::Path => ffi::mgp_type_path(),
-                        FieldType::Nullable => ffi::mgp_type_nullable(mgp_type),
-                        FieldType::List => ffi::mgp_type_list(mgp_type),
-                    };
+
+            for required_type in required_input_types {
+                let mgp_type = resolve_mgp_type(&required_type.types);
+                if ffi::mgp_proc_add_arg(procedure, required_type.name.as_ptr(), mgp_type) == 0 {
+                    return Err(MgpError::AddProcedureRequiredInputParameterError);
                 }
-                if ffi::mgp_proc_add_result(procedure, result_field.name.as_ptr(), mgp_type) == 0 {
+            }
+
+            for optional_input in optional_input_types {
+                let mgp_type = resolve_mgp_type(&optional_input.types);
+                if ffi::mgp_proc_add_opt_arg(
+                    procedure,
+                    optional_input.name.as_ptr(),
+                    mgp_type,
+                    optional_input.default.mgp_ptr(),
+                ) == 0
+                {
+                    return Err(MgpError::AddProcedureOptionalInputParameterError);
+                }
+            }
+
+            for result_field in result_field_types {
+                let mgp_type = resolve_mgp_type(&result_field.types);
+                if result_field.deprecated {
+                    if ffi::mgp_proc_add_deprecated_result(
+                        procedure,
+                        result_field.name.as_ptr(),
+                        mgp_type,
+                    ) == 0
+                    {
+                        return Err(MgpError::AddProcedureParameterTypeError);
+                    }
+                } else if ffi::mgp_proc_add_result(procedure, result_field.name.as_ptr(), mgp_type)
+                    == 0
+                {
                     return Err(MgpError::AddProcedureParameterTypeError);
                 }
             }
@@ -177,7 +220,10 @@ impl Memgraph {
         }
     }
 
-    // TODO(gitbuda): Add required and optional argument registration.
+    /// Return `true` if the currently executing procedure should abort as soon as possible.
+    pub fn must_abort(&self) -> bool {
+        unsafe { ffi::mgp_must_abort(self.graph_ptr()) != 0 }
+    }
 }
 
 #[cfg(test)]

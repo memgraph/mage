@@ -30,6 +30,7 @@ use std::ffi::CStr;
 use crate::memgraph::*;
 #[double]
 use crate::mgp::ffi;
+use crate::value::*;
 use mockall_double::double;
 
 /// Defines a new procedure callable by Memgraph engine.
@@ -109,7 +110,7 @@ macro_rules! define_procedure {
 ///     memgraph.add_read_procedure(
 ///         procedure_name,
 ///         c_str!("procedure_name"),
-///         &[define_type!("list", FieldType::List, FieldType::Int),],
+///         &[define_type!("list", Type::List, Type::Int),],
 ///     )?;
 ///     Ok(())
 /// });
@@ -169,7 +170,7 @@ macro_rules! close_module {
 }
 
 /// Used to pass expected result field types during procedure registration.
-pub enum FieldType {
+pub enum Type {
     Any,
     Bool,
     Number,
@@ -184,14 +185,22 @@ pub enum FieldType {
     List,
 }
 
-/// Used to pass expected result field types during procedure registration.
+/// Used to pass expected type during procedure registration, both input parameters and result
+/// types.
 ///
 /// Each procedure can have multiple returning fields, each one is represented by this struct.
-/// Return type is deduced by processing types field from left to right. E.g., [FieldType::Any]
-/// means any return type, [FieldType::List], [FieldType::Int] means a list of integer values.
-pub struct ResultFieldType<'a> {
+/// Return type is deduced by processing types field from left to right. E.g., [Type::Any]
+/// means any return type, [Type::List], [Type::Int] means a list of integer values.
+pub struct NamedType<'a> {
     pub name: &'a CStr,
-    pub types: &'a [FieldType],
+    pub types: &'a [Type],
+    pub deprecated: bool,
+}
+
+pub struct OptionalNamedType<'a> {
+    pub name: &'a CStr,
+    pub types: &'a [Type],
+    pub default: &'a MgpValue,
 }
 
 /// Defines single result field type.
@@ -199,14 +208,37 @@ pub struct ResultFieldType<'a> {
 /// Example of defining the field as a list of integers.
 ///
 /// ```no run
-/// define_type!("name", FieldType::List, FieldType::Int);
+/// define_type!("name", Type::List, Type::Int);
 /// ```
 #[macro_export]
 macro_rules! define_type {
     ($name:literal, $($types:expr),+) => {
-        ResultFieldType {
+        NamedType {
             name: &c_str!($name),
             types: &[$($types),+],
+            deprecated: false,
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! define_deprecated_type {
+    ($name:literal, $($types:expr),+) => {
+        NamedType {
+            name: &c_str!($name),
+            types: &[$($types),+],
+            depricated: true,
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! define_optional_type {
+    ($name:literal, $default:expr, $($types:expr),+) => {
+        OptionalNamedType {
+            name: &c_str!($name),
+            types: &[$($types),+],
+            default: $default,
         }
     };
 }
@@ -219,10 +251,6 @@ pub fn set_memgraph_error_msg(msg: &CStr, memgraph: &Memgraph) {
         }
     }
 }
-
-// TODO(gitbuda): Add transaction management (abort) stuff.
-// TODO(gitbuda): Deal with optional arguments.
-// TODO(gitbuda): Add support for depricated arguments.
 
 #[cfg(test)]
 mod tests {

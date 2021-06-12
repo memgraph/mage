@@ -6,7 +6,7 @@ use rsmgp_sys::property::*;
 use rsmgp_sys::result::*;
 use rsmgp_sys::rsmgp::*;
 use rsmgp_sys::value::*;
-use rsmgp_sys::{close_module, define_procedure, define_type, init_module};
+use rsmgp_sys::{close_module, define_optional_type, define_procedure, define_type, init_module};
 use std::ffi::CString;
 use std::os::raw::c_int;
 use std::panic;
@@ -15,28 +15,48 @@ init_module!(|memgraph: &Memgraph| -> Result<(), MgpError> {
     memgraph.add_read_procedure(
         test_procedure,
         c_str!("test_procedure"),
+        &[],
+        &[],
         &[
-            define_type!("labels_count", FieldType::Int),
-            define_type!("has_L3_label", FieldType::Bool),
-            define_type!("first_label", FieldType::String),
-            define_type!("name_property", FieldType::String),
-            define_type!("properties_string", FieldType::String),
-            define_type!("first_edge_type", FieldType::String),
-            define_type!("list", FieldType::List, FieldType::Int),
+            define_type!("labels_count", Type::Int),
+            define_type!("has_L3_label", Type::Bool),
+            define_type!("first_label", Type::String),
+            define_type!("name_property", Type::String),
+            define_type!("properties_string", Type::String),
+            define_type!("first_edge_type", Type::String),
+            define_type!("list", Type::List, Type::Int),
         ],
     )?;
 
+    let mgp_value = MgpValue::make_int(0, &memgraph)?;
     memgraph.add_read_procedure(
         basic,
         c_str!("basic"),
-        &[define_type!("input_string", FieldType::String)],
+        &[define_type!("input_string", Type::String)],
+        &[define_optional_type!(
+            "optional_input_int",
+            &mgp_value,
+            Type::Int
+        )],
+        &[
+            define_type!("output_string", Type::String),
+            define_type!("output_int", Type::Int),
+        ],
     )?;
+
     Ok(())
 });
 
 define_procedure!(basic, |memgraph: &Memgraph| -> Result<(), MgpError> {
     let result = memgraph.result_record()?;
-    result.insert_string(c_str!("input_string"), c_str!("TODO: Add input param."))?;
+    let args = memgraph.args()?;
+    let output_string = args.value_at(0)?;
+    let output_int = args.value_at(1)?;
+    result.insert_mgp_value(
+        c_str!("output_string"),
+        &output_string.to_mgp_value(&memgraph)?,
+    )?;
+    result.insert_mgp_value(c_str!("output_int"), &output_int.to_mgp_value(&memgraph)?)?;
     Ok(())
 });
 

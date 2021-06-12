@@ -219,6 +219,12 @@ pub enum MgpError {
     #[snafu(display("Unable to prepare result within Rust procedure."))]
     PreparingResultError,
 
+    #[snafu(display("Unable to add the required input parameter."))]
+    AddProcedureRequiredInputParameterError,
+
+    #[snafu(display("Unable to add the optional input parameter."))]
+    AddProcedureOptionalInputParameterError,
+
     #[snafu(display("Unable to add a type of procedure parameter in Rust Module."))]
     AddProcedureParameterTypeError,
 
