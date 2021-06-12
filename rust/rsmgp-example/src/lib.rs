@@ -1,4 +1,3 @@
-use backtrace::Backtrace;
 use c_str_macro::c_str;
 use rsmgp_sys::memgraph::*;
 use rsmgp_sys::mgp::*;
@@ -11,7 +10,7 @@ use std::ffi::CString;
 use std::os::raw::c_int;
 use std::panic;
 
-init_module!(|memgraph: &Memgraph| -> Result<(), MgpError> {
+init_module!(|memgraph: &Memgraph| -> MgpResult<()> {
     memgraph.add_read_procedure(
         test_procedure,
         c_str!("test_procedure"),
@@ -28,14 +27,13 @@ init_module!(|memgraph: &Memgraph| -> Result<(), MgpError> {
         ],
     )?;
 
-    let mgp_value = MgpValue::make_int(0, &memgraph)?;
     memgraph.add_read_procedure(
         basic,
         c_str!("basic"),
         &[define_type!("input_string", Type::String)],
         &[define_optional_type!(
             "optional_input_int",
-            &mgp_value,
+            &MgpValue::make_int(0, &memgraph)?,
             Type::Int
         )],
         &[
@@ -47,7 +45,7 @@ init_module!(|memgraph: &Memgraph| -> Result<(), MgpError> {
     Ok(())
 });
 
-define_procedure!(basic, |memgraph: &Memgraph| -> Result<(), MgpError> {
+define_procedure!(basic, |memgraph: &Memgraph| -> MgpResult<()> {
     let result = memgraph.result_record()?;
     let args = memgraph.args()?;
     let output_string = args.value_at(0)?;
@@ -60,77 +58,74 @@ define_procedure!(basic, |memgraph: &Memgraph| -> Result<(), MgpError> {
     Ok(())
 });
 
-define_procedure!(
-    test_procedure,
-    |memgraph: &Memgraph| -> Result<(), MgpError> {
-        for mgp_vertex in memgraph.vertices_iter()? {
-            let result = memgraph.result_record()?;
+define_procedure!(test_procedure, |memgraph: &Memgraph| -> MgpResult<()> {
+    for mgp_vertex in memgraph.vertices_iter()? {
+        let result = memgraph.result_record()?;
 
-            let mut properties: Vec<Property> = mgp_vertex.properties()?.collect();
-            properties.sort_by(|a, b| {
-                let a_name = a.name.to_str().unwrap();
-                let b_name = b.name.to_str().unwrap();
-                a_name.cmp(&b_name)
-            });
-            let properties_string = properties
-                .iter()
-                .map(|prop| {
-                    let prop_name = prop.name.to_str().unwrap();
-                    if let Value::Int(value) = prop.value {
-                        return format!("{}: {}", prop_name, value);
-                    } else if let Value::String(value) = &prop.value {
-                        return format!("{}: {}", prop_name, value.to_str().unwrap());
-                    } else if let Value::Float(value) = prop.value {
-                        return format!("{}: {}", prop_name, value);
-                    } else {
-                        ",".to_string()
-                    }
-                })
-                .collect::<Vec<String>>()
-                .join(", ");
-            result.insert_string(
-                c_str!("properties_string"),
-                CString::new(properties_string.into_bytes())
-                    .unwrap()
-                    .as_c_str(),
-            )?;
-
-            let labels_count = mgp_vertex.labels_count();
-            result.insert_int(c_str!("labels_count"), labels_count as i64)?;
-            if labels_count > 0 {
-                result.insert_string(c_str!("first_label"), &mgp_vertex.label_at(0)?)?;
-            } else {
-                result.insert_string(c_str!("first_label"), c_str!(""))?;
-            }
-
-            let name_property = mgp_vertex.property(c_str!("name"))?.value;
-            if let Value::Null = name_property {
-                result.insert_string(c_str!("name_property"), c_str!("unknown"))?;
-            } else if let Value::String(value) = name_property {
-                result.insert_string(c_str!("name_property"), &value)?;
-            } else {
-                result.insert_string(c_str!("name_property"), c_str!("not null and not string"))?
-            }
-
-            result.insert_bool(c_str!("has_L3_label"), mgp_vertex.has_label(c_str!("L3")))?;
-
-            match mgp_vertex.out_edges()?.next() {
-                Some(edge) => {
-                    let edge_type = edge.edge_type()?;
-                    result.insert_string(c_str!("first_edge_type"), &edge_type)?;
+        let mut properties: Vec<Property> = mgp_vertex.properties()?.collect();
+        properties.sort_by(|a, b| {
+            let a_name = a.name.to_str().unwrap();
+            let b_name = b.name.to_str().unwrap();
+            a_name.cmp(&b_name)
+        });
+        let properties_string = properties
+            .iter()
+            .map(|prop| {
+                let prop_name = prop.name.to_str().unwrap();
+                if let Value::Int(value) = prop.value {
+                    return format!("{}: {}", prop_name, value);
+                } else if let Value::String(value) = &prop.value {
+                    return format!("{}: {}", prop_name, value.to_str().unwrap());
+                } else if let Value::Float(value) = prop.value {
+                    return format!("{}: {}", prop_name, value);
+                } else {
+                    ",".to_string()
                 }
-                None => {
-                    result.insert_string(c_str!("first_edge_type"), c_str!("unknown_edge_type"))?;
-                }
-            }
+            })
+            .collect::<Vec<String>>()
+            .join(", ");
+        result.insert_string(
+            c_str!("properties_string"),
+            CString::new(properties_string.into_bytes())
+                .unwrap()
+                .as_c_str(),
+        )?;
 
-            let list_property = mgp_vertex.property(c_str!("list"))?.value;
-            if let Value::List(list) = list_property {
-                result.insert_list(c_str!("list"), &list)?;
+        let labels_count = mgp_vertex.labels_count();
+        result.insert_int(c_str!("labels_count"), labels_count as i64)?;
+        if labels_count > 0 {
+            result.insert_string(c_str!("first_label"), &mgp_vertex.label_at(0)?)?;
+        } else {
+            result.insert_string(c_str!("first_label"), c_str!(""))?;
+        }
+
+        let name_property = mgp_vertex.property(c_str!("name"))?.value;
+        if let Value::Null = name_property {
+            result.insert_string(c_str!("name_property"), c_str!("unknown"))?;
+        } else if let Value::String(value) = name_property {
+            result.insert_string(c_str!("name_property"), &value)?;
+        } else {
+            result.insert_string(c_str!("name_property"), c_str!("not null and not string"))?
+        }
+
+        result.insert_bool(c_str!("has_L3_label"), mgp_vertex.has_label(c_str!("L3")))?;
+
+        match mgp_vertex.out_edges()?.next() {
+            Some(edge) => {
+                let edge_type = edge.edge_type()?;
+                result.insert_string(c_str!("first_edge_type"), &edge_type)?;
+            }
+            None => {
+                result.insert_string(c_str!("first_edge_type"), c_str!("unknown_edge_type"))?;
             }
         }
-        Ok(())
-    }
-);
 
-close_module!(|| -> Result<(), MgpError> { Ok(()) });
+        let list_property = mgp_vertex.property(c_str!("list"))?.value;
+        if let Value::List(list) = list_property {
+            result.insert_list(c_str!("list"), &list)?;
+        }
+    }
+    Ok(())
+});
+
+close_module!(|| -> MgpResult<()> { Ok(()) });

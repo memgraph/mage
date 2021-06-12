@@ -38,11 +38,11 @@ impl Drop for Path {
 }
 
 impl Path {
-    pub fn new(ptr: *mut mgp_path, memgraph: &Memgraph) -> Path {
+    pub(crate) fn new(ptr: *mut mgp_path, memgraph: &Memgraph) -> Path {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
-            "Unable to create a new Path because pointer is null."
+            "Unable to create path because the given pointer is null."
         );
 
         Path {
@@ -59,7 +59,7 @@ impl Path {
         #[cfg(not(test))]
         assert!(
             !mgp_path.is_null(),
-            "Unable to make path copy because path pointer is null."
+            "Unable to make path copy because the given pointer is null."
         );
 
         let mgp_copy = ffi::mgp_path_copy(mgp_path, memgraph.memory_ptr());

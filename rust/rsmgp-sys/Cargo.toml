@@ -1,6 +1,6 @@
 [package]
 name = "rsmgp-sys"
-version = "0.1.4"
+version = "0.1.5"
 description = "Library to develop query modules for Memgraph in Rust."
 authors = ["Memgraph Contributors <tech@memgraph.com>"]
 license = "Apache-2.0"

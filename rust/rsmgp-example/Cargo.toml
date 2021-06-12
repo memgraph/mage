@@ -8,7 +8,6 @@ edition = "2018"
 c_str_macro = "1.0.2"
 rsmgp-sys = { path = "../rsmgp-sys" }
 # TODO(gitbuda): Add rsmgp-sys = "1.0.0"
-backtrace = "0.3"
 
 [lib]
 name = "memgraph_query_module_in_rust_example"

@@ -33,11 +33,11 @@ pub struct VerticesIterator {
 }
 
 impl VerticesIterator {
-    pub fn new(ptr: *mut mgp_vertices_iterator, memgraph: &Memgraph) -> VerticesIterator {
+    pub(crate) fn new(ptr: *mut mgp_vertices_iterator, memgraph: &Memgraph) -> VerticesIterator {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
-            "Unable to create a new VerticesIterator because pointer is null."
+            "Unable to create vertices iterator because the given pointer is null."
         );
 
         VerticesIterator {
@@ -98,11 +98,11 @@ impl Drop for Vertex {
 }
 
 impl Vertex {
-    pub fn new(ptr: *mut mgp_vertex, memgraph: &Memgraph) -> Vertex {
+    pub(crate) fn new(ptr: *mut mgp_vertex, memgraph: &Memgraph) -> Vertex {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
-            "Unable to create a new Vertex because pointer is null."
+            "Unable to create vertex because the given pointer is null."
         );
 
         Vertex {

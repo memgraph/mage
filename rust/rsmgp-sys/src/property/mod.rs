@@ -26,10 +26,10 @@ use mockall_double::double;
 /// All related to the property graph property (data key-value pair).
 ///
 /// Property is used in the following contexts:
-///   * return Property from PropertiesIterator
-///   * return Property directly from vertex/edge.
+///   * return Property from [PropertiesIterator]
+///   * return Property directly from [crate::vertex::Vertex] or [crate::edge::Edge].
 ///
-/// Property owns CString and Value bacause the underlying C string or value could be deleted
+/// Property owns [CString] and [Value] bacause the underlying C string or value could be deleted
 /// during the lifetime of the property. In other words, Property stores copies of underlying name
 /// and value.
 pub struct Property {
@@ -44,11 +44,14 @@ pub struct PropertiesIterator {
 }
 
 impl PropertiesIterator {
-    pub fn new(ptr: *mut mgp_properties_iterator, memgraph: &Memgraph) -> PropertiesIterator {
+    pub(crate) fn new(
+        ptr: *mut mgp_properties_iterator,
+        memgraph: &Memgraph,
+    ) -> PropertiesIterator {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
-            "Unable to create a new PropertiesIterator because pointer is null."
+            "Unable to create properties iterator because the given pointer is null."
         );
 
         PropertiesIterator {

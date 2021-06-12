@@ -61,11 +61,11 @@ impl<'a> Iterator for ListIterator<'a> {
 }
 
 impl List {
-    pub fn new(ptr: *mut mgp_list, memgraph: &Memgraph) -> List {
+    pub(crate) fn new(ptr: *mut mgp_list, memgraph: &Memgraph) -> List {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
-            "Unable to create a new List because pointer is null."
+            "Unable to create list because the given pointer is null."
         );
 
         List {
@@ -89,7 +89,7 @@ impl List {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
-            "Unable to make list copy because list pointer is null."
+            "Unable to create list copy because the given pointer is null."
         );
 
         let size = ffi::mgp_list_size(ptr);

@@ -25,6 +25,8 @@ use crate::vertex::*;
 use crate::mgp::ffi;
 use mockall_double::double;
 
+/// Combines the given array of types from left to right to construct [mgp_type]. E.g., if the
+/// input is [Type::List, Type::Int], the constructed [mgp_type] is going to be list of integers.
 fn resolve_mgp_type(types: &[Type]) -> *const mgp_type {
     unsafe {
         let mut mgp_type: *const mgp_type = std::ptr::null_mut();
@@ -59,6 +61,10 @@ pub struct Memgraph {
 }
 
 impl Memgraph {
+    /// Create a new Memgraph object.
+    ///
+    /// Required to be public because the required pointers have to passed during module
+    /// initialization and procedure call phase.
     pub fn new(
         args: *const mgp_list,
         graph: *const mgp_graph,
@@ -87,8 +93,9 @@ impl Memgraph {
         }
     }
 
+    /// Arguments passed to the procedure call.
     pub fn args(&self) -> MgpResult<List> {
-        // TODO(gitbuda): Avoid list copy when accessing args.
+        // TODO(gitbuda): Avoid list copy when accessing procedure arguments.
         unsafe { List::mgp_copy(self.args_ptr(), &self) }
     }
 
@@ -145,17 +152,20 @@ impl Memgraph {
     ///
     /// Keep this object on the stack and add data that will be returned to Memgraph / client
     /// during/after the procedure call.
-    pub fn result_record(&self) -> MgpResult<MgpResultRecord> {
-        MgpResultRecord::create(self)
+    pub fn result_record(&self) -> MgpResult<ResultRecord> {
+        ResultRecord::create(self)
     }
 
     /// Registers a new read procedure.
     ///
     /// * `proc_ptr` - Identifier of the top level C function that represents the procedure.
     /// * `name` - A string that will be registered as a procedure name inside Memgraph instance.
-    /// * `required_input_types` - An array of all [NamedType]s, each one define by name and an array of [Type]s.
-    /// * `optional_input_types` - An array of all [OptionalNamedType]s, each one define by name, an array of [Type]s, and default value.
-    /// * `result_field_types` - An array of all [NamedType]s, each one define by name and an array of [Type]s.
+    /// * `required_arg_types` - An array of all [NamedType]s, each one define by name and an array
+    ///    of [Type]s.
+    /// * `optional_arg_types` - An array of all [OptionalNamedType]s, each one defined by name, an
+    ///    array of [Type]s, and default value.
+    /// * `result_field_types` - An array of all [NamedType]s, each one defined by name and an
+    ///    array of [Type]s.
     pub fn add_read_procedure(
         &self,
         proc_ptr: extern "C" fn(
@@ -165,8 +175,8 @@ impl Memgraph {
             *mut mgp_memory,
         ),
         name: &CStr,
-        required_input_types: &[NamedType],
-        optional_input_types: &[OptionalNamedType],
+        required_arg_types: &[NamedType],
+        optional_arg_types: &[OptionalNamedType],
         result_field_types: &[NamedType],
     ) -> MgpResult<()> {
         unsafe {
@@ -179,14 +189,14 @@ impl Memgraph {
                 return Err(MgpError::UnableToRegisterReadProcedure);
             }
 
-            for required_type in required_input_types {
+            for required_type in required_arg_types {
                 let mgp_type = resolve_mgp_type(&required_type.types);
                 if ffi::mgp_proc_add_arg(procedure, required_type.name.as_ptr(), mgp_type) == 0 {
-                    return Err(MgpError::AddProcedureRequiredInputParameterError);
+                    return Err(MgpError::UnableToAddRequiredArguments);
                 }
             }
 
-            for optional_input in optional_input_types {
+            for optional_input in optional_arg_types {
                 let mgp_type = resolve_mgp_type(&optional_input.types);
                 if ffi::mgp_proc_add_opt_arg(
                     procedure,
@@ -195,7 +205,7 @@ impl Memgraph {
                     optional_input.default.mgp_ptr(),
                 ) == 0
                 {
-                    return Err(MgpError::AddProcedureOptionalInputParameterError);
+                    return Err(MgpError::UnableToAddOptionalArguments);
                 }
             }
 
@@ -208,19 +218,26 @@ impl Memgraph {
                         mgp_type,
                     ) == 0
                     {
-                        return Err(MgpError::AddProcedureParameterTypeError);
+                        return Err(MgpError::UnableToAddDeprecatedReturnType);
                     }
                 } else if ffi::mgp_proc_add_result(procedure, result_field.name.as_ptr(), mgp_type)
                     == 0
                 {
-                    return Err(MgpError::AddProcedureParameterTypeError);
+                    return Err(MgpError::UnableToAddReturnType);
                 }
             }
+
             Ok(())
         }
     }
 
     /// Return `true` if the currently executing procedure should abort as soon as possible.
+    ///
+    /// Procedures which perform heavyweight processing run the risk of running too long and going
+    /// over the query execution time limit. To prevent this, such procedures should periodically
+    /// call this function at critical points in their code in order to determine whether they
+    /// should abort or not. Note that this mechanism is purely cooperative and depends on the
+    /// procedure doing the checking and aborting on its own.
     pub fn must_abort(&self) -> bool {
         unsafe { ffi::mgp_must_abort(self.graph_ptr()) != 0 }
     }

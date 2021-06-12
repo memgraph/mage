@@ -33,11 +33,11 @@ pub struct EdgesIterator {
 }
 
 impl EdgesIterator {
-    pub fn new(ptr: *mut mgp_edges_iterator, memgraph: &Memgraph) -> EdgesIterator {
+    pub(crate) fn new(ptr: *mut mgp_edges_iterator, memgraph: &Memgraph) -> EdgesIterator {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
-            "Unable to create a new EdgeIterator because pointer is null."
+            "Unable to create edges iterator because the given pointer is null."
         );
 
         EdgesIterator {
@@ -75,7 +75,7 @@ impl Iterator for EdgesIterator {
             } else {
                 Some(match Edge::mgp_copy(data, &self.memgraph) {
                     Ok(v) => v,
-                    Err(_) => panic!("Unable to create new edge during edges iteration."),
+                    Err(_) => panic!("Unable to create edge during edges iteration."),
                 })
             }
         }
@@ -98,11 +98,11 @@ impl Drop for Edge {
 }
 
 impl Edge {
-    pub fn new(ptr: *mut mgp_edge, memgraph: &Memgraph) -> Edge {
+    pub(crate) fn new(ptr: *mut mgp_edge, memgraph: &Memgraph) -> Edge {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
-            "Unable to create a new Edge because pointer is null."
+            "Unable to create edge because the given pointer is null."
         );
 
         Edge {
@@ -116,12 +116,12 @@ impl Edge {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
-            "Unable to make edge copy because edge pointer is null."
+            "Unable to create edge copy because the given pointer is null."
         );
 
         let mgp_copy = ffi::mgp_edge_copy(ptr, memgraph.memory_ptr());
         if mgp_copy.is_null() {
-            return Err(MgpError::UnableToMakeEdgeCopy);
+            return Err(MgpError::UnableToCreateEdgeCopy);
         }
         Ok(Edge::new(mgp_copy, &memgraph))
     }

@@ -12,6 +12,53 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //! A library to simplify implementation of Memgraph Query Modules.
+//!
+//! Example
+//!
+//! ```
+//! use c_str_macro::c_str;
+//! // All possible rsmgp modules (probably not all will be required).
+//! use rsmgp_sys::edge::*;
+//! use rsmgp_sys::list::*;
+//! use rsmgp_sys::map::*;
+//! use rsmgp_sys::memgraph::*;
+//! use rsmgp_sys::mgp::*;
+//! use rsmgp_sys::path::*;
+//! use rsmgp_sys::property::*;
+//! use rsmgp_sys::result::*;
+//! use rsmgp_sys::rsmgp::*;
+//! use rsmgp_sys::value::*;
+//! use rsmgp_sys::vertex::*;
+//! use rsmgp_sys::{close_module, define_procedure, define_type, init_module};
+//! // The following are required because of used macros.
+//! use std::ffi::CString;
+//! use std::os::raw::c_int;
+//! use std::panic;
+//!
+//! init_module!(|memgraph: &Memgraph| -> MgpResult<()> {
+//!     memgraph.add_read_procedure(
+//!         basic, // Has to be the same as specified in the `define_procedure!`.
+//!         c_str!("basic"), // Name under which Memgraph will register the procedure.
+//!         &[define_type!("input_string", Type::String)],  // Required arguments.
+//!         &[],                                            // Optional arguments.
+//!         &[define_type!("output_string", Type::String)], // Return fields.
+//!     )?;
+//!     Ok(())
+//! });
+//!
+//! define_procedure!(basic, |memgraph: &Memgraph| -> MgpResult<()> {
+//!     let result = memgraph.result_record()?;
+//!     let args = memgraph.args()?;
+//!     let output_string = args.value_at(0)?;
+//!     result.insert_mgp_value(
+//!         c_str!("output_string"),
+//!         &output_string.to_mgp_value(&memgraph)?,
+//!     )?;
+//!     Ok(())
+//! });
+//!
+//! close_module!(|| -> MgpResult<()> { Ok(()) });
+//! ```
 
 #[cfg(test)]
 extern crate mockall;

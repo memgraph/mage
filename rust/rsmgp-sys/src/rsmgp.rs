@@ -14,13 +14,13 @@
 //! Macro definitions and top level data structures.
 //!
 //! [define_procedure], [init_module], [close_module] all accept a function accepting [Memgraph]
-//! and returning `Result<(), MgpError>` because that allows using `?` operator which is a very
+//! and returning [crate::result::MgpResult] because that allows using `?` operator which is a very
 //! convenient way of propagating execution errors.
 //!
 //! Example
 //!
 //! ```no run
-//! |memgraph: &Memgraph| -> Result<(), MgpError> {
+//! |memgraph: &Memgraph| -> MgpResult<()> {
 //!     // Implementation
 //! }
 //! ```
@@ -45,7 +45,7 @@ use mockall_double::double;
 /// Example
 ///
 /// ```no run
-/// define_procedure!(procedure_name, |memgraph: &Memgraph| -> Result<(), MgpError> {
+/// define_procedure!(procedure_name, |memgraph: &Memgraph| -> MgpResult<()> {
 ///     // Implementation
 /// }
 /// ```
@@ -67,7 +67,6 @@ macro_rules! define_procedure {
                 match $rs_func(&memgraph) {
                     Ok(_) => (),
                     Err(e) => {
-                        println!("{}", e);
                         let msg = e.to_string();
                         println!("{}", msg);
                         let c_msg =
@@ -80,21 +79,20 @@ macro_rules! define_procedure {
             panic::set_hook(prev_hook);
             match procedure_result {
                 Ok(_) => {}
-                // TODO(gitbuda): Take cause on panic and pass to mgp_result_set_error_msg.
-                // Until figuring out how to take info from panic object, set error in-place.
-                // As far as I know iterator can't return Result object and set error in-place.
                 Err(e) => {
                     println!("Procedure panic!");
+                    let memgraph = Memgraph::new(args, graph, result, memory, std::ptr::null_mut());
                     match e.downcast::<&str>() {
-                        Ok(panic_msg) => {
-                            println!("{}", panic_msg);
+                        Ok(msg) => {
+                            println!("{}", msg);
+                            let c_msg = CString::new(msg.as_bytes())
+                                .expect("Unable to create Memgraph PANIC error message!");
+                            set_memgraph_error_msg(&c_msg, &memgraph);
                         }
                         Err(_) => {
                             println!("Unknown type of panic!.");
                         }
                     }
-                    // TODO(gitbuda): Fix backtrace somehow.
-                    println!("{:?}", Backtrace::new());
                 }
             }
         }
@@ -149,7 +147,7 @@ macro_rules! init_module {
 /// Example
 ///
 /// ```no run
-/// close_module!(|memgraph: &Memgraph| -> Result<(), MgpError> {
+/// close_module!(|memgraph: &Memgraph| -> MgpResult<()> {
 ///     // Implementation
 /// }
 #[macro_export]
@@ -169,7 +167,8 @@ macro_rules! close_module {
     };
 }
 
-/// Used to pass expected result field types during procedure registration.
+/// Used to pass expected types (arguments, optional arguments, result field types) to the Memgraph
+/// engine.
 pub enum Type {
     Any,
     Bool,
@@ -185,27 +184,34 @@ pub enum Type {
     List,
 }
 
-/// Used to pass expected type during procedure registration, both input parameters and result
-/// types.
+/// Used to pass expected type during procedure registration for required parameters and result
+/// values.
 ///
-/// Each procedure can have multiple returning fields, each one is represented by this struct.
-/// Return type is deduced by processing types field from left to right. E.g., [Type::Any]
+/// The final type is deduced by processing types field from left to right. E.g., [Type::Any]
 /// means any return type, [Type::List], [Type::Int] means a list of integer values.
+///
+/// `deprecated` is used to register deprecated result type.
 pub struct NamedType<'a> {
     pub name: &'a CStr,
     pub types: &'a [Type],
     pub deprecated: bool,
 }
 
+/// Used to pass expected type during procedure registration for optional parameters.
+///
+/// The final type is deduced by processing types field from left to right. E.g., [Type::Any]
+/// means any return type, [Type::List], [Type::Int] means a list of integer values.
+///
+/// `default` stores value in case the caller doesn't pass any value.
 pub struct OptionalNamedType<'a> {
     pub name: &'a CStr,
     pub types: &'a [Type],
     pub default: &'a MgpValue,
 }
 
-/// Defines single result field type.
+/// Defines a regular type.
 ///
-/// Example of defining the field as a list of integers.
+/// Example of defining a list of integers
 ///
 /// ```no run
 /// define_type!("name", Type::List, Type::Int);
@@ -221,6 +227,13 @@ macro_rules! define_type {
     };
 }
 
+/// Defines a deprecated type.
+///
+/// Example of defining a list of integers
+///
+/// ```no run
+/// define_deprecated_type!("name", Type::List, Type::Int);
+/// ```
 #[macro_export]
 macro_rules! define_deprecated_type {
     ($name:literal, $($types:expr),+) => {
@@ -232,6 +245,13 @@ macro_rules! define_deprecated_type {
     };
 }
 
+/// Defines an optional type.
+///
+/// Example of defining an int.
+///
+/// ```no run
+/// define_optional_type!("name", &MgpValue::make_int(0, &memgraph), Type::List, Type::Int);
+/// ```
 #[macro_export]
 macro_rules! define_optional_type {
     ($name:literal, $default:expr, $($types:expr),+) => {
@@ -243,6 +263,7 @@ macro_rules! define_optional_type {
     };
 }
 
+/// Sets error that will be returned to the caller.
 pub fn set_memgraph_error_msg(msg: &CStr, memgraph: &Memgraph) {
     unsafe {
         let status = ffi::mgp_result_set_error_msg(memgraph.result_ptr(), msg.as_ptr());

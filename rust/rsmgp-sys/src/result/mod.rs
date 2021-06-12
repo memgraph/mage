@@ -29,19 +29,19 @@ use crate::vertex::*;
 use crate::mgp::ffi;
 use mockall_double::double;
 
-pub struct MgpResultRecord {
+pub struct ResultRecord {
     ptr: *mut mgp_result_record,
     memgraph: Memgraph,
 }
 
-impl MgpResultRecord {
-    pub fn create(memgraph: &Memgraph) -> MgpResult<MgpResultRecord> {
+impl ResultRecord {
+    pub fn create(memgraph: &Memgraph) -> MgpResult<ResultRecord> {
         unsafe {
             let mgp_ptr = ffi::mgp_result_new_record(memgraph.result_ptr());
             if mgp_ptr.is_null() {
                 return Err(MgpError::UnableToCreateResultRecord);
             }
-            Ok(MgpResultRecord {
+            Ok(ResultRecord {
                 ptr: mgp_ptr,
                 memgraph: memgraph.clone(),
             })
@@ -52,7 +52,7 @@ impl MgpResultRecord {
         unsafe {
             let inserted = ffi::mgp_result_record_insert(self.ptr, field.as_ptr(), value.mgp_ptr());
             if inserted == 0 {
-                return Err(MgpError::PreparingResultError);
+                return Err(MgpError::UnableToInsertResultValue);
             }
             Ok(())
         }
@@ -99,29 +99,26 @@ impl MgpResultRecord {
     }
 }
 
-// TODO(gitbuda): Polish error messages.
-
 #[derive(Debug, PartialEq, Snafu)]
 #[snafu(visibility = "pub")]
 pub enum MgpError {
-    #[snafu(display("Unable to register read procedure."))]
-    UnableToRegisterReadProcedure,
+    // EDGE
+    #[snafu(display("Unable to make edge copy."))]
+    UnableToCreateEdgeCopy,
 
-    #[snafu(display("Unable to insert map value."))]
-    UnableToInsertMapValue,
+    #[snafu(display("Unable to return edge property because of value allocation error."))]
+    UnableToReturnEdgePropertyValueAllocationError,
 
-    #[snafu(display("Unable to access map value."))]
-    UnableToAccessMapValue,
+    #[snafu(display("Unable to return edge property because of value creation error."))]
+    UnableToReturnEdgePropertyValueCreationError,
 
-    #[snafu(display("Unable to create map iterator."))]
-    UnableToCreateMapIterator,
+    #[snafu(display("Unable to return edge property because of name allocation error."))]
+    UnableToReturnEdgePropertyNameAllocationError,
 
-    #[snafu(display("Unable to create map."))]
-    UnableToCreateMap,
+    #[snafu(display("Unable to return edge properties iterator."))]
+    UnableToReturnEdgePropertiesIterator,
 
-    #[snafu(display("Unable to create empty map."))]
-    UnableToCreateEmptyMap,
-
+    // LIST
     #[snafu(display("Unable to create empty list."))]
     UnableToCreateEmptyList,
 
@@ -137,44 +134,72 @@ pub enum MgpError {
     #[snafu(display("Unable to access list value by index."))]
     UnableToAccessListValueByIndex,
 
+    // MAP
+    #[snafu(display("Unable to copy map."))]
+    UnableToCopyMap,
+
+    #[snafu(display("Unable to create empty map."))]
+    UnableToCreateEmptyMap,
+
+    #[snafu(display("Unable to insert map value."))]
+    UnableToInsertMapValue,
+
+    #[snafu(display("Unable to access map value."))]
+    UnableToAccessMapValue,
+
+    #[snafu(display("Unable to create map iterator."))]
+    UnableToCreateMapIterator,
+
+    // MEMGRAPH
     #[snafu(display("Unable to create graph vertices iterator."))]
     UnableToCreateGraphVerticesIterator,
-
-    #[snafu(display("Unable to make vertex copy."))]
-    UnableToMakeVertexCopy,
 
     #[snafu(display("Unable to find vertex by id."))]
     UnableToFindVertexById,
 
-    #[snafu(display("Unable to get vertex property."))]
-    UnableToGetVertexProperty,
+    #[snafu(display("Unable to register read procedure."))]
+    UnableToRegisterReadProcedure,
 
-    #[snafu(display("Unable to return vertex property because of make name error."))]
-    UnableToReturnVertexPropertyMakeNameEror,
+    #[snafu(display("Unable to add required arguments."))]
+    UnableToAddRequiredArguments,
 
-    #[snafu(display("Unable to return vertex properties iterator."))]
-    UnableToReturnVertexPropertiesIterator,
+    #[snafu(display("Unable to add optional arguments."))]
+    UnableToAddOptionalArguments,
 
-    #[snafu(display("Unable to make edge copy."))]
-    UnableToMakeEdgeCopy,
+    #[snafu(display("Unable to add return type."))]
+    UnableToAddReturnType,
 
-    #[snafu(display("Unable to return vertex in_edges iterator."))]
-    UnableToReturnVertexInEdgesIterator,
+    #[snafu(display("Unable to add deprecated return type."))]
+    UnableToAddDeprecatedReturnType,
 
-    #[snafu(display("Unable to return vertex out_edges iterator."))]
-    UnableToReturnVertexOutEdgesIterator,
+    // PATH
+    #[snafu(display("Unable to make path copy."))]
+    UnableToMakePathCopy,
 
-    #[snafu(display("Unable to return edge property because of value allocation error."))]
-    UnableToReturnEdgePropertyValueAllocationError,
+    #[snafu(display("Out of bound path vertex index."))]
+    OutOfBoundPathVertexIndex,
 
-    #[snafu(display("Unable to return edge property because of value creation error."))]
-    UnableToReturnEdgePropertyValueCreationError,
+    #[snafu(display("Out of bound path edge index."))]
+    OutOfBoundPathEdgeIndex,
 
-    #[snafu(display("Unable to return edge property because of name allocation error."))]
-    UnableToReturnEdgePropertyNameAllocationError,
+    #[snafu(display("Unable to create path with start Vertex."))]
+    UnableToCreatePathWithStartVertex,
 
-    #[snafu(display("Unable to return edge properties iterator."))]
-    UnableToReturnEdgePropertiesIterator,
+    #[snafu(display(
+        "Unable to expand path because of not matching vertex value or lack of memory."
+    ))]
+    UnableToExpandPath,
+
+    // RESULT
+    #[snafu(display("Unable to create result record."))]
+    UnableToCreateResultRecord,
+
+    #[snafu(display("Unable to insert result record."))]
+    UnableToInsertResultValue,
+
+    // VALUE
+    #[snafu(display("Unable to create new CString."))]
+    UnableToCreateCString,
 
     #[snafu(display("Unable to make null value."))]
     UnableToMakeNullValue,
@@ -188,7 +213,6 @@ pub enum MgpError {
     #[snafu(display("Unable to make double value."))]
     UnableToMakeDoubleValue,
 
-    // TODO(gitbuda): Multiple string related error messages.
     #[snafu(display("Unable to make Memgraph compatible string value."))]
     UnableToMakeMemgraphStringValue,
 
@@ -207,48 +231,33 @@ pub enum MgpError {
     #[snafu(display("Unable to make path value."))]
     UnableToMakePathValue,
 
-    #[snafu(display("Unable to make new CString."))]
-    UnableToMakeCString,
-
     #[snafu(display("Unable to make new Value::String."))]
     UnableToMakeValueString,
 
-    #[snafu(display("Unable to create result record."))]
-    UnableToCreateResultRecord,
-
-    #[snafu(display("Unable to prepare result within Rust procedure."))]
-    PreparingResultError,
-
-    #[snafu(display("Unable to add the required input parameter."))]
-    AddProcedureRequiredInputParameterError,
-
-    #[snafu(display("Unable to add the optional input parameter."))]
-    AddProcedureOptionalInputParameterError,
-
-    #[snafu(display("Unable to add a type of procedure parameter in Rust Module."))]
-    AddProcedureParameterTypeError,
+    // VERTEX
+    #[snafu(display("Unable to make vertex copy."))]
+    UnableToMakeVertexCopy,
 
     #[snafu(display("Out of bound label index."))]
     OutOfBoundLabelIndexError,
 
-    #[snafu(display("Unable to make a path copy."))]
-    UnableToMakePathCopy,
+    #[snafu(display("Unable to get vertex property."))]
+    UnableToGetVertexProperty,
 
-    #[snafu(display("Out of bound path vertex index."))]
-    OutOfBoundPathVertexIndex,
+    #[snafu(display("Unable to return vertex property because of make name error."))]
+    UnableToReturnVertexPropertyMakeNameEror,
 
-    #[snafu(display("Out of bound path edge index."))]
-    OutOfBoundPathEdgeIndex,
+    #[snafu(display("Unable to return vertex properties iterator."))]
+    UnableToReturnVertexPropertiesIterator,
 
-    #[snafu(display("Unable to create path with start Vertex."))]
-    UnableToCreatePathWithStartVertex,
+    #[snafu(display("Unable to return vertex in_edges iterator."))]
+    UnableToReturnVertexInEdgesIterator,
 
-    #[snafu(display(
-        "Unable to expand Path because of not matching Vertex value or lack of memory."
-    ))]
-    UnableToExpandPath,
+    #[snafu(display("Unable to return vertex out_edges iterator."))]
+    UnableToReturnVertexOutEdgesIterator,
 }
 
+/// A result type holding [MgpError] by default.
 pub type MgpResult<T, E = MgpError> = std::result::Result<T, E>;
 
 #[cfg(test)]

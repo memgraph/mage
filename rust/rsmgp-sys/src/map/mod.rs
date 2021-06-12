@@ -39,7 +39,7 @@ impl Drop for Map {
     }
 }
 
-/// MapItem has public fields because they are user facing object + they are easier to access.
+/// [MapItem] has public fields because they are user facing object + they are easier to access.
 pub struct MapItem {
     pub key: CString,
     pub value: Value,
@@ -52,7 +52,7 @@ pub struct MapIterator {
 }
 
 impl MapIterator {
-    pub fn new(ptr: *mut mgp_map_items_iterator, memgraph: &Memgraph) -> MapIterator {
+    pub(crate) fn new(ptr: *mut mgp_map_items_iterator, memgraph: &Memgraph) -> MapIterator {
         MapIterator {
             ptr,
             is_first: true,
@@ -103,11 +103,11 @@ impl Iterator for MapIterator {
 }
 
 impl Map {
-    pub fn new(ptr: *mut mgp_map, memgraph: &Memgraph) -> Map {
+    pub(crate) fn new(ptr: *mut mgp_map, memgraph: &Memgraph) -> Map {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
-            "Unable to create a new Map because pointer is null."
+            "Unable to create map because the given pointer is null."
         );
 
         Map {
@@ -120,21 +120,21 @@ impl Map {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
-            "Unable to create map copy because map pointer is null."
+            "Unable to create map copy because the given pointer is null."
         );
 
         let mgp_map_copy = ffi::mgp_map_make_empty(memgraph.memory_ptr());
         let mgp_map_iterator = ffi::mgp_map_iter_items(ptr, memgraph.memory_ptr());
         if mgp_map_iterator.is_null() {
             ffi::mgp_map_destroy(mgp_map_copy);
-            return Err(MgpError::UnableToCreateMap);
+            return Err(MgpError::UnableToCopyMap);
         }
         let map_iterator = MapIterator::new(mgp_map_iterator, &memgraph);
         for item in map_iterator {
             let mgp_value = item.value.to_mgp_value(&memgraph)?;
             if ffi::mgp_map_insert(mgp_map_copy, item.key.as_ptr(), mgp_value.mgp_ptr()) == 0 {
                 ffi::mgp_map_destroy(mgp_map_copy);
-                return Err(MgpError::UnableToCreateMap);
+                return Err(MgpError::UnableToCopyMap);
             }
         }
         Ok(Map::new(mgp_map_copy, &memgraph))
@@ -153,7 +153,6 @@ impl Map {
     pub fn insert(&self, key: &CStr, value: &Value) -> MgpResult<()> {
         unsafe {
             let mgp_value = value.to_mgp_value(&self.memgraph)?;
-            // TODO(gitbuda): Check the Map ptr for null.
             if ffi::mgp_map_insert(self.ptr, key.as_ptr(), mgp_value.mgp_ptr()) == 0 {
                 return Err(MgpError::UnableToInsertMapValue);
             }

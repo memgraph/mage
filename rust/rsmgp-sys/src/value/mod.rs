@@ -37,7 +37,7 @@ use mockall_double::double;
 pub(crate) unsafe fn create_cstring(c_char_ptr: *const i8) -> MgpResult<CString> {
     match CString::new(CStr::from_ptr(c_char_ptr).to_bytes()) {
         Ok(v) => Ok(v),
-        Err(_) => Err(MgpError::UnableToMakeCString),
+        Err(_) => Err(MgpError::UnableToCreateCString),
     }
 }
 
@@ -88,11 +88,11 @@ impl Drop for MgpValue {
 }
 
 impl MgpValue {
-    pub fn new(ptr: *mut mgp_value, memgraph: &Memgraph) -> MgpValue {
+    pub(crate) fn new(ptr: *mut mgp_value, memgraph: &Memgraph) -> MgpValue {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
-            "Unable to create a new MgpValue because pointer is null."
+            "Unable to create Memgraph value because the given pointer is null."
         );
 
         MgpValue {
@@ -403,7 +403,7 @@ pub(crate) unsafe fn mgp_raw_value_to_value(
             Ok(Value::Map(Map::mgp_copy(mgp_map, &memgraph)?))
         }
         _ => {
-            panic!("Unable to create Value object because of uncovered mgp_value type.");
+            panic!("Unable to create value object because of uncovered mgp_value type.");
         }
     }
 }
