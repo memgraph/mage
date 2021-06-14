@@ -13,6 +13,8 @@ import mgp
 __distance_matrix = None
 __depot_index = None
 
+MAX_DISTANCE_MATRIX_SIZE = 5
+
 
 def get_distance_matrix(vertices):
     """
@@ -57,6 +59,17 @@ def get_depot_index(vertices: mgp.Vertices, depot_node: mgp.Vertex):
     return __depot_index
 
 
+def cleanup():
+    global __distance_matrix, __depot_index
+
+    if (
+        __distance_matrix is not None
+        and len(__distance_matrix) >= MAX_DISTANCE_MATRIX_SIZE
+    ):
+        __distance_matrix = None
+        __depot_index = None
+
+
 @mgp.read_proc
 def route(
     context: mgp.ProcCtx,
@@ -88,6 +101,8 @@ def route(
     solver.solve()
 
     result = solver.get_result()
+
+    cleanup()
 
     return [
         mgp.Record(from_vertex=vertices[x.from_vertex], to_vertex=vertices[x.to_vertex])

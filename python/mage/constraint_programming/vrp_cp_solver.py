@@ -179,6 +179,9 @@ class VRPConstraintProgrammingSolver(VRPSolver):
         self._model.Obj(intermedias_sum)
 
     def _add_options(self):
+        # The SOLVER option specifies the type of solver that solves the
+        # VRP problem. More on solver options and other parameters can be found on
+        # https://gekko.readthedocs.io/en/latest/global.html
         self._model.options.SOLVER = 1
 
 
