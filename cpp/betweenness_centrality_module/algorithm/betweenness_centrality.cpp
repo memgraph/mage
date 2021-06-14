@@ -62,6 +62,7 @@ std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bo
   std::vector<double> betweenness_centrality(number_of_nodes, 0);
 
   // perform bfs for every node in the graph
+  #pragma omp parallel for
   for (std::uint64_t node_id = 0; node_id < number_of_nodes; node_id++) {
     // data structures used in BFS
     std::stack<std::uint64_t> visited;
@@ -81,10 +82,15 @@ std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bo
       }
 
       if (current_node != node_id) {
-        if (directed) betweenness_centrality[current_node] += dependency[current_node];
+        if (directed){
+          #pragma omp atomic update
+          betweenness_centrality[current_node] += dependency[current_node];
+        }
         // centrality scores need to be divided by two since all shortest paths are considered twice
-        else
+        else{
+          #pragma omp atomic update
           betweenness_centrality[current_node] += dependency[current_node] / 2.0;
+        }
       }
     }
   }
