@@ -40,6 +40,6 @@ namespace betweenness_centrality_alg {
 ///@return A vector that contains betweenness centrality scores placed on indices that correspond
 /// to the identifiers of the nodes.
 ///
-std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bool directed = true, bool normalize = true, int threads = 8);
+std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bool directed, bool normalize, int threads);
 
 }  // namespace betweenness_centrality_alg

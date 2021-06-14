@@ -1,5 +1,8 @@
+#include <thread>
+
 #include <mg_procedure.h>
 #include <mg_utils.hpp>
+
 
 #include "algorithm/betweenness_centrality.hpp"
 
@@ -55,7 +58,7 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
   // Query module arguments
   auto bool_value_directed = mgp_value_make_bool(true, memory);
   auto bool_value_normalized = mgp_value_make_bool(true, memory);
-  auto int_value_threads = mgp_value_make_int(8, memory);
+  auto int_value_threads = mgp_value_make_int(std::thread::hardware_concurrency(), memory);
 
   if (!mgp_proc_add_opt_arg(proc, kArgumentDirected, mgp_type_bool(), bool_value_directed)) return 1;
   if (!mgp_proc_add_opt_arg(proc, kArgumentNormalized, mgp_type_bool(), bool_value_normalized)) return 1;

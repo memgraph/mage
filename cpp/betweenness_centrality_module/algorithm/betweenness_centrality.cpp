@@ -63,8 +63,8 @@ std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bo
   std::vector<double> betweenness_centrality(number_of_nodes, 0);
 
   // perform bfs for every node in the graph
-  omp_set_dynamic(0); 
-  omp_set_num_threads(threads); 
+  omp_set_dynamic(0);
+  omp_set_num_threads(threads);
   #pragma omp parallel for
   for (std::uint64_t node_id = 0; node_id < number_of_nodes; node_id++) {
     // data structures used in BFS
