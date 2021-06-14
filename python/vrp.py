@@ -13,7 +13,7 @@ import mgp
 __distance_matrix = None
 __depot_index = None
 
-MAX_DISTANCE_MATRIX_SIZE = 5
+MAX_DISTANCE_MATRIX_SIZE = 100
 
 
 def get_distance_matrix(vertices):
