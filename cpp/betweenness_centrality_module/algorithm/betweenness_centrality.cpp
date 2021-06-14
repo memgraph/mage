@@ -1,6 +1,7 @@
 #include <queue>
 #include <stack>
 #include <vector>
+#include <omp.h>
 
 #include "betweenness_centrality.hpp"
 
@@ -57,11 +58,13 @@ namespace {
 
 namespace betweenness_centrality_alg {
 
-std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bool directed, bool normalize) {
+std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bool directed, bool normalize, int threads) {
   auto number_of_nodes = graph.Nodes().size();
   std::vector<double> betweenness_centrality(number_of_nodes, 0);
 
   // perform bfs for every node in the graph
+  omp_set_dynamic(0); 
+  omp_set_num_threads(threads); 
   #pragma omp parallel for
   for (std::uint64_t node_id = 0; node_id < number_of_nodes; node_id++) {
     // data structures used in BFS

@@ -10,6 +10,7 @@ constexpr char const *kFieldNode = "node";
 
 constexpr char const *kArgumentDirected = "directed";
 constexpr char const *kArgumentNormalized = "normalized";
+constexpr char const *kArgumentThreads = "threads";
 
 void InsertBCRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *memory,
                     const double betweeenness_centrality, const int node_id) {
@@ -26,11 +27,12 @@ void GetBetweennessCentrality(const mgp_list *args, const mgp_graph *memgraph_gr
   try {
     auto directed = mgp_value_get_bool(mgp_list_at(args, 0));
     auto normalize = mgp_value_get_bool(mgp_list_at(args, 1));
+    auto threads = mgp_value_get_int(mgp_list_at(args, 2));
 
     auto graph_type = directed ? mg_graph::GraphType::kDirectedGraph : mg_graph::GraphType::kUndirectedGraph;
 
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, graph_type);
-    auto BC = betweenness_centrality_alg::BetweennessCentrality(*graph, directed, normalize);
+    auto BC = betweenness_centrality_alg::BetweennessCentrality(*graph, directed, normalize, threads);
 
     auto number_of_nodes = graph->Nodes().size();
     for (std::uint64_t node_id = 0; node_id < number_of_nodes; ++node_id)
@@ -53,12 +55,15 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
   // Query module arguments
   auto bool_value_directed = mgp_value_make_bool(true, memory);
   auto bool_value_normalized = mgp_value_make_bool(true, memory);
+  auto int_value_threads = mgp_value_make_int(8, memory);
 
   if (!mgp_proc_add_opt_arg(proc, kArgumentDirected, mgp_type_bool(), bool_value_directed)) return 1;
   if (!mgp_proc_add_opt_arg(proc, kArgumentNormalized, mgp_type_bool(), bool_value_normalized)) return 1;
+  if (!mgp_proc_add_opt_arg(proc, kArgumentThreads, mgp_type_int(), int_value_threads)) return 1;
 
   mgp_value_destroy(bool_value_directed);
   mgp_value_destroy(bool_value_normalized);
+  mgp_value_destroy(int_value_threads);
 
   // Query module output record
   if (!mgp_proc_add_result(proc, kFieldNode, mgp_type_node())) return 1;
