@@ -8,16 +8,23 @@
 
 <p align="center">
     <a href="https://github.com/memgraph/mage/actions" alt="Actions">
-        <img src="https://img.shields.io/github/workflow/status/memgraph/mage/Build%20and%20Test?label=build%20and%20test" /></a>
-            <a href="https://github.com/memgraph/mage/blob/main/LICENSE" alt="Licence">
-        <img src="https://img.shields.io/github/license/memgraph/mage" /></a>
-            <a href="https://github.com/memgraph/mage" alt="Languages">
-        <img src="https://img.shields.io/github/languages/count/memgraph/mage" /></a>
-                    <a href="https://docs.memgraph.com/mage/" alt="Documentation">
-        <img src="https://img.shields.io/badge/documentation-MAGE-orange" /></a>
-            <a href="https://github.com/memgraph/mage/stargazers" alt="Stargazers">
-        <img src="https://img.shields.io/github/stars/memgraph/mage?style=social" /></a>
-
+        <img src="https://img.shields.io/github/workflow/status/memgraph/mage/Build%20and%20Test?label=build%20and%20test&logo=github"/>
+    </a>
+    <a href="https://github.com/memgraph/mage/blob/main/LICENSE" alt="Licence">
+        <img src="https://img.shields.io/github/license/memgraph/mage" />
+    </a>
+    <a href="https://docs.memgraph.com/mage/" alt="Documentation">
+        <img src="https://img.shields.io/badge/documentation-MAGE-orange" />
+    </a>
+    <a href="https://hub.docker.com/r/memgraph/memgraph-mage" alt="Documentation">
+        <img src="https://img.shields.io/badge/image-Docker-2496ED?logo=docker" />
+    </a>
+    <a href="https://github.com/memgraph/mage" alt="Languages">
+        <img src="https://img.shields.io/github/languages/count/memgraph/mage" />
+    </a>
+    <a href="https://github.com/memgraph/mage/stargazers" alt="Stargazers">
+        <img src="https://img.shields.io/github/stars/memgraph/mage?style=social" />
+    </a>
 </p>
 
 ## Memgraph Advanced Graph Extensions :crystal_ball:
@@ -28,21 +35,31 @@ Memgraph introduces the concept of **query modules**, user-defined procedures th
 
 If you want more info about MAGE, check out the official [MAGE Documentation](https://docs.memgraph.com/mage/).
 
+Furthermore, if you have an **algorithm proposition**, please fill in the survey on [**mage.memgraph.com**](https://mage.memgraph.com/).
+
 ## How to install?
 
 To build and install MAGE query modules you will need: **Python3**, **Make**, **CMake** and **Clang**. Also, you will need a runnable Memgraph instance, whether locally or via Docker image. [Download](https://memgraph.com/download), and [install](https://docs.memgraph.com/memgraph/getting-started/installation/) **Memgraph**.
 
 ### Installing MAGE with Docker
+#### Docker Hub
+
+**1.** This command downloads and runs Memgraph image with **MAGE** algorithms:
+```
+docker run -p 7687:7687 memgraph/memgraph-mage
+```
+
+#### Local Build
 
 **1.** Make sure to have `memgraph:latest` Docker image.  
 **2.** Build **MAGE** tagged Docker image.  
 ```
-docker build . -t memgraph:mage
+docker build . -t memgraph-mage
 ```
 
 **3.** Start Memgraph with the following command and enjoy **MAGE**:
 ```
-docker run -p 7687:7687 memgraph:mage
+docker run -p 7687:7687 memgraph-mage
 ```
 
 ### Installing MAGE locally
@@ -99,7 +116,8 @@ python3 test_e2e
 | [biconnected_components](cpp/biconnected_components_module/biconnected_components_module.cpp) | C++ | Algorithm for calculating maximal biconnected subgraph. A biconnected subgraph is a subgraph with a property that if any vertex were to be removed, the graph will remain connected. |
 | [bipartite_matching](cpp/bipartite_matching_module/bipartite_matching_module.cpp) | C++ | Algorithm for calculating maximum bipartite matching, where matching is a set of nodes chosen in such a way that no two edges share an endpoint. |
 | [cycles](cpp/cycles_module/cycles_module.cpp) | C++ | Algorithm for detecting cycles on graphs |
-| [bridges](cpp/bridges_module/bridges_module.cpp) | C++ | A bridge is an edge, which when deleted, increases the number of connected components. Goal of this algorithm is to detect edges which are bridges in graph. |
+| [bridges](cpp/bridges_module/bridges_module.cpp) | C++ | A bridge is an edge, which when deleted, increases the number of connected components. The goal of this algorithm is to detect edges that are bridges in a graph. |
+| [betweenness centrality](cpp/betweenness_centrality_module/betweenness_centrality_module.cpp) | C++ | The betweenness centrality of a node is defined as the sum of the of all-pairs shortest paths that pass through the node divided by the number of all-pairs shortest paths in the graph. The algorithm has O(nm) time complexity. |
 
 ## Contributing
 
