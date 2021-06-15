@@ -1,5 +1,9 @@
 import pytest
-from mage.geography import calculate_distance_between_points
+from mage.geography import (
+    calculate_distance_between_points,
+    InvalidCoordinatesException,
+    InvalidMetricException,
+)
 
 
 @pytest.fixture
@@ -23,11 +27,13 @@ def test_distance_between_points_m(points):
 
 def test_wrong_metrics(points):
     point_a, point_b = points
-    result = calculate_distance_between_points(point_a, point_b, metrics="r")
-    assert result is None
+    with pytest.raises(InvalidMetricException):
+        calculate_distance_between_points(point_a, point_b, metrics="r")
 
 
 def test_wrong_keys(points):
-    point_a, point_b = points
-    result = calculate_distance_between_points(point_a, point_b, metrics="r")
-    assert result is None
+    _, point_b = points
+    point_a = {"lat": 1}
+
+    with pytest.raises(InvalidCoordinatesException):
+        calculate_distance_between_points(point_a, point_b)
