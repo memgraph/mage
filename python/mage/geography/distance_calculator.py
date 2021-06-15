@@ -24,15 +24,26 @@ def calculate_distance_between_points(
         or LATITUDE not in end.keys()
         or LONGITUDE not in end.keys()
     ):
-        return None
+        raise InvalidCoordinatesException("Latitude/longitude not specified!")
+
+    lat_1_str = start[LATITUDE]
+    lng_1_str = start[LONGITUDE]
+    lat_2_str = end[LATITUDE]
+    lng_2_str = end[LONGITUDE]
+
+    if not all([lat_1_str, lng_1_str, lat_2_str, lng_2_str]):
+        raise InvalidCoordinatesException("Latitude/longitude not specified!")
+
+    try:
+        lat_1 = float(lat_1_str)
+        lat_2 = float(lat_2_str)
+        lng_1 = float(lng_1_str)
+        lng_2 = float(lng_2_str)
+    except ValueError:
+        raise InvalidCoordinatesException("Latitude/longitude not in numerical format!")
 
     if not isinstance(metrics, str) or metrics.lower() not in VALID_METRICS:
-        return None
-
-    lat_1 = start[LATITUDE]
-    lng_1 = start[LONGITUDE]
-    lat_2 = end[LATITUDE]
-    lng_2 = end[LONGITUDE]
+        raise InvalidMetricException("Invalid metric exception!")
 
     R = 6371e3
     pi_radians = math.pi / 180.00
@@ -55,3 +66,11 @@ def calculate_distance_between_points(
         distance *= KM_MULTIPLIER
 
     return distance
+
+
+class InvalidCoordinatesException(Exception):
+    pass
+
+
+class InvalidMetricException(Exception):
+    pass
