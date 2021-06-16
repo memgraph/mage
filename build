@@ -100,7 +100,7 @@ for project in filter(
 
     release_dir = os.path.join(RS_DIRECTORY, project, "target", "release")
     os.chdir(release_dir)
-    modules = [so for so in glob.glob("*.so")]
+    modules = glob.glob("*.so")
     assert len(
         modules) == 1, f"Wrong number of libs in Rust project {project}."
     module = modules[0]
