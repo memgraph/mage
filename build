@@ -91,18 +91,20 @@ os.environ["PYTHONPATH"] = PY_DIRECTORY
 #              Load Rust modules                #
 #################################################
 
-# List all build modules in a list explicitly.
-# NOTE: Cargo prefixes `.so` files with the `lib` prefix (not possible to
-#       change).
-# NOTE: There are more files with the suffix `libmodule_name.so` under the Rust
-#       build directory.
-RS_MODULES = [
-    (f"{RS_DIRECTORY}/rsmgp-example", "librust_example.so", "rust_example.so")
-]
-for rs_module in RS_MODULES:
-    proj_dir, build_lib_name, dist_lib_name = rs_module
-    os.chdir(proj_dir)
+os.chdir(RS_DIRECTORY)
+for project in filter(
+        lambda f: os.path.isdir(f) and f != "rsmgp-sys",
+        os.listdir(RS_DIRECTORY)):
+    os.chdir(os.path.join(RS_DIRECTORY, project))
     subprocess.run(["cargo", "build", "--release"])
-    build_lib_path = os.path.join(
-        proj_dir, "target", "release", build_lib_name)
-    shutil.copy2(build_lib_path, f"{QUERY_MODULES_DIRECTORY}/{dist_lib_name}")
+
+    release_dir = os.path.join(RS_DIRECTORY, project, "target", "release")
+    os.chdir(release_dir)
+    modules = [so for so in glob.glob("*.so")]
+    assert len(
+        modules) == 1, f"Wrong number of libs in Rust project {project}."
+    module = modules[0]
+    src_file = os.path.join(release_dir, module)
+    module = module.lstrip("lib") if module.startswith("lib") else module
+    dst_file = os.path.join(QUERY_MODULES_DIRECTORY, module)
+    shutil.copy2(src_file, dst_file)
