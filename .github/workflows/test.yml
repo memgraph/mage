@@ -10,7 +10,6 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v2
     - name: Cache Memgraph Docker image
@@ -41,6 +40,13 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ env.PY_VERSION }}
+    - name: Set up Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+    - name: Set up Rust - install Cargo tarpaulin # Unable to run https://github.com/actions-rs/tarpaulin from subdirectory.
+      run: |
+          cargo install cargo-tarpaulin
     - name: Build C++ modules
       run: |
         mkdir -p cpp/build
@@ -68,3 +74,16 @@ jobs:
       run: |
         cd e2e
         python -m pytest .
+
+    - name: Rust library tests
+      run: |
+        cd rust/rsmgp-sys
+        cargo fmt -- --check
+        cargo test
+        RUST_BACKTRACE=1 cargo tarpaulin --out Html --ignore-tests
+
+    - name: Rust example build
+      run: |
+        cd rust/rsmgp-example
+        cargo fmt -- --check
+        cargo build
