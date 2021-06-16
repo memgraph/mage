@@ -121,7 +121,7 @@ impl Edge {
 
         let mgp_copy = ffi::mgp_edge_copy(ptr, memgraph.memory_ptr());
         if mgp_copy.is_null() {
-            return Err(MgpError::UnableToCreateEdgeCopy);
+            return Err(MgpError::UnableToCopyEdge);
         }
         Ok(Edge::new(mgp_copy, &memgraph))
     }

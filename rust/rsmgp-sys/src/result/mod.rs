@@ -103,8 +103,8 @@ impl ResultRecord {
 #[snafu(visibility = "pub")]
 pub enum MgpError {
     // EDGE
-    #[snafu(display("Unable to make edge copy."))]
-    UnableToCreateEdgeCopy,
+    #[snafu(display("Unable to copy edge."))]
+    UnableToCopyEdge,
 
     #[snafu(display("Unable to return edge property because of value allocation error."))]
     UnableToReturnEdgePropertyValueAllocationError,
@@ -173,8 +173,8 @@ pub enum MgpError {
     UnableToAddDeprecatedReturnType,
 
     // PATH
-    #[snafu(display("Unable to make path copy."))]
-    UnableToMakePathCopy,
+    #[snafu(display("Unable to copy path."))]
+    UnableToCopyPath,
 
     #[snafu(display("Out of bound path vertex index."))]
     OutOfBoundPathVertexIndex,
@@ -235,8 +235,8 @@ pub enum MgpError {
     UnableToMakeValueString,
 
     // VERTEX
-    #[snafu(display("Unable to make vertex copy."))]
-    UnableToMakeVertexCopy,
+    #[snafu(display("Unable to copy vertex."))]
+    UnableToCopyVertex,
 
     #[snafu(display("Out of bound label index."))]
     OutOfBoundLabelIndexError,

@@ -46,15 +46,16 @@ init_module!(|memgraph: &Memgraph| -> MgpResult<()> {
 });
 
 define_procedure!(basic, |memgraph: &Memgraph| -> MgpResult<()> {
+    // This procedure just forwards the input parameters as procedure results.
     let result = memgraph.result_record()?;
     let args = memgraph.args()?;
-    let output_string = args.value_at(0)?;
-    let output_int = args.value_at(1)?;
+    let input_string = args.value_at(0)?;
+    let input_int = args.value_at(1)?;
     result.insert_mgp_value(
         c_str!("output_string"),
-        &output_string.to_mgp_value(&memgraph)?,
+        &input_string.to_mgp_value(&memgraph)?,
     )?;
-    result.insert_mgp_value(c_str!("output_int"), &output_int.to_mgp_value(&memgraph)?)?;
+    result.insert_mgp_value(c_str!("output_int"), &input_int.to_mgp_value(&memgraph)?)?;
     Ok(())
 });
 

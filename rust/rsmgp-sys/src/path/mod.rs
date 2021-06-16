@@ -64,7 +64,7 @@ impl Path {
 
         let mgp_copy = ffi::mgp_path_copy(mgp_path, memgraph.memory_ptr());
         if mgp_copy.is_null() {
-            return Err(MgpError::UnableToMakePathCopy);
+            return Err(MgpError::UnableToCopyPath);
         }
         Ok(Path::new(mgp_copy, &memgraph))
     }

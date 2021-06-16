@@ -124,7 +124,7 @@ impl Vertex {
 
         let mgp_copy = ffi::mgp_vertex_copy(mgp_vertex, memgraph.memory_ptr());
         if mgp_copy.is_null() {
-            return Err(MgpError::UnableToMakeVertexCopy);
+            return Err(MgpError::UnableToCopyVertex);
         }
         Ok(Vertex::new(mgp_copy, &memgraph))
     }
