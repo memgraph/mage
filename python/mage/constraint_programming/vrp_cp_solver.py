@@ -1,8 +1,16 @@
 from abc import ABC, abstractmethod
+from collections import defaultdict, namedtuple
+from mage.geography.vehicle_routing import VRPRoute, get_route_length
 from gekko import GEKKO
-from mage.geography import VRPPath, VRPResult, VRPSolver, InvalidDepotException
-from typing import List, Tuple
+from mage.geography import VRPResult, VRPSolver, InvalidDepotException
+from typing import Dict, List, Tuple
 import numpy as np
+
+
+"""
+VRP Path is an edge from a starting to ending node
+"""
+VRPPath = namedtuple("VRPPath", ("from_vertex, to_vertex"))
 
 
 class VRPConstraintProgrammingSolver(VRPSolver):
@@ -73,16 +81,20 @@ class VRPConstraintProgrammingSolver(VRPSolver):
         self._model.solve()
 
     def get_result(self) -> VRPResult:
-        return VRPResult(
-            [
-                VRPPath(
-                    key[0] if key[0] >= 0 else self.depot_index,
-                    key[1] if key[1] >= 0 else self.depot_index,
-                )
-                for key, var in self._edge_chosen_vars.items()
-                if int(var.value[0]) == 1
-            ]
-        )
+        individual_vrp_paths = [
+            VRPPath(
+                key[0] if key[0] >= 0 else self.depot_index,
+                key[1] if key[1] >= 0 else self.depot_index,
+            )
+            for key, var in self._edge_chosen_vars.items()
+            if int(var.value[0]) == 1
+        ]
+
+        routes = VRPCPRouteValidation(
+            individual_vrp_paths, self.distance_matrix, self.depot_index
+        ).create_routes()
+
+        return VRPResult(routes)
 
     def get_distance(self, edge: Tuple[int, int]) -> float:
         node_from, node_to = edge
@@ -183,6 +195,103 @@ class VRPConstraintProgrammingSolver(VRPSolver):
         # VRP problem. More on solver options and other parameters can be found on
         # https://gekko.readthedocs.io/en/latest/global.html
         self._model.options.SOLVER = 1
+
+
+class VRPCPRouteValidation:
+    """
+    Route validator for constraint programming since a route can have self-loops between vertexes with no depot.
+    """
+
+    def __init__(
+        self,
+        individual_vrp_paths: List[VRPPath],
+        distance_matrix: np.ndarray,
+        depot_index: int,
+    ):
+        self.individual_vrp_paths = individual_vrp_paths
+        self.distance_matrix = distance_matrix
+        self.depot_index = depot_index
+
+    def create_routes(self) -> List[VRPRoute]:
+        """
+        Creates a list of valid VRP Routes.
+        """
+        routes = self._construct_routes()
+        routes = self._correct_looping_routes(routes)
+
+        return routes
+
+    def _construct_routes(self) -> List[VRPRoute]:
+        """
+        Constructs Routes from VRP Paths. No validation hapenning here, only getting the initial states of routes.
+        """
+        path_dict = defaultdict(list)
+        for path in self.individual_vrp_paths:
+            path_dict[path.from_vertex].append(path.to_vertex)
+
+        routes: List[VRPRoute] = []
+
+        while len(path_dict[self.depot_index]):
+            routes.append(self._get_route(path_dict, self.depot_index))
+
+        for starting_point in path_dict.keys():
+            if len(path_dict[starting_point]):
+                routes.append(self._get_route(path_dict, starting_point))
+
+        return routes
+
+    def _get_route(self, path_dict: Dict[int, List[int]], start_index: int) -> VRPRoute:
+        """
+        Constructs a particular route by following ending nodes.
+        """
+        route: List[int] = [start_index]
+
+        while True:
+            source = route[-1]
+
+            if not len(path_dict[source]):
+                break
+            if len(route) > 1 and route[0] == route[-1]:
+                break
+
+            next_one = path_dict[source][0]
+            path_dict[source] = path_dict[source][1:]
+            route.append(next_one)
+
+        return VRPRoute(route)
+
+    def _correct_looping_routes(self, routes: List[VRPRoute]) -> List[VRPRoute]:
+        """
+        Fixes routes without a depot to be appended to the distance with smallest length.
+        """
+        routes_without_depot = [x for x in routes if x[0] != self.depot_index]
+
+        for route_without_depot in routes_without_depot:
+            routes_from_depot_with_lengths = sorted(
+                [
+                    (x, get_route_length(x, self.distance_matrix))
+                    for x in routes
+                    if x[0] == self.depot_index
+                ],
+                key=lambda x: x[1],
+            )
+            self._merge_routes(
+                routes_from_depot_with_lengths[0][0], route_without_depot
+            )
+
+        new_routes = [x for x in routes if x[0] == self.depot_index]
+
+        return new_routes
+
+    def _merge_routes(self, route_with_depot: VRPRoute, route_without_depot: VRPRoute):
+        """
+        Merges a route with and without a depot to a unique route with a depot.
+        """
+        route_with_depot.paths = route_with_depot.paths[:-1]
+        for index in range(len(route_without_depot) - 1):
+            route_with_depot.paths.append(route_without_depot[index])
+
+        route_with_depot.paths.append(route_with_depot[0])
 
 
 class VRPConstraint(ABC):

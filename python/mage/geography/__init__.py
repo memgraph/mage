@@ -16,8 +16,10 @@ from mage.geography.travelling_salesman import (  # noqa: F401, F402, F403
 
 
 from mage.geography.vehicle_routing import (  # noqa: F401, F402, F403
-    VRPPath,
+    VRPRoute,
     VRPResult,
     VRPSolver,
     InvalidDepotException,
+    InvalidRouteException,
+    get_route_length,
 )
