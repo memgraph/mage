@@ -68,7 +68,7 @@ class GekkoMPSolver(MatchingProblemSolver):
         :return: set indices
         """
 
-        m = GEKKO(remote=True)
+        m = GEKKO(remote=False)
         m.options.SOLVER = 1
         containing_const = m.Const(1, name="const")
 

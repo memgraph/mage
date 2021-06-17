@@ -17,11 +17,11 @@ def cp_solve(
     context: mgp.ProcCtx,
     element_vertexes: List[mgp.Vertex],
     set_vertexes: List[mgp.Vertex],
-) -> mgp.Record(resulting_sets=List[mgp.Vertex]):
+) -> mgp.Record(containing_set=mgp.Vertex):
     """
     This set cover solver method returns 1 filed
 
-      * `resulting_sets` is a minimal set of sets in which all the element have been contained
+      * `containing_set` is a minimal set of sets in which all the element have been contained
 
     The input arguments consist of
 
@@ -31,7 +31,7 @@ def cp_solve(
     Element and set equivalents at a certain index come in pairs so mappings between sets and elements are consistent.
 
     The procedure can be invoked in openCypher using the following calls, e.g.:
-      CALL set_cover.cp_solve([(:Point), (:Point)], [(:Set), (:Set)]) YIELD resulting_sets;
+      CALL set_cover.cp_solve([(:Point), (:Point)], [(:Set), (:Set)]) YIELD containing_set;
 
     The method uses constraint programming as a solving tool for obtaining a minimal set of sets that contain
         all the elements.
@@ -45,7 +45,7 @@ def cp_solve(
 
     resulting_nodes = [context.graph.get_vertex_by_id(x) for x in result]
 
-    return [mgp.Record(resulting_sets=resulting_nodes)]
+    return [mgp.Record(containing_set=x) for x in resulting_nodes]
 
 
 @mgp.read_proc
@@ -53,11 +53,11 @@ def greedy(
     context: mgp.ProcCtx,
     element_vertexes: List[mgp.Vertex],
     set_vertexes: List[mgp.Vertex],
-) -> mgp.Record(resulting_sets=List[mgp.Vertex]):
+) -> mgp.Record(containing_set=List[mgp.Vertex]):
     """
     This set cover solver method returns 1 filed
 
-      * `resulting_sets` is a minimal set of sets in which all the element have been contained
+      * `containing_set` is a minimal set of sets in which all the element have been contained
 
     The input arguments consist of
 
@@ -67,7 +67,7 @@ def greedy(
     Element and set equivalents at a certain index come in pairs so mappings between sets and elements are consistent.
 
     The procedure can be invoked in openCypher using the following calls, e.g.:
-      CALL set_cover.cp_solve([(:Point), (:Point)], [(:Set), (:Set)]) YIELD resulting_sets;
+      CALL set_cover.cp_solve([(:Point), (:Point)], [(:Set), (:Set)]) YIELD containing_set;
 
     The method uses a greedy method as a solving tool for obtaining a minimal set of sets that contain
         all the elements.
@@ -81,7 +81,7 @@ def greedy(
 
     resulting_nodes = [context.graph.get_vertex_by_id(x) for x in result]
 
-    return [mgp.Record(resulting_sets=resulting_nodes)]
+    return [mgp.Record(containing_set=x) for x in resulting_nodes]
 
 
 class MatchingProblemCreator(abc.ABC):
