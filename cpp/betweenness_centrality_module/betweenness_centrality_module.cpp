@@ -3,7 +3,6 @@
 #include <mg_procedure.h>
 #include <mg_utils.hpp>
 
-
 #include "algorithm/betweenness_centrality.hpp"
 
 namespace {
@@ -31,6 +30,8 @@ void GetBetweennessCentrality(const mgp_list *args, const mgp_graph *memgraph_gr
     auto directed = mgp_value_get_bool(mgp_list_at(args, 0));
     auto normalize = mgp_value_get_bool(mgp_list_at(args, 1));
     auto threads = mgp_value_get_int(mgp_list_at(args, 2));
+
+    if (threads <= 0) threads = std::thread::hardware_concurrency();
 
     auto graph_type = directed ? mg_graph::GraphType::kDirectedGraph : mg_graph::GraphType::kUndirectedGraph;
 

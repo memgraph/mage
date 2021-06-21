@@ -1,7 +1,7 @@
+#include <omp.h>
 #include <queue>
 #include <stack>
 #include <vector>
-#include <omp.h>
 
 #include "betweenness_centrality.hpp"
 
@@ -45,27 +45,28 @@ void BFS(const std::uint64_t source_node, const mg_graph::GraphView<> &graph, st
 }  // namespace betweenness_centrality_util
 
 namespace {
-  ///
-  ///@brief An in-place method that normalizes a vector by multiplying each component by a given constant.
-  ///
-  ///@param vec The vector that should be normalized
-  ///@param constant The constant with which the components of a vector are multiplied
-  ///
-  void Normalize(std::vector<double> &vec, double constant) {
-    for (auto &value : vec) value *= constant;
-  }
+///
+///@brief An in-place method that normalizes a vector by multiplying each component by a given constant.
+///
+///@param vec The vector that should be normalized
+///@param constant The constant with which the components of a vector are multiplied
+///
+void Normalize(std::vector<double> &vec, double constant) {
+  for (auto &value : vec) value *= constant;
+}
 }  // namespace
 
 namespace betweenness_centrality_alg {
 
-std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bool directed, bool normalize, int threads) {
+std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bool directed, bool normalize,
+                                          int threads) {
   auto number_of_nodes = graph.Nodes().size();
   std::vector<double> betweenness_centrality(number_of_nodes, 0);
 
   // perform bfs for every node in the graph
   omp_set_dynamic(0);
   omp_set_num_threads(threads);
-  #pragma omp parallel for
+#pragma omp parallel for
   for (std::uint64_t node_id = 0; node_id < number_of_nodes; node_id++) {
     // data structures used in BFS
     std::stack<std::uint64_t> visited;
@@ -85,13 +86,13 @@ std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bo
       }
 
       if (current_node != node_id) {
-        if (directed){
-          #pragma omp atomic update
+        if (directed) {
+#pragma omp atomic update
           betweenness_centrality[current_node] += dependency[current_node];
         }
         // centrality scores need to be divided by two since all shortest paths are considered twice
-        else{
-          #pragma omp atomic update
+        else {
+#pragma omp atomic update
           betweenness_centrality[current_node] += dependency[current_node] / 2.0;
         }
       }
