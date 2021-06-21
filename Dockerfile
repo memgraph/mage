@@ -10,6 +10,10 @@ RUN apt-get update && \
     ln -s /usr/bin/python3 python && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+# Install Rust
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
 # Set mage as working directory
 WORKDIR /mage
 COPY . /mage
