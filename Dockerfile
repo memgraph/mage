@@ -4,7 +4,7 @@ FROM memgraph-mage
 USER root
 
 RUN apt-get update && \
-    apt-get --yes install git cmake clang && \
+    apt-get --yes install git cmake g++ && \
     apt-get install -y python3-dev && \
     cd /usr/local/bin && \
     ln -s /usr/bin/python3 python && \

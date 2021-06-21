@@ -5,7 +5,7 @@ set(betweenness_centrality_src
 add_query_module(betweenness_centrality 1 "${betweenness_centrality_src}")
 
 # Link external libraries
-target_link_libraries(betweenness_centrality PRIVATE mg_utility openmp)
+target_link_libraries(betweenness_centrality PRIVATE mg_utility)
 target_include_directories(betweenness_centrality PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Module tests

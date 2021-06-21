@@ -1,6 +1,6 @@
 # Memgraph Mage C++ Query Modules CMake configuration.
 
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.9)
 
 project(memgraph-mage)
 
@@ -50,31 +50,14 @@ set_target_properties(gtest PROPERTIES
 include_directories("${GTEST_INCLUDE_DIR}")
 add_dependencies(gtest gtest-proj)
 
-# Install OpenMP
+# Add OpenMP compiling option
 
-set(OPENMP_ROOT ${PROJECT_BINARY_DIR}/openmp)
-ExternalProject_Add(openmp-proj
-  PREFIX            ${OPENMP_ROOT}
-  INSTALL_DIR       ${OPENMP_ROOT}
-  GIT_REPOSITORY    https://github.com/llvm-mirror/openmp
-  GIT_TAG           master
-  CMAKE_ARGS        "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
-                    "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
-                    "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
-                    "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
-
-set(OPENMP_INCLUDE_PATH ${OPENMP_ROOT}/include)
-set(OPENMP_LIBRARY_PATH ${OPENMP_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}omp.so)
-add_library(openmp STATIC IMPORTED)
-set_target_properties(openmp PROPERTIES
-  IMPORTED_LOCATION ${OPENMP_LIBRARY_PATH})
-include_directories("${OPENMP_INCLUDE_PATH}")
-add_dependencies(openmp openmp-proj)
-
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fopenmp")
-
+find_package(OpenMP)
+if (OPENMP_FOUND)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+endif()
 
 # mg_procedure library
 add_library(mg_procedure INTERFACE)
