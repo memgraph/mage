@@ -4,8 +4,7 @@ FROM memgraph-mage
 USER root
 
 RUN apt-get update && \
-    apt-get --yes install git cmake g++ && \
-    apt-get install -y python3-dev && \
+    apt-get --yes install curl git cmake g++ python3-dev && \
     cd /usr/local/bin && \
     ln -s /usr/bin/python3 python && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
