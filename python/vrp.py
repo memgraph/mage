@@ -130,12 +130,5 @@ def route(
     ]
 
 
-@mgp.read_proc
-def reroute(
-    context: mgp.ProcCtx,
-):
-    pass
-
-
 class DepotUnspecifiedException(Exception):
     pass
