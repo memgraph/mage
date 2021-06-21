@@ -11,6 +11,7 @@ WORK_DIRECTORY = os.getcwd()
 QUERY_MODULES_DIRECTORY = f"{WORK_DIRECTORY}/dist"
 CPP_DIRECTORY = f"{WORK_DIRECTORY}/cpp"
 PY_DIRECTORY = f"{WORK_DIRECTORY}/python"
+RS_DIRECTORY = f"{WORK_DIRECTORY}/rust"
 
 shutil.rmtree(QUERY_MODULES_DIRECTORY, ignore_errors=True)
 os.makedirs(QUERY_MODULES_DIRECTORY)
@@ -21,7 +22,7 @@ os.makedirs(QUERY_MODULES_DIRECTORY)
 
 
 def copytree(src, dst, ignore_patterns=[]):
-    _check_ignore = lambda x: any(
+    def _check_ignore(x): return any(
         [bool(fnmatch.fnmatch(x, pattern)) for pattern in ignore_patterns]
     )
 
@@ -85,3 +86,26 @@ ignore_list = [
 # Copy python repository tree inside dist folder
 copytree(PY_DIRECTORY, QUERY_MODULES_DIRECTORY, ignore_list)
 os.environ["PYTHONPATH"] = PY_DIRECTORY
+
+#################################################
+#              Load Rust modules                #
+#################################################
+
+os.chdir(RS_DIRECTORY)
+for project in filter(
+        lambda f: os.path.isdir(f) and f != "rsmgp-sys",
+        os.listdir(RS_DIRECTORY)):
+    project_dir = os.path.join(RS_DIRECTORY, project)
+    os.chdir(project_dir)
+    subprocess.run(["cargo", "build", "--release"])
+
+    release_dir = os.path.join(project_dir, "target", "release")
+    os.chdir(release_dir)
+    modules = glob.glob("*.so")
+    assert len(modules) == 1, f"Bad rust/{project} lib."
+
+    module = modules[0]
+    src_file = os.path.join(release_dir, module)
+    module = module.lstrip("lib") if module.startswith("lib") else module
+    dst_file = os.path.join(QUERY_MODULES_DIRECTORY, module)
+    shutil.copy2(src_file, dst_file)
