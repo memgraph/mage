@@ -21,7 +21,7 @@ void InsertCycleRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *m
 
 void GetCycles(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
+    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
     auto cycles = cycles_alg::GetCycles(*graph);
 
     for (std::size_t cycle_id = 0; cycle_id < cycles.size(); cycle_id++) {
