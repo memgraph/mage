@@ -33,7 +33,7 @@ void LouvainCommunityDetection(const mgp_list *args, const mgp_graph *memgraph_g
     auto community_alg_threshold = mgp_value_get_double(mgp_list_at(args, 2));
     auto coloring_alg_threshold = mgp_value_get_double(mgp_list_at(args, 3));
 
-    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory);
+    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
     auto communities = louvain_alg::GetCommunities(*graph, coloring, min_graph_shrink, community_alg_threshold,
                                                    coloring_alg_threshold);
 

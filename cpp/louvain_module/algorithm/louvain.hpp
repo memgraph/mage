@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <vector>
 
 #include <mg_exceptions.hpp>
@@ -12,7 +13,7 @@
 #include "basic_util.h"
 #include "color_comm.h"
 
-namespace louvain_util {
+namespace {
 
 /**
  * Grappolo community detection algorithm. Implementation by: https://github.com/Exa-Graph/grappolo
@@ -43,7 +44,7 @@ std::vector<std::uint64_t> GrappoloCommunityDetection(graph *grappoloGraph, bool
  */
 void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, graph *grappolo_graph);
 
-}  // namespace louvain_util
+}  // namespace
 
 namespace louvain_alg {
 
