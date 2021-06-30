@@ -3,8 +3,8 @@ FROM memgraph/memgraph:latest AS memgraph-mage
 FROM memgraph-mage
 USER root
 
-RUN apt update && \
-    apt install -y curl git cmake clang python3-dev && \
+RUN apt-get update && \
+    apt-get --yes install curl git cmake g++ clang python3-dev && \
     cd /usr/local/bin && \
     ln -s /usr/bin/python3 python && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*

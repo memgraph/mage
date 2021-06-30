@@ -1,6 +1,6 @@
 # Memgraph Mage C++ Query Modules CMake configuration.
 
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.9)
 
 project(memgraph-mage)
 
@@ -51,6 +51,15 @@ set_target_properties(gtest PROPERTIES
   INTERFACE_LINK_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
 include_directories("${GTEST_INCLUDE_DIR}")
 add_dependencies(gtest gtest-proj)
+
+# Add OpenMP compiling option
+
+find_package(OpenMP)
+if (OPENMP_FOUND)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+endif()
 
 # mg_procedure library
 add_library(mg_procedure INTERFACE)

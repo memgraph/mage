@@ -1,4 +1,5 @@
 #include <stack>
+#include <thread>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -38,16 +39,17 @@ TEST_P(BCUtilBFSParametersTests, BetweennessCentralityUtilBFS) {
 }
 
 ///
-///Instantiate test cases for testing BFS used in Betweenness Centrality algorithm.
+/// Instantiate test cases for testing BFS used in Betweenness Centrality algorithm.
 ///@param First parameter represents the number of nodes in the graph
 ///@param Second parameter represents the edge list that specifies the graph
 ///@param Third parameter specifies the type of the graph; the type can be directed or undirected
 ///@param Fourth parameter represents the stack that defines the order in which the nodes should be visited
-///@param Fifth  parameter represents the predecessors of each node in the bfs traversal that begins in the node with an index 0
+///@param Fifth  parameter represents the predecessors of each node in the bfs traversal that begins in the node with an
+/// index 0
 ///@param Sixth parameter represents the number of shortest paths that pass through a particular node,
-/// beginning at node 0 and ending in any node other than the node for which we count the shortest paths 
+/// beginning at node 0 and ending in any node other than the node for which we count the shortest paths
 ///
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     BCUtilTest, BCUtilBFSParametersTests,
     ::testing::Values(
         std::make_tuple(6,
@@ -86,12 +88,13 @@ class BetweennessCentralityParametersTests
 };
 
 TEST_P(BetweennessCentralityParametersTests, BetweennessCentralityTest) {
-  auto result = betweenness_centrality_alg::BetweennessCentrality(*graph, directed, normalized);
+  auto result = betweenness_centrality_alg::BetweennessCentrality(*graph, directed, normalized,
+                                                                  std::thread::hardware_concurrency());
   ASSERT_TRUE(mg_test_utility::TestEqualVectors(result, expected));
 }
 
 ///
-///Instantiate test cases for testing the Betweenness Centrality algorithm.
+/// Instantiate test cases for testing the Betweenness Centrality algorithm.
 ///@param First parameter represents the number of nodes in the graph
 ///@param Second parameter represents the edge list that specifies the graph
 ///@param Third parameter specifies the type of the graph; the type can be directed or undirected
@@ -101,7 +104,7 @@ TEST_P(BetweennessCentralityParametersTests, BetweennessCentralityTest) {
 ///@param Sixth parameter indicates whether the algorithm should normalize betweenness centrality scores,
 /// true if the results should be normalized, false otherwise
 ///
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     BCUtilTest, BetweennessCentralityParametersTests,
     ::testing::Values(
         std::make_tuple(1, std::vector<std::pair<std::uint64_t, std::uint64_t>>({}),
@@ -135,7 +138,8 @@ INSTANTIATE_TEST_CASE_P(
 
 TEST(BetweennessCentrality, EmptyGraph) {
   auto graph = mg_generate::BuildGraph(0, {});
-  auto result = betweenness_centrality_alg::BetweennessCentrality(*graph, false, false);
+  auto result =
+      betweenness_centrality_alg::BetweennessCentrality(*graph, false, false, std::thread::hardware_concurrency());
   ASSERT_EQ(result.size(), 0);
 }
 
