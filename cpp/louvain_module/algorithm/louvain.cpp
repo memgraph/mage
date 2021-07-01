@@ -56,7 +56,7 @@ void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, graph *gra
     return;
   }
 
-  auto *tmp_edge_list = (edge *)malloc(number_of_edges * sizeof(edge));  // Every edge stored ONCE
+  auto tmp_edge_list = std::unique_ptr<edge[]>(new edge[number_of_edges]);  // Every edge stored ONCE
 
   // TODO: (jmatak) Add different weights on edges
   double default_weight = 1.0;
@@ -67,12 +67,12 @@ void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, graph *gra
     tmp_edge_list[edge_index].weight = default_weight;  // Make it positive and cast to Double, fixed to 1.0
   }
 
-  auto *edge_list_ptrs = (long *)malloc((number_of_vertices + 1) * sizeof(long));
+  auto edge_list_ptrs = new long[number_of_vertices + 1];
   if (edge_list_ptrs == NULL) {
     throw mg_exception::NotEnoughMemoryException();
   }
 
-  auto *edge_list = (edge *)malloc(2 * number_of_edges * sizeof(edge));  // Every edge stored twice
+  auto edge_list = new edge[number_of_edges * 2];  // Every edge stored twice
   if (edge_list == NULL) {
     throw mg_exception::NotEnoughMemoryException();
   }
@@ -95,7 +95,7 @@ void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, graph *gra
   }
 
   // Keep track of how many edges have been added for a vertex:
-  auto *added = (long *)malloc(number_of_vertices * sizeof(long));
+  auto added = std::unique_ptr<long[]>(new long[number_of_vertices]);
   if (added == NULL) {
     throw mg_exception::NotEnoughMemoryException();
   }
@@ -126,10 +126,6 @@ void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, graph *gra
   grappolo_graph->numEdges = number_of_edges;
   grappolo_graph->edgeListPtrs = edge_list_ptrs;
   grappolo_graph->edgeList = edge_list;
-
-  // Clean up:
-  free(tmp_edge_list);
-  free(added);
 }
 }  // namespace
 
