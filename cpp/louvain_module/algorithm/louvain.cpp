@@ -11,17 +11,14 @@ std::vector<std::uint64_t> GrappoloCommunityDetection(graph *grappolo_graph, boo
                                                       double coloring_threshold) {
   auto number_of_vertices = grappolo_graph->numVertices;
 
-  int num_threads = 1;  // Default is one thread
-#pragma omp parallel
-  { num_threads = omp_get_num_threads(); }
-
-  // Initialize clustering array
   auto *cluster_array = (long *)malloc(number_of_vertices * sizeof(long));
 #pragma omp parallel for
   for (long i = 0; i < number_of_vertices; i++) {
     cluster_array[i] = -1;
   }
 
+  // Dynamically set currently.
+  auto num_threads = omp_get_num_threads();
   if (coloring) {
     runMultiPhaseColoring(grappolo_graph, cluster_array, coloring, kNumColors, kReplaceMap, min_graph_size, threshold,
                           coloring_threshold, num_threads, kThreadsOpt);
@@ -78,15 +75,15 @@ void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, graph *gra
   }
 
 #pragma omp parallel for
-  for (long i = 0; i <= number_of_vertices; i++) edge_list_ptrs[i] = 0;  // For first touch purposes
+  for (std::size_t i = 0; i <= number_of_vertices; i++) edge_list_ptrs[i] = 0;  // For first touch purposes
 
     // Build the EdgeListPtr Array: Cumulative addition
 #pragma omp parallel for
-  for (long i = 0; i < number_of_edges; i++) {
+  for (std::size_t i = 0; i < number_of_edges; i++) {
     __sync_fetch_and_add(&edge_list_ptrs[tmp_edge_list[i].head + 1], 1);  // Leave 0th position intact
     __sync_fetch_and_add(&edge_list_ptrs[tmp_edge_list[i].tail + 1], 1);  // Leave 0th position intact
   }
-  for (long i = 0; i < number_of_vertices; i++) {
+  for (std::size_t i = 0; i < number_of_vertices; i++) {
     edge_list_ptrs[i + 1] += edge_list_ptrs[i];  // Prefix Sum
   }
   // The last element of Cumulative will hold the total number of characters
@@ -100,11 +97,11 @@ void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, graph *gra
     throw mg_exception::NotEnoughMemoryException();
   }
 #pragma omp parallel for
-  for (long i = 0; i < number_of_vertices; i++) added[i] = 0;
+  for (std::size_t i = 0; i < number_of_vertices; i++) added[i] = 0;
 
     // Build the edgeList from edgeListTmp:
 #pragma omp parallel for
-  for (long i = 0; i < number_of_edges; i++) {
+  for (std::size_t i = 0; i < number_of_edges; i++) {
     auto head = tmp_edge_list[i].head;
     auto tail = tmp_edge_list[i].tail;
     auto weight = tmp_edge_list[i].weight;
