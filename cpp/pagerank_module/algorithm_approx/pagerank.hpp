@@ -33,7 +33,8 @@ void CreateRoute(const mg_graph::GraphView<> &graph, const std::uint64_t start_i
                  std::mt19937 gen);
 }  // namespace
 
-std::vector<double> PageRankApprox(const mg_graph::GraphView<> &graph, const std::uint64_t R, const double epsilon);
+std::vector<double> PageRankApprox(const mg_graph::GraphView<> &graph, const std::uint64_t R = 10,
+                                   const double epsilon = 0.2);
 
 std::vector<double> Update(const mg_graph::GraphView<> &graph, const std::pair<std::uint64_t, uint64_t> new_edge);
 

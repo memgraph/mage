@@ -68,8 +68,6 @@ std::vector<double> PageRankApprox(const mg_graph::GraphView<> &graph, const std
   std::mt19937 gen(42);
   std::uniform_real_distribution<float> distr(0.0, 1.0);
 
-  auto n = graph.Nodes().size();
-
   auto walk_index = 0;
   for (auto [node_id] : graph.Nodes()) {
     // We have R random walks for each node in the graph
@@ -91,10 +89,13 @@ std::vector<double> PageRankApprox(const mg_graph::GraphView<> &graph, const std
 }
 
 std::vector<double> Update(const mg_graph::GraphView<> &graph, const std::pair<std::uint64_t, std::uint64_t> new_edge) {
+  if (context.IsEmpty()) {
+    PageRankApprox(graph);
+  }
+
   std::mt19937 gen(42);
   std::uniform_real_distribution<float> distr(0.0, 1.0);
 
-  auto n = graph.Nodes().size();
   auto [from, to] = new_edge;
 
   std::unordered_set<std::uint64_t> walk_table_copy(context.walks_table[from]);
@@ -118,10 +119,12 @@ std::vector<double> Update(const mg_graph::GraphView<> &graph, const std::pair<s
 }
 
 std::vector<double> Update(const mg_graph::GraphView<> &graph, const std::uint64_t new_vertex) {
+  if (context.IsEmpty()) {
+    PageRankApprox(graph);
+  }
+
   std::mt19937 gen(42);
   std::uniform_real_distribution<float> distr(0.0, 1.0);
-
-  auto n = graph.Nodes().size();
 
   auto walk_index = context.walks.size();
   for (std::uint64_t i = 0; i < global_R; i++) {
