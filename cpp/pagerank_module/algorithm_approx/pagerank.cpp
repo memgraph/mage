@@ -88,9 +88,10 @@ std::vector<double> PageRankApprox(const mg_graph::GraphView<> &graph, const std
   return CalculatePageRank(graph);
 }
 
-std::vector<double> Update(const mg_graph::GraphView<> &graph, const std::pair<std::uint64_t, std::uint64_t> new_edge) {
+std::vector<double> UpdateCreate(const mg_graph::GraphView<> &graph,
+                                 const std::pair<std::uint64_t, std::uint64_t> new_edge) {
   if (context.IsEmpty()) {
-    PageRankApprox(graph);
+    return PageRankApprox(graph);
   }
 
   std::mt19937 gen(42);
@@ -118,9 +119,9 @@ std::vector<double> Update(const mg_graph::GraphView<> &graph, const std::pair<s
   return CalculatePageRank(graph);
 }
 
-std::vector<double> Update(const mg_graph::GraphView<> &graph, const std::uint64_t new_vertex) {
+std::vector<double> UpdateCreate(const mg_graph::GraphView<> &graph, const std::uint64_t new_vertex) {
   if (context.IsEmpty()) {
-    PageRankApprox(graph);
+    return PageRankApprox(graph);
   }
 
   std::mt19937 gen(42);
@@ -139,6 +140,61 @@ std::vector<double> Update(const mg_graph::GraphView<> &graph, const std::uint64
     context.walks.emplace_back(std::move(walk));
     walk_index++;
   }
+
+  return CalculatePageRank(graph);
+}
+
+std::vector<double> UpdateDelete(const mg_graph::GraphView<> &graph,
+                                 const std::pair<std::uint64_t, std::uint64_t> removed_edge) {
+  if (context.IsEmpty()) {
+    return PageRankApprox(graph);
+  }
+
+  std::mt19937 gen(42);
+  std::uniform_real_distribution<float> distr(0.0, 1.0);
+
+  auto [from, to] = removed_edge;
+
+  std::unordered_set<std::uint64_t> walk_table_copy(context.walks_table[from]);
+  for (auto walk_index : walk_table_copy) {
+    auto &walk = context.walks[walk_index];
+
+    auto position = std::find(walk.begin(), walk.end(), from) + 1;
+
+    if (position == walk.end()) {
+      continue;
+    }
+
+    auto next = *(position + 1);
+    if (next != next) {
+      continue;
+    }
+
+    while (position != walk.end()) {
+      auto node_id = *position;
+      context.walks_table[node_id].erase(walk_index);
+      context.walks_counter[node_id]--;
+      position++;
+    }
+    walk.erase(std::find(walk.begin(), walk.end(), from) + 1, walk.end());
+
+    auto current_id = from;
+    CreateRoute(graph, current_id, walk, walk_index, global_epsilon / 2.0, distr, gen);
+  }
+
+  return CalculatePageRank(graph);
+}
+
+std::vector<double> UpdateDelete(const mg_graph::GraphView<> &graph, const std::uint64_t removed_vertex) {
+  if (context.IsEmpty()) {
+    return PageRankApprox(graph);
+  }
+
+  std::mt19937 gen(42);
+  std::uniform_real_distribution<float> distr(0.0, 1.0);
+
+  context.walks_table.erase(removed_vertex);
+  context.walks_counter.erase(removed_vertex);
 
   return CalculatePageRank(graph);
 }

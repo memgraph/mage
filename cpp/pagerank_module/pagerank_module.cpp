@@ -100,7 +100,7 @@ void ApproxPageRankCreateUpdate(const mgp_list *args, const mgp_graph *memgraph_
       auto vertex = mgp_value_get_vertex(mgp_list_at(nodes_list, i));
       auto vertex_id = mgp_vertex_get_id(vertex).as_int;
 
-      pageranks = pagerank_approx_alg::Update(*graph, graph->GetInnerNodeId(vertex_id));
+      pageranks = pagerank_approx_alg::UpdateCreate(*graph, graph->GetInnerNodeId(vertex_id));
     }
 
     auto edges_size = mgp_list_size(edges_list);
@@ -109,7 +109,47 @@ void ApproxPageRankCreateUpdate(const mgp_list *args, const mgp_graph *memgraph_
       auto from_id = mgp_vertex_get_id(mgp_edge_get_from(edge)).as_int;
       auto to_id = mgp_vertex_get_id(mgp_edge_get_to(edge)).as_int;
 
-      pageranks = pagerank_approx_alg::Update(*graph, {graph->GetInnerNodeId(from_id), graph->GetInnerNodeId(to_id)});
+      pageranks =
+          pagerank_approx_alg::UpdateCreate(*graph, {graph->GetInnerNodeId(from_id), graph->GetInnerNodeId(to_id)});
+    }
+
+    auto number_of_nodes = graph->Nodes().size();
+    for (std::uint64_t node_id = 0; node_id < number_of_nodes; ++node_id) {
+      InsertPagerankRecord(memgraph_graph, result, memory, graph->GetMemgraphNodeId(node_id), pageranks[node_id]);
+    }
+  } catch (const std::exception &e) {
+    // We must not let any exceptions out of our module.
+    mgp_result_set_error_msg(result, e.what());
+    return;
+  }
+}
+
+void ApproxPageRankDeleteUpdate(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result,
+                                mgp_memory *memory) {
+  try {
+    std::vector<double> pageranks;
+
+    auto nodes_list = mgp_value_get_list(mgp_list_at(args, 0));
+    auto edges_list = mgp_value_get_list(mgp_list_at(args, 1));
+
+    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
+
+    auto edges_size = mgp_list_size(edges_list);
+    for (std::size_t i = 0; i < edges_size; i++) {
+      auto edge = mgp_value_get_edge(mgp_list_at(edges_list, i));
+      auto from_id = mgp_vertex_get_id(mgp_edge_get_from(edge)).as_int;
+      auto to_id = mgp_vertex_get_id(mgp_edge_get_to(edge)).as_int;
+
+      pageranks =
+          pagerank_approx_alg::UpdateDelete(*graph, {graph->GetInnerNodeId(from_id), graph->GetInnerNodeId(to_id)});
+    }
+
+    auto nodes_size = mgp_list_size(nodes_list);
+    for (std::size_t i = 0; i < nodes_size; i++) {
+      auto vertex = mgp_value_get_vertex(mgp_list_at(nodes_list, i));
+      auto vertex_id = mgp_vertex_get_id(vertex).as_int;
+
+      pageranks = pagerank_approx_alg::UpdateDelete(*graph, graph->GetInnerNodeId(vertex_id));
     }
 
     auto number_of_nodes = graph->Nodes().size();
@@ -183,6 +223,30 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
                               default_nodes))
       return 1;
     if (!mgp_proc_add_opt_arg(pagerank_proc, "created_edges", mgp_type_nullable(mgp_type_list(mgp_type_relationship())),
+                              default_edges))
+      return 1;
+
+    mgp_value_destroy(default_nodes);
+    mgp_value_destroy(default_edges);
+
+    // Query module output record
+    if (!mgp_proc_add_result(pagerank_proc, kFieldNode, mgp_type_node())) return 1;
+    if (!mgp_proc_add_result(pagerank_proc, kFieldRank, mgp_type_float())) return 1;
+  }
+
+  {
+    struct mgp_proc *pagerank_proc =
+        mgp_module_add_read_procedure(module, "approx_delete_update", ApproxPageRankCreateUpdate);
+
+    if (!pagerank_proc) return 1;
+
+    auto default_nodes = mgp_value_make_null(memory);
+    auto default_edges = mgp_value_make_null(memory);
+
+    if (!mgp_proc_add_opt_arg(pagerank_proc, "delete_nodes", mgp_type_nullable(mgp_type_list(mgp_type_node())),
+                              default_nodes))
+      return 1;
+    if (!mgp_proc_add_opt_arg(pagerank_proc, "delete_edges", mgp_type_nullable(mgp_type_list(mgp_type_relationship())),
                               default_edges))
       return 1;
 

@@ -36,8 +36,13 @@ void CreateRoute(const mg_graph::GraphView<> &graph, const std::uint64_t start_i
 std::vector<double> PageRankApprox(const mg_graph::GraphView<> &graph, const std::uint64_t R = 10,
                                    const double epsilon = 0.2);
 
-std::vector<double> Update(const mg_graph::GraphView<> &graph, const std::pair<std::uint64_t, uint64_t> new_edge);
+std::vector<double> UpdateCreate(const mg_graph::GraphView<> &graph, const std::pair<std::uint64_t, uint64_t> new_edge);
 
-std::vector<double> Update(const mg_graph::GraphView<> &graph, const std::uint64_t new_vertex);
+std::vector<double> UpdateCreate(const mg_graph::GraphView<> &graph, const std::uint64_t new_vertex);
+
+std::vector<double> UpdateDelete(const mg_graph::GraphView<> &graph,
+                                 const std::pair<std::uint64_t, std::uint64_t> removed_edge);
+
+std::vector<double> UpdateDelete(const mg_graph::GraphView<> &graph, const std::uint64_t removed_vertex);
 
 }  // namespace pagerank_approx_alg
