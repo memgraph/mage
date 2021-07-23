@@ -119,7 +119,7 @@ def get(
             threads,
         )
 
-    embeddingd = context.learner.get_embedding_vectors()
+    embeddings = context.learner.get_embedding_vectors()
 
     return [
         mgp.Record(node=node, embedding=embeddings[node]) for node in ctx.graph.nodes
