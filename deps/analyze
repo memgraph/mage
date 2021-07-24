@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+
+import os
+import subprocess
+
+WORK_DIRECTORY = os.getcwd()
+CPP_DIRECTORY = f"{WORK_DIRECTORY}/../cpp/build"
+PY_DIRECTORY = f"{WORK_DIRECTORY}/../python"
+RS_DIRECTORY = f"{WORK_DIRECTORY}/../rust/rsmgp-example"
+
+os.chdir(CPP_DIRECTORY)
+subprocess.run(["cmake", f"--graphviz={WORK_DIRECTORY}/cppdeps.dot", ".."])
+subprocess.run(["dot",
+                "-Tpng",
+                "-o",
+                f"{WORK_DIRECTORY}/cppdeps.png",
+                f"{WORK_DIRECTORY}/cppdeps.dot"])
+
+# TODO(gitbuda): Figure out how to install deps and activate env.
+os.chdir(WORK_DIRECTORY)
+with open("pydeps.dot", "w") as f:
+    subprocess.run(["pipdeptree", "--graph-output", "dot"], stdout=f)
+    subprocess.run(["dot",
+                    "-Tpng",
+                    "-o",
+                    f"{WORK_DIRECTORY}/pydeps.png",
+                    f"{WORK_DIRECTORY}/pydeps.dot"])
+
+# TODO(gitbuda): Ensure `cargo install cargo-deps`.
+# TODO(gitbuda): Analyze all Rust modules available in Mage.
+os.chdir(RS_DIRECTORY)
+with open(f"{WORK_DIRECTORY}/rsdeps.dot", "w") as f:
+    subprocess.run(["cargo", "deps"], stdout=f)
+    subprocess.run(["dot",
+                    "-Tpng",
+                    "-o",
+                    f"{WORK_DIRECTORY}/rsdeps.png",
+                    f"{WORK_DIRECTORY}/rsdeps.dot"])
