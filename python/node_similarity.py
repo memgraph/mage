@@ -1,5 +1,5 @@
 from math import sqrt
-from typing import Set, List, Callable
+from typing import Set, List, Callable, Tuple, Union
 from itertools import product
 
 import mgp
@@ -9,49 +9,40 @@ import mgp
 # not implemented for multigraphs
 # not taking into account edge weights
 
+class Mode:
+    """
+    Constants for mode parameter
+    """
+
+    PAIRWISE = ['p', 'pairwise']
+    CARTESIAN = ['c', 'cartesian']
+
+
 @mgp.read_proc
 def jaccard(
         context: mgp.ProcCtx,
         node1: mgp.Any,
         node2: mgp.Any,
-        mode: str = 'c'
-) -> mgp.Record(node1=mgp.Vertex, node2=mgp.Vertex, similarity=mgp.Number):
-    """
-    This procedure calls the method for calculating the Jaccard similarity between two nodes (or two lists of nodes)
-    and returns 3 fields
+        mode: str = 'cartesian'
+) -> mgp.Record(node1=mgp.Vertex, node2=mgp.Vertex, similarity=float):
+    """This procedure calls a method for calculating the similarity between two nodes (or two tuples of nodes)
+    so that the used node similarity measure is the Jaccard similarity.
 
-    :return node1: The first node
-    :return node2: The second node
-    :return similarity: The Jaccard similarity of the first and the second node
+    :param node1: A node or a tuple of nodes
+    :type node1: mgp.Vertex, tuple
+    :param node2: A node or a tuple of nodes
+    :type node2: mgp.Vertex, tuple
+    :param mode: Can be `p` (or `pairwise`) for pairwise similarity calculation or `c` (or `cartesian`)
+    for calculating the similarity of the Cartesian product of given tuples.
+    The default value is set to be a Cartesian product.
+    :type mode: str, optional
 
-    The input arguments consist of
+    :return: This procedure returns a list of mgp.Records with 3 fields in each:
+    the first node, the second node and the similarity between them
+    :rtype: list
+   """
 
-    :param mgp.Vertex or Tuple[mgp.Vertex] node1: A node or a tuple of nodes
-    :param mgp.Vertex or Tuple[mgp.Vertex] node2: A node or a tuple od nodes
-    :param str mode: Can be `p` for pairwise similarity calculation or `c` for calculating the similarity of the
-    Cartesian product of given tuples. Default value is `c`.
-    """
-
-    nodes1: tuple
-    nodes2: tuple
-
-    if isinstance(node1, mgp.Vertex):
-        nodes1 = tuple([node1])
-    elif isinstance(node1, tuple):
-        nodes1 = node1
-    else:
-        raise TypeError("Invalid type of first argument.")
-
-    if isinstance(node2, mgp.Vertex):
-        nodes2 = tuple([node2])
-    elif isinstance(node2, tuple):
-        nodes2 = node2
-    else:
-        raise TypeError("Invalid type of second argument.")
-
-    result = _calculate_similarity(nodes1, nodes2, _calculate_jaccard, mode)
-
-    return [mgp.Record(node1=n1, node2=n2, similarity=similarity) for n1, n2, similarity in result]
+    return _calculate_similarity(node1, node2, _calculate_jaccard, mode)
 
 
 @mgp.read_proc
@@ -59,44 +50,26 @@ def overlap(
         context: mgp.ProcCtx,
         node1: mgp.Any,
         node2: mgp.Any,
-        mode: str = 'c'
+        mode: str = 'cartesian'
 ) -> mgp.Record(node1=mgp.Vertex, node2=mgp.Vertex, similarity=mgp.Number):
+    """This procedure calls a method for calculating the similarity between two nodes (or two tuples of nodes)
+    so that the used node similarity measure is the overlap similarity.
+
+    :param node1: A node or a tuple of nodes
+    :type node1: mgp.Vertex, tuple
+    :param node2: A node or a tuple of nodes
+    :type node2: mgp.Vertex, tuple
+    :param mode: Can be `p` (or `pairwise`) for pairwise similarity calculation or `c` (or `cartesian`)
+    for calculating the similarity of the Cartesian product of given tuples.
+    The default value is set to be a Cartesian product.
+    :type mode: str, optional
+
+    :return: This procedure returns a list of mgp.Records with 3 fields in each:
+    the first node, the second node and the similarity between them
+    :rtype: list
     """
-    This procedure calls the method for calculating the overlap similarity between two nodes (or two lists of nodes)
-    and returns 3 fields
 
-    :return node1: The first node
-    :return node2: The second node
-    :return similarity: The overlap similarity of the first and the second node
-
-    The input arguments consist of
-
-    :param mgp.Vertex or Tuple[mgp.Vertex] node1: A node or a tuple of nodes
-    :param mgp.Vertex or Tuple[mgp.Vertex] node2: A node or a tuple od nodes
-    :param str mode: Can be `p` for pairwise similarity calculation or `c` for calculating the similarity of the
-    Cartesian product of given tuples. Default value is `c`.
-    """
-
-    nodes1: tuple
-    nodes2: tuple
-
-    if isinstance(node1, mgp.Vertex):
-        nodes1 = tuple([node1])
-    elif isinstance(node1, tuple):
-        nodes1 = node1
-    else:
-        raise TypeError("Invalid type of first argument.")
-
-    if isinstance(node2, mgp.Vertex):
-        nodes2 = tuple([node2])
-    elif isinstance(node2, tuple):
-        nodes2 = node2
-    else:
-        raise TypeError("Invalid type of second argument.")
-
-    result = _calculate_similarity(nodes1, nodes2, _calculate_overlap, mode)
-
-    return [mgp.Record(node1=n1, node2=n2, similarity=similarity) for n1, n2, similarity in result]
+    return _calculate_similarity(node1, node2, _calculate_overlap, mode)
 
 
 @mgp.read_proc
@@ -104,57 +77,38 @@ def cosine(
         context: mgp.ProcCtx,
         node1: mgp.Any,
         node2: mgp.Any,
-        mode: str = 'c'
+        mode: str = 'cartesian'
 ) -> mgp.Record(node1=mgp.Vertex, node2=mgp.Vertex, similarity=mgp.Number):
+    """This procedure calls a method for calculating the similarity between two nodes (or two tuples of nodes)
+    so that the used node similarity measure is the cosine similarity.
+
+    :param node1: A node or a tuple of nodes
+    :type node1: mgp.Vertex, tuple
+    :param node2: A node or a tuple of nodes
+    :type node2: mgp.Vertex, tuple
+    :param mode: Can be `p` (or `pairwise`) for pairwise similarity calculation or `c` (or `cartesian`)
+    for calculating the similarity of the Cartesian product of given tuples.
+    The default value is set to be a Cartesian product.
+    :type mode: str, optional
+
+    :return: This procedure returns a list of mgp.Records with 3 fields in each:
+    the first node, the second node and the similarity between them
+    :rtype: list
     """
-    This procedure calls the method for calculating the cosine similarity between two nodes (or two lists of nodes)
-    and returns 3 fields
 
-    :return node1: The first node
-    :return node2: The second node
-    :return similarity: The cosine similarity of the first and the second node
-
-    The input arguments consist of
-
-    :param mgp.Vertex or Tuple[mgp.Vertex] node1: A node or a tuple of nodes
-    :param mgp.Vertex or Tuple[mgp.Vertex] node2: A node or a tuple od nodes
-    :param str mode: Can be `p` for pairwise similarity calculation or `c` for calculating the similarity of the
-    Cartesian product of given tuples. Default value is `c`.
-    """
-
-    nodes1: tuple
-    nodes2: tuple
-
-    if isinstance(node1, mgp.Vertex):
-        nodes1 = tuple([node1])
-    elif isinstance(node1, tuple):
-        nodes1 = node1
-    else:
-        raise TypeError("Invalid type of first argument.")
-
-    if isinstance(node2, mgp.Vertex):
-        nodes2 = tuple([node2])
-    elif isinstance(node2, tuple):
-        nodes2 = node2
-    else:
-        raise TypeError("Invalid type of second argument.")
-
-    result = _calculate_similarity(nodes1, nodes2, _calculate_cosine, mode)
-
-    return [mgp.Record(node1=n1, node2=n2, similarity=similarity) for n1, n2, similarity in result]
+    return _calculate_similarity(node1, node2, _calculate_cosine, mode)
 
 
 def _calculate_jaccard(node1: mgp.Vertex, node2: mgp.Vertex) -> float:
-    """
-    This method calculates the Jaccard similarity between two nodes and returns their similarity.
+    """This method calculates the Jaccard similarity between two nodes.
+
+    :param node1: The first node
+    :type node1: mgp.Vertex
+    :param node2: The second node
+    :type node2: mgp.Vertex
 
     :return similarity: The Jaccard similarity of the first and the second node
     :rtype: float
-
-    The input arguments consist of
-
-    :param mgp.Vertex node1: The first node
-    :param mgp.Vertex node2: The second node
     """
 
     jaccard_similarity = 0
@@ -173,16 +127,16 @@ def _calculate_jaccard(node1: mgp.Vertex, node2: mgp.Vertex) -> float:
 
 
 def _calculate_overlap(node1: mgp.Vertex, node2: mgp.Vertex) -> float:
-    """
-    This method calculates the overlap similarity between two nodes and returns their similarity.
+    """This method calculates the overlap similarity between two nodes.
 
-    :return similarity: The overlap similarity of the first and the second node
+    :param node1: The first node
+    :type node1: mgp.Vertex
+    :param node2: The second node
+    :type node2: mgp.Vertex
+
+    :return: The overlap similarity of the first and the second node
     :rtype: float
 
-    The input arguments consist of
-
-    :param mgp.Vertex node1: The first node
-    :param mgp.Vertex node2: The second node
     """
 
     overlap_similarity = 0
@@ -199,16 +153,15 @@ def _calculate_overlap(node1: mgp.Vertex, node2: mgp.Vertex) -> float:
 
 
 def _calculate_cosine(node1: mgp.Vertex, node2: mgp.Vertex) -> float:
-    """
-    This method calculates the cosine similarity between two nodes and returns their similarity.
+    """This method calculates the cosine similarity between two nodes.
 
-    :return similarity: The cosine similarity of the first and the second node
+    :param node1: The first node
+    :type node1: mgp.Vertex
+    :param node2: The second node
+    :type node2: mgp.Vertex
+
+    :return: The cosine similarity of the first and the second node
     :rtype: float
-
-    The input arguments consist of
-
-    :param mgp.Vertex node1: The first node
-    :param mgp.Vertex node2: The second node
     """
 
     cosine_similarity = 0
@@ -224,66 +177,82 @@ def _calculate_cosine(node1: mgp.Vertex, node2: mgp.Vertex) -> float:
     return cosine_similarity
 
 
-def _calculate_similarity(nodes1: tuple, nodes2: tuple, method: Callable, mode: str) -> List:
-    """
-    This method calculates the similarity of nodes with given method and mode.
+def _calculate_similarity(node1: Union[mgp.Vertex, Tuple[mgp.Vertex]],
+                          node2: Union[mgp.Vertex, Tuple[mgp.Vertex]],
+                          method: Callable,
+                          mode: str
+                          ) -> List[Tuple[mgp.Vertex, mgp.Vertex, float]]:
+    """This method calculates the similarity of nodes for given method and mode.
 
-    :return result: Returns the calculated similarity between nodes in a list o tuples. Each tuple consist of
-    the first node, the second node and the similarity between them.
-    :rtype: List[Tuple[mgp.Vertex, mgp.Vertex, float]]
-
-    The input arguments consist of
-
-    :param mgp.Vertex nodes1: The first tuple of nodes
-    :param mgp.Vertex nodes2: The second tuple of nodes
-    :param Callable method: Similarity measure which will be used for calculating the similarity between nodes.
+    :param node1: The first node or tuple of nodes
+    :type node1: mgp.Vertex, tuple
+    :param node2: The second tuple of nodes
+    :type node2: mgp.Vertex, tuple
+    :param method: Similarity measure which will be used for calculating the similarity between nodes.
     Currently available are `_calculate_jaccard`, `_calculate_overlap` and `_calculate_cosine`
-    :param str mode: Can be `p` for pairwise similarity calculation or `c` for calculating the similarity of the
-    Cartesian product of given tuples
+    :type method: function
+    :param mode: Can be `p` (or `pairwise`) for pairwise similarity calculation or `c` (or `cartesian`) for
+    calculating the similarity of the Cartesian product of given tuples
+    :type mode: str
+
+    :raises TypeError: Occurs if there's a type mismatch for passed arguments
+    :raises ValueError: Occurs if a passed argument is invalid
+
+    :return: Returns the calculated similarity between nodes in a list o tuples. Each tuple consist of
+    the first node, the second node and the similarity between them.
+    :rtype: list
     """
+
+    nodes1: tuple
+    nodes2: tuple
+
+    if isinstance(node1, mgp.Vertex):
+        nodes1 = tuple([node1])
+    elif isinstance(node1, tuple):
+        nodes1 = node1
+    else:
+        raise TypeError("Invalid type of first argument.")
+
+    if isinstance(node2, mgp.Vertex):
+        nodes2 = tuple([node2])
+    elif isinstance(node2, tuple):
+        nodes2 = node2
+    else:
+        raise TypeError("Invalid type of second argument.")
+
+    mode_constants = Mode()
 
     result: list
 
-    if not isinstance(nodes1, tuple) or not isinstance(nodes2, tuple):
-        raise TypeError("Arguments should be tuples.")
-
-    if mode not in ['p', 'c']:
-        raise ValueError("Invalid mode.")
-
-    if mode == 'p':
+    if mode in mode_constants.PAIRWISE:
         if len(nodes1) == len(nodes2):
-            result = [(node1, node2, method(node1, node2)) for node1, node2 in zip(nodes1, nodes2)]
+            result = [(n1, n2, method(n1, n2)) for n1, n2 in zip(nodes1, nodes2)]
         else:
             raise ValueError("Incompatible lengths of given arguments")
-    elif mode == 'c':
-        result = [(node1, node2, method(node1, node2)) for node1, node2 in product(nodes1, nodes2)]
+    elif mode in mode_constants.CARTESIAN:
+        result = [(n1, n2, method(n1, n2)) for n1, n2 in product(nodes1, nodes2)]
     else:
-        raise ValueError
+        raise ValueError("Invalid mode.")
 
-    return result
+    return [mgp.Record(node1=n1, node2=n2, similarity=similarity) for n1, n2, similarity in result]
 
 
 def _get_neighbors(node: mgp.Vertex) -> Set[mgp.Vertex]:
-    """
-    This method find all neighbors of a given node.
+    """ This method finds all neighbors of a given node.
 
-        :return neighbors: All neighbors of a node
-        :rtype: Set
+    :param node: A node
+    :type node: mgp.Vertex
 
-    The input arguments consist of
-
-        :param mgp.Vertex node: A node
+    :return: Set of all neighbors of a node
+    :rtype: set
     """
 
     neighbors = set()
 
-    if isinstance(node, mgp.Vertex):
-        for edge in node.in_edges:
-            neighbors.add(edge.from_vertex)
+    for edge in node.in_edges:
+        neighbors.add(edge.from_vertex)
 
-        for edge in node.out_edges:
-            neighbors.add(edge.to_vertex)
-    else:
-        raise TypeError("Argument type must be mgp.Vertex.")
+    for edge in node.out_edges:
+        neighbors.add(edge.to_vertex)
 
     return neighbors
