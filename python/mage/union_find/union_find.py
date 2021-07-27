@@ -8,7 +8,9 @@ class UnionFind:
     """
 
     def __init__(self, node_ids: List[int]):
-        self.nodes: Dict[int, Node] = {node_id: Node(parent_id=node_id, rank=INITIAL_RANK) for node_id in node_ids}
+        self.nodes: Dict[int, Node] = {
+            node_id: Node(parent_id=node_id, rank=INITIAL_RANK) for node_id in node_ids
+        }
 
     def parent(self, node_id: int) -> int:
         """
@@ -48,7 +50,9 @@ class UnionFind:
 
         return node_id
 
-    def union(self, node_id_1: Union[int, List[int]], node_id_2: Union[int, List[int]]) -> None:
+    def union(
+        self, node_id_1: Union[int, List[int]], node_id_2: Union[int, List[int]]
+    ) -> None:
         """
         Executes a sequence of union operations on each pair of same-index nodes.
         Supports two nodes or two equal-length lists thereof.
@@ -82,7 +86,9 @@ class UnionFind:
         if self.rank(root_1) == self.rank(root_2):
             self.nodes[root_1].rank = self.rank(root_1) + 1
 
-    def connected(self, node_id_1: Union[int, List[int]], node_id_2: Union[int, List[int]]) -> Union[bool, List[bool]]:
+    def connected(
+        self, node_id_1: Union[int, List[int]], node_id_2: Union[int, List[int]]
+    ) -> Union[bool, List[bool]]:
         """
         Returns whether nodes belong to the same connected component for each pair of same-index nodes.
         Supports two nodes or two equal-length lists thereof.
@@ -93,7 +99,10 @@ class UnionFind:
         if type(node_id_1) is int and type(node_id_2) is int:
             return self.connected_pair(node_id_1, node_id_2)
         else:
-            return [self.connected_pair(node_id_1=x, node_id_2=y) for x, y in zip(node_id_1, node_id_2)]
+            return [
+                self.connected_pair(node_id_1=x, node_id_2=y)
+                for x, y in zip(node_id_1, node_id_2)
+            ]
 
     def connected_pair(self, node_id_1: int, node_id_2: int) -> bool:
         """
