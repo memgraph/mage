@@ -1,6 +1,5 @@
 from gensim.models import Word2Vec
-import numpy as np
-from collections import Counter, deque
+from typing import List, Any
 
 
 class GensimWord2Vec:
@@ -9,71 +8,67 @@ class GensimWord2Vec:
 
     Parameters
     ----------
-    embedding_dims : int
+    embedding_dimension : int
         Dimensions of the representation
-    lr_rate : float
+    learning_rate : float
         Learning rate
-    sg: 0/1
+    skip_gram: bool
         Use skip-gram model
-    neg_rate: int
+    negative_rate: int
         Negative rate
-    n_threads: int
+    threads: int
         Maximum number of threads for parallelization
     """
 
     def __init__(
-        self, embedding_dims=128, lr_rate=0.01, sg=True, neg_rate=10, n_threads=4
+        self,
+        embedding_dimension: int = 128,
+        learning_rate: float = 0.01,
+        skip_gram: bool = True,
+        negative_rate: int = 10,
+        threads: int = 4,
     ):
-        self.embedding_dims = embedding_dims
-        self.lr_rate = lr_rate
-        self.sg = sg
-        self.neg_rate = neg_rate
-        self.n_threads = n_threads
+        self.embedding_dimension = embedding_dimension
+        self.learning_rate = learning_rate
+        self.skip_gram = skip_gram
+        self.negative_rate = negative_rate
+        self.threads = threads
         self.num_epochs = 1
         self.embeddings = None
 
-    def __str__(self):
-        return "gensimw2v_dim%i_lr%0.4f_neg%i_sg%i" % (
-            self.embedding_dims,
-            self.lr_rate,
-            self.neg_rate,
-            self.sg,
-        )
-
-    def partial_fit(self, sentences):
+    def partial_fit(self, sentences: List[List[Any]]) -> None:
         if self.model == None:
             if self.neg_rate < 0:
                 self.model = Word2Vec(
                     sentences,
                     min_count=1,
-                    vector_size=self.embedding_dims,
+                    vector_size=self.embedding_dimension,
                     window=1,
-                    alpha=self.lr_rate,
-                    min_alpha=self.lr_rate,
-                    sg=int(self.sg),
+                    alpha=self.learning_rate,
+                    min_alpha=self.learning_rate,
+                    sg=int(self.skip_gram),
                     negative=0,
                     hs=1,
                     epochs=self.num_epochs,
-                    workers=self.n_threads,
+                    workers=self.threads,
                 )  # hierarchical softmax
             else:
                 self.model = Word2Vec(
                     sentences,
                     min_count=1,
-                    vector_size=self.embedding_dims,
+                    vector_size=self.embedding_dimension,
                     window=1,
-                    alpha=self.lr_rate,
-                    min_alpha=self.lr_rate,
-                    sg=int(self.sg),
-                    negative=self.neg_rate,
+                    alpha=self.learning_rate,
+                    min_alpha=self.learning_rate,
+                    sg=int(self.skip_gram),
+                    negative=self.negative_rate,
                     epochs=self.num_epochs,
-                    workers=self.n_threads,
+                    workers=self.threads,
                 )
         # update model
         self.model.build_vocab(sentences, update=True)
         self.model.train(
-            sentences, epochs=self.num_epochs, total_words=len(self.all_words)
-        )
+            sentences, epochs=self.num_epochs, total_examples=self.model.corpus_count)
         self.embeddings = self.get_embedding_vectors()
 
     def get_embedding_vectors(self):

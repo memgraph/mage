@@ -1,2 +1,2 @@
-from node2vec_online_module.w2v_learners import GensimWord2Vec
-from node2vec_online_module.walk_sampling import StreamWalkUpdater
+from mage.node2vec_online_module.w2v_learners import GensimWord2Vec
+from mage.node2vec_online_module.walk_sampling import StreamWalkUpdater

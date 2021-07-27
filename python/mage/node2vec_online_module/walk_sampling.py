@@ -1,85 +1,91 @@
 import random
-import numpy as np
+import math
+from typing import Any, List
 
 
 class StreamWalkUpdater:
     """
-    Sample temporal random walks for the StreamWalk algorithm
+    Sample temporal random walks for the StreamWalk algorithm.
+
+    The probability of the walk z at time t is defined as
+        p(z,t) = (beta ^ |z|) * exp(-c * (t - t1)),
+        where t1 is the timestamp of the oldest edge in the walk.
+
 
     Parameters
     ----------
     half_life : int
         Half-life in seconds for time decay
-    max_len : int
+    max_length : int
         Maximum length of the sampled temporal random walks
     beta : float
-        Damping factor for long paths
+        Damping factor for long paths, exponential decay on the length of the walk
     cutoff: int
         Temporal cutoff in seconds to exclude very distant past
-    k: int
+    sampled_walks: int
         Number of sampled walks for each edge update
     full_walks: bool
-        Return every node of the sampled walk for representation learning (full_walks=True) or only the endpoints of the walk (full_walks=False)
+        Return every node of the sampled walk for representation learning (full_walks=True)
+        or only the endpoints of the walk (full_walks=False)
     """
 
     def __init__(
-        self, half_life=7200, max_len=3, beta=0.9, cutoff=604800, k=4, full_walks=False
+        self,
+        half_life: int = 7200,
+        max_length: int = 3,
+        beta: float = 0.9,
+        cutoff: int = 604800,
+        sampled_walks: int = 4,
+        full_walks: bool = False,
     ):
-        self.c = -np.log(0.5) / half_life
+        self.c = -math.log(0.5) / half_life
         self.beta = beta
         self.half_life = half_life
-        self.k = k
+        self.sampled_walks = sampled_walks
         self.cutoff = cutoff
-        self.max_len = max_len
+        self.max_length = max_length
         self.full_walks = full_walks
-        self.G = {}
-        self.times = {}
-        self.cent = {}
-        self.cent_now = {}
-        self.lens = {}
-        for j in range(max_len):
-            self.lens[j + 1] = 0
+        # graph stores the in edges for each node
+        self.graph = {}
+        # last timestamp stores the last time an edge entering node arrived in the edge stream
+        self.last_timestamp = {}
+        # centrality is the total weight (probabilities) of all walks ending at node v at time t(uv) (uv is the last edge)
+        self.centrality = {}
 
-    def __str__(self):
-        return "streamwalk_hl%i_ml%i_beta%.2f_cutoff%i_k%i_fullw%s" % (
-            self.half_life,
-            self.max_len,
-            self.beta,
-            self.cutoff,
-            self.k,
-            self.full_walks,
-        )
+    def process_new_edge(self, source: Any, target: Any, time: int) -> List[List[Any]]:
+        self.update(source, target, time)
 
-    def process_new_edge(self, src, trg, time):
-        self.update(src, trg, time)
-        return self.sample_node_pairs(src, trg, time, self.k)
+        if source not in self.graph:
+            # source is not reachable from any node within cutoff
+            return [(source, target)] * self.sampled_walks
 
-    def sample_node_pairs(self, src, trg, time, sample_num):
-        if src not in self.G:
-            # src is not reachable from any node within cutoff
-            return [(src, trg)] * sample_num
-        edge_tuples = [(src, trg, time)] * sample_num
-        pairs = [self.sample_single_walk(tup) for tup in edge_tuples]
-        return pairs
+        walks = [
+            self.sample_single_walk(source, target, time)
+            for _ in range(self.sampled_walks)
+        ]
+        return walks
 
-    def sample_single_walk(self, edge_tuple):
-        src, trg, time = edge_tuple
-        node_, time_, cent_ = src, self.times[src], self.cent[src]
-        walk = []
-        walk.append(node_)
+    def sample_single_walk(self, source: Any, target: Any, time: int) -> List[Any]:
+
+        node_ = source
+        time_ = self.last_timestamp.get(source, 0)
+        centrality_ = self.centrality.get(source, 0)
+
+        walk = [node_]
+
         while True:
             if (
-                random.uniform(0, 1) < 1 / (cent_ * self.beta + 1)
-                or (node_ not in self.G)
-                or len(walk) >= self.max_len
+                random.uniform(0, 1) < 1 / (centrality_ * self.beta + 1)
+                or node_ not in self.graph
+                or len(walk) >= self.max_length
             ):
                 break
-            sum_ = cent_ * random.uniform(0, 1)
+            sum_ = centrality_ * random.uniform(0, 1)
             sum__ = 0
             broken = False
-            for (n, t, c) in reversed(self.G[node_]):
+            for (n, t, c) in reversed(self.graph[node_]):
                 if t < time_:
-                    sum__ += (c * self.beta + 1) * np.exp(self.c * (t - time_))
+                    sum__ += (c * self.beta + 1) * math.exp(self.c * (t - time_))
                     if sum__ >= sum_:
                         broken = True
                         break
@@ -87,49 +93,48 @@ class StreamWalkUpdater:
                 break
             node_, time_, cent_ = n, t, c
             walk.append(node_)
-        self.lens[len(walk)] += 1
+
         if self.full_walks:
             return [trg] + walk
-        else:
-            return (node_, trg)
+        return (node_, trg)
 
-    def update(self, src, trg, time):
-        # apply time decay for trg
-        if trg in self.cent:
-            self.cent[trg] = self.cent[trg] * np.exp(self.c * (self.times[trg] - time))
-        else:
-            self.cent[trg] = 0
-        src_cent = 0
-        if src in self.times:
-            src_cent = self.cent[src]
-            if self.times[src] < time:
-                src_cent = src_cent * np.exp(self.c * (self.times[src] - time))
-                # update centrality and time for src
-                self.cent[src] = src_cent
-                self.times[src] = time
-                self.cent_now[src] = 0
-                self.clean_in_edges(src, time)
-            else:
-                # if src is currently active then adjust centrality
-                src_cent = src_cent - self.cent_now[src]
-        self.cent[trg] += src_cent * self.beta + 1
-        if (trg not in self.times) or (self.times[trg] < time):
-            # cent_now is initialized for each node in each second
-            self.cent_now[trg] = 0
-        self.cent_now[trg] += src_cent * self.beta + 1
-        # collect recent edges for each vertex
-        if trg not in self.G:
-            self.G[trg] = []
-        self.G[trg].append((src, time, src_cent))
-        self.times[trg] = time
-        # clean in egdes
-        self.clean_in_edges(trg, time)
+    def update(self, source: Any, target: Any, time: int) -> None:
 
-    def clean_in_edges(self, node, time):
-        ii = 0
-        for (s, t, c) in self.G[node]:
-            if time - t < self.cutoff:
+        # all walks that terminated at the target before adding the new edge are decayed
+        if target in self.centrality:
+            self.centrality[target] *= math.exp(
+                self.c * (self.last_timestamp[target] - time)
+            )
+        else:
+            self.centrality[target] = 0
+
+        if source in self.last_timestamp:
+            self.centrality[source] *= math.exp(
+                self.c * (self.last_timestamp[source] - time)
+            )
+            self.last_timestamp[source] = time
+            self.clean_in_edges(source, time)
+
+        self.centrality[target] += self.centrality.get(source, 0) * self.beta + 1
+
+        if target not in self.graph:
+            self.graph[target] = []
+
+        self.graph[target].append((source, time, self.centrality.get(source, 0)))
+        self.last_timestamp[target] = time
+        self.clean_in_edges(target, time)
+
+    def clean_in_edges(self, node: Any, current_time: int):
+        """
+        Deletes the in edges for the given node
+        that appeared more than cutoff seconds ago.
+        """
+
+        # possible improvement by binary search
+        index = 0
+        for (source, time, centrality) in self.graph[node]:
+            if current_time - time < self.cutoff:
                 break
-            ii += 1
-        # drop old inedges
-        self.G[node] = self.G[node][ii:]
+            index += 1
+        # drop old in edges
+        self.graph[node] = self.graph[node][index:]

@@ -1,8 +1,7 @@
 import time
 import multiprocessing
+import mgp
 from mage.node2vec_online_module import GensimWord2Vec, StreamWalkUpdater
-
-MAX_THREADS = multiprocessing.cpu_count()
 
 
 class Node2VecContext:
@@ -23,10 +22,6 @@ class Node2VecContext:
     def start_time(self):
         return self._start_time
 
-    @property
-    def elapsed_time(self) -> int:
-        return time.time() - self._start_time
-
     @updater.setter
     def updater(self, updater):
         self._updater = updater
@@ -40,126 +35,85 @@ class Node2VecContext:
         self._start_time = start_time
 
     def is_initialized(self):
-        return self._learner is None or self._updater is None or self._start_time is None
+        return (
+            self._learner is None or self._updater is None or self._start_time is None
+        )
 
 
 context = Node2VecContext()
 
 
-def init_context(
-    start_time,
-    half_life: int,
-    max_length: int,
-    beta: float,
-    cuttoff: int,
-    k: int,
-    full_walks: bool,
-    embedding_dims: int,
-    learning_rate: float,
-    sg: bool,
-    negative_rate: float,
-    threads: int,
-):
-    global context
-    context.start_time = start_time
-    context.updater = StreamWalkUpdater(
-        half_life=half_life,
-        max_len=max_length,
-        beta=beta,
-        cutoff=cuttoff,
-        k=k,
-        full_walks=full_walks,
-    )
-    context.learner = GensimWord2Vec(
-        embedding_dims=embedding_dims,
-        lr_rate=learning_rate,
-        sg=sg,
-        neg_rate=negative_rate,
-        n_threads=threads,
-    )
-
-
-def update_model(source, target, current_time):
+def update_model(source: int, target: int, current_time: int):
     global context
     sampled_pairs = self.updater.process_new_edge(source, target, current_time)
     context.learner.partial_fit(sampled_pairs, current_time)
 
 
 @mgp.read_proc
-def get(
+def set(
     ctx: mgp.ProcCtx,
     half_life: int = 7200,
     max_length: int = 3,
-    beta: float = 0.9,
+    beta: mgp.Number = 0.9,
     cuttoff: int = 604800,
-    k: int = 4,
+    sampled_walks: int = 4,
     full_walks: bool = False,
-    embedding_dims: int = 128,
-    learning_rate: float = 0.01,
-    sg: bool = True,
-    negative_rate: float = 10,
-    threads: int = MAX_THREADS,
-) -> mgp.Record(node=mgp.Vertex, embedding=mgp.List[float]):
+    embedding_dimension: int = 128,
+    learning_rate: mgp.Number = 0.01,
+    skip_gram: bool = True,
+    negative_rate: mgp.Number = 10,
+    threads: mgp.Nullable[int] = None
+):
+
     global context
 
+    if threads is None:
+        threads = multiprocessing.cpu_count()
+
     current_time = time.time()
+
+    if context.is_initialized():
+        return
+
+    context.start_time = current_time
+    context.updater = StreamWalkUpdater(
+        half_life=half_life,
+        max_length=max_length,
+        beta=beta,
+        cutoff=cuttoff,
+        sampled_walks=sampled_walks,
+        full_walks=full_walks,
+    )
+    context.learner = GensimWord2Vec(
+        embedding_dimension=embedding_dimension,
+        learning_rate=learning_rate,
+        skip_gram=skip_gram,
+        negative_rate=negative_rate,
+        threads=threads,
+    )
+
+
+@mgp.read_proc
+def get(ctx: mgp.ProcCtx) -> mgp.Record(node=mgp.Vertex, embedding=mgp.List[mgp.Number]):
+
     if not context.is_initialized():
-        init_context(
-            current_time,
-            half_life,
-            max_length,
-            beta,
-            cuttoff,
-            k,
-            full_walks,
-            embedding_dims,
-            learning_rate,
-            sg,
-            negative_rate,
-            threads,
-        )
+        return
 
     embeddings = context.learner.get_embedding_vectors()
 
     return [
-        mgp.Record(node=node, embedding=embeddings[node]) for node in ctx.graph.nodes
+        mgp.Record(node=node, embedding=embeddings)
+        for node, embedding in embeddings.items()
     ]
 
 
 @mgp.read_proc
-def update(
-    ctx: mgp.ProcCtx,
-    edges: mgp.List[mgp.Edge],
-    half_life: int = 7200,
-    max_length: int = 3,
-    beta: float = 0.9,
-    cuttoff: int = 604800,
-    k: int = 4,
-    full_walks: bool = False,
-    embedding_dims: int = 128,
-    learning_rate: float = 0.01,
-    sg: bool = True,
-    negative_rate: float = 10,
-    threads: int = MAX_THREADS,
-):
+def update(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]):
     global context
 
     current_time = time.time()
     if not context.is_initialized():
-        init_context(
-            current_time,
-            half_life,
-            max_length,
-            beta,
-            cuttoff,
-            k,
-            full_walks,
-            embedding_dims,
-            learning_rate,
-            sg,
-            negative_rate,
-            threads,
-        )
+        return
 
     for e in edges:
         ctx.check_must_abort()
