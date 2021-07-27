@@ -1,4 +1,4 @@
-from python.mage.union_find.union_find import UnionFind
+from mage.union_find.union_find import UnionFind
 import pytest
 
 IDs = [i for i in range(10)]
