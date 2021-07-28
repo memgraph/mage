@@ -60,13 +60,13 @@ class UnionFind:
         :param node_id_1: First node's ID or list of node IDs
         :param node_id_2: Second node's ID or list of node IDs
         """
-        if type(node_id_1) is int and type(node_id_2) is int:
+        if isinstance(node_id_1, int) and isinstance(node_id_2, int):
             self.union_pair(node_id_1, node_id_2)
         else:
             for x, y in zip(node_id_1, node_id_2):
                 self.union_pair(node_id_1=x, node_id_2=y)
 
-    def union_pair(self, node_id_1, node_id_2) -> None:
+    def union_pair(self, node_id_1: int, node_id_2: int) -> None:
         """
         Unites the components containing two given nodes. Implements union by rank to reduce component tree height.
 
@@ -96,7 +96,7 @@ class UnionFind:
         :param node_id_1: First node's ID or list of node IDs
         :param node_id_2: Second node's ID or list of node IDs
         """
-        if type(node_id_1) is int and type(node_id_2) is int:
+        if isinstance(node_id_1, int) and isinstance(node_id_2, int):
             return self.connected_pair(node_id_1, node_id_2)
         else:
             return [
