@@ -36,7 +36,9 @@ class Node2VecContext:
 
     def is_initialized(self):
         return (
-            self._learner is None or self._updater is None or self._start_time is None
+            self._learner is not None
+            and self._updater is not None
+            and self._start_time is not None
         )
 
 
@@ -45,8 +47,8 @@ context = Node2VecContext()
 
 def update_model(source: int, target: int, current_time: int):
     global context
-    sampled_pairs = self.updater.process_new_edge(source, target, current_time)
-    context.learner.partial_fit(sampled_pairs, current_time)
+    sampled_pairs = context.updater.process_new_edge(source, target, current_time)
+    context.learner.partial_fit(sampled_pairs)
 
 
 @mgp.read_proc
@@ -62,7 +64,7 @@ def set(
     learning_rate: mgp.Number = 0.01,
     skip_gram: bool = True,
     negative_rate: mgp.Number = 10,
-    threads: mgp.Nullable[int] = None
+    threads: mgp.Nullable[int] = None,
 ):
 
     global context
@@ -72,29 +74,31 @@ def set(
 
     current_time = time.time()
 
-    if context.is_initialized():
-        return
+    if not context.is_initialized():
+        context.start_time = current_time
+        context.updater = StreamWalkUpdater(
+            half_life=half_life,
+            max_length=max_length,
+            beta=beta,
+            cutoff=cuttoff,
+            sampled_walks=sampled_walks,
+            full_walks=full_walks,
+        )
+        context.learner = GensimWord2Vec(
+            embedding_dimension=embedding_dimension,
+            learning_rate=learning_rate,
+            skip_gram=skip_gram,
+            negative_rate=negative_rate,
+            threads=threads,
+        )
 
-    context.start_time = current_time
-    context.updater = StreamWalkUpdater(
-        half_life=half_life,
-        max_length=max_length,
-        beta=beta,
-        cutoff=cuttoff,
-        sampled_walks=sampled_walks,
-        full_walks=full_walks,
-    )
-    context.learner = GensimWord2Vec(
-        embedding_dimension=embedding_dimension,
-        learning_rate=learning_rate,
-        skip_gram=skip_gram,
-        negative_rate=negative_rate,
-        threads=threads,
-    )
+    return mgp.Record()
 
 
 @mgp.read_proc
-def get(ctx: mgp.ProcCtx) -> mgp.Record(node=mgp.Vertex, embedding=mgp.List[mgp.Number]):
+def get(
+    ctx: mgp.ProcCtx,
+) -> mgp.Record(node_id=mgp.Vertex, embedding=mgp.List[mgp.Number]):
 
     if not context.is_initialized():
         return
@@ -102,8 +106,10 @@ def get(ctx: mgp.ProcCtx) -> mgp.Record(node=mgp.Vertex, embedding=mgp.List[mgp.
     embeddings = context.learner.get_embedding_vectors()
 
     return [
-        mgp.Record(node=node, embedding=embeddings)
-        for node, embedding in embeddings.items()
+        mgp.Record(
+            node_id=ctx.graph.get_vertex_by_id(str(node_id)), embedding=embeddings
+        )
+        for node_id, embedding in embeddings.items()
     ]
 
 
@@ -112,9 +118,9 @@ def update(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]):
     global context
 
     current_time = time.time()
-    if not context.is_initialized():
-        return
+    if context.is_initialized():
+        for e in edges:
+            ctx.check_must_abort()
+            update_model(e.from_vertex.id, e.to_vertex.id, current_time)
 
-    for e in edges:
-        ctx.check_must_abort()
-        update_model(e.from_vertex.id, e.to_vertex.id, current_time)
+    return mgp.Record()

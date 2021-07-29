@@ -34,44 +34,35 @@ class GensimWord2Vec:
         self.negative_rate = negative_rate
         self.threads = threads
         self.num_epochs = 1
-        self.embeddings = None
+        self.model = None
 
     def partial_fit(self, sentences: List[List[Any]]) -> None:
-        if self.model == None:
-            if self.neg_rate < 0:
+        if self.model is None:
+            params = {
+                "min_count": 1,
+                "vector_size": self.embedding_dimension,
+                "window": 1,
+                "alpha": self.learning_rate,
+                "min_alpha": self.learning_rate,
+                "sg": int(self.skip_gram),
+                "epochs": self.num_epochs,
+                "workers": self.threads,
+            }
+            if self.negative_rate < 0:
                 self.model = Word2Vec(
-                    sentences,
-                    min_count=1,
-                    vector_size=self.embedding_dimension,
-                    window=1,
-                    alpha=self.learning_rate,
-                    min_alpha=self.learning_rate,
-                    sg=int(self.skip_gram),
-                    negative=0,
-                    hs=1,
-                    epochs=self.num_epochs,
-                    workers=self.threads,
+                    sentences, negative=0, hs=1, **params
                 )  # hierarchical softmax
             else:
-                self.model = Word2Vec(
-                    sentences,
-                    min_count=1,
-                    vector_size=self.embedding_dimension,
-                    window=1,
-                    alpha=self.learning_rate,
-                    min_alpha=self.learning_rate,
-                    sg=int(self.skip_gram),
-                    negative=self.negative_rate,
-                    epochs=self.num_epochs,
-                    workers=self.threads,
-                )
+                self.model = Word2Vec(sentences, negative=self.negative_rate, **params)
         # update model
         self.model.build_vocab(sentences, update=True)
         self.model.train(
-            sentences, epochs=self.num_epochs, total_examples=self.model.corpus_count)
-        self.embeddings = self.get_embedding_vectors()
+            sentences, epochs=self.num_epochs, total_examples=self.model.corpus_count
+        )
 
     def get_embedding_vectors(self):
+        if self.model is None:
+            return {}
         vectors = self.model.wv.vectors
         indices = self.model.wv.index_to_key
         embeddings = {indices[i]: vectors[i] for i in range(len(indices))}

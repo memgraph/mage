@@ -91,12 +91,12 @@ class StreamWalkUpdater:
                         break
             if not broken:
                 break
-            node_, time_, cent_ = n, t, c
+            node_, time_, centrality_ = n, t, c
             walk.append(node_)
 
         if self.full_walks:
-            return [trg] + walk
-        return (node_, trg)
+            return [target] + walk
+        return (node_, target)
 
     def update(self, source: Any, target: Any, time: int) -> None:
 
