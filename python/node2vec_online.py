@@ -98,18 +98,20 @@ def set(
 @mgp.read_proc
 def get(
     ctx: mgp.ProcCtx,
-) -> mgp.Record(node_id=mgp.Vertex, embedding=mgp.List[mgp.Number]):
+) -> mgp.Record(node=mgp.Vertex, embedding=mgp.List[mgp.Number]):
 
     if not context.is_initialized():
-        return
+        return mgp.Record()
 
-    embeddings = context.learner.get_embedding_vectors()
+    embeddings_ = context.learner.get_embedding_vectors()
+
+    embeddings = {}
+    for node_id, embedding in embeddings_.items():
+        embeddings[node_id] = [float(e) for e in embedding]
 
     return [
-        mgp.Record(
-            node_id=ctx.graph.get_vertex_by_id(str(node_id)), embedding=embeddings
-        )
-        for node_id, embedding in embeddings.items()
+        mgp.Record(node=ctx.graph.get_vertex_by_id(node_id), embedding=e)
+        for node_id, e in embeddings.items()
     ]
 
 
