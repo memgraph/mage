@@ -1,0 +1,6 @@
+query: >
+  MATCH (start:Node {id: 0})
+    CALL random_walk.get(start, 2) YIELD path
+    RETURN path
+
+output: []
