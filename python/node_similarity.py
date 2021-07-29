@@ -4,10 +4,12 @@ from itertools import product
 
 import mgp
 
-
 # not implemented for directed graphs
 # not implemented for multigraphs
 # not taking into account edge weights
+
+neighbors_dict = dict()
+
 
 class Mode:
     """
@@ -37,9 +39,9 @@ def jaccard(
     The default value is set to be a Cartesian product.
     :type mode: str, optional
 
-    :return: This procedure returns a list of mgp.Records with 3 fields in each:
-    the first node, the second node and the similarity between them
-    :rtype: list
+    :return: This procedure returns a mgp.Record with 3 fields:
+    the first node, the second node and the Jaccard similarity between them
+    :rtype: mgp.Record
    """
 
     return _calculate_similarity(node1, node2, _calculate_jaccard, mode)
@@ -64,9 +66,9 @@ def overlap(
     The default value is set to be a Cartesian product.
     :type mode: str, optional
 
-    :return: This procedure returns a list of mgp.Records with 3 fields in each:
-    the first node, the second node and the similarity between them
-    :rtype: list
+    :return: This procedure returns a mgp.Record with 3 fields:
+    the first node, the second node and the overlap similarity between them
+    :rtype: mgp.Record
     """
 
     return _calculate_similarity(node1, node2, _calculate_overlap, mode)
@@ -91,9 +93,9 @@ def cosine(
     The default value is set to be a Cartesian product.
     :type mode: str, optional
 
-    :return: This procedure returns a list of mgp.Records with 3 fields in each:
-    the first node, the second node and the similarity between them
-    :rtype: list
+    :return: This procedure returns a mgp.Record with 3 fields:
+    the first node, the second node and the cosine similarity between them
+    :rtype: mgp.Record
     """
 
     return _calculate_similarity(node1, node2, _calculate_cosine, mode)
@@ -111,14 +113,29 @@ def _calculate_jaccard(node1: mgp.Vertex, node2: mgp.Vertex) -> float:
     :rtype: float
     """
 
-    jaccard_similarity = 0
+    jaccard_similarity: float
 
-    neighbours1 = _get_neighbors(node1)
-    neighbours2 = _get_neighbors(node2)
+    neighbors1: set
+    neighbors2: set
 
-    intersection_len = len(neighbours1 & neighbours2)
+    if node1 == node2:
+        jaccard_similarity = 1.0
+    else:
+        jaccard_similarity = 0.0
 
-    denominator = (len(neighbours1) + len(neighbours2) - intersection_len)
+    if node1 in neighbors_dict:
+        neighbors1 = neighbors_dict[node1.id]
+    else:
+        neighbors1 = _get_neighbors(node1)
+
+    if node1 in neighbors_dict:
+        neighbors2 = neighbors_dict[node2.id]
+    else:
+        neighbors2 = _get_neighbors(node2)
+
+    intersection_len = len(neighbors1 & neighbors2)
+
+    denominator = (len(neighbors1) + len(neighbors2) - intersection_len)
 
     if denominator != 0:
         jaccard_similarity = intersection_len / denominator
@@ -138,16 +155,30 @@ def _calculate_overlap(node1: mgp.Vertex, node2: mgp.Vertex) -> float:
     :rtype: float
 
     """
+    overlap_similarity: float
 
-    overlap_similarity = 0
+    neighbors1: set
+    neighbors2: set
 
-    neighbours1 = _get_neighbors(node1)
-    neighbours2 = _get_neighbors(node2)
+    if node1 == node2:
+        overlap_similarity = 1.0
+    else:
+        overlap_similarity = 0.0
 
-    denominator = (min(len(neighbours1), len(neighbours2)))
+    if node1 in neighbors_dict:
+        neighbors1 = neighbors_dict[node1.id]
+    else:
+        neighbors1 = _get_neighbors(node1)
+
+    if node1 in neighbors_dict:
+        neighbors2 = neighbors_dict[node2.id]
+    else:
+        neighbors2 = _get_neighbors(node2)
+
+    denominator = (min(len(neighbors1), len(neighbors2)))
 
     if denominator != 0:
-        overlap_similarity = len(neighbours1 & neighbours2) / denominator
+        overlap_similarity = len(neighbors1 & neighbors2) / denominator
 
     return overlap_similarity
 
@@ -164,15 +195,30 @@ def _calculate_cosine(node1: mgp.Vertex, node2: mgp.Vertex) -> float:
     :rtype: float
     """
 
-    cosine_similarity = 0
+    cosine_similarity: float
 
-    neighbours1 = _get_neighbors(node1)
-    neighbours2 = _get_neighbors(node2)
+    neighbors1: set
+    neighbors2: set
 
-    denominator = sqrt(len(neighbours1) * len(neighbours2))
+    if node1 == node2:
+        cosine_similarity = 1.0
+    else:
+        cosine_similarity = 0.0
+
+    if node1 in neighbors_dict:
+        neighbors1 = neighbors_dict[node1.id]
+    else:
+        neighbors1 = _get_neighbors(node1)
+
+    if node1 in neighbors_dict:
+        neighbors2 = neighbors_dict[node2.id]
+    else:
+        neighbors2 = _get_neighbors(node2)
+
+    denominator = sqrt(len(neighbors1) * len(neighbors2))
 
     if denominator != 0:
-        cosine_similarity = len(neighbours1 & neighbours2) / denominator
+        cosine_similarity = len(neighbors1 & neighbors2) / denominator
 
     return cosine_similarity
 
@@ -196,7 +242,7 @@ def _calculate_similarity(node1: Union[mgp.Vertex, Tuple[mgp.Vertex]],
     :type mode: str
 
     :raises TypeError: Occurs if there's a type mismatch for passed arguments
-    :raises ValueError: Occurs if a passed argument is invalid
+    :raises ValueError: Occurs if any passed argument is invalid
 
     :return: Returns the calculated similarity between nodes in a list o tuples. Each tuple consist of
     the first node, the second node and the similarity between them.
@@ -224,17 +270,20 @@ def _calculate_similarity(node1: Union[mgp.Vertex, Tuple[mgp.Vertex]],
 
     result: list
 
-    if mode in mode_constants.PAIRWISE:
+    if mode.lower() in mode_constants.PAIRWISE:
         if len(nodes1) == len(nodes2):
-            result = [(n1, n2, method(n1, n2)) for n1, n2 in zip(nodes1, nodes2)]
+            # result = [(n1, n2, method(n1, n2)) for n1, n2 in zip(nodes1, nodes2)]
+            return [mgp.Record(node1=n1, node2=n2, similarity=method(n1, n2)) for n1, n2 in zip(nodes1, nodes2)]
+
         else:
             raise ValueError("Incompatible lengths of given arguments")
-    elif mode in mode_constants.CARTESIAN:
-        result = [(n1, n2, method(n1, n2)) for n1, n2 in product(nodes1, nodes2)]
+    elif mode.lower() in mode_constants.CARTESIAN:
+        # result = [(n1, n2, method(n1, n2)) for n1, n2 in product(nodes1, nodes2)]
+        return [mgp.Record(node1=n1, node2=n2, similarity=method(n1, n2)) for n1, n2 in product(nodes1, nodes2)]
     else:
         raise ValueError("Invalid mode.")
 
-    return [mgp.Record(node1=n1, node2=n2, similarity=similarity) for n1, n2, similarity in result]
+    # return [mgp.Record(node1=n1, node2=n2, similarity=similarity) for n1, n2, similarity in result]
 
 
 def _get_neighbors(node: mgp.Vertex) -> Set[mgp.Vertex]:
@@ -254,5 +303,7 @@ def _get_neighbors(node: mgp.Vertex) -> Set[mgp.Vertex]:
 
     for edge in node.out_edges:
         neighbors.add(edge.to_vertex)
+
+    neighbors_dict[node.id] = neighbors
 
     return neighbors
