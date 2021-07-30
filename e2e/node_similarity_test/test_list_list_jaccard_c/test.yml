@@ -10,6 +10,8 @@ query: >
         CALL node_similarity.jaccard(nodes1, nodes2) YIELD *
           
         RETURN node1.id as node1, node2.id as node2, similarity
+        
+        ORDER BY node1, node2
                 
 output: 
     - node1: 3
@@ -28,3 +30,5 @@ output:
     - node1: 4
       node2: 1
       similarity: 0.75
+      
+   

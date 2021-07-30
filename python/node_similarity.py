@@ -274,7 +274,7 @@ def _calculate_similarity(
         return [
             mgp.Record(node1=n1, node2=n2, similarity=method(n1, n2))
             for n1, n2 in product(nodes1, nodes2)
-        ][-3:]
+        ]
     else:
         raise ValueError("Invalid mode.")
 
