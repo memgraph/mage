@@ -1,0 +1,21 @@
+query: >
+        MATCH (m {id: 0}), (n {id: 1})
+        
+        CALL node_similarity.jaccard(m, n, "p") YIELD 
+        node1 AS node1_jaccard_p, 
+        node2 AS node2_jaccard_p, 
+        similarity AS jaccard_similarity_p
+      
+        RETURN  
+        
+        node1_jaccard_p.id as node1_jaccard_p, 
+        node2_jaccard_p.id as node2_jaccard_p, 
+        jaccard_similarity_p
+
+
+output: 
+    - node1_jaccard_p: 0
+      node2_jaccard_p: 1
+      jaccard_similarity_p: 0.5
+      
+      
