@@ -1,7 +1,6 @@
 from math import sqrt
 from typing import Set, List, Callable, Tuple, Union
 from itertools import product
-
 import mgp
 
 # not implemented for directed graphs
@@ -9,6 +8,7 @@ import mgp
 # not taking into account edge weights
 
 neighbors_dict = dict()
+neighbors_dict.clear()
 
 
 class Mode:
@@ -114,15 +114,8 @@ def _calculate_jaccard(node1: mgp.Vertex, node2: mgp.Vertex) -> float:
     else:
         jaccard_similarity = 0.0
 
-    if node1 in neighbors_dict:
-        neighbors1 = neighbors_dict[node1.id]
-    else:
-        neighbors1 = _get_neighbors(node1)
-
-    if node1 in neighbors_dict:
-        neighbors2 = neighbors_dict[node2.id]
-    else:
-        neighbors2 = _get_neighbors(node2)
+    neighbors1 = _get_neighbors(node1)
+    neighbors2 = _get_neighbors(node2)
 
     intersection_len = len(neighbors1 & neighbors2)
 
@@ -146,6 +139,7 @@ def _calculate_overlap(node1: mgp.Vertex, node2: mgp.Vertex) -> float:
     :rtype: float
 
     """
+
     overlap_similarity: float
 
     neighbors1: set
@@ -156,15 +150,8 @@ def _calculate_overlap(node1: mgp.Vertex, node2: mgp.Vertex) -> float:
     else:
         overlap_similarity = 0.0
 
-    if node1 in neighbors_dict:
-        neighbors1 = neighbors_dict[node1.id]
-    else:
-        neighbors1 = _get_neighbors(node1)
-
-    if node1 in neighbors_dict:
-        neighbors2 = neighbors_dict[node2.id]
-    else:
-        neighbors2 = _get_neighbors(node2)
+    neighbors1 = _get_neighbors(node1)
+    neighbors2 = _get_neighbors(node2)
 
     denominator = min(len(neighbors1), len(neighbors2))
 
@@ -196,15 +183,8 @@ def _calculate_cosine(node1: mgp.Vertex, node2: mgp.Vertex) -> float:
     else:
         cosine_similarity = 0.0
 
-    if node1 in neighbors_dict:
-        neighbors1 = neighbors_dict[node1.id]
-    else:
-        neighbors1 = _get_neighbors(node1)
-
-    if node1 in neighbors_dict:
-        neighbors2 = neighbors_dict[node2.id]
-    else:
-        neighbors2 = _get_neighbors(node2)
+    neighbors1 = _get_neighbors(node1)
+    neighbors2 = _get_neighbors(node2)
 
     denominator = sqrt(len(neighbors1) * len(neighbors2))
 
@@ -258,11 +238,9 @@ def _calculate_similarity(
     else:
         raise TypeError("Invalid type of second argument.")
 
-    mode_constants = Mode()
-
     result: list
 
-    if mode.lower() in mode_constants.PAIRWISE:
+    if mode.lower() in Mode.PAIRWISE:
         if len(nodes1) == len(nodes2):
             return [
                 mgp.Record(node1=n1, node2=n2, similarity=method(n1, n2))
@@ -270,7 +248,7 @@ def _calculate_similarity(
             ]
         else:
             raise ValueError("Incompatible lengths of given arguments.")
-    elif mode.lower() in mode_constants.CARTESIAN:
+    elif mode.lower() in Mode.CARTESIAN:
         return [
             mgp.Record(node1=n1, node2=n2, similarity=method(n1, n2))
             for n1, n2 in product(nodes1, nodes2)
@@ -280,7 +258,9 @@ def _calculate_similarity(
 
 
 def _get_neighbors(node: mgp.Vertex) -> Set[mgp.Vertex]:
-    """This method finds all neighbors of a given node.
+    """This method finds all neighbors of a given node. If neighbors of a node have already been fetched once before,
+    they can be found in the neighbors_dict dictionary and thus the method returns the neighbors faster.
+    neighbors_dict is a global variable and it resets at the beginning of the program
 
     :param node: A node
     :type node: mgp.Vertex
@@ -289,14 +269,17 @@ def _get_neighbors(node: mgp.Vertex) -> Set[mgp.Vertex]:
     :rtype: set
     """
 
-    neighbors = set()
+    if node.id in neighbors_dict:
+        return neighbors_dict[node.id]
+    else:
+        neighbors = set()
 
-    for edge in node.in_edges:
-        neighbors.add(edge.from_vertex)
+        for edge in node.in_edges:
+            neighbors.add(edge.from_vertex)
 
-    for edge in node.out_edges:
-        neighbors.add(edge.to_vertex)
+        for edge in node.out_edges:
+            neighbors.add(edge.to_vertex)
 
-    neighbors_dict[node.id] = neighbors
+        neighbors_dict[node.id] = neighbors
 
-    return neighbors
+        return neighbors
