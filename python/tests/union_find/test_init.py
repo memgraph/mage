@@ -1,20 +1,20 @@
-from mage.union_find.union_find import UnionFind
-import pytest
+from mage.union_find.disjoint_set import DisjointSet
+from tests.union_find.constants import Constants
 
-IDs = [i for i in range(10)]
+import pytest
 
 
 @pytest.fixture
-def ds():
-    return UnionFind(node_ids=IDs)
+def disjoint_set():
+    return DisjointSet(node_ids=Constants.IDs)
 
 
 class TestInit:
-    def test_keys(self, ds):
-        assert all(i in ds.nodes.keys() for i in IDs)
+    def test_keys(self, disjoint_set):
+        assert all(i in disjoint_set.nodes.keys() for i in Constants.IDs)
 
-    def test_parent(self, ds):
-        assert all(ID == ds.nodes[ID].parent for ID in IDs)
+    def test_parent(self, disjoint_set):
+        assert all(ID == disjoint_set.nodes[ID].parent for ID in Constants.IDs)
 
-    def test_rank(self, ds):
-        assert all(ds.nodes[ID].rank == 0 for ID in IDs)
+    def test_rank(self, disjoint_set):
+        assert all(disjoint_set.nodes[ID].rank == 0 for ID in Constants.IDs)

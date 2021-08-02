@@ -1,19 +1,20 @@
-from mage.union_find.union_find import UnionFind
-import pytest
+from mage.union_find.disjoint_set import DisjointSet
+from tests.union_find.constants import Constants
 
-IDs = [i for i in range(10)]
+import pytest
 
 
 @pytest.fixture
-def ds():
-    return UnionFind(node_ids=IDs)
+def disjoint_set():
+    return DisjointSet(node_ids=Constants.IDs)
 
 
 class TestUnion:
-    def test_equal_height(self, ds):
-        ds.union(0, 1)
-        assert ds.nodes[1].parent == 0
+    def test_equal_height(self, disjoint_set):
+        disjoint_set.union(0, 1)
+        assert disjoint_set.nodes[1].parent == 0
 
-    def test_different_height(self, ds):
-        ds.union([0, 1], [1, 2])
-        assert ds.nodes[2].parent == 0
+    def test_different_height(self, disjoint_set):
+        disjoint_set.union(0, 1)
+        disjoint_set.union(1, 2)
+        assert disjoint_set.nodes[2].parent == 0
