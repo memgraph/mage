@@ -259,7 +259,7 @@ def _calculate_similarity(
         raise ValueError("Invalid mode.")
 
 
-def _get_neighbors(node: mgp.Vertex) -> Set[mgp.Vertex]:
+def _get_neighbors(node: mgp.Vertex) -> Set[int]:
     """This method finds all neighbors of a given node. If neighbors of a node have already been fetched once before,
     they can be found in the neighbors_dict dictionary and thus the method returns the neighbors faster.
     neighbors_dict is a global variable and it resets at the beginning of the program
@@ -267,7 +267,7 @@ def _get_neighbors(node: mgp.Vertex) -> Set[mgp.Vertex]:
     :param node: A node
     :type node: mgp.Vertex
 
-    :return: Set of all neighbors of a node
+    :return: Set of all IDs' of neighbors of a node
     :rtype: set
     """
 
@@ -277,10 +277,10 @@ def _get_neighbors(node: mgp.Vertex) -> Set[mgp.Vertex]:
         neighbors = set()
 
         for edge in node.in_edges:
-            neighbors.add(edge.from_vertex)
+            neighbors.add(edge.from_vertex.id)
 
         for edge in node.out_edges:
-            neighbors.add(edge.to_vertex)
+            neighbors.add(edge.to_vertex.id)
 
         neighbors_dict[node.id] = neighbors
 
