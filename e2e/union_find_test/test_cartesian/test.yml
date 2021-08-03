@@ -4,18 +4,50 @@ query: >
   RETURN node1, node2, connected;
 
 output:
-  - node1: 0
-    node2: 2
+  - node1:
+      labels:
+        - Node
+      properties:
+        id: 0
+    node2:
+      labels:
+        - Node
+      properties:
+        id: 2
     connected: true
 
-  - node1: 0
-    node2: 3
+  - node1:
+      labels:
+        - Node
+      properties:
+        id: 0
+    node2:
+      labels:
+        - Node
+      properties:
+        id: 3
     connected: false
 
-  - node1: 1
-    node2: 2
+  - node1:
+      labels:
+        - Node
+      properties:
+        id: 1
+    node2:
+      labels:
+        - Node
+      properties:
+        id: 2
     connected: true
 
-  - node1: 1
-    node2: 3
+  - node1:
+      labels:
+        - Node
+      properties:
+        id: 1
+    node2:
+      labels:
+        - Node
+      properties:
+        id: 3
     connected: false
