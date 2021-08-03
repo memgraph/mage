@@ -1,0 +1,21 @@
+query: >
+  MATCH (m {id: 0}), (n {id: 2}), (o {id: 1}), (p {id: 3})
+  CALL union_find.connected([m, o], [n, p], "p") YIELD *
+  RETURN node1, node2, connected;
+
+output:
+  - node1: 0
+    node2: 2
+    connected: true
+
+  - node1: 0
+    node2: 3
+    connected: false
+
+  - node1: 1
+    node2: 2
+    connected: true
+
+  - node1: 1
+    node2: 3
+    connected: false
