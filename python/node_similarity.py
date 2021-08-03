@@ -8,7 +8,6 @@ import mgp
 # not taking into account edge weights
 
 neighbors_dict = dict()
-neighbors_dict.clear()
 
 
 class Mode:
@@ -220,6 +219,9 @@ def _calculate_similarity(
     the first node, the second node and the similarity between them.
     :rtype: list
     """
+
+    # clear cache
+    neighbors_dict.clear()
 
     nodes1: tuple
     nodes2: tuple
