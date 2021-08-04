@@ -112,7 +112,7 @@ python3 test_e2e
 | [set_cover](python/set_cover.py) | Python | The algorithm for finding minimum cost subcollection of sets that covers all elements of a universe. |
 | [graph_coloring](python/graph_coloring.py) | Python | Algorithm for assigning labels to the graph elements subject to certain constraints. In this form, it is a way of coloring the graph vertices such that no two adjacent vertices are of the same color. |
 | [vrp](python/vrp.py) | Python | Algorithm for finding the shortest route possible between the central depot and places to be visited. The algorithm can be solved with multiple vehicles that represent a visiting fleet.
-| [node_similartiy](python/node_similarity) | Python | A module that contains similarity measures for calculating the similarity between two nodes. |
+| [node_similartiy](python/node_similarity.py) | Python | A module that contains similarity measures for calculating the similarity between two nodes. |
 | [weakly_connected_components](cpp/connectivity_module/connectivity_module.cpp) | C++ | A module that finds weakly connected components in a graph. |
 | [biconnected_components](cpp/biconnected_components_module/biconnected_components_module.cpp) | C++ | Algorithm for calculating maximal biconnected subgraph. A biconnected subgraph is a subgraph with a property that if any vertex were to be removed, the graph will remain connected. |
 | [bipartite_matching](cpp/bipartite_matching_module/bipartite_matching_module.cpp) | C++ | Algorithm for calculating maximum bipartite matching, where matching is a set of nodes chosen in such a way that no two edges share an endpoint. |
