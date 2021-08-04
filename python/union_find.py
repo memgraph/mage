@@ -33,8 +33,8 @@ def connected(
     :type nodes1: Union[mgp.Vertex, Tuple[mgp.Vertex]]
     :param nodes2: Node or tuple of nodes
     :type nodes2: Union[mgp.Vertex, Tuple[mgp.Vertex]]
-    :param mode: Mode of operation: `p` / `pairwise` for pairwise similarity calculation or `c` / `cartesian`
-    for calculating the similarity of the Cartesian product of given tuples. Default value is `pairwise`.
+    :param mode: Mode of operation: `p` / `pairwise` for pairwise operation or `c` / `cartesian`
+    for operating on the Cartesian product of given tuples. Default value is `pairwise`.
     :type mode: str
     :param update: Updates the disjoint set data structure used by the algorithm. Use if graph has been changed
     since this method's last call. Default value is `True`.
