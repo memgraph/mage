@@ -240,8 +240,6 @@ def _calculate_similarity(
     else:
         raise TypeError("Invalid type of second argument.")
 
-    result: list
-
     if mode.lower() in Mode.PAIRWISE:
         if len(nodes1) == len(nodes2):
             return [
