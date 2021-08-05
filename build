@@ -7,6 +7,8 @@ import glob
 import fnmatch
 import multiprocessing as mp
 
+import argparse
+
 WORK_DIRECTORY = os.getcwd()
 QUERY_MODULES_DIRECTORY = f"{WORK_DIRECTORY}/dist"
 CPP_DIRECTORY = f"{WORK_DIRECTORY}/cpp"
@@ -16,15 +18,30 @@ RS_DIRECTORY = f"{WORK_DIRECTORY}/rust"
 shutil.rmtree(QUERY_MODULES_DIRECTORY, ignore_errors=True)
 os.makedirs(QUERY_MODULES_DIRECTORY)
 
+
+def get_arguments():
+    parser = argparse.ArgumentParser(description="Log scheduling statistics.")
+    parser.add_argument("--path", "-p", default=None)
+    args = parser.parse_args()
+
+    return args
+
+
+def copy_dist(destination_path):
+    if destination_path is None:
+        return
+    shutil.copytree(QUERY_MODULES_DIRECTORY, destination_path, dirs_exist_ok=True)
+
+
 #################################################
 #                Copy Utility                   #
 #################################################
 
-
 def copytree(src, dst, ignore_patterns=[]):
-    def _check_ignore(x): return any(
-        [bool(fnmatch.fnmatch(x, pattern)) for pattern in ignore_patterns]
-    )
+    def _check_ignore(x):
+        return any(
+            [bool(fnmatch.fnmatch(x, pattern)) for pattern in ignore_patterns]
+        )
 
     def _copytree(rel_path=""):
         curr_dir = os.path.join(src, rel_path)
@@ -109,3 +126,14 @@ for project in filter(
     module = module.lstrip("lib") if module.startswith("lib") else module
     dst_file = os.path.join(QUERY_MODULES_DIRECTORY, module)
     shutil.copy2(src_file, dst_file)
+
+#################################################
+#            Optional copy dist folder          #
+#################################################
+
+arguments = get_arguments()
+
+if arguments.path is not None:
+    print('Copying files from folder {src} to {dst} folder.'.format(src=QUERY_MODULES_DIRECTORY, dst=arguments.path))
+    copy_dist(arguments.path)
+    print('Copying done!')
