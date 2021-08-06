@@ -254,7 +254,7 @@ def _calculate_similarity(
             for n1, n2 in product(nodes1, nodes2)
         ]
     else:
-        raise ValueError("Invalid mode.")
+        raise ValueError("Invalid mode. Valid modes are: pairwise, cartesian.")
 
 
 def _get_neighbors(node: mgp.Vertex) -> Set[int]:

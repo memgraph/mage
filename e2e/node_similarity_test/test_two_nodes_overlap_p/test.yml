@@ -1,7 +1,7 @@
 query: >
         MATCH (m {id: 0}), (n {id: 1})
         
-        CALL node_similarity.overlap(m, n, "p") YIELD 
+        CALL node_similarity.overlap(m, n, "pairwise") YIELD 
         node1 AS node1_overlap_p, 
         node2 AS node2_overlap_p, 
         similarity AS overlap_similarity_p

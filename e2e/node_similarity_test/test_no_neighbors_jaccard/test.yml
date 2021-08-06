@@ -6,20 +6,10 @@ query: >
         node2 AS node2_jaccard_default, 
         similarity AS jaccard_similarity_default
         
-        CALL node_similarity.jaccard(m, n, "c") YIELD 
-        node1 AS node1_jaccard_c, 
-        node2 AS node2_jaccard_c, 
-        similarity AS jaccard_similarity_c
-        
         CALL node_similarity.jaccard(m, n, "cartesian") YIELD 
         node1 AS node1_jaccard_cartesian, 
         node2 AS node2_jaccard_cartesian, 
         similarity AS jaccard_similarity_cartesian
-        
-        CALL node_similarity.jaccard(m, n, "p") YIELD 
-        node1 AS node1_jaccard_p, 
-        node2 AS node2_jaccard_p,
-        similarity AS jaccard_similarity_p
         
         CALL node_similarity.jaccard(m, n, "pairwise") YIELD 
         node1 AS node1_jaccard_pairwise, 
@@ -32,17 +22,9 @@ query: >
         node2_jaccard_default.id as node2_jaccard_default, 
         jaccard_similarity_default,
         
-        node1_jaccard_c.id as node1_jaccard_c, 
-        node2_jaccard_c.id as node2_jaccard_c, 
-        jaccard_similarity_c,
-        
         node1_jaccard_cartesian.id as node1_jaccard_cartesian, 
         node2_jaccard_cartesian.id as node2_jaccard_cartesian, 
         jaccard_similarity_cartesian,
-        
-        node1_jaccard_p.id as node1_jaccard_p, 
-        node2_jaccard_p.id as node2_jaccard_p, 
-        jaccard_similarity_p,
         
         node1_jaccard_pairwise.id as node1_jaccard_pairwise, 
         node2_jaccard_pairwise.id as node2_jaccard_pairwise, 
@@ -53,18 +35,10 @@ output:
     - node1_jaccard_default: 6
       node2_jaccard_default: 7
       jaccard_similarity_default: 0.0 
-      
-      node1_jaccard_c: 6
-      node2_jaccard_c: 7
-      jaccard_similarity_c: 0.0
-      
+         
       node1_jaccard_cartesian: 6
       node2_jaccard_cartesian: 7
       jaccard_similarity_cartesian: 0.0 
-      
-      node1_jaccard_p: 6
-      node2_jaccard_p: 7
-      jaccard_similarity_p: 0.0 
       
       node1_jaccard_pairwise: 6
       node2_jaccard_pairwise: 7

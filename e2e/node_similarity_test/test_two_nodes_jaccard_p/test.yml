@@ -1,7 +1,7 @@
 query: >
         MATCH (m {id: 0}), (n {id: 1})
         
-        CALL node_similarity.jaccard(m, n, "p") YIELD 
+        CALL node_similarity.jaccard(m, n, "pairwise") YIELD 
         node1 AS node1_jaccard_p, 
         node2 AS node2_jaccard_p, 
         similarity AS jaccard_similarity_p

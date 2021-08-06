@@ -1,7 +1,7 @@
 query: >
         MATCH (m {id: 0}), (n {id: 1})
         
-        CALL node_similarity.jaccard(m, n, "c") YIELD 
+        CALL node_similarity.jaccard(m, n, "cartesian") YIELD 
         node1 AS node1_jaccard_c, 
         node2 AS node2_jaccard_c, 
         similarity AS jaccard_similarity_c
