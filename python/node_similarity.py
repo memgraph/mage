@@ -110,8 +110,8 @@ def _calculate_jaccard(node1: mgp.Vertex, node2: mgp.Vertex) -> float:
 
     if node1 == node2:
         return 1.0
-    else:
-        jaccard_similarity = 0.0
+
+    jaccard_similarity = 0.0
 
     neighbors1 = _get_neighbors(node1)
     neighbors2 = _get_neighbors(node2)
@@ -146,8 +146,8 @@ def _calculate_overlap(node1: mgp.Vertex, node2: mgp.Vertex) -> float:
 
     if node1 == node2:
         return 1.0
-    else:
-        overlap_similarity = 0.0
+
+    overlap_similarity = 0.0
 
     neighbors1 = _get_neighbors(node1)
     neighbors2 = _get_neighbors(node2)
@@ -179,8 +179,8 @@ def _calculate_cosine(node1: mgp.Vertex, node2: mgp.Vertex) -> float:
 
     if node1 == node2:
         return 1.0
-    else:
-        cosine_similarity = 0.0
+
+    cosine_similarity = 0.0
 
     neighbors1 = _get_neighbors(node1)
     neighbors2 = _get_neighbors(node2)
@@ -271,15 +271,15 @@ def _get_neighbors(node: mgp.Vertex) -> Set[int]:
 
     if node.id in neighbors_dict:
         return neighbors_dict[node.id]
-    else:
-        neighbors = set()
 
-        for edge in node.in_edges:
-            neighbors.add(edge.from_vertex.id)
+    neighbors = set()
 
-        for edge in node.out_edges:
-            neighbors.add(edge.to_vertex.id)
+    for edge in node.in_edges:
+        neighbors.add(edge.from_vertex.id)
 
-        neighbors_dict[node.id] = neighbors
+    for edge in node.out_edges:
+        neighbors.add(edge.to_vertex.id)
 
-        return neighbors
+    neighbors_dict[node.id] = neighbors
+
+    return neighbors
