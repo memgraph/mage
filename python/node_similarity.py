@@ -1,3 +1,4 @@
+from enum import Enum
 from math import sqrt
 from typing import Set, List, Callable, Tuple, Union
 from itertools import product
@@ -10,13 +11,13 @@ import mgp
 neighbors_dict = dict()
 
 
-class Mode:
+class Mode(Enum):
     """
-    Constants for the mode parameter
+    Enum for mode parameter
     """
 
-    PAIRWISE = ["p", "pairwise"]
-    CARTESIAN = ["c", "cartesian"]
+    CARTESIAN = "cartesian"
+    PAIRWISE = "pairwise"
 
 
 @mgp.read_proc
@@ -30,7 +31,7 @@ def jaccard(
     :type node1: mgp.Vertex, tuple
     :param node2: A node or a tuple of nodes
     :type node2: mgp.Vertex, tuple
-    :param mode: Can be `p` (or `pairwise`) for pairwise similarity calculation or `c` (or `cartesian`)
+    :param mode: Can be `pairwise` for pairwise similarity calculation or `cartesian`
     for calculating the similarity of the Cartesian product of given tuples.
     The default value is set to be a Cartesian product.
     :type mode: str, optional
@@ -40,7 +41,7 @@ def jaccard(
     :rtype: mgp.Record
     """
 
-    return _calculate_similarity(node1, node2, _calculate_jaccard, mode)
+    return _calculate_similarity(node1, node2, _calculate_jaccard, Mode(mode))
 
 
 @mgp.read_proc
@@ -54,7 +55,7 @@ def overlap(
     :type node1: mgp.Vertex, tuple
     :param node2: A node or a tuple of nodes
     :type node2: mgp.Vertex, tuple
-    :param mode: Can be `p` (or `pairwise`) for pairwise similarity calculation or `c` (or `cartesian`)
+    :param mode: Can be `pairwise` for pairwise similarity calculation or `cartesian`
     for calculating the similarity of the Cartesian product of given tuples.
     The default value is set to be a Cartesian product.
     :type mode: str, optional
@@ -64,7 +65,7 @@ def overlap(
     :rtype: mgp.Record
     """
 
-    return _calculate_similarity(node1, node2, _calculate_overlap, mode)
+    return _calculate_similarity(node1, node2, _calculate_overlap, Mode(mode))
 
 
 @mgp.read_proc
@@ -78,7 +79,7 @@ def cosine(
     :type node1: mgp.Vertex, tuple
     :param node2: A node or a tuple of nodes
     :type node2: mgp.Vertex, tuple
-    :param mode: Can be `p` (or `pairwise`) for pairwise similarity calculation or `c` (or `cartesian`)
+    :param mode: Can be `pairwise` for pairwise similarity calculation or `cartesian`
     for calculating the similarity of the Cartesian product of given tuples.
     The default value is set to be a Cartesian product.
     :type mode: str, optional
@@ -88,7 +89,7 @@ def cosine(
     :rtype: mgp.Record
     """
 
-    return _calculate_similarity(node1, node2, _calculate_cosine, mode)
+    return _calculate_similarity(node1, node2, _calculate_cosine, Mode(mode))
 
 
 def _calculate_jaccard(node1: mgp.Vertex, node2: mgp.Vertex) -> float:
@@ -117,7 +118,6 @@ def _calculate_jaccard(node1: mgp.Vertex, node2: mgp.Vertex) -> float:
     neighbors2 = _get_neighbors(node2)
 
     intersection_len = len(neighbors1 & neighbors2)
-
     denominator = len(neighbors1) + len(neighbors2) - intersection_len
 
     if denominator != 0:
@@ -197,7 +197,7 @@ def _calculate_similarity(
     node1: Union[mgp.Vertex, Tuple[mgp.Vertex]],
     node2: Union[mgp.Vertex, Tuple[mgp.Vertex]],
     method: Callable,
-    mode: str,
+    mode: Mode,
 ) -> List[Tuple[mgp.Vertex, mgp.Vertex, float]]:
     """This method calculates the similarity of nodes for given method and mode.
 
@@ -208,9 +208,9 @@ def _calculate_similarity(
     :param method: Similarity measure which will be used for calculating the similarity between nodes.
     Currently available are `_calculate_jaccard`, `_calculate_overlap` and `_calculate_cosine`
     :type method: function
-    :param mode: Can be `p` (or `pairwise`) for pairwise similarity calculation or `c` (or `cartesian`) for
-    calculating the similarity of the Cartesian product of given tuples
-    :type mode: str
+    :param mode: Can be PAIRWISE for pairwise similarity calculation or CARTESIAN
+    for calculating the similarity of the Cartesian product of given tuples.
+    :type mode: enum
 
     :raises TypeError: Occurs if there's a type mismatch for passed arguments
     :raises ValueError: Occurs if any passed argument is invalid
@@ -240,7 +240,7 @@ def _calculate_similarity(
     else:
         raise TypeError("Invalid type of second argument.")
 
-    if mode.lower() in Mode.PAIRWISE:
+    if mode == Mode.PAIRWISE:
         if len(nodes1) == len(nodes2):
             return [
                 mgp.Record(node1=n1, node2=n2, similarity=method(n1, n2))
@@ -248,7 +248,7 @@ def _calculate_similarity(
             ]
         else:
             raise ValueError("Incompatible lengths of given arguments.")
-    elif mode.lower() in Mode.CARTESIAN:
+    elif mode == Mode.CARTESIAN:
         return [
             mgp.Record(node1=n1, node2=n2, similarity=method(n1, n2))
             for n1, n2 in product(nodes1, nodes2)
@@ -265,7 +265,7 @@ def _get_neighbors(node: mgp.Vertex) -> Set[int]:
     :param node: A node
     :type node: mgp.Vertex
 
-    :return: Set of all IDs' of neighbors of a node
+    :return: Set of all IDs of neighbors of a node
     :rtype: set
     """
 
