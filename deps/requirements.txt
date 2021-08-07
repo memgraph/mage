@@ -1,2 +1,5 @@
 graphviz==0.17
 pipdeptree==2.0.0
+networkx==2.6.2
+pydot==1.4.2
+gqlalchemy==1.0.4

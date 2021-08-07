@@ -2,11 +2,46 @@
 
 import os
 import subprocess
+import networkx
+
+from gqlalchemy.utilities import to_cypher_labels, to_cypher_properties
+from gqlalchemy.transformations import NetworkXGraphConstants
+from gqlalchemy import Memgraph
+
+
+def dot_to_mg_graph(path="file.dot", labels=[]):
+    graph = networkx.drawing.nx_pydot.read_dot(path)
+    for node in graph.nodes(data=True):
+        id, data = node
+        data['labels'] = labels
+        data['name'] = data['label'].strip('\'"')
+    return graph
+
+
+def mg_graph_to_cypher(graph):
+    for node_id, node_props in graph.nodes(data=True):
+        labels_str = to_cypher_labels(node_props.get(NetworkXGraphConstants.LABELS, ""))
+        node_name = node_props.get("name", "")
+        yield f"CREATE ({labels_str} {{id: \"{node_id}\", name: \"{node_name}\"}});"
+    for from_id, to_id, edge_props in graph.edges(data=True):
+        properties_str = to_cypher_properties(edge_props)
+        yield f"MATCH (n {{id: \"{from_id}\"}}), (m {{id: \"{to_id}\"}}) CREATE (n)-[:Depends {properties_str}]->(m);"
+
+
+def dot_to_memgraph(path="file.dot", labels=[], host="127.0.0.1", port=7687):
+    memgraph = Memgraph(host, port)
+    for query in mg_graph_to_cypher(dot_to_mg_graph(path, labels)):
+        memgraph.execute(query)
+
 
 WORK_DIRECTORY = os.getcwd()
 CPP_DIRECTORY = f"{WORK_DIRECTORY}/../cpp/build"
 PY_DIRECTORY = f"{WORK_DIRECTORY}/../python"
 RS_DIRECTORY = f"{WORK_DIRECTORY}/../rust/rsmgp-example"
+MG_HOST="127.0.0.1"
+MG_PORT=7687
+memgraph = Memgraph(MG_HOST, MG_PORT)
+memgraph.execute("MATCH (n) DETACH DELETE n;")
 
 os.chdir(CPP_DIRECTORY)
 subprocess.run(["cmake", f"--graphviz={WORK_DIRECTORY}/cppdeps.dot", ".."])
@@ -15,6 +50,7 @@ subprocess.run(["dot",
                 "-o",
                 f"{WORK_DIRECTORY}/cppdeps.png",
                 f"{WORK_DIRECTORY}/cppdeps.dot"])
+dot_to_memgraph(f"{WORK_DIRECTORY}/cppdeps.dot", ["Cpp"])
 
 # TODO(gitbuda): Figure out how to install deps and activate env.
 os.chdir(WORK_DIRECTORY)
@@ -25,6 +61,7 @@ with open("pydeps.dot", "w") as f:
                     "-o",
                     f"{WORK_DIRECTORY}/pydeps.png",
                     f"{WORK_DIRECTORY}/pydeps.dot"])
+dot_to_memgraph(f"{WORK_DIRECTORY}/pydeps.dot", ["Python"])
 
 # TODO(gitbuda): Ensure `cargo install cargo-deps`.
 # TODO(gitbuda): Analyze all Rust modules available in Mage.
@@ -36,3 +73,4 @@ with open(f"{WORK_DIRECTORY}/rsdeps.dot", "w") as f:
                     "-o",
                     f"{WORK_DIRECTORY}/rsdeps.png",
                     f"{WORK_DIRECTORY}/rsdeps.dot"])
+dot_to_memgraph(f"{WORK_DIRECTORY}/rsdeps.dot", ["Rust"])
