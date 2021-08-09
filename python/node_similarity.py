@@ -19,6 +19,10 @@ class Mode(Enum):
     CARTESIAN = "cartesian"
     PAIRWISE = "pairwise"
 
+    @classmethod
+    def has_value(cls, value):
+        return value in cls._value2member_map_
+
 
 @mgp.read_proc
 def jaccard(
@@ -36,12 +40,14 @@ def jaccard(
     The default value is set to be a Cartesian product.
     :type mode: str, optional
 
+    :raises ValueError: Occurs if passed mode argument is invalid
+
     :return: This procedure returns a mgp.Record with 3 fields:
     the first node, the second node and the Jaccard similarity between them
     :rtype: mgp.Record
     """
 
-    if mode not in Mode.__members__:
+    if not Mode.has_value(mode):
         raise ValueError("Invalid mode. Valid modes are: pairwise, cartesian.")
 
     return _calculate_similarity(node1, node2, _calculate_jaccard, Mode(mode))
@@ -63,12 +69,14 @@ def overlap(
     The default value is set to be a Cartesian product.
     :type mode: str, optional
 
+    :raises ValueError: Occurs if passed mode argument is invalid
+
     :return: This procedure returns a mgp.Record with 3 fields:
     the first node, the second node and the overlap similarity between them
     :rtype: mgp.Record
     """
 
-    if mode not in Mode.__members__:
+    if not Mode.has_value(mode):
         raise ValueError("Invalid mode. Valid modes are: pairwise, cartesian.")
 
     return _calculate_similarity(node1, node2, _calculate_overlap, Mode(mode))
@@ -90,12 +98,14 @@ def cosine(
     The default value is set to be a Cartesian product.
     :type mode: str, optional
 
+    :raises ValueError: Occurs if passed mode argument is invalid
+
     :return: This procedure returns a mgp.Record with 3 fields:
     the first node, the second node and the cosine similarity between them
     :rtype: mgp.Record
     """
 
-    if mode not in Mode.__members__:
+    if not Mode.has_value(mode):
         raise ValueError("Invalid mode. Valid modes are: pairwise, cartesian.")
 
     return _calculate_similarity(node1, node2, _calculate_cosine, Mode(mode))
