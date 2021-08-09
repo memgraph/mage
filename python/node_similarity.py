@@ -68,6 +68,9 @@ def overlap(
     :rtype: mgp.Record
     """
 
+    if mode not in Mode.__members__:
+        raise ValueError("Invalid mode. Valid modes are: pairwise, cartesian.")
+
     return _calculate_similarity(node1, node2, _calculate_overlap, Mode(mode))
 
 
@@ -91,6 +94,9 @@ def cosine(
     the first node, the second node and the cosine similarity between them
     :rtype: mgp.Record
     """
+
+    if mode not in Mode.__members__:
+        raise ValueError("Invalid mode. Valid modes are: pairwise, cartesian.")
 
     return _calculate_similarity(node1, node2, _calculate_cosine, Mode(mode))
 
