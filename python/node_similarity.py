@@ -41,6 +41,9 @@ def jaccard(
     :rtype: mgp.Record
     """
 
+    if mode not in Mode.__members__:
+        raise ValueError("Invalid mode. Valid modes are: pairwise, cartesian.")
+
     return _calculate_similarity(node1, node2, _calculate_jaccard, Mode(mode))
 
 
