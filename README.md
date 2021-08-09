@@ -39,7 +39,7 @@ Furthermore, if you have an **algorithm proposition**, please fill in the survey
 
 ## How to install?
 
-To build and install MAGE query modules you will need: **Python3**, **Make**, **CMake** and **Clang**. Also, you will need a runnable Memgraph instance, whether locally or via Docker image. [Download](https://memgraph.com/download), and [install](https://docs.memgraph.com/memgraph/getting-started/installation/) **Memgraph**.
+To build and install MAGE query modules you will need: **Python3**, **Make**, **CMake**, **Clang** and **Rust**. Also, you will need a runnable Memgraph instance, whether locally or via Docker image. [Download](https://memgraph.com/download), and [install](https://docs.memgraph.com/memgraph/getting-started/installation/) **Memgraph**.
 
 ### Installing MAGE with Docker
 #### Docker Hub
