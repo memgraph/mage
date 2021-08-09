@@ -1,6 +1,6 @@
 query: >
   MATCH (m {id: 0}), (n {id: 1})
-  CALL union_find.connected(m, n, "wrong") YIELD *
+  CALL union_find.connected(m, n, "invalid_mode") YIELD *
   RETURN node1, node2, connected;
 
 exception: >

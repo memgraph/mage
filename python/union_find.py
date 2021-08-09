@@ -1,3 +1,4 @@
+from enum import Enum
 from itertools import product
 from typing import Any, Tuple
 
@@ -9,13 +10,13 @@ import mgp
 disjoint_set = DisjointSet(node_ids=None)
 
 
-class Mode:
+class Mode(Enum):
     """
     Valid values of the mode parameter
     """
 
-    PAIRWISE = ["p", "pairwise"]
-    CARTESIAN = ["c", "cartesian"]
+    CARTESIAN = "cartesian"
+    PAIRWISE = "pairwise"
 
 
 @mgp.read_proc
@@ -33,7 +34,7 @@ def connected(
     :type nodes1: Union[mgp.Vertex, Tuple[mgp.Vertex]]
     :param nodes2: Node or tuple of nodes
     :type nodes2: Union[mgp.Vertex, Tuple[mgp.Vertex]]
-    :param mode: Mode of operation: `p` / `pairwise` for pairwise operation or `c` / `cartesian`
+    :param mode: Mode of operation: `pairwise` for pairwise operation or `cartesian`
     for operating on the Cartesian product of given tuples. Default value is `pairwise`.
     :type mode: str
     :param update: Updates the disjoint set data structure used by the algorithm. Use if graph has been changed
@@ -67,7 +68,7 @@ def connected(
     else:
         raise TypeError("Invalid type of second argument.")
 
-    if mode.lower() in Mode.PAIRWISE:
+    if Mode(mode.lower()) == Mode.PAIRWISE:
         if len(nodes1) != len(nodes2):
             raise ValueError("Incompatible lengths of given arguments.")
         else:
@@ -81,7 +82,7 @@ def connected(
                 )
                 for node1, node2 in zip(nodes1, nodes2)
             ]
-    elif mode.lower() in Mode.CARTESIAN:
+    elif Mode(mode.lower()) == Mode.CARTESIAN:
         return [
             mgp.Record(
                 node1=node1,
@@ -91,4 +92,5 @@ def connected(
             for node1, node2 in product(nodes1, nodes2)
         ]
     else:
-        raise ValueError("Invalid mode of operation specified.")
+        x = f"Invalid mode of operation specified {mode.lower()}, {Mode.PAIRWISE}."
+        raise ValueError(x)

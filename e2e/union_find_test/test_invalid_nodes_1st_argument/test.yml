@@ -1,6 +1,6 @@
 query: >
   MATCH (n {id: 1})
-  CALL union_find.connected(0, n, "p") YIELD *
+  CALL union_find.connected(0, n, "pairwise") YIELD *
   RETURN node1, node2, connected;
 
 exception: >
