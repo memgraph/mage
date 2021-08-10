@@ -271,8 +271,8 @@ def _calculate_similarity(
             mgp.Record(node1=n1, node2=n2, similarity=method(n1, n2))
             for n1, n2 in product(nodes1, nodes2)
         ]
-    else:
-        raise ValueError("Invalid mode. Valid modes are: pairwise, cartesian.")
+
+    raise ValueError("Invalid mode. Valid modes are: pairwise, cartesian.")
 
 
 def _get_neighbors(node: mgp.Vertex) -> Set[int]:
