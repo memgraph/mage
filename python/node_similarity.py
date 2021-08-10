@@ -260,13 +260,12 @@ def _calculate_similarity(
         raise TypeError("Invalid type of second argument.")
 
     if mode == Mode.PAIRWISE:
-        if len(nodes1) == len(nodes2):
-            return [
-                mgp.Record(node1=n1, node2=n2, similarity=method(n1, n2))
-                for n1, n2 in zip(nodes1, nodes2)
-            ]
-        else:
+        if len(nodes1) != len(nodes2):
             raise ValueError("Incompatible lengths of given arguments.")
+        return [
+            mgp.Record(node1=n1, node2=n2, similarity=method(n1, n2))
+            for n1, n2 in zip(nodes1, nodes2)
+        ]
     elif mode == Mode.CARTESIAN:
         return [
             mgp.Record(node1=n1, node2=n2, similarity=method(n1, n2))
