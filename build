@@ -133,7 +133,7 @@ for project in filter(
 
 arguments = get_arguments()
 
-if arguments.path is not None:
+if hasattr(arguments,'path'):
     print('Copying files from folder {src} to {dst} folder.'.format(src=QUERY_MODULES_DIRECTORY, dst=arguments.path))
     copy_dist(arguments.path)
     print('Copying done!')
