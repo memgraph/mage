@@ -1,7 +1,10 @@
-import time
 import multiprocessing
+import time
+
 import mgp
-from mage.node2vec_online_module import GensimWord2Vec, StreamWalkUpdater
+
+from mage.node2vec_online_module.w2v_learners import (GensimWord2Vec)
+from mage.node2vec_online_module.walk_sampling import (StreamWalkUpdater)
 
 
 class Node2VecContext:
@@ -84,6 +87,7 @@ def set(
             sampled_walks=sampled_walks,
             full_walks=full_walks,
         )
+
         context.learner = GensimWord2Vec(
             embedding_dimension=embedding_dimension,
             learning_rate=learning_rate,
