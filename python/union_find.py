@@ -68,11 +68,20 @@ def connected(
     else:
         raise TypeError("Invalid type of second argument.")
 
-    if mode.lower() not in [Mode.PAIRWISE.value, Mode.CARTESIAN.value]:
-        error_message = f'Mode {mode} is invalid, please specify one of the following: "{Mode.PAIRWISE.value}", "{Mode.CARTESIAN.value}".'
-        raise ValueError(error_message)
+    if mode.lower() == Mode.PAIRWISE.value:
+        if len(nodes1) != len(nodes2):
+            raise ValueError("Incompatible lengths of given arguments.")
 
-    if mode.lower() == Mode.CARTESIAN.value:
+        return [
+            mgp.Record(
+                node1=node1,
+                node2=node2,
+                connected=disjoint_set.connected(node1_id=node1.id, node2_id=node2.id),
+            )
+            for node1, node2 in zip(nodes1, nodes2)
+        ]
+
+    elif mode.lower() == Mode.CARTESIAN.value:
         return [
             mgp.Record(
                 node1=node1,
@@ -82,14 +91,5 @@ def connected(
             for node1, node2 in product(nodes1, nodes2)
         ]
 
-    # default mode (pairwise)
-    if len(nodes1) != len(nodes2):
-        raise ValueError("Incompatible lengths of given arguments.")
-    return [
-        mgp.Record(
-            node1=node1,
-            node2=node2,
-            connected=disjoint_set.connected(node1_id=node1.id, node2_id=node2.id),
-        )
-        for node1, node2 in zip(nodes1, nodes2)
-    ]
+    error_message = f'Mode {mode} is invalid, please specify one of the following: "{Mode.PAIRWISE.value}", "{Mode.CARTESIAN.value}".'
+    raise ValueError(error_message)
