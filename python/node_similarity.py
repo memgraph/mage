@@ -262,6 +262,7 @@ def _calculate_similarity(
     if mode == Mode.PAIRWISE:
         if len(nodes1) != len(nodes2):
             raise ValueError("Incompatible lengths of given arguments.")
+
         return [
             mgp.Record(node1=n1, node2=n2, similarity=method(n1, n2))
             for n1, n2 in zip(nodes1, nodes2)
