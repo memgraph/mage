@@ -1,0 +1,21 @@
+query: >
+        MATCH (m {id: 0}), (n {id: 1})
+        
+        CALL node_similarity.cosine(m, n, "pairwise") YIELD 
+        node1 AS node1_cosine_pairwise, 
+        node2 AS node2_cosine_pairwise, 
+        similarity AS cosine_similarity_pairwise
+      
+        RETURN  
+        
+        node1_cosine_pairwise.id as node1_cosine_pairwise, 
+        node2_cosine_pairwise.id as node2_cosine_pairwise, 
+        cosine_similarity_pairwise
+
+
+output: 
+    - node1_cosine_pairwise: 0
+      node2_cosine_pairwise: 1
+      cosine_similarity_pairwise: 0.67082
+      
+      
