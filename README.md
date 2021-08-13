@@ -63,7 +63,6 @@ docker run -p 7687:7687 memgraph-mage
 ```
 
 ### Installing MAGE locally
-There are two possibilities on how to start MAGE locally.
 **1.** Run the `build` script. It will generate a `dist` directory with all the needed files. If you want to skip step 2) 
 you can add optional -p (--path) flag which represents where will contents of `dist` directory be copied.
 ```
