@@ -1,0 +1,46 @@
+query: >
+        MATCH (m {id: 6}), (n {id: 7})
+        
+        CALL node_similarity.jaccard(m, n) YIELD 
+        node1 AS node1_jaccard_default, 
+        node2 AS node2_jaccard_default, 
+        similarity AS jaccard_similarity_default
+        
+        CALL node_similarity.jaccard(m, n, "cartesian") YIELD 
+        node1 AS node1_jaccard_cartesian, 
+        node2 AS node2_jaccard_cartesian, 
+        similarity AS jaccard_similarity_cartesian
+        
+        CALL node_similarity.jaccard(m, n, "pairwise") YIELD 
+        node1 AS node1_jaccard_pairwise, 
+        node2 AS node2_jaccard_pairwise, 
+        similarity AS jaccard_similarity_pairwise
+        
+        
+        RETURN  
+        node1_jaccard_default.id as node1_jaccard_default, 
+        node2_jaccard_default.id as node2_jaccard_default, 
+        jaccard_similarity_default,
+        
+        node1_jaccard_cartesian.id as node1_jaccard_cartesian, 
+        node2_jaccard_cartesian.id as node2_jaccard_cartesian, 
+        jaccard_similarity_cartesian,
+        
+        node1_jaccard_pairwise.id as node1_jaccard_pairwise, 
+        node2_jaccard_pairwise.id as node2_jaccard_pairwise, 
+        jaccard_similarity_pairwise
+        
+
+output: 
+    - node1_jaccard_default: 6
+      node2_jaccard_default: 7
+      jaccard_similarity_default: 0.0 
+         
+      node1_jaccard_cartesian: 6
+      node2_jaccard_cartesian: 7
+      jaccard_similarity_cartesian: 0.0 
+      
+      node1_jaccard_pairwise: 6
+      node2_jaccard_pairwise: 7
+      jaccard_similarity_pairwise: 0.0
+      
