@@ -1,12 +1,22 @@
 #!/usr/bin/env python3
 
+import argparse
 import os
 import subprocess
-import networkx
 
 from gqlalchemy.utilities import to_cypher_labels, to_cypher_properties
 from gqlalchemy.transformations import NetworkXGraphConstants
 from gqlalchemy import Memgraph
+import networkx
+
+
+WORK_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
+CPP_DIRECTORY = os.path.join(WORK_DIRECTORY, "..", "cpp", "build")
+PY_DIRECTORY = os.path.join(WORK_DIRECTORY, "..", "python")
+RS_DIRECTORY = os.path.join(WORK_DIRECTORY, "..", "rust")
+
+MG_HOST = "127.0.0.1"
+MG_PORT = 7687
 
 
 def dot_to_mg_graph(path="file.dot", labels=[]):
@@ -20,57 +30,126 @@ def dot_to_mg_graph(path="file.dot", labels=[]):
 
 def mg_graph_to_cypher(graph):
     for node_id, node_props in graph.nodes(data=True):
-        labels_str = to_cypher_labels(node_props.get(NetworkXGraphConstants.LABELS, ""))
+        labels_str = to_cypher_labels(
+            node_props.get(
+                NetworkXGraphConstants.LABELS, ""))
         node_name = node_props.get("name", "")
-        yield f"CREATE ({labels_str} {{id: \"{node_id}\", name: \"{node_name}\"}});"
+        yield f"""CREATE ({labels_str}
+                          {{id: \"{node_id}\", name: \"{node_name}\"}});"""
     for from_id, to_id, edge_props in graph.edges(data=True):
         properties_str = to_cypher_properties(edge_props)
-        yield f"MATCH (n {{id: \"{from_id}\"}}), (m {{id: \"{to_id}\"}}) CREATE (n)-[:Depends {properties_str}]->(m);"
+        yield f"""MATCH (n {{id: \"{from_id}\"}}),
+                        (m {{id: \"{to_id}\"}})
+                  CREATE (n)-[:Depends {properties_str}]->(m);"""
+
+
+def is_memgraph_ready(host="127.0.0.1", port=7687):
+    try:
+        memgraph = Memgraph(host, port)
+        memgraph.execute("MATCH (n) RETURN n LIMIT 1;")
+    except Exception:
+        return False
+    return True
 
 
 def dot_to_memgraph(path="file.dot", labels=[], host="127.0.0.1", port=7687):
+    if not is_memgraph_ready():
+        return
+
     memgraph = Memgraph(host, port)
     for query in mg_graph_to_cypher(dot_to_mg_graph(path, labels)):
         memgraph.execute(query)
 
 
-WORK_DIRECTORY = os.getcwd()
-CPP_DIRECTORY = f"{WORK_DIRECTORY}/../cpp/build"
-PY_DIRECTORY = f"{WORK_DIRECTORY}/../python"
-RS_DIRECTORY = f"{WORK_DIRECTORY}/../rust/rsmgp-example"
-MG_HOST="127.0.0.1"
-MG_PORT=7687
-memgraph = Memgraph(MG_HOST, MG_PORT)
-memgraph.execute("MATCH (n) DETACH DELETE n;")
+def is_cmake_ready():
+    try:
+        subprocess.run(["cmake", "--version"])
+    except Exception:
+        print("cmake is not available, please installed it.")
+        return False
+    return True
 
-os.chdir(CPP_DIRECTORY)
-subprocess.run(["cmake", f"--graphviz={WORK_DIRECTORY}/cppdeps.dot", ".."])
-subprocess.run(["dot",
-                "-Tpng",
-                "-o",
-                f"{WORK_DIRECTORY}/cppdeps.png",
-                f"{WORK_DIRECTORY}/cppdeps.dot"])
-dot_to_memgraph(f"{WORK_DIRECTORY}/cppdeps.dot", ["Cpp"])
 
-# TODO(gitbuda): Figure out how to install deps and activate env.
-os.chdir(WORK_DIRECTORY)
-with open("pydeps.dot", "w") as f:
-    subprocess.run(["pipdeptree", "--graph-output", "dot"], stdout=f)
-    subprocess.run(["dot",
-                    "-Tpng",
-                    "-o",
-                    f"{WORK_DIRECTORY}/pydeps.png",
-                    f"{WORK_DIRECTORY}/pydeps.dot"])
-dot_to_memgraph(f"{WORK_DIRECTORY}/pydeps.dot", ["Python"])
+def generate_cmake_dot(working_dir, output_file):
+    os.chdir(working_dir)
+    subprocess.run(["cmake", f"--graphviz={output_file}", ".."])
 
-# TODO(gitbuda): Ensure `cargo install cargo-deps`.
-# TODO(gitbuda): Analyze all Rust modules available in Mage.
-os.chdir(RS_DIRECTORY)
-with open(f"{WORK_DIRECTORY}/rsdeps.dot", "w") as f:
-    subprocess.run(["cargo", "deps"], stdout=f)
-    subprocess.run(["dot",
-                    "-Tpng",
-                    "-o",
-                    f"{WORK_DIRECTORY}/rsdeps.png",
-                    f"{WORK_DIRECTORY}/rsdeps.dot"])
-dot_to_memgraph(f"{WORK_DIRECTORY}/rsdeps.dot", ["Rust"])
+
+def generate_pip_dot(working_dir, output_file):
+    os.chdir(working_dir)
+    with open(output_file, "w") as f:
+        subprocess.run(["pipdeptree", "--graph-output", "dot"], stdout=f)
+
+
+def is_cargo_ready():
+    try:
+        subprocess.run(["cargo", "--version"], check=True)
+    except Exception:
+        print("cargo is not available, please installed it.")
+        return False
+
+    status = subprocess.run(
+        ["cargo", "install", "--list"], check=True, capture_output=True)
+    if status.returncode != 0:
+        print("Check of the cargo-deps failed, check installation of cargo.")
+        return False
+    if "cargo-deps" in str(status.stdout):
+        return True
+    else:
+        print("cargo-deps is not available, please installed it.")
+        return False
+
+
+def generate_cargo_dot(working_dir, output_file):
+    os.chdir(working_dir)
+    with open(output_file, "w") as f:
+        subprocess.run(["cargo", "deps"], stdout=f)
+
+
+def dot_to_png(input_file, output_file):
+    subprocess.run(["dot", "-Tpng", "-o", output_file, input_file])
+
+
+def main():
+    if is_cmake_ready():
+        cppdeps_dot = os.path.join(WORK_DIRECTORY, "cppdeps.dot")
+        cppdeps_png = os.path.join(WORK_DIRECTORY, "cppdeps.png")
+        generate_cmake_dot(CPP_DIRECTORY, cppdeps_dot)
+        dot_to_png(cppdeps_dot, cppdeps_png)
+        dot_to_memgraph(cppdeps_dot, ["Cpp"])
+
+    # pipdeptree expects graphviz to be installed "locally", in the same
+    # environemnt where the executable (pipdeptree) is located, to analyze
+    # external dependencies please install them in the current virtualenv.
+    pydeps_dot = os.path.join(WORK_DIRECTORY, "pydeps.dot")
+    pydeps_png = os.path.join(WORK_DIRECTORY, "pydeps.png")
+    generate_pip_dot(WORK_DIRECTORY, pydeps_dot)
+    dot_to_png(pydeps_dot, pydeps_png)
+    dot_to_memgraph(pydeps_dot, ["Python"])
+
+    if is_cargo_ready():
+        for module in [f.path for f in os.scandir(RS_DIRECTORY) if f.is_dir()]:
+            if not os.path.isfile(os.path.join(module, "Cargo.toml")):
+                continue
+            name = os.path.basename(module)
+            rsdeps_dot = os.path.join(WORK_DIRECTORY, "rsdeps_%s.dot" % name)
+            rsdeps_png = os.path.join(WORK_DIRECTORY, "rsdeps_%s.png" % name)
+            generate_cargo_dot(module, rsdeps_dot)
+            dot_to_png(rsdeps_dot, rsdeps_png)
+            dot_to_memgraph(rsdeps_dot, ["Rust"])
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Analyze dependencies.")
+    parser.add_argument("--clean", action="store_true",
+                        help="Clean the working directory (dot+png files).")
+    args = parser.parse_args()
+
+    if args.clean:
+        os.chdir(WORK_DIRECTORY)
+        subprocess.run("rm *.dot* *.png", shell=True)
+    else:
+        if is_memgraph_ready(MG_HOST, MG_PORT):
+            memgraph = Memgraph(MG_HOST, MG_PORT)
+            memgraph.execute("MATCH (n) DETACH DELETE n;")
+        main()
