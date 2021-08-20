@@ -49,7 +49,8 @@ class StreamWalkUpdater:
         self.graph = {}
         # last timestamp stores the last time an edge entering node arrived in the edge stream
         self.last_timestamp = {}
-        # centrality is the total weight (probabilities) of all walks ending at node v at time t(uv) (uv is the last edge)
+        # centrality is the total weight (probabilities) of all walks ending at node v at time t(uv)
+        # (uv is the last edge)
         self.centrality = {}
 
     def process_new_edge(self, source: Any, target: Any, time: int) -> List[List[Any]]:
