@@ -43,7 +43,6 @@ class Node2VecContext:
         return (
                 self._learner is not None
                 and self._updater is not None
-                and self._start_time is not None
         )
 
     def update_model(self, source: int, target: int, current_time: int):
@@ -179,7 +178,9 @@ def get(
     """
 
     if not node2vec_context.is_initialized():
-        raise mgp.InvalidContextError("StreamWalk learner and Gensim updater are not set.")
+         raise mgp.AbortError("Learner or updater are not initialized. Initialize them by calling:"
+                             "`CALL node2vec_online.set_word2vec_learner() YIELD *;`"
+                             "`CALL node2vec_online.set_streamwalk_updater() YIELD *;` ")
 
     embedding_vectors = node2vec_context.learner.get_embedding_vectors()
 
@@ -219,7 +220,7 @@ def update(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]) -> mgp.Record():
         node2vec_context.start_time = current_time
 
     if not node2vec_context.is_initialized():
-        raise mgp.InvalidContextError("Learner or updater are not initialized. Initialize them by calling:"
+        raise mgp.AbortError("Learner or updater are not initialized. Initialize them by calling:"
                                       "`CALL node2vec_online.set_word2vec_learner() YIELD *;`"
                                       "`CALL node2vec_online.set_streamwalk_updater() YIELD *;` ")
 
