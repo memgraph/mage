@@ -51,8 +51,8 @@ docker run -p 7687:7687 memgraph/memgraph-mage
 
 #### Local Build
 
-**1.** Make sure to have `memgraph:latest` Docker image.  
-**2.** Build **MAGE** tagged Docker image.  
+**1.** Make sure to have `memgraph:latest` Docker image.
+**2.** Build **MAGE** tagged Docker image.
 ```
 docker build . -t memgraph-mage
 ```
@@ -63,14 +63,14 @@ docker run -p 7687:7687 memgraph-mage
 ```
 
 ### Installing MAGE locally
-**1.** Run the `build` script. It will generate a `dist` directory with all the needed files. If you want to skip step 2) 
+**1.** Run the `build` script. It will generate a `dist` directory with all the needed files. If you want to skip step 2)
 you can add optional -p (--path) flag which represents where will contents of `dist` directory be copied.
 ```
 python3 build (-p /usr/lib/memgraph/query_modules)
 ```
 
-**2.** Copy the contents of the newly created `dist` directory to `/usr/lib/memgraph/query_modules`.  
-**3.** Start Memgraph and enjoy **MAGE**!  
+**2.** Copy the contents of the newly created `dist` directory to `/usr/lib/memgraph/query_modules`.
+**3.** Start Memgraph and enjoy **MAGE**!
 
 > Note that query modules are loaded into Memgraph on startup so if your instance was already running you will need to execute the following query to load them:
 ```
@@ -94,7 +94,7 @@ Graph input           |  MAGE output
 
 
 ## Testing the MAGE
-To test that everything is built, loaded, and working correctly, a python script can be run. Make sure that the Memgraph instance with **MAGE** is up and running. 
+To test that everything is built, loaded, and working correctly, a python script can be run. Make sure that the Memgraph instance with **MAGE** is up and running.
 ```
 # Running unit tests for C++ and Python
 python3 test_unit
@@ -121,6 +121,7 @@ python3 test_e2e
 | [cycles](cpp/cycles_module/cycles_module.cpp) | C++ | Algorithm for detecting cycles on graphs |
 | [bridges](cpp/bridges_module/bridges_module.cpp) | C++ | A bridge is an edge, which when deleted, increases the number of connected components. The goal of this algorithm is to detect edges that are bridges in a graph. |
 | [betweenness centrality](cpp/betweenness_centrality_module/betweenness_centrality_module.cpp) | C++ | The betweenness centrality of a node is defined as the sum of the of all-pairs shortest paths that pass through the node divided by the number of all-pairs shortest paths in the graph. The algorithm has O(nm) time complexity. |
+| [uuid](cpp/uuid_module/uuid_module.cpp) | C++ | A module that generates a new universally unique identifier (UUID). |
 
 ## Contributing
 
