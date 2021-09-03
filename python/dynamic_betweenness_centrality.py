@@ -95,7 +95,12 @@ def icentral(G: nx.Graph, from_: int, to_: int, bc: dict, operation: str) -> dic
         # predecessors_s - predecessors of a node on the shortest path between s (source) and current node (t)
         # we want to count how many shortest paths are between s and t
         for t in Be_subgraph.nodes:
-            sigma_s[t] = len(list(nx.algorithms.shortest_paths.generic.all_shortest_paths(G, source=s, target=t)))
+
+            try:
+                sigma_s[t] = len(list(nx.algorithms.shortest_paths.generic.all_shortest_paths(G, source=s, target=t)))
+            except Exception:
+                # if there's no path between s and t
+                sigma_s[t] = 0
 
             # TODO: extend for directed graphs
             predecessors_s[t] = nx.algorithms.shortest_paths.unweighted.predecessor(G, source=s, target=t)
@@ -146,9 +151,14 @@ def icentral(G: nx.Graph, from_: int, to_: int, bc: dict, operation: str) -> dic
         # predecessors_s2 - predecessors of a node on shortest path between s (source) and current node (t)
         # we want to count how many shortest paths are between s and t
         for t in Be_subgraph_changed.nodes:
-            sigma_s2[t] = len(list(nx.algorithms.shortest_paths.generic.all_shortest_paths(H,
-                                                                                           source=s,
-                                                                                           target=t)))
+
+            try:
+                sigma_s2[t] = len(list(nx.algorithms.shortest_paths.generic.all_shortest_paths(H,
+                                                                                               source=s,
+                                                                                               target=t)))
+            except Exception:
+                # if there's no path between s and t
+                sigma_s2[t] = 0
 
             # TODO: extend for directed graphs
             predecessors_s2[t] = nx.algorithms.shortest_paths.unweighted.predecessor(H,
