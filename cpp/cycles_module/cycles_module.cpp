@@ -1,25 +1,23 @@
-#include <mg_procedure.h>
 #include <mg_utils.hpp>
 
 #include "algorithm/cycles.hpp"
 
 namespace {
 
+constexpr char const *kProcedureGet = "get";
+
 constexpr char const *kFieldCycleId = "cycle_id";
 constexpr char const *kFieldNode = "node";
 
-void InsertCycleRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *memory, const int cycle_id,
+void InsertCycleRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const int cycle_id,
                        const int node_id) {
-  auto *record = mgp_result_new_record(result);
-  if (record == nullptr) {
-    throw mg_exception::NotEnoughMemoryException();
-  }
+  auto *record = mgp::result_new_record(result);
 
   mg_utility::InsertIntValueResult(record, kFieldCycleId, cycle_id, memory);
   mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
 }
 
-void GetCycles(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void GetCycles(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
     auto cycles = cycles_alg::GetCycles(*graph);
@@ -41,12 +39,14 @@ void GetCycles(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result
 // Each module needs to define mgp_init_module function.
 // Here you can register multiple procedures your module supports.
 extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
-  mgp_proc *proc = mgp_module_add_read_procedure(module, "get", GetCycles);
+  try {
+    auto *proc = mgp::module_add_read_procedure(module, kProcedureGet, GetCycles);
 
-  if (!proc) return 1;
-
-  if (!mgp_proc_add_result(proc, kFieldCycleId, mgp_type_int())) return 1;
-  if (!mgp_proc_add_result(proc, kFieldNode, mgp_type_node())) return 1;
+    mgp::proc_add_result(proc, kFieldCycleId, mgp::type_int());
+    mgp::proc_add_result(proc, kFieldNode, mgp::type_node());
+  } catch (const std::exception &e) {
+    return 1;
+  }
 
   return 0;
 }

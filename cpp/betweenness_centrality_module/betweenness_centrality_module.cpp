@@ -1,11 +1,12 @@
 #include <thread>
 
-#include <mg_procedure.h>
 #include <mg_utils.hpp>
 
 #include "algorithm/betweenness_centrality.hpp"
 
 namespace {
+
+constexpr char const *kProcedureGet = "get";
 
 constexpr char const *kFieldBCScore = "betweeenness_centrality";
 constexpr char const *kFieldNode = "node";
@@ -14,22 +15,19 @@ constexpr char const *kArgumentDirected = "directed";
 constexpr char const *kArgumentNormalized = "normalized";
 constexpr char const *kArgumentThreads = "threads";
 
-void InsertBCRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *memory,
-                    const double betweeenness_centrality, const int node_id) {
-  auto *record = mgp_result_new_record(result);
-  if (record == nullptr) {
-    throw mg_exception::NotEnoughMemoryException();
-  }
+void InsertBCRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const double betweeenness_centrality,
+                    const int node_id) {
+  auto *record = mgp::result_new_record(result);
+
   mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
   mg_utility::InsertDoubleValue(record, kFieldBCScore, betweeenness_centrality, memory);
 }
 
-void GetBetweennessCentrality(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result,
-                              mgp_memory *memory) {
+void GetBetweennessCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    auto directed = mgp_value_get_bool(mgp_list_at(args, 0));
-    auto normalize = mgp_value_get_bool(mgp_list_at(args, 1));
-    auto threads = mgp_value_get_int(mgp_list_at(args, 2));
+    auto directed = mgp::value_get_bool(mgp::list_at(args, 0));
+    auto normalize = mgp::value_get_bool(mgp::list_at(args, 1));
+    auto threads = mgp::value_get_int(mgp::list_at(args, 2));
 
     if (threads <= 0) threads = std::thread::hardware_concurrency();
 
@@ -53,25 +51,37 @@ void GetBetweennessCentrality(const mgp_list *args, const mgp_graph *memgraph_gr
 // Each module needs to define mgp_init_module function.
 // Here you can register multiple procedures your module supports.
 extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
-  mgp_proc *proc = mgp_module_add_read_procedure(module, "get", GetBetweennessCentrality);
-  if (!proc) return 1;
+  mgp_value *bool_value_directed;
+  mgp_value *bool_value_normalized;
+  mgp_value *int_value_threads;
 
-  // Query module arguments
-  auto bool_value_directed = mgp_value_make_bool(true, memory);
-  auto bool_value_normalized = mgp_value_make_bool(true, memory);
-  auto int_value_threads = mgp_value_make_int(std::thread::hardware_concurrency(), memory);
+  try {
+    auto *proc = mgp::module_add_read_procedure(module, kProcedureGet, GetBetweennessCentrality);
 
-  if (!mgp_proc_add_opt_arg(proc, kArgumentDirected, mgp_type_bool(), bool_value_directed)) return 1;
-  if (!mgp_proc_add_opt_arg(proc, kArgumentNormalized, mgp_type_bool(), bool_value_normalized)) return 1;
-  if (!mgp_proc_add_opt_arg(proc, kArgumentThreads, mgp_type_int(), int_value_threads)) return 1;
+    // Query module arguments
+    bool_value_directed = mgp::value_make_bool(true, memory);
+    bool_value_normalized = mgp::value_make_bool(true, memory);
+    int_value_threads = mgp::value_make_int(std::thread::hardware_concurrency(), memory);
+
+    mgp::proc_add_opt_arg(proc, kArgumentDirected, mgp::type_bool(), bool_value_directed);
+    mgp::proc_add_opt_arg(proc, kArgumentNormalized, mgp::type_bool(), bool_value_normalized);
+    mgp::proc_add_opt_arg(proc, kArgumentThreads, mgp::type_int(), int_value_threads);
+
+    // Query module output record
+    mgp::proc_add_result(proc, kFieldNode, mgp::type_node());
+    mgp::proc_add_result(proc, kFieldBCScore, mgp::type_float());
+
+  } catch (const std::exception &e) {
+    // Destroy the values if exception occurs
+    mgp_value_destroy(bool_value_directed);
+    mgp_value_destroy(bool_value_normalized);
+    mgp_value_destroy(int_value_threads);
+    return 1;
+  }
 
   mgp_value_destroy(bool_value_directed);
   mgp_value_destroy(bool_value_normalized);
   mgp_value_destroy(int_value_threads);
-
-  // Query module output record
-  if (!mgp_proc_add_result(proc, kFieldNode, mgp_type_node())) return 1;
-  if (!mgp_proc_add_result(proc, kFieldBCScore, mgp_type_float())) return 1;
 
   return 0;
 }

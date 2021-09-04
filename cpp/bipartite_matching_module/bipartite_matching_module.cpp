@@ -1,4 +1,3 @@
-#include <mg_procedure.h>
 #include <mg_exceptions.hpp>
 #include <mg_utils.hpp>
 
@@ -6,19 +5,17 @@
 
 namespace {
 
+constexpr char const *kProcedureMax = "max";
+
 constexpr char const *kFieldMatchingNumber = "maximum_bipartite_matching";
 
 void InsertBipartiteMatchingRecord(mgp_result *result, mgp_memory *memory, const int matching_number) {
-  auto *record = mgp_result_new_record(result);
-  if (record == nullptr) {
-    throw mg_exception::NotEnoughMemoryException();
-  }
+  auto *record = mgp::result_new_record(result);
 
   mg_utility::InsertIntValueResult(record, kFieldMatchingNumber, matching_number, memory);
 }
 
-void GetMaximumBipartiteMatching(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result,
-                                 mgp_memory *memory) {
+void GetMaximumBipartiteMatching(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
     auto maximum_bipartite_matching = bipartite_matching_alg::BipartiteMatching(*graph);
@@ -35,10 +32,13 @@ void GetMaximumBipartiteMatching(const mgp_list *args, const mgp_graph *memgraph
 // Each module needs to define mgp_init_module function.
 // Here you can register multiple procedures your module supports.
 extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
-  mgp_proc *proc = mgp_module_add_read_procedure(module, "max", GetMaximumBipartiteMatching);
-  if (!proc) return 1;
+  try {
+    mgp_proc *proc = mgp::module_add_read_procedure(module, kProcedureMax, GetMaximumBipartiteMatching);
 
-  if (!mgp_proc_add_result(proc, kFieldMatchingNumber, mgp_type_int())) return 1;
+    mgp::proc_add_result(proc, kFieldMatchingNumber, mgp::type_int());
+  } catch (const std::exception &e) {
+    return 1;
+  }
 
   return 0;
 }

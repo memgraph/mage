@@ -1,22 +1,19 @@
-#include <mg_procedure.h>
 #include <mg_exceptions.hpp>
 #include <mg_utils.hpp>
 
 #include "algorithm/biconnected_components.hpp"
 
 namespace {
+const char *kProcedureGet = "get";
 
 const char *fieldBiconnectedComponentID = "bcc_id";
 // const char *fieldEdgeID = "edge_id";
 const char *fieldNodeFrom = "node_from";
 const char *fieldNodeTo = "node_to";
 
-void InsertBiconnectedComponentRecord(const mgp_graph *graph, mgp_result *result, mgp_memory *memory, const int bcc_id,
+void InsertBiconnectedComponentRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const int bcc_id,
                                       const int edge_id, const int node_from_id, const int node_to_id) {
-  mgp_result_record *record = mgp_result_new_record(result);
-  if (record == nullptr) {
-    throw mg_exception::NotEnoughMemoryException();
-  }
+  auto *record = mgp::result_new_record(result);
 
   mg_utility::InsertIntValueResult(record, fieldBiconnectedComponentID, bcc_id, memory);
   // TODO: Implement edge getting function
@@ -25,8 +22,7 @@ void InsertBiconnectedComponentRecord(const mgp_graph *graph, mgp_result *result
   mg_utility::InsertNodeValueResult(graph, record, fieldNodeTo, node_to_id, memory);
 }
 
-void GetBiconnectedComponents(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result,
-                              mgp_memory *memory) {
+void GetBiconnectedComponents(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
 
@@ -49,15 +45,15 @@ void GetBiconnectedComponents(const mgp_list *args, const mgp_graph *memgraph_gr
 // Each module needs to define mgp_init_module function.
 // Here you can register multiple procedures your module supports.
 extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
-  mgp_proc *proc = mgp_module_add_read_procedure(module, "get", GetBiconnectedComponents);
+  try {
+    auto *proc = mgp::module_add_read_procedure(module, kProcedureGet, GetBiconnectedComponents);
 
-  if (!proc) return 1;
-
-  if (!mgp_proc_add_result(proc, fieldBiconnectedComponentID, mgp_type_int())) return 1;
-  // if (!mgp_proc_add_result(proc, fieldEdgeID, mgp_type_int()))
-  // return 1;
-  if (!mgp_proc_add_result(proc, fieldNodeFrom, mgp_type_node())) return 1;
-  if (!mgp_proc_add_result(proc, fieldNodeTo, mgp_type_node())) return 1;
+    mgp_proc_add_result(proc, fieldBiconnectedComponentID, mgp::type_int());
+    mgp_proc_add_result(proc, fieldNodeFrom, mgp::type_node());
+    mgp_proc_add_result(proc, fieldNodeTo, mgp::type_node());
+  } catch (const std::exception &e) {
+    return 1;
+  }
 
   return 0;
 }
