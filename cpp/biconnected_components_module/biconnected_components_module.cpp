@@ -36,7 +36,7 @@ void GetBiconnectedComponents(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
     }
   } catch (const std::exception &e) {
     // We must not let any exceptions out of our module.
-    mgp_result_set_error_msg(result, e.what());
+    mgp::result_set_error_msg(result, e.what());
     return;
   }
 }
@@ -48,9 +48,9 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
   try {
     auto *proc = mgp::module_add_read_procedure(module, kProcedureGet, GetBiconnectedComponents);
 
-    mgp_proc_add_result(proc, fieldBiconnectedComponentID, mgp::type_int());
-    mgp_proc_add_result(proc, fieldNodeFrom, mgp::type_node());
-    mgp_proc_add_result(proc, fieldNodeTo, mgp::type_node());
+    mgp::proc_add_result(proc, fieldBiconnectedComponentID, mgp::type_int());
+    mgp::proc_add_result(proc, fieldNodeFrom, mgp::type_node());
+    mgp::proc_add_result(proc, fieldNodeTo, mgp::type_node());
   } catch (const std::exception &e) {
     return 1;
   }

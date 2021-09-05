@@ -75,7 +75,6 @@ endfunction()
 # Available query modules.
 include(CTest)
 enable_testing()
-# add_subdirectory(dummy_module)
 add_subdirectory(connectivity_module)
 add_subdirectory(biconnected_components_module)
 add_subdirectory(bridges_module)

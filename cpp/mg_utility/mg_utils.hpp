@@ -99,6 +99,7 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(const mgp_graph *memgraph_g
   ///
 
   // Safe creation of vertices iterator
+ 
   auto *vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);
   if (vertices_it == nullptr) {
     throw mg_exception::NotEnoughMemoryException();
@@ -122,18 +123,12 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(const mgp_graph *memgraph_g
 
   // Safe creation of vertices iterator
   vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);
-  if (vertices_it == nullptr) {
-    throw mg_exception::NotEnoughMemoryException();
-  }
 
   for (auto *vertex_from = mgp::vertices_iterator_get(vertices_it); vertex_from;
        vertex_from = mgp::vertices_iterator_next(vertices_it)) {
     // Safe creation of edges iterator
     auto *edges_it = mgp::vertex_iter_out_edges(vertex_from, memory);
 
-    if (edges_it == nullptr) {
-      throw mg_exception::NotEnoughMemoryException();
-    }
     mg_utility::OnScopeExit delete_edges_it([&edges_it] {
       if (edges_it != nullptr) {
         mgp::edges_iterator_destroy(edges_it);

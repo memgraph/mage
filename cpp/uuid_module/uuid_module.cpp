@@ -21,7 +21,7 @@ void Generate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp
     mg_utility::InsertStringValueResult(record, kFieldUuid, string, memory);
   } catch (const std::exception &e) {
     // We must not let any exceptions out of our module.
-    mgp_result_set_error_msg(result, e.what());
+    mgp::result_set_error_msg(result, e.what());
     return;
   }
 }
@@ -31,7 +31,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   try {
     struct mgp_proc *uuid_proc = mgp::module_add_read_procedure(module, kProcedureGenerate, Generate);
 
-    mgp_proc_add_result(uuid_proc, kFieldUuid, mgp::type_string());
+    mgp::proc_add_result(uuid_proc, kFieldUuid, mgp::type_string());
   } catch (std::exception &e) {
     return 1;
   }

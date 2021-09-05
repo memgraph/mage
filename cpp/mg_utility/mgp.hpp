@@ -344,7 +344,7 @@ struct mgp_vertex *vertices_iterator_get(struct mgp_vertices_iterator *it) {
 }
 
 struct mgp_vertex *vertices_iterator_next(struct mgp_vertices_iterator *it) {
-  return MgInvoke<struct mgp_vertex *>(mgp_vertices_iterator_get, it);
+  return MgInvoke<struct mgp_vertex *>(mgp_vertices_iterator_next, it);
 }
 
 const struct mgp_type *type_any() { return MgInvoke<const struct mgp_type *>(mgp_type_any); }

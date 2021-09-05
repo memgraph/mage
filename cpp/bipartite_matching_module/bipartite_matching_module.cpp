@@ -23,7 +23,7 @@ void GetMaximumBipartiteMatching(mgp_list *args, mgp_graph *memgraph_graph, mgp_
     InsertBipartiteMatchingRecord(result, memory, maximum_bipartite_matching);
   } catch (const std::exception &e) {
     // We must not let any exceptions out of our module.
-    mgp_result_set_error_msg(result, e.what());
+    mgp::result_set_error_msg(result, e.what());
     return;
   }
 }
