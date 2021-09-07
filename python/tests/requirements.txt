@@ -9,4 +9,4 @@ pytest-cov
 pytest-benchmark
 pytest-flake8
 pytest-black
-gqlalchemy==1.0.5
+gqlalchemy
