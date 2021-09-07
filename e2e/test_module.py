@@ -1,3 +1,4 @@
+from typing import Dict, List
 import pytest
 import yaml
 
@@ -18,9 +19,9 @@ class TestConstants:
     OUTPUT = "output"
     QUERY = "query"
     TEST_DIR_ENDING = "_test"
+    TEST_DIR_ONLINE_PREFIX = "test_online"
+    ONLINE_TEST = "_test"
     TEST_FILE = "test.yml"
-
-    ABSOLUTE_TOLERANCE = 1e-3
 
 
 def _node_to_dict(data):
@@ -41,6 +42,9 @@ def _replace(data, match_classes):
 
 
 def prepare_tests():
+    """
+    Fetch all the tests in the testing folders, and prepare them for execution
+    """
     tests = []
 
     test_path = Path().cwd()
@@ -62,20 +66,27 @@ def prepare_tests():
 tests = prepare_tests()
 
 
-@pytest.mark.parametrize("test_dir", tests)
-def test_end2end(test_dir, db):
-    db.drop_database()
+def _load_yaml(path: Path) -> Dict:
+    """
+    Load YAML based file in Python dictionary.
+    """
+    file_handle = path.open("r")
+    return yaml.load(file_handle, Loader=yaml.Loader)
 
-    input_cyphers = test_dir.joinpath(TestConstants.INPUT_FILE).open("r").readlines()
+
+def _execute_cyphers(input_cyphers: List[str], db: Memgraph):
+    """
+    Execute commands against Memgraph
+    """
     for query in input_cyphers:
         db.execute_query(query)
 
-    test_dict = yaml.load(
-        test_dir.joinpath(TestConstants.TEST_FILE).open("r"), Loader=yaml.Loader
-    )
 
+def _run_test(test_dict: Dict, db: Memgraph):
+    """
+    Run queries on Memgraph and compare them to expected results stored in test_dict
+    """
     test_query = test_dict[TestConstants.QUERY]
-
     output_test = TestConstants.OUTPUT in test_dict
     exception_test = TestConstants.EXCEPTION in test_dict
 
@@ -96,6 +107,42 @@ def test_end2end(test_dir, db):
             assert result is None
         except Exception:
             assert True
+
+
+def _test_static(test_dir: Path, db: Memgraph):
+    """
+    Testing static modules.
+    """
+    input_cyphers = test_dir.joinpath(TestConstants.INPUT_FILE).open("r").readlines()
+    _execute_cyphers(input_cyphers, db)
+
+    test_dict = _load_yaml(test_dir.joinpath(TestConstants.TEST_FILE))
+    _run_test(test_dict, db)
+
+
+def _test_online(test_dir: Path, db: Memgraph):
+    """
+    Testing online modules. Checkpoint testing
+    """
+    checkpoint_input_cyphers = _load_yaml(test_dir.joinpath(TestConstants.INPUT_FILE))
+    checkpoint_test_dicts = _load_yaml(test_dir.joinpath(TestConstants.TEST_FILE))
+
+    for input_cyphers_raw, test_dict in zip(
+        checkpoint_input_cyphers, checkpoint_test_dicts
+    ):
+        input_cyphers = input_cyphers_raw.splitlines()
+        _execute_cyphers(input_cyphers, db)
+        _run_test(test_dict, db)
+
+
+@pytest.mark.parametrize("test_dir", tests)
+def test_end2end(test_dir: Path, db: Memgraph):
+    db.drop_database()
+
+    if not test_dir.name.startswith(TestConstants.TEST_DIR_ONLINE_PREFIX):
+        _test_static(test_dir, db)
+    else:
+        _test_online(test_dir, db)
 
     # Clean database once testing module is finished
     db.drop_database()
