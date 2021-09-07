@@ -155,6 +155,7 @@ void InsertStringValueResult(mgp_result_record *record, const char *field_name, 
     mgp::value_destroy(value);
   } catch (const std::exception &e) {
     mgp::value_destroy(value);
+    throw e;
   }
 }
 
@@ -168,6 +169,7 @@ void InsertIntValueResult(mgp_result_record *record, const char *field_name, con
     mgp::value_destroy(value);
   } catch (const std::exception &e) {
     mgp::value_destroy(value);
+    throw e;
   }
 }
 
@@ -182,6 +184,7 @@ void InsertDoubleValue(mgp_result_record *record, const char *field_name, const 
     mgp::value_destroy(value);
   } catch (const std::exception &e) {
     mgp::value_destroy(value);
+    throw e;
   }
 }
 
@@ -196,6 +199,7 @@ void InsertNodeValueResult(mgp_result_record *record, const char *field_name, mg
     mgp::value_destroy(value);
   } catch (const std::exception &e) {
     mgp::value_destroy(value);
+    throw e;
   }
 }
 
@@ -218,6 +222,7 @@ void InsertRelationshipValueResult(mgp_result_record *record, const char *field_
     mgp::value_destroy(value);
   } catch (const std::exception &e) {
     mgp::value_destroy(value);
+    throw e;
   }
 }
 
