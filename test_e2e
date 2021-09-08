@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import argparse
 
 WORK_DIRECTORY = os.getcwd()
 E2E_DIRECTORY = f"{WORK_DIRECTORY}/e2e"
@@ -10,6 +11,16 @@ E2E_DIRECTORY = f"{WORK_DIRECTORY}/e2e"
 #                End to end tests               #
 #################################################
 
-os.environ["PYTHONPATH"] = E2E_DIRECTORY
-os.chdir(E2E_DIRECTORY)
-subprocess.run(["pytest", ".", "-vv"])
+def main(test_filter: str = None):
+    os.environ["PYTHONPATH"] = E2E_DIRECTORY
+    os.chdir(E2E_DIRECTORY)
+    command = ["pytest", ".", "-vv"]
+    if test_filter:
+        command.extend(["-k", test_filter])
+    subprocess.run(command)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Test MAGE E2E, make sure to have your Memgraph instance ready.')
+    parser.add_argument('-k', help='Add filter to tests you want to run', type=str, required=False)
+    args = parser.parse_args()
+    main(args.k)
