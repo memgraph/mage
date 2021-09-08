@@ -1,6 +1,6 @@
 query: >
     MATCH (n)
-    CALL uuid.generate() YIELD uuid
+    CALL uuid_generator.get() YIELD uuid
     SET n.uuid = uuid
     WITH n
     WHERE n.uuid != ""
