@@ -49,8 +49,9 @@ class GensimWord2Vec:
                 "workers": self.threads,
             }
             if self.negative_rate < 0:
+                self.negative_rate = 0
                 self.model = Word2Vec(
-                    sentences, negative=0, hs=1, **params
+                    sentences, negative=self.negative_rate, hs=1, **params
                 )  # hierarchical softmax
             else:
                 self.model = Word2Vec(sentences, negative=self.negative_rate, **params)
