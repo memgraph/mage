@@ -2,7 +2,7 @@ import pytest
 import yaml
 
 from pathlib import Path
-from gqlalchemy import Memgraph, Node
+from database import Memgraph, Node
 
 
 @pytest.fixture
