@@ -10,7 +10,7 @@
     MERGE (a:Node {id: 3}) MERGE (b:Node {id: 4}) CREATE (a)-[:RELATION]->(b);
     MERGE (a:Node {id: 3}) MERGE (b:Node {id: 5}) CREATE (a)-[:RELATION]->(b);
 - |-
-    MERGE (a:Node {id: 4}) MERGE (b:Node {id: 3}) CREATE (a)-[:RELATION]->(b);
+    MERGE (a:Node {id: 4}) MERGE (b:Node {id: 6}) CREATE (a)-[:RELATION]->(b);
 - |-
     CALL node2vec_online.reset() YIELD *;
     DROP TRIGGER update_embeddings;
