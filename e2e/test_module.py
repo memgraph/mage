@@ -3,7 +3,7 @@ import pytest
 import yaml
 
 from pathlib import Path
-from gqlalchemy import Memgraph, Node
+from database import Memgraph, Node
 
 
 @pytest.fixture
@@ -22,6 +22,8 @@ class TestConstants:
     TEST_DIR_ONLINE_PREFIX = "test_online"
     ONLINE_TEST = "_test"
     TEST_FILE = "test.yml"
+
+    ABSOLUTE_TOLERANCE = 1e-3
 
 
 def _node_to_dict(data):
