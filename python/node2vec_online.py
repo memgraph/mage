@@ -72,7 +72,8 @@ def set_streamwalk_updater(
         :param beta: Damping factor for long paths
         :param cutoff: Temporal cutoff in seconds to exclude very distant past
         :param sampled_walks:  Number of sampled walks for each edge update
-        :param full_walks: Return every node of the sampled walk for representation learning (full_walks=True) or only the endpoints of the walk (full_walks=False)
+        :param full_walks: Return every node of the sampled walk for representation learning (full_walks=True) or
+        only the endpoints of the walk (full_walks=False)
 
         :return: empty record
 
@@ -86,7 +87,8 @@ def set_streamwalk_updater(
 
     if node2vec_context.is_initialized():
         return mgp.Record(
-            message="StreamWalk updater is already initialized.Call: `CALL node2vec_online.reset() YIELD *` in order to set parameters again. "
+            message="StreamWalk updater is already initialized."
+                    "Call: `CALL node2vec_online.reset() YIELD *:` in order to set parameters again. "
                     "Warning: all embeddings will be lost.")
 
     node2vec_context.updater = StreamWalkUpdater(
@@ -133,7 +135,8 @@ def set_word2vec_learner(
 
     if node2vec_context.is_initialized():
         return mgp.Record(
-            message="Word2Vec learner is already initialized. Call: `CALL node2vec_online.reset() YIELD *` in order to set parameters again. "
+            message="Word2Vec learner is already initialized. "
+                    "Call: `CALL node2vec_online.reset() YIELD *;`in order to set parameters again. "
                     "Warning: all embeddings will be lost.")
 
     if threads is None:
@@ -178,9 +181,9 @@ def get(
     """
 
     if not node2vec_context.is_initialized():
-         raise mgp.AbortError("Learner or updater are not initialized. Initialize them by calling:"
+        raise mgp.AbortError("Learner or updater are not initialized. Initialize them by calling:"
                              "`CALL node2vec_online.set_word2vec_learner() YIELD *;`"
-                             "`CALL node2vec_online.set_streamwalk_updater() YIELD *;` ")
+                             "`CALL node2vec_online.set_streamwalk_updater() YIELD *;`")
 
     embedding_vectors = node2vec_context.learner.get_embedding_vectors()
 
@@ -221,8 +224,8 @@ def update(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]) -> mgp.Record():
 
     if not node2vec_context.is_initialized():
         raise mgp.AbortError("Learner or updater are not initialized. Initialize them by calling:"
-                                      "`CALL node2vec_online.set_word2vec_learner() YIELD *;`"
-                                      "`CALL node2vec_online.set_streamwalk_updater() YIELD *;` ")
+                             "`CALL node2vec_online.set_word2vec_learner() YIELD *;`"
+                             "`CALL node2vec_online.set_streamwalk_updater() YIELD *;` ")
 
     for e in edges:
         ctx.check_must_abort()
