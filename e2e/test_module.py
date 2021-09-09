@@ -63,12 +63,12 @@ tests = prepare_tests()
 
 
 @pytest.mark.parametrize("test_dir", tests)
-def test_end2end(test_dir, db):
+def test_end2end(test_dir: Path, db: Memgraph):
     db.drop_database()
 
     input_cyphers = test_dir.joinpath(TestConstants.INPUT_FILE).open("r").readlines()
     for query in input_cyphers:
-        db.execute_query(query)
+        db.execute(query)
 
     test_dict = yaml.load(
         test_dir.joinpath(TestConstants.TEST_FILE).open("r"), Loader=yaml.Loader

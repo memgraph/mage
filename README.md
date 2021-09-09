@@ -102,6 +102,12 @@ python3 test_unit
 # Running end-to-end tests
 python3 test_e2e
 ```
+
+Furthermore, to test only specific end-to-end tests, you can add argument `-k` with substring refering to the algorithm that needs to be tested.
+```
+# Running specific end-to-end tests
+python3 test_e2e -k weakly_connected_components
+```
 ## MAGE Spells
 
 | Algorithms                                                                                    | Lang   | Description                                                                                                                                                                                                                       |
