@@ -125,7 +125,7 @@ class StreamWalkUpdater:
         self.last_timestamp[target] = time
         self.clean_in_edges(target, time)
 
-    def clean_in_edges(self, node: Any, current_time: int):
+    def clean_in_edges(self, node: Any, current_time: int) -> None:
         """
         Deletes the in edges for the given node
         that appeared more than cutoff seconds ago.
