@@ -16,6 +16,7 @@ CPP_DIRECTORY = f"{WORK_DIRECTORY}/cpp"
 PY_DIRECTORY = f"{WORK_DIRECTORY}/python"
 RS_DIRECTORY = f"{WORK_DIRECTORY}/rust"
 CPP_BUILD_DIRECTORY = f"{CPP_DIRECTORY}/build"
+MG_CONF_PATH = f"/etc/memgraph/memgraph.conf"
 
 log.basicConfig(level=log.INFO)
 
@@ -45,7 +46,7 @@ def get_arguments():
     )
 
     query_modules_parser = subparsers.add_parser(
-        'modules',
+        'modules_storage',
         help='Add path of mage/dist to memgraph.conf '
     )
     query_modules_parser.add_argument(
@@ -54,19 +55,7 @@ def get_arguments():
         required=False
     )
 
-    query_modules_parser.add_argument(
-        '--mg_conf_path', '-mgp',
-        help='Path to memgraph.conf file',
-        required=False
-    )
-
     return parser.parse_args()
-
-
-def copy_dist(destination_path):
-    if destination_path is None:
-        return
-    shutil.copytree(QUERY_MODULES_DIRECTORY, destination_path, dirs_exist_ok=True)
 
 
 #################################################
@@ -167,6 +156,39 @@ def build():
         shutil.copy2(src_file, dst_file)
 
 
+def run_build_action(copy_dist_dest_path: str):
+    log.log(level=log.INFO, msg="Starting building of source code...")
+    build()
+    log.log(level=log.INFO, msg="Building done.")
+
+    if copy_dist_dest_path is None:
+        log.log(level=log.INFO,
+                msg="Skipping copy of contents of 'dist' folder to specified folder since --path is not specified")
+        return
+
+    log.log(level=log.INFO,
+            msg='Copying files from folder {src} to {dst} folder.'.format(src=QUERY_MODULES_DIRECTORY,
+                                                                          dst=copy_dist_dest_path))
+
+    shutil.copytree(QUERY_MODULES_DIRECTORY, copy_dist_dest_path, dirs_exist_ok=True)
+    log.log(level=log.INFO, msg='Copying done!')
+
+
+def run_modules_storage_setup(modules_storage_path_param):
+    if modules_storage_path_param is None:
+        modules_storage_path = f"{pathlib.Path().resolve()}/dist"
+    else:
+        modules_storage_path = modules_storage_path_param
+
+    log.log(level=log.INFO,
+            msg="--query-modules-dir flag in {memgraph_conf} will be set to {path}".format(path=modules_storage_path,
+                                                                                           memgraph_conf=MG_CONF_PATH))
+    subprocess.run(['sed',
+                    '-i',
+                    '"s@.*(--query-modules-directory).*@\\1={path}"'.format(path=modules_storage_path),
+                    MG_CONF_PATH])
+
+
 def main():
     arguments = get_arguments()
 
@@ -175,36 +197,11 @@ def main():
         return
 
     if arguments.action == "build":
-        log.log(level=log.INFO, msg="Starting building of source code...")
-        build()
-        log.log(level=log.INFO, msg="Building done.")
-        if arguments.path is not None:
-            log.log(level=log.INFO,
-                    msg="Skipping copy of contents of 'dist' folder to specified folder since --path is not specified")
-            return
-
-        log.log(level=log.INFO,
-                msg='Copying files from folder {src} to {dst} folder.'.format(src=QUERY_MODULES_DIRECTORY,
-                                                                              dst=arguments.path))
-        copy_dist(arguments.path)
-        log.log(level=log.INFO, msg='Copying done!')
-
+        run_build_action(arguments.path)
         return
 
-    if arguments.action == "modules":
-        if arguments.path is None:
-            path = f"{pathlib.Path().resolve()}/dist"
-        else:
-            path = arguments.path
-
-        if arguments.mg_conf_path:
-            mg_conf_path = arguments.mg_conf_path
-        else:
-            mg_conf_path = "/etc/memgraph/memgraph.conf"
-
-        log.log(level=log.INFO,
-                msg="Path {path} will be added to {memgraph_conf} --query-modules-dir".format(path=path, memgraph_conf=mg_conf_path))
-        #subprocess.run([])
+    if arguments.action == "modules_storage":
+        run_modules_storage_setup(arguments.path)
         return
 
 
