@@ -76,7 +76,7 @@ class StreamWalkUpdater:
 
         while True:
             if (
-                random.uniform(0, 1) < 1 / (centrality_ * self.beta + 1)
+                random.uniform(0, 1) < 1 / (centrality_ + 1)
                 or node_ not in self.graph
                 or len(walk) >= self.max_length
             ):
@@ -86,7 +86,7 @@ class StreamWalkUpdater:
             broken = False
             for (n, t, c) in reversed(self.graph[node_]):
                 if t < time_:
-                    sum__ += (c * self.beta + 1) * math.exp(self.c * (t - time_))
+                    sum__ += (c + 1) * self.beta * math.exp(self.c * (t - time_))
                     if sum__ >= sum_:
                         broken = True
                         break
@@ -116,7 +116,7 @@ class StreamWalkUpdater:
             self.last_timestamp[source] = time
             self.clean_in_edges(source, time)
 
-        self.centrality[target] += self.centrality.get(source, 0) * self.beta + 1
+        self.centrality[target] += (self.centrality.get(source, 0) + 1) * self.beta
 
         if target not in self.graph:
             self.graph[target] = []
