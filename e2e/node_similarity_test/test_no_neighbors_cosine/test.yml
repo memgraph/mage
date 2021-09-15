@@ -1,0 +1,46 @@
+query: >
+        MATCH (m {id: 6}), (n {id: 7})
+        
+        CALL node_similarity.cosine(m, n) YIELD 
+        node1 AS node1_cosine_default, 
+        node2 AS node2_cosine_default, 
+        similarity AS cosine_similarity_default
+        
+        CALL node_similarity.cosine(m, n, "cartesian") YIELD 
+        node1 AS node1_cosine_cartesian, 
+        node2 AS node2_cosine_cartesian, 
+        similarity AS cosine_similarity_cartesian
+        
+        CALL node_similarity.cosine(m, n, "pairwise") YIELD 
+        node1 AS node1_cosine_pairwise, 
+        node2 AS node2_cosine_pairwise, 
+        similarity AS cosine_similarity_pairwise
+        
+        
+        RETURN  
+        node1_cosine_default.id as node1_cosine_default, 
+        node2_cosine_default.id as node2_cosine_default, 
+        cosine_similarity_default,
+        
+        node1_cosine_cartesian.id as node1_cosine_cartesian, 
+        node2_cosine_cartesian.id as node2_cosine_cartesian, 
+        cosine_similarity_cartesian,
+        
+        node1_cosine_pairwise.id as node1_cosine_pairwise, 
+        node2_cosine_pairwise.id as node2_cosine_pairwise, 
+        cosine_similarity_pairwise
+        
+
+output: 
+    - node1_cosine_default: 6
+      node2_cosine_default: 7
+      cosine_similarity_default: 0.0 
+
+      node1_cosine_cartesian: 6
+      node2_cosine_cartesian: 7
+      cosine_similarity_cartesian: 0.0 
+      
+      node1_cosine_pairwise: 6
+      node2_cosine_pairwise: 7
+      cosine_similarity_pairwise: 0.0
+      
