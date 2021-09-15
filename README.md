@@ -109,7 +109,7 @@ CALL mg.load_all();
 #### [Optional step] Set different query_modules directory
 `setup` script offers you to set your local `mage/dist` folder as  default `--query-modules-directory` with following step:
 ```
-python3 setup module_storage
+python3 setup modules_storage
 ```
 
 This way Memgraph will be looking for query modules inside `mage/dist` folder.
