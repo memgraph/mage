@@ -1,0 +1,210 @@
+#!/usr/bin/env python3
+
+import os
+import subprocess
+import shutil
+import glob
+import fnmatch
+import multiprocessing as mp
+import argparse
+import logging as log
+import pathlib
+
+from cryptography.hazmat.primitives.asymmetric.padding import MGF1
+
+WORK_DIRECTORY = os.getcwd()
+QUERY_MODULES_DIRECTORY = f"{WORK_DIRECTORY}/dist"
+CPP_DIRECTORY = f"{WORK_DIRECTORY}/cpp"
+PY_DIRECTORY = f"{WORK_DIRECTORY}/python"
+RS_DIRECTORY = f"{WORK_DIRECTORY}/rust"
+CPP_BUILD_DIRECTORY = f"{CPP_DIRECTORY}/build"
+MG_CONF_PATH = f"/etc/memgraph/memgraph.conf"
+
+log.basicConfig(level=log.INFO)
+
+HELP_MESSAGE = '''\
+    For usage info run: python3 setup -h
+    '''
+
+
+def get_arguments():
+    parser = argparse.ArgumentParser(
+        description='MAGE setup script',
+    )
+    subparsers = parser.add_subparsers(
+        help='sub-command help',
+        dest='action'
+
+    )
+
+    build_parser = subparsers.add_parser(
+        'build',
+        help='Build memgraph-mage'
+    )
+    build_parser.add_argument(
+        '-p', '--path',
+        help='Path to query modules directory',
+        required=False
+    )
+
+    query_modules_parser = subparsers.add_parser(
+        'modules_storage',
+        help='Add path of mage/dist to memgraph.conf '
+    )
+    query_modules_parser.add_argument(
+        '--path', '-p',
+        help='Path to memgraph.conf file',
+        required=False
+    )
+
+    return parser.parse_args()
+
+
+#################################################
+#                Copy Utility                   #
+#################################################
+
+def copytree(src, dst, ignore_patterns=[]):
+    def _check_ignore(x):
+        return any(
+            [bool(fnmatch.fnmatch(x, pattern)) for pattern in ignore_patterns]
+        )
+
+    def _copytree(rel_path=""):
+        curr_dir = os.path.join(src, rel_path)
+        for item in os.listdir(curr_dir):
+            if _check_ignore(item):
+                continue
+
+            abs_item = os.path.join(curr_dir, item)
+            rel_item = os.path.join(rel_path, item)
+
+            if os.path.isdir(abs_item):
+                _copytree(rel_item)
+                continue
+
+            destination = os.path.dirname(
+                os.path.join(dst, rel_item)
+            )  # Joining the tree-based name
+
+            os.makedirs(destination, exist_ok=True)
+            shutil.copy2(abs_item, destination)
+
+    _copytree()
+
+
+def build():
+    shutil.rmtree(QUERY_MODULES_DIRECTORY, ignore_errors=True)
+    os.makedirs(QUERY_MODULES_DIRECTORY, exist_ok=True)
+
+    #################################################
+    #              Load C++ modules                 #
+    #################################################
+
+    # Make build directory
+    os.makedirs(CPP_BUILD_DIRECTORY, exist_ok=True)
+
+    # Start CMake building
+    os.chdir(CPP_BUILD_DIRECTORY)
+    subprocess.run(["ls", "-l"])
+    subprocess.run(["cmake", ".."])
+    core_count = mp.cpu_count()
+    subprocess.run(["make", f"-j{core_count}"])
+
+    # Transfer files to the query modules directory
+    so_files = glob.glob("**/*.so", recursive=True)
+    for file in so_files:
+        shutil.copy2(file, QUERY_MODULES_DIRECTORY)
+
+    #################################################
+    #             Load Python modules               #
+    #################################################
+
+    os.chdir(PY_DIRECTORY)
+    ignore_list = [
+        "tests",
+        "requirements.txt",
+        "pytest.ini",
+        "htmlcov",
+        "__pycache__",
+        ".*",
+    ]
+
+    # Copy python repository tree inside dist folder
+    copytree(PY_DIRECTORY, QUERY_MODULES_DIRECTORY, ignore_list)
+    os.environ["PYTHONPATH"] = PY_DIRECTORY
+
+    #################################################
+    #              Load Rust modules                #
+    #################################################
+
+    os.chdir(RS_DIRECTORY)
+    for project in filter(
+            lambda f: os.path.isdir(f) and f != "rsmgp-sys",
+            os.listdir(RS_DIRECTORY)):
+        project_dir = os.path.join(RS_DIRECTORY, project)
+        os.chdir(project_dir)
+        subprocess.run(["cargo", "build", "--release"])
+
+        release_dir = os.path.join(project_dir, "target", "release")
+        os.chdir(release_dir)
+        modules = glob.glob("*.so")
+        assert len(modules) == 1, f"Bad rust/{project} lib."
+
+        module = modules[0]
+        src_file = os.path.join(release_dir, module)
+        module = module.lstrip("lib") if module.startswith("lib") else module
+        dst_file = os.path.join(QUERY_MODULES_DIRECTORY, module)
+        shutil.copy2(src_file, dst_file)
+
+
+def run_build_action(copy_dist_dest_path: str):
+    log.log(level=log.INFO, msg="Starting building of source code...")
+    build()
+    log.log(level=log.INFO, msg="Building done.")
+
+    if copy_dist_dest_path is None:
+        log.log(level=log.INFO,
+                msg="Skipping copy of contents of 'dist' folder to specified folder since --path is not specified")
+        return
+
+    log.log(level=log.INFO,
+            msg='Copying files from folder {src} to {dst} folder.'.format(src=QUERY_MODULES_DIRECTORY,
+                                                                          dst=copy_dist_dest_path))
+
+    shutil.copytree(QUERY_MODULES_DIRECTORY, copy_dist_dest_path, dirs_exist_ok=True)
+    log.log(level=log.INFO, msg='Copying done!')
+
+
+def run_modules_storage_setup_action(modules_storage_path_param):
+    if modules_storage_path_param is None:
+        modules_storage_path = f"{pathlib.Path().resolve()}/dist"
+    else:
+        modules_storage_path = modules_storage_path_param
+
+    log.log(level=log.INFO,
+            msg="--query-modules-dir flag in {memgraph_conf} will be set to {path}".format(path=modules_storage_path,
+                                                                                       memgraph_conf=MG_CONF_PATH))
+
+    subprocess.run(['sed', '-E', '-i', "s@.*(--query-modules-directory).*@\\1={path}@".format(path=modules_storage_path), MG_CONF_PATH  ])
+
+
+def main():
+    arguments = get_arguments()
+
+    if not hasattr(arguments, 'action'):
+        log.log(level=log.INFO, msg=HELP_MESSAGE)
+        return
+
+    if arguments.action == "build":
+        run_build_action(arguments.path)
+        return
+
+    if arguments.action == "modules_storage":
+        run_modules_storage_setup_action(arguments.path)
+        return
+
+
+
+if __name__ == "__main__":
+    main()

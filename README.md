@@ -31,51 +31,94 @@
 
 This open-source repository contains all available user-defined graph analytics modules and procedures that extend the Cypher query language, written by the team behind Memgraph and its users. You can find and contribute implementations of various algorithms in multiple programming languages, all runnable inside Memgraph. This project aims to give everyone the tools they need to tackle the most challenging graph problems.
 
-Memgraph introduces the concept of **query modules**, user-defined procedures that extend the Cypher query language. These procedures are grouped into modules that can be loaded into Memgraph. How to run them can be seen on their official [documentation](https://docs.memgraph.com/memgraph/database-functionalities/query-modules/built-in-query-modules).
+###Introduction to query modules with MAGE
+Memgraph introduces the concept of [query modules](https://docs.memgraph.com/memgraph/reference-guide/query-modules/),
+user-defined procedures that extend the Cypher query language. These procedures are grouped into modules that can be loaded into Memgraph. How to run them can be seen on their official 
+[documentation](https://docs.memgraph.com/mage/usage/loading-modules).
+When started, Memgraph will automatically attempt to load the query modules from all `*.so` and `*.py` files it finds in the default directory defined with flag 
+[--query-modules-directory](https://docs.memgraph.com/memgraph/reference-guide/configuration/).
 
+### Further reading
 If you want more info about MAGE, check out the official [MAGE Documentation](https://docs.memgraph.com/mage/).
 
+### Algortihm proposition
 Furthermore, if you have an **algorithm proposition**, please fill in the survey on [**mage.memgraph.com**](https://mage.memgraph.com/).
 
 ## How to install?
 
-To build and install MAGE query modules you will need: **Python3**, **Make**, **CMake**, **Clang** and **Rust**. Also, you will need a runnable Memgraph instance, whether locally or via Docker image. [Download](https://memgraph.com/download), and [install](https://docs.memgraph.com/memgraph/getting-started/installation/) **Memgraph**.
+To build and install MAGE query modules you will need: **Python3**, **Make**, **CMake**, **Clang** and **Rust**. 
+Also, you will need a runnable Memgraph instance, whether locally or via Docker image. 
+There are few options to [download](https://memgraph.com/download), and [install](https://docs.memgraph.com/memgraph/getting-started/installation/) **Memgraph**
+depending on MAGE installation preferences.
 
-### Installing MAGE with Docker
-#### Docker Hub
+### 1. Installing MAGE with Docker image of Memgraph 
+For this part you will need Docker image of Memgraph.
+
+**Make sure to have `memgraph:latest` Docker image with following command:**
+
+```shell
+docker inspect memgraph
+```
+
+
+#### a) Install MAGE with Docker Hub
 
 **1.** This command downloads and runs Memgraph image with **MAGE** algorithms:
 ```
 docker run -p 7687:7687 memgraph/memgraph-mage
 ```
+This command will make use of your `memgraph:latest` image, download MAGE algorithms from Docker hub
+and add them to query modules directory, so they can be loaded with Memgraph.
 
-#### Local Build
+> Note: If you made any changes in directory on MAGE's algorithms, you should use b) option - Local Build of MAGE image
+#### b) Local Build of MAGE image from cloned repo
 
-**1.** Make sure to have `memgraph:latest` Docker image.
-**2.** Build **MAGE** tagged Docker image.
+Make sure that you have cloned MAGE Github repo and positioned yourself inside repo in terminal.
+
+**1.** Build **MAGE** Docker image with following command:
 ```
 docker build . -t memgraph-mage
 ```
 
-**3.** Start Memgraph with the following command and enjoy **MAGE**:
+**2.** Start Memgraph with the following command and enjoy **MAGE**:
 ```
 docker run -p 7687:7687 memgraph-mage
 ```
 
-### Installing MAGE locally
-**1.** Run the `build` script. It will generate a `dist` directory with all the needed files. If you want to skip step 2)
-you can add optional -p (--path) flag which represents where will contents of `dist` directory be copied.
-```
-python3 build (-p /usr/lib/memgraph/query_modules)
-```
+This will build any new algorithm added to MAGE, and load it inside Memgraph.
 
-**2.** Copy the contents of the newly created `dist` directory to `/usr/lib/memgraph/query_modules`.
-**3.** Start Memgraph and enjoy **MAGE**!
+### 2. Installing MAGE locally with Linux package of Memgraph
 
-> Note that query modules are loaded into Memgraph on startup so if your instance was already running you will need to execute the following query to load them:
+In second option to run MAGE, you need Linux based Memgraph. Since Memgraph needs to load MAGE's modules, there is the
+`setup` script to help you.
+
+**1.** Run the `build` command of setup script. It will generate a `mage/dist` directory with all the `*.so` and `*.py` files.
+Flag `-p (--path)`  represents where will contents of `mage/dist` directory be copied. You need to copy it to 
+`/usr/lib/memgraph/query_modules` directory, because that's where Memgraph is looking for query modules by
+[default](https://docs.memgraph.com/memgraph/reference-guide/configuration/).
+
+```
+python3 setup build -p /usr/lib/memgraph/query_modules
+```
+> Note that query modules are loaded into Memgraph on startup so if your instance was already running you will need to 
+> execute the following query inside one of [querying platforms](https://docs.memgraph.com/memgraph/connect-to-memgraph) to load them:
 ```
 CALL mg.load_all();
 ```
+
+#### [Optional step] Set different query_modules directory
+`setup` script offers you to set your local `mage/dist` folder as  default `--query-modules-directory` with following step:
+```
+python3 setup modules_storage
+```
+
+This way Memgraph will be looking for query modules inside `mage/dist` folder.
+
+Now you can run only following command to build MAGE modules:
+```
+python3 setup build 
+```
+
 If you want to find out more about loading query modules, visit [this guide](https://docs.memgraph.com/memgraph/database-functionalities/query-modules/load-call-query-modules).
 
 ## Example
