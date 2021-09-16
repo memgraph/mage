@@ -1,36 +1,39 @@
-FROM memgraph/memgraph:latest AS memgraph-mage
-
-FROM memgraph-mage
+FROM debian:buster as debian
 USER root
 
-RUN apt-get update && \
-    apt-get --yes install curl git cmake g++ clang python3-dev uuid-dev && \
-    cd /usr/local/bin && \
-    ln -s /usr/bin/python3 python && \
-    curl https://sh.rustup.rs -sSf | sh -s -- -y  && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-# Install Rust
-ENV PATH="/root/.cargo/bin:${PATH}"
-
-# Set mage as working directory
-WORKDIR /mage
-COPY ./ .
-RUN rm -rf /mage/e2e
-RUN rm -rf /mage/img
-
-# Build all necessary modules
-RUN python3 build
-RUN cp -r /mage/dist/* /usr/lib/memgraph/query_modules/
-
-RUN rm -rf /mage/dist
-
-# It's required to install python3 because auth module scripts are going to be
-# written in python3.
-RUN python3 -m  pip install -r /mage/python/requirements.txt
-
-
-RUN apt-get --yes remove git clang curl cmake
+RUN apt-get update && apt-get install -y \
+    build-essential `mage` \
+    cmake           `mage` \
+    curl            `mage memgraph` \
+    g++             `mage` \
+    git             `mage` \
+    libcurl4        `memgraph` \
+    libpython3.7    `memgraph` \
+    libssl1.1       `memgraph` \
+    openssl         `memgraph` \
+    python3         `mage memgraph` \
+    python3-pip     `mage memgraph` \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
+    && pip3 install networkx==2.4 numpy==1.19.2 scipy==1.5.2 \
+    #install memgraph
+    && curl https://download.memgraph.com/memgraph/v1.6.1/debian-10/memgraph_1.6.1-community-1_amd64.deb --output memgraph.deb \
+    && dpkg -i memgraph.deb \
+    && rm memgraph.deb\
+    #install mage stuff
+    && apt-get update && apt-get install -y clang --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
+    && curl https://sh.rustup.rs -sSf | sh -s -- -y \
+    && export PATH="/root/.cargo/bin:${PATH}" \
+    && git clone https://github.com/memgraph/mage.git \
+    && cd /mage \
+    && python3 /mage/build \
+    && cp -r /mage/dist/* /usr/lib/memgraph/query_modules/ \
+    && python3 -m  pip install -r /mage/python/requirements.txt \
+    && rm -rf /mage \
+    && rm -rf /root/.rustup/toolchains \
+    && apt-get -y --purge autoremove clang git curl python3-pip cmake \
+    && apt-get clean
 
 USER memgraph
 ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
