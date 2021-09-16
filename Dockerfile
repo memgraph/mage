@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
     python3         `mage-memgraph` \
     python3-pip     `mage-memgraph` \
     --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* 
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 #Memgraph
 RUN pip3 install networkx==2.4 numpy==1.19.2 scipy==1.5.2 \
@@ -42,11 +42,6 @@ ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
 
 # Memgraph listens for Bolt Protocol on this port by default.
 EXPOSE 7687
-
-# Snapshots and logging volumes
-VOLUME /var/log/memgraph
-VOLUME /var/lib/memgraph
-VOLUME /etc/memgraph
 
 WORKDIR /usr/lib/memgraph/query_modules
 
