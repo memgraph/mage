@@ -128,7 +128,12 @@ class LabelRankT {
   ///@param min_value -- smallest acceptable probability in the cutoff step
   LabelRankT(std::unique_ptr<mg_graph::Graph<>>& graph, double w_selfloop = 1,
              double similarity_threshold = 0.7, double exponent = 4,
-             double min_value = 0.1);
+             double min_value = 0.1)
+      : w_selfloop(w_selfloop),
+        similarity_threshold(similarity_threshold),
+        exponent(exponent),
+        min_value(min_value),
+        graph(graph){};
 
   ///@brief Returns previously calculated community labels.
   /// If no calculation has been done previously, calculates community labels

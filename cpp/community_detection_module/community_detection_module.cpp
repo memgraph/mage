@@ -114,13 +114,14 @@ void UpdateWrapper(const mgp_list *args, const mgp_graph *memgraph_graph,
       std::vector<std::pair<std::uint64_t, std::uint64_t>> deleted_edges_;
 
       // Did this one blindly, suggestions welcome
-      for (auto i = 0UL; i < mgp_list_size(created_nodes); i++)
+      for (std::size_t i = 0; i < mgp_list_size(created_nodes); i++) {
         modified_nodes.push_back(
             mgp_vertex_get_id((mgp_vertex *)mgp_list_at(created_nodes, i))
                 .as_int);
+      }
 
       // Did this one blindly, suggestions welcome
-      for (auto i = 0UL; i < mgp_list_size(created_edges); i++) {
+      for (std::size_t i = 0; i < mgp_list_size(created_edges); i++) {
         auto edge = (mgp_edge *)mgp_list_at(created_edges, i);
         std::uint64_t from_node_id =
             mgp_vertex_get_id(mgp_edge_get_from(edge)).as_int;
@@ -129,12 +130,13 @@ void UpdateWrapper(const mgp_list *args, const mgp_graph *memgraph_graph,
         modified_edges.push_back(std::make_pair(from_node_id, to_node_id));
       }
 
-      for (auto i = 0UL; i < mgp_list_size(updated_nodes); i++)
+      for (std::size_t i = 0; i < mgp_list_size(updated_nodes); i++) {
         modified_nodes.push_back(
             mgp_vertex_get_id((mgp_vertex *)mgp_list_at(updated_nodes, i))
                 .as_int);
+      }
 
-      for (auto i = 0UL; i < mgp_list_size(updated_edges); i++) {
+      for (std::size_t i = 0; i < mgp_list_size(updated_edges); i++) {
         auto edge = (mgp_edge *)mgp_list_at(updated_edges, i);
         std::uint64_t from_node_id =
             mgp_vertex_get_id(mgp_edge_get_from(edge)).as_int;
@@ -143,12 +145,13 @@ void UpdateWrapper(const mgp_list *args, const mgp_graph *memgraph_graph,
         modified_edges.push_back(std::make_pair(from_node_id, to_node_id));
       }
 
-      for (auto i = 0UL; i < mgp_list_size(deleted_nodes); i++)
+      for (std::size_t i = 0; i < mgp_list_size(deleted_nodes); i++) {
         deleted_nodes_.push_back(
             mgp_vertex_get_id((mgp_vertex *)mgp_list_at(deleted_nodes, i))
                 .as_int);
+      }
 
-      for (auto i = 0UL; i < mgp_list_size(deleted_edges); i++) {
+      for (std::size_t i = 0; i < mgp_list_size(deleted_edges); i++) {
         auto edge = (mgp_edge *)mgp_list_at(deleted_edges, i);
         std::uint64_t from_node_id =
             mgp_vertex_get_id(mgp_edge_get_from(edge)).as_int;

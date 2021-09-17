@@ -19,8 +19,7 @@ namespace LabelRankT {
 template <class T>
 bool is_subset(std::vector<T> const& v1, std::vector<T> const& v2) {
   for (const auto& element : v1) {
-    if (std::find(v2.begin(), v2.end(), element) == v2.end())
-      return false;
+    if (std::find(v2.begin(), v2.end(), element) == v2.end()) return false;
   }
 
   return true;
@@ -38,21 +37,21 @@ void LabelRankT::set_structures(std::uint64_t node_id) {
   std::unordered_map<std::uint64_t, double> node_label_Ps;
 
   double sum_w_i = w_selfloop;
-  for (const auto node_j : graph->Neighbours(node_id))
+  for (const auto node_j : graph->Neighbours(node_id)) {
     sum_w_i += get_weight(node_j.node_id, node_id);
+  }
 
   // add self-loop
   node_label_Ps[node_id] = w_selfloop / sum_w_i;
 
   // add other edges
-  for (const auto node_j : graph->Neighbours(node_id))
+  for (const auto node_j : graph->Neighbours(node_id)) {
     node_label_Ps[node_j.node_id] =
         get_weight(node_id, node_j.node_id) / sum_w_i;
+  }
 
   label_Ps[node_id] = node_label_Ps;
   sum_w[node_id] = sum_w_i;
-
-  return;
 }
 
 void LabelRankT::remove_deleted_nodes(
@@ -62,13 +61,12 @@ void LabelRankT::remove_deleted_nodes(
     sum_w.erase(node_id);
     times_updated.erase(node_id);
   }
-
-  return;
 }
 
 void LabelRankT::reset_times_updated() {
-  for (auto [node_id, _] : times_updated) times_updated[node_id] = 0;
-  return;
+  for (auto [node_id, _] : times_updated) {
+    times_updated[node_id] = 0;
+  }
 }
 
 std::uint64_t LabelRankT::get_label(std::uint64_t node_id) {
@@ -116,9 +114,7 @@ bool LabelRankT::distinct_enough(mg_graph::Node<uint64_t> node_i,
     if (is_subset(labels_i, labels_j)) label_similarity++;
   }
 
-  if (label_similarity <= node_i_degree * similarity_threshold) return true;
-
-  return false;
+  return label_similarity <= node_i_degree * similarity_threshold;
 }
 
 std::unordered_map<std::uint64_t, double> LabelRankT::propagate(
@@ -152,9 +148,9 @@ void LabelRankT::inflate(
     sum_Ps += inflated_node_label_Ps;
   }
 
-  for (const auto [label, _] : node_label_Ps) node_label_Ps[label] /= sum_Ps;
-
-  return;
+  for (const auto [label, _] : node_label_Ps) {
+    node_label_Ps[label] /= sum_Ps;
+  }
 }
 
 void LabelRankT::cutoff(
@@ -166,19 +162,9 @@ void LabelRankT::cutoff(
     if (P < min_value) to_be_removed.push_back(label);
   }
 
-  for (const auto label : to_be_removed) node_label_Ps.erase(label);
-
-  return;
-}
-
-LabelRankT::LabelRankT(std::unique_ptr<mg_graph::Graph<>>& graph,
-                       double w_selfloop, double similarity_threshold,
-                       double exponent, double min_value)
-    : graph(graph) {
-  this->w_selfloop = w_selfloop;
-  this->similarity_threshold = similarity_threshold;
-  this->exponent = exponent;
-  this->min_value = min_value;
+  for (const auto label : to_be_removed) {
+    node_label_Ps.erase(label);
+  }
 }
 
 std::pair<bool, std::uint64_t> LabelRankT::iteration(
@@ -226,8 +212,9 @@ std::unordered_map<std::uint64_t, std::uint64_t> LabelRankT::get_labels() {
   std::unordered_map<std::uint64_t, std::uint64_t> labels;
 
   if (calculated) {
-    for (const auto [node, _] : label_Ps)
+    for (const auto [node, _] : label_Ps) {
       labels.insert({node, get_label(node)});
+    }
 
     return labels;
   }
@@ -239,13 +226,17 @@ std::unordered_map<std::uint64_t, std::uint64_t> LabelRankT::calculate_labels(
     std::uint64_t max_iterations, std::uint64_t max_updates,
     std::unordered_set<std::uint64_t> changed_nodes,
     std::unordered_set<std::uint64_t> to_delete) {
-  bool incremental = changed_nodes.size() > 1 ? true : false;
+  bool incremental = changed_nodes.size() >= 1 ? true : false;
 
   if (incremental) {
     remove_deleted_nodes(to_delete);
-    for (const auto node_id : changed_nodes) set_structures(node_id);
+    for (const auto node_id : changed_nodes) {
+      set_structures(node_id);
+    }
   } else {
-    for (const auto node : graph->Nodes()) set_structures(node.id);
+    for (const auto node : graph->Nodes()) {
+      set_structures(node.id);
+    }
   }
 
   this->max_iterations = max_iterations;
