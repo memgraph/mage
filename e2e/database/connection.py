@@ -27,7 +27,7 @@ class Connection(ABC):
         self.encrypted = encrypted
 
     @abstractmethod
-    def execute_query(self, query: str) -> None:
+    def execute(self, query: str) -> None:
         """Executes Cypher query without returning any results."""
         pass
 
@@ -62,7 +62,7 @@ class MemgraphConnection(Connection):
         self.lazy = lazy
         self._connection = self._create_connection()
 
-    def execute_query(self, query: str) -> None:
+    def execute(self, query: str) -> None:
         """Executes Cypher query without returning any results."""
         cursor = self._connection.cursor()
         cursor.execute(query)
@@ -111,7 +111,7 @@ class Neo4jConnection(Connection):
         super().__init__(host, port, username, password, encrypted)
         self._connection = self._create_connection()
 
-    def execute_query(self, query: str) -> None:
+    def execute(self, query: str) -> None:
         """Executes Cypher query without returning any results."""
         with self._connection.session() as session:
             session.run(query)
