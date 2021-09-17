@@ -8,18 +8,18 @@
 
 namespace LabelRankT {
 
-///@brief Checks if set is subset of another set.
+///@brief Checks if vector is subset of another vector.
 ///
 ///@tparam T -- set element data type
 ///
-///@param set1 -- subset candidate
-///@param set2 -- set against which the check is performed
+///@param v1 -- subset candidate
+///@param v2 -- vector against which the check is performed
 ///
-///@return -- whether set1 is subset of set2
+///@return -- whether v1 is subset of v2
 template <class T>
-bool is_subset(std::vector<T> const& set1, std::vector<T> const& set2) {
-  for (const auto& element : set1) {
-    if (std::find(set2.begin(), set2.end(), element) == set2.end())
+bool is_subset(std::vector<T> const& v1, std::vector<T> const& v2) {
+  for (const auto& element : v1) {
+    if (std::find(v2.begin(), v2.end(), element) == v2.end())
       return false;
   }
 
