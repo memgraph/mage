@@ -6,6 +6,8 @@
 
 namespace {
 
+constexpr char const *kProcedureGet = "get";
+
 constexpr char const *kFieldUuid = "uuid";
 
 void Generate(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
@@ -30,7 +32,7 @@ void Generate(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result 
 }  // namespace
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
-  struct mgp_proc *uuid_proc = mgp_module_add_read_procedure(module, "generate", Generate);
+  struct mgp_proc *uuid_proc = mgp_module_add_read_procedure(module, kProcedureGet, Generate);
   if (!uuid_proc) return 1;
   if (!mgp_proc_add_result(uuid_proc, kFieldUuid, mgp_type_string())) return 1;
 

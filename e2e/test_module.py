@@ -82,7 +82,7 @@ def _execute_cyphers(input_cyphers: List[str], db: Memgraph):
     Execute commands against Memgraph
     """
     for query in input_cyphers:
-        db.execute_query(query)
+        db.execute(query)
 
 
 def _run_test(test_dict: Dict, db: Memgraph):
