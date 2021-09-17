@@ -31,7 +31,7 @@
     - node_id: 4
       component_id: 1
     - node_id: 5
-      component_id: 1    
+      component_id: 1
     - node_id: 6
       component_id: 2
 - query: >-
@@ -50,5 +50,4 @@
     - node_id: 4
       component_id: 1
     - node_id: 5
-      component_id: 1    
-      
+      component_id: 1

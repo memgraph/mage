@@ -14,13 +14,16 @@ def db():
 class TestConstants:
     ABSOLUTE_TOLERANCE = 1e-3
 
+    CLEANUP = "cleanup"
     EXCEPTION = "exception"
     INPUT_FILE = "input.cyp"
     OUTPUT = "output"
+    ONLINE_TEST = "_test"
+    SETUP = "setup"
     QUERY = "query"
+    QUERIES = "queries"
     TEST_DIR_ENDING = "_test"
     TEST_DIR_ONLINE_PREFIX = "test_online"
-    ONLINE_TEST = "_test"
     TEST_FILE = "test.yml"
 
 
@@ -124,15 +127,21 @@ def _test_online(test_dir: Path, db: Memgraph):
     """
     Testing online modules. Checkpoint testing
     """
-    checkpoint_input_cyphers = _load_yaml(test_dir.joinpath(TestConstants.INPUT_FILE))
+    checkpoint_input = _load_yaml(test_dir.joinpath(TestConstants.INPUT_FILE))
     checkpoint_test_dicts = _load_yaml(test_dir.joinpath(TestConstants.TEST_FILE))
 
+    setup_cyphers = checkpoint_input[TestConstants.SETUP]
+    checkpoint_input_cyphers = checkpoint_input[TestConstants.QUERIES]
+    cleanup_cyphers = checkpoint_input[TestConstants.CLEANUP]
+
+    _execute_cyphers(setup_cyphers.splitlines(), db)
     for input_cyphers_raw, test_dict in zip(
         checkpoint_input_cyphers, checkpoint_test_dicts
     ):
         input_cyphers = input_cyphers_raw.splitlines()
         _execute_cyphers(input_cyphers, db)
         _run_test(test_dict, db)
+    _execute_cyphers(cleanup_cyphers.splitlines(), db)
 
 
 @pytest.mark.parametrize("test_dir", tests)
