@@ -1,4 +1,4 @@
-FROM debian:buster as debian
+FROM debian:buster as production
 USER root
 
 RUN apt-get update && apt-get install -y \
@@ -17,8 +17,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 #Memgraph
-RUN pip3 install networkx==2.4 numpy==1.19.2 scipy==1.5.2 \
-    && curl https://download.memgraph.com/memgraph/v1.6.1/debian-10/memgraph_1.6.1-community-1_amd64.deb --output memgraph.deb \
+RUN curl https://download.memgraph.com/memgraph/v1.6.1/debian-10/memgraph_1.6.1-community-1_amd64.deb --output memgraph.deb \
     && dpkg -i memgraph.deb \
     && rm memgraph.deb
 
@@ -33,9 +32,9 @@ RUN apt-get update && apt-get install -y clang --no-install-recommends \
     && cp -r /mage/dist/* /usr/lib/memgraph/query_modules/ \
     && python3 -m  pip install -r /mage/python/requirements.txt \
     && rm -rf /mage \
-    && rm -rf /root/.rustup/toolchains \
     && apt-get -y --purge autoremove clang git curl python3-pip cmake \
-    && apt-get clean
+    && apt-get clean \
+    && rustup self uninstall -y &> dev/null
 
 
 ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
@@ -46,3 +45,13 @@ EXPOSE 7687
 WORKDIR /usr/lib/memgraph/query_modules
 
 CMD ["runuser","-l","memgraph", "-c", "/usr/lib/memgraph/memgraph"]
+
+#Development
+FROM production as development
+RUN apt-get update && apt-get install -y  \
+    clang  \
+    python3-pip  \
+    cmake  \
+    curl  \
+    --no-install-recommends \
+    && curl https://sh.rustup.rs -sSf | sh -s -- -y
