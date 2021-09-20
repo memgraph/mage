@@ -28,7 +28,7 @@ jobs:
         docker load -i ~/memgraph/memgraph-docker.tar.gz
     - name: Build project
       run: |
-        docker build -t memgraph:mage .
+        docker build -t memgraph:mage --target development .
     - name: Run Memgraph MAGE image
       run: |
         docker run -d -p 7687:7687 memgraph:mage --telemetry-enabled=False

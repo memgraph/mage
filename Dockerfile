@@ -53,7 +53,8 @@ CMD ["runuser","-l","memgraph", "-c", "/usr/lib/memgraph/memgraph"]
 #Development
 FROM base as development
 
-COPY . /mage
+WORKDIR /mage
+COPY ./ /mage/
 
 #rust missing still
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
