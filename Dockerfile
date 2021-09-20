@@ -37,6 +37,7 @@ VOLUME /var/lib/memgraph
 VOLUME /etc/memgraph
 
 
+
 FROM base as prod
 
 #MAGE
@@ -55,11 +56,8 @@ RUN apt-get update && apt-get install -y git --no-install-recommends \
     && apt-get clean
 
 USER memgraph
-WORKDIR /usr/lib/memgraph
-
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
 CMD [""]
-
 
 FROM base as dev
 
@@ -73,9 +71,6 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
     && python3 -m  pip install -r /mage/python/requirements.txt \
     && cp -r /mage/dist/* /usr/lib/memgraph/query_modules/
 
-
 USER memgraph
-WORKDIR /usr/lib/memgraph
-
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
 CMD [""]
