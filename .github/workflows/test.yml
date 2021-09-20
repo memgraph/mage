@@ -63,9 +63,3 @@ jobs:
         cd rust/rsmgp-sys
         cargo fmt -- --check
         cargo test
-
-    - name: Rust example build
-      run: |
-        cd rust/rsmgp-example
-        cargo fmt -- --check
-        cargo build
