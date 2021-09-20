@@ -12,26 +12,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Cache Memgraph Docker image
-      id: cache-memgraph-docker
-      uses: actions/cache@v1
-      with:
-        path: ~/memgraph
-        key: cache-memgraph-v${{ env.MG_VERSION }}-docker-image
-    - name: Download Memgraph Docker image
-      if: steps.cache-memgraph-docker.outputs.cache-hit != 'true'
-      run: |
-        mkdir ~/memgraph
-        curl -L https://memgraph.com/download/memgraph/v${{ env.MG_VERSION }}/docker/memgraph-${{ env.MG_VERSION }}-community-docker.tar.gz > ~/memgraph/memgraph-docker.tar.gz
-    - name: Load Memgraph Docker image
-      run: |
-        docker load -i ~/memgraph/memgraph-docker.tar.gz
     - name: Build project
       run: |
-        docker build -t memgraph:mage --target development .
+        docker build -t memgraph:mage --target dev .
     - name: Run Memgraph MAGE image
       run: |
-        docker run -d -p 7687:7687 memgraph:mage --telemetry-enabled=False
+        docker run -d -p 7687:7687 memgraph:mage
     - name: Set up C++
       run: |
         sudo apt update
