@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     openssl         `memgraph` \
     python3         `mage-memgraph` \
     python3-pip     `mage-memgraph` \
+    uuid-dev        `mage-memgraph` \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -29,12 +30,12 @@ RUN apt-get update && apt-get install -y clang --no-install-recommends \
     && git clone https://github.com/memgraph/mage.git \
     && cd /mage \
     && python3 /mage/build \
-    && cp -r /mage/dist/* /usr/lib/memgraph/query_modules/ \
     && python3 -m  pip install -r /mage/python/requirements.txt \
+    && cp -r /mage/dist/* /usr/lib/memgraph/query_modules/ \
     && rm -rf /mage \
     && apt-get -y --purge autoremove clang git curl python3-pip cmake \
-    && apt-get clean \
-    && rustup self uninstall -y &> dev/null
+    && rm -rf /root/.rustup/toolchains \
+    && apt-get clean
 
 
 ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
