@@ -2,7 +2,8 @@ FROM debian:buster as base
 
 USER root
 
-
+ARG MG_VERSION=1.6.1
+ENV MG_VERSION ${MG_VERSION}
 #essentials for production/dev
 RUN apt-get update && apt-get install -y \
     libcurl4        `memgraph` \
@@ -20,7 +21,7 @@ RUN apt-get update && apt-get install -y \
     git             `mage-memgraph` \
     --no-install-recommends \
     # Download and install Memgraph
-    && curl https://download.memgraph.com/memgraph/v1.6.1/debian-10/memgraph_1.6.1-community-1_amd64.deb --output memgraph.deb \
+    && curl https://download.memgraph.com/memgraph/v${MG_VERSION}/debian-10/memgraph_${MG_VERSION}-community-1_amd64.deb --output memgraph.deb \
     && dpkg -i memgraph.deb \
     && rm memgraph.deb \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
