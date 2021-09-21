@@ -4,6 +4,7 @@ USER root
 
 ARG MG_VERSION=1.6.1
 ENV MG_VERSION ${MG_VERSION}
+
 #essentials for production/dev
 RUN apt-get update && apt-get install -y \
     libcurl4        `memgraph` \
