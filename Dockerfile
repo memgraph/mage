@@ -25,9 +25,6 @@ RUN apt-get update && apt-get install -y \
     && rm memgraph.deb \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-#install python requirements for build
-COPY ./python/requirements.txt /mage/python/requirements.txt
-RUN  python3 -m  pip install -r /mage/python/requirements.txt
 
 ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
 
@@ -45,11 +42,12 @@ FROM base as dev
 WORKDIR /mage
 COPY . /mage
 
+
 #MAGE
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
     && export PATH="/root/.cargo/bin:${PATH}" \
-    && python3 /mage/build \
     && python3 -m  pip install -r /mage/python/requirements.txt \
+    && python3 /mage/build \
     && cp -r /mage/dist/* /usr/lib/memgraph/query_modules/
 
 
@@ -68,10 +66,11 @@ ENTRYPOINT []
 COPY --from=dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
 
 #copy python build
-COPY --from=base /root/.local /root/.local
-ENV PATH=/root/.local/bin:$PATH
+COPY --from=dev /usr/local/lib/python3.7/ /usr/local/lib/python3.7/
+
 
 RUN rm -rf /mage \
+    && export PATH="/usr/local/lib/python3.7:${PATH}" \
     && apt-get -y --purge autoremove clang git curl python3-pip cmake build-essential \
     && apt-get clean
 
