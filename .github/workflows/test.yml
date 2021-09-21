@@ -17,7 +17,7 @@ jobs:
         docker build -t memgraph:mage --target dev .
     - name: Run Memgraph MAGE image
       run: |
-        docker run -d -p 7687:7687 memgraph:mage
+        docker run -d -p 7687:7687 memgraph:mage --telemetry-enabled=False
     - name: Set up C++
       run: |
         sudo apt update
