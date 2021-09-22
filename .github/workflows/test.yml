@@ -1,7 +1,6 @@
 name: Build and Test
 
 env:
-  MG_VERSION: '1.4.0'
   PY_VERSION: '3.7'
   CORE_COUNT: '8'
 
@@ -12,12 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Build project
+    - name: Build Memgraph MAGE dev image
       run: |
-        docker build -t memgraph:mage --target dev .
+        docker build -t memgraph-mage .
     - name: Run Memgraph MAGE image
       run: |
-        docker run -d -p 7687:7687 memgraph:mage --telemetry-enabled=False
+        docker run -d -p 7687:7687 --name mage memgraph-mage --telemetry-enabled=False
     - name: Set up C++
       run: |
         sudo apt update
