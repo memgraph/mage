@@ -4,11 +4,12 @@ USER root
 
 ARG MG_VERSION=1.6.1
 ENV MG_VERSION ${MG_VERSION}
+ENV PY_VERSION 3.7
 
 #essentials for production/dev
 RUN apt-get update && apt-get install -y \
     libcurl4        `memgraph` \
-    libpython3.7    `memgraph` \
+    libpython${PY_VERSION}    `memgraph` \
     libssl1.1       `memgraph` \
     openssl         `memgraph` \
     build-essential `mage-memgraph` \
@@ -68,7 +69,7 @@ ENTRYPOINT []
 COPY --from=dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
 
 #copy python build
-COPY --from=dev /usr/local/lib/python3.7/ /usr/local/lib/python3.7/
+COPY --from=dev /usr/local/lib/python${PY_VERSION} / /usr/local/lib/python${PY_VERSION} /
 
 
 RUN rm -rf /mage \
