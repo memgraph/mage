@@ -19,7 +19,7 @@ jobs:
 
     - name: Run Memgraph MAGE image
       run: |
-        docker run -d -p 7687:7687 --name {{ env.MAGE_CONTAINER }} memgraph-mage --telemetry-enabled=False
+        docker run -d -p 7687:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage --telemetry-enabled=False
 
     - name: Set up C++
       run: |
@@ -86,14 +86,14 @@ jobs:
 
     - name: Stop prod mage container and remove it
       run: |
-        docker stop {{ env.MAGE_CONTAINER }}
-        docker rm {{ env.MAGE_CONTAINER }}
+        docker stop ${{ env.MAGE_CONTAINER }}
+        docker rm ${{ env.MAGE_CONTAINER }}
 
     - name: Build Memgraph MAGE dev image
       run: docker build -t memgraph-mage:dev --target dev .
 
     - name: Run Memgraph MAGE dev image
-      run:  docker run -d -p 7687:7687 --name {{ env.MAGE_CONTAINER }} memgraph-mage:dev --telemetry-enabled=False
+      run:  docker run -d -p 7687:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:dev --telemetry-enabled=False
 
     - name: Test End-to-end on dev
       env:
