@@ -45,47 +45,58 @@ If you want more info about MAGE, check out the official [MAGE Documentation](ht
 Furthermore, if you have an **algorithm proposition**, please fill in the survey on [**mage.memgraph.com**](https://mage.memgraph.com/).
 
 ## How to install?
-There are two options to install MAGE. With [Docker installation]() you only need Docker. [To build from source]()
-you will need **Python3**, **Make**, **CMake**, **Clang** and **Rust**. 
+There are two options to install MAGE. With [Docker installation](#1-installing-mage-with-docker) you only need Docker.
+[To build from source](#2-installing-mage-locally-with-linux-package-of-memgraph). 
+you will need **Python3**, **Make**, **CMake**, **Clang** and **Rust**. Installation with Docker is easier for quick installation
+and smaller development. 
 
 ### 1. Installing MAGE with Docker
->Note: This option is easier for quick install, but to develop your own algorithms, check [Local installation]().
+
 
 #### a) Install MAGE from Docker Hub
 
-> Note: When you downloaded MAGE repo, and made changes in directory on MAGE's algorithms, 
-> you should use b) option - Local Build of MAGE image.
+> Note: Here you don't need to download Github Memgraph/MAGE repository.
 
-**1.** This command downloads and runs Memgraph image with **MAGE** algorithms:
+**1.** This command downloads image from Docker Hub and runs Memgraph with **MAGE** algorithms:
 ```
 docker run -p 7687:7687 memgraph/memgraph-mage
 ```
-This command will download MAGE image from Docker hub and run it.
 
-#### b) Local Build of MAGE image from cloned repo
+#### b) Local Build of MAGE image from Github repository
+If you want to make changes on algorithms, or add your algorithm, do the following.
 
-Make sure that you have cloned MAGE Github repo and positioned yourself inside repo in terminal.
+**0.** Make sure that you have cloned MAGE Github repository and positioned yourself inside repo in terminal.
+To clone Github repository and position yourself inside `mage` folder, inside terminal and do the following:
 
-**1.** Build **MAGE** Docker image with following command:
+```bash
+git clone https://github.com/memgraph/mage.git && cd mage
 ```
-docker build . -t memgraph-mage
+
+**1.** You can build **MAGE** Docker image equipped for development, since `Rust`, `Clang` and `Python3-pip` will still be
+inside running container. This means that you can copy **MAGE** repo inside container and do build inside container,
+there is no need to do whole Docker image build again. To create this **MAGE** image, run the following command:
+```
+docker build  --target dev -t memgraph-mage:dev . 
 ```
 
-**2.** Start Memgraph with the following command and enjoy **MAGE**:
+**2.** Start Memgraph with the following command and enjoy your own **MAGE**:
 ```
-docker run -p 7687:7687 --name="MAGE" memgraph-mage 
+docker run -p 7687:7687 --name="mage" memgraph-mage:dev 
 ```
 
 This will build any new algorithm added to MAGE, and load it inside Memgraph.
 
+> Note: if you made any new changes while Docker container is running, you need to can rebuild whole image,
+> or you can copy mage folder inside docker container and just do rebuild.
+
 
 ### 2. Installing MAGE locally with Linux package of Memgraph
-
 > Note: This step is more suitable for local development.
 
-To build and install MAGE query modules you will need: **Python3**, **Make**, **CMake**, **Clang** and **Rust**. 
-Also, you will need Linux based Memgraph instance.
-[Download](https://memgraph.com/download), and [install](https://docs.memgraph.com/memgraph/getting-started/installation/) **Memgraph**.
+Linux based Memgraph package you can download [here](https://memgraph.com/download). We offer Ubuntu, Debian, Centos based Memgraph
+packages. To install, proceed to the following [site](https://memgraph.com/docs/memgraph/installation)
+
+To build and install MAGE query modules you will need: **Python3**, **Make**, **CMake**, **Clang** and **Rust**.
 
 Since Memgraph needs to load MAGE's modules, there is the
 `setup` script to help you.
