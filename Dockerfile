@@ -34,12 +34,6 @@ ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
 # Memgraph listens for Bolt Protocol on this port by default.
 EXPOSE 7687
 
-# Snapshots and logging volumes
-VOLUME /var/log/memgraph
-VOLUME /var/lib/memgraph
-# Configuration volume
-VOLUME /etc/memgraph
-
 FROM base as dev
 
 WORKDIR /mage
@@ -73,7 +67,7 @@ COPY --from=dev /usr/local/lib/python${PY_VERSION} / /usr/local/lib/python${PY_V
 
 
 RUN rm -rf /mage \
-    && export PATH="/usr/local/lib/python3.7:${PATH}" \
+    && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
     && apt-get -y --purge autoremove clang git curl python3-pip cmake build-essential \
     && apt-get clean
 
