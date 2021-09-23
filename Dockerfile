@@ -44,7 +44,7 @@ COPY . /mage
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
     && export PATH="/root/.cargo/bin:${PATH}" \
     && python3 -m  pip install -r /mage/python/requirements.txt \
-    && python3 /mage/setup \
+    && python3 /mage/build \
     && cp -r /mage/dist/* /usr/lib/memgraph/query_modules/
 
 
