@@ -126,7 +126,8 @@ CALL mg.load_all();
 python3 setup modules_storage
 ```
 
-This way Memgraph will be looking for query modules inside `mage/dist` folder. Now you don't need to copy every time.
+This way Memgraph will be looking for query modules inside `mage/dist` folder. Now you don't need to copy `mage/dist` folder to
+`/usr/lib/memgraph/query_modules` every time when you do `build`.
 
 Now you can run only following command to build MAGE modules:
 ```
