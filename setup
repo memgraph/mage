@@ -10,8 +10,6 @@ import argparse
 import logging as log
 import pathlib
 
-from cryptography.hazmat.primitives.asymmetric.padding import MGF1
-
 WORK_DIRECTORY = os.getcwd()
 QUERY_MODULES_DIRECTORY = f"{WORK_DIRECTORY}/dist"
 CPP_DIRECTORY = f"{WORK_DIRECTORY}/cpp"
@@ -177,16 +175,15 @@ def run_build_action(copy_dist_dest_path: str):
 
 
 def run_modules_storage_setup_action(modules_storage_path_param):
-    if modules_storage_path_param is None:
-        modules_storage_path = f"{pathlib.Path().resolve()}/dist"
-    else:
-        modules_storage_path = modules_storage_path_param
+    modules_storage_path = f"{pathlib.Path().resolve()}/dist" if modules_storage_path_param is None else modules_storage_path_param
 
     log.log(level=log.INFO,
             msg="--query-modules-dir flag in {memgraph_conf} will be set to {path}".format(path=modules_storage_path,
-                                                                                       memgraph_conf=MG_CONF_PATH))
+                                                                                           memgraph_conf=MG_CONF_PATH))
 
-    subprocess.run(['sed', '-E', '-i', "s@.*(--query-modules-directory).*@\\1={path}@".format(path=modules_storage_path), MG_CONF_PATH  ])
+    subprocess.run(
+        ['sed', '-E', '-i', "s@.*(--query-modules-directory).*@\\1={path}@".format(path=modules_storage_path),
+         MG_CONF_PATH])
 
 
 def main():
@@ -203,7 +200,6 @@ def main():
     if arguments.action == "modules_storage":
         run_modules_storage_setup_action(arguments.path)
         return
-
 
 
 if __name__ == "__main__":
