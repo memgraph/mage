@@ -10,8 +10,6 @@ import argparse
 import logging as log
 import pathlib
 
-from cryptography.hazmat.primitives.asymmetric.padding import MGF1
-
 WORK_DIRECTORY = os.getcwd()
 QUERY_MODULES_DIRECTORY = f"{WORK_DIRECTORY}/dist"
 CPP_DIRECTORY = f"{WORK_DIRECTORY}/cpp"
