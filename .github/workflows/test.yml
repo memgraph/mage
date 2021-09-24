@@ -13,13 +13,14 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Build Memgraph MAGE image
+    - name: Build Memgraph MAGE:prod and MAGE:dev images
       run: |
-        DOCKER_BUILDKIT=1 docker build -t memgraph-mage .
+        DOCKER_BUILDKIT=1 docker build . -t memgraph-mage:prod --target prod
+        DOCKER_BUILDKIT=1 docker build . -t memgraph-mage:dev --target dev
 
-    - name: Run Memgraph MAGE image
+    - name: Run Memgraph MAGE:prod image
       run: |
-        docker run -d -p 7687:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage --telemetry-enabled=False
+        docker run -d -p 7687:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:prod --telemetry-enabled=False
 
     - name: Set up C++
       run: |
@@ -88,9 +89,6 @@ jobs:
       run: |
         docker stop ${{ env.MAGE_CONTAINER }}
         docker rm ${{ env.MAGE_CONTAINER }}
-
-    - name: Build Memgraph MAGE dev image
-      run: DOCKER_BUILDKIT=1 docker build -t memgraph-mage:dev --target dev .
 
     - name: Run Memgraph MAGE dev image
       run:  docker run -d -p 7687:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:dev --telemetry-enabled=False
