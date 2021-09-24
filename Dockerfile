@@ -1,15 +1,18 @@
+ARG PY_VERSION_DEFAULT=3.7
+
 FROM debian:buster as base
 
 USER root
 
 ARG MG_VERSION=1.6.1
+ARG PY_VERSION_DEFAULT
 ENV MG_VERSION ${MG_VERSION}
-ENV PY_VERSION 3.7
+ENV PY_VERSION ${PY_VERSION_DEFAULT}
 
 #essentials for production/dev
 RUN apt-get update && apt-get install -y \
     libcurl4        `memgraph` \
-    libpython3.7    `memgraph` \
+    libpython${PY_VERSION}   `memgraph` \
     libssl1.1       `memgraph` \
     openssl         `memgraph` \
     build-essential `mage-memgraph` \
@@ -23,7 +26,7 @@ RUN apt-get update && apt-get install -y \
     git             `mage-memgraph` \
     --no-install-recommends \
     # Download and install Memgraph
-    && curl https://download.memgraph.com/memgraph/v1.6.1/debian-10/memgraph_1.6.1-community-1_amd64.deb --output memgraph.deb \
+    && curl https://download.memgraph.com/memgraph/v${MG_VERSION}/debian-10/memgraph_${MG_VERSION}-community-1_amd64.deb --output memgraph.deb \
     && dpkg -i memgraph.deb \
     && rm memgraph.deb \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -38,6 +41,7 @@ FROM base as dev
 
 WORKDIR /mage
 COPY . /mage
+
 
 
 #MAGE
@@ -58,16 +62,18 @@ FROM base as prod
 
 USER root
 ENTRYPOINT []
+ARG PY_VERSION_DEFAULT
+ENV PY_VERSION ${PY_VERSION_DEFAULT}
 
 #copy modules
 COPY --from=dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
 
 #copy python build
-COPY --from=dev /usr/local/lib/python3.7/ /usr/local/lib/python3.7/
+COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
 
 
 RUN rm -rf /mage \
-    && export PATH="/usr/local/lib/python3.7:${PATH}" \
+    && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
     && apt-get -y --purge autoremove clang git curl python3-pip cmake build-essential \
     && apt-get clean
 
