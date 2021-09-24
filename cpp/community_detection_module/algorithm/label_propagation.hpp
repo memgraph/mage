@@ -1,8 +1,10 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 namespace LabelRankT {
 
@@ -10,6 +12,8 @@ class LabelRankT {
  private:
   /// default edge weight
   double DEFAULT_WEIGHT = 1;
+  /// weight property name
+  std::string weight_property;
 
   /// default self-loop weight
   double w_selfloop;
@@ -39,11 +43,10 @@ class LabelRankT {
   /// flag whether community labels have already been calculated
   bool calculated = false;
 
-  ///@return -- the weight of the edge between the given nodes
-  double get_weight(std::uint64_t node_i_id, std::uint64_t node_j_id);
-
   ///@brief Initializes internal data structures.
   void set_structures(std::uint64_t node_id);
+
+  double get_weight(std::uint64_t node_i_id, std::uint64_t node_j_id);
 
   ///@brief Removes deleted nodes’ entries from internal data structures.
   ///
@@ -126,10 +129,12 @@ class LabelRankT {
   /// selection step, values in [0, 1]
   ///@param exponent -- exponent used in the inflation step
   ///@param min_value -- smallest acceptable probability in the cutoff step
-  LabelRankT(std::unique_ptr<mg_graph::Graph<>>& graph, double w_selfloop = 1,
+  LabelRankT(std::unique_ptr<mg_graph::Graph<>>& graph,
+             std::string weight_property = "weight", double w_selfloop = 1,
              double similarity_threshold = 0.7, double exponent = 4,
              double min_value = 0.1)
-      : w_selfloop(w_selfloop),
+      : weight_property(weight_property),
+        w_selfloop(w_selfloop),
         similarity_threshold(similarity_threshold),
         exponent(exponent),
         min_value(min_value),

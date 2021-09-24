@@ -46,7 +46,7 @@ void LabelRankT::set_structures(std::uint64_t node_id) {
 
   // add other edges
   for (const auto node_j : graph->Neighbours(node_id)) {
-    node_label_Ps[node_j.node_id] =
+    node_label_Ps[node_j.node_id] +=
         get_weight(node_id, node_j.node_id) / sum_w_i;
   }
 
@@ -127,7 +127,13 @@ std::unordered_map<std::uint64_t, double> LabelRankT::propagate(
   }
 
   // propagate neighbors’ probabilities
+  std::unordered_set<std::uint64_t> neighbor_node_ids;
   for (const auto node_j : graph->Neighbours(node_i.id)) {
+    // avoid propagating one neighbor’s probabilities more than once in case of multigraphs
+    // (get_weight() returns the total weight of the parallel edges)
+    if (neighbor_node_ids.find(node_j.node_id) != neighbor_node_ids.end()) continue;
+
+    neighbor_node_ids.insert(node_j.node_id);
     double contribution = DEFAULT_WEIGHT / sum_w[node_i.id];
 
     for (const auto [label, P] : label_Ps[node_j.node_id]) {
