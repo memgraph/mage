@@ -16,6 +16,9 @@ jobs:
       - name: Get commit tag
         id: get-commit-tag
         run: |
-           echo "::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}"
+           echo "::set-output name=VERSION::${GITHUB_REF#refs/tags/}"
+           echo ::set-output name=VERSION_2::${GITHUB_REF#refs/tags/}
       - name: Get version
         run: echo "Version is ${{ steps.get-commit-tag.outputs.VERSION }}"
+      - name: Get version 2
+        run: echo "Version is ${{ steps.get-commit-tag.outputs.VERSION_2 }}"
