@@ -69,7 +69,6 @@ jobs:
         cd rust/rsmgp-sys
         cargo fmt -- --check
         cargo test
-        RUST_BACKTRACE=1 cargo tarpaulin --out Html --ignore-tests
 
     - name: Stop prod mage container and remove it
       run: |
