@@ -22,4 +22,4 @@ jobs:
       - name: Get version 2
         run: echo "Version is ${{ steps.get-commit-tag.outputs.VERSION_2 }}"
       - name: Get version 3
-        run: echo "Version is ${{ steps.get-commit-tag.outputs.VERSION_2 }}"
+        run: echo "Version is ${{ steps.get-commit-tag.outputs.VERSION_3 }}"
