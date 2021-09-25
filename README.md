@@ -103,7 +103,27 @@ packages. To install, proceed to the following [site](https://memgraph.com/docs/
 
 Since Memgraph needs to load MAGE's modules, there is the `setup` script to help you.
 
-**1.** Run the `build` command of the `setup` script. It will generate a `mage/dist` directory with all the `*.so` and `*.py` files.
+By running following command, this script will change default directory where Memgraph is looking for query modules to your
+`mage/dist` directory, and run `build` command to prepare `*.so` and `*.py` files.
+
+```
+python3 setup all
+```
+
+Next time you change something, just run the following command, since it is we have already set up new directory for 
+query modules directory:
+
+```
+python3 setup build
+```
+> Note that query modules are loaded into Memgraph on startup so if your instance was already running you will need to 
+> execute the following query inside one of [querying platforms](https://docs.memgraph.com/memgraph/connect-to-memgraph) to load them:
+
+#### [Different installation process] 
+
+##### 1. Use default Memgraph query-modules-directory
+
+Run the `build` command of the `setup` script. It will generate a `mage/dist` directory with all the `*.so` and `*.py` files.
 Flag `-p (--path)`  represents where will contents of `mage/dist` directory be copied. You need to copy it to 
 `/usr/lib/memgraph/query_modules` directory, because that's where Memgraph is looking for query modules by
 [default](https://docs.memgraph.com/memgraph/reference-guide/configuration/).
@@ -118,7 +138,7 @@ python3 setup build -p /usr/lib/memgraph/query_modules
 CALL mg.load_all();
 ```
 
-#### [Optional step] Set different query_modules directory
+##### 2. Set different query_modules directory
 `setup` script offers you to set your local `mage/dist` folder as  default one for Memgraph configuration file
 (flag `--query-modules-directory` defined in `/etc/memgraph/memgraph.conf` file with following step:
 
@@ -139,6 +159,8 @@ python3 setup build
 ```
 CALL mg.load_all();
 ```
+
+
 
 If you want to find out more about loading query modules, visit [this guide](https://memgraph.com/docs/memgraph/reference-guide/query-modules/load-call-query-modules).
 
