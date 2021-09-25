@@ -90,12 +90,45 @@ double AverageAbsoluteError(const std::vector<T> &result, const std::vector<T> &
 /// false otherwise
 ///
 template <typename T>
-bool TestEqualVectors(const std::vector<T> &result, const std::vector<T> &correct) {
+bool TestEqualVectors(const std::vector<T> &result, const std::vector<T> &correct,
+                      const double absolute_error = ABSOLUTE_ERROR_EPSILON,
+                      double average_error = AVERAGE_ABSOLUTE_ERROR_EPSILON) {
   auto max_absolute_error = MaxAbsoluteError(result, correct);
-  if (max_absolute_error >= ABSOLUTE_ERROR_EPSILON) return false;
+  if (max_absolute_error >= absolute_error) return false;
 
   auto average_absolute_error = AverageAbsoluteError(result, correct);
-  if (average_absolute_error >= AVERAGE_ABSOLUTE_ERROR_EPSILON) return false;
+  if (average_absolute_error >= average_error) return false;
+
+  return true;
+}
+
+///
+///@brief A method that determines whether given vectors are the same within the defined tolerance.
+/// The vector type must be an arithmetic type. Vectors must have the same size.
+///
+///@param result Container that stores calculated values
+///@param correct Container that stores accurate values
+///@return true if the maximum absolute error is lesser than ABSOLUTE_ERROR_EPSILON
+/// and the average absolute error is lesser than AVERAGE_ABSOLUTE_ERROR_EPSILON,
+/// false otherwise
+///
+bool TestEqualVectorPairs(std::vector<std::pair<std::uint64_t, double>> &result,
+                          std::vector<std::pair<std::uint64_t, double>> &correct,
+                          const double absolute_error = ABSOLUTE_ERROR_EPSILON) {
+  if (result.size() != correct.size()) return false;
+
+  auto compare = [](auto &left, auto &right) { return left.first < right.first; };
+  std::sort(result.begin(), result.end(), compare);
+  std::sort(correct.begin(), correct.end(), compare);
+
+  auto size = result.size();
+  for (std::size_t i = 0; i < size; i++) {
+    auto [result_id, result_value] = result[i];
+    auto [correct_id, correct_value] = result[i];
+
+    if (result_id != correct_id) return false;
+    if (std::abs(result_value - correct_value) > absolute_error) return false;
+  }
 
   return true;
 }
