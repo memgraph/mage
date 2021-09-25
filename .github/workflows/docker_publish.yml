@@ -1,8 +1,6 @@
 name: Publish Docker image
 on:
   push:
-    branches:
-      - T075-MAGE-add-releases
     tags:
       - v*.*.*
 
@@ -18,7 +16,10 @@ jobs:
         run: |
            echo "::set-output name=VERSION::${GITHUB_REF#refs/tags/}"
            echo ::set-output name=VERSION_2::${GITHUB_REF#refs/tags/}
+           echo ::set-output name=VERSION_3::${GITHUB_REF/refs\/tags\//}
       - name: Get version
         run: echo "Version is ${{ steps.get-commit-tag.outputs.VERSION }}"
       - name: Get version 2
+        run: echo "Version is ${{ steps.get-commit-tag.outputs.VERSION_2 }}"
+      - name: Get version 3
         run: echo "Version is ${{ steps.get-commit-tag.outputs.VERSION_2 }}"
