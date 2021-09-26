@@ -7,6 +7,7 @@
 namespace {
 
 constexpr char const *kProcedureGet = "get";
+
 constexpr char const *kFieldUuid = "uuid";
 
 void Generate(const mgp_list *args, const mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
