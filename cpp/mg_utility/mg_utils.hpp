@@ -235,4 +235,20 @@ void InsertRelationshipValueResult(mgp_result_record *record, const char *field_
 /// record.
 void InsertRelationshipValueResult(const mgp_graph *graph, mgp_result_record *record, const char *field_name,
                                    const int edge_id, mgp_memory *memory);
+
+/// Inserts a path of value path_value to the field field_name of
+/// the record mgp_result_record record.
+void InsertPathValueResult(mgp_result_record *record, const char *field_name, mgp_path *path_value,
+                           mgp_memory *memory) {
+  mgp_value *value = mgp_value_make_path(path_value);
+  if (value == nullptr) {
+    throw mg_exception::NotEnoughMemoryException();
+  }
+  auto result_inserted = mgp_result_record_insert(record, field_name, value);
+
+  mgp_value_destroy(value);
+  if (!result_inserted) {
+    throw mg_exception::NotEnoughMemoryException();
+  }
+}
 }  // namespace mg_utility

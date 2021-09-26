@@ -1,0 +1,11 @@
+query: >
+    MATCH (start {id: 0})
+    CALL random_walk.get(start, 2) YIELD path
+    WITH nodes(path) as nodes
+    UNWIND nodes as node
+    RETURN node.id as node_id;
+
+output:
+    - node_id: 0
+    - node_id: 1
+    - node_id: 2
