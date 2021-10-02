@@ -41,7 +41,7 @@ jobs:
               echo "::set-output name=LATEST::memgraph-mage:latest"
             fi
 
-      - run: echo "tags are ${{ steps.get-prod-tags.outputs.LATEST }}"
+      - run: echo "Additional tag for production image - ${{ steps.get-prod-tags.outputs.LATEST }}"
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v1
@@ -58,7 +58,6 @@ jobs:
           target: prod
           file: ./Dockerfile
 
-
       - name: Push development image to Docker Hub
         id: docker-build-dev
         uses: docker/build-push-action@v2
@@ -67,6 +66,3 @@ jobs:
             tags: memgraph/memgraph-mage:${{ steps.get-commit-tag.outputs.VERSION_TAG }}-dev
             target: dev
             file: ./Dockerfile
-
-
-
