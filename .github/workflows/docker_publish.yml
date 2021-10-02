@@ -56,7 +56,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: false
-          tags: ${{ steps.get-prod-tag.outputs.PROD_TAGS }}
+          tags: "${{ steps.get-prod-tag.outputs.PROD_TAGS }}"
           target: prod
           file: ./Dockerfile
 
