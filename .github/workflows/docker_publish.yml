@@ -12,12 +12,17 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
+      - name: Get latest tag
+        uses: actions-ecosystem/action-get-latest-tag@v1
+        id: get-latest-tag
 
       - name: Get commit tag
         id: get-commit-tag
         run: |
            export VERSION=${GITHUB_REF#refs/tags/}
            echo "::set-output name=VERSION_TAG::${VERSION:1}"
+           echo ${{ steps.get-latest-tag.outputs.tag }}
+
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v1
