@@ -38,10 +38,11 @@ jobs:
         run: |
             if [ "${{ steps.get-commit-tag.outputs.VERSION }}" == "${{ steps.get-latest-tag.outputs.tag }}" ]
             then
-              echo "::set-output name=PROD_TAGS::['memgraph/memgraph-mage:${{ steps.get-commit-tag.outputs.VERSION_TAG }}', 'memgraph/memgraph-mage:latest']"
+              TAGS = '["memgraph/memgraph-mage:${{ steps.get-commit-tag.outputs.VERSION_TAG }}", "memgraph/memgraph-mage:latest"]'
             else
-               echo "::set-output name=PROD_TAGS::['memgraph/memgraph-mage:${{ steps.get-commit-tag.outputs.VERSION_TAG }}']"
+               TAGS = '["memgraph/memgraph-mage:${{ steps.get-commit-tag.outputs.VERSION_TAG }}"]'
             fi
+            echo '::set-output name=PROD_TAGS::'$TAGS
 
       - run: echo "tags are ${{ steps.get-prod-tags.outputs.PROD_TAGS }}"
 
