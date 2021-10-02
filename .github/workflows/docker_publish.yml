@@ -18,6 +18,8 @@ jobs:
         with:
           repository: memgraph/mage  # The repository to scan.
           releases-only: false  # We know that all relevant tags have a GitHub release for them.
+          prefix: 'v'
+
         id: mage  # The step ID to refer to later.
 
       - run: echo "MAGE is at version ${{ steps.mage.outputs.tag }}"
@@ -53,6 +55,3 @@ jobs:
             tags: memgraph/memgraph-mage:${{ steps.get-commit-tag.outputs.VERSION_TAG }}-dev
             target: dev
             file: ./Dockerfile
-
-      - name: Get image digest
-        run: echo ${{ steps.docker-build-prod.outputs.metadata }}
