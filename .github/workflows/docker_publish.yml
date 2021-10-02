@@ -58,6 +58,7 @@ jobs:
           target: prod
           file: ./Dockerfile
 
+
       - name: Push development image to Docker Hub
         id: docker-build-dev
         uses: docker/build-push-action@v2
@@ -66,3 +67,6 @@ jobs:
             tags: memgraph/memgraph-mage:${{ steps.get-commit-tag.outputs.VERSION_TAG }}-dev
             target: dev
             file: ./Dockerfile
+
+
+
