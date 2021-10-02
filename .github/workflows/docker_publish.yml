@@ -16,10 +16,10 @@ jobs:
       - name: Get latest tag
         uses: oprypin/find-latest-tag@v1
         with:
-          repository: memgraph/mage  # The repository to scan.
-          releases-only: false  # We know that all relevant tags have a GitHub release for them.
+          repository: memgraph/mage
+          releases-only: false
           prefix: 'v'
-        id: get-latest-tag  # The step ID to refer to later.
+        id: get-latest-tag
 
       - run: echo "MAGE is at version ${{ steps.get-latest-tag.outputs.tag }}"
 
@@ -28,9 +28,20 @@ jobs:
         run: |
            export VERSION=${GITHUB_REF#refs/tags/}
            echo "::set-output name=VERSION_TAG::${VERSION:1}"
+           echo "::set-output name=VERSION::${VERSION}"
 
-      - run: echo "Current MAGE commit tag is at version ${VERSION}"
+      - name: Get version
+        run: echo "Version is ${{ steps.get-commit-tag.outputs.VERSION }}"
 
+      - name: Set production tag
+        id: get-prod-tags
+        run: |
+            if [ "${{ steps.get-commit-tag.outputs.VERSION }}" == "${{ steps.get-latest-tag.outputs.tag }}" ]
+            then
+              echo "::set-output name=PROD_TAGS::memgraph/memgraph-mage:${{ steps.get-commit-tag.outputs.VERSION_TAG }},memgraph/memgraph-mage:latest"
+            else
+               echo "::set-output name=PROD_TAGS::memgraph/memgraph-mage:${{ steps.get-commit-tag.outputs.VERSION_TAG }}"
+            fi
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v1
@@ -43,7 +54,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: false
-          tags: memgraph/memgraph-mage:latest, memgraph/memgraph-mage:${{ steps.get-commit-tag.outputs.VERSION_TAG }}
+          tags: ${{ steps.get-prod-tag.outputs.PROD_TAGS }}
           target: prod
           file: ./Dockerfile
 
