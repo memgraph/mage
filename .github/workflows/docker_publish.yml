@@ -38,9 +38,9 @@ jobs:
         run: |
             if [ "${{ steps.get-commit-tag.outputs.VERSION }}" == "${{ steps.get-latest-tag.outputs.tag }}" ]
             then
-              TAGS = '["memgraph/memgraph-mage:${{ steps.get-commit-tag.outputs.VERSION_TAG }}", "memgraph/memgraph-mage:latest"]'
+              TAGS='["memgraph/memgraph-mage:${{ steps.get-commit-tag.outputs.VERSION_TAG }}", "memgraph/memgraph-mage:latest"]'
             else
-               TAGS = '["memgraph/memgraph-mage:${{ steps.get-commit-tag.outputs.VERSION_TAG }}"]'
+               TAGS='["memgraph/memgraph-mage:${{ steps.get-commit-tag.outputs.VERSION_TAG }}"]'
             fi
             echo '::set-output name=PROD_TAGS::'$TAGS
 
