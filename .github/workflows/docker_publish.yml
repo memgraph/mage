@@ -45,7 +45,7 @@ jobs:
 
       - run: echo "tags are ${{ steps.get-prod-tags.outputs.PROD_TAGS }}"
 
-      - run: echo "tags are ${{ fromJson(steps.get-prod-tag.outputs.PROD_TAGS) }}"
+      - run: echo ${{ fromJson(steps.get-prod-tag.outputs.PROD_TAGS) }}
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v1
