@@ -43,6 +43,8 @@ jobs:
                echo "::set-output name=PROD_TAGS::memgraph/memgraph-mage:${{ steps.get-commit-tag.outputs.VERSION_TAG }}"
             fi
 
+      - run: echo "tags are ${{ steps.get-prod-tags.outputs.PROD_TAGS }}"
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v1
         with:
