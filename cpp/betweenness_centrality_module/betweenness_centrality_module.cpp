@@ -8,19 +8,19 @@ namespace {
 
 constexpr char const *kProcedureGet = "get";
 
-constexpr char const *kFieldBCScore = "betweeenness_centrality";
+constexpr char const *kFieldBCScore = "betweenness_centrality";
 constexpr char const *kFieldNode = "node";
 
 constexpr char const *kArgumentDirected = "directed";
 constexpr char const *kArgumentNormalized = "normalized";
 constexpr char const *kArgumentThreads = "threads";
 
-void InsertBCRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const double betweeenness_centrality,
+void InsertBCRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const double betweenness_centrality,
                     const int node_id) {
   auto *record = mgp::result_new_record(result);
 
   mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
-  mg_utility::InsertDoubleValue(record, kFieldBCScore, betweeenness_centrality, memory);
+  mg_utility::InsertDoubleValue(record, kFieldBCScore, betweenness_centrality, memory);
 }
 
 void GetBetweennessCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
