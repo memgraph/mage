@@ -104,18 +104,13 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(mgp_graph *memgraph_graph, 
   if (vertices_it == nullptr) {
     throw mg_exception::NotEnoughMemoryException();
   }
-  mg_utility::OnScopeExit delete_vertices_it([&vertices_it] {
-    if (vertices_it != nullptr) {
-      mgp::vertices_iterator_destroy(vertices_it);
-    }
-  });
+  mg_utility::OnScopeExit delete_vertices_it([&vertices_it] { mgp::vertices_iterator_destroy(vertices_it); });
 
   // Iterate trough Memgraph vertices and map them to GraphView
   for (auto *vertex = mgp::vertices_iterator_get(vertices_it); vertex;
        vertex = mgp::vertices_iterator_next(vertices_it)) {
     mg_graph::CreateGraphNode(graph.get(), vertex);
   }
-  mgp::vertices_iterator_destroy(vertices_it);
 
   ///
   /// Mapping Memgraph in-memory edges into graph view
@@ -129,11 +124,7 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(mgp_graph *memgraph_graph, 
     // Safe creation of edges iterator
     auto *edges_it = mgp::vertex_iter_out_edges(vertex_from, memory);
 
-    mg_utility::OnScopeExit delete_edges_it([&edges_it] {
-      if (edges_it != nullptr) {
-        mgp::edges_iterator_destroy(edges_it);
-      }
-    });
+    mg_utility::OnScopeExit delete_edges_it([&edges_it] { mgp::edges_iterator_destroy(edges_it); });
 
     for (auto *out_edge = mgp::edges_iterator_get(edges_it); out_edge; out_edge = mgp::edges_iterator_next(edges_it)) {
       auto vertex_to = mgp::edge_get_to(out_edge);
@@ -144,63 +135,42 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(mgp_graph *memgraph_graph, 
   return graph;
 }
 
+namespace {
+void InsertRecord(mgp_result_record *record, const char *field_name, mgp_value *value) {
+  mg_utility::OnScopeExit delete_value([&value] { mgp::value_destroy(value); });
+  mgp::result_record_insert(record, field_name, value);
+}
+}  // namespace
+
 /// Inserts a string of value string_value to the field field_name of
 /// the record mgp_result_record record.
 void InsertStringValueResult(mgp_result_record *record, const char *field_name, const char *string_value,
                              mgp_memory *memory) {
-  mgp_value *value;
-  try {
-    value = mgp::value_make_string(string_value, memory);
-    mgp::result_record_insert(record, field_name, value);
-    mgp::value_destroy(value);
-  } catch (const std::exception &e) {
-    mgp::value_destroy(value);
-    throw e;
-  }
+  auto value = mgp::value_make_string(string_value, memory);
+  InsertRecord(record, field_name, value);
 }
 
 /// Inserts an integer of value int_value to the field field_name of
 /// the record mgp_result_record record.
 void InsertIntValueResult(mgp_result_record *record, const char *field_name, const int int_value, mgp_memory *memory) {
-  mgp_value *value;
-  try {
-    value = mgp::value_make_int(int_value, memory);
-    mgp::result_record_insert(record, field_name, value);
-    mgp::value_destroy(value);
-  } catch (const std::exception &e) {
-    mgp::value_destroy(value);
-    throw e;
-  }
+  auto value = mgp::value_make_int(int_value, memory);
+  InsertRecord(record, field_name, value);
 }
 
 /// Inserts a double of value double_value to the field field_name of
 /// the record mgp_result_record record.
 void InsertDoubleValue(mgp_result_record *record, const char *field_name, const double double_value,
                        mgp_memory *memory) {
-  mgp_value *value;
-  try {
-    value = mgp::value_make_double(double_value, memory);
-    mgp::result_record_insert(record, field_name, value);
-    mgp::value_destroy(value);
-  } catch (const std::exception &e) {
-    mgp::value_destroy(value);
-    throw e;
-  }
+  auto value = mgp::value_make_double(double_value, memory);
+  InsertRecord(record, field_name, value);
 }
 
 /// Inserts a node of value vertex_value to the field field_name of
 /// the record mgp_result_record record.
 void InsertNodeValueResult(mgp_result_record *record, const char *field_name, mgp_vertex *vertex_value,
                            mgp_memory *memory) {
-  mgp_value *value;
-  try {
-    value = mgp::value_make_vertex(vertex_value);
-    mgp::result_record_insert(record, field_name, value);
-    mgp::value_destroy(value);
-  } catch (const std::exception &e) {
-    mgp::value_destroy(value);
-    throw e;
-  }
+  auto value = mgp::value_make_vertex(vertex_value);
+  InsertRecord(record, field_name, value);
 }
 
 /// Inserts a node with its ID node_id to create a vertex and insert
@@ -215,15 +185,8 @@ void InsertNodeValueResult(mgp_graph *graph, mgp_result_record *record, const ch
 /// the record mgp_result_record record.
 void InsertRelationshipValueResult(mgp_result_record *record, const char *field_name, mgp_edge *edge_value,
                                    mgp_memory *memory) {
-  mgp_value *value;
-  try {
-    value = mgp::value_make_edge(edge_value);
-    mgp::result_record_insert(record, field_name, value);
-    mgp::value_destroy(value);
-  } catch (const std::exception &e) {
-    mgp::value_destroy(value);
-    throw e;
-  }
+  auto value = mgp::value_make_edge(edge_value);
+  InsertRecord(record, field_name, value);
 }
 
 /// Inserts a relationship with its ID edge_id to create a relationship and
