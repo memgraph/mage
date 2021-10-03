@@ -5,7 +5,7 @@
 
 namespace {
 
-constexpr char const *kProcedureGenerate = "generate";
+constexpr char const *kProcedureGenerate = "get";
 
 constexpr char const *kFieldUuid = "uuid";
 

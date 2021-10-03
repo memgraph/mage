@@ -23,8 +23,8 @@ struct OutOfRangeException : public std::exception {
 struct LogicException : public std::exception {
   const char *what() const throw() { return "Logic exception, check the procedure signature!"; }
 };
-struct NonExistendObjectException : public std::exception {
-  const char *what() const throw() { return "Object does not exist!"; }
+struct DeletedObjectException : public std::exception {
+  const char *what() const throw() { return "Object is deleted!"; }
 };
 struct InvalidArgumentException : public std::exception {
   const char *what() const throw() { return "Invalid argument!"; }
@@ -32,5 +32,18 @@ struct InvalidArgumentException : public std::exception {
 
 struct InvalidIDException : public std::exception {
   const char *what() const throw() { return "Invalid ID!"; }
+};
+struct KeyAlreadyExistsException : public std::exception {
+  const char *what() const throw() { return "Key you are trying to set already exists!"; }
+};
+
+struct ImmutableObjectException : public std::exception {
+  const char *what() const throw() { return "Object you are trying to change is immutable!"; }
+};
+struct ValueConversionException : public std::exception {
+  const char *what() const throw() { return "Error in value conversion!"; }
+};
+struct SerializationException : public std::exception {
+  const char *what() const throw() { return "Error in serialization!"; }
 };
 }  // namespace mg_exception

@@ -22,7 +22,7 @@ namespace mg_graph {
 ///@param vertex Memgraph's vertex instance
 ///
 template <typename TSize>
-void CreateGraphNode(mg_graph::Graph<TSize> *graph, const mgp_vertex *vertex) {
+void CreateGraphNode(mg_graph::Graph<TSize> *graph, mgp_vertex *vertex) {
   // Get Memgraph internal ID property
   auto id_val = mgp::vertex_get_id(vertex);
   auto memgraph_id = id_val.as_int;
@@ -41,7 +41,7 @@ void CreateGraphNode(mg_graph::Graph<TSize> *graph, const mgp_vertex *vertex) {
 ///@param graph_type Type of stored graph: Directed/Undirected
 ///
 template <typename TSize>
-void CreateGraphEdge(mg_graph::Graph<TSize> *graph, const mgp_vertex *vertex_from, const mgp_vertex *vertex_to,
+void CreateGraphEdge(mg_graph::Graph<TSize> *graph, mgp_vertex *vertex_from, mgp_vertex *vertex_to,
                      const mg_graph::GraphType graph_type) {
   // Get Memgraph internal ID property
   auto memgraph_id_from = mgp::vertex_get_id(vertex_from).as_int;
@@ -90,8 +90,8 @@ class OnScopeExit {
 ///@return mg_graph::Graph
 ///
 template <typename TSize = std::uint64_t>
-std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(const mgp_graph *memgraph_graph, mgp_result *result,
-                                                     mgp_memory *memory, const mg_graph::GraphType graph_type) {
+std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory,
+                                                     const mg_graph::GraphType graph_type) {
   auto graph = std::make_unique<mg_graph::Graph<TSize>>();
 
   ///
@@ -99,7 +99,7 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(const mgp_graph *memgraph_g
   ///
 
   // Safe creation of vertices iterator
- 
+
   auto *vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);
   if (vertices_it == nullptr) {
     throw mg_exception::NotEnoughMemoryException();
@@ -111,7 +111,7 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(const mgp_graph *memgraph_g
   });
 
   // Iterate trough Memgraph vertices and map them to GraphView
-  for (const auto *vertex = mgp::vertices_iterator_get(vertices_it); vertex;
+  for (auto *vertex = mgp::vertices_iterator_get(vertices_it); vertex;
        vertex = mgp::vertices_iterator_next(vertices_it)) {
     mg_graph::CreateGraphNode(graph.get(), vertex);
   }
@@ -229,6 +229,6 @@ void InsertRelationshipValueResult(mgp_result_record *record, const char *field_
 /// Inserts a relationship with its ID edge_id to create a relationship and
 /// insert the edge to the field field_name of the record mgp_result_record
 /// record.
-void InsertRelationshipValueResult(const mgp_graph *graph, mgp_result_record *record, const char *field_name,
+void InsertRelationshipValueResult(mgp_graph *graph, mgp_result_record *record, const char *field_name,
                                    const int edge_id, mgp_memory *memory);
 }  // namespace mg_utility
