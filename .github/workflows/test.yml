@@ -1,9 +1,9 @@
 name: Build and Test
 
 env:
-  MG_VERSION: '1.6.1'
   PY_VERSION: '3.7'
   CORE_COUNT: '8'
+  MAGE_CONTAINER: 'mage'
 
 on: [push]
 
@@ -12,50 +12,64 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Build project
+
+    - name: Build Memgraph MAGE:prod and MAGE:dev images
       run: |
-        docker build -t memgraph-mage .
-    - name: Run Memgraph MAGE image
+        DOCKER_BUILDKIT=1 docker build . -t memgraph-mage:prod --target prod
+        DOCKER_BUILDKIT=1 docker build . -t memgraph-mage:dev --target dev
+
+    - name: Run Memgraph MAGE:prod image
       run: |
-        docker run -d -p 7687:7687 memgraph-mage --telemetry-enabled=False
+        docker run -d -p 7687:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:prod --telemetry-enabled=False
+
     - name: Set up C++
       run: |
         sudo apt update
         sudo apt install -y build-essential cmake
+
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
         python-version: ${{ env.PY_VERSION }}
-    - name: Set up Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
+
     - name: Build C++ modules
       run: |
         mkdir -p cpp/build
         cd cpp/build
         cmake ..
         make -j${{ env.CORE_COUNT }}
+
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r ./python/tests/requirements.txt
         pip install -r ./python/requirements.txt
+
+    - name: Test End-to-end on prod
+      env:
+        PYTHONPATH: '$PWD/e2e'
+      run: |
+        cd e2e
+        python -m pytest .
+
+    - name: Stop prod mage container and remove it
+      run: |
+        docker stop ${{ env.MAGE_CONTAINER }}
+        docker rm ${{ env.MAGE_CONTAINER }}
+
+    - name: Run Memgraph MAGE dev image
+      run:  docker run -d -p 7687:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:dev --telemetry-enabled=False
+
     - name: C++ Modules unit tests
       run: |
         cd cpp/build
         ctest -j${{ env.CORE_COUNT }}
+
     - name: Python modules unit tests
       env:
         PYTHONPATH: '$PWD/python'
       run: |
         cd python
-        python -m pytest .
-    - name: Test End-to-end
-      env:
-        PYTHONPATH: '$PWD/e2e'
-      run: |
-        cd e2e
         python -m pytest .
 
     - name: Rust library tests
@@ -63,3 +77,10 @@ jobs:
         cd rust/rsmgp-sys
         cargo fmt -- --check
         cargo test
+
+    - name: Test End-to-end on dev
+      env:
+        PYTHONPATH: '$PWD/e2e'
+      run: |
+        cd e2e
+        python -m pytest .
