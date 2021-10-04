@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y \
     g++             `mage-memgraph` \
     python3         `mage-memgraph` \
     python3-pip     `mage-memgraph` \
+    python3-setuptools     `mage-memgraph` \
     uuid-dev        `mage-memgraph` \
     clang           `mage-memgraph` \
     git             `mage-memgraph` \
@@ -73,7 +74,7 @@ COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VE
 
 RUN rm -rf /mage \
     && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
-    && apt-get -y --purge autoremove clang git curl python3-pip cmake build-essential \
+    && apt-get -y --purge autoremove clang git curl python3-pip python3-setuptools cmake build-essential \
     && apt-get clean
 
 USER memgraph
