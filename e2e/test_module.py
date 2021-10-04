@@ -3,12 +3,12 @@ import pytest
 import yaml
 
 from pathlib import Path
-import gqlalchemy
+from gqlalchemy import Memgraph, Node
 
 
 @pytest.fixture
 def db():
-    return gqlalchemy.Memgraph
+    return Memgraph()
 
 
 class TestConstants:
@@ -77,7 +77,7 @@ def _load_yaml(path: Path) -> Dict:
     return yaml.load(file_handle, Loader=yaml.Loader)
 
 
-def _execute_cyphers(input_cyphers: List[str], db: gqlalchemy.Memgraph):
+def _execute_cyphers(input_cyphers: List[str], db: Memgraph):
     """
     Execute commands against Memgraph
     """
@@ -85,7 +85,7 @@ def _execute_cyphers(input_cyphers: List[str], db: gqlalchemy.Memgraph):
         db.execute(query)
 
 
-def _run_test(test_dict: Dict, db: gqlalchemy.Memgraph):
+def _run_test(test_dict: Dict, db: Memgraph):
     """
     Run queries on Memgraph and compare them to expected results stored in test_dict
     """
@@ -98,7 +98,7 @@ def _run_test(test_dict: Dict, db: gqlalchemy.Memgraph):
 
     if output_test:
         result_query = list(db.execute_and_fetch(test_query))
-        result = _replace(result_query, gqlalchemy.Node)
+        result = _replace(result_query, Node)
 
         expected = test_dict[TestConstants.OUTPUT]
         assert result == expected
@@ -112,7 +112,7 @@ def _run_test(test_dict: Dict, db: gqlalchemy.Memgraph):
             assert True
 
 
-def _test_static(test_dir: Path, db: gqlalchemy.Memgraph):
+def _test_static(test_dir: Path, db: Memgraph):
     """
     Testing static modules.
     """
@@ -123,7 +123,7 @@ def _test_static(test_dir: Path, db: gqlalchemy.Memgraph):
     _run_test(test_dict, db)
 
 
-def _test_online(test_dir: Path, db: gqlalchemy.Memgraph):
+def _test_online(test_dir: Path, db: Memgraph):
     """
     Testing online modules. Checkpoint testing
     """
@@ -154,7 +154,7 @@ def _test_online(test_dir: Path, db: gqlalchemy.Memgraph):
 
 
 @pytest.mark.parametrize("test_dir", tests)
-def test_end2end(test_dir: Path, db: gqlalchemy.Memgraph):
+def test_end2end(test_dir: Path, db: Memgraph):
     db.drop_database()
 
     if not test_dir.name.startswith(TestConstants.ONLINE_TEST_SUBDIR_PREFIX):
