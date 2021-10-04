@@ -21,6 +21,8 @@ RUN apt-get update && apt-get install -y \
     g++             `mage-memgraph` \
     python3         `mage-memgraph` \
     python3-pip     `mage-memgraph` \
+    python3-setuptools     `mage-memgraph` \
+    python3-dev     `mage-memgraph` \
     uuid-dev        `mage-memgraph` \
     clang           `mage-memgraph` \
     git             `mage-memgraph` \
@@ -48,35 +50,47 @@ COPY . /mage
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
     && export PATH="/root/.cargo/bin:${PATH}" \
     && python3 -m  pip install -r /mage/python/requirements.txt \
+    <<<<<<< HEAD
     && python3 /mage/build \
     && cp -r /mage/dist/* /usr/lib/memgraph/query_modules/
+    =======
+    && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/
+    >>>>>>> main
 
 
-USER memgraph
-ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
-CMD [""]
+    USER memgraph
+    ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
+    CMD [""]
 
 
 
-FROM base as prod
+    FROM base as prod
 
-USER root
-ENTRYPOINT []
-ARG PY_VERSION_DEFAULT
-ENV PY_VERSION ${PY_VERSION_DEFAULT}
+    USER root
+    ENTRYPOINT []
+    ARG PY_VERSION_DEFAULT
+    ENV PY_VERSION ${PY_VERSION_DEFAULT}
 
-#copy modules
-COPY --from=dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
+    #copy modules
+    COPY --from=dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
 
-#copy python build
-COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
+    #copy python build
+    COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
 
 
-RUN rm -rf /mage \
+    RUN rm -rf /mage \
     && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
+    <<<<<<< HEAD
     && apt-get -y --purge autoremove clang git curl python3-pip cmake build-essential \
+    =======
+    && apt-get -y --purge autoremove clang git curl python3-pip python3-setuptools python3-dev cmake build-essential \
+    >>>>>>> main
     && apt-get clean
 
-USER memgraph
-ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
-CMD [""]
+    USER memgraph
+    ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
+    <<<<<<< HEAD
+    CMD [""]
+    =======
+    CMD [""]
+    >>>>>>> main

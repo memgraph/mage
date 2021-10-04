@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import re
 import subprocess
 import shutil
 import glob
@@ -8,52 +9,53 @@ import fnmatch
 import multiprocessing as mp
 import argparse
 import logging as log
-import pathlib
 
 WORK_DIRECTORY = os.getcwd()
-QUERY_MODULES_DIRECTORY = f"{WORK_DIRECTORY}/dist"
+MAGE_BUILD_DIRECTORY = f"{WORK_DIRECTORY}/dist"
 CPP_DIRECTORY = f"{WORK_DIRECTORY}/cpp"
 PY_DIRECTORY = f"{WORK_DIRECTORY}/python"
 RS_DIRECTORY = f"{WORK_DIRECTORY}/rust"
 CPP_BUILD_DIRECTORY = f"{CPP_DIRECTORY}/build"
-MG_CONF_PATH = f"/etc/memgraph/memgraph.conf"
+MG_CONF_DEFAULT_PATH = f"/etc/memgraph/memgraph.conf"
+MG_CONF_QUERY_MODULES_FLAG = "--query-modules-directory"
 
 log.basicConfig(level=log.INFO)
 
-HELP_MESSAGE = '''\
+HELP_MESSAGE = """\
     For usage info run: python3 setup -h
-    '''
+    """
 
 
 def get_arguments():
     parser = argparse.ArgumentParser(
-        description='MAGE setup script',
+        description="MAGE setup script",
     )
-    subparsers = parser.add_subparsers(
-        help='sub-command help',
-        dest='action'
+    subparsers = parser.add_subparsers(help="sub-command help", dest="action")
 
-    )
-
-    build_parser = subparsers.add_parser(
-        'build',
-        help='Build memgraph-mage'
-    )
+    build_parser = subparsers.add_parser("build", help="Build memgraph-mage")
     build_parser.add_argument(
-        '-p', '--path',
-        help='Path to query modules directory',
-        required=False
+        "-p", "--path", help="Path to query modules directory", required=False
     )
 
     query_modules_parser = subparsers.add_parser(
-        'modules_storage',
-        help='Add path of mage/dist to memgraph.conf '
+        "modules_storage", help="Add path of mage/dist to memgraph.conf "
     )
     query_modules_parser.add_argument(
-        '--path', '-p',
-        help='Path to memgraph.conf file',
-        required=False
+        "--conf_path",
+        "-cp",
+        help="Path to Memgraph configuration file",
+        required=False,
+        default=MG_CONF_DEFAULT_PATH,
     )
+    query_modules_parser.add_argument(
+        "--path",
+        "-p",
+        help="Path to new query_modules storage",
+        required=False,
+        default=MAGE_BUILD_DIRECTORY,
+    )
+
+    subparsers.add_parser("all", help="Set up memgraph-mage for usage")
 
     return parser.parse_args()
 
@@ -62,11 +64,10 @@ def get_arguments():
 #                Copy Utility                   #
 #################################################
 
+
 def copytree(src, dst, ignore_patterns=[]):
     def _check_ignore(x):
-        return any(
-            [bool(fnmatch.fnmatch(x, pattern)) for pattern in ignore_patterns]
-        )
+        return any([bool(fnmatch.fnmatch(x, pattern)) for pattern in ignore_patterns])
 
     def _copytree(rel_path=""):
         curr_dir = os.path.join(src, rel_path)
@@ -92,8 +93,8 @@ def copytree(src, dst, ignore_patterns=[]):
 
 
 def build():
-    shutil.rmtree(QUERY_MODULES_DIRECTORY, ignore_errors=True)
-    os.makedirs(QUERY_MODULES_DIRECTORY, exist_ok=True)
+    shutil.rmtree(MAGE_BUILD_DIRECTORY, ignore_errors=True)
+    os.makedirs(MAGE_BUILD_DIRECTORY, exist_ok=True)
 
     #################################################
     #              Load C++ modules                 #
@@ -112,7 +113,7 @@ def build():
     # Transfer files to the query modules directory
     so_files = glob.glob("**/*.so", recursive=True)
     for file in so_files:
-        shutil.copy2(file, QUERY_MODULES_DIRECTORY)
+        shutil.copy2(file, MAGE_BUILD_DIRECTORY)
 
     #################################################
     #             Load Python modules               #
@@ -129,7 +130,7 @@ def build():
     ]
 
     # Copy python repository tree inside dist folder
-    copytree(PY_DIRECTORY, QUERY_MODULES_DIRECTORY, ignore_list)
+    copytree(PY_DIRECTORY, MAGE_BUILD_DIRECTORY, ignore_list)
     os.environ["PYTHONPATH"] = PY_DIRECTORY
 
     #################################################
@@ -138,8 +139,8 @@ def build():
 
     os.chdir(RS_DIRECTORY)
     for project in filter(
-            lambda f: os.path.isdir(f) and f != "rsmgp-sys",
-            os.listdir(RS_DIRECTORY)):
+        lambda f: os.path.isdir(f) and f != "rsmgp-sys", os.listdir(RS_DIRECTORY)
+    ):
         project_dir = os.path.join(RS_DIRECTORY, project)
         os.chdir(project_dir)
         subprocess.run(["cargo", "build", "--release"])
@@ -152,45 +153,82 @@ def build():
         module = modules[0]
         src_file = os.path.join(release_dir, module)
         module = module.lstrip("lib") if module.startswith("lib") else module
-        dst_file = os.path.join(QUERY_MODULES_DIRECTORY, module)
+        dst_file = os.path.join(MAGE_BUILD_DIRECTORY, module)
         shutil.copy2(src_file, dst_file)
 
 
-def run_build_action(copy_dist_dest_path: str):
+def run_build_action(dst_path=None):
     log.log(level=log.INFO, msg="Starting building of source code...")
     build()
     log.log(level=log.INFO, msg="Building done.")
 
-    if copy_dist_dest_path is None:
-        log.log(level=log.INFO,
-                msg="Skipping copy of contents of 'dist' folder to specified folder since --path is not specified")
+    if dst_path is None:
         return
 
-    log.log(level=log.INFO,
-            msg='Copying files from folder {src} to {dst} folder.'.format(src=QUERY_MODULES_DIRECTORY,
-                                                                          dst=copy_dist_dest_path))
+    log.log(
+        level=log.INFO,
+        msg="Copying build files from folder {src} to {dst} folder.".format(
+            src=MAGE_BUILD_DIRECTORY, dst=dst_path
+        ),
+    )
 
-    shutil.copytree(QUERY_MODULES_DIRECTORY, copy_dist_dest_path, dirs_exist_ok=True)
-    log.log(level=log.INFO, msg='Copying done!')
+    copytree(MAGE_BUILD_DIRECTORY, dst_path)
+    log.log(level=log.INFO, msg="Copying done!")
 
 
-def run_modules_storage_setup_action(modules_storage_path_param):
-    modules_storage_path = f"{pathlib.Path().resolve()}/dist" if modules_storage_path_param is None else modules_storage_path_param
+def change_file_lines(file_path: str, pattern: str, substitution: str):
+    with open(file_path, "r") as file:
+        data = file.readlines()
 
-    log.log(level=log.INFO,
-            msg="--query-modules-dir flag in {memgraph_conf} will be set to {path}".format(path=modules_storage_path,
-                                                                                           memgraph_conf=MG_CONF_PATH))
+    data = [re.sub(pattern, substitution, line) for line in data]
 
-    subprocess.run(
-        ['sed', '-E', '-i', "s@.*(--query-modules-directory).*@\\1={path}@".format(path=modules_storage_path),
-         MG_CONF_PATH])
+    with open(file_path, "w") as file:
+        file.writelines(data)
+
+
+def run_modules_storage_setup_action(
+    modules_storage_path=MAGE_BUILD_DIRECTORY, mg_conf_path=MG_CONF_DEFAULT_PATH
+):
+    if not os.path.isfile(mg_conf_path):
+        log.log(
+            level=log.INFO,
+            msg="Configuration path does not exists: {path}. Check out whether you have installed Memgraph!".format(
+                path=mg_conf_path
+            ),
+        )
+        return
+
+    log.log(
+        level=log.INFO,
+        msg="--query-modules-dir flag in {memgraph_conf} will be set to {path}".format(
+            path=modules_storage_path, memgraph_conf=mg_conf_path
+        ),
+    )
+
+    change_file_lines(
+        mg_conf_path,
+        r".*({query_modules_flag}).*".format(
+            query_modules_flag=MG_CONF_QUERY_MODULES_FLAG
+        ),
+        r"\1={path}".format(path=modules_storage_path),
+    )
+
+    log.log(
+        level=log.INFO,
+        msg="--query-modules-dir flag set to {path}".format(path=modules_storage_path),
+    )
 
 
 def main():
     arguments = get_arguments()
 
-    if not hasattr(arguments, 'action'):
+    if not hasattr(arguments, "action"):
         log.log(level=log.INFO, msg=HELP_MESSAGE)
+        return
+
+    if arguments.action == "all":
+        run_modules_storage_setup_action()
+        run_build_action()
         return
 
     if arguments.action == "build":
@@ -198,7 +236,7 @@ def main():
         return
 
     if arguments.action == "modules_storage":
-        run_modules_storage_setup_action(arguments.path)
+        run_modules_storage_setup_action(arguments.path, arguments.conf_path)
         return
 
 
