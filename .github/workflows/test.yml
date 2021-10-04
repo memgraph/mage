@@ -45,6 +45,21 @@ jobs:
         pip install -r ./python/tests/requirements.txt
         pip install -r ./python/requirements.txt
 
+    - name: Test End-to-end on prod
+      env:
+        PYTHONPATH: '$PWD/e2e'
+      run: |
+        cd e2e
+        python -m pytest .
+
+    - name: Stop prod mage container and remove it
+      run: |
+        docker stop ${{ env.MAGE_CONTAINER }}
+        docker rm ${{ env.MAGE_CONTAINER }}
+
+    - name: Run Memgraph MAGE dev image
+      run:  docker run -d -p 7687:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:dev --telemetry-enabled=False
+
     - name: C++ Modules unit tests
       run: |
         cd cpp/build
@@ -57,26 +72,11 @@ jobs:
         cd python
         python -m pytest .
 
-    - name: Test End-to-end
-      env:
-        PYTHONPATH: '$PWD/e2e'
-      run: |
-        cd e2e
-        python -m pytest .
-
     - name: Rust library tests
       run: |
         cd rust/rsmgp-sys
         cargo fmt -- --check
         cargo test
-
-    - name: Stop prod mage container and remove it
-      run: |
-        docker stop ${{ env.MAGE_CONTAINER }}
-        docker rm ${{ env.MAGE_CONTAINER }}
-
-    - name: Run Memgraph MAGE dev image
-      run:  docker run -d -p 7687:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:dev --telemetry-enabled=False
 
     - name: Test End-to-end on dev
       env:
