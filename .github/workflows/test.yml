@@ -72,12 +72,6 @@ jobs:
         cd python
         python -m pytest .
 
-    - name: Rust library tests
-      run: |
-        cd rust/rsmgp-sys
-        cargo fmt -- --check
-        cargo test
-
     - name: Test End-to-end on dev
       env:
         PYTHONPATH: '$PWD/e2e'
