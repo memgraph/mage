@@ -89,7 +89,7 @@ docker run --rm -p 7687:7687 --name mage memgraph-mage
 
 **NOTE**: if you made any new changes while **MAGE** Docker container is running, you need to stop it and rebuild whole image,
 or you can copy mage folder inside **MAGE** docker container and just do the rebuild. 
-Jump to [build MAGE query modules with Docker](#loading-your-query-modules-inside-memgraph-with-docker)
+Jump to [build MAGE query modules with Docker](#building-and-loading-modules-inside-memgraph-with-docker)
 
 
 ### 2. Installing MAGE locally with Linux package of Memgraph
@@ -164,7 +164,7 @@ CALL mg.load_all();
 
 If you want to find out more about loading query modules, visit [this guide](https://memgraph.com/docs/memgraph/reference-guide/query-modules/load-call-query-modules).
 
-## Loading your query modules inside Memgraph with Docker
+## Building and loading modules inside Memgraph with Docker
 
 When you developed your own query module, you need to load it inside Memgraph running inside Docker container.
 
@@ -203,6 +203,42 @@ docker build --target dev -t memgraph-mage:dev .
 docker run --rm -p 7687:7687 --name mage memgraph-mage:dev 
 ```
 
+**3.** Now copying files inside  container and doing build.
+
+**a)** First you need to copy files to container with name `mage`
+
+```
+docker cp . mage:/mage/
+```
+
+**b)** Then you need to position yourself inside container as root:
+
+```
+docker exec -u root -it mage /bin/bash
+```
+
+> Note: if you have done build locally, make sure to delete folder `cpp/build` because
+> you might be dealing with different `architectures` or problems with `CMakeCache.txt`.
+> To delete it, run:
+> 
+> `rm -rf cpp/build`
+
+**c)** After that, run build and copying `mage/dist` to `/usr/lib/memgraph/query_modules`:
+
+```
+python3 setup build -p /usr/lib/memgraph/query_modules/
+```
+**d)** Everything is done now. Just run following command:
+
+```
+exit
+```
+
+> Note that query modules are loaded into Memgraph on startup so if your instance was already running you will need to 
+> execute the following query inside one of [querying platforms](https://docs.memgraph.com/memgraph/connect-to-memgraph) to load them:
+```
+CALL mg.load_all();
+```
 
 ## Example
 If we have a graph that is broken into multiple components (left image), simple call this MAGE spell to check out which node is in which components (right image) →
