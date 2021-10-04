@@ -103,7 +103,7 @@ python3 test_unit
 python3 test_e2e
 ```
 
-Furthermore, to test only specific end-to-end tests, you can add argument `-k` with substring refering to the algorithm that needs to be tested.
+Furthermore, to test only specific end-to-end tests, you can add argument `-k` with substring referring to the algorithm that needs to be tested. To test a module named `<query_module>`, you would have to run `python3 test_e2e -k <query_module>` where `<query_module>` is the name of the specific module you want to test.
 ```
 # Running specific end-to-end tests
 python3 test_e2e -k weakly_connected_components
@@ -127,8 +127,8 @@ python3 test_e2e -k weakly_connected_components
 | [cycles](cpp/cycles_module/cycles_module.cpp)                                                 | C++    | Algorithm for detecting cycles on graphs                                                                                                                                                                                          |
 | [bridges](cpp/bridges_module/bridges_module.cpp)                                              | C++    | A bridge is an edge, which when deleted, increases the number of connected components. The goal of this algorithm is to detect edges that are bridges in a graph.                                                                 |
 | [betweenness centrality](cpp/betweenness_centrality_module/betweenness_centrality_module.cpp) | C++    | The betweenness centrality of a node is defined as the sum of the of all-pairs shortest paths that pass through the node divided by the number of all-pairs shortest paths in the graph. The algorithm has O(nm) time complexity. |
-| [uuid_generator](cpp/uuid_module/uuid_module.cpp)                                             | C++    | A module that generates a new universally unique identifier (UUID).|
-| [node2vec_online](python/node2vec_online.py)                                                  | Python | An algorithm for calculating node embeddings as new edges arrive|                                                                                                                                                           |
+| [uuid_generator](cpp/uuid_module/uuid_module.cpp)                                             | C++    | A module that generates a new universally unique identifier (UUID).                                                                                                                                                               |
+| [node2vec_online](python/node2vec_online.py)                                                  | Python | An algorithm for calculating node embeddings as new edges arrive                                                                                                                                                                  |  |
 
 
 ## Contributing
