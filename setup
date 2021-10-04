@@ -229,6 +229,7 @@ def main():
     if arguments.action == "all":
         run_modules_storage_setup_action()
         run_build_action()
+        return
 
     if arguments.action == "build":
         run_build_action(arguments.path)
