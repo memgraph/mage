@@ -52,12 +52,14 @@ def get_arguments():
     query_modules_parser.add_argument(
         '--conf_path', '-cp',
         help='Path to Memgraph configuration file',
-        required=False
+        required=False,
+        default=MG_CONF_DEFAULT_PATH
     )
     query_modules_parser.add_argument(
         '--path', '-p',
         help='Path to new query_modules storage',
-        required=False
+        required=False,
+        default=MAGE_BUILD_DIRECTORY
     )
 
     subparsers.add_parser(
