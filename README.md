@@ -128,6 +128,8 @@ python3 test_e2e -k weakly_connected_components
 | [bridges](cpp/bridges_module/bridges_module.cpp)                                              | C++    | A bridge is an edge, which when deleted, increases the number of connected components. The goal of this algorithm is to detect edges that are bridges in a graph.                                                                 |
 | [betweenness centrality](cpp/betweenness_centrality_module/betweenness_centrality_module.cpp) | C++    | The betweenness centrality of a node is defined as the sum of the of all-pairs shortest paths that pass through the node divided by the number of all-pairs shortest paths in the graph. The algorithm has O(nm) time complexity. |
 | [uuid_generator](cpp/uuid_module/uuid_module.cpp)                                             | C++    | A module that generates a new universally unique identifier (UUID).                                                                                                                                                               |
+| [node2vec_online](python/node2vec_online.py)                                                  | Python | An algorithm for calculating node embeddings as new edges arrive                                                                                                                                                                  |  |
+
 
 ## Contributing
 
