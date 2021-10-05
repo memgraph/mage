@@ -44,7 +44,17 @@ If you want more info about MAGE, check out the official [MAGE Documentation](ht
 ### Algorithm proposition
 Furthermore, if you have an **algorithm proposition**, please fill in the survey on [**mage.memgraph.com**](https://mage.memgraph.com/).
 
+### Community
+Make sure to check out Memgraph community, and join us on a survey of streaming a graph algorithms! Drop us a message on the channels below:
+
+- :robot: [**Discord**](https://discord.gg/memgraph)
+- :busts_in_silhouette: [**Discourse forum**](https://discourse.memgraph.com/)
+- :octocat: [**Memgraph GitHub**](https://github.com/memgraph)
+- :bird: [**Twitter**](https://twitter.com/memgraphdb)
+- :movie_camera: [**YouTube**](https://www.youtube.com/channel/UCZ3HOJvHGxtQ_JHxOselBYg)
+
 ## Overview
+- [Compatibility](#memgraph-compatibility)
 - [Installation](#how-to-install)
 - [Example](#running-the-mage)
 - [MAGE Spells](#mage-spells)
@@ -53,10 +63,17 @@ Furthermore, if you have an **algorithm proposition**, please fill in the survey
 - [Testing](#testing-the-mage)
 - [Contributing](#contributing)
 - [Code of Conduct](#code-of-conduct)
+
+# Memgraph compatibility
+With changes in Memgraph API, MAGE started to track version numbers. Check out the table below which will tell you compatibility of MAGE with Memgraph versions.
+| MAGE version | Memgraph version  |
+| ------------ | ----------------- |
+| >= 1.0       | >= 2.0.0          |
+| ^0           | >= 1.4.0 <= 1.6.1 |
 ## How to install?
 There are two options to install MAGE. With [Docker installation](#1-installing-mage-with-docker) you only need Docker.
 [To build from source](#2-installing-mage-locally-with-linux-package-of-memgraph)
-you will need **Python3**, **Make**, **CMake**, **Clang** and **Rust**. Installation with Docker is easier for quick installation
+you will need **Python3**, **Make**, **CMake**, **Clang**, **UUID** and **Rust**. Installation with Docker is easier for quick installation
 and smaller development.
 
 ## Further steps - Installation
@@ -118,7 +135,7 @@ By running following command, this script will change default directory where Me
 ```
 python3 setup all
 ```
-> Note: If your changes are not loaded, make sure to restart the instance by restarting the instancy by running `systemctl stop memgraph` and `systemctl start memgraph`.
+> Note: If your changes are not loaded, make sure to restart the instance by running `systemctl stop memgraph` and `systemctl start memgraph`.
 
 Next time you change something, just run the following command, since it is we have already set up new directory for
 query modules directory:
