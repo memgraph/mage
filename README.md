@@ -135,7 +135,7 @@ By running following command, this script will change default directory where Me
 ```
 python3 setup all
 ```
-> Note: If your changes are not loaded, make sure to restart the instance by restarting the instancy by running `systemctl stop memgraph` and `systemctl start memgraph`.
+> Note: If your changes are not loaded, make sure to restart the instance by running `systemctl stop memgraph` and `systemctl start memgraph`.
 
 Next time you change something, just run the following command, since it is we have already set up new directory for
 query modules directory:
