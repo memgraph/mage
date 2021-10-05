@@ -41,6 +41,7 @@ void CreateRoute(const mg_graph::GraphView<> &graph, const std::uint64_t start_i
     // Pick and add the random outer edge
     auto number_of_neighbors = neighbors.size();
     auto next_id = neighbors[std::rand() % number_of_neighbors].node_id;
+    next_id = graph.GetMemgraphNodeId(next_id);
 
     walk.emplace_back(next_id);
     context.walks_table[next_id].insert(walk_index);
@@ -52,7 +53,7 @@ void CreateRoute(const mg_graph::GraphView<> &graph, const std::uint64_t start_i
       break;
     }
 
-    current_id = next_id;
+    current_id = graph.GetInnerNodeId(next_id);
   }
 }
 
@@ -73,7 +74,8 @@ void UpdateCreate(const mg_graph::GraphView<> &graph, const std::pair<std::uint6
     walk.erase(std::find(walk.begin(), walk.end(), from) + 1, walk.end());
 
     auto current_id = from;
-    CreateRoute(graph, current_id, walk, walk_index, global_epsilon / 2.0, *context.distr, *context.gen);
+    CreateRoute(graph, graph.GetInnerNodeId(current_id), walk, walk_index, global_epsilon / 2.0, *context.distr,
+                *context.gen);
   }
 }
 
@@ -86,7 +88,8 @@ void UpdateCreate(const mg_graph::GraphView<> &graph, const std::uint64_t new_ve
     context.walks_table[new_vertex].insert(walk_index);
     context.walks_counter[new_vertex]++;
 
-    CreateRoute(graph, new_vertex, walk, walk_index, global_epsilon, *context.distr, *context.gen);
+    CreateRoute(graph, graph.GetInnerNodeId(new_vertex), walk, walk_index, global_epsilon, *context.distr,
+                *context.gen);
 
     context.walks.emplace_back(std::move(walk));
     walk_index++;
@@ -120,7 +123,8 @@ void UpdateDelete(const mg_graph::GraphView<> &graph, const std::pair<std::uint6
     walk.erase(std::find(walk.begin(), walk.end(), from) + 1, walk.end());
 
     auto current_id = from;
-    CreateRoute(graph, current_id, walk, walk_index, global_epsilon / 2.0, *context.distr, *context.gen);
+    CreateRoute(graph, graph.GetInnerNodeId(current_id), walk, walk_index, global_epsilon / 2.0, *context.distr,
+                *context.gen);
   }
 }
 
@@ -142,17 +146,18 @@ std::vector<std::pair<std::uint64_t, double>> SetPagerank(const mg_graph::GraphV
     for (std::uint64_t i = 0; i < R; i++) {
       std::vector<std::uint64_t> walk;
 
-      auto current_id = node_id;
+      auto current_id = graph.GetMemgraphNodeId(node_id);
       walk.emplace_back(current_id);
       context.walks_table[current_id].insert(walk_index);
       context.walks_counter[current_id]++;
 
-      CreateRoute(graph, current_id, walk, walk_index, epsilon, *context.distr, *context.gen);
+      CreateRoute(graph, graph.GetInnerNodeId(current_id), walk, walk_index, epsilon, *context.distr, *context.gen);
 
       context.walks.emplace_back(std::move(walk));
       walk_index++;
     }
   }
+
   return CalculatePageRank();
 }
 
