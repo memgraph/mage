@@ -24,10 +24,13 @@ void InsertWeaklyComponentResult(mgp_graph *graph, mgp_result *result, mgp_memor
 /// Time complexity: O(|V|+|E|)
 void Weak(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
+    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
+
     std::unordered_map<std::uint64_t, std::uint64_t> vertex_component;
     std::uint64_t curr_component = 0;
     for (auto vertex : graph->Nodes()) {
+      if (vertex_component.find(vertex.id) != vertex_component.end()) continue;
+
       // Run BFS from current vertex.
       std::queue<std::uint64_t> q;
 
