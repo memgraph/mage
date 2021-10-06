@@ -19,6 +19,7 @@ fn main() {
     let bindings = bindgen::Builder::default()
         .header(mg_procedure_path)
         .blacklist_function("mgp_*")
+        .rustified_enum("mgp_error")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .generate()
         .expect("Unable to generate bindings")

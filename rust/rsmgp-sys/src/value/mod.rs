@@ -101,7 +101,7 @@ impl MgpValue {
         }
     }
 
-    pub(crate) fn mgp_ptr(&self) -> *const mgp_value {
+    pub(crate) fn mgp_ptr(&self) -> *mut mgp_value {
         self.ptr
     }
 
