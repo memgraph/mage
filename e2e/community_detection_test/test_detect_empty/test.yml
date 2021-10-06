@@ -1,0 +1,7 @@
+query: >
+  CALL community_detection.detect()
+  YIELD node, community
+  RETURN node.id, community
+  ORDER BY node.id;
+
+output:

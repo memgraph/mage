@@ -1,0 +1,24 @@
+query: >
+  CALL community_detection.detect(10.0, 0.7, 5.0, 0.1, 50, 5)
+  YIELD node, community
+  RETURN node.id, community
+  ORDER BY node.id;
+
+output:
+  - node_id: 0
+    community: 0
+
+  - node_id: 1
+    community: 1
+
+  - node_id: 2
+    community: 2
+
+  - node_id: 3
+    community: 3
+
+  - node_id: 4
+    community: 4
+  
+  - node_id: 5
+    community: 5

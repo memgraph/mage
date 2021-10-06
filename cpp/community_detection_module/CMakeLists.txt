@@ -2,7 +2,7 @@ set(community_detection_module_src
     community_detection_module.cpp
     algorithm/label_propagation.cpp)
 
-add_query_module(community_detection 1 ${community_detection_module_src})
+add_query_module(community_detection 1 "${community_detection_module_src}")
 
 # Link external libraries
 target_link_libraries(community_detection PRIVATE mg_utility)
@@ -15,7 +15,5 @@ set(community_detection_test_src
     algorithm/label_propagation.cpp)
 
 add_executable(community_detection_test "${community_detection_test_src}")
-
-# Link external libraries
 target_link_libraries(community_detection_test PRIVATE mg_utility gtest)
 gtest_add_tests(TARGET community_detection_test)

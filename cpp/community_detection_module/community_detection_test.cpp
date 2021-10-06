@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 
 #include <mg_generate.hpp>
-#include <mg_graph.hpp>
 
 #include "algorithm/label_propagation.hpp"
 
@@ -75,7 +74,7 @@ TEST(LabelRankT, GetLabels) {
   ASSERT_TRUE(labels == correct_labels);
 }
 
-TEST(LabelRankT, GetLabelsNoInitialization) {
+TEST(LabelRankT, GetLabelsUninitialized) {
   auto example_graph = mg_generate::BuildGraph(
       15, {
               {0, 1},   {0, 2},   {0, 3},   {1, 2},   {1, 4},   {2, 3},
@@ -97,7 +96,7 @@ TEST(LabelRankT, GetLabelsNoInitialization) {
   ASSERT_TRUE(labels == correct_labels);
 }
 
-TEST(LabelRankT, SetLabels) {
+TEST(LabelRankT, FindLabels) {
   auto example_graph = mg_generate::BuildGraph(
       15, {
               {0, 1},   {0, 2},   {0, 3},   {1, 2},   {1, 4},   {2, 3},
@@ -111,28 +110,6 @@ TEST(LabelRankT, SetLabels) {
 
   LabelRankT::LabelRankT graph = LabelRankT::LabelRankT(example_graph);
   auto labels = graph.calculate_labels();
-
-  std::unordered_map<std::uint64_t, std::uint64_t> correct_labels = {
-      {0, 2}, {1, 2},  {2, 2},   {3, 2},   {4, 4},   {5, 4},   {6, 4},  {7, 4},
-      {8, 4}, {9, 10}, {10, 10}, {11, 10}, {12, 10}, {13, 10}, {14, 10}};
-
-  ASSERT_TRUE(labels == correct_labels);
-}
-
-TEST(LabelRankT, UpdateLabelsNoInitialization) {
-  auto example_graph = mg_generate::BuildGraph(
-      15, {
-              {0, 1},   {0, 2},   {0, 3},   {1, 2},   {1, 4},   {2, 3},
-              {2, 9},   {3, 13},  {4, 5},   {4, 6},   {4, 7},   {4, 8},
-              {5, 7},   {5, 8},   {6, 7},   {6, 8},
-
-              {8, 10},  {9, 10},  {9, 12},  {9, 13},  {9, 14},  {10, 11},
-              {10, 13}, {10, 14}, {11, 12}, {11, 13}, {11, 14}, {12, 14},
-
-          });
-
-  LabelRankT::LabelRankT graph = LabelRankT::LabelRankT(example_graph);
-  auto labels = graph.update_labels({}, {{}}, {}, {{}});
 
   std::unordered_map<std::uint64_t, std::uint64_t> correct_labels = {
       {0, 2}, {1, 2},  {2, 2},   {3, 2},   {4, 4},   {5, 4},   {6, 4},  {7, 4},
@@ -192,7 +169,7 @@ TEST(LabelRankT, UpdateLabelsNodesChanged) {
   example_graph->EraseEdge(9, 12);
   example_graph->EraseEdge(9, 14);
   example_graph->EraseEdge(10, 13);
-
+  
   example_graph->CreateEdge(0, 13, mg_graph::GraphType::kUndirectedGraph);
   example_graph->CreateEdge(3, 9, mg_graph::GraphType::kUndirectedGraph);
   example_graph->CreateEdge(10, 12, mg_graph::GraphType::kUndirectedGraph);
@@ -223,7 +200,7 @@ TEST(LabelRankT, UpdateLabelsNodesChanged) {
   ASSERT_TRUE(labels == correct_labels);
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

@@ -13,16 +13,16 @@ class LabelRankT {
   /// default edge weight
   double DEFAULT_WEIGHT = 1;
   /// weight property name
-  std::string weight_property;
+  std::string weight_property = "weight";
 
   /// default self-loop weight
-  double w_selfloop;
-  /// similarity threshold used in the node selection step, values in [0, 1]
-  double similarity_threshold;
+  double w_selfloop = 1;
+  /// similarity threshold used in the node selection step, values within [0, 1]
+  double similarity_threshold = 0.7;
   /// exponent used in the inflation step
-  double exponent;
+  double exponent = 4;
   /// smallest acceptable probability in the cutoff step
-  double min_value;
+  double min_value = 0.1;
 
   /// maximum number of iterations
   std::uint64_t max_iterations = 100;
@@ -43,16 +43,29 @@ class LabelRankT {
   /// flag whether community labels have already been calculated
   bool calculated = false;
 
+  ///@brief Returns a vector of all graph’s nodes’ Memgraph IDs.
+  ///
+  ///@return -- vector of all graph’s nodes’ Memgraph IDs
+  std::vector<std::uint64_t> nodes_memgraph_ids();
+
+  ///@brief Returns neighbors’ Memgraph IDs for a given node’s Memgraph ID.
+  ///
+  ///@param node_id -- given node’s Memgraph ID
+  ///
+  ///@return -- vector of neighbors’ Memgraph IDs
+  std::vector<std::uint64_t> neighbors_memgraph_ids(std::uint64_t node_id);
+
   ///@brief Initializes internal data structures.
   void set_structures(std::uint64_t node_id);
-
-  double get_weight(std::uint64_t node_i_id, std::uint64_t node_j_id);
 
   ///@brief Removes deleted nodes’ entries from internal data structures.
   ///
   ///@param deleted_nodes_ids -- set of deleted nodes’ IDs
   void remove_deleted_nodes(
       std::unordered_set<std::uint64_t>& deleted_nodes_ids);
+
+  /// TBD
+  double get_weight(std::uint64_t node_i_id, std::uint64_t node_j_id);
 
   ///@brief Resets each node’s number of updates.
   void reset_times_updated();
@@ -73,8 +86,7 @@ class LabelRankT {
   ///@param similarity_threshold -- the k% threshold above
   ///
   ///@return -- whether the criterion is met
-  bool distinct_enough(mg_graph::Node<uint64_t> node_i,
-                       double similarity_threshold);
+  bool distinct_enough(std::uint64_t node_i_id, double similarity_threshold);
 
   ///@brief Performs label propagation on given node’s label probability vector.
   /// Label propagation works by calculating a weighted sum of the label
@@ -83,8 +95,7 @@ class LabelRankT {
   ///@param node_i -- given node
   ///
   ///@return -- updated label probabilities for given node
-  std::unordered_map<std::uint64_t, double> propagate(
-      mg_graph::Node<uint64_t> node_i);
+  std::unordered_map<std::uint64_t, double> propagate(std::uint64_t node_i_id);
 
   ///@brief Raises given node’s label probabilities to specified power and
   /// normalizes the result.
@@ -117,28 +128,28 @@ class LabelRankT {
   /// of any node so far} pair
   std::pair<bool, std::uint64_t> iteration(
       bool incremental = false,
-      std::unordered_set<std::uint64_t> changed_nodes = {});
+      std::unordered_set<std::uint64_t> changed_nodes = {},
+      std::unordered_set<std::uint64_t> to_delete = {});
 
  public:
-  ///@brief Creates an instance of the LabelRankT algorithm with associated data
-  /// structures.
+  ///@brief Creates an instance of the LabelRankT algorithm.
   ///
   ///@param graph -- reference to current graph
+  LabelRankT(std::unique_ptr<mg_graph::Graph<>>& graph) : graph(graph){};
+
+  ///@brief Sets parameters given to the query module’s set() method.
+  ///
+  ///@param weight_property -- weight-containing edge property’s name
   ///@param w_selfloop -- default weight of self-loops
   ///@param similarity_threshold -- similarity threshold used in the node
   /// selection step, values in [0, 1]
   ///@param exponent -- exponent used in the inflation step
   ///@param min_value -- smallest acceptable probability in the cutoff step
-  LabelRankT(std::unique_ptr<mg_graph::Graph<>>& graph,
-             std::string weight_property = "weight", double w_selfloop = 1,
-             double similarity_threshold = 0.7, double exponent = 4,
-             double min_value = 0.1)
-      : weight_property(weight_property),
-        w_selfloop(w_selfloop),
-        similarity_threshold(similarity_threshold),
-        exponent(exponent),
-        min_value(min_value),
-        graph(graph){};
+  ///@param max_iterations -- maximum number of iterations
+  ///@param max_updates -- maximum number of updates for any node
+  void set_parameters(std::string weight_property, double w_selfloop,
+                      double similarity_threshold, double exponent,
+                      double min_value);
 
   ///@brief Returns previously calculated community labels.
   /// If no calculation has been done previously, calculates community labels
