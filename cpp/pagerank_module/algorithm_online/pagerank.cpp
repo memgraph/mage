@@ -4,7 +4,7 @@
 #include <mg_graph.hpp>
 #include "pagerank.hpp"
 
-namespace pagerank_approx_alg {
+namespace pagerank_online_alg {
 namespace {
 PageRankData context;
 std::uint64_t global_R;
@@ -198,4 +198,4 @@ void Reset() {
 
   global_context.Init();
 }
-}  // namespace pagerank_approx_alg
+}  // namespace pagerank_online_alg

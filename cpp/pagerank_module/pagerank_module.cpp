@@ -2,7 +2,6 @@
 
 #include <iostream>
 #include "algorithm/pagerank.hpp"
-#include "algorithm_approx/pagerank.hpp"
 
 namespace {
 constexpr char const *kProcedureGet = "get";

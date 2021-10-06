@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include "algorithm/pagerank.hpp"
-#include "algorithm_approx/pagerank.hpp"
+#include "algorithm_online/pagerank.hpp"
 
 constexpr char const *kFieldNode = "node";
 constexpr char const *kFieldRank = "rank";
@@ -25,14 +25,14 @@ void InsertPagerankRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memo
   mg_utility::InsertDoubleValue(record, kFieldRank, rank, memory);
 }
 
-void ApproxPagerankGet(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void OnlinePagerankGet(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
     auto walks_per_node = mgp::value_get_int(mgp::list_at(args, 0));
     auto walk_stop_epsilon = mgp::value_get_double(mgp::list_at(args, 1));
 
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
 
-    auto pageranks = pagerank_approx_alg::SetPagerank(*graph, walks_per_node, walk_stop_epsilon);
+    auto pageranks = pagerank_online_alg::SetPagerank(*graph, walks_per_node, walk_stop_epsilon);
 
     for (auto const [node_id, rank] : pageranks) {
       InsertPagerankRecord(memgraph_graph, result, memory, node_id, rank);
@@ -44,7 +44,7 @@ void ApproxPagerankGet(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *re
   }
 }
 
-void ApproxPagerankUpdate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void OnlinePagerankUpdate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
     // Created vertices
     auto created_vertices_list = mgp::value_get_list(mgp::list_at(args, 0));
@@ -85,7 +85,7 @@ void ApproxPagerankUpdate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
 
     auto pageranks =
-        pagerank_approx_alg::UpdatePagerank(*graph, created_vertices, created_edges, deleted_vertices, deleted_edges);
+        pagerank_online_alg::UpdatePagerank(*graph, created_vertices, created_edges, deleted_vertices, deleted_edges);
 
     auto number_of_nodes = graph->Nodes().size();
     for (auto const [node_id, rank] : pageranks) {
@@ -99,10 +99,10 @@ void ApproxPagerankUpdate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
 }
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
-  // Approximate PageRank solution
+  // Online approximate PageRank solution
   {
     try {
-      auto *pagerank_proc = mgp::module_add_read_procedure(module, "get", ApproxPagerankGet);
+      auto *pagerank_proc = mgp::module_add_read_procedure(module, "get", OnlinePagerankGet);
 
       auto default_walks_per_node = mgp::value_make_int(10, memory);
       auto default_walk_stop_epsilon = mgp::value_make_double(0.1, memory);
@@ -122,10 +122,10 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     }
   }
 
-  // Approximate PageRank Create Edges/Nodes
+  // Online approximate PageRank Create Edges/Nodes
   {
     try {
-      auto *pagerank_proc = mgp::module_add_read_procedure(module, "update", ApproxPagerankUpdate);
+      auto *pagerank_proc = mgp::module_add_read_procedure(module, "update", OnlinePagerankUpdate);
 
       auto default_created_vertices = mgp::value_make_null(memory);
       auto default_created_edges = mgp::value_make_null(memory);

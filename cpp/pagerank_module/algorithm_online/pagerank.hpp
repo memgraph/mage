@@ -3,7 +3,7 @@
 #include <random>
 #include <unordered_set>
 
-namespace pagerank_approx_alg {
+namespace pagerank_online_alg {
 namespace {
 class PageRankData {
  public:
@@ -59,4 +59,4 @@ std::vector<std::pair<std::uint64_t, double>> UpdatePagerank(
 
 void Reset();
 
-}  // namespace pagerank_approx_alg
+}  // namespace pagerank_online_alg
