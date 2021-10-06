@@ -4,15 +4,22 @@
 #include "algorithm/pagerank.hpp"
 #include "algorithm_online/pagerank.hpp"
 
+constexpr char const *kProcedureSet = "set";
+constexpr char const *kProcedureGet = "get";
+constexpr char const *kProcedureUpdate = "update";
+constexpr char const *kProcedureReset = "reset";
+
 constexpr char const *kFieldNode = "node";
 constexpr char const *kFieldRank = "rank";
-
-constexpr char const *kArgumentMaxIterations = "max_iterations";
-constexpr char const *kArgumentDampingFactor = "damping_factor";
-constexpr char const *kArgumentStopEpsilon = "stop_epsilon";
+constexpr char const *kFieldMessage = "message";
 
 constexpr char const *kArgumentWalksPerNode = "walks_per_node";
 constexpr char const *kArgumentWalkStopEpsilon = "walk_stop_epsilon";
+
+constexpr char const *kArgumentCreatedVertices = "created_vertices";
+constexpr char const *kArgumentCreatedEdges = "created_edges";
+constexpr char const *kArgumentDeletedVertices = "deleted_vertices";
+constexpr char const *kArgumentDeletedEdges = "deleted_edges";
 
 void InsertPagerankRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
                           double rank) {
@@ -25,7 +32,32 @@ void InsertPagerankRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memo
   mg_utility::InsertDoubleValue(record, kFieldRank, rank, memory);
 }
 
+void InsertMessageRecord(mgp_result *result, mgp_memory *memory, const char *message) {
+  auto *record = mgp::result_new_record(result);
+  if (record == nullptr) {
+    throw mg_exception::NotEnoughMemoryException();
+  }
+
+  mg_utility::InsertStringValueResult(record, kFieldMessage, message, memory);
+}
+
 void OnlinePagerankGet(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  try {
+    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
+
+    auto pageranks = pagerank_online_alg::GetPagerank(*graph);
+
+    for (auto const [node_id, rank] : pageranks) {
+      InsertPagerankRecord(memgraph_graph, result, memory, node_id, rank);
+    }
+  } catch (const std::exception &e) {
+    // We must not let any exceptions out of our module.
+    mgp::result_set_error_msg(result, e.what());
+    return;
+  }
+}
+
+void OnlinePagerankSet(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
     auto walks_per_node = mgp::value_get_int(mgp::list_at(args, 0));
     auto walk_stop_epsilon = mgp::value_get_double(mgp::list_at(args, 1));
@@ -98,17 +130,27 @@ void OnlinePagerankUpdate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
   }
 }
 
+void OnlinePagerankReset(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  try {
+    pagerank_online_alg::Reset();
+    InsertMessageRecord(result, memory, "Pagerank context is reset! Before running again it will run initialization.");
+  } catch (const std::exception &e) {
+    // We must not let any exceptions out of our module.
+    InsertMessageRecord(result, memory, "Reset failed: An exception occurred, please check your module!");
+  }
+}
+
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   // Online approximate PageRank solution
   {
     try {
-      auto *pagerank_proc = mgp::module_add_read_procedure(module, "get", OnlinePagerankGet);
+      auto *pagerank_proc = mgp::module_add_read_procedure(module, kProcedureSet, OnlinePagerankSet);
 
       auto default_walks_per_node = mgp::value_make_int(10, memory);
       auto default_walk_stop_epsilon = mgp::value_make_double(0.1, memory);
 
       mgp::proc_add_opt_arg(pagerank_proc, kArgumentWalksPerNode, mgp::type_int(), default_walks_per_node);
-      mgp::proc_add_opt_arg(pagerank_proc, kArgumentStopEpsilon, mgp::type_float(), default_walk_stop_epsilon);
+      mgp::proc_add_opt_arg(pagerank_proc, kArgumentWalkStopEpsilon, mgp::type_float(), default_walk_stop_epsilon);
 
       mgp::value_destroy(default_walks_per_node);
       mgp::value_destroy(default_walk_stop_epsilon);
@@ -122,23 +164,37 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     }
   }
 
-  // Online approximate PageRank Create Edges/Nodes
+  // Online approximate PageRank get results
   {
     try {
-      auto *pagerank_proc = mgp::module_add_read_procedure(module, "update", OnlinePagerankUpdate);
+      auto *pagerank_proc = mgp::module_add_read_procedure(module, kProcedureGet, OnlinePagerankGet);
+
+      // Query module output record
+      mgp::proc_add_result(pagerank_proc, kFieldNode, mgp::type_node());
+      mgp::proc_add_result(pagerank_proc, kFieldRank, mgp::type_float());
+
+    } catch (const std::exception &e) {
+      return 1;
+    }
+  }
+
+  // Online approximate PageRank update state
+  {
+    try {
+      auto *pagerank_proc = mgp::module_add_read_procedure(module, kProcedureUpdate, OnlinePagerankUpdate);
 
       auto default_created_vertices = mgp::value_make_null(memory);
       auto default_created_edges = mgp::value_make_null(memory);
       auto default_deleted_vertices = mgp::value_make_null(memory);
       auto default_deleted_edges = mgp::value_make_null(memory);
 
-      mgp::proc_add_opt_arg(pagerank_proc, "created_vertices", mgp::type_nullable(mgp::type_list(mgp::type_node())),
-                            default_created_vertices);
-      mgp::proc_add_opt_arg(pagerank_proc, "created_edges",
+      mgp::proc_add_opt_arg(pagerank_proc, kArgumentCreatedVertices,
+                            mgp::type_nullable(mgp::type_list(mgp::type_node())), default_created_vertices);
+      mgp::proc_add_opt_arg(pagerank_proc, kArgumentCreatedEdges,
                             mgp::type_nullable(mgp::type_list(mgp::type_relationship())), default_created_edges);
-      mgp::proc_add_opt_arg(pagerank_proc, "deleted_vertices", mgp::type_nullable(mgp::type_list(mgp::type_node())),
-                            default_deleted_vertices);
-      mgp::proc_add_opt_arg(pagerank_proc, "deleted_edges",
+      mgp::proc_add_opt_arg(pagerank_proc, kArgumentDeletedVertices,
+                            mgp::type_nullable(mgp::type_list(mgp::type_node())), default_deleted_vertices);
+      mgp::proc_add_opt_arg(pagerank_proc, kArgumentDeletedEdges,
                             mgp::type_nullable(mgp::type_list(mgp::type_relationship())), default_deleted_edges);
 
       mgp::value_destroy(default_created_vertices);
@@ -149,6 +205,18 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
       // Query module output record
       mgp::proc_add_result(pagerank_proc, kFieldNode, mgp::type_node());
       mgp::proc_add_result(pagerank_proc, kFieldRank, mgp::type_float());
+
+    } catch (const std::exception &e) {
+      return 1;
+    }
+  }
+
+  // Add reset procedure
+  {
+    try {
+      auto *pagerank_proc = mgp::module_add_read_procedure(module, kProcedureReset, OnlinePagerankReset);
+
+      mgp::proc_add_result(pagerank_proc, kFieldMessage, mgp::type_string());
 
     } catch (const std::exception &e) {
       return 1;
