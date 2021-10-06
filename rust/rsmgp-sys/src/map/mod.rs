@@ -127,14 +127,14 @@ impl Map {
         let mgp_map_iterator = ffi::mgp_map_iter_items(ptr, memgraph.memory_ptr());
         if mgp_map_iterator.is_null() {
             ffi::mgp_map_destroy(mgp_map_copy);
-            return Err(MgpError::UnableToCopyMap);
+            return Err(Error::UnableToCopyMap);
         }
         let map_iterator = MapIterator::new(mgp_map_iterator, &memgraph);
         for item in map_iterator {
             let mgp_value = item.value.to_mgp_value(&memgraph)?;
             if ffi::mgp_map_insert(mgp_map_copy, item.key.as_ptr(), mgp_value.mgp_ptr()) == 0 {
                 ffi::mgp_map_destroy(mgp_map_copy);
-                return Err(MgpError::UnableToCopyMap);
+                return Err(Error::UnableToCopyMap);
             }
         }
         Ok(Map::new(mgp_map_copy, &memgraph))
@@ -144,7 +144,7 @@ impl Map {
         unsafe {
             let mgp_ptr = ffi::mgp_map_make_empty(memgraph.memory_ptr());
             if mgp_ptr.is_null() {
-                return Err(MgpError::UnableToCreateEmptyMap);
+                return Err(Error::UnableToCreateEmptyMap);
             }
             Ok(Map::new(mgp_ptr, &memgraph))
         }
@@ -154,7 +154,7 @@ impl Map {
         unsafe {
             let mgp_value = value.to_mgp_value(&self.memgraph)?;
             if ffi::mgp_map_insert(self.ptr, key.as_ptr(), mgp_value.mgp_ptr()) == 0 {
-                return Err(MgpError::UnableToInsertMapValue);
+                return Err(Error::UnableToInsertMapValue);
             }
             Ok(())
         }
@@ -168,7 +168,7 @@ impl Map {
         unsafe {
             let c_value = ffi::mgp_map_at(self.ptr, key.as_ptr());
             if c_value.is_null() {
-                return Err(MgpError::UnableToAccessMapValue);
+                return Err(Error::UnableToAccessMapValue);
             }
             mgp_raw_value_to_value(c_value, &self.memgraph)
         }
@@ -178,7 +178,7 @@ impl Map {
         unsafe {
             let mgp_iterator = ffi::mgp_map_iter_items(self.ptr, self.memgraph.memory_ptr());
             if mgp_iterator.is_null() {
-                return Err(MgpError::UnableToCreateMapIterator);
+                return Err(Error::UnableToCreateMapIterator);
             }
             Ok(MapIterator::new(mgp_iterator, &self.memgraph))
         }

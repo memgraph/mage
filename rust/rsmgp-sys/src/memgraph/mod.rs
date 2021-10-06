@@ -147,7 +147,7 @@ impl Memgraph {
                 self.memory_ptr()
             );
             if mgp_iterator.is_null() {
-                return Err(MgpError::UnableToCreateGraphVerticesIterator);
+                return Err(Error::UnableToCreateGraphVerticesIterator);
             }
             Ok(VerticesIterator::new(mgp_iterator, &self))
         }
@@ -163,7 +163,7 @@ impl Memgraph {
                 self.memory_ptr()
             );
             if mgp_vertex_ptr.is_null() {
-                return Err(MgpError::UnableToFindVertexById);
+                return Err(Error::UnableToFindVertexById);
             }
             Ok(Vertex::new(mgp_vertex_ptr, &self))
         }
@@ -204,7 +204,7 @@ impl Memgraph {
                 Some(proc_ptr)
             );
             if procedure.is_null() {
-                return Err(MgpError::UnableToRegisterReadProcedure);
+                return Err(Error::UnableToRegisterReadProcedure);
             }
 
             for required_type in required_arg_types {
@@ -212,7 +212,7 @@ impl Memgraph {
                 if ffi::mgp_proc_add_arg(procedure, required_type.name.as_ptr(), mgp_type)
                     != mgp_error::MGP_ERROR_NO_ERROR
                 {
-                    return Err(MgpError::UnableToAddRequiredArguments);
+                    return Err(Error::UnableToAddRequiredArguments);
                 }
             }
 
@@ -226,7 +226,7 @@ impl Memgraph {
                     optional_input.default.mgp_ptr(),
                 ) != mgp_error::MGP_ERROR_NO_ERROR
                 {
-                    return Err(MgpError::UnableToAddOptionalArguments);
+                    return Err(Error::UnableToAddOptionalArguments);
                 }
             }
 
@@ -239,12 +239,12 @@ impl Memgraph {
                         mgp_type,
                     ) != mgp_error::MGP_ERROR_NO_ERROR
                     {
-                        return Err(MgpError::UnableToAddDeprecatedReturnType);
+                        return Err(Error::UnableToAddDeprecatedReturnType);
                     }
                 } else if ffi::mgp_proc_add_result(procedure, result_field.name.as_ptr(), mgp_type)
                     != mgp_error::MGP_ERROR_NO_ERROR
                 {
-                    return Err(MgpError::UnableToAddReturnType);
+                    return Err(Error::UnableToAddReturnType);
                 }
             }
 

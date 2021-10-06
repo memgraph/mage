@@ -64,7 +64,7 @@ impl Path {
 
         let mgp_copy = ffi::mgp_path_copy(mgp_path, memgraph.memory_ptr());
         if mgp_copy.is_null() {
-            return Err(MgpError::UnableToCopyPath);
+            return Err(Error::UnableToCopyPath);
         }
         Ok(Path::new(mgp_copy, &memgraph))
     }
@@ -83,7 +83,7 @@ impl Path {
         unsafe {
             let mgp_path = ffi::mgp_path_make_with_start(vertex.mgp_ptr(), memgraph.memory_ptr());
             if mgp_path.is_null() {
-                return Err(MgpError::UnableToCreatePathWithStartVertex);
+                return Err(Error::UnableToCreatePathWithStartVertex);
             }
             Ok(Path::new(mgp_path, &memgraph))
         }
@@ -95,7 +95,7 @@ impl Path {
         unsafe {
             let mgp_result = ffi::mgp_path_expand(self.ptr, edge.mgp_ptr());
             if mgp_result == 0 {
-                return Err(MgpError::UnableToExpandPath);
+                return Err(Error::UnableToExpandPath);
             }
             Ok(())
         }
@@ -105,7 +105,7 @@ impl Path {
         unsafe {
             let mgp_vertex = ffi::mgp_path_vertex_at(self.ptr, index);
             if mgp_vertex.is_null() {
-                return Err(MgpError::OutOfBoundPathVertexIndex);
+                return Err(Error::OutOfBoundPathVertexIndex);
             }
             Vertex::mgp_copy(mgp_vertex, &self.memgraph)
         }
@@ -115,7 +115,7 @@ impl Path {
         unsafe {
             let mgp_edge = ffi::mgp_path_edge_at(self.ptr, index);
             if mgp_edge.is_null() {
-                return Err(MgpError::OutOfBoundPathEdgeIndex);
+                return Err(Error::OutOfBoundPathEdgeIndex);
             }
             Edge::mgp_copy(mgp_edge, &self.memgraph)
         }

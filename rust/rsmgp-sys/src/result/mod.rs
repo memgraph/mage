@@ -39,7 +39,7 @@ impl ResultRecord {
         unsafe {
             let mgp_ptr = ffi::mgp_result_new_record(memgraph.result_ptr());
             if mgp_ptr.is_null() {
-                return Err(MgpError::UnableToCreateResultRecord);
+                return Err(Error::UnableToCreateResultRecord);
             }
             Ok(ResultRecord {
                 ptr: mgp_ptr,
@@ -52,7 +52,7 @@ impl ResultRecord {
         unsafe {
             let inserted = ffi::mgp_result_record_insert(self.ptr, field.as_ptr(), value.mgp_ptr());
             if inserted == 0 {
-                return Err(MgpError::UnableToInsertResultValue);
+                return Err(Error::UnableToInsertResultValue);
             }
             Ok(())
         }
@@ -101,7 +101,7 @@ impl ResultRecord {
 
 #[derive(Debug, PartialEq, Snafu)]
 #[snafu(visibility = "pub")]
-pub enum MgpError {
+pub enum Error {
     // EDGE
     #[snafu(display("Unable to copy edge."))]
     UnableToCopyEdge,
@@ -257,8 +257,8 @@ pub enum MgpError {
     UnableToReturnVertexOutEdgesIterator,
 }
 
-/// A result type holding [MgpError] by default.
-pub type MgpResult<T, E = MgpError> = std::result::Result<T, E>;
+/// A result type holding [Error] by default.
+pub type MgpResult<T, E = Error> = std::result::Result<T, E>;
 
 #[cfg(test)]
 mod tests;

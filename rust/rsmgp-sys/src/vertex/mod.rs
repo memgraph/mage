@@ -124,7 +124,7 @@ impl Vertex {
 
         let mgp_copy = ffi::mgp_vertex_copy(mgp_vertex, memgraph.memory_ptr());
         if mgp_copy.is_null() {
-            return Err(MgpError::UnableToCopyVertex);
+            return Err(Error::UnableToCopyVertex);
         }
         Ok(Vertex::new(mgp_copy, &memgraph))
     }
@@ -145,7 +145,7 @@ impl Vertex {
         unsafe {
             let c_label = ffi::mgp_vertex_label_at(self.ptr, index);
             if c_label.name.is_null() {
-                return Err(MgpError::OutOfBoundLabelIndexError);
+                return Err(Error::OutOfBoundLabelIndexError);
             }
             create_cstring(c_label.name)
         }
@@ -165,7 +165,7 @@ impl Vertex {
             let mgp_value =
                 ffi::mgp_vertex_get_property(self.ptr, name.as_ptr(), self.memgraph.memory_ptr());
             if mgp_value.is_null() {
-                return Err(MgpError::UnableToGetVertexProperty);
+                return Err(Error::UnableToGetVertexProperty);
             }
             let value = MgpValue::new(mgp_value, &self.memgraph).to_value()?;
             match CString::new(name.to_bytes()) {
@@ -173,7 +173,7 @@ impl Vertex {
                     name: c_string,
                     value,
                 }),
-                Err(_) => Err(MgpError::UnableToReturnVertexPropertyMakeNameEror),
+                Err(_) => Err(Error::UnableToReturnVertexPropertyMakeNameEror),
             }
         }
     }
@@ -183,7 +183,7 @@ impl Vertex {
             let mgp_iterator =
                 ffi::mgp_vertex_iter_properties(self.ptr, self.memgraph.memory_ptr());
             if mgp_iterator.is_null() {
-                return Err(MgpError::UnableToReturnVertexPropertiesIterator);
+                return Err(Error::UnableToReturnVertexPropertiesIterator);
             }
             Ok(PropertiesIterator::new(mgp_iterator, &self.memgraph))
         }
@@ -193,7 +193,7 @@ impl Vertex {
         unsafe {
             let mgp_iterator = ffi::mgp_vertex_iter_in_edges(self.ptr, self.memgraph.memory_ptr());
             if mgp_iterator.is_null() {
-                return Err(MgpError::UnableToReturnVertexInEdgesIterator);
+                return Err(Error::UnableToReturnVertexInEdgesIterator);
             }
             Ok(EdgesIterator::new(mgp_iterator, &self.memgraph))
         }
@@ -203,7 +203,7 @@ impl Vertex {
         unsafe {
             let mgp_iterator = ffi::mgp_vertex_iter_out_edges(self.ptr, self.memgraph.memory_ptr());
             if mgp_iterator.is_null() {
-                return Err(MgpError::UnableToReturnVertexOutEdgesIterator);
+                return Err(Error::UnableToReturnVertexOutEdgesIterator);
             }
             Ok(EdgesIterator::new(mgp_iterator, &self.memgraph))
         }

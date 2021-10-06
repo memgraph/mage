@@ -37,7 +37,7 @@ use mockall_double::double;
 pub(crate) unsafe fn create_cstring(c_char_ptr: *const i8) -> MgpResult<CString> {
     match CString::new(CStr::from_ptr(c_char_ptr).to_bytes()) {
         Ok(v) => Ok(v),
-        Err(_) => Err(MgpError::UnableToCreateCString),
+        Err(_) => Err(Error::UnableToCreateCString),
     }
 }
 
@@ -113,7 +113,7 @@ impl MgpValue {
         unsafe {
             let mgp_ptr = ffi::mgp_value_make_null(memgraph.memory_ptr());
             if mgp_ptr.is_null() {
-                return Err(MgpError::UnableToMakeNullValue);
+                return Err(Error::UnableToMakeNullValue);
             }
             Ok(MgpValue::new(mgp_ptr, &memgraph))
         }
@@ -128,7 +128,7 @@ impl MgpValue {
             let mgp_ptr =
                 ffi::mgp_value_make_bool(if !value { 0 } else { 1 }, memgraph.memory_ptr());
             if mgp_ptr.is_null() {
-                return Err(MgpError::UnableToMakeBoolValue);
+                return Err(Error::UnableToMakeBoolValue);
             }
             Ok(MgpValue::new(mgp_ptr, &memgraph))
         }
@@ -142,7 +142,7 @@ impl MgpValue {
         unsafe {
             let mgp_ptr = ffi::mgp_value_make_int(value, memgraph.memory_ptr());
             if mgp_ptr.is_null() {
-                return Err(MgpError::UnableToMakeIntegerValue);
+                return Err(Error::UnableToMakeIntegerValue);
             }
             Ok(MgpValue::new(mgp_ptr, &memgraph))
         }
@@ -156,7 +156,7 @@ impl MgpValue {
         unsafe {
             let mgp_ptr = ffi::mgp_value_make_double(value, memgraph.memory_ptr());
             if mgp_ptr.is_null() {
-                return Err(MgpError::UnableToMakeDoubleValue);
+                return Err(Error::UnableToMakeDoubleValue);
             }
             Ok(MgpValue::new(mgp_ptr, &memgraph))
         }
@@ -170,7 +170,7 @@ impl MgpValue {
         unsafe {
             let mgp_ptr = ffi::mgp_value_make_string(value.as_ptr(), memgraph.memory_ptr());
             if mgp_ptr.is_null() {
-                return Err(MgpError::UnableToMakeMemgraphStringValue);
+                return Err(Error::UnableToMakeMemgraphStringValue);
             }
             Ok(MgpValue::new(mgp_ptr, &memgraph))
         }
@@ -191,13 +191,13 @@ impl MgpValue {
                 let mgp_value = item.to_mgp_value(&memgraph)?;
                 if ffi::mgp_list_append(mgp_list, mgp_value.ptr) == 0 {
                     ffi::mgp_list_destroy(mgp_list);
-                    return Err(MgpError::UnableToMakeListValue);
+                    return Err(Error::UnableToMakeListValue);
                 }
             }
             let mgp_value = ffi::mgp_value_make_list(mgp_list);
             if mgp_value.is_null() {
                 ffi::mgp_list_destroy(mgp_list);
-                return Err(MgpError::UnableToMakeListValue);
+                return Err(Error::UnableToMakeListValue);
             }
             Ok(MgpValue::new(mgp_value, &memgraph))
         }
@@ -219,18 +219,18 @@ impl MgpValue {
                     Ok(v) => v,
                     Err(_) => {
                         ffi::mgp_map_destroy(mgp_map);
-                        return Err(MgpError::UnableToMakeMapValue);
+                        return Err(Error::UnableToMakeMapValue);
                     }
                 };
                 if ffi::mgp_map_insert(mgp_map, item.key.as_ptr(), mgp_value.ptr) == 0 {
                     ffi::mgp_map_destroy(mgp_map);
-                    return Err(MgpError::UnableToMakeMapValue);
+                    return Err(Error::UnableToMakeMapValue);
                 }
             }
             let mgp_value = ffi::mgp_value_make_map(mgp_map);
             if mgp_value.is_null() {
                 ffi::mgp_map_destroy(mgp_map);
-                return Err(MgpError::UnableToMakeMapValue);
+                return Err(Error::UnableToMakeMapValue);
             }
             Ok(MgpValue::new(mgp_value, &memgraph))
         }
@@ -248,12 +248,12 @@ impl MgpValue {
             // fails.
             let mgp_copy = ffi::mgp_vertex_copy(vertex.mgp_ptr(), memgraph.memory_ptr());
             if mgp_copy.is_null() {
-                return Err(MgpError::UnableToMakeVertexValue);
+                return Err(Error::UnableToMakeVertexValue);
             }
             let mgp_value = ffi::mgp_value_make_vertex(mgp_copy);
             if mgp_value.is_null() {
                 ffi::mgp_vertex_destroy(mgp_copy);
-                return Err(MgpError::UnableToMakeVertexValue);
+                return Err(Error::UnableToMakeVertexValue);
             }
             Ok(MgpValue::new(mgp_value, &memgraph))
         }
@@ -271,12 +271,12 @@ impl MgpValue {
             // fails.
             let mgp_copy = ffi::mgp_edge_copy(edge.mgp_ptr(), memgraph.memory_ptr());
             if mgp_copy.is_null() {
-                return Err(MgpError::UnableToMakeEdgeValue);
+                return Err(Error::UnableToMakeEdgeValue);
             }
             let mgp_value = ffi::mgp_value_make_edge(mgp_copy);
             if mgp_value.is_null() {
                 ffi::mgp_edge_destroy(mgp_copy);
-                return Err(MgpError::UnableToMakeEdgeValue);
+                return Err(Error::UnableToMakeEdgeValue);
             }
             Ok(MgpValue::new(mgp_value, &memgraph))
         }
@@ -294,12 +294,12 @@ impl MgpValue {
             // fails.
             let mgp_copy = ffi::mgp_path_copy(path.mgp_ptr(), memgraph.memory_ptr());
             if mgp_copy.is_null() {
-                return Err(MgpError::UnableToMakePathValue);
+                return Err(Error::UnableToMakePathValue);
             }
             let mgp_value = ffi::mgp_value_make_path(mgp_copy);
             if mgp_value.is_null() {
                 ffi::mgp_path_destroy(mgp_copy);
-                return Err(MgpError::UnableToMakePathValue);
+                return Err(Error::UnableToMakePathValue);
             }
             Ok(MgpValue::new(mgp_value, &memgraph))
         }
@@ -378,7 +378,7 @@ pub(crate) unsafe fn mgp_raw_value_to_value(
             let mgp_string = ffi::mgp_value_get_string(value);
             match create_cstring(mgp_string) {
                 Ok(value) => Ok(Value::String(value)),
-                Err(_) => Err(MgpError::UnableToMakeValueString),
+                Err(_) => Err(Error::UnableToMakeValueString),
             }
         }
         mgp_value_type_MGP_VALUE_TYPE_DOUBLE => Ok(Value::Float(ffi::mgp_value_get_double(value))),

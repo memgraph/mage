@@ -78,7 +78,7 @@ impl List {
         unsafe {
             let mgp_ptr = ffi::mgp_list_make_empty(capacity, memgraph.memory_ptr());
             if mgp_ptr.is_null() {
-                return Err(MgpError::UnableToCreateEmptyList);
+                return Err(Error::UnableToCreateEmptyList);
             }
             Ok(List::new(mgp_ptr, &memgraph))
         }
@@ -95,13 +95,13 @@ impl List {
         let size = ffi::mgp_list_size(ptr);
         let mgp_copy = ffi::mgp_list_make_empty(size, memgraph.memory_ptr());
         if mgp_copy.is_null() {
-            return Err(MgpError::UnableToCopyList);
+            return Err(Error::UnableToCopyList);
         }
         for index in 0..size {
             let mgp_value = ffi::mgp_list_at(ptr, index);
             if ffi::mgp_list_append(mgp_copy, mgp_value) == 0 {
                 ffi::mgp_list_destroy(mgp_copy);
-                return Err(MgpError::UnableToCopyList);
+                return Err(Error::UnableToCopyList);
             }
         }
         Ok(List::new(mgp_copy, &memgraph))
@@ -116,7 +116,7 @@ impl List {
         unsafe {
             let mgp_value = value.to_mgp_value(&self.memgraph)?;
             if ffi::mgp_list_append(self.ptr, mgp_value.mgp_ptr()) == 0 {
-                return Err(MgpError::UnableToAppendListValue);
+                return Err(Error::UnableToAppendListValue);
             }
             Ok(())
         }
@@ -128,7 +128,7 @@ impl List {
         unsafe {
             let mgp_value = value.to_mgp_value(&self.memgraph)?;
             if ffi::mgp_list_append_extend(self.ptr, mgp_value.mgp_ptr()) == 0 {
-                return Err(MgpError::UnableToAppendExtendListValue);
+                return Err(Error::UnableToAppendExtendListValue);
             }
             Ok(())
         }
@@ -148,7 +148,7 @@ impl List {
         unsafe {
             let c_value = ffi::mgp_list_at(self.ptr, index);
             if c_value.is_null() {
-                return Err(MgpError::UnableToAccessListValueByIndex);
+                return Err(Error::UnableToAccessListValueByIndex);
             }
             mgp_raw_value_to_value(c_value, &self.memgraph)
         }

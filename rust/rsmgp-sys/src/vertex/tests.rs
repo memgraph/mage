@@ -90,7 +90,7 @@ fn test_property() {
     with_dummy!(Vertex, |vertex: &Vertex| {
         assert_eq!(
             vertex.property(c_str!("test")).err().unwrap(),
-            MgpError::UnableToGetVertexProperty
+            Error::UnableToGetVertexProperty
         );
     });
 }

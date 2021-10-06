@@ -121,7 +121,7 @@ impl Edge {
 
         let mgp_copy = ffi::mgp_edge_copy(ptr, memgraph.memory_ptr());
         if mgp_copy.is_null() {
-            return Err(MgpError::UnableToCopyEdge);
+            return Err(Error::UnableToCopyEdge);
         }
         Ok(Edge::new(mgp_copy, &memgraph))
     }
@@ -165,18 +165,18 @@ impl Edge {
             let mgp_value =
                 ffi::mgp_edge_get_property(self.ptr, name.as_ptr(), self.memgraph.memory_ptr());
             if mgp_value.is_null() {
-                return Err(MgpError::UnableToReturnEdgePropertyValueAllocationError);
+                return Err(Error::UnableToReturnEdgePropertyValueAllocationError);
             }
             let value = match MgpValue::new(mgp_value, &self.memgraph).to_value() {
                 Ok(v) => v,
-                Err(_) => return Err(MgpError::UnableToReturnEdgePropertyValueCreationError),
+                Err(_) => return Err(Error::UnableToReturnEdgePropertyValueCreationError),
             };
             match CString::new(name.to_bytes()) {
                 Ok(c_string) => Ok(Property {
                     name: c_string,
                     value,
                 }),
-                Err(_) => Err(MgpError::UnableToReturnEdgePropertyNameAllocationError),
+                Err(_) => Err(Error::UnableToReturnEdgePropertyNameAllocationError),
             }
         }
     }
@@ -185,7 +185,7 @@ impl Edge {
         unsafe {
             let mgp_iterator = ffi::mgp_edge_iter_properties(self.ptr, self.memgraph.memory_ptr());
             if mgp_iterator.is_null() {
-                return Err(MgpError::UnableToReturnEdgePropertiesIterator);
+                return Err(Error::UnableToReturnEdgePropertiesIterator);
             }
             Ok(PropertiesIterator::new(mgp_iterator, &self.memgraph))
         }
