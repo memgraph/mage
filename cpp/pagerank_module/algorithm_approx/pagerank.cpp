@@ -123,6 +123,12 @@ void UpdateDelete(const mg_graph::GraphView<> &graph, const std::pair<std::uint6
     walk.erase(std::find(walk.begin(), walk.end(), from) + 1, walk.end());
 
     auto current_id = from;
+
+    // Skip creating routes if node does not exist anymore
+    if (!graph.NodeExists(current_id)) {
+      continue;
+    }
+
     CreateRoute(graph, graph.GetInnerNodeId(current_id), walk, walk_index, global_epsilon / 2.0, *context.distr,
                 *context.gen);
   }

@@ -115,6 +115,54 @@ TEST_F(PagerankApproxTest, SmallGraphUpdateMixActions) {
   ASSERT_TRUE(mg_test_utility::TestEqualVectorPairs(results, expected, 0.05));
 }
 
+TEST_F(PagerankApproxTest, DeleteDetachEdge) {
+  pagerank_approx_alg::SetPagerank(*graph);
+
+  // Simulating change in graph
+  graph = mg_generate::BuildGraph({0, 2, 7, 4}, {{0, 2}, {0, 7}, {2, 0}}, mg_graph::GraphType::kDirectedGraph);
+  auto results = pagerank_approx_alg::UpdatePagerank(*graph, {}, {}, {1}, {{1, 2}});
+
+  std::vector<std::pair<uint64_t, double>> expected = {{0, 0.347}, {2, 0.267}, {7, 0.267}, {4, 0.119}};
+  ASSERT_TRUE(mg_test_utility::TestEqualVectorPairs(results, expected, 0.05));
+}
+
+TEST_F(PagerankApproxTest, DeleteDetachMultiEdge) {
+  pagerank_approx_alg::SetPagerank(*graph);
+
+  // Simulating change in graph
+  graph = mg_generate::BuildGraph({1, 2, 7, 4}, {{1, 2}}, mg_graph::GraphType::kDirectedGraph);
+  auto results = pagerank_approx_alg::UpdatePagerank(*graph, {}, {}, {0}, {{0, 2}, {0, 7}, {2, 0}});
+
+  std::vector<std::pair<uint64_t, double>> expected = {{1, 0.206}, {2, 0.382}, {7, 0.206}, {4, 0.206}};
+  ASSERT_TRUE(mg_test_utility::TestEqualVectorPairs(results, expected, 0.05));
+}
+
+TEST_F(PagerankApproxTest, DeleteGraph) {
+  pagerank_approx_alg::SetPagerank(*graph);
+
+  // Simulating change in graph
+  graph = mg_generate::BuildGraph({}, {}, mg_graph::GraphType::kDirectedGraph);
+  auto results = pagerank_approx_alg::UpdatePagerank(*graph, {}, {}, {0, 1, 2, 7, 4}, {{0, 2}, {0, 7}, {1, 2}, {2, 0}});
+
+  std::vector<std::pair<uint64_t, double>> expected = {};
+  ASSERT_TRUE(mg_test_utility::TestEqualVectorPairs(results, expected, 0.05));
+}
+
+TEST_F(PagerankApproxTest, DeleteAndRevertGraph) {
+  pagerank_approx_alg::SetPagerank(*graph);
+
+  // Simulating change in graph
+  graph = mg_generate::BuildGraph({}, {}, mg_graph::GraphType::kDirectedGraph);
+  auto results = pagerank_approx_alg::UpdatePagerank(*graph, {}, {}, {0, 1, 2, 7, 4}, {{0, 2}, {0, 7}, {1, 2}, {2, 0}});
+
+  graph =
+      mg_generate::BuildGraph({0, 1, 2, 7, 4}, {{0, 2}, {0, 7}, {1, 2}, {2, 0}}, mg_graph::GraphType::kDirectedGraph);
+  results = pagerank_approx_alg::UpdatePagerank(*graph, {0, 1, 2, 7, 4}, {{0, 2}, {0, 7}, {1, 2}, {2, 0}}, {}, {});
+
+  std::vector<std::pair<uint64_t, double>> expected = {{0, 0.268}, {1, 0.081}, {2, 0.289}, {7, 0.22}, {4, 0.081}};
+  ASSERT_TRUE(mg_test_utility::TestEqualVectorPairs(results, expected, 0.05));
+}
+
 int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
