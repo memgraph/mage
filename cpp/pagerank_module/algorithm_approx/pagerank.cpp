@@ -109,11 +109,6 @@ void UpdateDelete(const mg_graph::GraphView<> &graph, const std::pair<std::uint6
       continue;
     }
 
-    // auto next = *(position + 1);
-    // if (next != walk.end()) {
-    //   continue;
-    // }
-
     while (position != walk.end()) {
       auto node_id = *position;
       context.walks_table[node_id].erase(walk_index);
