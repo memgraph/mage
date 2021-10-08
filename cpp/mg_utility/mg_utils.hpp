@@ -14,7 +14,8 @@
 namespace mg_graph {
 
 ///
-///@brief Creates vertex inside GraphView. First step is getting Memgraph's UID for identifying vertex inside Memgraph
+///@brief Creates vertex inside GraphView. First step is getting Memgraph's UID
+/// for identifying vertex inside Memgraph
 /// platform.
 ///
 ///@tparam TSize Parameter for storing vertex identifiers
@@ -31,7 +32,8 @@ void CreateGraphNode(mg_graph::Graph<TSize> *graph, mgp_vertex *vertex) {
 }
 
 ///
-///@brief Creates edge within the GraphView. First step is getting Memgraph's UID for indetifying starting and ending
+///@brief Creates edge within the GraphView. First step is getting Memgraph's
+/// UID for indetifying starting and ending
 /// vertex in the edge.
 ///
 ///@tparam TSize Parameter for storing vertex identifiers
@@ -48,6 +50,42 @@ void CreateGraphEdge(mg_graph::Graph<TSize> *graph, mgp_vertex *vertex_from, mgp
   auto memgraph_id_to = mgp::vertex_get_id(vertex_to).as_int;
 
   graph->CreateEdge(memgraph_id_from, memgraph_id_to, graph_type);
+}
+
+/// Returns total edge weights between two nodes node_i_id and node_j_id.
+/// Weight is taken from the property property_name. If the property is not set
+/// default_weight is assumed for the edge.
+template <typename TSize>
+double get_weight(mg_graph::Graph<TSize> *graph, std::uint64_t node_i_id,
+                  std::uint64_t node_j_id, const char *property_name,
+                  const double default_weight, mgp_memory *memory) {
+  double weight = 0;
+
+  auto node_i = mgp_graph_get_vertex_by_id(graph, node_i_id, memory);
+  auto iterator = mgp_vertex_iter_out_edges(node_i, memory);
+  auto edge = mgp_edges_iterator_get(iterator);  // first edge
+  if (edge) {
+    auto node_j = mgp_edge_get_to(edge);
+    if (mgp_vertex_get_id(node_j) == node_j_id)
+      weight += mgp_value_make_double(
+          mgp_edge_get_property(edge, property_name, memory));
+    while (true) {
+      edge = mgp_edges_iterator_next(iterator); // other edges
+      if (edge) {
+        node_j = mgp_edge_get_to(edge);
+        if (mgp_vertex_get_id(node_j) == node_j_id)
+          weight += mgp_value_make_double(
+              mgp_edge_get_property(edge, property_name, memory));
+      } else {
+        break;
+      }
+    }
+  }
+
+  mgp_vertex_destroy(node_i);
+  mgp_edges_iterator_destroy(iterator);
+
+  return weight;
 }
 }  // namespace mg_graph
 
@@ -72,7 +110,8 @@ namespace mg_utility {
 /// }
 class OnScopeExit {
  public:
-  explicit OnScopeExit(const std::function<void()> &function) : function_(function) {}
+  explicit OnScopeExit(const std::function<void()> &function)
+      : function_(function) {}
   ~OnScopeExit() { function_(); }
 
  private:
