@@ -133,6 +133,16 @@ void UpdateDelete(const mg_graph::GraphView<> &graph, const std::uint64_t remove
   context.walks_table.erase(removed_vertex);
   context.walks_counter.erase(removed_vertex);
 }
+
+bool IsIncosistent(const mg_graph::GraphView<> &graph) {
+  for (auto const [node_id] : graph.Nodes()) {
+    auto external_id = graph.GetMemgraphNodeId(node_id);
+    if (context.walks_counter.find(external_id) == context.walks_counter.end()) {
+      return true;
+    }
+  }
+  return false;
+}
 }  // namespace
 
 std::vector<std::pair<std::uint64_t, double>> SetPagerank(const mg_graph::GraphView<> &graph, const std::uint64_t R,
@@ -165,6 +175,11 @@ std::vector<std::pair<std::uint64_t, double>> SetPagerank(const mg_graph::GraphV
 std::vector<std::pair<std::uint64_t, double>> GetPagerank(const mg_graph::GraphView<> &graph) {
   if (context.IsEmpty()) {
     return SetPagerank(graph);
+  }
+  if (IsIncosistent(graph)) {
+    throw std::runtime_error(
+        "Graph has been modified, therefore is incosistent with cached results, please update the Pagerank by calling "
+        "set/reset!");
   }
   return CalculatePageRank();
 }

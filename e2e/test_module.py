@@ -107,11 +107,8 @@ def _run_test(test_dict: Dict, db: Memgraph):
 
     if exception_test:
         # TODO: Implement for different kinds of errors
-        try:
-            result = db.execute_and_fetch(test_query)
-            assert result is None
-        except Exception:
-            assert True
+        with pytest.raises(Exception):
+            print(list(db.execute_and_fetch(test_query)))
 
 
 def _test_static(test_dir: Path, db: Memgraph):
