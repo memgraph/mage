@@ -194,4 +194,31 @@ void InsertRelationshipValueResult(mgp_result_record *record, const char *field_
 /// record.
 void InsertRelationshipValueResult(mgp_graph *graph, mgp_result_record *record, const char *field_name,
                                    const int edge_id, mgp_memory *memory);
+
+/// Returns a vector of node_ids of nodes from the mgp_list node_list.
+std::vector<std::uint64_t> get_node_ids(mgp_list *node_list) {
+  std::vector<std::uint64_t> node_ids;
+  for (std::size_t i = 0; i < mgp::list_size(node_list); i++) {
+    node_ids.push_back(
+        mgp::vertex_get_id(mgp::value_get_vertex(mgp::list_at(node_list, i)))
+            .as_int);
+  }
+
+  return node_ids;
+}
+
+/// Returns a vector of endpoints ({node_id, node_id} pairs) of edges
+/// from the mgp_list edge_list.
+std::vector<std::pair<std::uint64_t, std::uint64_t>> get_edge_endpoint_ids(
+    mgp_list *edge_list) {
+  std::vector<std::pair<std::uint64_t, std::uint64_t>> edge_endpoint_ids;
+  for (std::size_t i = 0; i < mgp::list_size(edge_list); i++) {
+    auto edge = mgp::value_get_edge(mgp::list_at(edge_list, i));
+    auto from_id = mgp::vertex_get_id(mgp::edge_get_from(edge));
+    auto to_id = mgp::vertex_get_id(mgp::edge_get_to(edge));
+    edge_endpoint_ids.push_back(std::make_pair(from_id.as_int, to_id.as_int));
+  }
+
+  return edge_endpoint_ids;
+}
 }  // namespace mg_utility
