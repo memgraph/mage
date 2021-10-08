@@ -1,5 +1,5 @@
 query: >
-  CALL dynamic_label_propagation.detect()
+  CALL dynamic_label_propagation.detect(FALSE)
   YIELD node, community_id
   RETURN node.id AS node_id, community_id
   ORDER BY node_id;
@@ -49,6 +49,3 @@ output:
 
   - node_id: 14
     community: 3
-
-  - node_id: 15
-    community: 4

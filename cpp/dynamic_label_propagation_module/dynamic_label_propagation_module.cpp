@@ -1,11 +1,12 @@
 #include <mg_graph.hpp>
 #include <mg_utils.hpp>
 
-#include "algorithm/label_propagation.hpp"
+#include "algorithm/dynamic_label_propagation.hpp"
 
 constexpr char const *kFieldNode = "node";
-constexpr char const *kFieldCommunity = "community";
+constexpr char const *kFieldCommunityId = "community_id";
 
+constexpr char const *kDirected = "directed";
 constexpr char const *kWeightProperty = "weight_property";
 constexpr char const *kWSelfloop = "w_selfloop";
 constexpr char const *kSimilarityThreshold = "similarity_threshold";
@@ -24,6 +25,7 @@ constexpr char const *kDeletedEdges = "deletedEdges";
 std::unique_ptr<mg_graph::Graph<>> graph;
 LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT(graph);
 bool initialized = false;
+auto direction_parameter = mg_graph::GraphType::kDirectedGraph;
 
 void InsertCommunityDetectionRecord(const mgp_graph *graph, mgp_result *result,
                                     mgp_memory *memory,
@@ -35,24 +37,31 @@ void InsertCommunityDetectionRecord(const mgp_graph *graph, mgp_result *result,
   }
 
   mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
-  mg_utility::InsertIntValueResult(record, kFieldCommunity, community_id,
+  mg_utility::InsertIntValueResult(record, kFieldCommunityId, community_id,
                                    memory);
 }
 
 void DetectWrapperrapper(const mgp_list *args, const mgp_graph *memgraph_graph,
-                 mgp_result *result, mgp_memory *memory) {
+                         mgp_result *result, mgp_memory *memory) {
   try {
+    auto directed = mgp_value_get_bool(mgp_list_at(args, 0));
     std::string weight_property =
         kWeightProperty;  // add after get_weight() is implemented
-    auto w_selfloop = mgp_value_get_double(mgp_list_at(args, 0));
-    auto similarity_threshold = mgp_value_get_double(mgp_list_at(args, 1));
-    auto exponent = mgp_value_get_double(mgp_list_at(args, 2));
-    auto min_value = mgp_value_get_double(mgp_list_at(args, 3));
-    auto max_iterations = mgp_value_get_int(mgp_list_at(args, 4));
-    auto max_updates = mgp_value_get_int(mgp_list_at(args, 5));
+    auto w_selfloop = mgp_value_get_double(mgp_list_at(args, 1));
+    auto similarity_threshold = mgp_value_get_double(mgp_list_at(args, 2));
+    auto exponent = mgp_value_get_double(mgp_list_at(args, 3));
+    auto min_value = mgp_value_get_double(mgp_list_at(args, 4));
+    auto max_iterations = mgp_value_get_int(mgp_list_at(args, 5));
+    auto max_updates = mgp_value_get_int(mgp_list_at(args, 6));
+
+    if (directed) {
+      direction_parameter = mg_graph::GraphType::kDirectedGraph;
+    } else {
+      direction_parameter = mg_graph::GraphType::kUndirectedGraph;
+    }
 
     graph = mg_utility::GetGraphView(memgraph_graph, result, memory,
-                                     mg_graph::GraphType::kDirectedGraph);
+                                     direction_parameter);
     algorithm.set_parameters(weight_property, w_selfloop, similarity_threshold,
                              exponent, min_value);
     initialized = true;
@@ -82,7 +91,7 @@ void GetWrapper(const mgp_list *args, const mgp_graph *memgraph_graph,
       }
     } else {
       graph = mg_utility::GetGraphView(memgraph_graph, result, memory,
-                                       mg_graph::GraphType::kDirectedGraph);
+                                       direction_parameter);
 
       auto labels = algorithm.calculate_labels();
 
@@ -128,7 +137,7 @@ void UpdateWrapper(const mgp_list *args, const mgp_graph *memgraph_graph,
           mg_utility::get_edge_endpoint_ids(deleted_edges);
 
       graph = mg_utility::GetGraphView(memgraph_graph, result, memory,
-                                       mg_graph::GraphType::kDirectedGraph);
+                                       direction_parameter);
 
       auto labels =
           algorithm.update_labels(modified_node_ids, modified_edge_endpoint_ids,
@@ -153,6 +162,7 @@ extern "C" int mgp_init_module(struct mgp_module *module,
   if (!detect_proc) return 1;
   if (!update_proc) return 1;
 
+  auto default_directed = mgp_value_make_bool(1, memory);
   // auto default_weight_property = mgp_value_make_string("weight", memory);
   auto default_w_selfloop = mgp_value_make_double(1.0, memory);
   auto default_similarity_threshold = mgp_value_make_double(0.7, memory);
@@ -161,6 +171,9 @@ extern "C" int mgp_init_module(struct mgp_module *module,
   auto default_max_iterations = mgp_value_make_int(100, memory);
   auto default_max_updates = mgp_value_make_int(5, memory);
 
+  if (!mgp_proc_add_opt_arg(detect_proc, kDirected, mgp_type_bool(),
+                            default_directed))
+    return 1;
   // if (!mgp_proc_add_opt_arg(detect_proc, kWeightProperty, mgp_type_string(),
   //                           default_weight_property))
   //   return 1;
@@ -203,6 +216,7 @@ extern "C" int mgp_init_module(struct mgp_module *module,
                         mgp_type_list(mgp_type_relationship())))
     return 1;
 
+  mgp_value_destroy(default_directed);
   // mgp_value_destroy(default_weight_property);
   mgp_value_destroy(default_w_selfloop);
   mgp_value_destroy(default_similarity_threshold);
@@ -213,14 +227,15 @@ extern "C" int mgp_init_module(struct mgp_module *module,
 
   // Query module output record
   if (!mgp_proc_add_result(get_proc, kFieldNode, mgp_type_node())) return 1;
-  if (!mgp_proc_add_result(get_proc, kFieldCommunity, mgp_type_int())) return 1;
+  if (!mgp_proc_add_result(get_proc, kFieldCommunityId, mgp_type_int()))
+    return 1;
 
   if (!mgp_proc_add_result(detect_proc, kFieldNode, mgp_type_node())) return 1;
-  if (!mgp_proc_add_result(detect_proc, kFieldCommunity, mgp_type_int()))
+  if (!mgp_proc_add_result(detect_proc, kFieldCommunityId, mgp_type_int()))
     return 1;
 
   if (!mgp_proc_add_result(update_proc, kFieldNode, mgp_type_node())) return 1;
-  if (!mgp_proc_add_result(update_proc, kFieldCommunity, mgp_type_int()))
+  if (!mgp_proc_add_result(update_proc, kFieldCommunityId, mgp_type_int()))
     return 1;
 
   return 0;

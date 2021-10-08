@@ -1,51 +1,51 @@
 query: >
-  CALL community_detection.get()
-  YIELD node, community
-  RETURN node.id, community
-  ORDER BY node.id;
+  CALL dynamic_label_propagation.detect()
+  YIELD node, community_id
+  RETURN node.id AS node_id, community_id
+  ORDER BY node_id;
 
 output:
   - node_id: 0
-    community: 2
+    community: 1
 
   - node_id: 1
-    community: 2
+    community: 1
 
   - node_id: 2
-    community: 2
+    community: 1
 
   - node_id: 3
-    community: 2
+    community: 1
 
   - node_id: 4
-    community: 4
+    community: 2
   
   - node_id: 5
-    community: 4
+    community: 2
   
   - node_id: 6
-    community: 4
+    community: 2
 
   - node_id: 7
-    community: 4
+    community: 2
 
   - node_id: 8
-    community: 4
+    community: 2
 
   - node_id: 9
-    community: 11
+    community: 3
 
   - node_id: 10
-    community: 11
+    community: 3
 
   - node_id: 11
-    community: 11
+    community: 3
 
   - node_id: 12
-    community: 11
+    community: 3
 
   - node_id: 13
-    community: 11
+    community: 3
 
   - node_id: 14
-    community: 11
+    community: 3

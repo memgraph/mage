@@ -75,7 +75,7 @@ endfunction()
 # Available query modules.
 include(CTest)
 enable_testing()
-add_subdirectory(community_detection_module)
+add_subdirectory(dynamic_label_propagation_module)
 add_subdirectory(connectivity_module)
 add_subdirectory(biconnected_components_module)
 add_subdirectory(bridges_module)

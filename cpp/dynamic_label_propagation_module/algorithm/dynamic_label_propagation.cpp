@@ -1,11 +1,13 @@
 #include <cmath>
-
 #include <mg_graph.hpp>
 
-#include "label_propagation.hpp"
+#include "dynamic_label_propagation.hpp"
 
 namespace LabelRankT {
 
+void print_map(std::unordered_map<std::int64_t, std::int64_t> map) {}
+
+#pragma region helper_methods
 ///@brief Checks if vector is subset of another vector.
 ///
 ///@tparam T -- set element data type
@@ -23,7 +25,8 @@ bool is_subset(std::vector<T> const& v1, std::vector<T> const& v2) {
   return true;
 }
 
-std::vector<std::uint64_t> LabelRankT::neighbors_memgraph_ids(std::uint64_t node_id) {
+std::vector<std::uint64_t> LabelRankT::neighbors_memgraph_ids(
+    std::uint64_t node_id) {
   std::vector<std::uint64_t> neighbors;
 
   for (const auto node_i : graph->Neighbours(graph->GetInnerNodeId(node_id))) {
@@ -34,13 +37,13 @@ std::vector<std::uint64_t> LabelRankT::neighbors_memgraph_ids(std::uint64_t node
 }
 
 std::vector<std::uint64_t> LabelRankT::nodes_memgraph_ids() {
-    std::vector<std::uint64_t> nodes;
+  std::vector<std::uint64_t> nodes;
 
-    for (const auto node : graph->Nodes()) {
-      nodes.push_back(graph->GetMemgraphNodeId(node.id));
-    }
+  for (const auto node : graph->Nodes()) {
+    nodes.push_back(graph->GetMemgraphNodeId(node.id));
+  }
 
-    return nodes;
+  return nodes;
 }
 
 void LabelRankT::set_structures(std::uint64_t node_id) {
@@ -86,8 +89,8 @@ void LabelRankT::reset_times_updated() {
   }
 }
 
-std::uint64_t LabelRankT::get_label(std::uint64_t node_id) {
-  std::uint64_t node_label;
+std::int64_t LabelRankT::get_label(std::uint64_t node_id) {
+  std::int64_t node_label = -1;
   double max_P = 0;
 
   for (const auto [label, P] : label_Ps[node_id]) {
@@ -116,7 +119,9 @@ std::vector<std::uint64_t> LabelRankT::most_probable_labels(
 
   return most_probable_labels;
 }
+#pragma endregion helper_methods
 
+#pragma region label_propagation_steps
 bool LabelRankT::distinct_enough(std::uint64_t node_i_id,
                                  double similarity_threshold) {
   std::vector<std::uint64_t> labels_i = most_probable_labels(node_i_id);
@@ -230,12 +235,40 @@ std::pair<bool, std::uint64_t> LabelRankT::iteration(
 
   return {none_updated, most_updates};
 }
+#pragma endregion label_propagation_steps
 
-std::unordered_map<std::uint64_t, std::uint64_t> LabelRankT::get_labels() {
-  std::unordered_map<std::uint64_t, std::uint64_t> labels;
+void LabelRankT::set_parameters(std::string weight_property, double w_selfloop,
+                                double similarity_threshold, double exponent,
+                                double min_value) {
+  this->weight_property = weight_property;
+  this->w_selfloop = w_selfloop;
+  this->similarity_threshold = similarity_threshold;
+  this->exponent = exponent;
+  this->min_value = min_value;
+}
+
+std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::get_labels() {
+  std::unordered_map<std::uint64_t, std::int64_t> labels;
   if (calculated) {
+    std::set<std::int64_t> labels_ordered;
+    std::map<std::int64_t, std::int64_t> lookup;
+
     for (const auto [node, _] : label_Ps) {
-      labels.insert({node, get_label(node)});
+      labels_ordered.insert(get_label(node));
+    }
+
+    int64_t label_i = 1;
+    for (const auto label : labels_ordered) {
+      if (label == -1) {
+        lookup[label] = label;
+      } else {
+        lookup[label] = label_i;
+        label_i++;
+      }
+    }
+
+    for (const auto [node, _] : label_Ps) {
+      labels.insert({node, lookup[get_label(node)]});
     }
 
     return labels;
@@ -244,7 +277,7 @@ std::unordered_map<std::uint64_t, std::uint64_t> LabelRankT::get_labels() {
   return calculate_labels();
 }
 
-std::unordered_map<std::uint64_t, std::uint64_t> LabelRankT::calculate_labels(
+std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::calculate_labels(
     std::uint64_t max_iterations, std::uint64_t max_updates,
     std::unordered_set<std::uint64_t> changed_nodes,
     std::unordered_set<std::uint64_t> to_delete) {
@@ -279,17 +312,7 @@ std::unordered_map<std::uint64_t, std::uint64_t> LabelRankT::calculate_labels(
   return get_labels();
 }
 
-void LabelRankT::set_parameters(std::string weight_property, double w_selfloop,
-                                double similarity_threshold, double exponent,
-                                double min_value) {
-  this->weight_property = weight_property;
-  this->w_selfloop = w_selfloop;
-  this->similarity_threshold = similarity_threshold;
-  this->exponent = exponent;
-  this->min_value = min_value;
-}
-
-std::unordered_map<std::uint64_t, std::uint64_t> LabelRankT::update_labels(
+std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::update_labels(
     std::vector<std::uint64_t> modified_nodes,
     std::vector<std::pair<std::uint64_t, std::uint64_t>> modified_edges,
     std::vector<std::uint64_t> deleted_nodes,

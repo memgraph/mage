@@ -59,7 +59,7 @@ queries:
     - |-
         CREATE TRIGGER testing 
         AFTER COMMIT EXECUTE 
-            CALL community_detection.update(createdVertices, createdEdges, updatedVertices, updatedEdges, deletedVertices, deletedEdges);
+            CALL dynamic_label_propagation.update(createdVertices, createdEdges, updatedVertices, updatedEdges, deletedVertices, deletedEdges);
     - |-
         MATCH (a:Node {id: 9})-[r:RELATION]->(b:Node {id: 12}) DELETE r;
         MATCH (a:Node {id: 12})-[r:RELATION]->(b:Node {id: 9}) DELETE r;
