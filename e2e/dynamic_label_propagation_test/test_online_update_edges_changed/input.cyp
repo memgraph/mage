@@ -56,7 +56,6 @@ queries:
         MERGE (a:Node {id: 14}) MERGE (b:Node {id: 11}) CREATE (a)-[:RELATION]->(b);
         MERGE (a:Node {id: 12}) MERGE (b:Node {id: 14}) CREATE (a)-[:RELATION]->(b);
         MERGE (a:Node {id: 14}) MERGE (b:Node {id: 12}) CREATE (a)-[:RELATION]->(b);
-    - |-
         CREATE TRIGGER testing AFTER COMMIT EXECUTE CALL dynamic_label_propagation.update(createdVertices, createdEdges, updatedVertices, updatedEdges, deletedVertices, deletedEdges);
     - |-
         MATCH (a:Node {id: 9})-[r:RELATION]->(b:Node {id: 12}) DELETE r;
