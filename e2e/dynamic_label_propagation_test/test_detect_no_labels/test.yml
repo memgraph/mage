@@ -6,19 +6,19 @@ query: >
 
 output:
   - node_id: 0
-    community: -1
+    community_id: -1
 
   - node_id: 1
-    community: -1
+    community_id: -1
 
   - node_id: 2
-    community: -1
+    community_id: -1
 
   - node_id: 3
-    community: -1
+    community_id: -1
 
   - node_id: 4
-    community: -1
+    community_id: -1
   
   - node_id: 5
-    community: -1
+    community_id: -1

@@ -6,46 +6,46 @@ query: >
 
 output:
   - node_id: 0
-    community: 1
+    community_id: 1
 
   - node_id: 1
-    community: 1
+    community_id: 1
 
   - node_id: 2
-    community: 1
+    community_id: 1
 
   - node_id: 3
-    community: 1
+    community_id: 1
 
   - node_id: 4
-    community: 2
+    community_id: 2
   
   - node_id: 5
-    community: 2
+    community_id: 2
   
   - node_id: 6
-    community: 2
+    community_id: 2
 
   - node_id: 7
-    community: 2
+    community_id: 2
 
   - node_id: 8
-    community: 2
+    community_id: 2
 
   - node_id: 9
-    community: 3
+    community_id: 3
 
   - node_id: 10
-    community: 3
+    community_id: 3
 
   - node_id: 11
-    community: 3
+    community_id: 3
 
   - node_id: 12
-    community: 3
+    community_id: 3
 
   - node_id: 13
-    community: 3
+    community_id: 3
 
   - node_id: 14
-    community: 3
+    community_id: 3
