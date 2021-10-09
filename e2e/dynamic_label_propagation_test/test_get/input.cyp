@@ -54,4 +54,4 @@ MERGE (a:Node {id: 11}) MERGE (b:Node {id: 14}) CREATE (a)-[:RELATION]->(b);
 MERGE (a:Node {id: 14}) MERGE (b:Node {id: 11}) CREATE (a)-[:RELATION]->(b);
 MERGE (a:Node {id: 12}) MERGE (b:Node {id: 14}) CREATE (a)-[:RELATION]->(b);
 MERGE (a:Node {id: 14}) MERGE (b:Node {id: 12}) CREATE (a)-[:RELATION]->(b);
-CALL dynamic_label_propagation.detect() YIELD node, community_id RETURN node.id AS node_id, community ORDER BY node_id;
+CALL dynamic_label_propagation.detect() YIELD node, community_id RETURN node.id AS node_id, community_id ORDER BY node_id;
