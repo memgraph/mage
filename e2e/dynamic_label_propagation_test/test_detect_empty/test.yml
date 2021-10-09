@@ -3,5 +3,3 @@ query: >
   YIELD node, community_id
   RETURN node.id AS node_id, community_id
   ORDER BY node_id;
-
-output:
