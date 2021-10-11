@@ -15,7 +15,7 @@
 
 use std::ffi::{CStr, CString};
 
-use crate::memgraph::Memgraph;
+use crate::memgraph::*;
 use crate::mgp::*;
 use crate::property::*;
 use crate::result::*;
@@ -65,9 +65,10 @@ impl Iterator for EdgesIterator {
         unsafe {
             let data = if self.is_first {
                 self.is_first = false;
-                ffi::mgp_edges_iterator_get(self.ptr)
+                invoke_mgp_func!(*mut mgp_edge, ffi::mgp_edges_iterator_get, self.ptr).unwrap()
             } else {
-                ffi::mgp_edges_iterator_next(self.ptr)
+                invoke_mgp_func!(*mut mgp_edge, ffi::mgp_edges_iterator_next, self.ptr)
+                    .expect("Unable to get next edge during edges iteration.")
             };
 
             if data.is_null() {
@@ -112,23 +113,30 @@ impl Edge {
     }
 
     /// Creates a new Edge based on [mgp_edge].
-    pub(crate) unsafe fn mgp_copy(ptr: *const mgp_edge, memgraph: &Memgraph) -> MgpResult<Edge> {
+    pub(crate) unsafe fn mgp_copy(ptr: *mut mgp_edge, memgraph: &Memgraph) -> MgpResult<Edge> {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
             "Unable to create edge copy because the given pointer is null."
         );
 
-        let mgp_copy = ffi::mgp_edge_copy(ptr, memgraph.memory_ptr());
-        if mgp_copy.is_null() {
-            return Err(Error::UnableToCopyEdge);
-        }
+        let mgp_copy = invoke_mgp_func_with_res!(
+            *mut mgp_edge,
+            Error::UnableToCopyEdge,
+            ffi::mgp_edge_copy,
+            ptr,
+            memgraph.memory_ptr()
+        )?;
         Ok(Edge::new(mgp_copy, &memgraph))
     }
 
     /// Returns the underlying [mgp_edge] pointer.
-    pub(crate) fn mgp_ptr(&self) -> *const mgp_edge {
+    pub(crate) fn mgp_ptr(&self) -> *mut mgp_edge {
         self.ptr
+    }
+
+    pub(crate) fn set_mgp_ptr(&mut self, new_ptr: *mut mgp_edge) {
+        self.ptr = new_ptr;
     }
 
     pub fn copy(&self) -> MgpResult<Edge> {
@@ -136,38 +144,61 @@ impl Edge {
     }
 
     pub fn id(&self) -> i64 {
-        unsafe { ffi::mgp_edge_get_id(self.ptr).as_int }
+        unsafe {
+            invoke_mgp_func!(mgp_edge_id, ffi::mgp_edge_get_id, self.ptr)
+                .unwrap()
+                .as_int
+        }
     }
 
     pub fn edge_type(&self) -> MgpResult<CString> {
         unsafe {
-            let mgp_edge_type = ffi::mgp_edge_get_type(self.ptr);
+            let mgp_edge_type = invoke_mgp_func_with_res!(
+                mgp_edge_type,
+                Error::UnableToCreateCString,
+                ffi::mgp_edge_get_type,
+                self.ptr
+            )?;
             create_cstring(mgp_edge_type.name)
         }
     }
 
     pub fn from_vertex(&self) -> MgpResult<Vertex> {
         unsafe {
-            let mgp_vertex = ffi::mgp_edge_get_from(self.ptr);
+            let mgp_vertex =
+                invoke_mgp_func!(*mut mgp_vertex, ffi::mgp_edge_get_from, self.ptr).unwrap();
             Vertex::mgp_copy(mgp_vertex, &self.memgraph)
         }
     }
 
     pub fn to_vertex(&self) -> MgpResult<Vertex> {
         unsafe {
-            let mgp_vertex = ffi::mgp_edge_get_to(self.ptr);
+            let mgp_vertex =
+                invoke_mgp_func!(*mut mgp_vertex, ffi::mgp_edge_get_to, self.ptr).unwrap();
             Vertex::mgp_copy(mgp_vertex, &self.memgraph)
         }
     }
 
     pub fn property(&self, name: &CStr) -> MgpResult<Property> {
         unsafe {
-            let mgp_value =
-                ffi::mgp_edge_get_property(self.ptr, name.as_ptr(), self.memgraph.memory_ptr());
-            if mgp_value.is_null() {
-                return Err(Error::UnableToReturnEdgePropertyValueAllocationError);
+            let mgp_value = invoke_mgp_func!(
+                *mut mgp_value,
+                ffi::mgp_edge_get_property,
+                self.ptr,
+                name.as_ptr(),
+                self.memgraph.memory_ptr()
+            );
+            match mgp_value {
+                Ok(_) => (),
+                Err(MgpError::UnableToAllocate) => {
+                    return Err(Error::UnableToReturnEdgePropertyValueAllocationError)
+                }
+                Err(MgpError::DeletedObject) => {
+                    return Err(Error::UnableToReturnEdgePropertyDeletedObjectError)
+                }
+                Err(_) => panic!("Unexpected error code is returned from MGP API"),
             }
-            let value = match MgpValue::new(mgp_value, &self.memgraph).to_value() {
+            let value = match MgpValue::new(mgp_value.unwrap(), &self.memgraph).to_value() {
                 Ok(v) => v,
                 Err(_) => return Err(Error::UnableToReturnEdgePropertyValueCreationError),
             };
@@ -183,10 +214,13 @@ impl Edge {
 
     pub fn properties(&self) -> MgpResult<PropertiesIterator> {
         unsafe {
-            let mgp_iterator = ffi::mgp_edge_iter_properties(self.ptr, self.memgraph.memory_ptr());
-            if mgp_iterator.is_null() {
-                return Err(Error::UnableToReturnEdgePropertiesIterator);
-            }
+            let mgp_iterator = invoke_mgp_func_with_res!(
+                *mut mgp_properties_iterator,
+                Error::UnableToReturnEdgePropertiesIterator,
+                ffi::mgp_edge_iter_properties,
+                self.ptr,
+                self.memgraph.memory_ptr()
+            )?;
             Ok(PropertiesIterator::new(mgp_iterator, &self.memgraph))
         }
     }

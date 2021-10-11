@@ -20,6 +20,7 @@ fn main() {
         .header(mg_procedure_path)
         .blacklist_function("mgp_*")
         .rustified_enum("mgp_error")
+        .rustified_enum("mgp_value_type")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .generate()
         .expect("Unable to generate bindings")

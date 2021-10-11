@@ -14,7 +14,6 @@
 //! Abstraction to interact with Memgraph.
 
 use std::ffi::CStr;
-use std::ptr;
 
 use crate::list::*;
 use crate::mgp::*;
@@ -26,18 +25,189 @@ use crate::vertex::*;
 use crate::mgp::ffi;
 use mockall_double::double;
 
+#[derive(Debug, PartialEq)]
+pub enum MgpError {
+    UnknownError,
+    UnableToAllocate,
+    InsufficientError,
+    OutOfRange,
+    LogicError,
+    DeletedObject,
+    InvalidArgument,
+    KeyAlreadyExists,
+    ImmutableObject,
+    ValueConversion,
+    SerializationError,
+}
+
+pub(crate) trait MgpDefault {
+    fn default() -> Self;
+}
+
+macro_rules! mgp_default_mut_ptr {
+    ($t:ident) => {
+        impl MgpDefault for *mut $t {
+            fn default() -> Self {
+                std::ptr::null_mut()
+            }
+        }
+    };
+}
+
+macro_rules! mgp_default_const_ptr {
+    ($t:ident) => {
+        impl MgpDefault for *const $t {
+            fn default() -> Self {
+                std::ptr::null()
+            }
+        }
+    };
+}
+
+macro_rules! mgp_default_zero {
+    ($t:ident) => {
+        impl MgpDefault for $t {
+            fn default() -> Self {
+                0
+            }
+        }
+    };
+}
+
+mgp_default_mut_ptr!(mgp_type);
+mgp_default_mut_ptr!(mgp_proc);
+mgp_default_mut_ptr!(mgp_vertices_iterator);
+mgp_default_mut_ptr!(mgp_edges_iterator);
+mgp_default_mut_ptr!(mgp_vertex);
+mgp_default_mut_ptr!(mgp_edge);
+mgp_default_mut_ptr!(mgp_map);
+mgp_default_mut_ptr!(mgp_map_item);
+mgp_default_mut_ptr!(mgp_map_items_iterator);
+mgp_default_mut_ptr!(mgp_value);
+mgp_default_mut_ptr!(mgp_properties_iterator);
+mgp_default_mut_ptr!(mgp_list);
+mgp_default_mut_ptr!(mgp_path);
+mgp_default_mut_ptr!(mgp_result_record);
+mgp_default_mut_ptr!(mgp_property);
+
+mgp_default_const_ptr!(i8);
+mgp_default_const_ptr!(u64);
+
+mgp_default_zero!(u64);
+mgp_default_zero!(i64);
+mgp_default_zero!(i32);
+
+impl MgpDefault for mgp_edge_id {
+    fn default() -> Self {
+        mgp_edge_id { as_int: 0 }
+    }
+}
+
+impl MgpDefault for mgp_vertex_id {
+    fn default() -> Self {
+        mgp_vertex_id { as_int: 0 }
+    }
+}
+
+impl MgpDefault for mgp_edge_type {
+    fn default() -> Self {
+        mgp_edge_type {
+            name: std::ptr::null(),
+        }
+    }
+}
+
+impl MgpDefault for mgp_label {
+    fn default() -> Self {
+        mgp_label {
+            name: std::ptr::null(),
+        }
+    }
+}
+
+impl MgpDefault for mgp_value_type {
+    fn default() -> Self {
+        mgp_value_type::MGP_VALUE_TYPE_NULL
+    }
+}
+
+impl MgpDefault for f64 {
+    fn default() -> Self {
+        0.0
+    }
+}
+
+pub(crate) fn to_rust_mgp_error(error: mgp_error) -> Option<MgpError> {
+    match error {
+        mgp_error::MGP_ERROR_NO_ERROR => None,
+        mgp_error::MGP_ERROR_UNKNOWN_ERROR => Some(MgpError::UnknownError),
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE => Some(MgpError::UnableToAllocate),
+        mgp_error::MGP_ERROR_INSUFFICIENT_BUFFER => Some(MgpError::InsufficientError),
+        mgp_error::MGP_ERROR_OUT_OF_RANGE => Some(MgpError::OutOfRange),
+        mgp_error::MGP_ERROR_LOGIC_ERROR => Some(MgpError::LogicError),
+        mgp_error::MGP_ERROR_DELETED_OBJECT => Some(MgpError::DeletedObject),
+        mgp_error::MGP_ERROR_INVALID_ARGUMENT => Some(MgpError::InvalidArgument),
+        mgp_error::MGP_ERROR_KEY_ALREADY_EXISTS => Some(MgpError::KeyAlreadyExists),
+        mgp_error::MGP_ERROR_IMMUTABLE_OBJECT => Some(MgpError::ImmutableObject),
+        mgp_error::MGP_ERROR_VALUE_CONVERSION => Some(MgpError::ValueConversion),
+        mgp_error::MGP_ERROR_SERIALIZATION_ERROR => Some(MgpError::SerializationError),
+    }
+}
+
 macro_rules! invoke_mgp_func {
     ($result_type:ty, $func:expr) => {{
-        let mut result: *mut $result_type = ptr::null_mut();
-         let error_code = $func(&mut result);
+        let result : Result<$result_type, MgpError> = {
+            let mut result: $result_type = MgpDefault::default();
+            match to_rust_mgp_error($func(&mut result)) {
+                None => Ok(result),
+                Some(err) => Err(err),
+            }
+        };
         result
     }};
     ($result_type:ty, $func:expr, $($args:expr),+) => {{
-        let mut result: *mut $result_type = ptr::null_mut();
-         let error_code = $func( $($args),+, &mut result );
+        let result : Result<$result_type, MgpError> = {
+            let mut result: $result_type = MgpDefault::default();
+            match to_rust_mgp_error($func($($args),+, &mut result )) {
+                None => Ok(result),
+                Some(err) => Err(err),
+            }
+        };
         result
     }};
 }
+
+macro_rules! invoke_void_mgp_func {
+    ($func:expr, $($args:expr),+) => {{
+        let result : Result<(), MgpError> = {
+            match to_rust_mgp_error($func($($args),+)) {
+                None => Ok(()),
+                Some(err) => Err(err),
+            }
+        };
+        result
+    }};
+}
+
+macro_rules! invoke_mgp_func_with_res {
+    ($result_type:ty, $err:expr, $func:expr) => {{
+        invoke_mgp_func!($result_type, $func).map_err(|_| -> Error { $err })
+    }};
+    ($result_type:ty, $err:expr, $func:expr, $($args:expr),+) => {{
+        invoke_mgp_func!($result_type, $func, $($args),+).map_err(|_| -> Error { $err })
+    }};
+}
+
+macro_rules! invoke_void_mgp_func_with_res {
+    ($err:expr, $func:expr, $($args:expr),+) => {{
+        invoke_void_mgp_func!($func, $($args),+).map_err(|_| -> Error { $err })
+    }};
+}
+
+pub(crate) use invoke_mgp_func;
+pub(crate) use invoke_mgp_func_with_res;
+pub(crate) use invoke_void_mgp_func;
+pub(crate) use invoke_void_mgp_func_with_res;
 
 /// Combines the given array of types from left to right to construct [mgp_type]. E.g., if the
 /// input is [Type::List, Type::Int], the constructed [mgp_type] is going to be list of integers.
@@ -46,18 +216,22 @@ fn resolve_mgp_type(types: &[Type]) -> *mut mgp_type {
         let mut mgp_type_ptr: *mut mgp_type = std::ptr::null_mut();
         for field_type in types.iter().rev() {
             mgp_type_ptr = match field_type {
-                Type::Any => invoke_mgp_func!(mgp_type, ffi::mgp_type_any),
-                Type::Bool => invoke_mgp_func!(mgp_type, ffi::mgp_type_bool),
-                Type::Number => invoke_mgp_func!(mgp_type, ffi::mgp_type_number),
-                Type::Int => invoke_mgp_func!(mgp_type, ffi::mgp_type_int),
-                Type::Double => invoke_mgp_func!(mgp_type, ffi::mgp_type_float),
-                Type::String => invoke_mgp_func!(mgp_type, ffi::mgp_type_string),
-                Type::Map => invoke_mgp_func!(mgp_type, ffi::mgp_type_map),
-                Type::Vertex => invoke_mgp_func!(mgp_type, ffi::mgp_type_node),
-                Type::Edge => invoke_mgp_func!(mgp_type, ffi::mgp_type_relationship),
-                Type::Path => invoke_mgp_func!(mgp_type, ffi::mgp_type_path),
-                Type::Nullable => invoke_mgp_func!(mgp_type, ffi::mgp_type_nullable, mgp_type_ptr),
-                Type::List => invoke_mgp_func!(mgp_type, ffi::mgp_type_list, mgp_type_ptr),
+                Type::Any => invoke_mgp_func!(*mut mgp_type, ffi::mgp_type_any).unwrap(),
+                Type::Bool => invoke_mgp_func!(*mut mgp_type, ffi::mgp_type_bool).unwrap(),
+                Type::Number => invoke_mgp_func!(*mut mgp_type, ffi::mgp_type_number).unwrap(),
+                Type::Int => invoke_mgp_func!(*mut mgp_type, ffi::mgp_type_int).unwrap(),
+                Type::Double => invoke_mgp_func!(*mut mgp_type, ffi::mgp_type_float).unwrap(),
+                Type::String => invoke_mgp_func!(*mut mgp_type, ffi::mgp_type_string).unwrap(),
+                Type::Map => invoke_mgp_func!(*mut mgp_type, ffi::mgp_type_map).unwrap(),
+                Type::Vertex => invoke_mgp_func!(*mut mgp_type, ffi::mgp_type_node).unwrap(),
+                Type::Edge => invoke_mgp_func!(*mut mgp_type, ffi::mgp_type_relationship).unwrap(),
+                Type::Path => invoke_mgp_func!(*mut mgp_type, ffi::mgp_type_path).unwrap(),
+                Type::Nullable => {
+                    invoke_mgp_func!(*mut mgp_type, ffi::mgp_type_nullable, mgp_type_ptr).unwrap()
+                }
+                Type::List => {
+                    invoke_mgp_func!(*mut mgp_type, ffi::mgp_type_list, mgp_type_ptr).unwrap()
+                }
             };
         }
         mgp_type_ptr
@@ -114,7 +288,7 @@ impl Memgraph {
     }
 
     /// Returns pointer to the object with all arguments passed to the procedure call.
-    pub(crate) fn args_ptr(&self) -> *const mgp_list {
+    pub(crate) fn args_ptr(&self) -> *mut mgp_list {
         self.args
     }
 
@@ -141,31 +315,31 @@ impl Memgraph {
     pub fn vertices_iter(&self) -> MgpResult<VerticesIterator> {
         unsafe {
             let mgp_iterator = invoke_mgp_func!(
-                mgp_vertices_iterator,
+                *mut mgp_vertices_iterator,
                 ffi::mgp_graph_iter_vertices,
                 self.graph_ptr(),
                 self.memory_ptr()
             );
-            if mgp_iterator.is_null() {
+            if mgp_iterator.is_err() {
                 return Err(Error::UnableToCreateGraphVerticesIterator);
             }
-            Ok(VerticesIterator::new(mgp_iterator, &self))
+            Ok(VerticesIterator::new(mgp_iterator.unwrap(), &self))
         }
     }
 
     pub fn vertex_by_id(&self, id: i64) -> MgpResult<Vertex> {
         unsafe {
             let mgp_vertex_ptr = invoke_mgp_func!(
-                mgp_vertex,
+                *mut mgp_vertex,
                 ffi::mgp_graph_get_vertex_by_id,
                 self.graph_ptr(),
                 mgp_vertex_id { as_int: id },
                 self.memory_ptr()
             );
-            if mgp_vertex_ptr.is_null() {
+            if mgp_vertex_ptr.is_err() {
                 return Err(Error::UnableToFindVertexById);
             }
-            Ok(Vertex::new(mgp_vertex_ptr, &self))
+            Ok(Vertex::new(mgp_vertex_ptr.unwrap(), &self))
         }
     }
 
@@ -196,16 +370,17 @@ impl Memgraph {
         result_field_types: &[NamedType],
     ) -> MgpResult<()> {
         unsafe {
-            let procedure = invoke_mgp_func!(
-                mgp_proc,
+            let maybe_procedure = invoke_mgp_func!(
+                *mut mgp_proc,
                 ffi::mgp_module_add_read_procedure,
                 self.module_ptr(),
                 name.as_ptr(),
                 Some(proc_ptr)
             );
-            if procedure.is_null() {
+            if maybe_procedure.is_err() {
                 return Err(Error::UnableToRegisterReadProcedure);
             }
+            let procedure = maybe_procedure.unwrap();
 
             for required_type in required_arg_types {
                 let mgp_type = resolve_mgp_type(&required_type.types);

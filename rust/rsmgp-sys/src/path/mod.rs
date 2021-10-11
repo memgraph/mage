@@ -52,39 +52,45 @@ impl Path {
     }
 
     /// Creates a new Path based on [mgp_path].
-    pub(crate) unsafe fn mgp_copy(
-        mgp_path: *const mgp_path,
-        memgraph: &Memgraph,
-    ) -> MgpResult<Path> {
+    pub(crate) unsafe fn mgp_copy(mgp_path: *mut mgp_path, memgraph: &Memgraph) -> MgpResult<Path> {
         #[cfg(not(test))]
         assert!(
             !mgp_path.is_null(),
             "Unable to make path copy because the given pointer is null."
         );
 
-        let mgp_copy = ffi::mgp_path_copy(mgp_path, memgraph.memory_ptr());
-        if mgp_copy.is_null() {
-            return Err(Error::UnableToCopyPath);
-        }
+        let mgp_copy = invoke_mgp_func_with_res!(
+            *mut mgp_path,
+            Error::UnableToCopyPath,
+            ffi::mgp_path_copy,
+            mgp_path,
+            memgraph.memory_ptr()
+        )?;
         Ok(Path::new(mgp_copy, &memgraph))
     }
 
     /// Returns the underlying [mgp_path] pointer.
-    pub(crate) fn mgp_ptr(&self) -> *const mgp_path {
+    pub(crate) fn mgp_ptr(&self) -> *mut mgp_path {
         self.ptr
+    }
+    pub(crate) fn set_mgp_ptr(&mut self, new_ptr: *mut mgp_path) {
+        self.ptr = new_ptr;
     }
 
     pub fn size(&self) -> u64 {
-        unsafe { ffi::mgp_path_size(self.ptr) }
+        unsafe { invoke_mgp_func!(u64, ffi::mgp_path_size, self.ptr).unwrap() }
     }
 
     /// Makes a new [Path] based on the starting [Vertex] object.
     pub fn make_with_start(vertex: &Vertex, memgraph: &Memgraph) -> MgpResult<Path> {
         unsafe {
-            let mgp_path = ffi::mgp_path_make_with_start(vertex.mgp_ptr(), memgraph.memory_ptr());
-            if mgp_path.is_null() {
-                return Err(Error::UnableToCreatePathWithStartVertex);
-            }
+            let mgp_path = invoke_mgp_func_with_res!(
+                *mut mgp_path,
+                Error::UnableToCreatePathWithStartVertex,
+                ffi::mgp_path_make_with_start,
+                vertex.mgp_ptr(),
+                memgraph.memory_ptr()
+            )?;
             Ok(Path::new(mgp_path, &memgraph))
         }
     }
@@ -93,30 +99,38 @@ impl Path {
     /// no memory to expand the path.
     pub fn expand(&self, edge: &Edge) -> MgpResult<()> {
         unsafe {
-            let mgp_result = ffi::mgp_path_expand(self.ptr, edge.mgp_ptr());
-            if mgp_result == 0 {
-                return Err(Error::UnableToExpandPath);
-            }
+            invoke_void_mgp_func_with_res!(
+                Error::UnableToExpandPath,
+                ffi::mgp_path_expand,
+                self.ptr,
+                edge.mgp_ptr()
+            )?;
             Ok(())
         }
     }
 
     pub fn vertex_at(&self, index: u64) -> MgpResult<Vertex> {
         unsafe {
-            let mgp_vertex = ffi::mgp_path_vertex_at(self.ptr, index);
-            if mgp_vertex.is_null() {
-                return Err(Error::OutOfBoundPathVertexIndex);
-            }
+            let mgp_vertex = invoke_mgp_func_with_res!(
+                *mut mgp_vertex,
+                Error::OutOfBoundPathVertexIndex,
+                ffi::mgp_path_vertex_at,
+                self.ptr,
+                index
+            )?;
             Vertex::mgp_copy(mgp_vertex, &self.memgraph)
         }
     }
 
     pub fn edge_at(&self, index: u64) -> MgpResult<Edge> {
         unsafe {
-            let mgp_edge = ffi::mgp_path_edge_at(self.ptr, index);
-            if mgp_edge.is_null() {
-                return Err(Error::OutOfBoundPathEdgeIndex);
-            }
+            let mgp_edge = invoke_mgp_func_with_res!(
+                *mut mgp_edge,
+                Error::OutOfBoundPathVertexIndex,
+                ffi::mgp_path_edge_at,
+                self.ptr,
+                index
+            )?;
             Edge::mgp_copy(mgp_edge, &self.memgraph)
         }
     }

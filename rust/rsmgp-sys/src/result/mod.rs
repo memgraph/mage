@@ -37,10 +37,12 @@ pub struct ResultRecord {
 impl ResultRecord {
     pub fn create(memgraph: &Memgraph) -> MgpResult<ResultRecord> {
         unsafe {
-            let mgp_ptr = ffi::mgp_result_new_record(memgraph.result_ptr());
-            if mgp_ptr.is_null() {
-                return Err(Error::UnableToCreateResultRecord);
-            }
+            let mgp_ptr = invoke_mgp_func_with_res!(
+                *mut mgp_result_record,
+                Error::UnableToCreateResultRecord,
+                ffi::mgp_result_new_record,
+                memgraph.result_ptr()
+            )?;
             Ok(ResultRecord {
                 ptr: mgp_ptr,
                 memgraph: memgraph.clone(),
@@ -50,10 +52,13 @@ impl ResultRecord {
 
     pub fn insert_mgp_value(&self, field: &CStr, value: &MgpValue) -> MgpResult<()> {
         unsafe {
-            let inserted = ffi::mgp_result_record_insert(self.ptr, field.as_ptr(), value.mgp_ptr());
-            if inserted == 0 {
-                return Err(Error::UnableToInsertResultValue);
-            }
+            invoke_void_mgp_func_with_res!(
+                Error::UnableToInsertResultValue,
+                ffi::mgp_result_record_insert,
+                self.ptr,
+                field.as_ptr(),
+                value.mgp_ptr()
+            )?;
             Ok(())
         }
     }
@@ -114,6 +119,9 @@ pub enum Error {
 
     #[snafu(display("Unable to return edge property because of name allocation error."))]
     UnableToReturnEdgePropertyNameAllocationError,
+
+    #[snafu(display("Unable to return edge property because the edge is deleted."))]
+    UnableToReturnEdgePropertyDeletedObjectError,
 
     #[snafu(display("Unable to return edge properties iterator."))]
     UnableToReturnEdgePropertiesIterator,
@@ -255,6 +263,15 @@ pub enum Error {
 
     #[snafu(display("Unable to return vertex out_edges iterator."))]
     UnableToReturnVertexOutEdgesIterator,
+
+    #[snafu(display("Unable to return vertex labels count becuase the vertex is deleted."))]
+    UnableToReturnVertexLabelsCountDeletedObjectError,
+
+    #[snafu(display("Unable to return vertex labels count becuase the vertex is deleted."))]
+    UnableToReturnVertexLabelDeletedObjectError,
+
+    #[snafu(display("Unable to check if vertex has a label."))]
+    UnableToCheckVertexHasLabel,
 }
 
 /// A result type holding [Error] by default.

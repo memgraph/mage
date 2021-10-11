@@ -25,7 +25,9 @@ use crate::{mock_mgp_once, with_dummy};
 #[test]
 #[serial]
 fn test_create_record() {
-    mock_mgp_once!(mgp_result_new_record_context, |_| { null_mut() });
+    mock_mgp_once!(mgp_result_new_record_context, |_, _| {
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
+    });
 
     with_dummy!(|memgraph: &Memgraph| {
         let result_record = ResultRecord::create(&memgraph);
@@ -33,64 +35,103 @@ fn test_create_record() {
     });
 }
 
+// macro_rules! mock_mgp_value_make {
+//     ($c_func_name:ident) => {
+//         mock_mgp_once!(
+//             $c_func_name,
+//             |_, _, value_ptr_ptr| unsafe {
+//                 (*value_ptr_ptr) = alloc_mgp_value();
+//                 mgp_error::MGP_ERROR_NO_ERROR
+//             }
+//         );
+//     };
+// }
+
+macro_rules! mock_mgp_value_make_with_mem {
+    ($c_func_name:ident) => {
+        mock_mgp_once!($c_func_name, |_, _, value_ptr_ptr| unsafe {
+            (*value_ptr_ptr) = alloc_mgp_value();
+            mgp_error::MGP_ERROR_NO_ERROR
+        });
+    };
+}
+
+macro_rules! mock_mgp_value_make_without_mem {
+    ($c_func_name:ident) => {
+        mock_mgp_once!($c_func_name, |_, value_ptr_ptr| unsafe {
+            (*value_ptr_ptr) = alloc_mgp_value();
+            mgp_error::MGP_ERROR_NO_ERROR
+        });
+    };
+}
+
 #[test]
 #[serial]
 fn test_insert_value() {
-    mock_mgp_once!(mgp_value_make_null_context, |_| unsafe {
-        alloc_mgp_value()
+    mock_mgp_once!(mgp_value_make_null_context, |_, value_ptr_ptr| unsafe {
+        (*value_ptr_ptr) = alloc_mgp_value();
+        mgp_error::MGP_ERROR_NO_ERROR
     });
-    mock_mgp_once!(mgp_value_make_bool_context, |_, _| unsafe {
-        alloc_mgp_value()
-    });
-    mock_mgp_once!(mgp_value_make_int_context, |_, _| unsafe {
-        alloc_mgp_value()
-    });
-    mock_mgp_once!(mgp_value_make_double_context, |_, _| unsafe {
-        alloc_mgp_value()
-    });
-    mock_mgp_once!(mgp_value_make_string_context, |_, _| unsafe {
-        alloc_mgp_value()
-    });
+    mock_mgp_value_make_with_mem!(mgp_value_make_bool_context);
+    mock_mgp_value_make_with_mem!(mgp_value_make_int_context);
+    mock_mgp_value_make_with_mem!(mgp_value_make_double_context);
+    mock_mgp_value_make_with_mem!(mgp_value_make_string_context);
 
-    let ctx_list_size = mgp_list_size_context();
-    ctx_list_size.expect().times(2).returning(|_| 0);
-    mock_mgp_once!(mgp_list_make_empty_context, |_, _| unsafe {
-        alloc_mgp_list()
+    mock_mgp_once!(mgp_list_size_context, |_, size_ptr| unsafe {
+        (*size_ptr) = 0;
+        mgp_error::MGP_ERROR_NO_ERROR
     });
-    mock_mgp_once!(mgp_value_make_list_context, |_| unsafe {
-        alloc_mgp_value()
+    mock_mgp_once!(mgp_list_make_empty_context, |_, _, list_ptr_ptr| unsafe {
+        (*list_ptr_ptr) = alloc_mgp_list();
+        mgp_error::MGP_ERROR_NO_ERROR
     });
+    mock_mgp_value_make_without_mem!(mgp_value_make_list_context);
 
-    mock_mgp_once!(mgp_map_make_empty_context, |_| unsafe { alloc_mgp_map() });
-    mock_mgp_once!(mgp_map_iter_items_context, |_, _| unsafe {
-        alloc_mgp_map_items_iterator()
+    mock_mgp_once!(mgp_map_make_empty_context, |_, map_ptr_ptr| unsafe {
+        (*map_ptr_ptr) = alloc_mgp_map();
+        mgp_error::MGP_ERROR_NO_ERROR
     });
-    mock_mgp_once!(mgp_map_items_iterator_get_context, |_| { null_mut() });
-    mock_mgp_once!(mgp_value_make_map_context, |_| unsafe { alloc_mgp_value() });
+    mock_mgp_once!(mgp_map_iter_items_context, |_, _, iter_ptr_ptr| unsafe {
+        (*iter_ptr_ptr) = alloc_mgp_map_items_iterator();
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
+    mock_mgp_once!(
+        mgp_map_items_iterator_get_context,
+        |_, item_ptr_ptr| unsafe {
+            (*item_ptr_ptr) = null_mut();
+            mgp_error::MGP_ERROR_NO_ERROR
+        }
+    );
+    mock_mgp_value_make_without_mem!(mgp_value_make_map_context);
     mock_mgp_once!(mgp_map_items_iterator_destroy_context, |_| {});
 
-    mock_mgp_once!(mgp_vertex_copy_context, |_, _| unsafe {
-        alloc_mgp_vertex()
+    mock_mgp_once!(mgp_vertex_copy_context, |_, _, vertex_ptr_ptr| unsafe {
+        (*vertex_ptr_ptr) = alloc_mgp_vertex();
+        mgp_error::MGP_ERROR_NO_ERROR
     });
-    mock_mgp_once!(mgp_value_make_vertex_context, |_| unsafe {
-        alloc_mgp_value()
-    });
+    mock_mgp_value_make_without_mem!(mgp_value_make_vertex_context);
 
-    mock_mgp_once!(mgp_edge_copy_context, |_, _| unsafe { alloc_mgp_edge() });
-    mock_mgp_once!(mgp_value_make_edge_context, |_| unsafe {
-        alloc_mgp_value()
+    mock_mgp_once!(mgp_edge_copy_context, |_, _, edge_ptr_ptr| unsafe {
+        (*edge_ptr_ptr) = alloc_mgp_edge();
+        mgp_error::MGP_ERROR_NO_ERROR
     });
+    mock_mgp_value_make_without_mem!(mgp_value_make_edge_context);
 
-    mock_mgp_once!(mgp_path_copy_context, |_, _| unsafe { alloc_mgp_path() });
-    mock_mgp_once!(mgp_value_make_path_context, |_| unsafe {
-        alloc_mgp_value()
+    mock_mgp_once!(mgp_path_copy_context, |_, _, path_ptr_ptr| unsafe {
+        (*path_ptr_ptr) = alloc_mgp_path();
+        mgp_error::MGP_ERROR_NO_ERROR
     });
+    mock_mgp_value_make_without_mem!(mgp_value_make_path_context);
 
-    mock_mgp_once!(mgp_result_new_record_context, |_| unsafe {
-        alloc_mgp_result_record()
+    mock_mgp_once!(mgp_result_new_record_context, |_, record_ptr_ptr| unsafe {
+        (*record_ptr_ptr) = alloc_mgp_result_record();
+        mgp_error::MGP_ERROR_NO_ERROR
     });
     let ctx_insert = mgp_result_record_insert_context();
-    ctx_insert.expect().times(10).returning(|_, _, _| 0);
+    ctx_insert
+        .expect()
+        .times(10)
+        .returning(|_, _, _| mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE);
     let ctx_destroy = mgp_value_destroy_context();
     ctx_destroy.expect().times(10).returning(|_| {});
 

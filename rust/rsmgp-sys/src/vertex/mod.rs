@@ -65,9 +65,10 @@ impl Iterator for VerticesIterator {
         unsafe {
             let data = if self.is_first {
                 self.is_first = false;
-                ffi::mgp_vertices_iterator_get(self.ptr)
+                invoke_mgp_func!(*mut mgp_vertex, ffi::mgp_vertices_iterator_get, self.ptr).unwrap()
             } else {
-                ffi::mgp_vertices_iterator_next(self.ptr)
+                invoke_mgp_func!(*mut mgp_vertex, ffi::mgp_vertices_iterator_next, self.ptr)
+                    .expect("Unable to get next vertex during vertices iteration.")
             };
 
             if data.is_null() {
@@ -113,7 +114,7 @@ impl Vertex {
 
     /// Creates a new Vertex based on [mgp_vertex].
     pub(crate) unsafe fn mgp_copy(
-        mgp_vertex: *const mgp_vertex,
+        mgp_vertex: *mut mgp_vertex,
         memgraph: &Memgraph,
     ) -> MgpResult<Vertex> {
         #[cfg(not(test))]
@@ -122,28 +123,54 @@ impl Vertex {
             "Unable to make vertex copy because vertex pointer is null."
         );
 
-        let mgp_copy = ffi::mgp_vertex_copy(mgp_vertex, memgraph.memory_ptr());
-        if mgp_copy.is_null() {
-            return Err(Error::UnableToCopyVertex);
-        }
+        let mgp_copy = invoke_mgp_func_with_res!(
+            *mut mgp_vertex,
+            Error::UnableToCopyVertex,
+            ffi::mgp_vertex_copy,
+            mgp_vertex,
+            memgraph.memory_ptr()
+        )?;
         Ok(Vertex::new(mgp_copy, &memgraph))
     }
 
-    pub(crate) fn mgp_ptr(&self) -> *const mgp_vertex {
+    pub(crate) fn mgp_ptr(&self) -> *mut mgp_vertex {
         self.ptr
     }
 
-    pub fn id(&self) -> i64 {
-        unsafe { ffi::mgp_vertex_get_id(self.ptr).as_int }
+    pub(crate) fn set_mgp_ptr(&mut self, new_ptr: *mut mgp_vertex) {
+        self.ptr = new_ptr;
     }
 
-    pub fn labels_count(&self) -> u64 {
-        unsafe { ffi::mgp_vertex_labels_count(self.ptr) }
+    pub fn id(&self) -> i64 {
+        unsafe {
+            invoke_mgp_func!(mgp_vertex_id, ffi::mgp_vertex_get_id, self.ptr)
+                .unwrap()
+                .as_int
+        }
+    }
+
+    pub fn labels_count(&self) -> MgpResult<u64> {
+        unsafe {
+            invoke_mgp_func_with_res!(
+                u64,
+                Error::UnableToReturnVertexLabelsCountDeletedObjectError,
+                ffi::mgp_vertex_labels_count,
+                self.ptr
+            )
+        }
     }
 
     pub fn label_at(&self, index: u64) -> MgpResult<CString> {
         unsafe {
-            let c_label = ffi::mgp_vertex_label_at(self.ptr, index);
+            let c_label =
+                match invoke_mgp_func!(mgp_label, ffi::mgp_vertex_label_at, self.ptr, index) {
+                    Err(MgpError::DeletedObject) => {
+                        return Err(Error::UnableToReturnVertexLabelDeletedObjectError);
+                    }
+                    Err(MgpError::OutOfRange) => return Err(Error::OutOfBoundLabelIndexError),
+                    Err(_) => panic!("Unexpected error when getting vertex label"),
+                    Ok(label) => label,
+                };
             if c_label.name.is_null() {
                 return Err(Error::OutOfBoundLabelIndexError);
             }
@@ -151,22 +178,32 @@ impl Vertex {
         }
     }
 
-    pub fn has_label(&self, name: &CStr) -> bool {
+    pub fn has_label(&self, name: &CStr) -> MgpResult<bool> {
         unsafe {
             let c_mgp_label = mgp_label {
                 name: name.as_ptr(),
             };
-            ffi::mgp_vertex_has_label(self.ptr, c_mgp_label) != 0
+            let c_bool = invoke_mgp_func_with_res!(
+                ::std::os::raw::c_int,
+                Error::UnableToCheckVertexHasLabel,
+                ffi::mgp_vertex_has_label,
+                self.ptr,
+                c_mgp_label
+            )?;
+            Ok(c_bool != 0)
         }
     }
 
     pub fn property(&self, name: &CStr) -> MgpResult<Property> {
         unsafe {
-            let mgp_value =
-                ffi::mgp_vertex_get_property(self.ptr, name.as_ptr(), self.memgraph.memory_ptr());
-            if mgp_value.is_null() {
-                return Err(Error::UnableToGetVertexProperty);
-            }
+            let mgp_value = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToGetVertexProperty,
+                ffi::mgp_vertex_get_property,
+                self.ptr,
+                name.as_ptr(),
+                self.memgraph.memory_ptr()
+            )?;
             let value = MgpValue::new(mgp_value, &self.memgraph).to_value()?;
             match CString::new(name.to_bytes()) {
                 Ok(c_string) => Ok(Property {
@@ -180,31 +217,39 @@ impl Vertex {
 
     pub fn properties(&self) -> MgpResult<PropertiesIterator> {
         unsafe {
-            let mgp_iterator =
-                ffi::mgp_vertex_iter_properties(self.ptr, self.memgraph.memory_ptr());
-            if mgp_iterator.is_null() {
-                return Err(Error::UnableToReturnVertexPropertiesIterator);
-            }
+            let mgp_iterator = invoke_mgp_func_with_res!(
+                *mut mgp_properties_iterator,
+                Error::UnableToReturnVertexPropertiesIterator,
+                ffi::mgp_vertex_iter_properties,
+                self.ptr,
+                self.memgraph.memory_ptr()
+            )?;
             Ok(PropertiesIterator::new(mgp_iterator, &self.memgraph))
         }
     }
 
     pub fn in_edges(&self) -> MgpResult<EdgesIterator> {
         unsafe {
-            let mgp_iterator = ffi::mgp_vertex_iter_in_edges(self.ptr, self.memgraph.memory_ptr());
-            if mgp_iterator.is_null() {
-                return Err(Error::UnableToReturnVertexInEdgesIterator);
-            }
+            let mgp_iterator = invoke_mgp_func_with_res!(
+                *mut mgp_edges_iterator,
+                Error::UnableToReturnVertexInEdgesIterator,
+                ffi::mgp_vertex_iter_in_edges,
+                self.ptr,
+                self.memgraph.memory_ptr()
+            )?;
             Ok(EdgesIterator::new(mgp_iterator, &self.memgraph))
         }
     }
 
     pub fn out_edges(&self) -> MgpResult<EdgesIterator> {
         unsafe {
-            let mgp_iterator = ffi::mgp_vertex_iter_out_edges(self.ptr, self.memgraph.memory_ptr());
-            if mgp_iterator.is_null() {
-                return Err(Error::UnableToReturnVertexOutEdgesIterator);
-            }
+            let mgp_iterator = invoke_mgp_func_with_res!(
+                *mut mgp_edges_iterator,
+                Error::UnableToReturnVertexOutEdgesIterator,
+                ffi::mgp_vertex_iter_out_edges,
+                self.ptr,
+                self.memgraph.memory_ptr()
+            )?;
             Ok(EdgesIterator::new(mgp_iterator, &self.memgraph))
         }
     }

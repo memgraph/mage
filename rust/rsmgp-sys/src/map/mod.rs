@@ -78,16 +78,25 @@ impl Iterator for MapIterator {
         unsafe {
             let data = if self.is_first {
                 self.is_first = false;
-                ffi::mgp_map_items_iterator_get(self.ptr)
+                invoke_mgp_func!(*mut mgp_map_item, ffi::mgp_map_items_iterator_get, self.ptr)
+                    .unwrap()
             } else {
-                ffi::mgp_map_items_iterator_next(self.ptr)
+                invoke_mgp_func!(
+                    *mut mgp_map_item,
+                    ffi::mgp_map_items_iterator_next,
+                    self.ptr
+                )
+                .unwrap()
             };
 
             if data.is_null() {
                 None
             } else {
-                let mgp_map_item_key = ffi::mgp_map_item_key(data);
-                let mgp_map_item_value = ffi::mgp_map_item_value(data);
+                let mgp_map_item_key =
+                    invoke_mgp_func!(*const ::std::os::raw::c_char, ffi::mgp_map_item_key, data)
+                        .unwrap();
+                let mgp_map_item_value =
+                    invoke_mgp_func!(*mut mgp_value, ffi::mgp_map_item_value, data).unwrap();
                 let key = match create_cstring(mgp_map_item_key) {
                     Ok(v) => v,
                     Err(_) => panic!("Unable to create map item key."),
@@ -116,72 +125,114 @@ impl Map {
         }
     }
 
-    pub(crate) unsafe fn mgp_copy(ptr: *const mgp_map, memgraph: &Memgraph) -> MgpResult<Map> {
+    pub(crate) unsafe fn mgp_copy(ptr: *mut mgp_map, memgraph: &Memgraph) -> MgpResult<Map> {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
             "Unable to create map copy because the given pointer is null."
         );
 
-        let mgp_map_copy = ffi::mgp_map_make_empty(memgraph.memory_ptr());
-        let mgp_map_iterator = ffi::mgp_map_iter_items(ptr, memgraph.memory_ptr());
-        if mgp_map_iterator.is_null() {
-            ffi::mgp_map_destroy(mgp_map_copy);
-            return Err(Error::UnableToCopyMap);
-        }
-        let map_iterator = MapIterator::new(mgp_map_iterator, &memgraph);
+        let mgp_map_copy = Map::new(
+            invoke_mgp_func_with_res!(
+                *mut mgp_map,
+                Error::UnableToCopyMap,
+                ffi::mgp_map_make_empty,
+                memgraph.memory_ptr()
+            )?,
+            &memgraph,
+        );
+        let map_iterator = MapIterator::new(
+            invoke_mgp_func_with_res!(
+                *mut mgp_map_items_iterator,
+                Error::UnableToCopyMap,
+                ffi::mgp_map_iter_items,
+                ptr,
+                memgraph.memory_ptr()
+            )?,
+            &memgraph,
+        );
         for item in map_iterator {
             let mgp_value = item.value.to_mgp_value(&memgraph)?;
-            if ffi::mgp_map_insert(mgp_map_copy, item.key.as_ptr(), mgp_value.mgp_ptr()) == 0 {
-                ffi::mgp_map_destroy(mgp_map_copy);
-                return Err(Error::UnableToCopyMap);
-            }
+            invoke_void_mgp_func_with_res!(
+                Error::UnableToCopyMap,
+                ffi::mgp_map_insert,
+                mgp_map_copy.ptr,
+                item.key.as_ptr(),
+                mgp_value.mgp_ptr()
+            )?
         }
-        Ok(Map::new(mgp_map_copy, &memgraph))
+        Ok(mgp_map_copy)
     }
 
     pub fn make_empty(memgraph: &Memgraph) -> MgpResult<Map> {
         unsafe {
-            let mgp_ptr = ffi::mgp_map_make_empty(memgraph.memory_ptr());
-            if mgp_ptr.is_null() {
-                return Err(Error::UnableToCreateEmptyMap);
-            }
-            Ok(Map::new(mgp_ptr, &memgraph))
+            Ok(Map::new(
+                invoke_mgp_func_with_res!(
+                    *mut mgp_map,
+                    Error::UnableToCreateEmptyMap,
+                    ffi::mgp_map_make_empty,
+                    memgraph.memory_ptr()
+                )?,
+                &memgraph,
+            ))
         }
     }
 
     pub fn insert(&self, key: &CStr, value: &Value) -> MgpResult<()> {
         unsafe {
             let mgp_value = value.to_mgp_value(&self.memgraph)?;
-            if ffi::mgp_map_insert(self.ptr, key.as_ptr(), mgp_value.mgp_ptr()) == 0 {
-                return Err(Error::UnableToInsertMapValue);
-            }
+            invoke_void_mgp_func_with_res!(
+                Error::UnableToInsertMapValue,
+                ffi::mgp_map_insert,
+                self.ptr,
+                key.as_ptr(),
+                mgp_value.mgp_ptr()
+            )?;
+
             Ok(())
         }
     }
 
     pub fn size(&self) -> u64 {
-        unsafe { ffi::mgp_map_size(self.ptr) }
+        unsafe { invoke_mgp_func!(u64, ffi::mgp_map_size, self.ptr).unwrap() }
     }
 
     pub fn at(&self, key: &CStr) -> MgpResult<Value> {
         unsafe {
-            let c_value = ffi::mgp_map_at(self.ptr, key.as_ptr());
-            if c_value.is_null() {
-                return Err(Error::UnableToAccessMapValue);
+            let result = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToAccessMapValue,
+                ffi::mgp_map_at,
+                self.ptr,
+                key.as_ptr()
+            )?;
+            if result.is_null() {
+                Err(Error::UnableToAccessMapValue)
+            } else {
+                mgp_raw_value_to_value(result, &self.memgraph)
             }
-            mgp_raw_value_to_value(c_value, &self.memgraph)
         }
     }
 
     pub fn iter(&self) -> MgpResult<MapIterator> {
         unsafe {
-            let mgp_iterator = ffi::mgp_map_iter_items(self.ptr, self.memgraph.memory_ptr());
-            if mgp_iterator.is_null() {
-                return Err(Error::UnableToCreateMapIterator);
-            }
+            let mgp_iterator = invoke_mgp_func_with_res!(
+                *mut mgp_map_items_iterator,
+                Error::UnableToCreateMapIterator,
+                ffi::mgp_map_iter_items,
+                self.ptr,
+                self.memgraph.memory_ptr()
+            )?;
             Ok(MapIterator::new(mgp_iterator, &self.memgraph))
         }
+    }
+
+    pub(crate) fn mgp_ptr(&self) -> *mut mgp_map {
+        self.ptr
+    }
+
+    pub(crate) fn set_mgp_ptr(&mut self, new_ptr: *mut mgp_map) {
+        self.ptr = new_ptr;
     }
 }
 

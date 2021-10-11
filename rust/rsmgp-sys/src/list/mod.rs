@@ -76,35 +76,37 @@ impl List {
 
     pub fn make_empty(capacity: u64, memgraph: &Memgraph) -> MgpResult<List> {
         unsafe {
-            let mgp_ptr = ffi::mgp_list_make_empty(capacity, memgraph.memory_ptr());
-            if mgp_ptr.is_null() {
-                return Err(Error::UnableToCreateEmptyList);
-            }
+            let mgp_ptr = invoke_mgp_func_with_res!(
+                *mut mgp_list,
+                Error::UnableToCreateEmptyList,
+                ffi::mgp_list_make_empty,
+                capacity,
+                memgraph.memory_ptr()
+            )?;
             Ok(List::new(mgp_ptr, &memgraph))
         }
     }
 
     /// Creates a new List based on [mgp_list].
-    pub(crate) unsafe fn mgp_copy(ptr: *const mgp_list, memgraph: &Memgraph) -> MgpResult<List> {
+    pub(crate) unsafe fn mgp_copy(ptr: *mut mgp_list, memgraph: &Memgraph) -> MgpResult<List> {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
             "Unable to create list copy because the given pointer is null."
         );
 
-        let size = ffi::mgp_list_size(ptr);
-        let mgp_copy = ffi::mgp_list_make_empty(size, memgraph.memory_ptr());
-        if mgp_copy.is_null() {
-            return Err(Error::UnableToCopyList);
-        }
+        let size = invoke_mgp_func!(u64, ffi::mgp_list_size, ptr).unwrap();
+        let mgp_copy = List::make_empty(size, memgraph)?;
         for index in 0..size {
-            let mgp_value = ffi::mgp_list_at(ptr, index);
-            if ffi::mgp_list_append(mgp_copy, mgp_value) == 0 {
-                ffi::mgp_list_destroy(mgp_copy);
-                return Err(Error::UnableToCopyList);
-            }
+            let mgp_value = invoke_mgp_func!(*mut mgp_value, ffi::mgp_list_at, ptr, index).unwrap();
+            invoke_void_mgp_func_with_res!(
+                Error::UnableToCopyList,
+                ffi::mgp_list_append,
+                mgp_copy.ptr,
+                mgp_value
+            )?
         }
-        Ok(List::new(mgp_copy, &memgraph))
+        Ok(mgp_copy)
     }
 
     pub fn copy(&self) -> MgpResult<List> {
@@ -115,9 +117,12 @@ impl List {
     pub fn append(&self, value: &Value) -> MgpResult<()> {
         unsafe {
             let mgp_value = value.to_mgp_value(&self.memgraph)?;
-            if ffi::mgp_list_append(self.ptr, mgp_value.mgp_ptr()) == 0 {
-                return Err(Error::UnableToAppendListValue);
-            }
+            invoke_void_mgp_func_with_res!(
+                Error::UnableToAppendListValue,
+                ffi::mgp_list_append,
+                self.ptr,
+                mgp_value.mgp_ptr()
+            )?;
             Ok(())
         }
     }
@@ -127,29 +132,35 @@ impl List {
     pub fn append_extend(&self, value: &Value) -> MgpResult<()> {
         unsafe {
             let mgp_value = value.to_mgp_value(&self.memgraph)?;
-            if ffi::mgp_list_append_extend(self.ptr, mgp_value.mgp_ptr()) == 0 {
-                return Err(Error::UnableToAppendExtendListValue);
-            }
+            invoke_void_mgp_func_with_res!(
+                Error::UnableToAppendExtendListValue,
+                ffi::mgp_list_append_extend,
+                self.ptr,
+                mgp_value.mgp_ptr()
+            )?;
             Ok(())
         }
     }
 
     pub fn size(&self) -> u64 {
-        unsafe { ffi::mgp_list_size(self.ptr) }
+        unsafe { invoke_mgp_func!(u64, ffi::mgp_list_size, self.ptr).unwrap() }
     }
 
     pub fn capacity(&self) -> u64 {
-        unsafe { ffi::mgp_list_capacity(self.ptr) }
+        unsafe { invoke_mgp_func!(u64, ffi::mgp_list_capacity, self.ptr).unwrap() }
     }
 
     /// Always copies the underlying value because in case of the capacity change any references
     /// would become invalid.
     pub fn value_at(&self, index: u64) -> MgpResult<Value> {
         unsafe {
-            let c_value = ffi::mgp_list_at(self.ptr, index);
-            if c_value.is_null() {
-                return Err(Error::UnableToAccessListValueByIndex);
-            }
+            let c_value = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToAccessListValueByIndex,
+                ffi::mgp_list_at,
+                self.ptr,
+                index
+            )?;
             mgp_raw_value_to_value(c_value, &self.memgraph)
         }
     }
@@ -159,6 +170,14 @@ impl List {
             list: self,
             position: 0,
         })
+    }
+
+    pub(crate) fn mgp_ptr(&self) -> *mut mgp_list {
+        self.ptr
+    }
+
+    pub(crate) fn set_mgp_ptr(&mut self, new_ptr: *mut mgp_list) {
+        self.ptr = new_ptr;
     }
 }
 

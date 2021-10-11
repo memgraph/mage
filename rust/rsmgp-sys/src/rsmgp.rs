@@ -54,8 +54,8 @@ macro_rules! define_procedure {
     ($c_name:ident, $rs_func:expr) => {
         #[no_mangle]
         extern "C" fn $c_name(
-            args: *const mgp_list,
-            graph: *const mgp_graph,
+            args: *mut mgp_list,
+            graph: *mut mgp_graph,
             result: *mut mgp_result,
             memory: *mut mgp_memory,
         ) {
@@ -266,10 +266,12 @@ macro_rules! define_optional_type {
 /// Sets error that will be returned to the caller.
 pub fn set_memgraph_error_msg(msg: &CStr, memgraph: &Memgraph) {
     unsafe {
-        let status = ffi::mgp_result_set_error_msg(memgraph.result_ptr(), msg.as_ptr());
-        if status == 0 {
-            panic!("Unable to pass error message to the Memgraph engine.");
-        }
+        invoke_void_mgp_func!(
+            ffi::mgp_result_set_error_msg,
+            memgraph.result_ptr(),
+            msg.as_ptr()
+        )
+        .expect("Unable to pass error message to the Memgraph engine.");
     }
 }
 
@@ -285,7 +287,9 @@ mod tests {
     #[test]
     #[serial]
     fn test_set_error_msg() {
-        mock_mgp_once!(mgp_result_set_error_msg_context, |_, _| 1);
+        mock_mgp_once!(mgp_result_set_error_msg_context, |_, _| {
+            crate::mgp::mgp_error::MGP_ERROR_NO_ERROR
+        });
 
         with_dummy!(|memgraph: &Memgraph| {
             set_memgraph_error_msg(c_str!("test_error"), &memgraph);
