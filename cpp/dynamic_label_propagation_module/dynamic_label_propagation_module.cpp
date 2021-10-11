@@ -118,23 +118,23 @@ void UpdateWrapper(mgp_list *args, mgp_graph *memgraph_graph,
     auto deleted_edges = mgp::value_get_list(mgp::list_at(args, 5));
 
     if (initialized) {
-      auto modified_node_ids = mg_utility::get_node_ids(created_nodes);
+      auto modified_node_ids = mg_utility::GetNodeIDs(created_nodes);
       auto modified_edge_endpoint_ids =
-          mg_utility::get_edge_endpoint_ids(created_edges);
+          mg_utility::GetEdgeEndpointIDs(created_edges);
 
-      auto updated_node_ids = mg_utility::get_node_ids(updated_nodes);
+      auto updated_node_ids = mg_utility::GetNodeIDs(updated_nodes);
       modified_node_ids.insert(modified_node_ids.end(),
                                updated_node_ids.begin(),
                                updated_node_ids.end());
       auto updated_edge_endpoint_ids =
-          mg_utility::get_edge_endpoint_ids(updated_edges);
+          mg_utility::GetEdgeEndpointIDs(updated_edges);
       modified_edge_endpoint_ids.insert(modified_edge_endpoint_ids.end(),
                                         updated_edge_endpoint_ids.begin(),
                                         updated_edge_endpoint_ids.end());
 
-      auto deleted_node_ids = mg_utility::get_node_ids(deleted_nodes);
+      auto deleted_node_ids = mg_utility::GetNodeIDs(deleted_nodes);
       auto deleted_edge_endpoint_ids =
-          mg_utility::get_edge_endpoint_ids(deleted_edges);
+          mg_utility::GetEdgeEndpointIDs(deleted_edges);
 
       graph = mg_utility::GetGraphView(memgraph_graph, result, memory,
                                        direction_parameter);

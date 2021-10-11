@@ -51,42 +51,6 @@ void CreateGraphEdge(mg_graph::Graph<TSize> *graph, mgp_vertex *vertex_from, mgp
 
   graph->CreateEdge(memgraph_id_from, memgraph_id_to, graph_type);
 }
-
-/// Returns total edge weights between two nodes node_i_id and node_j_id.
-/// Weight is taken from the property property_name. If the property is not set
-/// default_weight is assumed for the edge.
-template <typename TSize>
-double get_weight(mg_graph::Graph<TSize> *graph, std::uint64_t node_i_id,
-                  std::uint64_t node_j_id, const char *property_name,
-                  const double default_weight, mgp_memory *memory) {
-  double weight = 0;
-
-  auto node_i = mgp_graph_get_vertex_by_id(graph, node_i_id, memory);
-  auto iterator = mgp_vertex_iter_out_edges(node_i, memory);
-  auto edge = mgp_edges_iterator_get(iterator);  // first edge
-  if (edge) {
-    auto node_j = mgp_edge_get_to(edge);
-    if (mgp_vertex_get_id(node_j) == node_j_id)
-      weight += mgp_value_make_double(
-          mgp_edge_get_property(edge, property_name, memory));
-    while (true) {
-      edge = mgp_edges_iterator_next(iterator); // other edges
-      if (edge) {
-        node_j = mgp_edge_get_to(edge);
-        if (mgp_vertex_get_id(node_j) == node_j_id)
-          weight += mgp_value_make_double(
-              mgp_edge_get_property(edge, property_name, memory));
-      } else {
-        break;
-      }
-    }
-  }
-
-  mgp_vertex_destroy(node_i);
-  mgp_edges_iterator_destroy(iterator);
-
-  return weight;
-}
 }  // namespace mg_graph
 
 namespace mg_utility {
@@ -234,8 +198,44 @@ void InsertRelationshipValueResult(mgp_result_record *record, const char *field_
 void InsertRelationshipValueResult(mgp_graph *graph, mgp_result_record *record, const char *field_name,
                                    const int edge_id, mgp_memory *memory);
 
+/// Returns total edge weights between two nodes node_i_id and node_j_id.
+/// Weight is taken from the property property_name. If the property is not set
+/// default_weight is assumed for the edge.
+template <typename TSize>
+double GetWeight(mg_graph::Graph<TSize> *graph, std::uint64_t node_i_id,
+                  std::uint64_t node_j_id, const char *property_name,
+                  const double default_weight, mgp_memory *memory) {
+  double weight = 0;
+
+  auto node_i = mgp_graph_get_vertex_by_id(graph, node_i_id, memory);
+  auto iterator = mgp_vertex_iter_out_edges(node_i, memory);
+  auto edge = mgp_edges_iterator_get(iterator);  // first edge
+  if (edge) {
+    auto node_j = mgp_edge_get_to(edge);
+    if (mgp_vertex_get_id(node_j) == node_j_id)
+      weight += mgp_value_make_double(
+          mgp_edge_get_property(edge, property_name, memory));
+    while (true) {
+      edge = mgp_edges_iterator_next(iterator); // other edges
+      if (edge) {
+        node_j = mgp_edge_get_to(edge);
+        if (mgp_vertex_get_id(node_j) == node_j_id)
+          weight += mgp_value_make_double(
+              mgp_edge_get_property(edge, property_name, memory));
+      } else {
+        break;
+      }
+    }
+  }
+
+  mgp_vertex_destroy(node_i);
+  mgp_edges_iterator_destroy(iterator);
+
+  return weight;
+}
+
 /// Returns a vector of node_ids of nodes from the mgp_list node_list.
-std::vector<std::uint64_t> get_node_ids(mgp_list *node_list) {
+std::vector<std::uint64_t> GetNodeIDs(mgp_list *node_list) {
   std::vector<std::uint64_t> node_ids;
   for (std::size_t i = 0; i < mgp::list_size(node_list); i++) {
     node_ids.push_back(
@@ -248,7 +248,7 @@ std::vector<std::uint64_t> get_node_ids(mgp_list *node_list) {
 
 /// Returns a vector of endpoints ({node_id, node_id} pairs) of edges
 /// from the mgp_list edge_list.
-std::vector<std::pair<std::uint64_t, std::uint64_t>> get_edge_endpoint_ids(
+std::vector<std::pair<std::uint64_t, std::uint64_t>> GetEdgeEndpointIDs(
     mgp_list *edge_list) {
   std::vector<std::pair<std::uint64_t, std::uint64_t>> edge_endpoint_ids;
   for (std::size_t i = 0; i < mgp::list_size(edge_list); i++) {
