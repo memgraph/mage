@@ -104,9 +104,6 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(mgp_graph *memgraph_graph, 
   // Safe creation of vertices iterator
 
   auto *vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);
-  if (vertices_it == nullptr) {
-    throw mg_exception::NotEnoughMemoryException();
-  }
   mg_utility::OnScopeExit delete_vertices_it([&vertices_it] { mgp::vertices_iterator_destroy(vertices_it); });
 
   // Iterate trough Memgraph vertices and map them to GraphView
@@ -114,6 +111,8 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(mgp_graph *memgraph_graph, 
        vertex = mgp::vertices_iterator_next(vertices_it)) {
     mg_graph::CreateGraphNode(graph.get(), vertex);
   }
+  // Destroy iterator before creating a new one - otherwise, we'll experience memory leakage
+  mgp::vertices_iterator_destroy(vertices_it);
 
   ///
   /// Mapping Memgraph in-memory edges into graph view
