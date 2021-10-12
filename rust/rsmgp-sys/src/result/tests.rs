@@ -35,18 +35,6 @@ fn test_create_record() {
     });
 }
 
-// macro_rules! mock_mgp_value_make {
-//     ($c_func_name:ident) => {
-//         mock_mgp_once!(
-//             $c_func_name,
-//             |_, _, value_ptr_ptr| unsafe {
-//                 (*value_ptr_ptr) = alloc_mgp_value();
-//                 mgp_error::MGP_ERROR_NO_ERROR
-//             }
-//         );
-//     };
-// }
-
 macro_rules! mock_mgp_value_make_with_mem {
     ($c_func_name:ident) => {
         mock_mgp_once!($c_func_name, |_, _, value_ptr_ptr| unsafe {
