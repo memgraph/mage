@@ -23,6 +23,7 @@ use mockall_double::double;
 
 const MINIMUM_YEAR: i32 = 0;
 const MAXIMUM_YEAR: i32 = 9999;
+const MICROS_PER_SECOND: i64 = 1_000_000;
 const NANOS_PER_MILLIS: u32 = 1_000_000;
 const NANOS_PER_MICROS: u32 = 1_000;
 const MICROS_PER_MILLIS: u32 = 1_000;
@@ -143,6 +144,7 @@ impl Drop for LocalTime {
     }
 }
 
+#[allow(dead_code)]
 impl LocalTime {
     pub(crate) fn new(ptr: *mut mgp_local_time) -> LocalTime {
         #[cfg(not(test))]
@@ -170,12 +172,10 @@ impl LocalTime {
     }
 
     pub fn to_naive_time(&self) -> NaiveTime {
-        NaiveTime::from_hms_nano(
-            self.hour(),
-            self.minute(),
-            self.second(),
-            self.millisecond() * NANOS_PER_MILLIS + self.microsecond() * NANOS_PER_MICROS,
-        )
+        let timestamp = self.timestamp();
+        let seconds = (timestamp / MICROS_PER_SECOND) as u32;
+        let micros = (timestamp % MICROS_PER_SECOND) as u32;
+        NaiveTime::from_num_seconds_from_midnight(seconds, micros * NANOS_PER_MICROS)
     }
 
     pub fn mgp_ptr(&self) -> *mut mgp_local_time {
@@ -207,6 +207,10 @@ impl LocalTime {
         unsafe {
             invoke_mgp_func!(i32, ffi::mgp_local_time_get_microsecond, self.ptr).unwrap() as u32
         }
+    }
+
+    pub fn timestamp(&self) -> i64 {
+        unsafe { invoke_mgp_func!(i64, ffi::mgp_local_time_timestamp, self.ptr).unwrap() }
     }
 }
 

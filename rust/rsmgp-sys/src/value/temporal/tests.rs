@@ -230,35 +230,11 @@ fn test_local_time_accessors() {
 #[serial]
 fn test_to_naive_time() {
     let test_time = |time_to_test: NaiveTime| {
-        mock_mgp_once!(mgp_local_time_get_hour_context, move |_, hour_ptr| unsafe {
-            (*hour_ptr) = time_to_test.hour() as i32;
-            mgp_error::MGP_ERROR_NO_ERROR
-        });
         mock_mgp_once!(
-            mgp_local_time_get_minute_context,
-            move |_, minute_ptr| unsafe {
-                (*minute_ptr) = time_to_test.minute() as i32;
-                mgp_error::MGP_ERROR_NO_ERROR
-            }
-        );
-        mock_mgp_once!(
-            mgp_local_time_get_second_context,
-            move |_, second_ptr| unsafe {
-                (*second_ptr) = time_to_test.second() as i32;
-                mgp_error::MGP_ERROR_NO_ERROR
-            }
-        );
-        mock_mgp_once!(
-            mgp_local_time_get_millisecond_context,
-            move |_, millisecond_ptr| unsafe {
-                (*millisecond_ptr) = time_to_test.nanosecond() as i32 / 1_000_000;
-                mgp_error::MGP_ERROR_NO_ERROR
-            }
-        );
-        mock_mgp_once!(
-            mgp_local_time_get_microsecond_context,
-            move |_, microsecond_ptr| unsafe {
-                (*microsecond_ptr) = time_to_test.nanosecond() as i32 % 1_000_000 / 1_000;
+            mgp_local_time_timestamp_context,
+            move |_, timestamp_ptr| unsafe {
+                (*timestamp_ptr) = time_to_test.num_seconds_from_midnight() as i64 * 1_000_000
+                    + (time_to_test.nanosecond() / 1_000) as i64;
                 mgp_error::MGP_ERROR_NO_ERROR
             }
         );
