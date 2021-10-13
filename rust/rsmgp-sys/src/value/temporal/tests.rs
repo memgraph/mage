@@ -20,16 +20,33 @@ use crate::{mock_mgp_once, with_dummy};
 use libc::{c_void, free};
 use serial_test::serial;
 
+fn check_date_params<T: Datelike>(date_params: &mgp_date_parameters, date: &T) {
+    assert_eq!(date_params.year, date.year());
+    assert_eq!(date_params.month as u32, date.month());
+    assert_eq!(date_params.day as u32, date.day());
+}
+
+fn check_local_time_params<T: Timelike>(
+    local_time_params: &mgp_local_time_parameters,
+    time: &T,
+    millis: i32,
+    micros: i32,
+) {
+    assert_eq!(local_time_params.hour as u32, time.hour());
+    assert_eq!(local_time_params.minute as u32, time.minute());
+    assert_eq!(local_time_params.second as u32, time.second());
+    assert_eq!(local_time_params.millisecond, millis);
+    assert_eq!(local_time_params.microsecond, micros);
+}
+
 #[test]
 #[serial]
 fn test_from_naive_date() {
     let test_date = |date: NaiveDate| {
         mock_mgp_once!(
             mgp_date_from_parameters_context,
-            move |date_params, _, date_ptr_ptr| unsafe {
-                assert_eq!((*date_params).year, date.year());
-                assert_eq!((*date_params).month as u32, date.month());
-                assert_eq!((*date_params).day as u32, date.day());
+            move |date_params_ptr, _, date_ptr_ptr| unsafe {
+                check_date_params(&*date_params_ptr, &date);
                 (*date_ptr_ptr) = alloc_mgp_date();
                 mgp_error::MGP_ERROR_NO_ERROR
             }
@@ -111,12 +128,8 @@ fn test_from_naive_time() {
     let test_time = |time: NaiveTime, millis: i32, micros: i32| {
         mock_mgp_once!(
             mgp_local_time_from_parameters_context,
-            move |local_time_params, _, local_time_ptr_ptr| unsafe {
-                assert_eq!((*local_time_params).hour as u32, time.hour());
-                assert_eq!((*local_time_params).minute as u32, time.minute());
-                assert_eq!((*local_time_params).second as u32, time.second());
-                assert_eq!((*local_time_params).millisecond, millis);
-                assert_eq!((*local_time_params).microsecond, micros);
+            move |local_time_params_ptr, _, local_time_ptr_ptr| unsafe {
+                check_local_time_params(&*local_time_params_ptr, &time, millis, micros);
                 (*local_time_ptr_ptr) = alloc_mgp_local_time();
                 mgp_error::MGP_ERROR_NO_ERROR
             }
@@ -201,6 +214,158 @@ fn test_local_time_unable_to_allocate() {
         assert_eq!(
             error.err().unwrap(),
             Error::UnableToCreateLocalTimeFromNaiveTime
+        );
+    });
+}
+
+#[test]
+#[serial]
+fn test_from_naive_date_time() {
+    let test_date_time = |date: NaiveDate, time: NaiveTime, millis: i32, micros: i32| {
+        let datetime = NaiveDateTime::new(date, time);
+        mock_mgp_once!(
+            mgp_local_date_time_from_parameters_context,
+            move |local_date_time_params_ptr, _, local_time_ptr_ptr| unsafe {
+                check_date_params(&*(*local_date_time_params_ptr).date_parameters, &datetime);
+                check_local_time_params(
+                    &*(*local_date_time_params_ptr).local_time_parameters,
+                    &datetime,
+                    millis,
+                    micros,
+                );
+                (*local_time_ptr_ptr) = alloc_mgp_local_date_time();
+                mgp_error::MGP_ERROR_NO_ERROR
+            }
+        );
+        mock_mgp_once!(mgp_local_date_time_destroy_context, |ptr| unsafe {
+            free(ptr as *mut c_void);
+        });
+
+        with_dummy!(|memgraph: &Memgraph| {
+            let _mgp_local_date_time = LocalDateTime::from_naive_date_time(&datetime, &memgraph);
+        });
+    };
+    test_date_time(
+        NaiveDate::from_ymd(0, 1, 1),
+        NaiveTime::from_hms_micro(0, 0, 0, 0),
+        0,
+        0,
+    );
+    test_date_time(
+        NaiveDate::from_ymd(3456, 4, 6),
+        NaiveTime::from_hms_micro(11, 34, 51, 345_567),
+        345,
+        567,
+    );
+    test_date_time(
+        NaiveDate::from_ymd(9999, 12, 31),
+        NaiveTime::from_hms_micro(23, 59, 59, 999_999),
+        999,
+        999,
+    );
+    // Leaps seconds handling
+    test_date_time(
+        NaiveDate::from_ymd(9999, 12, 31),
+        NaiveTime::from_hms_micro(23, 59, 59, 1_777_888),
+        777,
+        888,
+    );
+}
+#[test]
+#[serial]
+fn test_local_date_time_accessors() {
+    let year = 1994;
+    let month = 12;
+    let day = 7;
+    let hour = 23;
+    let minute = 1;
+    let second = 2;
+    let millisecond = 3;
+    let microsecond = 4;
+    mock_mgp_once!(
+        mgp_local_date_time_get_year_context,
+        move |_, year_ptr| unsafe {
+            (*year_ptr) = year;
+            mgp_error::MGP_ERROR_NO_ERROR
+        }
+    );
+    mock_mgp_once!(
+        mgp_local_date_time_get_month_context,
+        move |_, month_ptr| unsafe {
+            (*month_ptr) = month;
+            mgp_error::MGP_ERROR_NO_ERROR
+        }
+    );
+    mock_mgp_once!(
+        mgp_local_date_time_get_day_context,
+        move |_, day_ptr| unsafe {
+            (*day_ptr) = day;
+            mgp_error::MGP_ERROR_NO_ERROR
+        }
+    );
+    mock_mgp_once!(
+        mgp_local_date_time_get_hour_context,
+        move |_, hour_ptr| unsafe {
+            (*hour_ptr) = hour;
+            mgp_error::MGP_ERROR_NO_ERROR
+        }
+    );
+    mock_mgp_once!(
+        mgp_local_date_time_get_minute_context,
+        move |_, minute_ptr| unsafe {
+            (*minute_ptr) = minute;
+            mgp_error::MGP_ERROR_NO_ERROR
+        }
+    );
+    mock_mgp_once!(
+        mgp_local_date_time_get_second_context,
+        move |_, second_ptr| unsafe {
+            (*second_ptr) = second;
+            mgp_error::MGP_ERROR_NO_ERROR
+        }
+    );
+    mock_mgp_once!(
+        mgp_local_date_time_get_millisecond_context,
+        move |_, millisecond_ptr| unsafe {
+            (*millisecond_ptr) = millisecond;
+            mgp_error::MGP_ERROR_NO_ERROR
+        }
+    );
+    mock_mgp_once!(
+        mgp_local_date_time_get_microsecond_context,
+        move |_, microsecond_ptr| unsafe {
+            (*microsecond_ptr) = microsecond;
+            mgp_error::MGP_ERROR_NO_ERROR
+        }
+    );
+
+    with_dummy!(LocalDateTime, |date_time: &LocalDateTime| {
+        assert_eq!(date_time.year(), year);
+        assert_eq!(date_time.month() as i32, month);
+        assert_eq!(date_time.day() as i32, day);
+        assert_eq!(date_time.hour() as i32, hour);
+        assert_eq!(date_time.minute() as i32, minute);
+        assert_eq!(date_time.second() as i32, second);
+        assert_eq!(date_time.millisecond() as i32, millisecond);
+        assert_eq!(date_time.microsecond() as i32, microsecond);
+    });
+}
+
+#[test]
+#[serial]
+fn test_local_date_time_unable_to_allocate() {
+    mock_mgp_once!(
+        mgp_local_date_time_from_parameters_context,
+        move |_, _, _| { mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE }
+    );
+
+    with_dummy!(|memgraph: &Memgraph| {
+        let error =
+            LocalDateTime::from_naive_date_time(&NaiveDateTime::from_timestamp(0, 0), &memgraph);
+        assert!(error.is_err());
+        assert_eq!(
+            error.err().unwrap(),
+            Error::UnableToCreateLocalDateTimeFromNaiveTime
         );
     });
 }

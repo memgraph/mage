@@ -91,6 +91,7 @@ mgp_default_mut_ptr!(mgp_result_record);
 mgp_default_mut_ptr!(mgp_property);
 mgp_default_mut_ptr!(mgp_date);
 mgp_default_mut_ptr!(mgp_local_time);
+mgp_default_mut_ptr!(mgp_local_date_time);
 
 mgp_default_const_ptr!(i8);
 mgp_default_const_ptr!(u64);
@@ -237,6 +238,9 @@ fn resolve_mgp_type(types: &[Type]) -> *mut mgp_type {
                 Type::Date => invoke_mgp_func!(*mut mgp_type, ffi::mgp_type_date).unwrap(),
                 Type::LocalTime => {
                     invoke_mgp_func!(*mut mgp_type, ffi::mgp_type_local_time).unwrap()
+                }
+                Type::LocalDateTime => {
+                    invoke_mgp_func!(*mut mgp_type, ffi::mgp_type_local_date_time).unwrap()
                 }
             };
         }
