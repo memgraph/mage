@@ -113,7 +113,7 @@ impl Edge {
     }
 
     /// Creates a new Edge based on [mgp_edge].
-    pub(crate) unsafe fn mgp_copy(ptr: *mut mgp_edge, memgraph: &Memgraph) -> MgpResult<Edge> {
+    pub(crate) unsafe fn mgp_copy(ptr: *mut mgp_edge, memgraph: &Memgraph) -> Result<Edge> {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
@@ -139,7 +139,7 @@ impl Edge {
         self.ptr = new_ptr;
     }
 
-    pub fn copy(&self) -> MgpResult<Edge> {
+    pub fn copy(&self) -> Result<Edge> {
         unsafe { Edge::mgp_copy(self.ptr, &self.memgraph) }
     }
 
@@ -151,7 +151,7 @@ impl Edge {
         }
     }
 
-    pub fn edge_type(&self) -> MgpResult<CString> {
+    pub fn edge_type(&self) -> Result<CString> {
         unsafe {
             let mgp_edge_type = invoke_mgp_func_with_res!(
                 mgp_edge_type,
@@ -163,7 +163,7 @@ impl Edge {
         }
     }
 
-    pub fn from_vertex(&self) -> MgpResult<Vertex> {
+    pub fn from_vertex(&self) -> Result<Vertex> {
         unsafe {
             let mgp_vertex =
                 invoke_mgp_func!(*mut mgp_vertex, ffi::mgp_edge_get_from, self.ptr).unwrap();
@@ -171,7 +171,7 @@ impl Edge {
         }
     }
 
-    pub fn to_vertex(&self) -> MgpResult<Vertex> {
+    pub fn to_vertex(&self) -> Result<Vertex> {
         unsafe {
             let mgp_vertex =
                 invoke_mgp_func!(*mut mgp_vertex, ffi::mgp_edge_get_to, self.ptr).unwrap();
@@ -179,7 +179,7 @@ impl Edge {
         }
     }
 
-    pub fn property(&self, name: &CStr) -> MgpResult<Property> {
+    pub fn property(&self, name: &CStr) -> Result<Property> {
         unsafe {
             let mgp_value = invoke_mgp_func!(
                 *mut mgp_value,
@@ -212,7 +212,7 @@ impl Edge {
         }
     }
 
-    pub fn properties(&self) -> MgpResult<PropertiesIterator> {
+    pub fn properties(&self) -> Result<PropertiesIterator> {
         unsafe {
             let mgp_iterator = invoke_mgp_func_with_res!(
                 *mut mgp_properties_iterator,

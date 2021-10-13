@@ -282,7 +282,7 @@ impl Memgraph {
     }
 
     /// Arguments passed to the procedure call.
-    pub fn args(&self) -> MgpResult<List> {
+    pub fn args(&self) -> Result<List> {
         // TODO(gitbuda): Avoid list copy when accessing procedure arguments.
         unsafe { List::mgp_copy(self.args_ptr(), &self) }
     }
@@ -312,7 +312,7 @@ impl Memgraph {
         self.module
     }
 
-    pub fn vertices_iter(&self) -> MgpResult<VerticesIterator> {
+    pub fn vertices_iter(&self) -> Result<VerticesIterator> {
         unsafe {
             let mgp_iterator = invoke_mgp_func!(
                 *mut mgp_vertices_iterator,
@@ -327,7 +327,7 @@ impl Memgraph {
         }
     }
 
-    pub fn vertex_by_id(&self, id: i64) -> MgpResult<Vertex> {
+    pub fn vertex_by_id(&self, id: i64) -> Result<Vertex> {
         unsafe {
             let mgp_vertex_ptr = invoke_mgp_func!(
                 *mut mgp_vertex,
@@ -347,7 +347,7 @@ impl Memgraph {
     ///
     /// Keep this object on the stack and add data that will be returned to Memgraph / client
     /// during/after the procedure call.
-    pub fn result_record(&self) -> MgpResult<ResultRecord> {
+    pub fn result_record(&self) -> Result<ResultRecord> {
         ResultRecord::create(self)
     }
 
@@ -368,7 +368,7 @@ impl Memgraph {
         required_arg_types: &[NamedType],
         optional_arg_types: &[OptionalNamedType],
         result_field_types: &[NamedType],
-    ) -> MgpResult<()> {
+    ) -> Result<()> {
         unsafe {
             let maybe_procedure = invoke_mgp_func!(
                 *mut mgp_proc,

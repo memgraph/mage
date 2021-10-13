@@ -74,7 +74,7 @@ impl List {
         }
     }
 
-    pub fn make_empty(capacity: u64, memgraph: &Memgraph) -> MgpResult<List> {
+    pub fn make_empty(capacity: u64, memgraph: &Memgraph) -> Result<List> {
         unsafe {
             let mgp_ptr = invoke_mgp_func_with_res!(
                 *mut mgp_list,
@@ -88,7 +88,7 @@ impl List {
     }
 
     /// Creates a new List based on [mgp_list].
-    pub(crate) unsafe fn mgp_copy(ptr: *mut mgp_list, memgraph: &Memgraph) -> MgpResult<List> {
+    pub(crate) unsafe fn mgp_copy(ptr: *mut mgp_list, memgraph: &Memgraph) -> Result<List> {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
@@ -109,12 +109,12 @@ impl List {
         Ok(mgp_copy)
     }
 
-    pub fn copy(&self) -> MgpResult<List> {
+    pub fn copy(&self) -> Result<List> {
         unsafe { List::mgp_copy(self.ptr, &self.memgraph) }
     }
 
     /// Appends value to the list, but if there is no place, returns an error.
-    pub fn append(&self, value: &Value) -> MgpResult<()> {
+    pub fn append(&self, value: &Value) -> Result<()> {
         unsafe {
             let mgp_value = value.to_mgp_value(&self.memgraph)?;
             invoke_void_mgp_func_with_res!(
@@ -129,7 +129,7 @@ impl List {
 
     /// In case of a capacity change, the previously contained elements will move in
     /// memory and any references to them will be invalid.
-    pub fn append_extend(&self, value: &Value) -> MgpResult<()> {
+    pub fn append_extend(&self, value: &Value) -> Result<()> {
         unsafe {
             let mgp_value = value.to_mgp_value(&self.memgraph)?;
             invoke_void_mgp_func_with_res!(
@@ -152,7 +152,7 @@ impl List {
 
     /// Always copies the underlying value because in case of the capacity change any references
     /// would become invalid.
-    pub fn value_at(&self, index: u64) -> MgpResult<Value> {
+    pub fn value_at(&self, index: u64) -> Result<Value> {
         unsafe {
             let c_value = invoke_mgp_func_with_res!(
                 *mut mgp_value,
@@ -165,7 +165,7 @@ impl List {
         }
     }
 
-    pub fn iter(&self) -> MgpResult<ListIterator> {
+    pub fn iter(&self) -> Result<ListIterator> {
         Ok(ListIterator {
             list: self,
             position: 0,

@@ -35,7 +35,7 @@ pub struct ResultRecord {
 }
 
 impl ResultRecord {
-    pub fn create(memgraph: &Memgraph) -> MgpResult<ResultRecord> {
+    pub fn create(memgraph: &Memgraph) -> Result<ResultRecord> {
         unsafe {
             let mgp_ptr = invoke_mgp_func_with_res!(
                 *mut mgp_result_record,
@@ -50,7 +50,7 @@ impl ResultRecord {
         }
     }
 
-    pub fn insert_mgp_value(&self, field: &CStr, value: &MgpValue) -> MgpResult<()> {
+    pub fn insert_mgp_value(&self, field: &CStr, value: &MgpValue) -> Result<()> {
         unsafe {
             invoke_void_mgp_func_with_res!(
                 Error::UnableToInsertResultValue,
@@ -63,43 +63,43 @@ impl ResultRecord {
         }
     }
 
-    pub fn insert_null(&self, field: &CStr) -> MgpResult<()> {
+    pub fn insert_null(&self, field: &CStr) -> Result<()> {
         self.insert_mgp_value(field, &MgpValue::make_null(&self.memgraph)?)
     }
 
-    pub fn insert_bool(&self, field: &CStr, value: bool) -> MgpResult<()> {
+    pub fn insert_bool(&self, field: &CStr, value: bool) -> Result<()> {
         self.insert_mgp_value(field, &MgpValue::make_bool(value, &self.memgraph)?)
     }
 
-    pub fn insert_int(&self, field: &CStr, value: i64) -> MgpResult<()> {
+    pub fn insert_int(&self, field: &CStr, value: i64) -> Result<()> {
         self.insert_mgp_value(field, &MgpValue::make_int(value, &self.memgraph)?)
     }
 
-    pub fn insert_double(&self, field: &CStr, value: f64) -> MgpResult<()> {
+    pub fn insert_double(&self, field: &CStr, value: f64) -> Result<()> {
         self.insert_mgp_value(field, &MgpValue::make_double(value, &self.memgraph)?)
     }
 
-    pub fn insert_string(&self, field: &CStr, value: &CStr) -> MgpResult<()> {
+    pub fn insert_string(&self, field: &CStr, value: &CStr) -> Result<()> {
         self.insert_mgp_value(field, &MgpValue::make_string(value, &self.memgraph)?)
     }
 
-    pub fn insert_list(&self, field: &CStr, value: &List) -> MgpResult<()> {
+    pub fn insert_list(&self, field: &CStr, value: &List) -> Result<()> {
         self.insert_mgp_value(field, &MgpValue::make_list(value, &self.memgraph)?)
     }
 
-    pub fn insert_map(&self, field: &CStr, value: &Map) -> MgpResult<()> {
+    pub fn insert_map(&self, field: &CStr, value: &Map) -> Result<()> {
         self.insert_mgp_value(field, &MgpValue::make_map(value, &self.memgraph)?)
     }
 
-    pub fn insert_vertex(&self, field: &CStr, value: &Vertex) -> MgpResult<()> {
+    pub fn insert_vertex(&self, field: &CStr, value: &Vertex) -> Result<()> {
         self.insert_mgp_value(field, &MgpValue::make_vertex(value, &self.memgraph)?)
     }
 
-    pub fn insert_edge(&self, field: &CStr, value: &Edge) -> MgpResult<()> {
+    pub fn insert_edge(&self, field: &CStr, value: &Edge) -> Result<()> {
         self.insert_mgp_value(field, &MgpValue::make_edge(value, &self.memgraph)?)
     }
 
-    pub fn insert_path(&self, field: &CStr, value: &Path) -> MgpResult<()> {
+    pub fn insert_path(&self, field: &CStr, value: &Path) -> Result<()> {
         self.insert_mgp_value(field, &MgpValue::make_path(value, &self.memgraph)?)
     }
 }
@@ -275,7 +275,7 @@ pub enum Error {
 }
 
 /// A result type holding [Error] by default.
-pub type MgpResult<T, E = Error> = std::result::Result<T, E>;
+pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 #[cfg(test)]
 mod tests;

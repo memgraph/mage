@@ -116,7 +116,7 @@ impl Vertex {
     pub(crate) unsafe fn mgp_copy(
         mgp_vertex: *mut mgp_vertex,
         memgraph: &Memgraph,
-    ) -> MgpResult<Vertex> {
+    ) -> Result<Vertex> {
         #[cfg(not(test))]
         assert!(
             !mgp_vertex.is_null(),
@@ -149,7 +149,7 @@ impl Vertex {
         }
     }
 
-    pub fn labels_count(&self) -> MgpResult<u64> {
+    pub fn labels_count(&self) -> Result<u64> {
         unsafe {
             invoke_mgp_func_with_res!(
                 u64,
@@ -160,7 +160,7 @@ impl Vertex {
         }
     }
 
-    pub fn label_at(&self, index: u64) -> MgpResult<CString> {
+    pub fn label_at(&self, index: u64) -> Result<CString> {
         unsafe {
             let c_label =
                 match invoke_mgp_func!(mgp_label, ffi::mgp_vertex_label_at, self.ptr, index) {
@@ -178,7 +178,7 @@ impl Vertex {
         }
     }
 
-    pub fn has_label(&self, name: &CStr) -> MgpResult<bool> {
+    pub fn has_label(&self, name: &CStr) -> Result<bool> {
         unsafe {
             let c_mgp_label = mgp_label {
                 name: name.as_ptr(),
@@ -194,7 +194,7 @@ impl Vertex {
         }
     }
 
-    pub fn property(&self, name: &CStr) -> MgpResult<Property> {
+    pub fn property(&self, name: &CStr) -> Result<Property> {
         unsafe {
             let mgp_value = invoke_mgp_func_with_res!(
                 *mut mgp_value,
@@ -215,7 +215,7 @@ impl Vertex {
         }
     }
 
-    pub fn properties(&self) -> MgpResult<PropertiesIterator> {
+    pub fn properties(&self) -> Result<PropertiesIterator> {
         unsafe {
             let mgp_iterator = invoke_mgp_func_with_res!(
                 *mut mgp_properties_iterator,
@@ -228,7 +228,7 @@ impl Vertex {
         }
     }
 
-    pub fn in_edges(&self) -> MgpResult<EdgesIterator> {
+    pub fn in_edges(&self) -> Result<EdgesIterator> {
         unsafe {
             let mgp_iterator = invoke_mgp_func_with_res!(
                 *mut mgp_edges_iterator,
@@ -241,7 +241,7 @@ impl Vertex {
         }
     }
 
-    pub fn out_edges(&self) -> MgpResult<EdgesIterator> {
+    pub fn out_edges(&self) -> Result<EdgesIterator> {
         unsafe {
             let mgp_iterator = invoke_mgp_func_with_res!(
                 *mut mgp_edges_iterator,

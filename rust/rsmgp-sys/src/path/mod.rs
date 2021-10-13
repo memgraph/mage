@@ -52,7 +52,7 @@ impl Path {
     }
 
     /// Creates a new Path based on [mgp_path].
-    pub(crate) unsafe fn mgp_copy(mgp_path: *mut mgp_path, memgraph: &Memgraph) -> MgpResult<Path> {
+    pub(crate) unsafe fn mgp_copy(mgp_path: *mut mgp_path, memgraph: &Memgraph) -> Result<Path> {
         #[cfg(not(test))]
         assert!(
             !mgp_path.is_null(),
@@ -82,7 +82,7 @@ impl Path {
     }
 
     /// Makes a new [Path] based on the starting [Vertex] object.
-    pub fn make_with_start(vertex: &Vertex, memgraph: &Memgraph) -> MgpResult<Path> {
+    pub fn make_with_start(vertex: &Vertex, memgraph: &Memgraph) -> Result<Path> {
         unsafe {
             let mgp_path = invoke_mgp_func_with_res!(
                 *mut mgp_path,
@@ -97,7 +97,7 @@ impl Path {
 
     /// Fails if the current last vertex in the path is not part of the given edge or if there is
     /// no memory to expand the path.
-    pub fn expand(&self, edge: &Edge) -> MgpResult<()> {
+    pub fn expand(&self, edge: &Edge) -> Result<()> {
         unsafe {
             invoke_void_mgp_func_with_res!(
                 Error::UnableToExpandPath,
@@ -109,7 +109,7 @@ impl Path {
         }
     }
 
-    pub fn vertex_at(&self, index: u64) -> MgpResult<Vertex> {
+    pub fn vertex_at(&self, index: u64) -> Result<Vertex> {
         unsafe {
             let mgp_vertex = invoke_mgp_func_with_res!(
                 *mut mgp_vertex,
@@ -122,7 +122,7 @@ impl Path {
         }
     }
 
-    pub fn edge_at(&self, index: u64) -> MgpResult<Edge> {
+    pub fn edge_at(&self, index: u64) -> Result<Edge> {
         unsafe {
             let mgp_edge = invoke_mgp_func_with_res!(
                 *mut mgp_edge,

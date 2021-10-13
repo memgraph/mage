@@ -125,7 +125,7 @@ impl Map {
         }
     }
 
-    pub(crate) unsafe fn mgp_copy(ptr: *mut mgp_map, memgraph: &Memgraph) -> MgpResult<Map> {
+    pub(crate) unsafe fn mgp_copy(ptr: *mut mgp_map, memgraph: &Memgraph) -> Result<Map> {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
@@ -164,7 +164,7 @@ impl Map {
         Ok(mgp_map_copy)
     }
 
-    pub fn make_empty(memgraph: &Memgraph) -> MgpResult<Map> {
+    pub fn make_empty(memgraph: &Memgraph) -> Result<Map> {
         unsafe {
             Ok(Map::new(
                 invoke_mgp_func_with_res!(
@@ -178,7 +178,7 @@ impl Map {
         }
     }
 
-    pub fn insert(&self, key: &CStr, value: &Value) -> MgpResult<()> {
+    pub fn insert(&self, key: &CStr, value: &Value) -> Result<()> {
         unsafe {
             let mgp_value = value.to_mgp_value(&self.memgraph)?;
             invoke_void_mgp_func_with_res!(
@@ -197,7 +197,7 @@ impl Map {
         unsafe { invoke_mgp_func!(u64, ffi::mgp_map_size, self.ptr).unwrap() }
     }
 
-    pub fn at(&self, key: &CStr) -> MgpResult<Value> {
+    pub fn at(&self, key: &CStr) -> Result<Value> {
         unsafe {
             let result = invoke_mgp_func_with_res!(
                 *mut mgp_value,
@@ -214,7 +214,7 @@ impl Map {
         }
     }
 
-    pub fn iter(&self) -> MgpResult<MapIterator> {
+    pub fn iter(&self) -> Result<MapIterator> {
         unsafe {
             let mgp_iterator = invoke_mgp_func_with_res!(
                 *mut mgp_map_items_iterator,

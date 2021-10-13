@@ -14,13 +14,13 @@
 //! Macro definitions and top level data structures.
 //!
 //! [define_procedure], [init_module], [close_module] all accept a function accepting [Memgraph]
-//! and returning [crate::result::MgpResult] because that allows using `?` operator which is a very
+//! and returning [crate::result::Result] because that allows using `?` operator which is a very
 //! convenient way of propagating execution errors.
 //!
 //! Example
 //!
 //! ```no run
-//! |memgraph: &Memgraph| -> MgpResult<()> {
+//! |memgraph: &Memgraph| -> Result<()> {
 //!     // Implementation
 //! }
 //! ```
@@ -45,7 +45,7 @@ use mockall_double::double;
 /// Example
 ///
 /// ```no run
-/// define_procedure!(procedure_name, |memgraph: &Memgraph| -> MgpResult<()> {
+/// define_procedure!(procedure_name, |memgraph: &Memgraph| -> Result<()> {
 ///     // Implementation
 /// }
 /// ```
@@ -104,7 +104,7 @@ macro_rules! define_procedure {
 /// Example
 ///
 /// ```no run
-/// init_module!(|memgraph: &Memgraph| -> MgpResult<()> {
+/// init_module!(|memgraph: &Memgraph| -> Result<()> {
 ///     memgraph.add_read_procedure(
 ///         procedure_name,
 ///         c_str!("procedure_name"),
@@ -147,7 +147,7 @@ macro_rules! init_module {
 /// Example
 ///
 /// ```no run
-/// close_module!(|memgraph: &Memgraph| -> MgpResult<()> {
+/// close_module!(|memgraph: &Memgraph| -> Result<()> {
 ///     // Implementation
 /// }
 #[macro_export]

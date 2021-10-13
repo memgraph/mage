@@ -34,7 +34,7 @@ use mockall_double::double;
 /// # Safety
 ///
 /// The caller has provided a pointer that points to a valid C string. More here [CStr::from_ptr].
-pub(crate) unsafe fn create_cstring(c_char_ptr: *const i8) -> MgpResult<CString> {
+pub(crate) unsafe fn create_cstring(c_char_ptr: *const i8) -> Result<CString> {
     match CString::new(CStr::from_ptr(c_char_ptr).to_bytes()) {
         Ok(v) => Ok(v),
         Err(_) => Err(Error::UnableToCreateCString),
@@ -105,11 +105,11 @@ impl MgpValue {
         self.ptr
     }
 
-    pub fn to_value(&self) -> MgpResult<Value> {
+    pub fn to_value(&self) -> Result<Value> {
         unsafe { mgp_raw_value_to_value(self.mgp_ptr(), &self.memgraph) }
     }
 
-    pub fn make_null(memgraph: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn make_null(memgraph: &Memgraph) -> Result<MgpValue> {
         unsafe {
             let mgp_ptr = invoke_mgp_func_with_res!(
                 *mut mgp_value,
@@ -128,7 +128,7 @@ impl MgpValue {
         }
     }
 
-    pub fn make_bool(value: bool, memgraph: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn make_bool(value: bool, memgraph: &Memgraph) -> Result<MgpValue> {
         unsafe {
             let mgp_ptr = invoke_mgp_func_with_res!(
                 *mut mgp_value,
@@ -147,7 +147,7 @@ impl MgpValue {
         }
     }
 
-    pub fn make_int(value: i64, memgraph: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn make_int(value: i64, memgraph: &Memgraph) -> Result<MgpValue> {
         unsafe {
             let mgp_ptr = invoke_mgp_func_with_res!(
                 *mut mgp_value,
@@ -166,7 +166,7 @@ impl MgpValue {
         }
     }
 
-    pub fn make_double(value: f64, memgraph: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn make_double(value: f64, memgraph: &Memgraph) -> Result<MgpValue> {
         unsafe {
             let mgp_ptr = invoke_mgp_func_with_res!(
                 *mut mgp_value,
@@ -186,7 +186,7 @@ impl MgpValue {
         }
     }
 
-    pub fn make_string(value: &CStr, memgraph: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn make_string(value: &CStr, memgraph: &Memgraph) -> Result<MgpValue> {
         unsafe {
             let mgp_ptr = invoke_mgp_func_with_res!(
                 *mut mgp_value,
@@ -208,7 +208,7 @@ impl MgpValue {
 
     /// Makes a copy of the given object returning the [MgpValue] object. [MgpValue] objects owns
     /// the new object.
-    pub fn make_list(list: &List, memgraph: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn make_list(list: &List, memgraph: &Memgraph) -> Result<MgpValue> {
         fn to_local_error(_: Error) -> Error {
             Error::UnableToMakeListValue
         }
@@ -234,7 +234,7 @@ impl MgpValue {
 
     /// Makes a copy of the given object returning the [MgpValue] object. [MgpValue] objects owns
     /// the new object.
-    pub fn make_map(map: &Map, memgraph: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn make_map(map: &Map, memgraph: &Memgraph) -> Result<MgpValue> {
         fn to_local_error(_: Error) -> Error {
             Error::UnableToMakeMapValue
         }
@@ -260,7 +260,7 @@ impl MgpValue {
 
     /// Makes a copy of the given object returning the [MgpValue] object. [MgpValue] objects owns
     /// the new object.
-    pub fn make_vertex(vertex: &Vertex, memgraph: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn make_vertex(vertex: &Vertex, memgraph: &Memgraph) -> Result<MgpValue> {
         fn to_local_error(_: Error) -> Error {
             Error::UnableToMakeVertexValue
         }
@@ -288,7 +288,7 @@ impl MgpValue {
 
     /// Makes a copy of the given object returning the [MgpValue] object. [MgpValue] objects owns
     /// the new object.
-    pub fn make_edge(edge: &Edge, memgraph: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn make_edge(edge: &Edge, memgraph: &Memgraph) -> Result<MgpValue> {
         fn to_local_error(_: Error) -> Error {
             Error::UnableToMakeEdgeValue
         }
@@ -314,7 +314,7 @@ impl MgpValue {
 
     /// Makes a copy of the given object returning the [MgpValue] object. [MgpValue] objects owns
     /// the new object.
-    pub fn make_path(path: &Path, memgraph: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn make_path(path: &Path, memgraph: &Memgraph) -> Result<MgpValue> {
         fn to_local_error(_: Error) -> Error {
             Error::UnableToMakePathValue
         }
@@ -356,7 +356,7 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn to_mgp_value(&self, memgraph: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn to_mgp_value(&self, memgraph: &Memgraph) -> Result<MgpValue> {
         match self {
             Value::Null => MgpValue::make_null(&memgraph),
             Value::Bool(x) => MgpValue::make_bool(*x, &memgraph),
@@ -397,7 +397,7 @@ impl From<MgpValue> for Value {
 pub(crate) unsafe fn mgp_raw_value_to_value(
     value: *mut mgp_value,
     memgraph: &Memgraph,
-) -> MgpResult<Value> {
+) -> Result<Value> {
     #[allow(non_upper_case_globals)]
     match invoke_mgp_func!(mgp_value_type, ffi::mgp_value_get_type, value).unwrap() {
         mgp_value_type::MGP_VALUE_TYPE_NULL => Ok(Value::Null),
