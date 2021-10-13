@@ -94,7 +94,7 @@ std::int64_t LabelRankT::get_label(std::uint64_t node_id) {
   double max_P = 0;
 
   for (const auto [label, P] : label_Ps[node_id]) {
-    if (P > max_P or (P == max_P and label < node_label)) {
+    if (P > max_P || (P == max_P && label < node_label)) {
       max_P = P;
       node_label = label;
     }
@@ -206,11 +206,11 @@ std::pair<bool, std::uint64_t> LabelRankT::iteration(
   for (const auto node_id : nodes_memgraph_ids()) {
     if (incremental) {
       bool was_updated = changed_nodes.count(node_id) > 0 ? true : false;
-      if (not was_updated or to_delete.count(node_id)) continue;
+      if (!was_updated || to_delete.count(node_id)) continue;
     }
 
     // node selection (a.k.a. conditional update)
-    if (not distinct_enough(node_id, similarity_threshold)) continue;
+    if (!distinct_enough(node_id, similarity_threshold)) continue;
     none_updated = false;
 
     // label propagation
@@ -237,9 +237,11 @@ std::pair<bool, std::uint64_t> LabelRankT::iteration(
 }
 #pragma endregion label_propagation_steps
 
-void LabelRankT::set_parameters(std::string weight_property, double w_selfloop,
+void LabelRankT::set_parameters(std::unique_ptr<mg_graph::Graph<>> graph,
+                                std::string weight_property, double w_selfloop,
                                 double similarity_threshold, double exponent,
                                 double min_value) {
+  this->graph = std::move(graph);
   this->weight_property = weight_property;
   this->w_selfloop = w_selfloop;
   this->similarity_threshold = similarity_threshold;
@@ -303,7 +305,7 @@ std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::calculate_labels(
   for (std::uint64_t i = 0; i < this->max_iterations; i++) {
     auto [none_updated, most_updates] =
         iteration(incremental, changed_nodes, to_delete);
-    if (none_updated or most_updates > this->max_updates) break;
+    if (none_updated || most_updates > this->max_updates) break;
   }
 
   calculated = true;
@@ -317,7 +319,7 @@ std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::update_labels(
     std::vector<std::pair<std::uint64_t, std::uint64_t>> modified_edges,
     std::vector<std::uint64_t> deleted_nodes,
     std::vector<std::pair<std::uint64_t, std::uint64_t>> deleted_edges) {
-  if (not calculated) return calculate_labels();
+  if (!calculated) return calculate_labels();
 
   std::unordered_set<std::uint64_t> changed_nodes(modified_nodes.begin(),
                                                   modified_nodes.end());

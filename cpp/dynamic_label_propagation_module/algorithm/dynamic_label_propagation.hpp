@@ -34,7 +34,8 @@ class LabelRankT {
 
 #pragma region structures
   /// reference to current graph
-  std::unique_ptr<mg_graph::Graph<>>& graph;
+  std::unique_ptr<mg_graph::Graph<>> graph;
+  // mg_graph::Graph<>* graph;
 
   /// map containing each node’s community label probabilities
   std::unordered_map<std::uint64_t, std::unordered_map<std::uint64_t, double>>
@@ -148,7 +149,8 @@ class LabelRankT {
   ///@brief Creates an instance of the LabelRankT algorithm.
   ///
   ///@param graph -- reference to current graph
-  LabelRankT(std::unique_ptr<mg_graph::Graph<>>& graph) : graph(graph){};
+  // LabelRankT(std::unique_ptr<mg_graph::Graph<>>& graph) : graph(graph){};
+  LabelRankT() = default;
 
   ///@brief Sets parameters given to the query module’s set() method.
   ///
@@ -160,7 +162,8 @@ class LabelRankT {
   ///@param min_value -- smallest acceptable probability in the cutoff step
   ///@param max_iterations -- maximum number of iterations
   ///@param max_updates -- maximum number of updates for any node
-  void set_parameters(std::string weight_property, double w_selfloop,
+  void set_parameters(std::unique_ptr<mg_graph::Graph<>> graph,
+                      std::string weight_property, double w_selfloop,
                       double similarity_threshold, double exponent,
                       double min_value);
 
