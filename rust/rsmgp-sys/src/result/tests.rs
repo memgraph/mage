@@ -21,6 +21,7 @@ use crate::memgraph::Memgraph;
 use crate::mgp::mock_ffi::*;
 use crate::testing::alloc::*;
 use crate::{mock_mgp_once, with_dummy};
+use libc::{c_void, free};
 
 #[test]
 #[serial]
@@ -92,7 +93,9 @@ fn test_insert_value() {
         }
     );
     mock_mgp_value_make_without_mem!(mgp_value_make_map_context);
-    mock_mgp_once!(mgp_map_items_iterator_destroy_context, |_| {});
+    mock_mgp_once!(mgp_map_items_iterator_destroy_context, |ptr| unsafe {
+        free(ptr as *mut c_void);
+    });
 
     mock_mgp_once!(mgp_vertex_copy_context, |_, _, vertex_ptr_ptr| unsafe {
         (*vertex_ptr_ptr) = alloc_mgp_vertex();
@@ -158,7 +161,9 @@ fn test_insert_value() {
         .times(14)
         .returning(|_, _, _| mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE);
     let ctx_destroy = mgp_value_destroy_context();
-    ctx_destroy.expect().times(14).returning(|_| {});
+    ctx_destroy.expect().times(14).returning(|ptr| unsafe {
+        free(ptr as *mut c_void);
+    });
 
     with_dummy!(|memgraph: &Memgraph| {
         let result_record = ResultRecord::create(&memgraph).unwrap();
