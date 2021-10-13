@@ -11,14 +11,13 @@ namespace mg_graph {
 /// Interface provides methods for fetching graph data.
 /// There are two methods for changing variables on the edges:
 /// SetVariableState and SetVariableValue
-template <typename TSize = std::uint64_t> class GraphView {
+template <typename TSize = std::uint64_t>
+class GraphView {
+  static_assert(std::is_unsigned_v<TSize>,
+                "mg_graph::GraphView expects the type to be an unsigned integer type\n"
+                "only (uint8_t, uint16_t, uint32_t, or uint64_t).");
 
-  static_assert(
-      std::is_unsigned_v<TSize>,
-      "mg_graph::GraphView expects the type to be an unsigned integer type\n"
-      "only (uint8_t, uint16_t, uint32_t, or uint64_t).");
-
-public:
+ public:
   using TNode = Node<TSize>;
   using TEdge = Edge<TSize>;
   using TNeighbour = Neighbour<TSize>;
@@ -42,8 +41,7 @@ public:
   /// @param[in] second node id
   ///
   /// @return     Iterator range
-  virtual std::vector<TSize> GetEdgesBetweenNodes(TSize first,
-                                                  TSize second) const = 0;
+  virtual std::vector<TSize> GetEdgesBetweenNodes(TSize first, TSize second) const = 0;
 
   /// Gets all incident edges ids.
   ///
@@ -70,8 +68,15 @@ public:
   ///
   /// @return Edge struct
   virtual const TEdge &GetEdge(TSize edge_id) const = 0;
+
+  virtual std::uint64_t GetMemgraphNodeId(TSize node_id) const = 0;
+
+  virtual TSize GetInnerNodeId(std::uint64_t memgraph_id) const = 0;
+
+  virtual bool NodeExists(TSize node_id) const = 0;
 };
 
-template <typename TSize> inline GraphView<TSize>::~GraphView() {}
+template <typename TSize>
+inline GraphView<TSize>::~GraphView() {}
 
-} // namespace mg_graph
+}  // namespace mg_graph
