@@ -323,7 +323,7 @@ impl MgpValue {
 
             let mgp_value = invoke_mgp_func_with_res!(
                 *mut mgp_value,
-                Error::UnableToMakeVertexValue,
+                Error::UnableToMakePathValue,
                 ffi::mgp_value_make_path,
                 path_copy.mgp_ptr()
             )?;
