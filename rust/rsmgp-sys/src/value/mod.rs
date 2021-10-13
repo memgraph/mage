@@ -24,7 +24,7 @@ use crate::mgp::*;
 use crate::path::*;
 use crate::result::*;
 use crate::vertex::*;
-use chrono::NaiveDate;
+use chrono::{NaiveDate, NaiveTime};
 // Required here, if not present tests linking fails.
 #[double]
 use crate::mgp::ffi;
@@ -360,6 +360,32 @@ impl MgpValue {
             invoke_mgp_func!(::std::os::raw::c_int, ffi::mgp_value_is_date, self.ptr).unwrap() != 0
         }
     }
+
+    pub fn make_local_time(time: &NaiveTime, memgraph: &Memgraph) -> Result<MgpValue> {
+        let mut time = temporal::LocalTime::from_naive_time(time, memgraph)?;
+        unsafe {
+            let mgp_value = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToMakeLocalTimeValue,
+                ffi::mgp_value_make_local_time,
+                time.mgp_ptr()
+            )?;
+            time.set_mgp_ptr(std::ptr::null_mut());
+            Ok(MgpValue::new(mgp_value, &memgraph))
+        }
+    }
+
+    pub fn is_local_time(&self) -> bool {
+        unsafe {
+            invoke_mgp_func!(
+                ::std::os::raw::c_int,
+                ffi::mgp_value_is_local_time,
+                self.ptr
+            )
+            .unwrap()
+                != 0
+        }
+    }
 }
 
 /// Object containing/owning concrete underlying mgp objects (e.g., mgp_vertex).
@@ -377,7 +403,7 @@ pub enum Value {
     List(List),
     Map(Map),
     Date(NaiveDate),
-    // LocalTime(NaiveTime),
+    LocalTime(NaiveTime),
     // LocalDateTime(NaiveDateTime),
     // Duration(Duration),
 }
@@ -396,6 +422,7 @@ impl Value {
             Value::Edge(x) => MgpValue::make_edge(&x, &memgraph),
             Value::Path(x) => MgpValue::make_path(&x, &memgraph),
             Value::Date(x) => MgpValue::make_date(&x, &memgraph),
+            Value::LocalTime(x) => MgpValue::make_local_time(&x, &memgraph),
         }
     }
 }
@@ -471,8 +498,14 @@ pub(crate) unsafe fn mgp_raw_value_to_value(
             )
             .to_naive_date(),
         )),
-        mgp_value_type::MGP_VALUE_TYPE_LOCAL_TIME
-        | mgp_value_type::MGP_VALUE_TYPE_LOCAL_DATE_TIME
+        mgp_value_type::MGP_VALUE_TYPE_LOCAL_TIME => Ok(Value::LocalTime(
+            temporal::LocalTime::new(
+                invoke_mgp_func!(*mut mgp_local_time, ffi::mgp_value_get_local_time, value)
+                    .unwrap(),
+            )
+            .to_naive_time(),
+        )),
+        mgp_value_type::MGP_VALUE_TYPE_LOCAL_DATE_TIME
         | mgp_value_type::MGP_VALUE_TYPE_DURATION => {
             panic!("Unable to create value object because of uncovered mgp_value type.");
         }
