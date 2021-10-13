@@ -51,6 +51,10 @@ pub mod alloc {
         malloc(size_of::<mgp_path>()) as *mut mgp_path
     }
 
+    pub(crate) unsafe fn alloc_mgp_date() -> *mut mgp_date {
+        malloc(size_of::<mgp_date>()) as *mut mgp_date
+    }
+
     pub(crate) unsafe fn alloc_mgp_proc() -> *mut mgp_proc {
         malloc(size_of::<mgp_proc>()) as *mut mgp_proc
     }
@@ -76,32 +80,37 @@ pub mod alloc {
 
         (List, $rs_test_func:expr) => {
             let memgraph = Memgraph::new_default();
-            let list = List::new(null_mut(), &memgraph);
+            let list = List::new(std::ptr::null_mut(), &memgraph);
             $rs_test_func(&list);
         };
 
         (Map, $rs_test_func:expr) => {
             let memgraph = Memgraph::new_default();
-            let map = Map::new(null_mut(), &memgraph);
+            let map = Map::new(std::ptr::null_mut(), &memgraph);
             $rs_test_func(&map);
         };
 
         (Vertex, $rs_test_func:expr) => {
             let memgraph = Memgraph::new_default();
-            let vertex = Vertex::new(null_mut(), &memgraph);
+            let vertex = Vertex::new(std::ptr::null_mut(), &memgraph);
             $rs_test_func(&vertex);
         };
 
         (Edge, $rs_test_func:expr) => {
             let memgraph = Memgraph::new_default();
-            let edge = Edge::new(null_mut(), &memgraph);
+            let edge = Edge::new(std::ptr::null_mut(), &memgraph);
             $rs_test_func(&edge);
         };
 
         (Path, $rs_test_func:expr) => {
             let memgraph = Memgraph::new_default();
-            let path = Path::new(null_mut(), &memgraph);
+            let path = Path::new(std::ptr::null_mut(), &memgraph);
             $rs_test_func(&path);
+        };
+
+        (Date, $rs_test_func:expr) => {
+            let date = Date::new(std::ptr::null_mut());
+            $rs_test_func(&date);
         };
     }
 }

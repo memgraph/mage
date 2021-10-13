@@ -92,3 +92,6 @@ impl Date {
         unsafe { invoke_mgp_func!(i32, ffi::mgp_date_get_day, self.ptr).unwrap() }
     }
 }
+
+#[cfg(test)]
+mod tests;
