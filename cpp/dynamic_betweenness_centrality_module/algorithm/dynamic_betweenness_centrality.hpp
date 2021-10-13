@@ -40,4 +40,5 @@ std::unordered_map<uint64_t, uint64_t> getOriginalNodeIDMapping(const mg_graph::
 void updateBiconnectedComponentsAndArticulationPoints(
     const mg_graph::GraphView<> &graph, std::vector<std::unordered_set<std::uint64_t>> &biconnectedComponents,
     std::unordered_set<uint64_t> &articulationPoints);
+void initializeBetweennessCentrality(const mg_graph::GraphView<> &graph);
 }  // namespace dynamic_bc_algorithm

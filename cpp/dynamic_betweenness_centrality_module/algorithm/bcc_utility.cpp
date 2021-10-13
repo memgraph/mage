@@ -66,7 +66,7 @@ void bcc_utility::BccDFS(std::uint64_t node_id, std::uint64_t parent_id, bcc_uti
 }
 
 std::vector<std::unordered_set<std::uint64_t>> bcc_algorithm::GetBiconnectedComponents(
-    const mg_graph::GraphView<> &graph, const std::unordered_set<uint64_t> &articulationPoints) {
+    const mg_graph::GraphView<> &graph, std::unordered_set<uint64_t> &articulationPoints) {
   auto number_of_nodes = graph.Nodes().size();
   bcc_utility::NodeState state(number_of_nodes);
 

@@ -3,6 +3,8 @@
 #include <mg_generate.hpp>
 #include "bcc_utility.hpp"
 
+dynamic_bc_algorithm::BetweennessCentralityData dynamic_bc_algorithm::context;
+
 // TODO: skinuti noviju verziju (gdje GraphView ima fje za dohvacanje inner node IDjeva)
 // TODO: promijeniti da argument funkcije bude const mg_graph::GraphView<>
 /**
@@ -32,8 +34,8 @@ std::unordered_map<uint64_t, uint64_t> dynamic_bc_algorithm::getOriginalNodeIDMa
  * @param[in] graph
  */
 
-void initializeBetweennessCentrality(const mg_graph::GraphView<> &graph) {
-  dynamic_bc_algorithm::context.init(graph.Nodes().size());
+void dynamic_bc_algorithm::initializeBetweennessCentrality(const mg_graph::GraphView<> &graph) {
+  context.init(graph.Nodes().size());
 }
 
 /**

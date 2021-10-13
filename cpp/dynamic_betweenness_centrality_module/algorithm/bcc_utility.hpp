@@ -16,7 +16,7 @@ struct NodeState {
   std::unordered_map<uint64_t, uint64_t> discovery, low_link;
   std::uint64_t counter;
 
-  explicit NodeState(std::uint64_t number_of_nodes) ;
+  explicit NodeState(std::uint64_t number_of_nodes);
   void Update(std::uint64_t node_id);
 };
 
