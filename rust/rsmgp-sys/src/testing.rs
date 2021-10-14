@@ -63,6 +63,10 @@ pub mod alloc {
         malloc(size_of::<mgp_local_date_time>()) as *mut mgp_local_date_time
     }
 
+    pub(crate) unsafe fn alloc_mgp_duration() -> *mut mgp_duration {
+        malloc(size_of::<mgp_duration>()) as *mut mgp_duration
+    }
+
     pub(crate) unsafe fn alloc_mgp_proc() -> *mut mgp_proc {
         malloc(size_of::<mgp_proc>()) as *mut mgp_proc
     }
@@ -129,6 +133,11 @@ pub mod alloc {
         (LocalDateTime, $rs_test_func:expr) => {
             let local_date_time = LocalDateTime::new(std::ptr::null_mut());
             $rs_test_func(&local_date_time);
+        };
+
+        (Duration, $rs_test_func:expr) => {
+            let duration = Duration::new(std::ptr::null_mut());
+            $rs_test_func(&duration);
         };
     }
 }

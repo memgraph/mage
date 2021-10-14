@@ -495,3 +495,95 @@ fn test_local_date_time_unable_to_allocate() {
         );
     });
 }
+
+#[test]
+#[serial]
+fn test_from_chrono_duration() {
+    let test_duration = |duration: chrono::Duration| {
+        mock_mgp_once!(
+            mgp_duration_from_microseconds_context,
+            move |micros, _, duration_ptr_ptr| unsafe {
+                assert_eq!(micros, duration.num_microseconds().unwrap());
+                (*duration_ptr_ptr) = alloc_mgp_duration();
+                mgp_error::MGP_ERROR_NO_ERROR
+            }
+        );
+        mock_mgp_once!(mgp_duration_destroy_context, |ptr| unsafe {
+            free(ptr as *mut c_void);
+        });
+
+        with_dummy!(|memgraph: &Memgraph| {
+            let _duration = Duration::from_chrono_duration(&duration, &memgraph);
+        });
+    };
+    test_duration(chrono::Duration::microseconds(0));
+    test_duration(chrono::Duration::microseconds(-1));
+    test_duration(chrono::Duration::microseconds(1));
+    test_duration(chrono::Duration::microseconds(20_000));
+    test_duration(chrono::Duration::microseconds(-23_456));
+    test_duration(chrono::Duration::microseconds(2i64.pow(31)));
+    test_duration(chrono::Duration::microseconds(-(2i64.pow(31))));
+    test_duration(chrono::Duration::microseconds(std::i64::MAX));
+    test_duration(chrono::Duration::microseconds(std::i64::MIN));
+}
+
+#[test]
+#[serial]
+fn test_duration_accessors() {
+    let microseconds: i64 = 4;
+    mock_mgp_once!(
+        mgp_duration_get_microseconds_context,
+        move |_, microseconds_ptr| unsafe {
+            (*microseconds_ptr) = microseconds;
+            mgp_error::MGP_ERROR_NO_ERROR
+        }
+    );
+
+    with_dummy!(Duration, |duration: &Duration| {
+        assert_eq!(duration.microseconds() as i64, microseconds);
+    });
+}
+
+#[test]
+#[serial]
+fn test_to_chrono_duration() {
+    let test_duration = |duration_to_test: chrono::Duration| {
+        mock_mgp_once!(
+            mgp_duration_get_microseconds_context,
+            move |_, microseconds_ptr| unsafe {
+                (*microseconds_ptr) = duration_to_test.num_microseconds().unwrap();
+                mgp_error::MGP_ERROR_NO_ERROR
+            }
+        );
+
+        with_dummy!(Duration, |duration: &Duration| {
+            assert_eq!(duration.to_chrono_duration(), duration_to_test);
+        });
+    };
+    test_duration(chrono::Duration::microseconds(0));
+    test_duration(chrono::Duration::microseconds(-1));
+    test_duration(chrono::Duration::microseconds(1));
+    test_duration(chrono::Duration::microseconds(20_000));
+    test_duration(chrono::Duration::microseconds(-23_456));
+    test_duration(chrono::Duration::microseconds(2i64.pow(31)));
+    test_duration(chrono::Duration::microseconds(-(2i64.pow(31))));
+    test_duration(chrono::Duration::microseconds(std::i64::MAX));
+    test_duration(chrono::Duration::microseconds(std::i64::MIN));
+}
+
+#[test]
+#[serial]
+fn test_duration_unable_to_allocate() {
+    mock_mgp_once!(mgp_duration_from_microseconds_context, move |_, _, _| {
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
+    });
+
+    with_dummy!(|memgraph: &Memgraph| {
+        let error = Duration::from_chrono_duration(&chrono::Duration::microseconds(0), &memgraph);
+        assert!(error.is_err());
+        assert_eq!(
+            error.err().unwrap(),
+            Error::UnableToCreateDurationFromChronoDuration
+        );
+    });
+}

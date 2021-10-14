@@ -330,5 +330,60 @@ impl LocalDateTime {
     }
 }
 
+pub(crate) struct Duration {
+    ptr: *mut mgp_duration,
+}
+
+impl Drop for Duration {
+    fn drop(&mut self) {
+        unsafe {
+            if !self.ptr.is_null() {
+                ffi::mgp_duration_destroy(self.ptr);
+            }
+        }
+    }
+}
+
+impl Duration {
+    pub(crate) fn new(ptr: *mut mgp_duration) -> Duration {
+        #[cfg(not(test))]
+        assert!(
+            !ptr.is_null(),
+            "Unable to create duration because the given pointer is null."
+        );
+
+        Duration { ptr }
+    }
+
+    pub fn from_chrono_duration(from: &chrono::Duration, memgraph: &Memgraph) -> Result<Duration> {
+        unsafe {
+            let duration = Duration::new(invoke_mgp_func_with_res!(
+                *mut mgp_duration,
+                Error::UnableToCreateDurationFromChronoDuration,
+                ffi::mgp_duration_from_microseconds,
+                from.num_microseconds()
+                    .ok_or(Error::UnableToCreateDurationFromChronoDuration)?,
+                memgraph.memory_ptr()
+            )?);
+            Ok(duration)
+        }
+    }
+
+    pub fn to_chrono_duration(&self) -> chrono::Duration {
+        chrono::Duration::microseconds(self.microseconds())
+    }
+
+    pub fn mgp_ptr(&self) -> *mut mgp_duration {
+        self.ptr
+    }
+    pub fn set_mgp_ptr(&mut self, new_ptr: *mut mgp_duration) {
+        self.ptr = new_ptr;
+    }
+
+    pub fn microseconds(&self) -> i64 {
+        unsafe { invoke_mgp_func!(i64, ffi::mgp_duration_get_microseconds, self.ptr).unwrap() }
+    }
+}
+
 #[cfg(test)]
 mod tests;

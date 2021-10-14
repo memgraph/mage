@@ -118,6 +118,10 @@ impl ResultRecord {
             &MgpValue::make_local_date_time(value, &self.memgraph)?,
         )
     }
+
+    pub fn insert_duration(&self, field: &CStr, value: &chrono::Duration) -> Result<()> {
+        self.insert_mgp_value(field, &MgpValue::make_duration(value, &self.memgraph)?)
+    }
 }
 
 #[derive(Debug, PartialEq, Snafu)]
@@ -126,6 +130,10 @@ pub enum Error {
     // DATE
     #[snafu(display("Unable to create date from NaiveDate."))]
     UnableToCreateDateFromNaiveDate,
+
+    // DURATION
+    #[snafu(display("Unable to create duration from chrono::Duration."))]
+    UnableToCreateDurationFromChronoDuration,
 
     // EDGE
     #[snafu(display("Unable to copy edge."))]
@@ -278,6 +286,9 @@ pub enum Error {
 
     #[snafu(display("Unable to make local date time value."))]
     UnableToMakeLocalDateTimeValue,
+
+    #[snafu(display("Unable to make duration value."))]
+    UnableToMakeDurationValue,
 
     // VERTEX
     #[snafu(display("Unable to copy vertex."))]

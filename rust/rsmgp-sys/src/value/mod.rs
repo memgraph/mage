@@ -412,6 +412,27 @@ impl MgpValue {
                 != 0
         }
     }
+
+    pub fn make_duration(duration: &chrono::Duration, memgraph: &Memgraph) -> Result<MgpValue> {
+        let mut duration = temporal::Duration::from_chrono_duration(duration, memgraph)?;
+        unsafe {
+            let mgp_value = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToMakeDurationValue,
+                ffi::mgp_value_make_duration,
+                duration.mgp_ptr()
+            )?;
+            duration.set_mgp_ptr(std::ptr::null_mut());
+            Ok(MgpValue::new(mgp_value, &memgraph))
+        }
+    }
+
+    pub fn is_duration(&self) -> bool {
+        unsafe {
+            invoke_mgp_func!(::std::os::raw::c_int, ffi::mgp_value_is_duration, self.ptr).unwrap()
+                != 0
+        }
+    }
 }
 
 /// Object containing/owning concrete underlying mgp objects (e.g., mgp_vertex).
@@ -431,7 +452,7 @@ pub enum Value {
     Date(NaiveDate),
     LocalTime(NaiveTime),
     LocalDateTime(NaiveDateTime),
-    // Duration(Duration),
+    Duration(chrono::Duration),
 }
 
 impl Value {
@@ -450,6 +471,7 @@ impl Value {
             Value::Date(x) => MgpValue::make_date(&x, &memgraph),
             Value::LocalTime(x) => MgpValue::make_local_time(&x, &memgraph),
             Value::LocalDateTime(x) => MgpValue::make_local_date_time(&x, &memgraph),
+            Value::Duration(x) => MgpValue::make_duration(&x, &memgraph),
         }
     }
 }
@@ -542,9 +564,12 @@ pub(crate) unsafe fn mgp_raw_value_to_value(
             )
             .to_naive_date_time(),
         )),
-        mgp_value_type::MGP_VALUE_TYPE_DURATION => {
-            panic!("Unable to create value object because of uncovered mgp_value type.");
-        }
+        mgp_value_type::MGP_VALUE_TYPE_DURATION => Ok(Value::Duration(
+            temporal::Duration::new(
+                invoke_mgp_func!(*mut mgp_duration, ffi::mgp_value_get_duration, value).unwrap(),
+            )
+            .to_chrono_duration(),
+        )),
     }
 }
 

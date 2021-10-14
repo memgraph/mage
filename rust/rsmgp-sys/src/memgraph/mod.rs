@@ -75,6 +75,7 @@ macro_rules! mgp_default_zero {
 }
 
 mgp_default_mut_ptr!(mgp_date);
+mgp_default_mut_ptr!(mgp_duration);
 mgp_default_mut_ptr!(mgp_edge);
 mgp_default_mut_ptr!(mgp_edges_iterator);
 mgp_default_mut_ptr!(mgp_list);
@@ -242,6 +243,7 @@ fn resolve_mgp_type(types: &[Type]) -> *mut mgp_type {
                 Type::LocalDateTime => {
                     invoke_mgp_func!(*mut mgp_type, ffi::mgp_type_local_date_time).unwrap()
                 }
+                Type::Duration => invoke_mgp_func!(*mut mgp_type, ffi::mgp_type_duration).unwrap(),
             };
         }
         mgp_type_ptr
