@@ -89,6 +89,7 @@ mgp_default_mut_ptr!(mgp_list);
 mgp_default_mut_ptr!(mgp_path);
 mgp_default_mut_ptr!(mgp_result_record);
 mgp_default_mut_ptr!(mgp_property);
+mgp_default_mut_ptr!(mgp_date);
 
 mgp_default_const_ptr!(i8);
 mgp_default_const_ptr!(u64);
@@ -232,6 +233,7 @@ fn resolve_mgp_type(types: &[Type]) -> *mut mgp_type {
                 Type::List => {
                     invoke_mgp_func!(*mut mgp_type, ffi::mgp_type_list, mgp_type_ptr).unwrap()
                 }
+                Type::Date => invoke_mgp_func!(*mut mgp_type, ffi::mgp_type_date).unwrap(),
             };
         }
         mgp_type_ptr

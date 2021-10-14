@@ -13,6 +13,7 @@
 // limitations under the License.
 //! Simplifies returning results to Memgraph and then to the client.
 
+use chrono::NaiveDate;
 use snafu::Snafu;
 use std::ffi::CStr;
 
@@ -102,11 +103,19 @@ impl ResultRecord {
     pub fn insert_path(&self, field: &CStr, value: &Path) -> Result<()> {
         self.insert_mgp_value(field, &MgpValue::make_path(value, &self.memgraph)?)
     }
+
+    pub fn insert_date(&self, field: &CStr, value: &NaiveDate) -> Result<()> {
+        self.insert_mgp_value(field, &MgpValue::make_date(value, &self.memgraph)?)
+    }
 }
 
 #[derive(Debug, PartialEq, Snafu)]
 #[snafu(visibility = "pub")]
 pub enum Error {
+    // DATE
+    #[snafu(display("Unable to create date from NaiveDate."))]
+    UnableToCreateDateFromNaiveDate,
+
     // EDGE
     #[snafu(display("Unable to copy edge."))]
     UnableToCopyEdge,
@@ -241,6 +250,9 @@ pub enum Error {
 
     #[snafu(display("Unable to make new Value::String."))]
     UnableToMakeValueString,
+
+    #[snafu(display("Unable to make date value."))]
+    UnableToMakeDateValue,
 
     // VERTEX
     #[snafu(display("Unable to copy vertex."))]

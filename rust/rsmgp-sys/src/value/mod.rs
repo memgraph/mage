@@ -24,10 +24,13 @@ use crate::mgp::*;
 use crate::path::*;
 use crate::result::*;
 use crate::vertex::*;
+use chrono::NaiveDate;
 // Required here, if not present tests linking fails.
 #[double]
 use crate::mgp::ffi;
 use mockall_double::double;
+
+mod temporal;
 
 /// Creates a copy of the provided string.
 ///
@@ -337,6 +340,26 @@ impl MgpValue {
             invoke_mgp_func!(::std::os::raw::c_int, ffi::mgp_value_is_path, self.ptr).unwrap() != 0
         }
     }
+
+    pub fn make_date(date: &NaiveDate, memgraph: &Memgraph) -> Result<MgpValue> {
+        let mut date = temporal::Date::from_naive_date(date, memgraph)?;
+        unsafe {
+            let mgp_value = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToMakeDateValue,
+                ffi::mgp_value_make_date,
+                date.mgp_ptr()
+            )?;
+            date.set_mgp_ptr(std::ptr::null_mut());
+            Ok(MgpValue::new(mgp_value, &memgraph))
+        }
+    }
+
+    pub fn is_date(&self) -> bool {
+        unsafe {
+            invoke_mgp_func!(::std::os::raw::c_int, ffi::mgp_value_is_date, self.ptr).unwrap() != 0
+        }
+    }
 }
 
 /// Object containing/owning concrete underlying mgp objects (e.g., mgp_vertex).
@@ -353,6 +376,10 @@ pub enum Value {
     Path(Path),
     List(List),
     Map(Map),
+    Date(NaiveDate),
+    // LocalTime(NaiveTime),
+    // LocalDateTime(NaiveDateTime),
+    // Duration(Duration),
 }
 
 impl Value {
@@ -368,6 +395,7 @@ impl Value {
             Value::Vertex(x) => MgpValue::make_vertex(&x, &memgraph),
             Value::Edge(x) => MgpValue::make_edge(&x, &memgraph),
             Value::Path(x) => MgpValue::make_path(&x, &memgraph),
+            Value::Date(x) => MgpValue::make_date(&x, &memgraph),
         }
     }
 }
@@ -437,8 +465,13 @@ pub(crate) unsafe fn mgp_raw_value_to_value(
             invoke_mgp_func!(*mut mgp_map, ffi::mgp_value_get_map, value).unwrap(),
             &memgraph,
         )?)),
-        mgp_value_type::MGP_VALUE_TYPE_DATE
-        | mgp_value_type::MGP_VALUE_TYPE_LOCAL_TIME
+        mgp_value_type::MGP_VALUE_TYPE_DATE => Ok(Value::Date(
+            temporal::Date::new(
+                invoke_mgp_func!(*mut mgp_date, ffi::mgp_value_get_date, value).unwrap(),
+            )
+            .to_naive_date(),
+        )),
+        mgp_value_type::MGP_VALUE_TYPE_LOCAL_TIME
         | mgp_value_type::MGP_VALUE_TYPE_LOCAL_DATE_TIME
         | mgp_value_type::MGP_VALUE_TYPE_DURATION => {
             panic!("Unable to create value object because of uncovered mgp_value type.");
