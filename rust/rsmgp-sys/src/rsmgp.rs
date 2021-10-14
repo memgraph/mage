@@ -14,13 +14,13 @@
 //! Macro definitions and top level data structures.
 //!
 //! [define_procedure], [init_module], [close_module] all accept a function accepting [Memgraph]
-//! and returning [crate::result::MgpResult] because that allows using `?` operator which is a very
+//! and returning [crate::result::Result] because that allows using `?` operator which is a very
 //! convenient way of propagating execution errors.
 //!
 //! Example
 //!
 //! ```no run
-//! |memgraph: &Memgraph| -> MgpResult<()> {
+//! |memgraph: &Memgraph| -> Result<()> {
 //!     // Implementation
 //! }
 //! ```
@@ -45,7 +45,7 @@ use mockall_double::double;
 /// Example
 ///
 /// ```no run
-/// define_procedure!(procedure_name, |memgraph: &Memgraph| -> MgpResult<()> {
+/// define_procedure!(procedure_name, |memgraph: &Memgraph| -> Result<()> {
 ///     // Implementation
 /// }
 /// ```
@@ -54,8 +54,8 @@ macro_rules! define_procedure {
     ($c_name:ident, $rs_func:expr) => {
         #[no_mangle]
         extern "C" fn $c_name(
-            args: *const mgp_list,
-            graph: *const mgp_graph,
+            args: *mut mgp_list,
+            graph: *mut mgp_graph,
             result: *mut mgp_result,
             memory: *mut mgp_memory,
         ) {
@@ -104,7 +104,7 @@ macro_rules! define_procedure {
 /// Example
 ///
 /// ```no run
-/// init_module!(|memgraph: &Memgraph| -> MgpResult<()> {
+/// init_module!(|memgraph: &Memgraph| -> Result<()> {
 ///     memgraph.add_read_procedure(
 ///         procedure_name,
 ///         c_str!("procedure_name"),
@@ -147,7 +147,7 @@ macro_rules! init_module {
 /// Example
 ///
 /// ```no run
-/// close_module!(|memgraph: &Memgraph| -> MgpResult<()> {
+/// close_module!(|memgraph: &Memgraph| -> Result<()> {
 ///     // Implementation
 /// }
 #[macro_export]
@@ -266,10 +266,12 @@ macro_rules! define_optional_type {
 /// Sets error that will be returned to the caller.
 pub fn set_memgraph_error_msg(msg: &CStr, memgraph: &Memgraph) {
     unsafe {
-        let status = ffi::mgp_result_set_error_msg(memgraph.result_ptr(), msg.as_ptr());
-        if status == 0 {
-            panic!("Unable to pass error message to the Memgraph engine.");
-        }
+        invoke_void_mgp_func!(
+            ffi::mgp_result_set_error_msg,
+            memgraph.result_ptr(),
+            msg.as_ptr()
+        )
+        .expect("Unable to pass error message to the Memgraph engine.");
     }
 }
 
@@ -285,7 +287,9 @@ mod tests {
     #[test]
     #[serial]
     fn test_set_error_msg() {
-        mock_mgp_once!(mgp_result_set_error_msg_context, |_, _| 1);
+        mock_mgp_once!(mgp_result_set_error_msg_context, |_, _| {
+            crate::mgp::mgp_error::MGP_ERROR_NO_ERROR
+        });
 
         with_dummy!(|memgraph: &Memgraph| {
             set_memgraph_error_msg(c_str!("test_error"), &memgraph);

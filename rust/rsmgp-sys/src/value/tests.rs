@@ -25,7 +25,9 @@ use crate::{mock_mgp_once, with_dummy};
 #[test]
 #[serial]
 fn test_make_null_mgp_value() {
-    mock_mgp_once!(mgp_value_make_null_context, |_| { null_mut() });
+    mock_mgp_once!(mgp_value_make_null_context, |_, _| {
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
+    });
 
     with_dummy!(|memgraph: &Memgraph| {
         let value = MgpValue::make_null(&memgraph);
@@ -36,9 +38,9 @@ fn test_make_null_mgp_value() {
 #[test]
 #[serial]
 fn test_make_false_bool_mgp_value() {
-    mock_mgp_once!(mgp_value_make_bool_context, |value, _| {
+    mock_mgp_once!(mgp_value_make_bool_context, |value, _, _| {
         assert_eq!(value, 0);
-        null_mut()
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
     });
 
     with_dummy!(|memgraph: &Memgraph| {
@@ -50,9 +52,9 @@ fn test_make_false_bool_mgp_value() {
 #[test]
 #[serial]
 fn test_make_true_bool_mgp_value() {
-    mock_mgp_once!(mgp_value_make_bool_context, |value, _| {
+    mock_mgp_once!(mgp_value_make_bool_context, |value, _, _| {
         assert_eq!(value, 1);
-        null_mut()
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
     });
 
     with_dummy!(|memgraph: &Memgraph| {
@@ -64,9 +66,9 @@ fn test_make_true_bool_mgp_value() {
 #[test]
 #[serial]
 fn test_make_int_mgp_value() {
-    mock_mgp_once!(mgp_value_make_int_context, |value, _| {
+    mock_mgp_once!(mgp_value_make_int_context, |value, _, _| {
         assert_eq!(value, 100);
-        null_mut()
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
     });
 
     with_dummy!(|memgraph: &Memgraph| {
@@ -78,9 +80,9 @@ fn test_make_int_mgp_value() {
 #[test]
 #[serial]
 fn test_make_double_mgp_value() {
-    mock_mgp_once!(mgp_value_make_double_context, |value, _| {
+    mock_mgp_once!(mgp_value_make_double_context, |value, _, _| {
         assert_eq!(value, 0.0);
-        null_mut()
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
     });
 
     with_dummy!(|memgraph: &Memgraph| {
@@ -92,9 +94,9 @@ fn test_make_double_mgp_value() {
 #[test]
 #[serial]
 fn test_make_string_mgp_value() {
-    mock_mgp_once!(mgp_value_make_string_context, |value, _| unsafe {
+    mock_mgp_once!(mgp_value_make_string_context, |value, _, _| unsafe {
         assert_eq!(CStr::from_ptr(value), c_str!("test"));
-        null_mut()
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
     });
 
     with_dummy!(|memgraph: &Memgraph| {
@@ -106,11 +108,16 @@ fn test_make_string_mgp_value() {
 #[test]
 #[serial]
 fn test_make_list_mgp_value() {
-    let mgp_list_size_context = mgp_list_size_context();
-    mgp_list_size_context.expect().times(2).returning(|_| 0);
-    mock_mgp_once!(mgp_list_make_empty_context, |_, _| { null_mut() });
-    mock_mgp_once!(mgp_value_make_list_context, |_| { null_mut() });
-    mock_mgp_once!(mgp_list_destroy_context, |_| {});
+    mock_mgp_once!(mgp_list_size_context, |_, size_ptr| unsafe {
+        (*size_ptr) = 0;
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
+    mock_mgp_once!(mgp_list_make_empty_context, |_, _, _| {
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
+    mock_mgp_once!(mgp_value_make_list_context, |_, _| {
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
+    });
 
     with_dummy!(|memgraph: &Memgraph| {
         let list = List::new(null_mut(), &memgraph);
@@ -122,8 +129,18 @@ fn test_make_list_mgp_value() {
 #[test]
 #[serial]
 fn test_make_map_mgp_value() {
-    mock_mgp_once!(mgp_map_make_empty_context, |_| { null_mut() });
-    mock_mgp_once!(mgp_map_iter_items_context, |_, _| { null_mut() });
+    mock_mgp_once!(mgp_map_make_empty_context, |_, _| {
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
+    mock_mgp_once!(mgp_map_iter_items_context, |_, _, _| {
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
+    mock_mgp_once!(mgp_map_items_iterator_get_context, |_, _| {
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
+    mock_mgp_once!(mgp_value_make_map_context, |_, _| {
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
+    });
 
     with_dummy!(|memgraph: &Memgraph| {
         let map = Map::new(null_mut(), &memgraph);
@@ -135,7 +152,9 @@ fn test_make_map_mgp_value() {
 #[test]
 #[serial]
 fn test_make_vertex_mgp_value() {
-    mock_mgp_once!(mgp_vertex_copy_context, |_, _| { null_mut() });
+    mock_mgp_once!(mgp_vertex_copy_context, |_, _, _| {
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
+    });
 
     with_dummy!(|memgraph: &Memgraph| {
         let vertex = Vertex::new(null_mut(), &memgraph);
@@ -147,7 +166,9 @@ fn test_make_vertex_mgp_value() {
 #[test]
 #[serial]
 fn test_make_edge_mgp_value() {
-    mock_mgp_once!(mgp_edge_copy_context, |_, _| { null_mut() });
+    mock_mgp_once!(mgp_edge_copy_context, |_, _, _| {
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
+    });
 
     with_dummy!(|memgraph: &Memgraph| {
         let edge = Edge::new(null_mut(), &memgraph);
@@ -159,7 +180,9 @@ fn test_make_edge_mgp_value() {
 #[test]
 #[serial]
 fn test_make_path_mgp_value() {
-    mock_mgp_once!(mgp_path_copy_context, |_, _| { null_mut() });
+    mock_mgp_once!(mgp_path_copy_context, |_, _, _| {
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
+    });
 
     with_dummy!(|memgraph: &Memgraph| {
         let path = Path::new(null_mut(), &memgraph);
@@ -168,19 +191,31 @@ fn test_make_path_mgp_value() {
     });
 }
 
+macro_rules! mock_mgp_value_is {
+    ($c_func_name:ident, $value:expr) => {
+        mock_mgp_once!(
+            $c_func_name,
+            |_, result: *mut ::std::os::raw::c_int| unsafe {
+                (*result) = $value;
+                mgp_error::MGP_ERROR_NO_ERROR
+            }
+        );
+    };
+}
+
 #[test]
 #[serial]
 fn test_mgp_value_for_the_right_type() {
-    mock_mgp_once!(mgp_value_is_null_context, |_| 1);
-    mock_mgp_once!(mgp_value_is_bool_context, |_| 1);
-    mock_mgp_once!(mgp_value_is_int_context, |_| 1);
-    mock_mgp_once!(mgp_value_is_double_context, |_| 1);
-    mock_mgp_once!(mgp_value_is_string_context, |_| 1);
-    mock_mgp_once!(mgp_value_is_list_context, |_| 1);
-    mock_mgp_once!(mgp_value_is_map_context, |_| 1);
-    mock_mgp_once!(mgp_value_is_vertex_context, |_| 1);
-    mock_mgp_once!(mgp_value_is_edge_context, |_| 1);
-    mock_mgp_once!(mgp_value_is_path_context, |_| 1);
+    mock_mgp_value_is!(mgp_value_is_null_context, 1);
+    mock_mgp_value_is!(mgp_value_is_bool_context, 1);
+    mock_mgp_value_is!(mgp_value_is_int_context, 1);
+    mock_mgp_value_is!(mgp_value_is_double_context, 1);
+    mock_mgp_value_is!(mgp_value_is_string_context, 1);
+    mock_mgp_value_is!(mgp_value_is_list_context, 1);
+    mock_mgp_value_is!(mgp_value_is_map_context, 1);
+    mock_mgp_value_is!(mgp_value_is_vertex_context, 1);
+    mock_mgp_value_is!(mgp_value_is_edge_context, 1);
+    mock_mgp_value_is!(mgp_value_is_path_context, 1);
 
     with_dummy!(|memgraph: &Memgraph| {
         let value = MgpValue::new(null_mut(), &memgraph);
@@ -200,16 +235,16 @@ fn test_mgp_value_for_the_right_type() {
 #[test]
 #[serial]
 fn test_mgp_value_for_the_wrong_type() {
-    mock_mgp_once!(mgp_value_is_null_context, |_| 0);
-    mock_mgp_once!(mgp_value_is_bool_context, |_| 0);
-    mock_mgp_once!(mgp_value_is_int_context, |_| 0);
-    mock_mgp_once!(mgp_value_is_double_context, |_| 0);
-    mock_mgp_once!(mgp_value_is_string_context, |_| 0);
-    mock_mgp_once!(mgp_value_is_list_context, |_| 0);
-    mock_mgp_once!(mgp_value_is_map_context, |_| 0);
-    mock_mgp_once!(mgp_value_is_vertex_context, |_| 0);
-    mock_mgp_once!(mgp_value_is_edge_context, |_| 0);
-    mock_mgp_once!(mgp_value_is_path_context, |_| 0);
+    mock_mgp_value_is!(mgp_value_is_null_context, 0);
+    mock_mgp_value_is!(mgp_value_is_bool_context, 0);
+    mock_mgp_value_is!(mgp_value_is_int_context, 0);
+    mock_mgp_value_is!(mgp_value_is_double_context, 0);
+    mock_mgp_value_is!(mgp_value_is_string_context, 0);
+    mock_mgp_value_is!(mgp_value_is_list_context, 0);
+    mock_mgp_value_is!(mgp_value_is_map_context, 0);
+    mock_mgp_value_is!(mgp_value_is_vertex_context, 0);
+    mock_mgp_value_is!(mgp_value_is_edge_context, 0);
+    mock_mgp_value_is!(mgp_value_is_path_context, 0);
 
     with_dummy!(|memgraph: &Memgraph| {
         let value = MgpValue::new(null_mut(), &memgraph);
@@ -229,7 +264,9 @@ fn test_mgp_value_for_the_wrong_type() {
 #[test]
 #[serial]
 fn test_to_mgp_value() {
-    mock_mgp_once!(mgp_value_make_null_context, |_| { null_mut() });
+    mock_mgp_once!(mgp_value_make_null_context, |_, _| {
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
+    });
 
     with_dummy!(|memgraph: &Memgraph| {
         let value = Value::Null;
