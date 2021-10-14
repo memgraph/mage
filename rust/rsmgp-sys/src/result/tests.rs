@@ -57,7 +57,7 @@ macro_rules! mock_mgp_value_make_without_mem {
 #[test]
 #[serial]
 fn test_insert_value() {
-    // TODO(antaljanosbenjamin) Try to free the independently allocates types (list, map, etc)
+    // TODO(antaljanosbenjamin) Try to free the independently allocated types (list, map, etc)
     mock_mgp_once!(mgp_value_make_null_context, |_, value_ptr_ptr| unsafe {
         (*value_ptr_ptr) = alloc_mgp_value();
         mgp_error::MGP_ERROR_NO_ERROR
