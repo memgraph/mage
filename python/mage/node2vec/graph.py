@@ -3,7 +3,6 @@ from typing import List, Tuple, Dict
 
 
 class Graph(ABC):
-
     def __init__(self):
         self._nodes = []
         self._is_directed = False
@@ -33,7 +32,9 @@ class Graph(ABC):
         pass
 
     @abstractmethod
-    def set_edge_transition_probs(self, edge: Tuple[int, int], transition_probs: List[float]) -> None:
+    def set_edge_transition_probs(
+        self, edge: Tuple[int, int], transition_probs: List[float]
+    ) -> None:
         pass
 
     @abstractmethod
@@ -41,11 +42,15 @@ class Graph(ABC):
         pass
 
     @abstractmethod
-    def set_node_first_travel_transition_probs(self, source_node_id: int, normalized_probs: List[float]) -> None:
+    def set_node_first_travel_transition_probs(
+        self, source_node_id: int, normalized_probs: List[float]
+    ) -> None:
         pass
 
     @abstractmethod
-    def get_node_first_travel_transition_probs(self, source_node_id: int) -> List[float]:
+    def get_node_first_travel_transition_probs(
+        self, source_node_id: int
+    ) -> List[float]:
         pass
 
 
@@ -72,21 +77,28 @@ class BasicGraph(Graph):
     def is_directed(self) -> bool:
         return self._is_directed
 
-    def set_edge_transition_probs(self, edge: Tuple[int, int], transition_probs: List[float]) -> None:
+    def set_edge_transition_probs(
+        self, edge: Tuple[int, int], transition_probs: List[float]
+    ) -> None:
         self._preprocessed_transition_probs[edge] = transition_probs
 
     def get_edge_transition_probs(self, edge: Tuple[int, int]) -> List[float]:
         return self._preprocessed_transition_probs[edge]
 
-    def set_node_first_travel_transition_probs(self, source_node_id: int, normalized_probs: List[float]) -> None:
+    def set_node_first_travel_transition_probs(
+        self, source_node_id: int, normalized_probs: List[float]
+    ) -> None:
         self._first_travel_transition_probs[source_node_id] = normalized_probs
 
-    def get_node_first_travel_transition_probs(self, source_node_id: int) -> List[float]:
+    def get_node_first_travel_transition_probs(
+        self, source_node_id: int
+    ) -> List[float]:
         return self._first_travel_transition_probs[source_node_id]
 
     def has_edge(self, src_node_id: int, dest_node_id: int) -> bool:
-        return (src_node_id, dest_node_id) in self._edges_weights or \
-               (not self.is_directed and (dest_node_id, src_node_id) in self._edges_weights)
+        return (src_node_id, dest_node_id) in self._edges_weights or (
+            not self.is_directed and (dest_node_id, src_node_id) in self._edges_weights
+        )
 
     def get_edges(self) -> List[Tuple[int, int]]:
         return list(self._edges_weights.keys())

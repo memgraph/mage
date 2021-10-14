@@ -1,8 +1,8 @@
-from typing import Tuple, List
+from typing import List
 
 import numpy as np
 
-from python.mage.node2vec.graph import Graph
+from mage.node2vec.graph import Graph
 
 
 class SecondOrderRandomWalk:
@@ -13,7 +13,6 @@ class SecondOrderRandomWalk:
         self.num_walks = num_walks
         self.walk_length = walk_length
 
-    # could be paralelized
     def sample_node_walks(self, graph: Graph) -> List[List[int]]:
         self.set_first_travel_transition_probs(graph)
         self.set_graph_transition_probs(graph)
@@ -35,28 +34,45 @@ class SecondOrderRandomWalk:
                 break
 
             if len(walk) == 1:
-                walk.append(np.random.choice(node_neighbors,
-                                             p=graph.get_node_first_travel_transition_probs(
-                                                 (current_node_id))))
+                walk.append(
+                    np.random.choice(
+                        node_neighbors,
+                        p=graph.get_node_first_travel_transition_probs(
+                            (current_node_id)
+                        ),
+                    )
+                )
                 continue
 
             previous_node_id = walk[-2]
 
-            next = np.random.choice(node_neighbors, p=graph.get_edge_transition_probs(
-                edge=(previous_node_id, current_node_id)))
+            next = np.random.choice(
+                node_neighbors,
+                p=graph.get_edge_transition_probs(
+                    edge=(previous_node_id, current_node_id)
+                ),
+            )
 
             walk.append(next)
         return walk
 
     def set_first_travel_transition_probs(self, graph: Graph):
         for source_node_id in graph.nodes:
-            unnormalized_probs = [graph.get_edge_weight(source_node_id, neighbor_id) for neighbor_id in
-                                  graph.get_neighbors(source_node_id)]
+            unnormalized_probs = [
+                graph.get_edge_weight(source_node_id, neighbor_id)
+                for neighbor_id in graph.get_neighbors(source_node_id)
+            ]
             norm_const = sum(unnormalized_probs)
-            normalized_probs = [float(u_prob) / norm_const for u_prob in unnormalized_probs]
-            graph.set_node_first_travel_transition_probs(source_node_id, normalized_probs)
+            normalized_probs = [
+                float(u_prob) / norm_const for u_prob in unnormalized_probs
+            ]
+            graph.set_node_first_travel_transition_probs(
+                source_node_id, normalized_probs
+            )
 
-    def calculate_edge_transition_probs(self, graph: Graph, src_node_id: int, dest_node_id: int) -> List[float]:
+    def calculate_edge_transition_probs(
+        self, graph: Graph, src_node_id: int, dest_node_id: int
+    ) -> List[float]:
 
         unnorm_trans_probs = []
 
@@ -79,15 +95,18 @@ class SecondOrderRandomWalk:
 
         return norm_trans_probs
 
-    # could be paralelized
     def set_graph_transition_probs(self, graph: Graph):
 
         for edge in graph.get_edges():
-            graph.set_edge_transition_probs((edge[0], edge[1]),
-                                            self.calculate_edge_transition_probs(graph, edge[0], edge[1]))
+            graph.set_edge_transition_probs(
+                (edge[0], edge[1]),
+                self.calculate_edge_transition_probs(graph, edge[0], edge[1]),
+            )
             if not graph.is_directed:
-                graph.set_edge_transition_probs((edge[1], edge[0]),
-                                                self.calculate_edge_transition_probs(graph, edge[1], edge[0]))
+                graph.set_edge_transition_probs(
+                    (edge[1], edge[0]),
+                    self.calculate_edge_transition_probs(graph, edge[1], edge[0]),
+                )
 
         for edge in graph.get_edges():
             print(edge, graph.get_edge_transition_probs(edge))
