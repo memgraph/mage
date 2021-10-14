@@ -24,9 +24,6 @@ constexpr char const *kArgumentDeletedEdges = "deleted_edges";
 void InsertPagerankRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
                           double rank) {
   auto *record = mgp::result_new_record(result);
-  if (record == nullptr) {
-    throw mg_exception::NotEnoughMemoryException();
-  }
 
   mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
   mg_utility::InsertDoubleValue(record, kFieldRank, rank, memory);
@@ -34,9 +31,6 @@ void InsertPagerankRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memo
 
 void InsertMessageRecord(mgp_result *result, mgp_memory *memory, const char *message) {
   auto *record = mgp::result_new_record(result);
-  if (record == nullptr) {
-    throw mg_exception::NotEnoughMemoryException();
-  }
 
   mg_utility::InsertStringValueResult(record, kFieldMessage, message, memory);
 }
