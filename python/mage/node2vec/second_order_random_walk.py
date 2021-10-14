@@ -87,7 +87,6 @@ class SecondOrderRandomWalk:
             else:
                 unnorm_trans_probs.append(edge_weight / self.q)
 
-
         norm_const = sum(unnorm_trans_probs)
         norm_trans_probs = np.array(unnorm_trans_probs) / norm_const
 

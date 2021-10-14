@@ -21,7 +21,7 @@ word2vec_params = {
 
 
 def learn_embeddings(
-        walks: List[List[int]], **word2vec_params
+    walks: List[List[int]], **word2vec_params
 ) -> Dict[int, List[float]]:
     model = gensim.models.Word2Vec(sentences=walks, **word2vec_params)
 
@@ -34,18 +34,18 @@ def learn_embeddings(
 
 @mgp.read_proc
 def set_word2vec_params(
-        ctx: mgp.ProcCtx,
-        vector_size=100,
-        alpha=0.025,
-        window=5,
-        min_count=5,
-        seed=1,
-        workers=3,
-        min_alpha=0.0001,
-        sg=1,
-        hs=0,
-        negative=5,
-        epochs=5,
+    ctx: mgp.ProcCtx,
+    vector_size=100,
+    alpha=0.025,
+    window=5,
+    min_count=5,
+    seed=1,
+    workers=3,
+    min_alpha=0.0001,
+    sg=1,
+    hs=0,
+    negative=5,
+    epochs=5,
 ) -> mgp.Record(
     vector_size=int,
     window=int,
@@ -120,13 +120,13 @@ def set_word2vec_params(
 
 @mgp.read_proc
 def get_embeddings(
-        ctx: mgp.ProcCtx,
-        edges: List[mgp.Edge],
-        is_directed: bool = False,
-        p=1.0,
-        q=1.0,
-        num_walks=4,
-        walk_length=5,
+    ctx: mgp.ProcCtx,
+    edges: List[mgp.Edge],
+    is_directed: bool = False,
+    p=1.0,
+    q=1.0,
+    num_walks=4,
+    walk_length=5,
 ) -> mgp.Record(node=mgp.Number, embedding=mgp.List[mgp.Number]):
     """
     Function to get node embeddings. Uses gensim.models.Word2Vec params.
