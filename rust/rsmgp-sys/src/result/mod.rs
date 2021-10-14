@@ -127,14 +127,6 @@ pub enum Error {
     #[snafu(display("Unable to create date from NaiveDate."))]
     UnableToCreateDateFromNaiveDate,
 
-    // LOCALTIME
-    #[snafu(display("Unable to create local time from NaiveTime."))]
-    UnableToCreateLocalTimeFromNaiveTime,
-
-    // LOCALDATETIME
-    #[snafu(display("Unable to create local date time from NaiveDateTime."))]
-    UnableToCreateLocalDateTimeFromNaiveTime,
-
     // EDGE
     #[snafu(display("Unable to copy edge."))]
     UnableToCopyEdge,
@@ -169,6 +161,14 @@ pub enum Error {
 
     #[snafu(display("Unable to access list value by index."))]
     UnableToAccessListValueByIndex,
+
+    // LOCALTIME
+    #[snafu(display("Unable to create local time from NaiveTime."))]
+    UnableToCreateLocalTimeFromNaiveTime,
+
+    // LOCALDATETIME
+    #[snafu(display("Unable to create local date time from NaiveDateTime."))]
+    UnableToCreateLocalDateTimeFromNaiveDateTime,
 
     // MAP
     #[snafu(display("Unable to copy map."))]

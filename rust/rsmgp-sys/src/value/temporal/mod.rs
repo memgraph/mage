@@ -47,7 +47,7 @@ impl Date {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
-            "Unable to create path because the given pointer is null."
+            "Unable to create date because the given pointer is null."
         );
 
         Date { ptr }
@@ -150,7 +150,7 @@ impl LocalTime {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
-            "Unable to create path because the given pointer is null."
+            "Unable to create local time because the given pointer is null."
         );
 
         LocalTime { ptr }
@@ -160,14 +160,14 @@ impl LocalTime {
         let mut local_time_params = create_mgp_local_time_parameters(&from);
 
         unsafe {
-            let date = LocalTime::new(invoke_mgp_func_with_res!(
+            let local_time = LocalTime::new(invoke_mgp_func_with_res!(
                 *mut mgp_local_time,
                 Error::UnableToCreateLocalTimeFromNaiveTime,
                 ffi::mgp_local_time_from_parameters,
                 &mut local_time_params,
                 memgraph.memory_ptr()
             )?);
-            Ok(date)
+            Ok(local_time)
         }
     }
 
@@ -233,7 +233,7 @@ impl LocalDateTime {
         #[cfg(not(test))]
         assert!(
             !ptr.is_null(),
-            "Unable to create path because the given pointer is null."
+            "Unable to create local date time because the given pointer is null."
         );
 
         LocalDateTime { ptr }
@@ -255,14 +255,14 @@ impl LocalDateTime {
         };
 
         unsafe {
-            let date = LocalDateTime::new(invoke_mgp_func_with_res!(
+            let local_date_time = LocalDateTime::new(invoke_mgp_func_with_res!(
                 *mut mgp_local_date_time,
-                Error::UnableToCreateLocalDateTimeFromNaiveTime,
+                Error::UnableToCreateLocalDateTimeFromNaiveDateTime,
                 ffi::mgp_local_date_time_from_parameters,
                 &mut local_date_time_params,
                 memgraph.memory_ptr()
             )?);
-            Ok(date)
+            Ok(local_date_time)
         }
     }
 

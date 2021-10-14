@@ -74,31 +74,31 @@ macro_rules! mgp_default_zero {
     };
 }
 
-mgp_default_mut_ptr!(mgp_type);
-mgp_default_mut_ptr!(mgp_proc);
-mgp_default_mut_ptr!(mgp_vertices_iterator);
-mgp_default_mut_ptr!(mgp_edges_iterator);
-mgp_default_mut_ptr!(mgp_vertex);
+mgp_default_mut_ptr!(mgp_date);
 mgp_default_mut_ptr!(mgp_edge);
+mgp_default_mut_ptr!(mgp_edges_iterator);
+mgp_default_mut_ptr!(mgp_list);
+mgp_default_mut_ptr!(mgp_local_date_time);
+mgp_default_mut_ptr!(mgp_local_time);
 mgp_default_mut_ptr!(mgp_map);
 mgp_default_mut_ptr!(mgp_map_item);
 mgp_default_mut_ptr!(mgp_map_items_iterator);
-mgp_default_mut_ptr!(mgp_value);
-mgp_default_mut_ptr!(mgp_properties_iterator);
-mgp_default_mut_ptr!(mgp_list);
 mgp_default_mut_ptr!(mgp_path);
-mgp_default_mut_ptr!(mgp_result_record);
+mgp_default_mut_ptr!(mgp_proc);
+mgp_default_mut_ptr!(mgp_properties_iterator);
 mgp_default_mut_ptr!(mgp_property);
-mgp_default_mut_ptr!(mgp_date);
-mgp_default_mut_ptr!(mgp_local_time);
-mgp_default_mut_ptr!(mgp_local_date_time);
+mgp_default_mut_ptr!(mgp_result_record);
+mgp_default_mut_ptr!(mgp_type);
+mgp_default_mut_ptr!(mgp_value);
+mgp_default_mut_ptr!(mgp_vertex);
+mgp_default_mut_ptr!(mgp_vertices_iterator);
 
 mgp_default_const_ptr!(i8);
 mgp_default_const_ptr!(u64);
 
-mgp_default_zero!(u64);
-mgp_default_zero!(i64);
 mgp_default_zero!(i32);
+mgp_default_zero!(i64);
+mgp_default_zero!(u64);
 
 impl MgpDefault for mgp_edge_id {
     fn default() -> Self {

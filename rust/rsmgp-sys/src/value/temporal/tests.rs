@@ -491,7 +491,7 @@ fn test_local_date_time_unable_to_allocate() {
         assert!(error.is_err());
         assert_eq!(
             error.err().unwrap(),
-            Error::UnableToCreateLocalDateTimeFromNaiveTime
+            Error::UnableToCreateLocalDateTimeFromNaiveDateTime
         );
     });
 }
