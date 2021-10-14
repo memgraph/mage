@@ -53,7 +53,7 @@ def greedy(
     context: mgp.ProcCtx,
     element_vertexes: List[mgp.Vertex],
     set_vertexes: List[mgp.Vertex],
-) -> mgp.Record(containing_set=List[mgp.Vertex]):
+) -> mgp.Record(containing_set=mgp.Vertex):
     """
     This set cover solver method returns 1 filed
 
@@ -67,7 +67,7 @@ def greedy(
     Element and set equivalents at a certain index come in pairs so mappings between sets and elements are consistent.
 
     The procedure can be invoked in openCypher using the following calls, e.g.:
-      CALL set_cover.cp_solve([(:Point), (:Point)], [(:Set), (:Set)]) YIELD containing_set;
+      CALL set_cover.greedy([(:Point), (:Point)], [(:Set), (:Set)]) YIELD containing_set;
 
     The method uses a greedy method as a solving tool for obtaining a minimal set of sets that contain
         all the elements.
