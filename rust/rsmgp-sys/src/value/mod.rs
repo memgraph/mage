@@ -362,15 +362,15 @@ impl MgpValue {
     }
 
     pub fn make_local_time(time: &NaiveTime, memgraph: &Memgraph) -> Result<MgpValue> {
-        let mut time = temporal::LocalTime::from_naive_time(time, memgraph)?;
+        let mut local_time = temporal::LocalTime::from_naive_time(time, memgraph)?;
         unsafe {
             let mgp_value = invoke_mgp_func_with_res!(
                 *mut mgp_value,
                 Error::UnableToMakeLocalTimeValue,
                 ffi::mgp_value_make_local_time,
-                time.mgp_ptr()
+                local_time.mgp_ptr()
             )?;
-            time.set_mgp_ptr(std::ptr::null_mut());
+            local_time.set_mgp_ptr(std::ptr::null_mut());
             Ok(MgpValue::new(mgp_value, &memgraph))
         }
     }
@@ -388,15 +388,16 @@ impl MgpValue {
     }
 
     pub fn make_local_date_time(datetime: &NaiveDateTime, memgraph: &Memgraph) -> Result<MgpValue> {
-        let mut time = temporal::LocalDateTime::from_naive_date_time(datetime, memgraph)?;
+        let mut local_date_time =
+            temporal::LocalDateTime::from_naive_date_time(datetime, memgraph)?;
         unsafe {
             let mgp_value = invoke_mgp_func_with_res!(
                 *mut mgp_value,
                 Error::UnableToMakeLocalDateTimeValue,
                 ffi::mgp_value_make_local_date_time,
-                time.mgp_ptr()
+                local_date_time.mgp_ptr()
             )?;
-            time.set_mgp_ptr(std::ptr::null_mut());
+            local_date_time.set_mgp_ptr(std::ptr::null_mut());
             Ok(MgpValue::new(mgp_value, &memgraph))
         }
     }
