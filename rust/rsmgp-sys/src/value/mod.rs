@@ -23,14 +23,13 @@ use crate::memgraph::*;
 use crate::mgp::*;
 use crate::path::*;
 use crate::result::*;
+use crate::temporal;
 use crate::vertex::*;
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 // Required here, if not present tests linking fails.
 #[double]
 use crate::mgp::ffi;
 use mockall_double::double;
-
-mod temporal;
 
 /// Creates a copy of the provided string.
 ///
