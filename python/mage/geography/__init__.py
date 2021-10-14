@@ -23,4 +23,5 @@ from mage.geography.vehicle_routing import (  # noqa: F401, F402, F403
     InvalidDepotException,
     InvalidRouteException,
     get_route_length,
+    is_location_contained_in_result,
 )

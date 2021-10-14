@@ -96,8 +96,12 @@ def get_route_length(vrp_route: VRPRoute, distance_matrix: np.ndarray):
     return length
 
 
-class DynamicSolutionIterator:
-    def __init__(self, paths, new_location) -> None:
+def is_location_contained_in_result(vrp_result: VRPResult, location_id: int) -> bool:
+    return location_id in [x for routes in vrp_result.routes for x in routes.paths]
+
+
+class VRPDynamicSolutionIterator:
+    def __init__(self, paths: List[int], new_location: int) -> None:
         self.paths = paths
         self.new_location = new_location
         self.current_path_index = 0
@@ -106,11 +110,11 @@ class DynamicSolutionIterator:
     def __iter__(self):
         return self
 
-    def __next__(self):
+    def __next__(self) -> VRPResult:
         if self.current_path_index >= len(self.paths):
             raise StopIteration
 
-        result = self.get_dynamic_solution()
+        result = self._next_element()
 
         self._update_indexes()
 
@@ -125,7 +129,7 @@ class DynamicSolutionIterator:
         else:
             self.current_position_index += 1
 
-    def get_dynamic_solution(self):
+    def _next_element(self) -> VRPResult:
         dynamic_paths = []
         for (index, path) in enumerate(self.paths):
             if index != self.current_path_index:
@@ -142,15 +146,35 @@ class DynamicSolutionIterator:
         return VRPResult([VRPRoute(x) for x in dynamic_paths])
 
 
-class DynamicRouting:
-    def __init__(self, distance_matrix) -> None:
+class DynamicRouting(VRPSolver):
+    def __init__(
+        self,
+        distance_matrix: np.ndarray,
+        initial_vrp_result: VRPResult,
+        new_locations: List[int],
+    ) -> None:
         self.distance_matrix = distance_matrix
+        self.initial_vrp_result = initial_vrp_result
+        self.new_locations = new_locations
+
+    def solve(self):
+        result = self.initial_vrp_result
+        for new_location in self.new_locations:
+            result = self.reroute(result, new_location)
+
+        self.vrp_result = result
+
+    def get_result(self):
+        if self.vrp_result is None:
+            raise VRPResultNotPresent("VRP Result not yet present!")
+
+        return self.vrp_result
 
     def reroute(self, vrp_routes: VRPResult, new_location_idx: int) -> VRPResult:
         paths = []
         [paths.append(route.paths.copy()) for route in vrp_routes.routes]
 
-        dynamic_solution_iterator = DynamicSolutionIterator(paths, new_location_idx)
+        dynamic_solution_iterator = VRPDynamicSolutionIterator(paths, new_location_idx)
 
         best_solution = None
         best_distance = None
@@ -168,4 +192,8 @@ class InvalidDepotException(Exception):
 
 
 class InvalidRouteException(Exception):
+    pass
+
+
+class VRPResultNotPresent(Exception):
     pass

@@ -1,4 +1,8 @@
-from mage.geography.vehicle_routing import DynamicRouting, VRPResult
+from mage.geography.vehicle_routing import (
+    DynamicRouting,
+    VRPResult,
+    is_location_contained_in_result,
+)
 from mage.geography import (
     create_distance_matrix,
     LATITUDE,
@@ -10,7 +14,7 @@ from typing import Dict, List, Tuple
 
 import mgp
 
-__routes = None
+__routing_result = None
 
 
 class DepotUnspecifiedException(Exception):
@@ -47,9 +51,15 @@ def get_depot_index(vertices: mgp.Vertices, depot_node: mgp.Vertex):
     raise DepotUnspecifiedException("No depot location specified!")
 
 
-def update_routes(vrp_result: VRPResult):
-    global __routes
-    __routes = vrp_result
+def get_vrp_location_id(vertices: mgp.Vertices, vertex: mgp.Vertex):
+    for (idx, v) in enumerate(vertices):
+        if v == vertex:
+            return idx
+
+
+def update_routing_result(vrp_result: VRPResult):
+    global __routing_result
+    __routing_result = vrp_result
 
 
 def create_output_from_result(result: VRPResult) -> List[Tuple[int, int, int]]:
@@ -61,12 +71,6 @@ def create_output_from_result(result: VRPResult) -> List[Tuple[int, int, int]]:
         for (vehicle_number, route) in enumerate(result.routes)
         for i in range(len(route) - 1)
     ]
-
-
-def get_location_vrp_id(vertices: mgp.Vertices, vertex: mgp.Vertex):
-    for (idx, v) in enumerate(vertices):
-        if v == vertex:
-            return idx
 
 
 @mgp.read_proc
@@ -105,7 +109,7 @@ def route(
 
     output = create_output_from_result(result)
 
-    update_routes(result)
+    update_routing_result(result)
 
     return [
         mgp.Record(
@@ -116,30 +120,40 @@ def route(
 
 
 @mgp.read_proc
-def re_route(
+def reroute(
     context: mgp.ProcCtx,
     new_locations: List[mgp.Vertex],
 ) -> mgp.Record(
     from_vertex=mgp.Vertex, to_vertex=mgp.Vertex, vehicle_id=mgp.Nullable[int]
 ):
-    global __routes
-    if __routes is None:
+    """
+    vrp.reroute(new_locations) returns the same fields as the method vrp.route. Reffer to that method instead.
+    Input arguments to the procedure are:
+        * `new_locations` - vertexes of the locations that want to be included in the solution.
+    """
+    global __routing_result
+    if __routing_result is None:
         return
-        
+
+    initial_routing_result = __routing_result
     vertices = [v for v in context.graph.vertices]
+    vrp_location_indexes = [get_vrp_location_id(x) for x in new_locations]
+    if is_location_contained_in_result(initial_routing_result, new_locations):
+        raise NewLocationAlreadyInVRPResultException(
+            "New location already in VRP result!"
+        )
+
     distance_matrix = get_distance_matrix(vertices)
 
-    dynamical_router = DynamicRouting(distance_matrix)
-    routes = __routes
+    dynamical_router = DynamicRouting(
+        distance_matrix, initial_routing_result, vrp_location_indexes
+    )
+    dynamical_router.solve()
+    vrp_result = dynamical_router.get_result()
 
-    for new_location in new_locations:
-        routes = dynamical_router.reroute(routes, get_location_vrp_id(vertices, new_location))
+    output = create_output_from_result(vrp_result)
 
-    __routes = routes
-    
-    output = create_output_from_result(routes)
-
-    update_routes(routes)
+    update_routing_result(vrp_result)
 
     return [
         mgp.Record(
@@ -147,3 +161,7 @@ def re_route(
         )
         for o in output
     ]
+
+
+class NewLocationAlreadyInVRPResultException(Exception):
+    pass
