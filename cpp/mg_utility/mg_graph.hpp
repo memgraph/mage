@@ -241,11 +241,11 @@ class Graph : public GraphView<TSize> {
   ///
   /// @param node_id Memgraphs's inner ID
   ///
-  TSize GetInnerNodeId(std::uint64_t memgraph_id) {
+  TSize GetInnerNodeId(std::uint64_t memgraph_id) const override {
     if (memgraph_to_inner_id_.find(memgraph_id) == memgraph_to_inner_id_.end()) {
       throw mg_exception::InvalidIDException();
     }
-    return memgraph_to_inner_id_[memgraph_id];
+    return memgraph_to_inner_id_.at(memgraph_id);
   }
 
   ///
@@ -253,11 +253,15 @@ class Graph : public GraphView<TSize> {
   ///
   /// @param node_id view's inner ID
   ///
-  std::uint64_t GetMemgraphNodeId(TSize node_id) {
+  std::uint64_t GetMemgraphNodeId(TSize node_id) const override {
     if (inner_to_memgraph_id_.find(node_id) == inner_to_memgraph_id_.end()) {
       throw mg_exception::InvalidIDException();
     }
-    return inner_to_memgraph_id_[node_id];
+    return inner_to_memgraph_id_.at(node_id);
+  }
+
+  bool NodeExists(TSize memgraph_id) const override {
+    return memgraph_to_inner_id_.find(memgraph_id) != memgraph_to_inner_id_.end();
   }
 
   /// Removes all edges and nodes from graph.

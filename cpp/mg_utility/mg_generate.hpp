@@ -29,6 +29,24 @@ std::unique_ptr<mg_graph::Graph<>> BuildGraph(
 }
 
 ///
+/// @brief Builds the undirected graph from a given list of nodes and a list of edges.
+/// Nodes shouldn't be zero-indexed
+///
+///@param nodes Nodes in newly built graph
+///@param edges Edges in newly built graph
+///@return std::unique_ptr<mg_graph::Graph<>> Pointer to the created graph
+///
+std::unique_ptr<mg_graph::Graph<>> BuildGraph(
+    const std::vector<std::uint64_t> &nodes, const std::vector<std::pair<std::uint64_t, std::uint64_t>> &edges,
+    const mg_graph::GraphType graph_type = mg_graph::GraphType::kUndirectedGraph) {
+  auto G = std::make_unique<mg_graph::Graph<>>();
+  for (auto node_id : nodes) G->CreateNode(node_id);
+  for (const auto [from, to] : edges) G->CreateEdge(from, to, graph_type);
+
+  return G;
+}
+
+///
 /// @brief Generates random undirected graph with a given numer of nodes and edges.
 /// The generated graph is not picked out of a uniform distribution.
 ///

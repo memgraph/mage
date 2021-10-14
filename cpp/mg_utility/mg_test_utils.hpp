@@ -90,12 +90,14 @@ double AverageAbsoluteError(const std::vector<T> &result, const std::vector<T> &
 /// false otherwise
 ///
 template <typename T>
-bool TestEqualVectors(const std::vector<T> &result, const std::vector<T> &correct) {
+bool TestEqualVectors(const std::vector<T> &result, const std::vector<T> &correct,
+                      const double absolute_error = ABSOLUTE_ERROR_EPSILON,
+                      double average_error = AVERAGE_ABSOLUTE_ERROR_EPSILON) {
   auto max_absolute_error = MaxAbsoluteError(result, correct);
-  if (max_absolute_error >= ABSOLUTE_ERROR_EPSILON) return false;
+  if (max_absolute_error >= absolute_error) return false;
 
   auto average_absolute_error = AverageAbsoluteError(result, correct);
-  if (average_absolute_error >= AVERAGE_ABSOLUTE_ERROR_EPSILON) return false;
+  if (average_absolute_error >= average_error) return false;
 
   return true;
 }
