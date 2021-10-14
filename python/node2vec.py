@@ -1,3 +1,5 @@
+from itertools import chain, repeat
+from inspect import cleandoc
 from typing import List, Dict
 
 import gensim
@@ -19,7 +21,7 @@ word2vec_params = {
 
 
 def learn_embeddings(
-    walks: List[List[int]], **word2vec_params
+        walks: List[List[int]], **word2vec_params
 ) -> Dict[int, List[float]]:
     model = gensim.models.Word2Vec(sentences=walks, **word2vec_params)
 
@@ -32,18 +34,18 @@ def learn_embeddings(
 
 @mgp.read_proc
 def set_word2vec_params(
-    ctx: mgp.ProcCtx,
-    vector_size=100,
-    alpha=0.025,
-    window=5,
-    min_count=5,
-    seed=1,
-    workers=3,
-    min_alpha=0.0001,
-    sg=1,
-    hs=0,
-    negative=5,
-    epochs=5,
+        ctx: mgp.ProcCtx,
+        vector_size=100,
+        alpha=0.025,
+        window=5,
+        min_count=5,
+        seed=1,
+        workers=3,
+        min_alpha=0.0001,
+        sg=1,
+        hs=0,
+        negative=5,
+        epochs=5,
 ) -> mgp.Record(
     vector_size=int,
     window=int,
@@ -118,14 +120,34 @@ def set_word2vec_params(
 
 @mgp.read_proc
 def get_embeddings(
-    ctx: mgp.ProcCtx,
-    edges: List[mgp.Edge],
-    is_directed: bool = False,
-    p=1,
-    q=1,
-    num_walks=4,
-    walk_length=5,
+        ctx: mgp.ProcCtx,
+        edges: List[mgp.Edge],
+        is_directed: bool = False,
+        p=1.0,
+        q=1.0,
+        num_walks=4,
+        walk_length=5,
 ) -> mgp.Record(node=mgp.Number, embedding=mgp.List[mgp.Number]):
+    """
+    Function to get node embeddings. Uses gensim.models.Word2Vec params.
+
+    Parameters
+    ----------
+    edges : List[mgp.Edge]
+        All the edges in graph.
+    is_directed : bool, optional
+        If bool=True, graph is treated as directed, else not directed
+    p : float, optional
+        Return hyperparameter for calculating transition probabilities.
+    q : float, optional
+        Inout hyperparameter for calculating transition probabilities.
+    num_walks : int, optional
+        Number of walks per node in walk sampling.
+    walk_length : int, optional
+        Length of one walk in walk sampling.
+
+
+    """
     edges_weights = {}
 
     for edge in edges:
@@ -139,7 +161,7 @@ def get_embeddings(
         p=int(p), q=int(q), num_walks=int(num_walks), walk_length=int(walk_length)
     )
     walks = second_order_random_walk.sample_node_walks(graph)
-    print("walks", walks)
+
     embeddings = learn_embeddings(walks, **word2vec_params)
 
     for node_id, embedding in embeddings.items():
@@ -149,3 +171,22 @@ def get_embeddings(
         mgp.Record(node=int(node_id), embedding=embedding)
         for node_id, embedding in embeddings.items()
     ]
+
+
+@mgp.read_proc
+def help() -> mgp.Record(name=str, value=str):
+    """Shows manual page for node2vec"""
+    records = []
+
+    def make_records(name, doc):
+        return (
+            mgp.Record(name=n, value=v)
+            for n, v in zip(chain([name], repeat("")), cleandoc(doc).splitlines())
+        )
+
+    for func in (help, set_word2vec_params, get_embeddings):
+        records.extend(
+            make_records("Procedure '{}'".format(func.__name__), func.__doc__)
+        )
+
+    return records

@@ -87,8 +87,6 @@ class SecondOrderRandomWalk:
             else:
                 unnorm_trans_probs.append(edge_weight / self.q)
 
-            if src_node_id == 0 and dest_node_id == 31:
-                print(dest_neighbor_id, unnorm_trans_probs[-1])
 
         norm_const = sum(unnorm_trans_probs)
         norm_trans_probs = np.array(unnorm_trans_probs) / norm_const
@@ -107,9 +105,5 @@ class SecondOrderRandomWalk:
                     (edge[1], edge[0]),
                     self.calculate_edge_transition_probs(graph, edge[1], edge[0]),
                 )
-
-        for edge in graph.get_edges():
-            print(edge, graph.get_edge_transition_probs(edge))
-        print()
 
         return
