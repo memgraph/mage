@@ -79,9 +79,19 @@ impl Iterator for PropertiesIterator {
         unsafe {
             let data = if self.is_first {
                 self.is_first = false;
-                ffi::mgp_properties_iterator_get(self.ptr)
+                invoke_mgp_func!(
+                    *mut mgp_property,
+                    ffi::mgp_properties_iterator_get,
+                    self.ptr
+                )
+                .unwrap()
             } else {
-                ffi::mgp_properties_iterator_next(self.ptr)
+                invoke_mgp_func!(
+                    *mut mgp_property,
+                    ffi::mgp_properties_iterator_next,
+                    self.ptr
+                )
+                .expect("Unable to provide next property. Iteration problem.")
             };
 
             if data.is_null() {

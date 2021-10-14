@@ -22,7 +22,9 @@ use crate::{mock_mgp_once, with_dummy};
 #[test]
 #[serial]
 fn test_mgp_copy() {
-    mock_mgp_once!(mgp_path_copy_context, |_, _| null_mut());
+    mock_mgp_once!(mgp_path_copy_context, |_, _, _| {
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
+    });
 
     with_dummy!(|memgraph: &Memgraph| {
         unsafe {
@@ -44,17 +46,22 @@ fn test_mgp_ptr() {
 #[test]
 #[serial]
 fn test_size() {
-    mock_mgp_once!(mgp_path_size_context, |_| 0);
+    mock_mgp_once!(mgp_path_size_context, |_, size_ptr| unsafe {
+        (*size_ptr) = 2;
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
 
     with_dummy!(Path, |path: &Path| {
-        assert_eq!(path.size(), 0);
+        assert_eq!(path.size(), 2);
     });
 }
 
 #[test]
 #[serial]
 fn test_make_with_start() {
-    mock_mgp_once!(mgp_path_make_with_start_context, |_, _| null_mut());
+    mock_mgp_once!(mgp_path_make_with_start_context, |_, _, _| {
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
+    });
 
     with_dummy!(|memgraph: &Memgraph| {
         let vertex = Vertex::new(std::ptr::null_mut(), &memgraph);
@@ -65,7 +72,9 @@ fn test_make_with_start() {
 #[test]
 #[serial]
 fn test_expand() {
-    mock_mgp_once!(mgp_path_expand_context, |_, _| 0);
+    mock_mgp_once!(mgp_path_expand_context, |_, _| {
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
+    });
 
     with_dummy!(|memgraph: &Memgraph| {
         let edge = Edge::new(std::ptr::null_mut(), &memgraph);
@@ -77,7 +86,9 @@ fn test_expand() {
 #[test]
 #[serial]
 fn test_vertex_at() {
-    mock_mgp_once!(mgp_path_vertex_at_context, |_, _| null_mut());
+    mock_mgp_once!(mgp_path_vertex_at_context, |_, _, _| {
+        mgp_error::MGP_ERROR_OUT_OF_RANGE
+    });
 
     with_dummy!(Path, |path: &Path| {
         assert!(path.vertex_at(0).is_err());
@@ -87,7 +98,9 @@ fn test_vertex_at() {
 #[test]
 #[serial]
 fn test_edge_at() {
-    mock_mgp_once!(mgp_path_edge_at_context, |_, _| null_mut());
+    mock_mgp_once!(mgp_path_edge_at_context, |_, _, _| {
+        mgp_error::MGP_ERROR_OUT_OF_RANGE
+    });
 
     with_dummy!(Path, |path: &Path| {
         assert!(path.edge_at(0).is_err());
