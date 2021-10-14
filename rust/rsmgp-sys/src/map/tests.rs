@@ -24,7 +24,9 @@ use crate::{mock_mgp_once, with_dummy};
 #[test]
 #[serial]
 fn test_make_empty() {
-    mock_mgp_once!(mgp_map_make_empty_context, |_| null_mut());
+    mock_mgp_once!(mgp_map_make_empty_context, |_, _| {
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
+    });
 
     with_dummy!(|memgraph: &Memgraph| {
         let value = Map::make_empty(&memgraph);
@@ -35,13 +37,21 @@ fn test_make_empty() {
 #[test]
 #[serial]
 fn test_mgp_copy() {
-    mock_mgp_once!(mgp_map_make_empty_context, |_| unsafe { alloc_mgp_map() });
-    let ctx_iter_items = mgp_map_iter_items_context();
-    ctx_iter_items
-        .expect()
-        .times(1)
-        .returning(|_, _| unsafe { alloc_mgp_map_items_iterator() });
-    mock_mgp_once!(mgp_map_items_iterator_get_context, |_| { null_mut() });
+    mock_mgp_once!(mgp_map_make_empty_context, |_, map_ptr_ptr| unsafe {
+        (*map_ptr_ptr) = alloc_mgp_map();
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
+    mock_mgp_once!(mgp_map_iter_items_context, |_, _, iter_ptr_ptr| unsafe {
+        (*iter_ptr_ptr) = alloc_mgp_map_items_iterator();
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
+    mock_mgp_once!(
+        mgp_map_items_iterator_get_context,
+        |_, item_ptr_ptr| unsafe {
+            (*item_ptr_ptr) = null_mut();
+            mgp_error::MGP_ERROR_NO_ERROR
+        }
+    );
     mock_mgp_once!(mgp_map_destroy_context, |_| {});
     mock_mgp_once!(mgp_map_items_iterator_destroy_context, |_| {});
 
@@ -56,10 +66,13 @@ fn test_mgp_copy() {
 #[test]
 #[serial]
 fn test_insert() {
-    mock_mgp_once!(mgp_value_make_null_context, |_| unsafe {
-        alloc_mgp_value()
+    mock_mgp_once!(mgp_value_make_null_context, |_, value_ptr_ptr| unsafe {
+        (*value_ptr_ptr) = alloc_mgp_value();
+        mgp_error::MGP_ERROR_NO_ERROR
     });
-    mock_mgp_once!(mgp_map_insert_context, |_, _, _| 0);
+    mock_mgp_once!(mgp_map_insert_context, |_, _, _| {
+        mgp_error::MGP_ERROR_KEY_ALREADY_EXISTS
+    });
     mock_mgp_once!(mgp_value_destroy_context, |_| {});
 
     with_dummy!(Map, |map: &Map| {
@@ -71,18 +84,24 @@ fn test_insert() {
 #[test]
 #[serial]
 fn test_size() {
-    mock_mgp_once!(mgp_map_size_context, |_| 0);
+    mock_mgp_once!(mgp_map_size_context, |_, size_ptr| unsafe {
+        (*size_ptr) = 3;
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
 
     with_dummy!(Map, |map: &Map| {
         let value = map.size();
-        assert_eq!(value, 0);
+        assert_eq!(value, 3);
     });
 }
 
 #[test]
 #[serial]
 fn test_at() {
-    mock_mgp_once!(mgp_map_at_context, |_, _| null_mut());
+    mock_mgp_once!(mgp_map_at_context, |_, _, value_ptr_ptr| unsafe {
+        (*value_ptr_ptr) = null_mut();
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
 
     with_dummy!(Map, |map: &Map| {
         let value = map.at(c_str!("key"));
@@ -93,7 +112,9 @@ fn test_at() {
 #[test]
 #[serial]
 fn test_empty_map_iter() {
-    mock_mgp_once!(mgp_map_iter_items_context, |_, _| null_mut());
+    mock_mgp_once!(mgp_map_iter_items_context, |_, _, _| {
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
+    });
 
     with_dummy!(Map, |map: &Map| {
         let iter = map.iter();
