@@ -1,4 +1,5 @@
 #include <cmath>
+
 #include <mg_graph.hpp>
 
 #include "dynamic_label_propagation.hpp"
@@ -89,18 +90,47 @@ void LabelRankT::reset_times_updated() {
   }
 }
 
-std::int64_t LabelRankT::get_label(std::uint64_t node_id) {
+std::int64_t LabelRankT::node_label(std::uint64_t node_id) {
   std::int64_t node_label = -1;
   double max_P = 0;
 
   for (const auto [label, P] : label_Ps[node_id]) {
-    if (P > max_P || (P == max_P && label < node_label)) {
+    if (P > max_P || (P == max_P && (std::int64_t) label < node_label)) {
       max_P = P;
       node_label = label;
     }
   }
 
   return node_label;
+}
+
+std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::graph_labels() {
+  std::unordered_map<std::uint64_t, std::int64_t> labels;
+
+  std::set<std::int64_t> labels_ordered;
+  std::map<std::int64_t, std::int64_t> lookup;
+
+  for (const auto [node, _] : label_Ps) {
+    labels_ordered.insert(node_label(node));
+  }
+
+  int64_t label_i = 1;
+  for (const auto label : labels_ordered) {
+    if (label == -1) {
+      lookup[label] = label;
+    } else {
+      lookup[label] = label_i;
+      label_i++;
+    }
+  }
+
+  for (const auto [node, _] : label_Ps) {
+    labels.insert({node, lookup[node_label(node)]});
+  }
+
+  this->graph.reset();
+
+  return labels;
 }
 
 std::vector<std::uint64_t> LabelRankT::most_probable_labels(
@@ -127,14 +157,15 @@ bool LabelRankT::distinct_enough(std::uint64_t node_i_id,
   std::vector<std::uint64_t> labels_i = most_probable_labels(node_i_id);
   std::uint64_t label_similarity = 0;
 
-  int node_i_degree = 0;
-  for (const auto node_j_id : neighbors_memgraph_ids(node_i_id)) {
-    node_i_degree++;
+  auto neighbors_ids = neighbors_memgraph_ids(node_i_id);
+  for (const auto node_j_id : neighbors_ids) {
     std::vector<std::uint64_t> labels_j = most_probable_labels(node_j_id);
 
     if (is_subset(labels_i, labels_j)) label_similarity++;
   }
 
+  int node_i_degree = neighbors_ids.size();
+  
   return label_similarity <= node_i_degree * similarity_threshold;
 }
 
@@ -237,52 +268,11 @@ std::pair<bool, std::uint64_t> LabelRankT::iteration(
 }
 #pragma endregion label_propagation_steps
 
-void LabelRankT::set_parameters(std::unique_ptr<mg_graph::Graph<>> graph,
-                                std::string weight_property, double w_selfloop,
-                                double similarity_threshold, double exponent,
-                                double min_value) {
-  this->graph = std::move(graph);
-  this->weight_property = weight_property;
-  this->w_selfloop = w_selfloop;
-  this->similarity_threshold = similarity_threshold;
-  this->exponent = exponent;
-  this->min_value = min_value;
-}
-
-std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::get_labels() {
-  std::unordered_map<std::uint64_t, std::int64_t> labels;
-  if (calculated) {
-    std::set<std::int64_t> labels_ordered;
-    std::map<std::int64_t, std::int64_t> lookup;
-
-    for (const auto [node, _] : label_Ps) {
-      labels_ordered.insert(get_label(node));
-    }
-
-    int64_t label_i = 1;
-    for (const auto label : labels_ordered) {
-      if (label == -1) {
-        lookup[label] = label;
-      } else {
-        lookup[label] = label_i;
-        label_i++;
-      }
-    }
-
-    for (const auto [node, _] : label_Ps) {
-      labels.insert({node, lookup[get_label(node)]});
-    }
-
-    return labels;
-  }
-
-  return calculate_labels();
-}
-
 std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::calculate_labels(
-    std::uint64_t max_iterations, std::uint64_t max_updates,
+    std::unique_ptr<mg_graph::Graph<>>& graph,
     std::unordered_set<std::uint64_t> changed_nodes,
     std::unordered_set<std::uint64_t> to_delete) {
+  this->graph = std::move(graph);
   bool incremental = changed_nodes.size() >= 1 ? true : false;
 
   if (incremental) {
@@ -299,9 +289,6 @@ std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::calculate_labels(
     }
   }
 
-  this->max_iterations = max_iterations;
-  this->max_updates = max_updates;
-
   for (std::uint64_t i = 0; i < this->max_iterations; i++) {
     auto [none_updated, most_updates] =
         iteration(incremental, changed_nodes, to_delete);
@@ -311,15 +298,41 @@ std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::calculate_labels(
   calculated = true;
   reset_times_updated();
 
-  return get_labels();
+  return graph_labels();
+}
+
+std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::get_labels(
+    std::unique_ptr<mg_graph::Graph<>>& graph) {
+  std::unordered_map<std::uint64_t, std::int64_t> labels;
+  if (!calculated) {
+    return calculate_labels(graph);
+  }
+
+  return graph_labels();
+}
+
+std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::set_labels(
+    std::unique_ptr<mg_graph::Graph<>>& graph, std::string weight_property,
+    double w_selfloop, double similarity_threshold, double exponent,
+    double min_value, std::uint64_t max_iterations, std::uint64_t max_updates) {
+  this->weight_property = weight_property;
+  this->w_selfloop = w_selfloop;
+  this->similarity_threshold = similarity_threshold;
+  this->exponent = exponent;
+  this->min_value = min_value;
+  this->max_iterations = max_iterations;
+  this->max_updates = max_updates;
+
+  return calculate_labels(graph);
 }
 
 std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::update_labels(
+    std::unique_ptr<mg_graph::Graph<>>& graph,
     std::vector<std::uint64_t> modified_nodes,
     std::vector<std::pair<std::uint64_t, std::uint64_t>> modified_edges,
     std::vector<std::uint64_t> deleted_nodes,
     std::vector<std::pair<std::uint64_t, std::uint64_t>> deleted_edges) {
-  if (!calculated) return calculate_labels();
+  if (!calculated) return calculate_labels(graph);
 
   std::unordered_set<std::uint64_t> changed_nodes(modified_nodes.begin(),
                                                   modified_nodes.end());
@@ -336,7 +349,6 @@ std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::update_labels(
     if (to_delete.count(edge.second) == 0) changed_nodes.insert(edge.second);
   }
 
-  return calculate_labels(max_iterations, max_updates, changed_nodes,
-                          to_delete);
+  return calculate_labels(graph, changed_nodes, to_delete);
 }
 }  // namespace LabelRankT
