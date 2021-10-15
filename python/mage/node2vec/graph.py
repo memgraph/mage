@@ -4,7 +4,7 @@ from typing import List, Tuple, Dict
 
 class Graph(ABC):
     def __init__(self):
-        self._nodes = []
+        self._nodes: List[int] = []
         self._is_directed = False
 
     @property
@@ -57,7 +57,6 @@ class Graph(ABC):
 class BasicGraph(Graph):
     def __init__(self, edges_weights: Dict[Tuple[int, int], float], is_directed: bool):
         super().__init__()
-        self._nodes: List[int] = list()
         self._edges_weights = edges_weights
         self._is_directed = is_directed
         self._graph = {}
@@ -67,7 +66,7 @@ class BasicGraph(Graph):
 
     @property
     def nodes(self) -> List[int]:
-        return self._nodes
+        return list(self._graph.keys())
 
     @property
     def graph(self):
@@ -101,7 +100,14 @@ class BasicGraph(Graph):
         )
 
     def get_edges(self) -> List[Tuple[int, int]]:
-        return list(self._edges_weights.keys())
+        edges = list(self._edges_weights.keys())
+        if self._is_directed:
+            return edges
+        edges_different_dir = []
+        for edge in edges:
+            edges_different_dir.append((edge[1], edge[0]))
+        edges.extend(edges_different_dir)
+        return edges
 
     def get_edge_weight(self, src_node_id: int, dest_node_id: int) -> float:
         if (src_node_id, dest_node_id) not in self._edges_weights and self.is_directed:

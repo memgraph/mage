@@ -99,10 +99,12 @@ class SecondOrderRandomWalk:
                 (edge[0], edge[1]),
                 self.calculate_edge_transition_probs(graph, edge[0], edge[1]),
             )
-            if not graph.is_directed:
-                graph.set_edge_transition_probs(
-                    (edge[1], edge[0]),
-                    self.calculate_edge_transition_probs(graph, edge[1], edge[0]),
-                )
+            if graph.is_directed:
+                continue
+
+            graph.set_edge_transition_probs(
+                (edge[1], edge[0]),
+                self.calculate_edge_transition_probs(graph, edge[1], edge[0]),
+            )
 
         return
