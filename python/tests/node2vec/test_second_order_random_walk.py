@@ -69,3 +69,25 @@ def test_graph_transition_probs(dataset, is_directed):
                 atol=1e-5,
             )
         )
+
+
+@pytest.mark.parametrize(
+    "dataset, is_directed",
+    [
+        (EDGES_DICT_SAME_WEIGHTS, True),
+        (EDGES_DICT_SAME_WEIGHTS, False),
+    ],
+)
+def test_second_order_walks(dataset, is_directed):
+    basic_graph = get_basic_graph(dataset, is_directed)
+    second_order_random_walk = SecondOrderRandomWalk(
+        p=2, q=0.5, walk_length=3, num_walks=2
+    )
+
+    walks = second_order_random_walk.sample_node_walks(basic_graph)
+
+    for walk in walks:
+        for i in range(1, len(walk)):
+            assert basic_graph.has_edge(walk[i - 1], walk[i])
+
+    assert len(walks) == second_order_random_walk.num_walks * len(basic_graph.nodes)
