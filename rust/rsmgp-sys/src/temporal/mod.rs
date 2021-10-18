@@ -172,6 +172,8 @@ impl LocalTime {
     }
 
     pub fn to_naive_time(&self) -> NaiveTime {
+        // Ideally this function should use NaiveTime::from_hms_nano, but because the issue with
+        // the LocalTime::minute method it cannot be used.
         let timestamp = self.timestamp();
         let seconds = (timestamp / MICROS_PER_SECOND) as u32;
         let micros = (timestamp % MICROS_PER_SECOND) as u32;
@@ -190,6 +192,9 @@ impl LocalTime {
     }
 
     pub fn minute(&self) -> u32 {
+        // As of Memgraph 2.0.1 there is a bug in the C API of mgp_local_time, which prevents the
+        // usage of mgp_local_time_get_minute. Therefore this function cannot be used until the bug
+        // is fixed.
         unsafe { invoke_mgp_func!(i32, ffi::mgp_local_time_get_minute, self.ptr).unwrap() as u32 }
     }
 
