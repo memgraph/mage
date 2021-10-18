@@ -122,15 +122,15 @@ class BasicGraph(Graph):
     def init_graph(self) -> None:
         for edge in self._edges_weights:
             if edge[0] not in self._graph:
-                self._graph[edge[0]] = list()
-            self._graph[edge[0]].append(edge[1])
+                self._graph[edge[0]] = set()
+            self._graph[edge[0]].add(edge[1])
 
             if not self.is_directed:
                 if edge[1] not in self._graph:
-                    self._graph[edge[1]] = list()
-                self._graph[edge[1]].append(edge[0])
+                    self._graph[edge[1]] = set()
+                self._graph[edge[1]].add(edge[0])
 
         self._nodes = self._graph.keys()
 
         for node in self._graph:
-            self._graph[node] = sorted(self._graph[node])
+            self._graph[node] = sorted(list(self._graph[node]))
