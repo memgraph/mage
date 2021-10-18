@@ -20,7 +20,7 @@ class PagerankOnlineTest : public ::testing::Test {
 TEST_F(PagerankOnlineTest, SmallGraphSet) {
   auto results = pagerank_online_alg::SetPagerank(*graph);
 
-  std::vector<std::pair<uint64_t, double>> expected = {{0, 0.268}, {1, 0.081}, {2, 0.289}, {7, 0.22}, {4, 0.081}};
+  std::vector<std::pair<uint64_t, double>> expected = {{0, 0.328}, {1, 0.081}, {2, 0.289}, {7, 0.22}, {4, 0.081}};
   ASSERT_TRUE(mg_test_utility::TestEqualVectorPairs(results, expected, 0.05));
 }
 
@@ -165,11 +165,15 @@ TEST_F(PagerankOnlineTest, DeleteAndRevertGraph) {
   graph = mg_generate::BuildGraph({}, {}, mg_graph::GraphType::kDirectedGraph);
   auto results = pagerank_online_alg::UpdatePagerank(*graph, {}, {}, {0, 1, 2, 7, 4}, {{0, 2}, {0, 7}, {1, 2}, {2, 0}});
 
+  for (auto const [node_id, rank] : results) {
+    std::cout << std::to_string(node_id) << " " << std::to_string(rank) << std::endl;
+  }
+
   graph =
       mg_generate::BuildGraph({0, 1, 2, 7, 4}, {{0, 2}, {0, 7}, {1, 2}, {2, 0}}, mg_graph::GraphType::kDirectedGraph);
   results = pagerank_online_alg::UpdatePagerank(*graph, {0, 1, 2, 7, 4}, {{0, 2}, {0, 7}, {1, 2}, {2, 0}}, {}, {});
 
-  std::vector<std::pair<uint64_t, double>> expected = {{0, 0.268}, {1, 0.081}, {2, 0.289}, {7, 0.22}, {4, 0.081}};
+  std::vector<std::pair<uint64_t, double>> expected = {{0, 0.328}, {1, 0.081}, {2, 0.289}, {7, 0.22}, {4, 0.081}};
   ASSERT_TRUE(mg_test_utility::TestEqualVectorPairs(results, expected, 0.05));
 }
 
