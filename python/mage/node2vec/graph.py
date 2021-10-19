@@ -148,7 +148,7 @@ class BasicGraph(Graph):
         return self._graph[node_id] if node_id in self._graph else []
 
     def init_graph(self) -> None:
-        for edge in self._edges_weights:
+        for node_from, node_to in self._edges_weights:
             if edge[0] not in self._graph:
                 self._graph[edge[0]] = set()
             self._graph[edge[0]].add(edge[1])
