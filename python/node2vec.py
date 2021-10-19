@@ -6,7 +6,7 @@ import gensim
 import mgp
 
 from mage.node2vec.second_order_random_walk import SecondOrderRandomWalk
-from mage.node2vec.graph import BasicGraph, Graph
+from mage.node2vec.graph import GraphHolder, Graph
 
 word2vec_params = {
     "min_count": 1,
@@ -157,7 +157,7 @@ def get_embeddings(
         dest_id = int(edge.to_vertex.properties.get("id", edge.to_vertex.id))
         edges_weights[(src_id, dest_id)] = edge_weight
 
-    graph: Graph = BasicGraph(edges_weights, is_directed)
+    graph: Graph = GraphHolder(edges_weights, is_directed)
     second_order_random_walk = SecondOrderRandomWalk(
         p=int(p), q=int(q), num_walks=int(num_walks), walk_length=int(walk_length)
     )

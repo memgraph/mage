@@ -3,7 +3,7 @@ from typing import List
 import numpy as np
 import pytest
 
-from mage.node2vec.graph import BasicGraph
+from mage.node2vec.graph import GraphHolder
 from mage.node2vec.second_order_random_walk import SecondOrderRandomWalk
 
 P = 2
@@ -100,8 +100,8 @@ DIRECT_GRAPH_FIRST_TRAVEL_TRANSITION_PROBS = {
 }
 
 
-def get_basic_graph(dataset, is_directed) -> BasicGraph:
-    return BasicGraph(dataset, is_directed)
+def get_basic_graph(dataset, is_directed) -> GraphHolder:
+    return GraphHolder(dataset, is_directed)
 
 
 def get_transition_probs(is_directed):

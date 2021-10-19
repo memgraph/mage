@@ -1,6 +1,6 @@
 import pytest
 
-from mage.node2vec.graph import BasicGraph
+from mage.node2vec.graph import GraphHolder
 
 
 DIRECT_GRAPH_EDGES_WEIGHTS = {
@@ -48,8 +48,8 @@ def is_directed(request):
 
 
 @pytest.fixture
-def basic_graph_from_dict(is_directed) -> BasicGraph:
-    return BasicGraph(DIRECT_GRAPH_EDGES_WEIGHTS, is_directed)
+def basic_graph_from_dict(is_directed) -> GraphHolder:
+    return GraphHolder(DIRECT_GRAPH_EDGES_WEIGHTS, is_directed)
 
 
 def test_graph_edges_from_dict(basic_graph_from_dict):

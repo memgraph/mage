@@ -77,7 +77,7 @@ class Graph(ABC):
         pass
 
 
-class BasicGraph(Graph):
+class GraphHolder(Graph):
     def __init__(self, edges_weights: Dict[Tuple[int, int], float], is_directed: bool):
         super().__init__(is_directed)
         self._edges_weights = edges_weights
