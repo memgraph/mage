@@ -4,20 +4,19 @@ from typing import List, Tuple, Dict
 
 class Graph(ABC):
     def __init__(self, is_directed: bool):
-        self._nodes: List[int] = []
-        self._is_directed = False
-        self._preprocessed_transition_probs = {}
-        self._first_travel_transition_probs = {}
         self._is_directed = is_directed
         self._graph = {}
-
-    @property
-    def graph(self):
-        return self._graph
+        self._nodes: List[int] = []
+        self._preprocessed_transition_probs = {}
+        self._first_travel_transition_probs = {}
 
     @property
     def is_directed(self):
         return self._is_directed
+
+    @property
+    def graph(self):
+        return self._graph
 
     @property
     def preprocessed_transition_probs(self) -> Dict[Tuple[int, int], List[float]]:
@@ -101,7 +100,6 @@ class BasicGraph(Graph):
     def __init__(self, edges_weights: Dict[Tuple[int, int], float], is_directed: bool):
         super().__init__(is_directed)
         self._edges_weights = edges_weights
-
         self.init_graph()
 
     def set_edge_transition_probs(
@@ -148,7 +146,7 @@ class BasicGraph(Graph):
         return self._graph[node_id] if node_id in self._graph else []
 
     def init_graph(self) -> None:
-        for node_from, node_to in self._edges_weights:
+        for edge in self._edges_weights:
             if edge[0] not in self._graph:
                 self._graph[edge[0]] = set()
             self._graph[edge[0]].add(edge[1])

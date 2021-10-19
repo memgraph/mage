@@ -1,4 +1,3 @@
-import gc
 from itertools import chain, repeat
 from inspect import cleandoc
 from typing import List, Dict
@@ -22,8 +21,8 @@ word2vec_params = {
 
 
 def learn_embeddings(
-    walks: List[List[str]], **word2vec_params
-) -> Dict[str, List[float]]:
+    walks: List[List[int]], **word2vec_params
+) -> Dict[int, List[float]]:
 
     model = gensim.models.Word2Vec(sentences=walks, **word2vec_params)
 
@@ -165,12 +164,6 @@ def get_embeddings(
     walks = second_order_random_walk.sample_node_walks(graph)
 
     embeddings = learn_embeddings(walks, **word2vec_params)
-
-    del graph
-    del walks
-    del second_order_random_walk
-    del edges_weights
-    gc.collect()
 
     for node_id, embedding in embeddings.items():
         embeddings[node_id] = [float(e) for e in embedding]
