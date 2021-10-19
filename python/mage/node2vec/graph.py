@@ -5,7 +5,6 @@ from typing import List, Tuple, Dict
 class Graph(ABC):
     def __init__(self, is_directed: bool):
         self._is_directed = is_directed
-        self._graph = {}
         self._nodes: List[int] = []
         self._preprocessed_transition_probs = {}
         self._first_travel_transition_probs = {}
@@ -13,10 +12,6 @@ class Graph(ABC):
     @property
     def is_directed(self):
         return self._is_directed
-
-    @property
-    def graph(self):
-        return self._graph
 
     @property
     def preprocessed_transition_probs(self) -> Dict[Tuple[int, int], List[float]]:
@@ -27,35 +22,21 @@ class Graph(ABC):
         return self._first_travel_transition_probs
 
     @property
+    @abstractmethod
     def nodes(self) -> List[int]:
-        return self._nodes
+        pass
 
     @nodes.setter
     def nodes(self, value):
         self._nodes = value
 
-    @nodes.deleter
-    def nodes(self):
-        print("deleter of nodes called")
-        del self._nodes
-
     @preprocessed_transition_probs.setter
     def preprocessed_transition_probs(self, value):
         self._preprocessed_transition_probs = value
 
-    @preprocessed_transition_probs.deleter
-    def preprocessed_transition_probs(self):
-        print("deleter of preprocessed_transition_probs called")
-        del self._preprocessed_transition_probs
-
     @first_travel_transition_probs.setter
     def first_travel_transition_probs(self, value):
         self._first_travel_transition_probs = value
-
-    @first_travel_transition_probs.deleter
-    def first_travel_transition_probs(self):
-        print("deleter of _first_travel_transition_probs called")
-        del self._first_travel_transition_probs
 
     @abstractmethod
     def has_edge(self, src_node_id: int, dest_node_id: int) -> bool:
@@ -100,7 +81,11 @@ class BasicGraph(Graph):
     def __init__(self, edges_weights: Dict[Tuple[int, int], float], is_directed: bool):
         super().__init__(is_directed)
         self._edges_weights = edges_weights
+        self._graph = {}
         self.init_graph()
+
+    def nodes(self) -> List[int]:
+        return list(self._graph.keys())
 
     def set_edge_transition_probs(
         self, edge: Tuple[int, int], transition_probs: List[float]
@@ -156,7 +141,7 @@ class BasicGraph(Graph):
                     self._graph[edge[1]] = set()
                 self._graph[edge[1]].add(edge[0])
 
-        self._nodes = self._graph.keys()
+        self.nodes = list(self._graph.keys())
 
         for node in self._graph:
             self._graph[node] = sorted(list(self._graph[node]))

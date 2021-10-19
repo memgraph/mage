@@ -83,22 +83,19 @@ class SecondOrderRandomWalk:
             else:
                 unnorm_trans_probs.append(edge_weight / self.q)
 
-        norm_const = sum(unnorm_trans_probs)
-        norm_trans_probs = np.array(unnorm_trans_probs) / norm_const
-
-        return norm_trans_probs
+        return math_functions.normalize(unnorm_trans_probs)
 
     def set_graph_transition_probs(self, graph: Graph) -> None:
 
-        for edge in graph.get_edges():
+        for (node_from, node_to) in graph.get_edges():
             graph.set_edge_transition_probs(
-                (edge[0], edge[1]),
-                self.calculate_edge_transition_probs(graph, edge[0], edge[1]),
+                (node_from, node_to),
+                self.calculate_edge_transition_probs(graph, node_from, node_to),
             )
             if graph.is_directed:
                 continue
 
             graph.set_edge_transition_probs(
-                (edge[1], edge[0]),
-                self.calculate_edge_transition_probs(graph, edge[1], edge[0]),
+                (node_to, node_from),
+                self.calculate_edge_transition_probs(graph, node_to, node_from),
             )
