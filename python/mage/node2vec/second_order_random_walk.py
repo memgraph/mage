@@ -13,15 +13,15 @@ class SecondOrderRandomWalk:
         self.num_walks = num_walks
         self.walk_length = walk_length
 
-    def sample_node_walks(self, graph: Graph) -> List[List[int]]:
+    def sample_node_walks(self, graph: Graph) -> List[List[str]]:
         self.set_first_travel_transition_probs(graph)
         self.set_graph_transition_probs(graph)
-
         walks = []
         for node in graph.nodes:
 
             for i in range(self.num_walks):
-                walks.append(self.sample_walk(graph, node))
+                walks.append(list(map(str, self.sample_walk(graph, node))))
+
         return walks
 
     def sample_walk(self, graph: Graph, start_node_id_int) -> List[int]:

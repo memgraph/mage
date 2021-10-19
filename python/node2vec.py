@@ -1,3 +1,5 @@
+import gc
+import sys
 from itertools import chain, repeat
 from inspect import cleandoc
 from typing import List, Dict
@@ -6,7 +8,7 @@ import gensim
 import mgp
 
 from mage.node2vec.second_order_random_walk import SecondOrderRandomWalk
-from mage.node2vec.graph import BasicGraph
+from mage.node2vec.graph import BasicGraph, Graph
 
 word2vec_params = {
     "min_count": 1,
@@ -21,9 +23,13 @@ word2vec_params = {
 
 
 def learn_embeddings(
-    walks: List[List[int]], **word2vec_params
-) -> Dict[int, List[float]]:
+    walks: List[List[str]], **word2vec_params
+) -> Dict[str, List[float]]:
+
     model = gensim.models.Word2Vec(sentences=walks, **word2vec_params)
+    print("embeddinzi gotovi")
+    model.save("word2vec.model")
+    print("embeddinzi spremljeni")
 
     vectors = model.wv.vectors
     indices = model.wv.index_to_key
@@ -127,7 +133,7 @@ def get_embeddings(
     q=1.0,
     num_walks=4,
     walk_length=5,
-) -> mgp.Record(node=mgp.Number, embedding=mgp.List[mgp.Number]):
+) -> mgp.Record(result=int):
     """
     Function to get node embeddings. Uses gensim.models.Word2Vec params.
 
@@ -156,21 +162,27 @@ def get_embeddings(
         dest_id = int(edge.to_vertex.properties.get("id", edge.to_vertex.id))
         edges_weights[(src_id, dest_id)] = edge_weight
 
-    graph = BasicGraph(edges_weights, is_directed)
+    graph: Graph = BasicGraph(edges_weights, is_directed)
     second_order_random_walk = SecondOrderRandomWalk(
         p=int(p), q=int(q), num_walks=int(num_walks), walk_length=int(walk_length)
     )
     walks = second_order_random_walk.sample_node_walks(graph)
 
     embeddings = learn_embeddings(walks, **word2vec_params)
+    print("embeddings calculated")
+    print("size in graph of embeddings", sys.getsizeof(embeddings))
+
+    del graph
+    del walks
+    del second_order_random_walk
+    del edges_weights
+    gc.collect()
 
     for node_id, embedding in embeddings.items():
         embeddings[node_id] = [float(e) for e in embedding]
-        print(node_id, embeddings[node_id])
-    return [
-        mgp.Record(node=int(node_id), embedding=embedding)
-        for node_id, embedding in embeddings.items()
-    ]
+        print(embeddings[node_id], "nodeid", node_id)
+
+    return mgp.Record(result=1)
 
 
 @mgp.read_proc

@@ -3,17 +3,60 @@ from typing import List, Tuple, Dict
 
 
 class Graph(ABC):
-    def __init__(self):
+    def __init__(self, is_directed: bool):
         self._nodes: List[int] = []
         self._is_directed = False
+        self._preprocessed_transition_probs = {}
+        self._first_travel_transition_probs = {}
+        self._is_directed = is_directed
+        self._graph = {}
 
     @property
-    def is_directed(self) -> bool:
+    def graph(self):
+        return self._graph
+
+    @property
+    def is_directed(self):
         return self._is_directed
+
+    @property
+    def preprocessed_transition_probs(self) -> Dict[Tuple[int, int], List[float]]:
+        return self._preprocessed_transition_probs
+
+    @property
+    def first_travel_transition_probs(self) -> Dict[int, List[float]]:
+        return self._first_travel_transition_probs
 
     @property
     def nodes(self) -> List[int]:
         return self._nodes
+
+    @nodes.setter
+    def nodes(self, value):
+        self._nodes = value
+
+    @nodes.deleter
+    def nodes(self):
+        print("deleter of nodes called")
+        del self._nodes
+
+    @preprocessed_transition_probs.setter
+    def preprocessed_transition_probs(self, value):
+        self._preprocessed_transition_probs = value
+
+    @preprocessed_transition_probs.deleter
+    def preprocessed_transition_probs(self):
+        print("deleter of preprocessed_transition_probs called")
+        del self._preprocessed_transition_probs
+
+    @first_travel_transition_probs.setter
+    def first_travel_transition_probs(self, value):
+        self._first_travel_transition_probs = value
+
+    @first_travel_transition_probs.deleter
+    def first_travel_transition_probs(self):
+        print("deleter of _first_travel_transition_probs called")
+        del self._first_travel_transition_probs
 
     @abstractmethod
     def has_edge(self, src_node_id: int, dest_node_id: int) -> bool:
@@ -56,25 +99,10 @@ class Graph(ABC):
 
 class BasicGraph(Graph):
     def __init__(self, edges_weights: Dict[Tuple[int, int], float], is_directed: bool):
-        super().__init__()
+        super().__init__(is_directed)
         self._edges_weights = edges_weights
-        self._is_directed = is_directed
-        self._graph = {}
-        self._preprocessed_transition_probs = {}
-        self._first_travel_transition_probs = {}
+
         self.init_graph()
-
-    @property
-    def nodes(self) -> List[int]:
-        return list(self._graph.keys())
-
-    @property
-    def graph(self):
-        return self._graph
-
-    @property
-    def is_directed(self) -> bool:
-        return self._is_directed
 
     def set_edge_transition_probs(
         self, edge: Tuple[int, int], transition_probs: List[float]
