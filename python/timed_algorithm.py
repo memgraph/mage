@@ -7,4 +7,3 @@ def execute() -> mgp.Record():
     :rtype: mgp.Record(mgp.Path, int)    
     """
     return mgp.Record()
-    
