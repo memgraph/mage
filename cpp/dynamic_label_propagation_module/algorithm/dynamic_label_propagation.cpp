@@ -80,7 +80,7 @@ void LabelRankT::remove_deleted_nodes(
 double LabelRankT::get_total_weight_between(std::uint64_t from_node_id,
                                             std::uint64_t to_node_id) {
   double total_weight = 0;
-  for (auto edge_id : graph->GetEdgesBetweenNodes(from_node_id, to_node_id)) {
+  for (auto edge_id : graph->GetEdgesBetweenNodes(graph->GetInnerNodeId(from_node_id), graph->GetInnerNodeId(to_node_id))) {
     auto edge = graph->GetEdge(edge_id);
 
     // edge direction check
