@@ -14,17 +14,23 @@ class LabelRankT {
 #pragma region parameters
   /// default edge weight
   double DEFAULT_WEIGHT = 1;
-  /// weight property name
-  std::string weight_property = "weight";
 
-  /// default self-loop weight
-  double w_selfloop = 1;
+  /// graph directedness
+  bool is_directed = false;
+  /// whether to use weights
+  bool is_weighted = false;
+
   /// similarity threshold used in the node selection step, values within [0, 1]
   double similarity_threshold = 0.7;
   /// exponent used in the inflation step
   double exponent = 4;
-  /// smallest acceptable probability in the cutoff step
+  /// lowest probability at the cutoff step
   double min_value = 0.1;
+
+  /// weight property name
+  std::string weight_property = "weight";
+  /// default self-loop weight
+  double w_selfloop = 1.0;
 
   /// maximum number of iterations
   std::uint64_t max_iterations = 100;
@@ -49,17 +55,19 @@ class LabelRankT {
 #pragma endregion structures
 
 #pragma region helper_methods
-  ///@brief Returns a vector of all graph’s nodes’ Memgraph IDs.
+  ///@brief Returns a vector of all graph nodes’ Memgraph IDs.
   ///
-  ///@return -- vector of all graph’s nodes’ Memgraph IDs
+  ///@return -- vector of all graph nodes’ Memgraph IDs
   std::vector<std::uint64_t> nodes_memgraph_ids();
 
-  ///@brief Returns neighbors’ Memgraph IDs for a given node’s Memgraph ID.
+  ///@brief Returns in-neighbors’ Memgraph IDs for a given node’s Memgraph ID.
+  /// If the graph is undirected, all neighbors are included.
   ///
   ///@param node_id -- given node’s Memgraph ID
   ///
   ///@return -- vector of neighbors’ Memgraph IDs
-  std::vector<std::uint64_t> neighbors_memgraph_ids(std::uint64_t node_id);
+  std::unordered_set<std::uint64_t> in_neighbors_memgraph_ids(
+      std::uint64_t node_id);
 
   ///@brief Initializes internal data structures.
   void set_structures(std::uint64_t node_id);
@@ -70,8 +78,19 @@ class LabelRankT {
   void remove_deleted_nodes(
       std::unordered_set<std::uint64_t>& deleted_nodes_ids);
 
-  /// TBD
-  double get_weight(std::uint64_t node_i_id, std::uint64_t node_j_id);
+  ///@brief Retrieves the total weight of edges between two nodes.
+  /// With undirected graphs it considers all edges between the given node pair.
+  /// On a directed graph, it checks if the source and target nodes match.
+  ///
+  ///@param from_node_id -- source node’s Memgraph ID
+  ///@param to_node_id -- target node’s Memgraph ID
+  ///
+  ///@return -- total weight of edges between from_node_id and to_node_id
+  double get_total_weight_between(std::uint64_t from_node_id,
+                                  std::uint64_t to_node_id);
+
+  ///@brief Retrieves given edge’s weight.
+  double get_weight(std::uint64_t edge_id);
 
   ///@brief Resets each node’s number of updates.
   void reset_times_updated();
@@ -123,7 +142,7 @@ class LabelRankT {
   ///@param exponent -- smallest acceptable value
   ///
   ///@return -- updated label probabilities for given node
-  void inflate(std::unordered_map<std::uint64_t, double> &node_label_Ps,
+  void inflate(std::unordered_map<std::uint64_t, double>& node_label_Ps,
                double exponent);
 
   ///@brief Removes values under a set threshold from given node’s label
@@ -133,7 +152,7 @@ class LabelRankT {
   ///@param min_value -- smallest acceptable value
   ///
   ///@return -- updated label probabilities for given node
-  void cutoff(std::unordered_map<std::uint64_t, double> &node_label_Ps,
+  void cutoff(std::unordered_map<std::uint64_t, double>& node_label_Ps,
               double min_value);
 
   ///@brief Performs an iteration of the LabelRankT algorithm.
@@ -151,10 +170,6 @@ class LabelRankT {
       std::unordered_set<std::uint64_t> to_delete = {});
 #pragma endregion label_propagation_steps
 
- public:
-  ///@brief Creates an instance of the LabelRankT algorithm.
-  LabelRankT() = default;
-
   ///@brief Handles calculation of community labels and associated data
   /// structures for both dynamic and non-dynamic uses of the algorithm.
   ///
@@ -164,9 +179,13 @@ class LabelRankT {
   ///
   ///@return -- {node id, community label} pairs
   std::unordered_map<std::uint64_t, std::int64_t> calculate_labels(
-      std::unique_ptr<mg_graph::Graph<>> &graph,
+      std::unique_ptr<mg_graph::Graph<>>& graph,
       std::unordered_set<std::uint64_t> changed_nodes = {},
       std::unordered_set<std::uint64_t> to_delete = {});
+
+ public:
+  ///@brief Creates an instance of the LabelRankT algorithm.
+  LabelRankT() = default;
 
   ///@brief Returns previously calculated community labels.
   /// If no calculation has been done previously, calculates community labels
@@ -183,20 +202,22 @@ class LabelRankT {
   /// community detection with update_labels().
   ///
   ///@param graph -- reference to current graph
-  ///@param weight_property -- weight-containing edge property’s name
-  ///@param w_selfloop -- default weight of self-loops
+  ///@param is_weighted -- whether graph is directed
+  ///@param is_weighted -- whether graph is weighted
   ///@param similarity_threshold -- similarity threshold used in the node
   /// selection step, values in [0, 1]
   ///@param exponent -- exponent used in the inflation step
   ///@param min_value -- smallest acceptable probability in the cutoff step
+  ///@param weight_property -- weight-containing edge property’s name
+  ///@param w_selfloop -- default weight of self-loops
   ///@param max_iterations -- maximum number of iterations
   ///@param max_updates -- maximum number of updates for any node
   std::unordered_map<std::uint64_t, std::int64_t> set_labels(
-      std::unique_ptr<mg_graph::Graph<>>& graph,
+      std::unique_ptr<mg_graph::Graph<>>& graph, bool is_directed = false,
+      bool is_weighted = false, double similarity_threshold = 0.7,
+      double exponent = 4.0, double min_value = 0.1,
       std::string weight_property = "weight", double w_selfloop = 1.0,
-      double similarity_threshold = 0.7, double exponent = 4.0,
-      double min_value = 0.1, std::uint64_t max_iterations = 100,
-      std::uint64_t max_updates = 5);
+      std::uint64_t max_iterations = 100, std::uint64_t max_updates = 5);
 
   ///@brief Updates changed nodes’ community labels with LabelRankT.
   /// The maximum numbers of iterations and updates are reused from previous

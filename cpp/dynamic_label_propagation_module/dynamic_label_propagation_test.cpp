@@ -8,7 +8,7 @@ TEST(LabelRankT, EmptyGraph) {
   auto empty_graph = mg_generate::BuildGraph(0, {});
 
   LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT();
-  auto labels = algorithm.set_labels(empty_graph, "weight", 1.0, 0.7, 4.0, 0.1);
+  auto labels = algorithm.set_labels(empty_graph);
 
   std::unordered_map<std::uint64_t, std::int64_t> correct_labels = {};
 
@@ -198,11 +198,63 @@ TEST(LabelRankT, NoLabelsDetected) {
       6, {{0, 1}, {0, 2}, {1, 2}, {2, 3}, {3, 4}, {3, 5}, {4, 5}});
 
   LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT();
-  auto labels =
-      algorithm.set_labels(small_graph, "weight", 1.0, 0.7, 4.0, 0.99);
+  auto labels = algorithm.set_labels(small_graph, false, false, 0.7, 4.0, 0.99,
+                                     "weight", 1.0, 100, 5);
 
   std::unordered_map<std::uint64_t, std::int64_t> correct_labels = {
       {0, -1}, {1, -1}, {2, -1}, {3, -1}, {4, -1}, {5, -1}};
+
+  ASSERT_TRUE(labels == correct_labels);
+}
+
+TEST(LabelRankT, DirectedGraph) {
+  auto directed_graph =
+      mg_generate::BuildGraph(
+          6,
+          {{0, 1}, {0, 2}, {1, 0}, {1, 2}, {2, 0}, {2, 1}, {2, 3}, 
+           {3, 2}, {3, 4}, {3, 5}, {4, 3}, {4, 5}, {5, 3}, {5, 4}},
+          mg_graph::GraphType::kDirectedGraph);
+
+  LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT();
+  auto labels = algorithm.set_labels(directed_graph, true, false);
+
+  std::unordered_map<std::uint64_t, std::int64_t> correct_labels = {
+      {0, 1}, {1, 1}, {2, 1}, {3, 2}, {4, 2}, {5, 2}};
+
+  ASSERT_TRUE(labels == correct_labels);
+}
+
+TEST(LabelRankT, WeightedGraph) {
+  auto weighted_graph =
+      mg_generate::BuildWeightedGraph(
+          6,
+          {{{0, 1}, 1}, {{0, 2}, 1}, {{1, 2}, 1}, {{2, 3}, 2}, {{3, 4}, 1},
+           {{3, 5}, 1}, {{4, 5}, 1}},
+          mg_graph::GraphType::kUndirectedGraph);
+
+  LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT();
+  auto labels = algorithm.set_labels(weighted_graph, false, true);
+
+  std::unordered_map<std::uint64_t, std::int64_t> correct_labels = {
+      {0, 1}, {1, 1}, {2, 1}, {3, 2}, {4, 2}, {5, 2}};
+
+  ASSERT_TRUE(labels == correct_labels);
+}
+
+TEST(LabelRankT, DirectedWeightedGraph) {
+  auto directed_weighted_graph =
+      mg_generate::BuildWeightedGraph(
+          6,
+          {{{0, 1}, 1}, {{0, 2}, 1}, {{1, 0}, 1}, {{1, 2}, 1}, {{2, 0}, 1},
+           {{2, 1}, 1}, {{2, 3}, 2}, {{3, 2}, 2}, {{3, 4}, 1}, {{3, 5}, 1},
+           {{4, 3}, 1}, {{4, 5}, 1}, {{5, 3}, 1}, {{5, 4}, 1}},
+          mg_graph::GraphType::kDirectedGraph);
+
+  LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT();
+  auto labels = algorithm.set_labels(directed_weighted_graph, true, true);
+
+  std::unordered_map<std::uint64_t, std::int64_t> correct_labels = {
+      {0, 1}, {1, 1}, {2, 1}, {3, 2}, {4, 2}, {5, 2}};
 
   ASSERT_TRUE(labels == correct_labels);
 }

@@ -28,6 +28,20 @@ std::unique_ptr<mg_graph::Graph<>> BuildGraph(
   return G;
 }
 
+std::unique_ptr<mg_graph::Graph<>> BuildWeightedGraph(
+    std::size_t num_nodes, const std::vector<std::pair<std::pair<std::uint64_t, std::uint64_t>, double>> &edges,
+    const mg_graph::GraphType graph_type = mg_graph::GraphType::kUndirectedGraph) {
+  auto G = std::make_unique<mg_graph::Graph<>>();
+  for (std::size_t i = 0; i < num_nodes; ++i) G->CreateNode(i);
+  for (const auto [endpoints, weight] : edges) {
+    auto from = endpoints.first;
+    auto to = endpoints.second;
+    G->CreateWeightedEdge(from, to, weight, graph_type);
+  }
+
+  return G;
+}
+
 ///
 /// @brief Generates random undirected graph with a given numer of nodes and edges.
 /// The generated graph is not picked out of a uniform distribution.
