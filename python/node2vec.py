@@ -35,6 +35,61 @@ def learn_embeddings(
     return embeddings
 
 
+def calculate_node_embeddings(
+    graph: Graph,
+    p: float,
+    q: float,
+    num_walks: int,
+    walk_length: int,
+    vector_size: int,
+    alpha: float,
+    window: int,
+    min_count: int,
+    seed: int,
+    workers: int,
+    min_alpha: float,
+    sg: int,
+    hs: int,
+    negative: int,
+    epochs: int,
+) -> Dict[int, List[float]]:
+    word2vec_params = {
+        Parameters.VECTOR_SIZE: vector_size,
+        Parameters.WINDOW: window,
+        Parameters.MIN_COUNT: min_count,
+        Parameters.WORKERS: workers,
+        Parameters.MIN_ALPHA: min_alpha,
+        Parameters.SEED: seed,
+        Parameters.ALPHA: alpha,
+        Parameters.EPOCHS: epochs,
+        Parameters.SG: sg,
+        Parameters.HS: hs,
+        Parameters.NEGATIVE: negative,
+    }
+
+    second_order_random_walk = SecondOrderRandomWalk(
+        p=p, q=q, num_walks=int(num_walks), walk_length=int(walk_length)
+    )
+
+    walks = second_order_random_walk.sample_node_walks(graph)
+    embeddings = learn_embeddings(walks, **word2vec_params)
+    return embeddings
+
+
+def get_graph_memgraph_ctx(
+    ctx: mgp.ProcCtx,
+    is_directed: bool = False,
+) -> Graph:
+    edges_weights = {}
+    for vertex in ctx.graph.vertices:
+        for edge in vertex.out_edges:
+            edge_weight = float(edge.properties.get("weight", default=1))
+            edges_weights[(edge.from_vertex.id, edge.to_vertex.id)] = edge_weight
+
+    graph: Graph = GraphHolder(edges_weights, is_directed)
+    return graph
+
+
 @mgp.read_proc
 def get_embeddings(
     ctx: mgp.ProcCtx,
@@ -100,33 +155,25 @@ def get_embeddings(
         Seed for the random number generator. Initial vectors for each word are seeded with a hash of
         the concatenation of word + `str(seed)`.
     """
-    word2vec_params = {
-        Parameters.VECTOR_SIZE: vector_size,
-        Parameters.WINDOW: window,
-        Parameters.MIN_COUNT: min_count,
-        Parameters.WORKERS: workers,
-        Parameters.MIN_ALPHA: min_alpha,
-        Parameters.SEED: seed,
-        Parameters.ALPHA: alpha,
-        Parameters.EPOCHS: epochs,
-        Parameters.SG: sg,
-        Parameters.HS: hs,
-        Parameters.NEGATIVE: negative,
-    }
-
-    edges_weights = {}
-    for vertex in ctx.graph.vertices:
-        for edge in vertex.out_edges:
-            edge_weight = float(edge.properties.get("weight", default=1))
-            edges_weights[(edge.from_vertex.id, edge.to_vertex.id)] = edge_weight
-
-    graph: Graph = GraphHolder(edges_weights, is_directed)
-    second_order_random_walk = SecondOrderRandomWalk(
-        p=p, q=q, num_walks=int(num_walks), walk_length=int(walk_length)
+    graph: Graph = get_graph_memgraph_ctx(ctx=ctx, is_directed=is_directed)
+    embeddings = calculate_node_embeddings(
+        graph=graph,
+        p=p,
+        q=q,
+        num_walks=num_walks,
+        walk_length=walk_length,
+        vector_size=vector_size,
+        alpha=alpha,
+        window=window,
+        min_count=min_count,
+        seed=seed,
+        workers=workers,
+        min_alpha=min_alpha,
+        sg=sg,
+        hs=hs,
+        negative=negative,
+        epochs=epochs,
     )
-
-    walks = second_order_random_walk.sample_node_walks(graph)
-    embeddings = learn_embeddings(walks, **word2vec_params)
 
     embeddings_result = []
     nodes_result = []
@@ -203,34 +250,26 @@ def set_embeddings(
         Seed for the random number generator. Initial vectors for each word are seeded with a hash of
         the concatenation of word + `str(seed)`.
     """
-    word2vec_params = {
-        Parameters.VECTOR_SIZE: vector_size,
-        Parameters.WINDOW: window,
-        Parameters.MIN_COUNT: min_count,
-        Parameters.WORKERS: workers,
-        Parameters.MIN_ALPHA: min_alpha,
-        Parameters.SEED: seed,
-        Parameters.ALPHA: alpha,
-        Parameters.EPOCHS: epochs,
-        Parameters.SG: sg,
-        Parameters.HS: hs,
-        Parameters.NEGATIVE: negative,
-    }
-
-    edges_weights = {}
-    for vertex in ctx.graph.vertices:
-        for edge in vertex.out_edges:
-            edge_weight = float(edge.properties.get("weight", default=1))
-            edges_weights[(edge.from_vertex.id, edge.to_vertex.id)] = edge_weight
-
-    graph: Graph = GraphHolder(edges_weights, is_directed)
-    second_order_random_walk = SecondOrderRandomWalk(
-        p=p, q=q, num_walks=int(num_walks), walk_length=int(walk_length)
+    graph: Graph = get_graph_memgraph_ctx(ctx=ctx, is_directed=is_directed)
+    embeddings = calculate_node_embeddings(
+        graph=graph,
+        p=p,
+        q=q,
+        num_walks=num_walks,
+        walk_length=walk_length,
+        vector_size=vector_size,
+        alpha=alpha,
+        window=window,
+        min_count=min_count,
+        seed=seed,
+        workers=workers,
+        min_alpha=min_alpha,
+        sg=sg,
+        hs=hs,
+        negative=negative,
+        epochs=epochs,
     )
 
-    walks = second_order_random_walk.sample_node_walks(graph)
-
-    embeddings = learn_embeddings(walks, **word2vec_params)
     embeddings_result = []
     nodes_result = []
 
