@@ -215,7 +215,7 @@ class Graph : public GraphView<TSize> {
       return false;
     }
     if (edges_[edge_id].id == k_deleted_edge_id_) {
-      return false;
+      return false; 
     }
     return true;
   }
@@ -298,13 +298,13 @@ class Graph : public GraphView<TSize> {
   void Clear() {
     adj_list_.clear();
     neighbours_.clear();
+    in_neighbours_.clear();
     nodes_.clear();
     edges_.clear();
     weights_.clear();
-    nodes_to_edge_.clear();
-
     memgraph_to_inner_id_.clear();
     inner_to_memgraph_id_.clear();
+    nodes_to_edge_.clear();
   }
 
  private:

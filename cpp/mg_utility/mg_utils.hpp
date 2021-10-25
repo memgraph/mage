@@ -55,18 +55,20 @@ void CreateGraphEdge(mg_graph::Graph<TSize> *graph, mgp_vertex *vertex_from,
 }
 
 template <typename TSize>
-void CreateWeightedGraphEdge(mg_graph::Graph<TSize> *graph, mgp_vertex *vertex_from,
-                     mgp_vertex *vertex_to, double weight,
-                     const mg_graph::GraphType graph_type) {
+void CreateWeightedGraphEdge(mg_graph::Graph<TSize> *graph,
+                             mgp_vertex *vertex_from, mgp_vertex *vertex_to,
+                             double weight,
+                             const mg_graph::GraphType graph_type) {
   auto memgraph_id_from = mgp::vertex_get_id(vertex_from).as_int;
   auto memgraph_id_to = mgp::vertex_get_id(vertex_to).as_int;
 
-  graph->CreateWeightedEdge(memgraph_id_from, memgraph_id_to, weight, graph_type);
+  graph->CreateWeightedEdge(memgraph_id_from, memgraph_id_to, weight,
+                            graph_type);
 }
 }  // namespace mg_graph
 
 namespace mg_utility {
-  double GetNumericProperty(mgp_edge *edge, const char *property_name,
+double GetNumericProperty(mgp_edge *edge, const char *property_name,
                           mgp_memory *memory, double default_weight);
 
 /// Calls a function in its destructor (on scope exit).
@@ -97,8 +99,8 @@ class OnScopeExit {
 };
 
 ///@brief Method for mapping the Memgraph in-memory graph into user-based graph
-/// with iterative node indices. Graph object stores information about node and
-/// edge mappings, alongside with connection information. Created graph is
+/// with iterative node indices. The graph object stores information about node
+/// and edge mappings alongside with connection information. Created graph is
 /// zero-indexed, meaning that indices start with index 0.
 ///
 ///@param graph Memgraph graph
@@ -116,7 +118,7 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(
   /// Mapping Memgraph in-memory vertices into graph view
   ///
 
-  // Safe creation of vertices iterator
+  // Safe vertices iterator creation
 
   auto *vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);
   mg_utility::OnScopeExit delete_vertices_it(
@@ -127,22 +129,20 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(
        vertex = mgp::vertices_iterator_next(vertices_it)) {
     mg_graph::CreateGraphNode(graph.get(), vertex);
   }
-  // Destroy iterator before creating a new one - otherwise, we'll experience
-  // memory leakage
+  // Destroy iterator before creating a new one in order to avoid memory leakage
   mgp::vertices_iterator_destroy(vertices_it);
 
   ///
   /// Mapping Memgraph in-memory edges into graph view
   ///
 
-  // Safe creation of vertices iterator
+  // Safe vertices iterator creation
   vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);
 
   for (auto *vertex_from = mgp::vertices_iterator_get(vertices_it); vertex_from;
        vertex_from = mgp::vertices_iterator_next(vertices_it)) {
-    // Safe creation of edges iterator
+    // Safe edges iterator creation
     auto *edges_it = mgp::vertex_iter_out_edges(vertex_from, memory);
-
     mg_utility::OnScopeExit delete_edges_it(
         [&edges_it] { mgp::edges_iterator_destroy(edges_it); });
 
@@ -158,9 +158,9 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(
 }
 
 ///@brief Method for mapping the Memgraph in-memory graph into user-based graph
-/// with iterative node indices. Graph object stores information about node and
-/// edge mappings, connection information, and properties. Created graph is
-/// zero-indexed, i.e. indices start at 0.
+/// with iterative node indices. The graph object stores information about node
+/// and edge mappings, connection information and the weight property. Created
+/// graph is zero-indexed, i.e. indices start at 0.
 ///
 ///@param graph Memgraph graph
 ///@param result Memgraph result object
@@ -170,7 +170,8 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(
 template <typename TSize = std::uint64_t>
 std::unique_ptr<mg_graph::Graph<TSize>> GetWeightedGraphView(
     mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory,
-    const mg_graph::GraphType graph_type, const char *weight_property, double default_weight) {
+    const mg_graph::GraphType graph_type, const char *weight_property,
+    double default_weight) {
   auto graph = std::make_unique<mg_graph::Graph<TSize>>();
 
   ///
@@ -187,7 +188,7 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetWeightedGraphView(
        vertex = mgp::vertices_iterator_next(vertices_it)) {
     mg_graph::CreateGraphNode(graph.get(), vertex);
   }
-  // Destroy iterator before creating a new one so as to avoid memory leakage
+  // Destroy iterator before creating a new one in order to avoid memory leakage
   mgp::vertices_iterator_destroy(vertices_it);
 
   ///
@@ -199,18 +200,18 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetWeightedGraphView(
 
   for (auto *vertex_from = mgp::vertices_iterator_get(vertices_it); vertex_from;
        vertex_from = mgp::vertices_iterator_next(vertices_it)) {
-    // Safe creation of edges iterator
+    // Safe edges iterator creation
     auto *edges_it = mgp::vertex_iter_out_edges(vertex_from, memory);
-
     mg_utility::OnScopeExit delete_edges_it(
         [&edges_it] { mgp::edges_iterator_destroy(edges_it); });
 
     for (auto *out_edge = mgp::edges_iterator_get(edges_it); out_edge;
          out_edge = mgp::edges_iterator_next(edges_it)) {
       auto vertex_to = mgp::edge_get_to(out_edge);
-      auto weight = mg_utility::GetNumericProperty(out_edge, weight_property, memory, default_weight);
-      mg_graph::CreateWeightedGraphEdge(graph.get(), vertex_from, vertex_to, weight,
-                                graph_type);
+      auto weight = mg_utility::GetNumericProperty(out_edge, weight_property,
+                                                   memory, default_weight);
+      mg_graph::CreateWeightedGraphEdge(graph.get(), vertex_from, vertex_to,
+                                        weight, graph_type);
     }
   }
 
@@ -303,6 +304,8 @@ double GetNumericProperty(mgp_edge *edge, const char *property_name,
     default:
       weight = default_weight;
   }
+
+  mgp::value_destroy(raw_value);
 
   return weight;
 }

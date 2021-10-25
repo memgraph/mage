@@ -1,9 +1,7 @@
-#include <cstring>
-
 #include <mg_graph.hpp>
 #include <mg_utils.hpp>
 
-#include "algorithm/dynamic_label_propagation.hpp"
+#include "algorithm/dynamic_community_detection.hpp"
 
 constexpr char const *kFieldNode = "node";
 constexpr char const *kFieldCommunityId = "community_id";
@@ -17,6 +15,8 @@ constexpr char const *kWeightProperty = "weight_property";
 constexpr char const *kWSelfloop = "w_selfloop";
 constexpr char const *kMaxIterations = "max_iterations";
 constexpr char const *kMaxUpdates = "max_updates";
+
+constexpr char const *kFieldMessage = "message";
 
 constexpr char const *kCreatedVertices = "createdVertices";
 constexpr char const *kCreatedEdges = "createdEdges";
@@ -44,8 +44,15 @@ void InsertCommunityDetectionRecord(mgp_graph *graph, mgp_result *result,
                                    memory);
 }
 
-void DetectWrapper(mgp_list *args, mgp_graph *memgraph_graph,
-                   mgp_result *result, mgp_memory *memory) {
+void InsertMessageRecord(mgp_result *result, mgp_memory *memory,
+                         const char *message) {
+  auto *record = mgp::result_new_record(result);
+
+  mg_utility::InsertStringValueResult(record, kFieldMessage, message, memory);
+}
+
+void Detect(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
+            mgp_memory *memory) {
   try {
     auto directed = mgp::value_get_bool(mgp::list_at(args, 0));
     auto weighted = mgp::value_get_bool(mgp::list_at(args, 1));
@@ -61,8 +68,9 @@ void DetectWrapper(mgp_list *args, mgp_graph *memgraph_graph,
     saved_weightedness = weighted;
     saved_weight_property = weight_property;
 
-    auto graph_type = saved_directedness ? mg_graph::GraphType::kDirectedGraph
-                                         : mg_graph::GraphType::kUndirectedGraph;
+    auto graph_type = saved_directedness
+                          ? mg_graph::GraphType::kDirectedGraph
+                          : mg_graph::GraphType::kUndirectedGraph;
     auto graph = saved_weightedness
                      ? mg_utility::GetWeightedGraphView(
                            memgraph_graph, result, memory, graph_type,
@@ -70,10 +78,7 @@ void DetectWrapper(mgp_list *args, mgp_graph *memgraph_graph,
                      : mg_utility::GetGraphView(memgraph_graph, result, memory,
                                                 graph_type);
 
-    // if (!saved_directedness) 
-    // for (auto i : graph->Edges()) std::cout << std::to_string(i.from) << "-" << std::to_string(i.to) << "\n";
-
-    auto labels = algorithm.set_labels(
+    auto labels = algorithm.SetLabels(
         graph, directed, weighted, similarity_threshold, exponent, min_value,
         weight_property, w_selfloop, max_iterations, max_updates);
     initialized = true;
@@ -89,11 +94,12 @@ void DetectWrapper(mgp_list *args, mgp_graph *memgraph_graph,
   }
 }
 
-void GetWrapper(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
-                mgp_memory *memory) {
+void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
+         mgp_memory *memory) {
   try {
-    auto graph_type = saved_directedness ? mg_graph::GraphType::kDirectedGraph
-                                         : mg_graph::GraphType::kUndirectedGraph;
+    auto graph_type = saved_directedness
+                          ? mg_graph::GraphType::kDirectedGraph
+                          : mg_graph::GraphType::kUndirectedGraph;
     auto graph = saved_weightedness
                      ? mg_utility::GetWeightedGraphView(
                            memgraph_graph, result, memory, graph_type,
@@ -102,7 +108,7 @@ void GetWrapper(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
                                                 graph_type);
 
     auto labels =
-        initialized ? algorithm.get_labels(graph) : algorithm.set_labels(graph);
+        initialized ? algorithm.GetLabels(graph) : algorithm.SetLabels(graph);
 
     for (const auto [node_id, label] : labels) {
       InsertCommunityDetectionRecord(memgraph_graph, result, memory, node_id,
@@ -115,8 +121,8 @@ void GetWrapper(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
   }
 }
 
-void UpdateWrapper(mgp_list *args, mgp_graph *memgraph_graph,
-                   mgp_result *result, mgp_memory *memory) {
+void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
+            mgp_memory *memory) {
   try {
     auto created_nodes = mgp::value_get_list(mgp::list_at(args, 0));
     auto created_edges = mgp::value_get_list(mgp::list_at(args, 1));
@@ -125,16 +131,15 @@ void UpdateWrapper(mgp_list *args, mgp_graph *memgraph_graph,
     auto deleted_nodes = mgp::value_get_list(mgp::list_at(args, 4));
     auto deleted_edges = mgp::value_get_list(mgp::list_at(args, 5));
 
-    auto graph_type = saved_directedness ? mg_graph::GraphType::kDirectedGraph
-                                         : mg_graph::GraphType::kUndirectedGraph;
+    auto graph_type = saved_directedness
+                          ? mg_graph::GraphType::kDirectedGraph
+                          : mg_graph::GraphType::kUndirectedGraph;
     auto graph = saved_weightedness
                      ? mg_utility::GetWeightedGraphView(
                            memgraph_graph, result, memory, graph_type,
                            saved_weight_property.c_str(), DEFAULT_WEIGHT)
                      : mg_utility::GetGraphView(memgraph_graph, result, memory,
                                                 graph_type);
-
-    std::unordered_map<uint64_t, int64_t> labels;
 
     if (initialized) {
       auto modified_node_ids = mg_utility::GetNodeIDs(created_nodes);
@@ -155,21 +160,35 @@ void UpdateWrapper(mgp_list *args, mgp_graph *memgraph_graph,
       auto deleted_edge_endpoint_ids =
           mg_utility::GetEdgeEndpointIDs(deleted_edges);
 
-      auto labels = algorithm.update_labels(
-          graph, modified_node_ids, modified_edge_endpoint_ids,
-          deleted_node_ids, deleted_edge_endpoint_ids);
+      algorithm.UpdateLabels(graph, modified_node_ids,
+                             modified_edge_endpoint_ids, deleted_node_ids,
+                             deleted_edge_endpoint_ids);
     } else {
-      auto labels = algorithm.update_labels(graph);
+      algorithm.SetLabels(graph);
     }
-
-    for (const auto [node_id, label] : labels) {
-      InsertCommunityDetectionRecord(memgraph_graph, result, memory, node_id,
-                                     label);
-    }
-
   } catch (const std::exception &e) {
     mgp::result_set_error_msg(result, e.what());
     return;
+  }
+}
+
+void Reset(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
+           mgp_memory *memory) {
+  try {
+    algorithm = LabelRankT::LabelRankT();
+    initialized = false;
+
+    saved_directedness = false;
+    saved_weightedness = false;
+    saved_weight_property = "weight";
+    DEFAULT_WEIGHT = 1;
+
+    InsertMessageRecord(result, memory,
+                        "The algorithm has been successfully reset!");
+  } catch (const std::exception &e) {
+    InsertMessageRecord(
+        result, memory,
+        "Reset failed: An exception occurred, please check your module!");
   }
 }
 
@@ -187,16 +206,18 @@ extern "C" int mgp_init_module(struct mgp_module *module,
 
   try {
     struct mgp_proc *get_proc =
-        mgp::module_add_read_procedure(module, "get", GetWrapper);
+        mgp::module_add_read_procedure(module, "get", Get);
     struct mgp_proc *detect_proc =
-        mgp::module_add_read_procedure(module, "detect", DetectWrapper);
+        mgp::module_add_read_procedure(module, "detect", Detect);
     struct mgp_proc *update_proc =
-        mgp::module_add_read_procedure(module, "update", UpdateWrapper);
+        mgp::module_add_read_procedure(module, "update", Update);
+    struct mgp_proc *reset_proc =
+        mgp::module_add_read_procedure(module, "reset", Reset);
 
     mgp::proc_add_opt_arg(detect_proc, kDirected, mgp::type_bool(),
                           default_directed);
     mgp::proc_add_opt_arg(detect_proc, kWeighted, mgp::type_bool(),
-                          default_directed);
+                          default_weighted);
     mgp::proc_add_opt_arg(detect_proc, kSimilarityThreshold, mgp::type_float(),
                           default_similarity_threshold);
     mgp::proc_add_opt_arg(detect_proc, kExponent, mgp::type_float(),
@@ -225,12 +246,13 @@ extern "C" int mgp_init_module(struct mgp_module *module,
     mgp::proc_add_arg(update_proc, kDeletedEdges,
                       mgp::type_list(mgp::type_relationship()));
 
-    // Query module output record
     mgp::proc_add_result(get_proc, kFieldNode, mgp::type_node());
     mgp::proc_add_result(get_proc, kFieldCommunityId, mgp::type_int());
 
     mgp::proc_add_result(detect_proc, kFieldNode, mgp::type_node());
     mgp::proc_add_result(detect_proc, kFieldCommunityId, mgp::type_int());
+
+    mgp::proc_add_result(reset_proc, kFieldMessage, mgp::type_string());
   } catch (const std::exception &e) {
     mgp::value_destroy(default_directed);
     mgp::value_destroy(default_weighted);
