@@ -127,6 +127,7 @@ class GraphHolder(Graph):
             return self._edges_weights[(src_node_id, dest_node_id)]
         return self._edges_weights[(dest_node_id, src_node_id)]
 
+    # Always return nodes in same order
     def get_neighbors(self, node_id: int) -> List[int]:
         return self._graph[node_id] if node_id in self._graph else []
 
