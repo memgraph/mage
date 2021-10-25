@@ -23,8 +23,11 @@ class Parameters:
     NEGATIVE = "negative"
 
 
+NODE_EMBEDDING_PROPERTY = "embedding"
+
+
 def learn_embeddings(
-    walks: List[List[int]], **word2vec_params
+        walks: List[List[int]], **word2vec_params
 ) -> Dict[int, List[float]]:
     model = gensim.models.Word2Vec(sentences=walks, **word2vec_params)
 
@@ -37,22 +40,22 @@ def learn_embeddings(
 
 
 def calculate_node_embeddings(
-    graph: Graph,
-    p: float,
-    q: float,
-    num_walks: int,
-    walk_length: int,
-    vector_size: int,
-    alpha: float,
-    window: int,
-    min_count: int,
-    seed: int,
-    workers: int,
-    min_alpha: float,
-    sg: int,
-    hs: int,
-    negative: int,
-    epochs: int,
+        graph: Graph,
+        p: float,
+        q: float,
+        num_walks: int,
+        walk_length: int,
+        vector_size: int,
+        alpha: float,
+        window: int,
+        min_count: int,
+        seed: int,
+        workers: int,
+        min_alpha: float,
+        sg: int,
+        hs: int,
+        negative: int,
+        epochs: int,
 ) -> Dict[int, List[float]]:
     word2vec_params = {
         Parameters.VECTOR_SIZE: vector_size,
@@ -78,7 +81,7 @@ def calculate_node_embeddings(
 
 
 def get_graph_memgraph_ctx(
-    ctx: mgp.ProcCtx, edge_weight_property: str, is_directed: bool = False
+        ctx: mgp.ProcCtx, edge_weight_property: str, is_directed: bool = False
 ) -> Graph:
     edges_weights = {}
     for vertex in ctx.graph.vertices:
@@ -92,24 +95,24 @@ def get_graph_memgraph_ctx(
 
 @mgp.read_proc
 def get_embeddings(
-    ctx: mgp.ProcCtx,
-    is_directed: bool = False,
-    p=2.0,
-    q=0.5,
-    num_walks=4,
-    walk_length=5,
-    vector_size=100,
-    alpha=0.025,
-    window=5,
-    min_count=1,
-    seed=1,
-    workers=1,
-    min_alpha=0.0001,
-    sg=1,
-    hs=0,
-    negative=5,
-    epochs=5,
-    edge_weight_property="weight",
+        ctx: mgp.ProcCtx,
+        is_directed: bool = False,
+        p=2.0,
+        q=0.5,
+        num_walks=4,
+        walk_length=5,
+        vector_size=100,
+        alpha=0.025,
+        window=5,
+        min_count=1,
+        seed=1,
+        workers=1,
+        min_alpha=0.0001,
+        sg=1,
+        hs=0,
+        negative=5,
+        epochs=5,
+        edge_weight_property="weight",
 ) -> mgp.Record(nodes=mgp.List[mgp.Vertex], embeddings=mgp.List[mgp.List[mgp.Number]]):
     """
     Function to get node embeddings. Uses gensim.models.Word2Vec params.
@@ -188,24 +191,24 @@ def get_embeddings(
 
 @mgp.write_proc
 def set_embeddings(
-    ctx: mgp.ProcCtx,
-    is_directed: bool = False,
-    p=2.0,
-    q=0.5,
-    num_walks=4,
-    walk_length=5,
-    vector_size=100,
-    alpha=0.025,
-    window=5,
-    min_count=1,
-    seed=1,
-    workers=1,
-    min_alpha=0.0001,
-    sg=1,
-    hs=0,
-    negative=5,
-    epochs=5,
-    edge_weight_property="weight",
+        ctx: mgp.ProcCtx,
+        is_directed: bool = False,
+        p=2.0,
+        q=0.5,
+        num_walks=4,
+        walk_length=5,
+        vector_size=100,
+        alpha=0.025,
+        window=5,
+        min_count=1,
+        seed=1,
+        workers=1,
+        min_alpha=0.0001,
+        sg=1,
+        hs=0,
+        negative=5,
+        epochs=5,
+        edge_weight_property="weight",
 ) -> mgp.Record(nodes=mgp.List[mgp.Vertex], embeddings=mgp.List[mgp.List[mgp.Number]]):
     """
     Function to get node embeddings. Uses gensim.models.Word2Vec params.
@@ -280,7 +283,7 @@ def set_embeddings(
     for node_id, embedding in embeddings.items():
         embeddings[node_id] = [float(e) for e in embedding]
         vertex = ctx.graph.get_vertex_by_id(node_id)
-        vertex.properties.set("embedding", embeddings[node_id])
+        vertex.properties.set(NODE_EMBEDDING_PROPERTY, embeddings[node_id])
 
         nodes_result.append(ctx.graph.get_vertex_by_id(node_id))
         embeddings_result.append(embeddings[node_id])
