@@ -56,7 +56,6 @@ class SecondOrderRandomWalk:
         return walk
 
     def set_first_travel_transition_probs(self, graph: Graph) -> None:
-
         for source_node_id in graph.nodes:
             unnormalized_probs = [
                 graph.get_edge_weight(source_node_id, neighbor_id)
@@ -86,7 +85,6 @@ class SecondOrderRandomWalk:
         return math_functions.normalize(unnorm_trans_probs)
 
     def set_graph_transition_probs(self, graph: Graph) -> None:
-
         for (node_from, node_to) in graph.get_edges():
             graph.set_edge_transition_probs(
                 (node_from, node_to),

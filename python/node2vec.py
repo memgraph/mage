@@ -28,9 +28,10 @@ def learn_embeddings(
 ) -> Dict[int, List[float]]:
     model = gensim.models.Word2Vec(sentences=walks, **word2vec_params)
 
-    vectors = model.wv.vectors
-    indices = model.wv.index_to_key
-    embeddings = {indices[i]: vectors[i] for i in range(len(indices))}
+    embeddings = {
+        index: embedding
+        for index, embedding in zip(model.wv.index_to_key, model.wv.vectors)
+    }
 
     return embeddings
 
@@ -77,13 +78,12 @@ def calculate_node_embeddings(
 
 
 def get_graph_memgraph_ctx(
-    ctx: mgp.ProcCtx,
-    is_directed: bool = False,
+    ctx: mgp.ProcCtx, edge_weight_property: str, is_directed: bool = False
 ) -> Graph:
     edges_weights = {}
     for vertex in ctx.graph.vertices:
         for edge in vertex.out_edges:
-            edge_weight = float(edge.properties.get("weight", default=1))
+            edge_weight = float(edge.properties.get(edge_weight_property, default=1))
             edges_weights[(edge.from_vertex.id, edge.to_vertex.id)] = edge_weight
 
     graph: Graph = GraphHolder(edges_weights, is_directed)
@@ -109,14 +109,13 @@ def get_embeddings(
     hs=0,
     negative=5,
     epochs=5,
+    edge_weight_property="weight",
 ) -> mgp.Record(nodes=mgp.List[mgp.Vertex], embeddings=mgp.List[mgp.List[mgp.Number]]):
     """
     Function to get node embeddings. Uses gensim.models.Word2Vec params.
 
     Parameters
     ----------
-    edges : List[mgp.Edge]
-        All the edges in graph.
     is_directed : bool, optional
         If bool=True, graph is treated as directed, else not directed
     p : float, optional
@@ -155,7 +154,9 @@ def get_embeddings(
         Seed for the random number generator. Initial vectors for each word are seeded with a hash of
         the concatenation of word + `str(seed)`.
     """
-    graph: Graph = get_graph_memgraph_ctx(ctx=ctx, is_directed=is_directed)
+    graph: Graph = get_graph_memgraph_ctx(
+        ctx=ctx, is_directed=is_directed, edge_weight_property=edge_weight_property
+    )
     embeddings = calculate_node_embeddings(
         graph=graph,
         p=p,
@@ -204,6 +205,7 @@ def set_embeddings(
     hs=0,
     negative=5,
     epochs=5,
+    edge_weight_property="weight",
 ) -> mgp.Record(nodes=mgp.List[mgp.Vertex], embeddings=mgp.List[mgp.List[mgp.Number]]):
     """
     Function to get node embeddings. Uses gensim.models.Word2Vec params.
@@ -250,7 +252,9 @@ def set_embeddings(
         Seed for the random number generator. Initial vectors for each word are seeded with a hash of
         the concatenation of word + `str(seed)`.
     """
-    graph: Graph = get_graph_memgraph_ctx(ctx=ctx, is_directed=is_directed)
+    graph: Graph = get_graph_memgraph_ctx(
+        ctx=ctx, is_directed=is_directed, edge_weight_property=edge_weight_property
+    )
     embeddings = calculate_node_embeddings(
         graph=graph,
         p=p,

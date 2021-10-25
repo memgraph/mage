@@ -6,4 +6,3 @@ query: >
 
 output:
     - embeddings_num: 5
-
