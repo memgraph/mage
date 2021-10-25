@@ -90,6 +90,28 @@ class Graph : public GraphView<TSize> {
     return neighbours_[node_id];
   }
 
+  /// Gets out-neighbour nodes.
+  ///
+  /// @param[in] node_id target node id
+  ///
+  /// @return vector of neighbours
+  const std::vector<TNeighbour> &OutNeighbours(TSize node_id) const {
+    return Neighbours(node_id);
+  }
+
+  /// Gets in-neighbour nodes.
+  ///
+  /// @param[in] node_id target node id
+  ///
+  /// @return vector of neighbours
+  const std::vector<TNeighbour> &InNeighbours(TSize node_id) const {
+    if (node_id < 0 && node_id >= nodes_.size()) {
+      throw mg_exception::InvalidIDException();
+    }
+
+    return in_neighbours_[node_id];
+  }
+
   /// Gets node with node id.
   ///
   /// @param[in] node_id node id
@@ -115,6 +137,18 @@ class Graph : public GraphView<TSize> {
     return edges_[edge_id];
   }
 
+  /// Gets edge weight by edge ID.
+  ///
+  /// @param[in] edge_id edge ID
+  ///
+  /// @return double weight
+  const double &GetWeight(TSize edge_id) const {
+    if (edge_id < 0 && edge_id >= edges_.size()) {
+      throw mg_exception::InvalidIDException();
+    }
+    return weights_[edge_id];
+  }
+
   /// Creates a node.
   ///
   /// @return     Created node id
@@ -123,6 +157,7 @@ class Graph : public GraphView<TSize> {
     nodes_.push_back({id});
     adj_list_.emplace_back();
     neighbours_.emplace_back();
+    in_neighbours_.emplace_back();
 
     inner_to_memgraph_id_.emplace(id, memgraph_id);
     memgraph_to_inner_id_.emplace(memgraph_id, id);
@@ -132,7 +167,7 @@ class Graph : public GraphView<TSize> {
   /// Creates an edge.
   ///
   /// Creates an directed/undirected edge in the graph depending on graph type. Edge will contain information
-  /// about the original node ID's. Throws exception if nodes are not contained in  graph.
+  /// about the original node IDs. Throws exception if nodes are not contained in  graph.
   ///
   /// @param[in]  from  The from node identifier
   /// @param[in]  to    The to node identifier
@@ -149,11 +184,31 @@ class Graph : public GraphView<TSize> {
     neighbours_[from].emplace_back(to, id);
     nodes_to_edge_.insert({std::minmax(from, to), id});
 
+    directedness = graph_type;
+    
     if (graph_type == GraphType::kUndirectedGraph) {
       adj_list_[to].push_back(id);
       neighbours_[to].emplace_back(from, id);
+    } else if (graph_type == GraphType::kDirectedGraph) {
+      in_neighbours_[to].emplace_back(from, id);
     }
+
     return id;
+  }
+
+  /// Creates a weighted edge.
+  ///
+  /// Creates an directed/undirected edge in the graph depending on graph type. Edge will contain information
+  /// about the original node IDs. Throws an exception if nodes are not contained in graph.
+  ///
+  /// @param[in]  from  The from node identifier
+  /// @param[in]  to    The to node identifier
+  ///
+  /// @return     Created edge id
+  TSize CreateWeightedEdge(std::uint64_t memgraph_id_from, std::uint64_t memgraph_id_to, double weight,
+                   const GraphType graph_type = GraphType::kDirectedGraph) {
+    weights_.push_back(weight);
+    return CreateEdge(memgraph_id_from, memgraph_id_to, graph_type);
   }
 
   /// Gets all valid edges.
@@ -263,13 +318,14 @@ class Graph : public GraphView<TSize> {
   /// Removes all edges and nodes from graph.
   void Clear() {
     adj_list_.clear();
+    neighbours_.clear();
+    in_neighbours_.clear();
     nodes_.clear();
     edges_.clear();
-    nodes_to_edge_.clear();
-    neighbours_.clear();
-
+    weights_.clear();
     memgraph_to_inner_id_.clear();
     inner_to_memgraph_id_.clear();
+    nodes_to_edge_.clear();
   }
 
  private:
@@ -277,8 +333,13 @@ class Graph : public GraphView<TSize> {
   // If edge id is equal to constant, edge is deleted.
   static constexpr inline TSize k_deleted_edge_id_ = std::numeric_limits<TSize>::max();
 
+  GraphType directedness;
+
   std::vector<std::vector<TSize>> adj_list_;
   std::vector<std::vector<TNeighbour>> neighbours_;
+  std::vector<std::vector<TNeighbour>> in_neighbours_;
+
+  std::vector<double> weights_;
 
   std::vector<TNode> nodes_;
   std::vector<TEdge> edges_;
