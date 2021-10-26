@@ -66,7 +66,7 @@ DIRECT_GRAPH_EDGE_TRANSITION_PROBS = {
     ),
 }
 
-UNDIRECT_GRAPH_FIRST_TRAVEL_TRANSITION_PROBS = {
+UNDIRECT_GRAPH_FIRST_PASS_TRANSITION_PROBS = {
     1: normalize(
         [
             EDGES_WEIGHTS_DICT[(0, 1)],
@@ -87,7 +87,7 @@ UNDIRECT_GRAPH_FIRST_TRAVEL_TRANSITION_PROBS = {
     ),
 }
 
-DIRECT_GRAPH_FIRST_TRAVEL_TRANSITION_PROBS = {
+DIRECT_GRAPH_FIRST_PASS_TRANSITION_PROBS = {
     1: normalize([EDGES_WEIGHTS_DICT[(1, 5)], EDGES_WEIGHTS_DICT[(1, 6)]]),
     0: normalize(
         [
@@ -110,10 +110,10 @@ def get_transition_probs(is_directed):
     return UNDIRECT_GRAPH_EDGE_TRANSITION_PROBS
 
 
-def get_first_travel_transition_probs(is_directed):
+def get_first_pass_transition_probs(is_directed):
     if is_directed:
-        return DIRECT_GRAPH_FIRST_TRAVEL_TRANSITION_PROBS
-    return UNDIRECT_GRAPH_FIRST_TRAVEL_TRANSITION_PROBS
+        return DIRECT_GRAPH_FIRST_PASS_TRANSITION_PROBS
+    return UNDIRECT_GRAPH_FIRST_PASS_TRANSITION_PROBS
 
 
 def same_array_values(
@@ -158,19 +158,19 @@ def test_graph_transition_probs(dataset, is_directed):
         (EDGES_WEIGHTS_DICT, False),
     ],
 )
-def test_graph_first_travel_transition_probs(dataset, is_directed):
+def test_graph_first_pass_transition_probs(dataset, is_directed):
     basic_graph = get_basic_graph(dataset, is_directed)
 
-    graph_transition_probs = get_first_travel_transition_probs(is_directed)
+    graph_transition_probs = get_first_pass_transition_probs(is_directed)
 
     second_order_random_walk = SecondOrderRandomWalk(
         p=P, q=Q, walk_length=WALK_LENGTH, num_walks=NUM_WALKS
     )
-    second_order_random_walk.set_first_travel_transition_probs(basic_graph)
+    second_order_random_walk.set_first_pass_transition_probs(basic_graph)
 
     for node in graph_transition_probs:
-        calculated_transition_probs = (
-            basic_graph.get_node_first_travel_transition_probs(node)
+        calculated_transition_probs = basic_graph.get_node_first_pass_transition_probs(
+            node
         )
         correct_transition_probs = graph_transition_probs.get(node)
         assert same_array_values(calculated_transition_probs, correct_transition_probs)

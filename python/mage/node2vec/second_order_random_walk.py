@@ -24,7 +24,7 @@ class SecondOrderRandomWalk:
     """
 
     def sample_node_walks(self, graph: Graph) -> List[List[int]]:
-        self.set_first_travel_transition_probs(graph)
+        self.set_first_pass_transition_probs(graph)
         self.set_graph_transition_probs(graph)
         walks = []
         for node in graph.nodes:
@@ -36,7 +36,7 @@ class SecondOrderRandomWalk:
     """
         Sampling one walk for specific node. Max walk length is self.walk_length.
         Next node in walk is determined by transition probability depending on previous node,
-        current node and current node neighbors. In-out parameter q and return parameter p determine 
+        current node and current node neighbors. In-out parameter q and return parameter p determine
         probabilities.
     """
 
@@ -54,9 +54,7 @@ class SecondOrderRandomWalk:
                 walk.append(
                     np.random.choice(
                         node_neighbors,
-                        p=graph.get_node_first_travel_transition_probs(
-                            (current_node_id)
-                        ),
+                        p=graph.get_node_first_pass_transition_probs((current_node_id)),
                     )
                 )
                 continue
@@ -74,18 +72,18 @@ class SecondOrderRandomWalk:
         return walk
 
     """
-        For second node in walk use normalized edge weights in random choice. First node is 
+        For second node in walk use normalized edge weights in random choice. First node is
         given node.
     """
 
-    def set_first_travel_transition_probs(self, graph: Graph) -> None:
+    def set_first_pass_transition_probs(self, graph: Graph) -> None:
         for source_node_id in graph.nodes:
             unnormalized_probs = [
                 graph.get_edge_weight(source_node_id, neighbor_id)
                 for neighbor_id in graph.get_neighbors(source_node_id)
             ]
 
-            graph.set_node_first_travel_transition_probs(
+            graph.set_node_first_pass_transition_probs(
                 source_node_id, math_functions.normalize(unnormalized_probs)
             )
 
