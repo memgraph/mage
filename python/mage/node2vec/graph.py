@@ -128,15 +128,14 @@ class GraphHolder(Graph):
         return self._graph[node_id] if node_id in self._graph else []
 
     def init_graph(self) -> None:
-        for edge in self._edges_weights:
-            if edge[0] not in self._graph:
-                self._graph[edge[0]] = set()
-            self._graph[edge[0]].add(edge[1])
-
+        for node_from, node_to in self._edges_weights:
+            if node_from not in self._graph:
+                self._graph[node_from] = set()
+            self._graph[node_from].add(node_to)
             if not self.is_directed:
-                if edge[1] not in self._graph:
-                    self._graph[edge[1]] = set()
-                self._graph[edge[1]].add(edge[0])
+                if node_to not in self._graph:
+                    self._graph[node_to] = set()
+                self._graph[node_to].add(node_from)
 
         self.nodes = list(self._graph.keys())
 
