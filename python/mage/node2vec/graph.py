@@ -117,7 +117,7 @@ class GraphHolder(Graph):
         return edges
 
     def get_edge_weight(self, src_node_id: int, dest_node_id: int) -> float:
-        if (src_node_id, dest_node_id) not in self._edges_weights and self.is_directed:
+        if not self.has_edge(src_node_id, dest_node_id):
             raise ValueError
         if (src_node_id, dest_node_id) in self._edges_weights:
             return self._edges_weights[(src_node_id, dest_node_id)]
