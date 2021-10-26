@@ -110,10 +110,7 @@ class GraphHolder(Graph):
         edges = list(self._edges_weights.keys())
         if self._is_directed:
             return edges
-        edges_different_dir = []
-        for edge in edges:
-            edges_different_dir.append((edge[1], edge[0]))
-        edges.extend(edges_different_dir)
+        edges.extend([(edge[1], edge[0]) for edge in edges])
         return edges
 
     def get_edge_weight(self, src_node_id: int, dest_node_id: int) -> float:
