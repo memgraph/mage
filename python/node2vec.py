@@ -87,7 +87,12 @@ def get_graph_memgraph_ctx(
     for vertex in ctx.graph.vertices:
         for edge in vertex.out_edges:
             edge_weight = float(edge.properties.get(edge_weight_property, default=1))
-            edges_weights[(edge.from_vertex.id, edge.to_vertex.id)] = edge_weight
+            old_value = 0
+            if (edge.from_vertex.id, edge.to_vertex.id) in edges_weights:
+                old_value = edges_weights[(edge.from_vertex.id, edge.to_vertex.id)]
+            edges_weights[(edge.from_vertex.id, edge.to_vertex.id)] = (
+                old_value + edge_weight
+            )
 
     graph: Graph = GraphHolder(edges_weights, is_directed)
     return graph
@@ -156,6 +161,8 @@ def get_embeddings(
     seed : int, optional
         Seed for the random number generator. Initial vectors for each word are seeded with a hash of
         the concatenation of word + `str(seed)`.
+    edge_weight_property: str,
+        Property from graph in database from which you want to take edge weights.
     """
     graph: Graph = get_graph_memgraph_ctx(
         ctx=ctx, is_directed=is_directed, edge_weight_property=edge_weight_property
@@ -254,6 +261,8 @@ def set_embeddings(
     seed : int, optional
         Seed for the random number generator. Initial vectors for each word are seeded with a hash of
         the concatenation of word + `str(seed)`.
+    edge_weight_property: str,
+        Property from graph in database from which you want to take edge weights.
     """
     graph: Graph = get_graph_memgraph_ctx(
         ctx=ctx, is_directed=is_directed, edge_weight_property=edge_weight_property
