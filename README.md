@@ -124,7 +124,7 @@ Jump to [build MAGE query modules with Docker](#building-and-loading-modules-ins
 #### Prerequisites
 * Linux based Memgraph package you can download [here](https://memgraph.com/download). We offer Ubuntu, Debian, Centos based Memgraph
 packages. To install, proceed to the following [site](https://memgraph.com/docs/memgraph/installation).
-* To build and install MAGE query modules you will need: **Python3**, **Make**, **CMake**, **Clang** and **Rust**.
+* To build and install MAGE query modules you will need: **Python3**, **Make**, **CMake**, **Clang**, **UUID** and **Rust**.
 
 
 Since Memgraph needs to load MAGE's modules, there is the `setup` script to help you.

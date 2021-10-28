@@ -182,6 +182,10 @@ pub enum Type {
     Path,
     Nullable,
     List,
+    Date,
+    LocalTime,
+    LocalDateTime,
+    Duration,
 }
 
 /// Used to pass expected type during procedure registration for required parameters and result
