@@ -192,7 +192,7 @@ def get_embeddings(
         embeddings[node_id] = [float(e) for e in embedding]
         nodes_result.append(ctx.graph.get_vertex_by_id(node_id))
         embeddings_result.append(embeddings[node_id])
-
+    # TODO (antoniofilipovic): when api becomes available, change to return list of records
     return mgp.Record(nodes=nodes_result, embeddings=embeddings_result)
 
 
@@ -296,7 +296,7 @@ def set_embeddings(
 
         nodes_result.append(ctx.graph.get_vertex_by_id(node_id))
         embeddings_result.append(embeddings[node_id])
-
+    # TODO (antoniofilipovic): when api becomes available, change to return list of records
     return mgp.Record(nodes=nodes_result, embeddings=embeddings_result)
 
 
