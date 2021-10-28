@@ -93,10 +93,6 @@ class SecondOrderRandomWalk:
             walk.append(next)
         return walk
 
-    """
-      
-    """
-
     def set_first_pass_transition_probs(self, graph: Graph) -> None:
         """
         Calculates and sets first pass transition probs in graph.
