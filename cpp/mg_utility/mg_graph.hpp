@@ -183,8 +183,6 @@ class Graph : public GraphView<TSize> {
     adj_list_[from].push_back(id);
     neighbours_[from].emplace_back(to, id);
     nodes_to_edge_.insert({std::minmax(from, to), id});
-
-    directedness = graph_type;
     
     if (graph_type == GraphType::kUndirectedGraph) {
       adj_list_[to].push_back(id);
@@ -332,8 +330,6 @@ class Graph : public GraphView<TSize> {
   // Constant is used for marking deleted edges.
   // If edge id is equal to constant, edge is deleted.
   static constexpr inline TSize k_deleted_edge_id_ = std::numeric_limits<TSize>::max();
-
-  GraphType directedness;
 
   std::vector<std::vector<TSize>> adj_list_;
   std::vector<std::vector<TNeighbour>> neighbours_;
