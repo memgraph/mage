@@ -31,7 +31,7 @@ bool initialized = false;
 auto saved_directedness = false;
 auto saved_weightedness = false;
 std::string saved_weight_property = "weight";
-double DEFAULT_WEIGHT = 1;
+double saved_default_weight = 1;
 
 void InsertCommunityDetectionRecord(mgp_graph *graph, mgp_result *result,
                                     mgp_memory *memory,
@@ -51,8 +51,8 @@ void InsertMessageRecord(mgp_result *result, mgp_memory *memory,
   mg_utility::InsertStringValueResult(record, kFieldMessage, message, memory);
 }
 
-void Detect(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
-            mgp_memory *memory) {
+void Set(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
+         mgp_memory *memory) {
   try {
     auto directed = mgp::value_get_bool(mgp::list_at(args, 0));
     auto weighted = mgp::value_get_bool(mgp::list_at(args, 1));
@@ -64,9 +64,9 @@ void Detect(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
     auto max_iterations = mgp::value_get_int(mgp::list_at(args, 7));
     auto max_updates = mgp::value_get_int(mgp::list_at(args, 8));
 
-    saved_directedness = directed;
-    saved_weightedness = weighted;
-    saved_weight_property = weight_property;
+    ::saved_directedness = directed;
+    ::saved_weightedness = weighted;
+    ::saved_weight_property = weight_property;
 
     auto graph_type = saved_directedness
                           ? mg_graph::GraphType::kDirectedGraph
@@ -74,20 +74,19 @@ void Detect(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
     auto graph = saved_weightedness
                      ? mg_utility::GetWeightedGraphView(
                            memgraph_graph, result, memory, graph_type,
-                           saved_weight_property.c_str(), DEFAULT_WEIGHT)
+                           saved_weight_property.c_str(), saved_default_weight)
                      : mg_utility::GetGraphView(memgraph_graph, result, memory,
                                                 graph_type);
 
     auto labels = algorithm.SetLabels(
         graph, directed, weighted, similarity_threshold, exponent, min_value,
         weight_property, w_selfloop, max_iterations, max_updates);
-    initialized = true;
+    ::initialized = true;
 
     for (const auto [node_id, label] : labels) {
       InsertCommunityDetectionRecord(memgraph_graph, result, memory, node_id,
                                      label);
     }
-
   } catch (const std::exception &e) {
     mgp::result_set_error_msg(result, e.what());
     return;
@@ -103,7 +102,7 @@ void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
     auto graph = saved_weightedness
                      ? mg_utility::GetWeightedGraphView(
                            memgraph_graph, result, memory, graph_type,
-                           saved_weight_property.c_str(), DEFAULT_WEIGHT)
+                           saved_weight_property.c_str(), saved_default_weight)
                      : mg_utility::GetGraphView(memgraph_graph, result, memory,
                                                 graph_type);
 
@@ -111,10 +110,19 @@ void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
         initialized ? algorithm.GetLabels(graph) : algorithm.SetLabels(graph);
 
     for (const auto [node_id, label] : labels) {
+      // Previously calculated labels returned by GetLabels() may contain
+      // deleted nodes; skip them as they cannot be inserted
+      auto *node = mgp::graph_get_vertex_by_id(
+          memgraph_graph, mgp_vertex_id{.as_int = (int)node_id}, memory);
+      if (!node) {
+        mgp::vertex_destroy(node);
+        continue;
+      }
+
+      mgp::vertex_destroy(node);
       InsertCommunityDetectionRecord(memgraph_graph, result, memory, node_id,
                                      label);
     }
-
   } catch (const std::exception &e) {
     mgp::result_set_error_msg(result, e.what());
     return;
@@ -137,7 +145,7 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
     auto graph = saved_weightedness
                      ? mg_utility::GetWeightedGraphView(
                            memgraph_graph, result, memory, graph_type,
-                           saved_weight_property.c_str(), DEFAULT_WEIGHT)
+                           saved_weight_property.c_str(), saved_default_weight)
                      : mg_utility::GetGraphView(memgraph_graph, result, memory,
                                                 graph_type);
 
@@ -175,13 +183,13 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
 void Reset(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
            mgp_memory *memory) {
   try {
-    algorithm = LabelRankT::LabelRankT();
-    initialized = false;
+    ::algorithm = LabelRankT::LabelRankT();
+    ::initialized = false;
 
-    saved_directedness = false;
-    saved_weightedness = false;
-    saved_weight_property = "weight";
-    DEFAULT_WEIGHT = 1;
+    ::saved_directedness = false;
+    ::saved_weightedness = false;
+    ::saved_weight_property = "weight";
+    ::saved_default_weight = 1;
 
     InsertMessageRecord(result, memory,
                         "The algorithm has been successfully reset!");
@@ -207,30 +215,30 @@ extern "C" int mgp_init_module(struct mgp_module *module,
   try {
     struct mgp_proc *get_proc =
         mgp::module_add_read_procedure(module, "get", Get);
-    struct mgp_proc *detect_proc =
-        mgp::module_add_read_procedure(module, "detect", Detect);
+    struct mgp_proc *set_proc =
+        mgp::module_add_read_procedure(module, "set", Set);
     struct mgp_proc *update_proc =
         mgp::module_add_read_procedure(module, "update", Update);
     struct mgp_proc *reset_proc =
         mgp::module_add_read_procedure(module, "reset", Reset);
 
-    mgp::proc_add_opt_arg(detect_proc, kDirected, mgp::type_bool(),
+    mgp::proc_add_opt_arg(set_proc, kDirected, mgp::type_bool(),
                           default_directed);
-    mgp::proc_add_opt_arg(detect_proc, kWeighted, mgp::type_bool(),
+    mgp::proc_add_opt_arg(set_proc, kWeighted, mgp::type_bool(),
                           default_weighted);
-    mgp::proc_add_opt_arg(detect_proc, kSimilarityThreshold, mgp::type_float(),
+    mgp::proc_add_opt_arg(set_proc, kSimilarityThreshold, mgp::type_float(),
                           default_similarity_threshold);
-    mgp::proc_add_opt_arg(detect_proc, kExponent, mgp::type_float(),
+    mgp::proc_add_opt_arg(set_proc, kExponent, mgp::type_float(),
                           default_exponent);
-    mgp::proc_add_opt_arg(detect_proc, kMinValue, mgp::type_float(),
+    mgp::proc_add_opt_arg(set_proc, kMinValue, mgp::type_float(),
                           default_min_value);
-    mgp::proc_add_opt_arg(detect_proc, kWeightProperty, mgp::type_string(),
+    mgp::proc_add_opt_arg(set_proc, kWeightProperty, mgp::type_string(),
                           default_weight_property);
-    mgp::proc_add_opt_arg(detect_proc, kWSelfloop, mgp::type_float(),
+    mgp::proc_add_opt_arg(set_proc, kWSelfloop, mgp::type_float(),
                           default_w_selfloop);
-    mgp::proc_add_opt_arg(detect_proc, kMaxIterations, mgp::type_int(),
+    mgp::proc_add_opt_arg(set_proc, kMaxIterations, mgp::type_int(),
                           default_max_iterations);
-    mgp::proc_add_opt_arg(detect_proc, kMaxUpdates, mgp::type_int(),
+    mgp::proc_add_opt_arg(set_proc, kMaxUpdates, mgp::type_int(),
                           default_max_updates);
 
     mgp::proc_add_arg(update_proc, kCreatedVertices,
@@ -249,8 +257,8 @@ extern "C" int mgp_init_module(struct mgp_module *module,
     mgp::proc_add_result(get_proc, kFieldNode, mgp::type_node());
     mgp::proc_add_result(get_proc, kFieldCommunityId, mgp::type_int());
 
-    mgp::proc_add_result(detect_proc, kFieldNode, mgp::type_node());
-    mgp::proc_add_result(detect_proc, kFieldCommunityId, mgp::type_int());
+    mgp::proc_add_result(set_proc, kFieldNode, mgp::type_node());
+    mgp::proc_add_result(set_proc, kFieldCommunityId, mgp::type_int());
 
     mgp::proc_add_result(reset_proc, kFieldMessage, mgp::type_string());
   } catch (const std::exception &e) {

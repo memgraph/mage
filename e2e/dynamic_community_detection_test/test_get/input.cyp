@@ -26,4 +26,4 @@ MERGE (a: Node {id: 11}) MERGE (b: Node {id: 12}) CREATE (a)-[r: Relation]->(b);
 MERGE (a: Node {id: 11}) MERGE (b: Node {id: 13}) CREATE (a)-[r: Relation]->(b);
 MERGE (a: Node {id: 11}) MERGE (b: Node {id: 14}) CREATE (a)-[r: Relation]->(b);
 MERGE (a: Node {id: 12}) MERGE (b: Node {id: 14}) CREATE (a)-[r: Relation]->(b);
-CALL dynamic_community_detection.detect() YIELD node, community_id RETURN node.id AS node_id, community_id ORDER BY node_id;
+CALL dynamic_community_detection.set() YIELD node, community_id RETURN node.id AS node_id, community_id ORDER BY node_id;

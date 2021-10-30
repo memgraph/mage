@@ -106,7 +106,7 @@ class LabelRankT {
   /// Community label numbers are initially derived from Memgraph’s node IDs. As
   /// those grow larger with graph updates, this method renumbers them so that
   /// they begin with 1.
-  std::unordered_map<std::uint64_t, std::int64_t> GraphLabels();
+  std::unordered_map<std::uint64_t, std::int64_t> AllLabels();
 
   ///@return -- given node’s most probable community labels
   std::vector<std::uint64_t> MostProbableLabels(std::uint64_t node_id);
@@ -175,12 +175,13 @@ class LabelRankT {
   ///@param graph -- reference to current graph
   ///@param changed_nodes -- list of changed nodes (for incremental update)
   ///@param to_delete -- list of deleted nodes (for incremental update)
+  ///@param persist -- whether to store results
   ///
   ///@return -- {node id, community label} pairs
   std::unordered_map<std::uint64_t, std::int64_t> CalculateLabels(
       std::unique_ptr<mg_graph::Graph<>>& graph,
       std::unordered_set<std::uint64_t> changed_nodes = {},
-      std::unordered_set<std::uint64_t> to_delete = {});
+      std::unordered_set<std::uint64_t> to_delete = {}, bool persist = true);
 
  public:
   ///@brief Creates an instance of the LabelRankT algorithm.

@@ -12,7 +12,7 @@ TEST(LabelRankT, EmptyGraph) {
 
   std::unordered_map<std::uint64_t, std::int64_t> correct_labels = {};
 
-  ASSERT_TRUE(correct_labels == correct_labels);
+  ASSERT_TRUE(labels == correct_labels);
 }
 
 TEST(LabelRankT, SmallGraph) {

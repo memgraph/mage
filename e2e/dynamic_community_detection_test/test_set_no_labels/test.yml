@@ -1,5 +1,5 @@
 query: >
-  CALL dynamic_community_detection.detect(FALSE, TRUE, 0.7, 4.0, 0.99)
+  CALL dynamic_community_detection.set(FALSE, TRUE, 0.7, 4.0, 0.99)
   YIELD node, community_id
   RETURN node.id AS node_id, community_id
   ORDER BY node_id;

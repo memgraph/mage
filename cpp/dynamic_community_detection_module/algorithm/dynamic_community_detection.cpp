@@ -123,7 +123,7 @@ std::int64_t LabelRankT::NodeLabel(std::uint64_t node_id) {
   return node_label;
 }
 
-std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::GraphLabels() {
+std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::AllLabels() {
   std::unordered_map<std::uint64_t, std::int64_t> labels;
 
   std::set<std::int64_t> labels_ordered;
@@ -286,7 +286,7 @@ std::pair<bool, std::uint64_t> LabelRankT::Iteration(
 std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::CalculateLabels(
     std::unique_ptr<mg_graph::Graph<>>& graph,
     std::unordered_set<std::uint64_t> changed_nodes,
-    std::unordered_set<std::uint64_t> to_delete) {
+    std::unordered_set<std::uint64_t> to_delete, bool persist) {
   this->graph = std::move(graph);
 
   bool incremental = changed_nodes.size() >= 1 ? true : false;
@@ -310,20 +310,18 @@ std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::CalculateLabels(
     if (none_updated || most_updates > this->max_updates) break;
   }
 
-  calculated = true;
+  if (persist) this->calculated = true;
   ResetTimesUpdated();
 
-  return GraphLabels();
+  return AllLabels();
 }
 
 std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::GetLabels(
     std::unique_ptr<mg_graph::Graph<>>& graph) {
   std::unordered_map<std::uint64_t, std::int64_t> labels;
-  if (!calculated) {
-    return CalculateLabels(graph);
-  }
+  if (!calculated) return CalculateLabels(graph, {}, {}, false);
 
-  return GraphLabels();
+  return AllLabels();
 }
 
 std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::SetLabels(
@@ -350,7 +348,7 @@ std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::UpdateLabels(
     std::vector<std::pair<std::uint64_t, std::uint64_t>> modified_edges,
     std::vector<std::uint64_t> deleted_nodes,
     std::vector<std::pair<std::uint64_t, std::uint64_t>> deleted_edges) {
-  if (!calculated) return CalculateLabels(graph);
+  if (!calculated) return CalculateLabels(graph, {}, {}, false);
 
   std::unordered_set<std::uint64_t> changed_nodes(modified_nodes.begin(),
                                                   modified_nodes.end());

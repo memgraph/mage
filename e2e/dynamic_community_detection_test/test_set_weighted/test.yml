@@ -1,5 +1,5 @@
 query: >
-  CALL dynamic_community_detection.detect()
+  CALL dynamic_community_detection.set(FALSE, TRUE)
   YIELD node, community_id
   RETURN node.id AS node_id, community_id
   ORDER BY node_id;
@@ -7,7 +7,7 @@ output:
   - node_id: 0
     community_id: 1
   - node_id: 1
-    community_id: 1
+    community_id: 2
   - node_id: 2
     community_id: 1
   - node_id: 3
