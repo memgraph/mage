@@ -31,7 +31,7 @@ bool initialized = false;
 auto saved_directedness = false;
 auto saved_weightedness = false;
 std::string saved_weight_property = "weight";
-double saved_default_weight = 1;
+double saved_default_weight = 1.0;
 
 void InsertCommunityDetectionRecord(mgp_graph *graph, mgp_result *result,
                                     mgp_memory *memory,
@@ -60,7 +60,7 @@ void Set(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
     auto exponent = mgp::value_get_double(mgp::list_at(args, 3));
     auto min_value = mgp::value_get_double(mgp::list_at(args, 4));
     auto weight_property = mgp::value_get_string(mgp::list_at(args, 5));
-    auto w_selfloop = mgp::value_get_double(mgp::list_at(args, 6));
+    auto w_selfloop = weighted ? mgp::value_get_double(mgp::list_at(args, 6)) : 1.0;
     auto max_iterations = mgp::value_get_int(mgp::list_at(args, 7));
     auto max_updates = mgp::value_get_int(mgp::list_at(args, 8));
 
