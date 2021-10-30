@@ -25,8 +25,9 @@ use crate::{mock_mgp_once, with_dummy};
 #[test]
 #[serial]
 fn test_id() {
-    mock_mgp_once!(mgp_vertex_get_id_context, |_| {
-        mgp_vertex_id { as_int: 72 }
+    mock_mgp_once!(mgp_vertex_get_id_context, |_, vertex_id_ptr| unsafe {
+        (*vertex_id_ptr).as_int = 72;
+        mgp_error::MGP_ERROR_NO_ERROR
     });
 
     with_dummy!(Vertex, |vertex: &Vertex| {
@@ -37,24 +38,31 @@ fn test_id() {
 #[test]
 #[serial]
 fn test_labels_count() {
-    mock_mgp_once!(mgp_vertex_labels_count_context, |_| 2);
+    mock_mgp_once!(mgp_vertex_labels_count_context, |_, labels_count| unsafe {
+        (*labels_count) = 2;
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
 
     with_dummy!(Vertex, |vertex: &Vertex| {
-        assert_eq!(vertex.labels_count(), 2);
+        assert_eq!(vertex.labels_count().unwrap(), 2);
     });
 }
 
 #[test]
 #[serial]
 fn test_has_label() {
-    mock_mgp_once!(mgp_vertex_has_label_context, |vertex, label| unsafe {
-        assert_eq!(vertex, null_mut());
-        assert_eq!(CStr::from_ptr(label.name), c_str!("labela"));
-        1
-    });
+    mock_mgp_once!(
+        mgp_vertex_has_label_context,
+        |vertex, label, result| unsafe {
+            assert_eq!(vertex, null_mut());
+            assert_eq!(CStr::from_ptr(label.name), c_str!("labela"));
+            (*result) = 1;
+            mgp_error::MGP_ERROR_NO_ERROR
+        }
+    );
 
     with_dummy!(Vertex, |vertex: &Vertex| {
-        assert_eq!(vertex.has_label(c_str!("labela")), true);
+        assert_eq!(vertex.has_label(c_str!("labela")).unwrap(), true);
     });
 }
 
@@ -62,12 +70,14 @@ fn test_has_label() {
 #[serial]
 fn test_label_at() {
     let test_label = CString::new("test");
-    mock_mgp_once!(mgp_vertex_label_at_context, move |vertex, _| {
-        assert_eq!(vertex, null_mut());
-        mgp_label {
-            name: test_label.as_ref().unwrap().as_ptr(),
+    mock_mgp_once!(
+        mgp_vertex_label_at_context,
+        move |vertex, _, result| unsafe {
+            assert_eq!(vertex, null_mut());
+            (*result).name = test_label.as_ref().unwrap().as_ptr();
+            mgp_error::MGP_ERROR_NO_ERROR
         }
-    });
+    );
 
     with_dummy!(Vertex, |vertex: &Vertex| {
         assert_eq!(vertex.label_at(5).unwrap(), CString::new("test").unwrap());
@@ -79,18 +89,18 @@ fn test_label_at() {
 fn test_property() {
     mock_mgp_once!(
         mgp_vertex_get_property_context,
-        move |vertex, prop_name, memory| {
+        move |vertex, prop_name, memory, _| {
             assert_eq!(vertex, null_mut());
             assert_eq!(prop_name, c_str!("test").as_ptr());
             assert_eq!(memory, null_mut());
-            null_mut()
+            mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
         }
     );
 
     with_dummy!(Vertex, |vertex: &Vertex| {
         assert_eq!(
             vertex.property(c_str!("test")).err().unwrap(),
-            MgpError::UnableToGetVertexProperty
+            Error::UnableToGetVertexProperty
         );
     });
 }
@@ -98,7 +108,9 @@ fn test_property() {
 #[test]
 #[serial]
 fn test_properties() {
-    mock_mgp_once!(mgp_vertex_iter_properties_context, |_, _| { null_mut() });
+    mock_mgp_once!(mgp_vertex_iter_properties_context, |_, _, _| {
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
+    });
 
     with_dummy!(Vertex, |vertex: &Vertex| {
         let iter = vertex.properties();
@@ -109,7 +121,9 @@ fn test_properties() {
 #[test]
 #[serial]
 fn test_in_edges() {
-    mock_mgp_once!(mgp_vertex_iter_in_edges_context, |_, _| { null_mut() });
+    mock_mgp_once!(mgp_vertex_iter_in_edges_context, |_, _, _| {
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
+    });
 
     with_dummy!(Vertex, |vertex: &Vertex| {
         let iter = vertex.in_edges();
@@ -120,7 +134,9 @@ fn test_in_edges() {
 #[test]
 #[serial]
 fn test_out_edges() {
-    mock_mgp_once!(mgp_vertex_iter_out_edges_context, |_, _| { null_mut() });
+    mock_mgp_once!(mgp_vertex_iter_out_edges_context, |_, _, _| {
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
+    });
 
     with_dummy!(Vertex, |vertex: &Vertex| {
         let iter = vertex.out_edges();

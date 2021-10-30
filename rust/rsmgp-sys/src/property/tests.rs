@@ -22,8 +22,12 @@ use crate::{mock_mgp_once, with_dummy};
 #[test]
 #[serial]
 fn test_properties_iterator() {
-    mock_mgp_once!(mgp_properties_iterator_get_context, |_| { null_mut() });
-    mock_mgp_once!(mgp_properties_iterator_next_context, |_| { null_mut() });
+    let property_getter = |_, prop_ptr_ptr: *mut *mut mgp_property| unsafe {
+        (*prop_ptr_ptr) = null_mut();
+        mgp_error::MGP_ERROR_NO_ERROR
+    };
+    mock_mgp_once!(mgp_properties_iterator_get_context, property_getter);
+    mock_mgp_once!(mgp_properties_iterator_next_context, property_getter);
 
     with_dummy!(|memgraph: &Memgraph| {
         let mut iterator = PropertiesIterator::new(null_mut(), &memgraph);

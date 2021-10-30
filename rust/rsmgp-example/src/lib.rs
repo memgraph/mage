@@ -1,4 +1,5 @@
 use c_str_macro::c_str;
+use rsmgp_sys::list::*;
 use rsmgp_sys::memgraph::*;
 use rsmgp_sys::mgp::*;
 use rsmgp_sys::property::*;
@@ -10,7 +11,7 @@ use std::ffi::CString;
 use std::os::raw::c_int;
 use std::panic;
 
-init_module!(|memgraph: &Memgraph| -> MgpResult<()> {
+init_module!(|memgraph: &Memgraph| -> Result<()> {
     memgraph.add_read_procedure(
         test_procedure,
         c_str!("test_procedure"),
@@ -45,7 +46,7 @@ init_module!(|memgraph: &Memgraph| -> MgpResult<()> {
     Ok(())
 });
 
-define_procedure!(basic, |memgraph: &Memgraph| -> MgpResult<()> {
+define_procedure!(basic, |memgraph: &Memgraph| -> Result<()> {
     // This procedure just forwards the input parameters as procedure results.
     let result = memgraph.result_record()?;
     let args = memgraph.args()?;
@@ -59,7 +60,7 @@ define_procedure!(basic, |memgraph: &Memgraph| -> MgpResult<()> {
     Ok(())
 });
 
-define_procedure!(test_procedure, |memgraph: &Memgraph| -> MgpResult<()> {
+define_procedure!(test_procedure, |memgraph: &Memgraph| -> Result<()> {
     for mgp_vertex in memgraph.vertices_iter()? {
         let result = memgraph.result_record()?;
 
@@ -74,13 +75,13 @@ define_procedure!(test_procedure, |memgraph: &Memgraph| -> MgpResult<()> {
             .map(|prop| {
                 let prop_name = prop.name.to_str().unwrap();
                 if let Value::Int(value) = prop.value {
-                    return format!("{}: {}", prop_name, value);
+                    format!("{}: {}", prop_name, value)
                 } else if let Value::String(value) = &prop.value {
-                    return format!("{}: {}", prop_name, value.to_str().unwrap());
+                    format!("{}: {}", prop_name, value.to_str().unwrap())
                 } else if let Value::Float(value) = prop.value {
-                    return format!("{}: {}", prop_name, value);
+                    format!("{}: {}", prop_name, value)
                 } else {
-                    ",".to_string()
+                    format!("{}: <complex type>", prop_name)
                 }
             })
             .collect::<Vec<String>>()
@@ -92,7 +93,7 @@ define_procedure!(test_procedure, |memgraph: &Memgraph| -> MgpResult<()> {
                 .as_c_str(),
         )?;
 
-        let labels_count = mgp_vertex.labels_count();
+        let labels_count = mgp_vertex.labels_count()?;
         result.insert_int(c_str!("labels_count"), labels_count as i64)?;
         if labels_count > 0 {
             result.insert_string(c_str!("first_label"), &mgp_vertex.label_at(0)?)?;
@@ -109,7 +110,7 @@ define_procedure!(test_procedure, |memgraph: &Memgraph| -> MgpResult<()> {
             result.insert_string(c_str!("name_property"), c_str!("not null and not string"))?
         }
 
-        result.insert_bool(c_str!("has_L3_label"), mgp_vertex.has_label(c_str!("L3")))?;
+        result.insert_bool(c_str!("has_L3_label"), mgp_vertex.has_label(c_str!("L3"))?)?;
 
         match mgp_vertex.out_edges()?.next() {
             Some(edge) => {
@@ -122,11 +123,13 @@ define_procedure!(test_procedure, |memgraph: &Memgraph| -> MgpResult<()> {
         }
 
         let list_property = mgp_vertex.property(c_str!("list"))?.value;
-        if let Value::List(list) = list_property {
-            result.insert_list(c_str!("list"), &list)?;
+        match list_property {
+            Value::List(list) => result.insert_list(c_str!("list"), &list)?,
+            Value::Null => result.insert_list(c_str!("list"), &List::make_empty(5, &memgraph)?)?,
+            _ => (),
         }
     }
     Ok(())
 });
 
-close_module!(|| -> MgpResult<()> { Ok(()) });
+close_module!(|| -> Result<()> { Ok(()) });
