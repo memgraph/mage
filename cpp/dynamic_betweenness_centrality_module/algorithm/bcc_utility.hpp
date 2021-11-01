@@ -46,6 +46,7 @@ namespace bcc_algorithm {
 ///@return std::vector<std::vector<mg_graph::Edge<>>>
 ///
 std::vector<std::unordered_set<std::uint64_t>> GetBiconnectedComponents(
-    const mg_graph::GraphView<> &graph, std::unordered_set<uint64_t> &articulationPoints);
+    const mg_graph::GraphView<> &graph, std::unordered_set<uint64_t> &articulationPoints,
+    std::vector<std::vector<mg_graph::Edge<>>> &bcc_edges);
 
 }  // namespace bcc_algorithm
