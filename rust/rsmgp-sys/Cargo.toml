@@ -16,6 +16,7 @@ categories = ["database", "api-bindings"]
 c_str_macro = "1.0.2"
 snafu = "0.6.10"
 mockall_double = "0.2.0"
+chrono = "0.4.19"
 
 [dev-dependencies]
 mockall = "0.9.1"

@@ -13,24 +13,34 @@
 // limitations under the License.
 
 use serial_test::serial;
-use std::ptr::null_mut;
 
 use super::*;
 use crate::memgraph::Memgraph;
 use crate::mgp::mock_ffi::*;
 use crate::testing::alloc::*;
 use crate::{mock_mgp_once, with_dummy};
+use libc::{c_void, free};
 
 #[test]
 #[serial]
 fn test_mgp_copy() {
-    mock_mgp_once!(mgp_list_size_context, |_| 1);
-    mock_mgp_once!(mgp_list_make_empty_context, |_, _| unsafe {
-        alloc_mgp_list()
+    mock_mgp_once!(mgp_list_size_context, |_, size_ptr| unsafe {
+        (*size_ptr) = 1;
+        mgp_error::MGP_ERROR_NO_ERROR
     });
-    mock_mgp_once!(mgp_list_at_context, |_, _| unsafe { alloc_mgp_value() });
-    mock_mgp_once!(mgp_list_append_context, |_, _| 0);
-    mock_mgp_once!(mgp_list_destroy_context, |_| {});
+    mock_mgp_once!(mgp_list_make_empty_context, |_, _, list_ptr_ptr| unsafe {
+        (*list_ptr_ptr) = alloc_mgp_list();
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
+    mock_mgp_once!(mgp_list_at_context, |_, _, _| {
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
+    mock_mgp_once!(mgp_list_append_context, |_, _| {
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
+    });
+    mock_mgp_once!(mgp_list_destroy_context, |ptr| unsafe {
+        free(ptr as *mut c_void);
+    });
 
     with_dummy!(|memgraph: &Memgraph| {
         unsafe {
@@ -43,7 +53,9 @@ fn test_mgp_copy() {
 #[test]
 #[serial]
 fn test_make_empty() {
-    mock_mgp_once!(mgp_list_make_empty_context, |_, _| { null_mut() });
+    mock_mgp_once!(mgp_list_make_empty_context, |_, _, _| {
+        mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
+    });
 
     with_dummy!(|memgraph: &Memgraph| {
         let value = List::make_empty(0, &memgraph);
@@ -54,11 +66,16 @@ fn test_make_empty() {
 #[test]
 #[serial]
 fn test_append() {
-    mock_mgp_once!(mgp_list_append_context, |_, _| 0);
-    mock_mgp_once!(mgp_value_make_null_context, |_| unsafe {
-        alloc_mgp_value()
+    mock_mgp_once!(mgp_value_make_null_context, |_, value_ptr_ptr| unsafe {
+        (*value_ptr_ptr) = alloc_mgp_value();
+        mgp_error::MGP_ERROR_NO_ERROR
     });
-    mock_mgp_once!(mgp_value_destroy_context, |_| {});
+    mock_mgp_once!(mgp_list_append_context, |_, _| {
+        mgp_error::MGP_ERROR_INSUFFICIENT_BUFFER
+    });
+    mock_mgp_once!(mgp_value_destroy_context, |ptr| unsafe {
+        free(ptr as *mut c_void);
+    });
 
     with_dummy!(List, |list: &List| {
         assert!(list.append(&Value::Null).is_err());
@@ -68,11 +85,16 @@ fn test_append() {
 #[test]
 #[serial]
 fn test_append_extend() {
-    mock_mgp_once!(mgp_list_append_extend_context, |_, _| 0);
-    mock_mgp_once!(mgp_value_make_null_context, |_| unsafe {
-        alloc_mgp_value()
+    mock_mgp_once!(mgp_value_make_null_context, |_, value_ptr_ptr| unsafe {
+        (*value_ptr_ptr) = alloc_mgp_value();
+        mgp_error::MGP_ERROR_NO_ERROR
     });
-    mock_mgp_once!(mgp_value_destroy_context, |_| {});
+    mock_mgp_once!(mgp_list_append_extend_context, |_, _| {
+        mgp_error::MGP_ERROR_INSUFFICIENT_BUFFER
+    });
+    mock_mgp_once!(mgp_value_destroy_context, |ptr| unsafe {
+        free(ptr as *mut c_void);
+    });
 
     with_dummy!(List, |list: &List| {
         assert!(list.append_extend(&Value::Null).is_err());
@@ -82,27 +104,35 @@ fn test_append_extend() {
 #[test]
 #[serial]
 fn test_size() {
-    mock_mgp_once!(mgp_list_size_context, |_| 0);
+    mock_mgp_once!(mgp_list_size_context, |_, size_ptr| unsafe {
+        (*size_ptr) = 3;
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
 
     with_dummy!(List, |list: &List| {
-        assert_eq!(list.size(), 0);
+        assert_eq!(list.size(), 3);
     });
 }
 
 #[test]
 #[serial]
 fn test_capacity() {
-    mock_mgp_once!(mgp_list_capacity_context, |_| 0);
+    mock_mgp_once!(mgp_list_capacity_context, |_, capacity_ptr| unsafe {
+        (*capacity_ptr) = 42;
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
 
     with_dummy!(List, |list: &List| {
-        assert_eq!(list.capacity(), 0);
+        assert_eq!(list.capacity(), 42);
     });
 }
 
 #[test]
 #[serial]
 fn test_value_at() {
-    mock_mgp_once!(mgp_list_at_context, |_, _| null_mut());
+    mock_mgp_once!(mgp_list_at_context, |_, _, _| {
+        mgp_error::MGP_ERROR_OUT_OF_RANGE
+    });
 
     with_dummy!(List, |list: &List| {
         assert!(list.value_at(0).is_err());
@@ -112,7 +142,10 @@ fn test_value_at() {
 #[test]
 #[serial]
 fn test_empty_list_iter() {
-    mock_mgp_once!(mgp_list_size_context, |_| 0);
+    mock_mgp_once!(mgp_list_size_context, |_, size_ptr| unsafe {
+        (*size_ptr) = 0;
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
 
     with_dummy!(List, |list: &List| {
         let iter = list.iter();

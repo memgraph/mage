@@ -23,7 +23,9 @@ use crate::memgraph::*;
 use crate::mgp::*;
 use crate::path::*;
 use crate::result::*;
+use crate::temporal;
 use crate::vertex::*;
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 // Required here, if not present tests linking fails.
 #[double]
 use crate::mgp::ffi;
@@ -34,10 +36,10 @@ use mockall_double::double;
 /// # Safety
 ///
 /// The caller has provided a pointer that points to a valid C string. More here [CStr::from_ptr].
-pub(crate) unsafe fn create_cstring(c_char_ptr: *const i8) -> MgpResult<CString> {
+pub(crate) unsafe fn create_cstring(c_char_ptr: *const i8) -> Result<CString> {
     match CString::new(CStr::from_ptr(c_char_ptr).to_bytes()) {
         Ok(v) => Ok(v),
-        Err(_) => Err(MgpError::UnableToCreateCString),
+        Err(_) => Err(Error::UnableToCreateCString),
     }
 }
 
@@ -101,212 +103,335 @@ impl MgpValue {
         }
     }
 
-    pub(crate) fn mgp_ptr(&self) -> *const mgp_value {
+    pub(crate) fn mgp_ptr(&self) -> *mut mgp_value {
         self.ptr
     }
 
-    pub fn to_value(&self) -> MgpResult<Value> {
+    pub fn to_value(&self) -> Result<Value> {
         unsafe { mgp_raw_value_to_value(self.mgp_ptr(), &self.memgraph) }
     }
 
-    pub fn make_null(memgraph: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn make_null(memgraph: &Memgraph) -> Result<MgpValue> {
         unsafe {
-            let mgp_ptr = ffi::mgp_value_make_null(memgraph.memory_ptr());
-            if mgp_ptr.is_null() {
-                return Err(MgpError::UnableToMakeNullValue);
-            }
+            let mgp_ptr = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToMakeNullValue,
+                ffi::mgp_value_make_null,
+                memgraph.memory_ptr()
+            )?;
+
             Ok(MgpValue::new(mgp_ptr, &memgraph))
         }
     }
 
     pub fn is_null(&self) -> bool {
-        unsafe { ffi::mgp_value_is_null(self.ptr) != 0 }
+        unsafe {
+            invoke_mgp_func!(::std::os::raw::c_int, ffi::mgp_value_is_null, self.ptr).unwrap() != 0
+        }
     }
 
-    pub fn make_bool(value: bool, memgraph: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn make_bool(value: bool, memgraph: &Memgraph) -> Result<MgpValue> {
         unsafe {
-            let mgp_ptr =
-                ffi::mgp_value_make_bool(if !value { 0 } else { 1 }, memgraph.memory_ptr());
-            if mgp_ptr.is_null() {
-                return Err(MgpError::UnableToMakeBoolValue);
-            }
+            let mgp_ptr = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToMakeBoolValue,
+                ffi::mgp_value_make_bool,
+                if !value { 0 } else { 1 },
+                memgraph.memory_ptr()
+            )?;
             Ok(MgpValue::new(mgp_ptr, &memgraph))
         }
     }
 
     pub fn is_bool(&self) -> bool {
-        unsafe { ffi::mgp_value_is_bool(self.ptr) != 0 }
+        unsafe {
+            invoke_mgp_func!(::std::os::raw::c_int, ffi::mgp_value_is_bool, self.ptr).unwrap() != 0
+        }
     }
 
-    pub fn make_int(value: i64, memgraph: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn make_int(value: i64, memgraph: &Memgraph) -> Result<MgpValue> {
         unsafe {
-            let mgp_ptr = ffi::mgp_value_make_int(value, memgraph.memory_ptr());
-            if mgp_ptr.is_null() {
-                return Err(MgpError::UnableToMakeIntegerValue);
-            }
+            let mgp_ptr = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToMakeIntegerValue,
+                ffi::mgp_value_make_int,
+                value,
+                memgraph.memory_ptr()
+            )?;
             Ok(MgpValue::new(mgp_ptr, &memgraph))
         }
     }
 
     pub fn is_int(&self) -> bool {
-        unsafe { ffi::mgp_value_is_int(self.ptr) != 0 }
+        unsafe {
+            invoke_mgp_func!(::std::os::raw::c_int, ffi::mgp_value_is_int, self.ptr).unwrap() != 0
+        }
     }
 
-    pub fn make_double(value: f64, memgraph: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn make_double(value: f64, memgraph: &Memgraph) -> Result<MgpValue> {
         unsafe {
-            let mgp_ptr = ffi::mgp_value_make_double(value, memgraph.memory_ptr());
-            if mgp_ptr.is_null() {
-                return Err(MgpError::UnableToMakeDoubleValue);
-            }
+            let mgp_ptr = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToMakeDoubleValue,
+                ffi::mgp_value_make_double,
+                value,
+                memgraph.memory_ptr()
+            )?;
             Ok(MgpValue::new(mgp_ptr, &memgraph))
         }
     }
 
     pub fn is_double(&self) -> bool {
-        unsafe { ffi::mgp_value_is_double(self.ptr) != 0 }
+        unsafe {
+            invoke_mgp_func!(::std::os::raw::c_int, ffi::mgp_value_is_double, self.ptr).unwrap()
+                != 0
+        }
     }
 
-    pub fn make_string(value: &CStr, memgraph: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn make_string(value: &CStr, memgraph: &Memgraph) -> Result<MgpValue> {
         unsafe {
-            let mgp_ptr = ffi::mgp_value_make_string(value.as_ptr(), memgraph.memory_ptr());
-            if mgp_ptr.is_null() {
-                return Err(MgpError::UnableToMakeMemgraphStringValue);
-            }
+            let mgp_ptr = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToMakeMemgraphStringValue,
+                ffi::mgp_value_make_string,
+                value.as_ptr(),
+                memgraph.memory_ptr()
+            )?;
             Ok(MgpValue::new(mgp_ptr, &memgraph))
         }
     }
 
     pub fn is_string(&self) -> bool {
-        unsafe { ffi::mgp_value_is_string(self.ptr) != 0 }
+        unsafe {
+            invoke_mgp_func!(::std::os::raw::c_int, ffi::mgp_value_is_string, self.ptr).unwrap()
+                != 0
+        }
     }
 
     /// Makes a copy of the given object returning the [MgpValue] object. [MgpValue] objects owns
     /// the new object.
-    pub fn make_list(list: &List, memgraph: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn make_list(list: &List, memgraph: &Memgraph) -> Result<MgpValue> {
+        fn to_local_error(_: Error) -> Error {
+            Error::UnableToMakeListValue
+        }
         unsafe {
-            // The new object should be manually destroyed in case something within this function
-            // fails.
-            let mgp_list = ffi::mgp_list_make_empty(list.size(), memgraph.memory_ptr());
-            for item in list.iter()? {
-                let mgp_value = item.to_mgp_value(&memgraph)?;
-                if ffi::mgp_list_append(mgp_list, mgp_value.ptr) == 0 {
-                    ffi::mgp_list_destroy(mgp_list);
-                    return Err(MgpError::UnableToMakeListValue);
-                }
-            }
-            let mgp_value = ffi::mgp_value_make_list(mgp_list);
-            if mgp_value.is_null() {
-                ffi::mgp_list_destroy(mgp_list);
-                return Err(MgpError::UnableToMakeListValue);
-            }
+            let mut list_copy = List::mgp_copy(list.mgp_ptr(), memgraph).map_err(to_local_error)?;
+
+            let mgp_value = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToMakeListValue,
+                ffi::mgp_value_make_list,
+                list_copy.mgp_ptr()
+            )?;
+            list_copy.set_mgp_ptr(std::ptr::null_mut());
             Ok(MgpValue::new(mgp_value, &memgraph))
         }
     }
 
     pub fn is_list(&self) -> bool {
-        unsafe { ffi::mgp_value_is_list(self.ptr) != 0 }
+        unsafe {
+            invoke_mgp_func!(::std::os::raw::c_int, ffi::mgp_value_is_list, self.ptr).unwrap() != 0
+        }
     }
 
     /// Makes a copy of the given object returning the [MgpValue] object. [MgpValue] objects owns
     /// the new object.
-    pub fn make_map(map: &Map, memgraph: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn make_map(map: &Map, memgraph: &Memgraph) -> Result<MgpValue> {
+        fn to_local_error(_: Error) -> Error {
+            Error::UnableToMakeMapValue
+        }
         unsafe {
-            // The new object should be manually destroyed in case something within this function
-            // fails.
-            let mgp_map = ffi::mgp_map_make_empty(memgraph.memory_ptr());
-            for item in map.iter()? {
-                let mgp_value = match item.value.to_mgp_value(&memgraph) {
-                    Ok(v) => v,
-                    Err(_) => {
-                        ffi::mgp_map_destroy(mgp_map);
-                        return Err(MgpError::UnableToMakeMapValue);
-                    }
-                };
-                if ffi::mgp_map_insert(mgp_map, item.key.as_ptr(), mgp_value.ptr) == 0 {
-                    ffi::mgp_map_destroy(mgp_map);
-                    return Err(MgpError::UnableToMakeMapValue);
-                }
-            }
-            let mgp_value = ffi::mgp_value_make_map(mgp_map);
-            if mgp_value.is_null() {
-                ffi::mgp_map_destroy(mgp_map);
-                return Err(MgpError::UnableToMakeMapValue);
-            }
+            let mut map_copy = Map::mgp_copy(map.mgp_ptr(), memgraph).map_err(to_local_error)?;
+
+            let mgp_value = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToMakeMapValue,
+                ffi::mgp_value_make_map,
+                map_copy.mgp_ptr()
+            )?;
+            map_copy.set_mgp_ptr(std::ptr::null_mut());
             Ok(MgpValue::new(mgp_value, &memgraph))
         }
     }
 
     pub fn is_map(&self) -> bool {
-        unsafe { ffi::mgp_value_is_map(self.ptr) != 0 }
+        unsafe {
+            invoke_mgp_func!(::std::os::raw::c_int, ffi::mgp_value_is_map, self.ptr).unwrap() != 0
+        }
     }
 
     /// Makes a copy of the given object returning the [MgpValue] object. [MgpValue] objects owns
     /// the new object.
-    pub fn make_vertex(vertex: &Vertex, memgraph: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn make_vertex(vertex: &Vertex, memgraph: &Memgraph) -> Result<MgpValue> {
+        fn to_local_error(_: Error) -> Error {
+            Error::UnableToMakeVertexValue
+        }
         unsafe {
-            // The new object should be manually destroyed in case something within this function
-            // fails.
-            let mgp_copy = ffi::mgp_vertex_copy(vertex.mgp_ptr(), memgraph.memory_ptr());
-            if mgp_copy.is_null() {
-                return Err(MgpError::UnableToMakeVertexValue);
-            }
-            let mgp_value = ffi::mgp_value_make_vertex(mgp_copy);
-            if mgp_value.is_null() {
-                ffi::mgp_vertex_destroy(mgp_copy);
-                return Err(MgpError::UnableToMakeVertexValue);
-            }
+            let mut vertex_copy =
+                Vertex::mgp_copy(vertex.mgp_ptr(), memgraph).map_err(to_local_error)?;
+
+            let mgp_value = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToMakeVertexValue,
+                ffi::mgp_value_make_vertex,
+                vertex_copy.mgp_ptr()
+            )?;
+            vertex_copy.set_mgp_ptr(std::ptr::null_mut());
             Ok(MgpValue::new(mgp_value, &memgraph))
         }
     }
 
     pub fn is_vertex(&self) -> bool {
-        unsafe { ffi::mgp_value_is_vertex(self.ptr) != 0 }
+        unsafe {
+            invoke_mgp_func!(::std::os::raw::c_int, ffi::mgp_value_is_vertex, self.ptr).unwrap()
+                != 0
+        }
     }
 
     /// Makes a copy of the given object returning the [MgpValue] object. [MgpValue] objects owns
     /// the new object.
-    pub fn make_edge(edge: &Edge, memgraph: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn make_edge(edge: &Edge, memgraph: &Memgraph) -> Result<MgpValue> {
+        fn to_local_error(_: Error) -> Error {
+            Error::UnableToMakeEdgeValue
+        }
         unsafe {
-            // The new object should be manually destroyed in case something within this function
-            // fails.
-            let mgp_copy = ffi::mgp_edge_copy(edge.mgp_ptr(), memgraph.memory_ptr());
-            if mgp_copy.is_null() {
-                return Err(MgpError::UnableToMakeEdgeValue);
-            }
-            let mgp_value = ffi::mgp_value_make_edge(mgp_copy);
-            if mgp_value.is_null() {
-                ffi::mgp_edge_destroy(mgp_copy);
-                return Err(MgpError::UnableToMakeEdgeValue);
-            }
+            let mut edge_copy = Edge::mgp_copy(edge.mgp_ptr(), memgraph).map_err(to_local_error)?;
+
+            let mgp_value = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToMakeEdgeValue,
+                ffi::mgp_value_make_edge,
+                edge_copy.mgp_ptr()
+            )?;
+            edge_copy.set_mgp_ptr(std::ptr::null_mut());
             Ok(MgpValue::new(mgp_value, &memgraph))
         }
     }
 
     pub fn is_edge(&self) -> bool {
-        unsafe { ffi::mgp_value_is_edge(self.ptr) != 0 }
+        unsafe {
+            invoke_mgp_func!(::std::os::raw::c_int, ffi::mgp_value_is_edge, self.ptr).unwrap() != 0
+        }
     }
 
     /// Makes a copy of the given object returning the [MgpValue] object. [MgpValue] objects owns
     /// the new object.
-    pub fn make_path(path: &Path, memgraph: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn make_path(path: &Path, memgraph: &Memgraph) -> Result<MgpValue> {
+        fn to_local_error(_: Error) -> Error {
+            Error::UnableToMakePathValue
+        }
         unsafe {
-            // The new object should be manually destroyed in case something within this function
-            // fails.
-            let mgp_copy = ffi::mgp_path_copy(path.mgp_ptr(), memgraph.memory_ptr());
-            if mgp_copy.is_null() {
-                return Err(MgpError::UnableToMakePathValue);
-            }
-            let mgp_value = ffi::mgp_value_make_path(mgp_copy);
-            if mgp_value.is_null() {
-                ffi::mgp_path_destroy(mgp_copy);
-                return Err(MgpError::UnableToMakePathValue);
-            }
+            let mut path_copy = Path::mgp_copy(path.mgp_ptr(), memgraph).map_err(to_local_error)?;
+
+            let mgp_value = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToMakePathValue,
+                ffi::mgp_value_make_path,
+                path_copy.mgp_ptr()
+            )?;
+            path_copy.set_mgp_ptr(std::ptr::null_mut());
             Ok(MgpValue::new(mgp_value, &memgraph))
         }
     }
 
     pub fn is_path(&self) -> bool {
-        unsafe { ffi::mgp_value_is_path(self.ptr) != 0 }
+        unsafe {
+            invoke_mgp_func!(::std::os::raw::c_int, ffi::mgp_value_is_path, self.ptr).unwrap() != 0
+        }
+    }
+
+    pub fn make_date(date: &NaiveDate, memgraph: &Memgraph) -> Result<MgpValue> {
+        let mut date = temporal::Date::from_naive_date(date, memgraph)?;
+        unsafe {
+            let mgp_value = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToMakeDateValue,
+                ffi::mgp_value_make_date,
+                date.mgp_ptr()
+            )?;
+            date.set_mgp_ptr(std::ptr::null_mut());
+            Ok(MgpValue::new(mgp_value, &memgraph))
+        }
+    }
+
+    pub fn is_date(&self) -> bool {
+        unsafe {
+            invoke_mgp_func!(::std::os::raw::c_int, ffi::mgp_value_is_date, self.ptr).unwrap() != 0
+        }
+    }
+
+    pub fn make_local_time(time: &NaiveTime, memgraph: &Memgraph) -> Result<MgpValue> {
+        let mut local_time = temporal::LocalTime::from_naive_time(time, memgraph)?;
+        unsafe {
+            let mgp_value = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToMakeLocalTimeValue,
+                ffi::mgp_value_make_local_time,
+                local_time.mgp_ptr()
+            )?;
+            local_time.set_mgp_ptr(std::ptr::null_mut());
+            Ok(MgpValue::new(mgp_value, &memgraph))
+        }
+    }
+
+    pub fn is_local_time(&self) -> bool {
+        unsafe {
+            invoke_mgp_func!(
+                ::std::os::raw::c_int,
+                ffi::mgp_value_is_local_time,
+                self.ptr
+            )
+            .unwrap()
+                != 0
+        }
+    }
+
+    pub fn make_local_date_time(datetime: &NaiveDateTime, memgraph: &Memgraph) -> Result<MgpValue> {
+        let mut local_date_time =
+            temporal::LocalDateTime::from_naive_date_time(datetime, memgraph)?;
+        unsafe {
+            let mgp_value = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToMakeLocalDateTimeValue,
+                ffi::mgp_value_make_local_date_time,
+                local_date_time.mgp_ptr()
+            )?;
+            local_date_time.set_mgp_ptr(std::ptr::null_mut());
+            Ok(MgpValue::new(mgp_value, &memgraph))
+        }
+    }
+
+    pub fn is_local_date_time(&self) -> bool {
+        unsafe {
+            invoke_mgp_func!(
+                ::std::os::raw::c_int,
+                ffi::mgp_value_is_local_date_time,
+                self.ptr
+            )
+            .unwrap()
+                != 0
+        }
+    }
+
+    pub fn make_duration(duration: &chrono::Duration, memgraph: &Memgraph) -> Result<MgpValue> {
+        let mut duration = temporal::Duration::from_chrono_duration(duration, memgraph)?;
+        unsafe {
+            let mgp_value = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToMakeDurationValue,
+                ffi::mgp_value_make_duration,
+                duration.mgp_ptr()
+            )?;
+            duration.set_mgp_ptr(std::ptr::null_mut());
+            Ok(MgpValue::new(mgp_value, &memgraph))
+        }
+    }
+
+    pub fn is_duration(&self) -> bool {
+        unsafe {
+            invoke_mgp_func!(::std::os::raw::c_int, ffi::mgp_value_is_duration, self.ptr).unwrap()
+                != 0
+        }
     }
 }
 
@@ -324,10 +449,14 @@ pub enum Value {
     Path(Path),
     List(List),
     Map(Map),
+    Date(NaiveDate),
+    LocalTime(NaiveTime),
+    LocalDateTime(NaiveDateTime),
+    Duration(chrono::Duration),
 }
 
 impl Value {
-    pub fn to_mgp_value(&self, memgraph: &Memgraph) -> MgpResult<MgpValue> {
+    pub fn to_mgp_value(&self, memgraph: &Memgraph) -> Result<MgpValue> {
         match self {
             Value::Null => MgpValue::make_null(&memgraph),
             Value::Bool(x) => MgpValue::make_bool(*x, &memgraph),
@@ -339,6 +468,10 @@ impl Value {
             Value::Vertex(x) => MgpValue::make_vertex(&x, &memgraph),
             Value::Edge(x) => MgpValue::make_edge(&x, &memgraph),
             Value::Path(x) => MgpValue::make_path(&x, &memgraph),
+            Value::Date(x) => MgpValue::make_date(&x, &memgraph),
+            Value::LocalTime(x) => MgpValue::make_local_time(&x, &memgraph),
+            Value::LocalDateTime(x) => MgpValue::make_local_date_time(&x, &memgraph),
+            Value::Duration(x) => MgpValue::make_duration(&x, &memgraph),
         }
     }
 }
@@ -366,45 +499,77 @@ impl From<MgpValue> for Value {
 /// Calls C API unsafe functions. The provided [mgp_value] object has to be a valid non-null
 /// pointer.
 pub(crate) unsafe fn mgp_raw_value_to_value(
-    value: *const mgp_value,
+    value: *mut mgp_value,
     memgraph: &Memgraph,
-) -> MgpResult<Value> {
-    #[allow(non_upper_case_globals)]
-    match ffi::mgp_value_get_type(value) {
-        mgp_value_type_MGP_VALUE_TYPE_NULL => Ok(Value::Null),
-        mgp_value_type_MGP_VALUE_TYPE_BOOL => Ok(Value::Bool(ffi::mgp_value_get_bool(value) == 0)),
-        mgp_value_type_MGP_VALUE_TYPE_INT => Ok(Value::Int(ffi::mgp_value_get_int(value))),
-        mgp_value_type_MGP_VALUE_TYPE_STRING => {
-            let mgp_string = ffi::mgp_value_get_string(value);
+) -> Result<Value> {
+    match invoke_mgp_func!(mgp_value_type, ffi::mgp_value_get_type, value).unwrap() {
+        mgp_value_type::MGP_VALUE_TYPE_NULL => Ok(Value::Null),
+        mgp_value_type::MGP_VALUE_TYPE_BOOL => Ok(Value::Bool(
+            invoke_mgp_func!(::std::os::raw::c_int, ffi::mgp_value_get_bool, value).unwrap() == 0,
+        )),
+        mgp_value_type::MGP_VALUE_TYPE_INT => Ok(Value::Int(
+            invoke_mgp_func!(i64, ffi::mgp_value_get_int, value).unwrap(),
+        )),
+        mgp_value_type::MGP_VALUE_TYPE_STRING => {
+            let mgp_string = invoke_mgp_func!(*const i8, ffi::mgp_value_get_string, value).unwrap();
             match create_cstring(mgp_string) {
                 Ok(value) => Ok(Value::String(value)),
-                Err(_) => Err(MgpError::UnableToMakeValueString),
+                Err(_) => Err(Error::UnableToMakeValueString),
             }
         }
-        mgp_value_type_MGP_VALUE_TYPE_DOUBLE => Ok(Value::Float(ffi::mgp_value_get_double(value))),
-        mgp_value_type_MGP_VALUE_TYPE_VERTEX => {
-            let mgp_vertex = ffi::mgp_value_get_vertex(value);
-            Ok(Value::Vertex(Vertex::mgp_copy(mgp_vertex, &memgraph)?))
-        }
-        mgp_value_type_MGP_VALUE_TYPE_EDGE => {
-            let mgp_edge = ffi::mgp_value_get_edge(value);
-            Ok(Value::Edge(Edge::mgp_copy(mgp_edge, &memgraph)?))
-        }
-        mgp_value_type_MGP_VALUE_TYPE_PATH => {
-            let mgp_path = ffi::mgp_value_get_path(value);
-            Ok(Value::Path(Path::mgp_copy(mgp_path, &memgraph)?))
-        }
-        mgp_value_type_MGP_VALUE_TYPE_LIST => {
-            let mgp_list = ffi::mgp_value_get_list(value);
-            Ok(Value::List(List::mgp_copy(mgp_list, &memgraph)?))
-        }
-        mgp_value_type_MGP_VALUE_TYPE_MAP => {
-            let mgp_map = ffi::mgp_value_get_map(value);
-            Ok(Value::Map(Map::mgp_copy(mgp_map, &memgraph)?))
-        }
-        _ => {
-            panic!("Unable to create value object because of uncovered mgp_value type.");
-        }
+        mgp_value_type::MGP_VALUE_TYPE_DOUBLE => Ok(Value::Float(
+            invoke_mgp_func!(f64, ffi::mgp_value_get_double, value).unwrap(),
+        )),
+        mgp_value_type::MGP_VALUE_TYPE_VERTEX => Ok(Value::Vertex(Vertex::mgp_copy(
+            invoke_mgp_func!(*mut mgp_vertex, ffi::mgp_value_get_vertex, value).unwrap(),
+            &memgraph,
+        )?)),
+        mgp_value_type::MGP_VALUE_TYPE_EDGE => Ok(Value::Edge(Edge::mgp_copy(
+            invoke_mgp_func!(*mut mgp_edge, ffi::mgp_value_get_edge, value).unwrap(),
+            &memgraph,
+        )?)),
+        mgp_value_type::MGP_VALUE_TYPE_PATH => Ok(Value::Path(Path::mgp_copy(
+            invoke_mgp_func!(*mut mgp_path, ffi::mgp_value_get_path, value).unwrap(),
+            &memgraph,
+        )?)),
+        mgp_value_type::MGP_VALUE_TYPE_LIST => Ok(Value::List(List::mgp_copy(
+            invoke_mgp_func!(*mut mgp_list, ffi::mgp_value_get_list, value).unwrap(),
+            &memgraph,
+        )?)),
+        mgp_value_type::MGP_VALUE_TYPE_MAP => Ok(Value::Map(Map::mgp_copy(
+            invoke_mgp_func!(*mut mgp_map, ffi::mgp_value_get_map, value).unwrap(),
+            &memgraph,
+        )?)),
+        mgp_value_type::MGP_VALUE_TYPE_DATE => Ok(Value::Date(
+            temporal::Date::new(
+                invoke_mgp_func!(*mut mgp_date, ffi::mgp_value_get_date, value).unwrap(),
+            )
+            .to_naive_date(),
+        )),
+        mgp_value_type::MGP_VALUE_TYPE_LOCAL_TIME => Ok(Value::LocalTime(
+            temporal::LocalTime::new(
+                invoke_mgp_func!(*mut mgp_local_time, ffi::mgp_value_get_local_time, value)
+                    .unwrap(),
+            )
+            .to_naive_time(),
+        )),
+        mgp_value_type::MGP_VALUE_TYPE_LOCAL_DATE_TIME => Ok(Value::LocalDateTime(
+            temporal::LocalDateTime::new(
+                invoke_mgp_func!(
+                    *mut mgp_local_date_time,
+                    ffi::mgp_value_get_local_date_time,
+                    value
+                )
+                .unwrap(),
+            )
+            .to_naive_date_time(),
+        )),
+        mgp_value_type::MGP_VALUE_TYPE_DURATION => Ok(Value::Duration(
+            temporal::Duration::new(
+                invoke_mgp_func!(*mut mgp_duration, ffi::mgp_value_get_duration, value).unwrap(),
+            )
+            .to_chrono_duration(),
+        )),
     }
 }
 

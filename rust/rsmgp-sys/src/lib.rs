@@ -35,7 +35,7 @@
 //! use std::os::raw::c_int;
 //! use std::panic;
 //!
-//! init_module!(|memgraph: &Memgraph| -> MgpResult<()> {
+//! init_module!(|memgraph: &Memgraph| -> Result<()> {
 //!     memgraph.add_read_procedure(
 //!         basic, // Has to be the same as specified in the `define_procedure!`.
 //!         c_str!("basic"), // Name under which Memgraph will register the procedure.
@@ -46,7 +46,7 @@
 //!     Ok(())
 //! });
 //!
-//! define_procedure!(basic, |memgraph: &Memgraph| -> MgpResult<()> {
+//! define_procedure!(basic, |memgraph: &Memgraph| -> Result<()> {
 //!     let result = memgraph.result_record()?;
 //!     let args = memgraph.args()?;
 //!     let output_string = args.value_at(0)?;
@@ -57,7 +57,7 @@
 //!     Ok(())
 //! });
 //!
-//! close_module!(|| -> MgpResult<()> { Ok(()) });
+//! close_module!(|| -> Result<()> { Ok(()) });
 //! ```
 
 #[cfg(test)]
@@ -65,6 +65,7 @@ extern crate mockall;
 
 extern crate mockall_double;
 
+mod temporal;
 mod testing;
 
 pub mod edge;
