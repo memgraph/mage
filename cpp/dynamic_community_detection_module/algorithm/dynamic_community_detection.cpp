@@ -1,5 +1,6 @@
 #include <cmath>
 #include <mg_graph.hpp>
+#include <numeric>
 
 #include "dynamic_community_detection.hpp"
 
@@ -15,14 +16,12 @@ namespace LabelRankT {
 ///@return -- whether v1 is subset of v2
 template <class T>
 bool IsSubset(const std::vector<T>& v1, const std::vector<T>& v2) {
-  for (const auto& element : v1) {
-    if (std::find(v2.begin(), v2.end(), element) == v2.end()) return false;
-  }
-
-  return true;
+  return !std::any_of(v1.begin(), v1.end(), [&](const auto& e) {
+    return std::find(v2.begin(), v2.end(), e) == v2.end();
+  });
 }
 
-std::vector<std::uint64_t> LabelRankT::NodesMemgraphIDs() {
+std::vector<std::uint64_t> LabelRankT::NodesMemgraphIDs() const {
   std::vector<std::uint64_t> nodes;
 
   for (const auto node : graph->Nodes()) {
@@ -33,7 +32,7 @@ std::vector<std::uint64_t> LabelRankT::NodesMemgraphIDs() {
 }
 
 std::unordered_set<std::uint64_t> LabelRankT::InNeighborsMemgraphIDs(
-    const std::uint64_t node_id) {
+    const std::uint64_t node_id) const {
   std::unordered_set<std::uint64_t> neighbors;
 
   const auto neighbor_set =
@@ -50,8 +49,10 @@ void LabelRankT::SetStructures(const std::uint64_t node_id) {
   times_updated[node_id] = 0;
   std::unordered_map<std::uint64_t, double> node_label_Ps;
 
+  const auto in_neighbors = InNeighborsMemgraphIDs(node_id);
+
   double sum_w_i = w_selfloop;
-  for (const auto node_j_id : InNeighborsMemgraphIDs(node_id)) {
+  for (const auto node_j_id : in_neighbors) {
     sum_w_i += GetTotalWeightBetween(node_j_id, node_id);
   }
 
@@ -59,7 +60,7 @@ void LabelRankT::SetStructures(const std::uint64_t node_id) {
   node_label_Ps[node_id] = w_selfloop / sum_w_i;
 
   // add other edges
-  for (const auto node_j_id : InNeighborsMemgraphIDs(node_id)) {
+  for (const auto node_j_id : in_neighbors) {
     node_label_Ps[node_j_id] +=
         GetTotalWeightBetween(node_j_id, node_id) / sum_w_i;
   }
@@ -78,7 +79,7 @@ void LabelRankT::RemoveDeletedNodes(
 }
 
 double LabelRankT::GetTotalWeightBetween(const std::uint64_t from_node_id,
-                                         const std::uint64_t to_node_id) {
+                                         const std::uint64_t to_node_id) const {
   double total_weight = 0;
   for (const auto edge_id :
        graph->GetEdgesBetweenNodes(graph->GetInnerNodeId(from_node_id),
@@ -97,7 +98,7 @@ double LabelRankT::GetTotalWeightBetween(const std::uint64_t from_node_id,
   return total_weight;
 }
 
-double LabelRankT::GetWeight(const std::uint64_t edge_id) {
+double LabelRankT::GetWeight(const std::uint64_t edge_id) const {
   if (!this->is_weighted) return this->DEFAULT_WEIGHT;
 
   return graph->GetWeight(edge_id);
@@ -127,21 +128,19 @@ std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::AllLabels() {
   std::unordered_map<std::uint64_t, std::int64_t> labels;
 
   std::set<std::int64_t> labels_ordered;
-  std::map<std::int64_t, std::int64_t> lookup;
+  std::unordered_map<std::int64_t, std::int64_t> lookup;
 
   for (const auto [node, _] : label_Ps) {
     labels_ordered.insert(NodeLabel(node));
   }
 
   int64_t label_i = 1;
+  labels_ordered.erase(-1);
   for (const auto label : labels_ordered) {
-    if (label == -1) {  // no label found
-      lookup[label] = label;
-    } else {
-      lookup[label] = label_i;
-      label_i++;
-    }
+    lookup[label] = label_i;
+    label_i++;
   }
+  lookup[-1] = -1;
 
   for (const auto [node, _] : label_Ps) {
     labels.insert({node, lookup[NodeLabel(node)]});
@@ -160,7 +159,7 @@ std::vector<std::uint64_t> LabelRankT::MostProbableLabels(
     if (P > max_P) max_P = P;
   }
 
-  std::vector<std::uint64_t> most_probable_labels = {};
+  std::vector<std::uint64_t> most_probable_labels;
 
   for (const auto [label, P] : label_Ps[node_id]) {
     if (P == max_P) most_probable_labels.push_back(label);
@@ -210,7 +209,7 @@ std::unordered_map<std::uint64_t, double> LabelRankT::Propagate(
 
 void LabelRankT::Inflate(
     std::unordered_map<std::uint64_t, double>& node_label_Ps,
-    const double exponent) {
+    const double exponent) const {
   double sum_Ps = 0;
 
   for (const auto [label, _] : node_label_Ps) {
@@ -226,29 +225,30 @@ void LabelRankT::Inflate(
 
 void LabelRankT::Cutoff(
     std::unordered_map<std::uint64_t, double>& node_label_Ps,
-    const double min_value) {
+    const double min_value) const {
   std::vector<std::uint64_t> to_be_removed;
 
-  for (const auto [label, P] : node_label_Ps) {
-    if (P < min_value) to_be_removed.push_back(label);
-  }
-
-  for (const auto label : to_be_removed) {
-    node_label_Ps.erase(label);
+  for (auto node_label_P = node_label_Ps.begin();
+       node_label_P != node_label_Ps.end();) {
+    auto P = node_label_P->second;
+    if (P < min_value)
+      node_label_P = node_label_Ps.erase(node_label_P);
+    else
+      node_label_P++;
   }
 }
 
 std::pair<bool, std::uint64_t> LabelRankT::Iteration(
-    const bool incremental,
-    const std::unordered_set<std::uint64_t> changed_nodes,
-    const std::unordered_set<std::uint64_t> to_delete) {
+    const std::vector<uint64_t>& nodes_memgraph_ids, const bool incremental,
+    const std::unordered_set<std::uint64_t>& changed_nodes,
+    const std::unordered_set<std::uint64_t>& to_delete) {
   std::unordered_map<std::uint64_t, std::unordered_map<std::uint64_t, double>>
       updated_label_Ps;
 
   bool none_updated = true;
   std::uint64_t most_updates = 0;
 
-  for (const auto node_id : NodesMemgraphIDs()) {
+  for (const auto node_id : nodes_memgraph_ids) {
     if (incremental) {
       const bool was_updated = changed_nodes.count(node_id) > 0 ? true : false;
       const bool was_deleted = to_delete.count(node_id) > 0 ? true : false;
@@ -270,10 +270,10 @@ std::pair<bool, std::uint64_t> LabelRankT::Iteration(
     // cutoff
     Cutoff(updated_node_label_Ps, min_value);
 
-    updated_label_Ps.insert({node_id, updated_node_label_Ps});
+    updated_label_Ps.insert({node_id, std::move(updated_node_label_Ps)});
   }
 
-  for (const auto [node, updated_node_label_Ps] : updated_label_Ps) {
+  for (const auto& [node, updated_node_label_Ps] : updated_label_Ps) {
     label_Ps[node] = updated_node_label_Ps;
     times_updated[node]++;
 
@@ -286,9 +286,10 @@ std::pair<bool, std::uint64_t> LabelRankT::Iteration(
 
 std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::CalculateLabels(
     std::unique_ptr<mg_graph::Graph<>>& graph,
-    const std::unordered_set<std::uint64_t> changed_nodes,
-    const std::unordered_set<std::uint64_t> to_delete, const bool persist) {
+    const std::unordered_set<std::uint64_t>& changed_nodes,
+    const std::unordered_set<std::uint64_t>& to_delete, const bool persist) {
   this->graph = std::move(graph);
+  const auto nodes_memgraph_ids = NodesMemgraphIDs();
 
   const bool incremental = changed_nodes.size() >= 1 ? true : false;
   if (incremental) {
@@ -300,14 +301,14 @@ std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::CalculateLabels(
     label_Ps.clear();
     sum_w.clear();
     times_updated.clear();
-    for (const auto node_id : NodesMemgraphIDs()) {
+    for (const auto node_id : nodes_memgraph_ids) {
       SetStructures(node_id);
     }
   }
 
   for (std::uint64_t i = 0; i < this->max_iterations; i++) {
     const auto [none_updated, most_updates] =
-        Iteration(incremental, changed_nodes, to_delete);
+        Iteration(nodes_memgraph_ids, incremental, changed_nodes, to_delete);
     if (none_updated || most_updates > this->max_updates) break;
   }
 
@@ -335,7 +336,7 @@ std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::SetLabels(
   this->similarity_threshold = similarity_threshold;
   this->exponent = exponent;
   this->min_value = min_value;
-  this->weight_property = weight_property;
+  this->weight_property = std::move(weight_property);
   this->w_selfloop = w_selfloop;
   this->max_iterations = max_iterations;
   this->max_updates = max_updates;
@@ -345,10 +346,10 @@ std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::SetLabels(
 
 std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::UpdateLabels(
     std::unique_ptr<mg_graph::Graph<>>& graph,
-    const std::vector<std::uint64_t> modified_nodes,
-    const std::vector<std::pair<std::uint64_t, std::uint64_t>> modified_edges,
-    const std::vector<std::uint64_t> deleted_nodes,
-    const std::vector<std::pair<std::uint64_t, std::uint64_t>> deleted_edges) {
+    const std::vector<std::uint64_t>& modified_nodes,
+    const std::vector<std::pair<std::uint64_t, std::uint64_t>>& modified_edges,
+    const std::vector<std::uint64_t>& deleted_nodes,
+    const std::vector<std::pair<std::uint64_t, std::uint64_t>>& deleted_edges) {
   if (!calculated) return CalculateLabels(graph, {}, {}, false);
 
   std::unordered_set<std::uint64_t> changed_nodes(modified_nodes.begin(),

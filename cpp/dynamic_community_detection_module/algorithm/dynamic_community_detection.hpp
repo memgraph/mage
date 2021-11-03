@@ -13,7 +13,7 @@ class LabelRankT {
  private:
   /* #region parameters */
   /// default edge weight
-  double DEFAULT_WEIGHT = 1;
+  static constexpr double DEFAULT_WEIGHT = 1;
 
   /// graph directedness
   bool is_directed = false;
@@ -58,7 +58,7 @@ class LabelRankT {
   ///@brief Returns a vector of all graph nodes’ Memgraph IDs.
   ///
   ///@return -- vector of all graph nodes’ Memgraph IDs
-  std::vector<std::uint64_t> NodesMemgraphIDs();
+  std::vector<std::uint64_t> NodesMemgraphIDs() const;
 
   ///@brief Returns in-neighbors’ Memgraph IDs for a given node’s Memgraph ID.
   /// If the graph is undirected, all neighbors are included.
@@ -67,7 +67,7 @@ class LabelRankT {
   ///
   ///@return -- vector of neighbors’ Memgraph IDs
   std::unordered_set<std::uint64_t> InNeighborsMemgraphIDs(
-      const std::uint64_t node_id);
+      const std::uint64_t node_id) const;
 
   ///@brief Initializes internal data structures.
   void SetStructures(const std::uint64_t node_id);
@@ -75,7 +75,8 @@ class LabelRankT {
   ///@brief Removes deleted nodes’ entries from internal data structures.
   ///
   ///@param deleted_nodes_ids -- set of deleted nodes’ IDs
-  void RemoveDeletedNodes(const std::unordered_set<std::uint64_t>& deleted_nodes_ids);
+  void RemoveDeletedNodes(
+      const std::unordered_set<std::uint64_t>& deleted_nodes_ids);
 
   ///@brief Retrieves the total weight of edges between two nodes.
   /// With undirected graphs it considers all edges between the given node pair.
@@ -86,10 +87,10 @@ class LabelRankT {
   ///
   ///@return -- total weight of edges between from_node_id and to_node_id
   double GetTotalWeightBetween(const std::uint64_t from_node_id,
-                               const std::uint64_t to_node_id);
+                               const std::uint64_t to_node_id) const;
 
   ///@brief Retrieves given edge’s weight.
-  double GetWeight(const std::uint64_t edge_id);
+  double GetWeight(const std::uint64_t edge_id) const;
 
   ///@brief Resets each node’s number of updates.
   void ResetTimesUpdated();
@@ -123,7 +124,8 @@ class LabelRankT {
   ///@param similarity_threshold -- the k% threshold above
   ///
   ///@return -- whether the criterion is met
-  bool DistinctEnough(const std::uint64_t node_i_id, const double similarity_threshold);
+  bool DistinctEnough(const std::uint64_t node_i_id,
+                      const double similarity_threshold);
 
   ///@brief Performs label propagation on given node’s label probability vector.
   /// Label propagation works by calculating a weighted sum of the label
@@ -132,27 +134,28 @@ class LabelRankT {
   ///@param node_i -- given node
   ///
   ///@return -- updated label probabilities for given node
-  std::unordered_map<std::uint64_t, double> Propagate(const std::uint64_t node_i_id);
+  std::unordered_map<std::uint64_t, double> Propagate(
+      const std::uint64_t node_i_id);
 
   ///@brief Raises given node’s label probabilities to specified power and
   /// normalizes the result.
   ///
-  ///@param NodeLabel_Ps -- given node’s label probabilities
+  ///@param node_label_Ps -- given node’s label probabilities
   ///@param exponent -- smallest acceptable value
   ///
   ///@return -- updated label probabilities for given node
-  void Inflate(std::unordered_map<std::uint64_t, double>& NodeLabel_Ps,
-               const double exponent);
+  void Inflate(std::unordered_map<std::uint64_t, double>& node_label_Ps,
+               const double exponent) const;
 
   ///@brief Removes values under a set threshold from given node’s label
   /// probability vector.
   ///
-  ///@param NodeLabel_Ps -- given node’s label probabilities
+  ///@param node_label_Ps -- given node’s label probabilities
   ///@param min_value -- smallest acceptable value
   ///
   ///@return -- updated label probabilities for given node
-  void Cutoff(std::unordered_map<std::uint64_t, double>& NodeLabel_Ps,
-              const double min_value);
+  void Cutoff(std::unordered_map<std::uint64_t, double>& node_label_Ps,
+              const double min_value) const;
 
   ///@brief Performs an iteration of the LabelRankT algorithm.
   /// Each iteration has four steps: node selection, label propagation,
@@ -164,15 +167,16 @@ class LabelRankT {
   ///@return -- {whether no nodes have been updated, maximum number of updates
   /// of any node so far} pair
   std::pair<bool, std::uint64_t> Iteration(
+      const std::vector<uint64_t>& nodes_memgraph_ids,
       const bool incremental = false,
-      const std::unordered_set<std::uint64_t> changed_nodes = {},
-      const std::unordered_set<std::uint64_t> to_delete = {});
+      const std::unordered_set<std::uint64_t>& changed_nodes = {},
+      const std::unordered_set<std::uint64_t>& to_delete = {});
   /* #endregion */
 
   ///@brief Handles calculation of community labels and associated data
   /// structures for both dynamic and non-dynamic uses of the algorithm.
   ///
-  ///@param graph -- reference to current graph
+  ///@param graph -- current graph
   ///@param changed_nodes -- list of changed nodes (for incremental update)
   ///@param to_delete -- list of deleted nodes (for incremental update)
   ///@param persist -- whether to store results
@@ -180,8 +184,9 @@ class LabelRankT {
   ///@return -- {node id, community label} pairs
   std::unordered_map<std::uint64_t, std::int64_t> CalculateLabels(
       std::unique_ptr<mg_graph::Graph<>>& graph,
-      const std::unordered_set<std::uint64_t> changed_nodes = {},
-      const std::unordered_set<std::uint64_t> to_delete = {}, const bool persist = true);
+      const std::unordered_set<std::uint64_t>& changed_nodes = {},
+      const std::unordered_set<std::uint64_t>& to_delete = {},
+      const bool persist = true);
 
  public:
   ///@brief Creates an instance of the LabelRankT algorithm.
@@ -191,7 +196,7 @@ class LabelRankT {
   /// If no calculation has been done previously, calculates community labels
   /// with default parameter values.
   ///
-  ///@param graph -- reference to current graph
+  ///@param graph -- current graph
   ///
   ///@return -- {node id, community label} pairs
   std::unordered_map<std::uint64_t, std::int64_t> GetLabels(
@@ -201,7 +206,7 @@ class LabelRankT {
   /// and the parameters for their calculation are reused in online
   /// community detection with UpdateLabels().
   ///
-  ///@param graph -- reference to current graph
+  ///@param graph -- current graph
   ///@param is_weighted -- whether graph is directed
   ///@param is_weighted -- whether graph is weighted
   ///@param similarity_threshold -- similarity threshold used in the node
@@ -216,15 +221,16 @@ class LabelRankT {
       std::unique_ptr<mg_graph::Graph<>>& graph, const bool is_directed = false,
       const bool is_weighted = false, const double similarity_threshold = 0.7,
       const double exponent = 4.0, const double min_value = 0.1,
-      const std::string weight_property = "weight", const double w_selfloop = 1.0,
-      const std::uint64_t max_iterations = 100, const std::uint64_t max_updates = 5);
+      const std::string weight_property = "weight",
+      const double w_selfloop = 1.0, const std::uint64_t max_iterations = 100,
+      const std::uint64_t max_updates = 5);
 
   ///@brief Updates changed nodes’ community labels with LabelRankT.
   /// The maximum numbers of iterations and updates are reused from previous
   /// CalculateLabels() calls. If no calculation has been done previously,
   /// calculates community labels with default parameter values.
   ///
-  ///@param graph -- reference to current graph
+  ///@param graph -- current graph
   ///@param updated_nodes -- list of updated (added, modified) nodes
   ///@param updated_edges -- list of updated (added, modified) edges
   ///@param deleted_nodes -- list of deleted nodes
@@ -233,9 +239,11 @@ class LabelRankT {
   ///@return -- {node id, community label} pairs
   std::unordered_map<std::uint64_t, std::int64_t> UpdateLabels(
       std::unique_ptr<mg_graph::Graph<>>& graph,
-      const std::vector<std::uint64_t> modified_nodes = {},
-      const std::vector<std::pair<std::uint64_t, std::uint64_t>> modified_edges = {},
-      const std::vector<std::uint64_t> deleted_nodes = {},
-      const std::vector<std::pair<std::uint64_t, std::uint64_t>> deleted_edges = {});
+      const std::vector<std::uint64_t>& modified_nodes = {},
+      const std::vector<std::pair<std::uint64_t, std::uint64_t>>&
+          modified_edges = {},
+      const std::vector<std::uint64_t>& deleted_nodes = {},
+      const std::vector<std::pair<std::uint64_t, std::uint64_t>>&
+          deleted_edges = {});
 };
 }  // namespace LabelRankT

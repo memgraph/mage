@@ -31,7 +31,8 @@ bool initialized = false;
 auto saved_directedness = false;
 auto saved_weightedness = false;
 std::string saved_weight_property = "weight";
-double saved_default_weight = 1.0;
+
+static constexpr double DEFAULT_WEIGHT = 1.0;
 
 void InsertCommunityDetectionRecord(mgp_graph *graph, mgp_result *result,
                                     mgp_memory *memory,
@@ -56,7 +57,8 @@ void Set(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
   try {
     const auto directed = mgp::value_get_bool(mgp::list_at(args, 0));
     const auto weighted = mgp::value_get_bool(mgp::list_at(args, 1));
-    const auto similarity_threshold = mgp::value_get_double(mgp::list_at(args, 2));
+    const auto similarity_threshold =
+        mgp::value_get_double(mgp::list_at(args, 2));
     const auto exponent = mgp::value_get_double(mgp::list_at(args, 3));
     const auto min_value = mgp::value_get_double(mgp::list_at(args, 4));
     const auto weight_property = mgp::value_get_string(mgp::list_at(args, 5));
@@ -70,12 +72,12 @@ void Set(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
     ::saved_weight_property = weight_property;
 
     const auto graph_type = saved_directedness
-                          ? mg_graph::GraphType::kDirectedGraph
-                          : mg_graph::GraphType::kUndirectedGraph;
+                                ? mg_graph::GraphType::kDirectedGraph
+                                : mg_graph::GraphType::kUndirectedGraph;
     auto graph = saved_weightedness
                      ? mg_utility::GetWeightedGraphView(
                            memgraph_graph, result, memory, graph_type,
-                           saved_weight_property.c_str(), saved_default_weight)
+                           saved_weight_property.c_str(), DEFAULT_WEIGHT)
                      : mg_utility::GetGraphView(memgraph_graph, result, memory,
                                                 graph_type);
 
@@ -98,12 +100,12 @@ void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
          mgp_memory *memory) {
   try {
     const auto graph_type = saved_directedness
-                          ? mg_graph::GraphType::kDirectedGraph
-                          : mg_graph::GraphType::kUndirectedGraph;
+                                ? mg_graph::GraphType::kDirectedGraph
+                                : mg_graph::GraphType::kUndirectedGraph;
     auto graph = saved_weightedness
                      ? mg_utility::GetWeightedGraphView(
                            memgraph_graph, result, memory, graph_type,
-                           saved_weight_property.c_str(), saved_default_weight)
+                           saved_weight_property.c_str(), DEFAULT_WEIGHT)
                      : mg_utility::GetGraphView(memgraph_graph, result, memory,
                                                 graph_type);
 
@@ -141,12 +143,12 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
     const auto deleted_edges = mgp::value_get_list(mgp::list_at(args, 5));
 
     const auto graph_type = saved_directedness
-                          ? mg_graph::GraphType::kDirectedGraph
-                          : mg_graph::GraphType::kUndirectedGraph;
+                                ? mg_graph::GraphType::kDirectedGraph
+                                : mg_graph::GraphType::kUndirectedGraph;
     auto graph = saved_weightedness
                      ? mg_utility::GetWeightedGraphView(
                            memgraph_graph, result, memory, graph_type,
-                           saved_weight_property.c_str(), saved_default_weight)
+                           saved_weight_property.c_str(), DEFAULT_WEIGHT)
                      : mg_utility::GetGraphView(memgraph_graph, result, memory,
                                                 graph_type);
 
@@ -190,7 +192,6 @@ void Reset(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
     ::saved_directedness = false;
     ::saved_weightedness = false;
     ::saved_weight_property = "weight";
-    ::saved_default_weight = 1;
 
     InsertMessageRecord(result, memory,
                         "The algorithm has been successfully reset!");
