@@ -29,7 +29,7 @@ std::unique_ptr<mg_graph::Graph<>> BuildGraph(
   return G;
 }
 
-/// @brief Builds a weighted graph from given number of nodes and list of edges.
+/// @brief Builds a weighted graph from a given number of nodes and a list of edges.
 /// Nodes should be 0-indexed and each edge should represent an undirected connection between specified nodes.
 ///
 ///@param num_nodes Number of nodes in the graph

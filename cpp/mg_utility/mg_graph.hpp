@@ -200,9 +200,8 @@ class Graph : public GraphView<TSize> {
 
   /// Creates a weighted edge.
   ///
-  /// Creates an directed/undirected edge in the graph depending on graph type.
-  /// Edge will contain information about the original node IDs. Throws an
-  /// exception if nodes are not contained in graph.
+  /// Creates a directed/undirected edge in the graph depending on graph type. Edge will contain information
+  /// about the original node IDs. Throws an exception if nodes are not contained in the graph.
   ///
   /// @param[in]  from  The from node identifier
   /// @param[in]  to    The to node identifier
