@@ -54,21 +54,22 @@ void InsertMessageRecord(mgp_result *result, mgp_memory *memory,
 void Set(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
          mgp_memory *memory) {
   try {
-    auto directed = mgp::value_get_bool(mgp::list_at(args, 0));
-    auto weighted = mgp::value_get_bool(mgp::list_at(args, 1));
-    auto similarity_threshold = mgp::value_get_double(mgp::list_at(args, 2));
-    auto exponent = mgp::value_get_double(mgp::list_at(args, 3));
-    auto min_value = mgp::value_get_double(mgp::list_at(args, 4));
-    auto weight_property = mgp::value_get_string(mgp::list_at(args, 5));
-    auto w_selfloop = weighted ? mgp::value_get_double(mgp::list_at(args, 6)) : 1.0;
-    auto max_iterations = mgp::value_get_int(mgp::list_at(args, 7));
-    auto max_updates = mgp::value_get_int(mgp::list_at(args, 8));
+    const auto directed = mgp::value_get_bool(mgp::list_at(args, 0));
+    const auto weighted = mgp::value_get_bool(mgp::list_at(args, 1));
+    const auto similarity_threshold = mgp::value_get_double(mgp::list_at(args, 2));
+    const auto exponent = mgp::value_get_double(mgp::list_at(args, 3));
+    const auto min_value = mgp::value_get_double(mgp::list_at(args, 4));
+    const auto weight_property = mgp::value_get_string(mgp::list_at(args, 5));
+    const auto w_selfloop =
+        weighted ? mgp::value_get_double(mgp::list_at(args, 6)) : 1.0;
+    const auto max_iterations = mgp::value_get_int(mgp::list_at(args, 7));
+    const auto max_updates = mgp::value_get_int(mgp::list_at(args, 8));
 
     ::saved_directedness = directed;
     ::saved_weightedness = weighted;
     ::saved_weight_property = weight_property;
 
-    auto graph_type = saved_directedness
+    const auto graph_type = saved_directedness
                           ? mg_graph::GraphType::kDirectedGraph
                           : mg_graph::GraphType::kUndirectedGraph;
     auto graph = saved_weightedness
@@ -78,7 +79,7 @@ void Set(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
                      : mg_utility::GetGraphView(memgraph_graph, result, memory,
                                                 graph_type);
 
-    auto labels = algorithm.SetLabels(
+    const auto labels = algorithm.SetLabels(
         graph, directed, weighted, similarity_threshold, exponent, min_value,
         weight_property, w_selfloop, max_iterations, max_updates);
     ::initialized = true;
@@ -96,7 +97,7 @@ void Set(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
 void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
          mgp_memory *memory) {
   try {
-    auto graph_type = saved_directedness
+    const auto graph_type = saved_directedness
                           ? mg_graph::GraphType::kDirectedGraph
                           : mg_graph::GraphType::kUndirectedGraph;
     auto graph = saved_weightedness
@@ -106,7 +107,7 @@ void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
                      : mg_utility::GetGraphView(memgraph_graph, result, memory,
                                                 graph_type);
 
-    auto labels =
+    const auto labels =
         initialized ? algorithm.GetLabels(graph) : algorithm.SetLabels(graph);
 
     for (const auto [node_id, label] : labels) {
@@ -132,14 +133,14 @@ void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
 void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
             mgp_memory *memory) {
   try {
-    auto created_nodes = mgp::value_get_list(mgp::list_at(args, 0));
-    auto created_edges = mgp::value_get_list(mgp::list_at(args, 1));
-    auto updated_nodes = mgp::value_get_list(mgp::list_at(args, 2));
-    auto updated_edges = mgp::value_get_list(mgp::list_at(args, 3));
-    auto deleted_nodes = mgp::value_get_list(mgp::list_at(args, 4));
-    auto deleted_edges = mgp::value_get_list(mgp::list_at(args, 5));
+    const auto created_nodes = mgp::value_get_list(mgp::list_at(args, 0));
+    const auto created_edges = mgp::value_get_list(mgp::list_at(args, 1));
+    const auto updated_nodes = mgp::value_get_list(mgp::list_at(args, 2));
+    const auto updated_edges = mgp::value_get_list(mgp::list_at(args, 3));
+    const auto deleted_nodes = mgp::value_get_list(mgp::list_at(args, 4));
+    const auto deleted_edges = mgp::value_get_list(mgp::list_at(args, 5));
 
-    auto graph_type = saved_directedness
+    const auto graph_type = saved_directedness
                           ? mg_graph::GraphType::kDirectedGraph
                           : mg_graph::GraphType::kUndirectedGraph;
     auto graph = saved_weightedness
@@ -164,8 +165,8 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
                                         updated_edge_endpoint_ids.begin(),
                                         updated_edge_endpoint_ids.end());
 
-      auto deleted_node_ids = mg_utility::GetNodeIDs(deleted_nodes);
-      auto deleted_edge_endpoint_ids =
+      const auto deleted_node_ids = mg_utility::GetNodeIDs(deleted_nodes);
+      const auto deleted_edge_endpoint_ids =
           mg_utility::GetEdgeEndpointIDs(deleted_edges);
 
       algorithm.UpdateLabels(graph, modified_node_ids,
