@@ -22,9 +22,10 @@ class Graph : public GraphView<TSize> {
   using typename GraphView<TSize>::TEdge;
   using typename GraphView<TSize>::TNeighbour;
 
-  static_assert(std::is_unsigned_v<TSize>,
-                "mg_graph::Graph expects the type to be an unsigned integer type\n"
-                "only (uint8_t, uint16_t, uint32_t, or uint64_t).");
+  static_assert(
+      std::is_unsigned_v<TSize>,
+      "mg_graph::Graph expects the type to be an unsigned integer type\n"
+      "only (uint8_t, uint16_t, uint32_t, or uint64_t).");
 
  public:
   /// Create object Graph
@@ -54,9 +55,11 @@ class Graph : public GraphView<TSize> {
   /// @param[in] second node id
   ///
   /// @return     Iterator range
-  std::vector<TSize> GetEdgesBetweenNodes(TSize first, TSize second) const override {
+  std::vector<TSize> GetEdgesBetweenNodes(TSize first,
+                                          TSize second) const override {
     std::vector<TSize> edge_ids;
-    const auto [range_start, range_end] = nodes_to_edge_.equal_range(std::minmax(first, second));
+    const auto [range_start, range_end] =
+        nodes_to_edge_.equal_range(std::minmax(first, second));
     edge_ids.reserve(std::distance(range_start, range_end));
     for (auto it = range_start; it != range_end; ++it) {
       if (IsEdgeValid(it->second)) {
@@ -166,8 +169,9 @@ class Graph : public GraphView<TSize> {
 
   /// Creates an edge.
   ///
-  /// Creates an directed/undirected edge in the graph depending on graph type. Edge will contain information
-  /// about the original node IDs. Throws exception if nodes are not contained in  graph.
+  /// Creates an directed/undirected edge in the graph depending on graph type.
+  /// Edge will contain information about the original node IDs. Throws
+  /// exception if nodes are not contained in  graph.
   ///
   /// @param[in]  from  The from node identifier
   /// @param[in]  to    The to node identifier
@@ -183,7 +187,7 @@ class Graph : public GraphView<TSize> {
     adj_list_[from].push_back(id);
     neighbours_[from].emplace_back(to, id);
     nodes_to_edge_.insert({std::minmax(from, to), id});
-    
+
     if (graph_type == GraphType::kUndirectedGraph) {
       adj_list_[to].push_back(id);
       neighbours_[to].emplace_back(from, id);
@@ -196,15 +200,17 @@ class Graph : public GraphView<TSize> {
 
   /// Creates a weighted edge.
   ///
-  /// Creates an directed/undirected edge in the graph depending on graph type. Edge will contain information
-  /// about the original node IDs. Throws an exception if nodes are not contained in graph.
+  /// Creates an directed/undirected edge in the graph depending on graph type.
+  /// Edge will contain information about the original node IDs. Throws an
+  /// exception if nodes are not contained in graph.
   ///
   /// @param[in]  from  The from node identifier
   /// @param[in]  to    The to node identifier
   ///
   /// @return     Created edge id
-  TSize CreateWeightedEdge(std::uint64_t memgraph_id_from, std::uint64_t memgraph_id_to, double weight,
-                   const GraphType graph_type = GraphType::kDirectedGraph) {
+  TSize CreateWeightedEdge(
+      std::uint64_t memgraph_id_from, std::uint64_t memgraph_id_to,
+      double weight, const GraphType graph_type = GraphType::kDirectedGraph) {
     weights_.push_back(weight);
     return CreateEdge(memgraph_id_from, memgraph_id_to, graph_type);
   }
@@ -260,14 +266,16 @@ class Graph : public GraphView<TSize> {
 
     auto edge_id = it->second;
 
-    for (auto it = adj_list_[node_from].begin(); it != adj_list_[node_from].end(); ++it) {
+    for (auto it = adj_list_[node_from].begin();
+         it != adj_list_[node_from].end(); ++it) {
       if (edges_[*it].to == node_to || edges_[*it].from == node_to) {
         edges_[*it].id = Graph::k_deleted_edge_id_;
         adj_list_[node_from].erase(it);
         break;
       }
     }
-    for (auto it = adj_list_[node_to].begin(); it != adj_list_[node_to].end(); ++it) {
+    for (auto it = adj_list_[node_to].begin(); it != adj_list_[node_to].end();
+         ++it) {
       if (edges_[*it].to == node_from || edges_[*it].from == node_from) {
         edges_[*it].id = Graph::k_deleted_edge_id_;
         adj_list_[node_to].erase(it);
@@ -275,13 +283,15 @@ class Graph : public GraphView<TSize> {
       }
     }
 
-    for (auto it = neighbours_[node_from].begin(); it != neighbours_[node_from].end(); ++it) {
+    for (auto it = neighbours_[node_from].begin();
+         it != neighbours_[node_from].end(); ++it) {
       if (it->edge_id == edge_id) {
         neighbours_[node_from].erase(it);
         break;
       }
     }
-    for (auto it = neighbours_[node_to].begin(); it != neighbours_[node_to].end(); ++it) {
+    for (auto it = neighbours_[node_to].begin();
+         it != neighbours_[node_to].end(); ++it) {
       if (it->edge_id == edge_id) {
         neighbours_[node_to].erase(it);
         break;
@@ -295,7 +305,8 @@ class Graph : public GraphView<TSize> {
   /// @param node_id Memgraphs's inner ID
   ///
   TSize GetInnerNodeId(std::uint64_t memgraph_id) {
-    if (memgraph_to_inner_id_.find(memgraph_id) == memgraph_to_inner_id_.end()) {
+    if (memgraph_to_inner_id_.find(memgraph_id) ==
+        memgraph_to_inner_id_.end()) {
       throw mg_exception::InvalidIDException();
     }
     return memgraph_to_inner_id_[memgraph_id];
@@ -329,10 +340,12 @@ class Graph : public GraphView<TSize> {
  private:
   // Constant is used for marking deleted edges.
   // If edge id is equal to constant, edge is deleted.
-  static constexpr inline TSize k_deleted_edge_id_ = std::numeric_limits<TSize>::max();
+  static constexpr inline TSize k_deleted_edge_id_ =
+      std::numeric_limits<TSize>::max();
 
   std::vector<std::vector<TSize>> adj_list_;
-  std::vector<std::vector<TNeighbour>> neighbours_;
+  std::vector<std::vector<TNeighbour>>
+      neighbours_;  // only contains out-neighbours if the graph is directed
   std::vector<std::vector<TNeighbour>> in_neighbours_;
 
   std::vector<double> weights_;
