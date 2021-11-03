@@ -103,8 +103,8 @@ class OnScopeExit {
 };
 
 ///@brief Method for mapping the Memgraph in-memory graph into user-based graph
-/// with iterative node indices. The graph object stores information about node
-/// and edge mappings alongside with connection information. Created graph is
+/// with iterative node indices. The graph object stores information about the node
+/// and edge mappings alongside connection information. Created graph is
 /// zero-indexed, i.e. indices start at index 0.
 ///
 ///@param graph Memgraph graph
