@@ -97,5 +97,4 @@ std::unique_ptr<mg_graph::Graph<>> GenRandomTree(
   }
   return BuildGraph(num_nodes, edges, graph_type);
 }
-
 }  // namespace mg_generate
