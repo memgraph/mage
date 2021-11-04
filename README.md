@@ -150,8 +150,8 @@ If we have a graph that is broken into multiple components (left image), simple 
 ```
 // Create graph as on image below
 
-CALL weakly_connected_components.get() YIELD node, component
-RETURN node, component;
+CALL weakly_connected_components.get() YIELD node, component_id
+RETURN node, component_id;
 ```
 
 |       Graph input        |        MAGE output        |
