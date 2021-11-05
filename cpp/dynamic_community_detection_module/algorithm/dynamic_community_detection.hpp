@@ -110,7 +110,7 @@ class LabelRankT {
   std::unordered_map<std::uint64_t, std::int64_t> AllLabels();
 
   ///@return -- given node’s most probable community labels
-  std::vector<std::uint64_t> MostProbableLabels(const std::uint64_t node_id);
+  std::unordered_set<std::uint64_t> MostProbableLabels(const std::uint64_t node_id);
   /* #endregion */
 
   /* #region label_propagation_steps */
@@ -183,7 +183,7 @@ class LabelRankT {
   ///
   ///@return -- {node id, community label} pairs
   std::unordered_map<std::uint64_t, std::int64_t> CalculateLabels(
-      std::unique_ptr<mg_graph::Graph<>>& graph,
+      std::unique_ptr<mg_graph::Graph<>>&& graph,
       const std::unordered_set<std::uint64_t>& changed_nodes = {},
       const std::unordered_set<std::uint64_t>& to_delete = {},
       const bool persist = true);
@@ -200,7 +200,7 @@ class LabelRankT {
   ///
   ///@return -- {node id, community label} pairs
   std::unordered_map<std::uint64_t, std::int64_t> GetLabels(
-      std::unique_ptr<mg_graph::Graph<>>& graph);
+      std::unique_ptr<mg_graph::Graph<>>&& graph);
 
   ///@brief Calculates and returns community labels using LabelRankT. The labels
   /// and the parameters for their calculation are reused in online
@@ -218,7 +218,7 @@ class LabelRankT {
   ///@param max_iterations -- maximum number of iterations
   ///@param max_updates -- maximum number of updates for any node
   std::unordered_map<std::uint64_t, std::int64_t> SetLabels(
-      std::unique_ptr<mg_graph::Graph<>>& graph, const bool is_directed = false,
+      std::unique_ptr<mg_graph::Graph<>>&& graph, const bool is_directed = false,
       const bool is_weighted = false, const double similarity_threshold = 0.7,
       const double exponent = 4.0, const double min_value = 0.1,
       const std::string weight_property = "weight",
@@ -238,7 +238,7 @@ class LabelRankT {
   ///
   ///@return -- {node id, community label} pairs
   std::unordered_map<std::uint64_t, std::int64_t> UpdateLabels(
-      std::unique_ptr<mg_graph::Graph<>>& graph,
+      std::unique_ptr<mg_graph::Graph<>>&& graph,
       const std::vector<std::uint64_t>& modified_nodes = {},
       const std::vector<std::pair<std::uint64_t, std::uint64_t>>&
           modified_edges = {},

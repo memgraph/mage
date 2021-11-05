@@ -8,7 +8,7 @@ TEST(LabelRankT, EmptyGraph) {
   auto empty_graph = mg_generate::BuildGraph(0, {});
 
   LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT();
-  auto labels = algorithm.SetLabels(empty_graph);
+  auto labels = algorithm.SetLabels(std::move(empty_graph));
 
   std::unordered_map<std::uint64_t, std::int64_t> correct_labels = {};
 
@@ -20,7 +20,7 @@ TEST(LabelRankT, SmallGraph) {
       6, {{0, 1}, {0, 2}, {1, 2}, {2, 3}, {3, 4}, {3, 5}, {4, 5}});
 
   LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT();
-  auto labels = algorithm.SetLabels(small_graph);
+  auto labels = algorithm.SetLabels(std::move(small_graph));
 
   std::unordered_map<std::uint64_t, std::int64_t> correct_labels = {
       {0, 1}, {1, 1}, {2, 1}, {3, 2}, {4, 2}, {5, 2}};
@@ -39,7 +39,7 @@ TEST(LabelRankT, DisconnectedGraph) {
       });
 
   LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT();
-  auto labels = algorithm.SetLabels(disconnected_graph);
+  auto labels = algorithm.SetLabels(std::move(disconnected_graph));
 
   std::unordered_map<std::uint64_t, std::int64_t> correct_labels = {
       {0, 1}, {1, 1}, {2, 1},  {3, 1},  {4, 2},  {5, 2},  {6, 2},  {7, 2},
@@ -59,8 +59,8 @@ TEST(LabelRankT, GetLabels) {
       });
 
   LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT();
-  algorithm.SetLabels(example_graph);
-  auto labels = algorithm.GetLabels(example_graph);
+  algorithm.SetLabels(std::move(example_graph));
+  auto labels = algorithm.GetLabels(std::move(example_graph));
 
   std::unordered_map<std::uint64_t, std::int64_t> correct_labels = {
       {0, 1}, {1, 1}, {2, 1},  {3, 1},  {4, 2},  {5, 2},  {6, 2}, {7, 2},
@@ -80,7 +80,7 @@ TEST(LabelRankT, GetLabelsUninitialized) {
       });
 
   LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT();
-  auto labels = algorithm.GetLabels(example_graph);
+  auto labels = algorithm.GetLabels(std::move(example_graph));
 
   std::unordered_map<std::uint64_t, std::int64_t> correct_labels = {
       {0, 1}, {1, 1}, {2, 1},  {3, 1},  {4, 2},  {5, 2},  {6, 2}, {7, 2},
@@ -100,7 +100,7 @@ TEST(LabelRankT, SetLabels) {
       });
 
   LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT();
-  auto labels = algorithm.SetLabels(example_graph);
+  auto labels = algorithm.SetLabels(std::move(example_graph));
 
   std::unordered_map<std::uint64_t, std::int64_t> correct_labels = {
       {0, 1}, {1, 1}, {2, 1},  {3, 1},  {4, 2},  {5, 2},  {6, 2}, {7, 2},
@@ -121,7 +121,7 @@ TEST(LabelRankT, UpdateLabelsEdgesChanged) {
       });
 
   LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT();
-  auto labels = algorithm.SetLabels(example_graph);
+  auto labels = algorithm.SetLabels(std::move(example_graph));
 
   auto updated_graph = mg_generate::BuildGraph(
       15,
@@ -134,7 +134,7 @@ TEST(LabelRankT, UpdateLabelsEdgesChanged) {
       });
 
   labels =
-      algorithm.UpdateLabels(updated_graph, {}, {{0, 13}, {3, 9}, {10, 12}}, {},
+      algorithm.UpdateLabels(std::move(updated_graph), {}, {{0, 13}, {3, 9}, {10, 12}}, {},
                              {{9, 12}, {9, 14}, {10, 13}});
 
   std::unordered_map<std::uint64_t, std::int64_t> correct_labels = {
@@ -156,7 +156,7 @@ TEST(LabelRankT, UpdateLabelsNodesChanged) {
       });
 
   LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT();
-  auto labels = algorithm.SetLabels(example_graph);
+  auto labels = algorithm.SetLabels(std::move(example_graph));
 
   auto updated_graph = mg_generate::BuildGraph(
       15,
@@ -169,7 +169,7 @@ TEST(LabelRankT, UpdateLabelsNodesChanged) {
       });
 
   labels =
-      algorithm.UpdateLabels(updated_graph, {}, {{0, 13}, {3, 9}, {10, 12}}, {},
+      algorithm.UpdateLabels(std::move(updated_graph), {}, {{0, 13}, {3, 9}, {10, 12}}, {},
                              {{9, 12}, {9, 14}, {10, 13}});
 
   updated_graph = mg_generate::BuildGraph(
@@ -182,7 +182,7 @@ TEST(LabelRankT, UpdateLabelsNodesChanged) {
           });
 
   labels = algorithm.UpdateLabels(
-      updated_graph, {15},
+      std::move(updated_graph), {15},
       {{8, 15}, {10, 15}, {14, 15}, {1, 7}, {2, 4}, {2, 6}}, {5},
       {{4, 5}, {5, 7}, {5, 8}, {6, 8}});
 
@@ -198,7 +198,7 @@ TEST(LabelRankT, NoLabelsDetected) {
       6, {{0, 1}, {0, 2}, {1, 2}, {2, 3}, {3, 4}, {3, 5}, {4, 5}});
 
   LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT();
-  auto labels = algorithm.SetLabels(small_graph, false, false, 0.7, 4.0, 0.99,
+  auto labels = algorithm.SetLabels(std::move(small_graph), false, false, 0.7, 4.0, 0.99,
                                     "weight", 1.0, 100, 5);
 
   std::unordered_map<std::uint64_t, std::int64_t> correct_labels = {
@@ -227,7 +227,7 @@ TEST(LabelRankT, DirectedGraph) {
                               mg_graph::GraphType::kDirectedGraph);
 
   LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT();
-  auto labels = algorithm.SetLabels(directed_graph, true, false);
+  auto labels = algorithm.SetLabels(std::move(directed_graph), true, false);
 
   std::unordered_map<std::uint64_t, std::int64_t> correct_labels = {
       {0, 1}, {1, 1}, {2, 1}, {3, 2}, {4, 2}, {5, 2}};
@@ -248,7 +248,7 @@ TEST(LabelRankT, WeightedGraph) {
                                       mg_graph::GraphType::kUndirectedGraph);
 
   LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT();
-  auto labels = algorithm.SetLabels(weighted_graph, false, true);
+  auto labels = algorithm.SetLabels(std::move(weighted_graph), false, true);
 
   std::unordered_map<std::uint64_t, std::int64_t> correct_labels = {
       {0, 1}, {1, 1}, {2, 1}, {3, 2}, {4, 2}, {5, 2}};
@@ -276,7 +276,7 @@ TEST(LabelRankT, DirectedWeightedGraph) {
                                       mg_graph::GraphType::kDirectedGraph);
 
   LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT();
-  auto labels = algorithm.SetLabels(directed_weighted_graph, true, true);
+  auto labels = algorithm.SetLabels(std::move(directed_weighted_graph), true, true);
 
   std::unordered_map<std::uint64_t, std::int64_t> correct_labels = {
       {0, 1}, {1, 1}, {2, 1}, {3, 2}, {4, 2}, {5, 2}};

@@ -82,7 +82,7 @@ void Set(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
                                                 graph_type);
 
     const auto labels = algorithm.SetLabels(
-        graph, directed, weighted, similarity_threshold, exponent, min_value,
+        std::move(graph), directed, weighted, similarity_threshold, exponent, min_value,
         weight_property, w_selfloop, max_iterations, max_updates);
     ::initialized = true;
 
@@ -110,7 +110,7 @@ void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
                                                 graph_type);
 
     const auto labels =
-        initialized ? algorithm.GetLabels(graph) : algorithm.SetLabels(graph);
+        initialized ? algorithm.GetLabels(std::move(graph)) : algorithm.SetLabels(std::move(graph));
 
     for (const auto [node_id, label] : labels) {
       // Previously calculated labels returned by GetLabels() may contain
@@ -171,11 +171,11 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
       const auto deleted_edge_endpoint_ids =
           mg_utility::GetEdgeEndpointIDs(deleted_edges);
 
-      algorithm.UpdateLabels(graph, modified_node_ids,
+      algorithm.UpdateLabels(std::move(graph), modified_node_ids,
                              modified_edge_endpoint_ids, deleted_node_ids,
                              deleted_edge_endpoint_ids);
     } else {
-      algorithm.SetLabels(graph);
+      algorithm.SetLabels(std::move(graph));
     }
   } catch (const std::exception &e) {
     mgp::result_set_error_msg(result, e.what());

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <mg_graph.hpp>
 #include <numeric>
@@ -6,19 +7,17 @@
 
 namespace LabelRankT {
 /* #region helper_methods */
-///@brief Checks if vector is subset of another vector.
+///@brief Checks if unordered_set is subset of another unordered_set.
 ///
 ///@tparam T -- set element data type
 ///
-///@param v1 -- subset candidate
-///@param v2 -- vector against which the check is performed
+///@param a -- subset candidate
+///@param b -- set against which the check is performed
 ///
-///@return -- whether v1 is subset of v2
+///@return -- whether a is subset of b
 template <class T>
-bool IsSubset(const std::vector<T>& v1, const std::vector<T>& v2) {
-  return !std::any_of(v1.begin(), v1.end(), [&](const auto& e) {
-    return std::find(v2.begin(), v2.end(), e) == v2.end();
-  });
+bool IsSubset(const std::unordered_set<T>& a, const std::unordered_set<T>& b) {
+  return std::includes(a.begin(), a.end(), b.begin(), b.end());
 }
 
 std::vector<std::uint64_t> LabelRankT::NodesMemgraphIDs() const {
@@ -151,7 +150,7 @@ std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::AllLabels() {
   return labels;
 }
 
-std::vector<std::uint64_t> LabelRankT::MostProbableLabels(
+std::unordered_set<std::uint64_t> LabelRankT::MostProbableLabels(
     const std::uint64_t node_id) {
   double max_P = 0;
 
@@ -159,10 +158,10 @@ std::vector<std::uint64_t> LabelRankT::MostProbableLabels(
     if (P > max_P) max_P = P;
   }
 
-  std::vector<std::uint64_t> most_probable_labels;
+  std::unordered_set<std::uint64_t> most_probable_labels;
 
   for (const auto [label, P] : label_Ps[node_id]) {
-    if (P == max_P) most_probable_labels.push_back(label);
+    if (P == max_P) most_probable_labels.insert(label);
   }
 
   return most_probable_labels;
@@ -172,12 +171,12 @@ std::vector<std::uint64_t> LabelRankT::MostProbableLabels(
 /* #region label_propagation_steps */
 bool LabelRankT::DistinctEnough(const std::uint64_t node_i_id,
                                 const double similarity_threshold) {
-  const std::vector<std::uint64_t> labels_i = MostProbableLabels(node_i_id);
+  const auto labels_i = MostProbableLabels(node_i_id);
   std::uint64_t label_similarity = 0;
 
   const auto in_neighbors_ids = InNeighborsMemgraphIDs(node_i_id);
   for (const auto node_j_id : in_neighbors_ids) {
-    const std::vector<std::uint64_t> labels_j = MostProbableLabels(node_j_id);
+    const auto labels_j = MostProbableLabels(node_j_id);
     if (IsSubset(labels_i, labels_j)) label_similarity++;
   }
 
@@ -285,7 +284,7 @@ std::pair<bool, std::uint64_t> LabelRankT::Iteration(
 /* #endregion */
 
 std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::CalculateLabels(
-    std::unique_ptr<mg_graph::Graph<>>& graph,
+    std::unique_ptr<mg_graph::Graph<>>&& graph,
     const std::unordered_set<std::uint64_t>& changed_nodes,
     const std::unordered_set<std::uint64_t>& to_delete, const bool persist) {
   this->graph = std::move(graph);
@@ -319,14 +318,14 @@ std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::CalculateLabels(
 }
 
 std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::GetLabels(
-    std::unique_ptr<mg_graph::Graph<>>& graph) {
-  if (!calculated) return CalculateLabels(graph, {}, {}, false);
+    std::unique_ptr<mg_graph::Graph<>>&& graph) {
+  if (!calculated) return CalculateLabels(std::move(graph), {}, {}, false);
 
   return AllLabels();
 }
 
 std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::SetLabels(
-    std::unique_ptr<mg_graph::Graph<>>& graph, const bool is_directed,
+    std::unique_ptr<mg_graph::Graph<>>&& graph, const bool is_directed,
     const bool is_weighted, const double similarity_threshold,
     const double exponent, const double min_value,
     const std::string weight_property, const double w_selfloop,
@@ -341,16 +340,16 @@ std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::SetLabels(
   this->max_iterations = max_iterations;
   this->max_updates = max_updates;
 
-  return CalculateLabels(graph);
+  return CalculateLabels(std::move(graph));
 }
 
 std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::UpdateLabels(
-    std::unique_ptr<mg_graph::Graph<>>& graph,
+    std::unique_ptr<mg_graph::Graph<>>&& graph,
     const std::vector<std::uint64_t>& modified_nodes,
     const std::vector<std::pair<std::uint64_t, std::uint64_t>>& modified_edges,
     const std::vector<std::uint64_t>& deleted_nodes,
     const std::vector<std::pair<std::uint64_t, std::uint64_t>>& deleted_edges) {
-  if (!calculated) return CalculateLabels(graph, {}, {}, false);
+  if (!calculated) return CalculateLabels(std::move(graph), {}, {}, false);
 
   std::unordered_set<std::uint64_t> changed_nodes(modified_nodes.begin(),
                                                   modified_nodes.end());
@@ -367,6 +366,6 @@ std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::UpdateLabels(
     if (to_delete.count(edge.second) == 0) changed_nodes.insert(edge.second);
   }
 
-  return CalculateLabels(graph, changed_nodes, to_delete);
+  return CalculateLabels(std::move(graph), changed_nodes, to_delete);
 }
 }  // namespace LabelRankT
