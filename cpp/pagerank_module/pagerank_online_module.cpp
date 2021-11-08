@@ -1,6 +1,5 @@
 #include <mg_utils.hpp>
 
-#include <iostream>
 #include "algorithm/pagerank.hpp"
 #include "algorithm_online/pagerank.hpp"
 
@@ -177,10 +176,10 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     try {
       auto *pagerank_proc = mgp::module_add_read_procedure(module, kProcedureUpdate, OnlinePagerankUpdate);
 
-      auto default_created_vertices = mgp::value_make_null(memory);
-      auto default_created_edges = mgp::value_make_null(memory);
-      auto default_deleted_vertices = mgp::value_make_null(memory);
-      auto default_deleted_edges = mgp::value_make_null(memory);
+      auto default_created_vertices = mgp::value_make_list(mgp::list_make_empty(0, memory));
+      auto default_created_edges = mgp::value_make_list(mgp::list_make_empty(0, memory));
+      auto default_deleted_vertices = mgp::value_make_list(mgp::list_make_empty(0, memory));
+      auto default_deleted_edges = mgp::value_make_list(mgp::list_make_empty(0, memory));
 
       mgp::proc_add_opt_arg(pagerank_proc, kArgumentCreatedVertices,
                             mgp::type_nullable(mgp::type_list(mgp::type_node())), default_created_vertices);
@@ -209,7 +208,6 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   {
     try {
       auto *pagerank_proc = mgp::module_add_read_procedure(module, kProcedureReset, OnlinePagerankReset);
-
       mgp::proc_add_result(pagerank_proc, kFieldMessage, mgp::type_string());
 
     } catch (const std::exception &e) {
