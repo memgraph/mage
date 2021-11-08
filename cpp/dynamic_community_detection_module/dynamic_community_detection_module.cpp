@@ -36,7 +36,7 @@ static constexpr double DEFAULT_WEIGHT = 1.0;
 
 void InsertCommunityDetectionRecord(mgp_graph *graph, mgp_result *result,
                                     mgp_memory *memory,
-                                    const std::uint64_t node_id,
+                                    std::uint64_t node_id,
                                     std::uint64_t community_id) {
   auto *record = mgp::result_new_record(result);
 
@@ -82,8 +82,8 @@ void Set(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
                                                 graph_type);
 
     const auto labels = algorithm.SetLabels(
-        std::move(graph), directed, weighted, similarity_threshold, exponent, min_value,
-        weight_property, w_selfloop, max_iterations, max_updates);
+        std::move(graph), directed, weighted, similarity_threshold, exponent,
+        min_value, weight_property, w_selfloop, max_iterations, max_updates);
     ::initialized = true;
 
     for (const auto [node_id, label] : labels) {
@@ -109,8 +109,8 @@ void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
                      : mg_utility::GetGraphView(memgraph_graph, result, memory,
                                                 graph_type);
 
-    const auto labels =
-        initialized ? algorithm.GetLabels(std::move(graph)) : algorithm.SetLabels(std::move(graph));
+    const auto labels = initialized ? algorithm.GetLabels(std::move(graph))
+                                    : algorithm.SetLabels(std::move(graph));
 
     for (const auto [node_id, label] : labels) {
       // Previously calculated labels returned by GetLabels() may contain
