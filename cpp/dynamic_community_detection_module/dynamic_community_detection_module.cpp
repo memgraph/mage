@@ -35,8 +35,7 @@ std::string saved_weight_property = "weight";
 static constexpr double DEFAULT_WEIGHT = 1.0;
 
 void InsertCommunityDetectionRecord(mgp_graph *graph, mgp_result *result,
-                                    mgp_memory *memory,
-                                    std::uint64_t node_id,
+                                    mgp_memory *memory, std::uint64_t node_id,
                                     std::uint64_t community_id) {
   auto *record = mgp::result_new_record(result);
 
@@ -214,6 +213,19 @@ extern "C" int mgp_init_module(struct mgp_module *module,
   auto default_max_iterations = mgp::value_make_int(100, memory);
   auto default_max_updates = mgp::value_make_int(5, memory);
 
+  auto default_created_vertices =
+      mgp::value_make_list(mgp::list_make_empty(0, memory));
+  auto default_created_edges =
+      mgp::value_make_list(mgp::list_make_empty(0, memory));
+  auto default_updated_vertices =
+      mgp::value_make_list(mgp::list_make_empty(0, memory));
+  auto default_updated_edges =
+      mgp::value_make_list(mgp::list_make_empty(0, memory));
+  auto default_deleted_vertices =
+      mgp::value_make_list(mgp::list_make_empty(0, memory));
+  auto default_deleted_edges =
+      mgp::value_make_list(mgp::list_make_empty(0, memory));
+
   try {
     struct mgp_proc *get_proc =
         mgp::module_add_read_procedure(module, "get", Get);
@@ -243,18 +255,24 @@ extern "C" int mgp_init_module(struct mgp_module *module,
     mgp::proc_add_opt_arg(set_proc, kMaxUpdates, mgp::type_int(),
                           default_max_updates);
 
-    mgp::proc_add_arg(update_proc, kCreatedVertices,
-                      mgp::type_list(mgp::type_node()));
-    mgp::proc_add_arg(update_proc, kCreatedEdges,
-                      mgp::type_list(mgp::type_relationship()));
-    mgp::proc_add_arg(update_proc, kUpdatedVertices,
-                      mgp::type_list(mgp::type_node()));
-    mgp::proc_add_arg(update_proc, kUpdatedEdges,
-                      mgp::type_list(mgp::type_relationship()));
-    mgp::proc_add_arg(update_proc, kDeletedVertices,
-                      mgp::type_list(mgp::type_node()));
-    mgp::proc_add_arg(update_proc, kDeletedEdges,
-                      mgp::type_list(mgp::type_relationship()));
+    mgp::proc_add_opt_arg(update_proc, kCreatedVertices,
+                          mgp::type_list(mgp::type_node()),
+                          default_created_vertices);
+    mgp::proc_add_opt_arg(update_proc, kCreatedEdges,
+                          mgp::type_list(mgp::type_relationship()),
+                          default_deleted_edges);
+    mgp::proc_add_opt_arg(update_proc, kUpdatedVertices,
+                          mgp::type_list(mgp::type_node()),
+                          default_updated_vertices);
+    mgp::proc_add_opt_arg(update_proc, kUpdatedEdges,
+                          mgp::type_list(mgp::type_relationship()),
+                          default_updated_edges);
+    mgp::proc_add_opt_arg(update_proc, kDeletedVertices,
+                          mgp::type_list(mgp::type_node()),
+                          default_deleted_vertices);
+    mgp::proc_add_opt_arg(update_proc, kDeletedEdges,
+                          mgp::type_list(mgp::type_relationship()),
+                          default_deleted_edges);
 
     mgp::proc_add_result(get_proc, kFieldNode, mgp::type_node());
     mgp::proc_add_result(get_proc, kFieldCommunityId, mgp::type_int());
@@ -274,6 +292,13 @@ extern "C" int mgp_init_module(struct mgp_module *module,
     mgp::value_destroy(default_max_iterations);
     mgp::value_destroy(default_max_updates);
 
+    mgp::value_destroy(default_created_vertices);
+    mgp::value_destroy(default_created_edges);
+    mgp::value_destroy(default_updated_vertices);
+    mgp::value_destroy(default_updated_edges);
+    mgp::value_destroy(default_deleted_vertices);
+    mgp::value_destroy(default_deleted_edges);
+
     return 1;
   }
 
@@ -286,6 +311,13 @@ extern "C" int mgp_init_module(struct mgp_module *module,
   mgp::value_destroy(default_w_selfloop);
   mgp::value_destroy(default_max_iterations);
   mgp::value_destroy(default_max_updates);
+
+  mgp::value_destroy(default_created_vertices);
+  mgp::value_destroy(default_created_edges);
+  mgp::value_destroy(default_updated_vertices);
+  mgp::value_destroy(default_updated_edges);
+  mgp::value_destroy(default_deleted_vertices);
+  mgp::value_destroy(default_deleted_edges);
 
   return 0;
 }

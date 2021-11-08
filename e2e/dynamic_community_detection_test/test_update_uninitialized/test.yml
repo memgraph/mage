@@ -1,0 +1,3 @@
+query: >
+  CALL dynamic_community_detection.update();
+output: []
