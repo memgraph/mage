@@ -10,8 +10,21 @@ PageRankData context;
 std::uint64_t global_R;
 double global_epsilon;
 
+int GetRandInt(int from, int to) {
+  static std::minstd_rand eng{std::random_device{}()};
+  std::uniform_int_distribution<int> dist{from, to - 1};
+  return dist(eng);
+}
+
+float GetRandFloat() {
+  static std::minstd_rand eng{std::random_device{}()};
+  static std::uniform_real_distribution<float> dist{};
+  return dist(eng);
+}
+
 void NormalizeRank(std::vector<std::pair<std::uint64_t, double>> &rank) {
-  const double sum = std::accumulate(rank.begin(), rank.end(), 0.0, [](auto &sum, auto &p) { return sum + p.second; });
+  const double sum =
+      std::accumulate(rank.begin(), rank.end(), 0.0, [](auto sum, const auto &p) { return sum + p.second; });
   for (auto &[node_id, value] : rank) {
     value /= sum;
   }
@@ -33,9 +46,8 @@ std::vector<std::pair<std::uint64_t, double>> CalculatePageRank() {
   return pageranks;
 }
 
-void CreateRoute(const mg_graph::GraphView<> &graph, const std::uint64_t start_id, std::vector<std::uint64_t> &walk,
-                 const std::uint64_t walk_index, const double epsilon, std::uniform_real_distribution<float> distr,
-                 std::mt19937 gen) {
+void CreateRoute(const mg_graph::GraphView<> &graph, std::uint64_t start_id, std::vector<std::uint64_t> &walk,
+                 std::uint64_t walk_index, double epsilon) {
   std::uint64_t current_id = start_id;
   while (true) {
     auto neighbors = graph.Neighbours(current_id);
@@ -43,7 +55,7 @@ void CreateRoute(const mg_graph::GraphView<> &graph, const std::uint64_t start_i
 
     // Pick and add the random outer edge
     auto number_of_neighbors = neighbors.size();
-    auto next_id = neighbors[std::rand() % number_of_neighbors].node_id;
+    auto next_id = neighbors[GetRandInt(0, number_of_neighbors)].node_id;
     next_id = graph.GetMemgraphNodeId(next_id);
 
     walk.emplace_back(next_id);
@@ -52,7 +64,7 @@ void CreateRoute(const mg_graph::GraphView<> &graph, const std::uint64_t start_i
 
     // Finish walk when random number is smaller than epsilon
     // Average length of walk is 1/epsilon
-    if (distr(gen) < epsilon) {
+    if (GetRandFloat() < epsilon) {
       break;
     }
 
@@ -60,7 +72,7 @@ void CreateRoute(const mg_graph::GraphView<> &graph, const std::uint64_t start_i
   }
 }
 
-void UpdateCreate(const mg_graph::GraphView<> &graph, const std::pair<std::uint64_t, std::uint64_t> new_edge) {
+void UpdateCreate(const mg_graph::GraphView<> &graph, const std::pair<std::uint64_t, std::uint64_t> &new_edge) {
   auto [from, to] = new_edge;
 
   std::unordered_set<std::uint64_t> walk_table_copy(pagerank_online_alg::context.walks_table[from]);
@@ -78,32 +90,30 @@ void UpdateCreate(const mg_graph::GraphView<> &graph, const std::pair<std::uint6
 
     auto current_id = from;
     auto half_eps = pagerank_online_alg::global_epsilon / 2.0;
-    CreateRoute(graph, graph.GetInnerNodeId(current_id), walk, walk_index, half_eps,
-                *pagerank_online_alg::context.distr, *pagerank_online_alg::context.gen);
+    CreateRoute(graph, graph.GetInnerNodeId(current_id), walk, walk_index, half_eps);
   }
 }
 
-void UpdateCreate(const mg_graph::GraphView<> &graph, const std::uint64_t new_vertex) {
+void UpdateCreate(const mg_graph::GraphView<> &graph, std::uint64_t new_vertex) {
   auto R = pagerank_online_alg::global_R;
   auto eps = pagerank_online_alg::global_epsilon;
 
   auto walk_index = pagerank_online_alg::context.walks.size();
-  for (std::uint64_t i = 0; i < R; i++) {
+  for (std::uint64_t i = 0; i < R; ++i) {
     std::vector<std::uint64_t> walk;
 
     walk.emplace_back(new_vertex);
     pagerank_online_alg::context.walks_table[new_vertex].insert(walk_index);
     pagerank_online_alg::context.walks_counter[new_vertex]++;
 
-    CreateRoute(graph, graph.GetInnerNodeId(new_vertex), walk, walk_index, eps, *pagerank_online_alg::context.distr,
-                *pagerank_online_alg::context.gen);
+    CreateRoute(graph, graph.GetInnerNodeId(new_vertex), walk, walk_index, eps);
 
     pagerank_online_alg::context.walks.emplace_back(std::move(walk));
     walk_index++;
   }
 }
 
-void UpdateDelete(const mg_graph::GraphView<> &graph, const std::pair<std::uint64_t, std::uint64_t> removed_edge) {
+void UpdateDelete(const mg_graph::GraphView<> &graph, const std::pair<std::uint64_t, std::uint64_t> &removed_edge) {
   auto [from, to] = removed_edge;
 
   std::unordered_set<std::uint64_t> walk_table_copy(pagerank_online_alg::context.walks_table[from]);
@@ -132,12 +142,11 @@ void UpdateDelete(const mg_graph::GraphView<> &graph, const std::pair<std::uint6
     }
 
     auto half_eps = pagerank_online_alg::global_epsilon / 2.0;
-    CreateRoute(graph, graph.GetInnerNodeId(current_id), walk, walk_index, half_eps,
-                *pagerank_online_alg::context.distr, *pagerank_online_alg::context.gen);
+    CreateRoute(graph, graph.GetInnerNodeId(current_id), walk, walk_index, half_eps);
   }
 }
 
-void UpdateDelete(const mg_graph::GraphView<> &graph, const std::uint64_t removed_vertex) {
+void UpdateDelete(const mg_graph::GraphView<> &graph, std::uint64_t removed_vertex) {
   pagerank_online_alg::context.walks_table.erase(removed_vertex);
   pagerank_online_alg::context.walks_counter.erase(removed_vertex);
 }
@@ -154,8 +163,8 @@ bool IsIncosistent(const mg_graph::GraphView<> &graph) {
 }
 }  // namespace
 
-std::vector<std::pair<std::uint64_t, double>> SetPagerank(const mg_graph::GraphView<> &graph, const std::uint64_t R,
-                                                          const double epsilon) {
+std::vector<std::pair<std::uint64_t, double>> SetPagerank(const mg_graph::GraphView<> &graph, std::uint64_t R,
+                                                          double epsilon) {
   pagerank_online_alg::global_R = R;
   pagerank_online_alg::global_epsilon = epsilon;
   pagerank_online_alg::context.Init();
@@ -171,8 +180,7 @@ std::vector<std::pair<std::uint64_t, double>> SetPagerank(const mg_graph::GraphV
       pagerank_online_alg::context.walks_table[current_id].insert(walk_index);
       pagerank_online_alg::context.walks_counter[current_id]++;
 
-      CreateRoute(graph, graph.GetInnerNodeId(current_id), walk, walk_index, epsilon,
-                  *pagerank_online_alg::context.distr, *pagerank_online_alg::context.gen);
+      CreateRoute(graph, graph.GetInnerNodeId(current_id), walk, walk_index, epsilon);
 
       pagerank_online_alg::context.walks.emplace_back(std::move(walk));
       walk_index++;
@@ -195,9 +203,10 @@ std::vector<std::pair<std::uint64_t, double>> GetPagerank(const mg_graph::GraphV
 }
 
 std::vector<std::pair<std::uint64_t, double>> UpdatePagerank(
-    const mg_graph::GraphView<> &graph, const std::vector<std::uint64_t> new_vertices,
-    const std::vector<std::pair<std::uint64_t, uint64_t>> new_edges, const std::vector<std::uint64_t> deleted_vertices,
-    const std::vector<std::pair<std::uint64_t, uint64_t>> deleted_edges) {
+    const mg_graph::GraphView<> &graph, const std::vector<std::uint64_t> &new_vertices,
+    const std::vector<std::pair<std::uint64_t, uint64_t>> &new_edges,
+    const std::vector<std::uint64_t> &deleted_vertices,
+    const std::vector<std::pair<std::uint64_t, uint64_t>> &deleted_edges) {
   if (pagerank_online_alg::context.IsEmpty()) {
     return SetPagerank(graph);
   }

@@ -15,12 +15,9 @@ class PageRankData {
     walks.clear();
     walks_counter.clear();
     walks_table.clear();
-
-    gen = new std::mt19937(42);
-    distr = new std::uniform_real_distribution<float>(0.0, 1.0);
   }
 
-  bool IsEmpty() { return walks.empty(); }
+  bool IsEmpty() const { return walks.empty(); }
 
   /// Keeping the information about walks on the graph
   std::vector<std::vector<std::uint64_t>> walks;
@@ -30,9 +27,6 @@ class PageRankData {
 
   /// Table that keeps the node appearance and walk ID
   std::unordered_map<std::uint64_t, std::unordered_set<std::uint64_t>> walks_table;
-
-  std::mt19937 *gen;
-  std::uniform_real_distribution<float> *distr;
 };
 
 extern PageRankData context;
@@ -62,12 +56,9 @@ std::vector<std::pair<std::uint64_t, double>> CalculatePageRank();
 ///@param walk Walk vector that stores a route
 ///@param walk_index Index of a walk for context storing
 ///@param epsilon Probability of stopping the route creation
-///@param distr Random distribution
-///@param gen Random number generator
 ///
-void CreateRoute(const mg_graph::GraphView<> &graph, const std::uint64_t start_id, std::vector<std::uint64_t> &walk,
-                 const std::uint64_t walk_index, const double epsilon, std::uniform_real_distribution<float> distr,
-                 std::mt19937 gen);
+void CreateRoute(const mg_graph::GraphView<> &graph, std::uint64_t start_id, std::vector<std::uint64_t> &walk,
+                 std::uint64_t walk_index, double epsilon);
 
 ///
 ///@brief Updates the context based on adding the new vertex. This means adding it to a context tables and creating
@@ -76,7 +67,7 @@ void CreateRoute(const mg_graph::GraphView<> &graph, const std::uint64_t start_i
 ///@param graph Graph for updating
 ///@param new_vertex New vertex
 ///
-void UpdateCreate(const mg_graph::GraphView<> &graph, const std::uint64_t new_vertex);
+void UpdateCreate(const mg_graph::GraphView<> &graph, std::uint64_t new_vertex);
 
 ///
 ///@brief Updates the context based on new edge addition. Reverts previous walks made from starting node and updates
@@ -85,7 +76,7 @@ void UpdateCreate(const mg_graph::GraphView<> &graph, const std::uint64_t new_ve
 ///@param graph Graph for updating
 ///@param new_edge New edge
 ///
-void UpdateCreate(const mg_graph::GraphView<> &graph, const std::pair<std::uint64_t, std::uint64_t> new_edge);
+void UpdateCreate(const mg_graph::GraphView<> &graph, const std::pair<std::uint64_t, std::uint64_t> &new_edge);
 
 ///
 ///@brief Removes the edge from the context and updates walks. This method works by updating walks that contain starting
@@ -94,7 +85,7 @@ void UpdateCreate(const mg_graph::GraphView<> &graph, const std::pair<std::uint6
 ///@param graph Graph for updating
 ///@param removed_edge Deleted edge
 ///
-void UpdateDelete(const mg_graph::GraphView<> &graph, const std::pair<std::uint64_t, std::uint64_t> removed_edge);
+void UpdateDelete(const mg_graph::GraphView<> &graph, const std::pair<std::uint64_t, std::uint64_t> &removed_edge);
 
 ///
 ///@brief Deletes vertex from context. This is trivial because we are sure that no edge exists around that node.
@@ -102,7 +93,7 @@ void UpdateDelete(const mg_graph::GraphView<> &graph, const std::pair<std::uint6
 ///@param graph Graph for updating
 ///@param removed_vertex Removed vertex
 ///
-void UpdateDelete(const mg_graph::GraphView<> &graph, const std::uint64_t removed_vertex);
+void UpdateDelete(const mg_graph::GraphView<> &graph, std::uint64_t removed_vertex);
 
 }  // namespace
 
@@ -116,8 +107,8 @@ void UpdateDelete(const mg_graph::GraphView<> &graph, const std::uint64_t remove
 ///@param epsilon Stopping epsilong, walks of size (1/epsilon)
 ///@return std::vector<std::pair<std::uint64_t, double>>
 ///
-std::vector<std::pair<std::uint64_t, double>> SetPagerank(const mg_graph::GraphView<> &graph,
-                                                          const std::uint64_t R = 10, const double epsilon = 0.2);
+std::vector<std::pair<std::uint64_t, double>> SetPagerank(const mg_graph::GraphView<> &graph, std::uint64_t R = 10,
+                                                          double epsilon = 0.2);
 
 ///
 ///@brief Method for getting the values from the current Pagerank context. However if context is not set, method throws
@@ -141,9 +132,10 @@ std::vector<std::pair<std::uint64_t, double>> GetPagerank(const mg_graph::GraphV
 ///@return std::vector<std::pair<std::uint64_t, double>>
 ///
 std::vector<std::pair<std::uint64_t, double>> UpdatePagerank(
-    const mg_graph::GraphView<> &graph, const std::vector<std::uint64_t> new_vertices,
-    const std::vector<std::pair<std::uint64_t, uint64_t>> new_edges, const std::vector<std::uint64_t> deleted_vertices,
-    const std::vector<std::pair<std::uint64_t, uint64_t>> deleted_edges);
+    const mg_graph::GraphView<> &graph, const std::vector<std::uint64_t> &new_vertices,
+    const std::vector<std::pair<std::uint64_t, uint64_t>> &new_edges,
+    const std::vector<std::uint64_t> &deleted_vertices,
+    const std::vector<std::pair<std::uint64_t, uint64_t>> &deleted_edges);
 
 ///
 ///@brief Method for resetting the context and initializing structures

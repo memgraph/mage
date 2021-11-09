@@ -91,15 +91,9 @@ double AverageAbsoluteError(const std::vector<T> &result, const std::vector<T> &
 ///
 template <typename T>
 bool TestEqualVectors(const std::vector<T> &result, const std::vector<T> &correct,
-                      const double absolute_error = ABSOLUTE_ERROR_EPSILON,
+                      double absolute_error = ABSOLUTE_ERROR_EPSILON,
                       double average_error = AVERAGE_ABSOLUTE_ERROR_EPSILON) {
-  auto max_absolute_error = MaxAbsoluteError(result, correct);
-  if (max_absolute_error >= absolute_error) return false;
-
-  auto average_absolute_error = AverageAbsoluteError(result, correct);
-  if (average_absolute_error >= average_error) return false;
-
-  return true;
+  return MaxAbsoluteError(result, correct) < absolute_error && AverageAbsoluteError(result, correct) < absolute_error;
 }
 
 ///
@@ -109,27 +103,24 @@ bool TestEqualVectors(const std::vector<T> &result, const std::vector<T> &correc
 ///@param result Container that stores calculated values
 ///@param correct Container that stores accurate values
 ///@param absolute_error Absolute error between any two pairs of resulting and correct value
-///@return true if the maximum absolute error is lesser than ABSOLUTE_ERROR_EPSILON
-/// false otherwise
+///@return true if the maximum absolute error is lesser than ABSOLUTE_ERROR_EPSILON false otherwise
 ///
 template <typename T>
-bool TestEqualVectorPairs(std::vector<std::pair<std::uint64_t, T>> &result,
-                          std::vector<std::pair<std::uint64_t, T>> &correct,
-                          const double absolute_error = ABSOLUTE_ERROR_EPSILON) {
+bool TestEqualVectorPairs(const std::vector<std::pair<std::uint64_t, T>> &result,
+                          const std::vector<std::pair<std::uint64_t, T>> &correct,
+                          double absolute_error = ABSOLUTE_ERROR_EPSILON) {
   if (result.size() != correct.size()) return false;
 
-  std::sort(result.begin(), result.end());
-  std::sort(correct.begin(), correct.end());
+  std::vector<std::pair<std::uint64_t, T>> result_cp(result);
+  std::vector<std::pair<std::uint64_t, T>> correct_cp(correct);
 
-  auto size = result.size();
-  for (std::size_t i = 0; i < size; i++) {
-    auto [result_id, result_value] = result[i];
-    auto [correct_id, correct_value] = correct[i];
+  std::sort(result_cp.begin(), result_cp.end());
+  std::sort(correct_cp.begin(), correct_cp.end());
 
-    if (result_id != correct_id) return false;
-    if (std::abs(result_value - correct_value) > absolute_error) return false;
-  }
-
-  return true;
+  auto size = result_cp.size();
+  return std::equal(
+      result_cp.begin(), result_cp.end(), correct_cp.begin(), [&absolute_error](auto result_cp, auto correct_cp) {
+        return result_cp.first == correct_cp.first && std::abs(result_cp.second - correct_cp.second) <= absolute_error;
+      });
 }
 }  // namespace mg_test_utility
