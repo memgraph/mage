@@ -25,6 +25,7 @@ constexpr char const *kUpdatedEdges = "updatedEdges";
 constexpr char const *kDeletedVertices = "deletedVertices";
 constexpr char const *kDeletedEdges = "deletedEdges";
 
+namespace {
 LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT();
 bool initialized = false;
 
@@ -32,7 +33,8 @@ auto saved_directedness = false;
 auto saved_weightedness = false;
 std::string saved_weight_property = "weight";
 
-static constexpr double DEFAULT_WEIGHT = 1.0;
+constexpr double DEFAULT_WEIGHT = 1.0;
+}  // namespace
 
 void InsertCommunityDetectionRecord(mgp_graph *graph, mgp_result *result,
                                     mgp_memory *memory, std::uint64_t node_id,

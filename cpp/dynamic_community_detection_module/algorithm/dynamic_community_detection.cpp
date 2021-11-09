@@ -22,6 +22,7 @@ bool IsSubset(const std::unordered_set<T>& a, const std::unordered_set<T>& b) {
 
 std::vector<std::uint64_t> LabelRankT::NodesMemgraphIDs() const {
   std::vector<std::uint64_t> nodes;
+  nodes.reserve(graph->Nodes().size());
 
   for (const auto node : graph->Nodes()) {
     nodes.push_back(graph->GetMemgraphNodeId(node.id));
@@ -113,7 +114,8 @@ std::int64_t LabelRankT::NodeLabel(std::uint64_t node_id) {
   double max_P = 0;
 
   for (const auto [label, P] : label_Ps[node_id]) {
-    if (P > max_P || (P == max_P && (std::int64_t)label < node_label)) {
+    if (P > max_P ||
+        (P == max_P && static_cast<std::int64_t>(label) < node_label)) {
       max_P = P;
       node_label = label;
     }
