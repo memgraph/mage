@@ -1,6 +1,5 @@
 #include <mg_utils.hpp>
 
-#include <iostream>
 #include "algorithm/pagerank.hpp"
 
 namespace {
@@ -36,7 +35,7 @@ void PagerankWrapper(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
 
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
 
-    auto graph_edges = graph->Edges();
+    const auto &graph_edges = graph->Edges();
     std::vector<pagerank_alg::EdgePair> pagerank_edges;
     std::transform(graph_edges.begin(), graph_edges.end(), std::back_inserter(pagerank_edges),
                    [](const mg_graph::Edge<std::uint64_t> &edge) -> pagerank_alg::EdgePair {

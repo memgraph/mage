@@ -134,7 +134,7 @@ void OnlinePagerankReset(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *
 }
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
-  // Online approximate PageRank solution
+  // Online approximative PageRank solution
   {
     try {
       auto *pagerank_proc = mgp::module_add_read_procedure(module, kProcedureSet, OnlinePagerankSet);
@@ -157,7 +157,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     }
   }
 
-  // Online approximate PageRank get results
+  // Online approximative PageRank get results
   {
     try {
       auto *pagerank_proc = mgp::module_add_read_procedure(module, kProcedureGet, OnlinePagerankGet);
@@ -171,7 +171,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     }
   }
 
-  // Online approximate PageRank update state
+  // Online approximative PageRank update state
   {
     try {
       auto *pagerank_proc = mgp::module_add_read_procedure(module, kProcedureUpdate, OnlinePagerankUpdate);
