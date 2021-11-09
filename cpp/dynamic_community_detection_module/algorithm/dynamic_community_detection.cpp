@@ -35,8 +35,8 @@ std::unordered_set<std::uint64_t> LabelRankT::InNeighborsMemgraphIDs(
   std::unordered_set<std::uint64_t> neighbors;
 
   const auto neighbor_set =
-      this->is_directed ? graph->InNeighbours(graph->GetInnerNodeId(node_id))
-                        : graph->Neighbours(graph->GetInnerNodeId(node_id));
+      is_directed ? graph->InNeighbours(graph->GetInnerNodeId(node_id))
+                  : graph->Neighbours(graph->GetInnerNodeId(node_id));
   for (const auto node_i : neighbor_set) {
     neighbors.insert(graph->GetMemgraphNodeId(node_i.node_id));
   }
@@ -86,9 +86,8 @@ double LabelRankT::GetTotalWeightBetween(std::uint64_t from_node_id,
     const auto edge = graph->GetEdge(edge_id);
 
     // edge direction check
-    if (this->is_directed &&
-        (graph->GetMemgraphNodeId(edge.from) != from_node_id ||
-         graph->GetMemgraphNodeId(edge.to) != to_node_id))
+    if (is_directed && (graph->GetMemgraphNodeId(edge.from) != from_node_id ||
+                        graph->GetMemgraphNodeId(edge.to) != to_node_id))
       continue;
 
     total_weight += GetWeight(edge_id);
@@ -98,7 +97,7 @@ double LabelRankT::GetTotalWeightBetween(std::uint64_t from_node_id,
 }
 
 double LabelRankT::GetWeight(std::uint64_t edge_id) const {
-  if (!this->is_weighted) return this->DEFAULT_WEIGHT;
+  if (!is_weighted) return DEFAULT_WEIGHT;
 
   return graph->GetWeight(edge_id);
 }
@@ -145,7 +144,7 @@ std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::AllLabels() {
     labels.insert({node, lookup[NodeLabel(node)]});
   }
 
-  this->graph.reset();
+  graph.reset();
 
   return labels;
 }
@@ -305,13 +304,13 @@ std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::CalculateLabels(
     }
   }
 
-  for (std::uint64_t i = 0; i < this->max_iterations; i++) {
+  for (std::uint64_t i = 0; i < max_iterations; i++) {
     const auto [none_updated, most_updates] =
         Iteration(nodes_memgraph_ids, incremental, changed_nodes, to_delete);
-    if (none_updated || most_updates > this->max_updates) break;
+    if (none_updated || most_updates > max_updates) break;
   }
 
-  if (persist) this->calculated = true;
+  if (persist) calculated = true;
   ResetTimesUpdated();
 
   return AllLabels();
