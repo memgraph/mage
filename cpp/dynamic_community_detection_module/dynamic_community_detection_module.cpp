@@ -266,7 +266,7 @@ extern "C" int mgp_init_module(struct mgp_module *module,
 
   {
     try {
-      struct mgp_proc *update_proc =
+      auto *update_proc =
           mgp::module_add_read_procedure(module, "update", Update);
 
       auto default_created_vertices =
@@ -314,8 +314,7 @@ extern "C" int mgp_init_module(struct mgp_module *module,
 
   {
     try {
-      struct mgp_proc *reset_proc =
-          mgp::module_add_read_procedure(module, "reset", Reset);
+      auto *reset_proc = mgp::module_add_read_procedure(module, "reset", Reset);
 
       mgp::proc_add_result(reset_proc, kFieldMessage, mgp::type_string());
     } catch (const std::exception &e) {
