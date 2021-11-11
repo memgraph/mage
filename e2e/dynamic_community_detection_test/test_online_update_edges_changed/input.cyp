@@ -1,5 +1,5 @@
 setup: |-
-    CREATE TRIGGER test_edges_changed BEFORE COMMIT EXECUTE CALL dynamic_community_detection.update(createdVertices, createdEdges, updatedVertices, updatedEdges, deletedVertices, deletedEdges);
+    CREATE TRIGGER test_edges_changed BEFORE COMMIT EXECUTE CALL dynamic_community_detection.update(createdVertices, createdEdges, updatedVertices, updatedEdges, deletedVertices, deletedEdges) YIELD *;
 queries:
     - |-
         MERGE (a: Node {id: 0}) MERGE (b: Node {id: 1}) CREATE (a)-[r: Relation]->(b);
@@ -39,3 +39,4 @@ queries:
         MERGE (a: Node {id: 10}) MERGE (b: Node {id: 12}) CREATE (a)-[r: Relation]->(b);
 cleanup: |-
     DROP TRIGGER test_edges_changed;
+    CALL dynamic_community_detection.reset() YIELD message;

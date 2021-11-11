@@ -172,11 +172,21 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
       const auto deleted_edge_endpoint_ids =
           mg_utility::GetEdgeEndpointIDs(deleted_edges);
 
-      algorithm.UpdateLabels(std::move(graph), modified_node_ids,
-                             modified_edge_endpoint_ids, deleted_node_ids,
-                             deleted_edge_endpoint_ids);
+      const auto labels = algorithm.UpdateLabels(
+          std::move(graph), modified_node_ids, modified_edge_endpoint_ids,
+          deleted_node_ids, deleted_edge_endpoint_ids);
+
+      for (const auto [node_id, label] : labels) {
+        InsertCommunityDetectionRecord(memgraph_graph, result, memory, node_id,
+                                       label);
+      }
     } else {
-      algorithm.SetLabels(std::move(graph));
+      const auto labels = algorithm.SetLabels(std::move(graph));
+
+      for (const auto [node_id, label] : labels) {
+        InsertCommunityDetectionRecord(memgraph_graph, result, memory, node_id,
+                                       label);
+      }
     }
   } catch (const std::exception &e) {
     mgp::result_set_error_msg(result, e.what());
@@ -302,6 +312,9 @@ extern "C" int mgp_init_module(struct mgp_module *module,
       mgp::proc_add_opt_arg(update_proc, kDeletedEdges,
                             mgp::type_list(mgp::type_relationship()),
                             default_deleted_edges);
+
+      mgp::proc_add_result(update_proc, kFieldNode, mgp::type_node());
+      mgp::proc_add_result(update_proc, kFieldCommunityId, mgp::type_int());
 
       mgp::value_destroy(default_created_vertices);
       mgp::value_destroy(default_created_edges);
