@@ -3,27 +3,27 @@
 
 #include "algorithm/dynamic_community_detection.hpp"
 
-constexpr char const *kFieldNode = "node";
-constexpr char const *kFieldCommunityId = "community_id";
+constexpr std::string_view const kFieldNode{"node"};
+constexpr std::string_view const kFieldCommunityId{"community_id"};
 
-constexpr char const *kFieldMessage = "message";
+constexpr std::string_view const kFieldMessage{"message"};
 
-constexpr char const *kDirected = "directed";
-constexpr char const *kWeighted = "weighted";
-constexpr char const *kSimilarityThreshold = "similarity_threshold";
-constexpr char const *kExponent = "exponent";
-constexpr char const *kMinValue = "min_value";
-constexpr char const *kWeightProperty = "weight_property";
-constexpr char const *kWSelfloop = "w_selfloop";
-constexpr char const *kMaxIterations = "max_iterations";
-constexpr char const *kMaxUpdates = "max_updates";
+constexpr std::string_view const kDirected{"directed"};
+constexpr std::string_view const kWeighted{"weighted"};
+constexpr std::string_view const kSimilarityThreshold{"similarity_threshold"};
+constexpr std::string_view const kExponent{"exponent"};
+constexpr std::string_view const kMinValue{"min_value"};
+constexpr std::string_view const kWeightProperty{"weight_property"};
+constexpr std::string_view const kWSelfloop{"w_selfloop"};
+constexpr std::string_view const kMaxIterations{"max_iterations"};
+constexpr std::string_view const kMaxUpdates{"max_updates"};
 
-constexpr char const *kCreatedVertices = "createdVertices";
-constexpr char const *kCreatedEdges = "createdEdges";
-constexpr char const *kUpdatedVertices = "updatedVertices";
-constexpr char const *kUpdatedEdges = "updatedEdges";
-constexpr char const *kDeletedVertices = "deletedVertices";
-constexpr char const *kDeletedEdges = "deletedEdges";
+constexpr std::string_view const kCreatedVertices{"createdVertices"};
+constexpr std::string_view const kCreatedEdges{"createdEdges"};
+constexpr std::string_view const kUpdatedVertices{"updatedVertices"};
+constexpr std::string_view const kUpdatedEdges{"updatedEdges"};
+constexpr std::string_view const kDeletedVertices{"deletedVertices"};
+constexpr std::string_view const kDeletedEdges{"deletedEdges"};
 
 namespace {
 LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT();
@@ -41,8 +41,8 @@ void InsertCommunityDetectionRecord(mgp_graph *graph, mgp_result *result,
                                     std::uint64_t community_id) {
   auto *record = mgp::result_new_record(result);
 
-  mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
-  mg_utility::InsertIntValueResult(record, kFieldCommunityId, community_id,
+  mg_utility::InsertNodeValueResult(graph, record, kFieldNode.data(), node_id, memory);
+  mg_utility::InsertIntValueResult(record, kFieldCommunityId.data(), community_id,
                                    memory);
 }
 
@@ -50,7 +50,7 @@ void InsertMessageRecord(mgp_result *result, mgp_memory *memory,
                          const char *message) {
   auto *record = mgp::result_new_record(result);
 
-  mg_utility::InsertStringValueResult(record, kFieldMessage, message, memory);
+  mg_utility::InsertStringValueResult(record, kFieldMessage.data(), message, memory);
 }
 
 void Set(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
@@ -229,27 +229,27 @@ extern "C" int mgp_init_module(struct mgp_module *module,
       auto default_max_iterations = mgp::value_make_int(100, memory);
       auto default_max_updates = mgp::value_make_int(5, memory);
 
-      mgp::proc_add_opt_arg(set_proc, kDirected, mgp::type_bool(),
+      mgp::proc_add_opt_arg(set_proc, kDirected.data(), mgp::type_bool(),
                             default_directed);
-      mgp::proc_add_opt_arg(set_proc, kWeighted, mgp::type_bool(),
+      mgp::proc_add_opt_arg(set_proc, kWeighted.data(), mgp::type_bool(),
                             default_weighted);
-      mgp::proc_add_opt_arg(set_proc, kSimilarityThreshold, mgp::type_float(),
+      mgp::proc_add_opt_arg(set_proc, kSimilarityThreshold.data(), mgp::type_float(),
                             default_similarity_threshold);
-      mgp::proc_add_opt_arg(set_proc, kExponent, mgp::type_float(),
+      mgp::proc_add_opt_arg(set_proc, kExponent.data(), mgp::type_float(),
                             default_exponent);
-      mgp::proc_add_opt_arg(set_proc, kMinValue, mgp::type_float(),
+      mgp::proc_add_opt_arg(set_proc, kMinValue.data(), mgp::type_float(),
                             default_min_value);
-      mgp::proc_add_opt_arg(set_proc, kWeightProperty, mgp::type_string(),
+      mgp::proc_add_opt_arg(set_proc, kWeightProperty.data(), mgp::type_string(),
                             default_weight_property);
-      mgp::proc_add_opt_arg(set_proc, kWSelfloop, mgp::type_float(),
+      mgp::proc_add_opt_arg(set_proc, kWSelfloop.data(), mgp::type_float(),
                             default_w_selfloop);
-      mgp::proc_add_opt_arg(set_proc, kMaxIterations, mgp::type_int(),
+      mgp::proc_add_opt_arg(set_proc, kMaxIterations.data(), mgp::type_int(),
                             default_max_iterations);
-      mgp::proc_add_opt_arg(set_proc, kMaxUpdates, mgp::type_int(),
+      mgp::proc_add_opt_arg(set_proc, kMaxUpdates.data(), mgp::type_int(),
                             default_max_updates);
 
-      mgp::proc_add_result(set_proc, kFieldNode, mgp::type_node());
-      mgp::proc_add_result(set_proc, kFieldCommunityId, mgp::type_int());
+      mgp::proc_add_result(set_proc, kFieldNode.data(), mgp::type_node());
+      mgp::proc_add_result(set_proc, kFieldCommunityId.data(), mgp::type_int());
 
       mgp::value_destroy(default_directed);
       mgp::value_destroy(default_weighted);
@@ -269,8 +269,8 @@ extern "C" int mgp_init_module(struct mgp_module *module,
     try {
       auto *get_proc = mgp::module_add_read_procedure(module, "get", Get);
 
-      mgp::proc_add_result(get_proc, kFieldNode, mgp::type_node());
-      mgp::proc_add_result(get_proc, kFieldCommunityId, mgp::type_int());
+      mgp::proc_add_result(get_proc, kFieldNode.data(), mgp::type_node());
+      mgp::proc_add_result(get_proc, kFieldCommunityId.data(), mgp::type_int());
     } catch (const std::exception &e) {
       return 1;
     }
@@ -294,27 +294,27 @@ extern "C" int mgp_init_module(struct mgp_module *module,
       auto default_deleted_edges =
           mgp::value_make_list(mgp::list_make_empty(0, memory));
 
-      mgp::proc_add_opt_arg(update_proc, kCreatedVertices,
+      mgp::proc_add_opt_arg(update_proc, kCreatedVertices.data(),
                             mgp::type_list(mgp::type_node()),
                             default_created_vertices);
-      mgp::proc_add_opt_arg(update_proc, kCreatedEdges,
+      mgp::proc_add_opt_arg(update_proc, kCreatedEdges.data(),
                             mgp::type_list(mgp::type_relationship()),
                             default_deleted_edges);
-      mgp::proc_add_opt_arg(update_proc, kUpdatedVertices,
+      mgp::proc_add_opt_arg(update_proc, kUpdatedVertices.data(),
                             mgp::type_list(mgp::type_node()),
                             default_updated_vertices);
-      mgp::proc_add_opt_arg(update_proc, kUpdatedEdges,
+      mgp::proc_add_opt_arg(update_proc, kUpdatedEdges.data(),
                             mgp::type_list(mgp::type_relationship()),
                             default_updated_edges);
-      mgp::proc_add_opt_arg(update_proc, kDeletedVertices,
+      mgp::proc_add_opt_arg(update_proc, kDeletedVertices.data(),
                             mgp::type_list(mgp::type_node()),
                             default_deleted_vertices);
-      mgp::proc_add_opt_arg(update_proc, kDeletedEdges,
+      mgp::proc_add_opt_arg(update_proc, kDeletedEdges.data(),
                             mgp::type_list(mgp::type_relationship()),
                             default_deleted_edges);
 
-      mgp::proc_add_result(update_proc, kFieldNode, mgp::type_node());
-      mgp::proc_add_result(update_proc, kFieldCommunityId, mgp::type_int());
+      mgp::proc_add_result(update_proc, kFieldNode.data(), mgp::type_node());
+      mgp::proc_add_result(update_proc, kFieldCommunityId.data(), mgp::type_int());
 
       mgp::value_destroy(default_created_vertices);
       mgp::value_destroy(default_created_edges);
@@ -331,7 +331,7 @@ extern "C" int mgp_init_module(struct mgp_module *module,
     try {
       auto *reset_proc = mgp::module_add_read_procedure(module, "reset", Reset);
 
-      mgp::proc_add_result(reset_proc, kFieldMessage, mgp::type_string());
+      mgp::proc_add_result(reset_proc, kFieldMessage.data(), mgp::type_string());
     } catch (const std::exception &e) {
       return 1;
     }
