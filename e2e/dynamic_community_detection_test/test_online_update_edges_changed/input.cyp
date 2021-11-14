@@ -39,4 +39,4 @@ queries:
         MERGE (a: Node {id: 10}) MERGE (b: Node {id: 12}) CREATE (a)-[r: Relation]->(b);
 cleanup: |-
     DROP TRIGGER test_edges_changed;
-    CALL dynamic_community_detection.reset() YIELD message;
+    CALL dynamic_community_detection.reset() YIELD *;

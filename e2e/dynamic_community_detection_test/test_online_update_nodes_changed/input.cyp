@@ -48,4 +48,4 @@ queries:
         MATCH (n: Node {id: 5}) DETACH DELETE n;
 cleanup: |-
     DROP TRIGGER test_nodes_changed;
-    CALL dynamic_community_detection.reset() YIELD message;
+    CALL dynamic_community_detection.reset() YIELD *;
