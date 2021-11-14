@@ -41,16 +41,29 @@ void InsertCommunityDetectionRecord(mgp_graph *graph, mgp_result *result,
                                     std::uint64_t community_id) {
   auto *record = mgp::result_new_record(result);
 
-  mg_utility::InsertNodeValueResult(graph, record, kFieldNode.data(), node_id, memory);
-  mg_utility::InsertIntValueResult(record, kFieldCommunityId.data(), community_id,
-                                   memory);
+  mg_utility::InsertNodeValueResult(graph, record, kFieldNode.data(), node_id,
+                                    memory);
+  mg_utility::InsertIntValueResult(record, kFieldCommunityId.data(),
+                                   community_id, memory);
+}
+
+void InsertCommunityDetectionUpdateRecord(mgp_graph *graph, mgp_result *result,
+                                          mgp_memory *memory,
+                                          std::uint64_t node_id,
+                                          std::uint64_t community_id) {
+  auto *record = mgp::result_new_record(result);
+
+  mg_utility::InsertIntValueResult(record, kFieldNode.data(), node_id, memory);
+  mg_utility::InsertIntValueResult(record, kFieldCommunityId.data(),
+                                   community_id, memory);
 }
 
 void InsertMessageRecord(mgp_result *result, mgp_memory *memory,
                          const char *message) {
   auto *record = mgp::result_new_record(result);
 
-  mg_utility::InsertStringValueResult(record, kFieldMessage.data(), message, memory);
+  mg_utility::InsertStringValueResult(record, kFieldMessage.data(), message,
+                                      memory);
 }
 
 void Set(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
@@ -177,7 +190,7 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
           deleted_node_ids, deleted_edge_endpoint_ids);
 
       for (const auto [node_id, label] : labels) {
-        InsertCommunityDetectionRecord(memgraph_graph, result, memory, node_id,
+        InsertCommunityDetectionUpdateRecord(memgraph_graph, result, memory, node_id,
                                        label);
       }
     } else {
@@ -233,14 +246,14 @@ extern "C" int mgp_init_module(struct mgp_module *module,
                             default_directed);
       mgp::proc_add_opt_arg(set_proc, kWeighted.data(), mgp::type_bool(),
                             default_weighted);
-      mgp::proc_add_opt_arg(set_proc, kSimilarityThreshold.data(), mgp::type_float(),
-                            default_similarity_threshold);
+      mgp::proc_add_opt_arg(set_proc, kSimilarityThreshold.data(),
+                            mgp::type_float(), default_similarity_threshold);
       mgp::proc_add_opt_arg(set_proc, kExponent.data(), mgp::type_float(),
                             default_exponent);
       mgp::proc_add_opt_arg(set_proc, kMinValue.data(), mgp::type_float(),
                             default_min_value);
-      mgp::proc_add_opt_arg(set_proc, kWeightProperty.data(), mgp::type_string(),
-                            default_weight_property);
+      mgp::proc_add_opt_arg(set_proc, kWeightProperty.data(),
+                            mgp::type_string(), default_weight_property);
       mgp::proc_add_opt_arg(set_proc, kWSelfloop.data(), mgp::type_float(),
                             default_w_selfloop);
       mgp::proc_add_opt_arg(set_proc, kMaxIterations.data(), mgp::type_int(),
@@ -314,7 +327,8 @@ extern "C" int mgp_init_module(struct mgp_module *module,
                             default_deleted_edges);
 
       mgp::proc_add_result(update_proc, kFieldNode.data(), mgp::type_node());
-      mgp::proc_add_result(update_proc, kFieldCommunityId.data(), mgp::type_int());
+      mgp::proc_add_result(update_proc, kFieldCommunityId.data(),
+                           mgp::type_int());
 
       mgp::value_destroy(default_created_vertices);
       mgp::value_destroy(default_created_edges);
@@ -331,7 +345,8 @@ extern "C" int mgp_init_module(struct mgp_module *module,
     try {
       auto *reset_proc = mgp::module_add_read_procedure(module, "reset", Reset);
 
-      mgp::proc_add_result(reset_proc, kFieldMessage.data(), mgp::type_string());
+      mgp::proc_add_result(reset_proc, kFieldMessage.data(),
+                           mgp::type_string());
     } catch (const std::exception &e) {
       return 1;
     }
