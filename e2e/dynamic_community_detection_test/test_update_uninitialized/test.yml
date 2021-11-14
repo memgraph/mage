@@ -1,7 +1,7 @@
 query: >
   CALL dynamic_community_detection.update()
   YIELD node, community_id
-  RETURN node.id AS node_id, community_id
+  RETURN node AS node_id, community_id
   ORDER BY node_id;
 output:
   - node_id: 0
