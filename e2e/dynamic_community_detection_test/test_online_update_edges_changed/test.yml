@@ -1,5 +1,5 @@
 - query: >-
-    CALL dynamic_community_detection.set()
+    CALL dynamic_community_detection.get()
     YIELD node, community_id
     RETURN node.id AS node_id, community_id
     ORDER BY node_id;
