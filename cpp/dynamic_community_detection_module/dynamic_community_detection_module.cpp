@@ -190,14 +190,14 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
           deleted_node_ids, deleted_edge_endpoint_ids);
 
       for (const auto [node_id, label] : labels) {
-        InsertCommunityDetectionUpdateRecord(memgraph_graph, result, memory, node_id,
+        InsertCommunityDetectionRecord(memgraph_graph, result, memory, node_id,
                                        label);
       }
     } else {
       const auto labels = algorithm.SetLabels(std::move(graph));
 
       for (const auto [node_id, label] : labels) {
-        InsertCommunityDetectionUpdateRecord(memgraph_graph, result, memory, node_id,
+        InsertCommunityDetectionRecord(memgraph_graph, result, memory, node_id,
                                        label);
       }
     }
@@ -326,7 +326,7 @@ extern "C" int mgp_init_module(struct mgp_module *module,
                             mgp::type_list(mgp::type_relationship()),
                             default_deleted_edges);
 
-      mgp::proc_add_result(update_proc, kFieldNode.data(), mgp::type_int());
+      mgp::proc_add_result(update_proc, kFieldNode.data(), mgp::type_node());
       mgp::proc_add_result(update_proc, kFieldCommunityId.data(),
                            mgp::type_int());
 

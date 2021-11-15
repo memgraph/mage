@@ -1,4 +1,5 @@
 setup: |-
+    CALL dynamic_community_detection.reset() YIELD *;
     CREATE TRIGGER test_edges_changed BEFORE COMMIT EXECUTE CALL dynamic_community_detection.update(createdVertices, createdEdges, updatedVertices, updatedEdges, deletedVertices, deletedEdges) YIELD *;
 queries:
     - |-
