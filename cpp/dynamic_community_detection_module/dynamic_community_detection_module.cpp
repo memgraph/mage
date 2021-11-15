@@ -47,17 +47,6 @@ void InsertCommunityDetectionRecord(mgp_graph *graph, mgp_result *result,
                                    community_id, memory);
 }
 
-void InsertCommunityDetectionUpdateRecord(mgp_graph *graph, mgp_result *result,
-                                          mgp_memory *memory,
-                                          std::uint64_t node_id,
-                                          std::uint64_t community_id) {
-  auto *record = mgp::result_new_record(result);
-
-  mg_utility::InsertIntValueResult(record, kFieldNode.data(), node_id, memory);
-  mg_utility::InsertIntValueResult(record, kFieldCommunityId.data(),
-                                   community_id, memory);
-}
-
 void InsertMessageRecord(mgp_result *result, mgp_memory *memory,
                          const char *message) {
   auto *record = mgp::result_new_record(result);

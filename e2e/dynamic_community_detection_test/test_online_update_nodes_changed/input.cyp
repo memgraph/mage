@@ -1,5 +1,5 @@
 setup: |-
-    CALL dynamic_community_detection.reset() YIELD *;
+    CALL dynamic_community_detection.reset() YIELD message;
     CREATE TRIGGER test_nodes_changed BEFORE COMMIT EXECUTE CALL dynamic_community_detection.update(createdVertices, createdEdges, updatedVertices, updatedEdges, deletedVertices, deletedEdges) YIELD *;
 queries:
     - |-
@@ -49,4 +49,4 @@ queries:
         MATCH (n: Node {id: 5}) DETACH DELETE n;
 cleanup: |-
     DROP TRIGGER test_nodes_changed;
-    CALL dynamic_community_detection.reset() YIELD *;
+    CALL dynamic_community_detection.reset() YIELD message;

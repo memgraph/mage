@@ -133,9 +133,9 @@ TEST(LabelRankT, UpdateLabelsEdgesChanged) {
 
       });
 
-  labels =
-      algorithm.UpdateLabels(std::move(updated_graph), {}, {{0, 13}, {3, 9}, {10, 12}}, {},
-                             {{9, 12}, {9, 14}, {10, 13}});
+  labels = algorithm.UpdateLabels(std::move(updated_graph), {},
+                                  {{0, 13}, {3, 9}, {10, 12}}, {},
+                                  {{9, 12}, {9, 14}, {10, 13}});
 
   std::unordered_map<std::uint64_t, std::int64_t> correct_labels = {
       {0, 1}, {1, 1}, {2, 1},  {3, 1},  {4, 2},  {5, 2},  {6, 2}, {7, 2},
@@ -168,9 +168,9 @@ TEST(LabelRankT, UpdateLabelsNodesChanged) {
 
       });
 
-  labels =
-      algorithm.UpdateLabels(std::move(updated_graph), {}, {{0, 13}, {3, 9}, {10, 12}}, {},
-                             {{9, 12}, {9, 14}, {10, 13}});
+  labels = algorithm.UpdateLabels(std::move(updated_graph), {},
+                                  {{0, 13}, {3, 9}, {10, 12}}, {},
+                                  {{9, 12}, {9, 14}, {10, 13}});
 
   updated_graph = mg_generate::BuildGraph(
       16, {{0, 1},   {0, 2},   {0, 3},   {0, 13},  {1, 2},   {1, 4},   {1, 7},
@@ -198,8 +198,8 @@ TEST(LabelRankT, NoLabelsDetected) {
       6, {{0, 1}, {0, 2}, {1, 2}, {2, 3}, {3, 4}, {3, 5}, {4, 5}});
 
   LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT();
-  auto labels = algorithm.SetLabels(std::move(small_graph), false, false, 0.7, 4.0, 0.99,
-                                    "weight", 1.0, 100, 5);
+  auto labels = algorithm.SetLabels(std::move(small_graph), false, false, 0.7,
+                                    4.0, 0.99, "weight", 1.0, 100, 5);
 
   std::unordered_map<std::uint64_t, std::int64_t> correct_labels = {
       {0, -1}, {1, -1}, {2, -1}, {3, -1}, {4, -1}, {5, -1}};
@@ -276,7 +276,8 @@ TEST(LabelRankT, DirectedWeightedGraph) {
                                       mg_graph::GraphType::kDirectedGraph);
 
   LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT();
-  auto labels = algorithm.SetLabels(std::move(directed_weighted_graph), true, true);
+  auto labels =
+      algorithm.SetLabels(std::move(directed_weighted_graph), true, true);
 
   std::unordered_map<std::uint64_t, std::int64_t> correct_labels = {
       {0, 1}, {1, 1}, {2, 1}, {3, 2}, {4, 2}, {5, 2}};
