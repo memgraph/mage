@@ -13,6 +13,7 @@
 // limitations under the License.
 //! Simplifies returning results to Memgraph and then to the client.
 
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use snafu::Snafu;
 use std::ffi::CStr;
 
@@ -102,11 +103,38 @@ impl ResultRecord {
     pub fn insert_path(&self, field: &CStr, value: &Path) -> Result<()> {
         self.insert_mgp_value(field, &MgpValue::make_path(value, &self.memgraph)?)
     }
+
+    pub fn insert_date(&self, field: &CStr, value: &NaiveDate) -> Result<()> {
+        self.insert_mgp_value(field, &MgpValue::make_date(value, &self.memgraph)?)
+    }
+
+    pub fn insert_local_time(&self, field: &CStr, value: &NaiveTime) -> Result<()> {
+        self.insert_mgp_value(field, &MgpValue::make_local_time(value, &self.memgraph)?)
+    }
+
+    pub fn insert_local_date_time(&self, field: &CStr, value: &NaiveDateTime) -> Result<()> {
+        self.insert_mgp_value(
+            field,
+            &MgpValue::make_local_date_time(value, &self.memgraph)?,
+        )
+    }
+
+    pub fn insert_duration(&self, field: &CStr, value: &chrono::Duration) -> Result<()> {
+        self.insert_mgp_value(field, &MgpValue::make_duration(value, &self.memgraph)?)
+    }
 }
 
 #[derive(Debug, PartialEq, Snafu)]
 #[snafu(visibility = "pub")]
 pub enum Error {
+    // DATE
+    #[snafu(display("Unable to create date from NaiveDate."))]
+    UnableToCreateDateFromNaiveDate,
+
+    // DURATION
+    #[snafu(display("Unable to create duration from chrono::Duration."))]
+    UnableToCreateDurationFromChronoDuration,
+
     // EDGE
     #[snafu(display("Unable to copy edge."))]
     UnableToCopyEdge,
@@ -141,6 +169,14 @@ pub enum Error {
 
     #[snafu(display("Unable to access list value by index."))]
     UnableToAccessListValueByIndex,
+
+    // LOCALTIME
+    #[snafu(display("Unable to create local time from NaiveTime."))]
+    UnableToCreateLocalTimeFromNaiveTime,
+
+    // LOCALDATETIME
+    #[snafu(display("Unable to create local date time from NaiveDateTime."))]
+    UnableToCreateLocalDateTimeFromNaiveDateTime,
 
     // MAP
     #[snafu(display("Unable to copy map."))]
@@ -241,6 +277,18 @@ pub enum Error {
 
     #[snafu(display("Unable to make new Value::String."))]
     UnableToMakeValueString,
+
+    #[snafu(display("Unable to make date value."))]
+    UnableToMakeDateValue,
+
+    #[snafu(display("Unable to make local time value."))]
+    UnableToMakeLocalTimeValue,
+
+    #[snafu(display("Unable to make local date time value."))]
+    UnableToMakeLocalDateTimeValue,
+
+    #[snafu(display("Unable to make duration value."))]
+    UnableToMakeDurationValue,
 
     // VERTEX
     #[snafu(display("Unable to copy vertex."))]

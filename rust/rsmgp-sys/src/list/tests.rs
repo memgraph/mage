@@ -13,13 +13,13 @@
 // limitations under the License.
 
 use serial_test::serial;
-use std::ptr::null_mut;
 
 use super::*;
 use crate::memgraph::Memgraph;
 use crate::mgp::mock_ffi::*;
 use crate::testing::alloc::*;
 use crate::{mock_mgp_once, with_dummy};
+use libc::{c_void, free};
 
 #[test]
 #[serial]
@@ -32,14 +32,15 @@ fn test_mgp_copy() {
         (*list_ptr_ptr) = alloc_mgp_list();
         mgp_error::MGP_ERROR_NO_ERROR
     });
-    mock_mgp_once!(mgp_list_at_context, |_, _, value_ptr_ptr| unsafe {
-        (*value_ptr_ptr) = alloc_mgp_value();
+    mock_mgp_once!(mgp_list_at_context, |_, _, _| {
         mgp_error::MGP_ERROR_NO_ERROR
     });
     mock_mgp_once!(mgp_list_append_context, |_, _| {
         mgp_error::MGP_ERROR_UNABLE_TO_ALLOCATE
     });
-    mock_mgp_once!(mgp_list_destroy_context, |_| {});
+    mock_mgp_once!(mgp_list_destroy_context, |ptr| unsafe {
+        free(ptr as *mut c_void);
+    });
 
     with_dummy!(|memgraph: &Memgraph| {
         unsafe {
@@ -72,7 +73,9 @@ fn test_append() {
     mock_mgp_once!(mgp_list_append_context, |_, _| {
         mgp_error::MGP_ERROR_INSUFFICIENT_BUFFER
     });
-    mock_mgp_once!(mgp_value_destroy_context, |_| {});
+    mock_mgp_once!(mgp_value_destroy_context, |ptr| unsafe {
+        free(ptr as *mut c_void);
+    });
 
     with_dummy!(List, |list: &List| {
         assert!(list.append(&Value::Null).is_err());
@@ -89,7 +92,9 @@ fn test_append_extend() {
     mock_mgp_once!(mgp_list_append_extend_context, |_, _| {
         mgp_error::MGP_ERROR_INSUFFICIENT_BUFFER
     });
-    mock_mgp_once!(mgp_value_destroy_context, |_| {});
+    mock_mgp_once!(mgp_value_destroy_context, |ptr| unsafe {
+        free(ptr as *mut c_void);
+    });
 
     with_dummy!(List, |list: &List| {
         assert!(list.append_extend(&Value::Null).is_err());
