@@ -1,5 +1,5 @@
 query: >
-    CALL json_util.load_from_url("https://raw.githubusercontent.com/memgraph/mage/main/e2e/json_util_test/test_load_from_url/data.json") 
+    CALL json_util.load_from_url("https://raw.githubusercontent.com/memgraph/mage/add-json-util/e2e/json_util_test/test_load_from_url/data.json") 
     YIELD objects
     UNWIND objects AS o
     RETURN o.name AS name, o.age AS age;  
