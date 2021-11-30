@@ -117,7 +117,6 @@ bool TestEqualVectorPairs(const std::vector<std::pair<std::uint64_t, T>> &result
   std::sort(result_cp.begin(), result_cp.end());
   std::sort(correct_cp.begin(), correct_cp.end());
 
-  auto size = result_cp.size();
   return std::equal(
       result_cp.begin(), result_cp.end(), correct_cp.begin(), [&absolute_error](auto result_cp, auto correct_cp) {
         return result_cp.first == correct_cp.first && std::abs(result_cp.second - correct_cp.second) <= absolute_error;

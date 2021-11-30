@@ -22,6 +22,11 @@ float GetRandFloat() {
   return dist(eng);
 }
 
+///
+///@brief Function for vector normalization
+///
+///@param rank Vector that needs to be normalized
+///
 void NormalizeRank(std::vector<std::pair<std::uint64_t, double>> &rank) {
   const double sum =
       std::accumulate(rank.begin(), rank.end(), 0.0, [](auto sum, const auto &p) { return sum + p.second; });
@@ -30,6 +35,11 @@ void NormalizeRank(std::vector<std::pair<std::uint64_t, double>> &rank) {
   }
 }
 
+///
+///@brief Calculates pagerank based on current information stored in global context
+///
+///@return std::vector<std::pair<std::uint64_t, double>>
+///
 std::vector<std::pair<std::uint64_t, double>> CalculatePageRank() {
   std::vector<std::pair<std::uint64_t, double>> pageranks;
 
@@ -37,6 +47,7 @@ std::vector<std::pair<std::uint64_t, double>> CalculatePageRank() {
   auto eps = pagerank_online_alg::global_epsilon;
 
   auto n = pagerank_online_alg::context.walks_counter.size();
+  pageranks.reserve(n);
   for (auto const [node_id, total] : pagerank_online_alg::context.walks_counter) {
     auto rank = total / ((n * R) / eps);
     pageranks.emplace_back(node_id, rank);
@@ -46,6 +57,16 @@ std::vector<std::pair<std::uint64_t, double>> CalculatePageRank() {
   return pageranks;
 }
 
+///
+///@brief Creates a route starting from start_id, stores it in walk and updates the walk_index. Route is created via
+/// random walk depending on random number genrator.
+///
+///@param graph Graph for route creation
+///@param start_id Starting node in graph creation
+///@param walk Walk vector that stores a route
+///@param walk_index Index of a walk for context storing
+///@param epsilon Probability of stopping the route creation
+///
 void CreateRoute(const mg_graph::GraphView<> &graph, std::uint64_t start_id, std::vector<std::uint64_t> &walk,
                  std::uint64_t walk_index, double epsilon) {
   std::uint64_t current_id = start_id;
@@ -72,6 +93,13 @@ void CreateRoute(const mg_graph::GraphView<> &graph, std::uint64_t start_id, std
   }
 }
 
+///
+///@brief Updates the context based on new edge addition. Reverts previous walks made from starting node and updates
+/// them.
+///
+///@param graph Graph for updating
+///@param new_edge New edge
+///
 void UpdateCreate(const mg_graph::GraphView<> &graph, const std::pair<std::uint64_t, std::uint64_t> &new_edge) {
   auto [from, to] = new_edge;
 
@@ -94,15 +122,21 @@ void UpdateCreate(const mg_graph::GraphView<> &graph, const std::pair<std::uint6
   }
 }
 
+///
+///@brief Updates the context based on adding the new vertex. This means adding it to a context tables and creating
+/// walks from it.
+///
+///@param graph Graph for updating
+///@param new_vertex New vertex
+///
 void UpdateCreate(const mg_graph::GraphView<> &graph, std::uint64_t new_vertex) {
   auto R = pagerank_online_alg::global_R;
   auto eps = pagerank_online_alg::global_epsilon;
 
   auto walk_index = pagerank_online_alg::context.walks.size();
   for (std::uint64_t i = 0; i < R; ++i) {
-    std::vector<std::uint64_t> walk;
+    std::vector<std::uint64_t> walk{new_vertex};
 
-    walk.emplace_back(new_vertex);
     pagerank_online_alg::context.walks_table[new_vertex].insert(walk_index);
     pagerank_online_alg::context.walks_counter[new_vertex]++;
 
@@ -113,6 +147,13 @@ void UpdateCreate(const mg_graph::GraphView<> &graph, std::uint64_t new_vertex) 
   }
 }
 
+///
+///@brief Removes the edge from the context and updates walks. This method works by updating walks that contain starting
+/// node because they no longer exist.
+///
+///@param graph Graph for updating
+///@param removed_edge Deleted edge
+///
 void UpdateDelete(const mg_graph::GraphView<> &graph, const std::pair<std::uint64_t, std::uint64_t> &removed_edge) {
   auto [from, to] = removed_edge;
 
@@ -146,6 +187,12 @@ void UpdateDelete(const mg_graph::GraphView<> &graph, const std::pair<std::uint6
   }
 }
 
+///
+///@brief Deletes vertex from context. This is trivial because we are sure that no edge exists around that node.
+///
+///@param graph Graph for updating
+///@param removed_vertex Removed vertex
+///
 void UpdateDelete(const mg_graph::GraphView<> &graph, std::uint64_t removed_vertex) {
   pagerank_online_alg::context.walks_table.erase(removed_vertex);
   pagerank_online_alg::context.walks_counter.erase(removed_vertex);
