@@ -4,31 +4,6 @@
 #include <unordered_set>
 
 namespace pagerank_online_alg {
-namespace {
-class PageRankData {
-  ///
-  ///@brief Context for storing data for dynamic pagerank
-  ///
-  ///
- public:
-  void Init() {
-    walks.clear();
-    walks_counter.clear();
-    walks_table.clear();
-  }
-
-  bool IsEmpty() const { return walks.empty(); }
-
-  /// Keeping the information about walks on the graph
-  std::vector<std::vector<std::uint64_t>> walks;
-
-  // Keeping the information of walk appearance in algorithm for faster calculation
-  std::unordered_map<std::uint64_t, uint64_t> walks_counter;
-
-  /// Table that keeps the node appearance and walk ID
-  std::unordered_map<std::uint64_t, std::unordered_set<std::uint64_t>> walks_table;
-};
-}  // namespace
 
 ///
 ///@brief Recreates context and calculates Pagerank based on method developed by Bahmani et. al.
