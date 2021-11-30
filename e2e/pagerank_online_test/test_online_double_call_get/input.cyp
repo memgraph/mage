@@ -10,4 +10,5 @@ queries:
         MERGE (a:Node {id: 4}) MERGE (b:Node {id: 6}) CREATE (a)-[:RELATION]->(b);
 
 cleanup: |-
+    CALL pagerank_online.reset() YIELD *;
     CALL mg.load('pagerank_online') YIELD *;

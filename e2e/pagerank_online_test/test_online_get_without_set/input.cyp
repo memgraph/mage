@@ -16,5 +16,6 @@ queries:
         MATCH (n) DETACH DELETE n;
 
 cleanup: |-
+    CALL pagerank_online.reset() YIELD *;
     CALL mg.load('pagerank_online') YIELD *;
     DROP TRIGGER pagerank_online;
