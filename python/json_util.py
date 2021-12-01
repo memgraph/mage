@@ -1,6 +1,6 @@
 import mgp
 import json
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 from urllib.error import URLError
 from pathlib import Path
 
@@ -44,11 +44,13 @@ def load_from_url(ctx: mgp.ProcCtx, url: str) -> mgp.Record(objects=mgp.List[obj
     url : str
         URL to the JSON that is being loaded.
     """
+    request = Request(url)
+    request.add_header('User-Agent', 'MAGE module')
     try:
-        response = urlopen(url)
+        content = urlopen(request)
     except URLError:
         print("There is no file " + url)
     else:
-        objects = extract_objects(response)
+        objects = extract_objects(content)
 
     return mgp.Record(objects=objects)
