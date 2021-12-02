@@ -7,6 +7,7 @@ import sys
 def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
     """
     Procedure to import the local JSON created by the export_util.json procedure.
+
     Parameters
     ----------
     path : str
