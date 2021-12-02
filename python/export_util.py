@@ -4,9 +4,9 @@ import json as js
 
 
 @mgp.read_proc
-def json(ctx: mgp.ProcCtx, file: str) -> mgp.Record():
+def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
     """
-    Procedure to export whole database as JSON to a local file. 
+    Procedure to export the whole database as JSON to a local file. 
 
     Parameters
     ----------
@@ -46,7 +46,7 @@ def json(ctx: mgp.ProcCtx, file: str) -> mgp.Record():
 
         graph = nodes + edges
 
-    with open(file, 'w') as outfile:
+    with open(path, 'w') as outfile:
         js.dump(graph, outfile, indent=4, sort_keys=True, default=str)
 
     return mgp.Record()
