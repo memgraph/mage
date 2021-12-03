@@ -2,8 +2,8 @@ query: >
     CALL json_util.load_from_url("https://download.memgraph.com/asset/mage/data.json") 
     YIELD objects
     UNWIND objects AS o
-    RETURN o.name AS name, o.age AS age;  
+    RETURN o.first_name AS name, o.last_name AS surname;
 
 output:
-    - name: "Michael"
-      age: 41
+    - name: "James"
+      surname: "Bond"
