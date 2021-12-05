@@ -73,7 +73,7 @@ class GraphView {
 
   virtual TSize GetInnerNodeId(std::uint64_t memgraph_id) const = 0;
 
-  virtual bool NodeExists(TSize node_id) const = 0;
+  virtual bool NodeExists(std::uint64_t memgraph_id) const = 0;
 };
 
 template <typename TSize>

@@ -260,7 +260,7 @@ class Graph : public GraphView<TSize> {
     return inner_to_memgraph_id_.at(node_id);
   }
 
-  bool NodeExists(TSize memgraph_id) const override {
+  bool NodeExists(std::uint64_t memgraph_id) const override {
     return memgraph_to_inner_id_.find(memgraph_id) != memgraph_to_inner_id_.end();
   }
 

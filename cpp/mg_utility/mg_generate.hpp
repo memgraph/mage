@@ -29,10 +29,10 @@ std::unique_ptr<mg_graph::Graph<>> BuildGraph(
 }
 
 ///
-/// @brief Builds the undirected graph from a given list of nodes and a list of edges.
-/// Nodes shouldn't be zero-indexed
+/// @brief Builds the undirected graph from a given number of nodes and a list of edges.
+/// Nodes should be 0-indexed and each edge should represent an undirected connection between specified nodes.
 ///
-///@param nodes Nodes in newly built graph
+///@param num_nodes Number of nodes in graph
 ///@param edges Edges in newly built graph
 ///@return std::unique_ptr<mg_graph::Graph<>> Pointer to the created graph
 ///
