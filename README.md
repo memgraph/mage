@@ -92,7 +92,7 @@ docker run -p 7687:7687 memgraph/memgraph-mage
 ```
 
 
-#### b) Local Build of MAGE image from Github repository
+#### b) Install MAGE with Docker build of repository
 
 **0.** Make sure that you have cloned MAGE Github repository and positioned yourself inside repo in terminal.
 To clone Github repository and position yourself inside `mage` folder, do the following in terminal:
@@ -118,7 +118,7 @@ or you can copy mage folder inside **MAGE** docker container and just do the reb
 Jump to [build MAGE query modules with Docker](#building-and-loading-modules-inside-memgraph-with-docker)
 
 
-### 2. Installing MAGE locally with Linux package of Memgraph
+### 2. Installing MAGE on Linux distro from source
 > Note: This step is more suitable for local development.
 
 #### Prerequisites
@@ -126,25 +126,23 @@ Jump to [build MAGE query modules with Docker](#building-and-loading-modules-ins
 packages. To install, proceed to the following [site](https://memgraph.com/docs/memgraph/installation).
 * To build and install MAGE query modules you will need: **Python3**, **Make**, **CMake**, **Clang**, **UUID** and **Rust**.
 
-
 Since Memgraph needs to load MAGE's modules, there is the `setup` script to help you.
 
-By running following command, this script will change default directory where Memgraph is looking for query modules to your
-`mage/dist` directory, and run `build` command to prepare `*.so` and `*.py` files.
+
+Run the `build` command of the `setup` script. It will generate a `mage/dist` directory with all the `*.so` and `*.py` files.
+Flag `-p (--path)`  represents where will contents of `mage/dist` directory be copied. You need to copy it to
+`/usr/lib/memgraph/query_modules` directory, because that's where Memgraph is looking for query modules by
+[default](https://docs.memgraph.com/memgraph/reference-guide/configuration/).
 
 ```
-python3 setup all
-```
-> Note: If your changes are not loaded, make sure to restart the instance by running `systemctl stop memgraph` and `systemctl start memgraph`.
-
-Next time you change something, just run the following command, since it is we have already set up new directory for
-query modules directory:
-
-```
-python3 setup build
+python3 setup build -p /usr/lib/memgraph/query_modules
 ```
 > Note that query modules are loaded into Memgraph on startup so if your instance was already running you will need to
 > execute the following query inside one of [querying platforms](https://docs.memgraph.com/memgraph/connect-to-memgraph) to load them:
+
+```
+CALL mg.load_all();
+```
 
 ## Running the MAGE
 If we have a graph that is broken into multiple components (left image), simple call this MAGE spell to check out which node is in which components (right image) →
@@ -152,8 +150,8 @@ If we have a graph that is broken into multiple components (left image), simple 
 ```
 // Create graph as on image below
 
-CALL weakly_connected_components.get() YIELD node, component
-RETURN node, component;
+CALL weakly_connected_components.get() YIELD node, component_id
+RETURN node, component_id;
 ```
 
 |       Graph input        |        MAGE output        |
@@ -175,6 +173,7 @@ RETURN node, component;
 | [union_find](python/union_find.py)                                                            | Python | A module with an algorithm that enables the user to check whether the given nodes belong to the same connected component.                                                                                                         |
 | [node_similartiy](python/node_similarity.py)                                                  | Python | A module that contains similarity measures for calculating the similarity between two nodes.                                                                                                                                      |
 | [node2vec_online](python/node2vec_online.py)                                                  | Python | An algorithm for calculating node embeddings as new edges arrive                                                                                                                                                                  |
+| [node2vec](python/node2vec.py)                                                                | Python | An algorithm for calculating node embeddings on static graph.                                                                                                                                                                     |
 | [weakly_connected_components](cpp/connectivity_module/connectivity_module.cpp)                | C++    | A module that finds weakly connected components in a graph.                                                                                                                                                                       |
 | [biconnected_components](cpp/biconnected_components_module/biconnected_components_module.cpp) | C++    | Algorithm for calculating maximal biconnected subgraph. A biconnected subgraph is a subgraph with a property that if any vertex were to be removed, the graph will remain connected.                                              |
 | [bipartite_matching](cpp/bipartite_matching_module/bipartite_matching_module.cpp)             | C++    | Algorithm for calculating maximum bipartite matching, where matching is a set of nodes chosen in such a way that no two edges share an endpoint.                                                                                  |
@@ -186,24 +185,26 @@ RETURN node, component;
 
 ## Advanced configuration
 
-##### 1. Use default Memgraph query-modules-directory
-
-Run the `build` command of the `setup` script. It will generate a `mage/dist` directory with all the `*.so` and `*.py` files.
-Flag `-p (--path)`  represents where will contents of `mage/dist` directory be copied. You need to copy it to
-`/usr/lib/memgraph/query_modules` directory, because that's where Memgraph is looking for query modules by
-[default](https://docs.memgraph.com/memgraph/reference-guide/configuration/).
+### 1. Automatic setup of query_module directory and build
+By running following command, this script will change default directory where Memgraph is looking for query modules to your
+`mage/dist` directory, and run `build` command to prepare `*.so` and `*.py` files.
 
 ```
-python3 setup build -p /usr/lib/memgraph/query_modules
+python3 setup all
+```
+> Note: If your changes are not loaded, make sure to restart the instance by running `systemctl stop memgraph` and `systemctl start memgraph`.
+
+Next time you change something, just run the following command, since it is we have already set up new directory for
+query modules directory:
+
+```
+python3 setup build
 ```
 > Note that query modules are loaded into Memgraph on startup so if your instance was already running you will need to
 > execute the following query inside one of [querying platforms](https://docs.memgraph.com/memgraph/connect-to-memgraph) to load them:
 
-```
-CALL mg.load_all();
-```
 
-##### 2. Set different query_modules directory
+### 2. Set different query_modules directory
 `setup` script offers you to set your local `mage/dist` folder as  default one for Memgraph configuration file
 (flag `--query-modules-directory` defined in `/etc/memgraph/memgraph.conf` file with following step:
 
