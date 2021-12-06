@@ -17,7 +17,7 @@ void InsertPagerankRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memo
   auto *record = mgp::result_new_record(result);
 
   mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
-  mg_utility::InsertDoubleValue(record, kFieldRank, rank, memory);
+  mg_utility::InsertDoubleValueResult(record, kFieldRank, rank, memory);
 }
 
 /// Memgraph query module implementation of parallel pagerank_module algorithm.
