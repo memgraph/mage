@@ -20,6 +20,7 @@ use super::*;
 use crate::mgp::mock_ffi::*;
 use crate::testing::alloc::*;
 use crate::{mock_mgp_once, with_dummy};
+use libc::{c_void, free};
 
 #[test]
 #[serial]
@@ -52,8 +53,12 @@ fn test_mgp_copy() {
             mgp_error::MGP_ERROR_NO_ERROR
         }
     );
-    mock_mgp_once!(mgp_map_destroy_context, |_| {});
-    mock_mgp_once!(mgp_map_items_iterator_destroy_context, |_| {});
+    mock_mgp_once!(mgp_map_destroy_context, |ptr| unsafe {
+        free(ptr as *mut c_void);
+    });
+    mock_mgp_once!(mgp_map_items_iterator_destroy_context, |ptr| unsafe {
+        free(ptr as *mut c_void);
+    });
 
     with_dummy!(|memgraph: &Memgraph| {
         unsafe {
@@ -73,7 +78,9 @@ fn test_insert() {
     mock_mgp_once!(mgp_map_insert_context, |_, _, _| {
         mgp_error::MGP_ERROR_KEY_ALREADY_EXISTS
     });
-    mock_mgp_once!(mgp_value_destroy_context, |_| {});
+    mock_mgp_once!(mgp_value_destroy_context, |ptr| unsafe {
+        free(ptr as *mut c_void);
+    });
 
     with_dummy!(Map, |map: &Map| {
         let value = Value::Null;

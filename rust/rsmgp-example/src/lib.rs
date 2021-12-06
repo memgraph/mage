@@ -1,4 +1,5 @@
 use c_str_macro::c_str;
+use rsmgp_sys::list::*;
 use rsmgp_sys::memgraph::*;
 use rsmgp_sys::mgp::*;
 use rsmgp_sys::property::*;
@@ -74,13 +75,13 @@ define_procedure!(test_procedure, |memgraph: &Memgraph| -> Result<()> {
             .map(|prop| {
                 let prop_name = prop.name.to_str().unwrap();
                 if let Value::Int(value) = prop.value {
-                    return format!("{}: {}", prop_name, value);
+                    format!("{}: {}", prop_name, value)
                 } else if let Value::String(value) = &prop.value {
-                    return format!("{}: {}", prop_name, value.to_str().unwrap());
+                    format!("{}: {}", prop_name, value.to_str().unwrap())
                 } else if let Value::Float(value) = prop.value {
-                    return format!("{}: {}", prop_name, value);
+                    format!("{}: {}", prop_name, value)
                 } else {
-                    ",".to_string()
+                    format!("{}: <complex type>", prop_name)
                 }
             })
             .collect::<Vec<String>>()
@@ -122,8 +123,10 @@ define_procedure!(test_procedure, |memgraph: &Memgraph| -> Result<()> {
         }
 
         let list_property = mgp_vertex.property(c_str!("list"))?.value;
-        if let Value::List(list) = list_property {
-            result.insert_list(c_str!("list"), &list)?;
+        match list_property {
+            Value::List(list) => result.insert_list(c_str!("list"), &list)?,
+            Value::Null => result.insert_list(c_str!("list"), &List::make_empty(5, &memgraph)?)?,
+            _ => (),
         }
     }
     Ok(())

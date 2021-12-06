@@ -65,6 +65,7 @@ extern crate mockall;
 
 extern crate mockall_double;
 
+mod temporal;
 mod testing;
 
 pub mod edge;
