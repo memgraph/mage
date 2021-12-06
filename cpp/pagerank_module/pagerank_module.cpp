@@ -37,7 +37,6 @@ void PagerankWrapper(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
 
     const auto &graph_edges = graph->Edges();
     std::vector<pagerank_alg::EdgePair> pagerank_edges;
-    pagerank_edges.reserve(graph_edges.size());
     std::transform(graph_edges.begin(), graph_edges.end(), std::back_inserter(pagerank_edges),
                    [](const mg_graph::Edge<std::uint64_t> &edge) -> pagerank_alg::EdgePair {
                      return {edge.from, edge.to};
