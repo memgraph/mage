@@ -235,7 +235,7 @@ void InsertIntValueResult(mgp_result_record *record, const char *field_name, con
 
 /// Inserts a double of value double_value to the field field_name of
 /// the record mgp_result_record record.
-void InsertDoubleValue(mgp_result_record *record, const char *field_name, const double double_value,
+void InsertDoubleValueResult(mgp_result_record *record, const char *field_name, const double double_value,
                        mgp_memory *memory) {
   auto value = mgp::value_make_double(double_value, memory);
   InsertRecord(record, field_name, value);

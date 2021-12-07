@@ -90,13 +90,36 @@ double AverageAbsoluteError(const std::vector<T> &result, const std::vector<T> &
 /// false otherwise
 ///
 template <typename T>
-bool TestEqualVectors(const std::vector<T> &result, const std::vector<T> &correct) {
-  auto max_absolute_error = MaxAbsoluteError(result, correct);
-  if (max_absolute_error >= ABSOLUTE_ERROR_EPSILON) return false;
+bool TestEqualVectors(const std::vector<T> &result, const std::vector<T> &correct,
+                      double absolute_error = ABSOLUTE_ERROR_EPSILON,
+                      double average_error = AVERAGE_ABSOLUTE_ERROR_EPSILON) {
+  return MaxAbsoluteError(result, correct) < absolute_error && AverageAbsoluteError(result, correct) < absolute_error;
+}
 
-  auto average_absolute_error = AverageAbsoluteError(result, correct);
-  if (average_absolute_error >= AVERAGE_ABSOLUTE_ERROR_EPSILON) return false;
+///
+///@brief A method that determines whether given vectors with (int, arithmetic_type) values are the same within the
+/// defined tolerance. Vectors must have the same size.
+///
+///@param result Container that stores calculated values
+///@param correct Container that stores accurate values
+///@param absolute_error Absolute error between any two pairs of resulting and correct value
+///@return true if the maximum absolute error is lesser than ABSOLUTE_ERROR_EPSILON false otherwise
+///
+template <typename T>
+bool TestEqualVectorPairs(const std::vector<std::pair<std::uint64_t, T>> &result,
+                          const std::vector<std::pair<std::uint64_t, T>> &correct,
+                          double absolute_error = ABSOLUTE_ERROR_EPSILON) {
+  if (result.size() != correct.size()) return false;
 
-  return true;
+  std::vector<std::pair<std::uint64_t, T>> result_cp(result);
+  std::vector<std::pair<std::uint64_t, T>> correct_cp(correct);
+
+  std::sort(result_cp.begin(), result_cp.end());
+  std::sort(correct_cp.begin(), correct_cp.end());
+
+  return std::equal(
+      result_cp.begin(), result_cp.end(), correct_cp.begin(), [&absolute_error](auto result_cp, auto correct_cp) {
+        return result_cp.first == correct_cp.first && std::abs(result_cp.second - correct_cp.second) <= absolute_error;
+      });
 }
 }  // namespace mg_test_utility
