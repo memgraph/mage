@@ -1,3 +1,4 @@
+from io import TextIOWrapper
 import mgp
 import json
 from urllib.request import Request, urlopen
@@ -5,7 +6,7 @@ from urllib.error import URLError
 from pathlib import Path
 
 
-def extract_objects(file):
+def extract_objects(file: TextIOWrapper):
     objects = json.load(file)
     if type(objects) is dict:
         objects = [objects]
@@ -15,7 +16,7 @@ def extract_objects(file):
 @mgp.read_proc
 def load_from_path(ctx: mgp.ProcCtx, path: str) -> mgp.Record(objects=mgp.List[object]):
     """
-    Procedure to load JSON from a local file. 
+    Procedure to load JSON from a local file.
 
     Parameters
     ----------
@@ -37,7 +38,7 @@ def load_from_path(ctx: mgp.ProcCtx, path: str) -> mgp.Record(objects=mgp.List[o
 @mgp.read_proc
 def load_from_url(ctx: mgp.ProcCtx, url: str) -> mgp.Record(objects=mgp.List[object]):
     """
-    Procedure to load JSON from a remote address. 
+    Procedure to load JSON from a remote address.
 
     Parameters
     ----------
@@ -45,11 +46,11 @@ def load_from_url(ctx: mgp.ProcCtx, url: str) -> mgp.Record(objects=mgp.List[obj
         URL to the JSON that is being loaded.
     """
     request = Request(url)
-    request.add_header('User-Agent', 'MAGE module')
+    request.add_header("User-Agent", "MAGE module")
     try:
         content = urlopen(request)
-    except URLError:
-        print("There is no file " + url)
+    except URLError as url_error:
+        raise url_error
     else:
         objects = extract_objects(content)
 
