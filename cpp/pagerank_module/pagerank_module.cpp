@@ -17,7 +17,7 @@ void InsertPagerankRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memo
   auto *record = mgp::result_new_record(result);
 
   mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
-  mg_utility::InsertDoubleValue(record, kFieldRank, rank, memory);
+  mg_utility::InsertDoubleValueResult(record, kFieldRank, rank, memory);
 }
 
 /// Memgraph query module implementation of parallel pagerank_module algorithm.
@@ -37,7 +37,6 @@ void PagerankWrapper(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
 
     const auto &graph_edges = graph->Edges();
     std::vector<pagerank_alg::EdgePair> pagerank_edges;
-    pagerank_edges.reserve(graph_edges.size());
     std::transform(graph_edges.begin(), graph_edges.end(), std::back_inserter(pagerank_edges),
                    [](const mg_graph::Edge<std::uint64_t> &edge) -> pagerank_alg::EdgePair {
                      return {edge.from, edge.to};

@@ -20,7 +20,7 @@ void InsertBCRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, co
   auto *record = mgp::result_new_record(result);
 
   mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
-  mg_utility::InsertDoubleValue(record, kFieldBCScore, betweenness_centrality, memory);
+  mg_utility::InsertDoubleValueResult(record, kFieldBCScore, betweenness_centrality, memory);
 }
 
 void GetBetweennessCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {

@@ -23,7 +23,9 @@ use crate::memgraph::*;
 use crate::mgp::*;
 use crate::path::*;
 use crate::result::*;
+use crate::temporal;
 use crate::vertex::*;
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 // Required here, if not present tests linking fails.
 #[double]
 use crate::mgp::ffi;
@@ -337,6 +339,100 @@ impl MgpValue {
             invoke_mgp_func!(::std::os::raw::c_int, ffi::mgp_value_is_path, self.ptr).unwrap() != 0
         }
     }
+
+    pub fn make_date(date: &NaiveDate, memgraph: &Memgraph) -> Result<MgpValue> {
+        let mut date = temporal::Date::from_naive_date(date, memgraph)?;
+        unsafe {
+            let mgp_value = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToMakeDateValue,
+                ffi::mgp_value_make_date,
+                date.mgp_ptr()
+            )?;
+            date.set_mgp_ptr(std::ptr::null_mut());
+            Ok(MgpValue::new(mgp_value, &memgraph))
+        }
+    }
+
+    pub fn is_date(&self) -> bool {
+        unsafe {
+            invoke_mgp_func!(::std::os::raw::c_int, ffi::mgp_value_is_date, self.ptr).unwrap() != 0
+        }
+    }
+
+    pub fn make_local_time(time: &NaiveTime, memgraph: &Memgraph) -> Result<MgpValue> {
+        let mut local_time = temporal::LocalTime::from_naive_time(time, memgraph)?;
+        unsafe {
+            let mgp_value = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToMakeLocalTimeValue,
+                ffi::mgp_value_make_local_time,
+                local_time.mgp_ptr()
+            )?;
+            local_time.set_mgp_ptr(std::ptr::null_mut());
+            Ok(MgpValue::new(mgp_value, &memgraph))
+        }
+    }
+
+    pub fn is_local_time(&self) -> bool {
+        unsafe {
+            invoke_mgp_func!(
+                ::std::os::raw::c_int,
+                ffi::mgp_value_is_local_time,
+                self.ptr
+            )
+            .unwrap()
+                != 0
+        }
+    }
+
+    pub fn make_local_date_time(datetime: &NaiveDateTime, memgraph: &Memgraph) -> Result<MgpValue> {
+        let mut local_date_time =
+            temporal::LocalDateTime::from_naive_date_time(datetime, memgraph)?;
+        unsafe {
+            let mgp_value = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToMakeLocalDateTimeValue,
+                ffi::mgp_value_make_local_date_time,
+                local_date_time.mgp_ptr()
+            )?;
+            local_date_time.set_mgp_ptr(std::ptr::null_mut());
+            Ok(MgpValue::new(mgp_value, &memgraph))
+        }
+    }
+
+    pub fn is_local_date_time(&self) -> bool {
+        unsafe {
+            invoke_mgp_func!(
+                ::std::os::raw::c_int,
+                ffi::mgp_value_is_local_date_time,
+                self.ptr
+            )
+            .unwrap()
+                != 0
+        }
+    }
+
+    pub fn make_duration(duration: &chrono::Duration, memgraph: &Memgraph) -> Result<MgpValue> {
+        let mut duration = temporal::Duration::from_chrono_duration(duration, memgraph)?;
+        unsafe {
+            let mgp_value = invoke_mgp_func_with_res!(
+                *mut mgp_value,
+                Error::UnableToMakeDurationValue,
+                ffi::mgp_value_make_duration,
+                duration.mgp_ptr()
+            )?;
+            duration.set_mgp_ptr(std::ptr::null_mut());
+            Ok(MgpValue::new(mgp_value, &memgraph))
+        }
+    }
+
+    pub fn is_duration(&self) -> bool {
+        unsafe {
+            invoke_mgp_func!(::std::os::raw::c_int, ffi::mgp_value_is_duration, self.ptr).unwrap()
+                != 0
+        }
+    }
 }
 
 /// Object containing/owning concrete underlying mgp objects (e.g., mgp_vertex).
@@ -353,6 +449,10 @@ pub enum Value {
     Path(Path),
     List(List),
     Map(Map),
+    Date(NaiveDate),
+    LocalTime(NaiveTime),
+    LocalDateTime(NaiveDateTime),
+    Duration(chrono::Duration),
 }
 
 impl Value {
@@ -368,6 +468,10 @@ impl Value {
             Value::Vertex(x) => MgpValue::make_vertex(&x, &memgraph),
             Value::Edge(x) => MgpValue::make_edge(&x, &memgraph),
             Value::Path(x) => MgpValue::make_path(&x, &memgraph),
+            Value::Date(x) => MgpValue::make_date(&x, &memgraph),
+            Value::LocalTime(x) => MgpValue::make_local_time(&x, &memgraph),
+            Value::LocalDateTime(x) => MgpValue::make_local_date_time(&x, &memgraph),
+            Value::Duration(x) => MgpValue::make_duration(&x, &memgraph),
         }
     }
 }
@@ -398,7 +502,6 @@ pub(crate) unsafe fn mgp_raw_value_to_value(
     value: *mut mgp_value,
     memgraph: &Memgraph,
 ) -> Result<Value> {
-    #[allow(non_upper_case_globals)]
     match invoke_mgp_func!(mgp_value_type, ffi::mgp_value_get_type, value).unwrap() {
         mgp_value_type::MGP_VALUE_TYPE_NULL => Ok(Value::Null),
         mgp_value_type::MGP_VALUE_TYPE_BOOL => Ok(Value::Bool(
@@ -437,12 +540,36 @@ pub(crate) unsafe fn mgp_raw_value_to_value(
             invoke_mgp_func!(*mut mgp_map, ffi::mgp_value_get_map, value).unwrap(),
             &memgraph,
         )?)),
-        mgp_value_type::MGP_VALUE_TYPE_DATE
-        | mgp_value_type::MGP_VALUE_TYPE_LOCAL_TIME
-        | mgp_value_type::MGP_VALUE_TYPE_LOCAL_DATE_TIME
-        | mgp_value_type::MGP_VALUE_TYPE_DURATION => {
-            panic!("Unable to create value object because of uncovered mgp_value type.");
-        }
+        mgp_value_type::MGP_VALUE_TYPE_DATE => Ok(Value::Date(
+            temporal::Date::new(
+                invoke_mgp_func!(*mut mgp_date, ffi::mgp_value_get_date, value).unwrap(),
+            )
+            .to_naive_date(),
+        )),
+        mgp_value_type::MGP_VALUE_TYPE_LOCAL_TIME => Ok(Value::LocalTime(
+            temporal::LocalTime::new(
+                invoke_mgp_func!(*mut mgp_local_time, ffi::mgp_value_get_local_time, value)
+                    .unwrap(),
+            )
+            .to_naive_time(),
+        )),
+        mgp_value_type::MGP_VALUE_TYPE_LOCAL_DATE_TIME => Ok(Value::LocalDateTime(
+            temporal::LocalDateTime::new(
+                invoke_mgp_func!(
+                    *mut mgp_local_date_time,
+                    ffi::mgp_value_get_local_date_time,
+                    value
+                )
+                .unwrap(),
+            )
+            .to_naive_date_time(),
+        )),
+        mgp_value_type::MGP_VALUE_TYPE_DURATION => Ok(Value::Duration(
+            temporal::Duration::new(
+                invoke_mgp_func!(*mut mgp_duration, ffi::mgp_value_get_duration, value).unwrap(),
+            )
+            .to_chrono_duration(),
+        )),
     }
 }
 
