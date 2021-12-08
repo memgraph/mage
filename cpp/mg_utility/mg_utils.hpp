@@ -309,9 +309,14 @@ std::vector<std::uint64_t> GetNodeIDs(mgp_list *node_list) {
 /// Returns a vector of endpoints ({node_id, node_id} pairs) of edges
 /// from the mgp_list edge_list.
 std::vector<std::pair<std::uint64_t, std::uint64_t>> GetEdgeEndpointIDs(mgp_list *edge_list) {
-  auto to_id = mgp::vertex_get_id(mgp::edge_get_to(edge));
-}
+  std::vector<std::pair<std::uint64_t, std::uint64_t>> edge_endpoint_ids;
+  for (std::size_t i = 0; i < mgp::list_size(edge_list); i++) {
+    auto edge = mgp::value_get_edge(mgp::list_at(edge_list, i));
+    auto from_id = mgp::vertex_get_id(mgp::edge_get_from(edge));
+    auto to_id = mgp::vertex_get_id(mgp::edge_get_to(edge));
+    edge_endpoint_ids.push_back(std::make_pair(from_id.as_int, to_id.as_int));
+  }
 
-return edge_endpoint_ids;
-}  // namespace mg_utility
+  return edge_endpoint_ids;
+}
 }  // namespace mg_utility
