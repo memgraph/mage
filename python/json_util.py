@@ -1,9 +1,9 @@
 from io import TextIOWrapper
-import mgp
 import json
+import mgp
+from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.error import URLError
-from pathlib import Path
 
 
 def extract_objects(file: TextIOWrapper):
