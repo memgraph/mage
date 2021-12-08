@@ -3,29 +3,29 @@
 
 #include "algorithm/dynamic_community_detection.hpp"
 
-constexpr std::string_view const kFieldNode{"node"};
-constexpr std::string_view const kFieldCommunityId{"community_id"};
-
-constexpr std::string_view const kFieldMessage{"message"};
-
-constexpr std::string_view const kDirected{"directed"};
-constexpr std::string_view const kWeighted{"weighted"};
-constexpr std::string_view const kSimilarityThreshold{"similarity_threshold"};
-constexpr std::string_view const kExponent{"exponent"};
-constexpr std::string_view const kMinValue{"min_value"};
-constexpr std::string_view const kWeightProperty{"weight_property"};
-constexpr std::string_view const kWSelfloop{"w_selfloop"};
-constexpr std::string_view const kMaxIterations{"max_iterations"};
-constexpr std::string_view const kMaxUpdates{"max_updates"};
-
-constexpr std::string_view const kCreatedVertices{"createdVertices"};
-constexpr std::string_view const kCreatedEdges{"createdEdges"};
-constexpr std::string_view const kUpdatedVertices{"updatedVertices"};
-constexpr std::string_view const kUpdatedEdges{"updatedEdges"};
-constexpr std::string_view const kDeletedVertices{"deletedVertices"};
-constexpr std::string_view const kDeletedEdges{"deletedEdges"};
-
 namespace {
+constexpr std::string_view kFieldNode{"node"};
+constexpr std::string_view kFieldCommunityId{"community_id"};
+
+constexpr std::string_view kFieldMessage{"message"};
+
+constexpr std::string_view kDirected{"directed"};
+constexpr std::string_view kWeighted{"weighted"};
+constexpr std::string_view kSimilarityThreshold{"similarity_threshold"};
+constexpr std::string_view kExponent{"exponent"};
+constexpr std::string_view kMinValue{"min_value"};
+constexpr std::string_view kWeightProperty{"weight_property"};
+constexpr std::string_view kWSelfloop{"w_selfloop"};
+constexpr std::string_view kMaxIterations{"max_iterations"};
+constexpr std::string_view kMaxUpdates{"max_updates"};
+
+constexpr std::string_view kCreatedVertices{"createdVertices"};
+constexpr std::string_view kCreatedEdges{"createdEdges"};
+constexpr std::string_view kUpdatedVertices{"updatedVertices"};
+constexpr std::string_view kUpdatedEdges{"updatedEdges"};
+constexpr std::string_view kDeletedVertices{"deletedVertices"};
+constexpr std::string_view kDeletedEdges{"deletedEdges"};
+
 LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT();
 bool initialized = false;
 

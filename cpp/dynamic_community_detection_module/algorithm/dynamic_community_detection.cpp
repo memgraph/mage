@@ -1,7 +1,8 @@
 #include <algorithm>
 #include <cmath>
-#include <mg_graph.hpp>
 #include <numeric>
+
+#include <mg_graph.hpp>
 
 #include "dynamic_community_detection.hpp"
 
@@ -65,7 +66,7 @@ void LabelRankT::SetStructures(std::uint64_t node_id) {
         GetTotalWeightBetween(node_j_id, node_id) / sum_w_i;
   }
 
-  label_Ps[node_id] = node_label_Ps;
+  label_Ps[node_id] = std::move(node_label_Ps);
   sum_w[node_id] = sum_w_i;
 }
 
@@ -104,8 +105,8 @@ double LabelRankT::GetWeight(std::uint64_t edge_id) const {
 }
 
 void LabelRankT::ResetTimesUpdated() {
-  for (const auto [node_id, _] : times_updated) {
-    times_updated[node_id] = 0;
+  for (auto &[_, count] : times_updated) {
+    count = 0;
   }
 }
 
@@ -130,7 +131,7 @@ std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::AllLabels() {
   std::set<std::int64_t> labels_ordered;
   std::unordered_map<std::int64_t, std::int64_t> lookup;
 
-  for (const auto [node, _] : label_Ps) {
+  for (const auto &[node, _] : label_Ps) {
     labels_ordered.insert(NodeLabel(node));
   }
 
@@ -142,7 +143,7 @@ std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::AllLabels() {
   }
   lookup[-1] = -1;
 
-  for (const auto [node, _] : label_Ps) {
+  for (const auto &[node, _] : label_Ps) {
     labels.insert({node, lookup[NodeLabel(node)]});
   }
 
@@ -226,8 +227,6 @@ void LabelRankT::Inflate(
 void LabelRankT::Cutoff(
     std::unordered_map<std::uint64_t, double>& node_label_Ps,
     double min_value) const {
-  std::vector<std::uint64_t> to_be_removed;
-
   for (auto node_label_P = node_label_Ps.begin();
        node_label_P != node_label_Ps.end();) {
     auto P = node_label_P->second;
@@ -250,8 +249,8 @@ std::pair<bool, std::uint64_t> LabelRankT::Iteration(
 
   for (const auto node_id : nodes_memgraph_ids) {
     if (incremental) {
-      const bool was_updated = changed_nodes.count(node_id) > 0 ? true : false;
-      const bool was_deleted = to_delete.count(node_id) > 0 ? true : false;
+      const bool was_updated = changed_nodes.count(node_id) > 0;
+      const bool was_deleted = to_delete.count(node_id) > 0;
 
       if (!was_updated || was_deleted) continue;
     }
@@ -291,7 +290,7 @@ std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::CalculateLabels(
   this->graph = std::move(graph);
   const auto nodes_memgraph_ids = NodesMemgraphIDs();
 
-  const bool incremental = changed_nodes.size() >= 1 ? true : false;
+  const bool incremental = changed_nodes.size() >= 1;
   if (incremental) {
     RemoveDeletedNodes(to_delete);
     for (const auto node_id : changed_nodes) {
@@ -356,14 +355,14 @@ std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::UpdateLabels(
   std::unordered_set<std::uint64_t> to_delete(deleted_nodes.begin(),
                                               deleted_nodes.end());
 
-  for (const auto edge : modified_edges) {
-    changed_nodes.insert(edge.first);
-    changed_nodes.insert(edge.second);
+  for (const auto [from, to] : modified_edges) {
+    changed_nodes.insert(from);
+    changed_nodes.insert(to);
   }
 
-  for (const auto edge : deleted_edges) {
-    if (to_delete.count(edge.first) == 0) changed_nodes.insert(edge.first);
-    if (to_delete.count(edge.second) == 0) changed_nodes.insert(edge.second);
+  for (const auto [from, to] : deleted_edges) {
+    if (to_delete.count(from) == 0) changed_nodes.insert(from);
+    if (to_delete.count(to) == 0) changed_nodes.insert(to);
   }
 
   return CalculateLabels(std::move(graph), changed_nodes, to_delete);
