@@ -1,6 +1,6 @@
 ### Description
 
-Please explain the changes you made here.
+Please briefly explain the changes you made here.
 
 ### Pull request type
 
