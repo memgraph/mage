@@ -19,7 +19,7 @@ Delete if this PR doesn't resolve any issues. Link the issue if it does.
 
 ######################################
 
-### Reviewer checklist (this part checks the reviewer)
+### Reviewer checklist (the reviewer checks this part)
 #### Module/Algorithm
 - [ ] Core algorithm/module implementation
 - [ ] [Query module](https://memgraph.com/docs/memgraph/reference-guide/query-modules) implementation
