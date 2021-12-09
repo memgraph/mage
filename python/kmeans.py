@@ -16,7 +16,7 @@ def get_groups(number_of_clusters, embeddings, nodes) -> List[Tuple[mgp.Vertex, 
     scaler = StandardScaler()
     embeddings_scaled = scaler.fit_transform(embeddings)
 
-    kmeans = KMeans(n_clusters=number_of_clusters, random_state=time.time()).fit(embeddings_scaled)
+    kmeans = KMeans(n_clusters=number_of_clusters, random_state=int(time.time())).fit(embeddings_scaled)
 
     kmeans_labels = kmeans.labels_
 
