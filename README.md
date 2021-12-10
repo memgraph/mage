@@ -52,6 +52,22 @@ Make sure to check out Memgraph community, and join us on a survey of streaming 
 - :octocat: [**Memgraph GitHub**](https://github.com/memgraph)
 - :bird: [**Twitter**](https://twitter.com/memgraphdb)
 - :movie_camera: [**YouTube**](https://www.youtube.com/channel/UCZ3HOJvHGxtQ_JHxOselBYg)
+-
+<a href="https://twitter.com/intent/follow?screen_name=memgraphmage">
+    <img src="https://img.shields.io/badge/@memgraphmage-1DA1F2?style=flat-square&logo=twitter&logoColor=white" alt="Follow @memgraphmage"/>
+  </a>
+<a href="https://discourse.memgraph.com/">
+    <img src="https://img.shields.io/badge/Discourse_forum-000000?style=flat-square&logo=discourse&logoColor=white" alt="Discourse forum"/>
+</a>
+<a href="https://memgr.ph/join-discord">
+    <img src="https://img.shields.io/badge/Discord-7289DA?style=flat-square&logo=discord&logoColor=white" alt="Discord"/>
+</a>
+<a href="https://github.com/memgraph">
+    <img src="https://img.shields.io/badge/Memgraph_GitHub-181717?style=flat-square&logo=github&logoColor=white" alt="Memgraph Github"/>
+</a>
+<a href="https://www.youtube.com/channel/UCZ3HOJvHGxtQ_JHxOselBYg">
+    <img src="https://img.shields.io/badge/YouTube-FF0000?style=flat-square&logo=youtube&logoColor=white" alt="Memgraph YouTube"/>
+</a>
 
 ## Overview
 - [Memgraph compatibility](#memgraph-compatibility)
