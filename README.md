@@ -47,22 +47,40 @@ Furthermore, if you have an **algorithm proposition**, please fill in the survey
 ### Community
 Make sure to check out Memgraph community, and join us on a survey of streaming a graph algorithms! Drop us a message on the channels below:
 
-- :robot: [**Discord**](https://discord.gg/memgraph)
-- :busts_in_silhouette: [**Discourse forum**](https://discourse.memgraph.com/)
-- :octocat: [**Memgraph GitHub**](https://github.com/memgraph)
-- :bird: [**Twitter**](https://twitter.com/memgraphdb)
-- :movie_camera: [**YouTube**](https://www.youtube.com/channel/UCZ3HOJvHGxtQ_JHxOselBYg)
+<p align="center">
+<a href="https://twitter.com/intent/follow?screen_name=memgraphmage">
+    <img src="https://img.shields.io/badge/@memgraphmage-1DA1F2?style=for-the-badge&logo=twitter&logoColor=white" alt="Follow @memgraphmage"/>
+  </a>
+<a href="https://discourse.memgraph.com/">
+    <img src="https://img.shields.io/badge/Discourse_forum-000000?style=for-the-badge&logo=discourse&logoColor=white" alt="Discourse forum"/>
+</a>
+<a href="https://memgr.ph/join-discord">
+    <img src="https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"/>
+</a>
+<a href="https://github.com/memgraph">
+    <img src="https://img.shields.io/badge/Memgraph_GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="Memgraph Github"/>
+</a>
+<a href="https://www.youtube.com/channel/UCZ3HOJvHGxtQ_JHxOselBYg">
+    <img src="https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Memgraph YouTube"/>
+</a>
+</p>
 
 ## Overview
-- [Compatibility](#memgraph-compatibility)
-- [Installation](#how-to-install)
-- [Example](#running-the-mage)
-- [MAGE Spells](#mage-spells)
-- [Advanced configuration](#advanced-configuration)
-- [Developing](#developing-mage-with-docker)
-- [Testing](#testing-the-mage)
-- [Contributing](#contributing)
-- [Code of Conduct](#code-of-conduct)
+- [Memgraph compatibility](#memgraph-compatibility)
+  - [How to install?](#how-to-install)
+  - [Further steps - Installation](#further-steps---installation)
+    - [1. Installing MAGE with Docker](#1-installing-mage-with-docker)
+      - [a) Install MAGE from Docker Hub](#a-install-mage-from-docker-hub)
+      - [b) Install MAGE with Docker build of repository](#b-install-mage-with-docker-build-of-repository)
+    - [2. Installing MAGE on Linux distro from source](#2-installing-mage-on-linux-distro-from-source)
+      - [Prerequisites](#prerequisites)
+  - [Running the MAGE](#running-the-mage)
+  - [MAGE Spells](#mage-spells)
+  - [Advanced configuration](#advanced-configuration)
+  - [Testing the MAGE](#testing-the-mage)
+  - [Contributing](#contributing)
+  - [Code of Conduct](#code-of-conduct)
+  - [Feedback](#feedback)
 
 # Memgraph compatibility
 With changes in Memgraph API, MAGE started to track version numbers. Check out the table below which will tell you compatibility of MAGE with Memgraph versions.
@@ -161,150 +179,34 @@ RETURN node, component_id;
 
 ## MAGE Spells
 
-| Algorithms                                                                                    | Lang   | Description                                                                                                                                                                                                                       |
-| --------------------------------------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [nxalg](python/nxalg.py)                                                                      | Python | A module that provides NetworkX integration with Memgraph and implements many NetworkX algorithms                                                                                                                                 |
-| [graph_analyzer](python/graph_analyzer.py)                                                    | Python | This Graph Analyzer query module offers insights about the stored graph or a subgraph.                                                                                                                                            |
-| [distance_calculator](python/distance_calculator.py)                                          | Python | Module for finding the geographical distance between two points defined with 'lng' and 'lat' coordinates.                                                                                                                         |
-| [tsp](python/tsp.py)                                                                          | Python | An algorithm for finding the shortest possible route that visits each vertex exactly once.                                                                                                                                        |
-| [set_cover](python/set_cover.py)                                                              | Python | The algorithm for finding minimum cost subcollection of sets that covers all elements of a universe.                                                                                                                              |
-| [graph_coloring](python/graph_coloring.py)                                                    | Python | Algorithm for assigning labels to the graph elements subject to certain constraints. In this form, it is a way of coloring the graph vertices such that no two adjacent vertices are of the same color.                           |
-| [vrp](python/vrp.py)                                                                          | Python | Algorithm for finding the shortest route possible between the central depot and places to be visited. The algorithm can be solved with multiple vehicles that represent a visiting fleet.                                         |
-| [union_find](python/union_find.py)                                                            | Python | A module with an algorithm that enables the user to check whether the given nodes belong to the same connected component.                                                                                                         |
-| [node_similartiy](python/node_similarity.py)                                                  | Python | A module that contains similarity measures for calculating the similarity between two nodes.                                                                                                                                      |
-| [node2vec_online](python/node2vec_online.py)                                                  | Python | An algorithm for calculating node embeddings as new edges arrive                                                                                                                                                                  |
-| [node2vec](python/node2vec.py)                                                                | Python | An algorithm for calculating node embeddings on static graph.                                                                                                                                                                     |
-| [weakly_connected_components](cpp/connectivity_module/connectivity_module.cpp)                | C++    | A module that finds weakly connected components in a graph.                                                                                                                                                                       |
-| [biconnected_components](cpp/biconnected_components_module/biconnected_components_module.cpp) | C++    | Algorithm for calculating maximal biconnected subgraph. A biconnected subgraph is a subgraph with a property that if any vertex were to be removed, the graph will remain connected.                                              |
-| [bipartite_matching](cpp/bipartite_matching_module/bipartite_matching_module.cpp)             | C++    | Algorithm for calculating maximum bipartite matching, where matching is a set of nodes chosen in such a way that no two edges share an endpoint.                                                                                  |
-| [cycles](cpp/cycles_module/cycles_module.cpp)                                                 | C++    | Algorithm for detecting cycles on graphs                                                                                                                                                                                          |
-| [bridges](cpp/bridges_module/bridges_module.cpp)                                              | C++    | A bridge is an edge, which when deleted, increases the number of connected components. The goal of this algorithm is to detect edges that are bridges in a graph.                                                                 |
-| [betweenness centrality](cpp/betweenness_centrality_module/betweenness_centrality_module.cpp) | C++    | The betweenness centrality of a node is defined as the sum of the of all-pairs shortest paths that pass through the node divided by the number of all-pairs shortest paths in the graph. The algorithm has O(nm) time complexity. |
-| [uuid_generator](cpp/uuid_module/uuid_module.cpp)                                             | C++    | A module that generates a new universally unique identifier (UUID).                                                                                                                                                               |
-
+| Algorithms                                                                                         | Lang   | Description                                                                                                                                                                                                                       |
+| -------------------------------------------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [betweenness_centrality](cpp/betweenness_centrality_module/betweenness_centrality_module.cpp)      | C++    | The betweenness centrality of a node is defined as the sum of the of all-pairs shortest paths that pass through the node divided by the number of all-pairs shortest paths in the graph. The algorithm has O(nm) time complexity. |
+| [biconnected_components](cpp/biconnected_components_module/biconnected_components_module.cpp)      | C++    | Algorithm for calculating maximal biconnected subgraph. A biconnected subgraph is a subgraph with a property that if any vertex were to be removed, the graph will remain connected.                                              |
+| [bipartite_matching](cpp/bipartite_matching_module/bipartite_matching_module.cpp)                  | C++    | Algorithm for calculating maximum bipartite matching, where matching is a set of nodes chosen in such a way that no two edges share an endpoint.                                                                                  |
+| [bridges](cpp/bridges_module/bridges_module.cpp)                                                   | C++    | A bridge is an edge, which when deleted, increases the number of connected components. The goal of this algorithm is to detect edges that are bridges in a graph.                                                                 |
+| [community_detection_online](cpp/community_detection_module/community_detection_online_module.cpp) | C++    | A dynamic community detection algorithm suitable for large-scale graphs based upon label propagation. Runs in O(m) time and has O(mn) space complexity.                                                                           |
+| [cycles](cpp/cycles_module/cycles_module.cpp)                                                      | C++    | Algorithm for detecting cycles on graphs                                                                                                                                                                                          |
+| [distance_calculator](python/distance_calculator.py)                                               | Python | Module for finding the geographical distance between two points defined with 'lng' and 'lat' coordinates.                                                                                                                         |
+| [graph_analyzer](python/graph_analyzer.py)                                                         | Python | This Graph Analyzer query module offers insights about the stored graph or a subgraph.                                                                                                                                            |
+| [graph_coloring](python/graph_coloring.py)                                                         | Python | Algorithm for assigning labels to the graph elements subject to certain constraints. In this form, it is a way of coloring the graph vertices such that no two adjacent vertices are of the same color.                           |
+| [node2vec](python/node2vec.py)                                                                     | Python | An algorithm for calculating node embeddings on static graph.                                                                                                                                                                     |
+| [node2vec_online](python/node2vec_online.py)                                                       | Python | An algorithm for calculating node embeddings as new edges arrive                                                                                                                                                                  |
+| [node_similarity](python/node_similarity.py)                                                       | Python | A module that contains similarity measures for calculating the similarity between two nodes.                                                                                                                                      |
+| [nxalg](python/nxalg.py)                                                                           | Python | A module that provides NetworkX integration with Memgraph and implements many NetworkX algorithms                                                                                                                                 |
+| [pagerank](cpp/pagerank_module/pagerank_module.cpp)                                                | C++    | Algorithm that yields the influence measurement based on the recursive information about the connected nodes influence                                                                                                            |
+| [pagerank_online](cpp/pagerank_module/pagerank_online_module.cpp)                                  | C++    | A dynamic algorithm made for calculating PageRank in a graph streaming scenario.                                                                                                                                                  |
+| [rust_example](cpp/pagerank_module/pagerank_online_module.cpp)                                     | Rust   | Example of a basic module with input parameters forwarding, made in Rust.                                                                                                                                                         |
+| [set_cover](python/set_cover.py)                                                                   | Python | The algorithm for finding minimum cost subcollection of sets that covers all elements of a universe.                                                                                                                              |
+| [tsp](python/tsp.py)                                                                               | Python | An algorithm for finding the shortest possible route that visits each vertex exactly once.                                                                                                                                        |
+| [union_find](python/union_find.py)                                                                 | Python | A module with an algorithm that enables the user to check whether the given nodes belong to the same connected component.                                                                                                         |
+| [uuid_generator](cpp/uuid_module/uuid_module.cpp)                                                  | C++    | A module that generates a new universally unique identifier (UUID).                                                                                                                                                               |
+| [vrp](python/vrp.py)                                                                               | Python | Algorithm for finding the shortest route possible between the central depot and places to be visited. The algorithm can be solved with multiple vehicles that represent a visiting fleet.                                         |
+| [weakly_connected_components](cpp/connectivity_module/connectivity_module.cpp)                     | C++    | A module that finds weakly connected components in a graph.                                                                                                                                                                       |
 
 ## Advanced configuration
-
-### 1. Automatic setup of query_module directory and build
-By running following command, this script will change default directory where Memgraph is looking for query modules to your
-`mage/dist` directory, and run `build` command to prepare `*.so` and `*.py` files.
-
-```
-python3 setup all
-```
-> Note: If your changes are not loaded, make sure to restart the instance by running `systemctl stop memgraph` and `systemctl start memgraph`.
-
-Next time you change something, just run the following command, since it is we have already set up new directory for
-query modules directory:
-
-```
-python3 setup build
-```
-> Note that query modules are loaded into Memgraph on startup so if your instance was already running you will need to
-> execute the following query inside one of [querying platforms](https://docs.memgraph.com/memgraph/connect-to-memgraph) to load them:
-
-
-### 2. Set different query_modules directory
-`setup` script offers you to set your local `mage/dist` folder as  default one for Memgraph configuration file
-(flag `--query-modules-directory` defined in `/etc/memgraph/memgraph.conf` file with following step:
-
-```
-python3 setup modules_storage
-```
-
-This way Memgraph will be looking for query modules inside `mage/dist` folder. Now you don't need to copy `mage/dist` folder to
-`/usr/lib/memgraph/query_modules` every time when you do `build`.
-
-Now you can run only following command to build MAGE modules:
-```
-python3 setup build
-```
-
-> Again the note that query modules are loaded into Memgraph on startup so if your instance was already running you will need to
-> execute the following query inside one of [querying platforms](https://memgraph.com/docs/memgraph/connect-to-memgraph) to load them:
-```
-CALL mg.load_all();
-```
-
-
-
-If you want to find out more about loading query modules, visit [this guide](https://memgraph.com/docs/memgraph/reference-guide/query-modules/load-call-query-modules).
-
-## Developing MAGE with Docker
-
-When you developed your own query module, you need to load it inside Memgraph running inside Docker container.
-
-There are two options here.
-
-### 1. Rebuild whole MAGE image
-
-This command will trigger rebuild of whole Docker image. Make sure that you have added Python requirements inside `python/requirements.txt`
-file.
-
-**1.** Firstly, do the build of **MAGE** image:
-
-```
-docker build -t memgraph-mage .
-```
-
-**2.** Now, start `memgraph-mage` image with the following command and enjoy **your** own **MAGE**:
-```
-docker run --rm -p 7687:7687 --name mage memgraph-mage
-```
-
-### 2. Build inside Docker container
-
-You can build **MAGE** Docker image equipped for development. `Rust`, `Clang`, `Python3-pip`, and everything else necessary
-for development will still be inside the running container. This means that you can copy **MAGE** repository inside the container
-and do build inside `mage` container. And there is no need to do the whole Docker image build again.
-
-**1.** To create `dev` **MAGE** image, run the following command:
-
-```
-docker build --target dev -t memgraph-mage:dev .
-```
-**2.** Now run the image with following command:
-
-```
-docker run --rm -p 7687:7687 --name mage memgraph-mage:dev
-```
-
-**3.** Now copying files inside  container and doing build.
-
-**a)** First you need to copy files to container with name `mage`
-
-```
-docker cp . mage:/mage/
-```
-
-**b)** Then you need to position yourself inside container as root:
-
-```
-docker exec -u root -it mage /bin/bash
-```
-
-> Note: if you have done build locally, make sure to delete folder `cpp/build` because
-> you might be dealing with different `architectures` or problems with `CMakeCache.txt`.
-> To delete it, run:
->
-> `rm -rf cpp/build`
-
-**c)** After that, run build and copying `mage/dist` to `/usr/lib/memgraph/query_modules`:
-
-```
-python3 setup build -p /usr/lib/memgraph/query_modules/
-```
-**d)** Everything is done now. Just run following command:
-
-```
-exit
-```
-
-> Note that query modules are loaded into Memgraph on startup so if your instance was already running you will need to
-> execute the following query inside one of [querying platforms](https://docs.memgraph.com/memgraph/connect-to-memgraph) to load them:
-```
-CALL mg.load_all();
-```
+- [Advanced query module directories setup](https://memgraph.com/docs/mage/installation#advanced-configuration) (under `Build from source on Linux`)
+- [Developing MAGE with Docker](https://memgraph.com/docs/mage/installation#developing-mage-with-docker) (under `Docker build`)
 
 ## Testing the MAGE
 To test that everything is built, loaded, and working correctly, a python script can be run. Make sure that the Memgraph instance with **MAGE** is up and running.
