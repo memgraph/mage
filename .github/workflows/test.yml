@@ -93,7 +93,7 @@ jobs:
   build-and-test-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: Vampire/setup-wsl@v1
 
       - name: Build Memgraph MAGE:prod and MAGE:dev images
         run: |
