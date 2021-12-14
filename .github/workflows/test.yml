@@ -15,6 +15,7 @@ jobs:
         os: [ macos-latest, windows-latest, ubuntu-20.04 ]
       max-parallel: 3
       fail-fast: true
+    steps:
     - uses: actions/checkout@v2
 
     - name: Build Memgraph MAGE:prod and MAGE:dev images
