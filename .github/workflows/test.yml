@@ -112,6 +112,8 @@ jobs:
           sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
           apt-cache policy docker-ce
           sudo apt -y install docker-ce
+          sudo systemctl status docker
+          sudo systemctl start docker
 
           sudo docker build . -t memgraph-mage:prod --target prod
           sudo docker build . -t memgraph-mage:dev --target dev
