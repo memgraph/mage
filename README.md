@@ -24,7 +24,8 @@
     </a>
     <a href="https://github.com/memgraph/mage/stargazers" alt="Stargazers">
         <img src="https://img.shields.io/github/stars/memgraph/mage?style=social" />
-    </a>
+    </a>![graph_input](https://user-images.githubusercontent.com/66276597/146028963-d5d6be9d-95f0-4de0-9a37-87c2baf17fdd.png)
+
 </p>
 
 ## Memgraph Advanced Graph Extensions :crystal_ball:
@@ -45,7 +46,7 @@ If you want more info about MAGE, check out the official [MAGE Documentation](ht
 Furthermore, if you have an **algorithm proposition**, please fill in the survey on [**mage.memgraph.com**](https://mage.memgraph.com/).
 
 ### Community
-Make sure to check out Memgraph community, and join us on a survey of streaming a graph algorithms! Drop us a message on the channels below:
+Make sure to check out the Memgraph community, and join us on a survey of streaming graph algorithms! Drop us a message on the channels below:
 
 <p align="center">
 <a href="https://twitter.com/intent/follow?screen_name=memgraphmage">
@@ -67,14 +68,13 @@ Make sure to check out Memgraph community, and join us on a survey of streaming 
 
 ## Overview
 - [Memgraph compatibility](#memgraph-compatibility)
-  - [How to install?](#how-to-install)
-  - [Further steps - Installation](#further-steps---installation)
+  - [How to install MAGE?](#how-to-install-mage)
     - [1. Installing MAGE with Docker](#1-installing-mage-with-docker)
       - [a) Install MAGE from Docker Hub](#a-install-mage-from-docker-hub)
-      - [b) Install MAGE with Docker build of repository](#b-install-mage-with-docker-build-of-repository)
+      - [b) Install MAGE with Docker build of the repository](#b-install-mage-with-docker-build-of-repository)
     - [2. Installing MAGE on Linux distro from source](#2-installing-mage-on-linux-distro-from-source)
       - [Prerequisites](#prerequisites)
-  - [Running the MAGE](#running-the-mage)
+  - [Running MAGE](#running-mage)
   - [MAGE Spells](#mage-spells)
   - [Advanced configuration](#advanced-configuration)
   - [Testing the MAGE](#testing-the-mage)
@@ -82,59 +82,56 @@ Make sure to check out Memgraph community, and join us on a survey of streaming 
   - [Code of Conduct](#code-of-conduct)
   - [Feedback](#feedback)
 
-# Memgraph compatibility
-With changes in Memgraph API, MAGE started to track version numbers. Check out the table below which will tell you compatibility of MAGE with Memgraph versions.
+## Memgraph compatibility
+With changes in Memgraph API, MAGE started to track version numbers. The table below lists the compatibility of MAGE with Memgraph versions.
 | MAGE version | Memgraph version  |
 | ------------ | ----------------- |
 | >= 1.0       | >= 2.0.0          |
 | ^0           | >= 1.4.0 <= 1.6.1 |
-## How to install?
-There are two options to install MAGE. With [Docker installation](#1-installing-mage-with-docker) you only need Docker.
-[To build from source](#2-installing-mage-locally-with-linux-package-of-memgraph)
-you will need **Python3**, **Make**, **CMake**, **Clang**, **UUID** and **Rust**. Installation with Docker is easier for quick installation
-and smaller development.
 
-## Further steps - Installation
-After installation part, you will be ready to query Memgraph and use **MAGE** modules. Make sure to have one of [the querying
-platform](https://memgraph.com/docs/memgraph/connect-to-memgraph/).
+## How to install MAGE?
+There are two options to install MAGE. For the [Docker installation](#1-installing-mage-with-docker), you only need Docker installed.
+[To build from source](#2-installing-mage-locally-with-linux-package-of-memgraph)
+you will need **Python3**, **Make**, **CMake**, **Clang**, **UUID** and **Rust**.
+
+After the installation, you will be ready to query Memgraph and use MAGE modules. Make sure to have one of [the querying
+platforms](https://memgraph.com/docs/memgraph/connect-to-memgraph/) installed as well.
 
 ### 1. Installing MAGE with Docker
 
 #### a) Install MAGE from Docker Hub
 
-> Note: Here you don't need to download Github Memgraph/MAGE repository.
+**1.** This command downloads the image from Docker Hub and runs Memgraph preloaded with **MAGE** modules:
 
-**1.** This command downloads image from Docker Hub and runs Memgraph with **MAGE** algorithms:
 ```
 docker run -p 7687:7687 memgraph/memgraph-mage
 ```
 
+#### b) Install MAGE with Docker build of the repository
 
-#### b) Install MAGE with Docker build of repository
-
-**0.** Make sure that you have cloned MAGE Github repository and positioned yourself inside repo in terminal.
-To clone Github repository and position yourself inside `mage` folder, do the following in terminal:
+**0.** Make sure that you have cloned the MAGE Github repository and positioned yourself inside the repo in your terminal:
 
 ```bash
 git clone https://github.com/memgraph/mage.git && cd mage
 ```
 
 **1.** To build **MAGE** image run the following command:
+
 ```
 docker build  -t memgraph-mage .
 ```
+
 This will build any new algorithm added to MAGE, and load it inside Memgraph.
 
-**2.** Start image with the following command and enjoy your own **MAGE**:
+**2.** Start the container with the following command and enjoy Memgraph with **MAGE**:
+
 ```
 docker run --rm -p 7687:7687 --name mage memgraph-mage
 ```
 
-
-**NOTE**: if you made any new changes while **MAGE** Docker container is running, you need to stop it and rebuild whole image,
-or you can copy mage folder inside **MAGE** docker container and just do the rebuild.
-Jump to [build MAGE query modules with Docker](#building-and-loading-modules-inside-memgraph-with-docker)
-
+**NOTE**: if you made any changes while the **MAGE** Docker container was running, you will need to stop it and rebuild the whole image,
+or you can copy the mage folder inside the Docker container and do the rebuild from there.
+To learn mmore about development with MAGE and Docker, visit the [documentation](https://memgraph.com/docs/mage/installation).
 
 ### 2. Installing MAGE on Linux distro from source
 > Note: This step is more suitable for local development.
@@ -162,7 +159,7 @@ python3 setup build -p /usr/lib/memgraph/query_modules
 CALL mg.load_all();
 ```
 
-## Running the MAGE
+## Running MAGE
 If we have a graph that is broken into multiple components (left image), simple call this MAGE spell to check out which node is in which components (right image) →
 
 ```
@@ -190,11 +187,11 @@ RETURN node, component_id;
 | [distance_calculator](python/distance_calculator.py)                                               | Python | Module for finding the geographical distance between two points defined with 'lng' and 'lat' coordinates.                                                                                                                         |
 | [graph_analyzer](python/graph_analyzer.py)                                                         | Python | This Graph Analyzer query module offers insights about the stored graph or a subgraph.                                                                                                                                            |
 | [graph_coloring](python/graph_coloring.py)                                                         | Python | Algorithm for assigning labels to the graph elements subject to certain constraints. In this form, it is a way of coloring the graph vertices such that no two adjacent vertices are of the same color.                           |
-| [node2vec](python/node2vec.py)                                                                     | Python | An algorithm for calculating node embeddings on static graph.                                                                                                                                                                     |
+| [node2vec](python/node2vec.py)                                                                     | Python | An algorithm for calculating node embeddings from static graphs.                                                                                                                                                                     |
 | [node2vec_online](python/node2vec_online.py)                                                       | Python | An algorithm for calculating node embeddings as new edges arrive                                                                                                                                                                  |
 | [node_similarity](python/node_similarity.py)                                                       | Python | A module that contains similarity measures for calculating the similarity between two nodes.                                                                                                                                      |
 | [nxalg](python/nxalg.py)                                                                           | Python | A module that provides NetworkX integration with Memgraph and implements many NetworkX algorithms                                                                                                                                 |
-| [pagerank](cpp/pagerank_module/pagerank_module.cpp)                                                | C++    | Algorithm that yields the influence measurement based on the recursive information about the connected nodes influence                                                                                                            |
+| [pagerank](cpp/pagerank_module/pagerank_module.cpp)                                                | C++    | An algorithm that yields the influence measurement based on the recursive information about the connected nodes influence                                                                                                            |
 | [pagerank_online](cpp/pagerank_module/pagerank_online_module.cpp)                                  | C++    | A dynamic algorithm made for calculating PageRank in a graph streaming scenario.                                                                                                                                                  |
 | [rust_example](cpp/pagerank_module/pagerank_online_module.cpp)                                     | Rust   | Example of a basic module with input parameters forwarding, made in Rust.                                                                                                                                                         |
 | [set_cover](python/set_cover.py)                                                                   | Python | The algorithm for finding minimum cost subcollection of sets that covers all elements of a universe.                                                                                                                              |
@@ -208,7 +205,7 @@ RETURN node, component_id;
 - [Advanced query module directories setup](https://memgraph.com/docs/mage/installation#advanced-configuration) (under `Build from source on Linux`)
 - [Developing MAGE with Docker](https://memgraph.com/docs/mage/installation#developing-mage-with-docker) (under `Docker build`)
 
-## Testing the MAGE
+## Testing MAGE
 To test that everything is built, loaded, and working correctly, a python script can be run. Make sure that the Memgraph instance with **MAGE** is up and running.
 ```
 # Running unit tests for C++ and Python
