@@ -84,21 +84,20 @@ streaming graph algorithms! Drop us a message on the channels below:
 ## Overview
 
 - [Memgraph compatibility](#memgraph-compatibility)
-  - [How to install MAGE?](#how-to-install-mage)
-    - [1. Installing MAGE with Docker](#1-installing-mage-with-docker)
-      - [a) Install MAGE from Docker Hub](#a-install-mage-from-docker-hub)
-      - [b) Install MAGE with Docker build of the
-        repository](#b-install-mage-with-docker-build-of-repository)
-    - [2. Installing MAGE on Linux distro from
-      source](#2-installing-mage-on-linux-distro-from-source)
-      - [Prerequisites](#prerequisites)
-  - [Running MAGE](#running-mage)
-  - [MAGE Spells](#mage-spells)
-  - [Advanced configuration](#advanced-configuration)
-  - [Testing the MAGE](#testing-the-mage)
-  - [Contributing](#contributing)
-  - [Code of Conduct](#code-of-conduct)
-  - [Feedback](#feedback)
+- [How to install MAGE?](#how-to-install-mage)
+  - [1. Installing MAGE with Docker](#1-installing-mage-with-docker)
+    - [a) Install MAGE from Docker Hub](#a-install-mage-from-docker-hub)
+    - [b) Install MAGE with Docker build of the
+      repository](#b-install-mage-with-docker-build-of-the-repository)
+  - [2. Installing MAGE on Linux distro from
+    source](#2-installing-mage-on-linux-distro-from-source)
+- [Running MAGE](#running-mage)
+- [MAGE Spells](#mage-spells)
+- [Advanced configuration](#advanced-configuration)
+- [Testing MAGE](#testing-mage)
+- [Contributing](#contributing)
+- [Code of Conduct](#code-of-conduct)
+- [Feedback](#feedback)
 
 ## Memgraph compatibility
 
