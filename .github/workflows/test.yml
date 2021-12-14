@@ -91,11 +91,20 @@ jobs:
           python -m pytest .
 
   build-and-test-windows:
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        os: [ windows-latest ]
+    runs-on: ${{ matrix.os }}
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
       - uses: Vampire/setup-wsl@v1
+        with:
+          distribution: Ubuntu-20.04
 
       - name: Build Memgraph MAGE:prod and MAGE:dev images
+        shell: wsl-bash {0} # root shell
         run: |
           docker build . -t memgraph-mage:prod --target prod
           docker build . -t memgraph-mage:dev --target dev
