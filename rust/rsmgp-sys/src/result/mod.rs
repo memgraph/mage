@@ -13,6 +13,7 @@
 // limitations under the License.
 //! Simplifies returning results to Memgraph and then to the client.
 
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use snafu::Snafu;
 use std::ffi::CStr;
 
@@ -35,12 +36,14 @@ pub struct ResultRecord {
 }
 
 impl ResultRecord {
-    pub fn create(memgraph: &Memgraph) -> MgpResult<ResultRecord> {
+    pub fn create(memgraph: &Memgraph) -> Result<ResultRecord> {
         unsafe {
-            let mgp_ptr = ffi::mgp_result_new_record(memgraph.result_ptr());
-            if mgp_ptr.is_null() {
-                return Err(MgpError::UnableToCreateResultRecord);
-            }
+            let mgp_ptr = invoke_mgp_func_with_res!(
+                *mut mgp_result_record,
+                Error::UnableToCreateResultRecord,
+                ffi::mgp_result_new_record,
+                memgraph.result_ptr()
+            )?;
             Ok(ResultRecord {
                 ptr: mgp_ptr,
                 memgraph: memgraph.clone(),
@@ -48,60 +51,90 @@ impl ResultRecord {
         }
     }
 
-    pub fn insert_mgp_value(&self, field: &CStr, value: &MgpValue) -> MgpResult<()> {
+    pub fn insert_mgp_value(&self, field: &CStr, value: &MgpValue) -> Result<()> {
         unsafe {
-            let inserted = ffi::mgp_result_record_insert(self.ptr, field.as_ptr(), value.mgp_ptr());
-            if inserted == 0 {
-                return Err(MgpError::UnableToInsertResultValue);
-            }
+            invoke_void_mgp_func_with_res!(
+                Error::UnableToInsertResultValue,
+                ffi::mgp_result_record_insert,
+                self.ptr,
+                field.as_ptr(),
+                value.mgp_ptr()
+            )?;
             Ok(())
         }
     }
 
-    pub fn insert_null(&self, field: &CStr) -> MgpResult<()> {
+    pub fn insert_null(&self, field: &CStr) -> Result<()> {
         self.insert_mgp_value(field, &MgpValue::make_null(&self.memgraph)?)
     }
 
-    pub fn insert_bool(&self, field: &CStr, value: bool) -> MgpResult<()> {
+    pub fn insert_bool(&self, field: &CStr, value: bool) -> Result<()> {
         self.insert_mgp_value(field, &MgpValue::make_bool(value, &self.memgraph)?)
     }
 
-    pub fn insert_int(&self, field: &CStr, value: i64) -> MgpResult<()> {
+    pub fn insert_int(&self, field: &CStr, value: i64) -> Result<()> {
         self.insert_mgp_value(field, &MgpValue::make_int(value, &self.memgraph)?)
     }
 
-    pub fn insert_double(&self, field: &CStr, value: f64) -> MgpResult<()> {
+    pub fn insert_double(&self, field: &CStr, value: f64) -> Result<()> {
         self.insert_mgp_value(field, &MgpValue::make_double(value, &self.memgraph)?)
     }
 
-    pub fn insert_string(&self, field: &CStr, value: &CStr) -> MgpResult<()> {
+    pub fn insert_string(&self, field: &CStr, value: &CStr) -> Result<()> {
         self.insert_mgp_value(field, &MgpValue::make_string(value, &self.memgraph)?)
     }
 
-    pub fn insert_list(&self, field: &CStr, value: &List) -> MgpResult<()> {
+    pub fn insert_list(&self, field: &CStr, value: &List) -> Result<()> {
         self.insert_mgp_value(field, &MgpValue::make_list(value, &self.memgraph)?)
     }
 
-    pub fn insert_map(&self, field: &CStr, value: &Map) -> MgpResult<()> {
+    pub fn insert_map(&self, field: &CStr, value: &Map) -> Result<()> {
         self.insert_mgp_value(field, &MgpValue::make_map(value, &self.memgraph)?)
     }
 
-    pub fn insert_vertex(&self, field: &CStr, value: &Vertex) -> MgpResult<()> {
+    pub fn insert_vertex(&self, field: &CStr, value: &Vertex) -> Result<()> {
         self.insert_mgp_value(field, &MgpValue::make_vertex(value, &self.memgraph)?)
     }
 
-    pub fn insert_edge(&self, field: &CStr, value: &Edge) -> MgpResult<()> {
+    pub fn insert_edge(&self, field: &CStr, value: &Edge) -> Result<()> {
         self.insert_mgp_value(field, &MgpValue::make_edge(value, &self.memgraph)?)
     }
 
-    pub fn insert_path(&self, field: &CStr, value: &Path) -> MgpResult<()> {
+    pub fn insert_path(&self, field: &CStr, value: &Path) -> Result<()> {
         self.insert_mgp_value(field, &MgpValue::make_path(value, &self.memgraph)?)
+    }
+
+    pub fn insert_date(&self, field: &CStr, value: &NaiveDate) -> Result<()> {
+        self.insert_mgp_value(field, &MgpValue::make_date(value, &self.memgraph)?)
+    }
+
+    pub fn insert_local_time(&self, field: &CStr, value: &NaiveTime) -> Result<()> {
+        self.insert_mgp_value(field, &MgpValue::make_local_time(value, &self.memgraph)?)
+    }
+
+    pub fn insert_local_date_time(&self, field: &CStr, value: &NaiveDateTime) -> Result<()> {
+        self.insert_mgp_value(
+            field,
+            &MgpValue::make_local_date_time(value, &self.memgraph)?,
+        )
+    }
+
+    pub fn insert_duration(&self, field: &CStr, value: &chrono::Duration) -> Result<()> {
+        self.insert_mgp_value(field, &MgpValue::make_duration(value, &self.memgraph)?)
     }
 }
 
 #[derive(Debug, PartialEq, Snafu)]
 #[snafu(visibility = "pub")]
-pub enum MgpError {
+pub enum Error {
+    // DATE
+    #[snafu(display("Unable to create date from NaiveDate."))]
+    UnableToCreateDateFromNaiveDate,
+
+    // DURATION
+    #[snafu(display("Unable to create duration from chrono::Duration."))]
+    UnableToCreateDurationFromChronoDuration,
+
     // EDGE
     #[snafu(display("Unable to copy edge."))]
     UnableToCopyEdge,
@@ -114,6 +147,9 @@ pub enum MgpError {
 
     #[snafu(display("Unable to return edge property because of name allocation error."))]
     UnableToReturnEdgePropertyNameAllocationError,
+
+    #[snafu(display("Unable to return edge property because the edge is deleted."))]
+    UnableToReturnEdgePropertyDeletedObjectError,
 
     #[snafu(display("Unable to return edge properties iterator."))]
     UnableToReturnEdgePropertiesIterator,
@@ -133,6 +169,14 @@ pub enum MgpError {
 
     #[snafu(display("Unable to access list value by index."))]
     UnableToAccessListValueByIndex,
+
+    // LOCALTIME
+    #[snafu(display("Unable to create local time from NaiveTime."))]
+    UnableToCreateLocalTimeFromNaiveTime,
+
+    // LOCALDATETIME
+    #[snafu(display("Unable to create local date time from NaiveDateTime."))]
+    UnableToCreateLocalDateTimeFromNaiveDateTime,
 
     // MAP
     #[snafu(display("Unable to copy map."))]
@@ -234,6 +278,18 @@ pub enum MgpError {
     #[snafu(display("Unable to make new Value::String."))]
     UnableToMakeValueString,
 
+    #[snafu(display("Unable to make date value."))]
+    UnableToMakeDateValue,
+
+    #[snafu(display("Unable to make local time value."))]
+    UnableToMakeLocalTimeValue,
+
+    #[snafu(display("Unable to make local date time value."))]
+    UnableToMakeLocalDateTimeValue,
+
+    #[snafu(display("Unable to make duration value."))]
+    UnableToMakeDurationValue,
+
     // VERTEX
     #[snafu(display("Unable to copy vertex."))]
     UnableToCopyVertex,
@@ -255,10 +311,19 @@ pub enum MgpError {
 
     #[snafu(display("Unable to return vertex out_edges iterator."))]
     UnableToReturnVertexOutEdgesIterator,
+
+    #[snafu(display("Unable to return vertex labels count becuase the vertex is deleted."))]
+    UnableToReturnVertexLabelsCountDeletedObjectError,
+
+    #[snafu(display("Unable to return vertex labels count becuase the vertex is deleted."))]
+    UnableToReturnVertexLabelDeletedObjectError,
+
+    #[snafu(display("Unable to check if vertex has a label."))]
+    UnableToCheckVertexHasLabel,
 }
 
-/// A result type holding [MgpError] by default.
-pub type MgpResult<T, E = MgpError> = std::result::Result<T, E>;
+/// A result type holding [Error] by default.
+pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 #[cfg(test)]
 mod tests;

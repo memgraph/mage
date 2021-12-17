@@ -1,0 +1,21 @@
+query: >
+        MATCH (m {id: 0}), (n {id: 1})
+        
+        CALL node_similarity.overlap(m, n) YIELD 
+        node1 AS node1_overlap_c, 
+        node2 AS node2_overlap_c, 
+        similarity AS overlap_similarity_c
+      
+        RETURN  
+        
+        node1_overlap_c.id as node1_overlap_c, 
+        node2_overlap_c.id as node2_overlap_c, 
+        overlap_similarity_c
+        
+
+output: 
+    - node1_overlap_c: 0
+      node2_overlap_c: 1
+      overlap_similarity_c: 0.75
+      
+      
