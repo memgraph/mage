@@ -12,6 +12,7 @@ import logging as log
 
 WORK_DIRECTORY = os.getcwd()
 MAGE_BUILD_DIRECTORY = f"{WORK_DIRECTORY}/dist"
+LICENCE_DIRECTORY = f"{WORK_DIRECTORY}/licenses"
 CPP_DIRECTORY = f"{WORK_DIRECTORY}/cpp"
 PY_DIRECTORY = f"{WORK_DIRECTORY}/python"
 RS_DIRECTORY = f"{WORK_DIRECTORY}/rust"
@@ -95,6 +96,7 @@ def copytree(src, dst, ignore_patterns=[]):
 def build():
     shutil.rmtree(MAGE_BUILD_DIRECTORY, ignore_errors=True)
     os.makedirs(MAGE_BUILD_DIRECTORY, exist_ok=True)
+    copytree(LICENCE_DIRECTORY, MAGE_BUILD_DIRECTORY)
 
     #################################################
     #              Load C++ modules                 #
