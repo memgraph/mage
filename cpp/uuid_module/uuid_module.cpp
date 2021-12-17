@@ -1,4 +1,4 @@
-#include <uuid/uuid.h>
+#include <uuid.h>
 
 #include <mg_exceptions.hpp>
 #include <mg_utils.hpp>
@@ -11,14 +11,13 @@ constexpr char const *kFieldUuid = "uuid";
 
 void Generate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    uuid_t id;
-    uuid_generate(id);
-    char *string = new char[100];
-    uuid_unparse(id, string);
+    std::random_device dev;
+    std::mt19937 rng(dev());
+    auto id = uuids::uuid_random_generator{rng}();
+    auto id_str = uuids::to_string(id);
 
     auto *record = mgp::result_new_record(result);
-
-    mg_utility::InsertStringValueResult(record, kFieldUuid, string, memory);
+    mg_utility::InsertStringValueResult(record, kFieldUuid, id_str.c_str(), memory);
   } catch (const std::exception &e) {
     // We must not let any exceptions out of our module.
     mgp::result_set_error_msg(result, e.what());
