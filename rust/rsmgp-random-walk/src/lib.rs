@@ -39,8 +39,7 @@ define_procedure!(get, |memgraph: &Memgraph| -> Result<()> {
         if edges.is_empty() {
             break;
         }
-        let num = rng.gen_range(0..edges.len());
-        let edge = &edges[num];
+        let edge = &edges[rng.gen_range(0..edges.len())];
         vertex = edge.to_vertex()?;
         path.expand(edge)?;
     }
