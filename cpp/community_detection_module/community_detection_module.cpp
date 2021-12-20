@@ -6,7 +6,7 @@
 namespace {
 
 const char *kFieldNode = "node";
-const char *kFieldCommunity = "community";
+const char *kFieldCommunity = "community_id";
 
 const char *kArgumentColoring = "coloring";
 const char *kArgumentMinGraphShrink = "min_graph_shrink";

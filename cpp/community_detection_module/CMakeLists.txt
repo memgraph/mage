@@ -1,4 +1,6 @@
-# Louvain community detection module
+################# Louvain
+
+# Community detection module
 
 set(community_detection_module_src
     community_detection_module.cpp
@@ -8,7 +10,21 @@ add_subdirectory(grappolo)
 add_query_module(community_detection 1 "${community_detection_module_src}")
 
 target_include_directories(community_detection PRIVATE ${GRAPPOLO_HEADERS} ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(community_detection PRIVATE mg_utility  basic_cd util full_syn_opt coloring OpenMP::OpenMP_CXX)
+target_link_libraries(community_detection PRIVATE mg_utility basic_cd util full_syn_opt coloring OpenMP::OpenMP_CXX)
+
+# Module tests
+include(GoogleTest)
+set(community_detection_test_src
+    community_detection_test.cpp
+    algorithm/louvain.cpp)
+
+add_executable(community_detection_test "${community_detection_test_src}")
+target_include_directories(community_detection_test PRIVATE ${GRAPPOLO_HEADERS} ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(community_detection_test PRIVATE mg_utility basic_cd full_syn_opt coloring util OpenMP::OpenMP_CXX gtest)
+gtest_add_tests(TARGET community_detection_test)
+
+
+################# LabelRankT
 
 # Community detection online module
 

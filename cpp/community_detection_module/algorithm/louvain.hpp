@@ -13,6 +13,11 @@
 #include "basic_util.h"
 #include "color_comm.h"
 
+namespace louvain_alg {
+
+// Used for removing the ambiguity of existing graph instances
+using GrappoloGraph = graph;
+
 namespace {
 
 /**
@@ -33,8 +38,9 @@ namespace {
  * gain in modularity is less than `coloringThreshold`
  * @return Vector of community indices
  */
-std::vector<std::uint64_t> GrappoloCommunityDetection(graph *grappoloGraph, bool coloring, std::uint64_t min_graph_size,
-                                                      double threshold, double coloringThreshold);
+std::vector<std::int64_t> GrappoloCommunityDetection(GrappoloGraph &grappolo_graph, bool coloring,
+                                                     std::uint64_t min_graph_size, double threshold,
+                                                     double coloringThreshold);
 
 /**
  * Method for loading Grappolo graph from the instance of Memgraph graph.
@@ -42,13 +48,12 @@ std::vector<std::uint64_t> GrappoloCommunityDetection(graph *grappoloGraph, bool
  * @param memgraph_graph Memgraph graph instance
  * @param grappolo_graph Grappolo graph instance
  */
-void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, graph *grappolo_graph);
+void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, GrappoloGraph &grappolo_graph);
 
 }  // namespace
 
-namespace louvain_alg {
+std::vector<std::int64_t> GetCommunities(const mg_graph::GraphView<> &memgraph_graph, bool coloring = false,
+                                         std::uint64_t min_graph_shrink = 100000, double threshold = 0.000001,
+                                         double coloring_threshold = 0.01);
 
-std::vector<std::uint64_t> GetCommunities(const mg_graph::GraphView<> &memgraph_graph, bool coloring,
-                                          std::uint64_t min_graph_shrink, double threshold, double coloring_threshold);
-
-}
+}  // namespace louvain_alg

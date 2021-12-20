@@ -1,15 +1,17 @@
 #include "louvain.hpp"
 
+namespace louvain_alg {
+
 namespace {
 
 constexpr int kReplaceMap = 0;
 constexpr int kThreadsOpt = 1;
 constexpr int kNumColors = 16;
 
-std::vector<std::uint64_t> GrappoloCommunityDetection(graph *grappolo_graph, bool coloring,
-                                                      std::uint64_t min_graph_size, double threshold,
-                                                      double coloring_threshold) {
-  auto number_of_vertices = grappolo_graph->numVertices;
+std::vector<std::int64_t> GrappoloCommunityDetection(GrappoloGraph &grappolo_graph, bool coloring,
+                                                     std::uint64_t min_graph_size, double threshold,
+                                                     double coloring_threshold) {
+  auto number_of_vertices = grappolo_graph.numVertices;
 
   auto *cluster_array = (long *)malloc(number_of_vertices * sizeof(long));
 #pragma omp parallel for
@@ -20,15 +22,15 @@ std::vector<std::uint64_t> GrappoloCommunityDetection(graph *grappolo_graph, boo
   // Dynamically set currently.
   auto num_threads = omp_get_num_threads();
   if (coloring) {
-    runMultiPhaseColoring(grappolo_graph, cluster_array, coloring, kNumColors, kReplaceMap, min_graph_size, threshold,
+    runMultiPhaseColoring(&grappolo_graph, cluster_array, coloring, kNumColors, kReplaceMap, min_graph_size, threshold,
                           coloring_threshold, num_threads, kThreadsOpt);
   } else {
-    runMultiPhaseBasic(grappolo_graph, cluster_array, kReplaceMap, min_graph_size, threshold, coloring_threshold,
+    runMultiPhaseBasic(&grappolo_graph, cluster_array, kReplaceMap, min_graph_size, threshold, coloring_threshold,
                        num_threads, kThreadsOpt);
   }
 
   // Store clustering information in vector
-  std::vector<std::uint64_t> result;
+  std::vector<std::int64_t> result;
   for (long i = 0; i < number_of_vertices; ++i) {
     result.emplace_back(cluster_array[i]);
   }
@@ -39,7 +41,7 @@ std::vector<std::uint64_t> GrappoloCommunityDetection(graph *grappolo_graph, boo
   return result;
 }
 
-void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, graph *grappolo_graph) {
+void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, GrappoloGraph &grappolo_graph) {
   int num_threads = 1;
 #pragma omp parallel
   { num_threads = omp_get_num_threads(); }
@@ -49,7 +51,7 @@ void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, graph *gra
 
   // Case without graph edges
   if (number_of_edges == 0) {
-    grappolo_graph->numEdges = 0;
+    grappolo_graph.numEdges = 0;
     return;
   }
 
@@ -62,6 +64,7 @@ void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, graph *gra
     tmp_edge_list[edge_index].head = from;              // The S index
     tmp_edge_list[edge_index].tail = to;                // The T index: Zero-based indexing
     tmp_edge_list[edge_index].weight = default_weight;  // Make it positive and cast to Double, fixed to 1.0
+    edge_index++;
   }
 
   auto edge_list_ptrs = new long[number_of_vertices + 1];
@@ -118,25 +121,25 @@ void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, graph *gra
   }
 
   // Define Grappolo graph structure
-  grappolo_graph->sVertices = number_of_vertices;
-  grappolo_graph->numVertices = number_of_vertices;
-  grappolo_graph->numEdges = number_of_edges;
-  grappolo_graph->edgeListPtrs = edge_list_ptrs;
-  grappolo_graph->edgeList = edge_list;
+  grappolo_graph.sVertices = number_of_vertices;
+  grappolo_graph.numVertices = number_of_vertices;
+  grappolo_graph.numEdges = number_of_edges;
+  grappolo_graph.edgeListPtrs = edge_list_ptrs;
+  grappolo_graph.edgeList = edge_list;
 }
 }  // namespace
 
-namespace louvain_alg {
-std::vector<std::uint64_t> GetCommunities(const mg_graph::GraphView<> &memgraph_graph, bool coloring,
-                                          std::uint64_t min_graph_shrink, double threshold, double coloring_threshold) {
-  if (!memgraph_graph.Nodes().size()) {
-    return std::vector<std::uint64_t>();
+std::vector<std::int64_t> GetCommunities(const mg_graph::GraphView<> &memgraph_graph, bool coloring,
+                                         std::uint64_t min_graph_shrink, double threshold, double coloring_threshold) {
+  if (memgraph_graph.Nodes().empty()) {
+    return std::vector<std::int64_t>();
   }
 
+  // The structure will be deleted in afterward calls in grappolo methods
+  auto grappolo_graph = (GrappoloGraph *)malloc(sizeof(GrappoloGraph));
   // Create structure and load undirected edges
-  auto grappolo_graph = std::make_unique<graph>();
-  LoadUndirectedEdges(memgraph_graph, grappolo_graph.get());
+  LoadUndirectedEdges(memgraph_graph, *grappolo_graph);
 
-  return GrappoloCommunityDetection(grappolo_graph.get(), coloring, min_graph_shrink, threshold, coloring_threshold);
+  return GrappoloCommunityDetection(*grappolo_graph, coloring, min_graph_shrink, threshold, coloring_threshold);
 }
 }  // namespace louvain_alg
