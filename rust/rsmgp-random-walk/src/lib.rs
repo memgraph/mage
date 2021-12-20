@@ -19,7 +19,7 @@ define_procedure!(get, |memgraph: &Memgraph| -> Result<()> {
     let input_start = args.value_at(0)?;
     let input_length = args.value_at(1)?;
     let path = if let Value::Vertex(ref vertex) = input_start {
-        Path::make_with_start(&vertex, &memgraph)
+        Path::make_with_start(vertex, memgraph)
     } else {
         panic!("Failed to create path from the start vertex.");
     }?;
@@ -37,13 +37,13 @@ define_procedure!(get, |memgraph: &Memgraph| -> Result<()> {
     let mut rng = rand::thread_rng();
     for _ in 0..length {
         let edges: Vec<Edge> = vertex.out_edges()?.collect();
-        if edges.len() == 0 {
+        if edges.is_empty() {
             break;
         }
         let num = rng.gen_range(0..edges.len());
-        let edge = &edges[0];
+        let edge = &edges[num];
         vertex = edge.to_vertex()?;
-        path.expand(&edge)?;
+        path.expand(edge)?;
     }
 
     result.insert_path(c_str!("path"), &path)?;
