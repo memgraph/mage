@@ -1,4 +1,5 @@
 use c_str_macro::c_str;
+use rand::Rng;
 use rsmgp_sys::edge::*;
 use rsmgp_sys::memgraph::*;
 use rsmgp_sys::mgp::*;
@@ -10,8 +11,6 @@ use rsmgp_sys::{close_module, define_procedure, define_type, init_module};
 use std::ffi::CString;
 use std::os::raw::c_int;
 use std::panic;
-extern crate rand;
-use rand::Rng;
 
 define_procedure!(get, |memgraph: &Memgraph| -> Result<()> {
     let args = memgraph.args()?;
