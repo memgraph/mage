@@ -2,7 +2,9 @@
 
 cmake_minimum_required(VERSION 3.9)
 
-project(memgraph-mage)
+# TODO(gitbuda): CUDA should be optional part of mage.
+# TODO(gitbuda): Add system install part, e.g., on Ubuntu apt install nvidia-cuda-toolkit
+project(memgraph-mage LANGUAGES CXX CUDA)
 
 # Export the compile commands so that we can use clang-tidy. Additional benefit
 # is easier debugging of compilation and linker flags.
@@ -76,6 +78,7 @@ endfunction()
 include(CTest)
 enable_testing()
 add_subdirectory(connectivity_module)
+add_subdirectory(ccugraph_alg_module)
 add_subdirectory(biconnected_components_module)
 add_subdirectory(bridges_module)
 add_subdirectory(cycles_module)
