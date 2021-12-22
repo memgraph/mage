@@ -6,7 +6,7 @@ try:
     import cugraph
 except ImportError as import_error:
     sys.stderr.write(
-        "RAPIDS cuGraph is not installed, please build Memgraph from source with Python Conda interpreter where cuGraph is installd ."
+        "RAPIDS cuGraph is not installed, please build Memgraph from source with Python Conda interpreter where cuGraph is installed."
     )
     raise import_error
 
@@ -34,7 +34,7 @@ def _get_mg_data(mg_graph: mgp.Graph) -> pandas.DataFrame:
 @mgp.read_proc
 def pagerank(
     context: mgp.ProcCtx,
-) -> mgp.Record(vertex_id=mgp.Number, pagerank=mgp.Number):
+) -> mgp.Record(vertex_id=mgp.Vertex, pagerank=mgp.Number):
     df = _get_mg_data(context.graph)
     G = cugraph.Graph()
 
