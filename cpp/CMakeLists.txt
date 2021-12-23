@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 3.9)
 
 # TODO(gitbuda): CUDA should be optional part of mage.
 # TODO(gitbuda): Add system install part, e.g., on Ubuntu apt install nvidia-cuda-toolkit
+# cugraph requires cuda 11+, download from https://developer.nvidia.com/cuda-downloads
 project(memgraph-mage LANGUAGES CXX CUDA)
 
 # Export the compile commands so that we can use clang-tidy. Additional benefit
@@ -27,9 +28,9 @@ set(CMAKE_SHARED_LIBRARY_PREFIX "")
 # Install testing dependencies
 find_package(Threads REQUIRED)
 
-# Install gtest
-
 include(ExternalProject)
+
+# Install gtest
 set(GTEST_ROOT ${PROJECT_BINARY_DIR}/gtest)
 ExternalProject_Add(gtest-proj
   PREFIX            ${GTEST_ROOT}
@@ -40,7 +41,6 @@ ExternalProject_Add(gtest-proj
                     "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
                     "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
                     "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
-
 set(GTEST_INCLUDE_DIR ${GTEST_ROOT}/include)
 set(GTEST_LIBRARY_PATH ${GTEST_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
 set(GTEST_DEBUG_LIBRARY_PATH ${GTEST_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtestd.a)
@@ -51,6 +51,20 @@ set_target_properties(gtest PROPERTIES
   INTERFACE_LINK_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
 include_directories("${GTEST_INCLUDE_DIR}")
 add_dependencies(gtest gtest-proj)
+
+# TODO(gitbuda): Install cugraph, make optional
+# Requires cmake 3.20 and nvcc 11+
+set(CMAKE_CUDA_STANDARD 17)
+set(CMAKE_CUDA_STANDARD_REQUIRED TRUE)
+set(CUGRAPH_ROOT ${PROJECT_BINARY_DIR}/cugraph)
+ExternalProject_Add(cugraph-proj
+  PREFIX            ${CUGRAPH_ROOT}
+  INSTALL_DIR       ${CUGRAPH_ROOT}
+  GIT_REPOSITORY    https://github.com/rapidsai/cugraph.git
+  GIT_TAG           branch-22.02
+  SOURCE_SUBDIR     "cpp"
+  CMAKE_ARGS        "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
+                    "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
 
 # Add OpenMP compiling option
 
