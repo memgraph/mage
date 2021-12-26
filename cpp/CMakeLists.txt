@@ -3,15 +3,29 @@
 cmake_minimum_required(VERSION 3.9)
 
 # TODO(gitbuda): CUDA should be optional part of mage.
-# TODO(gitbuda): Add system install part, e.g., on Ubuntu apt install nvidia-cuda-toolkit
+# TODO(gitbuda): Add system install part, e.g., on Ubuntu apt install nvidia-cuda-toolkit -> NO because nvcc 11.0+
 # cugraph requires cuda 11+, download from https://developer.nvidia.com/cuda-downloads
-project(memgraph-mage LANGUAGES CXX CUDA)
+# Once installed cuda has to be added to the path because the default /usr/bin/nvcc is still e.g. 10
+# export PATH="/usr/local/cuda-11/bin:$PATH"
+# NOTE: Be careful, https://github.com/rapidsai/rapids-cmake, somehow take default /usr/bin/nvcc if available.
+# NOTE: Old include (/usr/include/cuda* /usr/include/cu*) files should also be deleted
+#       because nvcc gets tested against wrong include files.
+# INSTALL: sudo apt install libblas-dev liblapack-dev
+# NCCL is also required (NVIDIA Developer Program registration is required -> huge hustle).
+# IMPORTANT: NCCL could be installed from  https://github.com/NVIDIA/nccl (NOTE: take care of versions/tags).
+# TODO(gitbuda): Figure out how to compile cugraph in a regular way.
+#                https://github.com/rapidsai/cugraph/blob/branch-22.02/SOURCEBUILD.md
+# TODO(gitbuda): Figure out how to compile cugraph from Mage cmake (issue with faiss).
+# NOTE: Order of the languages matters because cmake pics different compilers.
+project(memgraph-mage LANGUAGES CXX CUDA C)
 
 # Export the compile commands so that we can use clang-tidy. Additional benefit
 # is easier debugging of compilation and linker flags.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Required C++ standard.
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -36,7 +50,7 @@ ExternalProject_Add(gtest-proj
   PREFIX            ${GTEST_ROOT}
   INSTALL_DIR       ${GTEST_ROOT}
   GIT_REPOSITORY    https://github.com/google/googletest.git
-  GIT_TAG           v1.10.x
+  GIT_TAG           release-1.11.0
   CMAKE_ARGS        "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
                     "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
                     "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
