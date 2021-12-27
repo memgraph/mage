@@ -1,4 +1,6 @@
+#include <optional>
 #include <set>
+#include <vector>
 
 #include <mg_graph.hpp>
 
