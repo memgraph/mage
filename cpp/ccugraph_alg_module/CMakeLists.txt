@@ -5,7 +5,7 @@ set(ccugraph_alg_module_src
 add_query_module(ccugraph_alg 1 "${ccugraph_alg_module_src}")
 
 # Link external libraries
-target_link_libraries(ccugraph_alg PRIVATE mg_utility)
+target_link_libraries(ccugraph_alg PRIVATE mg_utility mage_cugraph)
 target_include_directories(ccugraph_alg PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 # TODO(gitubda): CUDA_* have to be highly configurable.
 # CUDA_ARCHITECTURES -> https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/).

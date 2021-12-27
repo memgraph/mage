@@ -84,13 +84,15 @@ if (MAGE_ENABLE_CUGRAPH)
   set(CMAKE_CUDA_STANDARD_REQUIRED TRUE)
   set(MAGE_CUGRAPH_ROOT ${PROJECT_BINARY_DIR}/cugraph)
   ExternalProject_Add(cugraph-proj
-    PREFIX            "${CUGRAPH_ROOT}"
-    INSTALL_DIR       "${CUGRAPH_ROOT}"
+    PREFIX            "${MAGE_CUGRAPH_ROOT}"
+    INSTALL_DIR       "${MAGE_CUGRAPH_ROOT}"
     GIT_REPOSITORY    "${MAGE_CUGRAPH_REPO}"
     GIT_TAG           "${MAGE_CUGRAPH_TAG}"
     SOURCE_SUBDIR     "cpp"
     CMAKE_ARGS        "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
                       "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}"
+                      "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
+                      "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
                       "-DCMAKE_CUDA_ARCHITECTURES='${MAGE_CUDA_ARCHITECTURES}'"
                       "-DBUILD_TESTS=OFF"
                       "-DBUILD_CUGRAPH_MG_TESTS=OFF"

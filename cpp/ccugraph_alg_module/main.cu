@@ -1,5 +1,8 @@
 #include <stdio.h>
 
+#include <mg_utils.hpp>
+#include <mg_exceptions.hpp>
+
 // TODO(gitbuda): Just a CUDA example, put something useful here, buda ❤ cuda!
 __global__
 void saxpy(int n, float a, float *x, float *y)
@@ -8,8 +11,7 @@ void saxpy(int n, float a, float *x, float *y)
   if (i < n) y[i] = a*x[i] + y[i];
 }
 
-int main(void)
-{
+void ExampleCuGraphProc(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   int N = 1<<20;
   float *x, *y, *d_x, *d_y;
   x = (float*)malloc(N*sizeof(float));
@@ -41,3 +43,15 @@ int main(void)
   free(x);
   free(y);
 }
+
+extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
+  try {
+    struct mgp_proc *example_cugraph_proc = mgp::module_add_read_procedure(module, "example", ExampleCuGraphProc);
+    mgp::proc_add_result(example_cugraph_proc, "data", mgp::type_string());
+  } catch (std::exception &e) {
+    return 1;
+  }
+  return 0;
+}
+
+extern "C" int mgp_shutdown_module() { return 0; }
