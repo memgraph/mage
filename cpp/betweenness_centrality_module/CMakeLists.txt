@@ -15,5 +15,5 @@ set(betweenness_centrality_src
     algorithm/betweenness_centrality.cpp)
 
 add_executable(betweenness_centrality_test  "${betweenness_centrality_src}")
-target_link_libraries(betweenness_centrality_test PRIVATE mg_utility gtest)
+target_link_libraries(betweenness_centrality_test PRIVATE mg_utility mage_gtest)
 gtest_add_tests(TARGET betweenness_centrality_test)

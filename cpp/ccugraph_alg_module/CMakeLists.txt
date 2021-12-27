@@ -10,6 +10,7 @@ target_include_directories(ccugraph_alg PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 # TODO(gitubda): CUDA_* have to be highly configurable.
 # CUDA_ARCHITECTURES -> https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/).
 set_target_properties(ccugraph_alg PROPERTIES
-  CUDA_STANDARD          14
+  CUDA_STANDARD          17
   CUDA_STANDARD_REQUIRED ON
-  CUDA_ARCHITECTURES     "75")
+  CUDA_ARCHITECTURES     "75"
+)

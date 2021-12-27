@@ -15,5 +15,5 @@ set(pagerank_test_src
     algorithm/pagerank.cpp)
 
 add_executable(pagerank_test "${pagerank_test_src}")
-target_link_libraries(pagerank_test PRIVATE mg_utility gtest)
+target_link_libraries(pagerank_test PRIVATE mg_utility mage_gtest)
 gtest_add_tests(TARGET pagerank_test)

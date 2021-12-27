@@ -66,17 +66,16 @@ ExternalProject_Add(gtest-proj
 set(GTEST_INCLUDE_DIR ${GTEST_ROOT}/include)
 set(GTEST_LIBRARY_PATH ${GTEST_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
 set(GTEST_DEBUG_LIBRARY_PATH ${GTEST_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtestd.a)
-add_library(gtest STATIC IMPORTED)
-set_target_properties(gtest PROPERTIES
+add_library(mage_gtest STATIC IMPORTED)
+set_target_properties(mage_gtest PROPERTIES
   IMPORTED_LOCATION ${GTEST_LIBRARY_PATH}
   IMPORTED_LOCATION_DEBUG ${GTEST_DEBUG_LIBRARY_PATH}
   INTERFACE_LINK_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
 include_directories("${GTEST_INCLUDE_DIR}")
-add_dependencies(gtest gtest-proj)
+add_dependencies(mage_gtest gtest-proj)
 
 # Install cuGraph (optional)
-# TODO(gitbuda): Disable cuGraph build by default.
-option(MAGE_ENABLE_CUGRAPH "Enable cuGraph build" ON)
+option(MAGE_ENABLE_CUGRAPH "Enable cuGraph build" OFF)
 if (MAGE_ENABLE_CUGRAPH)
   set(MAGE_CUGRAPH_REPO "https://github.com/rapidsai/cugraph.git" CACHE STRING "cuGraph GIT repo URL")
   set(MAGE_CUGRAPH_TAG "branch-21.12" CACHE STRING "cuGraph GIT tag to checkout" )
@@ -98,12 +97,12 @@ if (MAGE_ENABLE_CUGRAPH)
   )
   set(MAGE_CUGRAPH_INCLUDE_DIR "${MAGE_CUGRAPH_ROOT}/include")
   set(MAGE_CUGRAPH_LIBRARY_PATH "${MAGE_CUGRAPH_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}cugraph.so")
-  add_library(cugraph SHARED IMPORTED)
-  set_target_properties(gtest PROPERTIES
+  add_library(mage_cugraph SHARED IMPORTED)
+  set_target_properties(mage_cugraph PROPERTIES
     IMPORTED_LOCATION "${MAGE_CUGRAPH_LIBRARY_PATH}"
   )
   include_directories("${MAGE_CUGRAPH_INCLUDE_DIR}")
-  add_dependencies(cugraph cugraph-proj)
+  add_dependencies(mage_cugraph cugraph-proj)
 endif()
 
 # Add OpenMP compiling option
@@ -128,11 +127,16 @@ function(add_query_module target_name version src)
   target_link_libraries(${target_name} PRIVATE mg_procedure)
 endfunction()
 
+macro(add_cugraph_subdirectory subdirectory_name)
+  if (MAGE_ENABLE_CUGRAPH)
+    add_subdirectory("${subdirectory_name}")
+  endif()
+endmacro()
+
 # Available query modules.
 include(CTest)
 enable_testing()
 add_subdirectory(connectivity_module)
-add_subdirectory(ccugraph_alg_module)
 add_subdirectory(biconnected_components_module)
 add_subdirectory(bridges_module)
 add_subdirectory(cycles_module)
@@ -140,3 +144,4 @@ add_subdirectory(bipartite_matching_module)
 add_subdirectory(betweenness_centrality_module)
 add_subdirectory(pagerank_module)
 add_subdirectory(uuid_module)
+add_cugraph_subdirectory(ccugraph_alg_module)

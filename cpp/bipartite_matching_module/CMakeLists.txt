@@ -15,5 +15,5 @@ set(bipartite_matching_test_src
     algorithm/bipartite_matching.cpp)
 
 add_executable(bipartite_matching_test  "${bipartite_matching_test_src}")
-target_link_libraries(bipartite_matching_test PRIVATE mg_utility gtest)
+target_link_libraries(bipartite_matching_test PRIVATE mg_utility mage_gtest)
 gtest_add_tests(TARGET bipartite_matching_test)
