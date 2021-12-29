@@ -13,55 +13,61 @@
 // limitations under the License.
 
 #include <stdio.h>
+#include <iostream>
 
-#include <mg_utils.hpp>
+#include <cugraph/algorithms.hpp>
 #include <mg_exceptions.hpp>
+#include <mg_utils.hpp>
+#include <raft/distance/distance.hpp>
+#include <raft/handle.hpp>
+#include <rmm/device_uvector.hpp>
 
-// TODO(gitbuda): Just a CUDA example, put something useful here, buda ❤ cuda!
-__global__
-void saxpy(int n, float a, float *x, float *y)
-{
-  int i = blockIdx.x*blockDim.x + threadIdx.x;
-  if (i < n) y[i] = a*x[i] + y[i];
+// TODO(gitbuda): Just a RAPIDS example, put something useful here, buda ❤ cuda + rapids + cugraph!
+
+constexpr char const *kProcedureRapidsExample = "rapids_example";
+constexpr char const *kProcedureCugraphExample = "cugraph_example";
+constexpr char const *kResultValue = "value";
+
+void InsertRecord(mgp_graph *, mgp_result *result, mgp_memory *memory, const double value) {
+  auto *record = mgp::result_new_record(result);
+  mg_utility::InsertDoubleValueResult(record, kResultValue, value, memory);
 }
 
-void ExampleCuGraphProc(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  int N = 1<<20;
-  float *x, *y, *d_x, *d_y;
-  x = (float*)malloc(N*sizeof(float));
-  y = (float*)malloc(N*sizeof(float));
+void ExampleRapidsProc(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  raft::handle_t handle{};
+  auto stream = handle.get_stream_view();
 
-  cudaMalloc(&d_x, N*sizeof(float));
-  cudaMalloc(&d_y, N*sizeof(float));
-
-  for (int i = 0; i < N; i++) {
-    x[i] = 1.0f;
-    y[i] = 2.0f;
+  int n_samples = 3;
+  int n_features = 2;
+  rmm::device_uvector<float> input(n_samples * n_features, stream);
+  for (int i = 0; i < input.size(); ++i) {
+    float value = i;
+    input.set_element_async(i, value, stream);
   }
+  stream.synchronize_no_throw();
+  rmm::device_uvector<float> output(n_samples * n_samples, stream);
+  auto metric = raft::distance::DistanceType::L1;  // Sum of distances in each feature vector.
+  raft::distance::pairwise_distance(handle, input.data(), input.data(), output.data(), n_samples, n_samples, n_features,
+                                    metric);
 
-  cudaMemcpy(d_x, x, N*sizeof(float), cudaMemcpyHostToDevice);
-  cudaMemcpy(d_y, y, N*sizeof(float), cudaMemcpyHostToDevice);
+  for (int i = 0; i < output.size(); ++i) {
+    auto value = output.element(i, stream);
+    InsertRecord(memgraph_graph, result, memory, value);
+  }
+}
 
-  // Perform SAXPY on 1M elements
-  saxpy<<<(N+255)/256, 256>>>(N, 2.0f, d_x, d_y);
-
-  cudaMemcpy(y, d_y, N*sizeof(float), cudaMemcpyDeviceToHost);
-
-  float maxError = 0.0f;
-  for (int i = 0; i < N; i++)
-    maxError = max(maxError, abs(y[i]-4.0f));
-  printf("Max error: %f\n", maxError);
-
-  cudaFree(d_x);
-  cudaFree(d_y);
-  free(x);
-  free(y);
+void ExampleCugraphProc(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  // TODO(gitbuda): Implement example cuGraph Memgraph procedure.
 }
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
-    struct mgp_proc *example_cugraph_proc = mgp::module_add_read_procedure(module, "example", ExampleCuGraphProc);
-    mgp::proc_add_result(example_cugraph_proc, "data", mgp::type_string());
+    struct mgp_proc *example_rapids_proc =
+        mgp::module_add_read_procedure(module, kProcedureRapidsExample, ExampleRapidsProc);
+    mgp::proc_add_result(example_rapids_proc, kResultValue, mgp::type_float());
+    struct mgp_proc *example_cugraph_proc =
+        mgp::module_add_read_procedure(module, kProcedureCugraphExample, ExampleRapidsProc);
+    mgp::proc_add_result(example_cugraph_proc, kResultValue, mgp::type_float());
   } catch (std::exception &e) {
     return 1;
   }

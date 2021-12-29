@@ -15,5 +15,5 @@ set(community_detection_online_test_src
     algorithm_online/community_detection.cpp)
 
 add_executable(community_detection_online_test "${community_detection_online_test_src}")
-target_link_libraries(community_detection_online_test PRIVATE mg_utility gtest)
+target_link_libraries(community_detection_online_test PRIVATE mg_utility mage_gtest)
 gtest_add_tests(TARGET community_detection_online_test)
