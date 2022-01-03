@@ -26,6 +26,8 @@ class TestConstants:
     ONLINE_TEST_E2E_INPUT_QUERIES = "queries"
     ONLINE_TEST_SUBDIR_PREFIX = "test_online"
 
+    ABSOLUTE_TOLERANCE = 1e-3
+
 
 def _node_to_dict(data):
     labels = data.labels if hasattr(data, "labels") else data._labels
@@ -105,11 +107,8 @@ def _run_test(test_dict: Dict, db: Memgraph):
 
     if exception_test:
         # TODO: Implement for different kinds of errors
-        try:
-            result = db.execute_and_fetch(test_query)
-            assert result is None
-        except Exception:
-            assert True
+        with pytest.raises(Exception):
+            db.execute(test_query)
 
 
 def _test_static(test_dir: Path, db: Memgraph):
