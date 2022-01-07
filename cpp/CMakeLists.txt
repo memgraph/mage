@@ -26,7 +26,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall \
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
     "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer")
 # Release flags.
-set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
+# TODO(gitbuda): Allow Debug&Release&RelWithDebInfo, Release should be default.
+# set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
 
 # Install testing dependencies

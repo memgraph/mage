@@ -24,7 +24,7 @@ std::unique_ptr<mg_graph::Graph<>> BuildGraph(
     const mg_graph::GraphType graph_type = mg_graph::GraphType::kUndirectedGraph) {
   auto G = std::make_unique<mg_graph::Graph<>>();
   for (std::size_t i = 0; i < num_nodes; ++i) G->CreateNode(i);
-  for (const auto [from, to] : edges) G->CreateEdge(from, to, graph_type);
+  for (const auto &[from, to] : edges) G->CreateEdge(from, to, graph_type);
 
   return G;
 }
@@ -42,7 +42,7 @@ std::unique_ptr<mg_graph::Graph<>> BuildWeightedGraph(
     const mg_graph::GraphType graph_type = mg_graph::GraphType::kUndirectedGraph) {
   auto G = std::make_unique<mg_graph::Graph<>>();
   for (std::size_t i = 0; i < num_nodes; ++i) G->CreateNode(i);
-  for (const auto [endpoints, weight] : edges) {
+  for (const auto &[endpoints, weight] : edges) {
     auto from = endpoints.first;
     auto to = endpoints.second;
     G->CreateWeightedEdge(from, to, weight, graph_type);
@@ -64,7 +64,7 @@ std::unique_ptr<mg_graph::Graph<>> BuildGraph(
     const mg_graph::GraphType graph_type = mg_graph::GraphType::kUndirectedGraph) {
   auto G = std::make_unique<mg_graph::Graph<>>();
   for (auto node_id : nodes) G->CreateNode(node_id);
-  for (const auto [from, to] : edges) G->CreateEdge(from, to, graph_type);
+  for (const auto &[from, to] : edges) G->CreateEdge(from, to, graph_type);
 
   return G;
 }

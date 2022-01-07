@@ -25,6 +25,8 @@ HELP_MESSAGE = """\
     For usage info run: python3 setup -h
     """
 
+# TODO(gitbuda): Add debug+release build argument.
+
 
 def get_arguments():
     parser = argparse.ArgumentParser(
@@ -106,7 +108,8 @@ def build():
     # Start CMake building
     os.chdir(CPP_BUILD_DIRECTORY)
     subprocess.run(["ls", "-l"])
-    subprocess.run(["cmake", ".."])
+    # TODO(gitbuda): Add the cugraph argument as well.
+    subprocess.run(["cmake", "-DCMAKE_BUILD_TYPE=Debug", "-DMAGE_ENABLE_CUGRAPH=ON", ".."])
     core_count = mp.cpu_count()
     subprocess.run(["make", f"-j{core_count}"])
 
