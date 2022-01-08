@@ -98,6 +98,8 @@ decltype(auto) CreateCugraphFromMemgraph(raft::handle_t const &handle, mgp_graph
   // messages contain only the top call details + graph_view has many template
   // paremeters.
   cugraph::graph_t<vertex_t, edge_t, weight_t, true, false> mg_cugraph(handle);
+  // TODO(gitbuda): The code crashes here!
+  std::cerr << d_rows.size() << " " << d_cols.size() << std::endl;
   std::tie(mg_cugraph, std::ignore) = cugraph::create_graph_from_edgelist<vertex_t, edge_t, weight_t, true, false>(
       handle, std::nullopt, std::move(d_rows), std::move(d_cols), std::move(d_weights),
       cugraph::graph_properties_t{false, false}, false);
@@ -120,6 +122,7 @@ void ExampleCugraphProc(mgp_list *args, mgp_graph *mg_graph, mgp_result *result,
                                                                  epsilon);
 
   for (int node_id = 0; node_id < d_pageranks.size(); ++node_id) {
+    std::cerr << node_id << std::endl;
     auto rank = d_pageranks.element(node_id, stream);
     InsertPagerankRecord(mg_graph, result, memory, mg_graph_view->GetMemgraphNodeId(node_id), rank);
   }

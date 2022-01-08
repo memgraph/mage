@@ -175,7 +175,10 @@ def build(args):
         if args.type is not None:
             if args.type == BuildType.DEBUG: rs_build_mode = "debug"
             if args.type == BuildType.RELEASE: rs_build_mode = "release"
-        subprocess.run(["cargo", "build", "--%s" % rs_build_mode])
+        rs_build_flags = ["--release"]
+        if args.type is not None and args.type == BuildType.DEBUG:
+            rs_build_flags = []
+        subprocess.run(["cargo", "build"] + rs_build_flags)
 
         release_dir = os.path.join(project_dir, "target", "%s" % rs_build_mode)
         os.chdir(release_dir)
