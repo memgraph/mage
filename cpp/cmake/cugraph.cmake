@@ -34,15 +34,17 @@
 #       CMAKE_CUDA_ARCHITECTURES="ALL"
 # FAIL: branch-22.02 of rapidsai/raft doesn't have raft::handle_t::get_stream_view method... -> use main branch
 # FAIL: rapidsai/raft main branch also doesn't work -> try cugraph (branch-21.12) because 22.02 branches are not compatible
+# NOTE: cugraph in Debug mode does NOT compile.
 
-option(MAGE_ENABLE_CUGRAPH "Enable cuGraph build" OFF)
+option(MAGE_CUGRAPH_ENABLE "Enable cuGraph build" OFF)
 
-if (MAGE_ENABLE_CUGRAPH)
+if (MAGE_CUGRAPH_ENABLE)
+  enable_language(CUDA)
   set(MAGE_CUGRAPH_REPO "https://github.com/rapidsai/cugraph.git" CACHE STRING "cuGraph GIT repo URL")
   set(MAGE_CUGRAPH_TAG "branch-21.12" CACHE STRING "cuGraph GIT tag to checkout" )
   set(MAGE_CUDA_ARCHITECTURES "NATIVE" CACHE STRING "Passed to cuGraph as CMAKE_CUDA_ARCHITECTURES")
   set(CMAKE_CUDA_STANDARD 17)
-  set(CMAKE_CUDA_STANDARD_REQUIRED TRUE)
+  set(CMAKE_CUDA_STANDARD_REQUIRED ON)
   set(MAGE_CUGRAPH_ROOT ${PROJECT_BINARY_DIR}/cugraph)
   ExternalProject_Add(cugraph-proj
     PREFIX            "${MAGE_CUGRAPH_ROOT}"

@@ -1,9 +1,6 @@
 # Memgraph Mage C++ Query Modules CMake configuration.
-
 cmake_minimum_required(VERSION 3.9)
-
-# TODO(gitbuda): CUDA should be optional part of mage.
-project(memgraph-mage LANGUAGES CXX CUDA C)
+project(memgraph-mage LANGUAGES C CXX)
 
 # setup CMake module path, defines path for include() and find_package()
 # https://cmake.org/cmake/help/latest/variable/CMAKE_MODULE_PATH.html
@@ -26,16 +23,16 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall \
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
     "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer")
 # Release flags.
-# TODO(gitbuda): Allow Debug&Release&RelWithDebInfo, Release should be default.
-# set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
 
-# Install testing dependencies
 find_package(Threads REQUIRED)
-
 include(ExternalProject)
 
-# Install gtest
+# Install cuGraph (optional)
+include(cugraph)
+
+# Install testing dependencies (gtest)
 set(GTEST_ROOT ${PROJECT_BINARY_DIR}/gtest)
 ExternalProject_Add(gtest-proj
   PREFIX            ${GTEST_ROOT}
@@ -57,11 +54,7 @@ set_target_properties(mage_gtest PROPERTIES
 include_directories("${GTEST_INCLUDE_DIR}")
 add_dependencies(mage_gtest gtest-proj)
 
-# Install cuGraph (optional)
-include(cugraph)
-
 # Add OpenMP compiling option
-
 find_package(OpenMP)
 if (OPENMP_FOUND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")

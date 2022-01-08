@@ -9,6 +9,7 @@ import fnmatch
 import multiprocessing as mp
 import argparse
 import logging as log
+from enum import Enum
 
 WORK_DIRECTORY = os.getcwd()
 MAGE_BUILD_DIRECTORY = f"{WORK_DIRECTORY}/dist"
@@ -25,7 +26,12 @@ HELP_MESSAGE = """\
     For usage info run: python3 setup -h
     """
 
-# TODO(gitbuda): Add debug+release build argument.
+class BuildType(Enum):
+    DEBUG = "Debug"
+    RELEASE = "Release"
+
+    def __str__(self):
+        return self.value
 
 
 def get_arguments():
@@ -34,10 +40,17 @@ def get_arguments():
     )
     subparsers = parser.add_subparsers(help="sub-command help", dest="action")
 
-    build_parser = subparsers.add_parser("build", help="Build memgraph-mage")
-    build_parser.add_argument(
+    build_args_parser = argparse.ArgumentParser(description="Build arguments", add_help=False)
+    build_args_parser.add_argument(
         "-p", "--path", help="Path to query modules directory", required=False
     )
+    build_args_parser.add_argument(
+        "--type", help="Build type", type=BuildType, choices=list(BuildType), required=False
+    )
+    build_args_parser.add_argument(
+        "--cpp-cmake-flags", nargs="+", help="CMake flags for the cpp part (without -D)", required=False
+    )
+    build_parser = subparsers.add_parser("build", help="Build memgraph-mage", parents=[build_args_parser])
 
     query_modules_parser = subparsers.add_parser(
         "modules_storage", help="Add path of mage/dist to memgraph.conf "
@@ -57,7 +70,7 @@ def get_arguments():
         default=MAGE_BUILD_DIRECTORY,
     )
 
-    subparsers.add_parser("all", help="Set up memgraph-mage for usage")
+    subparsers.add_parser("all", help="Set up memgraph-mage for usage", parents=[build_args_parser])
 
     return parser.parse_args()
 
@@ -94,7 +107,7 @@ def copytree(src, dst, ignore_patterns=[]):
     _copytree()
 
 
-def build():
+def build(args):
     shutil.rmtree(MAGE_BUILD_DIRECTORY, ignore_errors=True)
     os.makedirs(MAGE_BUILD_DIRECTORY, exist_ok=True)
 
@@ -108,8 +121,14 @@ def build():
     # Start CMake building
     os.chdir(CPP_BUILD_DIRECTORY)
     subprocess.run(["ls", "-l"])
-    # TODO(gitbuda): Add the cugraph argument as well.
-    subprocess.run(["cmake", "-DCMAKE_BUILD_TYPE=Debug", "-DMAGE_ENABLE_CUGRAPH=ON", ".."])
+    cmake_args = [".."]
+    if args.type is not None:
+        cmake_args.append("-DCMAKE_BUILD_TYPE=%s" % args.type)
+    else:
+        cmake_args.append("-DCMAKE_BUILD_TYPE=Release")
+    if args.cpp_cmake_flags is not None:
+        cmake_args += ["-D%s" % arg for arg in args.cpp_cmake_flags]
+    subprocess.run(["cmake"] + cmake_args)
     core_count = mp.cpu_count()
     subprocess.run(["make", f"-j{core_count}"])
 
@@ -152,9 +171,13 @@ def build():
     ):
         project_dir = os.path.join(RS_DIRECTORY, project)
         os.chdir(project_dir)
-        subprocess.run(["cargo", "build", "--release"])
+        rs_build_mode = "release"
+        if args.type is not None:
+            if args.type == BuildType.DEBUG: rs_build_mode = "debug"
+            if args.type == BuildType.RELEASE: rs_build_mode = "release"
+        subprocess.run(["cargo", "build", "--%s" % rs_build_mode])
 
-        release_dir = os.path.join(project_dir, "target", "release")
+        release_dir = os.path.join(project_dir, "target", "%s" % rs_build_mode)
         os.chdir(release_dir)
         modules = glob.glob("*.so")
         assert len(modules) == 1, f"Bad rust/{project} lib."
@@ -166,22 +189,22 @@ def build():
         shutil.copy2(src_file, dst_file)
 
 
-def run_build_action(dst_path=None):
+def run_build_action(args):
     log.log(level=log.INFO, msg="Starting building of source code...")
-    build()
+    build(args)
     log.log(level=log.INFO, msg="Building done.")
 
-    if dst_path is None:
+    if args.path is None:
         return
 
     log.log(
         level=log.INFO,
         msg="Copying build files from folder {src} to {dst} folder.".format(
-            src=MAGE_BUILD_DIRECTORY, dst=dst_path
+            src=MAGE_BUILD_DIRECTORY, dst=args.path
         ),
     )
 
-    copytree(MAGE_BUILD_DIRECTORY, dst_path)
+    copytree(MAGE_BUILD_DIRECTORY, args.path)
     log.log(level=log.INFO, msg="Copying done!")
 
 
@@ -237,11 +260,11 @@ def main():
 
     if arguments.action == "all":
         run_modules_storage_setup_action()
-        run_build_action()
+        run_build_action(arguments)
         return
 
     if arguments.action == "build":
-        run_build_action(arguments.path)
+        run_build_action(arguments)
         return
 
     if arguments.action == "modules_storage":
