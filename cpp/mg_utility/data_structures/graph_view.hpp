@@ -55,6 +55,20 @@ class GraphView {
   /// @return vector of neighbours
   virtual const std::vector<TNeighbour> &Neighbours(TSize node_id) const = 0;
 
+  /// Gets out-neighbour nodes.
+  ///
+  /// @param[in] node_id target node id
+  ///
+  /// @return vector of neighbours
+  virtual const std::vector<TNeighbour> &OutNeighbours(TSize node_id) const = 0;
+
+  /// Gets in-neighbour nodes.
+  ///
+  /// @param[in] node_id target node id
+  ///
+  /// @return vector of neighbours
+  virtual const std::vector<TNeighbour> &InNeighbours(TSize node_id) const = 0;
+
   /// Gets node with node id.
   ///
   /// @param[in] node_id node id
