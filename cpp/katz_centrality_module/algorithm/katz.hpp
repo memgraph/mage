@@ -17,5 +17,6 @@ std::uint64_t MaxDegree(const mg_graph::GraphView<> &graph);
 void InitVertexMap(std::unordered_map<std::uint64_t, double> &map, double default_value,
                    const mg_graph::GraphView<> &graph);
 }  // namespace
-std::vector<std::pair<std::uint64_t, double>> GetKatzCentrality(const mg_graph::GraphView<> &graph);
+std::vector<std::pair<std::uint64_t, double>> GetKatzCentrality(const mg_graph::GraphView<> &graph, double alpha = 0.1,
+                                                                std::uint64_t k = 5, double epsilon = 1e-2);
 }  // namespace katz_alg

@@ -21,7 +21,7 @@ bool Converged(std::vector<std::uint64_t> &active_nodes, std::uint64_t k, double
   std::partial_sort(active_centrality.begin(), active_centrality.begin() + k, active_centrality.end(), PairSortDesc);
 
   for (std::size_t i = k + 1; i < centrality.size(); i++) {
-    if (ur.at(active_centrality[i].second) - epsilon < lr.at(active_centrality[k].second)) {
+    if (ur.at(active_centrality[i].first) - epsilon < lr.at(active_centrality[k].first)) {
       active_centrality.erase(active_centrality.begin() + i);
     }
   }
@@ -34,7 +34,10 @@ bool Converged(std::vector<std::uint64_t> &active_nodes, std::uint64_t k, double
   // Next step is checking whether the top of the partial list has converged too
   auto size = std::min(active_centrality.size(), k);
   for (std::size_t i = 1; i < size; i++) {
-    if (ur.at(active_centrality[i].second) - epsilon < lr.at(active_centrality[i - 1].second)) {
+    double u = ur.at(active_centrality[i].first);
+    double l = lr.at(active_centrality[i - 1].first);
+
+    if (u - epsilon < l) {
       return false;
     }
   }
@@ -43,7 +46,7 @@ bool Converged(std::vector<std::uint64_t> &active_nodes, std::uint64_t k, double
 
 std::uint64_t MaxDegree(const mg_graph::GraphView<> &graph) {
   std::vector<std::size_t> deg_vector;
-  std::transform(graph.Nodes().begin(), graph.Nodes().end(), deg_vector.begin(),
+  std::transform(graph.Nodes().begin(), graph.Nodes().end(), std::back_inserter(deg_vector),
                  [&graph](mg_graph::Node<> vertex) -> std::size_t { return graph.Neighbours(vertex.id).size(); });
   auto deg_max = *std::max_element(deg_vector.begin(), deg_vector.end());
   return deg_max;
@@ -60,8 +63,8 @@ void InitVertexMap(std::unordered_map<std::uint64_t, double> &map, double defaul
 }
 }  // namespace
 
-std::vector<std::pair<std::uint64_t, double>> GetKatzCentrality(const mg_graph::GraphView<> &graph, double alpha = 0.8,
-                                                                std::uint64_t k = 5, double epsilon = 0.01) {
+std::vector<std::pair<std::uint64_t, double>> GetKatzCentrality(const mg_graph::GraphView<> &graph, double alpha,
+                                                                std::uint64_t k, double epsilon) {
   auto deg_max = MaxDegree(graph);
   auto n = graph.Nodes().size();
   double gamma = deg_max / (1. - (alpha * deg_max));
@@ -86,7 +89,7 @@ std::vector<std::pair<std::uint64_t, double>> GetKatzCentrality(const mg_graph::
 
   // Initialize the active vector
   std::vector<std::uint64_t> active_nodes;
-  std::transform(graph.Nodes().begin(), graph.Nodes().end(), active_nodes.begin(),
+  std::transform(graph.Nodes().begin(), graph.Nodes().end(), std::back_inserter(active_nodes),
                  [&graph](mg_graph::Node<> vertex) -> std::uint64_t { return graph.GetMemgraphNodeId(vertex.id); });
 
   while (!Converged(active_nodes, k, epsilon, centrality, lr, ur)) {
