@@ -90,7 +90,7 @@ decltype(auto) CreateCugraphFromMemgraph(raft::handle_t const &handle, mgp_graph
   raft::update_device(d_rows.data(), h_rows.data(), h_rows.size(), stream);
   rmm::device_uvector<vertex_t> d_cols(h_cols.size(), stream);
   raft::update_device(d_cols.data(), h_cols.data(), h_cols.size(), stream);
-  std::vector<weight_t> h_weights(h_vertices.size(), 1.0);
+  std::vector<weight_t> h_weights(mg_edges.size(), 1.0);
   auto d_weights = std::make_optional<vector_weight_t>(h_weights.size(), stream);
   raft::update_device((*d_weights).data(), h_weights.data(), h_weights.size(), stream);
   // IMPORTANT: store_transposed has to be true because cugraph::pagerank only
@@ -98,8 +98,6 @@ decltype(auto) CreateCugraphFromMemgraph(raft::handle_t const &handle, mgp_graph
   // messages contain only the top call details + graph_view has many template
   // paremeters.
   cugraph::graph_t<vertex_t, edge_t, weight_t, true, false> mg_cugraph(handle);
-  // TODO(gitbuda): The code crashes here!
-  std::cerr << d_rows.size() << " " << d_cols.size() << std::endl;
   std::tie(mg_cugraph, std::ignore) = cugraph::create_graph_from_edgelist<vertex_t, edge_t, weight_t, true, false>(
       handle, std::nullopt, std::move(d_rows), std::move(d_cols), std::move(d_weights),
       cugraph::graph_properties_t{false, false}, false);
@@ -135,7 +133,8 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     mgp::proc_add_result(example_rapids_proc, kResultValue, mgp::type_float());
     struct mgp_proc *example_cugraph_proc =
         mgp::module_add_read_procedure(module, kProcedureCugraphExample, ExampleCugraphProc);
-    mgp::proc_add_result(example_cugraph_proc, kResultValue, mgp::type_float());
+    mgp::proc_add_result(example_cugraph_proc, kFieldNode, mgp::type_node());
+    mgp::proc_add_result(example_cugraph_proc, kFieldRank, mgp::type_float());
   } catch (std::exception &e) {
     return 1;
   }
