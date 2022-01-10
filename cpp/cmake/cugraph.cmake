@@ -73,8 +73,6 @@ if (MAGE_CUGRAPH_ENABLE)
   add_dependencies(mage_cugraph cugraph-proj)
 endif()
 
-macro(set_cugraph_target_properties)
-
 macro(add_cugraph_subdirectory subdirectory_name)
   if (MAGE_ENABLE_CUGRAPH)
     add_subdirectory("${subdirectory_name}")
