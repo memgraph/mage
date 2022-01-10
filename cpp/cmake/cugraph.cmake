@@ -74,7 +74,7 @@ if (MAGE_CUGRAPH_ENABLE)
 endif()
 
 macro(add_cugraph_subdirectory subdirectory_name)
-  if (MAGE_ENABLE_CUGRAPH)
+  if (MAGE_CUGRAPH_ENABLE)
     add_subdirectory("${subdirectory_name}")
   endif()
 endmacro()
