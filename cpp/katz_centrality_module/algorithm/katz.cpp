@@ -81,7 +81,8 @@ bool Converged(std::set<std::uint64_t> &active_nodes, std::uint64_t k, double ep
   }
 
   // Partially sort the centralities. Keep only the first `k` sorted
-  std::partial_sort(active_centrality.begin(), active_centrality.begin() + k, active_centrality.end(),
+  std::partial_sort(active_centrality.begin(), active_centrality.begin() + std::min(k, active_centrality.size()),
+                    active_centrality.end(),
                     [](std::pair<std::uint64_t, double> a, std::pair<std::uint64_t, double> b) -> bool {
                       return a.second > b.second;
                     });
@@ -103,7 +104,7 @@ bool Converged(std::set<std::uint64_t> &active_nodes, std::uint64_t k, double ep
     double u = ur.at(active_centrality[i].first);
     double l = lr.at(active_centrality[i - 1].first);
 
-    if (u - epsilon < l) {
+    if (u - epsilon >= l) {
       return false;
     }
   }
@@ -123,7 +124,7 @@ void InitVertexMap(std::unordered_map<std::uint64_t, double> &map, double defaul
 std::vector<std::pair<std::uint64_t, double>> KatzCentralityLoop(std::set<std::uint64_t> &active_nodes,
                                                                  const mg_graph::GraphView<> &graph, double alpha,
                                                                  std::uint64_t k, double epsilon, double gamma) {
-  while (!Converged(active_nodes, k, epsilon)) {
+  do {
     katz_alg::context.AddIteration(graph);
     auto iteration = katz_alg::context.iteration;
 
@@ -145,7 +146,7 @@ std::vector<std::pair<std::uint64_t, double>> KatzCentralityLoop(std::set<std::u
       katz_alg::context.ur[v] = katz_alg::context.centralities[iteration][v] +
                                 pow(alpha, iteration + 1) * katz_alg::context.omegas[iteration][v] * gamma;
     }
-  }
+  } while (!Converged(active_nodes, k, epsilon));
 
   // Transform the resulting values
   return std::vector<std::pair<std::uint64_t, double>>(
@@ -189,8 +190,14 @@ std::vector<std::pair<std::uint64_t, double>> GetKatzCentrality(const mg_graph::
   katz_alg::epsilon = epsilon;
   katz_alg::context.Init(graph);
 
+  if (graph.Edges().empty()) {
+    return std::vector<std::pair<std::uint64_t, double>>(
+        katz_alg::context.centralities[katz_alg::context.iteration].begin(),
+        katz_alg::context.centralities[katz_alg::context.iteration].end());
+  }
+
   auto deg_max = MaxDegree(graph);
-  double gamma = deg_max / (1. - (alpha * deg_max));
+  double gamma = deg_max / (1. - (alpha * alpha * deg_max));
 
   // Initialize the active vector
   std::transform(graph.Nodes().begin(), graph.Nodes().end(),
