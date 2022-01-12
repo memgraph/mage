@@ -15,8 +15,8 @@ void InitVertexMap(std::unordered_map<std::uint64_t, double> &map, double defaul
                    const mg_graph::GraphView<> &graph);
 }  // namespace
 
-std::vector<std::pair<std::uint64_t, double>> GetKatzCentrality(const mg_graph::GraphView<> &graph, double alpha = 0.1,
-                                                                std::uint64_t k = 5, double epsilon = 1e-2);
+std::vector<std::pair<std::uint64_t, double>> GetKatzCentrality(const mg_graph::GraphView<> &graph, double alpha = 0.4,
+                                                                std::uint64_t k = 3, double epsilon = 1e-2);
 
 std::vector<std::pair<std::uint64_t, double>> UpdateKatz(
     const mg_graph::GraphView<> &graph, const std::vector<std::uint64_t> &new_vertices,

@@ -23,6 +23,9 @@ class KatzCentralityData {
     InitVertexMap(lr, 0.0, graph);
     // Initialize the ur vector
     InitVertexMap(ur, 0.0, graph);
+
+    iteration = 0;
+    active_nodes.clear();
   }
 
   bool IsEmpty() const { return centralities.empty(); }
@@ -48,7 +51,7 @@ class KatzCentralityData {
   // Initialize the upper bound vector
   std::unordered_map<std::uint64_t, double> ur;
 
-  std::vector<std::uint64_t> active_nodes;
+  std::set<std::uint64_t> active_nodes;
 
   std::uint64_t iteration = 0;
 };
@@ -66,11 +69,7 @@ std::uint64_t MaxDegree(const mg_graph::GraphView<> &graph) {
   return deg_max;
 }
 
-bool PairSortDesc(std::pair<std::uint64_t, double> a, std::pair<std::uint64_t, double> b) {
-  return a.second < b.second;
-}
-
-bool Converged(std::vector<std::uint64_t> &active_nodes, std::uint64_t k, double epsilon) {
+bool Converged(std::set<std::uint64_t> &active_nodes, std::uint64_t k, double epsilon) {
   auto centrality = katz_alg::context.centralities[context.iteration];
   auto lr = katz_alg::context.lr;
   auto ur = katz_alg::context.ur;
@@ -82,10 +81,13 @@ bool Converged(std::vector<std::uint64_t> &active_nodes, std::uint64_t k, double
   }
 
   // Partially sort the centralities. Keep only the first `k` sorted
-  std::partial_sort(active_centrality.begin(), active_centrality.begin() + k, active_centrality.end(), PairSortDesc);
+  std::partial_sort(active_centrality.begin(), active_centrality.begin() + k, active_centrality.end(),
+                    [](std::pair<std::uint64_t, double> a, std::pair<std::uint64_t, double> b) -> bool {
+                      return a.second > b.second;
+                    });
 
-  for (std::size_t i = k + 1; i < centrality.size(); i++) {
-    if (ur.at(active_centrality[i].first) - epsilon < lr.at(active_centrality[k].first)) {
+  for (std::size_t i = k; i < centrality.size(); i++) {
+    if (ur.at(active_centrality[i].first) - epsilon < lr.at(active_centrality[k - 1].first)) {
       active_centrality.erase(active_centrality.begin() + i);
     }
   }
@@ -118,7 +120,7 @@ void InitVertexMap(std::unordered_map<std::uint64_t, double> &map, double defaul
   }
 }
 
-std::vector<std::pair<std::uint64_t, double>> KatzCentralityLoop(std::vector<std::uint64_t> &active_nodes,
+std::vector<std::pair<std::uint64_t, double>> KatzCentralityLoop(std::set<std::uint64_t> &active_nodes,
                                                                  const mg_graph::GraphView<> &graph, double alpha,
                                                                  std::uint64_t k, double epsilon, double gamma) {
   while (!Converged(active_nodes, k, epsilon)) {
@@ -128,13 +130,15 @@ std::vector<std::pair<std::uint64_t, double>> KatzCentralityLoop(std::vector<std
     for (auto &[_v] : graph.Nodes()) {
       // Transform inner ID to Memgraph
       auto v = graph.GetMemgraphNodeId(_v);
-      for (auto &[_u, _] : graph.Neighbours(v)) {
+
+      // Fetch the number of descendants
+      for (auto &[_u, _] : graph.InNeighbours(_v)) {
         // Transform inner ID to Memgraph
         auto u = graph.GetMemgraphNodeId(_u);
         katz_alg::context.omegas[iteration][v] += katz_alg::context.omegas[iteration - 1][u];
       }
-      katz_alg::context.centralities[iteration][v] =
-          katz_alg::context.centralities[iteration][v] + pow(alpha, iteration) * katz_alg::context.omegas[iteration][v];
+      katz_alg::context.centralities[iteration][v] = katz_alg::context.centralities[iteration - 1][v] +
+                                                     pow(alpha, iteration) * katz_alg::context.omegas[iteration][v];
 
       // Update the lower and upper bound
       katz_alg::context.lr[v] = katz_alg::context.centralities[iteration][v];
@@ -155,26 +159,27 @@ void UpdateLevel(KatzCentralityData &context_new, std::set<std::uint64_t> &from_
                  const mg_graph::GraphView<> &graph) {
   auto i = context_new.iteration;
   for (auto v : from_nodes) {
-    for (auto [w, _] : graph.OutNeighbours(v)) {
+    context_new.omegas[i][v] = katz_alg::context.omegas[i][v];
+    for (auto [w_, _] : graph.OutNeighbours(graph.GetInnerNodeId(v))) {
+      auto w = graph.GetMemgraphNodeId(w_);
       from_nodes.emplace(w);
       context_new.omegas[i][w] += context_new.omegas[i - 1][v] - katz_alg::context.omegas[i - 1][w];
     }
   }
 
   for (auto [w, v] : new_edges) {
-    context_new.omegas[i][w] += context_new.omegas[i - 1][v];
+    context_new.omegas[i][v] += context_new.omegas[i - 1][w];
   }
 
   for (auto [w, v] : deleted_edges) {
-    context_new.omegas[i][w] -= katz_alg::context.omegas[i - 1][v];
+    context_new.omegas[i][v] -= katz_alg::context.omegas[i - 1][w];
   }
 
   for (auto w : from_nodes) {
-    katz_alg::context.centralities[i][w] - pow(katz_alg::alpha, i) * katz_alg::context.omegas[i][w] +
-        pow(katz_alg::alpha, i) * context_new.omegas[i][w];
+    katz_alg::context.centralities[i][w] +=
+        -pow(katz_alg::alpha, i) * katz_alg::context.omegas[i][w] + pow(katz_alg::alpha, i) * context_new.omegas[i][w];
+    katz_alg::context.omegas[i][w] = context_new.omegas[i][w];
   }
-
-  katz_alg::context.omegas[i] = std::move(context_new.omegas[i]);
 }
 }  // namespace
 std::vector<std::pair<std::uint64_t, double>> GetKatzCentrality(const mg_graph::GraphView<> &graph, double alpha,
@@ -188,7 +193,8 @@ std::vector<std::pair<std::uint64_t, double>> GetKatzCentrality(const mg_graph::
   double gamma = deg_max / (1. - (alpha * deg_max));
 
   // Initialize the active vector
-  std::transform(graph.Nodes().begin(), graph.Nodes().end(), std::back_inserter(katz_alg::context.active_nodes),
+  std::transform(graph.Nodes().begin(), graph.Nodes().end(),
+                 std::inserter(katz_alg::context.active_nodes, katz_alg::context.active_nodes.end()),
                  [&graph](mg_graph::Node<> vertex) -> std::uint64_t { return graph.GetMemgraphNodeId(vertex.id); });
 
   return KatzCentralityLoop(katz_alg::context.active_nodes, graph, katz_alg::alpha, katz_alg::k, katz_alg::epsilon,
@@ -206,13 +212,13 @@ std::vector<std::pair<std::uint64_t, double>> UpdateKatz(
   std::set<std::uint64_t> from_nodes;
   std::set<std::uint64_t> to_nodes;
 
-  for (auto [from, to] : new_edges) {
-    from_nodes.emplace(from);
-    to_nodes.emplace(to);
+  for (auto [w, v] : new_edges) {
+    from_nodes.emplace(graph.GetMemgraphNodeId(w));
+    to_nodes.emplace(graph.GetMemgraphNodeId(v));
   }
   for (auto [w, v] : deleted_edges) {
-    from_nodes.emplace(w);
-    to_nodes.emplace(v);
+    from_nodes.emplace(graph.GetMemgraphNodeId(w));
+    to_nodes.emplace(graph.GetMemgraphNodeId(v));
   }
 
   KatzCentralityData context_new;
@@ -231,16 +237,18 @@ std::vector<std::pair<std::uint64_t, double>> UpdateKatz(
                               pow(katz_alg::alpha, iteration + 1) * katz_alg::context.omegas[iteration][w];
   }
 
-  for (auto [w] : graph.Nodes()) {
+  for (auto [w_] : graph.Nodes()) {
+    auto w = graph.GetMemgraphNodeId(w_);
     auto min_lower_element = *std::min_element(katz_alg::context.lr.begin(), katz_alg::context.lr.end(),
                                                [](const auto &l, const auto &r) { return l.second < r.second; });
     auto min_lr = min_lower_element.second;
     if (katz_alg::context.ur[w] >= (min_lr - katz_alg::epsilon)) {
-      katz_alg::context.active_nodes.emplace_back(w);
+      katz_alg::context.active_nodes.emplace(w);
     }
   }
 
   return KatzCentralityLoop(katz_alg::context.active_nodes, graph, katz_alg::alpha, katz_alg::k, katz_alg::epsilon,
                             gamma);
 }
+
 }  // namespace katz_alg
