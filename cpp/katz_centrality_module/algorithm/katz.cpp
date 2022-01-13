@@ -1,3 +1,4 @@
+#include <queue>
 #include "katz.hpp"
 
 namespace katz_alg {
@@ -90,6 +91,7 @@ bool Converged(std::set<std::uint64_t> &active_nodes, std::uint64_t k, double ep
   for (std::size_t i = k; i < centrality.size(); i++) {
     if (ur.at(active_centrality[i].first) - epsilon < lr.at(active_centrality[k - 1].first)) {
       active_centrality.erase(active_centrality.begin() + i);
+      active_nodes.erase(active_centrality[i].first);
     }
   }
 
@@ -159,12 +161,28 @@ void UpdateLevel(KatzCentralityData &context_new, std::set<std::uint64_t> &from_
                  const std::vector<std::pair<std::uint64_t, uint64_t>> &deleted_edges,
                  const mg_graph::GraphView<> &graph) {
   auto i = context_new.iteration;
+
+  std::queue<std::uint64_t> queue;
   for (auto v : from_nodes) {
-    context_new.omegas[i][v] = katz_alg::context.omegas[i][v];
+    queue.push(v);
+  }
+  for (auto [id, value] : katz_alg::context.omegas[i]) {
+    context_new.omegas[i][id] = value;
+  }
+
+  while (!queue.empty()) {
+    auto v = queue.front();
+    queue.pop();
+
     for (auto [w_, _] : graph.OutNeighbours(graph.GetInnerNodeId(v))) {
       auto w = graph.GetMemgraphNodeId(w_);
+
+      if (from_nodes.find(w) == from_nodes.end()) {
+        queue.push(w);
+      }
+
       from_nodes.emplace(w);
-      context_new.omegas[i][w] += context_new.omegas[i - 1][v] - katz_alg::context.omegas[i - 1][w];
+      context_new.omegas[i][w] += context_new.omegas[i - 1][v] - katz_alg::context.omegas[i - 1][v];
     }
   }
 
@@ -177,9 +195,8 @@ void UpdateLevel(KatzCentralityData &context_new, std::set<std::uint64_t> &from_
   }
 
   for (auto w : from_nodes) {
-    katz_alg::context.centralities[i][w] +=
-        -pow(katz_alg::alpha, i) * katz_alg::context.omegas[i][w] + pow(katz_alg::alpha, i) * context_new.omegas[i][w];
-    katz_alg::context.omegas[i][w] = context_new.omegas[i][w];
+    katz_alg::context.centralities[i][w] =
+        katz_alg::context.centralities[i - 1][w] + pow(katz_alg::alpha, i) * context_new.omegas[i][w];
   }
 }
 }  // namespace
@@ -234,6 +251,11 @@ std::vector<std::pair<std::uint64_t, double>> UpdateKatz(
     context_new.AddIteration(graph);
     UpdateLevel(context_new, from_nodes, new_edges, deleted_edges, graph);
   }
+  for (std::uint64_t i = 1; i < context_new.iteration + 1; i++) {
+    for (auto [id, value] : context_new.omegas[i]) {
+      katz_alg::context.omegas[i][id] = value;
+    }
+  }
 
   for (auto w : from_nodes) {
     // Update the lower and upper bound
@@ -244,11 +266,15 @@ std::vector<std::pair<std::uint64_t, double>> UpdateKatz(
                               pow(katz_alg::alpha, iteration + 1) * katz_alg::context.omegas[iteration][w];
   }
 
+  std::vector<double> min_lr_vector;
+  for (auto active_node : katz_alg::context.active_nodes) {
+    min_lr_vector.emplace_back(katz_alg::context.lr[active_node]);
+  }
+
+  auto min_lr = *std::min_element(min_lr_vector.begin(), min_lr_vector.end());
   for (auto [w_] : graph.Nodes()) {
     auto w = graph.GetMemgraphNodeId(w_);
-    auto min_lower_element = *std::min_element(katz_alg::context.lr.begin(), katz_alg::context.lr.end(),
-                                               [](const auto &l, const auto &r) { return l.second < r.second; });
-    auto min_lr = min_lower_element.second;
+
     if (katz_alg::context.ur[w] >= (min_lr - katz_alg::epsilon)) {
       katz_alg::context.active_nodes.emplace(w);
     }
