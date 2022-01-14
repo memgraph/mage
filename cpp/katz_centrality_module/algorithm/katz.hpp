@@ -15,12 +15,12 @@ void InitVertexMap(std::unordered_map<std::uint64_t, double> &map, double defaul
                    const mg_graph::GraphView<> &graph);
 }  // namespace
 
-std::vector<std::pair<std::uint64_t, double>> GetKatzCentrality(const mg_graph::GraphView<> &graph, double alpha = 0.4,
+std::vector<std::pair<std::uint64_t, double>> GetKatzCentrality(const mg_graph::GraphView<> &graph, double alpha = 0.2,
                                                                 std::uint64_t k = 3, double epsilon = 1e-2);
 
 std::vector<std::pair<std::uint64_t, double>> UpdateKatz(
     const mg_graph::GraphView<> &graph, const std::vector<std::uint64_t> &new_vertices,
-    const std::vector<std::pair<std::uint64_t, uint64_t>> &new_edges,
+    const std::vector<std::pair<std::uint64_t, uint64_t>> &new_edges, const std::set<std::uint64_t> &new_edge_ids,
     const std::vector<std::uint64_t> &deleted_vertices,
     const std::vector<std::pair<std::uint64_t, uint64_t>> &deleted_edges);
 }  // namespace katz_alg

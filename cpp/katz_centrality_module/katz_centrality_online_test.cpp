@@ -26,35 +26,122 @@ bool CompareRankingSort(const std::vector<std::pair<uint64_t, double>> &result,
 }
 }  // namespace
 
-// TEST(KatzCentrality, KatzDynamicAddEdges) {
-//   auto graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6},
-//                                        {{0, 5}, {0, 1}, {1, 4}, {2, 1}, {3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}, {5,
-//                                        4}}, mg_graph::GraphType::kDirectedGraph);
-//   auto katz_centrality = katz_alg::GetKatzCentrality(*graph, 0.2);
-//   ASSERT_TRUE(CompareRankingSort(katz_centrality, {1, 4, 0, 3, 5, 2, 6}));
+TEST(KatzCentrality, KatzDynamicAddNodesAndEdges) {
+  auto graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6},
+                                       {{0, 5}, {0, 1}, {1, 4}, {2, 1}, {3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}, {5, 4}},
+                                       mg_graph::GraphType::kDirectedGraph);
+  auto katz_centrality = katz_alg::GetKatzCentrality(*graph);
+  ASSERT_TRUE(CompareRankingSort(katz_centrality, {1, 4, 0, 3, 5, 2, 6}));
 
-//   graph = mg_generate::BuildGraph(
-//       {0, 1, 2, 3, 4, 5, 6},
-//       {{0, 5}, {0, 1}, {1, 4}, {2, 1}, {3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}, {5, 4}, {3, 5}, {2, 5}},
-//       mg_graph::GraphType::kDirectedGraph);
-//   katz_centrality = katz_alg::UpdateKatz(*graph, {}, {{3, 5}, {2, 5}}, {}, {});
-//   ASSERT_TRUE(CompareRankingSort(katz_centrality, {1, 5, 4, 0, 3, 2, 6}));
-// }
+  graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6, 13},
+                                  {{0, 5}, {0, 1}, {1, 4}, {2, 1}, {3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}, {5, 4}},
+                                  mg_graph::GraphType::kDirectedGraph);
+  katz_centrality = katz_alg::UpdateKatz(*graph, {13}, {}, {}, {}, {});
+  ASSERT_TRUE(CompareRankingSort(katz_centrality, {1, 4, 0, 3, 5, 2, 6, 13}));
 
-TEST(KatzCentrality, KatzDynamicAddEdgesCompareSimilar) {
-  // auto graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6},
-  //                                      {{0, 5}, {0, 1}, {1, 4}, {2, 1}, {3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}, {5,
-  //                                      4}}, mg_graph::GraphType::kDirectedGraph);
-  // katz_alg::GetKatzCentrality(*graph, 0.2);
+  graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6, 13},
+                                  {{0, 5},
+                                   {0, 1},
+                                   {1, 4},
+                                   {2, 1},
+                                   {3, 1},
+                                   {4, 0},
+                                   {4, 3},
+                                   {4, 1},
+                                   {5, 0},
+                                   {5, 4},
+                                   {13, 1},
+                                   {2, 13},
+                                   {13, 5},
+                                   {4, 13}},
+                                  mg_graph::GraphType::kDirectedGraph);
+  katz_centrality = katz_alg::UpdateKatz(*graph, {}, {{13, 1}, {2, 13}, {13, 5}, {4, 13}}, {10, 11, 12, 13}, {}, {});
+  ASSERT_TRUE(CompareRankingSort(katz_centrality, {1, 4, 0, 5, 13, 3, 2, 6}));
+}
 
-  auto updated_graph = mg_generate::BuildGraph(
+TEST(KatzCentrality, KatzDynamicAddEdges) {
+  auto graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6},
+                                       {{0, 5}, {0, 1}, {1, 4}, {2, 1}, {3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}, {5, 4}},
+                                       mg_graph::GraphType::kDirectedGraph);
+  auto katz_centrality = katz_alg::GetKatzCentrality(*graph);
+  ASSERT_TRUE(CompareRankingSort(katz_centrality, {1, 4, 0, 3, 5, 2, 6}));
+
+  graph = mg_generate::BuildGraph(
       {0, 1, 2, 3, 4, 5, 6},
       {{0, 5}, {0, 1}, {1, 4}, {2, 1}, {3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}, {5, 4}, {3, 5}, {2, 5}},
       mg_graph::GraphType::kDirectedGraph);
-  // auto katz_centrality_dynamic = katz_alg::UpdateKatz(*updated_graph, {}, {{3, 5}, {2, 5}}, {}, {});
+  katz_centrality = katz_alg::UpdateKatz(*graph, {}, {{3, 5}, {2, 5}}, {10, 11}, {}, {});
+  ASSERT_TRUE(CompareRankingSort(katz_centrality, {1, 5, 4, 0, 3, 2, 6}));
+}
 
-  auto katz_centrality_static = katz_alg::GetKatzCentrality(*updated_graph, 0.2);
-  // ASSERT_TRUE(mg_test_utility::TestEqualVectorPairs(katz_centrality_static, katz_centrality_dynamic));
+TEST(KatzCentrality, KatzDynamicAddEdgesGradually) {
+  auto graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6}, {{3, 1}, {4, 0}}, mg_graph::GraphType::kDirectedGraph);
+  auto katz_centrality = katz_alg::GetKatzCentrality(*graph);
+  ASSERT_TRUE(CompareRankingSort(katz_centrality, {0, 1, 2, 3, 4, 5, 6}));
+
+  graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6}, {{3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}},
+                                  mg_graph::GraphType::kDirectedGraph);
+  katz_centrality = katz_alg::UpdateKatz(*graph, {}, {{4, 3}, {4, 1}, {5, 0}}, {2, 3, 4}, {}, {});
+  ASSERT_TRUE(CompareRankingSort(katz_centrality, {1, 0, 3, 2, 4, 5, 6}));
+
+  graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6},
+                                  {{3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}, {0, 5}, {0, 1}, {1, 4}, {2, 1}},
+                                  mg_graph::GraphType::kDirectedGraph);
+  katz_centrality = katz_alg::UpdateKatz(*graph, {}, {{0, 5}, {0, 1}, {1, 4}, {2, 1}}, {5, 6, 7, 8}, {}, {});
+  ASSERT_TRUE(CompareRankingSort(katz_centrality, {1, 0, 4, 5, 3, 2, 6}));
+
+  graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6},
+                                  {{3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}, {0, 5}, {0, 1}, {1, 4}, {2, 1}, {5, 4}},
+                                  mg_graph::GraphType::kDirectedGraph);
+  katz_centrality = katz_alg::UpdateKatz(*graph, {}, {{5, 4}}, {9}, {}, {});
+  ASSERT_TRUE(CompareRankingSort(katz_centrality, {1, 4, 0, 3, 5, 2, 6}));
+}
+
+TEST(KatzCentrality, KatzDynamicDeleteEdges) {
+  auto graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6},
+                                       {{0, 5}, {0, 1}, {1, 4}, {2, 1}, {3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}, {5, 4}},
+                                       mg_graph::GraphType::kDirectedGraph);
+  auto katz_centrality = katz_alg::GetKatzCentrality(*graph);
+  ASSERT_TRUE(CompareRankingSort(katz_centrality, {1, 4, 0, 3, 5, 2, 6}));
+
+  graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6}, {{0, 5}, {0, 1}, {1, 4}, {4, 0}, {4, 3}, {5, 0}, {5, 4}},
+                                  mg_graph::GraphType::kDirectedGraph);
+  katz_centrality = katz_alg::UpdateKatz(*graph, {}, {}, {}, {}, {{2, 1}, {3, 1}, {4, 1}});
+  ASSERT_TRUE(CompareRankingSort(katz_centrality, {0, 4, 1, 5, 3, 2, 6}));
+}
+
+TEST(KatzCentrality, KatzDynamicDeleteAllEdges) {
+  auto graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6},
+                                       {{0, 5}, {0, 1}, {1, 4}, {2, 1}, {3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}, {5, 4}},
+                                       mg_graph::GraphType::kDirectedGraph);
+  auto katz_centrality = katz_alg::GetKatzCentrality(*graph);
+  ASSERT_TRUE(CompareRankingSort(katz_centrality, {1, 4, 0, 3, 5, 2, 6}));
+
+  graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6}, {}, mg_graph::GraphType::kDirectedGraph);
+  katz_centrality = katz_alg::UpdateKatz(
+      *graph, {}, {}, {}, {}, {{0, 5}, {0, 1}, {1, 4}, {2, 1}, {3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}, {5, 4}});
+  ASSERT_TRUE(CompareRankingSort(katz_centrality, {0, 1, 2, 3, 4, 5, 6}));
+}
+
+TEST(KatzCentrality, KatzDynamicDeleteAllAndRevert) {
+  auto graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6},
+                                       {{0, 5}, {0, 1}, {1, 4}, {2, 1}, {3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}, {5, 4}},
+                                       mg_graph::GraphType::kDirectedGraph);
+  auto katz_centrality = katz_alg::GetKatzCentrality(*graph);
+  ASSERT_TRUE(CompareRankingSort(katz_centrality, {1, 4, 0, 3, 5, 2, 6}));
+
+  graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6}, {}, mg_graph::GraphType::kDirectedGraph);
+  katz_centrality = katz_alg::UpdateKatz(
+      *graph, {}, {}, {}, {}, {{0, 5}, {0, 1}, {1, 4}, {2, 1}, {3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}, {5, 4}});
+  ASSERT_TRUE(CompareRankingSort(katz_centrality, {0, 1, 2, 3, 4, 5, 6}));
+
+  graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6},
+                                  {{0, 5}, {0, 1}, {1, 4}, {2, 1}, {3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}, {5, 4}},
+                                  mg_graph::GraphType::kDirectedGraph);
+  katz_centrality =
+      katz_alg::UpdateKatz(*graph, {}, {{0, 5}, {0, 1}, {1, 4}, {2, 1}, {3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}, {5, 4}},
+                           {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, {}, {});
+  ASSERT_TRUE(CompareRankingSort(katz_centrality, {1, 4, 0, 3, 5, 2, 6}));
 }
 
 int main(int argc, char **argv) {
