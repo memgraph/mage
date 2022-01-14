@@ -78,3 +78,29 @@ macro(add_cugraph_subdirectory subdirectory_name)
     add_subdirectory("${subdirectory_name}")
   endif()
 endmacro()
+
+# TODO(gitbuda): Deal with CUDA_ARCHITECTURES and other target props (be correct).
+macro(target_mage_cugraph target_name)
+  if (MAGE_CUGRAPH_ENABLE)
+    list(APPEND MAGE_CUDA_FLAGS --expt-extended-lambda)
+    if(CMAKE_BUILD_TYPE MATCHES Debug)
+      message(STATUS "Building ccugraph_alg cuda module with debugging flags")
+      list(APPEND MAGE_CUDA_FLAGS -g -G -Xcompiler=-rdynamic)
+    endif()
+    target_compile_options("${target_name}"
+      PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:${MAGE_CXX_FLAGS}>"
+              "$<$<COMPILE_LANGUAGE:CUDA>:${MAGE_CUDA_FLAGS}>"
+    )
+    target_link_libraries("${target_name}" PRIVATE mage_cugraph)
+    set_target_properties("${target_name}" PROPERTIES
+      # CXX_STANDARD                        17
+      # CXX_STANDARD_REQUIRED               ON
+      # CUDA_STANDARD                       17
+      # CUDA_STANDARD_REQUIRED              ON
+      # POSITION_INDEPENDENT_CODE           ON
+      # INTERFACE_POSITION_INDEPENDENT_CODE ON
+      # Otherwise CMake is complaining.
+      CUDA_ARCHITECTURES                  OFF
+    )
+  endif()
+endmacro()
