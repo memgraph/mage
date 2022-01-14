@@ -197,6 +197,7 @@ void UpdateLevel(KatzCentralityData &context_new, std::set<std::uint64_t> &from_
     auto v = queue.front();
     queue.pop();
 
+    if (!graph.NodeExists(v)) continue;
     for (auto [w_, edge_id] : graph.OutNeighbours(graph.GetInnerNodeId(v))) {
       auto w = graph.GetMemgraphNodeId(w_);
 
@@ -264,7 +265,7 @@ std::vector<std::pair<std::uint64_t, double>> UpdateKatz(
 
   for (auto v : new_vertices) {
     katz_alg::context.omegas[0][v] = 1;
-    for (std::uint64_t i = 0; i < katz_alg::context.iteration; i++) {
+    for (std::uint64_t i = 0; i <= katz_alg::context.iteration; i++) {
       katz_alg::context.centralities[i][v] = 0;
     }
   }
@@ -274,11 +275,11 @@ std::vector<std::pair<std::uint64_t, double>> UpdateKatz(
 
   for (auto [w, v] : new_edges) {
     from_nodes.emplace(w);
-    to_nodes.emplace(v);
+    from_nodes.emplace(v);
   }
   for (auto [w, v] : deleted_edges) {
     from_nodes.emplace(w);
-    to_nodes.emplace(v);
+    from_nodes.emplace(v);
   }
 
   KatzCentralityData context_new;
@@ -314,6 +315,14 @@ std::vector<std::pair<std::uint64_t, double>> UpdateKatz(
     if (katz_alg::context.ur[w] >= (min_lr - katz_alg::epsilon)) {
       katz_alg::context.active_nodes.emplace(w);
     }
+  }
+
+  for (auto v : deleted_vertices) {
+    for (std::uint64_t i = 0; i <= katz_alg::context.iteration; i++) {
+      katz_alg::context.omegas[i].erase(katz_alg::context.omegas[i].find(v));
+      katz_alg::context.centralities[i].erase(katz_alg::context.centralities[i].find(v));
+    }
+    katz_alg::context.active_nodes.erase(katz_alg::context.active_nodes.find(v));
   }
 
   return KatzCentralityLoop(katz_alg::context.active_nodes, graph, katz_alg::alpha, katz_alg::k, katz_alg::epsilon,

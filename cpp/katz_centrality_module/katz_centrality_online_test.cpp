@@ -26,7 +26,7 @@ bool CompareRankingSort(const std::vector<std::pair<uint64_t, double>> &result,
 }
 }  // namespace
 
-TEST(KatzCentrality, KatzDynamicAddNodesAndEdges) {
+TEST(KatzCentrality, AddNodesAndEdges) {
   auto graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6},
                                        {{0, 5}, {0, 1}, {1, 4}, {2, 1}, {3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}, {5, 4}},
                                        mg_graph::GraphType::kDirectedGraph);
@@ -59,7 +59,7 @@ TEST(KatzCentrality, KatzDynamicAddNodesAndEdges) {
   ASSERT_TRUE(CompareRankingSort(katz_centrality, {1, 4, 0, 5, 13, 3, 2, 6}));
 }
 
-TEST(KatzCentrality, KatzDynamicAddEdges) {
+TEST(KatzCentrality, AddEdges) {
   auto graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6},
                                        {{0, 5}, {0, 1}, {1, 4}, {2, 1}, {3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}, {5, 4}},
                                        mg_graph::GraphType::kDirectedGraph);
@@ -74,7 +74,7 @@ TEST(KatzCentrality, KatzDynamicAddEdges) {
   ASSERT_TRUE(CompareRankingSort(katz_centrality, {1, 5, 4, 0, 3, 2, 6}));
 }
 
-TEST(KatzCentrality, KatzDynamicAddEdgesGradually) {
+TEST(KatzCentrality, AddEdgesGradually) {
   auto graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6}, {{3, 1}, {4, 0}}, mg_graph::GraphType::kDirectedGraph);
   auto katz_centrality = katz_alg::GetKatzCentrality(*graph);
   ASSERT_TRUE(CompareRankingSort(katz_centrality, {0, 1, 2, 3, 4, 5, 6}));
@@ -97,7 +97,7 @@ TEST(KatzCentrality, KatzDynamicAddEdgesGradually) {
   ASSERT_TRUE(CompareRankingSort(katz_centrality, {1, 4, 0, 3, 5, 2, 6}));
 }
 
-TEST(KatzCentrality, KatzDynamicDeleteEdges) {
+TEST(KatzCentrality, DeleteEdges) {
   auto graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6},
                                        {{0, 5}, {0, 1}, {1, 4}, {2, 1}, {3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}, {5, 4}},
                                        mg_graph::GraphType::kDirectedGraph);
@@ -110,7 +110,7 @@ TEST(KatzCentrality, KatzDynamicDeleteEdges) {
   ASSERT_TRUE(CompareRankingSort(katz_centrality, {0, 4, 1, 5, 3, 2, 6}));
 }
 
-TEST(KatzCentrality, KatzDynamicDeleteAllEdges) {
+TEST(KatzCentrality, DeleteAllEdges) {
   auto graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6},
                                        {{0, 5}, {0, 1}, {1, 4}, {2, 1}, {3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}, {5, 4}},
                                        mg_graph::GraphType::kDirectedGraph);
@@ -123,7 +123,7 @@ TEST(KatzCentrality, KatzDynamicDeleteAllEdges) {
   ASSERT_TRUE(CompareRankingSort(katz_centrality, {0, 1, 2, 3, 4, 5, 6}));
 }
 
-TEST(KatzCentrality, KatzDynamicDeleteAllAndRevert) {
+TEST(KatzCentrality, DeleteAllAndRevert) {
   auto graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6},
                                        {{0, 5}, {0, 1}, {1, 4}, {2, 1}, {3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}, {5, 4}},
                                        mg_graph::GraphType::kDirectedGraph);
@@ -142,6 +142,20 @@ TEST(KatzCentrality, KatzDynamicDeleteAllAndRevert) {
       katz_alg::UpdateKatz(*graph, {}, {{0, 5}, {0, 1}, {1, 4}, {2, 1}, {3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}, {5, 4}},
                            {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, {}, {});
   ASSERT_TRUE(CompareRankingSort(katz_centrality, {1, 4, 0, 3, 5, 2, 6}));
+}
+
+TEST(KatzCentrality, DeleteNodes) {
+  auto graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6},
+                                       {{0, 5}, {0, 1}, {1, 4}, {2, 1}, {3, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}, {5, 4}},
+                                       mg_graph::GraphType::kDirectedGraph);
+  auto katz_centrality = katz_alg::GetKatzCentrality(*graph);
+  ASSERT_TRUE(CompareRankingSort(katz_centrality, {1, 4, 0, 3, 5, 2, 6}));
+
+  std::cout << "Dynamic algorithm" << std::endl;
+  graph = mg_generate::BuildGraph({0, 1, 2, 3, 5, 6}, {{0, 5}, {0, 1}, {2, 1}, {3, 1}, {5, 0}},
+                                  mg_graph::GraphType::kDirectedGraph);
+  katz_centrality = katz_alg::UpdateKatz(*graph, {}, {}, {}, {4}, {{1, 4}, {4, 0}, {4, 3}, {4, 1}, {5, 4}});
+  ASSERT_TRUE(CompareRankingSort(katz_centrality, {1, 0, 5, 2, 3, 6}));
 }
 
 int main(int argc, char **argv) {
