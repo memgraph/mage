@@ -1,6 +1,7 @@
 # Memgraph Mage C++ Query Modules CMake configuration.
 cmake_minimum_required(VERSION 3.9)
-project(memgraph-mage LANGUAGES C CXX)
+set(MEMGRAPH_MAGE_PROJECT_NAME "memgraph-mage")
+project("${MEMGRAPH_MAGE_PROJECT_NAME}" LANGUAGES C CXX)
 
 # setup CMake module path, defines path for include() and find_package()
 # https://cmake.org/cmake/help/latest/variable/CMAKE_MODULE_PATH.html

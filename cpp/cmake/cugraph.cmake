@@ -12,37 +12,46 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# TODO(gitbuda): Add system install part, e.g., on Ubuntu apt install nvidia-cuda-toolkit -> NO because nvcc 11.0+
-# cugraph requires cuda 11+, download from https://developer.nvidia.com/cuda-downloads
-# Once installed cuda has to be added to the path because the default /usr/bin/nvcc is still e.g. 10
-# export PATH="/usr/local/cuda-11/bin:$PATH"
-# NOTE: Be careful, https://github.com/rapidsai/rapids-cmake, somehow take default /usr/bin/nvcc if available.
-# NOTE: Old include (/usr/include/cuda* /usr/include/cu*) files should also be deleted
-#       because nvcc gets tested against wrong include files.
-# INSTALL: sudo apt install libblas-dev liblapack-dev libboost-all-dev
-# NCCL is also required (NVIDIA Developer Program registration is required -> huge hustle).
-# IMPORTANT: NCCL could be installed from  https://github.com/NVIDIA/nccl (NOTE: take care of versions/tags).
-# TODO(gitbuda): Figure out how to compile cugraph in a regular way.
-#                https://github.com/rapidsai/cugraph/blob/branch-22.02/SOURCEBUILD.md
-# TODO(gitbuda): Figure out how to compile cugraph from Mage cmake (issue with faiss).
-# NOTE: Order of the languages matters because cmake pics different compilers.
-# FAIL: cugraph depends on gunrock, gunrock is an old repo -> v1.2 does not compile because of some templating issue inside the code.
-# NOTE: compiling cugraph takes edges and it's complex -> allow adding linking an already compiled version of cugraph.
-# NOTE: CUDA_ARCHITECTURES -> https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/).
-# NOTE: Set CMAKE_CUDA_ARCHITECTURES to a specific architecture because compilation is going to be faster
-#       CMAKE_CUDA_ARCHITECTURES="NATIVE"
-#       CMAKE_CUDA_ARCHITECTURES="75"
-#       CMAKE_CUDA_ARCHITECTURES="ALL"
-# FAIL: branch-22.02 of rapidsai/raft doesn't have raft::handle_t::get_stream_view method... -> use main branch
-# FAIL: rapidsai/raft main branch also doesn't work -> try cugraph (branch-21.12) because 22.02 branches are not compatible
-# NOTE: cugraph in Debug mode does NOT compile.
+# NOTES:
+#
+# Install Cuda manually from from https://developer.nvidia.com/cuda-downloads
+# because cugraph requires Cuda 11+. In fact, don't use system Cuda because
+# CMake easily detects that one. export PATH="/usr/local/cuda/bin:$PATH" is
+# your friend.
+#
+# INSTALL SYSTEM PACKAGES: sudo apt install libblas-dev liblapack-dev libboost-all-dev
+#
+# NCCL is also required (NVIDIA Developer Program registration is required ->
+# huge hustle). NCCL could be installed from  https://github.com/NVIDIA/nccl.
+#
+# Order of the languages matters because cmake pics different compilers.
+#
+# Compiling cugraph takes edges and it's complex -> allow adding linking an
+# already compiled version of cugraph.
+#
+# CUDA_ARCHITECTURES ->
+# https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
+# Rapids CMake add NATIVE + ALL options as CUDA_ARCHITECTURES which simplifies
+# build configuration.
 
 option(MAGE_CUGRAPH_ENABLE "Enable cuGraph build" OFF)
 
 if (MAGE_CUGRAPH_ENABLE)
+  # RAPIDS.cmake is here because rapids_cuda_init_architectures is required to
+  # properly set both CMAKE_CUDA_ARCHITECTURES and CUDA_ARCHITECTURES target
+  # property.
+  file(DOWNLOAD https://raw.githubusercontent.com/rapidsai/rapids-cmake/branch-21.12/RAPIDS.cmake
+                ${CMAKE_BINARY_DIR}/RAPIDS.cmake)
+  include(${CMAKE_BINARY_DIR}/RAPIDS.cmake)
+  include(rapids-cuda)
+  rapids_cuda_init_architectures("${MEMGRAPH_MAGE_PROJECT_NAME}")
   enable_language(CUDA)
+
   set(MAGE_CUGRAPH_REPO "https://github.com/rapidsai/cugraph.git" CACHE STRING "cuGraph GIT repo URL")
   set(MAGE_CUGRAPH_TAG "branch-21.12" CACHE STRING "cuGraph GIT tag to checkout" )
+  # Custom MAGE_CUGRAPH_BUILD_TYPE because Debug build did NOT work.
+  set(MAGE_CUGRAPH_BUILD_TYPE "Release" CACHE STRING "Passed to cuGraph as CMAKE_BUILD_TYPE")
+  # NATIVE | ALL -> possible because cugraph calls rapids_cuda_init_architectures
   set(MAGE_CUDA_ARCHITECTURES "NATIVE" CACHE STRING "Passed to cuGraph as CMAKE_CUDA_ARCHITECTURES")
   set(CMAKE_CUDA_STANDARD 17)
   set(CMAKE_CUDA_STANDARD_REQUIRED ON)
@@ -55,7 +64,7 @@ if (MAGE_CUGRAPH_ENABLE)
     GIT_TAG           "${MAGE_CUGRAPH_TAG}"
     SOURCE_SUBDIR     "cpp"
     CMAKE_ARGS        "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
-                      "-DCMAKE_BUILD_TYPE=Release"
+                      "-DCMAKE_BUILD_TYPE=${MAGE_CUGRAPH_BUILD_TYPE}"
                       "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
                       "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
                       "-DCMAKE_CUDA_ARCHITECTURES='${MAGE_CUDA_ARCHITECTURES}'"
@@ -79,12 +88,11 @@ macro(add_cugraph_subdirectory subdirectory_name)
   endif()
 endmacro()
 
-# TODO(gitbuda): Deal with CUDA_ARCHITECTURES and other target props (be correct).
 macro(target_mage_cugraph target_name)
   if (MAGE_CUGRAPH_ENABLE)
     list(APPEND MAGE_CUDA_FLAGS --expt-extended-lambda)
     if(CMAKE_BUILD_TYPE MATCHES Debug)
-      message(STATUS "Building ccugraph_alg cuda module with debugging flags")
+      message(STATUS "Building with CUDA debugging flags")
       list(APPEND MAGE_CUDA_FLAGS -g -G -Xcompiler=-rdynamic)
     endif()
     target_compile_options("${target_name}"
@@ -92,15 +100,5 @@ macro(target_mage_cugraph target_name)
               "$<$<COMPILE_LANGUAGE:CUDA>:${MAGE_CUDA_FLAGS}>"
     )
     target_link_libraries("${target_name}" PRIVATE mage_cugraph)
-    set_target_properties("${target_name}" PROPERTIES
-      # CXX_STANDARD                        17
-      # CXX_STANDARD_REQUIRED               ON
-      # CUDA_STANDARD                       17
-      # CUDA_STANDARD_REQUIRED              ON
-      # POSITION_INDEPENDENT_CODE           ON
-      # INTERFACE_POSITION_INDEPENDENT_CODE ON
-      # Otherwise CMake is complaining.
-      CUDA_ARCHITECTURES                  OFF
-    )
   endif()
 endmacro()
