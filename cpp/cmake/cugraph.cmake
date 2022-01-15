@@ -26,8 +26,8 @@
 #
 # Order of the languages matters because cmake pics different compilers.
 #
-# Compiling cugraph takes edges and it's complex -> allow adding linking an
-# already compiled version of cugraph.
+# Compiling cugraph takes ages and it's complex.
+# TODO(gitbuda): Allow linking of an already compiled version of cugraph.
 #
 # CUDA_ARCHITECTURES ->
 # https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
