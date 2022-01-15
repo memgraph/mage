@@ -56,7 +56,6 @@ if (MAGE_CUGRAPH_ENABLE)
   set(CMAKE_CUDA_STANDARD 17)
   set(CMAKE_CUDA_STANDARD_REQUIRED ON)
   set(MAGE_CUGRAPH_ROOT ${PROJECT_BINARY_DIR}/cugraph)
-  # TODO(gitbuda): Release is hardcoded here, put the CMAKE var or add additonal flag.
   ExternalProject_Add(cugraph-proj
     PREFIX            "${MAGE_CUGRAPH_ROOT}"
     INSTALL_DIR       "${MAGE_CUGRAPH_ROOT}"

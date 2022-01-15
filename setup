@@ -134,19 +134,14 @@ def build(args):
 
     # Transfer files to the query modules directory. The transfer is tricky
     # because e.g. cugraph generates a bunch of stuff, a new contributor might
-    # get confused with the amount of stuff that ends up in the dist. More
-    # importantly, when I added all the stuff cugraph build generated, the
-    # example cugraph module didn't actually work (I had to delete everything,
-    # don't know the exact reason yet)self.
+    # get confused with the amount of stuff that ends up in the dist.
     # NOTE: Cugraph only compiles to a SHARED library.
     # NOTE: This is dependent on the cpp/cmake/cugraph ExternalProject_Add (on
     # the INSTALL_DIR).
-    # TODO(gitbuda): It's not only other so files, cugraph_alg.py is in
-    # conflict with ccugraph_alg.so. import cugraph is from conda while
-    # libcugraph.so is compiled locally. Figure out how to load both.
-    cpp_all = set(glob.glob("**/*.so", recursive=True))
-    cpp_ignores = set(glob.glob("cugraph/**/*.so", recursive=True))
-    for file in cpp_all - cpp_ignores:
+    all_so = set(glob.glob("**/*.so", recursive=True))
+    cugraph_so = set(glob.glob("cugraph/**/*.so", recursive=True))
+    rapids_so = set(glob.glob("**/librapids*.so", recursive=True))
+    for file in all_so - cugraph_so - rapids_so:
         shutil.copy2(file, MAGE_BUILD_DIRECTORY)
 
     #################################################
