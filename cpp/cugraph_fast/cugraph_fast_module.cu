@@ -71,7 +71,7 @@ auto CreateCugraphFromMemgraph(raft::handle_t const &handle, mgp_graph *mg_graph
   std::tie(d_graph, std::ignore) =
       cugraph::create_graph_from_edgelist<vertex_t, edge_t, weight_t, TStoreTransposed, TMultiGPU>(
           handle, std::nullopt, std::move(d_rows), std::move(d_cols), std::nullopt,
-          cugraph::graph_properties_t{false, false}, false);
+          cugraph::graph_properties_t{false, false}, false, false);
   stream.synchronize_no_throw();
   return std::make_pair(std::move(h_graph), std::move(d_graph));
 }
@@ -89,10 +89,10 @@ void PagerankProc(mgp_list *args, mgp_graph *mg_graph, mgp_result *result, mgp_m
     auto mg_cugraph_view = mg_cugraph.view();
     rmm::device_uvector<result_t> d_pageranks(mg_cugraph_view.get_number_of_vertices(), stream);
 
-    // IMPORTANT: store_transposed has to be true because cugraph::pagerank only
-    // accepts true. It's hard to detect/debug problem because nvcc error
-    // messages contain only the top call details + graph_view has many template
-    // paremeters.
+    // IMPORTANT: store_transposed has to be true because cugraph::pagerank
+    // only accepts true. It's hard to detect/debug problem because nvcc error
+    // messages contain only the top call details + graph_view has many
+    // template paremeters.
     cugraph::pagerank<vertex_t, edge_t, weight_t, result_t, false>(handle, mg_cugraph_view, std::nullopt, std::nullopt,
                                                                    std::nullopt, std::nullopt, d_pageranks.data(),
                                                                    damping_factor, stop_epsilon, max_iterations);
