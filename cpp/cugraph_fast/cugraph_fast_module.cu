@@ -12,10 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <stdio.h>
-#include <iostream>
-#include <utility>
-
 #include <cugraph/algorithms.hpp>
 #include <cugraph/graph_functions.hpp>
 #include <mg_exceptions.hpp>
