@@ -55,6 +55,17 @@ class KatzCentralityData {
   std::set<std::uint64_t> active_nodes;
 
   std::uint64_t iteration = 0;
+
+ private:
+  void InitVertexMap(std::unordered_map<std::uint64_t, double> &map, double default_value,
+                     const mg_graph::GraphView<> &graph) {
+    for (auto &[_v] : graph.Nodes()) {
+      // Transform inner ID to Memgraph
+      auto v = graph.GetMemgraphNodeId(_v);
+
+      map[v] = default_value;
+    }
+  }
 };
 
 KatzCentralityData context;
@@ -92,8 +103,6 @@ bool Converged(std::set<std::uint64_t> &active_nodes, std::uint64_t k, double ep
                     });
 
   for (std::size_t i = k; i < centrality.size(); i++) {
-    auto u_ = ur.at(active_centrality[i].second);
-    auto l_ = lr.at(active_centrality[k - 1].second);
     if (ur.at(active_centrality[i].first - epsilon) < lr.at(active_centrality[k - 1].first)) {
       active_centrality.erase(active_centrality.begin() + i);
       active_nodes.erase(active_centrality[i].first);
@@ -116,16 +125,6 @@ bool Converged(std::set<std::uint64_t> &active_nodes, std::uint64_t k, double ep
     }
   }
   return true;
-}
-
-void InitVertexMap(std::unordered_map<std::uint64_t, double> &map, double default_value,
-                   const mg_graph::GraphView<> &graph) {
-  for (auto &[_v] : graph.Nodes()) {
-    // Transform inner ID to Memgraph
-    auto v = graph.GetMemgraphNodeId(_v);
-
-    map[v] = default_value;
-  }
 }
 
 std::vector<std::pair<std::uint64_t, double>> KatzCentralityLoop(std::set<std::uint64_t> &active_nodes,
