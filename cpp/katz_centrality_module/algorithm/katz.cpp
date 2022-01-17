@@ -287,6 +287,11 @@ std::vector<std::pair<std::uint64_t, double>> UpdateKatz(
     const std::vector<std::pair<std::uint64_t, uint64_t>> &new_edges, const std::set<std::uint64_t> &new_edge_ids,
     const std::vector<std::uint64_t> &deleted_vertices,
     const std::vector<std::pair<std::uint64_t, uint64_t>> &deleted_edges) {
+  // Create context and calculate values if not initialized
+  if (!katz_alg::context.IsInitialized()) {
+    return GetKatz(graph);
+  }
+
   auto deg_max = MaxDegree(graph);
   double gamma = deg_max / (1. - (alpha * deg_max));
 
