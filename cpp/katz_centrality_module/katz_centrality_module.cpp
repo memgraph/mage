@@ -20,7 +20,7 @@ void InsertKatzRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, 
 void GetCycles(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
-    auto katz_centralities = katz_alg::GetKatzCentrality(*graph);
+    auto katz_centralities = katz_alg::GetKatz(*graph);
 
     for (auto &[vertex_id, centrality] : katz_centralities) {
       // Insert the Katz centrality record
