@@ -292,6 +292,13 @@ std::vector<std::pair<std::uint64_t, double>> UpdateKatz(
     return GetKatz(graph);
   }
 
+  if (graph.Edges().empty()) {
+    katz_alg::context.Init();
+    return std::vector<std::pair<std::uint64_t, double>>(
+        katz_alg::context.centralities[katz_alg::context.iteration].begin(),
+        katz_alg::context.centralities[katz_alg::context.iteration].end());
+  }
+
   auto deg_max = MaxDegree(graph);
   double gamma = deg_max / (1. - (alpha * deg_max));
 

@@ -26,6 +26,12 @@ void InsertKatzRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, 
   mg_utility::InsertDoubleValueResult(record, kFieldRank, katz_centrality, memory);
 }
 
+void InsertMessageRecord(mgp_result *result, mgp_memory *memory, const char *message) {
+  auto *record = mgp::result_new_record(result);
+
+  mg_utility::InsertStringValueResult(record, kFieldMessage, message, memory);
+}
+
 void GetKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
@@ -50,8 +56,8 @@ void UpdateKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
     auto created_edge_ids = mg_utility::GetEdgeIDsFromList(mg_utility::GetListFromArgument(args, 1));
 
     // Deleted entities
-    auto deleted_vertices = mg_utility::GetVerticesFromList(mg_utility::GetListFromArgument(args, 3));
-    auto deleted_edges = mg_utility::GetEdgesFromList(mg_utility::GetListFromArgument(args, 4));
+    auto deleted_vertices = mg_utility::GetVerticesFromList(mg_utility::GetListFromArgument(args, 2));
+    auto deleted_edges = mg_utility::GetEdgesFromList(mg_utility::GetListFromArgument(args, 3));
 
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
     std::transform(created_edge_ids.begin(), created_edge_ids.end(), created_edge_ids.begin(),
@@ -68,6 +74,17 @@ void UpdateKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
     // We must not let any exceptions out of our module.
     mgp::result_set_error_msg(result, e.what());
     return;
+  }
+}
+void KatzCentralityReset(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  try {
+    katz_alg::Reset();
+    InsertMessageRecord(result, memory,
+                        "Katz centrality context is reset! Before running again it will run initialization.");
+  } catch (const std::exception &e) {
+    // We must not let any exceptions out of our module.
+    InsertMessageRecord(result, memory,
+                        "Reset failed: An exception occurred, please check your `katz_centrality_online` module!");
   }
 }
 }  // namespace
@@ -108,6 +125,11 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
 
       mgp::proc_add_result(proc, kFieldNode, mgp::type_node());
       mgp::proc_add_result(proc, kFieldRank, mgp::type_float());
+    }
+
+    {
+      auto *proc = mgp::module_add_read_procedure(module, kProcedureReset, KatzCentralityReset);
+      mgp::proc_add_result(proc, kFieldMessage, mgp::type_string());
     }
 
   } catch (const std::exception &e) {
