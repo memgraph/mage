@@ -284,7 +284,7 @@ std::vector<std::pair<std::uint64_t, double>> GetKatz(const mg_graph::GraphView<
 
 std::vector<std::pair<std::uint64_t, double>> UpdateKatz(
     const mg_graph::GraphView<> &graph, const std::vector<std::uint64_t> &new_vertices,
-    const std::vector<std::pair<std::uint64_t, uint64_t>> &new_edges, const std::set<std::uint64_t> &new_edge_ids,
+    const std::vector<std::pair<std::uint64_t, uint64_t>> &new_edges, const std::vector<std::uint64_t> &new_edge_ids,
     const std::vector<std::uint64_t> &deleted_vertices,
     const std::vector<std::pair<std::uint64_t, uint64_t>> &deleted_edges) {
   // Create context and calculate values if not initialized
@@ -317,9 +317,10 @@ std::vector<std::pair<std::uint64_t, double>> UpdateKatz(
   // Create new context for updating the dynamic graph
   KatzCentralityData context_new;
   context_new.Init(graph);
+  std::set<std::uint64_t> new_edge_ids_set(new_edge_ids.begin(), new_edge_ids.end());
   for (std::uint64_t i = 0; i < katz_alg::context.iteration; i++) {
     context_new.AddIteration(graph);
-    UpdateLevel(context_new, updated_nodes, new_edges, deleted_edges, new_edge_ids, graph);
+    UpdateLevel(context_new, updated_nodes, new_edges, deleted_edges, new_edge_ids_set, graph);
   }
 
   // After updating iteration results, store them in global value

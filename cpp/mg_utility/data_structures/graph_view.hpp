@@ -87,6 +87,10 @@ class GraphView {
 
   virtual TSize GetInnerNodeId(std::uint64_t memgraph_id) const = 0;
 
+  virtual std::uint64_t GetMemgraphEdgeId(TSize node_id) const = 0;
+
+  virtual TSize GetInnerEdgeId(std::uint64_t memgraph_id) const = 0;
+
   virtual bool NodeExists(std::uint64_t memgraph_id) const = 0;
 };
 

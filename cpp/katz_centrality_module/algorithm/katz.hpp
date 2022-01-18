@@ -93,7 +93,7 @@ std::vector<std::pair<std::uint64_t, double>> GetKatz(const mg_graph::GraphView<
 ///
 std::vector<std::pair<std::uint64_t, double>> UpdateKatz(
     const mg_graph::GraphView<> &graph, const std::vector<std::uint64_t> &new_vertices,
-    const std::vector<std::pair<std::uint64_t, uint64_t>> &new_edges, const std::set<std::uint64_t> &new_edge_ids,
+    const std::vector<std::pair<std::uint64_t, uint64_t>> &new_edges, const std::vector<std::uint64_t> &new_edge_ids,
     const std::vector<std::uint64_t> &deleted_vertices,
     const std::vector<std::pair<std::uint64_t, uint64_t>> &deleted_edges);
 

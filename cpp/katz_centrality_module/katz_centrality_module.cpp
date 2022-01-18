@@ -7,17 +7,17 @@ namespace {
 constexpr char const *kProcedureGet = "get";
 
 constexpr char const *kFieldNode = "node";
-constexpr char const *kFieldKatzCentrality = "katz_centrality";
+constexpr char const *kFieldRank = "rank";
 
 void InsertKatzRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const double katz_centrality,
                       const int node_id) {
   auto *record = mgp::result_new_record(result);
 
   mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
-  mg_utility::InsertDoubleValueResult(record, kFieldKatzCentrality, katz_centrality, memory);
+  mg_utility::InsertDoubleValueResult(record, kFieldRank, katz_centrality, memory);
 }
 
-void GetCycles(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void GetKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
     auto katz_centralities = katz_alg::GetKatz(*graph);
@@ -32,16 +32,20 @@ void GetCycles(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mg
     return;
   }
 }
+
 }  // namespace
 
 // Each module needs to define mgp_init_module function.
 // Here you can register multiple procedures your module supports.
 extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
   try {
-    auto *proc = mgp::module_add_read_procedure(module, kProcedureGet, GetCycles);
+    // Static Katz centrality
+    {
+      auto *proc = mgp::module_add_read_procedure(module, kProcedureGet, GetKatzCentrality);
 
-    mgp::proc_add_result(proc, kFieldNode, mgp::type_node());
-    mgp::proc_add_result(proc, kFieldKatzCentrality, mgp::type_float());
+      mgp::proc_add_result(proc, kFieldNode, mgp::type_node());
+      mgp::proc_add_result(proc, kFieldRank, mgp::type_float());
+    }
   } catch (const std::exception &e) {
     return 1;
   }
