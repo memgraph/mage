@@ -1,5 +1,7 @@
 #include <chrono>
 #include <fstream>
+#include <locale>
+#include <clocale>
 
 #include <mg_utils.hpp>
 
@@ -19,32 +21,30 @@ void ProcedureRun(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
     using std::chrono::milliseconds;
 
     auto t1 = high_resolution_clock::now();
-    std::ofstream bench_file("benchmark.txt");
     auto t2 = high_resolution_clock::now();
     duration<double, std::milli> ms_double = t2 - t1;
-    std::cout << "Test"
-              << "ms\n";
-    std::cerr << ms_double.count() << "ms\n";
-    std::cout << ms_double.count() << "ms\n";
-
-    bench_file << "Testing time: "
-               << "100"
-               << "ms\n";
-    bench_file << "CreateCugraphFromMemgraph: " << ms_double.count() << "ms\n";
-    bench_file.flush();
-    bench_file << "test";
-    bench_file.flush();
-    bench_file.close();
+    std::cout << "Testing iostreams" << std::endl;
+    std::cerr << "cerr: " << ms_double.count() << "ms" << std::endl;
+    std::cout << "cout: " << ms_double.count() << "ms" << std::endl;
     InsertRecord(memgraph_graph, result, memory);
-  } catch (const std::exception &e) {
-    // We must not let any exceptions out of our module.
-    mgp::result_set_error_msg(result, e.what());
+  } catch (...) {
+    mgp::result_set_error_msg(result, "Error during ProcedureRun occured");
     return;
   }
 }
 }  // namespace
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
+  // Check Notes https://en.cppreference.com/w/cpp/locale/setlocale
+  std::setlocale(LC_ALL, "en_US.UTF-8");
+  auto locale = std::locale{std::locale{"C"}, new std::num_put<char>{}};
+  // Check https://en.cppreference.com/w/cpp/locale/locale/global
+  // Does 0 related to specific streams.
+  std::locale::global(locale);
+
+  std::cout.imbue(locale);
+  std::cerr.imbue(locale);
+
   try {
     auto *pagerank_proc = mgp::module_add_read_procedure(module, kProcedureRun, ProcedureRun);
     mgp::proc_add_result(pagerank_proc, kFieldInteger, mgp::type_int());
