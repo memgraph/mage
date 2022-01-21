@@ -39,11 +39,16 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   std::setlocale(LC_ALL, "en_US.UTF-8");
   auto locale = std::locale{std::locale{"C"}, new std::num_put<char>{}};
   // Check https://en.cppreference.com/w/cpp/locale/locale/global
-  // Does 0 related to specific streams.
+  // Does 0 related to six standard I/O C++ streams.
+  // Check https://stackoverflow.com/a/25696480/4888809
   std::locale::global(locale);
 
   std::cout.imbue(locale);
   std::cerr.imbue(locale);
+  std::clog.imbue(locale);
+  std::wcout.imbue(locale);
+  std::wcerr.imbue(locale);
+  std::wclog.imbue(locale);
 
   try {
     auto *pagerank_proc = mgp::module_add_read_procedure(module, kProcedureRun, ProcedureRun);
