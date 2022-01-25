@@ -1,4 +1,7 @@
+import numpy as np
 import torch.nn as nn
+import torch
+from tgn.definitions.events import Event
 
 
 class MessageFunction(nn.Module):
@@ -31,4 +34,8 @@ class MessageFunctionIdentity(MessageFunction):
         assert raw_message_dimension == message_dimension, 'f Wrong!'
 
     def forward(self, data):
-        return data
+        concat_message = torch.concat(data,dim=-1)
+
+        # returns shape (1, message_dim) (1 row, message dim columns)
+        return concat_message.unsqueeze(0)
+

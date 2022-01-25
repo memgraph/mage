@@ -15,3 +15,8 @@ class MemoryUpdaterType(enum.Enum):
     GRU = 0
     RNN = 1
     LSTM = 2
+
+
+class MessageAggregatorType(enum.Enum):
+    Mean = 0
+    Last = 1
