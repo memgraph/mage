@@ -1,5 +1,29 @@
+from mage.export_import_util.parameters import Parameter
 import mgp
 import json as js
+
+
+def create_vertex(ctx, properties, labels):
+    vertex = ctx.graph.create_vertex()
+    vertex_properties = vertex.properties
+
+    for key, value in properties.items():
+        vertex_properties[key] = value
+
+    for label in labels:
+        vertex.add_label(label)
+
+    return vertex.id
+
+
+def create_edge(ctx, properties, start_node_id, end_node_id, type, vertex_ids):
+    vertex_from = ctx.graph.get_vertex_by_id(vertex_ids[start_node_id])
+    vertex_to = ctx.graph.get_vertex_by_id(vertex_ids[end_node_id])
+    edge = ctx.graph.create_edge(vertex_from, vertex_to, mgp.EdgeType(type))
+    edge_properties = edge.properties
+
+    for key, value in properties.items():
+        edge_properties[key] = value
 
 
 @mgp.write_proc
@@ -18,52 +42,51 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
 
     for object in graph_objects:
 
-        if all(key in object for key in ("type", "properties", "id")):
-            type_value = object["type"]
-            properties_value = object["properties"]
-            id_value = object["id"]
+        if all(
+            key in object
+            for key in (
+                Parameter.TYPE.value,
+                Parameter.PROPERTIES.value,
+                Parameter.ID.value,
+            )
+        ):
+            type_value = object[Parameter.TYPE.value]
+            properties_value = object[Parameter.PROPERTIES.value]
+            id_value = object[Parameter.ID.value]
         else:
             raise KeyError(
                 "Each graph object needs to have 'type', 'properties' and 'id' keys."
             )
 
-        if type_value == "node":
+        if type_value == Parameter.NODE.value:
 
-            if "labels" in object:
-                labels_value = object["labels"]
+            if Parameter.LABELS.value in object:
+                labels_value = object[Parameter.LABELS.value]
             else:
                 raise KeyError("Each node object needs to have 'labels' key.")
 
-            vertex = ctx.graph.create_vertex()
-            vertex_properties = vertex.properties
+            vertex_ids[id_value] = create_vertex(ctx, properties_value, labels_value)
 
-            for key, value in properties_value.items():
-                vertex_properties[key] = value
-
-            for label in labels_value:
-                vertex.add_label(label)
-
-            vertex_ids[id_value] = vertex.id
-
-        elif type_value == "relationship":
-            if all(key in object for key in ("start", "end", "label")):
-                start_node_id = object["start"]
-                end_node_id = object["end"]
-                edge_type = object["label"]
+        elif type_value == Parameter.RELATIONSHIP.value:
+            if all(
+                key in object
+                for key in (
+                    Parameter.START.value,
+                    Parameter.END.value,
+                    Parameter.LABEL.value,
+                )
+            ):
+                start_node_id = object[Parameter.START.value]
+                end_node_id = object[Parameter.END.value]
+                edge_type = object[Parameter.LABEL.value]
             else:
                 raise KeyError(
                     "Each relationship object needs to have 'start', 'end' and 'label' keys."
                 )
 
-            vertex_from = ctx.graph.get_vertex_by_id(vertex_ids[start_node_id])
-            vertex_to = ctx.graph.get_vertex_by_id(vertex_ids[end_node_id])
-            edge = ctx.graph.create_edge(
-                vertex_from, vertex_to, mgp.EdgeType(edge_type)
+            create_edge(
+                ctx, properties_value, start_node_id, end_node_id, edge_type, vertex_ids
             )
-            edge_properties = edge.properties
-
-            for key, value in properties_value.items():
-                edge_properties[key] = value
         else:
             raise KeyError("The provided file is not in the correct JSON form.")
 
