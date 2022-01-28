@@ -1,6 +1,5 @@
 import mgp
 import json as js
-import sys
 
 
 @mgp.write_proc
@@ -19,22 +18,21 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
 
     for object in graph_objects:
 
-        try:
+        if all(key in object for key in ("type", "properties", "id")):
             type_value = object["type"]
             properties_value = object["properties"]
             id_value = object["id"]
-        except KeyError as key_error:
-            sys.stderr.write(
-                (f"Each graph object needs to have 'type', 'properties' and 'id' keys.")
+        else:
+            raise KeyError(
+                "Each graph object needs to have 'type', 'properties' and 'id' keys."
             )
-            raise key_error
 
         if type_value == "node":
-            try:
+
+            if "labels" in object:
                 labels_value = object["labels"]
-            except KeyError as key_error:
-                sys.stderr.write((f"Each node object needs to have 'labels' key."))
-                raise key_error
+            else:
+                raise KeyError("Each node object needs to have 'labels' key.")
 
             vertex = ctx.graph.create_vertex()
             vertex_properties = vertex.properties
@@ -48,17 +46,14 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
             vertex_ids[id_value] = vertex.id
 
         elif type_value == "relationship":
-            try:
+            if all(key in object for key in ("start", "end", "label")):
                 start_node_id = object["start"]
                 end_node_id = object["end"]
                 edge_type = object["label"]
-            except KeyError as key_error:
-                sys.stderr.write(
-                    (
-                        f"Each relationship object needs to have 'start', 'end' and 'label' keys."
-                    )
+            else:
+                raise KeyError(
+                    "Each relationship object needs to have 'start', 'end' and 'label' keys."
                 )
-                raise key_error
 
             vertex_from = ctx.graph.get_vertex_by_id(vertex_ids[start_node_id])
             vertex_to = ctx.graph.get_vertex_by_id(vertex_ids[end_node_id])
