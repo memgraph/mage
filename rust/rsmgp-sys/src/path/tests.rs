@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use serial_test::serial;
-use std::ptr::null_mut;
 
 use super::*;
 use crate::mgp::mock_ffi::*;
