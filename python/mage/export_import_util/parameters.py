@@ -1,0 +1,13 @@
+from enum import Enum
+
+
+class Parameter(Enum):
+    ID = "id"
+    LABELS = "labels"
+    PROPERTIES = "properties"
+    TYPE = "type"
+    END = "end"
+    LABEL = "label"
+    START = "start"
+    NODE = "node"
+    RELATIONSHIP = "relationship"
