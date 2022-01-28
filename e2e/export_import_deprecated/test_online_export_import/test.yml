@@ -1,0 +1,12 @@
+- query: >-
+    MATCH (n) RETURN count(n) AS count_after_export;
+  output: 
+    - count_after_export: 3
+- query: >-
+    MATCH (n) RETURN count(n) AS count;
+  output: 
+    - count: 0
+- query: >-
+    MATCH (n) RETURN count(n) AS count_after_import;
+  output:
+    - count_after_import: 3
