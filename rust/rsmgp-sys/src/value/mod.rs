@@ -512,7 +512,8 @@ pub(crate) unsafe fn mgp_raw_value_to_value(
             invoke_mgp_func!(i64, ffi::mgp_value_get_int, value).unwrap(),
         )),
         mgp_value_type::MGP_VALUE_TYPE_STRING => {
-            let mgp_string = invoke_mgp_func!(*const c_char, ffi::mgp_value_get_string, value).unwrap();
+            let mgp_string =
+                invoke_mgp_func!(*const c_char, ffi::mgp_value_get_string, value).unwrap();
             match create_cstring(mgp_string) {
                 Ok(value) => Ok(Value::String(value)),
                 Err(_) => Err(Error::UnableToMakeValueString),
