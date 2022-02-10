@@ -90,15 +90,11 @@ class TGN(nn.Module):
         TGNLayer = get_layer_type(layer_type)
 
         for i in range(num_of_layers):
-            layer = TGNLayer(temporal_neighborhood=self.temporal_neighborhood,
-                             embedding_dimension=self.memory_dimension + self.num_node_features,
+            layer = TGNLayer(embedding_dimension=self.memory_dimension + self.num_node_features,
                              edge_feature_dim=self.num_edge_features,
                              time_encoding_dim=self.time_dimension,
                              node_features_dim=self.num_node_features,
-                             layer_indx=i + 1,  # rename just to layer,
-                             # layer_indx would mean we go from 0, but actually we go from 1
-                             max_layer=num_of_layers,
-                             get_layer_embeddings=self.get_raw_node_features_on_depth)
+                           )
 
             tgn_layers.append(layer)
 
@@ -417,17 +413,13 @@ class TGNLayer(nn.Module):
     Base class for all implementations
     """
 
-    def __init__(self, temporal_neighborhood: TemporalNeighborhood, embedding_dimension: int, edge_feature_dim: int,
-                 time_encoding_dim: int, node_features_dim: int, layer_indx: int, max_layer: int, get_layer_embeddings):
+    def __init__(self, embedding_dimension: int, edge_feature_dim: int,
+                 time_encoding_dim: int, node_features_dim: int):
         super().__init__()
-        self.temporal_neighborhood = temporal_neighborhood
         self.embedding_dimension = embedding_dimension
         self.edge_feature_dim = edge_feature_dim
         self.time_encoding_dim = time_encoding_dim
         self.node_features_dim = node_features_dim
-        self.layer_indx = layer_indx
-        self.max_layer = max_layer
-        self.get_layer_embeddings = get_layer_embeddings
 
 
 class TGNLayerGraphSumEmbedding(TGNLayer):
@@ -435,11 +427,10 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
     TGN layer implementation inspired by official TGN implementation
     """
 
-    def __init__(self, temporal_neighborhood: TemporalNeighborhood, embedding_dimension: int, edge_feature_dim: int,
-                 time_encoding_dim: int, node_features_dim: int, layer_indx: int, max_layer: int, get_layer_embeddings):
-        super().__init__(temporal_neighborhood, embedding_dimension, edge_feature_dim, time_encoding_dim,
-                         node_features_dim, layer_indx,
-                         max_layer, get_layer_embeddings)
+    def __init__(self, embedding_dimension: int, edge_feature_dim: int,
+                 time_encoding_dim: int, node_features_dim: int):
+        super().__init__(embedding_dimension, edge_feature_dim, time_encoding_dim,
+                         node_features_dim)
         # Initialize W1 matrix and W2 matrix
 
         self.linear_1 = torch.nn.Linear(embedding_dimension + time_encoding_dim + edge_feature_dim,
@@ -451,15 +442,17 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
     def forward(self, data: Tuple[List[torch.Tensor], List[torch.Tensor], List[torch.Tensor]]):
         print("hi from TGN Graph Sum Embedding layer")
         # todo set requires grad on torch tensors
-        # if we are on 1st layer (of max 2 layers), if you look at formula, it means
-        # we need to use neighbors of neighbors of original nodes on 0th level to get h_tilda on 1st
-        # and we need to use neighbors of original nodes on 0th level (their raw features)
+        # If we want to get embeddings on layer 2, we need propagation two times
+        # First we need from neighbors of neighbors to neighbors of our source nodes and then from neighbors to
+        # source nodes
+        # This way we will have embeddings on layer 1 for neighbors of source nodes and for source nodes
+        # To get embeddings on layer 2 for source nodes we need to propagate from neighbors of source nodes
+        # on layer 1 to source nodes
 
-        # By doing further propagation to level for level 2, we will need on level 1 neighbors of original nodes
-        # but we will also need current nodes on level 1
+        # Since we don't have adj matrix to do all at once like in static GNN like GCN where we just multiply matrix
+        # here we will do actual propagation of message in for loop
 
-        # This means we need two different propagations on level 1 (neighbors and neighbors of neighbors)
-        # and only 1 at level 2 (only neighbors)
+        # Index 0 represents farthest nodes from our source nodes
 
         prev_layer_layered_embeddings, prev_layer_layered_edge_features, prev_layer_layered_time_diffs = data
 
@@ -507,17 +500,91 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
     TGN layer implementation inspired by official TGN implementation
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, embedding_dimension: int, edge_feature_dim: int,
+                 time_encoding_dim: int, node_features_dim: int):
+        super().__init__(embedding_dimension, edge_feature_dim, time_encoding_dim, node_features_dim)
+
+        self.query_dim = embedding_dimension + time_encoding_dim
+        self.key_dim = embedding_dimension + edge_feature_dim + time_encoding_dim
+        self.value_dim = self.key_dim
+
+        self.multi_head_attention = nn.MultiheadAttention(embed_dim=self.query_dim,
+                                                          kdim=self.key_dim*5, #set on neighbors num
+                                                          vdim=self.value_dim*5,
+                                                          num_heads=1,
+                                                          batch_first=True) # this way no need to do torch.permute later <3
+        # todo add MLP layer with options
+
+        self.fc1 = torch.nn.Linear(self.query_dim + embedding_dimension, embedding_dimension)
+        self.fc2 = torch.nn.Linear(embedding_dimension, embedding_dimension)
+        self.act = torch.nn.ReLU()
+
+        torch.nn.init.xavier_normal_(self.fc1.weight)
+        torch.nn.init.xavier_normal_(self.fc2.weight)
+
 
     def forward(self, data):
         print("hi from TGN Graph Attention Embedding layer")
-        return data
+        prev_layer_layered_embeddings, prev_layer_layered_edge_features, prev_layer_layered_time_diffs = data
+
+        new_layer_layered_embeddings = []
+        new_layer_edge_features = prev_layer_layered_edge_features[1:]
+        new_layer_time_diffs = prev_layer_layered_time_diffs[1:]
+
+        assert len(prev_layer_layered_edge_features) == len(prev_layer_layered_time_diffs) == len(
+            prev_layer_layered_embeddings) - 1, \
+            f"Error brate"
+        prev_layer_layered_time_diffs.append(torch.zeros((10, 1)))
+        for i in range (len(prev_layer_layered_edge_features)):
+            # C^(l)(t)
+            # shape = N, num_neighbors,
+            neighborhood_features = torch.cat([prev_layer_layered_embeddings[i],
+                                               prev_layer_layered_edge_features[i],
+                                               prev_layer_layered_time_diffs[i]], dim=2)
+            # goal is from 50x5x373 -> 50x1865
+            neighborhood_features = torch.flatten(neighborhood_features, start_dim=1)
+            next_layer_shape = prev_layer_layered_embeddings[i+1].shape
+            if len(next_layer_shape) == 2:
+                next_layer_shape=(1, next_layer_shape[0])
+            # 50x1865 -> 10x5x1865
+            neighborhood_features=neighborhood_features.reshape((next_layer_shape[0],next_layer_shape[1],-1))
+
+            key = neighborhood_features
+            value = neighborhood_features
+            dim = prev_layer_layered_embeddings[i+1].dim()
+            query = torch.cat([prev_layer_layered_embeddings[i+1], prev_layer_layered_time_diffs[i+1]], dim=dim-1)
+
+            query_shape = query.shape
+
+            if len(query_shape) == 2:
+                query = query.reshape((1, query_shape[0], query_shape[1]))
+
+            #todo check how to add mask
+            #shape 10,5, query_dim
+            attention_output, attention_output_weights = self.multi_head_attention(query=query, value=value, key=key)
+            dim = attention_output.dim()
+            prev_layer_layered_embeddings_next_shape = prev_layer_layered_embeddings[i+1].shape
+            if len(prev_layer_layered_embeddings_next_shape) == 2:
+                prev_layer_layered_embeddings[i+1] = prev_layer_layered_embeddings[i+1].reshape((1,
+                                                                                        prev_layer_layered_embeddings_next_shape[0],
+                                                                                        prev_layer_layered_embeddings_next_shape[1]))
+            x = torch.cat([attention_output, prev_layer_layered_embeddings[i+1]], dim=dim-1)
+            h = self.act(self.fc1(x))
+            result = self.fc2(h)
+            if i == len(prev_layer_layered_edge_features) -1:
+                result = result.squeeze()
+
+            new_layer_layered_embeddings.append(result)
+
+
+        return new_layer_layered_embeddings, new_layer_edge_features, new_layer_time_diffs
 
 
 def get_layer_type(layer_type: TGNLayerType):
     if layer_type == TGNLayerType.GraphSumEmbedding:
         return TGNLayerGraphSumEmbedding
+    elif layer_type == TGNLayerType.GraphAttentionEmbedding:
+        return TGNLayerGraphAttentionEmbedding
     else:
         raise Exception(f'Layer type {layer_type} not yet supported.')
 
