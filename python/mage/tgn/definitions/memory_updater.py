@@ -28,9 +28,9 @@ class MemoryUpdaterGRU(MemoryUpdater):
         messages, memory = data
 
         # memory_dim = (1, memory_dim)
-        memory = memory.unsqueeze(0)
+        # memory = memory.unsqueeze(0)
 
-        return self.memory_updater_net(messages, memory)
+        return self.memory_updater_net(messages, memory.unsqueeze(0))
 
 
 # todo check if this works, currently just c-p of GRU class
@@ -66,6 +66,6 @@ class MemoryUpdaterLSTM(MemoryUpdater):
         messages, memory = data
 
         # memory_dim = (1, memory_dim)
-        memory = memory.unsqueeze(0)
+        #memory = memory.unsqueeze(0)
 
-        return self.memory_updater_net(messages, memory)
+        return self.memory_updater_net(messages, memory.unsqueeze(0))

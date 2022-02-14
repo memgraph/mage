@@ -8,6 +8,8 @@ class RawMessage:
         self.source = source
         self.timestamp = timestamp
 
+    def detach_memory(self):
+        pass
     def __str__(self):
         return "{source},{timestamp}".format(source=self.source, timestamp=self.timestamp)
 
@@ -18,6 +20,7 @@ class NodeRawMessage(RawMessage):
         self.source_memory = source_memory
         self.timestamp = timestamp
         self.node_features = node_features
+
 
     def __str__(self):
         return "{source},{timestamp}".format(source=self.source, timestamp=self.timestamp)
@@ -31,6 +34,13 @@ class InteractionRawMessage(RawMessage):
         self.dest_memory = dest_memory
         self.delta_time = delta_time
         self.edge_features = edge_features
+
+
+    def detach_memory(self):
+        self.source_memory = self.source_memory.detach()
+        self.dest_memory = self.dest_memory.detach()
+        self.delta_time = self.delta_time.detach()
+        self.edge_features = self.edge_features.detach()
 
     def __str__(self):
         return "{source},{timestamp}".format(source=self.source, timestamp=self.timestamp)

@@ -12,6 +12,11 @@ class RawMessageStore:
         self.message_container:Dict[int, List[RawMessage]] = {}
         self.edge_raw_message_dimension = edge_raw_message_dimension
 
+    def detach_grads(self):
+        for node in self.message_container:
+            for message in self.message_container[node]:
+                message.detach_memory()
+
     def get_messages(self):
         return self.message_container.copy()
 

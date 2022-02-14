@@ -23,6 +23,7 @@ class TGN(nn.Module):
                  num_edge_features: int,
                  num_node_features: int,
                  message_dimension: int,
+                 num_neighbors: int,
                  edge_message_function_type: MessageFunctionType,
                  message_aggregator_type: MessageAggregatorType,
                  memory_updater_type: MemoryUpdaterType,
@@ -33,6 +34,8 @@ class TGN(nn.Module):
         self.time_dimension = time_dimension
         self.num_node_features = num_node_features
         self.num_edge_features = num_edge_features
+
+        self.num_neighbors = num_neighbors
 
         self.edge_features: Dict[int, torch.Tensor] = {}
         self.node_features: Dict[int, torch.Tensor] = {}
@@ -94,11 +97,37 @@ class TGN(nn.Module):
                              edge_feature_dim=self.num_edge_features,
                              time_encoding_dim=self.time_dimension,
                              node_features_dim=self.num_node_features,
-                           )
+                             num_neighbors=self.num_neighbors
+                             )
 
             tgn_layers.append(layer)
 
         self.tgn_net = nn.Sequential(*tgn_layers)
+
+    def memory_detach_tensor_grads(self):
+        self.memory.detach_tensor_grads()
+
+    def get_tgn_data(self, nodes: np.array, timestamps: np.array):
+        zeroth_layer_embeddings = []
+        edge_features_between_layers = []
+        time_diff_between_layers = []
+
+        for i in range(0, self.num_of_layers + 1):
+            neighbors_embeddings_zero_layer, edge_features_zero_layer, time_diff_zero_layer = self.get_raw_node_features_on_depth(
+                self.num_of_layers - i,
+                nodes,
+                num_neighbors=5,
+                timestamps=timestamps)
+
+            zeroth_layer_embeddings.append(neighbors_embeddings_zero_layer)
+
+            if edge_features_zero_layer is not None:
+                edge_features_between_layers.append(edge_features_zero_layer)
+
+            if time_diff_zero_layer is not None:
+                time_diff_between_layers.append(time_diff_zero_layer)
+
+        return zeroth_layer_embeddings, edge_features_between_layers, time_diff_between_layers
 
     def forward(self, data: Tuple[
         np.ndarray, np.ndarray, np.ndarray, np.ndarray, Dict[int, torch.Tensor], Dict[int, torch.Tensor]]):
@@ -109,6 +138,7 @@ class TGN(nn.Module):
         # destinations -> np.array(num_of_nodes,)
         # timestamps -> np.array(num_of_nodes,)
         # edge_index -> np.array(num_of_nodes,)
+        # save_in_raw_message_store :bool
         # tl;dr used to unpack data
         sources, destinations, timestamps, edge_idxs, edge_features, node_features = data
 
@@ -122,38 +152,22 @@ class TGN(nn.Module):
         # By doing this, the computation of the memory-related modules directly influences the loss
         self.process_previous_batches()
 
-        working_nodes = np.concatenate([sources.copy(), destinations.copy()], dtype=int)
-
-        zeroth_layer_embeddings = []
-        edge_features_between_layers = []
-        time_diff_between_layers = []
-
-        for i in range(0, self.num_of_layers + 1 ):
-            neighbors_embeddings_zero_layer, edge_features_zero_layer, time_diff_zero_layer = self.get_raw_node_features_on_depth(
-                self.num_of_layers-i,
-                working_nodes,
-                num_neighbors=5,
-                timestamps=np.concatenate([timestamps, timestamps]))  # for source and then destination nodes
-
-            zeroth_layer_embeddings.append(neighbors_embeddings_zero_layer)
-
-            if edge_features_zero_layer is not None:
-                edge_features_between_layers.append(edge_features_zero_layer)
-
-            if time_diff_zero_layer is not None:
-                time_diff_between_layers.append(time_diff_zero_layer)
-
-        tgn_data = (zeroth_layer_embeddings,
-                    edge_features_between_layers,
-                    time_diff_between_layers)
-
-        result = self.tgn_net(tgn_data)
+        result = self.tgn_net(self.get_tgn_data(
+            np.concatenate([sources.copy(), destinations.copy()], dtype=int),
+            np.concatenate([timestamps, timestamps])))
 
         # here we update raw message store, and this batch will be used in next
         # call of tgn in function self.process_previous_batches
         # the raw messages for this batch interactions are stored in the raw
         # message store  to be used in future batches.
         # in paper on figure 2 this is part 7.
+        self.process_current_batch(sources, destinations, node_features, edge_features, edge_idxs, timestamps)
+
+        return result
+
+    def process_current_batch(self, sources: np.array, destinations: np.array, node_features: Dict[int, torch.Tensor],
+                              edge_features: Dict[int, torch.Tensor], edge_idxs: np.array, timestamps: np.array):
+
         self.update_raw_message_store_current_batch(sources=sources,
                                                     destinations=destinations,
                                                     node_features=node_features,
@@ -172,102 +186,9 @@ class TGN(nn.Module):
         for node_id, node_feature in node_features.items():
             self.node_features[node_id] = node_feature
 
-        return result
-
-    def get_0_layer_node_features(self, nodes: np.array):
-        node_features = torch.empty((len(nodes), self.memory_dimension + self.num_node_features))
-        for i, node in enumerate(nodes):
-            memory_features = self.memory.get_node_memory(node)
-            node_feature = self.node_features[node] if node in self.node_features else torch.zeros(
-                self.num_node_features)
-            concat_features = torch.concat((memory_features, node_feature)).reshape(
-                (1, self.memory_dimension + self.num_node_features))
-            node_features[i][:] = concat_features
-        return node_features
-
-    def get_0_layer_edge_features(self, edge_idxs: np.array):
-        edge_features = torch.empty((len(edge_idxs), self.num_edge_features))
-        for i, edge_idx in enumerate(edge_idxs):
-            edge_feature = self.edge_features[edge_idx] if edge_idx in self.edge_features else torch.zeros(
-                self.num_edge_features)
-            edge_features[i][:] = edge_feature
-        return edge_features
-
-    def get_0_layer_timestamp_features(self, current_timestamp: int, neighbor_timestamps: np.array):
-        subtracted_arr = neighbor_timestamps - current_timestamp
-        timestamp_features = torch.from_numpy(np.array(subtracted_arr, dtype=np.float32)).reshape(
-            (len(neighbor_timestamps), 1))
-
-        return timestamp_features
-
-    def get_raw_node_features_on_depth(self, depth: int, original_nodes: np.array,
-                                       num_neighbors: int, timestamps: np.array) -> (
-            torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor):
-        # The goal of this function is to have embedding features in shape of 3D matrix. If we have 2 layers in TGN,
-        # that means we will do propagation 2 times, but it means we need to propagate info from 0th layer to 1st,
-        # and from 1st to 2nd. 0th layer means we will use raw features (memory_dimension + node_features) and those
-        # raw features will be represented in 2D matrix. So every node on 1st layer will have its own 2D matrix
-        # (shape= (rows=num_neighbors, columns=num_features))
-        # Since every node in 2nd layer has num_neighbors on 1st layer, we will have num_neighbors 2D matrices
-        # for each node. This number grows as layers grow.
-
-        assert depth >= 0, f'Layers should be of at least depth 0'
-
-        if depth == 0:
-            return self.get_0_layer_node_features(nodes=original_nodes), None, None
-
-        num_nodes = len(original_nodes)
-        zero_layer_nodes_raw_features = torch.empty((
-            num_nodes * num_neighbors ** (depth - 1), num_neighbors,
-            self.memory_dimension + self.num_node_features))
-        zero_layer_neighbors_edge_features = torch.empty(
-            (num_nodes * num_neighbors ** (depth - 1), num_neighbors, self.num_edge_features))
-        zero_layer_neighbors_time_diff = torch.empty(
-            (num_nodes * num_neighbors ** (depth - 1), num_neighbors, 1))
-
-        # zeroth dim represents how many 2D matrices we have
-        zeroth_dim_nodes = zero_layer_nodes_raw_features.shape[0]
-
-        # every node will have number of 2D matrices it occupies
-        # So for example if we have 2 layers, on 1st layer every node will have only 1 full 2D matrix
-        # But on second layer every node will have num_neigbors 2D matrices
-        nodes_block_size = zeroth_dim_nodes // num_nodes
-
-        for i, node in enumerate(original_nodes):
-            node_neighbors, edge_idxs, neighbors_timestamps = \
-                self.temporal_neighborhood.get_neighborhood(node, timestamps[i], num_neighbors)
-
-            if depth == 1:
-                # here we create 0th layer features for embeddings, but if you look at formula
-                # we need to do 0th layer features for current node also
-                zero_layer_nodes_raw_features[i] = self.get_0_layer_node_features(node_neighbors)
-                zero_layer_neighbors_edge_features[i] = self.get_0_layer_edge_features(edge_idxs)
-                zero_layer_neighbors_time_diff[i] = self.get_0_layer_timestamp_features(current_timestamp=timestamps[i],
-                                                                                        neighbor_timestamps=neighbors_timestamps)
-
-                # 0th layer features for node
-                zero_layer_nodes_raw_features[i] = self.get_0_layer_node_features(np.array([node]))
-                continue
-
-            # here we go only if original depth was 2
-            prev_layer_embedding, prev_layer_edge_features, prev_layer_time_diff = self.get_raw_node_features_on_depth(
-                depth - 1,
-                node_neighbors,
-                num_neighbors,
-                np.repeat(timestamps[i], num_neighbors)
-            )
-
-            # This way we now on which indexes are features for which node
-            zero_layer_nodes_raw_features[i * nodes_block_size:(i + 1) * nodes_block_size][:][
-            :] = prev_layer_embedding
-            zero_layer_neighbors_edge_features[i * nodes_block_size:(i + 1) * nodes_block_size][:][
-            :] = prev_layer_edge_features
-            zero_layer_neighbors_time_diff[i * nodes_block_size:(i + 1) * nodes_block_size][:][
-            :] = prev_layer_time_diff
-
-        return zero_layer_nodes_raw_features, zero_layer_neighbors_edge_features, zero_layer_neighbors_time_diff
-
     def process_previous_batches(self) -> None:
+        # todo check if necessary
+        self.raw_message_store.detach_grads()
 
         # dict nodeid -> List[event]
         raw_messages = self.raw_message_store.get_messages()
@@ -369,9 +290,9 @@ class TGN(nn.Module):
                                               dest_memory=memory.get_node_memory(event.dest),
                                               source=node,
                                               edge_features=edge_features[event.edge_indx],
-                                              delta_time=torch.as_tensor(
+                                              delta_time=torch.tensor(
                                                   np.array(event.timestamp).astype(
-                                                      'float')) - memory.get_last_node_update(
+                                                      'float'), requires_grad=False) - memory.get_last_node_update(
                                                   event.source)))
                     raw_messages[event.dest].append(
                         InteractionRawMessage(source_memory=memory.get_node_memory(event.dest),
@@ -379,9 +300,9 @@ class TGN(nn.Module):
                                               dest_memory=memory.get_node_memory(event.source),
                                               source=event.dest,
                                               edge_features=edge_features[event.edge_indx],
-                                              delta_time=torch.as_tensor(
+                                              delta_time=torch.tensor(
                                                   np.array(event.timestamp).astype(
-                                                      'float')) - memory.get_last_node_update(
+                                                      'float'), requires_grad=False) - memory.get_last_node_update(
                                                   event.dest)))
                 else:
                     raise Exception(f'Event Type not supported {type(event)}')
@@ -407,6 +328,164 @@ class TGN(nn.Module):
             updated_memory = torch.flatten(updated_memory)
             memory.set_node_memory(node, updated_memory)
 
+    def get_0_layer_node_features(self, nodes: np.array):
+        node_features = torch.empty((len(nodes), self.memory_dimension + self.num_node_features), requires_grad=False)
+        for i, node in enumerate(nodes):
+            memory_features = self.memory.get_node_memory(node)
+            node_feature = self.node_features[node] if node in self.node_features else torch.zeros(
+                self.num_node_features, requires_grad=False)
+            concat_features = torch.concat((memory_features, node_feature)).reshape(
+                (1, self.memory_dimension + self.num_node_features))
+            node_features[i][:] = concat_features
+        return node_features
+
+    def get_0_layer_edge_features(self, edge_idxs: np.array):
+        edge_features = torch.empty((len(edge_idxs), self.num_edge_features), requires_grad=False)
+        for i, edge_idx in enumerate(edge_idxs):
+            edge_feature = self.edge_features[edge_idx] if edge_idx in self.edge_features else torch.zeros(
+                self.num_edge_features, requires_grad=False)
+            edge_features[i][:] = edge_feature
+        return edge_features
+
+    def get_0_layer_timestamp_features(self, current_timestamp: int, neighbor_timestamps: np.array):
+        subtracted_arr = neighbor_timestamps - current_timestamp
+        timestamp_features = torch.tensor(np.array(subtracted_arr, dtype=np.float32), requires_grad=False).reshape(
+            (len(neighbor_timestamps), 1))
+
+        return timestamp_features
+
+    def get_raw_node_features_on_depth(self, depth: int, original_nodes: np.array,
+                                       num_neighbors: int, timestamps: np.array) -> (
+            torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor):
+        # The goal of this function is to have embedding features in shape of 3D matrix. If we have 2 layers in TGN,
+        # that means we will do propagation 2 times, but it means we need to propagate info from 0th layer to 1st,
+        # and from 1st to 2nd. 0th layer means we will use raw features (memory_dimension + node_features) and those
+        # raw features will be represented in 2D matrix. So every node on 1st layer will have its own 2D matrix
+        # (shape= (rows=num_neighbors, columns=num_features))
+        # Since every node in 2nd layer has num_neighbors on 1st layer, we will have num_neighbors 2D matrices
+        # for each node. This number grows as layers grow.
+
+        assert depth >= 0, f'Layers should be of at least depth 0'
+
+        if depth == 0:
+            return self.get_0_layer_node_features(nodes=original_nodes), None, None
+
+        num_nodes = len(original_nodes)
+        zero_layer_nodes_raw_features = torch.zeros((
+            num_nodes * num_neighbors ** (depth - 1), num_neighbors,
+            self.memory_dimension + self.num_node_features), requires_grad=False)
+        print("zero_layer_nodes_raw_features", id(zero_layer_nodes_raw_features), "layer", depth)
+        zero_layer_neighbors_edge_features = torch.zeros(
+            (num_nodes * num_neighbors ** (depth - 1), num_neighbors, self.num_edge_features), requires_grad=False)
+
+        zero_layer_neighbors_time_diff = torch.zeros(
+            (num_nodes * num_neighbors ** (depth - 1), num_neighbors, 1), requires_grad=False)
+
+        # zeroth dim represents how many 2D matrices we have
+        zeroth_dim_nodes = zero_layer_nodes_raw_features.shape[0]
+
+        # every node will have number of 2D matrices it occupies
+        # So for example if we have 2 layers, on 1st layer every node will have only 1 full 2D matrix
+        # But on second layer every node will have num_neigbors 2D matrices
+        nodes_block_size = zeroth_dim_nodes // num_nodes
+
+        for i, node in enumerate(original_nodes):
+            node_neighbors, edge_idxs, neighbors_timestamps = \
+                self.temporal_neighborhood.get_neighborhood(node, timestamps[i], num_neighbors)
+
+            if depth == 1:
+                # here we create 0th layer features for embeddings, but if you look at formula
+                # we need to do 0th layer features for current node also
+                zero_layer_nodes_raw_features[i] = self.get_0_layer_node_features(node_neighbors)
+                zero_layer_neighbors_edge_features[i] = self.get_0_layer_edge_features(edge_idxs)
+                zero_layer_neighbors_time_diff[i] = self.get_0_layer_timestamp_features(current_timestamp=timestamps[i],
+                                                                                        neighbor_timestamps=neighbors_timestamps)
+
+                # 0th layer features for node
+                # todo what is this?????
+                # zero_layer_nodes_raw_features[i] = self.get_0_layer_node_features(np.array([node]))
+                continue
+
+            # here we go only if original depth was 2
+            prev_layer_embedding, prev_layer_edge_features, prev_layer_time_diff = self.get_raw_node_features_on_depth(
+                depth - 1,
+                node_neighbors,
+                num_neighbors,
+                np.repeat(timestamps[i], num_neighbors)
+            )
+
+            # This way we now on which indexes are features for which node
+            zero_layer_nodes_raw_features[i * nodes_block_size:(i + 1) * nodes_block_size][:][
+            :] += prev_layer_embedding
+            zero_layer_neighbors_edge_features[i * nodes_block_size:(i + 1) * nodes_block_size][:][
+            :] += prev_layer_edge_features
+            zero_layer_neighbors_time_diff[i * nodes_block_size:(i + 1) * nodes_block_size][:][
+            :] += prev_layer_time_diff
+
+        print(" - - zero_layer_nodes_raw_features", id(zero_layer_nodes_raw_features), "layer", depth)
+        print()
+        return zero_layer_nodes_raw_features, zero_layer_neighbors_edge_features, zero_layer_neighbors_time_diff
+
+
+class TGNEdgesSelfSupervised(TGN):
+
+    def forward(self, data: Tuple[
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        Dict[int, torch.Tensor],
+        Dict[int, torch.Tensor]]):
+        # source -> np.array(num_of_nodes,)
+        # destinations -> np.array(num_of_nodes,)
+        # negative_sources -> np.array
+        # negative_destinations -> np.array
+        # timestamps -> np.array(num_of_nodes,)
+        # edge_index -> np.array(num_of_nodes,)
+
+        # edge_features = Dict(int, np.array)
+        # node_features -> Dict(int, np.array)
+        # tl;dr used to unpack data
+        sources, destinations, negative_sources, negative_destinations, timestamps, edge_idxs, edge_features, node_features = data
+
+        assert sources.shape[0] == destinations.shape[0] == negative_sources.shape[0] == negative_destinations.shape[
+            0] == timestamps.shape[0] == len(edge_idxs) == len(edge_features), \
+            f'Sources, destinations, negative sources, negative destinations, timestamps, edge_indxs and edge_features must be of same dimension, but got ' \
+            f'{sources.shape[0]}, {destinations.shape[0]}, {timestamps.shape[0]}, {len(edge_idxs)}, {len(edge_features)}'
+
+        # part of 1->2->3, all till point 4 in paper from Figure 2
+        # we are using this part so that we can get gradients from memory module also and so that they
+        # can be included in optimizer
+        # By doing this, the computation of the memory-related modules directly influences the loss
+        self.process_previous_batches()
+
+        embeddings_list, _, _ = self.tgn_net(self.get_tgn_data(
+            np.concatenate([sources.copy(), destinations.copy()], dtype=int),
+            np.concatenate([timestamps, timestamps])))
+
+        # return will be a matrix inside a list
+        # matrix shape = (N, embedding_dim)
+        embeddings_merged = embeddings_list[0]
+
+        #        embeddings_negative_list, _, _ = self.tgn_net(self.get_tgn_data(
+        #            np.concatenate([negative_sources.copy(), negative_destinations.copy()], dtype=int),
+        #            np.concatenate([timestamps, timestamps])))
+
+        # return will be a matrix inside a list
+        # matrix shape = (N, embedding_dim)
+        #        embeddings_negative_merged = embeddings_negative_list[0]
+
+        # here we update raw message store, and this batch will be used in next
+        # call of tgn in function self.process_previous_batches
+        # the raw messages for this batch interactions are stored in the raw
+        # message store  to be used in future batches.
+        # in paper on figure 2 this is part 7.
+        self.process_current_batch(sources, destinations, node_features, edge_features, edge_idxs, timestamps)
+
+        return embeddings_merged, torch.zeros((10, 200))
+
 
 class TGNLayer(nn.Module):
     """
@@ -414,12 +493,13 @@ class TGNLayer(nn.Module):
     """
 
     def __init__(self, embedding_dimension: int, edge_feature_dim: int,
-                 time_encoding_dim: int, node_features_dim: int):
+                 time_encoding_dim: int, node_features_dim: int, num_neighbors: int):
         super().__init__()
         self.embedding_dimension = embedding_dimension
         self.edge_feature_dim = edge_feature_dim
         self.time_encoding_dim = time_encoding_dim
         self.node_features_dim = node_features_dim
+        self.num_neighbors = num_neighbors
 
 
 class TGNLayerGraphSumEmbedding(TGNLayer):
@@ -428,9 +508,9 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
     """
 
     def __init__(self, embedding_dimension: int, edge_feature_dim: int,
-                 time_encoding_dim: int, node_features_dim: int):
+                 time_encoding_dim: int, node_features_dim: int, num_neighbors: int):
         super().__init__(embedding_dimension, edge_feature_dim, time_encoding_dim,
-                         node_features_dim)
+                         node_features_dim, num_neighbors)
         # Initialize W1 matrix and W2 matrix
 
         self.linear_1 = torch.nn.Linear(embedding_dimension + time_encoding_dim + edge_feature_dim,
@@ -440,7 +520,6 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
                                         embedding_dimension)
 
     def forward(self, data: Tuple[List[torch.Tensor], List[torch.Tensor], List[torch.Tensor]]):
-        print("hi from TGN Graph Sum Embedding layer")
         # todo set requires grad on torch tensors
         # If we want to get embeddings on layer 2, we need propagation two times
         # First we need from neighbors of neighbors to neighbors of our source nodes and then from neighbors to
@@ -460,14 +539,15 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
         new_layer_edge_features = prev_layer_layered_edge_features[1:]
         new_layer_time_diffs = prev_layer_layered_time_diffs[1:]
 
-        assert  len(prev_layer_layered_edge_features) == len(prev_layer_layered_time_diffs) == len(prev_layer_layered_embeddings)-1, \
+        assert len(prev_layer_layered_edge_features) == len(prev_layer_layered_time_diffs) == len(
+            prev_layer_layered_embeddings) - 1, \
             f"Error brate"
 
-        for i in range (len(prev_layer_layered_edge_features)):
+        for i in range(len(prev_layer_layered_edge_features)):
             # h_j @ layer-1, e_ij, phi(t)
             neighborhood_features = torch.cat([prev_layer_layered_embeddings[i],
-                                           prev_layer_layered_edge_features[i],
-                                           prev_layer_layered_time_diffs[i]], dim=2)
+                                               prev_layer_layered_edge_features[i],
+                                               prev_layer_layered_time_diffs[i]], dim=2)
 
             # Apply W1 matrix projection to smaller dim - N, neighbors, (embedding_dimension +
             # time_encoding_dim + edge_feature_dim) -> N, neighbors, (embedding_dimension)
@@ -476,21 +556,20 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
             # after that we do summation of rows of each matrix,
             # (neighborhood, num_neighbors, embedding_dim) -> (neighborhood, embedding_dim)
             # h_tilda @ layer
-            current_layer_neighbors_sum = torch.nn.functional.relu(torch.sum(neighbor_embeddings, dim=1))
+            #todo check inplace
+            current_layer_neighbors_sum = torch.nn.functional.relu(torch.sum(neighbor_embeddings, dim=1), inplace=False)
 
-            if i+1 < len(prev_layer_layered_edge_features):
-                current_layer_neighbors_sum = current_layer_neighbors_sum.view(prev_layer_layered_embeddings[i+1].shape[0],
-                                                                               prev_layer_layered_embeddings[i+1].shape[1],
-                                                                               prev_layer_layered_embeddings[i+1].shape[2])
+            if i + 1 < len(prev_layer_layered_edge_features):
+                current_layer_neighbors_sum = current_layer_neighbors_sum.view(
+                    prev_layer_layered_embeddings[i + 1].shape[0],
+                    prev_layer_layered_embeddings[i + 1].shape[1],
+                    prev_layer_layered_embeddings[i + 1].shape[2])
 
             dim = current_layer_neighbors_sum.dim()
-            current_layer_neighbors_embeddings = self.linear_2(torch.cat([prev_layer_layered_embeddings[i+1],
-                                                                          current_layer_neighbors_sum], dim = dim -1))
+            current_layer_neighbors_embeddings = self.linear_2(torch.cat([prev_layer_layered_embeddings[i + 1],
+                                                                          current_layer_neighbors_sum], dim=dim - 1))
 
             new_layer_layered_embeddings.append(current_layer_neighbors_embeddings)
-
-
-
 
         return new_layer_layered_embeddings, new_layer_edge_features, new_layer_time_diffs
 
@@ -501,27 +580,27 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
     """
 
     def __init__(self, embedding_dimension: int, edge_feature_dim: int,
-                 time_encoding_dim: int, node_features_dim: int):
-        super().__init__(embedding_dimension, edge_feature_dim, time_encoding_dim, node_features_dim)
+                 time_encoding_dim: int, node_features_dim: int, num_neighbors: int):
+        super().__init__(embedding_dimension, edge_feature_dim, time_encoding_dim, node_features_dim, num_neighbors)
 
         self.query_dim = embedding_dimension + time_encoding_dim
         self.key_dim = embedding_dimension + edge_feature_dim + time_encoding_dim
         self.value_dim = self.key_dim
 
         self.multi_head_attention = nn.MultiheadAttention(embed_dim=self.query_dim,
-                                                          kdim=self.key_dim*5, #set on neighbors num
-                                                          vdim=self.value_dim*5,
-                                                          num_heads=1,
-                                                          batch_first=True) # this way no need to do torch.permute later <3
+                                                          kdim=self.key_dim * self.num_neighbors,
+                                                          # set on neighbors num
+                                                          vdim=self.value_dim * self.num_neighbors,
+                                                          num_heads=1,  # this add as a parameter
+                                                          batch_first=True)  # this way no need to do torch.permute later <3
         # todo add MLP layer with options
-
+        # fc1, fc2 and relu represent last MLP
         self.fc1 = torch.nn.Linear(self.query_dim + embedding_dimension, embedding_dimension)
         self.fc2 = torch.nn.Linear(embedding_dimension, embedding_dimension)
         self.act = torch.nn.ReLU()
 
         torch.nn.init.xavier_normal_(self.fc1.weight)
         torch.nn.init.xavier_normal_(self.fc2.weight)
-
 
     def forward(self, data):
         print("hi from TGN Graph Attention Embedding layer")
@@ -535,7 +614,7 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
             prev_layer_layered_embeddings) - 1, \
             f"Error brate"
         prev_layer_layered_time_diffs.append(torch.zeros((10, 1)))
-        for i in range (len(prev_layer_layered_edge_features)):
+        for i in range(len(prev_layer_layered_edge_features)):
             # C^(l)(t)
             # shape = N, num_neighbors,
             neighborhood_features = torch.cat([prev_layer_layered_embeddings[i],
@@ -543,39 +622,40 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
                                                prev_layer_layered_time_diffs[i]], dim=2)
             # goal is from 50x5x373 -> 50x1865
             neighborhood_features = torch.flatten(neighborhood_features, start_dim=1)
-            next_layer_shape = prev_layer_layered_embeddings[i+1].shape
+            next_layer_shape = prev_layer_layered_embeddings[i + 1].shape
             if len(next_layer_shape) == 2:
-                next_layer_shape=(1, next_layer_shape[0])
+                next_layer_shape = (1, next_layer_shape[0])
             # 50x1865 -> 10x5x1865
-            neighborhood_features=neighborhood_features.reshape((next_layer_shape[0],next_layer_shape[1],-1))
+            neighborhood_features = neighborhood_features.reshape((next_layer_shape[0], next_layer_shape[1], -1))
 
             key = neighborhood_features
             value = neighborhood_features
-            dim = prev_layer_layered_embeddings[i+1].dim()
-            query = torch.cat([prev_layer_layered_embeddings[i+1], prev_layer_layered_time_diffs[i+1]], dim=dim-1)
+            dim = prev_layer_layered_embeddings[i + 1].dim()
+            query = torch.cat([prev_layer_layered_embeddings[i + 1], prev_layer_layered_time_diffs[i + 1]], dim=dim - 1)
 
             query_shape = query.shape
 
             if len(query_shape) == 2:
                 query = query.reshape((1, query_shape[0], query_shape[1]))
 
-            #todo check how to add mask
-            #shape 10,5, query_dim
+            # todo check how to add mask
+            # shape 10,5, query_dim
             attention_output, attention_output_weights = self.multi_head_attention(query=query, value=value, key=key)
             dim = attention_output.dim()
-            prev_layer_layered_embeddings_next_shape = prev_layer_layered_embeddings[i+1].shape
+            prev_layer_layered_embeddings_next_shape = prev_layer_layered_embeddings[i + 1].shape
             if len(prev_layer_layered_embeddings_next_shape) == 2:
-                prev_layer_layered_embeddings[i+1] = prev_layer_layered_embeddings[i+1].reshape((1,
-                                                                                        prev_layer_layered_embeddings_next_shape[0],
-                                                                                        prev_layer_layered_embeddings_next_shape[1]))
-            x = torch.cat([attention_output, prev_layer_layered_embeddings[i+1]], dim=dim-1)
+                prev_layer_layered_embeddings[i + 1] = prev_layer_layered_embeddings[i + 1].reshape((1,
+                                                                                                     prev_layer_layered_embeddings_next_shape[
+                                                                                                         0],
+                                                                                                     prev_layer_layered_embeddings_next_shape[
+                                                                                                         1]))
+            x = torch.cat([attention_output, prev_layer_layered_embeddings[i + 1]], dim=dim - 1)
             h = self.act(self.fc1(x))
             result = self.fc2(h)
-            if i == len(prev_layer_layered_edge_features) -1:
+            if i == len(prev_layer_layered_edge_features) - 1:
                 result = result.squeeze()
 
             new_layer_layered_embeddings.append(result)
-
 
         return new_layer_layered_embeddings, new_layer_edge_features, new_layer_time_diffs
 
