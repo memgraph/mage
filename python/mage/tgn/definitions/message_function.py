@@ -8,6 +8,7 @@ class MessageFunction(nn.Module):
     """
     This is base class for Message function implementation
     """
+
     def __init__(self, raw_message_dimension: int, message_dimension: int):
         super().__init__()
         self.raw_message_dimension = raw_message_dimension
@@ -34,8 +35,7 @@ class MessageFunctionIdentity(MessageFunction):
         assert raw_message_dimension == message_dimension, 'f Wrong!'
 
     def forward(self, data):
-        concat_message = torch.concat(data,dim=-1)
+        concat_message = torch.concat(data, dim=-1)
 
         # returns shape (1, message_dim) (1 row, message dim columns)
         return concat_message.unsqueeze(0)
-

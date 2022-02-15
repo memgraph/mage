@@ -22,6 +22,9 @@ class NodeRawMessage(RawMessage):
         self.node_features = node_features
 
 
+    def detach_memory(self):
+        pass
+
     def __str__(self):
         return "{source},{timestamp}".format(source=self.source, timestamp=self.timestamp)
 
@@ -37,6 +40,7 @@ class InteractionRawMessage(RawMessage):
 
 
     def detach_memory(self):
+
         self.source_memory = self.source_memory.detach()
         self.dest_memory = self.dest_memory.detach()
         self.delta_time = self.delta_time.detach()

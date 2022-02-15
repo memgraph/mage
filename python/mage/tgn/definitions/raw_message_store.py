@@ -13,12 +13,14 @@ class RawMessageStore:
         self.edge_raw_message_dimension = edge_raw_message_dimension
 
     def detach_grads(self):
+
         for node in self.message_container:
-            for message in self.message_container[node]:
+            for i, message in enumerate(self.message_container[node]):
                 message.detach_memory()
 
     def get_messages(self):
-        return self.message_container.copy()
+        #todo was a copy here
+        return self.message_container
 
     def update_messages(self, new_node_messages:Dict[int, List[RawMessage]]):
         for node in new_node_messages:

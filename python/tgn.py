@@ -45,10 +45,10 @@ def get_train_data(train_indices: np.array, sources: np.array, destinations: np.
     # be careful if you will copy this later, because here mapping of indices works from 0 to 100, later it should
     # also??
     # dict -> (edge_indx, np.array)
-    edge_features_train_dict = {edge_idxs[index]: torch.tensor(np.array(feature, dtype=np.float32), requires_grad=False)
+    edge_features_train_dict = {edge_idxs[index]: torch.tensor(np.array(feature, dtype=np.float32), requires_grad=True)
                                 for index, feature in zip(train_indices, edge_features_train)}
 
-    node_features_dict = {node: torch.tensor(np.zeros(NUM_NODE_FEATURES), requires_grad=False) for node in
+    node_features_dict = {node: torch.tensor(np.zeros(NUM_NODE_FEATURES), requires_grad=True) for node in
                           set(sources).union(destinations)}
 
     return sources_train, destinations_train, negative_src, negative_dest, timestamps_train, edge_idxs_train, \
@@ -106,7 +106,9 @@ def train_tgn(config):
 
         for i in range(batch_num):
             print("Ba")
-            # optimizer.zero_grad()
+
+            optimizer.zero_grad()
+
             if i == batch_num - 1:
                 end_batch_idx = len(sources) - 1
             else:
@@ -149,7 +151,7 @@ def train_tgn(config):
             optimizer.step()
             m_loss.append(loss.item())
 
-            tgn.memory_detach_tensor_grads()
+            #tgn.memory_detach_tensor_grads()
 
         print("epoch num", epoch_num, " loss", loss, "mean loss,", np.mean(m_loss))
 
