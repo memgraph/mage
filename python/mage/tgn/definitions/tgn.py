@@ -105,9 +105,12 @@ class TGN(nn.Module):
         self.tgn_net = nn.Sequential(*tgn_layers)
 
     def memory_detach_tensor_grads(self):
-        raise Exception("ne moze")
+
         self.memory.detach_tensor_grads()
         self.raw_message_store.detach_grads()
+
+    def reset_memory(self):
+        self.memory.reset_memory()
 
     def get_tgn_data(self, nodes: np.array, timestamps: np.array):
         zeroth_layer_embeddings = []
@@ -374,7 +377,7 @@ class TGN(nn.Module):
         zero_layer_nodes_raw_features = torch.zeros((
             num_nodes * num_neighbors ** (depth - 1), num_neighbors,
             self.memory_dimension + self.num_node_features), requires_grad=False)
-        #print("zero_layer_nodes_raw_features", id(zero_layer_nodes_raw_features), "layer", depth)
+        # print("zero_layer_nodes_raw_features", id(zero_layer_nodes_raw_features), "layer", depth)
         zero_layer_neighbors_edge_features = torch.zeros(
             (num_nodes * num_neighbors ** (depth - 1), num_neighbors, self.num_edge_features), requires_grad=False)
 
@@ -424,8 +427,8 @@ class TGN(nn.Module):
             zero_layer_neighbors_time_diff[i * nodes_block_size:(i + 1) * nodes_block_size][:][
             :] += prev_layer_time_diff
 
-        #print(" - - zero_layer_nodes_raw_features", id(zero_layer_nodes_raw_features), "layer", depth)
-        #print()
+        # print(" - - zero_layer_nodes_raw_features", id(zero_layer_nodes_raw_features), "layer", depth)
+        # print()
         return zero_layer_nodes_raw_features, zero_layer_neighbors_edge_features, zero_layer_neighbors_time_diff
 
 
@@ -462,27 +465,28 @@ class TGNEdgesSelfSupervised(TGN):
         # can be included in optimizer
         # By doing this, the computation of the memory-related modules directly influences the loss
         self.process_previous_batches()
-        emb, edg, tmp = self.get_tgn_data(
+        graph_data = self.get_tgn_data(
             np.concatenate([sources.copy(), destinations.copy()], dtype=int),
             np.concatenate([timestamps, timestamps]))
 
-        aa = [torch.rand((50, 5, 200), requires_grad=True), torch.rand((10, 5, 200), requires_grad=False),
-              torch.rand((10, 200), requires_grad=True)]
-        bb = [torch.rand((50, 5, 172), requires_grad=True), torch.rand((10, 5, 172), requires_grad=False)]
-        cc = [torch.rand((50, 5, 1), requires_grad=True), torch.rand((10, 5, 1), requires_grad=False)]
-        embeddings_list, _, _ = self.tgn_net((aa, bb, cc))
+        # todo remove, only for testing purposes
+        # aa = [torch.rand((50, 5, 200), requires_grad=True), torch.rand((10, 5, 200), requires_grad=False),
+        #      torch.rand((10, 200), requires_grad=True)]
+        # bb = [torch.rand((50, 5, 172), requires_grad=True), torch.rand((10, 5, 172), requires_grad=False)]
+        # cc = [torch.rand((50, 5, 1), requires_grad=True), torch.rand((10, 5, 1), requires_grad=False)]
+        embeddings_list, _, _ = self.tgn_net(graph_data)
 
         # return will be a matrix inside a list
         # matrix shape = (N, embedding_dim)
         embeddings_merged = embeddings_list[0]
 
-        # embeddings_negative_list, _, _ = self.tgn_net(self.get_tgn_data(
-        #            np.concatenate([negative_sources.copy(), negative_destinations.copy()], dtype=int),
-        #            np.concatenate([timestamps, timestamps])))
+        embeddings_negative_list, _, _ = self.tgn_net(self.get_tgn_data(
+            np.concatenate([negative_sources.copy(), negative_destinations.copy()], dtype=int),
+            np.concatenate([timestamps, timestamps])))
 
         # return will be a matrix inside a list
         # matrix shape = (N, embedding_dim)
-        # embeddings_negative_merged = embeddings_negative_list[0]
+        embeddings_negative_merged = embeddings_negative_list[0]
 
         # here we update raw message store, and this batch will be used in next
         # call of tgn in function self.process_previous_batches
@@ -491,7 +495,7 @@ class TGNEdgesSelfSupervised(TGN):
         # in paper on figure 2 this is part 7.
         self.process_current_batch(sources, destinations, node_features, edge_features, edge_idxs, timestamps)
 
-        return embeddings_merged, torch.zeros((10, 200))
+        return embeddings_merged, embeddings_negative_merged
 
 
 class TGNLayer(nn.Module):
@@ -543,36 +547,35 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
 
         prev_layer_layered_embeddings, prev_layer_layered_edge_features, prev_layer_layered_time_diffs = data
 
-        new_layer_layered_embeddings = []
-        new_layer_edge_features = []
-
-        new_layer_time_diffs = []
-
-        for i in range(1, len(prev_layer_layered_edge_features)):
-            new_layer_edge_features.append(prev_layer_layered_edge_features[i].clone().detach())
-            new_layer_time_diffs.append(prev_layer_layered_time_diffs[i].clone())
-
-        # return new_layer_layered_embeddings, new_layer_edge_features, new_layer_time_diffs
-
         assert len(prev_layer_layered_edge_features) == len(prev_layer_layered_time_diffs) == len(
             prev_layer_layered_embeddings) - 1, \
-            f"Error brate"
+            f"Error in dimensions"
 
+        new_layer_edge_features = []
+        new_layer_time_diffs = []
+
+        # on every layer we need to do few propagations
+        # For example if we want embeddings of our nodes on 2nd layer, firstly we need
+        # to propagate on 0th layer from neighbors of nodes we operate on, and we need embeddings
+        # on 0th layer from neighbors of neighbors of sources
         num_propagations = len(prev_layer_layered_embeddings) - 1
+
+        for i in range(1, num_propagations):
+            new_layer_edge_features.append(prev_layer_layered_edge_features[i].detach().clone())
+            new_layer_time_diffs.append(prev_layer_layered_time_diffs[i].detach().clone())
 
         neighbor_features = []
         prev_layer_layered_emb_copy = []
         for i in range(num_propagations):
-            neighbor_features.append(torch.cat([prev_layer_layered_embeddings[i].clone().detach(),
-                                                prev_layer_layered_edge_features[i].clone().detach(),
-                                                prev_layer_layered_time_diffs[i].clone().detach()], dim=2))
-            prev_layer_layered_emb_copy.append(prev_layer_layered_embeddings[i + 1].clone().detach())
+            # h_j @ layer-1, e_ij, phi(t)
+            neighbor_features.append(torch.cat([prev_layer_layered_embeddings[i].detach().clone(),
+                                                prev_layer_layered_edge_features[i].detach().clone(),
+                                                prev_layer_layered_time_diffs[i].detach().clone()], dim=2))
+            prev_layer_layered_emb_copy.append(prev_layer_layered_embeddings[i + 1].detach().clone())
+
+        neighborhood_summed_features = []
 
         for i in range(num_propagations):
-            # h_j @ layer-1, e_ij, phi(t)
-            # neighborhood_features = torch.cat([torch.clone(prev_layer_layered_embeddings[i]),
-            #                                   torch.clone(prev_layer_layered_edge_features[i]),
-            #                                   torch.clone(prev_layer_layered_time_diffs[i])], dim=2)
 
             neighborhood_features = neighbor_features[i]
 
@@ -590,32 +593,22 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
                     prev_layer_layered_embeddings[i + 1].shape[0],
                     prev_layer_layered_embeddings[i + 1].shape[1],
                     prev_layer_layered_embeddings[i + 1].shape[2])
-            #new_layer_layered_embeddings.append(prev_layer_layered_embeddings[i+1])
-            new_layer_layered_embeddings.append(current_layer_neighbors_sum)
-            continue
-            dim = current_layer_neighbors_sum.dim()
-            # current_layer_neighbors_embeddings = self.linear_2(torch.cat([prev_layer_layered_embeddings[i + 1],
-            #                                                              current_layer_neighbors_sum], dim=dim - 1))
 
-            current_layer_neighbors_embeddings = self.linear_2(
-                torch.cat([prev_layer_layered_emb_copy[i].clone().detach(),
-                           current_layer_neighbors_sum], dim=dim - 1))
+            neighborhood_summed_features.append(current_layer_neighbors_sum)
 
-            new_layer_layered_embeddings.append(current_layer_neighbors_embeddings)
-
-        cat_embed = []
+        h_tilda_concat_h_i_list = []
         for i in range(num_propagations):
             dim = prev_layer_layered_emb_copy[i].dim()
-            cat_embed.append(
-                torch.cat([prev_layer_layered_emb_copy[i].clone().detach(),
-                           new_layer_layered_embeddings[i].clone().detach()], dim=dim - 1))
+            h_tilda_concat_h_i_list.append(
+                torch.cat([prev_layer_layered_emb_copy[i].detach().clone(),
+                           neighborhood_summed_features[i].detach().clone()], dim=dim - 1))
 
-        new_new_layered_emb=[]
+        new_layer_embeddings = []
         for i in range(num_propagations):
-            baa = cat_embed[i]
-            new_new_layered_emb.append(self.linear_2(baa))
+            h_i_h_tilda_i = h_tilda_concat_h_i_list[i]
+            new_layer_embeddings.append(self.linear_2(h_i_h_tilda_i))
 
-        return new_new_layered_emb, new_layer_edge_features, new_layer_time_diffs
+        return new_layer_embeddings, new_layer_edge_features, new_layer_time_diffs
 
 
 class TGNLayerGraphAttentionEmbedding(TGNLayer):
@@ -636,7 +629,8 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
                                                           # set on neighbors num
                                                           vdim=self.value_dim * self.num_neighbors,
                                                           num_heads=1,  # this add as a parameter
-                                                          batch_first=True)  # this way no need to do torch.permute later <3
+                                                          batch_first=True)  # this way no need to do torch.permute
+        # later <3
         # todo add MLP layer with options
         # fc1, fc2 and relu represent last MLP
         self.fc1 = torch.nn.Linear(self.query_dim + embedding_dimension, embedding_dimension)
@@ -647,7 +641,6 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
         torch.nn.init.xavier_normal_(self.fc2.weight)
 
     def forward(self, data):
-        print("hi from TGN Graph Attention Embedding layer")
         prev_layer_layered_embeddings, prev_layer_layered_edge_features, prev_layer_layered_time_diffs = data
 
         new_layer_layered_embeddings = []
@@ -656,8 +649,17 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
 
         assert len(prev_layer_layered_edge_features) == len(prev_layer_layered_time_diffs) == len(
             prev_layer_layered_embeddings) - 1, \
-            f"Error brate"
-        prev_layer_layered_time_diffs.append(torch.zeros((10, 1)))
+            f"Error in dimensions"
+
+        num_propagations = len(prev_layer_layered_embeddings) - 1
+
+        last_embed_idx = len(prev_layer_layered_embeddings) - 1
+        num_source_nodes = prev_layer_layered_embeddings[last_embed_idx].shape[0]
+
+        # todo fix, send timestamps of nodes
+        prev_layer_layered_time_diffs.append(torch.zeros((num_source_nodes, 1)))
+
+
         for i in range(len(prev_layer_layered_edge_features)):
             # C^(l)(t)
             # shape = N, num_neighbors,
