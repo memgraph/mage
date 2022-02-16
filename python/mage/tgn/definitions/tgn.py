@@ -121,7 +121,7 @@ class TGN(nn.Module):
             neighbors_embeddings_zero_layer, edge_features_zero_layer, time_diff_zero_layer = self.get_raw_node_features_on_depth(
                 self.num_of_layers - i,
                 nodes,
-                num_neighbors=5,
+                num_neighbors=self.num_neighbors,
                 timestamps=timestamps)
 
             zeroth_layer_embeddings.append(neighbors_embeddings_zero_layer)
@@ -405,10 +405,6 @@ class TGN(nn.Module):
                 zero_layer_neighbors_edge_features[i] = self.get_0_layer_edge_features(edge_idxs)
                 zero_layer_neighbors_time_diff[i] = self.get_0_layer_timestamp_features(current_timestamp=timestamps[i],
                                                                                         neighbor_timestamps=neighbors_timestamps)
-
-                # 0th layer features for node
-                # todo what is this?????
-                # zero_layer_nodes_raw_features[i] = self.get_0_layer_node_features(np.array([node]))
                 continue
 
             # here we go only if original depth was 2
@@ -433,6 +429,23 @@ class TGN(nn.Module):
 
 
 class TGNEdgesSelfSupervised(TGN):
+
+    def __init__(self, num_of_layers: int,
+                 layer_type: TGNLayerType,
+                 memory_dimension: int,
+                 time_dimension: int,
+                 num_edge_features: int,
+                 num_node_features: int,
+                 message_dimension: int,
+                 num_neighbors: int,
+                 edge_message_function_type: MessageFunctionType,
+                 message_aggregator_type: MessageAggregatorType,
+                 memory_updater_type: MemoryUpdaterType,
+                 ):
+        super(TGNEdgesSelfSupervised, self).__init__(num_of_layers, layer_type, memory_dimension, time_dimension,
+                                                     num_edge_features, num_node_features, message_dimension,
+                                                     num_neighbors, edge_message_function_type, message_aggregator_type,
+                                                     memory_updater_type)
 
     def forward(self, data: Tuple[
         np.ndarray,
@@ -469,11 +482,6 @@ class TGNEdgesSelfSupervised(TGN):
             np.concatenate([sources.copy(), destinations.copy()], dtype=int),
             np.concatenate([timestamps, timestamps]))
 
-        # todo remove, only for testing purposes
-        # aa = [torch.rand((50, 5, 200), requires_grad=True), torch.rand((10, 5, 200), requires_grad=False),
-        #      torch.rand((10, 200), requires_grad=True)]
-        # bb = [torch.rand((50, 5, 172), requires_grad=True), torch.rand((10, 5, 172), requires_grad=False)]
-        # cc = [torch.rand((50, 5, 1), requires_grad=True), torch.rand((10, 5, 1), requires_grad=False)]
         embeddings_list, _, _ = self.tgn_net(graph_data)
 
         # return will be a matrix inside a list
@@ -633,19 +641,17 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
         # later <3
         # todo add MLP layer with options
         # fc1, fc2 and relu represent last MLP
-        self.fc1 = torch.nn.Linear(self.query_dim + embedding_dimension, embedding_dimension)
-        self.fc2 = torch.nn.Linear(embedding_dimension, embedding_dimension)
-        self.act = torch.nn.ReLU()
+        self.fc1 = nn.Linear(self.query_dim + embedding_dimension, embedding_dimension)
+        self.fc2 = nn.Linear(embedding_dimension, embedding_dimension)
+        self.act = nn.ReLU()
 
-        torch.nn.init.xavier_normal_(self.fc1.weight)
-        torch.nn.init.xavier_normal_(self.fc2.weight)
+        nn.init.xavier_normal_(self.fc1.weight)
+        nn.init.xavier_normal_(self.fc2.weight)
 
     def forward(self, data):
         prev_layer_layered_embeddings, prev_layer_layered_edge_features, prev_layer_layered_time_diffs = data
 
-        new_layer_layered_embeddings = []
-        new_layer_edge_features = prev_layer_layered_edge_features[1:]
-        new_layer_time_diffs = prev_layer_layered_time_diffs[1:]
+
 
         assert len(prev_layer_layered_edge_features) == len(prev_layer_layered_time_diffs) == len(
             prev_layer_layered_embeddings) - 1, \
@@ -653,53 +659,111 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
 
         num_propagations = len(prev_layer_layered_embeddings) - 1
 
+        # todo 1: fix, send timestamps of nodes, currently I am using timestamps of edges + this zeros
+        # todo 2: move this to TGN forward part
         last_embed_idx = len(prev_layer_layered_embeddings) - 1
         num_source_nodes = prev_layer_layered_embeddings[last_embed_idx].shape[0]
-
-        # todo fix, send timestamps of nodes
         prev_layer_layered_time_diffs.append(torch.zeros((num_source_nodes, 1)))
 
+        # copy to new layer
+        new_layer_edge_features = []
+        new_layer_time_diffs = []
+        for i in range(1, num_propagations):
+            new_layer_edge_features.append(prev_layer_layered_edge_features[i].detach().clone())
+            new_layer_time_diffs.append(prev_layer_layered_time_diffs[i].detach().clone())
 
-        for i in range(len(prev_layer_layered_edge_features)):
+        neighborhood_concat_features = []
+        prev_layer_layered_emb_copy = []
+        prev_layer_layered_emb_copy_2 = []
+        current_time_features_list = []
+        for i in range(num_propagations):
             # C^(l)(t)
             # shape = N, num_neighbors,
-            neighborhood_features = torch.cat([prev_layer_layered_embeddings[i],
-                                               prev_layer_layered_edge_features[i],
-                                               prev_layer_layered_time_diffs[i]], dim=2)
-            # goal is from 50x5x373 -> 50x1865
-            neighborhood_features = torch.flatten(neighborhood_features, start_dim=1)
+            neighborhood_features = torch.cat([prev_layer_layered_embeddings[i].detach().clone(),
+                                               prev_layer_layered_edge_features[i].detach().clone(),
+                                               prev_layer_layered_time_diffs[i].detach().clone()], dim=2)
+
+            # example 50x5x373 -> 50x1865,  concatenate features of neighbors
+            neighborhood_features_flatten = torch.flatten(neighborhood_features, start_dim=1)
+
+            # conform our matrix to shape of its sources (since we in current iteration working with neighbors of
+            # sources)
             next_layer_shape = prev_layer_layered_embeddings[i + 1].shape
             if len(next_layer_shape) == 2:
+                # this is just technique so that we have 3D matrix in any case
                 next_layer_shape = (1, next_layer_shape[0])
+
             # 50x1865 -> 10x5x1865
-            neighborhood_features = neighborhood_features.reshape((next_layer_shape[0], next_layer_shape[1], -1))
+            # 10 represents number of top layer source nodes, 5 number of their neighbors
+            neighborhood_features_flatten_reshapped = neighborhood_features_flatten.reshape((next_layer_shape[0], next_layer_shape[1], -1))
 
-            key = neighborhood_features
-            value = neighborhood_features
-            dim = prev_layer_layered_embeddings[i + 1].dim()
-            query = torch.cat([prev_layer_layered_embeddings[i + 1], prev_layer_layered_time_diffs[i + 1]], dim=dim - 1)
+            neighborhood_concat_features.append(neighborhood_features_flatten_reshapped.detach().clone())
+            prev_layer_layered_emb_copy.append(prev_layer_layered_embeddings[i + 1].detach().clone())
+            prev_layer_layered_emb_copy_2.append(prev_layer_layered_embeddings[i + 1].detach().clone())
+            current_time_features_list.append(prev_layer_layered_time_diffs[i+1].detach().clone())
 
+        queries = []
+        for i in range(num_propagations):
+            current_features = prev_layer_layered_emb_copy[i].detach().clone()
+            current_time_features = current_time_features_list[i].detach().clone()
+
+            # query dim
+            current_num_of_dim = current_features.dim()
+            # concat along last dim, variable dim gets number of dimensions, and torch
+            # looks at dimensions from 0 to dim-1
+            query = torch.cat([current_features, current_time_features], dim=current_num_of_dim - 1)
+
+            # we again need to reshape it so we can have 3D matrix, at least 1, num_nodes, features
+            # Also if you look at multi head attention documentation, 1 represents batch in our case
             query_shape = query.shape
-
             if len(query_shape) == 2:
                 query = query.reshape((1, query_shape[0], query_shape[1]))
 
+            queries.append(query)
+
+        attentions = []
+        for i in range(num_propagations):
+            neighborhood_features = neighborhood_concat_features[i].detach().clone()
+
+            key = neighborhood_features.detach().clone()
+            value = neighborhood_features.detach().clone()
+            query = queries[i]
+
             # todo check how to add mask
             # shape 10,5, query_dim
-            attention_output, attention_output_weights = self.multi_head_attention(query=query, value=value, key=key)
-            dim = attention_output.dim()
-            prev_layer_layered_embeddings_next_shape = prev_layer_layered_embeddings[i + 1].shape
-            if len(prev_layer_layered_embeddings_next_shape) == 2:
-                prev_layer_layered_embeddings[i + 1] = prev_layer_layered_embeddings[i + 1].reshape((1,
-                                                                                                     prev_layer_layered_embeddings_next_shape[
-                                                                                                         0],
-                                                                                                     prev_layer_layered_embeddings_next_shape[
-                                                                                                         1]))
-            x = torch.cat([attention_output, prev_layer_layered_embeddings[i + 1]], dim=dim - 1)
-            h = self.act(self.fc1(x))
-            result = self.fc2(h)
-            if i == len(prev_layer_layered_edge_features) - 1:
-                result = result.squeeze()
+            attention_output, _ = self.multi_head_attention(query=query, value=value, key=key)
+
+            attentions.append(attention_output)
+
+        attention_concat = []
+        for i in range(num_propagations):
+            attention_output = attentions[i].detach().clone()
+
+            attention_output_dim = attention_output.dim()
+
+            current_features = prev_layer_layered_emb_copy_2[i].detach().clone()
+
+            current_features_shape = current_features.shape
+            if len(current_features_shape) == 2:
+                # again do the reshape so we can have 3D matrix
+                current_features = current_features.reshape((1,
+                                                             current_features_shape[0],
+                                                             current_features_shape[1])).detach().clone()
+
+            # todo check if dim is exactily 2 always
+            x = torch.cat([attention_output.detach().clone(), current_features.detach().clone()],
+                          dim=attention_output_dim - 1)
+            attention_concat.append(x)
+
+
+        new_layer_layered_embeddings = []
+        for i in range(num_propagations):
+            concat_features = attention_concat[i].detach().clone()
+            result = self.fc2(self.act(self.fc1(concat_features))).detach().clone()
+            if i == num_propagations - 1:  # last iter
+                result_cpy = result.squeeze()
+                new_layer_layered_embeddings.append(result_cpy)
+                continue
 
             new_layer_layered_embeddings.append(result)
 
