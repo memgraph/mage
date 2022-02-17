@@ -13,6 +13,7 @@ from tgn.definitions.message_function import MessageFunctionMLP, MessageFunction
 from tgn.definitions.messages import RawMessage, NodeRawMessage, InteractionRawMessage
 from tgn.definitions.raw_message_store import RawMessageStore
 from tgn.definitions.temporal_neighborhood import TemporalNeighborhood
+from tgn.definitions.time_encoding import TimeEncoder
 
 
 class TGN(nn.Module):
@@ -44,11 +45,12 @@ class TGN(nn.Module):
 
         # dimension of raw message for edge
         # m_ij = (s_i, s_j, delta t, e_ij)
-        self.edge_raw_message_dimension = 2 * self.memory_dimension + time_dimension + num_edge_features
+        # delta t is only one number :)
+        self.edge_raw_message_dimension = 2 * self.memory_dimension + 1 + num_edge_features
 
         # dimension of raw message for node
         # m_i = (s_i, t, v_i)
-        self.node_raw_message_dimension = self.memory_dimension + time_dimension + num_node_features
+        self.node_raw_message_dimension = self.memory_dimension + 1 + num_node_features
 
         self.raw_message_store = RawMessageStore(edge_raw_message_dimension=self.edge_raw_message_dimension,
                                                  node_raw_message_dimension=self.node_raw_message_dimension)
@@ -87,22 +89,7 @@ class TGN(nn.Module):
         self.memory_updater = MemoryUpdaterType(memory_dimension=self.memory_dimension,
                                                 message_dimension=self.message_dimension)
 
-        # Initialize TGN layers
-        tgn_layers = []
-
-        TGNLayer = get_layer_type(layer_type)
-
-        for i in range(num_of_layers):
-            layer = TGNLayer(embedding_dimension=self.memory_dimension + self.num_node_features,
-                             edge_feature_dim=self.num_edge_features,
-                             time_encoding_dim=self.time_dimension,
-                             node_features_dim=self.num_node_features,
-                             num_neighbors=self.num_neighbors
-                             )
-
-            tgn_layers.append(layer)
-
-        self.tgn_net = nn.Sequential(*tgn_layers)
+        self.time_encoder = TimeEncoder(out_dimension=self.time_dimension)
 
     def memory_detach_tensor_grads(self):
 
@@ -239,6 +226,7 @@ class TGN(nn.Module):
         return interaction_events
 
     def create_node_events(self, ):
+        # currently not using this
         return []
 
     def create_messages(self,
@@ -351,11 +339,11 @@ class TGN(nn.Module):
         return edge_features
 
     def get_0_layer_timestamp_features(self, current_timestamp: int, neighbor_timestamps: np.array):
+
         subtracted_arr = neighbor_timestamps - current_timestamp
         timestamp_features = torch.tensor(np.array(subtracted_arr, dtype=np.float32), requires_grad=False).reshape(
             (len(neighbor_timestamps), 1))
-
-        return timestamp_features
+        return self.time_encoder(timestamp_features)
 
     def get_raw_node_features_on_depth(self, depth: int, original_nodes: np.array,
                                        num_neighbors: int, timestamps: np.array) -> (
@@ -382,7 +370,7 @@ class TGN(nn.Module):
             (num_nodes * num_neighbors ** (depth - 1), num_neighbors, self.num_edge_features), requires_grad=False)
 
         zero_layer_neighbors_time_diff = torch.zeros(
-            (num_nodes * num_neighbors ** (depth - 1), num_neighbors, 1), requires_grad=False)
+            (num_nodes * num_neighbors ** (depth - 1), num_neighbors, self.time_dimension), requires_grad=False)
 
         # return zero_layer_nodes_raw_features, zero_layer_neighbors_edge_features, zero_layer_neighbors_time_diff
 
@@ -428,24 +416,13 @@ class TGN(nn.Module):
         return zero_layer_nodes_raw_features, zero_layer_neighbors_edge_features, zero_layer_neighbors_time_diff
 
 
-class TGNEdgesSelfSupervised(TGN):
+############################################
 
-    def __init__(self, num_of_layers: int,
-                 layer_type: TGNLayerType,
-                 memory_dimension: int,
-                 time_dimension: int,
-                 num_edge_features: int,
-                 num_node_features: int,
-                 message_dimension: int,
-                 num_neighbors: int,
-                 edge_message_function_type: MessageFunctionType,
-                 message_aggregator_type: MessageAggregatorType,
-                 memory_updater_type: MemoryUpdaterType,
-                 ):
-        super(TGNEdgesSelfSupervised, self).__init__(num_of_layers, layer_type, memory_dimension, time_dimension,
-                                                     num_edge_features, num_node_features, message_dimension,
-                                                     num_neighbors, edge_message_function_type, message_aggregator_type,
-                                                     memory_updater_type)
+# Instances of TGN
+
+############################################
+
+class TGNEdgesSelfSupervised(TGN):
 
     def forward(self, data: Tuple[
         np.ndarray,
@@ -504,6 +481,121 @@ class TGNEdgesSelfSupervised(TGN):
         self.process_current_batch(sources, destinations, node_features, edge_features, edge_idxs, timestamps)
 
         return embeddings_merged, embeddings_negative_merged
+
+
+class TGNGraphAttentionEmbedding(TGN):
+    def __init__(self, num_of_layers: int,
+                 layer_type: TGNLayerType,
+                 memory_dimension: int,
+                 time_dimension: int,
+                 num_edge_features: int,
+                 num_node_features: int,
+                 message_dimension: int,
+                 num_neighbors: int,
+                 edge_message_function_type: MessageFunctionType,
+                 message_aggregator_type: MessageAggregatorType,
+                 memory_updater_type: MemoryUpdaterType,
+                 num_attention_heads: int
+                 ):
+        super().__init__(num_of_layers, layer_type, memory_dimension, time_dimension,
+                         num_edge_features, num_node_features, message_dimension,
+                         num_neighbors, edge_message_function_type, message_aggregator_type, memory_updater_type)
+
+        assert layer_type == TGNLayerType.GraphAttentionEmbedding
+
+        self.num_attention_heads = num_attention_heads
+
+        # Initialize TGN layers
+        tgn_layers = []
+
+        for i in range(num_of_layers):
+            layer = TGNLayerGraphAttentionEmbedding(embedding_dimension=self.memory_dimension + self.num_node_features,
+                                                    edge_feature_dim=self.num_edge_features,
+                                                    time_encoding_dim=self.time_dimension,
+                                                    node_features_dim=self.num_node_features,
+                                                    num_neighbors=self.num_neighbors,
+                                                    num_attention_heads=num_attention_heads
+                                                    )
+
+            tgn_layers.append(layer)
+
+        self.tgn_net = nn.Sequential(*tgn_layers)
+
+
+class TGNGraphSumEmbedding(TGN):
+    def __init__(self, num_of_layers: int,
+                 layer_type: TGNLayerType,
+                 memory_dimension: int,
+                 time_dimension: int,
+                 num_edge_features: int,
+                 num_node_features: int,
+                 message_dimension: int,
+                 num_neighbors: int,
+                 edge_message_function_type: MessageFunctionType,
+                 message_aggregator_type: MessageAggregatorType,
+                 memory_updater_type: MemoryUpdaterType,
+                 ):
+        super().__init__(num_of_layers, layer_type, memory_dimension, time_dimension,
+                         num_edge_features, num_node_features, message_dimension,
+                         num_neighbors, edge_message_function_type, message_aggregator_type, memory_updater_type)
+
+        assert layer_type == TGNLayerType.GraphAttentionEmbedding
+
+        # Initialize TGN layers
+        tgn_layers = []
+
+        for i in range(num_of_layers):
+            layer = TGNLayerGraphSumEmbedding(embedding_dimension=self.memory_dimension + self.num_node_features,
+                                              edge_feature_dim=self.num_edge_features,
+                                              time_encoding_dim=self.time_dimension,
+                                              node_features_dim=self.num_node_features,
+                                              num_neighbors=self.num_neighbors,
+                                              )
+
+            tgn_layers.append(layer)
+
+        self.tgn_net = nn.Sequential(*tgn_layers)
+
+
+class TGNGraphAttentionEdgeSelfSupervised(TGNGraphAttentionEmbedding, TGNEdgesSelfSupervised):
+
+    def __init__(self, num_of_layers: int,
+                 layer_type: TGNLayerType,
+                 memory_dimension: int,
+                 time_dimension: int,
+                 num_edge_features: int,
+                 num_node_features: int,
+                 message_dimension: int,
+                 num_neighbors: int,
+                 edge_message_function_type: MessageFunctionType,
+                 message_aggregator_type: MessageAggregatorType,
+                 memory_updater_type: MemoryUpdaterType,
+                 num_attention_heads: int
+                 ):
+        super().__init__(num_of_layers, layer_type, memory_dimension, time_dimension,
+                         num_edge_features, num_node_features, message_dimension,
+                         num_neighbors, edge_message_function_type, message_aggregator_type,
+                         memory_updater_type, num_attention_heads)
+
+
+class TGNGraphSumEdgeSelfSupervised(TGNGraphSumEmbedding, TGNEdgesSelfSupervised):
+
+    def __init__(self, num_of_layers: int,
+                 layer_type: TGNLayerType,
+                 memory_dimension: int,
+                 time_dimension: int,
+                 num_edge_features: int,
+                 num_node_features: int,
+                 message_dimension: int,
+                 num_neighbors: int,
+                 edge_message_function_type: MessageFunctionType,
+                 message_aggregator_type: MessageAggregatorType,
+                 memory_updater_type: MemoryUpdaterType,
+                 ):
+        super().__init__(num_of_layers, layer_type, memory_dimension, time_dimension,
+                         num_edge_features, num_node_features, message_dimension,
+                         num_neighbors, edge_message_function_type, message_aggregator_type,
+                         memory_updater_type)
 
 
 class TGNLayer(nn.Module):
@@ -625,18 +717,19 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
     """
 
     def __init__(self, embedding_dimension: int, edge_feature_dim: int,
-                 time_encoding_dim: int, node_features_dim: int, num_neighbors: int):
+                 time_encoding_dim: int, node_features_dim: int, num_neighbors: int, num_attention_heads: int):
         super().__init__(embedding_dimension, edge_feature_dim, time_encoding_dim, node_features_dim, num_neighbors)
 
         self.query_dim = embedding_dimension + time_encoding_dim
         self.key_dim = embedding_dimension + edge_feature_dim + time_encoding_dim
         self.value_dim = self.key_dim
+        self.num_attention_heads = num_attention_heads
 
         self.multi_head_attention = nn.MultiheadAttention(embed_dim=self.query_dim,
                                                           kdim=self.key_dim * self.num_neighbors,
                                                           # set on neighbors num
                                                           vdim=self.value_dim * self.num_neighbors,
-                                                          num_heads=1,  # this add as a parameter
+                                                          num_heads=num_attention_heads,  # this add as a parameter
                                                           batch_first=True)  # this way no need to do torch.permute
         # later <3
         # todo add MLP layer with options
@@ -650,8 +743,6 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
 
     def forward(self, data):
         prev_layer_layered_embeddings, prev_layer_layered_edge_features, prev_layer_layered_time_diffs = data
-
-
 
         assert len(prev_layer_layered_edge_features) == len(prev_layer_layered_time_diffs) == len(
             prev_layer_layered_embeddings) - 1, \
@@ -695,12 +786,13 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
 
             # 50x1865 -> 10x5x1865
             # 10 represents number of top layer source nodes, 5 number of their neighbors
-            neighborhood_features_flatten_reshapped = neighborhood_features_flatten.reshape((next_layer_shape[0], next_layer_shape[1], -1))
+            neighborhood_features_flatten_reshapped = neighborhood_features_flatten.reshape(
+                (next_layer_shape[0], next_layer_shape[1], -1))
 
             neighborhood_concat_features.append(neighborhood_features_flatten_reshapped.detach().clone())
             prev_layer_layered_emb_copy.append(prev_layer_layered_embeddings[i + 1].detach().clone())
             prev_layer_layered_emb_copy_2.append(prev_layer_layered_embeddings[i + 1].detach().clone())
-            current_time_features_list.append(prev_layer_layered_time_diffs[i+1].detach().clone())
+            current_time_features_list.append(prev_layer_layered_time_diffs[i + 1].detach().clone())
 
         queries = []
         for i in range(num_propagations):
@@ -755,7 +847,6 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
                           dim=attention_output_dim - 1)
             attention_concat.append(x)
 
-
         new_layer_layered_embeddings = []
         for i in range(num_propagations):
             concat_features = attention_concat[i].detach().clone()
@@ -768,15 +859,6 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
             new_layer_layered_embeddings.append(result)
 
         return new_layer_layered_embeddings, new_layer_edge_features, new_layer_time_diffs
-
-
-def get_layer_type(layer_type: TGNLayerType):
-    if layer_type == TGNLayerType.GraphSumEmbedding:
-        return TGNLayerGraphSumEmbedding
-    elif layer_type == TGNLayerType.GraphAttentionEmbedding:
-        return TGNLayerGraphAttentionEmbedding
-    else:
-        raise Exception(f'Layer type {layer_type} not yet supported.')
 
 
 def get_message_function_type(message_function_type: MessageFunctionType):

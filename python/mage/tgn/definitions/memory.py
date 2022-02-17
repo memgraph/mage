@@ -37,9 +37,13 @@ class Memory:
     def get_all_nodes(self) -> List[int]:
         return list(self.memory_container.keys())
 
+    def reset_memory(self):
+        self.memory_container: Dict[int, torch.Tensor] = {}
+        self.last_node_update: Dict[int, torch.Tensor] = {}
+
     def copy(self):
+        raise Exception("why use this")
         memory_copy = Memory(self.memory_dimension)
         memory_copy.memory_container = self.memory_container.copy()
         memory_copy.last_node_update = self.last_node_update.copy()
         return memory_copy
-
