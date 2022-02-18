@@ -1,4 +1,4 @@
-ARG PY_VERSION_DEFAULT=3.7
+ARG PY_VERSION_DEFAULT=3.9
 
 FROM debian:bullseye as base
 
