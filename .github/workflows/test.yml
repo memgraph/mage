@@ -10,13 +10,24 @@ on: [pull_request, workflow_dispatch]
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      DOCKER_ORGANIZATION_NAME: memgraph
+      DOCKER_REPOSITORY_NAME: test-mage
+    strategy:
+      matrix:
+        architecture: ["amd64", "arm64"]
+        target: ["prod", "dev"]
     steps:
     - uses: actions/checkout@v2
 
+    - name: Download memgraph binaries
+      run: |
+        curl -L ${{ github.event.inputs.memgraph_amd_binary_url }} > memgraph-amd64.deb
+
     - name: Build Memgraph MAGE:prod and MAGE:dev images
       run: |
-        DOCKER_BUILDKIT=1 docker build . -t memgraph-mage:prod --target prod
-        DOCKER_BUILDKIT=1 docker build . -t memgraph-mage:dev --target dev
+        DOCKER_BUILDKIT=1 docker build . -t memgraph-mage:prod --target ${{ matrix.target }} --build-arg ${{ matrix.arm64 }}
+        DOCKER_BUILDKIT=1 docker build . -t memgraph-mage:dev --target ${{ matrix.target }} --build-arg ${{ matrix.arm64 }}
 
     - name: Run Memgraph MAGE:prod image
       run: |
