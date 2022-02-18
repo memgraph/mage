@@ -3,8 +3,8 @@ from typing import List, Dict
 import numpy as np
 import torch
 
-from tgn.definitions.events import Event
-from tgn.definitions.messages import RawMessage
+from mage.tgn.definitions.events import Event
+from mage.tgn.definitions.messages import RawMessage
 
 
 class RawMessageStore:

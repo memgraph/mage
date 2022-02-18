@@ -2,21 +2,21 @@ import enum
 
 
 class TGNLayerType(enum.Enum):
-    GraphSumEmbedding = 0
-    GraphAttentionEmbedding = 1
+    GraphSumEmbedding = "graph_sum"
+    GraphAttentionEmbedding = "graph_attn"
 
 
 class MessageFunctionType(enum.Enum):
-    MLP = 0
-    Identity = 1
+    MLP = "mlp"
+    Identity = "identity"
 
 
 class MemoryUpdaterType(enum.Enum):
-    GRU = 0
-    RNN = 1
-    LSTM = 2
+    GRU = "gru"
+    RNN = "rnn"
+    LSTM = "lstm"
 
 
 class MessageAggregatorType(enum.Enum):
-    Mean = 0
-    Last = 1
+    Mean = "mean"
+    Last = "last"

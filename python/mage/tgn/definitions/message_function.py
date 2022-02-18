@@ -1,7 +1,5 @@
-import numpy as np
 import torch.nn as nn
 import torch
-from tgn.definitions.events import Event
 
 
 class MessageFunction(nn.Module):

@@ -4,16 +4,16 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from tgn.constants import TGNLayerType, MessageFunctionType, MemoryUpdaterType, MessageAggregatorType
-from tgn.definitions.events import Event, InteractionEvent, NodeEvent
-from tgn.definitions.memory import Memory
-from tgn.definitions.memory_updater import MemoryUpdaterGRU, MemoryUpdaterRNN, MemoryUpdaterLSTM
-from tgn.definitions.message_aggregator import MeanMessageAggregator, LastMessageAggregator, MessageAggregator
-from tgn.definitions.message_function import MessageFunctionMLP, MessageFunctionIdentity, MessageFunction
-from tgn.definitions.messages import RawMessage, NodeRawMessage, InteractionRawMessage
-from tgn.definitions.raw_message_store import RawMessageStore
-from tgn.definitions.temporal_neighborhood import TemporalNeighborhood
-from tgn.definitions.time_encoding import TimeEncoder
+from mage.tgn.constants import TGNLayerType, MessageFunctionType, MemoryUpdaterType, MessageAggregatorType
+from mage.tgn.definitions.events import Event, InteractionEvent, NodeEvent
+from mage.tgn.definitions.memory import Memory
+from mage.tgn.definitions.memory_updater import MemoryUpdaterGRU, MemoryUpdaterRNN, MemoryUpdaterLSTM
+from mage.tgn.definitions.message_aggregator import MeanMessageAggregator, LastMessageAggregator, MessageAggregator
+from mage.tgn.definitions.message_function import MessageFunctionMLP, MessageFunctionIdentity, MessageFunction
+from mage.tgn.definitions.messages import RawMessage, NodeRawMessage, InteractionRawMessage
+from mage.tgn.definitions.raw_message_store import RawMessageStore
+from mage.tgn.definitions.temporal_neighborhood import TemporalNeighborhood
+from mage.tgn.definitions.time_encoding import TimeEncoder
 
 
 class TGN(nn.Module):
@@ -98,6 +98,8 @@ class TGN(nn.Module):
 
     def reset_memory(self):
         self.memory.reset_memory()
+        #todo check
+        #self.temporal_neighborhood = TemporalNeighborhood()
 
     def get_tgn_data(self, nodes: np.array, timestamps: np.array):
         zeroth_layer_embeddings = []
