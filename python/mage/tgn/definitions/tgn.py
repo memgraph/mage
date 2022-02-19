@@ -541,7 +541,7 @@ class TGNGraphSumEmbedding(TGN):
                          num_edge_features, num_node_features, message_dimension,
                          num_neighbors, edge_message_function_type, message_aggregator_type, memory_updater_type)
 
-        assert layer_type == TGNLayerType.GraphAttentionEmbedding
+        assert layer_type == TGNLayerType.GraphSumEmbedding
 
         # Initialize TGN layers
         tgn_layers = []

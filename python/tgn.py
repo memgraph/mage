@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from mage.tgn.constants import TGNLayerType, MessageFunctionType, MessageAggregatorType, MemoryUpdaterType
-from mage.tgn.definitions.tgn import TGNEdgesSelfSupervised, TGN
+from mage.tgn.definitions.tgn import TGNEdgesSelfSupervised, TGN, TGNGraphSumEdgeSelfSupervised
 from dataclasses import dataclass
 
 
@@ -70,7 +70,7 @@ class QueryModuleTGNBatch:
 all_edges: Set[Tuple[int, int]] = set()
 
 # to get all embeddings
-all_embeddings: Dict[int, List[float]] = {}
+all_embeddings: Dict[int, np.array] = {}
 
 query_module_tgn: QueryModuleTGN
 query_module_tgn_batch: QueryModuleTGNBatch
@@ -91,7 +91,7 @@ def set_tgn(config: Dict[str, Any]):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    tgn = TGNEdgesSelfSupervised(
+    tgn = TGNGraphSumEdgeSelfSupervised(
         num_of_layers=config[TGNParameters.NUM_OF_LAYERS],
         layer_type=config[TGNParameters.LAYER_TYPE],
         memory_dimension=config[TGNParameters.MEMORY_DIMENSION],
@@ -145,19 +145,20 @@ def sample_negative(negative_num: int) -> (np.array, np.array):
 
 
 def train_batch_self_supervised():
-    global query_module_tgn, query_module_tgn_batch
+    global query_module_tgn, query_module_tgn_batch, all_embeddings
 
     sources, destinations, timestamps, edge_features, edge_idxs, node_features, current_batch_size = \
         query_module_tgn_batch.sources, query_module_tgn_batch.destinations, query_module_tgn_batch.timestamps, \
         query_module_tgn_batch.edge_features, query_module_tgn_batch.edge_idxs, \
         query_module_tgn_batch.node_features, query_module_tgn_batch.current_batch_size
 
-    assert len(sources) == len(destinations) == len(timestamps) == len(edge_features) == len(edge_idxs) == current_batch_size, f"Batch size training error"
+    assert len(sources) == len(destinations) == len(timestamps) == len(edge_features) == len(
+        edge_idxs) == current_batch_size, f"Batch size training error"
 
     negative_src, negative_dest = sample_negative(len(sources))
 
     graph_data = (
-        sources, destinations, negative_src, negative_dest, timestamps, edge_features, edge_idxs, node_features)
+        sources, destinations, negative_src, negative_dest, timestamps, edge_idxs, edge_features, node_features)
     query_module_tgn.optimizer.zero_grad()
 
     embeddings, embeddings_negative = query_module_tgn.tgn(graph_data)
@@ -190,6 +191,17 @@ def train_batch_self_supervised():
     query_module_tgn.optimizer.step()
     query_module_tgn.m_loss.append(loss.item())
 
+    print(loss.item())
+
+    embeddings_source_npy = embeddings_source.cpu().detach().numpy()
+    embeddings_dest_npy = embeddings_dest.cpu().detach().numpy()
+
+    for i, node in enumerate(sources):
+        all_embeddings[node] = embeddings_source_npy[i]
+
+    for i, node in enumerate(destinations):
+        all_embeddings[node] = embeddings_dest_npy[i]
+
 
 def train_batch_supervised():
     # todo implement supervised learning
@@ -209,7 +221,7 @@ def train_epochs(epochs: int):
 
 
 def process_edges(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]):
-    global query_module_tgn_batch, query_module_tgn
+    global query_module_tgn_batch, query_module_tgn, all_edges
 
     # sources: np.array
     # destinations: np.array
@@ -217,7 +229,6 @@ def process_edges(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]):
     # edge_features: Dict[int, torch.Tensor] (id is edge_idx)
     # edge_idxs: np.array incremental and not repeatable
     # node_features: Dict[int, Torch.Tensor]
-
 
     for edge in edges:
 
@@ -227,19 +238,19 @@ def process_edges(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]):
         dest = ctx.graph.get_vertex_by_id(edge.to_vertex.id)
         dest_id = int(edge.to_vertex.id)
 
+        all_edges.add((src_id, dest_id))
+
         src_features = source.properties.get("features", None)
         dest_features = dest.properties.get("features", None)
 
         timestamp = edge.id
-        edge_idx = edge.id
+        edge_idx = int(edge.id)
 
         edge_feature = edge.properties.get("features", None)
 
         if src_features is None:
             src_features = np.random.randint(0, 100, query_module_tgn.config[TGNParameters.NUM_NODE_FEATURES]) / 100
         else:
-            print(src_features)
-            print(type(src_features))
             assert type(src_features) is tuple
             src_features = np.array(src_features)
 
@@ -262,11 +273,6 @@ def process_edges(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]):
         query_module_tgn_batch.node_features[src_id] = src_features
         query_module_tgn_batch.node_features[dest_id] = dest_features
 
-        # print(edge_idx)
-        # print(src_features)
-        # print(dest_features)
-        # print(edge_feature)
-
         query_module_tgn_batch.edge_features[edge_idx] = edge_feature
 
         query_module_tgn_batch.sources = np.append(query_module_tgn_batch.sources, src_id)
@@ -274,26 +280,14 @@ def process_edges(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]):
         query_module_tgn_batch.timestamps = np.append(query_module_tgn_batch.timestamps, timestamp)
         query_module_tgn_batch.edge_idxs = np.append(query_module_tgn_batch.edge_idxs, edge_idx)
 
-
-    # print("sources", sources)
-    # print("destinations", destinations)
-    # print("timestamps", timestamps)
-    # print("edge_features", edge_features)
-    # print("edge_idxs", edge_idxs)
-    # print("node_features", node_features)
+        print(len(query_module_tgn_batch.sources))
 
 
-def save_current_batch_data():
+def reset_current_batch_data(batch_size: int):
     global query_module_tgn_batch
-    sources, destinations = query_module_tgn_batch.sources, query_module_tgn_batch.destinations
-    for i, (src, dest) in enumerate(zip(sources, destinations)):
-        all_edges.add((src, dest))
-
-
-def reset_current_batch_data(batch_size:int):
-    global query_module_tgn_batch
-    query_module_tgn_batch = QueryModuleTGNBatch(0, np.empty((0, 1)), np.empty((0, 1)), np.empty((0, 1)),
-                                                 np.empty((0, 1)), {}, {}, batch_size)
+    query_module_tgn_batch = QueryModuleTGNBatch(0, np.empty((0, 1), dtype=int), np.empty((0, 1), dtype=int),
+                                                 np.empty((0, 1), dtype=int),
+                                                 np.empty((0, 1), dtype=int), {}, {}, batch_size)
 
 
 #####################################################
@@ -301,6 +295,21 @@ def reset_current_batch_data(batch_size:int):
 # all available read_procs
 
 #####################################################
+
+@mgp.read_proc
+def get(ctx: mgp.ProcCtx) -> mgp.Record(node=mgp.Vertex, embedding=mgp.List[float]):
+    global all_embeddings
+
+    embeddings_dict = {}
+
+    for node_id, embedding in all_embeddings.items():
+        embeddings_dict[node_id] = [float(e) for e in embedding]
+
+    return [
+        mgp.Record(node=ctx.graph.get_vertex_by_id(node_id), embedding=embedding)
+        for node_id, embedding in embeddings_dict.items()
+    ]
+
 
 @mgp.read_proc
 def update(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]) -> mgp.Record():
@@ -319,7 +328,6 @@ def update(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]) -> mgp.Record():
     else:
         train_batch_supervised()
 
-    save_current_batch_data()
     reset_current_batch_data(batch_size=query_module_tgn_batch.batch_size)
 
     return mgp.Record()
@@ -345,8 +353,9 @@ def set_params(
     restarted
     """
     global query_module_tgn_batch
-    query_module_tgn_batch = QueryModuleTGNBatch(0, np.empty((0, 1)), np.empty((0, 1)), np.empty((0, 1)),
-                                                 np.empty((0, 1)), {}, {}, batch_size)
+    query_module_tgn_batch = QueryModuleTGNBatch(0, np.empty((0, 1), dtype=int), np.empty((0, 1), dtype=int),
+                                                 np.empty((0, 1), dtype=int),
+                                                 np.empty((0, 1), dtype=int), {}, {}, batch_size)
     config = {}
 
     # tgn params
@@ -369,8 +378,6 @@ def set_params(
     # set tgn
     set_tgn(config)
 
-    # todo add to return
-    # print(config)
     return mgp.Record()
 
 
