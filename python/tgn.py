@@ -7,13 +7,15 @@ import numpy as np
 import torch
 import torch.nn as nn
 from mage.tgn.constants import TGNLayerType, MessageFunctionType, MessageAggregatorType, MemoryUpdaterType
-from mage.tgn.definitions.tgn import TGNEdgesSelfSupervised, TGN, TGNGraphSumEdgeSelfSupervised
+from mage.tgn.definitions.tgn import TGN, TGNGraphSumEdgeSelfSupervised
 from dataclasses import dataclass
 
 
 ###################
 # params and classes
 ##################
+from mage.tgn.definitions.tgn import TGNGraphAttentionEdgeSelfSupervised
+
 
 class TGNParameters:
     NUM_OF_LAYERS = "num_of_layers"
@@ -28,6 +30,7 @@ class TGNParameters:
     MESSAGE_AGGREGATOR_TYPE = "message_aggregator_type"
     MEMORY_UPDATER_TYPE = "memory_updater_type"
     LEARNING_TYPE = "learning_type"  # enum self_supervised or supervised
+    NUM_ATTENTION_HEADS = "num_attention_heads"
 
 
 class LearningType(enum.Enum):
@@ -84,30 +87,25 @@ query_module_tgn_batch: QueryModuleTGNBatch
 
 def set_tgn(config: Dict[str, Any]):
     """
-    This is adapted for self-supervised learning
+    This is adapted for self-supervised learning for graph sum
     todo: check if it works with supervised
     """
     global query_module_tgn
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    tgn = TGNGraphSumEdgeSelfSupervised(
-        num_of_layers=config[TGNParameters.NUM_OF_LAYERS],
-        layer_type=config[TGNParameters.LAYER_TYPE],
-        memory_dimension=config[TGNParameters.MEMORY_DIMENSION],
-        time_dimension=config[TGNParameters.TIME_DIMENSION],
-        num_edge_features=config[TGNParameters.NUM_EDGE_FEATURES],
-        num_node_features=config[TGNParameters.NUM_NODE_FEATURES],
-        message_dimension=config[TGNParameters.MESSAGE_DIMENSION],
-        num_neighbors=config[TGNParameters.NUM_NEIGHBORS],
-        # if edge is identity, node must be MLP,
-        # if edge is MLP, node also will be MLP
-        # thats why we only determine edge type
-        edge_message_function_type=config[TGNParameters.EDGE_FUNCTION_TYPE],
-        message_aggregator_type=config[TGNParameters.MESSAGE_AGGREGATOR_TYPE],
-        memory_updater_type=config[TGNParameters.MEMORY_UPDATER_TYPE]
-    ).to(device)
+    config_copy = {**config}
 
+    del config_copy[TGNParameters.LEARNING_TYPE]
+
+    if config[TGNParameters.LAYER_TYPE] == TGNLayerType.GraphSumEmbedding and \
+            config[TGNParameters.LEARNING_TYPE] == "self_supervised":
+        tgn = TGNGraphSumEdgeSelfSupervised(**config_copy).to(device)
+    elif config[TGNParameters.LAYER_TYPE] == TGNLayerType.GraphAttentionEmbedding and\
+            config[TGNParameters.LEARNING_TYPE] == "self_supervised":
+        tgn = TGNGraphAttentionEdgeSelfSupervised(**config_copy).to(device)
+    else:
+        raise Exception("Wrong types")
     print(config)
     # set training mode
     tgn.train()
@@ -302,6 +300,24 @@ def reset_current_batch_data(batch_size: int):
 
 #####################################################
 
+@mgp.read_proc
+def revert_from_database(ctx: mgp.ProcCtx) -> mgp.Record():
+    """
+    todo implement
+    Revert from database and potential file in var/log/ to which we can save params
+    """
+    pass
+
+
+@mgp.read_proc
+def save_tgn_params(ctx: mgp.ProcCtx) -> mgp.Record():
+    """
+    todo implement
+    After every batch we could add saving params as checkpoints to var/log/memgraph
+    This is how it is done usually in ML
+    """
+    pass
+
 
 @mgp.read_proc
 def reset(ctx: mgp.ProcCtx) -> mgp.Record():
@@ -366,7 +382,8 @@ def set_params(
         num_neighbors: int,
         edge_message_function_type: str,
         message_aggregator_type: str,
-        memory_updater_type: str) -> mgp.Record():
+        memory_updater_type: str,
+        num_attention_heads = 1) -> mgp.Record():
     """
     Warning: Every time you call this function, old TGN object is cleared and process of learning params is
     restarted
