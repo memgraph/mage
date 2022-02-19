@@ -721,7 +721,7 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
     def __init__(self, embedding_dimension: int, edge_feature_dim: int,
                  time_encoding_dim: int, node_features_dim: int, num_neighbors: int, num_attention_heads: int):
         super().__init__(embedding_dimension, edge_feature_dim, time_encoding_dim, node_features_dim, num_neighbors)
-
+        self.time_encoding_dim = time_encoding_dim
         self.query_dim = embedding_dimension + time_encoding_dim
         self.key_dim = embedding_dimension + edge_feature_dim + time_encoding_dim
         self.value_dim = self.key_dim
@@ -756,7 +756,7 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
         # todo 2: move this to TGN forward part
         last_embed_idx = len(prev_layer_layered_embeddings) - 1
         num_source_nodes = prev_layer_layered_embeddings[last_embed_idx].shape[0]
-        prev_layer_layered_time_diffs.append(torch.zeros((num_source_nodes, 1)))
+        prev_layer_layered_time_diffs.append(torch.zeros((num_source_nodes, self.time_encoding_dim)))
 
         # copy to new layer
         new_layer_edge_features = []

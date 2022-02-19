@@ -408,6 +408,9 @@ def set_params(
     config[TGNParameters.MESSAGE_AGGREGATOR_TYPE] = get_message_aggregator_type(message_aggregator_type)
     config[TGNParameters.MEMORY_UPDATER_TYPE] = get_memory_updater_type(memory_updater_type)
 
+    if config[TGNParameters.LAYER_TYPE] == TGNLayerType.GraphAttentionEmbedding:
+        config[TGNParameters.NUM_ATTENTION_HEADS] = num_attention_heads
+
     # learning params
     config[TGNParameters.LEARNING_TYPE] = learning_type
 
