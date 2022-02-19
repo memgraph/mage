@@ -108,6 +108,7 @@ def set_tgn(config: Dict[str, Any]):
         memory_updater_type=config[TGNParameters.MEMORY_UPDATER_TYPE]
     ).to(device)
 
+    print(config)
     # set training mode
     tgn.train()
 
@@ -147,6 +148,8 @@ def sample_negative(negative_num: int) -> (np.array, np.array):
 def train_batch_self_supervised():
     global query_module_tgn, query_module_tgn_batch, all_embeddings
 
+    # todo fix bug if query_module_batch.sources > BATCH_SIZE, split it in multiple batches
+
     sources, destinations, timestamps, edge_features, edge_idxs, node_features, current_batch_size = \
         query_module_tgn_batch.sources, query_module_tgn_batch.destinations, query_module_tgn_batch.timestamps, \
         query_module_tgn_batch.edge_features, query_module_tgn_batch.edge_idxs, \
@@ -155,6 +158,8 @@ def train_batch_self_supervised():
     assert len(sources) == len(destinations) == len(timestamps) == len(edge_features) == len(
         edge_idxs) == current_batch_size, f"Batch size training error"
 
+    print("sources, destinations", sources, destinations)
+
     negative_src, negative_dest = sample_negative(len(sources))
 
     graph_data = (
@@ -162,6 +167,7 @@ def train_batch_self_supervised():
     query_module_tgn.optimizer.zero_grad()
 
     embeddings, embeddings_negative = query_module_tgn.tgn(graph_data)
+    print(embeddings)
 
     embeddings_source = embeddings[:current_batch_size]
     embeddings_dest = embeddings[current_batch_size:]
@@ -266,9 +272,9 @@ def process_edges(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]):
             assert type(edge_feature) is tuple
             edge_feature = np.array(edge_feature)
 
-        src_features = torch.tensor(src_features, requires_grad=True)
-        dest_features = torch.tensor(dest_features, requires_grad=True)
-        edge_feature = torch.tensor(edge_feature, requires_grad=True)
+        src_features = torch.tensor(src_features, requires_grad=True, dtype=torch.float)
+        dest_features = torch.tensor(dest_features, requires_grad=True, dtype=torch.float)
+        edge_feature = torch.tensor(edge_feature, requires_grad=True, dtype=torch.float)
 
         query_module_tgn_batch.node_features[src_id] = src_features
         query_module_tgn_batch.node_features[dest_id] = dest_features
@@ -304,8 +310,8 @@ def reset(ctx: mgp.ProcCtx) -> mgp.Record():
     all_embeddings = {}
     reset_current_batch_data(0)
     all_edges = set()
-    #todo how to delete query_module_tgn, but enable it as global object again
-    #query_module_tgn
+    # todo how to delete query_module_tgn, but enable it as global object again
+    # query_module_tgn
     return mgp.Record()
 
 
@@ -431,7 +437,7 @@ def get_message_aggregator_type(message_aggregator_type: str) -> MessageAggregat
 
 def get_memory_updater_type(memory_updater_type: str) -> MemoryUpdaterType:
     if MemoryUpdaterType(memory_updater_type) is MemoryUpdaterType.GRU:
-        return MessageFunctionType.Mean
+        return MemoryUpdaterType.GRU
 
     elif MemoryUpdaterType(memory_updater_type) is MemoryUpdaterType.RNN:
         return MemoryUpdaterType.RNN

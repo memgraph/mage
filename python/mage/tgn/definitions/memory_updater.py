@@ -52,7 +52,7 @@ class MemoryUpdaterRNN(MemoryUpdater):
         return self.memory_updater_net(messages, memory)
 
 
-# todo check if this works, currently just c-p of GRU class
+# todo: doesn't work fix bug
 class MemoryUpdaterLSTM(MemoryUpdater):
     def __init__(self, memory_dimension: int, message_dimension: int):
         super().__init__(memory_dimension, message_dimension)

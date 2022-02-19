@@ -98,8 +98,8 @@ class TGN(nn.Module):
 
     def reset_memory(self):
         self.memory.reset_memory()
-        #todo check
-        #self.temporal_neighborhood = TemporalNeighborhood()
+        # todo check
+        # self.temporal_neighborhood = TemporalNeighborhood()
 
     def get_tgn_data(self, nodes: np.array, timestamps: np.array):
         zeroth_layer_embeddings = []
