@@ -296,6 +296,19 @@ def reset_current_batch_data(batch_size: int):
 
 #####################################################
 
+
+@mgp.read_proc
+def reset(ctx: mgp.ProcCtx) -> mgp.Record():
+    global all_embeddings, query_module_tgn_batch, query_module_tgn, all_edges
+
+    all_embeddings = {}
+    reset_current_batch_data(0)
+    all_edges = set()
+    #todo how to delete query_module_tgn, but enable it as global object again
+    #query_module_tgn
+    return mgp.Record()
+
+
 @mgp.read_proc
 def get(ctx: mgp.ProcCtx) -> mgp.Record(node=mgp.Vertex, embedding=mgp.List[float]):
     global all_embeddings
