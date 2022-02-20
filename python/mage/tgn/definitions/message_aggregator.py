@@ -14,12 +14,11 @@ class MeanMessageAggregator(MessageAggregator):
     def __init__(self):
         super().__init__()
 
-    # todo fix this is bug still
     def forward(self, data: List[torch.Tensor]):
         b = torch.rand((len(data), data[0].shape[0], data[0].shape[1]))
         torch.cat(data, out=b)
-
-        return torch.mean(b)
+        mean = torch.mean(b, dim=0)
+        return mean.reshape((1,-1))
 
 
 class LastMessageAggregator(MessageAggregator):
