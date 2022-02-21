@@ -10,9 +10,6 @@ on: [pull_request, workflow_dispatch]
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      DOCKER_ORGANIZATION_NAME: memgraph
-      DOCKER_REPOSITORY_NAME: test-mage
     strategy:
       matrix:
         architecture: ["amd64", "arm64"]
