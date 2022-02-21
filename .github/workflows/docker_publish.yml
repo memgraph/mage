@@ -6,8 +6,8 @@ on:
         description: "Version of docker image to release."
         required: true
 jobs:
-  build_with_tag:
-    name: Build Docker image with tag
+  build_and_release_docker:
+    name: Build & release Docker image with tag
     runs-on: ubuntu-latest
     env:
       DOCKER_ORGANIZATION_NAME: memgraph

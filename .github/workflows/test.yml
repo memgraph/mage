@@ -31,11 +31,15 @@ jobs:
           curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11/memgraph_${MEMGRAPH_VERSION}-1_amd64.deb > memgraph-amd64.deb
           curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION}-1_aarch64.deb > memgraph-arm64.deb
 
-      - name: Build Memgraph MAGE:prod and MAGE:dev images
+      - name: Build Memgraph MAGE:${{ matrix.target }}
         run: |
-          DOCKER_BUILDKIT=1 docker buildx build . -t memgraph-mage:${{ matrix.target }} --load --target ${{ matrix.target }} --platform linux/${{ matrix.architecture }}
+          DOCKER_BUILDKIT=1 docker buildx build \
+          --tag memgraph-mage:${{ matrix.target }} \
+          --target ${{ matrix.target }} \
+          --platform linux/${{ matrix.architecture }} \
+          --load .
 
-      - name: Run Memgraph MAGE:prod image
+      - name: Run Memgraph MAGE:${{ matrix.target }} image
         run: |
           docker run -d -p 7687:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:${{ matrix.target }} --telemetry-enabled=False
 
