@@ -88,6 +88,7 @@ jobs:
           cargo test
 
       - name: Run End-to-end tests
+        if: matrix.architecture != 'arm64'
         env:
           PYTHONPATH: "$PWD/e2e"
         run: |
