@@ -37,6 +37,7 @@ jobs:
           --tag memgraph-mage:${{ matrix.target }} \
           --target ${{ matrix.target }} \
           --platform linux/${{ matrix.architecture }} \
+          --file Dockerfile.release \
           --load .
 
       - name: Run Memgraph MAGE:${{ matrix.target }} image
