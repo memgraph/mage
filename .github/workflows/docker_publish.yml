@@ -1,10 +1,10 @@
 name: Publish Docker image
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Version of docker image to release."
-        required: true
+  push:
+    tags:
+      - v*.*.*
+      - v*.*
+
 jobs:
   build_and_release_docker:
     name: Build & release Docker image with tag
