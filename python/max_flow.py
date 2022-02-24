@@ -2,13 +2,16 @@ from math import floor, log2
 from typing import List, Dict
 import mgp
 from itertools import chain
-from mage.max_flow import BFS_find_weight_min_max
+from mage.max_flow.bfs_weight_min_max import BFS_find_weight_min_max
+
 
 @mgp.read_proc
 def get_flow(
-        context: mgp.ProcCtx, start_v: mgp.Vertex, end_v: mgp.Vertex,
-        edge_property: str = "weight"
-        ) -> mgp.Record(max_flow=mgp.Number):
+    context: mgp.ProcCtx,
+    start_v: mgp.Vertex,
+    end_v: mgp.Vertex,
+    edge_property: str = "weight"
+) -> mgp.Record(max_flow=mgp.Number):
     """
     Calculates maximum flow of graph from paths found with get_paths()
 
@@ -36,9 +39,11 @@ def get_flow(
 
 @mgp.read_proc
 def get_paths(
-        context: mgp.ProcCtx, start_v: mgp.Vertex, end_v: mgp.Vertex,
-        edge_property: str = "weight"
-        ) -> mgp.Record(path=mgp.Path, flow=mgp.Number):
+    context: mgp.ProcCtx,
+    start_v: mgp.Vertex,
+    end_v: mgp.Vertex,
+    edge_property: str = "weight"
+) -> mgp.Record(path=mgp.Path, flow=mgp.Number):
     """
     Returns each path and its flow used in max flow of a graph. Uses
     Ford-Fulkerson algorithm, with capacity scaling for augmenting path
@@ -57,8 +62,7 @@ def get_paths(
     RETURN path, flow
     """
 
-    if (not isinstance(start_v, mgp.Vertex)
-            or not isinstance(end_v, mgp.Vertex)):
+    if not isinstance(start_v, mgp.Vertex) or not isinstance(end_v, mgp.Vertex):
         return [mgp.Record(path=None, flow=0)]
 
     max_weight, min_weight = BFS_find_weight_min_max(start_v, edge_property)
@@ -72,13 +76,13 @@ def get_paths(
     edge_flows = dict()
     return_paths_and_flows = []
 
-    while(True):
+    while True:
         # augmenting path is a list of interchangeable
         # VertexId and EdgeId
         augmenting_path = [start_v.id]
         flow_bottleneck = DFS_path_finding(
-            context, augmenting_path, start_v, end_v,
-            edge_property, delta, edge_flows)
+            context, augmenting_path, start_v, end_v, edge_property, delta, edge_flows
+        )
 
         if flow_bottleneck == -1:
             if delta < min_weight:
@@ -88,12 +92,10 @@ def get_paths(
 
         for i, e in enumerate(augmenting_path):
             if isinstance(e, mgp.Edge):
-                if augmenting_path[i-1] == e.from_vertex.id:
-                    edge_flows[e.id] = (edge_flows.get(e.id, 0)
-                                        + flow_bottleneck)
-                elif augmenting_path[i-1] == e.to_vertex.id:
-                    edge_flows[e.id] = (edge_flows.get(e.id, 0)
-                                        - flow_bottleneck)
+                if augmenting_path[i - 1] == e.from_vertex.id:
+                    edge_flows[e.id] = edge_flows.get(e.id, 0) + flow_bottleneck
+                elif augmenting_path[i - 1] == e.to_vertex.id:
+                    edge_flows[e.id] = edge_flows.get(e.id, 0) - flow_bottleneck
                 else:
                     raise Exception("path is not ordered correctly")
 
@@ -102,23 +104,25 @@ def get_paths(
         # store path as mgp.Path to return
         for i, elem in enumerate(augmenting_path):
             if i == 0:
-                path = mgp.Path(
-                    context.graph.get_vertex_by_id(augmenting_path[0]))
+                path = mgp.Path(context.graph.get_vertex_by_id(augmenting_path[0]))
             else:
                 if isinstance(elem, mgp.Edge):
                     path.expand(elem)
 
         return_paths_and_flows.append((path, flow_bottleneck))
 
-    return [mgp.Record(path=path, flow=flow)
-            for path, flow in return_paths_and_flows]
+    return [mgp.Record(path=path, flow=flow) for path, flow in return_paths_and_flows]
 
 
 def DFS_path_finding(
-        context: mgp.ProcCtx, path: List, current_v: mgp.Vertex,
-        end_v: mgp.Vertex, edge_property: str, delta: mgp.Number,
-        edge_flows: Dict
-        ) -> mgp.Number:
+    context: mgp.ProcCtx,
+    path: List,
+    current_v: mgp.Vertex,
+    end_v: mgp.Vertex,
+    edge_property: str,
+    delta: mgp.Number,
+    edge_flows: Dict
+) -> mgp.Number:
     """
     Finds augmenting path for max_flow algorithm using recursive DFS
     with minimum edge weight delta, as defined by capacity scaling.
@@ -136,8 +140,9 @@ def DFS_path_finding(
     for edge in chain(current_v.out_edges, current_v.in_edges):
         if edge.from_vertex == current_v:
             to_v = edge.to_vertex
-            remaining_capacity = (edge.properties[edge_property]
-                                  - edge_flows.get(edge.id, 0))
+            remaining_capacity = edge.properties[edge_property] - edge_flows.get(
+                edge.id, 0
+            )
         else:
             to_v = edge.from_vertex
             remaining_capacity = edge_flows.get(edge.id, 0)
@@ -155,7 +160,8 @@ def DFS_path_finding(
                 return remaining_capacity
 
             flow_bottleneck = DFS_path_finding(
-                context, path, to_v, end_v, edge_property, delta, edge_flows)
+                context, path, to_v, end_v, edge_property, delta, edge_flows
+            )
             if flow_bottleneck != -1:
                 # function call found path, propagate back
                 return min(remaining_capacity, flow_bottleneck)
