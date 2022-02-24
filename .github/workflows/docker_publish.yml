@@ -1,10 +1,9 @@
 name: Publish Docker image
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Version of docker image to release."
-        required: true
+  push:
+    tags:
+      - v*.*.*
+      - v*.*
 
 jobs:
   build_and_release_docker:
@@ -12,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DOCKER_ORGANIZATION_NAME: memgraph
-      DOCKER_REPOSITORY_NAME: test-memgraph-mage
+      DOCKER_REPOSITORY_NAME: memgraph-mage
       MEMGRAPH_VERSION: 2.2.0
     steps:
       - name: Check out the repo
@@ -41,7 +40,6 @@ jobs:
           export VERSION=${GITHUB_REF#refs/tags/}
           echo "::set-output name=VERSION_TAG::${VERSION:1}"
           echo "::set-output name=VERSION::${VERSION}"
-
       - name: Get version
         run: echo "Version is ${{ steps.get-commit-tag.outputs.VERSION }}"
 
@@ -52,7 +50,6 @@ jobs:
           then
             echo "::set-output name=LATEST::memgraph/memgraph-mage:latest"
           fi
-
       - run: echo "Additional tag for production image - ${{ steps.get-prod-tags.outputs.LATEST }}"
 
       - name: Log in to Docker Hub
@@ -65,22 +62,20 @@ jobs:
         run: |
           curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11/memgraph_${MEMGRAPH_VERSION}-1_amd64.deb > memgraph-amd64.deb
           curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION}-1_aarch64.deb > memgraph-arm64.deb
-
       - name: Build & push prod docker images
         run: |
           docker buildx build \
           --target prod \
           --platform linux/amd64,linux/arm64 \
-          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ github.event.inputs.version }} \
-          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:latest \
+          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ steps.get-commit-tag.outputs.VERSION_TAG }} \
+          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ steps.get-prod-tags.outputs.LATEST }} \
           --file Dockerfile.release \
           --push .
-
       - name: Build & push dev docker images
         run: |
           docker buildx build \
           --target dev \
           --platform linux/amd64,linux/arm64 \
-          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ github.event.inputs.version }}-dev \
+          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ steps.get-commit-tag.outputs.VERSION_TAG }}-dev \
           --file Dockerfile.release \
           --push .
