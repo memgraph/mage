@@ -1,0 +1,200 @@
+from math import floor, log2
+from typing import List, Dict
+import mgp
+from itertools import chain
+
+
+@mgp.read_proc
+def get_flow(
+        context: mgp.ProcCtx, start_v: mgp.Vertex, end_v: mgp.Vertex,
+        edge_property: str = "weight"
+        ) -> mgp.Record(max_flow=mgp.Number):
+    """
+    Calculates maximum flow of graph from paths found with get_paths()
+
+    :param start_v: source vertex for outgoing flow
+    :param end_v: sink vertex for ingoing flow
+    :param edge_property: property of edge to be used as flow capacity
+
+    return: number value of graph max flow
+
+    The procedure can be invoked in openCypher using the following call:
+    MATCH (source {id: 0}), (sink {id: 5})
+    CALL max_flow.get_flow(source, sink, "weight")
+    YIELD max_flow
+    RETURN max_flow
+    """
+
+    records = get_paths(context, start_v, end_v, edge_property)
+
+    max_flow = 0
+    for record in records:
+        max_flow += record.fields["flow"]
+
+    return mgp.Record(max_flow=max_flow)
+
+
+@mgp.read_proc
+def get_paths(
+        context: mgp.ProcCtx, start_v: mgp.Vertex, end_v: mgp.Vertex,
+        edge_property: str = "weight"
+        ) -> mgp.Record(path=mgp.Path, flow=mgp.Number):
+    """
+    Returns each path and its flow used in max flow of a graph. Uses
+    Ford-Fulkerson algorithm, with capacity scaling for augmenting path
+    finding. Works for positive number weight values.
+
+    :param start_v: source vertex for outgoing flow
+    :param end_v: sink vertex for ingoing flow
+    :param edge_property: property of edge to be used as flow capacity
+
+    return: number value of graph max flow
+
+    The procedure can be invoked in openCypher using the following call:
+    MATCH (source {id: 0}), (sink {id: 5})
+    CALL max_flow.get_paths(source, sink, "weight")
+    YIELD path, flow
+    RETURN path, flow
+    """
+
+    if (not isinstance(start_v, mgp.Vertex)
+            or not isinstance(end_v, mgp.Vertex)):
+        return mgp.Record(max_flow=0)
+
+    max_weight, min_weight = BFS_find_weight_extremes(context, start_v, edge_property)
+    print("found extremes", max_weight, min_weight)
+
+    # delta is init as largest power of 2 smaller than max_weight
+    delta = 2 ** floor(log2(max_weight))
+
+    edge_flows = dict()
+    return_paths_and_flows = []
+
+    while(True):
+        print("delta", delta)
+        # augmenting path is a list of interchangeable
+        # VertexId and EdgeId
+        augmenting_path = [start_v.id]
+        flow_bottleneck = DFS_path_finding(
+            context, augmenting_path, start_v, end_v,
+            edge_property, delta, edge_flows)
+
+        if flow_bottleneck == -1:
+            if delta <= min_weight:
+                print("exiting")
+                break
+            delta //= 2
+            continue
+
+        print("found path", flow_bottleneck)
+
+        for i, e in enumerate(augmenting_path):
+            if isinstance(e, mgp.Edge):
+                if augmenting_path[i-1] == e.from_vertex.id:
+                    edge_flows[e.id] = (edge_flows.get(e.id, 0)
+                                        + flow_bottleneck)
+                elif augmenting_path[i-1] == e.to_vertex.id:
+                    edge_flows[e.id] = (edge_flows.get(e.id, 0)
+                                        - flow_bottleneck)
+                else:
+                    raise Exception("path is not ordered correctly")
+
+        # store path as mgp.Path to return
+        for i, elem in enumerate(augmenting_path):
+            if i == 0:
+                path = mgp.Path(
+                    context.graph.get_vertex_by_id(augmenting_path[0]))
+            else:
+                if isinstance(elem, mgp.Edge):
+                    path.expand(elem)
+
+        return_paths_and_flows.append((path, flow_bottleneck))
+
+    return [mgp.Record(path=path, flow=flow)
+            for path, flow in return_paths_and_flows]
+
+
+def DFS_path_finding(
+        context: mgp.ProcCtx, path: List, current_v: mgp.Vertex,
+        end_v: mgp.Vertex, edge_property: str, delta: mgp.Number,
+        edge_flows: Dict
+        ) -> mgp.Number:
+    """
+    Finds augmenting path for max_flow algorithm using recursive DFS
+    with minimum edge weight delta, as defined by capacity scaling.
+
+    :param path: list for storing path, elements are
+                 alternating mgp.VertexId and mgp.Edge
+    :param delta: lower bound for path flow
+    param edge_flows: dict containing existing flows of edges
+
+    :return: flow_bottleneck, smallest remaining capacity on the path,
+             -1 if no path to end_node is found
+    """
+
+    # instead of using residual edges, we check for in_edges with flow
+    for edge in chain(current_v.out_edges, current_v.in_edges):
+        if edge.from_vertex == current_v:
+            to_v = edge.to_vertex
+            remaining_capacity = (edge.properties[edge_property]
+                                  - edge_flows.get(edge.id, 0))
+        else:
+            to_v = edge.from_vertex
+            remaining_capacity = edge_flows.get(edge.id, 0)
+
+        if to_v.id in path:
+            continue
+
+        if remaining_capacity > delta:
+
+            path.append(edge)
+            path.append(to_v.id)
+
+            if to_v.id == end_v.id:
+                # found path
+                return remaining_capacity
+
+            flow_bottleneck = DFS_path_finding(
+                context, path, to_v, end_v, edge_property, delta, edge_flows)
+            if flow_bottleneck != -1:
+                # function call found path, propagate back
+                return min(remaining_capacity, flow_bottleneck)
+
+    # no path found with this vertex, remove it and its edge
+    del path[-2:]
+
+    return -1
+
+
+def BFS_find_weight_extremes(
+        context: mgp.ProcCtx, start_v: mgp.Vertex, edge_property: str
+        ) -> mgp.Number:
+    """
+    Breadth-first search for finding the largest and smallest edge weight,
+    largest being used for capacity scaling, and smallest for lower bound
+
+    :param start_v: starting vertex
+    :param edge_propery: str denoting the edge property used as weight
+
+    :return: Number, the largest value of edge_property in graph
+    """
+
+    next_queue = [start_v]
+    visited = set()
+    max_weight = 0
+    min_weight = float('Inf')
+
+    while(next_queue):
+        current_v = next_queue.pop(0)
+        visited.add(current_v)
+
+        for e in current_v.out_edges:
+            if e.properties[edge_property] > max_weight:
+                max_weight = e.properties[edge_property]
+            elif e.properties[edge_property] < min_weight:
+                min_weight = e.properties[edge_property]
+
+            if e.to_vertex not in visited:
+                next_queue.append(e.to_vertex)
+
+    return max_weight, min_weight
