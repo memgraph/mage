@@ -49,7 +49,9 @@ jobs:
         run: |
           if [ "${{ steps.get-commit-tag.outputs.VERSION }}" == "${{ steps.get-latest-tag.outputs.tag }}" ]
           then
-            echo "::set-output name=LATEST::memgraph/memgraph-mage:latest"
+            echo "::set-output name=LATEST::latest"
+          else
+            echo "::set-output name=LATEST::fix"
           fi
       - run: echo "Additional tag for production image - ${{ steps.get-prod-tags.outputs.LATEST }}"
 
