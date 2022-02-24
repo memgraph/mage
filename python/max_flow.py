@@ -10,7 +10,7 @@ def get_flow(
     context: mgp.ProcCtx,
     start_v: mgp.Vertex,
     end_v: mgp.Vertex,
-    edge_property: str = "weight"
+    edge_property: str = "weight",
 ) -> mgp.Record(max_flow=mgp.Number):
     """
     Calculates maximum flow of graph from paths found with get_paths()
@@ -42,7 +42,7 @@ def get_paths(
     context: mgp.ProcCtx,
     start_v: mgp.Vertex,
     end_v: mgp.Vertex,
-    edge_property: str = "weight"
+    edge_property: str = "weight",
 ) -> mgp.Record(path=mgp.Path, flow=mgp.Number):
     """
     Returns each path and its flow used in max flow of a graph. Uses
@@ -121,7 +121,7 @@ def DFS_path_finding(
     end_v: mgp.Vertex,
     edge_property: str,
     delta: mgp.Number,
-    edge_flows: Dict
+    edge_flows: Dict,
 ) -> mgp.Number:
     """
     Finds augmenting path for max_flow algorithm using recursive DFS

@@ -1,8 +1,7 @@
 import mgp
 
-def BFS_find_weight_min_max(
-        start_v: mgp.Vertex, edge_property: str
-        ) -> mgp.Number:
+
+def BFS_find_weight_min_max(start_v: mgp.Vertex, edge_property: str) -> mgp.Number:
     """
     Breadth-first search for finding the largest and smallest edge weight,
     largest being used for capacity scaling, and smallest for lower bound
@@ -16,9 +15,9 @@ def BFS_find_weight_min_max(
     next_queue = [start_v]
     visited = set()
     max_weight = 0
-    min_weight = float('Inf')
+    min_weight = float("Inf")
 
-    while(next_queue):
+    while next_queue:
         current_v = next_queue.pop(0)
         visited.add(current_v)
 
