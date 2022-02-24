@@ -72,7 +72,7 @@ jobs:
           --platform linux/amd64,linux/arm64 \
           --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ steps.get-commit-tag.outputs.VERSION_TAG }} \
           --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ steps.get-prod-tags.outputs.LATEST }} \
-          --file Dockerfile.release
+          --file Dockerfile.release \
           --push .
 
       - name: Build & push dev docker images
@@ -81,5 +81,5 @@ jobs:
           --target dev \
           --platform linux/amd64,linux/arm64 \
           --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ steps.get-commit-tag.outputs.VERSION_TAG }}-dev \
-          --file Dockerfile.release
+          --file Dockerfile.release \
           --push .
