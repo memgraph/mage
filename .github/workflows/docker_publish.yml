@@ -40,6 +40,7 @@ jobs:
           export VERSION=${GITHUB_REF#refs/tags/}
           echo "::set-output name=VERSION_TAG::${VERSION:1}"
           echo "::set-output name=VERSION::${VERSION}"
+
       - name: Get version
         run: echo "Version is ${{ steps.get-commit-tag.outputs.VERSION }}"
 
@@ -62,6 +63,7 @@ jobs:
         run: |
           curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11/memgraph_${MEMGRAPH_VERSION}-1_amd64.deb > memgraph-amd64.deb
           curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION}-1_aarch64.deb > memgraph-arm64.deb
+
       - name: Build & push prod docker images
         run: |
           docker buildx build \
@@ -71,6 +73,7 @@ jobs:
           --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ steps.get-prod-tags.outputs.LATEST }} \
           --file Dockerfile.release \
           --push .
+
       - name: Build & push dev docker images
         run: |
           docker buildx build \
