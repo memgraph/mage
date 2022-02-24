@@ -2,7 +2,7 @@ from math import floor, log2
 from typing import List, Dict
 import mgp
 from itertools import chain
-
+from mage.max_flow import BFS_find_weight_min_max
 
 @mgp.read_proc
 def get_flow(
@@ -59,10 +59,12 @@ def get_paths(
 
     if (not isinstance(start_v, mgp.Vertex)
             or not isinstance(end_v, mgp.Vertex)):
-        return mgp.Record(max_flow=0)
+        return [mgp.Record(path=None, flow=0)]
 
-    max_weight, min_weight = BFS_find_weight_extremes(context, start_v, edge_property)
-    print("found extremes", max_weight, min_weight)
+    max_weight, min_weight = BFS_find_weight_min_max(start_v, edge_property)
+
+    if max_weight <= 0:
+        return [mgp.Record(path=None, flow=0)]
 
     # delta is init as largest power of 2 smaller than max_weight
     delta = 2 ** floor(log2(max_weight))
@@ -71,7 +73,6 @@ def get_paths(
     return_paths_and_flows = []
 
     while(True):
-        print("delta", delta)
         # augmenting path is a list of interchangeable
         # VertexId and EdgeId
         augmenting_path = [start_v.id]
@@ -80,13 +81,10 @@ def get_paths(
             edge_property, delta, edge_flows)
 
         if flow_bottleneck == -1:
-            if delta <= min_weight:
-                print("exiting")
+            if delta < min_weight:
                 break
             delta //= 2
             continue
-
-        print("found path", flow_bottleneck)
 
         for i, e in enumerate(augmenting_path):
             if isinstance(e, mgp.Edge):
@@ -98,6 +96,8 @@ def get_paths(
                                         - flow_bottleneck)
                 else:
                     raise Exception("path is not ordered correctly")
+
+        print(augmenting_path)
 
         # store path as mgp.Path to return
         for i, elem in enumerate(augmenting_path):
@@ -164,37 +164,3 @@ def DFS_path_finding(
     del path[-2:]
 
     return -1
-
-
-def BFS_find_weight_extremes(
-        context: mgp.ProcCtx, start_v: mgp.Vertex, edge_property: str
-        ) -> mgp.Number:
-    """
-    Breadth-first search for finding the largest and smallest edge weight,
-    largest being used for capacity scaling, and smallest for lower bound
-
-    :param start_v: starting vertex
-    :param edge_propery: str denoting the edge property used as weight
-
-    :return: Number, the largest value of edge_property in graph
-    """
-
-    next_queue = [start_v]
-    visited = set()
-    max_weight = 0
-    min_weight = float('Inf')
-
-    while(next_queue):
-        current_v = next_queue.pop(0)
-        visited.add(current_v)
-
-        for e in current_v.out_edges:
-            if e.properties[edge_property] > max_weight:
-                max_weight = e.properties[edge_property]
-            elif e.properties[edge_property] < min_weight:
-                min_weight = e.properties[edge_property]
-
-            if e.to_vertex not in visited:
-                next_queue.append(e.to_vertex)
-
-    return max_weight, min_weight
