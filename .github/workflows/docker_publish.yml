@@ -1,9 +1,10 @@
 name: Publish Docker image
 on:
-  push:
-    tags:
-      - v*.*.*
-      - v*.*
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version of docker image to release."
+        required: true
 
 jobs:
   build_and_release_docker:
@@ -11,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DOCKER_ORGANIZATION_NAME: memgraph
-      DOCKER_REPOSITORY_NAME: memgraph-mage
+      DOCKER_REPOSITORY_NAME: test-memgraph-mage
       MEMGRAPH_VERSION: 2.2.0
     steps:
       - name: Check out the repo
