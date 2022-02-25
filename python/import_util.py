@@ -36,8 +36,12 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
     path : str
         Path to the JSON that is being imported.
     """
-    file = open(path)
-    graph_objects = js.load(file)
+    try:
+        with open(path, "r") as file:
+            graph_objects = js.load(file)
+    except:
+        raise OSError("Could not open/read file.")
+
     vertex_ids = dict()
 
     for object in graph_objects:
