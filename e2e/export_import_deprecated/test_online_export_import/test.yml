@@ -1,12 +1,25 @@
 - query: >-
     MATCH (n) RETURN count(n) AS count_after_export;
-  output: 
-    - count_after_export: 3
+  output:
+    - count_after_export: 5
 - query: >-
     MATCH (n) RETURN count(n) AS count;
-  output: 
+  output:
     - count: 0
 - query: >-
     MATCH (n) RETURN count(n) AS count_after_import;
   output:
-    - count_after_import: 3
+    - count_after_import: 5
+- query: >-
+    MATCH (n:User) WITH n.cars AS cars UNWIND cars AS my_cars RETURN count(my_cars) AS count;
+  output:
+    - count: 3
+- query: >-
+    MATCH (n:List) RETURN keys(n)[0] AS key;
+  output:
+    - key: "listKey"
+- query: >-
+    MATCH (n:List) UNWIND n.listKey as list RETURN list.inner AS inner;
+  output:
+    - inner: "Map1"
+    - inner: "Map2"

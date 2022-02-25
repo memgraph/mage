@@ -78,7 +78,14 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
 
         graph = nodes + relationships
 
-    with open(path, "w") as outfile:
-        js.dump(graph, outfile, indent=4, default=str)
+    try:
+        with open(path, "w") as outfile:
+            js.dump(graph, outfile, indent=4, default=str)
+    except PermissionError:
+        raise PermissionError(
+            "You don't have permissions to write into that file. Make sure to give the user memgraph the necessary permissions"
+        )
+    except Exception:
+        raise OSError("Could not open or write to the file.")
 
     return mgp.Record()

@@ -39,7 +39,7 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
     try:
         with open(path, "r") as file:
             graph_objects = js.load(file)
-    except:
+    except Exception:
         raise OSError("Could not open/read file.")
 
     vertex_ids = dict()
