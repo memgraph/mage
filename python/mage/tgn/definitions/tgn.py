@@ -309,7 +309,9 @@ class TGN(nn.Module):
         #                                []], shape=(number_of_nodes, aggregated_length)
         aggregated_messages = {node: None for node in processed_messages}
         for node in processed_messages:
+            print("processing")
             aggregated_messages[node] = aggregator_function(processed_messages[node])
+            print("processed")
         return aggregated_messages
 
     def update_memory(self, messages, memory, memory_updater) -> None:

@@ -284,7 +284,6 @@ def process_edges(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]):
         query_module_tgn_batch.timestamps = np.append(query_module_tgn_batch.timestamps, timestamp)
         query_module_tgn_batch.edge_idxs = np.append(query_module_tgn_batch.edge_idxs, edge_idx)
 
-        print(len(query_module_tgn_batch.sources))
 
 
 def reset_current_batch_data(batch_size: int):
