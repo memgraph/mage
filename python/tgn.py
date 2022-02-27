@@ -462,8 +462,6 @@ def get_memory_updater_type(memory_updater_type: str) -> MemoryUpdaterType:
     elif MemoryUpdaterType(memory_updater_type) is MemoryUpdaterType.RNN:
         return MemoryUpdaterType.RNN
 
-    elif MemoryUpdaterType(memory_updater_type) is MemoryUpdaterType.LSTM:
-        return MemoryUpdaterType.LSTM
     else:
-        raise Exception(f"Wrong memory updater type, expected {MemoryUpdaterType.GRU} "
-                        f", {MemoryUpdaterType.RNN} or or {MemoryUpdaterType.LSTM}")
+        raise Exception(f"Wrong memory updater type, expected {MemoryUpdaterType.GRU} or"
+                        f", {MemoryUpdaterType.RNN}")

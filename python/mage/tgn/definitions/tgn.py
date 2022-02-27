@@ -7,7 +7,7 @@ import torch.nn as nn
 from mage.tgn.constants import TGNLayerType, MessageFunctionType, MemoryUpdaterType, MessageAggregatorType
 from mage.tgn.definitions.events import Event, InteractionEvent, NodeEvent
 from mage.tgn.definitions.memory import Memory
-from mage.tgn.definitions.memory_updater import MemoryUpdaterGRU, MemoryUpdaterRNN, MemoryUpdaterLSTM
+from mage.tgn.definitions.memory_updater import MemoryUpdaterGRU, MemoryUpdaterRNN
 from mage.tgn.definitions.message_aggregator import MeanMessageAggregator, LastMessageAggregator, MessageAggregator
 from mage.tgn.definitions.message_function import MessageFunctionMLP, MessageFunctionIdentity, MessageFunction
 from mage.tgn.definitions.messages import RawMessage, NodeRawMessage, InteractionRawMessage
@@ -878,9 +878,6 @@ def get_memory_updater_type(memory_updater_type: MemoryUpdaterType):
 
     elif memory_updater_type == MemoryUpdaterType.RNN:
         return MemoryUpdaterRNN
-
-    elif memory_updater_type == MemoryUpdaterType.LSTM:
-        return MemoryUpdaterLSTM
     else:
         raise Exception(f'Memory updater type {memory_updater_type} not yet supported.')
 

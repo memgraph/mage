@@ -14,7 +14,6 @@ class MessageFunctionType(enum.Enum):
 class MemoryUpdaterType(enum.Enum):
     GRU = "gru"
     RNN = "rnn"
-    LSTM = "lstm"
 
 
 class MessageAggregatorType(enum.Enum):
