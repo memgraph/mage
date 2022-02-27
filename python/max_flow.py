@@ -81,7 +81,7 @@ def get_paths(
         # VertexId and EdgeId
         augmenting_path = [start_v.id]
         flow_bottleneck = DFS_path_finding(
-            context, augmenting_path, start_v, end_v, edge_property, delta, edge_flows
+            augmenting_path, start_v, end_v, edge_property, delta, edge_flows
         )
 
         if flow_bottleneck == -1:
@@ -115,7 +115,6 @@ def get_paths(
 
 
 def DFS_path_finding(
-    context: mgp.ProcCtx,
     path: List,
     current_v: mgp.Vertex,
     end_v: mgp.Vertex,
@@ -130,7 +129,7 @@ def DFS_path_finding(
     :param path: list for storing path, elements are
                  alternating mgp.VertexId and mgp.Edge
     :param delta: lower bound for path flow
-    param edge_flows: dict containing existing flows of edges
+    :param edge_flows: dict containing existing flows of edges
 
     :return: flow_bottleneck, smallest remaining capacity on the path,
              -1 if no path to end_node is found
@@ -138,6 +137,10 @@ def DFS_path_finding(
 
     # instead of using residual edges, we check for in_edges with flow
     for edge in chain(current_v.out_edges, current_v.in_edges):
+        # skip edges without the flow property to allow heterogeneous graphs
+        if edge_property not in edge.properties:
+            continue
+
         if edge.from_vertex == current_v:
             to_v = edge.to_vertex
             remaining_capacity = edge.properties[edge_property] - edge_flows.get(
@@ -160,13 +163,13 @@ def DFS_path_finding(
                 return remaining_capacity
 
             flow_bottleneck = DFS_path_finding(
-                context, path, to_v, end_v, edge_property, delta, edge_flows
+                path, to_v, end_v, edge_property, delta, edge_flows
             )
             if flow_bottleneck != -1:
                 # function call found path, propagate back
                 return min(remaining_capacity, flow_bottleneck)
 
     # no path found with this vertex, remove it and its edge
-    del path[-2:]
+    path = path[:-2]
 
     return -1

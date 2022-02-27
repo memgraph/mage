@@ -22,10 +22,13 @@ def BFS_find_weight_min_max(start_v: mgp.Vertex, edge_property: str) -> mgp.Numb
         visited.add(current_v)
 
         for e in current_v.out_edges:
-            if e.properties[edge_property] > max_weight:
-                max_weight = e.properties[edge_property]
-            elif e.properties[edge_property] < min_weight:
-                min_weight = e.properties[edge_property]
+            # if there are edges without the given property, we ignore them,
+            # in order to support heterogeneous graphs
+            if edge_property not in e.properties:
+                continue
+
+            max_weight = max(max_weight, e.properties[edge_property])
+            min_weight = min(min_weight, e.properties[edge_property])
 
             if e.to_vertex not in visited:
                 next_queue.append(e.to_vertex)
