@@ -13,13 +13,14 @@ def get_flow(
     edge_property: str = "weight",
 ) -> mgp.Record(max_flow=mgp.Number):
     """
-    Calculates maximum flow of graph from paths found with get_paths()
+    Calculates maximum flow of graph from paths found with method
+    ford_fulkerson_capacity_scaling
 
     :param start_v: source vertex for outgoing flow
     :param end_v: sink vertex for ingoing flow
     :param edge_property: property of edge to be used as flow capacity
 
-    return: number value of graph max flow
+    return: number value of graph's maximum flow
 
     The procedure can be invoked in openCypher using the following call:
     MATCH (source {id: 0}), (sink {id: 5})
@@ -27,12 +28,11 @@ def get_flow(
     YIELD max_flow
     RETURN max_flow
     """
-
-    records = get_paths(context, start_v, end_v, edge_property)
+    paths_and_flows = ford_fulkerson_capacity_scaling(start_v, end_v, edge_property)
 
     max_flow = 0
-    for record in records:
-        max_flow += record.fields["flow"]
+    for _, flow in paths_and_flows:
+        max_flow += flow
 
     return mgp.Record(max_flow=max_flow)
 
@@ -45,15 +45,14 @@ def get_paths(
     edge_property: str = "weight",
 ) -> mgp.Record(path=mgp.Path, flow=mgp.Number):
     """
-    Returns each path and its flow used in max flow of a graph. Uses
-    Ford-Fulkerson algorithm, with capacity scaling for augmenting path
-    finding. Works for positive number weight values.
+    Returns each path and its flow used in max flow of a graph found with
+    ford_fulkerson_capacity_scaling
 
     :param start_v: source vertex for outgoing flow
     :param end_v: sink vertex for ingoing flow
     :param edge_property: property of edge to be used as flow capacity
 
-    return: number value of graph max flow
+    return: flow paths and amounts
 
     The procedure can be invoked in openCypher using the following call:
     MATCH (source {id: 0}), (sink {id: 5})
@@ -61,20 +60,41 @@ def get_paths(
     YIELD path, flow
     RETURN path, flow
     """
+    paths_and_flows = ford_fulkerson_capacity_scaling(start_v, end_v, edge_property)
+
+    return [mgp.Record(path=list_to_mgp_path(context, path), flow=flow)
+            for path, flow in paths_and_flows]
+
+
+def ford_fulkerson_capacity_scaling(
+    start_v: mgp.Vertex,
+    end_v: mgp.Vertex,
+    edge_property: str = "weight",
+) -> List:
+    """
+    Uses Ford-Fulkerson algorithm, with capacity scaling for augmenting path
+    finding. Works for positive number weight values.
+
+    :param start_v: source vertex for outgoing flow
+    :param end_v: sink vertex for ingoing flow
+    :param edge_property: property of edge to be used as flow capacity
+
+    return: list of tuples of path and flow
+    """
 
     if not isinstance(start_v, mgp.Vertex) or not isinstance(end_v, mgp.Vertex):
-        return [mgp.Record(path=None, flow=0)]
+        return []
 
     max_weight, min_weight = BFS_find_weight_min_max(start_v, edge_property)
 
     if max_weight <= 0:
-        return [mgp.Record(path=None, flow=0)]
+        return []
 
     # delta is init as largest power of 2 smaller than max_weight
     delta = 2 ** floor(log2(max_weight))
 
     edge_flows = dict()
-    return_paths_and_flows = []
+    paths_and_flows = []
 
     while True:
         # augmenting path is a list of interchangeable
@@ -99,19 +119,9 @@ def get_paths(
                 else:
                     raise Exception("path is not ordered correctly")
 
-        print(augmenting_path)
+        paths_and_flows.append((augmenting_path, flow_bottleneck))
 
-        # store path as mgp.Path to return
-        for i, elem in enumerate(augmenting_path):
-            if i == 0:
-                path = mgp.Path(context.graph.get_vertex_by_id(augmenting_path[0]))
-            else:
-                if isinstance(elem, mgp.Edge):
-                    path.expand(elem)
-
-        return_paths_and_flows.append((path, flow_bottleneck))
-
-    return [mgp.Record(path=path, flow=flow) for path, flow in return_paths_and_flows]
+    return paths_and_flows
 
 
 def DFS_path_finding(
@@ -173,3 +183,24 @@ def DFS_path_finding(
     path = path[:-2]
 
     return -1
+
+
+def list_to_mgp_path(
+    context: mgp.ProcCtx,
+    augmenting_path: List
+) -> mgp.Path:
+    """
+    Converts a list of mgp.VertexId and mgp.EdgeId into mgp.Path
+
+    :param augmenting_path: List of interchangeable VertexId and EdgeId
+
+    :return: mgp.Path structure
+    """
+    for i, elem in enumerate(augmenting_path):
+        if i == 0:
+            path = mgp.Path(context.graph.get_vertex_by_id(augmenting_path[0]))
+        else:
+            if isinstance(elem, mgp.Edge):
+                path.expand(elem)
+
+    return path
