@@ -138,18 +138,18 @@ def _test_online(test_dir: Path, db: Memgraph):
     # Run optional setup queries
     if setup_cyphers:
         _execute_cyphers(setup_cyphers.splitlines(), db)
-
-    # Execute cypher queries and compare them with results
-    for input_cyphers_raw, test_dict in zip(
-        checkpoint_input_cyphers, checkpoint_test_dicts
-    ):
-        input_cyphers = input_cyphers_raw.splitlines()
-        _execute_cyphers(input_cyphers, db)
-        _run_test(test_dict, db)
-
-    # Run optional cleanup queries
-    if cleanup_cyphers:
-        _execute_cyphers(cleanup_cyphers.splitlines(), db)
+    try:
+        # Execute cypher queries and compare them with results
+        for input_cyphers_raw, test_dict in zip(
+            checkpoint_input_cyphers, checkpoint_test_dicts
+        ):
+            input_cyphers = input_cyphers_raw.splitlines()
+            _execute_cyphers(input_cyphers, db)
+            _run_test(test_dict, db)
+    finally:
+        # Run optional cleanup queries
+        if cleanup_cyphers:
+            _execute_cyphers(cleanup_cyphers.splitlines(), db)
 
 
 @pytest.mark.parametrize("test_dir", tests)
