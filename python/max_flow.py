@@ -62,8 +62,10 @@ def get_paths(
     """
     paths_and_flows = ford_fulkerson_capacity_scaling(start_v, end_v, edge_property)
 
-    return [mgp.Record(path=list_to_mgp_path(context, path), flow=flow)
-            for path, flow in paths_and_flows]
+    return [
+        mgp.Record(path=list_to_mgp_path(context, path), flow=flow)
+        for path, flow in paths_and_flows
+    ]
 
 
 def ford_fulkerson_capacity_scaling(
@@ -185,10 +187,7 @@ def DFS_path_finding(
     return -1
 
 
-def list_to_mgp_path(
-    context: mgp.ProcCtx,
-    augmenting_path: List
-) -> mgp.Path:
+def list_to_mgp_path(context: mgp.ProcCtx, augmenting_path: List) -> mgp.Path:
     """
     Converts a list of mgp.VertexId and mgp.EdgeId into mgp.Path
 
