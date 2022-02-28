@@ -369,6 +369,7 @@ def update(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]) -> mgp.Record():
 
 @mgp.read_proc
 def set_params(
+        ctx: mgp.ProcCtx,
         learning_type: str,
         batch_size: int,
         num_of_layers: int,

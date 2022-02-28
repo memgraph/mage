@@ -15,14 +15,9 @@ class MeanMessageAggregator(MessageAggregator):
         super().__init__()
 
     def forward(self, data: List[torch.Tensor]):
-        return data[len(data) - 1]
-        print("mean")
         b = torch.rand((len(data), data[0].shape[0], data[0].shape[1]))
-        print(b)
-        torch.cat(data, out=b)
-        print("works")
+        b = torch.cat(data)
         mean = torch.mean(b, dim=0)
-        print("mean", mean)
         return mean.reshape((1, -1))
 
 
