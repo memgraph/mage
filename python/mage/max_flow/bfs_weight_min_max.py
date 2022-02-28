@@ -13,7 +13,7 @@ def BFS_find_weight_min_max(start_v: mgp.Vertex, edge_property: str) -> mgp.Numb
     :return: Number, the largest value of edge_property in graph
     """
 
-    next_queue = deque([start_v])    
+    next_queue = deque([start_v])
     visited = set()
     max_weight = 0
     min_weight = float("Inf")
