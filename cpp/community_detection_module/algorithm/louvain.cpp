@@ -68,12 +68,12 @@ void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, GrappoloGr
   }
 
   auto edge_list_ptrs = new long[number_of_vertices + 1];
-  if (edge_list_ptrs == NULL) {
+  if (edge_list_ptrs == nullptr) {
     throw mg_exception::NotEnoughMemoryException();
   }
 
   auto edge_list = new edge[number_of_edges * 2];  // Every edge stored twice
-  if (edge_list == NULL) {
+  if (edge_list == nullptr) {
     throw mg_exception::NotEnoughMemoryException();
   }
 
@@ -96,7 +96,7 @@ void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, GrappoloGr
 
   // Keep track of how many edges have been added for a vertex:
   auto added = std::unique_ptr<long[]>(new long[number_of_vertices]);
-  if (added == NULL) {
+  if (added == nullptr) {
     throw mg_exception::NotEnoughMemoryException();
   }
 #pragma omp parallel for
