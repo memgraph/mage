@@ -27,6 +27,8 @@ set(CMAKE_SHARED_LIBRARY_PREFIX "")
 # Install testing dependencies
 find_package(Threads REQUIRED)
 
+include(GNUInstallDirs)
+
 # Install gtest
 
 include(ExternalProject)
@@ -35,20 +37,20 @@ ExternalProject_Add(gtest-proj
   PREFIX            ${GTEST_ROOT}
   INSTALL_DIR       ${GTEST_ROOT}
   GIT_REPOSITORY    https://github.com/google/googletest.git
-  GIT_TAG           v1.10.x
+  GIT_TAG           release-1.11.0
   CMAKE_ARGS        "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
                     "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
                     "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
                     "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
 
 set(GTEST_INCLUDE_DIR ${GTEST_ROOT}/include)
-set(GTEST_LIBRARY_PATH ${GTEST_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
-set(GTEST_DEBUG_LIBRARY_PATH ${GTEST_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtestd.a)
+set(GTEST_LIBRARY_PATH ${GTEST_ROOT}/${CMAKE_INSTALL_LIBDIR}/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
+set(GTEST_DEBUG_LIBRARY_PATH ${GTEST_ROOT}/${CMAKE_INSTALL_LIBDIR}/${CMAKE_FIND_LIBRARY_PREFIXES}gtestd.a)
 add_library(gtest STATIC IMPORTED)
 set_target_properties(gtest PROPERTIES
-  IMPORTED_LOCATION ${GTEST_LIBRARY_PATH}
-  IMPORTED_LOCATION_DEBUG ${GTEST_DEBUG_LIBRARY_PATH}
-  INTERFACE_LINK_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
+  IMPORTED_LOCATION "${GTEST_LIBRARY_PATH}"
+  IMPORTED_LOCATION_DEBUG "${GTEST_DEBUG_LIBRARY_PATH}"
+  INTERFACE_LINK_LIBRARIES "${CMAKE_THREAD_LIBS_INIT}")
 include_directories("${GTEST_INCLUDE_DIR}")
 add_dependencies(gtest gtest-proj)
 
