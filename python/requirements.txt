@@ -3,4 +3,6 @@ scipy==1.7.1
 gekko==0.2.8
 networkx==2.6.2
 python-Levenshtein==0.12.1
-gensim==4.0.0.
+gensim==4.0.0
+requests==2.27.1
+kafka-python==2.0.2
