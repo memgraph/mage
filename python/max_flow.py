@@ -166,7 +166,6 @@ def DFS_path_finding(
             continue
 
         if remaining_capacity > delta:
-
             path.append(edge)
             path.append(to_v.id)
 
