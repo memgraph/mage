@@ -15,6 +15,8 @@ from mage.tgn.definitions.raw_message_store import RawMessageStore
 from mage.tgn.definitions.temporal_neighborhood import TemporalNeighborhood
 from mage.tgn.definitions.time_encoding import TimeEncoder
 
+from mage.tgn.helper.simple_mlp import MLP
+
 
 class TGN(nn.Module):
     def __init__(self, num_of_layers: int,
@@ -94,7 +96,6 @@ class TGN(nn.Module):
 
     def memory_detach_tensor_grads(self):
         self.memory.detach_tensor_grads()
-        # todo check if we need this to do
         # self.raw_message_store.detach_grads()
 
     def forward(self, data: Tuple[
@@ -374,6 +375,8 @@ class TGNEdgesSelfSupervised(TGN):
 
         # edge_features = Dict(int, np.array)
         # node_features -> Dict(int, np.array)
+        # tl;dr used to unpack data
+        print("forward TGNEdgesSelfSupervised")
         sources, destinations, negative_sources, negative_destinations, timestamps, edge_idxs, edge_features, node_features = data
 
         assert sources.shape[0] == destinations.shape[0] == negative_sources.shape[0] == negative_destinations.shape[
@@ -439,7 +442,8 @@ class TGNGraphAttentionEmbedding(TGN):
                                                 time_encoding_dim=self.time_dimension,
                                                 node_features_dim=self.num_node_features,
                                                 num_neighbors=self.num_neighbors,
-                                                num_attention_heads=num_attention_heads
+                                                num_attention_heads=num_attention_heads,
+                                                num_of_layers=self.num_of_layers
                                                 )
 
         tgn_layers.append(layer)
@@ -591,8 +595,12 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
             features_curr = features[row][:]
             edge_feature_curr = edge_features[i][:]
             time_feature_curr = time_features[i][:]
-
+            # shape(num_neighbors, embedding_dim+edge_features_dim+time_encoding_dim)
+            # concatenation is done alongside columns, we have only 2 dimension, rows=0 and columns=1
             aggregate = torch.concat((features_curr, edge_feature_curr, time_feature_curr), dim=1)
+
+            # sum rows, but keep this dimension
+            # shape(1, embedding_dim+edge_features_dim+time_encoding_dim)
             aggregate_sum = torch.sum(aggregate, dim=0, keepdim=True)
             out_linear1 = self.linear_1(aggregate_sum)
             out_relu_linear1 = self.relu(out_linear1)
@@ -608,150 +616,82 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
     """
 
     def __init__(self, embedding_dimension: int, edge_feature_dim: int,
-                 time_encoding_dim: int, node_features_dim: int, num_neighbors: int, num_attention_heads: int):
-        super().__init__(embedding_dimension, edge_feature_dim, time_encoding_dim, node_features_dim, num_neighbors)
+                 time_encoding_dim: int, node_features_dim: int, num_neighbors: int, num_of_layers: int,
+                 num_attention_heads: int):
+        super().__init__(embedding_dimension, edge_feature_dim, time_encoding_dim,
+                         node_features_dim, num_neighbors, num_of_layers)
 
         self.query_dim = embedding_dimension + time_encoding_dim
         self.key_dim = embedding_dimension + edge_feature_dim + time_encoding_dim
         self.value_dim = self.key_dim
         self.num_attention_heads = num_attention_heads
 
-        self.multi_head_attention = nn.MultiheadAttention(embed_dim=self.query_dim,
-                                                          kdim=self.key_dim * self.num_neighbors,
-                                                          # set on neighbors num
-                                                          vdim=self.value_dim * self.num_neighbors,
-                                                          num_heads=num_attention_heads,  # this add as a parameter
-                                                          batch_first=True)  # this way no need to do torch.permute
-        # later <3
-        # todo add MLP layer with options
-        # fc1, fc2 and relu represent last MLP
-        self.fc1 = nn.Linear(self.query_dim + embedding_dimension, embedding_dimension)
-        self.fc2 = nn.Linear(embedding_dimension, embedding_dimension)
-        self.act = nn.ReLU()
+        self.multi_head_attention = nn.MultiheadAttention(
+            embed_dim=self.query_dim,
+            kdim=self.key_dim * self.num_neighbors,
+            # set on neighbors num
+            vdim=self.value_dim * self.num_neighbors,
+            num_heads=num_attention_heads,  # this add as a parameter
+            batch_first=True)  # this way no need to do torch.permute later <3
 
-        nn.init.xavier_normal_(self.fc1.weight)
-        nn.init.xavier_normal_(self.fc2.weight)
+        self.mlp = MLP([self.query_dim + embedding_dimension, embedding_dimension, embedding_dimension])
 
     def forward(self, data):
-        print("forward")
-        prev_layer_layered_embeddings, prev_layer_layered_edge_features, prev_layer_layered_time_diffs = data
+        node_layers, mappings, edge_layers, neighbors_arr, features, edge_features, time_features = data
 
-        assert len(prev_layer_layered_edge_features) == len(prev_layer_layered_time_diffs) == len(
-            prev_layer_layered_embeddings) - 1, \
-            f"Error in dimensions"
+        out = features
 
-        num_propagations = len(prev_layer_layered_embeddings) - 1
+        for k in range(self.num_of_layers):
+            mapping = mappings[k]
+            nodes = node_layers[k + 1]  # neighbors on next layer
+            # represents how we globally gave index to node,timestamp mapping
+            global_indexes = np.array([mappings[0][(v, t)] for (v, t) in nodes])
+            cur_neighbors = [neighbors_arr[index] for index in
+                             global_indexes]  # neighbors and timestamps of nodes from next layer
+            curr_edges = [edge_features[index] for index in global_indexes]
+            curr_time = [time_features[index] for index in global_indexes]
+            # shape (len(nodes), self.num_neighbors * self.key_dim)
+            aggregate = self._aggregate(out, cur_neighbors, nodes, mapping, curr_edges, curr_time)
 
-        # todo 1: fix, send timestamps of nodes, currently I am using timestamps of edges + this zeros
-        # todo 2: move this to TGN forward part
-        last_embed_idx = len(prev_layer_layered_embeddings) - 1
-        num_source_nodes = prev_layer_layered_embeddings[last_embed_idx].shape[0]
-        # todo check why here ,1 worked
-        prev_layer_layered_time_diffs.append(torch.zeros((num_source_nodes, self.time_encoding_dim)))
+            # add third dimension,
+            aggregate_unsqueeze = torch.unsqueeze(aggregate, dim=0)
 
-        # copy to new layer
-        new_layer_edge_features = []
-        new_layer_time_diffs = []
-        for i in range(1, num_propagations):
-            new_layer_edge_features.append(prev_layer_layered_edge_features[i].detach().clone())
-            new_layer_time_diffs.append(prev_layer_layered_time_diffs[i].detach().clone())
+            curr_mapped_nodes = np.array([mapping[(v, t)] for (v, t) in nodes])
 
-        neighborhood_concat_features = []
-        prev_layer_layered_emb_copy = []
-        prev_layer_layered_emb_copy_2 = []
-        current_time_features_list = []
-        for i in range(num_propagations):
-            # C^(l)(t)
-            # shape = N, num_neighbors,
-            neighborhood_features = torch.cat([prev_layer_layered_embeddings[i].detach().clone(),
-                                               prev_layer_layered_edge_features[i].detach().clone(),
-                                               prev_layer_layered_time_diffs[i].detach().clone()], dim=2)
+            keys = aggregate_unsqueeze
+            values = aggregate_unsqueeze
+            query_concat = torch.concat(
+                (out[curr_mapped_nodes], torch.zeros(len(curr_mapped_nodes), self.time_encoding_dim)), dim=1)
+            query = torch.unsqueeze(query_concat, dim=0)
 
-            # example 50x5x373 -> 50x1865,  concatenate features of neighbors
-            neighborhood_features_flatten = torch.flatten(neighborhood_features, start_dim=1)
+            attn_out, _ = self.multi_head_attention(query=query, key=keys, value=values)
 
-            # conform our matrix to shape of its sources (since we in current iteration working with neighbors of
-            # sources)
-            next_layer_shape = prev_layer_layered_embeddings[i + 1].shape
-            if len(next_layer_shape) == 2:
-                # this is just technique so that we have 3D matrix in any case
-                next_layer_shape = (1, next_layer_shape[0])
+            attn_out = torch.squeeze(attn_out)
 
-            # 50x1865 -> 10x5x1865
-            # 10 represents number of top layer source nodes, 5 number of their neighbors
-            neighborhood_features_flatten_reshapped = neighborhood_features_flatten.reshape(
-                (next_layer_shape[0], next_layer_shape[1], -1))
+            concat_neigh_out = torch.cat((out[curr_mapped_nodes], attn_out),
+                                         dim=1)
+            out = self.mlp(concat_neigh_out)
+        return out
 
-            neighborhood_concat_features.append(neighborhood_features_flatten_reshapped.detach().clone())
-            prev_layer_layered_emb_copy.append(prev_layer_layered_embeddings[i + 1].detach().clone())
-            prev_layer_layered_emb_copy_2.append(prev_layer_layered_embeddings[i + 1].detach().clone())
-            current_time_features_list.append(prev_layer_layered_time_diffs[i + 1].detach().clone())
+    def _aggregate(self, features, rows, nodes, mapping, edge_features, time_features):
+        assert len(nodes) == len(rows)
+        mapped_rows = [np.array([mapping[(vi, ti)] for (vi, ti) in row]) for row in rows]
 
-        queries = []
-        for i in range(num_propagations):
-            current_features = prev_layer_layered_emb_copy[i].detach().clone()
-            current_time_features = current_time_features_list[i].detach().clone()
+        out = torch.rand(len(nodes), self.num_neighbors * self.key_dim)
 
-            # query dim
-            current_num_of_dim = current_features.dim()
-            # concat along last dim, variable dim gets number of dimensions, and torch
-            # looks at dimensions from 0 to dim-1
-            query = torch.cat([current_features, current_time_features], dim=current_num_of_dim - 1)
+        # row represents list of indexes of "current neighbors" of edge_features on i-th index
+        for i, row in enumerate(mapped_rows):
+            features_curr = features[row][:]
+            edge_feature_curr = edge_features[i][:]
+            time_feature_curr = time_features[i][:]
 
-            # we again need to reshape it so we can have 3D matrix, at least 1, num_nodes, features
-            # Also if you look at multi head attention documentation, 1 represents batch in our case
-            query_shape = query.shape
-            if len(query_shape) == 2:
-                query = query.reshape((1, query_shape[0], query_shape[1]))
+            # shape(1, num_neighbors * (embedding_dim + edge_features_dim + time_encoding_dim)
+            # after doing concatenation on columns side, reshape to have 1 row
+            aggregate = torch.concat((features_curr, edge_feature_curr, time_feature_curr), dim=1).reshape((1, -1))
 
-            queries.append(query)
+            out[i, :] = aggregate
 
-        attentions = []
-        for i in range(num_propagations):
-            neighborhood_features = neighborhood_concat_features[i].detach().clone()
-
-            key = neighborhood_features.detach().clone()
-            value = neighborhood_features.detach().clone()
-            query = queries[i]
-
-            # todo check how to add mask
-            # shape 10,5, query_dim
-            attention_output, _ = self.multi_head_attention(query=query, value=value, key=key)
-
-            attentions.append(attention_output)
-
-        attention_concat = []
-        for i in range(num_propagations):
-            attention_output = attentions[i].detach().clone()
-
-            attention_output_dim = attention_output.dim()
-
-            current_features = prev_layer_layered_emb_copy_2[i].detach().clone()
-
-            current_features_shape = current_features.shape
-            if len(current_features_shape) == 2:
-                # again do the reshape so we can have 3D matrix
-                current_features = current_features.reshape((1,
-                                                             current_features_shape[0],
-                                                             current_features_shape[1])).detach().clone()
-
-            # todo check if dim is exactily 2 always
-            x = torch.cat([attention_output.detach().clone(), current_features.detach().clone()],
-                          dim=attention_output_dim - 1)
-            attention_concat.append(x)
-
-        new_layer_layered_embeddings = []
-        for i in range(num_propagations):
-            concat_features = attention_concat[i].detach().clone()
-            result = self.fc2(self.act(self.fc1(concat_features))).detach().clone()
-            if i == num_propagations - 1:  # last iter
-                result_cpy = result.squeeze()
-                new_layer_layered_embeddings.append(result_cpy)
-                continue
-
-            new_layer_layered_embeddings.append(result)
-
-        return new_layer_layered_embeddings, new_layer_edge_features, new_layer_time_diffs
+        return out
 
 
 def get_message_function_type(message_function_type: MessageFunctionType):
