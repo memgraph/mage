@@ -8,8 +8,10 @@ from mage.tgn.definitions.messages import RawMessage
 
 
 class RawMessageStore:
-    def __init__(self, edge_raw_message_dimension:int, node_raw_message_dimension:int):
-        self.message_container:Dict[int, List[RawMessage]] = {}
+    def __init__(
+        self, edge_raw_message_dimension: int, node_raw_message_dimension: int
+    ):
+        self.message_container: Dict[int, List[RawMessage]] = {}
         self.edge_raw_message_dimension = edge_raw_message_dimension
 
     def detach_grads(self):
@@ -19,10 +21,10 @@ class RawMessageStore:
                 message.detach_memory()
 
     def get_messages(self):
-        #todo was a copy here
+        # todo was a copy here
         return self.message_container
 
-    def update_messages(self, new_node_messages:Dict[int, List[RawMessage]]):
+    def update_messages(self, new_node_messages: Dict[int, List[RawMessage]]):
         for node in new_node_messages:
             if node not in self.message_container:
                 self.message_container[node] = []

@@ -6,7 +6,12 @@ import mgp
 import numpy as np
 import torch
 import torch.nn as nn
-from mage.tgn.constants import TGNLayerType, MessageFunctionType, MessageAggregatorType, MemoryUpdaterType
+from mage.tgn.constants import (
+    TGNLayerType,
+    MessageFunctionType,
+    MessageAggregatorType,
+    MemoryUpdaterType,
+)
 from mage.tgn.definitions.tgn import TGN, TGNGraphSumEdgeSelfSupervised
 from dataclasses import dataclass
 
@@ -85,6 +90,7 @@ query_module_tgn_batch: QueryModuleTGNBatch
 
 #####################################
 
+
 def set_tgn(config: Dict[str, Any]):
     """
     This is adapted for self-supervised learning for graph sum
@@ -98,11 +104,15 @@ def set_tgn(config: Dict[str, Any]):
 
     del config_copy[TGNParameters.LEARNING_TYPE]
 
-    if config[TGNParameters.LAYER_TYPE] == TGNLayerType.GraphSumEmbedding and \
-            config[TGNParameters.LEARNING_TYPE] == "self_supervised":
+    if (
+        config[TGNParameters.LAYER_TYPE] == TGNLayerType.GraphSumEmbedding
+        and config[TGNParameters.LEARNING_TYPE] == "self_supervised"
+    ):
         tgn = TGNGraphSumEdgeSelfSupervised(**config_copy).to(device)
-    elif config[TGNParameters.LAYER_TYPE] == TGNLayerType.GraphAttentionEmbedding and\
-            config[TGNParameters.LEARNING_TYPE] == "self_supervised":
+    elif (
+        config[TGNParameters.LAYER_TYPE] == TGNLayerType.GraphAttentionEmbedding
+        and config[TGNParameters.LEARNING_TYPE] == "self_supervised"
+    ):
         tgn = TGNGraphAttentionEdgeSelfSupervised(**config_copy).to(device)
     else:
         raise Exception("Wrong types")
@@ -111,8 +121,9 @@ def set_tgn(config: Dict[str, Any]):
     tgn.train()
 
     # init this as global param
-    embedding_dim_crit_loss = (config[TGNParameters.MEMORY_DIMENSION] + config[
-        TGNParameters.NUM_NODE_FEATURES]) * 2  # concat embeddings of source and destination
+    embedding_dim_crit_loss = (
+        config[TGNParameters.MEMORY_DIMENSION] + config[TGNParameters.NUM_NODE_FEATURES]
+    ) * 2  # concat embeddings of source and destination
     fc1 = nn.Linear(embedding_dim_crit_loss, embedding_dim_crit_loss // 2)
     fc2 = nn.Linear(embedding_dim_crit_loss // 2, 1)
     act = nn.ReLU(inplace=False)
@@ -125,7 +136,9 @@ def set_tgn(config: Dict[str, Any]):
     optimizer = torch.optim.Adam(tgn.parameters(), lr=0.0001)
     m_loss = []
 
-    query_module_tgn = QueryModuleTGN(config, tgn, criterion, optimizer, device, m_loss, fc1, fc2, act)
+    query_module_tgn = QueryModuleTGN(
+        config, tgn, criterion, optimizer, device, m_loss, fc1, fc2, act
+    )
 
 
 def sample_negative(negative_num: int) -> (np.array, np.array):
@@ -139,8 +152,9 @@ def sample_negative(negative_num: int) -> (np.array, np.array):
     all_src = list(set([src for src, dest in all_edges]))
     all_dest = list(set([src for src, dest in all_edges]))
 
-    return np.random.choice(all_src, negative_num, replace=True), \
-           np.random.choice(all_dest, negative_num, replace=True)
+    return np.random.choice(all_src, negative_num, replace=True), np.random.choice(
+        all_dest, negative_num, replace=True
+    )
 
 
 def train_batch_self_supervised():
@@ -148,20 +162,47 @@ def train_batch_self_supervised():
 
     # todo fix bug if query_module_batch.sources > BATCH_SIZE, split it in multiple batches
 
-    sources, destinations, timestamps, edge_features, edge_idxs, node_features, current_batch_size = \
-        query_module_tgn_batch.sources, query_module_tgn_batch.destinations, query_module_tgn_batch.timestamps, \
-        query_module_tgn_batch.edge_features, query_module_tgn_batch.edge_idxs, \
-        query_module_tgn_batch.node_features, query_module_tgn_batch.current_batch_size
+    (
+        sources,
+        destinations,
+        timestamps,
+        edge_features,
+        edge_idxs,
+        node_features,
+        current_batch_size,
+    ) = (
+        query_module_tgn_batch.sources,
+        query_module_tgn_batch.destinations,
+        query_module_tgn_batch.timestamps,
+        query_module_tgn_batch.edge_features,
+        query_module_tgn_batch.edge_idxs,
+        query_module_tgn_batch.node_features,
+        query_module_tgn_batch.current_batch_size,
+    )
 
-    assert len(sources) == len(destinations) == len(timestamps) == len(edge_features) == len(
-        edge_idxs) == current_batch_size, f"Batch size training error"
+    assert (
+        len(sources)
+        == len(destinations)
+        == len(timestamps)
+        == len(edge_features)
+        == len(edge_idxs)
+        == current_batch_size
+    ), f"Batch size training error"
 
     print("sources, destinations", sources, destinations)
 
     negative_src, negative_dest = sample_negative(len(sources))
 
     graph_data = (
-        sources, destinations, negative_src, negative_dest, timestamps, edge_idxs, edge_features, node_features)
+        sources,
+        destinations,
+        negative_src,
+        negative_dest,
+        timestamps,
+        edge_idxs,
+        edge_features,
+        node_features,
+    )
     query_module_tgn.optimizer.zero_grad()
 
     embeddings, embeddings_negative = query_module_tgn.tgn(graph_data)
@@ -173,8 +214,9 @@ def train_batch_self_supervised():
     embeddings_source_neg = embeddings_negative[:current_batch_size]
     embeddings_dest_neg = embeddings_negative[current_batch_size:]
 
-    x1, x2 = torch.cat([embeddings_source, embeddings_source_neg], dim=0), torch.cat([embeddings_dest,
-                                                                                      embeddings_dest_neg])
+    x1, x2 = torch.cat([embeddings_source, embeddings_source_neg], dim=0), torch.cat(
+        [embeddings_dest, embeddings_dest_neg]
+    )
     x = torch.cat([x1, x2], dim=1)
     h = query_module_tgn.act(query_module_tgn.fc1(x))
     score = query_module_tgn.fc2(h).squeeze(dim=0)
@@ -184,11 +226,16 @@ def train_batch_self_supervised():
 
     pos_prob, neg_prob = pos_score.sigmoid(), neg_score.sigmoid()
     with torch.no_grad():
-        pos_label = torch.ones(current_batch_size, dtype=torch.float, device=query_module_tgn.device)
-        neg_label = torch.zeros(current_batch_size, dtype=torch.float, device=query_module_tgn.device)
+        pos_label = torch.ones(
+            current_batch_size, dtype=torch.float, device=query_module_tgn.device
+        )
+        neg_label = torch.zeros(
+            current_batch_size, dtype=torch.float, device=query_module_tgn.device
+        )
 
-    loss = query_module_tgn.criterion(pos_prob.squeeze(), pos_label) + query_module_tgn.criterion(neg_prob.squeeze(),
-                                                                                                  neg_label)
+    loss = query_module_tgn.criterion(
+        pos_prob.squeeze(), pos_label
+    ) + query_module_tgn.criterion(neg_prob.squeeze(), neg_label)
 
     # todo solve a problem of retaining a graph
     loss.backward(retain_graph=True)
@@ -253,25 +300,42 @@ def process_edges(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]):
         edge_feature = edge.properties.get("features", None)
 
         if src_features is None:
-            src_features = np.random.randint(0, 100, query_module_tgn.config[TGNParameters.NUM_NODE_FEATURES]) / 100
+            src_features = (
+                np.random.randint(
+                    0, 100, query_module_tgn.config[TGNParameters.NUM_NODE_FEATURES]
+                )
+                / 100
+            )
         else:
             assert type(src_features) is tuple
             src_features = np.array(src_features)
 
         if dest_features is None:
-            dest_features = np.random.randint(0, 100, query_module_tgn.config[TGNParameters.NUM_NODE_FEATURES]) / 100
+            dest_features = (
+                np.random.randint(
+                    0, 100, query_module_tgn.config[TGNParameters.NUM_NODE_FEATURES]
+                )
+                / 100
+            )
         else:
             assert type(dest_features) is tuple
             dest_features = np.array(dest_features)
 
         if edge_feature is None:
-            edge_feature = np.random.randint(0, 100, query_module_tgn.config[TGNParameters.NUM_EDGE_FEATURES]) / 100
+            edge_feature = (
+                np.random.randint(
+                    0, 100, query_module_tgn.config[TGNParameters.NUM_EDGE_FEATURES]
+                )
+                / 100
+            )
         else:
             assert type(edge_feature) is tuple
             edge_feature = np.array(edge_feature)
 
         src_features = torch.tensor(src_features, requires_grad=True, dtype=torch.float)
-        dest_features = torch.tensor(dest_features, requires_grad=True, dtype=torch.float)
+        dest_features = torch.tensor(
+            dest_features, requires_grad=True, dtype=torch.float
+        )
         edge_feature = torch.tensor(edge_feature, requires_grad=True, dtype=torch.float)
 
         query_module_tgn_batch.node_features[src_id] = src_features
@@ -279,18 +343,32 @@ def process_edges(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]):
 
         query_module_tgn_batch.edge_features[edge_idx] = edge_feature
 
-        query_module_tgn_batch.sources = np.append(query_module_tgn_batch.sources, src_id)
-        query_module_tgn_batch.destinations = np.append(query_module_tgn_batch.destinations, dest_id)
-        query_module_tgn_batch.timestamps = np.append(query_module_tgn_batch.timestamps, timestamp)
-        query_module_tgn_batch.edge_idxs = np.append(query_module_tgn_batch.edge_idxs, edge_idx)
-
+        query_module_tgn_batch.sources = np.append(
+            query_module_tgn_batch.sources, src_id
+        )
+        query_module_tgn_batch.destinations = np.append(
+            query_module_tgn_batch.destinations, dest_id
+        )
+        query_module_tgn_batch.timestamps = np.append(
+            query_module_tgn_batch.timestamps, timestamp
+        )
+        query_module_tgn_batch.edge_idxs = np.append(
+            query_module_tgn_batch.edge_idxs, edge_idx
+        )
 
 
 def reset_current_batch_data(batch_size: int):
     global query_module_tgn_batch
-    query_module_tgn_batch = QueryModuleTGNBatch(0, np.empty((0, 1), dtype=int), np.empty((0, 1), dtype=int),
-                                                 np.empty((0, 1), dtype=int),
-                                                 np.empty((0, 1), dtype=int), {}, {}, batch_size)
+    query_module_tgn_batch = QueryModuleTGNBatch(
+        0,
+        np.empty((0, 1), dtype=int),
+        np.empty((0, 1), dtype=int),
+        np.empty((0, 1), dtype=int),
+        np.empty((0, 1), dtype=int),
+        {},
+        {},
+        batch_size,
+    )
 
 
 #####################################################
@@ -298,6 +376,7 @@ def reset_current_batch_data(batch_size: int):
 # all available read_procs
 
 #####################################################
+
 
 @mgp.read_proc
 def revert_from_database(ctx: mgp.ProcCtx) -> mgp.Record():
@@ -369,29 +448,37 @@ def update(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]) -> mgp.Record():
 
 @mgp.read_proc
 def set_params(
-        ctx: mgp.ProcCtx,
-        learning_type: str,
-        batch_size: int,
-        num_of_layers: int,
-        layer_type: str,
-        memory_dimension: int,
-        time_dimension: int,
-        num_edge_features: int,
-        num_node_features: int,
-        message_dimension: int,
-        num_neighbors: int,
-        edge_message_function_type: str,
-        message_aggregator_type: str,
-        memory_updater_type: str,
-        num_attention_heads = 1) -> mgp.Record():
+    ctx: mgp.ProcCtx,
+    learning_type: str,
+    batch_size: int,
+    num_of_layers: int,
+    layer_type: str,
+    memory_dimension: int,
+    time_dimension: int,
+    num_edge_features: int,
+    num_node_features: int,
+    message_dimension: int,
+    num_neighbors: int,
+    edge_message_function_type: str,
+    message_aggregator_type: str,
+    memory_updater_type: str,
+    num_attention_heads=1,
+) -> mgp.Record():
     """
     Warning: Every time you call this function, old TGN object is cleared and process of learning params is
     restarted
     """
     global query_module_tgn_batch
-    query_module_tgn_batch = QueryModuleTGNBatch(0, np.empty((0, 1), dtype=int), np.empty((0, 1), dtype=int),
-                                                 np.empty((0, 1), dtype=int),
-                                                 np.empty((0, 1), dtype=int), {}, {}, batch_size)
+    query_module_tgn_batch = QueryModuleTGNBatch(
+        0,
+        np.empty((0, 1), dtype=int),
+        np.empty((0, 1), dtype=int),
+        np.empty((0, 1), dtype=int),
+        np.empty((0, 1), dtype=int),
+        {},
+        {},
+        batch_size,
+    )
     config = {}
 
     # tgn params
@@ -404,9 +491,15 @@ def set_params(
     config[TGNParameters.NUM_NEIGHBORS] = num_neighbors
 
     config[TGNParameters.LAYER_TYPE] = get_tgn_layer_enum(layer_type)
-    config[TGNParameters.EDGE_FUNCTION_TYPE] = get_edge_message_function_type(edge_message_function_type)
-    config[TGNParameters.MESSAGE_AGGREGATOR_TYPE] = get_message_aggregator_type(message_aggregator_type)
-    config[TGNParameters.MEMORY_UPDATER_TYPE] = get_memory_updater_type(memory_updater_type)
+    config[TGNParameters.EDGE_FUNCTION_TYPE] = get_edge_message_function_type(
+        edge_message_function_type
+    )
+    config[TGNParameters.MESSAGE_AGGREGATOR_TYPE] = get_message_aggregator_type(
+        message_aggregator_type
+    )
+    config[TGNParameters.MEMORY_UPDATER_TYPE] = get_memory_updater_type(
+        memory_updater_type
+    )
 
     if config[TGNParameters.LAYER_TYPE] == TGNLayerType.GraphAttentionEmbedding:
         config[TGNParameters.NUM_ATTENTION_HEADS] = num_attention_heads
@@ -431,8 +524,10 @@ def get_tgn_layer_enum(layer_type: str) -> TGNLayerType:
     elif TGNLayerType(layer_type) is TGNLayerType.GraphSumEmbedding:
         return TGNLayerType.GraphSumEmbedding
     else:
-        raise Exception(f"Wrong layer type, expected {TGNLayerType.GraphAttentionEmbedding} "
-                        f"or {TGNLayerType.GraphSumEmbedding} ")
+        raise Exception(
+            f"Wrong layer type, expected {TGNLayerType.GraphAttentionEmbedding} "
+            f"or {TGNLayerType.GraphSumEmbedding} "
+        )
 
 
 def get_edge_message_function_type(message_function_type: str) -> MessageFunctionType:
@@ -441,8 +536,10 @@ def get_edge_message_function_type(message_function_type: str) -> MessageFunctio
     elif MessageFunctionType(message_function_type) is MessageFunctionType.MLP:
         return MessageFunctionType.MLP
     else:
-        raise Exception(f"Wrong message function type, expected {MessageFunctionType.Identity} "
-                        f"or {MessageFunctionType.MLP} ")
+        raise Exception(
+            f"Wrong message function type, expected {MessageFunctionType.Identity} "
+            f"or {MessageFunctionType.MLP} "
+        )
 
 
 def get_message_aggregator_type(message_aggregator_type: str) -> MessageAggregatorType:
@@ -451,8 +548,10 @@ def get_message_aggregator_type(message_aggregator_type: str) -> MessageAggregat
     elif MessageAggregatorType(message_aggregator_type) is MessageAggregatorType.Last:
         return MessageAggregatorType.Last
     else:
-        raise Exception(f"Wrong message aggregator type, expected {MessageAggregatorType.Last} "
-                        f"or {MessageAggregatorType.Mean} ")
+        raise Exception(
+            f"Wrong message aggregator type, expected {MessageAggregatorType.Last} "
+            f"or {MessageAggregatorType.Mean} "
+        )
 
 
 def get_memory_updater_type(memory_updater_type: str) -> MemoryUpdaterType:
@@ -463,5 +562,7 @@ def get_memory_updater_type(memory_updater_type: str) -> MemoryUpdaterType:
         return MemoryUpdaterType.RNN
 
     else:
-        raise Exception(f"Wrong memory updater type, expected {MemoryUpdaterType.GRU} or"
-                        f", {MemoryUpdaterType.RNN}")
+        raise Exception(
+            f"Wrong memory updater type, expected {MemoryUpdaterType.GRU} or"
+            f", {MemoryUpdaterType.RNN}"
+        )

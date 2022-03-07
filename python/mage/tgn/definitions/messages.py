@@ -10,34 +10,50 @@ class RawMessage:
 
     def detach_memory(self):
         pass
+
     def __str__(self):
-        return "{source},{timestamp}".format(source=self.source, timestamp=self.timestamp)
+        return "{source},{timestamp}".format(
+            source=self.source, timestamp=self.timestamp
+        )
 
 
 class NodeRawMessage(RawMessage):
-    def __init__(self, source_memory: np.array, timestamp: int, node_features: np.array, source: int):
+    def __init__(
+        self,
+        source_memory: np.array,
+        timestamp: int,
+        node_features: np.array,
+        source: int,
+    ):
         super(NodeRawMessage, self).__init__(source, timestamp)
         self.source_memory = source_memory
         self.timestamp = timestamp
         self.node_features = node_features
 
-
     def detach_memory(self):
         pass
 
     def __str__(self):
-        return "{source},{timestamp}".format(source=self.source, timestamp=self.timestamp)
+        return "{source},{timestamp}".format(
+            source=self.source, timestamp=self.timestamp
+        )
 
 
 class InteractionRawMessage(RawMessage):
-    def __init__(self, source_memory: torch.Tensor, dest_memory: torch.Tensor,
-                 delta_time: torch.Tensor, edge_features: torch.Tensor, source: int, timestamp: int):
+    def __init__(
+        self,
+        source_memory: torch.Tensor,
+        dest_memory: torch.Tensor,
+        delta_time: torch.Tensor,
+        edge_features: torch.Tensor,
+        source: int,
+        timestamp: int,
+    ):
         super(InteractionRawMessage, self).__init__(source, timestamp)
         self.source_memory = source_memory
         self.dest_memory = dest_memory
         self.delta_time = delta_time
         self.edge_features = edge_features
-
 
     def detach_memory(self):
 
@@ -47,4 +63,6 @@ class InteractionRawMessage(RawMessage):
         self.edge_features = self.edge_features.detach()
 
     def __str__(self):
-        return "{source},{timestamp}".format(source=self.source, timestamp=self.timestamp)
+        return "{source},{timestamp}".format(
+            source=self.source, timestamp=self.timestamp
+        )

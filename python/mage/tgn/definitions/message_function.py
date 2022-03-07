@@ -20,7 +20,7 @@ class MessageFunctionMLP(MessageFunction):
         self.message_function_net = nn.Sequential(
             nn.Linear(raw_message_dimension, raw_message_dimension // 2),
             nn.ReLU(),
-            nn.Linear(raw_message_dimension // 2, message_dimension)
+            nn.Linear(raw_message_dimension // 2, message_dimension),
         )
 
     def forward(self, data):
@@ -30,7 +30,7 @@ class MessageFunctionMLP(MessageFunction):
 class MessageFunctionIdentity(MessageFunction):
     def __init__(self, raw_message_dimension: int, message_dimension: int):
         super().__init__(raw_message_dimension, message_dimension)
-        assert raw_message_dimension == message_dimension, 'f Wrong!'
+        assert raw_message_dimension == message_dimension, "f Wrong!"
 
     def forward(self, data):
         concat_message = torch.concat(data, dim=-1)

@@ -21,8 +21,12 @@ class Memory:
 
     def get_node_memory(self, node: int) -> torch.Tensor:
         if node not in self.memory_container:
-            self.memory_container[node] = torch.zeros(self.memory_dimension, dtype=torch.float32, device='cpu',
-                                                      requires_grad=True)
+            self.memory_container[node] = torch.zeros(
+                self.memory_dimension,
+                dtype=torch.float32,
+                device="cpu",
+                requires_grad=True,
+            )
         return self.memory_container[node]
 
     def set_node_memory(self, node: int, node_memory: torch.Tensor) -> torch.Tensor:
@@ -31,7 +35,9 @@ class Memory:
 
     def get_last_node_update(self, node: int) -> torch.Tensor:
         if node not in self.last_node_update:
-            self.last_node_update[node] = torch.zeros(1, dtype=torch.float32, device='cpu', requires_grad=True)
+            self.last_node_update[node] = torch.zeros(
+                1, dtype=torch.float32, device="cpu", requires_grad=True
+            )
         return self.last_node_update[node]
 
     def get_all_nodes(self) -> List[int]:

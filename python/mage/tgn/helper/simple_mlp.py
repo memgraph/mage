@@ -2,6 +2,7 @@ from typing import List
 
 import torch.nn as nn
 
+
 class MLP(nn.Module):
     def __init__(self, dims: List[int]):
         super().__init__()
@@ -17,6 +18,7 @@ class MLP(nn.Module):
         h = self.act(self.fc1(data))
         return self.fc2(h)
 
+
 class SimpleMLP(nn.Module):
     def __init__(self, dim_input, dim_output):
         super(SimpleMLP, self).__init__()
@@ -30,4 +32,3 @@ class SimpleMLP(nn.Module):
     def forward(self, data):
         h = self.act(self.fc1(data))
         return self.fc2(h).squeeze(dim=0)
-

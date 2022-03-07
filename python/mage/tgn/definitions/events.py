@@ -5,7 +5,9 @@ class Event:
         self.timestamp = timestamp
 
     def __str__(self):
-        return "{source},{timestamp}".format(source=self.source, timestamp=self.timestamp)
+        return "{source},{timestamp}".format(
+            source=self.source, timestamp=self.timestamp
+        )
 
 
 class NodeEvent(Event):
@@ -13,14 +15,18 @@ class NodeEvent(Event):
         super(NodeEvent, self).__init__(source, timestamp)
 
     def __str__(self):
-        return "{source},{timestamp}".format(source=self.source, timestamp=self.timestamp)
+        return "{source},{timestamp}".format(
+            source=self.source, timestamp=self.timestamp
+        )
 
 
 class InteractionEvent(Event):
-    def __init__(self, source: int, dest: int, timestamp: int, edge_indx:int):
+    def __init__(self, source: int, dest: int, timestamp: int, edge_indx: int):
         super(InteractionEvent, self).__init__(source, timestamp)
         self.dest = dest
-        self.edge_indx=edge_indx
+        self.edge_indx = edge_indx
 
     def __str__(self):
-        return "{source},{timestamp}".format(source=self.source, timestamp=self.timestamp)
+        return "{source},{timestamp}".format(
+            source=self.source, timestamp=self.timestamp
+        )

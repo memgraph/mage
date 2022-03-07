@@ -6,7 +6,7 @@ import torch.nn as nn
 
 class MemoryUpdater(nn.Module):
     """
-      This is base class for memory updater implementation
+    This is base class for memory updater implementation
     """
 
     def __init__(self, memory_dimension: int, message_dimension: int):
@@ -20,7 +20,9 @@ class MemoryUpdaterGRU(MemoryUpdater):
         super().__init__(memory_dimension, message_dimension)
 
         # check if this is correct that hidden dim is memory_dim
-        self.memory_updater_net = nn.GRUCell(input_size=message_dimension, hidden_size=memory_dimension)
+        self.memory_updater_net = nn.GRUCell(
+            input_size=message_dimension, hidden_size=memory_dimension
+        )
 
     def forward(self, data: Tuple[torch.Tensor, torch.Tensor]):
         # messages shape = (1, message_dim)
@@ -38,7 +40,9 @@ class MemoryUpdaterRNN(MemoryUpdater):
         super().__init__(memory_dimension, message_dimension)
 
         # check if this is correct that hidden dim is memory_dim
-        self.memory_updater_net = nn.RNNCell(input_size=message_dimension, hidden_size=memory_dimension)
+        self.memory_updater_net = nn.RNNCell(
+            input_size=message_dimension, hidden_size=memory_dimension
+        )
 
     def forward(self, data: Tuple[torch.Tensor, torch.Tensor]):
         # messages shape = (1, message_dim)
