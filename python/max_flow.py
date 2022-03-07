@@ -195,11 +195,9 @@ def list_to_mgp_path(context: mgp.ProcCtx, augmenting_path: List) -> mgp.Path:
 
     :return: mgp.Path structure
     """
-    for i, elem in enumerate(augmenting_path):
-        if i == 0:
-            path = mgp.Path(context.graph.get_vertex_by_id(augmenting_path[0]))
-        else:
-            if isinstance(elem, mgp.Edge):
-                path.expand(elem)
+    path = mgp.Path(context.graph.get_vertex_by_id(augmenting_path[0]))
+    for _, elem in enumerate(augmenting_path, start=1):
+        if isinstance(elem, mgp.Edge):
+            path.expand(elem)
 
     return path
