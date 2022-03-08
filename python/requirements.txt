@@ -4,5 +4,4 @@ gekko==0.2.8
 networkx==2.6.2
 python-Levenshtein==0.12.1
 gensim==4.0.0.
---find-links https://download.pytorch.org/whl/torch_stable.html
 torch==1.10.1
