@@ -15,6 +15,7 @@
 
 use std::convert::From;
 use std::ffi::{CStr, CString};
+use std::os::raw::c_char;
 
 use crate::edge::*;
 use crate::list::*;
@@ -36,7 +37,7 @@ use mockall_double::double;
 /// # Safety
 ///
 /// The caller has provided a pointer that points to a valid C string. More here [CStr::from_ptr].
-pub(crate) unsafe fn create_cstring(c_char_ptr: *const i8) -> Result<CString> {
+pub(crate) unsafe fn create_cstring(c_char_ptr: *const c_char) -> Result<CString> {
     match CString::new(CStr::from_ptr(c_char_ptr).to_bytes()) {
         Ok(v) => Ok(v),
         Err(_) => Err(Error::UnableToCreateCString),
@@ -511,7 +512,8 @@ pub(crate) unsafe fn mgp_raw_value_to_value(
             invoke_mgp_func!(i64, ffi::mgp_value_get_int, value).unwrap(),
         )),
         mgp_value_type::MGP_VALUE_TYPE_STRING => {
-            let mgp_string = invoke_mgp_func!(*const i8, ffi::mgp_value_get_string, value).unwrap();
+            let mgp_string =
+                invoke_mgp_func!(*const c_char, ffi::mgp_value_get_string, value).unwrap();
             match create_cstring(mgp_string) {
                 Ok(value) => Ok(Value::String(value)),
                 Err(_) => Err(Error::UnableToMakeValueString),
