@@ -34,6 +34,12 @@ from mage.tgn.definitions.time_encoding import TimeEncoder
 
 from mage.tgn.helper.simple_mlp import MLP
 
+from typing import List, Dict, Tuple
+
+import numpy as np
+import torch
+import torch.nn as nn
+
 
 class TGN(nn.Module):
     def __init__(
@@ -138,9 +144,9 @@ class TGN(nn.Module):
             Dict[int, torch.Tensor],
         ],
     ):
-        raise Exception("Should not be implemented")
+        raise Exception("Not implemented")
 
-    def process_current_batch(
+    def _process_current_batch(
         self,
         sources: np.array,
         destinations: np.array,
@@ -150,7 +156,7 @@ class TGN(nn.Module):
         timestamps: np.array,
     ):
 
-        self.update_raw_message_store_current_batch(
+        self._update_raw_message_store_current_batch(
             sources=sources,
             destinations=destinations,
             node_features=node_features,
@@ -172,25 +178,25 @@ class TGN(nn.Module):
         for node_id, node_feature in node_features.items():
             self.node_features[node_id] = node_feature
 
-    def process_previous_batches(self) -> None:
+    def _process_previous_batches(self) -> None:
 
         # dict nodeid -> List[event]
         raw_messages = self.raw_message_store.get_messages()
 
-        processed_messages = self.create_messages(
+        processed_messages = self._create_messages(
             node_event_function=self.node_message_function,
             edge_event_function=self.edge_message_function,
             raw_messages=raw_messages,
         )
 
-        aggregated_messages = self.aggregate_messages(
+        aggregated_messages = self._aggregate_messages(
             processed_messages=processed_messages,
             aggregator_function=self.message_aggregator,
         )
 
-        self.update_memory(aggregated_messages, self.memory, self.memory_updater)
+        self._update_memory(aggregated_messages, self.memory, self.memory_updater)
 
-    def update_raw_message_store_current_batch(
+    def _update_raw_message_store_current_batch(
         self,
         sources: np.array,
         destinations: np.array,
@@ -201,7 +207,7 @@ class TGN(nn.Module):
     ) -> None:
 
         # node_events: Dict[int, List[Event]] = create_node_events()
-        interaction_events: Dict[int, List[Event]] = self.create_interaction_events(
+        interaction_events: Dict[int, List[Event]] = self._create_interaction_events(
             sources=sources,
             destinations=destinations,
             timestamps=timestamps,
@@ -212,7 +218,7 @@ class TGN(nn.Module):
         events: Dict[int, List[Event]] = interaction_events
         # events.sort(key=lambda x:x.get_time()) # sort by time
 
-        raw_messages: Dict[int, List[RawMessage]] = self.create_raw_messages(
+        raw_messages: Dict[int, List[RawMessage]] = self._create_raw_messages(
             events=events,
             edge_features=edge_features,
             node_features=node_features,
@@ -221,7 +227,7 @@ class TGN(nn.Module):
 
         self.raw_message_store.update_messages(raw_messages)
 
-    def create_interaction_events(
+    def _create_interaction_events(
         self,
         sources: np.ndarray,
         destinations: np.ndarray,
@@ -243,13 +249,13 @@ class TGN(nn.Module):
             )
         return interaction_events
 
-    def create_node_events(
+    def _create_node_events(
         self,
     ):
         # currently not using this
         return []
 
-    def create_messages(
+    def _create_messages(
         self,
         node_event_function: MessageFunction,
         edge_event_function: MessageFunction,
@@ -293,7 +299,7 @@ class TGN(nn.Module):
                     raise Exception(f"Message Type not supported {type(message)}")
         return processed_messages_dict
 
-    def create_raw_messages(
+    def _create_raw_messages(
         self,
         events: Dict[int, List[Event]],
         memory: Memory,
@@ -348,7 +354,7 @@ class TGN(nn.Module):
                     raise Exception(f"Event Type not supported {type(event)}")
         return raw_messages
 
-    def aggregate_messages(
+    def _aggregate_messages(
         self,
         processed_messages: Dict[int, List[torch.Tensor]],
         aggregator_function: MessageAggregator,
@@ -361,7 +367,7 @@ class TGN(nn.Module):
             aggregated_messages[node] = aggregator_function(processed_messages[node])
         return aggregated_messages
 
-    def update_memory(self, messages, memory, memory_updater) -> None:
+    def _update_memory(self, messages, memory, memory_updater) -> None:
         # todo change to do all updates at once
         for node in messages:
             updated_memory = memory_updater(
@@ -427,13 +433,9 @@ class TGN(nn.Module):
         edge_layers.append(edge_arr)
         timestamp_layers.append(timestamp_arr)
 
-        # edge_layers.reverse()
-        # timestamp_layers.reverse()
-
         return node_layers, mappings, edge_layers, timestamp_layers
 
     def _get_edge_features(self, edge_idx: int) -> torch.Tensor:
-        # todo check if edge features don't exist, save them in dict as random or zero
         return (
             self.edge_features[edge_idx]
             if edge_idx in self.edge_features
@@ -445,6 +447,15 @@ class TGN(nn.Module):
         for i, edge_idx in enumerate(edge_idxs):
             edges_features[i, :] = self._get_edge_features(edge_idx)
         return edges_features
+
+    def _get_graph_data(self, nodes: np.array, timestamps: np.array):
+        graph_data_tuple = self._get_graph_sum_data(nodes, timestamps)
+        if self.layer_type == TGNLayerType.GraphSumEmbedding:
+            return graph_data_tuple
+
+        return graph_data_tuple + tuple(
+            self.time_encoder(torch.zeros(1, 1)).unsqueeze(0)
+        )
 
     def _get_graph_sum_data(self, nodes: np.array, timestamps: np.array):
         (
@@ -516,6 +527,10 @@ class TGN(nn.Module):
 
 
 class TGNEdgesSelfSupervised(TGN):
+    """
+    Class contains forward method different for edges self_supervised learning type
+    """
+
     def forward(
         self,
         data: Tuple[
@@ -568,16 +583,16 @@ class TGNEdgesSelfSupervised(TGN):
         # we are using this part so that we can get gradients from memory module also and so that they
         # can be included in optimizer
         # By doing this, the computation of the memory-related modules directly influences the loss
-        self.process_previous_batches()
+        self._process_previous_batches()
 
-        graph_data = self._get_graph_sum_data(
+        graph_data = self._get_graph_data(
             np.concatenate([sources.copy(), destinations.copy()], dtype=int),
             np.concatenate([timestamps, timestamps]),
         )
 
         embeddings = self.tgn_net(graph_data)
 
-        graph_data_negative = self._get_graph_sum_data(
+        graph_data_negative = self._get_graph_data(
             np.concatenate(
                 [negative_sources.copy(), negative_destinations.copy()], dtype=int
             ),
@@ -591,11 +606,79 @@ class TGNEdgesSelfSupervised(TGN):
         # the raw messages for this batch interactions are stored in the raw
         # message store  to be used in future batches.
         # in paper on figure 2 this is part 7.
-        self.process_current_batch(
+        self._process_current_batch(
             sources, destinations, node_features, edge_features, edge_idxs, timestamps
         )
 
         return embeddings, embeddings_negative
+
+
+class TGNSupervised(TGN):
+    """
+    Class contains forward method different for supervised learning type
+    """
+
+    def forward(
+        self,
+        data: Tuple[
+            np.ndarray,
+            np.ndarray,
+            np.ndarray,
+            np.ndarray,
+            Dict[int, torch.Tensor],
+            Dict[int, torch.Tensor],
+        ],
+    ):
+        # source -> np.array(num_of_nodes,)
+        # destinations -> np.array(num_of_nodes,)
+        # timestamps -> np.array(num_of_nodes,)
+        # edge_index -> np.array(num_of_nodes,)
+        # edge_features = Dict(int, np.array)
+        # node_features -> Dict(int, np.array)
+
+        (
+            sources,
+            destinations,
+            timestamps,
+            edge_idxs,
+            edge_features,
+            node_features,
+        ) = data
+
+        assert (
+            sources.shape[0]
+            == destinations.shape[0]
+            == timestamps.shape[0]
+            == len(edge_idxs)
+            == len(edge_features)
+        ), (
+            f"Sources, destinations, timestamps, edge_indxs and edge_features must be of same dimension, but got "
+            f"{sources.shape[0]}, {destinations.shape[0]}, {timestamps.shape[0]}, {len(edge_idxs)}, {len(edge_features)}"
+        )
+
+        # part of 1->2->3, all till point 4 in paper from Figure 2
+        # we are using this part so that we can get gradients from memory module also and so that they
+        # can be included in optimizer
+        # By doing this, the computation of the memory-related modules directly influences the loss
+        self._process_previous_batches()
+
+        graph_data = self._get_graph_data(
+            np.concatenate([sources.copy(), destinations.copy()], dtype=int),
+            np.concatenate([timestamps, timestamps]),
+        )
+
+        embeddings = self.tgn_net(graph_data)
+
+        # here we update raw message store, and this batch will be used in next
+        # call of tgn in function self.process_previous_batches
+        # the raw messages for this batch interactions are stored in the raw
+        # message store  to be used in future batches.
+        # in paper on figure 2 this is part 7.
+        self._process_current_batch(
+            sources, destinations, node_features, edge_features, edge_idxs, timestamps
+        )
+
+        return embeddings
 
 
 class TGNGraphAttentionEmbedding(TGN):
@@ -698,6 +781,12 @@ class TGNGraphSumEmbedding(TGN):
         self.tgn_net = nn.Sequential(*tgn_layers)
 
 
+#
+# TGN instances - [Supervised, Self_supervised] x [Graph_attention, Graph_sum]
+#
+
+
+# Self_supervised x Graph_attention
 class TGNGraphAttentionEdgeSelfSupervised(
     TGNGraphAttentionEmbedding, TGNEdgesSelfSupervised
 ):
@@ -732,6 +821,7 @@ class TGNGraphAttentionEdgeSelfSupervised(
         )
 
 
+# Self_supervised x Graph_sum
 class TGNGraphSumEdgeSelfSupervised(TGNGraphSumEmbedding, TGNEdgesSelfSupervised):
     def __init__(
         self,
@@ -762,6 +852,73 @@ class TGNGraphSumEdgeSelfSupervised(TGNGraphSumEmbedding, TGNEdgesSelfSupervised
         )
 
 
+# Supervised x Graph_sum
+class TGNGraphSumSupervised(TGNGraphSumEmbedding, TGNSupervised):
+    def __init__(
+        self,
+        num_of_layers: int,
+        layer_type: TGNLayerType,
+        memory_dimension: int,
+        time_dimension: int,
+        num_edge_features: int,
+        num_node_features: int,
+        message_dimension: int,
+        num_neighbors: int,
+        edge_message_function_type: MessageFunctionType,
+        message_aggregator_type: MessageAggregatorType,
+        memory_updater_type: MemoryUpdaterType,
+    ):
+        super().__init__(
+            num_of_layers,
+            layer_type,
+            memory_dimension,
+            time_dimension,
+            num_edge_features,
+            num_node_features,
+            message_dimension,
+            num_neighbors,
+            edge_message_function_type,
+            message_aggregator_type,
+            memory_updater_type,
+        )
+
+
+# Supervised x Graph_attention
+class TGNGraphAttentionSupervised(TGNGraphAttentionEmbedding, TGNSupervised):
+    def __init__(
+        self,
+        num_of_layers: int,
+        layer_type: TGNLayerType,
+        memory_dimension: int,
+        time_dimension: int,
+        num_edge_features: int,
+        num_node_features: int,
+        message_dimension: int,
+        num_neighbors: int,
+        edge_message_function_type: MessageFunctionType,
+        message_aggregator_type: MessageAggregatorType,
+        memory_updater_type: MemoryUpdaterType,
+        num_attention_heads: int,
+    ):
+        super().__init__(
+            num_of_layers,
+            layer_type,
+            memory_dimension,
+            time_dimension,
+            num_edge_features,
+            num_node_features,
+            message_dimension,
+            num_neighbors,
+            edge_message_function_type,
+            message_aggregator_type,
+            memory_updater_type,
+            num_attention_heads,
+        )
+
+
+#
+# Layers
+#
 class TGNLayer(nn.Module):
     """
     Base class for all implementations
@@ -787,7 +944,7 @@ class TGNLayer(nn.Module):
 
 class TGNLayerGraphSumEmbedding(TGNLayer):
     """
-    TGN layer implementation inspired by official TGN implementation
+    TGN layer implementation of graph sum embedding
     """
 
     def __init__(
@@ -809,13 +966,19 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
         )
         # Initialize W1 matrix and W2 matrix
 
-        self.linear_1 = torch.nn.Linear(
-            embedding_dimension + time_encoding_dim + edge_feature_dim,
-            embedding_dimension,
+        self.linear_1s = nn.ModuleList(
+            torch.nn.Linear(
+                embedding_dimension + time_encoding_dim + edge_feature_dim,
+                embedding_dimension,
+            )
+            for _ in range(self.num_of_layers)
         )
 
-        self.linear_2 = torch.nn.Linear(
-            embedding_dimension + embedding_dimension, embedding_dimension
+        self.linear_2s = nn.ModuleList(
+            torch.nn.Linear(
+                embedding_dimension + embedding_dimension, embedding_dimension
+            )
+            for _ in range(self.num_of_layers)
         )
         self.relu = torch.nn.ReLU()
 
@@ -844,16 +1007,18 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
             curr_time = [time_features[index] for index in global_indexes]
 
             aggregate = self._aggregate(
-                out, cur_neighbors, nodes, mapping, curr_edges, curr_time
+                out, cur_neighbors, nodes, mapping, curr_edges, curr_time, k
             )
 
             curr_mapped_nodes = np.array([mapping[(v, t)] for (v, t) in nodes])
 
             concat_neigh_out = torch.cat((out[curr_mapped_nodes], aggregate), dim=1)
-            out = self.linear_2(concat_neigh_out)
+            out = self.linear_2s[k](concat_neigh_out)
         return out
 
-    def _aggregate(self, features, rows, nodes, mapping, edge_features, time_features):
+    def _aggregate(
+        self, features, rows, nodes, mapping, edge_features, time_features, k
+    ):
         assert len(nodes) == len(rows)
         mapped_rows = [
             np.array([mapping[(vi, ti)] for (vi, ti) in row]) for row in rows
@@ -874,7 +1039,7 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
             # sum rows, but keep this dimension
             # shape(1, embedding_dim+edge_features_dim+time_encoding_dim)
             aggregate_sum = torch.sum(aggregate, dim=0, keepdim=True)
-            out_linear1 = self.linear_1(aggregate_sum)
+            out_linear1 = self.linear_1s[k](aggregate_sum)
             out_relu_linear1 = self.relu(out_linear1)
 
             out[i, :] = out_relu_linear1
@@ -884,7 +1049,7 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
 
 class TGNLayerGraphAttentionEmbedding(TGNLayer):
     """
-    TGN layer implementation inspired by official TGN implementation
+    TGN layer implementation of graph attention embedding
     """
 
     def __init__(
@@ -911,22 +1076,28 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
         self.value_dim = self.key_dim
         self.num_attention_heads = num_attention_heads
 
-        self.multi_head_attention = nn.MultiheadAttention(
-            embed_dim=self.query_dim,
-            kdim=self.key_dim * self.num_neighbors,
-            # set on neighbors num
-            vdim=self.value_dim * self.num_neighbors,
-            num_heads=num_attention_heads,  # this add as a parameter
-            batch_first=True,
-        )  # this way no need to do torch.permute later <3
-
-        self.mlp = MLP(
-            [
-                self.query_dim + embedding_dimension,
-                embedding_dimension,
-                embedding_dimension,
-            ]
+        self.mlps = nn.ModuleList(
+            MLP(
+                [
+                    self.query_dim + embedding_dimension,
+                    embedding_dimension,
+                    embedding_dimension,
+                ]
+            )
+            for _ in range(self.num_of_layers)
         )
+
+        self.multi_head_attentions = nn.ModuleList(
+            nn.MultiheadAttention(
+                embed_dim=self.query_dim,
+                kdim=self.key_dim * self.num_neighbors,
+                # set on neighbors num
+                vdim=self.value_dim * self.num_neighbors,
+                num_heads=num_attention_heads,  # this add as a parameter
+                batch_first=True,
+            )
+            for _ in range(self.num_of_layers)
+        )  # this way no need to do torch.permute later <3
 
     def forward(self, data):
         (
@@ -937,6 +1108,7 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
             features,
             edge_features,
             time_features,
+            time_encoder_zeros,
         ) = data
 
         out = features
@@ -966,18 +1138,20 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
             query_concat = torch.concat(
                 (
                     out[curr_mapped_nodes],
-                    torch.zeros(len(curr_mapped_nodes), self.time_encoding_dim),
+                    time_encoder_zeros.repeat(len(curr_mapped_nodes), 1),
                 ),
                 dim=1,
             )
             query = torch.unsqueeze(query_concat, dim=0)
 
-            attn_out, _ = self.multi_head_attention(query=query, key=keys, value=values)
+            attn_out, _ = self.multi_head_attentions[k](
+                query=query, key=keys, value=values
+            )
 
             attn_out = torch.squeeze(attn_out)
 
             concat_neigh_out = torch.cat((out[curr_mapped_nodes], attn_out), dim=1)
-            out = self.mlp(concat_neigh_out)
+            out = self.mlps[k](concat_neigh_out)
         return out
 
     def _aggregate(self, features, rows, nodes, mapping, edge_features, time_features):

@@ -12,14 +12,16 @@ from mage.tgn.constants import (
     MessageAggregatorType,
     MemoryUpdaterType,
 )
-from mage.tgn.definitions.tgn import TGN, TGNGraphSumEdgeSelfSupervised
+from mage.tgn.definitions.tgn import TGN, TGNGraphSumEdgeSelfSupervised, TGNGraphSumSupervised, \
+    TGNGraphAttentionSupervised
 from dataclasses import dataclass
 
+from mage.tgn.definitions.tgn import TGNGraphAttentionEdgeSelfSupervised
+from mage.tgn.helper.simple_mlp import MLP
 
 ###################
 # params and classes
 ##################
-from mage.tgn.definitions.tgn import TGNGraphAttentionEdgeSelfSupervised
 
 
 class TGNParameters:
@@ -34,8 +36,8 @@ class TGNParameters:
     EDGE_FUNCTION_TYPE = "edge_message_function_type"
     MESSAGE_AGGREGATOR_TYPE = "message_aggregator_type"
     MEMORY_UPDATER_TYPE = "memory_updater_type"
-    LEARNING_TYPE = "learning_type"  # enum self_supervised or supervised
     NUM_ATTENTION_HEADS = "num_attention_heads"
+    LEARNING_RATE = "learning_rate"
 
 
 class LearningType(enum.Enum):
@@ -51,9 +53,7 @@ class QueryModuleTGN:
     optimizer: torch.optim.Adam
     device: torch.device
     m_loss: List[float]
-    fc1: nn.Linear
-    fc2: nn.Linear
-    act: nn.ReLU
+    mlp: MLP
 
 
 @dataclass
@@ -69,8 +69,6 @@ class QueryModuleTGNBatch:
 
 
 ##############################
-
-
 # global tgn training variables
 ##############################
 
@@ -83,6 +81,7 @@ all_embeddings: Dict[int, np.array] = {}
 query_module_tgn: QueryModuleTGN
 query_module_tgn_batch: QueryModuleTGNBatch
 
+tgn_learning_type = None
 
 #####################################
 
@@ -91,54 +90,83 @@ query_module_tgn_batch: QueryModuleTGNBatch
 #####################################
 
 
-def set_tgn(config: Dict[str, Any]):
+def set_tgn_self_supervised(config: Dict[str, Any]):
     """
-    This is adapted for self-supervised learning for graph sum
-    todo: check if it works with supervised
+    Set parameters for self supervised learning. Here we try to predict edges.
     """
     global query_module_tgn
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     config_copy = {**config}
+    del config_copy[TGNParameters.LEARNING_RATE]
 
-    del config_copy[TGNParameters.LEARNING_TYPE]
-
-    if (
-        config[TGNParameters.LAYER_TYPE] == TGNLayerType.GraphSumEmbedding
-        and config[TGNParameters.LEARNING_TYPE] == "self_supervised"
-    ):
+    if config[TGNParameters.LAYER_TYPE] == TGNLayerType.GraphSumEmbedding:
         tgn = TGNGraphSumEdgeSelfSupervised(**config_copy).to(device)
-    elif (
-        config[TGNParameters.LAYER_TYPE] == TGNLayerType.GraphAttentionEmbedding
-        and config[TGNParameters.LEARNING_TYPE] == "self_supervised"
-    ):
+    elif config[TGNParameters.LAYER_TYPE] == TGNLayerType.GraphAttentionEmbedding:
         tgn = TGNGraphAttentionEdgeSelfSupervised(**config_copy).to(device)
     else:
-        raise Exception("Wrong types")
-    print(config)
-    # set training mode
+        raise Exception(
+            f"Wrong layer type, expected {TGNLayerType.GraphSumEmbedding} or {TGNLayerType.GraphAttentionEmbedding}"
+        )
+
     tgn.train()
 
-    # init this as global param
-    embedding_dim_crit_loss = (
+    src_dest_embedd_concat_dim = (
         config[TGNParameters.MEMORY_DIMENSION] + config[TGNParameters.NUM_NODE_FEATURES]
-    ) * 2  # concat embeddings of source and destination
-    fc1 = nn.Linear(embedding_dim_crit_loss, embedding_dim_crit_loss // 2)
-    fc2 = nn.Linear(embedding_dim_crit_loss // 2, 1)
-    act = nn.ReLU(inplace=False)
+    ) * 2
 
-    nn.init.xavier_normal_(fc1.weight)
-    nn.init.xavier_normal_(fc2.weight)
+    # used as probability calculator for edge
+    mlp = MLP([src_dest_embedd_concat_dim, src_dest_embedd_concat_dim // 2, 1])
 
-    # global params
     criterion = torch.nn.BCELoss()
-    optimizer = torch.optim.Adam(tgn.parameters(), lr=0.0001)
+    optimizer = torch.optim.Adam(tgn.parameters(), lr=config[TGNParameters.LEARNING_RATE])
     m_loss = []
 
     query_module_tgn = QueryModuleTGN(
-        config, tgn, criterion, optimizer, device, m_loss, fc1, fc2, act
+        config, tgn, criterion, optimizer, device, m_loss, mlp
     )
+
+
+def set_tgn_supervised(config: Dict[str, Any]):
+    """ """
+    global query_module_tgn
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    config_copy = {**config}
+    del config_copy[TGNParameters.LEARNING_RATE]
+
+    if config[TGNParameters.LAYER_TYPE] == TGNLayerType.GraphSumEmbedding:
+        tgn = TGNGraphSumSupervised(**config_copy).to(device)
+    elif config[TGNParameters.LAYER_TYPE] == TGNLayerType.GraphAttentionEmbedding:
+        tgn = TGNGraphAttentionSupervised(**config_copy).to(device)
+    else:
+        raise Exception(
+            f"Wrong layer type, expected {TGNLayerType.GraphSumEmbedding} or {TGNLayerType.GraphAttentionEmbedding}"
+        )
+
+    tgn.train()
+
+    src_dest_embedd_concat_dim = (
+        config[TGNParameters.MEMORY_DIMENSION] + config[TGNParameters.NUM_NODE_FEATURES]
+    ) * 2
+
+    # used as probability calculator for edge
+    mlp = MLP([src_dest_embedd_concat_dim, src_dest_embedd_concat_dim // 2, 1])
+
+    criterion = torch.nn.BCELoss()
+    optimizer = torch.optim.Adam(tgn.parameters(), lr=config["lr"])
+    m_loss = []
+
+    query_module_tgn = QueryModuleTGN(
+        config, tgn, criterion, optimizer, device, m_loss, mlp
+    )
+
+
+#
+# Training - self_supervised
+#
 
 
 def sample_negative(negative_num: int) -> (np.array, np.array):
@@ -189,8 +217,6 @@ def train_batch_self_supervised():
         == current_batch_size
     ), f"Batch size training error"
 
-    print("sources, destinations", sources, destinations)
-
     negative_src, negative_dest = sample_negative(len(sources))
 
     graph_data = (
@@ -206,7 +232,6 @@ def train_batch_self_supervised():
     query_module_tgn.optimizer.zero_grad()
 
     embeddings, embeddings_negative = query_module_tgn.tgn(graph_data)
-    print(embeddings)
 
     embeddings_source = embeddings[:current_batch_size]
     embeddings_dest = embeddings[current_batch_size:]
@@ -218,8 +243,7 @@ def train_batch_self_supervised():
         [embeddings_dest, embeddings_dest_neg]
     )
     x = torch.cat([x1, x2], dim=1)
-    h = query_module_tgn.act(query_module_tgn.fc1(x))
-    score = query_module_tgn.fc2(h).squeeze(dim=0)
+    score = query_module_tgn.mlp(x).squeeze(dim=0)
 
     pos_score = score[:current_batch_size]
     neg_score = score[current_batch_size:]
@@ -237,8 +261,7 @@ def train_batch_self_supervised():
         pos_prob.squeeze(), pos_label
     ) + query_module_tgn.criterion(neg_prob.squeeze(), neg_label)
 
-    # todo solve a problem of retaining a graph
-    loss.backward(retain_graph=True)
+    loss.backward()
     query_module_tgn.optimizer.step()
     query_module_tgn.m_loss.append(loss.item())
 
@@ -252,6 +275,11 @@ def train_batch_self_supervised():
 
     for i, node in enumerate(destinations):
         all_embeddings[node] = embeddings_dest_npy[i]
+
+
+#
+# Training - supervised
+#
 
 
 def train_batch_supervised():
@@ -426,7 +454,7 @@ def get(ctx: mgp.ProcCtx) -> mgp.Record(node=mgp.Vertex, embedding=mgp.List[floa
 
 @mgp.read_proc
 def update(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]) -> mgp.Record():
-    global query_module_tgn_batch, query_module_tgn
+    global query_module_tgn_batch, query_module_tgn, tgn_learning_type
 
     process_edges(ctx, edges)
 
@@ -435,12 +463,14 @@ def update(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]) -> mgp.Record():
     if query_module_tgn_batch.current_batch_size < query_module_tgn_batch.batch_size:
         return mgp.Record()
 
-    learning_type = query_module_tgn.config[TGNParameters.LEARNING_TYPE]
-    if learning_type == "self_supervised":
+    if tgn_learning_type == LearningType.SelfSupervised:
         train_batch_self_supervised()
-    else:
+    elif tgn_learning_type == LearningType.Supervised:
         train_batch_supervised()
-
+    else:
+        raise Exception(
+            f"Wrong learning type, expected {LearningType.SelfSupervised} or {LearningType.Supervised}"
+        )
     reset_current_batch_data(batch_size=query_module_tgn_batch.batch_size)
 
     return mgp.Record()
@@ -468,7 +498,7 @@ def set_params(
     Warning: Every time you call this function, old TGN object is cleared and process of learning params is
     restarted
     """
-    global query_module_tgn_batch
+    global query_module_tgn_batch, tgn_learning_type
     query_module_tgn_batch = QueryModuleTGNBatch(
         0,
         np.empty((0, 1), dtype=int),
@@ -479,37 +509,40 @@ def set_params(
         {},
         batch_size,
     )
-    config = {}
+    config = {
+        TGNParameters.NUM_OF_LAYERS: num_of_layers,
+        TGNParameters.MEMORY_DIMENSION: memory_dimension,
+        TGNParameters.TIME_DIMENSION: time_dimension,
+        TGNParameters.NUM_EDGE_FEATURES: num_edge_features,
+        TGNParameters.NUM_NODE_FEATURES: num_node_features,
+        TGNParameters.MESSAGE_DIMENSION: message_dimension,
+        TGNParameters.NUM_NEIGHBORS: num_neighbors,
+        TGNParameters.LAYER_TYPE: get_tgn_layer_enum(layer_type),
+        TGNParameters.EDGE_FUNCTION_TYPE: get_edge_message_function_type(
+            edge_message_function_type
+        ),
+        TGNParameters.MESSAGE_AGGREGATOR_TYPE: get_message_aggregator_type(
+            message_aggregator_type
+        ),
+        TGNParameters.MEMORY_UPDATER_TYPE: get_memory_updater_type(memory_updater_type),
+        TGNParameters.LEARNING_RATE: 2e-2
+    }
 
     # tgn params
-    config[TGNParameters.NUM_OF_LAYERS] = num_of_layers
-    config[TGNParameters.MEMORY_DIMENSION] = memory_dimension
-    config[TGNParameters.TIME_DIMENSION] = time_dimension
-    config[TGNParameters.NUM_EDGE_FEATURES] = num_edge_features
-    config[TGNParameters.NUM_NODE_FEATURES] = num_node_features
-    config[TGNParameters.MESSAGE_DIMENSION] = message_dimension
-    config[TGNParameters.NUM_NEIGHBORS] = num_neighbors
-
-    config[TGNParameters.LAYER_TYPE] = get_tgn_layer_enum(layer_type)
-    config[TGNParameters.EDGE_FUNCTION_TYPE] = get_edge_message_function_type(
-        edge_message_function_type
-    )
-    config[TGNParameters.MESSAGE_AGGREGATOR_TYPE] = get_message_aggregator_type(
-        message_aggregator_type
-    )
-    config[TGNParameters.MEMORY_UPDATER_TYPE] = get_memory_updater_type(
-        memory_updater_type
-    )
 
     if config[TGNParameters.LAYER_TYPE] == TGNLayerType.GraphAttentionEmbedding:
         config[TGNParameters.NUM_ATTENTION_HEADS] = num_attention_heads
 
-    # learning params
-    config[TGNParameters.LEARNING_TYPE] = learning_type
-
     # set tgn
-    set_tgn(config)
-
+    tgn_learning_type = get_learning_type(learning_type)
+    if tgn_learning_type == LearningType.SelfSupervised:
+        set_tgn_self_supervised(config)
+    elif tgn_learning_type == LearningType.Supervised:
+        set_tgn_supervised()
+    else:
+        raise Exception(
+            f"Wrong learning type, expected {LearningType.Supervised} or {LearningType.SelfSupervised}"
+        )
     return mgp.Record()
 
 
@@ -565,4 +598,18 @@ def get_memory_updater_type(memory_updater_type: str) -> MemoryUpdaterType:
         raise Exception(
             f"Wrong memory updater type, expected {MemoryUpdaterType.GRU} or"
             f", {MemoryUpdaterType.RNN}"
+        )
+
+
+def get_learning_type(learning_type: str) -> LearningType:
+    if LearningType(learning_type) is LearningType.SelfSupervised:
+        return LearningType.SelfSupervised
+
+    elif LearningType(learning_type) is LearningType.Supervised:
+        return LearningType.Supervised
+
+    else:
+        raise Exception(
+            f"Wrong learning type, expected {LearningType.Supervised} or"
+            f", {LearningType.SelfSupervised}"
         )
