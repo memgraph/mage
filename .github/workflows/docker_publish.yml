@@ -49,9 +49,10 @@ jobs:
         run: |
           if [ "${{ steps.get-commit-tag.outputs.VERSION }}" == "${{ steps.get-latest-tag.outputs.tag }}" ]
           then
-            echo "::set-output name=LATEST::memgraph/memgraph-mage:latest"
+            echo "::set-output name=LATEST::latest"
+          else
+            echo "::set-output name=LATEST::fix"
           fi
-
       - run: echo "Additional tag for production image - ${{ steps.get-prod-tags.outputs.LATEST }}"
 
       - name: Log in to Docker Hub
@@ -72,7 +73,7 @@ jobs:
           --platform linux/amd64,linux/arm64 \
           --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ steps.get-commit-tag.outputs.VERSION_TAG }} \
           --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ steps.get-prod-tags.outputs.LATEST }} \
-          --file Dockerfile.release
+          --file Dockerfile.release \
           --push .
 
       - name: Build & push dev docker images
@@ -81,5 +82,5 @@ jobs:
           --target dev \
           --platform linux/amd64,linux/arm64 \
           --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ steps.get-commit-tag.outputs.VERSION_TAG }}-dev \
-          --file Dockerfile.release
+          --file Dockerfile.release \
           --push .
