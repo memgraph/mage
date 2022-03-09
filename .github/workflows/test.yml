@@ -22,22 +22,10 @@ jobs:
       run: |
         docker run -d -p 7687:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:prod --telemetry-enabled=False --also-log-to-stderr --log-level=TRACE
 
-#    - name: Set up C++
-#      run: |
-#        sudo apt update
-#        sudo apt install -y build-essential cmake
-
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
         python-version: ${{ env.PY_VERSION }}
-
-#    - name: Build C++ modules
-#      run: |
-#        mkdir -p cpp/build
-#        cd cpp/build
-#        cmake ..
-#        make -j${{ env.CORE_COUNT }}
 
     - name: Install Python dependencies
       run: |
@@ -50,7 +38,7 @@ jobs:
         PYTHONPATH: '$PWD/e2e'
       run: |
         cd e2e
-        python -m pytest .
+        python -m pytest . -k tgn_test
 
     - name: Stop prod mage container and remove it
       run: |
