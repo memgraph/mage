@@ -20,7 +20,8 @@ jobs:
 
     - name: Run Memgraph MAGE:prod image
       run: |
-        docker run -d -p 7687:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:prod --telemetry-enabled=False --also-log-to-stderr --log-level=TRACE
+        docker run -d -p 7687:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:prod --telemetry-enabled=False
+        --log-level=TRACE
 
     - name: Set up C++
       run: |
