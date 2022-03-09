@@ -294,7 +294,6 @@ def train_batch_supervised():
         query_module_tgn_batch.current_batch_size,
         query_module_tgn_batch.labels,
     )
-
     assert (
             len(sources)
             == len(destinations)
@@ -386,7 +385,7 @@ def process_edges(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]):
         dest_features = dest.properties.get("features", None)
 
         src_label = source.properties.get("label", 0)
-        dest_label = source.properties.get("label", 0)
+        dest_label = dest.properties.get("label", 0)
 
         timestamp = edge.id
         edge_idx = int(edge.id)
@@ -451,8 +450,7 @@ def process_edges(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]):
             query_module_tgn_batch.edge_idxs, edge_idx
         )
         query_module_tgn_batch.labels = np.append(
-            query_module_tgn_batch.labels, np.array([src_label, dest_label])
-        )
+            query_module_tgn_batch.labels, np.array([[src_label, dest_label]]), axis=0)
 
 
 def reset_tgn_batch(batch_size: int):
@@ -466,7 +464,7 @@ def reset_tgn_batch(batch_size: int):
         {},
         {},
         batch_size,
-        np.empty((1, 2), dtype=int),
+        np.empty((0, 2), dtype=int),
     )
 
 
