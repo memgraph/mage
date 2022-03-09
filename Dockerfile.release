@@ -4,9 +4,8 @@ FROM debian:bullseye as base
 
 USER root
 
-ARG MG_VERSION=2.2.0
+ARG TARGETARCH
 ARG PY_VERSION_DEFAULT
-ENV MG_VERSION ${MG_VERSION}
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
 
 #essentials for production/dev
@@ -27,12 +26,11 @@ RUN apt-get update && apt-get install -y \
     clang           `mage-memgraph` \
     git             `mage-memgraph` \
     --no-install-recommends \
-    # Download and install Memgraph
-    && curl https://download.memgraph.com/memgraph/v${MG_VERSION}/debian-11/memgraph_${MG_VERSION}-1_amd64.deb --output memgraph.deb \
-    && dpkg -i memgraph.deb \
-    && rm memgraph.deb \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+COPY memgraph-${TARGETARCH}.deb .
+
+RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb
 
 ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
 
@@ -75,7 +73,7 @@ COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VE
 
 RUN rm -rf /mage \
     && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
-    && apt-get -y --purge autoremove clang git curl python3-pip python3-dev cmake build-essential \
+    && apt-get -y --purge autoremove clang git curl python3-pip python3-setuptools python3-dev cmake build-essential \
     && apt-get clean
 
 USER memgraph
