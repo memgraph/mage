@@ -44,7 +44,11 @@ jobs:
         run: |
           docker run -d -p 7687:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:${{ matrix.target }} --telemetry-enabled=False --also-log-to-stderr --log-level=TRACE
 
-#      - name: Set up C++
+      - name: Run echo MAGE:${{ matrix.target }} image
+        run: |
+          docker exec -it --name ${{ env.MAGE_CONTAINER }} cat /var/log/memgraph/memgraph_2022-03-10.log
+
+      #      - name: Set up C++
 #        run: |
 #          sudo apt update
 #          sudo apt install -y build-essential cmake
