@@ -15,7 +15,7 @@ jobs:
     strategy:
       matrix:
         architecture: ["amd64", "arm64"]
-        target: ["prod", "dev"]
+        target: ["dev", "prod" ]
     steps:
       - uses: actions/checkout@v2
 
