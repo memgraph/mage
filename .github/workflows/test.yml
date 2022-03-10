@@ -12,10 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       MEMGRAPH_VERSION: 2.2.0
-    strategy:
-      matrix:
-        architecture: ["amd64", "arm64"]
-        target: ["dev", "prod" ]
     steps:
       - uses: actions/checkout@v2
 
@@ -29,20 +25,19 @@ jobs:
       - name: Download memgraph binaries
         run: |
           curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11/memgraph_${MEMGRAPH_VERSION}-1_amd64.deb > memgraph-amd64.deb
-          curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION}-1_aarch64.deb > memgraph-arm64.deb
 
-      - name: Build Memgraph MAGE:${{ matrix.target }}
+      - name: Build Memgraph MAGE:dev
         run: |
           DOCKER_BUILDKIT=1 docker buildx build \
-          --tag memgraph-mage:${{ matrix.target }} \
-          --target ${{ matrix.target }} \
-          --platform linux/${{ matrix.architecture }} \
+          --tag memgraph-mage:dev \
+          --target dev \
+          --platform linux/amd64 \
           --file Dockerfile.release \
           --load .
 
-      - name: Run Memgraph MAGE:${{ matrix.target }} image
+      - name: Run Memgraph MAGE:dev image
         run: |
-          docker run -d -p 7687:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:${{ matrix.target }} --telemetry-enabled=False --also-log-to-stderr --log-level=TRACE
+          docker run -d -p 7687:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:dev --telemetry-enabled=False --also-log-to-stderr --log-level=TRACE
 
       - name: Run ls query modules
         run: |
@@ -52,7 +47,7 @@ jobs:
         run: |
           docker exec ${{ env.MAGE_CONTAINER }} cat /etc/memgraph/memgraph.conf
 
-      - name: Run echo MAGE:${{ matrix.target }} image
+      - name: Run echo MAGE:dev image
         run: |
           docker exec ${{ env.MAGE_CONTAINER }} cat /var/log/memgraph/memgraph_2022-03-10.log
 
@@ -102,7 +97,6 @@ jobs:
 #          cargo test
 
       - name: Run End-to-end tests
-        if: matrix.architecture != 'arm64'
         env:
           PYTHONPATH: "$PWD/e2e"
         run: |
