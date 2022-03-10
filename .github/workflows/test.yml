@@ -44,9 +44,18 @@ jobs:
         run: |
           docker run -d -p 7687:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:${{ matrix.target }} --telemetry-enabled=False --also-log-to-stderr --log-level=TRACE
 
+      - name: Run ls query modules
+        run: |
+          docker exec ${{ env.MAGE_CONTAINER }} ls /usr/lib/memgraph/query_modules
+
+      - name: Run cat memgraph conf
+        run: |
+          docker exec ${{ env.MAGE_CONTAINER }} cat /etc/memgraph/memgraph.conf
+
       - name: Run echo MAGE:${{ matrix.target }} image
         run: |
           docker exec ${{ env.MAGE_CONTAINER }} cat /var/log/memgraph/memgraph_2022-03-10.log
+
 
       #      - name: Set up C++
 #        run: |
@@ -98,4 +107,4 @@ jobs:
           PYTHONPATH: "$PWD/e2e"
         run: |
           cd e2e
-          python -m pytest . -k tgn_test
+          python -m pytest .
