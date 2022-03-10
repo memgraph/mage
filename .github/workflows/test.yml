@@ -52,11 +52,6 @@ jobs:
         run: |
           docker exec ${{ env.MAGE_CONTAINER }} cat /etc/memgraph/memgraph.conf
 
-      - name: Run echo MAGE:${{ matrix.target }} image
-        run: |
-          docker exec ${{ env.MAGE_CONTAINER }} cat /var/log/memgraph/memgraph_2022-03-10.log
-
-
       #      - name: Set up C++
 #        run: |
 #          sudo apt update
