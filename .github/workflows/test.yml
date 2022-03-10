@@ -46,7 +46,7 @@ jobs:
 
       - name: Run echo MAGE:${{ matrix.target }} image
         run: |
-          docker exec -it ${{ env.MAGE_CONTAINER }} cat /var/log/memgraph/memgraph_2022-03-10.log
+          docker exec ${{ env.MAGE_CONTAINER }} cat /var/log/memgraph/memgraph_2022-03-10.log
 
       #      - name: Set up C++
 #        run: |
