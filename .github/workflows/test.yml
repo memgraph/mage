@@ -42,32 +42,24 @@ jobs:
 
       - name: Run Memgraph MAGE:${{ matrix.target }} image
         run: |
-          docker run -d -p 7687:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:${{ matrix.target }} --telemetry-enabled=False --also-log-to-stderr --log-level=TRACE
+          docker run -d -p 7687:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:${{ matrix.target }} --telemetry-enabled=False
 
-      - name: Run ls query modules
+      - name: Set up C++
         run: |
-          docker exec ${{ env.MAGE_CONTAINER }} ls /usr/lib/memgraph/query_modules
-
-      - name: Run cat memgraph conf
-        run: |
-          docker exec ${{ env.MAGE_CONTAINER }} cat /etc/memgraph/memgraph.conf
-
-      #      - name: Set up C++
-#        run: |
-#          sudo apt update
-#          sudo apt install -y build-essential cmake
+          sudo apt update
+          sudo apt install -y build-essential cmake
 
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: ${{ env.PY_VERSION }}
 
-#      - name: Build C++ modules
-#        run: |
-#          mkdir -p cpp/build
-#          cd cpp/build
-#          cmake ..
-#          make -j${{ env.CORE_COUNT }}
+      - name: Build C++ modules
+        run: |
+          mkdir -p cpp/build
+          cd cpp/build
+          cmake ..
+          make -j${{ env.CORE_COUNT }}
 
       - name: Install Python dependencies
         run: |
@@ -75,26 +67,26 @@ jobs:
           pip install -r ./python/tests/requirements.txt
           pip install -r ./python/requirements.txt
 
-#      - name: C++ Modules unit tests
-#        if: matrix.target == 'dev'
-#        run: |
-#          cd cpp/build
-#          ctest -j${{ env.CORE_COUNT }}
-#
-#      - name: Python modules unit tests
-#        if: matrix.target == 'dev'
-#        env:
-#          PYTHONPATH: "$PWD/python"
-#        run: |
-#          cd python
-#          python -m pytest .
-#
-#      - name: Rust library tests
-#        if: matrix.target == 'dev'
-#        run: |
-#          cd rust/rsmgp-sys
-#          cargo fmt -- --check
-#          cargo test
+      - name: C++ Modules unit tests
+        if: matrix.target == 'dev'
+        run: |
+          cd cpp/build
+          ctest -j${{ env.CORE_COUNT }}
+
+      - name: Python modules unit tests
+        if: matrix.target == 'dev'
+        env:
+          PYTHONPATH: "$PWD/python"
+        run: |
+          cd python
+          python -m pytest .
+
+      - name: Rust library tests
+        if: matrix.target == 'dev'
+        run: |
+          cd rust/rsmgp-sys
+          cargo fmt -- --check
+          cargo test
 
       - name: Run End-to-end tests
         if: matrix.architecture != 'arm64'
