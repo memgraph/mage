@@ -1,1 +1,0 @@
-CALL mg.procedures() YIELD *;
