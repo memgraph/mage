@@ -8,6 +8,7 @@ class MessageAggregator(nn.Module):
     """
     Base class for all message aggregations
     """
+
     def __init__(self):
         super().__init__()
 
@@ -21,6 +22,7 @@ class MeanMessageAggregator(MessageAggregator):
     From messages received as List of torch.Tensor, it creates new aggregated message
     as mean of features received
     """
+
     def __init__(self):
         super().__init__()
 
@@ -39,6 +41,7 @@ class LastMessageAggregator(MessageAggregator):
     Last message aggregator
     From messages received as List of torch.Tensor, it returns last message
     """
+
     def __init__(self):
         super().__init__()
 

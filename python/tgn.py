@@ -12,8 +12,12 @@ from mage.tgn.constants import (
     MessageAggregatorType,
     MemoryUpdaterType,
 )
-from mage.tgn.definitions.tgn import TGN, TGNGraphSumEdgeSelfSupervised, TGNGraphSumSupervised, \
-    TGNGraphAttentionSupervised
+from mage.tgn.definitions.tgn import (
+    TGN,
+    TGNGraphSumEdgeSelfSupervised,
+    TGNGraphSumSupervised,
+    TGNGraphAttentionSupervised,
+)
 from dataclasses import dataclass
 
 from mage.tgn.definitions.tgn import TGNGraphAttentionEdgeSelfSupervised
@@ -98,7 +102,12 @@ tgn_training_losses = np.empty(0)
 
 #####################################
 
-def set_tgn(learning_type: LearningType, tgn_config: Dict[str, any], optimizer_config: Dict[str, any]):
+
+def set_tgn(
+    learning_type: LearningType,
+    tgn_config: Dict[str, any],
+    optimizer_config: Dict[str, any],
+):
     global query_module_tgn
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -110,11 +119,16 @@ def set_tgn(learning_type: LearningType, tgn_config: Dict[str, any], optimizer_c
         tgn, mlp = get_tgn_supervised(tgn_config, device)
 
     criterion = torch.nn.BCELoss()
-    optimizer = torch.optim.Adam(tgn.parameters(), lr=optimizer_config[OptimizerParameters.LEARNING_RATE],
-                                 weight_decay=optimizer_config[OptimizerParameters.WEIGHT_DECAY])
+    optimizer = torch.optim.Adam(
+        tgn.parameters(),
+        lr=optimizer_config[OptimizerParameters.LEARNING_RATE],
+        weight_decay=optimizer_config[OptimizerParameters.WEIGHT_DECAY],
+    )
     m_loss = []
 
-    query_module_tgn = QueryModuleTGN(tgn_config, tgn, criterion, optimizer, device, m_loss, mlp)
+    query_module_tgn = QueryModuleTGN(
+        tgn_config, tgn, criterion, optimizer, device, m_loss, mlp
+    )
 
 
 def get_tgn_self_supervised(config: Dict[str, Any], device: torch.device):
@@ -129,7 +143,9 @@ def get_tgn_self_supervised(config: Dict[str, Any], device: torch.device):
 
     tgn.train()
 
-    src_dest_embedd_concat_dim = (config[TGNParameters.MEMORY_DIMENSION] + config[TGNParameters.NUM_NODE_FEATURES]) * 2
+    src_dest_embedd_concat_dim = (
+        config[TGNParameters.MEMORY_DIMENSION] + config[TGNParameters.NUM_NODE_FEATURES]
+    ) * 2
 
     # used as probability calculator for edge
     mlp = MLP([src_dest_embedd_concat_dim, src_dest_embedd_concat_dim // 2, 1])
@@ -138,8 +154,7 @@ def get_tgn_self_supervised(config: Dict[str, Any], device: torch.device):
 
 
 def get_tgn_supervised(config: Dict[str, Any], device: torch.device):
-    """
-    """
+    """ """
 
     if config[TGNParameters.LAYER_TYPE] == TGNLayerType.GraphSumEmbedding:
         tgn = TGNGraphSumSupervised(**config).to(device)
@@ -148,8 +163,9 @@ def get_tgn_supervised(config: Dict[str, Any], device: torch.device):
 
     tgn.train()
 
-    src_dest_embedd_concat_dim = config[TGNParameters.MEMORY_DIMENSION] + config[
-        TGNParameters.NUM_NODE_FEATURES]
+    src_dest_embedd_concat_dim = (
+        config[TGNParameters.MEMORY_DIMENSION] + config[TGNParameters.NUM_NODE_FEATURES]
+    )
 
     # used as probability calculator for edge
     mlp = MLP([src_dest_embedd_concat_dim, src_dest_embedd_concat_dim // 2, 1])
@@ -203,12 +219,12 @@ def train_batch_self_supervised():
     )
 
     assert (
-            len(sources)
-            == len(destinations)
-            == len(timestamps)
-            == len(edge_features)
-            == len(edge_idxs)
-            == current_batch_size
+        len(sources)
+        == len(destinations)
+        == len(timestamps)
+        == len(edge_features)
+        == len(edge_idxs)
+        == current_batch_size
     ), f"Batch size training error"
 
     negative_src, negative_dest = sample_negative(len(sources))
@@ -297,16 +313,14 @@ def train_batch_supervised():
         query_module_tgn_batch.labels,
     )
     assert (
-            len(sources)
-            == len(destinations)
-            == len(timestamps)
-            == len(edge_features)
-            == len(edge_idxs)
-            == current_batch_size
-            == len(labels)
+        len(sources)
+        == len(destinations)
+        == len(timestamps)
+        == len(edge_features)
+        == len(edge_idxs)
+        == current_batch_size
+        == len(labels)
     ), f"Batch size training error"
-
-
 
     graph_data = (
         sources,
@@ -323,8 +337,7 @@ def train_batch_supervised():
     embeddings_source = embeddings[:current_batch_size]
     embeddings_dest = embeddings[current_batch_size:]
 
-    x= torch.cat([embeddings_source, embeddings_dest], dim=0)
-
+    x = torch.cat([embeddings_source, embeddings_dest], dim=0)
 
     score = query_module_tgn.mlp(x).squeeze(dim=0)
 
@@ -334,16 +347,15 @@ def train_batch_supervised():
     src_prob, dest_prob = src_score.sigmoid(), dest_score.sigmoid()
     with torch.no_grad():
         src_label = torch.tensor(
-            labels[:,0], dtype=torch.float, device=query_module_tgn.device
+            labels[:, 0], dtype=torch.float, device=query_module_tgn.device
         )
         dest_label = torch.tensor(
-            labels[:,1], dtype=torch.float, device=query_module_tgn.device
+            labels[:, 1], dtype=torch.float, device=query_module_tgn.device
         )
-
 
     loss = query_module_tgn.criterion(
         src_prob.squeeze(), src_label.squeeze()
-    ) + query_module_tgn.criterion( dest_prob.squeeze(), dest_label.squeeze())
+    ) + query_module_tgn.criterion(dest_prob.squeeze(), dest_label.squeeze())
 
     loss.backward()
     query_module_tgn.optimizer.step()
@@ -397,10 +409,10 @@ def process_edges(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]):
         if src_features is None:
             # If node feature doesn't exist on one node, probably won't on any. Maybe this is wrong approach.
             src_features = (
-                    np.random.randint(
-                        0, 100, query_module_tgn.config[TGNParameters.NUM_NODE_FEATURES]
-                    )
-                    / 100
+                np.random.randint(
+                    0, 100, query_module_tgn.config[TGNParameters.NUM_NODE_FEATURES]
+                )
+                / 100
             )
         else:
             assert type(src_features) is tuple
@@ -408,10 +420,10 @@ def process_edges(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]):
 
         if dest_features is None:
             dest_features = (
-                    np.random.randint(
-                        0, 100, query_module_tgn.config[TGNParameters.NUM_NODE_FEATURES]
-                    )
-                    / 100
+                np.random.randint(
+                    0, 100, query_module_tgn.config[TGNParameters.NUM_NODE_FEATURES]
+                )
+                / 100
             )
         else:
             assert type(dest_features) is tuple
@@ -419,10 +431,10 @@ def process_edges(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]):
 
         if edge_feature is None:
             edge_feature = (
-                    np.random.randint(
-                        0, 100, query_module_tgn.config[TGNParameters.NUM_EDGE_FEATURES]
-                    )
-                    / 100
+                np.random.randint(
+                    0, 100, query_module_tgn.config[TGNParameters.NUM_EDGE_FEATURES]
+                )
+                / 100
             )
         else:
             assert type(edge_feature) is tuple
@@ -452,7 +464,8 @@ def process_edges(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]):
             query_module_tgn_batch.edge_idxs, edge_idx
         )
         query_module_tgn_batch.labels = np.append(
-            query_module_tgn_batch.labels, np.array([[src_label, dest_label]]), axis=0)
+            query_module_tgn_batch.labels, np.array([[src_label, dest_label]]), axis=0
+        )
 
 
 def reset_tgn_batch(batch_size: int):
@@ -551,23 +564,23 @@ def update(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]) -> mgp.Record():
 
 @mgp.read_proc
 def set_params(
-        ctx: mgp.ProcCtx,
-        learning_type: str,
-        batch_size: int,
-        num_of_layers: int,
-        layer_type: str,
-        memory_dimension: int,
-        time_dimension: int,
-        num_edge_features: int,
-        num_node_features: int,
-        message_dimension: int,
-        num_neighbors: int,
-        edge_message_function_type: str,
-        message_aggregator_type: str,
-        memory_updater_type: str,
-        num_attention_heads=1,
-        learning_rate=2e-2,
-        weight_decay=5e-3,
+    ctx: mgp.ProcCtx,
+    learning_type: str,
+    batch_size: int,
+    num_of_layers: int,
+    layer_type: str,
+    memory_dimension: int,
+    time_dimension: int,
+    num_edge_features: int,
+    num_node_features: int,
+    message_dimension: int,
+    num_neighbors: int,
+    edge_message_function_type: str,
+    message_aggregator_type: str,
+    memory_updater_type: str,
+    num_attention_heads=1,
+    learning_rate=2e-2,
+    weight_decay=5e-3,
 ) -> mgp.Record():
     """
     Warning: Every time you call this function, old TGN object is cleared and process of learning params is
@@ -596,7 +609,7 @@ def set_params(
     }
     optimizer_config = {
         OptimizerParameters.LEARNING_RATE: learning_rate,
-        OptimizerParameters.WEIGHT_DECAY: weight_decay
+        OptimizerParameters.WEIGHT_DECAY: weight_decay,
     }
     # tgn params
 

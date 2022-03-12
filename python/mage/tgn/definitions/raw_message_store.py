@@ -13,7 +13,7 @@ class RawMessageStore:
     """
 
     def __init__(
-            self, edge_raw_message_dimension: int, node_raw_message_dimension: int
+        self, edge_raw_message_dimension: int, node_raw_message_dimension: int
     ):
         self.message_container: Dict[int, List[RawMessage]] = {}
         self.edge_raw_message_dimension = edge_raw_message_dimension
@@ -27,7 +27,7 @@ class RawMessageStore:
     def get_messages(self) -> Dict[int, List[RawMessage]]:
         return self.message_container
 
-    def update_messages(self, new_node_messages: Dict[int, List[RawMessage]])->None:
+    def update_messages(self, new_node_messages: Dict[int, List[RawMessage]]) -> None:
         for node in new_node_messages:
             if node not in self.message_container:
                 self.message_container[node] = []

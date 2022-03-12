@@ -7,12 +7,13 @@ class RawMessage:
     Raw Message class is a container for information needed to compute message from Node-wise event and Interaction-wise
     event respectfully.
     """
+
     def __init__(self, source: int, timestamp: int):
         super(RawMessage, self).__init__()
         self.source = source
         self.timestamp = timestamp
 
-    def detach_memory(self)->None:
+    def detach_memory(self) -> None:
         raise Exception("Not implemented")
 
     def __str__(self):
@@ -34,7 +35,7 @@ class NodeRawMessage(RawMessage):
         self.timestamp = timestamp
         self.node_features = node_features
 
-    def detach_memory(self)->None:
+    def detach_memory(self) -> None:
         raise Exception("Not implemented")
 
 
@@ -46,6 +47,7 @@ class InteractionRawMessage(RawMessage):
     in time (delta time) of current time and last interaction for source node, and edge features
 
     """
+
     def __init__(
         self,
         source_memory: torch.Tensor,
@@ -61,5 +63,5 @@ class InteractionRawMessage(RawMessage):
         self.delta_time = delta_time
         self.edge_features = edge_features
 
-    def detach_memory(self)->None:
+    def detach_memory(self) -> None:
         raise Exception("Not implemented")
