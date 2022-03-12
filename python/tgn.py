@@ -38,6 +38,7 @@ class TGNParameters:
     MESSAGE_AGGREGATOR_TYPE = "message_aggregator_type"
     MEMORY_UPDATER_TYPE = "memory_updater_type"
     NUM_ATTENTION_HEADS = "num_attention_heads"
+    DEVICE = "device"
 
 
 class OptimizerParameters:
@@ -101,6 +102,7 @@ def set_tgn(learning_type: LearningType, tgn_config: Dict[str, any], optimizer_c
     global query_module_tgn
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    tgn_config[TGNParameters.DEVICE] = device
 
     if learning_type == LearningType.SelfSupervised:
         tgn, mlp = get_tgn_self_supervised(tgn_config, device)

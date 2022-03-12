@@ -4,10 +4,11 @@ import torch
 
 
 class Memory:
-    def __init__(self, memory_dimension: int):
+    def __init__(self, memory_dimension: int, device: torch.device):
         self.memory_container: Dict[int, torch.Tensor] = {}
         self.memory_dimension = memory_dimension
         self.last_node_update: Dict[int, torch.Tensor] = {}
+        self.device = device
 
     # https://stackoverflow.com/questions/48274929/pytorch-runtimeerror-trying-to-backward-through-the-graph-a-second
     # -time-but
@@ -24,7 +25,7 @@ class Memory:
             self.memory_container[node] = torch.zeros(
                 self.memory_dimension,
                 dtype=torch.float32,
-                device="cpu",
+                device=self.device,
                 requires_grad=True,
             )
         return self.memory_container[node]
@@ -36,7 +37,7 @@ class Memory:
     def get_last_node_update(self, node: int) -> torch.Tensor:
         if node not in self.last_node_update:
             self.last_node_update[node] = torch.zeros(
-                1, dtype=torch.float32, device="cpu", requires_grad=True
+                1, dtype=torch.float32, device=self.device, requires_grad=True
             )
         return self.last_node_update[node]
 
@@ -46,10 +47,3 @@ class Memory:
     def reset_memory(self):
         self.memory_container: Dict[int, torch.Tensor] = {}
         self.last_node_update: Dict[int, torch.Tensor] = {}
-
-    def copy(self):
-        raise Exception("why use this")
-        memory_copy = Memory(self.memory_dimension)
-        memory_copy.memory_container = self.memory_container.copy()
-        memory_copy.last_node_update = self.last_node_update.copy()
-        return memory_copy

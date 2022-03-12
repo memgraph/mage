@@ -5,52 +5,65 @@ import numpy as np
 
 class TemporalNeighborhood:
     def __init__(self):
-        super(TemporalNeighborhood, self).__init__()
-
+        super().__init__()
         self.neighborhood: Dict[int, List[Tuple[int, int, float]]] = {}
 
-    def update_neighborhood(self, sources, destinations, edge_idx, timestamps):
-        # idea is that smallest new timestamp is always greater than last biggest one in dict so we don't need to
-        # sort arrays:)
-        # if it doesn't exist, create empty, else overwrite
+    def update_neighborhood(self, sources: np.array, destinations: np.array,
+                            edge_idxs: np.array, timestamps: np.array) -> None:
+        """
+        Idea is that smallest new timestamp is always greater than last biggest one in dict so we don't need to
+        sort arrays :)
+        if it doesn't exist, create empty, else overwrite
+        """
         self.neighborhood = {
             **{node: [] for node in set(sources).union(set(destinations))},
             **self.neighborhood,
         }
-        for neighbor in zip(sources, destinations, edge_idx, timestamps):
-            self.neighborhood[neighbor[0]].append((neighbor[1:]))
-            self.neighborhood[neighbor[1]].append(
-                (neighbor[0], neighbor[2], neighbor[3])
+        for source, destination, edge_idx, timestamp in zip(sources, destinations, edge_idxs, timestamps):
+            self.neighborhood[source].append((destination, edge_idx, timestamp))
+            self.neighborhood[destination].append(
+                (source, edge_idx, timestamp)
             )
 
-    def get_neighborhood(self, node: int, timestamp: int, num_neighbors: int):
-        # todo check if we need copy
+    def get_neighborhood(self, node: int, timestamp: int, num_neighbors: int) -> Tuple[np.array, np.array ,np.array]:
+        """
 
+        """
         if node not in self.neighborhood:
             return (
                 np.zeros(num_neighbors, dtype=int),
                 np.zeros(num_neighbors, dtype=int),
-                np.zeros(num_neighbors),
+                np.zeros(num_neighbors, dtype=int),
             )
-        neighbors_tuple = self.neighborhood[node].copy()
+        neighbors_tuple = self.neighborhood[node]
 
-        unzipped_tuple = list(zip(*neighbors_tuple))
-        neighbors = list(unzipped_tuple[0])[-num_neighbors:]
-        edge_idxs = list(unzipped_tuple[1])[-num_neighbors:]
-        timestamps = list(unzipped_tuple[2])[-num_neighbors:]
+        neighbors, edge_idxs, timestamps = list(zip(*neighbors_tuple))
+        neighbors, edge_idxs, timestamps = list(neighbors), list(edge_idxs), list(timestamps)
+
+        neighbors= np.array(neighbors)
+        edge_idxs = np.array(edge_idxs)
+        timestamps = np.array(timestamps)
+
+        indices = np.where(timestamps <timestamp)[0]
+        indices = np.random.choice(indices, size=min(num_neighbors, len(indices)), replace=False)
+
+        neighbors = neighbors[indices]
+        edge_idxs = edge_idxs[indices]
+        timestamps = timestamps[indices]
 
         neighbors = np.append(
-            arr=neighbors, values=np.zeros(num_neighbors - len(neighbors))
+            arr=neighbors, values=np.zeros(num_neighbors - len(neighbors), dtype=int)
         )
         edge_idxs = np.append(
-            arr=edge_idxs, values=np.zeros(num_neighbors - len(edge_idxs))
+            arr=edge_idxs, values=np.zeros(num_neighbors - len(edge_idxs), dtype=int)
         )
         timestamps = np.append(
-            arr=timestamps, values=np.zeros(num_neighbors - len(timestamps))
+            arr=timestamps, values=np.zeros(num_neighbors - len(timestamps), dtype=int)
         )
         return neighbors, edge_idxs, timestamps
 
+
     def find_neighborhood(
-        self, nodes: List[int], num_neighbors: int
+            self, nodes: List[int], num_neighbors: int
     ) -> Dict[int, List[Tuple[int, int, float]]]:
-        return {node: self.neighborhood[node].copy()[:num_neighbors] for node in nodes}
+        return {node: self.neighborhood[node][:num_neighbors] for node in nodes}
