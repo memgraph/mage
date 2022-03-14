@@ -1,9 +1,5 @@
 from typing import List, Dict
 
-import numpy as np
-import torch
-
-from mage.tgn.definitions.events import Event
 from mage.tgn.definitions.messages import RawMessage
 
 

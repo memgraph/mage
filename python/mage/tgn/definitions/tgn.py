@@ -1,5 +1,3 @@
-from typing import List, Dict, Tuple
-
 import numpy as np
 import torch
 import torch.nn as nn
@@ -35,10 +33,6 @@ from mage.tgn.definitions.time_encoding import TimeEncoder
 from mage.tgn.helper.simple_mlp import MLP
 
 from typing import List, Dict, Tuple
-
-import numpy as np
-import torch
-import torch.nn as nn
 
 
 class TGN(nn.Module):
