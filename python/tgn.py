@@ -12,16 +12,18 @@ from mage.tgn.constants import (
     MessageAggregatorType,
     MemoryUpdaterType,
 )
-from mage.tgn.definitions.tgn import (
-    TGN
-)
+from mage.tgn.definitions.tgn import TGN
 from dataclasses import dataclass
 
 
 from mage.tgn.helper.simple_mlp import MLP
 
-from mage.tgn.definitions.instances import TGNGraphSumEdgeSelfSupervised, TGNGraphSumSupervised, \
-    TGNGraphAttentionSupervised, TGNGraphAttentionEdgeSelfSupervised
+from mage.tgn.definitions.instances import (
+    TGNGraphSumEdgeSelfSupervised,
+    TGNGraphSumSupervised,
+    TGNGraphAttentionSupervised,
+    TGNGraphAttentionEdgeSelfSupervised,
+)
 
 
 ###################

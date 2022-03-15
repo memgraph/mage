@@ -7,8 +7,16 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from mage.tgn.constants import MessageFunctionType, MessageAggregatorType, MemoryUpdaterType, TGNLayerType
-from mage.tgn.definitions.layers import TGNLayerGraphSumEmbedding, TGNLayerGraphAttentionEmbedding
+from mage.tgn.constants import (
+    MessageFunctionType,
+    MessageAggregatorType,
+    MemoryUpdaterType,
+    TGNLayerType,
+)
+from mage.tgn.definitions.layers import (
+    TGNLayerGraphSumEmbedding,
+    TGNLayerGraphAttentionEmbedding,
+)
 from mage.tgn.definitions.tgn import TGN
 
 
@@ -29,18 +37,13 @@ class TGNEdgesSelfSupervised(TGN):
             Dict[int, torch.Tensor],
             Dict[int, torch.Tensor],
         ],
-    ):
-        # source -> np.array(num_of_nodes,)
-        # destinations -> np.array(num_of_nodes,)
-        # negative_sources -> np.array
-        # negative_destinations -> np.array
-        # timestamps -> np.array(num_of_nodes,)
-        # edge_index -> np.array(num_of_nodes,)
-
-        # edge_features = Dict(int, np.array)
-        # node_features -> Dict(int, np.array)
-        # tl;dr used to unpack data
-        print("forward TGNEdgesSelfSupervised")
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        :param data: input containing sources, destinations, negative_sources,  negative_destinations,
+            timestamps, edge_idxs, edge_features, node_features
+        :return embeddings for sources and destinations in first result, embeddings for negative sources and destinations
+        as other result
+        """
         (
             sources,
             destinations,
@@ -114,13 +117,12 @@ class TGNSupervised(TGN):
             Dict[int, torch.Tensor],
             Dict[int, torch.Tensor],
         ],
-    ):
-        # source -> np.array(num_of_nodes,)
-        # destinations -> np.array(num_of_nodes,)
-        # timestamps -> np.array(num_of_nodes,)
-        # edge_index -> np.array(num_of_nodes,)
-        # edge_features = Dict(int, np.array)
-        # node_features -> Dict(int, np.array)
+    ) -> torch.Tensor:
+        """
+        :param data: input containing sources, destinations,
+            timestamps, edge_idxs, edge_features, node_features
+        :return embeddings for sources and destinations in one torch.Tensor
+        """
 
         (
             sources,
@@ -204,7 +206,7 @@ class TGNGraphAttentionEmbedding(TGN):
         self.num_attention_heads = num_attention_heads
 
         # Initialize TGN layers
-        tgn_layers = []
+        self.tgn_layers = []
 
         layer = TGNLayerGraphAttentionEmbedding(
             embedding_dimension=self.memory_dimension + self.num_node_features,
@@ -216,9 +218,9 @@ class TGNGraphAttentionEmbedding(TGN):
             num_of_layers=self.num_of_layers,
         )
 
-        tgn_layers.append(layer)
+        self.tgn_layers.append(layer)
 
-        self.tgn_net = nn.Sequential(*tgn_layers)
+        self.tgn_net = nn.Sequential(*self.tgn_layers)
 
 
 class TGNGraphSumEmbedding(TGN):
@@ -255,7 +257,7 @@ class TGNGraphSumEmbedding(TGN):
         assert layer_type == TGNLayerType.GraphSumEmbedding
 
         # Initialize TGN layers
-        tgn_layers = []
+        self.tgn_layers = []
 
         layer = TGNLayerGraphSumEmbedding(
             embedding_dimension=self.memory_dimension + self.num_node_features,
@@ -266,9 +268,9 @@ class TGNGraphSumEmbedding(TGN):
             num_of_layers=self.num_of_layers,
         )
 
-        tgn_layers.append(layer)
+        self.tgn_layers.append(layer)
 
-        self.tgn_net = nn.Sequential(*tgn_layers)
+        self.tgn_net = nn.Sequential(*self.tgn_layers)
 
 
 #

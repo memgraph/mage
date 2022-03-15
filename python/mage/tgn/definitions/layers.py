@@ -1,11 +1,15 @@
 """
 This class contains implementations of different layers
 """
+from typing import List, Tuple, Dict
+
 import numpy as np
 import torch.nn as nn
 import torch
 
 from mage.tgn.helper.simple_mlp import MLP
+
+from mage.tgn.definitions.tgn import GraphSumDataType, GraphAttnDataType
 
 
 class TGNLayer(nn.Module):
@@ -71,7 +75,7 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
         )
         self.relu = torch.nn.ReLU()
 
-    def forward(self, data):
+    def forward(self, data: GraphSumDataType):
         (
             node_layers,
             mappings,
@@ -106,8 +110,15 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
         return out
 
     def _aggregate(
-        self, features, rows, nodes, mapping, edge_features, time_features, k
-    ):
+        self,
+        features: torch.Tensor,
+        rows: List[List[Tuple[int, int]]],
+        nodes: List[int],
+        mapping: Dict[Tuple[int, int], int],
+        edge_features: List[torch.Tensor],
+        time_features: List[torch.Tensor],
+        layer: int,
+    ) -> torch.Tensor:
         assert len(nodes) == len(rows)
         mapped_rows = [
             np.array([mapping[(vi, ti)] for (vi, ti) in row]) for row in rows
@@ -128,7 +139,7 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
             # sum rows, but keep this dimension
             # shape(1, embedding_dim+edge_features_dim+time_encoding_dim)
             aggregate_sum = torch.sum(aggregate, dim=0, keepdim=True)
-            out_linear1 = self.linear_1s[k](aggregate_sum)
+            out_linear1 = self.linear_1s[layer](aggregate_sum)
             out_relu_linear1 = self.relu(out_linear1)
 
             out[i, :] = out_relu_linear1
@@ -188,7 +199,7 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
             for _ in range(self.num_of_layers)
         )  # this way no need to do torch.permute later <3
 
-    def forward(self, data):
+    def forward(self, data: GraphAttnDataType):
         (
             node_layers,
             mappings,
@@ -243,7 +254,15 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
             out = self.mlps[k](concat_neigh_out)
         return out
 
-    def _aggregate(self, features, rows, nodes, mapping, edge_features, time_features):
+    def _aggregate(
+        self,
+        features: torch.Tensor,
+        rows: List[List[Tuple[int, int]]],
+        nodes: List[int],
+        mapping: Dict[Tuple[int, int], int],
+        edge_features: List[torch.Tensor],
+        time_features: List[torch.Tensor],
+    ) -> torch.Tensor:
         assert len(nodes) == len(rows)
         mapped_rows = [
             np.array([mapping[(vi, ti)] for (vi, ti) in row]) for row in rows
