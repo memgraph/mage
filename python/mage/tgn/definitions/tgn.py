@@ -258,7 +258,7 @@ class TGN(nn.Module):
     def _create_node_events(
         self,
     ):
-        raise NotImplemented
+        raise NotImplementedError()
 
     def _create_messages(
         self,
