@@ -16,12 +16,12 @@ std::unordered_set<std::uint64_t> NeighborsMemgraphIDs(const mg_graph::GraphView
 }
 
 bool OnlineBC::Inconsistent(const mg_graph::GraphView<> &graph) {
-  for (auto const [node_id] : graph.Nodes()) {
-    auto external_id = graph.GetMemgraphNodeId(node_id);
-    if (this->node_bc_scores.find(external_id) == this->node_bc_scores.end()) {
-      return true;
-    }
+  if (graph.Nodes().size() != this->node_bc_scores.size()) return true;
+
+  for (const auto [node_inner_id] : graph.Nodes()) {
+    if (!this->node_bc_scores.count(graph.GetMemgraphNodeId(node_inner_id))) return true;
   }
+
   return false;
 }
 

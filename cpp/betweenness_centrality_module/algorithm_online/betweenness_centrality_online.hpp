@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <memory>
 #include <queue>
 #include <set>
@@ -35,7 +36,7 @@ class OnlineBC {
   static constexpr double NO_DOUBLE_COUNT = 2.0;
 
   ///@brief Returns whether previously calculated betweenness centrality scores are inconsistent with the current graph,
-  /// i.e. if there are any scores associated with a node that no longer exists.
+  /// i.e. if the nodes which have associated betweenness centrality scores are not the same as the graph’s nodes.
   ///
   ///@param graph Current graph
   bool Inconsistent(const mg_graph::GraphView<> &graph);
