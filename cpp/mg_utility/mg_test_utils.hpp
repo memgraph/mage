@@ -3,7 +3,9 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <set>
 #include <stack>
+#include <unordered_map>
 #include <vector>
 
 namespace mg_test_utility {
@@ -94,6 +96,39 @@ bool TestEqualVectors(const std::vector<T> &result, const std::vector<T> &correc
                       double absolute_error = ABSOLUTE_ERROR_EPSILON,
                       double average_error = AVERAGE_ABSOLUTE_ERROR_EPSILON) {
   return MaxAbsoluteError(result, correct) < absolute_error && AverageAbsoluteError(result, correct) < absolute_error;
+}
+
+///
+///@brief A method that determines whether given unordered maps with (int, arithmetic_type) values are the same within
+/// defined tolerance. Maps must have the same keys.
+///
+///@param result Container storing calculated results
+///@param correct Container storing correct values
+///@param absolute_error Absolute error between any two pairs of resulting and correct value
+///@return true if the maximum absolute error is lesser than ABSOLUTE_ERROR_EPSILON, false otherwise
+///
+template <typename T>
+bool TestEqualUnorderedMaps(const std::unordered_map<std::uint64_t, T> &result,
+                            const std::unordered_map<std::uint64_t, T> &correct,
+                            double absolute_error = ABSOLUTE_ERROR_EPSILON) {
+  if (result.size() != correct.size()) return false;
+
+  auto get_map_keys = [](const std::unordered_map<std::uint64_t, T> &map) -> std::set<std::uint64_t> {
+    std::set<std::uint64_t> keys;
+    for (const auto [k, v] : map) {
+      keys.insert(k);
+    }
+    return keys;
+  };
+  auto keys_result = get_map_keys(result);
+  auto keys_correct = get_map_keys(correct);
+
+  if (keys_result != keys_correct) return false;
+
+  return std::equal(keys_result.begin(), keys_result.end(), keys_correct.begin(),
+                    [&result, &correct, &absolute_error](auto key_result, auto key_correct) {
+                      return std::abs(result.at(key_result) - correct.at(key_correct)) <= absolute_error;
+                    });
 }
 
 ///

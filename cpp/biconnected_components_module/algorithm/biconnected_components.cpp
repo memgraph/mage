@@ -20,7 +20,7 @@ void bcc_utility::BccDFS(std::uint64_t node_id, std::uint64_t parent_id, bcc_uti
                          std::vector<std::unordered_set<std::uint64_t>> *bcc_nodes, const mg_graph::GraphView<> &graph,
                          std::unordered_set<uint64_t> &articulationPoints) {
   auto root = node_id == parent_id;
-
+  
   state->Update(node_id);
 
   std::uint64_t root_count = 0;  // needed to handle the special case for root node.
