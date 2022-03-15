@@ -32,6 +32,8 @@ from mage.tgn.definitions.time_encoding import TimeEncoder
 
 from typing import List, Dict, Tuple, Union
 
+from mage.tgn.definitions.memory_updater import MemoryUpdater
+
 GraphSumDataType = Tuple[
     List[List[Tuple[int, int]]],
     List[Dict[Tuple[int, int], int]],
@@ -265,7 +267,7 @@ class TGN(nn.Module):
         node_event_function: MessageFunction,
         edge_event_function: MessageFunction,
         raw_messages: Dict[int, List[RawMessage]],
-    ):
+    ) -> Dict[int, List[torch.Tensor]]:
         # change this so that every that dict is of type
         # node_id -> [[],
         #             [],
@@ -310,7 +312,7 @@ class TGN(nn.Module):
         memory: Memory,
         node_features: Dict[int, torch.Tensor],
         edge_features: Dict[int, torch.Tensor],
-    ):
+    ) -> Dict[int, List[RawMessage]]:
         raw_messages = {node: [] for node in events}
         for node in events:
             node_events = events[node]
@@ -385,13 +387,13 @@ class TGN(nn.Module):
 
     def _form_computation_graph(
         self, nodes: np.array, timestamps: np.array
-    ) -> (
+    ) -> Tuple[
         List[List[Tuple[int, int]]],
         List[Dict[Tuple[int, int], int]],
         List[List[int]],
         List[List[int]],
         List[List[Tuple[int, int]]],
-    ):
+    ]:
         """
         This method creates computation graph in form of list of lists of nodes.
         From input nodes and timestamps we sample for each one of them nodes needed to calculate embeddings on certain
@@ -567,7 +569,9 @@ class TGN(nn.Module):
         )
 
 
-def get_message_function_type(message_function_type: MessageFunctionType):
+def get_message_function_type(
+    message_function_type: MessageFunctionType,
+) -> MessageFunction:
     if message_function_type == MessageFunctionType.MLP:
         return MessageFunctionMLP
     elif message_function_type == MessageFunctionType.Identity:
@@ -578,7 +582,7 @@ def get_message_function_type(message_function_type: MessageFunctionType):
         )
 
 
-def get_memory_updater_type(memory_updater_type: MemoryUpdaterType):
+def get_memory_updater_type(memory_updater_type: MemoryUpdaterType) -> MemoryUpdater:
     if memory_updater_type == MemoryUpdaterType.GRU:
         return MemoryUpdaterGRU
 
@@ -588,7 +592,9 @@ def get_memory_updater_type(memory_updater_type: MemoryUpdaterType):
         raise Exception(f"Memory updater type {memory_updater_type} not yet supported.")
 
 
-def get_message_aggregator_type(message_aggregator_type: MessageAggregatorType):
+def get_message_aggregator_type(
+    message_aggregator_type: MessageAggregatorType,
+) -> MessageAggregator:
     if message_aggregator_type == MessageAggregatorType.Mean:
         return MeanMessageAggregator
 
