@@ -1,4 +1,6 @@
+#include <cstdint>
 #include <set>
+#include <optional>
 
 #include <mg_graph.hpp>
 
