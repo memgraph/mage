@@ -86,8 +86,8 @@ std::unordered_map<std::uint64_t, int> OnlineBC::SSSPLengths(
 }
 
 std::unordered_map<std::uint64_t, int> OnlineBC::PeripheralSubgraphsOrder(
-    const mg_graph::GraphView<> &graph, std::unordered_set<std::uint64_t> affected_bcc_articulation_points,
-    std::unordered_set<std::uint64_t> affected_bcc_nodes) const {
+    const mg_graph::GraphView<> &graph, std::unordered_set<std::uint64_t> &affected_bcc_articulation_points,
+    std::unordered_set<std::uint64_t> &affected_bcc_nodes) const {
   std::unordered_map<std::uint64_t, int> peripheral_subgraphs_order;
   for (const auto articulation_point_id : affected_bcc_articulation_points) {
     std::unordered_set<std::uint64_t> visited({articulation_point_id});
