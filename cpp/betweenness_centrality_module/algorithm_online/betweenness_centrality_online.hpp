@@ -10,8 +10,7 @@
 
 namespace online_bc {
 
-using bcc_data = std::tuple<std::unordered_set<std::uint64_t>, std::set<std::pair<std::uint64_t, std::uint64_t>>,
-                            std::unordered_set<std::uint64_t>>;
+using bcc_data = std::tuple<std::unordered_set<std::uint64_t>, std::unordered_set<std::uint64_t>>;
 using brandesian_bfs_data =
     std::tuple<std::unordered_map<std::uint64_t, int>, std::unordered_map<std::uint64_t, std::set<std::uint64_t>>,
                std::vector<std::uint64_t>>;
@@ -59,12 +58,12 @@ class OnlineBC {
   ///@param threads Number of concurrent threads
   void BrandesWrapper(const mg_graph::GraphView<> &graph, const std::uint64_t threads);
 
-  ///@brief Returns the nodes, edges and articulation points of the biconnected component affected by the update.
+  ///@brief Returns the nodes and the articulation points of the biconnected component affected by the update.
   ///
-  ///@param graph Graph containing the updated edge (new graph if edge was created, old graph if edge was deleted)
+  ///@param graph Graph containing affected edge (new graph if edge was created, old graph if edge was deleted)
   ///@param updated_edge Created/deleted edge
   ///
-  ///@return (nodes, edges, articulation points) in the affected biconnected component
+  ///@return (nodes, articulation points) in the affected biconnected component
   bcc_data IsolateAffectedBCC(const mg_graph::GraphView<> &graph,
                               const std::pair<std::uint64_t, std::uint64_t> updated_edge) const;
 

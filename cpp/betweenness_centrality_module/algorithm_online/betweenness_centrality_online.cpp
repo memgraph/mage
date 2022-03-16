@@ -43,19 +43,14 @@ bcc_data OnlineBC::IsolateAffectedBCC(const mg_graph::GraphView<> &graph,
   const auto edges_by_bcc = bcc_algorithm::GetBiconnectedComponents(graph, articulation_points_by_bcc, nodes_by_bcc);
 
   std::unordered_set<std::uint64_t> affected_bcc_nodes;
-  std::set<std::pair<std::uint64_t, std::uint64_t>>
-      affected_bcc_edges;  // std::pair cannot be an std::unordered_set element
   std::unordered_set<std::uint64_t> affected_bcc_articulation_points;
 
   for (std::size_t i = 0; i < edges_by_bcc.size(); i++) {
     if (std::any_of(edges_by_bcc[i].begin(), edges_by_bcc[i].end(), [updated_edge](auto &edge) {
-          return edge.from == updated_edge.first && edge.to == updated_edge.second;  // if the edge is in the BCC
+          return edge.from == updated_edge.first && edge.to == updated_edge.second;  // if edge in BCC
         })) {
       for (const auto node : nodes_by_bcc[i]) {
         affected_bcc_nodes.insert(node);
-      }
-      for (const auto &edge : edges_by_bcc[i]) {
-        affected_bcc_edges.insert({edge.from, edge.to});
       }
       for (const auto node : articulation_points_by_bcc) {
         if (affected_bcc_nodes.count(node)) affected_bcc_articulation_points.insert(node);
@@ -63,7 +58,7 @@ bcc_data OnlineBC::IsolateAffectedBCC(const mg_graph::GraphView<> &graph,
     }
   }
 
-  return {affected_bcc_nodes, affected_bcc_edges, affected_bcc_articulation_points};
+  return {affected_bcc_nodes, affected_bcc_articulation_points};
 }
 
 std::unordered_map<std::uint64_t, int> OnlineBC::SSSPLengths(
@@ -175,16 +170,14 @@ void OnlineBC::Iteration(const mg_graph::GraphView<> &prior_graph, const mg_grap
   }
 
   for (const auto w_id : reverse_bfs_order_prior) {
-    if (affected_bcc_articulation_points.count(s_id) && affected_bcc_articulation_points.count(w_id)) {
+    if (affected_bcc_articulation_points.count(s_id) && affected_bcc_articulation_points.count(w_id))
       ext_dependency_s_on.at(w_id) = peripheral_subgraphs_order.at(s_id) * peripheral_subgraphs_order.at(w_id);
-    }
 
     for (const auto p_id : predecessors_prior.at(w_id)) {
       auto ratio = static_cast<double>(n_shortest_paths_prior.at(p_id)) / n_shortest_paths_prior.at(w_id);
       dependency_s_on.at(p_id) += (ratio * (1 + dependency_s_on.at(w_id)));
-      if (affected_bcc_articulation_points.count(s_id)) {
+      if (affected_bcc_articulation_points.count(s_id))
         ext_dependency_s_on.at(p_id) += (ext_dependency_s_on.at(w_id) * ratio);
-      }
     }
 
     if (s_id != w_id) {
@@ -211,16 +204,14 @@ void OnlineBC::Iteration(const mg_graph::GraphView<> &prior_graph, const mg_grap
   }
 
   for (const auto w_id : reverse_bfs_order_current) {
-    if (affected_bcc_articulation_points.count(s_id) && affected_bcc_articulation_points.count(w_id)) {
+    if (affected_bcc_articulation_points.count(s_id) && affected_bcc_articulation_points.count(w_id))
       ext_dependency_s_on.at(w_id) = peripheral_subgraphs_order.at(s_id) * peripheral_subgraphs_order.at(w_id);
-    }
 
     for (const auto p_id : predecessors_current.at(w_id)) {
       auto ratio = static_cast<double>(n_shortest_paths_current.at(p_id)) / n_shortest_paths_current.at(w_id);
       dependency_s_on.at(p_id) += ratio * (1 + dependency_s_on.at(w_id));
-      if (affected_bcc_articulation_points.count(s_id)) {
+      if (affected_bcc_articulation_points.count(s_id))
         ext_dependency_s_on.at(p_id) += ext_dependency_s_on.at(w_id) * ratio;
-      }
     }
 
     if (s_id != w_id) {
@@ -249,7 +240,7 @@ void OnlineBC::iCentral(const mg_graph::GraphView<> &prior_graph, const mg_graph
   edges_by_bcc =
       bcc_algorithm::GetBiconnectedComponents(graph_with_updated_edge, articulation_points_by_bcc, nodes_by_bcc);
 
-  const auto [affected_bcc_nodes, affected_bcc_edges, affected_bcc_articulation_points] =
+  const auto [affected_bcc_nodes, affected_bcc_articulation_points] =
       IsolateAffectedBCC(graph_with_updated_edge, updated_edge);
 
   const auto distances_first = SSSPLengths(graph_with_updated_edge, updated_edge.first, affected_bcc_nodes);
@@ -272,10 +263,9 @@ void OnlineBC::iCentral(const mg_graph::GraphView<> &prior_graph, const mg_graph
 #pragma omp parallel for
   for (std::uint64_t i = 0; i < array_size; i++) {
     auto node_id = affected_bcc_nodes_array[i];
-    if (distances_first.at(node_id) != distances_second.at(node_id)) {
+    if (distances_first.at(node_id) != distances_second.at(node_id))
       Iteration(prior_graph, current_graph, node_id, affected_bcc_nodes, affected_bcc_articulation_points,
                 peripheral_subgraphs_order);
-    }
   }
 }
 
@@ -294,11 +284,10 @@ std::unordered_map<std::uint64_t, double> OnlineBC::Set(const mg_graph::GraphVie
 std::unordered_map<std::uint64_t, double> OnlineBC::Get(const mg_graph::GraphView<> &graph, const bool normalize) {
   if (!this->computed) BrandesWrapper(graph, std::thread::hardware_concurrency());
 
-  if (Inconsistent(graph)) {
+  if (Inconsistent(graph))
     throw std::runtime_error(
         "Graph has been modified and is thus inconsistent with cached betweenness centrality scores; to update them, "
         "please call set/reset!");
-  }
 
   if (normalize) return NormalizeBC(this->node_bc_scores, graph.Nodes().size());
 
