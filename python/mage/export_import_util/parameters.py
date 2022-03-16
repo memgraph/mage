@@ -11,3 +11,7 @@ class Parameter(Enum):
     START = "start"
     NODE = "node"
     RELATIONSHIP = "relationship"
+    DURATION = "duration("
+    LOCALTIME = "localTime("
+    LOCALDATETIME = "localDateTime("
+    DATE = "date("

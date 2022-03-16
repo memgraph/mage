@@ -1,7 +1,8 @@
 from dataclasses import dataclass
+from datetime import datetime, date, time, timedelta
 import json as js
-import mgp
 from mage.export_import_util.parameters import Parameter
+import mgp
 
 
 @dataclass
@@ -38,6 +39,24 @@ class Relationship:
         }
 
 
+def convert_to_isoformat(property):
+
+    if isinstance(property, timedelta):
+        return Parameter.DURATION.value + str(property) + ")"
+
+    elif isinstance(property, time):
+        return Parameter.LOCALTIME.value + property.isoformat() + ")"
+
+    elif isinstance(property, datetime):
+        return Parameter.LOCALDATETIME.value + property.isoformat() + ")"
+
+    elif isinstance(property, date):
+        return Parameter.DATE.value + property.isoformat() + ")"
+
+    else:
+        return property
+
+
 @mgp.read_proc
 def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
     """
@@ -55,15 +74,16 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
     for vertex in ctx.graph.vertices:
         labels = [label.name for label in vertex.labels]
         properties = {
-            key: vertex.properties.get(key) for key in vertex.properties.keys()
+            key: convert_to_isoformat(vertex.properties.get(key))
+            for key in vertex.properties.keys()
         }
 
         nodes.append(Node(vertex.id, labels, properties).get_dict())
 
         for edge in vertex.out_edges:
-            properties = dict()
             properties = {
-                key: edge.properties.get(key) for key in edge.properties.keys()
+                key: convert_to_isoformat(edge.properties.get(key))
+                for key in edge.properties.keys()
             }
 
             relationships.append(

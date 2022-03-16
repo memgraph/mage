@@ -1,6 +1,29 @@
+from datetime import datetime, date, time, timedelta
+import json as js
 from mage.export_import_util.parameters import Parameter
 import mgp
-import json as js
+
+
+def convert_from_isoformat(property):
+    if isinstance(property, str):
+        if str.startswith(property, Parameter.DURATION.value):
+            parsed_time = datetime.strptime(
+                property.split("(")[-1].split(")")[0], "%H:%M:%S.%f"
+            )
+            return timedelta(
+                hours=parsed_time.hour,
+                minutes=parsed_time.minute,
+                seconds=parsed_time.second,
+                microseconds=parsed_time.microsecond,
+            )
+        if str.startswith(property, Parameter.LOCALTIME.value):
+            return time.fromisoformat(property.split("(")[-1].split(")")[0])
+        if str.startswith(property, Parameter.LOCALDATETIME.value):
+            return datetime.fromisoformat(property.split("(")[-1].split(")")[0])
+        if str.startswith(property, Parameter.DATE.value):
+            return date.fromisoformat(property.split("(")[-1].split(")")[0])
+
+    return property
 
 
 def create_vertex(ctx, properties, labels):
@@ -8,7 +31,7 @@ def create_vertex(ctx, properties, labels):
     vertex_properties = vertex.properties
 
     for key, value in properties.items():
-        vertex_properties[key] = value
+        vertex_properties[key] = convert_from_isoformat(value)
 
     for label in labels:
         vertex.add_label(label)
@@ -23,7 +46,7 @@ def create_edge(ctx, properties, start_node_id, end_node_id, type, vertex_ids):
     edge_properties = edge.properties
 
     for key, value in properties.items():
-        edge_properties[key] = value
+        edge_properties[key] = convert_from_isoformat(value)
 
 
 @mgp.write_proc
