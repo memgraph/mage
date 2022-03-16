@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <map>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "data_structures/graph_data.hpp"
 #include "data_structures/graph_view.hpp"
@@ -88,6 +89,21 @@ class Graph : public GraphView<TSize> {
     }
 
     return neighbours_[node_id];
+  }
+
+  /// Returns Memgraph IDs of neighbouring nodes.
+  ///
+  /// @param[in] node_id target node ID
+  ///
+  /// @return unordered set of neighbouring nodes' Memgraph IDs
+  const std::unordered_set<std::uint64_t> GetNeighboursMemgraphNodeIds(TSize node_id) const override {
+    if (node_id < 0 || node_id >= nodes_.size()) throw mg_exception::InvalidIDException();
+
+    std::unordered_set<std::uint64_t> neighbors_memgraph_ids;
+    for (const auto &neighbor : neighbours_[node_id]) {
+      neighbors_memgraph_ids.insert(GetMemgraphNodeId(neighbor.node_id));
+    }
+    return neighbors_memgraph_ids;
   }
 
   /// Gets out-neighbour nodes.

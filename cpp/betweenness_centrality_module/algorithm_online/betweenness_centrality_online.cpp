@@ -5,16 +5,6 @@
 #include "betweenness_centrality_online.hpp"
 
 namespace online_bc {
-
-std::unordered_set<std::uint64_t> NeighborsMemgraphIDs(const mg_graph::GraphView<> &graph,
-                                                       const std::vector<mg_graph::Neighbour<uint64_t>> neighbors) {
-  std::unordered_set<std::uint64_t> neighbors_memgraph_ids;
-  for (const auto &neighbor : neighbors) {
-    neighbors_memgraph_ids.insert(graph.GetMemgraphNodeId(neighbor.node_id));
-  }
-  return neighbors_memgraph_ids;
-}
-
 bool OnlineBC::Inconsistent(const mg_graph::GraphView<> &graph) {
   if (graph.Nodes().size() != this->node_bc_scores.size()) return true;
 
@@ -87,7 +77,7 @@ std::unordered_map<std::uint64_t, int> OnlineBC::SSSPLengths(
     const auto current_id = queue.front();
     queue.pop();
 
-    for (const auto neighbor_id : NeighborsMemgraphIDs(std::move(graph), graph.Neighbours(current_id))) {
+    for (const auto neighbor_id : graph.GetNeighboursMemgraphNodeIds(graph.GetInnerNodeId(current_id))) {
       if (!affected_bcc_nodes.count(neighbor_id)) continue;
 
       if (!distances.count(neighbor_id)) {  // if unvisited
@@ -112,7 +102,7 @@ std::unordered_map<std::uint64_t, int> OnlineBC::PeripheralSubgraphsOrder(
       const auto current_id = queue.front();
       queue.pop();
 
-      for (const auto neighbor_id : NeighborsMemgraphIDs(std::move(graph), graph.Neighbours(current_id))) {
+      for (const auto neighbor_id : graph.GetNeighboursMemgraphNodeIds(graph.GetInnerNodeId(current_id))) {
         if (affected_bcc_nodes.count(neighbor_id)) continue;
 
         if (!visited.count(neighbor_id)) {
@@ -142,7 +132,7 @@ brandesian_bfs_data OnlineBC::BrandesianBFS(const mg_graph::GraphView<> &graph, 
     const auto current_id = queue.front();
     queue.pop();
 
-    for (const auto neighbor_id : NeighborsMemgraphIDs(std::move(graph), graph.Neighbours(current_id))) {
+    for (const auto neighbor_id : graph.GetNeighboursMemgraphNodeIds(graph.GetInnerNodeId(current_id))) {
       if (!affected_bcc_nodes.count(neighbor_id)) continue;
 
       if (!distances.count(neighbor_id)) {  // if unvisited
