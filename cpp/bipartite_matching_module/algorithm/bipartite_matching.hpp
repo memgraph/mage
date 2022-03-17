@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include <mg_graph.hpp>
 
 namespace bipartite_matching_util {

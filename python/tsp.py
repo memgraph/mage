@@ -21,7 +21,7 @@ def solve(
     context: mgp.ProcCtx, points: List[mgp.Vertex], method: str = DEFAULT_SOLVING_METHOD
 ) -> mgp.Record(sources=List[mgp.Vertex], destinations=List[mgp.Vertex]):
     """
-    The tsp_module solver returns 2 fields whose elements at indexes are correlated
+    The tsp solver returns 2 fields whose elements at indexes are correlated
 
       * `sources` - elements from 1st to n-1th element
       * `destinations` - elements from 2nd to nth element
@@ -35,7 +35,7 @@ def solve(
     The procedure can be invoked in openCypher using the following calls:
     MATCH (n:Point)
     WITH collect(n) as points
-    CALL tsp_module.solve(points) YIELD sources, destinations;
+    CALL tsp.solve(points) YIELD sources, destinations RETURN sources, destinations;
     """
 
     if not all(isinstance(x, mgp.Vertex) for x in points):

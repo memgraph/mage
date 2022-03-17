@@ -6,12 +6,23 @@ on:
       - v*.*
 
 jobs:
-  build_with_tag:
-    name: Build Docker image with tag
+  build_and_release_docker:
+    name: Build & release Docker image with tag
     runs-on: ubuntu-latest
+    env:
+      DOCKER_ORGANIZATION_NAME: memgraph
+      DOCKER_REPOSITORY_NAME: memgraph-mage
+      MEMGRAPH_VERSION: 2.2.0
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
 
       - name: Get latest tag
         id: get-latest-tag
@@ -19,16 +30,16 @@ jobs:
         with:
           repository: memgraph/mage
           releases-only: false
-          prefix: 'v'
+          prefix: "v"
 
       - run: echo "MAGE is at version ${{ steps.get-latest-tag.outputs.tag }}"
 
       - name: Get commit tag
         id: get-commit-tag
         run: |
-           export VERSION=${GITHUB_REF#refs/tags/}
-           echo "::set-output name=VERSION_TAG::${VERSION:1}"
-           echo "::set-output name=VERSION::${VERSION}"
+          export VERSION=${GITHUB_REF#refs/tags/}
+          echo "::set-output name=VERSION_TAG::${VERSION:1}"
+          echo "::set-output name=VERSION::${VERSION}"
 
       - name: Get version
         run: echo "Version is ${{ steps.get-commit-tag.outputs.VERSION }}"
@@ -36,33 +47,40 @@ jobs:
       - name: Set production tag
         id: get-prod-tags
         run: |
-            if [ "${{ steps.get-commit-tag.outputs.VERSION }}" == "${{ steps.get-latest-tag.outputs.tag }}" ]
-            then
-              echo "::set-output name=LATEST::memgraph/memgraph-mage:latest"
-            fi
-
+          if [ "${{ steps.get-commit-tag.outputs.VERSION }}" == "${{ steps.get-latest-tag.outputs.tag }}" ]
+          then
+            echo "::set-output name=LATEST::latest"
+          else
+            echo "::set-output name=LATEST::fix"
+          fi
       - run: echo "Additional tag for production image - ${{ steps.get-prod-tags.outputs.LATEST }}"
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v1
         with:
-            username: ${{ secrets.DOCKER_USERNAME }}
-            password: ${{ secrets.DOCKER_PASSWORD }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Push production image to Docker Hub
-        id: docker-build-prod
-        uses: docker/build-push-action@v2
-        with:
-          push: true
-          tags: memgraph/memgraph-mage:${{ steps.get-commit-tag.outputs.VERSION_TAG }}, ${{ steps.get-prod-tags.outputs.LATEST }}
-          target: prod
-          file: ./Dockerfile
+      - name: Download memgraph binary
+        run: |
+          curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11/memgraph_${MEMGRAPH_VERSION}-1_amd64.deb > memgraph-amd64.deb
+          curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION}-1_aarch64.deb > memgraph-arm64.deb
 
-      - name: Push development image to Docker Hub
-        id: docker-build-dev
-        uses: docker/build-push-action@v2
-        with:
-            push: true
-            tags: memgraph/memgraph-mage:${{ steps.get-commit-tag.outputs.VERSION_TAG }}-dev
-            target: dev
-            file: ./Dockerfile
+      - name: Build & push prod docker images
+        run: |
+          docker buildx build \
+          --target prod \
+          --platform linux/amd64,linux/arm64 \
+          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ steps.get-commit-tag.outputs.VERSION_TAG }} \
+          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ steps.get-prod-tags.outputs.LATEST }} \
+          --file Dockerfile.release \
+          --push .
+
+      - name: Build & push dev docker images
+        run: |
+          docker buildx build \
+          --target dev \
+          --platform linux/amd64,linux/arm64 \
+          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ steps.get-commit-tag.outputs.VERSION_TAG }}-dev \
+          --file Dockerfile.release \
+          --push .
