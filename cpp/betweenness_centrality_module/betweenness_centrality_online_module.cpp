@@ -25,7 +25,7 @@ constexpr char const *kFieldNode = "node";
 constexpr char const *kFieldBCScore = "betweenness_centrality";
 constexpr char const *kFieldMessage = "message";
 
-online_bc::OnlineBC algorithm = online_bc::OnlineBC();
+auto algorithm = online_bc::OnlineBC();
 
 ///@brief Tests if given node is connected to the rest of the graph via given edge.
 bool ConnectedVia(std::uint64_t node_id, std::pair<std::uint64_t, std::uint64_t> edge) {
