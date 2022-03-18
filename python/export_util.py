@@ -65,7 +65,7 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
     Parameters
     ----------
     path : str
-        Path to the exported JSON file.
+        Path to the JSON file containing the exported graph database.
     """
     nodes = list()
     relationships = list()
