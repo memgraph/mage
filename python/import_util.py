@@ -5,25 +5,27 @@ import mgp
 
 
 def convert_from_isoformat(property):
-    if isinstance(property, str):
-        if str.startswith(property, Parameter.DURATION.value):
-            parsed_time = datetime.strptime(
-                property.split("(")[-1].split(")")[0], "%H:%M:%S.%f"
-            )
-            return timedelta(
-                hours=parsed_time.hour,
-                minutes=parsed_time.minute,
-                seconds=parsed_time.second,
-                microseconds=parsed_time.microsecond,
-            )
-        if str.startswith(property, Parameter.LOCALTIME.value):
-            return time.fromisoformat(property.split("(")[-1].split(")")[0])
-        if str.startswith(property, Parameter.LOCALDATETIME.value):
-            return datetime.fromisoformat(property.split("(")[-1].split(")")[0])
-        if str.startswith(property, Parameter.DATE.value):
-            return date.fromisoformat(property.split("(")[-1].split(")")[0])
+    if not isinstance(property, str):
+        return property
 
-    return property
+    if str.startswith(property, Parameter.DURATION.value):
+        duration_iso = property.split("(")[-1].split(")")[0]
+        parsed_time = datetime.strptime(duration_iso, "%H:%M:%S.%f")
+        return timedelta(
+            hours=parsed_time.hour,
+            minutes=parsed_time.minute,
+            seconds=parsed_time.second,
+            microseconds=parsed_time.microsecond,
+        )
+    if str.startswith(property, Parameter.LOCALTIME.value):
+        local_time_iso = property.split("(")[-1].split(")")[0]
+        return time.fromisoformat(local_time_iso)
+    if str.startswith(property, Parameter.LOCALDATETIME.value):
+        local_datetime_iso = property.split("(")[-1].split(")")[0]
+        return datetime.fromisoformat(local_datetime_iso)
+    if str.startswith(property, Parameter.DATE.value):
+        date_iso = property.split("(")[-1].split(")")[0]
+        return date.fromisoformat(date_iso)
 
 
 def create_vertex(ctx, properties, labels):
