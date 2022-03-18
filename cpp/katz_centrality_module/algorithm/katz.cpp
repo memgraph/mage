@@ -188,10 +188,8 @@ std::vector<std::pair<std::uint64_t, double>> KatzCentralityLoop(std::set<std::u
     }
   } while (!Converged(active_nodes, k, epsilon));
 
-  // Transform the resulting values
-  return std::vector<std::pair<std::uint64_t, double>>(
-      katz_alg::context.centralities[katz_alg::context.iteration].begin(),
-      katz_alg::context.centralities[katz_alg::context.iteration].end());
+  // Transform the resulting global values
+  return WrapResults();
 }
 
 void UpdateLevel(KatzCentralityData &context_new, std::set<std::uint64_t> &updated_nodes,
@@ -255,9 +253,41 @@ void UpdateLevel(KatzCentralityData &context_new, std::set<std::uint64_t> &updat
     }
   }
 }
+
+std::vector<std::pair<std::uint64_t, double>> WrapResults() {
+  return std::vector<std::pair<std::uint64_t, double>>(
+      katz_alg::context.centralities[katz_alg::context.iteration].begin(),
+      katz_alg::context.centralities[katz_alg::context.iteration].end());
+}
+
+bool IsIncosistent(const mg_graph::GraphView<> &graph) {
+  for (auto const [node_id] : graph.Nodes()) {
+    auto external_id = graph.GetMemgraphNodeId(node_id);
+    if (katz_alg::context.centralities[katz_alg::context.iteration].find(external_id) ==
+        katz_alg::context.centralities[katz_alg::context.iteration].end()) {
+      return true;
+    }
+  }
+  return false;
+}
 }  // namespace
 
-std::vector<std::pair<std::uint64_t, double>> GetKatz(const mg_graph::GraphView<> &graph, double alpha,
+std::vector<std::pair<std::uint64_t, double>> GetKatz(const mg_graph::GraphView<> &graph) {
+  // Create context and calculate values if not initialized
+  if (!katz_alg::context.IsInitialized()) {
+    return SetKatz(graph);
+  }
+
+  if (IsIncosistent(graph)) {
+    throw std::runtime_error(
+        "Graph has been modified, therefore is incosistent with cached results, please update the Katz centrality by "
+        "calling set/reset!");
+  }
+
+  return WrapResults();
+}
+
+std::vector<std::pair<std::uint64_t, double>> SetKatz(const mg_graph::GraphView<> &graph, double alpha,
                                                       double epsilon) {
   katz_alg::alpha = alpha;
   katz_alg::k = k;
@@ -265,9 +295,7 @@ std::vector<std::pair<std::uint64_t, double>> GetKatz(const mg_graph::GraphView<
   katz_alg::context.Init(graph);
 
   if (graph.Edges().empty()) {
-    return std::vector<std::pair<std::uint64_t, double>>(
-        katz_alg::context.centralities[katz_alg::context.iteration].begin(),
-        katz_alg::context.centralities[katz_alg::context.iteration].end());
+    return WrapResults();
   }
 
   auto deg_max = MaxDegree(graph);
@@ -289,14 +317,12 @@ std::vector<std::pair<std::uint64_t, double>> UpdateKatz(
     const std::vector<std::pair<std::uint64_t, uint64_t>> &deleted_edges) {
   // Create context and calculate values if not initialized
   if (!katz_alg::context.IsInitialized()) {
-    return GetKatz(graph);
+    return SetKatz(graph);
   }
 
   if (graph.Edges().empty()) {
-    katz_alg::context.Init();
-    return std::vector<std::pair<std::uint64_t, double>>(
-        katz_alg::context.centralities[katz_alg::context.iteration].begin(),
-        katz_alg::context.centralities[katz_alg::context.iteration].end());
+    katz_alg::context.Init(graph);
+    return WrapResults();
   }
 
   auto deg_max = MaxDegree(graph);

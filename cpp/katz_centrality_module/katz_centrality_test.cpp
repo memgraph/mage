@@ -28,14 +28,14 @@ bool CompareRankingSort(const std::vector<std::pair<uint64_t, double>> &result,
 
 TEST(KatzCentrality, KatzRankingExample_1) {
   auto graph = mg_generate::BuildGraph(std::vector<std::uint64_t>{0}, {}, mg_graph::GraphType::kDirectedGraph);
-  auto katz_centrality = katz_alg::GetKatz(*graph, 0.2);
+  auto katz_centrality = katz_alg::SetKatz(*graph, 0.2);
   std::vector<std::uint64_t> expected_ranking{0};
   ASSERT_TRUE(CompareRankingSort(katz_centrality, expected_ranking));
 }
 
 TEST(KatzCentrality, KatzRankingExample_2) {
   auto graph = mg_generate::BuildGraph({0, 1}, {{0, 1}}, mg_graph::GraphType::kDirectedGraph);
-  auto katz_centrality = katz_alg::GetKatz(*graph, 0.2);
+  auto katz_centrality = katz_alg::SetKatz(*graph, 0.2);
   std::vector<std::uint64_t> expected_ranking{1, 0};
   ASSERT_TRUE(CompareRankingSort(katz_centrality, expected_ranking));
 }
@@ -43,7 +43,7 @@ TEST(KatzCentrality, KatzRankingExample_2) {
 TEST(KatzCentrality, KatzRankingExample_3) {
   auto graph = mg_generate::BuildGraph({0, 1, 2}, {{0, 1}, {0, 2}, {1, 0}, {1, 2}, {2, 0}, {2, 1}},
                                        mg_graph::GraphType::kDirectedGraph);
-  auto katz_centrality = katz_alg::GetKatz(*graph, 0.2);
+  auto katz_centrality = katz_alg::SetKatz(*graph, 0.2);
   std::vector<std::uint64_t> expected_ranking{0, 1, 2};
   ASSERT_TRUE(CompareRankingSort(katz_centrality, expected_ranking));
 }
@@ -51,7 +51,7 @@ TEST(KatzCentrality, KatzRankingExample_3) {
 TEST(KatzCentrality, KatzRankingExample_4) {
   auto graph =
       mg_generate::BuildGraph({0, 1, 2, 3}, {{0, 1}, {2, 1}, {3, 0}, {3, 1}}, mg_graph::GraphType::kDirectedGraph);
-  auto katz_centrality = katz_alg::GetKatz(*graph, 0.2);
+  auto katz_centrality = katz_alg::SetKatz(*graph, 0.2);
   std::vector<std::uint64_t> expected_ranking{1, 0, 2, 3};
   ASSERT_TRUE(CompareRankingSort(katz_centrality, expected_ranking));
 }
@@ -59,7 +59,7 @@ TEST(KatzCentrality, KatzRankingExample_4) {
 TEST(KatzCentrality, KatzRankingExample_5) {
   auto graph = mg_generate::BuildGraph({0, 1, 2, 3, 4}, {{0, 4}, {1, 4}, {2, 1}, {3, 0}, {3, 1}, {3, 4}},
                                        mg_graph::GraphType::kDirectedGraph);
-  auto katz_centrality = katz_alg::GetKatz(*graph, 0.2);
+  auto katz_centrality = katz_alg::SetKatz(*graph, 0.2);
   std::vector<std::uint64_t> expected_ranking{4, 1, 0, 2, 3};
   ASSERT_TRUE(CompareRankingSort(katz_centrality, expected_ranking));
 }
@@ -68,7 +68,7 @@ TEST(KatzCentrality, KatzRankingExample_6) {
   auto graph =
       mg_generate::BuildGraph({0, 1, 2, 3, 4, 5}, {{0, 5}, {0, 1}, {1, 4}, {2, 1}, {4, 0}, {4, 3}, {4, 1}, {5, 0}},
                               mg_graph::GraphType::kDirectedGraph);
-  auto katz_centrality = katz_alg::GetKatz(*graph, 0.2);
+  auto katz_centrality = katz_alg::SetKatz(*graph, 0.2);
   std::vector<std::uint64_t> expected_ranking{1, 0, 4, 5, 3, 2};
   ASSERT_TRUE(CompareRankingSort(katz_centrality, expected_ranking));
 }
@@ -76,7 +76,7 @@ TEST(KatzCentrality, KatzRankingExample_6) {
 TEST(KatzCentrality, KatzRankingExample_7) {
   auto graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6}, {{0, 5}, {2, 1}, {4, 0}, {5, 0}},
                                        mg_graph::GraphType::kDirectedGraph);
-  auto katz_centrality = katz_alg::GetKatz(*graph, 0.2);
+  auto katz_centrality = katz_alg::SetKatz(*graph, 0.2);
   std::vector<std::uint64_t> expected_ranking{0, 5, 1, 2, 3, 4, 6};
   ASSERT_TRUE(CompareRankingSort(katz_centrality, expected_ranking));
 }
@@ -86,7 +86,7 @@ TEST(KatzCentrality, KatzRankingExample_8) {
       mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6, 7},
                               {{0, 1}, {0, 3}, {0, 2}, {1, 0}, {3, 2}, {4, 3}, {4, 2}, {6, 0}, {6, 3}, {6, 5}, {7, 4}},
                               mg_graph::GraphType::kDirectedGraph);
-  auto katz_centrality = katz_alg::GetKatz(*graph, 0.2);
+  auto katz_centrality = katz_alg::SetKatz(*graph, 0.2);
   std::vector<std::uint64_t> expected_ranking{2, 3, 0, 1, 4, 5, 6, 7};
   ASSERT_TRUE(CompareRankingSort(katz_centrality, expected_ranking));
 }
@@ -95,7 +95,7 @@ TEST(KatzCentrality, KatzRankingExample_9) {
   auto graph = mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6, 7, 8},
                                        {{0, 8}, {1, 0}, {1, 8}, {1, 6}, {1, 3}, {3, 2}, {3, 8}, {4, 3}, {6, 3}},
                                        mg_graph::GraphType::kDirectedGraph);
-  auto katz_centrality = katz_alg::GetKatz(*graph, 0.2);
+  auto katz_centrality = katz_alg::SetKatz(*graph, 0.2);
   std::vector<std::uint64_t> expected_ranking{8, 3, 2, 0, 6, 1, 4, 5, 7};
   ASSERT_TRUE(CompareRankingSort(katz_centrality, expected_ranking));
 }
@@ -105,7 +105,7 @@ TEST(KatzCentrality, KatzRankingExample_10) {
       mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
                               {{0, 1}, {0, 8}, {1, 0}, {1, 8}, {1, 9}, {3, 2}, {3, 8}, {4, 3}, {6, 0}, {6, 3}, {8, 9}},
                               mg_graph::GraphType::kDirectedGraph);
-  auto katz_centrality = katz_alg::GetKatz(*graph, 0.2);
+  auto katz_centrality = katz_alg::SetKatz(*graph, 0.2);
   std::vector<std::uint64_t> expected_ranking{8, 9, 0, 3, 1, 2, 4, 5, 6, 7};
   ASSERT_TRUE(CompareRankingSort(katz_centrality, expected_ranking));
 }
@@ -128,7 +128,7 @@ TEST(KatzCentrality, KatzRankingExample_11) {
                                         {10, 1},
                                         {10, 8}},
                                        mg_graph::GraphType::kDirectedGraph);
-  auto katz_centrality = katz_alg::GetKatz(*graph, 0.2);
+  auto katz_centrality = katz_alg::SetKatz(*graph, 0.2);
   std::vector<std::uint64_t> expected_ranking{1, 9, 4, 8, 6, 0, 5, 2, 7, 10, 3};
   ASSERT_TRUE(CompareRankingSort(katz_centrality, expected_ranking));
 }
@@ -138,7 +138,7 @@ TEST(KatzCentrality, KatzRankingExample_12) {
       mg_generate::BuildGraph({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
                               {{0, 11}, {1, 3}, {3, 2}, {3, 8}, {4, 3}, {8, 1}, {9, 6}, {10, 1}, {10, 11}, {11, 1}},
                               mg_graph::GraphType::kDirectedGraph);
-  auto katz_centrality = katz_alg::GetKatz(*graph, 0.2);
+  auto katz_centrality = katz_alg::SetKatz(*graph, 0.2);
   std::vector<std::uint64_t> expected_ranking{1, 3, 11, 2, 8, 6, 0, 4, 5, 7, 9, 10};
   ASSERT_TRUE(CompareRankingSort(katz_centrality, expected_ranking));
 }
@@ -149,7 +149,7 @@ TEST(KatzCentrality, KatzRankingExample_13) {
       {{0, 11}, {0, 12}, {1, 3}, {3, 2},  {3, 8},   {4, 3},  {4, 12},  {6, 3},  {7, 9},  {8, 1},
        {8, 3},  {9, 6},  {9, 0}, {10, 1}, {10, 11}, {11, 1}, {11, 10}, {11, 8}, {11, 6}, {12, 2}},
       mg_graph::GraphType::kDirectedGraph);
-  auto katz_centrality = katz_alg::GetKatz(*graph, 0.2);
+  auto katz_centrality = katz_alg::SetKatz(*graph, 0.2);
   std::vector<std::uint64_t> expected_ranking{3, 1, 8, 2, 6, 11, 12, 10, 0, 9, 4, 5, 7};
   ASSERT_TRUE(CompareRankingSort(katz_centrality, expected_ranking));
 }
@@ -159,7 +159,7 @@ TEST(KatzCentrality, KatzRankingExample_14) {
       {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13},
       {{0, 11}, {1, 3}, {3, 2}, {3, 8}, {4, 3}, {8, 1}, {9, 6}, {9, 0}, {10, 1}, {10, 11}, {11, 1}},
       mg_graph::GraphType::kDirectedGraph);
-  auto katz_centrality = katz_alg::GetKatz(*graph, 0.2);
+  auto katz_centrality = katz_alg::SetKatz(*graph, 0.2);
   std::vector<std::uint64_t> expected_ranking{1, 3, 11, 2, 8, 0, 6, 4, 5, 7, 9, 10, 12, 13};
   ASSERT_TRUE(CompareRankingSort(katz_centrality, expected_ranking));
 }

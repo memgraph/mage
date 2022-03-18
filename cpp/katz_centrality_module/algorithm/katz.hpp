@@ -61,6 +61,22 @@ void UpdateLevel(KatzCentralityData &context_new, std::set<std::uint64_t> &from_
                  const std::vector<std::pair<std::uint64_t, std::uint64_t>> &new_edges,
                  const std::vector<std::pair<std::uint64_t, std::uint64_t>> &deleted_edges,
                  const std::set<std::uint64_t> &new_edge_ids, const mg_graph::GraphView<> &graph);
+
+///
+///@brief Wrap the current results and return the last iteration ranking
+///
+///@return std::vector<std::pair<std::uint64_t, double>> Results in format [node, ranking   ]
+///
+std::vector<std::pair<std::uint64_t, double>> WrapResults();
+
+///
+///@brief Graph is inconsistent if the results are not matching with the current graph state
+///
+///@param graph Graph for consistency check
+///@return true Results are matching
+///@return false There are missing nodes.
+///
+bool IsIncosistent(const mg_graph::GraphView<> &graph);
 }  // namespace
 
 ///
@@ -75,8 +91,18 @@ void UpdateLevel(KatzCentralityData &context_new, std::set<std::uint64_t> &from_
 ///@param epsilon Tolerance for convergence
 ///@return std::vector<std::pair<std::uint64_t, double>>
 ///
-std::vector<std::pair<std::uint64_t, double>> GetKatz(const mg_graph::GraphView<> &graph, double alpha = 0.2,
+std::vector<std::pair<std::uint64_t, double>> SetKatz(const mg_graph::GraphView<> &graph, double alpha = 0.2,
                                                       double epsilon = 1e-2);
+
+///
+///@brief Fetch already computed results of Katz Centrality. If results have not been created, create them by calling
+/// set. If graph is not in the consistent state (changes were made before the last update) an error is thrown.
+///
+///@param graph Graph for calculation
+///@return std::vector<std::pair<std::uint64_t, double>>
+///
+std::vector<std::pair<std::uint64_t, double>> GetKatz(const mg_graph::GraphView<> &graph);
+
 ///
 ///@brief Update the Katz centrality based on the new and deleted entities in the graph. All previous iteration steps
 /// should be updated for both deleted edges and newly created ones. Once they are updated, if the boundaries hasn't
