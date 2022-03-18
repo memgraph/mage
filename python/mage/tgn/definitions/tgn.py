@@ -139,7 +139,7 @@ class TGN(nn.Module):
 
     def memory_detach_tensor_grads(self):
         self.memory.detach_tensor_grads()
-        # self.raw_message_store.detach_grads()
+        self.raw_message_store.detach_grads()
 
     def forward(
         self,

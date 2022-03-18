@@ -14,11 +14,15 @@ class Memory:
     # -time-but
     def detach_tensor_grads(self):
 
-        for node in self.memory_container:
-            self.memory_container[node] = self.memory_container[node].detach()
+        for node, node_memory in self.memory_container.items():
+            if node_memory.grad is not None:
+                node_memory.grad.detach_()
+                node_memory.grad.zero_()
 
-        for node in self.last_node_update:
-            self.last_node_update[node] = self.last_node_update[node].detach()
+        for node, timestamp in self.last_node_update.items():
+            if timestamp.grad is not None:
+                timestamp.grad.detach_()
+                timestamp.grad.zero_()
 
     def get_node_memory(self, node: int) -> torch.Tensor:
         if node not in self.memory_container:

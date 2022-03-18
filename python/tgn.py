@@ -277,6 +277,8 @@ def train_batch_self_supervised():
     query_module_tgn.optimizer.step()
     query_module_tgn.m_loss.append(loss.item())
 
+    query_module_tgn.tgn.memory_detach_tensor_grads()
+
     embeddings_source_npy = embeddings_source.cpu().detach().numpy()
     embeddings_dest_npy = embeddings_dest.cpu().detach().numpy()
 

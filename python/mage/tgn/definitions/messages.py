@@ -64,4 +64,15 @@ class InteractionRawMessage(RawMessage):
         self.edge_features = edge_features
 
     def detach_memory(self) -> None:
-        raise Exception("Not implemented")
+        if self.source_memory.grad is not None:
+            self.source_memory.detach_()
+            self.source_memory.zero_()
+        if self.dest_memory.grad is not None:
+            self.dest_memory.detach_()
+            self.dest_memory.zero_()
+        if self.delta_time.grad is not None:
+            self.delta_time.detach_()
+            self.delta_time.zero_()
+        if self.edge_features.grad is not None:
+            self.edge_features.detach_()
+            self.edge_features.zero_()
