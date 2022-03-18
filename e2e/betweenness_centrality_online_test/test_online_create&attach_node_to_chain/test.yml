@@ -7,14 +7,12 @@
     - node_id: 0
       betweenness_centrality: 0
     - node_id: 1
-      betweenness_centrality: 0
+      betweenness_centrality: 4
     - node_id: 2
       betweenness_centrality: 6
     - node_id: 3
       betweenness_centrality: 6
     - node_id: 4
-      betweenness_centrality: 0
+      betweenness_centrality: 4
     - node_id: 5
-      betweenness_centrality: 0
-    - node_id: 6
       betweenness_centrality: 0

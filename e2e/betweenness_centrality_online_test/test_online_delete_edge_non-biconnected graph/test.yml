@@ -11,10 +11,8 @@
     - node_id: 2
       betweenness_centrality: 6
     - node_id: 3
-      betweenness_centrality: 6
+      betweenness_centrality: 7
     - node_id: 4
       betweenness_centrality: 0
     - node_id: 5
-      betweenness_centrality: 0
-    - node_id: 6
       betweenness_centrality: 0

@@ -1,16 +1,13 @@
 queries:
     - |-
-        MERGE (a: Node {id: 30}) MERGE (b: Node {id: 31}) CREATE (a)-[:RELATION]->(b);
-        MERGE (a: Node {id: 30}) MERGE (b: Node {id: 32}) CREATE (a)-[:RELATION]->(b);
-        MERGE (a: Node {id: 31}) MERGE (b: Node {id: 32}) CREATE (a)-[:RELATION]->(b);
-        MERGE (a: Node {id: 32}) MERGE (b: Node {id: 33}) CREATE (a)-[:RELATION]->(b);
-        MERGE (a: Node {id: 33}) MERGE (b: Node {id: 34}) CREATE (a)-[:RELATION]->(b);
-        MERGE (a: Node {id: 33}) MERGE (b: Node {id: 35}) CREATE (a)-[:RELATION]->(b);
-        MERGE (a: Node {id: 34}) MERGE (b: Node {id: 35}) CREATE (a)-[:RELATION]->(b);
-    - |-
-        MATCH (n: Node) RETURN n;
+        MERGE (a: Node {id: 0}) MERGE (b: Node {id: 1}) CREATE (a)-[:RELATION]->(b);
+        MERGE (a: Node {id: 0}) MERGE (b: Node {id: 2}) CREATE (a)-[:RELATION]->(b);
+        MERGE (a: Node {id: 1}) MERGE (b: Node {id: 2}) CREATE (a)-[:RELATION]->(b);
+        MERGE (a: Node {id: 2}) MERGE (b: Node {id: 3}) CREATE (a)-[:RELATION]->(b);
+        MERGE (a: Node {id: 3}) MERGE (b: Node {id: 4}) CREATE (a)-[:RELATION]->(b);
+        MERGE (a: Node {id: 3}) MERGE (b: Node {id: 5}) CREATE (a)-[:RELATION]->(b);
+        MERGE (a: Node {id: 4}) MERGE (b: Node {id: 5}) CREATE (a)-[:RELATION]->(b);
 
 cleanup: |-
     MATCH (n: Node) DETACH DELETE n;
-    CALL betweenness_centrality_online.reset() YIELD *;
     CALL mg.load('betweenness_centrality_online') YIELD *;

@@ -156,8 +156,8 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
         algorithm.NodeEdgeUpdate(*graph, online_bc::Operation::CREATE_ATTACH_NODE, created_nodes[0], created_edges[0],
                                  normalize);
       } else if (deleted_nodes.size() == 1 && deleted_edges.size() == 1 &&
-                 ConnectedVia(created_nodes[0], created_edges[0])) {  // Detach-and-delete-node update
-        algorithm.NodeEdgeUpdate(*graph, online_bc::Operation::DETACH_DELETE_NODE, created_nodes[0], created_edges[0],
+                 ConnectedVia(deleted_nodes[0], deleted_edges[0])) {  // Detach-and-delete-node update
+        algorithm.NodeEdgeUpdate(*graph, online_bc::Operation::DETACH_DELETE_NODE, deleted_nodes[0], deleted_edges[0],
                                  normalize);
       } else {  // Default to offline update
         node_bc_scores = algorithm.Set(*graph, normalize, threads);

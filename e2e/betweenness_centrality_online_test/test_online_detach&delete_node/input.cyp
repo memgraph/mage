@@ -5,13 +5,16 @@ setup: |-
         MERGE (a: Node {id: 2}) MERGE (b: Node {id: 3}) CREATE (a)-[:RELATION]->(b);
         MERGE (a: Node {id: 3}) MERGE (b: Node {id: 4}) CREATE (a)-[:RELATION]->(b);
         MERGE (a: Node {id: 3}) MERGE (b: Node {id: 5}) CREATE (a)-[:RELATION]->(b);
-        CREATE TRIGGER test_no_parallelization BEFORE COMMIT EXECUTE CALL betweenness_centrality_online.update(createdVertices, createdEdges, deletedVertices, deletedEdges, false, 1) YIELD *;
+        MERGE (a: Node {id: 4}) MERGE (b: Node {id: 5}) CREATE (a)-[:RELATION]->(b);
+        MERGE (a: Node {id: 4}) MERGE (b: Node {id: 6}) CREATE (a)-[:RELATION]->(b);
+        CALL betweenness_centrality_online.set() YIELD *
+        CREATE TRIGGER test_detachdelete_node BEFORE COMMIT EXECUTE CALL betweenness_centrality_online.update(createdVertices, createdEdges, deletedVertices, deletedEdges) YIELD *;
 
 queries:
     - |-
-        MERGE (a: Node {id: 4}) MERGE (b: Node {id: 5}) CREATE (a)-[:RELATION]->(b);
+        MATCH (n: Node {id: 6}) DETACH DELETE n;
 
 cleanup: |-
-    DROP TRIGGER test_no_parallelization;
+    DROP TRIGGER test_detachdelete_node;
     MATCH (n: Node) DETACH DELETE n;
     CALL mg.load('betweenness_centrality_online') YIELD *;

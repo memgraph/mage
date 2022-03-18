@@ -9,12 +9,13 @@
     - node_id: 1
       betweenness_centrality: 0
     - node_id: 2
-      betweenness_centrality: 6
+      betweenness_centrality: 8
     - node_id: 3
-      betweenness_centrality: 6
+      betweenness_centrality: 9
     - node_id: 4
-      betweenness_centrality: 0
+      betweenness_centrality: 5
     - node_id: 5
       betweenness_centrality: 0
     - node_id: 6
       betweenness_centrality: 0
+
