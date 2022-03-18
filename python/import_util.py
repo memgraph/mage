@@ -17,15 +17,17 @@ def convert_from_isoformat(property):
             seconds=parsed_time.second,
             microseconds=parsed_time.microsecond,
         )
-    if str.startswith(property, Parameter.LOCALTIME.value):
+    elif str.startswith(property, Parameter.LOCALTIME.value):
         local_time_iso = property.split("(")[-1].split(")")[0]
         return time.fromisoformat(local_time_iso)
-    if str.startswith(property, Parameter.LOCALDATETIME.value):
+    elif str.startswith(property, Parameter.LOCALDATETIME.value):
         local_datetime_iso = property.split("(")[-1].split(")")[0]
         return datetime.fromisoformat(local_datetime_iso)
-    if str.startswith(property, Parameter.DATE.value):
+    elif str.startswith(property, Parameter.DATE.value):
         date_iso = property.split("(")[-1].split(")")[0]
         return date.fromisoformat(date_iso)
+    else:
+        return property
 
 
 def create_vertex(ctx, properties, labels):
