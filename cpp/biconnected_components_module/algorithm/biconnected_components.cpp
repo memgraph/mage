@@ -18,9 +18,9 @@ void bcc_utility::BccDFS(std::uint64_t node_id, std::uint64_t parent_id, bcc_uti
                          std::stack<mg_graph::Edge<>> *edge_stack,
                          std::vector<std::vector<mg_graph::Edge<>>> *bcc_edges,
                          std::vector<std::unordered_set<std::uint64_t>> *bcc_nodes, const mg_graph::GraphView<> &graph,
-                         std::unordered_set<uint64_t> &articulationPoints) {
+                         std::unordered_set<std::uint64_t> &articulation_points) {
   auto root = node_id == parent_id;
-  
+
   state->Update(node_id);
 
   std::uint64_t root_count = 0;  // needed to handle the special case for root node.
@@ -39,7 +39,7 @@ void bcc_utility::BccDFS(std::uint64_t node_id, std::uint64_t parent_id, bcc_uti
 
     ++root_count;
     edge_stack->push(edge);
-    BccDFS(next_id, node_id, state, edge_stack, bcc_edges, bcc_nodes, graph, articulationPoints);
+    BccDFS(next_id, node_id, state, edge_stack, bcc_edges, bcc_nodes, graph, articulation_points);
     state->low_link[node_id] = std::min(state->low_link[node_id], state->low_link[next_id]);
 
     // Articulation point check
@@ -47,7 +47,7 @@ void bcc_utility::BccDFS(std::uint64_t node_id, std::uint64_t parent_id, bcc_uti
          (!root && state->low_link[next_id] >= state->discovery[node_id])) &&
         !edge_stack->empty()) {
       // get articulation point
-      articulationPoints.insert(node_id);
+      articulation_points.insert(node_id);
 
       bcc_edges->emplace_back();
       bcc_nodes->emplace_back();
@@ -66,7 +66,7 @@ void bcc_utility::BccDFS(std::uint64_t node_id, std::uint64_t parent_id, bcc_uti
 }
 
 std::vector<std::vector<mg_graph::Edge<>>> bcc_algorithm::GetBiconnectedComponents(
-    const mg_graph::GraphView<> &graph, std::unordered_set<uint64_t> &articulationPoints,
+    const mg_graph::GraphView<> &graph, std::unordered_set<std::uint64_t> &articulation_points,
     std::vector<std::unordered_set<std::uint64_t>> &bcc_nodes) {
   auto number_of_nodes = graph.Nodes().size();
   bcc_utility::NodeState state(number_of_nodes);
@@ -77,7 +77,7 @@ std::vector<std::vector<mg_graph::Edge<>>> bcc_algorithm::GetBiconnectedComponen
   for (const auto &node : graph.Nodes()) {
     if (state.visited[node.id]) continue;
 
-    BccDFS(node.id, node.id, &state, &edge_stack, &bcc_edges, &bcc_nodes, graph, articulationPoints);
+    BccDFS(node.id, node.id, &state, &edge_stack, &bcc_edges, &bcc_nodes, graph, articulation_points);
 
     // Any edges left on stack form a BCC
     if (!edge_stack.empty()) {

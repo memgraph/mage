@@ -10,26 +10,18 @@
 
 namespace online_bc {
 
-using bcc_data = std::tuple<std::unordered_set<std::uint64_t>, std::unordered_set<std::uint64_t>>;
-using brandesian_bfs_data =
-    std::tuple<std::unordered_map<std::uint64_t, int>, std::unordered_map<std::uint64_t, std::set<std::uint64_t>>,
-               std::vector<std::uint64_t>>;
-
-enum class Operation { INSERT_EDGE, INSERT_NODE, DELETE_EDGE, DELETE_NODE };
+enum class Operation { CREATE_EDGE, CREATE_NODE, CREATE_ATTACH_NODE, DELETE_EDGE, DELETE_NODE, DETACH_DELETE_NODE };
 
 std::unordered_set<std::uint64_t> NeighborsMemgraphIDs(const mg_graph::GraphView<> &graph,
                                                        const std::vector<mg_graph::Neighbour<uint64_t>> neighbors);
 
 class OnlineBC {
  private:
-  /// Graph directedness
-  bool directed = false;
-
   /// Maps nodes (Memgraph IDs) to their betweenness centrality scores
   std::unordered_map<std::uint64_t, double> node_bc_scores;
 
-  /// Betweenness centrality score computation flag
-  bool computed = false;
+  /// Betweenness centrality score initialization flag
+  bool initialized = false;
 
   /// Avoids counting edges twice in case of undirected graphs
   static constexpr double NO_DOUBLE_COUNT = 2.0;
@@ -56,7 +48,7 @@ class OnlineBC {
   ///
   ///@param graph Current graph
   ///@param threads Number of concurrent threads
-  void BrandesWrapper(const mg_graph::GraphView<> &graph, const std::uint64_t threads);
+  void CallBrandesAlgorithm(const mg_graph::GraphView<> &graph, const std::uint64_t threads);
 
   ///@brief Returns the nodes and the articulation points of the biconnected component affected by the update.
   ///
@@ -64,8 +56,8 @@ class OnlineBC {
   ///@param updated_edge Created/deleted edge
   ///
   ///@return (nodes, articulation points) in the affected biconnected component
-  bcc_data IsolateAffectedBCC(const mg_graph::GraphView<> &graph,
-                              const std::pair<std::uint64_t, std::uint64_t> updated_edge) const;
+  std::tuple<std::unordered_set<std::uint64_t>, std::unordered_set<std::uint64_t>> IsolateAffectedBCC(
+      const mg_graph::GraphView<> &graph, const std::pair<std::uint64_t, std::uint64_t> updated_edge) const;
 
   ///@brief For each articulation point of the biconnected component affected by the update, returns the order (Nº
   /// of nodes) of the portion of the graph reachable from the articulation point through edges outside that component.
@@ -93,18 +85,23 @@ class OnlineBC {
                                                      const std::uint64_t source_node_id,
                                                      const std::unordered_set<std::uint64_t> &bcc_nodes) const;
 
-  ///@brief Performs a breadth-first search from a given node akin to the one used by the Brandes’ algorithm, but
-  /// restricted to one biconnected component.
+  ///@brief Performs a breadth-first search from a given node akin to the one used by the Brandes’ algorithm. The search
+  /// can be restricted to one biconnected component.
   ///
   ///@param graph Graph traversed by the breadth-first search
   ///@param source_node_id Source node ID
-  ///@param affected_bcc_nodes Nodes in the biconnected component
+  ///@param restrict If true, restricts the search to the affected biconnected component
+  ///@param compensate_for_deleted_node If true, guarantees correct results for the DETACH_DELETE_NODE operation
+  ///@param affected_bcc_nodes Nodes in the affected biconnected component
   ///
   ///@return {node ID, Nº of shortest paths from the source node} pairs,
   /// {node ID, IDs of immediate predecessors on the shortest paths from the source node} pairs
   /// IDs of nodes visited in the breadth-first search, in reverse order
-  brandesian_bfs_data BrandesianBFS(const mg_graph::GraphView<> &graph, const std::uint64_t source_node_id,
-                                    const std::unordered_set<std::uint64_t> &bcc_nodes) const;
+  std::tuple<std::unordered_map<std::uint64_t, int>, std::unordered_map<std::uint64_t, std::set<std::uint64_t>>,
+             std::vector<std::uint64_t>>
+  BrandesBFS(const mg_graph::GraphView<> &graph, const std::uint64_t source_node_id, const bool restrict = false,
+             const bool compensate_for_deleted_node = false,
+             const std::unordered_set<std::uint64_t> &bcc_nodes = {}) const;
 
   ///@brief Performs an iteration of iCentral that updates the betweenness centrality scores in two steps:
   /// 1) subtracts given node’s old graph contribution to other nodes’ betweenness centrality scores,
@@ -116,69 +113,85 @@ class OnlineBC {
   ///@param affected_bcc_nodes Nodes in the affected biconnected component
   ///@param affected_bcc_articulation_points Articulation points in the affected biconnected component
   ///@param peripheral_subgraphs_order {node ID, order of subgraph reachable from node} pairs
-  void Iteration(const mg_graph::GraphView<> &prior_graph, const mg_graph::GraphView<> &current_graph,
-                 const std::uint64_t s_id, const std::unordered_set<std::uint64_t> &affected_bcc_nodes,
-                 const std::unordered_set<std::uint64_t> &affected_bcc_articulation_points,
-                 const std::unordered_map<std::uint64_t, int> &peripheral_subgraphs_order);
-
-  ///@brief Recomputes betweennness centrality scores after an edge update using iCentral.
-  ///
-  ///@param prior_graph Graph as before the last update
-  ///@param current_graph Current graph
-  ///@param operation Type of graph update (one of {INSERT_EDGE, DELETE_EDGE})
-  ///@param updated_edge Created/deleted edge
-  ///@param threads Number of concurrent threads
-  void iCentral(const mg_graph::GraphView<> &prior_graph, const mg_graph::GraphView<> &current_graph,
-                const Operation operation, const std::pair<std::uint64_t, std::uint64_t> updated_edge,
-                const std::uint64_t threads);
+  void iCentralIteration(const mg_graph::GraphView<> &prior_graph, const mg_graph::GraphView<> &current_graph,
+                         const std::uint64_t s_id, const std::unordered_set<std::uint64_t> &affected_bcc_nodes,
+                         const std::unordered_set<std::uint64_t> &affected_bcc_articulation_points,
+                         const std::unordered_map<std::uint64_t, int> &peripheral_subgraphs_order);
 
  public:
   OnlineBC() = default;
 
+  ///@brief Getter for checking initialization status
+  ///
+  inline bool Initialized() const { return this->initialized; };
+
   ///@brief Computes initial betweennness centrality scores with Brandes’ algorithm.
   ///
   ///@param graph Current graph
-  ///@param directed Graph directedness
-  ///@param normalize If true, normalize each node’s betweenness centrality score by the number of node pairs not
+  ///@param normalize If true, normalizes each node’s betweenness centrality score by the number of node pairs not
   /// containing said node. The normalization constant is 2/((N-1)(N-2)) for undirected and 1/((N-1)(N-2)) for directed
   /// graphs, with N being the number of graph nodes.
   ///@param threads Number of concurrent threads
   ///
   ///@return {node ID, BC score} pairs
-  std::unordered_map<std::uint64_t, double> Set(const mg_graph::GraphView<> &graph, const bool directed = false,
-                                                const bool normalize = true,
+  std::unordered_map<std::uint64_t, double> Set(const mg_graph::GraphView<> &graph, const bool normalize = true,
                                                 const std::uint64_t threads = std::thread::hardware_concurrency());
 
   ///@brief Returns previously computed betweennness centrality scores.
   /// If this->computed flag is set to false, computes betweennness centrality scores with default parameter values.
   ///
   ///@param graph Current graph
-  ///@param normalize If true, normalize each node’s betweenness centrality score by the number of node pairs not
+  ///@param normalize If true, normalizes each node’s betweenness centrality score by the number of node pairs not
   /// containing said node. The normalization constant is 2/((N-1)(N-2)) for undirected and 1/((N-1)(N-2)) for directed
   /// graphs, with N being the number of graph nodes.
   ///
   ///@return {node ID, BC score} pairs
   std::unordered_map<std::uint64_t, double> Get(const mg_graph::GraphView<> &graph, const bool normalize = true);
 
-  ///@brief Recomputes betweennness centrality scores after a graph update. iCentral is used after edge updates, and
-  /// Brandes’ algorithm is used after node updates.
+  ///@brief Uses iCentral to recompute betweennness centrality scores after edge updates.
   ///
   ///@param prior_graph Graph as before the last update
   ///@param current_graph Current graph
-  ///@param operation Type of graph update (one of {INSERT_EDGE, INSERT_NODE, DELETE_EDGE, DELETE_NODE})
-  ///@param updated_node Created/deleted node (Memgraph ID)
-  ///@param updated_edge Created/deleted edge (Memgraph IDs)
-  ///@param normalize If true, normalize each node’s betweenness centrality score by the number of node pairs not
+  ///@param operation Type of graph update (one of {CREATE_EDGE, DELETE_EDGE})
+  ///@param updated_edge Created/deleted edge
+  ///@param normalize If true, normalizes each node’s betweenness centrality score by the number of node pairs not
   /// containing said node. The normalization constant is 2/((N-1)(N-2)) for undirected and 1/((N-1)(N-2)) for directed
   /// graphs, with N being the number of graph nodes.
   ///@param threads Number of concurrent threads
   ///
   ///@return {node ID, BC score} pairs
-  std::unordered_map<std::uint64_t, double> Update(const mg_graph::GraphView<> &prior_graph,
-                                                   const mg_graph::GraphView<> &current_graph,
-                                                   const Operation operation, const std::uint64_t updated_node,
-                                                   const std::pair<std::uint64_t, std::uint64_t> updated_edge,
-                                                   const bool normalize = true,
-                                                   const std::uint64_t threads = std::thread::hardware_concurrency());
+  std::unordered_map<std::uint64_t, double> EdgeUpdate(
+      const mg_graph::GraphView<> &prior_graph, const mg_graph::GraphView<> &current_graph, const Operation operation,
+      const std::pair<std::uint64_t, std::uint64_t> updated_edge, const bool normalize = true,
+      const std::uint64_t threads = std::thread::hardware_concurrency());
+
+  ///@brief Uses a single iteration of Brandes’ algorithm to recompute betweennness centrality scores after updates
+  /// consisting of an edge and a node solely connected to it.
+  ///
+  ///@param current_graph Current graph
+  ///@param operation Type of graph update (one of {CREATE_ATTACH_NODE, DETACH_DELETE_NODE})
+  ///@param updated_node Created/deleted node
+  ///@param updated_edge Created/deleted edge
+  ///@param normalize If true, normalizes each node’s betweenness centrality score by the number of node pairs not
+  /// containing said node. The normalization constant is 2/((N-1)(N-2)) for undirected and 1/((N-1)(N-2)) for directed
+  /// graphs, with N being the number of graph nodes.
+  ///
+  ///@return {node ID, BC score} pairs
+  std::unordered_map<std::uint64_t, double> NodeEdgeUpdate(const mg_graph::GraphView<> &current_graph,
+                                                           const Operation operation, const std::uint64_t updated_node,
+                                                           const std::pair<std::uint64_t, std::uint64_t> updated_edge,
+                                                           const bool normalize = true);
+
+  ///@brief Adds or removes the betweenness centrality score entry of created/deleted nodes with degree 0.
+  ///
+  ///@param operation Type of graph update (one of {CREATE_NODE, DELETE_NODE})
+  ///@param updated_node Created/deleted node
+  ///@param normalize If true, normalizes each node’s betweenness centrality score by the number of node pairs not
+  /// containing said node. The normalization constant is 2/((N-1)(N-2)) for undirected and 1/((N-1)(N-2)) for directed
+  /// graphs, with N being the number of graph nodes.
+  ///
+  ///@return {node ID, BC score} pairs
+  std::unordered_map<std::uint64_t, double> NodeUpdate(const Operation operation, const std::uint64_t updated_node,
+                                                       const bool normalize = true);
 };
 }  // namespace online_bc
