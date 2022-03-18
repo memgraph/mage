@@ -102,10 +102,10 @@ streaming graph algorithms! Drop us a message on the channels below:
 ## Memgraph compatibility
 
 With changes in Memgraph API, MAGE started to track version numbers. The table
-below lists the compatibility of MAGE with Memgraph versions. 
+below lists the compatibility of MAGE with Memgraph versions.
 | MAGE version | Memgraph version |
 | ------------ | ----------------- |
-| >= 1.0 | >= 2.0.0 | 
+| >= 1.0 | >= 2.0.0 |
 | ^0 | >= 1.4.0 <= 1.6.1 |
 
 ## How to install MAGE?
@@ -208,8 +208,8 @@ CALL pagerank.get()
 YIELD node, rank;
 ```
 
-|       Graph input        |        MAGE output        |
-| :----------------------: | :-----------------------: |
+|             Graph input             |              MAGE output              |
+| :---------------------------------: | :-----------------------------------: |
 | ![graph_input](img/graph_input.png) | ![graph_output](img/graph_output.png) |
 
 ## MAGE Spells
@@ -217,18 +217,18 @@ YIELD node, rank;
 | Algorithms                                                                                         | Lang   | Description                                                                                                                                                                                                                       |
 | -------------------------------------------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [betweenness_centrality](cpp/betweenness_centrality_module/betweenness_centrality_module.cpp)      | C++    | The betweenness centrality of a node is defined as the sum of the of all-pairs shortest paths that pass through the node divided by the number of all-pairs shortest paths in the graph. The algorithm has O(nm) time complexity. |
-| [biconnected_components](cpp/biconnected_components_module/biconnected_components_module.cpp)      | C++    | An algorithm for calculating maximal biconnected subgraph. A biconnected subgraph is a subgraph with a property that if any vertex were to be removed, the graph will remain connected.                                              |
-| [bipartite_matching](cpp/bipartite_matching_module/bipartite_matching_module.cpp)                  | C++    | An algorithm for calculating maximum bipartite matching, where matching is a set of nodes chosen in such a way that no two edges share an endpoint.                                                                                  |
+| [biconnected_components](cpp/biconnected_components_module/biconnected_components_module.cpp)      | C++    | An algorithm for calculating maximal biconnected subgraph. A biconnected subgraph is a subgraph with a property that if any vertex were to be removed, the graph will remain connected.                                           |
+| [bipartite_matching](cpp/bipartite_matching_module/bipartite_matching_module.cpp)                  | C++    | An algorithm for calculating maximum bipartite matching, where matching is a set of nodes chosen in such a way that no two edges share an endpoint.                                                                               |
 | [bridges](cpp/bridges_module/bridges_module.cpp)                                                   | C++    | A bridge is an edge, which when deleted, increases the number of connected components. The goal of this algorithm is to detect edges that are bridges in a graph.                                                                 |
 | [community_detection_online](cpp/community_detection_module/community_detection_online_module.cpp) | C++    | A dynamic community detection algorithm suitable for large-scale graphs based upon label propagation. Runs in O(m) time and has O(mn) space complexity.                                                                           |
 | [cycles](cpp/cycles_module/cycles_module.cpp)                                                      | C++    | Algorithm for detecting cycles on graphs                                                                                                                                                                                          |
 | [distance_calculator](python/distance_calculator.py)                                               | Python | Module for finding the geographical distance between two points defined with 'lng' and 'lat' coordinates.                                                                                                                         |
-| [export_util](python/export_util.py)                                                               | Python | A module for exporting graph database in different formats.                                                                                                                                                                |
+| [export_util](python/export_util.py)                                                               | Python | A module for exporting the graph database in different formats (JSON).                                                                                                                                                            |
 | [graph_analyzer](python/graph_analyzer.py)                                                         | Python | This Graph Analyzer query module offers insights about the stored graph or a subgraph.                                                                                                                                            |
-| [graph_coloring](python/graph_coloring.py)                                                         | Python | An algorithm for assigning labels to the graph elements subject to certain constraints. In this form, it is a way of coloring the graph vertices such that no two adjacent vertices are of the same color.                           |
-| [import_util](python/import_util.py)                                                               | Python | A module for importing files from which a graph database is created.                                                                                                                                                              |
-| [json_util](python/json_util.py)                                                                   | Python | A module for loading JSON from a local file or remote address.
-| [max_flow](python/max_flow.py)                                                                     | Python | An algorithm for calculating maximum flow through a graph using capacity scaling                                                                             |
+| [graph_coloring](python/graph_coloring.py)                                                         | Python | An algorithm for assigning labels to the graph elements subject to certain constraints. In this form, it is a way of coloring the graph vertices such that no two adjacent vertices are of the same color.                        |
+| [import_util](python/import_util.py)                                                               | Python | A module for importing data from different formats (JSON).                                                                                                                                                                        |
+| [json_util](python/json_util.py)                                                                   | Python | A module for loading JSON from a local file or remote address.                                                                                                                                                                    |
+| [max_flow](python/max_flow.py)                                                                     | Python | An algorithm for calculating maximum flow through a graph using capacity scaling                                                                                                                                                  |
 | [node2vec](python/node2vec.py)                                                                     | Python | An algorithm for calculating node embeddings from static graphs.                                                                                                                                                                  |
 | [node2vec_online](python/node2vec_online.py)                                                       | Python | An algorithm for calculating node embeddings as new edges arrive                                                                                                                                                                  |
 | [node_similarity](python/node_similarity.py)                                                       | Python | A module that contains similarity measures for calculating the similarity between two nodes.                                                                                                                                      |
@@ -240,7 +240,7 @@ YIELD node, rank;
 | [tsp](python/tsp.py)                                                                               | Python | An algorithm for finding the shortest possible route that visits each vertex exactly once.                                                                                                                                        |
 | [union_find](python/union_find.py)                                                                 | Python | A module with an algorithm that enables the user to check whether the given nodes belong to the same connected component.                                                                                                         |
 | [uuid_generator](cpp/uuid_module/uuid_module.cpp)                                                  | C++    | A module that generates a new universally unique identifier (UUID).                                                                                                                                                               |
-| [vrp](python/vrp.py)                                                                               | Python | An algorithm for finding the shortest route possible between the central depot and places to be visited. The algorithm can be solved with multiple vehicles that represent a visiting fleet.                                         |
+| [vrp](python/vrp.py)                                                                               | Python | An algorithm for finding the shortest route possible between the central depot and places to be visited. The algorithm can be solved with multiple vehicles that represent a visiting fleet.                                      |
 | [weakly_connected_components](cpp/connectivity_module/connectivity_module.cpp)                     | C++    | A module that finds weakly connected components in a graph.                                                                                                                                                                       |
 
 ## Advanced configuration
@@ -266,8 +266,7 @@ python3 test_e2e
 
 Furthermore, to test only specific end-to-end tests, you can add argument `-k`
 with substring referring to the algorithm that needs to be tested. To test a
-module named `<query_module>`, you would have to run `python3 test_e2e -k
-<query_module>` where `<query_module>` is the name of the specific module you
+module named `<query_module>`, you would have to run `python3 test_e2e -k <query_module>` where `<query_module>` is the name of the specific module you
 want to test.
 
 ```

@@ -52,12 +52,12 @@ def create_edge(ctx, properties, start_node_id, end_node_id, type, vertex_ids):
 @mgp.write_proc
 def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
     """
-    Procedure to import the local JSON created by the export_util.json procedure.
+    Procedure to import a local JSON file created by the export_util.json procedure.
 
     Parameters
     ----------
     path : str
-        Path to the JSON that is being imported.
+        Path to the JSON file that is being imported.
     """
     try:
         with open(path, "r") as file:
@@ -115,6 +115,6 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
                 ctx, properties_value, start_node_id, end_node_id, edge_type, vertex_ids
             )
         else:
-            raise KeyError("The provided file is not in the correct JSON form.")
+            raise KeyError("The provided file does not match the correct JSON format.")
 
     return mgp.Record()

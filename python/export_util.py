@@ -60,12 +60,12 @@ def convert_to_isoformat(property):
 @mgp.read_proc
 def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
     """
-    Procedure to export the whole database as JSON to a local file.
+    Procedure to export the whole database in JSON format to a local file.
 
     Parameters
     ----------
     path : str
-        Path to the file where JSON will be saved.
+        Path where the JSON file will be saved.
     """
     nodes = list()
     relationships = list()
@@ -103,7 +103,7 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
             js.dump(graph, outfile, indent=4, default=str)
     except PermissionError:
         raise PermissionError(
-            "You don't have permissions to write into that file. Make sure to give the user memgraph the necessary permissions"
+            "You don't have permissions to write into that file. Make sure to give the user memgraph the necessary permissions."
         )
     except Exception:
         raise OSError("Could not open or write to the file.")
