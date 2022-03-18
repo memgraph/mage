@@ -52,7 +52,7 @@ def create_edge(ctx, properties, start_node_id, end_node_id, type, vertex_ids):
 @mgp.write_proc
 def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
     """
-    Procedure to import a local JSON file created by the export_util.json procedure.
+    Procedure to import the JSON created by the export_util.json procedure.
 
     Parameters
     ----------

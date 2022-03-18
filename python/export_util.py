@@ -60,12 +60,12 @@ def convert_to_isoformat(property):
 @mgp.read_proc
 def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
     """
-    Procedure to export the whole database in JSON format to a local file.
+    Procedure to export the whole database to a JSON file.
 
     Parameters
     ----------
     path : str
-        Path where the JSON file will be saved.
+        Path to the exported JSON file.
     """
     nodes = list()
     relationships = list()
