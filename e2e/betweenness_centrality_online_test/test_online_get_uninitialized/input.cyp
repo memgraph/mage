@@ -1,12 +1,12 @@
 queries:
     - |-
-        MERGE (a: Node {id: 0}) MERGE (b: Node {id: 1}) CREATE (a)-[:RELATION]->(b);
-        MERGE (a: Node {id: 0}) MERGE (b: Node {id: 2}) CREATE (a)-[:RELATION]->(b);
-        MERGE (a: Node {id: 1}) MERGE (b: Node {id: 2}) CREATE (a)-[:RELATION]->(b);
-        MERGE (a: Node {id: 2}) MERGE (b: Node {id: 3}) CREATE (a)-[:RELATION]->(b);
-        MERGE (a: Node {id: 3}) MERGE (b: Node {id: 4}) CREATE (a)-[:RELATION]->(b);
-        MERGE (a: Node {id: 3}) MERGE (b: Node {id: 5}) CREATE (a)-[:RELATION]->(b);
-        MERGE (a: Node {id: 4}) MERGE (b: Node {id: 5}) CREATE (a)-[:RELATION]->(b);
+        MERGE (a: Node {id: 50}) MERGE (b: Node {id: 51}) CREATE (a)-[:RELATION]->(b);
+        MERGE (a: Node {id: 50}) MERGE (b: Node {id: 52}) CREATE (a)-[:RELATION]->(b);
+        MERGE (a: Node {id: 51}) MERGE (b: Node {id: 52}) CREATE (a)-[:RELATION]->(b);
+        MERGE (a: Node {id: 52}) MERGE (b: Node {id: 53}) CREATE (a)-[:RELATION]->(b);
+        MERGE (a: Node {id: 53}) MERGE (b: Node {id: 54}) CREATE (a)-[:RELATION]->(b);
+        MERGE (a: Node {id: 53}) MERGE (b: Node {id: 55}) CREATE (a)-[:RELATION]->(b);
+        MERGE (a: Node {id: 54}) MERGE (b: Node {id: 55}) CREATE (a)-[:RELATION]->(b);
 
 cleanup: |-
     MATCH (n: Node) DETACH DELETE n;

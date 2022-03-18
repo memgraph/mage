@@ -7,8 +7,6 @@ queries:
         MERGE (a: Node {id: 43}) MERGE (b: Node {id: 44}) CREATE (a)-[:RELATION]->(b);
         MERGE (a: Node {id: 43}) MERGE (b: Node {id: 45}) CREATE (a)-[:RELATION]->(b);
         MERGE (a: Node {id: 44}) MERGE (b: Node {id: 45}) CREATE (a)-[:RELATION]->(b);
-    - |-
-        MATCH (n: Node {id: 45}) DETACH DELETE n;
 
 cleanup: |-
     MATCH (n: Node) DETACH DELETE n;

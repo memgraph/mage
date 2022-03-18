@@ -1,0 +1,6 @@
+- query: >-
+    CALL betweenness_centrality_online.set(false, 1)
+    YIELD node, betweenness_centrality
+    RETURN COUNT(node) AS count;
+  output:
+    - count: 6

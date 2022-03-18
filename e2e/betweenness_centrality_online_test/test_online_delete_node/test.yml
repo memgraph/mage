@@ -16,6 +16,8 @@
       betweenness_centrality: 0
     - node_id: 25
       betweenness_centrality: 0
+    - node_id: 26
+      betweenness_centrality: 0
 
 - query: >-
     CALL betweenness_centrality_online.get(false)
@@ -34,6 +36,4 @@
     - node_id: 24
       betweenness_centrality: 0
     - node_id: 25
-      betweenness_centrality: 0
-    - node_id: 26
       betweenness_centrality: 0

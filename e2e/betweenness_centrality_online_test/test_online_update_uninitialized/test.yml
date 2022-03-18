@@ -4,15 +4,7 @@
     RETURN node.id AS node_id, betweenness_centrality
     ORDER BY node_id;
   output:
-    - node_id: 60
+    - node_id: 10
       betweenness_centrality: 0
-    - node_id: 61
-      betweenness_centrality: 0
-    - node_id: 62
-      betweenness_centrality: 6
-    - node_id: 63
-      betweenness_centrality: 6
-    - node_id: 64
-      betweenness_centrality: 0
-    - node_id: 65
+    - node_id: 11
       betweenness_centrality: 0

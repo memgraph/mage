@@ -4,17 +4,17 @@
     RETURN node.id AS node_id, betweenness_centrality
     ORDER BY node_id;
   output:
-    - node_id: 0
+    - node_id: 30
       betweenness_centrality: 0
-    - node_id: 1
+    - node_id: 31
       betweenness_centrality: 0
-    - node_id: 2
+    - node_id: 32
       betweenness_centrality: 6
-    - node_id: 3
+    - node_id: 33
       betweenness_centrality: 6
-    - node_id: 4
+    - node_id: 34
       betweenness_centrality: 0
-    - node_id: 5
+    - node_id: 35
       betweenness_centrality: 0
 
 - query: >-
@@ -23,15 +23,15 @@
     RETURN node.id AS node_id, betweenness_centrality
     ORDER BY node_id;
   output:
-    - node_id: 0
+    - node_id: 30
       betweenness_centrality: 0
-    - node_id: 1
+    - node_id: 31
       betweenness_centrality: 0
-    - node_id: 2
+    - node_id: 32
       betweenness_centrality: 6
-    - node_id: 3
+    - node_id: 33
       betweenness_centrality: 6
-    - node_id: 4
+    - node_id: 34
       betweenness_centrality: 0
-    - node_id: 5
+    - node_id: 35
       betweenness_centrality: 0
