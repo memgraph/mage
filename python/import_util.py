@@ -2,9 +2,12 @@ from datetime import datetime, date, time, timedelta
 import json as js
 from mage.export_import_util.parameters import Parameter
 import mgp
+from typing import Union, List, Dict, Any
 
 
-def convert_from_isoformat(property):
+def convert_from_isoformat(
+    property: Union[None, str, bool, int, float, List[Any], Dict[str, Any]]
+):
     if not isinstance(property, str):
         return property
 
@@ -30,7 +33,7 @@ def convert_from_isoformat(property):
         return property
 
 
-def create_vertex(ctx, properties, labels):
+def create_vertex(ctx: mgp.ProcCtx, properties: Dict[str, Any], labels: List[str]):
     vertex = ctx.graph.create_vertex()
     vertex_properties = vertex.properties
 
@@ -43,7 +46,14 @@ def create_vertex(ctx, properties, labels):
     return vertex.id
 
 
-def create_edge(ctx, properties, start_node_id, end_node_id, type, vertex_ids):
+def create_edge(
+    ctx: mgp.ProcCtx,
+    properties: Dict[str, Any],
+    start_node_id: int,
+    end_node_id: int,
+    type: str,
+    vertex_ids: Dict[int, int],
+):
     vertex_from = ctx.graph.get_vertex_by_id(vertex_ids[start_node_id])
     vertex_to = ctx.graph.get_vertex_by_id(vertex_ids[end_node_id])
     edge = ctx.graph.create_edge(vertex_from, vertex_to, mgp.EdgeType(type))

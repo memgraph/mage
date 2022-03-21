@@ -15,3 +15,4 @@ class Parameter(Enum):
     LOCALTIME = "localTime("
     LOCALDATETIME = "localDateTime("
     DATE = "date("
+    STANDARD_INDENT = 4

@@ -3,6 +3,7 @@ from datetime import datetime, date, time, timedelta
 import json as js
 from mage.export_import_util.parameters import Parameter
 import mgp
+from typing import Union, List, Dict, Any
 
 
 @dataclass
@@ -39,7 +40,21 @@ class Relationship:
         }
 
 
-def convert_to_isoformat(property):
+def convert_to_isoformat(
+    property: Union[
+        None,
+        str,
+        bool,
+        int,
+        float,
+        List[Any],
+        Dict[str, Any],
+        timedelta,
+        time,
+        datetime,
+        date,
+    ]
+):
 
     if isinstance(property, timedelta):
         return Parameter.DURATION.value + str(property) + ")"
@@ -100,10 +115,10 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
 
     try:
         with open(path, "w") as outfile:
-            js.dump(graph, outfile, indent=4, default=str)
+            js.dump(graph, outfile, indent=Parameter.STANDARD_INDENT.value, default=str)
     except PermissionError:
         raise PermissionError(
-            "You don't have permissions to write into that file. Make sure to give the user memgraph the necessary permissions."
+            "You don't have permissions to write into that file. Make sure to give the necessary permissions to user memgraph."
         )
     except Exception:
         raise OSError("Could not open or write to the file.")
