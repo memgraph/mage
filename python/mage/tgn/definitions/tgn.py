@@ -137,9 +137,15 @@ class TGN(nn.Module):
 
         self.time_encoder = TimeEncoder(out_dimension=self.time_dimension)
 
-    def memory_detach_tensor_grads(self):
+    def detach_tensor_grads(self) -> None:
         self.memory.detach_tensor_grads()
         self.raw_message_store.detach_grads()
+
+    def subsample_neighborhood(self, num_latest: int) -> None:
+        return
+        # todo implement
+        self.temporal_neighborhood.subsample()
+        self.raw_message_store.subsample()
 
     def forward(
         self,

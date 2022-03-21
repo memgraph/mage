@@ -1,4 +1,6 @@
+import dataclasses
 import enum
+import time
 from typing import Dict, Tuple, Set, List, Any
 
 import mgp
@@ -6,6 +8,8 @@ import mgp
 import numpy as np
 import torch
 import torch.nn as nn
+from sklearn.metrics import average_precision_score
+
 from mage.tgn.constants import (
     TGNLayerType,
     MessageFunctionType,
@@ -13,8 +17,6 @@ from mage.tgn.constants import (
     MemoryUpdaterType,
 )
 from mage.tgn.definitions.tgn import TGN
-from dataclasses import dataclass
-
 
 from mage.tgn.helper.simple_mlp import MLP
 
@@ -57,7 +59,12 @@ class LearningType(enum.Enum):
     SelfSupervised = "self_supervised"
 
 
-@dataclass
+class TGNMode(enum.Enum):
+    Train = "train"
+    Eval = "eval"
+
+
+@dataclasses.dataclass
 class QueryModuleTGN:
     config: Dict[str, Any]
     tgn: TGN
@@ -66,9 +73,11 @@ class QueryModuleTGN:
     device: torch.device
     m_loss: List[float]
     mlp: MLP
+    tgn_mode: TGNMode
+    learning_type: LearningType
 
 
-@dataclass
+@dataclasses.dataclass
 class QueryModuleTGNBatch:
     current_batch_size: int
     sources: np.array
@@ -88,14 +97,14 @@ class QueryModuleTGNBatch:
 # used in negative sampling for self_supervised
 all_edges: Set[Tuple[int, int]] = set()
 
+train_edges: List[mgp.Edge] = []
+eval_edges: List[mgp.Edge] = []
+
 # to get all embeddings
 all_embeddings: Dict[int, np.array] = {}
 
 query_module_tgn: QueryModuleTGN
 query_module_tgn_batch: QueryModuleTGNBatch
-
-tgn_learning_type = None
-tgn_training_losses = np.empty(0)
 
 
 #####################################
@@ -129,7 +138,15 @@ def set_tgn(
     m_loss = []
 
     query_module_tgn = QueryModuleTGN(
-        tgn_config, tgn, criterion, optimizer, device, m_loss, mlp
+        tgn_config,
+        tgn,
+        criterion,
+        optimizer,
+        device,
+        m_loss,
+        mlp,
+        TGNMode.Train,
+        learning_type,
     )
 
 
@@ -145,12 +162,13 @@ def get_tgn_self_supervised(config: Dict[str, Any], device: torch.device):
 
     tgn.train()
 
-    src_dest_embedd_concat_dim = (
+    # when we TGN outputs features for source and destinations, since we are working with edges and edge predictions
+    # we will concatenate their features together and get prediction with MLP whether it is edge or it isn't
+    mlp_in_features_dim = (
         config[TGNParameters.MEMORY_DIMENSION] + config[TGNParameters.NUM_NODE_FEATURES]
     ) * 2
 
-    # used as probability calculator for edge
-    mlp = MLP([src_dest_embedd_concat_dim, src_dest_embedd_concat_dim // 2, 1])
+    mlp = MLP([mlp_in_features_dim, 64, 1])
 
     return tgn, mlp
 
@@ -163,20 +181,18 @@ def get_tgn_supervised(config: Dict[str, Any], device: torch.device):
     else:
         tgn = TGNGraphAttentionSupervised(**config).to(device)
 
-    tgn.train()
-
-    src_dest_embedd_concat_dim = (
+    mlp_in_features_dim = (
         config[TGNParameters.MEMORY_DIMENSION] + config[TGNParameters.NUM_NODE_FEATURES]
     )
 
-    # used as probability calculator for edge
-    mlp = MLP([src_dest_embedd_concat_dim, src_dest_embedd_concat_dim // 2, 1])
+    # used as probability calculator for label
+    mlp = MLP([mlp_in_features_dim, 64, 1])
 
     return tgn, mlp
 
 
 #
-# Training - self_supervised
+# Helper functions
 #
 
 
@@ -195,31 +211,37 @@ def sample_negative(negative_num: int) -> (np.array, np.array):
     )
 
 
-def train_batch_self_supervised():
-    """
-    Uses sources, destinations, timestamps, edge_features and node_features from transactions.
-    It is possible that current_batch_size is not always consistent, but it is always greater than minimum required.
-    """
-    global query_module_tgn, query_module_tgn_batch, all_embeddings
+def unpack_tgn_batch_data():
+    global query_module_tgn_batch
+    return dataclasses.astuple(query_module_tgn_batch)
+
+
+def update_mode_reset_grads_check_dims():
+    global query_module_tgn, query_module_tgn_batch
+
+    if query_module_tgn.tgn_mode == TGNMode.Train:
+        # set training mode
+        query_module_tgn.tgn.train()
+
+        query_module_tgn.optimizer.zero_grad()
+        # query_module_tgn.tgn.detach_tensor_grads()
+
+        # todo add so that we only work with latest 128 neighbors
+        # query_module_tgn.tgn.subsample_neighborhood()
+    else:
+        query_module_tgn.tgn.eval()
 
     (
+        _,
         sources,
         destinations,
         timestamps,
-        edge_features,
         edge_idxs,
         node_features,
+        edge_features,
         current_batch_size,
-    ) = (
-        query_module_tgn_batch.sources,
-        query_module_tgn_batch.destinations,
-        query_module_tgn_batch.timestamps,
-        query_module_tgn_batch.edge_features,
-        query_module_tgn_batch.edge_idxs,
-        query_module_tgn_batch.node_features,
-        query_module_tgn_batch.current_batch_size,
-    )
-
+        labels,
+    ) = unpack_tgn_batch_data()
     assert (
         len(sources)
         == len(destinations)
@@ -227,7 +249,48 @@ def train_batch_self_supervised():
         == len(edge_features)
         == len(edge_idxs)
         == current_batch_size
+        == len(labels)
     ), f"Batch size training error"
+
+
+def update_embeddings(
+    embeddings_source: np.array,
+    embeddings_dest: np.array,
+    sources: np.array,
+    destinations: np.array,
+) -> None:
+    global all_embeddings
+    for i, node in enumerate(sources):
+        all_embeddings[node] = embeddings_source[i]
+
+    for i, node in enumerate(destinations):
+        all_embeddings[node] = embeddings_dest[i]
+
+
+#
+# Training - self_supervised
+#
+def process_batch_self_supervised() -> float:
+    """
+    Uses sources, destinations, timestamps, edge_features and node_features from transactions.
+    It is possible that current_batch_size is not always consistent, but it is always greater than minimum required.
+    """
+    global query_module_tgn, query_module_tgn_batch
+
+    # do all necessary checks and updates of gradients
+    update_mode_reset_grads_check_dims()
+
+    (
+        _,
+        sources,
+        destinations,
+        timestamps,
+        edge_idxs,
+        node_features,
+        edge_features,
+        current_batch_size,
+        labels,
+    ) = unpack_tgn_batch_data()
 
     negative_src, negative_dest = sample_negative(len(sources))
 
@@ -241,7 +304,6 @@ def train_batch_self_supervised():
         edge_features,
         node_features,
     )
-    query_module_tgn.optimizer.zero_grad()
 
     embeddings, embeddings_negative = query_module_tgn.tgn(graph_data)
 
@@ -261,32 +323,47 @@ def train_batch_self_supervised():
     neg_score = score[current_batch_size:]
 
     pos_prob, neg_prob = pos_score.sigmoid(), neg_score.sigmoid()
-    with torch.no_grad():
-        pos_label = torch.ones(
-            current_batch_size, dtype=torch.float, device=query_module_tgn.device
-        )
-        neg_label = torch.zeros(
-            current_batch_size, dtype=torch.float, device=query_module_tgn.device
-        )
 
-    loss = query_module_tgn.criterion(
-        pos_prob.squeeze(), pos_label
-    ) + query_module_tgn.criterion(neg_prob.squeeze(), neg_label)
+    if query_module_tgn.tgn_mode == TGNMode.Train:
+        with torch.no_grad():
+            pos_label = torch.ones(
+                current_batch_size, dtype=torch.float, device=query_module_tgn.device
+            )
+            neg_label = torch.zeros(
+                current_batch_size, dtype=torch.float, device=query_module_tgn.device
+            )
 
-    loss.backward()
-    query_module_tgn.optimizer.step()
-    query_module_tgn.m_loss.append(loss.item())
+        loss = query_module_tgn.criterion(
+            pos_prob.squeeze(), pos_label
+        ) + query_module_tgn.criterion(neg_prob.squeeze(), neg_label)
 
-    query_module_tgn.tgn.memory_detach_tensor_grads()
+        loss.backward()
+        query_module_tgn.optimizer.step()
+        query_module_tgn.m_loss.append(loss.item())
 
-    embeddings_source_npy = embeddings_source.cpu().detach().numpy()
-    embeddings_dest_npy = embeddings_dest.cpu().detach().numpy()
+    pred_score = np.concatenate(
+        [
+            (pos_prob.squeeze()).cpu().detach().numpy(),
+            (neg_prob.squeeze()).cpu().detach().numpy(),
+        ]
+    )
+    true_label = np.concatenate(
+        [np.ones(current_batch_size), np.zeros(current_batch_size)]
+    )
+    accuracy = average_precision_score(true_label, pred_score)
 
-    for i, node in enumerate(sources):
-        all_embeddings[node] = embeddings_source_npy[i]
+    # update embeddings to newest ones that we can return on user request
+    update_embeddings(
+        embeddings_source.cpu().detach().numpy(),
+        embeddings_dest.cpu().detach().numpy(),
+        sources,
+        destinations,
+    )
 
-    for i, node in enumerate(destinations):
-        all_embeddings[node] = embeddings_dest_npy[i]
+    if query_module_tgn.tgn_mode == TGNMode.Eval:
+        return accuracy
+
+    return accuracy
 
 
 #
@@ -294,37 +371,23 @@ def train_batch_self_supervised():
 #
 
 
-def train_batch_supervised():
-    global query_module_tgn, query_module_tgn_batch, all_embeddings
+def process_batch_supervised() -> float:
+    global query_module_tgn, query_module_tgn_batch
+
+    # do all necessary checks and updates of gradients
+    update_mode_reset_grads_check_dims()
 
     (
+        _,
         sources,
         destinations,
         timestamps,
-        edge_features,
         edge_idxs,
         node_features,
+        edge_features,
         current_batch_size,
         labels,
-    ) = (
-        query_module_tgn_batch.sources,
-        query_module_tgn_batch.destinations,
-        query_module_tgn_batch.timestamps,
-        query_module_tgn_batch.edge_features,
-        query_module_tgn_batch.edge_idxs,
-        query_module_tgn_batch.node_features,
-        query_module_tgn_batch.current_batch_size,
-        query_module_tgn_batch.labels,
-    )
-    assert (
-        len(sources)
-        == len(destinations)
-        == len(timestamps)
-        == len(edge_features)
-        == len(edge_idxs)
-        == current_batch_size
-        == len(labels)
-    ), f"Batch size training error"
+    ) = unpack_tgn_batch_data()
 
     graph_data = (
         sources,
@@ -334,14 +397,13 @@ def train_batch_supervised():
         edge_features,
         node_features,
     )
-    query_module_tgn.optimizer.zero_grad()
 
     embeddings = query_module_tgn.tgn(graph_data)
 
     embeddings_source = embeddings[:current_batch_size]
     embeddings_dest = embeddings[current_batch_size:]
 
-    x = torch.cat([embeddings_source, embeddings_dest], dim=0)
+    x = torch.cat([embeddings_source, embeddings_dest], dim=0)  # along rows
 
     score = query_module_tgn.mlp(x).squeeze(dim=0)
 
@@ -349,6 +411,29 @@ def train_batch_supervised():
     dest_score = score[current_batch_size:]
 
     src_prob, dest_prob = src_score.sigmoid(), dest_score.sigmoid()
+
+    pred_score = np.concatenate(
+        [
+            (src_prob.squeeze()).cpu().detach().numpy(),
+            (dest_prob.squeeze()).cpu().detach().numpy(),
+        ]
+    )
+    true_label = np.concatenate([np.array(labels[:, 0]), np.array(labels[:, 1])])
+
+    accuracy = average_precision_score(true_label, pred_score)
+
+    # update embeddings to newest ones that we can return on user request
+    update_embeddings(
+        embeddings_source.cpu().detach().numpy(),
+        embeddings_dest.cpu().detach().numpy(),
+        sources,
+        destinations,
+    )
+
+    if query_module_tgn.tgn_mode == TGNMode.Eval:
+        return accuracy
+
+    # backprop only in case of training
     with torch.no_grad():
         src_label = torch.tensor(
             labels[:, 0], dtype=torch.float, device=query_module_tgn.device
@@ -360,41 +445,35 @@ def train_batch_supervised():
     loss = query_module_tgn.criterion(
         src_prob.squeeze(), src_label.squeeze()
     ) + query_module_tgn.criterion(dest_prob.squeeze(), dest_label.squeeze())
-
     loss.backward()
     query_module_tgn.optimizer.step()
     query_module_tgn.m_loss.append(loss.item())
 
-    embeddings_source_npy = embeddings_source.cpu().detach().numpy()
-    embeddings_dest_npy = embeddings_dest.cpu().detach().numpy()
-
-    for i, node in enumerate(sources):
-        all_embeddings[node] = embeddings_source_npy[i]
-
-    for i, node in enumerate(destinations):
-        all_embeddings[node] = embeddings_dest_npy[i]
+    return accuracy
 
 
 def train_epochs(epochs: int):
+    global query_module_tgn
+
+    query_module_tgn.tgn.init_memory()
+    query_module_tgn.tgn.init_temporal_neighborhood()
     pass
 
 
-def process_edges(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]):
-    global query_module_tgn_batch, query_module_tgn, all_edges
+def process_edges(edges: mgp.List[mgp.Edge]):
+    global query_module_tgn_batch, query_module_tgn, all_edges, train_edges, eval_edges
 
-    # sources: np.array
-    # destinations: np.array
-    # timestamps: np.array
-    # edge_features: Dict[int, torch.Tensor] (id is edge_idx)
-    # edge_idxs: np.array incremental and not repeatable
-    # node_features: Dict[int, Torch.Tensor]
+    if query_module_tgn.tgn_mode == TGNMode.Train:
+        train_edges.extend(edges)
+    else:
+        eval_edges.extend(edges)
 
     for edge in edges:
 
-        source = ctx.graph.get_vertex_by_id(edge.from_vertex.id)
-        src_id = int(edge.from_vertex.id)
+        source = edge.from_vertex
+        src_id = edge.from_vertex.id
 
-        dest = ctx.graph.get_vertex_by_id(edge.to_vertex.id)
+        dest = edge.to_vertex
         dest_id = int(edge.to_vertex.id)
 
         all_edges.add((src_id, dest_id))
@@ -495,11 +574,38 @@ def reset_tgn():
     all_edges = set()
 
 
+def update_batch(edges: mgp.List[mgp.Edge]) -> int:
+    global query_module_tgn_batch
+
+    edge_processing_start_time = time.time()
+    process_edges(edges)
+    edge_processing_time = time.time() - edge_processing_start_time
+
+    query_module_tgn_batch.current_batch_size += len(edges)
+
+    return int(edge_processing_time)
+
+
 #####################################################
 
 # all available read_procs
 
 #####################################################
+
+
+@mgp.read_proc
+def set_mode(ctx: mgp.ProcCtx, mode: str) -> mgp.Record():
+    global query_module_tgn
+    if query_module_tgn.tgn is None:
+        raise Exception("TGN module is not set")
+    if mode == "train":
+        query_module_tgn.tgn_mode = TGNMode.Train
+    elif mode == "eval":
+        query_module_tgn.tgn_mode = TGNMode.Eval
+    else:
+        raise Exception(f"Expected mode {TGNMode.Train} or {TGNMode.Eval}, got {mode}")
+
+    return mgp.Record()
 
 
 @mgp.read_proc
@@ -543,27 +649,53 @@ def get(ctx: mgp.ProcCtx) -> mgp.Record(node=mgp.Vertex, embedding=mgp.List[floa
 
 
 @mgp.read_proc
-def update(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]) -> mgp.Record():
-    global query_module_tgn_batch, query_module_tgn, tgn_learning_type
+def update(
+    ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]
+) -> mgp.Record(
+    batch_process_time=mgp.Number,
+    edge_process_time=mgp.Number,
+    train_batch_loss=mgp.Number,
+    train_avg_loss=mgp.Number,
+    accuracy=mgp.Number,
+):
+    global query_module_tgn_batch, query_module_tgn
+    batch_process_time, train_batch_loss, train_avg_loss, accuracy = [0, 0, 0, 0]
 
-    process_edges(ctx, edges)
+    edge_process_time = update_batch(edges)
 
-    query_module_tgn_batch.current_batch_size += len(edges)
+    current_batch_size = query_module_tgn_batch.current_batch_size
 
-    if query_module_tgn_batch.current_batch_size < query_module_tgn_batch.batch_size:
-        return mgp.Record()
-
-    if tgn_learning_type == LearningType.SelfSupervised:
-        train_batch_self_supervised()
-    elif tgn_learning_type == LearningType.Supervised:
-        train_batch_supervised()
-    else:
-        raise Exception(
-            f"Wrong learning type, expected {LearningType.SelfSupervised} or {LearningType.Supervised}"
+    if current_batch_size < query_module_tgn_batch.batch_size:
+        return mgp.Record(
+            batch_process_time=batch_process_time,
+            edge_process_time=edge_process_time,
+            train_batch_loss=train_batch_loss,
+            train_avg_loss=train_avg_loss,
+            accuracy=accuracy,
         )
+
+    batch_start_time = time.time()
+    accuracy = (
+        process_batch_self_supervised()
+        if query_module_tgn.learning_type == LearningType.SelfSupervised
+        else process_batch_supervised()
+    )
+    batch_process_time = time.time() - batch_start_time
+
+    if query_module_tgn.tgn_mode == TGNMode.Train:
+        train_batch_loss = query_module_tgn.m_loss[-1]
+        train_avg_loss = sum(query_module_tgn.m_loss) / len(query_module_tgn.m_loss)
+
+    # reset for next batch
     reset_tgn_batch(batch_size=query_module_tgn_batch.batch_size)
 
-    return mgp.Record()
+    return mgp.Record(
+        batch_process_time=batch_process_time,
+        edge_process_time=edge_process_time,
+        train_batch_loss=train_batch_loss,
+        train_avg_loss=train_avg_loss,
+        accuracy=accuracy,
+    )
 
 
 @mgp.read_proc
@@ -590,7 +722,7 @@ def set_params(
     Warning: Every time you call this function, old TGN object is cleared and process of learning params is
     restarted
     """
-    global query_module_tgn_batch, tgn_learning_type
+    global query_module_tgn_batch
 
     reset_tgn_batch(batch_size)
 
@@ -620,7 +752,7 @@ def set_params(
     if tgn_config[TGNParameters.LAYER_TYPE] == TGNLayerType.GraphAttentionEmbedding:
         tgn_config[TGNParameters.NUM_ATTENTION_HEADS] = num_attention_heads
 
-    # set tgn
+    # set learning type
     tgn_learning_type = get_learning_type(learning_type)
 
     set_tgn(tgn_learning_type, tgn_config, optimizer_config)
