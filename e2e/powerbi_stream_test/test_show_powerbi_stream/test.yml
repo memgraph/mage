@@ -1,0 +1,6 @@
+query: >
+    CALL power_bi.show_streams() YIELD api_url, name RETURN COUNT(*) AS count;
+
+output:
+- count: 1
+

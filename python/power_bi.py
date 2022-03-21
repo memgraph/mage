@@ -13,12 +13,18 @@ def create_push_stream(
     context: mgp.ProcCtx,
     stream_name: str,
     api_url: str,
-) -> mgp.Record():
+) -> mgp.Record(created=bool):
     global API_URLS
+
+    if not isinstance(stream_name, str):
+        raise TypeError("Invalid type on first argument!")
+
+    if not isinstance(api_url, str):
+        raise TypeError("Invalid type on second argument!")
 
     API_URLS[stream_name] = api_url
 
-    return mgp.Record()
+    return mgp.Record(created=True)
 
 
 @mgp.read_proc
@@ -39,6 +45,12 @@ def push(
     stream_name: str,
     payload: mgp.Map,
 ) -> mgp.Record(status=str):
+
+    if not isinstance(stream_name, str):
+        raise TypeError("Invalid type on first argument!")
+
+    if not isinstance(payload, dict):
+        raise TypeError("Invalid type on second argument!")
 
     if stream_name not in API_URLS:
         raise Exception("Power BI stream not defined!")

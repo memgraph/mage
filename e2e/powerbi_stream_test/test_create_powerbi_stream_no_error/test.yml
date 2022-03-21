@@ -1,0 +1,6 @@
+query: >
+    CALL power_bi.create_push_stream("stream", "http://abc.xyz") YIELD created
+    RETURN created;
+
+output:
+  - created: true

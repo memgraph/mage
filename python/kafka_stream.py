@@ -14,7 +14,17 @@ def create_push_stream(
     stream_name: str,
     topic: str,
     config: mgp.Map,
-) -> mgp.Record():
+) -> mgp.Record(created=bool):
+
+    if not isinstance(stream_name, str):
+        raise TypeError("Invalid type on first argument!")
+
+    if not isinstance(topic, str):
+        raise TypeError("Invalid type on second argument!")
+
+    # if not isinstance(config, dict):
+    #     raise TypeError("Invalid type on third argument!")
+
     producer = KafkaProducer(
         value_serializer=lambda m: json.dumps(m).encode("utf-8"), **config
     )
@@ -22,7 +32,7 @@ def create_push_stream(
     producers_by_name[stream_name] = producer
     topics_by_name[stream_name] = topic
 
-    return mgp.Record()
+    return mgp.Record(created=True)
 
 
 @mgp.read_proc
@@ -43,6 +53,13 @@ def push(
     stream_name: str,
     payload: mgp.Map,
 ) -> mgp.Record(message=mgp.Map):
+
+    if not isinstance(stream_name, str):
+        raise TypeError("Invalid type on first argument!")
+
+    if not isinstance(payload, mgp.Map):
+        raise TypeError("Invalid type on second argument!")
+
     if stream_name not in producers_by_name or stream_name not in topics_by_name:
         raise Exception(f"Stream {stream_name} is not present!")
 
