@@ -11,9 +11,12 @@ class RawMessageStore:
     def __init__(
         self, edge_raw_message_dimension: int, node_raw_message_dimension: int
     ):
-        self.message_container: Dict[int, List[RawMessage]] = {}
         self.edge_raw_message_dimension = edge_raw_message_dimension
         self.node_raw_message_dimension = node_raw_message_dimension
+        self.init_message_store()
+
+    def init_message_store(self):
+        self.message_container: Dict[int, List[RawMessage]] = {}
 
     def detach_grads(self) -> None:
         for _, messages in self.message_container.items():

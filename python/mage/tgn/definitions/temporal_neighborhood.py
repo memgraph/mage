@@ -6,6 +6,9 @@ import numpy as np
 class TemporalNeighborhood:
     def __init__(self):
         super().__init__()
+        self.init_temporal_neighborhood()
+
+    def init_temporal_neighborhood(self):
         self.neighborhood: Dict[int, List[Tuple[int, int, float]]] = {}
 
     def update_neighborhood(

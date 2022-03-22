@@ -5,10 +5,13 @@ import torch
 
 class Memory:
     def __init__(self, memory_dimension: int, device: torch.device):
-        self.memory_container: Dict[int, torch.Tensor] = {}
         self.memory_dimension = memory_dimension
-        self.last_node_update: Dict[int, torch.Tensor] = {}
         self.device = device
+        self.init_memory()
+
+    def init_memory(self):
+        self.memory_container: Dict[int, torch.Tensor] = {}
+        self.last_node_update: Dict[int, torch.Tensor] = {}
 
     # https://stackoverflow.com/questions/48274929/pytorch-runtimeerror-trying-to-backward-through-the-graph-a-second
     # -time-but

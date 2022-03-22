@@ -141,6 +141,15 @@ class TGN(nn.Module):
         self.memory.detach_tensor_grads()
         self.raw_message_store.detach_grads()
 
+    def init_memory(self):
+        self.memory.init_memory()
+
+    def init_temporal_neighborhood(self):
+        self.temporal_neighborhood.init_temporal_neighborhood()
+
+    def init_message_store(self):
+        self.raw_message_store.init_message_store()
+
     def subsample_neighborhood(self, num_latest: int) -> None:
         return
         # todo implement
