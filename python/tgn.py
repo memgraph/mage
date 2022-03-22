@@ -510,11 +510,11 @@ def process_edges(edges: mgp.List[mgp.Edge]):
             assert type(edge_feature) is tuple
             edge_feature = np.array(edge_feature)
 
-        src_features = torch.tensor(src_features, requires_grad=True, dtype=torch.float)
+        src_features = torch.tensor(src_features, requires_grad=True, device = query_module_tgn.device, dtype=torch.float)
         dest_features = torch.tensor(
-            dest_features, requires_grad=True, dtype=torch.float
+            dest_features, requires_grad=True, dtype=torch.float, device = query_module_tgn.device
         )
-        edge_feature = torch.tensor(edge_feature, requires_grad=True, dtype=torch.float)
+        edge_feature = torch.tensor(edge_feature, requires_grad=True, dtype=torch.float, device = query_module_tgn.device)
 
         query_module_tgn_batch.node_features[src_id] = src_features
         query_module_tgn_batch.node_features[dest_id] = dest_features
