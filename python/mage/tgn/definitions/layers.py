@@ -24,7 +24,8 @@ class TGNLayer(nn.Module):
         time_encoding_dim: int,
         node_features_dim: int,
         num_neighbors: int,
-        num_of_layers,
+        num_of_layers:int,
+        device:torch.device
     ):
         super().__init__()
         self.embedding_dimension = embedding_dimension
@@ -33,6 +34,7 @@ class TGNLayer(nn.Module):
         self.node_features_dim = node_features_dim
         self.num_neighbors = num_neighbors
         self.num_of_layers = num_of_layers
+        self.device =  device
 
 
 class TGNLayerGraphSumEmbedding(TGNLayer):
@@ -48,6 +50,7 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
         node_features_dim: int,
         num_neighbors: int,
         num_of_layers: int,
+        device: torch.device
     ):
         super().__init__(
             embedding_dimension,
@@ -56,6 +59,7 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
             node_features_dim,
             num_neighbors,
             num_of_layers,
+            device
         )
         # Initialize W1 matrix and W2 matrix
 
@@ -65,14 +69,14 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
                 embedding_dimension,
             )
             for _ in range(self.num_of_layers)
-        )
+        ).to(self.device)
 
         self.linear_2s = nn.ModuleList(
             torch.nn.Linear(
                 embedding_dimension + embedding_dimension, embedding_dimension
             )
             for _ in range(self.num_of_layers)
-        )
+        ).to(self.device)
         self.relu = torch.nn.ReLU()
 
     def forward(self, data: GraphSumDataType):
@@ -161,6 +165,7 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
         num_neighbors: int,
         num_of_layers: int,
         num_attention_heads: int,
+        device:torch.device
     ):
         super().__init__(
             embedding_dimension,
@@ -169,6 +174,7 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
             node_features_dim,
             num_neighbors,
             num_of_layers,
+            device
         )
 
         self.query_dim = embedding_dimension + time_encoding_dim
@@ -185,7 +191,7 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
                 ]
             )
             for _ in range(self.num_of_layers)
-        )
+        ).to(self.device)
 
         self.multi_head_attentions = nn.ModuleList(
             nn.MultiheadAttention(
@@ -197,7 +203,7 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
                 batch_first=True,
             )
             for _ in range(self.num_of_layers)
-        )  # this way no need to do torch.permute later <3
+        ).to(self.device)  # this way no need to do torch.permute later <3
 
     def forward(self, data: GraphAttnDataType):
         (
