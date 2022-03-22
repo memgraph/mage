@@ -115,11 +115,13 @@ class TGN(nn.Module):
         self.edge_message_function = MessageFunctionEdge(
             message_dimension=self.message_dimension,
             raw_message_dimension=self.edge_raw_message_dimension,
+            device = self.device
         )
 
         self.node_message_function = MessageFunctionNode(
             message_dimension=self.message_dimension,
             raw_message_dimension=self.node_raw_message_dimension,
+            device = self.device
         )
 
         MessageAggregator = get_message_aggregator_type(message_aggregator_type)
@@ -133,9 +135,10 @@ class TGN(nn.Module):
         self.memory_updater = MemoryUpdaterType(
             memory_dimension=self.memory_dimension,
             message_dimension=self.message_dimension,
+            device=self.device
         )
 
-        self.time_encoder = TimeEncoder(out_dimension=self.time_dimension)
+        self.time_encoder = TimeEncoder(out_dimension=self.time_dimension, device=self.device)
 
     def detach_tensor_grads(self) -> None:
         self.memory.detach_tensor_grads()
