@@ -216,6 +216,7 @@ class TGNGraphAttentionEmbedding(TGN):
             num_neighbors=self.num_neighbors,
             num_attention_heads=num_attention_heads,
             num_of_layers=self.num_of_layers,
+            device=self.device
         )
 
         self.tgn_layers.append(layer)
@@ -266,6 +267,7 @@ class TGNGraphSumEmbedding(TGN):
             node_features_dim=self.num_node_features,
             num_neighbors=self.num_neighbors,
             num_of_layers=self.num_of_layers,
+            device=self.device
         )
 
         self.tgn_layers.append(layer)
