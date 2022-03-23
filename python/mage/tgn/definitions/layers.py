@@ -127,7 +127,7 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
         mapped_rows = [
             np.array([mapping[(vi, ti)] for (vi, ti) in row]) for row in rows
         ]
-        out = torch.rand(len(nodes), self.embedding_dimension)
+        out = torch.rand(len(nodes), self.embedding_dimension, device = self.device)
 
         # row represents list of indexes of "current neighbors" of edge_features on i-th index
         for i, row in enumerate(mapped_rows):
@@ -274,7 +274,7 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
             np.array([mapping[(vi, ti)] for (vi, ti) in row]) for row in rows
         ]
 
-        out = torch.rand(len(nodes), self.num_neighbors * self.key_dim)
+        out = torch.rand(len(nodes), self.num_neighbors * self.key_dim, device=self.device)
 
         # row represents list of indexes of "current neighbors" of edge_features on i-th index
         for i, row in enumerate(mapped_rows):

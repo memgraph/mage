@@ -169,7 +169,7 @@ def get_tgn_self_supervised(config: Dict[str, Any], device: torch.device):
                                   config[TGNParameters.MEMORY_DIMENSION] + config[TGNParameters.NUM_NODE_FEATURES]
                           ) * 2
 
-    mlp = MLP([mlp_in_features_dim, 64, 1])
+    mlp = MLP([mlp_in_features_dim, 64, 1]).to(device=device)
 
     return tgn, mlp
 
@@ -187,7 +187,7 @@ def get_tgn_supervised(config: Dict[str, Any], device: torch.device):
     )
 
     # used as probability calculator for label
-    mlp = MLP([mlp_in_features_dim, 64, 1])
+    mlp = MLP([mlp_in_features_dim, 64, 1]).to(device=device)
 
     return tgn, mlp
 
