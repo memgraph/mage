@@ -5,7 +5,7 @@ import torch
 
 # time encoding by GAT
 class TimeEncoder(nn.Module):
-    def __init__(self, out_dimension:int, device: torch.device):
+    def __init__(self, out_dimension: int, device: torch.device):
         super().__init__()
         self.device = device
         self.out_dimension = out_dimension
@@ -16,7 +16,9 @@ class TimeEncoder(nn.Module):
             .float()
             .reshape(out_dimension, -1)
         )
-        self.w.bias = nn.Parameter(torch.zeros(out_dimension, device = self.device).float())
+        self.w.bias = nn.Parameter(
+            torch.zeros(out_dimension, device=self.device).float()
+        )
 
     def forward(self, t):
         output = torch.cos(self.w(t))

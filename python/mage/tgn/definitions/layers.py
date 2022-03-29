@@ -24,8 +24,8 @@ class TGNLayer(nn.Module):
         time_encoding_dim: int,
         node_features_dim: int,
         num_neighbors: int,
-        num_of_layers:int,
-        device:torch.device
+        num_of_layers: int,
+        device: torch.device,
     ):
         super().__init__()
         self.embedding_dimension = embedding_dimension
@@ -34,7 +34,7 @@ class TGNLayer(nn.Module):
         self.node_features_dim = node_features_dim
         self.num_neighbors = num_neighbors
         self.num_of_layers = num_of_layers
-        self.device =  device
+        self.device = device
 
 
 class TGNLayerGraphSumEmbedding(TGNLayer):
@@ -50,7 +50,7 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
         node_features_dim: int,
         num_neighbors: int,
         num_of_layers: int,
-        device: torch.device
+        device: torch.device,
     ):
         super().__init__(
             embedding_dimension,
@@ -59,7 +59,7 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
             node_features_dim,
             num_neighbors,
             num_of_layers,
-            device
+            device,
         )
         # Initialize W1 matrix and W2 matrix
 
@@ -127,7 +127,7 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
         mapped_rows = [
             np.array([mapping[(vi, ti)] for (vi, ti) in row]) for row in rows
         ]
-        out = torch.rand(len(nodes), self.embedding_dimension, device = self.device)
+        out = torch.rand(len(nodes), self.embedding_dimension, device=self.device)
 
         # row represents list of indexes of "current neighbors" of edge_features on i-th index
         for i, row in enumerate(mapped_rows):
@@ -165,7 +165,7 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
         num_neighbors: int,
         num_of_layers: int,
         num_attention_heads: int,
-        device:torch.device
+        device: torch.device,
     ):
         super().__init__(
             embedding_dimension,
@@ -174,7 +174,7 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
             node_features_dim,
             num_neighbors,
             num_of_layers,
-            device
+            device,
         )
 
         self.query_dim = embedding_dimension + time_encoding_dim
@@ -203,7 +203,9 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
                 batch_first=True,
             )
             for _ in range(self.num_of_layers)
-        ).to(self.device)  # this way no need to do torch.permute later <3
+        ).to(
+            self.device
+        )  # this way no need to do torch.permute later <3
 
     def forward(self, data: GraphAttnDataType):
         (
@@ -274,7 +276,9 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
             np.array([mapping[(vi, ti)] for (vi, ti) in row]) for row in rows
         ]
 
-        out = torch.rand(len(nodes), self.num_neighbors * self.key_dim, device=self.device)
+        out = torch.rand(
+            len(nodes), self.num_neighbors * self.key_dim, device=self.device
+        )
 
         # row represents list of indexes of "current neighbors" of edge_features on i-th index
         for i, row in enumerate(mapped_rows):

@@ -7,7 +7,9 @@ class MessageFunction(nn.Module):
     This is base class for Message function implementation
     """
 
-    def __init__(self, raw_message_dimension: int, message_dimension: int, device:torch.device):
+    def __init__(
+        self, raw_message_dimension: int, message_dimension: int, device: torch.device
+    ):
         super().__init__()
         self.raw_message_dimension = raw_message_dimension
         self.message_dimension = message_dimension
@@ -15,7 +17,9 @@ class MessageFunction(nn.Module):
 
 
 class MessageFunctionMLP(MessageFunction):
-    def __init__(self, raw_message_dimension: int, message_dimension: int, device:torch.device):
+    def __init__(
+        self, raw_message_dimension: int, message_dimension: int, device: torch.device
+    ):
         super().__init__(raw_message_dimension, message_dimension, device)
 
         self.message_function_net = nn.Sequential(
@@ -29,7 +33,9 @@ class MessageFunctionMLP(MessageFunction):
 
 
 class MessageFunctionIdentity(MessageFunction):
-    def __init__(self, raw_message_dimension: int, message_dimension: int, device: torch.device):
+    def __init__(
+        self, raw_message_dimension: int, message_dimension: int, device: torch.device
+    ):
         super().__init__(raw_message_dimension, message_dimension, device)
         assert raw_message_dimension == message_dimension, "Wrong!"
 

@@ -9,7 +9,9 @@ class MemoryUpdater(nn.Module):
     This is base class for memory updater implementation
     """
 
-    def __init__(self, memory_dimension: int, message_dimension: int, device: torch.device):
+    def __init__(
+        self, memory_dimension: int, message_dimension: int, device: torch.device
+    ):
         super().__init__()
         self.memory_dimension = memory_dimension
         self.message_dimension = message_dimension
@@ -17,7 +19,9 @@ class MemoryUpdater(nn.Module):
 
 
 class MemoryUpdaterGRU(MemoryUpdater):
-    def __init__(self, memory_dimension: int, message_dimension: int, device:torch.device):
+    def __init__(
+        self, memory_dimension: int, message_dimension: int, device: torch.device
+    ):
         super().__init__(memory_dimension, message_dimension, device)
 
         self.memory_updater_net = nn.GRUCell(
@@ -36,7 +40,9 @@ class MemoryUpdaterGRU(MemoryUpdater):
 
 
 class MemoryUpdaterRNN(MemoryUpdater):
-    def __init__(self, memory_dimension: int, message_dimension: int, device:torch.device):
+    def __init__(
+        self, memory_dimension: int, message_dimension: int, device: torch.device
+    ):
         super().__init__(memory_dimension, message_dimension, device)
 
         self.memory_updater_net = nn.RNNCell(

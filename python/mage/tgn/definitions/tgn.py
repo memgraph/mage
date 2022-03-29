@@ -115,13 +115,13 @@ class TGN(nn.Module):
         self.edge_message_function = MessageFunctionEdge(
             message_dimension=self.message_dimension,
             raw_message_dimension=self.edge_raw_message_dimension,
-            device = self.device
+            device=self.device,
         )
 
         self.node_message_function = MessageFunctionNode(
             message_dimension=self.message_dimension,
             raw_message_dimension=self.node_raw_message_dimension,
-            device = self.device
+            device=self.device,
         )
 
         MessageAggregator = get_message_aggregator_type(message_aggregator_type)
@@ -135,10 +135,12 @@ class TGN(nn.Module):
         self.memory_updater = MemoryUpdaterType(
             memory_dimension=self.memory_dimension,
             message_dimension=self.message_dimension,
-            device=self.device
+            device=self.device,
         )
 
-        self.time_encoder = TimeEncoder(out_dimension=self.time_dimension, device=self.device)
+        self.time_encoder = TimeEncoder(
+            out_dimension=self.time_dimension, device=self.device
+        )
 
     def detach_tensor_grads(self) -> None:
         self.memory.detach_tensor_grads()
@@ -357,7 +359,7 @@ class TGN(nn.Module):
                             delta_time=torch.tensor(
                                 np.array(event.timestamp).astype("float"),
                                 requires_grad=True,
-                                device=self.device
+                                device=self.device,
                             )
                             - memory.get_last_node_update(event.source),
                         )
@@ -372,7 +374,7 @@ class TGN(nn.Module):
                             delta_time=torch.tensor(
                                 np.array(event.timestamp).astype("float"),
                                 requires_grad=True,
-                                device=self.device
+                                device=self.device,
                             )
                             - memory.get_last_node_update(event.dest),
                         )
@@ -513,11 +515,15 @@ class TGN(nn.Module):
         return (
             self.edge_features[edge_idx]
             if edge_idx in self.edge_features
-            else torch.zeros(self.num_edge_features, requires_grad=True, device = self.device)
+            else torch.zeros(
+                self.num_edge_features, requires_grad=True, device=self.device
+            )
         )
 
     def _get_edges_features(self, edge_idxs: List[int]) -> torch.Tensor:
-        edges_features = torch.zeros(self.num_neighbors, self.num_edge_features, device = self.device)
+        edges_features = torch.zeros(
+            self.num_neighbors, self.num_edge_features, device=self.device
+        )
         for i, edge_idx in enumerate(edge_idxs):
             edges_features[i, :] = self._get_edge_features(edge_idx)
         return edges_features
@@ -527,7 +533,9 @@ class TGN(nn.Module):
         graph_data_tuple = self._get_graph_sum_data(nodes, timestamps)
         if self.layer_type == TGNLayerType.GraphSumEmbedding:
             return graph_data_tuple
-        graph_attn_zeros = self.time_encoder(torch.zeros(1, 1, device = self.device)).unsqueeze(0)
+        graph_attn_zeros = self.time_encoder(
+            torch.zeros(1, 1, device=self.device)
+        ).unsqueeze(0)
 
         return graph_data_tuple + tuple(graph_attn_zeros)
 
@@ -550,17 +558,22 @@ class TGN(nn.Module):
         nodes = node_layers[0]
 
         node_features = torch.zeros(
-            len(nodes), self.memory_dimension + self.num_node_features, device = self.device
+            len(nodes),
+            self.memory_dimension + self.num_node_features,
+            device=self.device,
         )
 
         for i, (node, _) in enumerate(nodes):
             node_feature = (
                 self.node_features[node]
                 if node in self.node_features
-                else torch.zeros(self.num_node_features, requires_grad=True, device = self.device)
+                else torch.zeros(
+                    self.num_node_features, requires_grad=True, device=self.device
+                )
             )
             node_memory = torch.tensor(
-                self.memory.get_node_memory(node).cpu().detach().numpy(), device = self.device
+                self.memory.get_node_memory(node).cpu().detach().numpy(),
+                device=self.device,
             )
             node_features[i, :] = torch.concat((node_memory, node_feature))
 
@@ -572,7 +585,9 @@ class TGN(nn.Module):
         timestamp_features = [
             self.time_encoder(
                 torch.tensor(
-                    np.array(time, dtype=np.float32), requires_grad=True, device = self.device
+                    np.array(time, dtype=np.float32),
+                    requires_grad=True,
+                    device=self.device,
                 ).reshape((len(time), 1))
             )
             for time in global_timestamps
