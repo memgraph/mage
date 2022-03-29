@@ -226,6 +226,13 @@ void InsertStringValueResult(mgp_result_record *record, const char *field_name, 
   InsertRecord(record, field_name, value);
 }
 
+/// Inserts a string of value string_value to the field field_name of
+/// the record mgp_result_record record.
+void InsertPathValueResult(mgp_result_record *record, const char *field_name, mgp_path *path_value, mgp_memory *memory) {
+  auto value = mgp::value_make_path(path_value);
+  InsertRecord(record, field_name, value);
+}
+
 /// Inserts an integer of value int_value to the field field_name of
 /// the record mgp_result_record record.
 void InsertIntValueResult(mgp_result_record *record, const char *field_name, const int int_value, mgp_memory *memory) {

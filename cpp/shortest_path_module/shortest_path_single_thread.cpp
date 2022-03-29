@@ -76,10 +76,14 @@ void ShortestPath(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
     auto st1 = StartTimer();
     auto targets = mg_utility::GetNodeIDs(mgp::value_get_list(mgp::list_at(args, 0)));
     auto targets_size = targets.size();
-    EdgeStore store;
     t1 += EndTimer(st1);
+    
 
+    omp_set_dynamic(0);
+    omp_set_num_threads(8);
+#pragma omp parallel for
     for (std::size_t i = 0; i < targets_size; ++i) {
+      EdgeStore store;
       auto target = targets[i];
 
       std::priority_queue<PriorityPathItem> priority_queue;
@@ -116,7 +120,7 @@ void ShortestPath(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
 
         auto st5 = StartTimer();
         auto *edges_it = mgp::vertex_iter_in_edges(node, memory);
-        mg_utility::OnScopeExit delete_edges_it([&edges_it] { mgp::edges_iterator_destroy(edges_it); });
+        // mg_utility::OnScopeExit delete_edges_it([&edges_it] { mgp::edges_iterator_destroy(edges_it); });
         t5 += EndTimer(st5);
 
         for (auto *in_edge = mgp::edges_iterator_get(edges_it); in_edge; in_edge = mgp::edges_iterator_next(edges_it)) {
@@ -126,6 +130,7 @@ void ShortestPath(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
           auto nxt_vertex_id = (std::uint64_t)mgp::vertex_get_id(nxt_vertex).as_int;
           auto nxt_distance = distance + 1;
 
+// #pragma omp atomic
           store.put(in_edge);
           t6 += EndTimer(st6);
 
