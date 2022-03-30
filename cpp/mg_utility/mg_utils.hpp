@@ -41,13 +41,14 @@ void CreateGraphNode(mg_graph::Graph<TSize> *graph, mgp_vertex *vertex) {
 ///@param graph_type Type of stored graph: Directed/Undirected
 ///
 template <typename TSize>
-void CreateGraphEdge(mg_graph::Graph<TSize> *graph, mgp_vertex *vertex_from, mgp_vertex *vertex_to,
+void CreateGraphEdge(mg_graph::Graph<TSize> *graph, mgp_edge *edge, mgp_vertex *vertex_from, mgp_vertex *vertex_to,
                      const mg_graph::GraphType graph_type) {
   // Get Memgraph internal ID property
+  auto memgraph_edge_id = mgp::edge_get_id(edge).as_int;
   auto memgraph_id_from = mgp::vertex_get_id(vertex_from).as_int;
   auto memgraph_id_to = mgp::vertex_get_id(vertex_to).as_int;
 
-  graph->CreateEdge(memgraph_id_from, memgraph_id_to, graph_type);
+  graph->CreateEdge(memgraph_edge_id, memgraph_id_from, memgraph_id_to, graph_type);
 }
 
 ///@brief Creates a weighted edge within GraphView. Requires Memgraph’s UIDs for its endpoints.
@@ -98,6 +99,82 @@ class OnScopeExit {
   std::function<void()> function_;
 };
 
+class EdgeStore {
+ public:
+  void Put(std::uint64_t edge_id, mgp_edge *edge) {
+    _edge_map.emplace(edge_id, std::unique_ptr<mgp_edge, EdgeDelete>(edge));
+  }
+
+  mgp_edge *Get(std::uint64_t edge_id) { return _edge_map.at(edge_id).get(); }
+
+ private:
+  struct EdgeDelete {
+    void operator()(mgp_edge *e) {
+      // if (e) mgp::edge_destroy(e);
+    }
+  };
+  std::unordered_map<std::uint64_t, std::unique_ptr<mgp_edge, EdgeDelete>> _edge_map;
+};
+
+///@brief Method for mapping the Memgraph in-memory graph into user-based graph
+/// with iterative node indices. The graph object stores information about the node
+/// and edge mappings alongside connection information. Created graph is
+/// zero-indexed, i.e. indices start at index 0.
+///
+///@param graph Memgraph graph
+///@param result Memgraph result object
+///@param memory Memgraph storage object
+///@param graph_type Graph directedness
+///@return mg_graph::Graph
+///
+template <typename TSize = std::uint64_t>
+std::pair<std::unique_ptr<mg_graph::Graph<TSize>>, std::unique_ptr<EdgeStore>> GetGraphViewWithEdge(
+    mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory, const mg_graph::GraphType graph_type) {
+  auto graph = std::make_unique<mg_graph::Graph<TSize>>();
+  auto edge_store = std::make_unique<EdgeStore>();
+
+  ///
+  /// Mapping Memgraph in-memory vertices into graph view
+  ///
+
+  // Safe vertices iterator creation
+
+  auto *vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);
+  mg_utility::OnScopeExit delete_vertices_it([&vertices_it] { mgp::vertices_iterator_destroy(vertices_it); });
+
+  // Iterate through Memgraph vertices and map them to GraphView
+  for (auto *vertex = mgp::vertices_iterator_get(vertices_it); vertex;
+       vertex = mgp::vertices_iterator_next(vertices_it)) {
+    mg_graph::CreateGraphNode(graph.get(), vertex);
+  }
+  // Destroy iterator before creating a new one in order to avoid memory leakage
+  mgp::vertices_iterator_destroy(vertices_it);
+
+  ///
+  /// Mapping Memgraph in-memory edges into graph view
+  ///
+
+  // Safe vertices iterator creation
+  vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);
+
+  for (auto *vertex_from = mgp::vertices_iterator_get(vertices_it); vertex_from;
+       vertex_from = mgp::vertices_iterator_next(vertices_it)) {
+    // Safe edges iterator creation
+    auto *edges_it = mgp::vertex_iter_out_edges(vertex_from, memory);
+    mg_utility::OnScopeExit delete_edges_it([&edges_it] { mgp::edges_iterator_destroy(edges_it); });
+
+    for (auto *out_edge = mgp::edges_iterator_get(edges_it); out_edge; out_edge = mgp::edges_iterator_next(edges_it)) {
+      auto vertex_to = mgp::edge_get_to(out_edge);
+      auto edge_id = mgp::edge_get_id(out_edge).as_int;
+      mg_graph::CreateGraphEdge(graph.get(), out_edge, vertex_from, vertex_to, graph_type);
+
+      edge_store.get()->Put(edge_id, out_edge);
+    }
+  }
+
+  return {std::move(graph), std::move(edge_store)};
+}
+
 ///@brief Method for mapping the Memgraph in-memory graph into user-based graph
 /// with iterative node indices. The graph object stores information about the node
 /// and edge mappings alongside connection information. Created graph is
@@ -146,7 +223,8 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(mgp_graph *memgraph_graph, 
 
     for (auto *out_edge = mgp::edges_iterator_get(edges_it); out_edge; out_edge = mgp::edges_iterator_next(edges_it)) {
       auto vertex_to = mgp::edge_get_to(out_edge);
-      mg_graph::CreateGraphEdge(graph.get(), vertex_from, vertex_to, graph_type);
+      auto edge_id = mgp::edge_get_id(out_edge).as_int;
+      mg_graph::CreateGraphEdge(graph.get(), out_edge, vertex_from, vertex_to, graph_type);
     }
   }
 
@@ -228,7 +306,8 @@ void InsertStringValueResult(mgp_result_record *record, const char *field_name, 
 
 /// Inserts a string of value string_value to the field field_name of
 /// the record mgp_result_record record.
-void InsertPathValueResult(mgp_result_record *record, const char *field_name, mgp_path *path_value, mgp_memory *memory) {
+void InsertPathValueResult(mgp_result_record *record, const char *field_name, mgp_path *path_value,
+                           mgp_memory *memory) {
   auto value = mgp::value_make_path(path_value);
   InsertRecord(record, field_name, value);
 }

@@ -106,7 +106,7 @@ def build():
     # Start CMake building
     os.chdir(CPP_BUILD_DIRECTORY)
     subprocess.run(["ls", "-l"])
-    subprocess.run(["cmake", ".."])
+    subprocess.run(["cmake", "-DCMAKE_BUILD_TYPE=Release",".."])
     core_count = mp.cpu_count()
     subprocess.run(["make", f"-j{core_count}"])
 

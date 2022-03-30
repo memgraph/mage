@@ -111,11 +111,7 @@ void ShortestPath(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
 
           std::vector<std::unique_ptr<mgp_edge, EdgeDelete>> new_path(path.begin(), path.end());
           new_path.emplace_back(CreateEdgePointer(in_edge, memory));
-          PriorityPathItem path_item{};
-          path_item.distance = distance + 1;
-          path_item.vertex = CreateVertexPointer(vertex_in, memory);
-          // path_item.path = new_path;
-          priority_queue.push(path_item);
+          priority_queue.push({distance + 1, CreateVertexPointer(vertex_in, memory, new_path)});
         }
       }
     }

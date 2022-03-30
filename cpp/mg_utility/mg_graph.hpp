@@ -163,7 +163,7 @@ class Graph : public GraphView<TSize> {
     return id;
   }
 
-  /// Creates an edge.
+   /// Creates an edge.
   ///
   /// Creates an directed/undirected edge in the graph depending on graph type.
   /// Edge will contain information about the original node IDs. Throws
@@ -191,6 +191,39 @@ class Graph : public GraphView<TSize> {
       in_neighbours_[to].emplace_back(from, id);
     }
 
+    return id;
+  }
+
+  /// Creates an edge.
+  ///
+  /// Creates an directed/undirected edge in the graph depending on graph type.
+  /// Edge will contain information about the original node IDs. Throws
+  /// exception if nodes are not contained in  graph.
+  ///
+  /// @param[in]  from  The from node identifier
+  /// @param[in]  to    The to node identifier
+  ///
+  /// @return     Created edge id
+  TSize CreateEdge(std::uint64_t memgraph_edge_id, std::uint64_t memgraph_id_from, std::uint64_t memgraph_id_to,
+                   const GraphType graph_type = GraphType::kDirectedGraph) {
+    auto from = GetInnerNodeId(memgraph_id_from);
+    auto to = GetInnerNodeId(memgraph_id_to);
+
+    auto id = edges_.size();
+    edges_.push_back({id, from, to});
+    adj_list_[from].push_back(id);
+    neighbours_[from].emplace_back(to, id);
+    nodes_to_edge_.insert({std::minmax(from, to), id});
+
+    if (graph_type == GraphType::kUndirectedGraph) {
+      adj_list_[to].push_back(id);
+      neighbours_[to].emplace_back(from, id);
+    } else if (graph_type == GraphType::kDirectedGraph) {
+      in_neighbours_[to].emplace_back(from, id);
+    }
+
+    inner_to_memgraph_edge_id_[id] = memgraph_edge_id;
+    memgraph_to_inner_edge_id_[memgraph_edge_id] = id;
     return id;
   }
 
@@ -313,6 +346,30 @@ class Graph : public GraphView<TSize> {
     return inner_to_memgraph_id_.at(node_id);
   }
 
+  ///
+  /// Returns the GraphView ID from Memgraph's internal ID
+  ///
+  /// @param node_id Memgraphs's inner ID
+  ///
+  TSize GetInnerEdgeId(std::uint64_t memgraph_id) const override {
+    if (memgraph_to_inner_edge_id_.find(memgraph_id) == memgraph_to_inner_edge_id_.end()) {
+      throw mg_exception::InvalidIDException();
+    }
+    return memgraph_to_inner_edge_id_.at(memgraph_id);
+  }
+
+  ///
+  /// Returns the Memgraph database ID from graph view
+  ///
+  /// @param node_id view's inner ID
+  ///
+  std::uint64_t GetMemgraphEdgeId(TSize node_id) const override {
+    if (inner_to_memgraph_edge_id_.find(node_id) == inner_to_memgraph_edge_id_.end()) {
+      throw mg_exception::InvalidIDException();
+    }
+    return inner_to_memgraph_edge_id_.at(node_id);
+  }
+
   bool NodeExists(std::uint64_t memgraph_id) const override {
     return memgraph_to_inner_id_.find(memgraph_id) != memgraph_to_inner_id_.end();
   }
@@ -345,6 +402,9 @@ class Graph : public GraphView<TSize> {
   std::vector<TEdge> edges_;
   std::unordered_map<TSize, std::uint64_t> inner_to_memgraph_id_;
   std::unordered_map<std::uint64_t, TSize> memgraph_to_inner_id_;
+
+  std::unordered_map<std::uint64_t, TSize> memgraph_to_inner_edge_id_;
+  std::unordered_map<TSize, std::uint64_t> inner_to_memgraph_edge_id_;
 
   std::multimap<std::pair<TSize, TSize>, TSize> nodes_to_edge_;
 };
