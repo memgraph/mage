@@ -161,15 +161,13 @@ def get_tgn_self_supervised(config: Dict[str, Any], device: torch.device):
     else:
         tgn = TGNGraphAttentionEdgeSelfSupervised(**config).to(device)
 
-    tgn.train()
-
     # when we TGN outputs features for source and destinations, since we are working with edges and edge predictions
     # we will concatenate their features together and get prediction with MLP whether it is edge or it isn't
     mlp_in_features_dim = (
         config[TGNParameters.MEMORY_DIMENSION] + config[TGNParameters.NUM_NODE_FEATURES]
     ) * 2
 
-    mlp = MLP([mlp_in_features_dim, 64, 1]).to(device=device)
+    mlp = MLP([mlp_in_features_dim, mlp_in_features_dim // 2, 1]).to(device=device)
 
     return tgn, mlp
 
@@ -225,7 +223,7 @@ def update_mode_reset_grads_check_dims():
         query_module_tgn.tgn.train()
 
         query_module_tgn.optimizer.zero_grad()
-        # query_module_tgn.tgn.detach_tensor_grads()
+        query_module_tgn.tgn.detach_tensor_grads()
 
         # todo add so that we only work with latest 128 neighbors
         # query_module_tgn.tgn.subsample_neighborhood()
@@ -238,9 +236,9 @@ def update_mode_reset_grads_check_dims():
         destinations,
         timestamps,
         edge_idxs,
-        node_features,
+        _,
         edge_features,
-        current_batch_size,
+        _,
         labels,
     ) = unpack_tgn_batch_data()
     assert (
@@ -249,7 +247,6 @@ def update_mode_reset_grads_check_dims():
         == len(timestamps)
         == len(edge_features)
         == len(edge_idxs)
-        #   == current_batch_size
         == len(labels)
     ), f"Batch size training error"
 
@@ -269,7 +266,7 @@ def update_embeddings(
 
 
 #
-# Training - self_supervised
+# Batch processing - self_supervised
 #
 def process_batch_self_supervised() -> float:
     """
@@ -315,10 +312,16 @@ def process_batch_self_supervised() -> float:
     embeddings_source_neg = embeddings_negative[:current_batch_size]
     embeddings_dest_neg = embeddings_negative[current_batch_size:]
 
+    # first row concatenation
     x1, x2 = torch.cat([embeddings_source, embeddings_source_neg], dim=0), torch.cat(
-        [embeddings_dest, embeddings_dest_neg]
+        [embeddings_dest, embeddings_dest_neg], dim=0
     )
+    # columns concatenation
     x = torch.cat([x1, x2], dim=1)
+    # score calculation = shape (num_positive_edges + num_negative_edges, 1) ->
+    # (num_positive_edges + num_negative_edges)
+    # num_positive_edges == num_negative_edges == current_batch_size
+    # todo update so that  num_negative_edges in range [10,25]
     score = query_module_tgn.mlp(x).squeeze(dim=0)
 
     pos_score = score[:current_batch_size]
@@ -327,13 +330,13 @@ def process_batch_self_supervised() -> float:
     pos_prob, neg_prob = pos_score.sigmoid(), neg_score.sigmoid()
 
     if query_module_tgn.tgn_mode == TGNMode.Train:
-        with torch.no_grad():
-            pos_label = torch.ones(
-                current_batch_size, dtype=torch.float, device=query_module_tgn.device
-            )
-            neg_label = torch.zeros(
-                current_batch_size, dtype=torch.float, device=query_module_tgn.device
-            )
+
+        pos_label = torch.ones(
+            current_batch_size, dtype=torch.float, device=query_module_tgn.device
+        )
+        neg_label = torch.zeros(
+            current_batch_size, dtype=torch.float, device=query_module_tgn.device
+        )
 
         loss = query_module_tgn.criterion(
             pos_prob.squeeze(), pos_label
@@ -342,6 +345,7 @@ def process_batch_self_supervised() -> float:
         loss.backward()
         query_module_tgn.optimizer.step()
         query_module_tgn.m_loss.append(loss.item())
+
     print("POS PROB | NEG PROB", pos_prob.squeeze().cpu(), neg_prob.squeeze().cpu())
     pred_score = np.concatenate(
         [
@@ -352,7 +356,7 @@ def process_batch_self_supervised() -> float:
     true_label = np.concatenate(
         [np.ones(current_batch_size), np.zeros(current_batch_size)]
     )
-    print("PRED_SCORE", pred_score)
+
     accuracy = average_precision_score(true_label, pred_score)
 
     # update embeddings to newest ones that we can return on user request
@@ -589,7 +593,7 @@ def update_batch(edges: mgp.List[mgp.Edge]) -> int:
 def train_eval_epochs(
     epochs: int, train_edges: List[mgp.Edge], eval_edges: List[mgp.Edge]
 ):
-    global query_module_tgn, query_module_tgn_batch
+    global query_module_tgn, query_module_tgn_batch, all_edges
 
     batch_size = query_module_tgn_batch.batch_size
     num_train_edges = len(train_edges)
@@ -603,6 +607,8 @@ def train_eval_epochs(
         query_module_tgn.tgn.init_memory()
         query_module_tgn.tgn.init_temporal_neighborhood()
         query_module_tgn.tgn.init_message_store()
+
+        all_edges = set()
 
         query_module_tgn.m_loss = []
 
@@ -818,8 +824,8 @@ def set_params(
     message_aggregator_type: str,
     memory_updater_type: str,
     num_attention_heads=1,
-    learning_rate=2e-2,
-    weight_decay=5e-3,
+    learning_rate=1e-4,
+    weight_decay=5e-5,
 ) -> mgp.Record():
     """
     Warning: Every time you call this function, old TGN object is cleared and process of learning params is
