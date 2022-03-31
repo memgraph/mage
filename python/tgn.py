@@ -581,8 +581,9 @@ def reset_tgn():
 
 
 def update_batch(edges: mgp.List[mgp.Edge]) -> int:
-    global query_module_tgn_batch, query_module_tgn
+    global query_module_tgn_batch, query_module_tgn, global_edge_count
 
+    global_edge_count += len(edges)
     edge_processing_start_time = time.time()
     process_edges(edges)
     edge_processing_time = time.time() - edge_processing_start_time
@@ -651,13 +652,13 @@ def train_eval_epochs(
                     epoch_num=current_epoch,
                     batch_num=overall_batch,
                     batch_process_time=batch_process_time,
-                    train_accuracy=accuracy,
-                    eval_accuracy=0,
+                    accuracy=accuracy,
+                    accuracy_type="train",
                 )
             )
             # create record, but print for now
             print(
-                f"EPOCH {epoch} || BATCH {i}, | batch_process_time={batch_process_time} | train_batch_loss={train_batch_loss} | train_avg_loss={train_avg_loss} | accuracy={accuracy}"
+                f"EPOCH {current_epoch} || BATCH {overall_batch}, | batch_process_time={batch_process_time} | train_batch_loss={train_batch_loss} | train_avg_loss={train_avg_loss} | accuracy={accuracy}"
             )
 
         # eval
@@ -689,14 +690,14 @@ def train_eval_epochs(
                     epoch_num=current_epoch,
                     batch_num=overall_batch,
                     batch_process_time=batch_process_time,
-                    train_accuracy=0,
-                    eval_accuracy=accuracy,
+                    accuracy=accuracy,
+                    accuracy_type="eval",
                 )
             )
 
             # create record, but print for now
             print(
-                f"EPOCH {epoch} || BATCH {i}, | batch_process_time={batch_process_time}  | accuracy={accuracy}"
+                f"EPOCH {current_epoch} || BATCH {overall_batch}, | batch_process_time={batch_process_time}  | accuracy={accuracy}"
             )
 
 
@@ -714,8 +715,8 @@ def process_epochs(
     epoch_num=mgp.Number,
     batch_num=mgp.Number,
     batch_process_time=mgp.Number,
-    train_accuracy=mgp.Number,
-    eval_accuracy=mgp.Number,
+    accuracy=mgp.Number,
+    accuracy_type=str,
 ):
     global results_per_epochs, current_epoch, global_edge_count, train_eval_index_split
 
@@ -753,13 +754,14 @@ def get_results(
     epoch_num=mgp.Number,
     batch_num=mgp.Number,
     batch_process_time=mgp.Number,
-    train_accuracy=mgp.Number,
-    eval_accuracy=mgp.Number,
+    accuracy=mgp.Number,
+    accuracy_type=str,
 ):
     final_records = []
 
     for i in range(1, len(results_per_epochs) + 1):
         final_records.extend(results_per_epochs[i])
+
     return final_records
 
 
@@ -823,26 +825,15 @@ def get(ctx: mgp.ProcCtx) -> mgp.Record(node=mgp.Vertex, embedding=mgp.List[floa
 @mgp.read_proc
 def update(
     ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]
-) -> mgp.Record(
-    epoch_num=mgp.Number,
-    batch_num=mgp.Number,
-    batch_process_time=mgp.Number,
-    train_accuracy=mgp.Number,
-    eval_accuracy=mgp.Number,
-):
-    global query_module_tgn_batch, query_module_tgn, results_per_epochs, current_epoch, global_edge_count
-    global_edge_count += len(edges)
-    batch_process_time, train_accuracy, eval_accuracy = [0, 0, 0]
+) -> mgp.Record(batch_process_time=mgp.Number,):
+    global query_module_tgn_batch, query_module_tgn, results_per_epochs, current_epoch
+
+    # we update our batch with current edges
     update_batch(edges)
 
-    current_batch_size = query_module_tgn_batch.current_batch_size
-
-    if current_batch_size < query_module_tgn_batch.batch_size:
-        mgp.Record(
-            batch_process_time=batch_process_time,
-            train_accuracy=train_accuracy,
-            eval_accuracy=eval_accuracy,
-        )
+    # if batch is still not full, we don't process edges
+    if query_module_tgn_batch.current_batch_size < query_module_tgn_batch.batch_size:
+        return mgp.Record(batch_process_time=0)
 
     batch_start_time = time.time()
     accuracy = (
@@ -850,12 +841,15 @@ def update(
         if query_module_tgn.learning_type == LearningType.SelfSupervised
         else process_batch_supervised()
     )
-    batch_process_time = time.time() - batch_start_time
 
+    record_config = {"batch_process_time": 0}
+    batch_process_time = time.time() - batch_start_time
+    record_config["batch_process_time"] = batch_process_time
+    record_config["accuracy"] = accuracy
     if query_module_tgn.tgn_mode == TGNMode.Train:
-        train_accuracy = accuracy
+        record_config["accuracy_type"] = "train"
     else:
-        eval_accuracy = accuracy
+        record_config["accuracy_type"] = "eval"
 
     # reset for next batch
     reset_tgn_batch(batch_size=query_module_tgn_batch.batch_size)
@@ -863,16 +857,15 @@ def update(
     if current_epoch not in results_per_epochs:
         results_per_epochs[current_epoch] = []
 
-    record = mgp.Record(
-        epoch_num=current_epoch,
-        batch_num=len(results_per_epochs[current_epoch]) + 1,
-        batch_process_time=batch_process_time,
-        train_accuracy=train_accuracy,
-        eval_accuracy=eval_accuracy,
-    )
+    # in global variable current_epoch we store epoch of all trainings done so far
+    record_config["epoch_num"] = current_epoch
+    # results_per_epochs is a dict of lists of batch records, with accuracy for either training or evaluation
+    record_config["batch_num"] = len(results_per_epochs[current_epoch]) + 1
 
+    record = mgp.Record(**record_config)
     results_per_epochs[current_epoch].append(record)
-    return record
+
+    return mgp.Record(batch_process_time=batch_process_time)
 
 
 @mgp.read_proc
