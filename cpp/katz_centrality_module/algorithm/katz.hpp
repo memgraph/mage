@@ -76,7 +76,7 @@ std::vector<std::pair<std::uint64_t, double>> WrapResults();
 ///@return true Results are matching
 ///@return false There are missing nodes.
 ///
-bool IsIncosistent(const mg_graph::GraphView<> &graph);
+bool IsInconsistent(const mg_graph::GraphView<> &graph);
 }  // namespace
 
 ///

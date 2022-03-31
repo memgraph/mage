@@ -12,7 +12,7 @@
       - node_id: 2
 
 - query: >-
-    CALL katz_centrality_online.set() YIELD node, rank
+    CALL katz_centrality_online.get() YIELD node, rank
     RETURN node.id AS node_id
     ORDER BY rank DESC, node_id ASC;
   output:
@@ -24,7 +24,7 @@
       - node_id: 2
 
 - query: >-
-    CALL katz_centrality_online.set() YIELD node, rank
+    CALL katz_centrality_online.get() YIELD node, rank
     RETURN node.id AS node_id
     ORDER BY rank DESC, node_id ASC;
   output:

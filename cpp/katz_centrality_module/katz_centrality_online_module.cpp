@@ -72,13 +72,13 @@ void SetKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *re
 void UpdateKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
     // Created vertices
-    auto created_vertices = mg_utility::GetVerticesFromList(mg_utility::GetListFromArgument(args, 0));
-    auto created_edges = mg_utility::GetEdgesFromList(mg_utility::GetListFromArgument(args, 1));
-    auto created_edge_ids = mg_utility::GetEdgeIDsFromList(mg_utility::GetListFromArgument(args, 1));
+    auto created_vertices = mg_utility::GetNodeIDs(mgp::value_get_list(mgp::list_at(args, 0)));
+    auto created_edges = mg_utility::GetEdgeEndpointIDs(mgp::value_get_list(mgp::list_at(args, 1)));
+    auto created_edge_ids = mg_utility::GetEdgeIDs(mgp::value_get_list(mgp::list_at(args, 1)));
 
     // Deleted entities
-    auto deleted_vertices = mg_utility::GetVerticesFromList(mg_utility::GetListFromArgument(args, 2));
-    auto deleted_edges = mg_utility::GetEdgesFromList(mg_utility::GetListFromArgument(args, 3));
+    auto deleted_vertices = mg_utility::GetNodeIDs(mgp::value_get_list(mgp::list_at(args, 2)));
+    auto deleted_edges = mg_utility::GetEdgeEndpointIDs(mgp::value_get_list(mgp::list_at(args, 3)));
 
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
     std::transform(created_edge_ids.begin(), created_edge_ids.end(), created_edge_ids.begin(),
@@ -119,7 +119,7 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
       auto default_alpha = mgp::value_make_double(0.2, memory);
       auto default_epsilon = mgp::value_make_double(1e-2, memory);
 
-      auto *proc = mgp::module_add_read_procedure(module, kProcedureSet, GetKatzCentrality);
+      auto *proc = mgp::module_add_read_procedure(module, kProcedureSet, SetKatzCentrality);
 
       mgp::proc_add_opt_arg(proc, kArgumentAlpha, mgp::type_float(), default_alpha);
       mgp::proc_add_opt_arg(proc, kArgumentEpsilon, mgp::type_float(), default_epsilon);

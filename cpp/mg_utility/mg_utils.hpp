@@ -323,39 +323,15 @@ std::vector<std::pair<std::uint64_t, std::uint64_t>> GetEdgeEndpointIDs(mgp_list
   return edge_endpoint_ids;
 }
 
-mgp_list *GetListFromArgument(mgp_list *args, std::size_t index) {
-  return mgp::value_get_list(mgp::list_at(args, index));
-}
-
-std::vector<std::pair<std::uint64_t, std::uint64_t>> GetEdgesFromList(mgp_list *list) {
-  auto size = mgp::list_size(list);
-  auto edges = std::vector<std::pair<std::uint64_t, std::uint64_t>>(size);
-  for (std::size_t i = 0; i < size; i++) {
-    auto edge = mgp::value_get_edge(mgp::list_at(list, i));
-    auto from = mgp::vertex_get_id(mgp::edge_get_from(edge)).as_int;
-    auto to = mgp::vertex_get_id(mgp::edge_get_to(edge)).as_int;
-    edges[i] = std::make_pair(from, to);
-  }
-  return edges;
-}
-
-std::vector<std::uint64_t> GetEdgeIDsFromList(mgp_list *list) {
-  auto size = mgp::list_size(list);
+/// Return a vector of edge ids from the mgp_list edge_list
+std::vector<std::uint64_t> GetEdgeIDs(mgp_list *edge_list) {
+  auto size = mgp::list_size(edge_list);
   auto edge_ids = std::vector<std::uint64_t>(size);
   for (std::size_t i = 0; i < size; i++) {
-    auto edge = mgp::value_get_edge(mgp::list_at(list, i));
+    auto edge = mgp::value_get_edge(mgp::list_at(edge_list, i));
     auto edge_id = mgp::edge_get_id(edge).as_int;
     edge_ids[i] = edge_id;
   }
   return edge_ids;
-}
-
-std::vector<std::uint64_t> GetVerticesFromList(mgp_list *list) {
-  auto size = mgp::list_size(list);
-  auto vertices = std::vector<std::uint64_t>(size);
-  for (std::size_t i = 0; i < size; i++) {
-    vertices[i] = mgp::vertex_get_id(mgp::value_get_vertex(mgp::list_at(list, i))).as_int;
-  }
-  return vertices;
 }
 }  // namespace mg_utility

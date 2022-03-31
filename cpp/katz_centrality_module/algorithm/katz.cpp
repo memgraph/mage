@@ -9,7 +9,7 @@ class KatzCentralityData {
   ///
   ///@brief Clearing the resulting storages in algorithm context
   ///
-  void Init() {
+  void Clear() {
     centralities.clear();
     omegas.clear();
     active_nodes.clear();
@@ -22,7 +22,7 @@ class KatzCentralityData {
   ///@param graph Graph for calculation
   ///
   void Init(const mg_graph::GraphView<> &graph) {
-    Init();
+    Clear();
 
     // Initialize the centrality vector
     std::unordered_map<std::uint64_t, double> centrality;
@@ -166,7 +166,7 @@ std::vector<std::pair<std::uint64_t, double>> KatzCentralityLoop(std::set<std::u
                                                                  std::uint64_t k, double epsilon, double gamma) {
   do {
     katz_alg::context.AddIteration(graph);
-    auto iteration = katz_alg::context.iteration;
+    auto &iteration = katz_alg::context.iteration;
 
     for (auto &[_v] : graph.Nodes()) {
       // Transform inner ID to Memgraph
@@ -260,7 +260,7 @@ std::vector<std::pair<std::uint64_t, double>> WrapResults() {
       katz_alg::context.centralities[katz_alg::context.iteration].end());
 }
 
-bool IsIncosistent(const mg_graph::GraphView<> &graph) {
+bool IsInconsistent(const mg_graph::GraphView<> &graph) {
   for (auto const [node_id] : graph.Nodes()) {
     auto external_id = graph.GetMemgraphNodeId(node_id);
     if (katz_alg::context.centralities[katz_alg::context.iteration].find(external_id) ==
@@ -268,6 +268,13 @@ bool IsIncosistent(const mg_graph::GraphView<> &graph) {
       return true;
     }
   }
+
+  for (auto [node_id, _] : katz_alg::context.centralities[katz_alg::context.iteration]) {
+    if (!graph.NodeExists(node_id)) {
+      return true;
+    }
+  }
+
   return false;
 }
 }  // namespace
@@ -278,10 +285,10 @@ std::vector<std::pair<std::uint64_t, double>> GetKatz(const mg_graph::GraphView<
     return SetKatz(graph);
   }
 
-  if (IsIncosistent(graph)) {
+  if (IsInconsistent(graph)) {
     throw std::runtime_error(
-        "Graph has been modified, therefore is incosistent with cached results, please update the Katz centrality by "
-        "calling set/reset!");
+        "Graph has been modified and is thus inconsistent with cached Katz centrality scores. To update them, "
+        "please call set/reset!");
   }
 
   return WrapResults();
@@ -400,6 +407,6 @@ std::vector<std::pair<std::uint64_t, double>> UpdateKatz(
                             gamma);
 }
 
-void Reset() { katz_alg::context.Init(); }
+void Reset() { katz_alg::context.Clear(); }
 
 }  // namespace katz_alg

@@ -1,6 +1,5 @@
 setup: |-
-    CREATE TRIGGER katz_online BEFORE COMMIT EXECUTE CALL katz_centrality_online.update(createdVertices, createdEdges, deletedVertices, deletedEdges) YIELD *;
-    CALL katz_centrality_online.set(0.15, 0.015) YIELD *;
+    CREATE TRIGGER katz_online BEFORE COMMIT EXECUTE CALL katz_centrality_online.update(createdVertices, createdEdges, deletedVertices, deletedEdges) YIELD node, rank SET node.katz = rank;
 
 queries:
     - |-
