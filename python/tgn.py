@@ -1,8 +1,55 @@
+"""
+This module represents entry point to temporal graph networks Python implementation of Temporal graph networks for
+deep learning on dynamic graps paper https://arxiv.org/pdf/2006.10637.pdf introduced by E.Rossi [erossi@twitter.com]
+during his work in Twitter.
+
+Temporal graph networks(TGNs) is a graph neural network method on dynamic graphs. In the recent years,
+graph neural networks have become very popular due to their ability to perform a wide variation of machine learning
+tasks on graphs, such as link prediction, node classification and so on. This rise started with Graph convolutional
+networks introduced by Kipf et al, following by GraphSAGE introduced by Hamilton et al, and in recent years new
+method was presented which introduces attention mechanism to graphs, known as Graph attention networks, by Veličković
+et al. Last two methods offer great possibility for inductive learning. But they haven't been specifically developed
+to handle different events occurring on graphs, such as node features update, node delition, edge delition and so on.
+
+In his work, Rossi et al introduced to us Temporal graph networks which present great possibility to do graph machine
+learning on stream of data, use-case occurring more often in recent years.
+
+In this module we developed on our own way Temporal graph networks with two layer implementations:
+ * graph attention layer and
+ * graph sum layer introduced in paper.
+
+Furthermore, we adapted a query module to be able to predict edges as well as to perform node classification tasks.
+
+To start exploring our module, jump to python/mage/tgn/definitions/instances.py and pick one of the implementations,
+either TGNEdgesSelfSupervised for self supervised learning on edges or TGNSupervised for supervised learning on nodes classification.
+
+Each of those methods consist of following steps you should look for in the module:
+ * self._process_previous_batches - if you follow paper this will include calculating of messages collected for each node
+    (python/mage/tgn/definitions/message_function.py), aggregation of messages (python/mage/tgn/definitions/message_aggregator.py)
+    and finally memory update part in (python/mage/tgn/definitions/memory_updater.py)
+ * self._get_graph_data -> afterwards we create computation graph used by graph attention layer or graph sum layer
+ *  self._process_current_batch -> final step includes processing of current batch, updating raw message store from
+ interaction events
+
+What is not implemented in the module?
+    We didn't implement Node events since they occur very rarely.
+    We didn't implement Time projection embedding calculation and Identity embedding calculation since author mentions
+        they perform very poorly on all datasets.
+
+
+What we believe we did and author probably failed to do:
+ Embedding calculation seems to be off in authors work on GitHub page: https://github.com/twitter-research/tgn
+ Problem seems to be author doesn't use new embeddings for each node when concatenation is in place in each layer
+ with neighborhood embeddings, but instead uses raw features from 0th layer.
+
+
+"""
+
 import dataclasses
 import enum
 import time
 from math import ceil
-from typing import Dict, Tuple, Set, List, Any
+from typing import Dict, Tuple, Set, List, Any, Union
 
 import mgp
 
@@ -72,10 +119,18 @@ class QueryModuleTGN:
     criterion: nn.BCELoss
     optimizer: torch.optim.Adam
     device: torch.device
-    m_loss: List[float]
+    m_loss: List[float]  # mean loss
     mlp: MLP
     tgn_mode: TGNMode
     learning_type: LearningType
+    # used in negative sampling for self_supervised
+    all_edges: Set[Tuple[int, int]]
+    # to get all embeddings
+    all_embeddings: Dict[int, np.array]
+    results_per_epochs: Dict[int, List[mgp.Record]]
+    current_epoch: int
+    global_edge_count: int
+    train_eval_index_split: int
 
 
 @dataclasses.dataclass
@@ -95,20 +150,66 @@ class QueryModuleTGNBatch:
 # global tgn training variables
 ##############################
 
-# used in negative sampling for self_supervised
-all_edges: Set[Tuple[int, int]] = set()
-
-# to get all embeddings
-all_embeddings: Dict[int, np.array] = {}
 
 query_module_tgn: QueryModuleTGN
 query_module_tgn_batch: QueryModuleTGNBatch
 
-results_per_epochs: Dict[int, List[mgp.Record]] = {}
-current_epoch = 1
 
-global_edge_count = 0
-train_eval_index_split = 0
+#############################
+# global helpers
+#############################
+def update_epoch_counter() -> int:
+    global query_module_tgn
+
+    query_module_tgn.current_epoch += 1
+    return query_module_tgn.current_epoch
+
+
+def get_current_epoch() -> int:
+    global query_module_tgn
+    return query_module_tgn.current_epoch
+
+
+def get_current_batch() -> int:
+    global query_module_tgn
+    return len(query_module_tgn.results_per_epochs[query_module_tgn.current_epoch])
+
+
+def initialize_results_per_epoch(current_epoch: int) -> None:
+    global query_module_tgn
+    query_module_tgn.results_per_epochs[current_epoch] = []
+
+
+def set_global_edge_count(new_global_edge_count: int) -> int:
+    global query_module_tgn
+    query_module_tgn.global_edge_count = new_global_edge_count
+    return query_module_tgn.global_edge_count
+
+
+def set_current_batch_size(new_current_batch_size: int) -> int:
+    global query_module_tgn_batch
+    query_module_tgn_batch.current_batch_size = new_current_batch_size
+    return query_module_tgn_batch.current_batch_size
+
+
+def append_batch_record_curr_epoch(
+    current_epoch: int, record: mgp.Record
+) -> Dict[int, List[mgp.Record]]:
+    global query_module_tgn
+    assert (
+        current_epoch in query_module_tgn.results_per_epochs
+    ), f"Current epoch not defined"
+    query_module_tgn.results_per_epochs[current_epoch].append(record)
+    return query_module_tgn.results_per_epochs
+
+
+def get_output_records() -> List[mgp.Record]:
+    global query_module_tgn
+    output_records = []
+
+    for i in range(1, len(query_module_tgn.results_per_epochs) + 1):
+        output_records.extend(query_module_tgn.results_per_epochs[i])
+    return output_records
 
 
 #####################################
@@ -122,7 +223,7 @@ def set_tgn(
     learning_type: LearningType,
     tgn_config: Dict[str, any],
     optimizer_config: Dict[str, any],
-):
+) -> None:
     global query_module_tgn
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -139,22 +240,29 @@ def set_tgn(
         lr=optimizer_config[OptimizerParameters.LEARNING_RATE],
         weight_decay=optimizer_config[OptimizerParameters.WEIGHT_DECAY],
     )
-    m_loss = []
 
     query_module_tgn = QueryModuleTGN(
-        tgn_config,
-        tgn,
-        criterion,
-        optimizer,
-        device,
-        m_loss,
-        mlp,
-        TGNMode.Train,
-        learning_type,
+        config=tgn_config,
+        tgn=tgn,
+        criterion=criterion,
+        optimizer=optimizer,
+        device=device,
+        m_loss=[],
+        mlp=mlp,
+        tgn_mode=TGNMode.Train,  # we start in train mode
+        learning_type=learning_type,
+        all_edges=set(),
+        all_embeddings={},
+        results_per_epochs={},
+        current_epoch=1,
+        global_edge_count=0,
+        train_eval_index_split=0,
     )
 
 
-def get_tgn_self_supervised(config: Dict[str, Any], device: torch.device):
+def get_tgn_self_supervised(
+    config: Dict[str, Any], device: torch.device
+) -> Tuple[TGN, MLP]:
     """
     Set parameters for self supervised learning. Here we try to predict edges.
     """
@@ -164,8 +272,13 @@ def get_tgn_self_supervised(config: Dict[str, Any], device: torch.device):
     else:
         tgn = TGNGraphAttentionEdgeSelfSupervised(**config).to(device)
 
-    # when we TGN outputs features for source and destinations, since we are working with edges and edge predictions
-    # we will concatenate their features together and get prediction with MLP whether it is edge or it isn't
+    # When TGN outputs embeddings for source nodes and destination nodes,
+    # since we are working with edges and edge predictions we will concatenate their features together
+    # and get prediction with MLP whether it is edge or it isn't
+    # Other possibility would be Hadamard product
+    # ( https://en.wikipedia.org/wiki/Hadamard_product_(matrices) it is a fancy name for dot product)
+    # of source embeddings and destination embeddings, but we went with concat since author used concatenation
+    # and not Hadamard product, in original implementation
     mlp_in_features_dim = (
         config[TGNParameters.MEMORY_DIMENSION] + config[TGNParameters.NUM_NODE_FEATURES]
     ) * 2
@@ -175,7 +288,7 @@ def get_tgn_self_supervised(config: Dict[str, Any], device: torch.device):
     return tgn, mlp
 
 
-def get_tgn_supervised(config: Dict[str, Any], device: torch.device):
+def get_tgn_supervised(config: Dict[str, Any], device: torch.device) -> Tuple[TGN, MLP]:
     """ """
 
     if config[TGNParameters.LAYER_TYPE] == TGNLayerType.GraphSumEmbedding:
@@ -203,8 +316,8 @@ def sample_negative(negative_num: int) -> (np.array, np.array):
     Currently sampling of negative nodes is done in completely random fashion, and it is possible to sample
     source-dest pair that are real edges
     """
-    global all_edges
-
+    global query_module_tgn
+    all_edges = query_module_tgn.all_edges
     all_src = list(set([src for src, dest in all_edges]))
     all_dest = list(set([src for src, dest in all_edges]))
 
@@ -218,7 +331,7 @@ def unpack_tgn_batch_data():
     return dataclasses.astuple(query_module_tgn_batch)
 
 
-def update_mode_reset_grads_check_dims():
+def update_mode_reset_grads_check_dims() -> None:
     global query_module_tgn, query_module_tgn_batch
 
     if query_module_tgn.tgn_mode == TGNMode.Train:
@@ -260,12 +373,12 @@ def update_embeddings(
     sources: np.array,
     destinations: np.array,
 ) -> None:
-    global all_embeddings
+    global query_module_tgn
     for i, node in enumerate(sources):
-        all_embeddings[node] = embeddings_source[i]
+        query_module_tgn.all_embeddings[node] = embeddings_source[i]
 
     for i, node in enumerate(destinations):
-        all_embeddings[node] = embeddings_dest[i]
+        query_module_tgn.all_embeddings[node] = embeddings_dest[i]
 
 
 #
@@ -290,7 +403,7 @@ def process_batch_self_supervised() -> float:
         node_features,
         edge_features,
         _,
-        labels,
+        _,
     ) = unpack_tgn_batch_data()
 
     current_batch_size = len(sources)
@@ -391,9 +504,11 @@ def process_batch_supervised() -> float:
         edge_idxs,
         node_features,
         edge_features,
-        current_batch_size,
+        _,
         labels,
     ) = unpack_tgn_batch_data()
+
+    current_batch_size = len(sources)
 
     graph_data = (
         sources,
@@ -458,19 +573,40 @@ def process_batch_supervised() -> float:
     return accuracy
 
 
-def process_edges(edges: mgp.List[mgp.Edge]):
-    global query_module_tgn_batch, query_module_tgn, all_edges
+def create_torch_tensor(feature: Union[None, Tuple]) -> torch.Tensor:
+    if feature is None:
+        np_feature = (
+            np.random.randint(
+                0, 100, query_module_tgn.config[TGNParameters.NUM_NODE_FEATURES]
+            )
+            / 100
+        )
+    else:
+        np_feature = np.array(feature)
+    return torch.tensor(
+        np_feature,
+        requires_grad=True,
+        device=query_module_tgn.device,
+        dtype=torch.float,
+    )
+
+
+def parse_mgp_edges_into_tgn_batch(edges: mgp.List[mgp.Edge]) -> QueryModuleTGNBatch:
+    global query_module_tgn_batch, query_module_tgn
 
     for edge in edges:
-
         source = edge.from_vertex
         src_id = edge.from_vertex.id
 
         dest = edge.to_vertex
         dest_id = int(edge.to_vertex.id)
 
-        all_edges.add((src_id, dest_id))
+        # maybe this is not best practice, but since we are calling this
+        # function only for processing of edges, we can also
+        # update all edges to for negative sampling later used later on
+        query_module_tgn.all_edges.add((src_id, dest_id))
 
+        # todo update to have label defined
         src_features = source.properties.get("features", None)
         dest_features = dest.properties.get("features", None)
 
@@ -482,63 +618,13 @@ def process_edges(edges: mgp.List[mgp.Edge]):
 
         edge_feature = edge.properties.get("features", None)
 
-        if src_features is None:
-            # If node feature doesn't exist on one node, probably won't on any. Maybe this is wrong approach.
-            src_features = (
-                np.random.randint(
-                    0, 100, query_module_tgn.config[TGNParameters.NUM_NODE_FEATURES]
-                )
-                / 100
-            )
-        else:
-            assert type(src_features) is tuple
-            src_features = np.array(src_features)
-
-        if dest_features is None:
-            dest_features = (
-                np.random.randint(
-                    0, 100, query_module_tgn.config[TGNParameters.NUM_NODE_FEATURES]
-                )
-                / 100
-            )
-        else:
-            assert type(dest_features) is tuple
-            dest_features = np.array(dest_features)
-
-        if edge_feature is None:
-            edge_feature = (
-                np.random.randint(
-                    0, 100, query_module_tgn.config[TGNParameters.NUM_EDGE_FEATURES]
-                )
-                / 100
-            )
-        else:
-            assert type(edge_feature) is tuple
-            edge_feature = np.array(edge_feature)
-
-        src_features = torch.tensor(
-            src_features,
-            requires_grad=True,
-            device=query_module_tgn.device,
-            dtype=torch.float,
+        query_module_tgn_batch.node_features[src_id] = create_torch_tensor(src_features)
+        query_module_tgn_batch.node_features[dest_id] = create_torch_tensor(
+            dest_features
         )
-        dest_features = torch.tensor(
-            dest_features,
-            requires_grad=True,
-            dtype=torch.float,
-            device=query_module_tgn.device,
+        query_module_tgn_batch.edge_features[edge_idx] = create_torch_tensor(
+            edge_feature
         )
-        edge_feature = torch.tensor(
-            edge_feature,
-            requires_grad=True,
-            dtype=torch.float,
-            device=query_module_tgn.device,
-        )
-
-        query_module_tgn_batch.node_features[src_id] = src_features
-        query_module_tgn_batch.node_features[dest_id] = dest_features
-
-        query_module_tgn_batch.edge_features[edge_idx] = edge_feature
 
         query_module_tgn_batch.sources = np.append(
             query_module_tgn_batch.sources, src_id
@@ -555,9 +641,10 @@ def process_edges(edges: mgp.List[mgp.Edge]):
         query_module_tgn_batch.labels = np.append(
             query_module_tgn_batch.labels, np.array([[src_label, dest_label]]), axis=0
         )
+    return query_module_tgn_batch
 
 
-def reset_tgn_batch(batch_size: int):
+def reset_tgn_batch(batch_size: int) -> None:
     global query_module_tgn_batch
     query_module_tgn_batch = QueryModuleTGNBatch(
         0,
@@ -572,31 +659,44 @@ def reset_tgn_batch(batch_size: int):
     )
 
 
-def reset_tgn():
-    global all_embeddings, query_module_tgn_batch, query_module_tgn, all_edges
+def reset_tgn() -> None:
+    global query_module_tgn
 
-    all_embeddings = {}
+    # reset whole tgn
+    query_module_tgn.all_embeddings = {}
     reset_tgn_batch(0)
-    all_edges = set()
+    query_module_tgn.all_edges = set()
 
 
-def update_batch(edges: mgp.List[mgp.Edge]) -> int:
-    global query_module_tgn_batch, query_module_tgn, global_edge_count
+def process_epoch_batch() -> mgp.Record:
+    batch_start_time = time.time()
+    accuracy = (
+        process_batch_self_supervised()
+        if query_module_tgn.learning_type == LearningType.SelfSupervised
+        else process_batch_supervised()
+    )
+    batch_process_time = time.time() - batch_start_time
 
-    global_edge_count += len(edges)
-    edge_processing_start_time = time.time()
-    process_edges(edges)
-    edge_processing_time = time.time() - edge_processing_start_time
+    record = mgp.Record(
+        epoch_num=get_current_epoch(),
+        batch_num=get_current_batch() + 1,  # this is a new record batch
+        batch_process_time=batch_process_time,
+        accuracy=accuracy,
+        accuracy_type=query_module_tgn.tgn_mode.name,
+    )
 
-    query_module_tgn_batch.current_batch_size += len(edges)
+    # add same logging as in core
+    print(
+        f"EPOCH {get_current_epoch()} || BATCH {get_current_batch()}, | batch_process_time={batch_process_time}  | accuracy={accuracy}"
+    )
 
-    return int(edge_processing_time)
+    return record
 
 
 def train_eval_epochs(
-    epochs: int, train_edges: List[mgp.Edge], eval_edges: List[mgp.Edge]
-):
-    global query_module_tgn, query_module_tgn_batch, all_edges, results_per_epochs, current_epoch
+    num_epochs: int, train_edges: List[mgp.Edge], eval_edges: List[mgp.Edge]
+) -> None:
+    global query_module_tgn, query_module_tgn_batch
 
     batch_size = query_module_tgn_batch.batch_size
     num_train_edges = len(train_edges)
@@ -606,99 +706,67 @@ def train_eval_epochs(
     num_eval_batches = ceil(num_eval_edges / batch_size)
     assert batch_size > 0
 
-    for epoch in range(epochs):
-        current_epoch += 1
-        overall_batch = 0
-        results_per_epochs[current_epoch] = []
+    for epoch in range(num_epochs):
+
+        # update global epoch counter
+        update_epoch_counter()
+
+        # initialize container for current epochs where we save records for
+        # accuracy results and batch processing time
+        initialize_results_per_epoch(get_current_epoch())
+
+        # on every epoch training tgn should have clean state,
+        # although we update parameters, memory should be empty,
+        # temporal neighborhood should be empty and message store should be empty
+        # because if it isn't we have problem with information leakage from future
+        # to current training samples
         query_module_tgn.tgn.init_memory()
         query_module_tgn.tgn.init_temporal_neighborhood()
         query_module_tgn.tgn.init_message_store()
 
-        all_edges = set()
-
+        query_module_tgn.all_edges = set()
         query_module_tgn.m_loss = []
 
-        reset_tgn_batch(batch_size)
+        reset_tgn_batch(batch_size=batch_size)
 
-        # train
+        # when we update here tgn_mode, later when we call process_batch_self_supervised
+        # it will change tgn mode to .train() so no worries
         query_module_tgn.tgn_mode = TGNMode.Train
-        query_module_tgn.tgn.train()
+
         for i in range(num_train_batches):
-            overall_batch += 1
             # sample edges we need
             start_index_train_batch = i * batch_size
             end_index_train_batch = min((i + 1) * batch_size, num_train_edges - 1)
-            current_batch = train_edges[start_index_train_batch:end_index_train_batch]
+            current_edges_batch = train_edges[
+                start_index_train_batch:end_index_train_batch
+            ]
 
             # prepare batch
-            process_edges(current_batch)
-
-            batch_start_time = time.time()
-            accuracy = (
-                process_batch_self_supervised()
-                if query_module_tgn.learning_type == LearningType.SelfSupervised
-                else process_batch_supervised()
-            )
-            batch_process_time = time.time() - batch_start_time
-
-            train_batch_loss = query_module_tgn.m_loss[-1]
-            train_avg_loss = sum(query_module_tgn.m_loss) / len(query_module_tgn.m_loss)
+            parse_mgp_edges_into_tgn_batch(current_edges_batch)
+            batch_result_record = process_epoch_batch()
+            append_batch_record_curr_epoch(get_current_epoch(), batch_result_record)
 
             # reset for next batch
-            reset_tgn_batch(batch_size=query_module_tgn_batch.batch_size)
+            reset_tgn_batch(batch_size=batch_size)
 
-            results_per_epochs[current_epoch].append(
-                mgp.Record(
-                    epoch_num=current_epoch,
-                    batch_num=overall_batch,
-                    batch_process_time=batch_process_time,
-                    accuracy=accuracy,
-                    accuracy_type="train",
-                )
-            )
-            # create record, but print for now
-            print(
-                f"EPOCH {current_epoch} || BATCH {overall_batch}, | batch_process_time={batch_process_time} | train_batch_loss={train_batch_loss} | train_avg_loss={train_avg_loss} | accuracy={accuracy}"
-            )
-
-        # eval
+        # here we need to change mode to eval
+        # also later when we call process_batch_self_supervised
+        # it will change tgn mode to .eval()
         query_module_tgn.tgn_mode = TGNMode.Eval
-        query_module_tgn.tgn.eval()
         for i in range(num_eval_batches):
-            overall_batch += 1
             # sample edges we need
             start_index_eval_batch = i * batch_size
             end_index_eval_batch = min((i + 1) * batch_size, num_eval_edges - 1)
-            current_batch = eval_edges[start_index_eval_batch:end_index_eval_batch]
-
+            current_edges_batch = eval_edges[
+                start_index_eval_batch:end_index_eval_batch
+            ]
             # prepare batch
-            process_edges(current_batch)
-
-            batch_start_time = time.time()
-            accuracy = (
-                process_batch_self_supervised()
-                if query_module_tgn.learning_type == LearningType.SelfSupervised
-                else process_batch_supervised()
-            )
-            batch_process_time = time.time() - batch_start_time
+            parse_mgp_edges_into_tgn_batch(current_edges_batch)
+            batch_result_record = process_epoch_batch()
+            append_batch_record_curr_epoch(get_current_epoch(), batch_result_record)
 
             # reset for next batch
-            reset_tgn_batch(batch_size=query_module_tgn_batch.batch_size)
-
-            results_per_epochs[current_epoch].append(
-                mgp.Record(
-                    epoch_num=current_epoch,
-                    batch_num=overall_batch,
-                    batch_process_time=batch_process_time,
-                    accuracy=accuracy,
-                    accuracy_type="eval",
-                )
-            )
-
-            # create record, but print for now
-            print(
-                f"EPOCH {current_epoch} || BATCH {overall_batch}, | batch_process_time={batch_process_time}  | accuracy={accuracy}"
-            )
+            reset_tgn_batch(batch_size=batch_size)
 
 
 #####################################################
@@ -718,7 +786,23 @@ def process_epochs(
     accuracy=mgp.Number,
     accuracy_type=str,
 ):
-    global results_per_epochs, current_epoch, global_edge_count, train_eval_index_split
+    """
+    After calling this function from ctx we will get all edges currently in database, split them in ratio of
+    train and eval edges if function set_mode("eval") was called at some point and use training edges to train
+    further TGN and eval edges to evaluate our model.
+
+    If you didn't call function set_mode("eval"), you will introduce leakage of information in your training set
+    since we will train during whole time of stream until that function is invoked, but for the purpose of
+    exploring you can define train_eval_percent_split parameter and it will split whole dataset
+
+    :param num_epochs: number of epochs used for training and evaluation
+    :train_eval_percent_split: dataset split ratio on train and eval
+
+
+    :return: mgp.Record(): emtpy record if everything was fine
+    """
+
+    global query_module_tgn
 
     vertices = ctx.graph.vertices
     curr_all_edges = []
@@ -730,21 +814,22 @@ def process_epochs(
     # note: if you didn't call accidentally mode switch to eval, you can
     # still do epoch training, with train_eval_percent_split, only you will have leakage
     # of info in training set with first epoch, not a good practice
-    if train_eval_index_split != 0:
-        train_eval_percent_split = train_eval_index_split / global_edge_count
+    if query_module_tgn.train_eval_index_split != 0:
+        train_eval_percent_split = (
+            query_module_tgn.train_eval_index_split / query_module_tgn.global_edge_count
+        )
 
-    train_eval_index_split = int(global_edge_count * train_eval_percent_split)
+    query_module_tgn.train_eval_index_split = int(
+        query_module_tgn.global_edge_count * train_eval_percent_split
+    )
 
     train_eval_epochs(
-        num_epochs,
-        curr_all_edges[:train_eval_index_split],
-        curr_all_edges[train_eval_index_split:],
+        num_epochs=num_epochs,
+        train_edges=curr_all_edges[: query_module_tgn.train_eval_index_split],
+        eval_edges=curr_all_edges[query_module_tgn.train_eval_index_split :],
     )
-    final_records = []
-
-    for i in range(1, len(results_per_epochs) + 1):
-        final_records.extend(results_per_epochs[i])
-    return final_records
+    # get all records for every epoch and every batch inside it as results
+    return get_output_records()
 
 
 @mgp.read_proc
@@ -757,24 +842,35 @@ def get_results(
     accuracy=mgp.Number,
     accuracy_type=str,
 ):
-    final_records = []
+    """
+    This method returns all results from training and evaluation on all epochs
 
-    for i in range(1, len(results_per_epochs) + 1):
-        final_records.extend(results_per_epochs[i])
+    :return: mgp.Record(): List of records of training and evaluation stats
 
-    return final_records
+    """
+    # get all records for every epoch and every batch inside it as results
+    return get_output_records()
 
 
 @mgp.read_proc
 def set_mode(ctx: mgp.ProcCtx, mode: str) -> mgp.Record():
-    global global_edge_count, train_eval_index_split, query_module_tgn
+    """
+    Purpose of this function is to switch mode from "train" to "eval" at some point during your stream.
+    At that point, we will save current edge count, and this information will later be used in function
+    `process_epochs` to split edges from Memgraph in train and eval set
+
+    :param mode: "train" or "eval" mode
+
+    :return: mgp.Record(): emtpy record if everything was fine
+    """
+    global query_module_tgn
 
     if query_module_tgn.tgn is None:
         raise Exception("TGN module is not set")
     if mode == "train":
         query_module_tgn.tgn_mode = TGNMode.Train
     elif mode == "eval":
-        train_eval_index_split = global_edge_count
+        query_module_tgn.train_eval_index_split = query_module_tgn.global_edge_count
         query_module_tgn.tgn_mode = TGNMode.Eval
     else:
         raise Exception(f"Expected mode {TGNMode.Train} or {TGNMode.Eval}, got {mode}")
@@ -809,6 +905,20 @@ def reset(ctx: mgp.ProcCtx) -> mgp.Record():
 
 @mgp.read_proc
 def get(ctx: mgp.ProcCtx) -> mgp.Record(node=mgp.Vertex, embedding=mgp.List[float]):
+    """
+    Get all embeddings of nodes created by TGN. These are final embeddings, after num_layers of processing
+
+    One note here: embeddings are not for same timestamp, since one node could have last interaction at time
+    t1 and current timestamp can be tn, where t1<tn
+
+    We can't update embedding of node if it doesn't have any interactions, but we can update node's memory, so next
+    time it appears in some interaction event, it won't suffer from memory staleness problem as mentioned in orginal
+    paper
+
+    :param edges: list of edges to preprocess, and if current batch size is big enough use for training or evaluation
+
+    :return: mgp.Record(): emtpy record if everything was fine
+    """
     global all_embeddings
 
     embeddings_dict = {}
@@ -823,49 +933,73 @@ def get(ctx: mgp.ProcCtx) -> mgp.Record(node=mgp.Vertex, embedding=mgp.List[floa
 
 
 @mgp.read_proc
-def update(
-    ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]
-) -> mgp.Record(batch_process_time=mgp.Number,):
-    global query_module_tgn_batch, query_module_tgn, results_per_epochs, current_epoch
+def update(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]) -> mgp.Record():
+    """
+    Purpose of following function is to process edges which are created in Memgraph, and get features from
+    nodes or edges if they are present and save all that data so when batch is greater than
+    predefined size `batch_size` saved in object `query_mode_tgn` "set_params",
+    this function will call training on those edges of TGN module. This represents one batch
+    and until you call tgn.set_mode("eval") all those edges will be used as training edges.
+
+    If you have a stream of data and you expect let's say 20000 edges, you can "split" your stream of data
+    in "train" set and "eval" set by calling method tgn.set_mode("eval").
+
+
+    Once again you should not call this function yourself but set trigger
+    on --> CREATE event (edge create event), and Memgraph will give edges as input
+
+    Your toy example could look like following
+
+    CREATE INDEX ON :User(id);
+    CREATE INDEX ON :Item(id);
+    CALL tgn.set_params("self_supervised", 200, 2, "graph_attn", 100, 100, 20, 20, 100, 10, "identity", "last", "gru", 1) YIELD *;
+    MERGE (a:User {id: 'A1BHUGKLYW6H7V', profile_name:'P. Lecuyer'}) MERGE (b:Item {id: 'B0007MCVQ2'}) MERGE (a)-[:REVIEWED { features: [161.0,..., 0.9238], ...}]->(b);
+    Here create more edges
+    CALL tgn.set_mode("eval") YIELD *;
+    Here create some edges used for evaluation
+    CALL tgn.process_epochs(5) YIELD * RETURN *;
+
+    This way all edges **until** you call `CALL tgn.set_mode("eval") YIELD *;` will be used for **training**,
+    and all edges after such call will be used for **evaluation**.
+
+    After you make a query `CALL tgn.process_epochs(5) YIELD * RETURN *;`, we will get all edges from our database,
+    and because you called tgn.set_mode("eval") at some point, we save at which point it happened at we will split
+    train and eval edges in same manner.
+
+    :param edges: list of edges to preprocess, and if current batch size is big enough use for training or evaluation
+
+    :return: mgp.Record(): emtpy record if everything was fine
+    """
+    global query_module_tgn_batch, query_module_tgn
+    num_edges = len(edges)
+
+    # we track number of edges so
+    set_global_edge_count(query_module_tgn.global_edge_count + num_edges)
+
+    # update current batch size with new edges
+    set_current_batch_size(query_module_tgn_batch.current_batch_size + num_edges)
 
     # we update our batch with current edges
-    update_batch(edges)
+    parse_mgp_edges_into_tgn_batch(edges)
 
-    # if batch is still not full, we don't process edges
+    # if batch is still not full, we don't go to "train" or "eval" of TGN
     if query_module_tgn_batch.current_batch_size < query_module_tgn_batch.batch_size:
-        return mgp.Record(batch_process_time=0)
+        return mgp.Record()
 
-    batch_start_time = time.time()
-    accuracy = (
-        process_batch_self_supervised()
-        if query_module_tgn.learning_type == LearningType.SelfSupervised
-        else process_batch_supervised()
-    )
+    # this is just check if we have initialized list to save records of batches for training or evaluation
+    if get_current_epoch() not in query_module_tgn.results_per_epochs:
+        initialize_results_per_epoch(get_current_epoch())
 
-    record_config = {"batch_process_time": 0}
-    batch_process_time = time.time() - batch_start_time
-    record_config["batch_process_time"] = batch_process_time
-    record_config["accuracy"] = accuracy
-    if query_module_tgn.tgn_mode == TGNMode.Train:
-        record_config["accuracy_type"] = "train"
-    else:
-        record_config["accuracy_type"] = "eval"
+    # process epoch in self_supervised or supervised mode in a given mode which
+    # can be "train" or "eval"
+    batch_result_record = process_epoch_batch()
+
+    append_batch_record_curr_epoch(get_current_epoch(), batch_result_record)
 
     # reset for next batch
     reset_tgn_batch(batch_size=query_module_tgn_batch.batch_size)
 
-    if current_epoch not in results_per_epochs:
-        results_per_epochs[current_epoch] = []
-
-    # in global variable current_epoch we store epoch of all trainings done so far
-    record_config["epoch_num"] = current_epoch
-    # results_per_epochs is a dict of lists of batch records, with accuracy for either training or evaluation
-    record_config["batch_num"] = len(results_per_epochs[current_epoch]) + 1
-
-    record = mgp.Record(**record_config)
-    results_per_epochs[current_epoch].append(record)
-
-    return mgp.Record(batch_process_time=batch_process_time)
+    return mgp.Record()
 
 
 @mgp.read_proc
@@ -889,8 +1023,33 @@ def set_params(
     weight_decay=5e-5,
 ) -> mgp.Record():
     """
+    With following function you can define parameters used in TGN, as well as what kind of learning you want
+    to do with TGN module.
+
+    If you set TGN to "self_supervised" mode, it will try to predict new edges, and with "supervised" mode it will try
+    to predict labels
+
     Warning: Every time you call this function, old TGN object is cleared and process of learning params is
     restarted
+
+    :param learning_type: "self_supervised" or "supervised" depending on if you want to predict edges or node labels
+    :param batch_size: size of batch to process by TGN, recommended size 200
+    :param num_of_layers: number of layers of graph neural network, 2 is optimal size, GNNs perform worse with bigger size
+    :param layer_type: "graph_attn" or "graph_sum" layer type as defined in original paper
+    :param memory_dimension: dimension of memory tensor of each node
+    :param time_dimension: dimension of time vector from "time2vec" paper
+    :param num_edge_features: number of edge features we will use from each edge
+    :param num_node_features: number of expected node features
+    :param message_dimension: dimension of message, only used if you use MLP as message function type, otherwise ignored
+    :param num_neighbors: number of sampled neighbors
+    :param edge_message_function_type: message function type, "identity" for concatenation or "mlp" for projection
+    :param message_aggregator_type: message aggregator type, "mean" or "last"
+    :param memory_updater_type: memory updater type, "gru" or "rnn"
+    :param num_attention_heads: number of attention heads used if you define "graph_attn" as layer type
+    :param learning_rate: learning rate for optimizer
+    :param weight_decay: weight decay used in optimizer
+
+    :return: mgp.Record(): emtpy record if everything was fine
     """
     global query_module_tgn_batch
 
