@@ -5,13 +5,18 @@
 
 namespace {
 
+const char *kProcedureGet = "get";
+
 const char *kFieldNode = "node";
 const char *kFieldCommunity = "community_id";
 
+const char *kArgumentWeight = "weight";
 const char *kArgumentColoring = "coloring";
 const char *kArgumentMinGraphShrink = "min_graph_shrink";
 const char *kArgumentCommunityAlgThreshold = "community_alg_threshold";
 const char *kArgumentColoringAlgThreshold = "coloring_alg_threshold";
+
+const double kDefaultWeight = 1.0;
 
 void InsertLouvainRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
                          const std::uint64_t community) {
@@ -27,12 +32,15 @@ void InsertLouvainRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memor
 void LouvainCommunityDetection(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
     // Get the query module arguments
-    auto coloring = mgp::value_get_bool(mgp::list_at(args, 0));
-    auto min_graph_shrink = mgp::value_get_int(mgp::list_at(args, 1));
-    auto community_alg_threshold = mgp::value_get_double(mgp::list_at(args, 2));
-    auto coloring_alg_threshold = mgp::value_get_double(mgp::list_at(args, 3));
+    auto maybe_weight = mgp::list_at(args, 0);
+    auto coloring = mgp::value_get_bool(mgp::list_at(args, 1));
+    auto min_graph_shrink = mgp::value_get_int(mgp::list_at(args, 2));
+    auto community_alg_threshold = mgp::value_get_double(mgp::list_at(args, 3));
+    auto coloring_alg_threshold = mgp::value_get_double(mgp::list_at(args, 4));
 
-    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
+    auto weight_property = !mgp::value_is_null(maybe_weight) ? mgp::value_get_string(maybe_weight) : "";
+    auto graph = mg_utility::GetWeightedGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph,
+                                                  weight_property, kDefaultWeight);
     auto communities = louvain_alg::GetCommunities(*graph, coloring, min_graph_shrink, community_alg_threshold,
                                                    coloring_alg_threshold);
 
@@ -53,18 +61,30 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
   try {
     auto community_proc = mgp::module_add_read_procedure(module, "get", LouvainCommunityDetection);
 
+    auto default_weight = mgp::value_make_null(memory);
+    auto default_coloring = mgp::value_make_bool(false, memory);
+    auto default_min_graph_shrink = mgp::value_make_int(100000, memory);
+    auto default_community_alg_threshold = mgp::value_make_double(0.000001, memory);
+    auto default_coloring_alg_threshold = mgp::value_make_double(0.01, memory);
+
     // Query module arguments
-    mgp::proc_add_opt_arg(community_proc, kArgumentColoring, mgp::type_bool(), mgp::value_make_bool(false, memory));
-    mgp::proc_add_opt_arg(community_proc, kArgumentMinGraphShrink, mgp::type_int(),
-                          mgp::value_make_int(100000, memory));
+    mgp::proc_add_opt_arg(community_proc, kArgumentWeight, mgp::type_nullable(mgp::type_string()), default_weight);
+    mgp::proc_add_opt_arg(community_proc, kArgumentColoring, mgp::type_bool(), default_coloring);
+    mgp::proc_add_opt_arg(community_proc, kArgumentMinGraphShrink, mgp::type_int(), default_min_graph_shrink);
     mgp::proc_add_opt_arg(community_proc, kArgumentCommunityAlgThreshold, mgp::type_float(),
-                          mgp::value_make_double(0.000001, memory));
+                          default_community_alg_threshold);
     mgp::proc_add_opt_arg(community_proc, kArgumentColoringAlgThreshold, mgp::type_float(),
-                          mgp::value_make_double(0.01, memory));
+                          default_coloring_alg_threshold);
 
     // Query module output record
     mgp::proc_add_result(community_proc, kFieldNode, mgp::type_node());
     mgp::proc_add_result(community_proc, kFieldCommunity, mgp::type_int());
+
+    mgp::value_destroy(default_weight);
+    mgp::value_destroy(default_coloring);
+    mgp::value_destroy(default_min_graph_shrink);
+    mgp::value_destroy(default_community_alg_threshold);
+    mgp::value_destroy(default_coloring_alg_threshold);
   } catch (const std::exception &e) {
     return 1;
   }

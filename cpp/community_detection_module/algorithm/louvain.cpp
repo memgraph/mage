@@ -58,12 +58,11 @@ void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, GrappoloGr
   auto tmp_edge_list = std::unique_ptr<edge[]>(new edge[number_of_edges]);  // Every edge stored ONCE
 
   // TODO: (jmatak) Add different weights on edges
-  double default_weight = 1.0;
   std::uint64_t edge_index = 0;
   for (const auto [id, from, to] : memgraph_graph.Edges()) {
-    tmp_edge_list[edge_index].head = from;              // The S index
-    tmp_edge_list[edge_index].tail = to;                // The T index: Zero-based indexing
-    tmp_edge_list[edge_index].weight = default_weight;  // Make it positive and cast to Double, fixed to 1.0
+    tmp_edge_list[edge_index].head = from;               // The S index
+    tmp_edge_list[edge_index].tail = to;                 // The T index: Zero-based indexing
+    tmp_edge_list[edge_index].weight = memgraph_graph.GetWeight(id);  // Make it positive and cast to Double, fixed to 1.0
     edge_index++;
   }
 
@@ -91,7 +90,7 @@ void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, GrappoloGr
   }
   // The last element of Cumulative will hold the total number of characters
   if (2 * number_of_edges != edge_list_ptrs[number_of_vertices]) {
-    throw std::runtime_error("Community detection error: Number of edges should be 2*NE");
+    throw std::runtime_error("Community detection error: Error while graph fetching in the edge prefix sum creation");
   }
 
   // Keep track of how many edges have been added for a vertex:
