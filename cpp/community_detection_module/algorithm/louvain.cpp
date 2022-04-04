@@ -60,9 +60,11 @@ void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, GrappoloGr
   // TODO: (jmatak) Add different weights on edges
   std::uint64_t edge_index = 0;
   for (const auto [id, from, to] : memgraph_graph.Edges()) {
-    tmp_edge_list[edge_index].head = from;               // The S index
-    tmp_edge_list[edge_index].tail = to;                 // The T index: Zero-based indexing
-    tmp_edge_list[edge_index].weight = memgraph_graph.GetWeight(id);  // Make it positive and cast to Double, fixed to 1.0
+    tmp_edge_list[edge_index].head = from;  // The S index
+    tmp_edge_list[edge_index].tail = to;    // The T index: Zero-based indexing
+    tmp_edge_list[edge_index].weight = memgraph_graph.IsWeighted()
+                                           ? memgraph_graph.GetWeight(id)
+                                           : 1.0;  // Make it positive and cast to Double, fixed to 1.0
     edge_index++;
   }
 

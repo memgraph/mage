@@ -99,7 +99,12 @@ class GraphView {
   /// @param[in] edge_id edge ID
   ///
   /// @return double weight
-  virtual const double &GetWeight(TSize edge_id) const = 0;
+  virtual double GetWeight(TSize edge_id) const = 0;
+
+  ///
+  ///@brief Return true if graph has weights on edges.
+  ///
+  virtual bool IsWeighted() const = 0;
 };
 
 template <typename TSize>
