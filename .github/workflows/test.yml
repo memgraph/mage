@@ -21,7 +21,7 @@ jobs:
           sudo apt update
           sudo apt install -y build-essential cmake
 
-      - name: Set up C++
+      - name: Print C++ Version
         run: |
           gcc --version
           g++ --version
