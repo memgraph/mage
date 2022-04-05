@@ -12,9 +12,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # Compile flags.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall \
-    -Werror=switch -Werror=switch-bool -Werror=return-type")
+    -Werror=switch -Werror=switch-bool")
 # Don't omit frame pointer in RelWithDebInfo, for additional callchain debug.
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
     "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer")
@@ -42,8 +44,8 @@ ExternalProject_Add(gtest-proj
                     "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
 
 set(GTEST_INCLUDE_DIR ${GTEST_ROOT}/include)
-set(GTEST_LIBRARY_PATH ${GTEST_ROOT}/${CMAKE_INSTALL_LIBDIR}/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
-set(GTEST_DEBUG_LIBRARY_PATH ${GTEST_ROOT}/${CMAKE_INSTALL_LIBDIR}/${CMAKE_FIND_LIBRARY_PREFIXES}gtestd.a)
+set(GTEST_LIBRARY_PATH ${GTEST_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
+set(GTEST_DEBUG_LIBRARY_PATH ${GTEST_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtestd.a)
 add_library(gtest STATIC IMPORTED)
 set_target_properties(gtest PROPERTIES
   IMPORTED_LOCATION "${GTEST_LIBRARY_PATH}"
