@@ -25,6 +25,7 @@ jobs:
         run: |
           gcc --version
           g++ --version
+          cmake --version
 
       - name: Build C++ modules
         run: |
