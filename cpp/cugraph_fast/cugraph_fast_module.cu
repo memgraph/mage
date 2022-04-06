@@ -56,7 +56,7 @@ auto CreateCugraphFromMemgraph(raft::handle_t const &handle, mgp_graph *mg_graph
                  [](const auto &edge) -> vertex_t { return edge.from; });
   std::transform(h_edges.begin(), h_edges.end(), std::back_inserter(h_cols),
                  [](const auto &edge) -> vertex_t { return edge.to; });
-  auto stream = handle.get_stream_view();
+  auto stream = handle.get_stream();
   rmm::device_uvector<vertex_t> d_rows(h_rows.size(), stream);
   raft::update_device(d_rows.data(), h_rows.data(), h_rows.size(), stream);
   rmm::device_uvector<vertex_t> d_cols(h_cols.size(), stream);
@@ -79,7 +79,7 @@ void PagerankProc(mgp_list *args, mgp_graph *mg_graph, mgp_result *result, mgp_m
     auto stop_epsilon = mgp::value_get_double(mgp::list_at(args, 2));
 
     raft::handle_t handle{};
-    auto stream = handle.get_stream_view();
+    auto stream = handle.get_stream();
 
     auto [mg_graph_view, mg_cugraph] = CreateCugraphFromMemgraph(handle, mg_graph, result, memory);
     auto mg_cugraph_view = mg_cugraph.view();

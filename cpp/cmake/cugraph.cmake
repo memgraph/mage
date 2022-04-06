@@ -35,6 +35,7 @@
 # build configuration.
 
 option(MAGE_CUGRAPH_ENABLE "Enable cuGraph build" OFF)
+message(STATUS "------> Enable cuGraph build ${MAGE_CUGRAPH_ENABLE}")
 
 if (MAGE_CUGRAPH_ENABLE)
   # RAPIDS.cmake is here because rapids_cuda_init_architectures is required to
@@ -48,7 +49,7 @@ if (MAGE_CUGRAPH_ENABLE)
   enable_language(CUDA)
 
   set(MAGE_CUGRAPH_REPO "https://github.com/rapidsai/cugraph.git" CACHE STRING "cuGraph GIT repo URL")
-  set(MAGE_CUGRAPH_TAG "branch-21.12" CACHE STRING "cuGraph GIT tag to checkout" )
+  set(MAGE_CUGRAPH_TAG "v22.02.00" CACHE STRING "cuGraph GIT tag to checkout" )
   # Custom MAGE_CUGRAPH_BUILD_TYPE because Debug build did NOT work.
   set(MAGE_CUGRAPH_BUILD_TYPE "Release" CACHE STRING "Passed to cuGraph as CMAKE_BUILD_TYPE")
   # NATIVE | ALL -> possible because cugraph calls rapids_cuda_init_architectures
