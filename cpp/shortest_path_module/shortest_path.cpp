@@ -1,9 +1,10 @@
 #include <omp.h>
 
 #include <chrono>
+#include <numeric>
 #include <queue>
-#include <set>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <mg_exceptions.hpp>
 #include <mg_utils.hpp>
@@ -45,23 +46,53 @@ void InsertPathResult(mgp_graph *graph, mgp_result *result, mgp_memory *memory, 
   mg_utility::InsertPathValueResult(record, kFieldPath, path, memory);
 }
 
+std::vector<std::uint64_t> TransformNodeIDs(const mg_graph::GraphView<> &mg_graph,
+                                            std::vector<std::uint64_t> &mg_nodes) {
+  std::vector<std::uint64_t> nodes;
+  nodes.reserve(mg_nodes.size());
+  std::transform(
+      mg_nodes.begin(), mg_nodes.end(), std::back_inserter(nodes),
+      [&mg_graph](const std::uint64_t node_id) -> std::uint64_t { return mg_graph.GetInnerNodeId(node_id); });
+  return nodes;
+}
+
+std::vector<std::uint64_t> FetchAllNodesIDs(const mg_graph::GraphView<> &mg_graph) {
+  std::vector<uint64_t> nodes(mg_graph.Nodes().size());
+  std::iota(nodes.begin(), nodes.end(), 0);
+  return nodes;
+}
+
+std::vector<std::uint64_t> FetchNodeIDs(const mg_graph::GraphView<> &mg_graph, mgp_list *mg_nodes) {
+  std::vector<uint64_t> nodes;
+  if (mg_nodes != nullptr) {
+    auto sources_arg = mg_utility::GetNodeIDs(mg_nodes);
+    nodes = TransformNodeIDs(mg_graph, sources_arg);
+  } else {
+    nodes = FetchAllNodesIDs(mg_graph);
+  }
+  return nodes;
+}
+
 void ShortestPath(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    // Fetch the target IDs
-    auto targets_arg = mg_utility::GetNodeIDs(mgp::value_get_list(mgp::list_at(args, 0)));
-    auto targets_size = targets_arg.size();
+    // Fetch the target & source IDs
+    auto sources_arg =
+        !mgp::value_is_null(mgp::list_at(args, 0)) ? mgp::value_get_list(mgp::list_at(args, 0)) : nullptr;
 
-    // Construct the graph view
+    auto targets_arg =
+        !mgp::value_is_null(mgp::list_at(args, 1)) ? mgp::value_get_list(mgp::list_at(args, 1)) : nullptr;
+
     auto res = mg_utility::GetGraphViewWithEdge(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
     const auto &graph = res.first;
     const auto &edge_store = res.second;
 
-    // Get targets as graph view IDs
-    std::vector<std::uint64_t> targets;
-    targets.reserve(targets_size);
-    std::transform(
-        targets_arg.begin(), targets_arg.end(), std::back_inserter(targets),
-        [&graph](const std::uint64_t node_id) -> std::uint64_t { return graph.get()->GetInnerNodeId(node_id); });
+    // Fetch target inner IDs. If not provided, fetch all.
+    auto targets = FetchNodeIDs(*graph.get(), targets_arg);
+    auto targets_size = targets.size();
+
+    // Fetch sources inner IDs. If not provided, fetch all.
+    auto sources_tmp = FetchNodeIDs(*graph.get(), sources_arg);
+    std::unordered_set<std::uint64_t> sources(sources_tmp.begin(), sources_tmp.end());
 
     // Reversed Dijsktra with priority queue. Parallel for each target
 #pragma omp parallel for
@@ -70,7 +101,7 @@ void ShortestPath(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
 
       std::priority_queue<PriorityPathItem> priority_queue;
       std::unordered_map<std::uint64_t, std::int64_t> shortest_path_length;
-      std::set<std::uint64_t> visited;
+      std::unordered_set<std::uint64_t> visited;
 
       priority_queue.push({0, target, std::vector<std::uint64_t>{}});
 
@@ -87,7 +118,7 @@ void ShortestPath(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
         shortest_path_length[node_id] = distance;
 
         // If path is found, insert in Memgraph result
-        if (!path.empty()) {
+        if (!path.empty() && (sources.find(node_id) != sources.end())) {
 #pragma omp critical
           InsertPathResult(memgraph_graph, result, memory, graph.get()->GetMemgraphNodeId(node_id),
                            graph.get()->GetMemgraphNodeId(target), path, *edge_store.get());
@@ -115,11 +146,17 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   try {
     auto *wcc_proc = mgp::module_add_read_procedure(module, kProcedureGet, ShortestPath);
 
-    mgp::proc_add_arg(wcc_proc, kArgumentTargets, mgp::type_list(mgp::type_node()));
+    auto default_null = mgp::value_make_null(memory);
+    mgp::proc_add_opt_arg(wcc_proc, kArgumentSources, mgp::type_nullable(mgp::type_list(mgp::type_node())),
+                          default_null);
+    mgp::proc_add_opt_arg(wcc_proc, kArgumentTargets, mgp::type_nullable(mgp::type_list(mgp::type_node())),
+                          default_null);
 
     mgp::proc_add_result(wcc_proc, kFieldSource, mgp::type_node());
     mgp::proc_add_result(wcc_proc, kFieldTarget, mgp::type_node());
     mgp::proc_add_result(wcc_proc, kFieldPath, mgp::type_path());
+
+    mgp::value_destroy(default_null);
   } catch (const std::exception &e) {
     return 1;
   }

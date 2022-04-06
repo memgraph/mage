@@ -101,8 +101,8 @@ class OnScopeExit {
 
 class EdgeStore {
  public:
-  void Put(std::uint64_t edge_id, mgp_edge *edge) {
-    _edge_map.emplace(edge_id, std::unique_ptr<mgp_edge, EdgeDelete>(edge));
+  void Put(std::uint64_t edge_id, mgp_edge *edge, mgp_memory *memory) {
+    _edge_map.emplace(edge_id, std::unique_ptr<mgp_edge, EdgeDelete>(mgp::edge_copy(edge, memory)));
   }
 
   mgp_edge *Get(std::uint64_t edge_id) { return _edge_map.at(edge_id).get(); }
@@ -110,7 +110,7 @@ class EdgeStore {
  private:
   struct EdgeDelete {
     void operator()(mgp_edge *e) {
-      // if (e) mgp::edge_destroy(e);
+      if (e) mgp::edge_destroy(e);
     }
   };
   std::unordered_map<std::uint64_t, std::unique_ptr<mgp_edge, EdgeDelete>> _edge_map;
@@ -168,7 +168,7 @@ std::pair<std::unique_ptr<mg_graph::Graph<TSize>>, std::unique_ptr<EdgeStore>> G
       auto edge_id = mgp::edge_get_id(out_edge).as_int;
       mg_graph::CreateGraphEdge(graph.get(), out_edge, vertex_from, vertex_to, graph_type);
 
-      edge_store.get()->Put(edge_id, out_edge);
+      edge_store.get()->Put(graph.get()->GetInnerEdgeId(edge_id), out_edge, memory);
     }
   }
 
@@ -223,7 +223,6 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(mgp_graph *memgraph_graph, 
 
     for (auto *out_edge = mgp::edges_iterator_get(edges_it); out_edge; out_edge = mgp::edges_iterator_next(edges_it)) {
       auto vertex_to = mgp::edge_get_to(out_edge);
-      auto edge_id = mgp::edge_get_id(out_edge).as_int;
       mg_graph::CreateGraphEdge(graph.get(), out_edge, vertex_from, vertex_to, graph_type);
     }
   }
