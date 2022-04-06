@@ -72,7 +72,7 @@ class Graph : public GraphView<TSize> {
   ///
   /// @return all incident edges
   const std::vector<TSize> &IncidentEdges(TSize node_id) const override {
-    if (node_id < 0 && node_id >= nodes_.size()) {
+    if (node_id < 0 || node_id >= nodes_.size()) {
       throw mg_exception::InvalidIDException();
     }
 
@@ -85,7 +85,7 @@ class Graph : public GraphView<TSize> {
   ///
   /// @return vector of neighbours
   const std::vector<TNeighbour> &Neighbours(TSize node_id) const override {
-    if (node_id < 0 && node_id >= nodes_.size()) {
+    if (node_id < 0 || node_id >= nodes_.size()) {
       throw mg_exception::InvalidIDException();
     }
 
@@ -120,7 +120,7 @@ class Graph : public GraphView<TSize> {
   ///
   /// @return vector of neighbours
   const std::vector<TNeighbour> &InNeighbours(TSize node_id) const {
-    if (node_id < 0 && node_id >= nodes_.size()) {
+    if (node_id < 0 || node_id >= nodes_.size()) {
       throw mg_exception::InvalidIDException();
     }
 
@@ -133,7 +133,7 @@ class Graph : public GraphView<TSize> {
   ///
   /// @return target Node struct
   const TNode &GetNode(TSize node_id) const override {
-    if (node_id < 0 && node_id >= nodes_.size()) {
+    if (node_id < 0 || node_id >= nodes_.size()) {
       throw mg_exception::InvalidIDException();
     }
 
@@ -146,7 +146,7 @@ class Graph : public GraphView<TSize> {
   ///
   /// @return Edge struct
   const TEdge &GetEdge(TSize edge_id) const override {
-    if (edge_id < 0 && edge_id >= edges_.size()) {
+    if (edge_id < 0 || edge_id >= edges_.size()) {
       throw mg_exception::InvalidIDException();
     }
     return edges_[edge_id];
@@ -158,7 +158,7 @@ class Graph : public GraphView<TSize> {
   ///
   /// @return double weight
   const double &GetWeight(TSize edge_id) const {
-    if (edge_id < 0 && edge_id >= edges_.size()) {
+    if (edge_id < 0 || edge_id >= edges_.size()) {
       throw mg_exception::InvalidIDException();
     }
     return weights_[edge_id];
@@ -262,10 +262,10 @@ class Graph : public GraphView<TSize> {
   /// @param[in] node_from node id of node on same edge
   /// @param[in] node_to node id of node on same edge
   void EraseEdge(TSize node_from, TSize node_to) {
-    if (node_from < 0 && node_from >= nodes_.size()) {
+    if (node_from < 0 || node_from >= nodes_.size()) {
       throw mg_exception::InvalidIDException();
     }
-    if (node_to < 0 && node_to >= nodes_.size()) {
+    if (node_to < 0 || node_to >= nodes_.size()) {
       throw mg_exception::InvalidIDException();
     }
 
