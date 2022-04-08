@@ -19,6 +19,15 @@ void RemoveDuplicates(std::vector<T> &vector) {
 }
 
 namespace online_bc {
+std::unordered_set<std::uint64_t> NeighborsMemgraphIDs(const mg_graph::GraphView<> &graph,
+                                                       const std::uint64_t node_id) {
+  std::unordered_set<std::uint64_t> neighbors_memgraph_ids;
+  for (const auto &neighbor : graph.Neighbours(graph.GetInnerNodeId(node_id))) {
+    neighbors_memgraph_ids.insert(graph.GetMemgraphNodeId(neighbor.node_id));
+  }
+  return neighbors_memgraph_ids;
+}
+
 bool OnlineBC::Inconsistent(const mg_graph::GraphView<> &graph) const {
   if (graph.Nodes().size() != this->node_bc_scores.size()) return true;
 
@@ -47,42 +56,6 @@ void OnlineBC::CallBrandesAlgorithm(const mg_graph::GraphView<> &graph, const st
   for (std::uint64_t node_id = 0; node_id < graph.Nodes().size(); ++node_id) {
     this->node_bc_scores[graph.GetMemgraphNodeId(node_id)] = bc_scores[node_id];
   }
-}
-
-std::tuple<std::unordered_map<std::uint64_t, std::uint64_t>, std::unordered_map<std::uint64_t, std::set<std::uint64_t>>,
-           std::vector<std::uint64_t>>
-OnlineBC::BrandesBFS(const mg_graph::GraphView<> &graph, const std::uint64_t start_id,
-                     const bool compensate_for_deleted_node) const {
-  std::unordered_map<std::uint64_t, std::uint64_t> n_shortest_paths({{start_id, 1}});
-  std::unordered_map<std::uint64_t, std::uint64_t> distances;
-  std::unordered_map<std::uint64_t, std::set<std::uint64_t>> predecessors;
-  std::vector<std::uint64_t> bfs_order({start_id});
-
-  std::queue<std::uint64_t> queue({start_id});
-  while (!queue.empty()) {
-    const auto current_id = queue.front();
-    queue.pop();
-
-    for (const auto neighbor_id : graph.GetNeighboursMemgraphNodeIds(graph.GetInnerNodeId(current_id))) {
-      if (!distances.count(neighbor_id)) {  // if unvisited
-        distances[neighbor_id] = distances[current_id] + 1;
-
-        queue.push(neighbor_id);
-        bfs_order.push_back(neighbor_id);
-      }
-
-      if (distances[neighbor_id] == distances[current_id] + 1) {
-        n_shortest_paths[neighbor_id] += n_shortest_paths[current_id];
-        predecessors[neighbor_id].insert(current_id);
-      }
-    }
-  }
-
-  if (!compensate_for_deleted_node) n_shortest_paths[start_id] = 0;
-  predecessors[start_id] = std::set<std::uint64_t>();
-  std::reverse(bfs_order.begin(), bfs_order.end());
-
-  return {n_shortest_paths, predecessors, bfs_order};
 }
 
 std::tuple<std::unordered_set<std::uint64_t>, std::unordered_set<std::uint64_t>> OnlineBC::IsolateAffectedBCC(
@@ -120,7 +93,7 @@ std::unordered_map<std::uint64_t, std::uint64_t> OnlineBC::SSSPLengths(
     const auto current_id = queue.front();
     queue.pop();
 
-    for (const auto neighbor_id : graph.GetNeighboursMemgraphNodeIds(graph.GetInnerNodeId(current_id))) {
+    for (const auto neighbor_id : NeighborsMemgraphIDs(graph, current_id)) {
       if (!affected_bcc_nodes.count(neighbor_id)) continue;
 
       if (!distances.count(neighbor_id)) {  // if unvisited
@@ -145,7 +118,7 @@ std::unordered_map<std::uint64_t, std::uint64_t> OnlineBC::PeripheralSubgraphOrd
       const auto current_id = queue.front();
       queue.pop();
 
-      for (const auto neighbor_id : graph.GetNeighboursMemgraphNodeIds(graph.GetInnerNodeId(current_id))) {
+      for (const auto neighbor_id : NeighborsMemgraphIDs(graph, current_id)) {
         if (affected_bcc_nodes.count(neighbor_id)) continue;
 
         if (!visited.count(neighbor_id)) {
@@ -165,9 +138,10 @@ std::unordered_map<std::uint64_t, std::uint64_t> OnlineBC::PeripheralSubgraphOrd
 std::tuple<std::unordered_map<std::uint64_t, std::uint64_t>, std::unordered_map<std::uint64_t, std::uint64_t>,
            std::unordered_map<std::uint64_t, std::set<std::uint64_t>>, std::vector<std::uint64_t>>
 OnlineBC::iCentralBFS(const mg_graph::GraphView<> &graph, const std::uint64_t start_id,
+                      const bool compensate_for_deleted_node, const bool affected_bcc_only,
                       const std::unordered_set<std::uint64_t> &affected_bcc_nodes) const {
-  std::unordered_map<std::uint64_t, std::uint64_t> distances;
   std::unordered_map<std::uint64_t, std::uint64_t> n_shortest_paths({{start_id, 1}});
+  std::unordered_map<std::uint64_t, std::uint64_t> distances;
   std::unordered_map<std::uint64_t, std::set<std::uint64_t>> predecessors;
   std::vector<std::uint64_t> bfs_order({start_id});
 
@@ -176,12 +150,13 @@ OnlineBC::iCentralBFS(const mg_graph::GraphView<> &graph, const std::uint64_t st
     const auto current_id = queue.front();
     queue.pop();
 
-    for (const auto neighbor_id : graph.GetNeighboursMemgraphNodeIds(graph.GetInnerNodeId(current_id))) {
-      if (!affected_bcc_nodes.count(neighbor_id)) continue;
+    for (const auto neighbor_id : NeighborsMemgraphIDs(graph, current_id)) {
+      if (affected_bcc_only && !affected_bcc_nodes.count(neighbor_id)) continue;
 
       if (!distances.count(neighbor_id)) {  // if unvisited
-        queue.push(neighbor_id);
         distances[neighbor_id] = distances[current_id] + 1;
+
+        queue.push(neighbor_id);
         bfs_order.push_back(neighbor_id);
       }
 
@@ -192,7 +167,7 @@ OnlineBC::iCentralBFS(const mg_graph::GraphView<> &graph, const std::uint64_t st
     }
   }
 
-  n_shortest_paths[start_id] = 0;
+  if (!compensate_for_deleted_node) n_shortest_paths[start_id] = 0;
   predecessors[start_id] = std::set<std::uint64_t>();
   std::reverse(bfs_order.begin(), bfs_order.end());
 
@@ -241,7 +216,7 @@ OnlineBC::PartialBFS(const mg_graph::GraphView<> &graph, const std::pair<std::ui
     const auto current_id = queue.front();
     queue.pop();
 
-    for (const auto neighbor_id : graph.GetNeighboursMemgraphNodeIds(graph.GetInnerNodeId(current_id))) {
+    for (const auto neighbor_id : NeighborsMemgraphIDs(graph, current_id)) {
       if (!affected_bcc_nodes.count(neighbor_id)) continue;
 
       if (distances[neighbor_id] < distances[current_id] + 1) {  // New path not the shortest
@@ -307,7 +282,7 @@ void OnlineBC::iCentralIteration(const mg_graph::GraphView<> &graph, const Opera
   const double divisor = NO_DOUBLE_COUNT;
 
   const auto [n_shortest_paths_no_edge, distances_no_edge, predecessors_no_edge, reverse_bfs_order_no_edge] =
-      iCentralBFS(graph, s_id, affected_bcc_nodes);
+      iCentralBFS(graph, s_id, false, true, affected_bcc_nodes);
   const auto [n_shortest_paths_with_edge, distances_with_edge, predecessors_with_edge,
               partial_reverse_bfs_order_with_edge] =
       PartialBFS(graph, updated_edge, affected_bcc_nodes, s_id, n_shortest_paths_no_edge, distances_no_edge,
@@ -491,7 +466,7 @@ std::unordered_map<std::uint64_t, double> OnlineBC::NodeEdgeUpdate(
       start_id = updated_edge.first;
   }
 
-  auto [n_shortest_paths, predecessors, visited] = BrandesBFS(current_graph, start_id, compensate_for_deleted_node);
+  auto [n_shortest_paths, _, predecessors, visited] = iCentralBFS(current_graph, start_id, compensate_for_deleted_node);
 
   for (const auto current_id : visited) {
     for (auto p_id : predecessors[current_id]) {

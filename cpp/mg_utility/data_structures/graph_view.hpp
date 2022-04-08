@@ -55,13 +55,6 @@ class GraphView {
   /// @return vector of neighbours
   virtual const std::vector<TNeighbour> &Neighbours(TSize node_id) const = 0;
 
-  /// Returns Memgraph IDs of neighbouring nodes.
-  ///
-  /// @param[in] node_id target node id
-  ///
-  /// @return unordered set of neighbouring nodes' Memgraph IDs
-  virtual const std::unordered_set<std::uint64_t> GetNeighboursMemgraphNodeIds(TSize node_id) const = 0;
-
   /// Gets node with node id.
   ///
   /// @param[in] node_id node id

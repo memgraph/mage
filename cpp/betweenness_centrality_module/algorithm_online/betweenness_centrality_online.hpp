@@ -17,12 +17,14 @@ void RemoveDuplicates(std::vector<T> &vector);
 namespace online_bc {
 enum class Operation { CREATE_EDGE, CREATE_NODE, CREATE_ATTACH_NODE, DELETE_EDGE, DELETE_NODE, DETACH_DELETE_NODE };
 
-std::unordered_set<std::uint64_t> NeighborsMemgraphIDs(const mg_graph::GraphView<> &graph,
-                                                       const std::vector<mg_graph::Neighbour<uint64_t>> neighbors);
+/// Returns Memgraph IDs of nodes neighboring the target node.
+///
+/// @param node_id target node id
+std::unordered_set<std::uint64_t> NeighborsMemgraphIDs(const mg_graph::GraphView<> &graph, const std::uint64_t node_id);
 
 class OnlineBC {
  private:
-  /// Maps nodes (Memgraph IDs) to their betweenness centrality scores
+  /// Maps nodes (i.e. Memgraph IDs) to their betweenness centrality scores
   std::unordered_map<std::uint64_t, double> node_bc_scores;
 
   /// Betweenness centrality score initialization flag
@@ -54,20 +56,6 @@ class OnlineBC {
   ///@param graph Current graph
   ///@param threads Number of concurrent threads
   void CallBrandesAlgorithm(const mg_graph::GraphView<> &graph, const std::uint64_t threads);
-
-  ///@brief Performs a breadth-first search from a given node with the Brandes’ algorithm.
-  ///
-  ///@param graph Graph traversed the BFS
-  ///@param start_id Start node ID
-  ///@param compensate_for_deleted_node If true, guarantees correct results for the DETACH_DELETE_NODE operation
-  ///
-  ///@return Nº of shortest paths to each node from the start node
-  /// Each node’s immediate predecessors on the shortest paths from the start node
-  /// IDs of nodes visited by the BFS, in reverse order
-  std::tuple<std::unordered_map<std::uint64_t, std::uint64_t>,
-             std::unordered_map<std::uint64_t, std::set<std::uint64_t>>, std::vector<std::uint64_t>>
-  BrandesBFS(const mg_graph::GraphView<> &graph, const std::uint64_t start_id,
-             const bool compensate_for_deleted_node = false) const;
 
   ///@brief Returns the nodes and the articulation points of the biconnected component affected by the update.
   ///
@@ -103,13 +91,14 @@ class OnlineBC {
       const mg_graph::GraphView<> &graph, std::unordered_set<std::uint64_t> affected_bcc_articulation_points,
       std::unordered_set<std::uint64_t> affected_bcc_nodes) const;
 
-  ///@brief Performs a breadth-first search from a given node with the iCentral algorithm. Search is restricted to one
-  /// biconnected component.
+  ///@brief Performs a breadth-first search from a given node in the Brandes and iCentral algorithms. Search can be
+  /// restricted to one biconnected component.
   ///
   ///@param graph Graph traversed by the BFS
   ///@param start_id Start node ID
+  ///@param compensate_for_deleted_node If true, guarantees correct results for the DETACH_DELETE_NODE operation
+  ///@param affected_bcc_only Nodes in the affected biconnected component
   ///@param affected_bcc_nodes Nodes in the affected biconnected component
-  ///@param updated_edge Created/deleted edge
   ///
   ///@return Nº of shortest paths to each node from the start node
   /// Distances to each node from the start node
@@ -118,7 +107,8 @@ class OnlineBC {
   std::tuple<std::unordered_map<std::uint64_t, std::uint64_t>, std::unordered_map<std::uint64_t, std::uint64_t>,
              std::unordered_map<std::uint64_t, std::set<std::uint64_t>>, std::vector<std::uint64_t>>
   iCentralBFS(const mg_graph::GraphView<> &graph, const std::uint64_t start_id,
-              const std::unordered_set<std::uint64_t> &affected_bcc_nodes) const;
+              const bool compensate_for_deleted_node = false, const bool affected_bcc_only = false,
+              const std::unordered_set<std::uint64_t> &affected_bcc_nodes = {}) const;
 
   ///@brief Updates the breadth-first search’s data structures after insertion of an edge, starting out from the more
   /// distant node of that edge. Search is restricted to one biconnected component.

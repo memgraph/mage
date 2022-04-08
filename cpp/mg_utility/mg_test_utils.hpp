@@ -5,6 +5,7 @@
 #include <cmath>
 #include <set>
 #include <stack>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
 
@@ -95,6 +96,7 @@ template <typename T>
 bool TestEqualVectors(const std::vector<T> &result, const std::vector<T> &correct,
                       double absolute_error = ABSOLUTE_ERROR_EPSILON,
                       double average_error = AVERAGE_ABSOLUTE_ERROR_EPSILON) {
+  static_assert(std::is_arithmetic<T>::value, "Not an arithmetic type!");
   return MaxAbsoluteError(result, correct) < absolute_error && AverageAbsoluteError(result, correct) < absolute_error;
 }
 
@@ -111,6 +113,8 @@ template <typename T>
 bool TestEqualUnorderedMaps(const std::unordered_map<std::uint64_t, T> &result,
                             const std::unordered_map<std::uint64_t, T> &correct,
                             double absolute_error = ABSOLUTE_ERROR_EPSILON) {
+  static_assert(std::is_arithmetic<T>::value, "Not an arithmetic type!");
+
   if (result.size() != correct.size()) return false;
 
   auto get_map_keys = [](const std::unordered_map<std::uint64_t, T> &map) -> std::set<std::uint64_t> {

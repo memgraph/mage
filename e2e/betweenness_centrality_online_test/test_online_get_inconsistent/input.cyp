@@ -13,5 +13,4 @@ queries:
         MATCH (n: Node {id: 5}) DETACH DELETE n;
 
 cleanup: |-
-    MATCH (n: Node) DETACH DELETE n;
     CALL mg.load('betweenness_centrality_online') YIELD *;

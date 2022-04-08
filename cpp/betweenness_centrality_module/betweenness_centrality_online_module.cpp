@@ -29,8 +29,7 @@ auto algorithm = online_bc::OnlineBC();
 
 ///@brief Tests if given node is connected to the rest of the graph via given edge.
 bool ConnectedVia(std::uint64_t node_id, std::pair<std::uint64_t, std::uint64_t> edge) {
-  // exclude self-loops
-  return (edge.first == node_id && edge.second != node_id) || (edge.first != node_id && edge.second == node_id);
+  return (edge.first == node_id || edge.second == node_id) && edge.first != edge.second;  // exclude self-loops
 }
 }  // namespace
 

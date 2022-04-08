@@ -9,5 +9,4 @@ queries:
         MERGE (a: Node {id: 4}) MERGE (b: Node {id: 5}) CREATE (a)-[:RELATION]->(b);
 
 cleanup: |-
-    MATCH (n: Node) DETACH DELETE n;
     CALL mg.load('betweenness_centrality_online') YIELD *;
