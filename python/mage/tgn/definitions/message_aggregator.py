@@ -46,4 +46,4 @@ class LastMessageAggregator(MessageAggregator):
         super().__init__()
 
     def forward(self, data: List[torch.Tensor]) -> torch.Tensor:
-        return data[len(data) - 1]
+        return data[-1]

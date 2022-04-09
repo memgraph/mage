@@ -62,7 +62,6 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
             device,
         )
         # Initialize W1 matrix and W2 matrix
-
         self.linear_1s = nn.ModuleList(
             torch.nn.Linear(
                 embedding_dimension + time_encoding_dim + edge_feature_dim,

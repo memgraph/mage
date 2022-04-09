@@ -1,3 +1,9 @@
+from typing import Dict
+
+import numpy as np
+from astroid import List
+
+
 class Event:
     def __init__(self, source: int, timestamp: int):
         super(Event, self).__init__()
@@ -21,12 +27,34 @@ class NodeEvent(Event):
 
 
 class InteractionEvent(Event):
-    def __init__(self, source: int, dest: int, timestamp: int, edge_indx: int):
+    def __init__(self, source: int, dest: int, timestamp: int, edge_idx: int):
         super(InteractionEvent, self).__init__(source, timestamp)
         self.dest = dest
-        self.edge_indx = edge_indx
+        self.edge_idx = edge_idx
 
     def __str__(self):
         return "{source},{timestamp}".format(
             source=self.source, timestamp=self.timestamp
         )
+
+
+def create_interaction_events(
+    sources: np.ndarray,
+    destinations: np.ndarray,
+    timestamps: np.ndarray,
+    edge_indx: np.ndarray,
+) -> Dict[int, List[InteractionEvent]]:
+    "Every event has two interaction events"
+    interaction_events: Dict[int, List[InteractionEvent]] = {
+        node: [] for node in set(sources).union(set(destinations))
+    }
+    for i in range(len(sources)):
+        interaction_events[sources[i]].append(
+            InteractionEvent(
+                source=sources[i],
+                dest=destinations[i],
+                timestamp=timestamps[i],
+                edge_idx=edge_indx[i],
+            )
+        )
+    return interaction_events

@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import List, Dict
 
 from mage.tgn.definitions.messages import RawMessage
@@ -15,11 +16,11 @@ class RawMessageStore:
         self.node_raw_message_dimension = node_raw_message_dimension
         self.init_message_store()
 
-    def init_message_store(self):
-        self.message_container: Dict[int, List[RawMessage]] = {}
+    def init_message_store(self) -> None:
+        self.message_container: Dict[int, List[RawMessage]] = defaultdict(list)
 
     def detach_grads(self) -> None:
-        for _, messages in self.message_container.items():
+        for messages in self.message_container.values():
             for message in messages:
                 message.detach_memory()
 
@@ -28,6 +29,4 @@ class RawMessageStore:
 
     def update_messages(self, new_node_messages: Dict[int, List[RawMessage]]) -> None:
         for node in new_node_messages:
-            if node not in self.message_container:
-                self.message_container[node] = []
             self.message_container[node].extend(new_node_messages[node])

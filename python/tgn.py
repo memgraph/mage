@@ -9,16 +9,27 @@ tasks on graphs, such as link prediction, node classification and so on. This ri
 networks introduced by Kipf et al, following by GraphSAGE introduced by Hamilton et al, and in recent years new
 method was presented which introduces attention mechanism to graphs, known as Graph attention networks, by Veličković
 et al. Last two methods offer great possibility for inductive learning. But they haven't been specifically developed
-to handle different events occurring on graphs, such as node features update, node delition, edge delition and so on.
+to handle different events occurring on graphs, such as node features update, node deletion, edge deletion and so on.
 
 In his work, Rossi et al introduced to us Temporal graph networks which present great possibility to do graph machine
 learning on stream of data, use-case occurring more often in recent years.
 
-In this module we developed on our own way Temporal graph networks with two layer implementations:
- * graph attention layer and
- * graph sum layer introduced in paper.
+What we have covered in this module
+  * **link prediction** - train your **TGN** to predict new **links/edges** and **node classification** - predict labels of nodes from graph structure and **node/edge** features
+  * **graph attention layer** embedding calculation and **graph sum layer** embedding layer calculation
+  * **mean** and **last** as message aggregators
+  * **mlp** and **identity(concatenation)** as message functions
+  * **gru** and **rnn** as memory updater
+  * **uniform** temporal neighborhood sampler
+  * **memory** store and **raw message store**
 
-Furthermore, we adapted a query module to be able to predict edges as well as to perform node classification tasks.
+as introduced by **[Rossi et al](https://emanuelerossi.co.uk/)**.
+
+Following means **you** can use **TGN** to be able to **predict edges** or  to perform **node classification** tasks, with **graph attention layer** or **graph sum layer**, by using
+either **mean** or **last** as message aggregator, **mlp** or **identity** as message function, and finally  **gru** or **rnn** as memory updater.
+
+
+************************************************** IMPORTANT ******************************************
 
 To start exploring our module, jump to python/mage/tgn/definitions/instances.py and pick one of the implementations,
 either TGNEdgesSelfSupervised for self supervised learning on edges or TGNSupervised for supervised learning on nodes classification.
@@ -29,18 +40,22 @@ Each of those methods consist of following steps you should look for in the modu
     and finally memory update part in (python/mage/tgn/definitions/memory_updater.py)
  * self._get_graph_data -> afterwards we create computation graph used by graph attention layer or graph sum layer
  *  self._process_current_batch -> final step includes processing of current batch, updating raw message store from
- interaction events
+ interaction events, and preparing our **raw_message_store** for next batches
 
-What is not implemented in the module?
-    We didn't implement Node events since they occur very rarely.
-    We didn't implement Time projection embedding calculation and Identity embedding calculation since author mentions
-        they perform very poorly on all datasets.
+
+What is **not** implemented in the module:
+  * **node update/deletion events** since they occur very rarely - although we have prepared a terrain
+  * **edge deletion** events
+  * **time projection** embedding calculation and **identity** embedding calculation since author mentions
+    they perform very poorly on all datasets - although it is trivial to add new layer
 
 
 What we believe we did and author probably failed to do:
- Embedding calculation seems to be off in authors work on GitHub page: https://github.com/twitter-research/tgn
- Problem seems to be author doesn't use new embeddings for each node when concatenation is in place in each layer
- with neighborhood embeddings, but instead uses raw features from 0th layer.
+ * Embedding calculation seems to be off in authors work on GitHub page: https://github.com/twitter-research/tgn.
+    One of our developers of module dropped an issue on GitHub page of twitter-research, but they seem to be too busy,
+    can't blame them.
+    Problem seems that author doesn't use newly calculated embeddings in next layers, but instead uses raw features from 0th layer,
+    which according to paper is wrong.
 
 
 """
@@ -706,6 +721,10 @@ def train_eval_epochs(
     num_eval_batches = ceil(num_eval_edges / batch_size)
     assert batch_size > 0
 
+    print("num train edges", num_train_edges)
+    print("num eval edges", num_eval_edges)
+    print("num eval batches", num_eval_batches)
+
     for epoch in range(num_epochs):
 
         # update global epoch counter
@@ -736,13 +755,19 @@ def train_eval_epochs(
         for i in range(num_train_batches):
             # sample edges we need
             start_index_train_batch = i * batch_size
-            end_index_train_batch = min((i + 1) * batch_size, num_train_edges - 1)
+            end_index_train_batch = min((i + 1) * batch_size, num_train_edges)
             current_edges_batch = train_edges[
                 start_index_train_batch:end_index_train_batch
             ]
 
             # prepare batch
             parse_mgp_edges_into_tgn_batch(current_edges_batch)
+            print(
+                query_module_tgn_batch.sources,
+                query_module_tgn_batch.destinations,
+                query_module_tgn_batch.timestamps,
+                query_module_tgn_batch.edge_idxs,
+            )
             batch_result_record = process_epoch_batch()
             append_batch_record_curr_epoch(get_current_epoch(), batch_result_record)
 
@@ -756,7 +781,7 @@ def train_eval_epochs(
         for i in range(num_eval_batches):
             # sample edges we need
             start_index_eval_batch = i * batch_size
-            end_index_eval_batch = min((i + 1) * batch_size, num_eval_edges - 1)
+            end_index_eval_batch = min((i + 1) * batch_size, num_eval_edges)
             current_edges_batch = eval_edges[
                 start_index_eval_batch:end_index_eval_batch
             ]
@@ -818,6 +843,7 @@ def process_epochs(
         train_eval_percent_split = (
             query_module_tgn.train_eval_index_split / query_module_tgn.global_edge_count
         )
+        print("TRAIN EVAL PERCENT SPLIT", train_eval_percent_split)
 
     query_module_tgn.train_eval_index_split = int(
         query_module_tgn.global_edge_count * train_eval_percent_split
@@ -870,6 +896,7 @@ def set_mode(ctx: mgp.ProcCtx, mode: str) -> mgp.Record():
     if mode == "train":
         query_module_tgn.tgn_mode = TGNMode.Train
     elif mode == "eval":
+        print("GLOBAL EDGE COUNT", query_module_tgn.global_edge_count)
         query_module_tgn.train_eval_index_split = query_module_tgn.global_edge_count
         query_module_tgn.tgn_mode = TGNMode.Eval
     else:
@@ -981,11 +1008,9 @@ def update(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]) -> mgp.Record():
 
     # we update our batch with current edges
     parse_mgp_edges_into_tgn_batch(edges)
-
     # if batch is still not full, we don't go to "train" or "eval" of TGN
     if query_module_tgn_batch.current_batch_size < query_module_tgn_batch.batch_size:
         return mgp.Record()
-
     # this is just check if we have initialized list to save records of batches for training or evaluation
     if get_current_epoch() not in query_module_tgn.results_per_epochs:
         initialize_results_per_epoch(get_current_epoch())

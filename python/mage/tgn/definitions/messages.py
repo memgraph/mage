@@ -32,7 +32,6 @@ class NodeRawMessage(RawMessage):
     ):
         super(NodeRawMessage, self).__init__(source, timestamp)
         self.source_memory = source_memory
-        self.timestamp = timestamp
         self.node_features = node_features
 
     def detach_memory(self) -> None:
