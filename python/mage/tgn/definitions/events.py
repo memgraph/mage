@@ -1,7 +1,6 @@
-from typing import Dict
+from typing import Dict, List
 
 import numpy as np
-from astroid import List
 
 
 class Event:
@@ -42,7 +41,7 @@ def create_interaction_events(
     sources: np.ndarray,
     destinations: np.ndarray,
     timestamps: np.ndarray,
-    edge_indx: np.ndarray,
+    edge_idxs: np.ndarray,
 ) -> Dict[int, List[InteractionEvent]]:
     "Every event has two interaction events"
     interaction_events: Dict[int, List[InteractionEvent]] = {
@@ -54,7 +53,7 @@ def create_interaction_events(
                 source=sources[i],
                 dest=destinations[i],
                 timestamp=timestamps[i],
-                edge_idx=edge_indx[i],
+                edge_idx=edge_idxs[i],
             )
         )
     return interaction_events

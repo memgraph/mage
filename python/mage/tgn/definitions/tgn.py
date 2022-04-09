@@ -231,7 +231,7 @@ class TGN(nn.Module):
             sources=sources,
             destinations=destinations,
             timestamps=timestamps,
-            edge_idx=edge_idxs,
+            edge_idxs=edge_idxs,
         )
 
         # this is what TGN gets
@@ -260,7 +260,7 @@ class TGN(nn.Module):
                 if type(message) is NodeRawMessage:
                     node_raw_message = message
                     processed_messages_dict[node].append(
-                        self.node_event_function(
+                        self.node_message_function(
                             (
                                 node_raw_message.source_memory,
                                 node_raw_message.timestamp,
@@ -273,7 +273,7 @@ class TGN(nn.Module):
                     interaction_raw_message = message
 
                     processed_messages_dict[node].append(
-                        self.edge_event_function(
+                        self.edge_message_function(
                             (
                                 interaction_raw_message.source_memory,
                                 interaction_raw_message.dest_memory,
@@ -313,7 +313,7 @@ class TGN(nn.Module):
                             timestamp=event.timestamp,
                             dest_memory=self.memory.get_node_memory(event.dest),
                             source=node,
-                            edge_features=edge_features[event.edge_indx],
+                            edge_features=edge_features[event.edge_idx],
                             delta_time=torch.tensor(
                                 np.array(event.timestamp).astype("float"),
                                 requires_grad=True,
@@ -328,7 +328,7 @@ class TGN(nn.Module):
                             timestamp=event.timestamp,
                             dest_memory=self.memory.get_node_memory(event.source),
                             source=event.dest,
-                            edge_features=edge_features[event.edge_indx],
+                            edge_features=edge_features[event.edge_idx],
                             delta_time=torch.tensor(
                                 np.array(event.timestamp).astype("float"),
                                 requires_grad=True,

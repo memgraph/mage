@@ -946,11 +946,11 @@ def get(ctx: mgp.ProcCtx) -> mgp.Record(node=mgp.Vertex, embedding=mgp.List[floa
 
     :return: mgp.Record(): emtpy record if everything was fine
     """
-    global all_embeddings
+    global query_module_tgn
 
     embeddings_dict = {}
 
-    for node_id, embedding in all_embeddings.items():
+    for node_id, embedding in query_module_tgn.all_embeddings.items():
         embeddings_dict[node_id] = [float(e) for e in embedding]
 
     return [
