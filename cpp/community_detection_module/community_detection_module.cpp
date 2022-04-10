@@ -38,7 +38,7 @@ void LouvainCommunityDetection(mgp_list *args, mgp_graph *memgraph_graph, mgp_re
     auto community_alg_threshold = mgp::value_get_double(mgp::list_at(args, 3));
     auto coloring_alg_threshold = mgp::value_get_double(mgp::list_at(args, 4));
 
-    auto weight_property = !mgp::value_is_null(maybe_weight) ? mgp::value_get_string(maybe_weight) : "";
+    auto weight_property = !mgp::value_is_null(maybe_weight) ? mgp::value_get_string(maybe_weight) : "weight";
     auto graph = mg_utility::GetWeightedGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph,
                                                   weight_property, kDefaultWeight);
     auto communities = louvain_alg::GetCommunities(*graph, coloring, min_graph_shrink, community_alg_threshold,
