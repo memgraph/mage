@@ -56,7 +56,7 @@ def calculate_distance_between_points(
     sin_delta_phi = math.sin(delta_phi / 2.0)
     sin_delta_lambda = math.sin(delta_lambda / 2.0)
 
-    a = sin_delta_phi**2 + math.cos(phi_1) * math.cos(phi_2) * (sin_delta_lambda**2)
+    a = sin_delta_phi ** 2 + math.cos(phi_1) * math.cos(phi_2) * (sin_delta_lambda ** 2)
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
     # Distance in metres
