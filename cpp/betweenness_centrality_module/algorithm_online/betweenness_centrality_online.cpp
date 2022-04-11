@@ -135,11 +135,9 @@ std::unordered_map<std::uint64_t, std::uint64_t> OnlineBC::PeripheralSubgraphOrd
   return peripheral_subgraph_orders;
 }
 
-std::tuple<std::unordered_map<std::uint64_t, std::uint64_t>, std::unordered_map<std::uint64_t, std::uint64_t>,
-           std::unordered_map<std::uint64_t, std::set<std::uint64_t>>, std::vector<std::uint64_t>>
-OnlineBC::iCentralBFS(const mg_graph::GraphView<> &graph, const std::uint64_t start_id,
-                      const bool compensate_for_deleted_node, const bool affected_bcc_only,
-                      const std::unordered_set<std::uint64_t> &affected_bcc_nodes) const {
+BFSResult OnlineBC::iCentralBFS(const mg_graph::GraphView<> &graph, const std::uint64_t start_id,
+                                const bool compensate_for_deleted_node, const bool affected_bcc_only,
+                                const std::unordered_set<std::uint64_t> &affected_bcc_nodes) const {
   std::unordered_map<std::uint64_t, std::uint64_t> n_shortest_paths({{start_id, 1}});
   std::unordered_map<std::uint64_t, std::uint64_t> distances;
   std::unordered_map<std::uint64_t, std::set<std::uint64_t>> predecessors;
@@ -171,16 +169,15 @@ OnlineBC::iCentralBFS(const mg_graph::GraphView<> &graph, const std::uint64_t st
   predecessors[start_id] = std::set<std::uint64_t>();
   std::reverse(bfs_order.begin(), bfs_order.end());
 
-  return {n_shortest_paths, distances, predecessors, bfs_order};
+  return BFSResult{n_shortest_paths, distances, predecessors, bfs_order};
 }
 
-std::tuple<std::unordered_map<std::uint64_t, std::uint64_t>, std::unordered_map<std::uint64_t, std::uint64_t>,
-           std::unordered_map<std::uint64_t, std::set<std::uint64_t>>, std::vector<std::uint64_t>>
-OnlineBC::PartialBFS(const mg_graph::GraphView<> &graph, const std::pair<std::uint64_t, std::uint64_t> updated_edge,
-                     const std::unordered_set<std::uint64_t> &affected_bcc_nodes, const std::uint64_t start_id_initial,
-                     const std::unordered_map<std::uint64_t, std::uint64_t> &n_shortest_paths_initial,
-                     const std::unordered_map<std::uint64_t, std::uint64_t> &initial_distances,
-                     const std::unordered_map<std::uint64_t, std::set<std::uint64_t>> &predecessors_initial) const {
+BFSResult OnlineBC::PartialBFS(
+    const mg_graph::GraphView<> &graph, const std::pair<std::uint64_t, std::uint64_t> updated_edge,
+    const std::unordered_set<std::uint64_t> &affected_bcc_nodes, const std::uint64_t start_id_initial,
+    const std::unordered_map<std::uint64_t, std::uint64_t> &n_shortest_paths_initial,
+    const std::unordered_map<std::uint64_t, std::uint64_t> &initial_distances,
+    const std::unordered_map<std::uint64_t, std::set<std::uint64_t>> &predecessors_initial) const {
   // Partial BFS starts from the updated edge’s node that is further away from initial BFS’s start node
   std::uint64_t start_id, before_start_id;
   if (initial_distances.at(updated_edge.first) < initial_distances.at(updated_edge.second)) {
@@ -199,7 +196,7 @@ OnlineBC::PartialBFS(const mg_graph::GraphView<> &graph, const std::pair<std::ui
 
   n_shortest_paths[start_id_initial] = 1;
 
-  // Recompute data structures for start node
+  // Recompute data structures for the start node
   if (initial_distances.at(start_id) > initial_distances.at(before_start_id) + 1) {  // New path shorter than before
     delta_n_shortest_paths[start_id] = n_shortest_paths[before_start_id] - n_shortest_paths[start_id];
     n_shortest_paths[start_id] = n_shortest_paths[before_start_id];
@@ -248,7 +245,7 @@ OnlineBC::PartialBFS(const mg_graph::GraphView<> &graph, const std::pair<std::ui
   std::reverse(bfs_order.begin(), bfs_order.end());
   RemoveDuplicates(bfs_order);
 
-  return {n_shortest_paths, distances, predecessors, bfs_order};
+  return BFSResult{n_shortest_paths, distances, predecessors, bfs_order};
 }
 
 std::vector<std::uint64_t> OnlineBC::MergeBFSOrders(
@@ -259,7 +256,7 @@ std::vector<std::uint64_t> OnlineBC::MergeBFSOrders(
   std::unordered_set<std::uint64_t> overlap{partial_bfs_order.begin(), partial_bfs_order.end()};
   std::vector<std::uint64_t> initial_order_no_overlap;
   std::copy_if(initial_order.begin(), initial_order.end(), std::back_inserter(initial_order_no_overlap),
-               [&overlap](const std::uint64_t node_id) { return overlap.count(node_id) == 0; });
+               [&overlap](const std::uint64_t node_id) { return !overlap.count(node_id); });
 
   std::vector<std::uint64_t> merged_order;
   merged_order.reserve(initial_order.size());

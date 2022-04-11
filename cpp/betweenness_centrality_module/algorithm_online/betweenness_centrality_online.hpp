@@ -17,6 +17,13 @@ void RemoveDuplicates(std::vector<T> &vector);
 namespace online_bc {
 enum class Operation { CREATE_EDGE, CREATE_NODE, CREATE_ATTACH_NODE, DELETE_EDGE, DELETE_NODE, DETACH_DELETE_NODE };
 
+struct BFSResult {
+  std::unordered_map<std::uint64_t, std::uint64_t> n_shortest_paths;
+  std::unordered_map<std::uint64_t, std::uint64_t> distances;
+  std::unordered_map<std::uint64_t, std::set<std::uint64_t>> predecessors;
+  std::vector<std::uint64_t> bfs_order;
+};
+
 /// Returns Memgraph IDs of nodes neighboring the target node.
 ///
 /// @param node_id target node id
@@ -104,11 +111,9 @@ class OnlineBC {
   /// Distances to each node from the start node
   /// Each node’s immediate predecessors on the shortest paths from the start node
   /// IDs of nodes visited by the BFS, in reverse order
-  std::tuple<std::unordered_map<std::uint64_t, std::uint64_t>, std::unordered_map<std::uint64_t, std::uint64_t>,
-             std::unordered_map<std::uint64_t, std::set<std::uint64_t>>, std::vector<std::uint64_t>>
-  iCentralBFS(const mg_graph::GraphView<> &graph, const std::uint64_t start_id,
-              const bool compensate_for_deleted_node = false, const bool affected_bcc_only = false,
-              const std::unordered_set<std::uint64_t> &affected_bcc_nodes = {}) const;
+  BFSResult iCentralBFS(const mg_graph::GraphView<> &graph, const std::uint64_t start_id,
+                        const bool compensate_for_deleted_node = false, const bool affected_bcc_only = false,
+                        const std::unordered_set<std::uint64_t> &affected_bcc_nodes = {}) const;
 
   ///@brief Updates the breadth-first search’s data structures after insertion of an edge, starting out from the more
   /// distant node of that edge. Search is restricted to one biconnected component.
@@ -126,13 +131,12 @@ class OnlineBC {
   /// Updated: distances to each node from the start node
   /// Updated: each node’s immediate predecessors on the shortest paths from the start node
   /// IDs of nodes visited by the partial BFS, in reverse order
-  std::tuple<std::unordered_map<std::uint64_t, std::uint64_t>, std::unordered_map<std::uint64_t, std::uint64_t>,
-             std::unordered_map<std::uint64_t, std::set<std::uint64_t>>, std::vector<std::uint64_t>>
-  PartialBFS(const mg_graph::GraphView<> &graph, const std::pair<std::uint64_t, std::uint64_t> updated_edge,
-             const std::unordered_set<std::uint64_t> &affected_bcc_nodes, const std::uint64_t start_id_initial,
-             const std::unordered_map<std::uint64_t, std::uint64_t> &n_shortest_paths_initial,
-             const std::unordered_map<std::uint64_t, std::uint64_t> &distances_initial,
-             const std::unordered_map<std::uint64_t, std::set<std::uint64_t>> &predecessors_initial) const;
+  BFSResult PartialBFS(const mg_graph::GraphView<> &graph, const std::pair<std::uint64_t, std::uint64_t> updated_edge,
+                       const std::unordered_set<std::uint64_t> &affected_bcc_nodes,
+                       const std::uint64_t start_id_initial,
+                       const std::unordered_map<std::uint64_t, std::uint64_t> &n_shortest_paths_initial,
+                       const std::unordered_map<std::uint64_t, std::uint64_t> &distances_initial,
+                       const std::unordered_map<std::uint64_t, std::set<std::uint64_t>> &predecessors_initial) const;
 
   ///@brief As the order from PartialBFS() contains only nodes whose distance changes after the update, this function
   /// adds remaining nodes from iCentralBFS() in correct order (descending by distance).
