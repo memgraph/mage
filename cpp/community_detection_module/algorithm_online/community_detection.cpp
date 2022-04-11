@@ -18,7 +18,7 @@ namespace LabelRankT {
 ///@return -- whether a is subset of b
 template <class T>
 bool IsSubset(const std::unordered_set<T> &a, const std::unordered_set<T> &b) {
-  return std::includes(a.begin(), a.end(), b.begin(), b.end());
+  return std::all_of(b.begin(), b.end(), [&](const T &value) { return a.find(value) != a.end(); });
 }
 
 std::vector<std::uint64_t> LabelRankT::NodesMemgraphIDs() const {
