@@ -695,8 +695,8 @@ def process_epoch_batch() -> mgp.Record:
     record = mgp.Record(
         epoch_num=get_current_epoch(),
         batch_num=get_current_batch() + 1,  # this is a new record batch
-        batch_process_time=batch_process_time,
-        accuracy=accuracy,
+        batch_process_time=round(batch_process_time, 2),
+        accuracy=round(accuracy, 2),
         accuracy_type=query_module_tgn.tgn_mode.name,
     )
 
@@ -720,10 +720,6 @@ def train_eval_epochs(
     num_eval_edges = len(eval_edges)
     num_eval_batches = ceil(num_eval_edges / batch_size)
     assert batch_size > 0
-
-    print("num train edges", num_train_edges)
-    print("num eval edges", num_eval_edges)
-    print("num eval batches", num_eval_batches)
 
     for epoch in range(num_epochs):
 
@@ -762,12 +758,6 @@ def train_eval_epochs(
 
             # prepare batch
             parse_mgp_edges_into_tgn_batch(current_edges_batch)
-            print(
-                query_module_tgn_batch.sources,
-                query_module_tgn_batch.destinations,
-                query_module_tgn_batch.timestamps,
-                query_module_tgn_batch.edge_idxs,
-            )
             batch_result_record = process_epoch_batch()
             append_batch_record_curr_epoch(get_current_epoch(), batch_result_record)
 
@@ -843,7 +833,6 @@ def process_epochs(
         train_eval_percent_split = (
             query_module_tgn.train_eval_index_split / query_module_tgn.global_edge_count
         )
-        print("TRAIN EVAL PERCENT SPLIT", train_eval_percent_split)
 
     query_module_tgn.train_eval_index_split = int(
         query_module_tgn.global_edge_count * train_eval_percent_split
@@ -896,7 +885,6 @@ def set_mode(ctx: mgp.ProcCtx, mode: str) -> mgp.Record():
     if mode == "train":
         query_module_tgn.tgn_mode = TGNMode.Train
     elif mode == "eval":
-        print("GLOBAL EDGE COUNT", query_module_tgn.global_edge_count)
         query_module_tgn.train_eval_index_split = query_module_tgn.global_edge_count
         query_module_tgn.tgn_mode = TGNMode.Eval
     else:
