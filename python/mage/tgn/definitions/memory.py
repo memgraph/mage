@@ -16,12 +16,12 @@ class Memory:
     # https://stackoverflow.com/questions/48274929/pytorch-runtimeerror-trying-to-backward-through-the-graph-a-second
     # -time-but
     def detach_tensor_grads(self):
-        for node, node_memory in self.memory_container.items():
+        for node_memory in self.memory_container.values():
             if node_memory.grad is not None:
                 node_memory.grad.detach_()
                 node_memory.grad.zero_()
 
-        for node, timestamp in self.last_node_update.items():
+        for timestamp in self.last_node_update.values():
             if timestamp.grad is not None:
                 timestamp.grad.detach_()
                 timestamp.grad.zero_()

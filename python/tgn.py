@@ -117,9 +117,20 @@ class OptimizerParameters:
     WEIGHT_DECAY = "weight_decay"
 
 
+class MemgraphObjectsProperties:
+    NODE_FEATURES_PROPERTY = "node_features_property"
+    EDGE_FEATURES_PROPERTY = "edge_features_property"
+    NODE_LABELS_PROPERTY = "node_label_property"
+
+
 class LearningType(enum.Enum):
     Supervised = "supervised"
     SelfSupervised = "self_supervised"
+
+
+class DeviceType(enum.Enum):
+    CUDA = "cuda"
+    CPU = "cpu"
 
 
 class TGNMode(enum.Enum):
@@ -146,6 +157,7 @@ class QueryModuleTGN:
     current_epoch: int
     global_edge_count: int
     train_eval_index_split: int
+    memgraph_objects_properties: Dict[str, Any]
 
 
 @dataclasses.dataclass
@@ -168,6 +180,12 @@ class QueryModuleTGNBatch:
 
 query_module_tgn: QueryModuleTGN
 query_module_tgn_batch: QueryModuleTGNBatch
+
+##############################
+# constants
+##############################
+
+EPOCH_START = 1
 
 
 #############################
@@ -219,12 +237,19 @@ def append_batch_record_curr_epoch(
 
 
 def get_output_records() -> List[mgp.Record]:
-    global query_module_tgn
+    global query_module_tgn, EPOCH_START
     output_records = []
 
-    for i in range(1, len(query_module_tgn.results_per_epochs) + 1):
+    for i in range(EPOCH_START, len(query_module_tgn.results_per_epochs) + 1):
         output_records.extend(query_module_tgn.results_per_epochs[i])
     return output_records
+
+
+def is_tgn_initialized() -> bool:
+    global query_module_tgn
+    if query_module_tgn.tgn is None:
+        return False
+    return True
 
 
 #####################################
@@ -236,12 +261,18 @@ def get_output_records() -> List[mgp.Record]:
 
 def set_tgn(
     learning_type: LearningType,
-    tgn_config: Dict[str, any],
-    optimizer_config: Dict[str, any],
+    device_type: DeviceType,
+    tgn_config: Dict[str, Any],
+    optimizer_config: Dict[str, Any],
+    memgraph_objects_properties_config: Dict[str, Any],
 ) -> None:
-    global query_module_tgn
+    global query_module_tgn, EPOCH_START
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if device_type == device_type.CUDA and torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
+
     tgn_config[TGNParameters.DEVICE] = device
 
     if learning_type == LearningType.SelfSupervised:
@@ -269,9 +300,10 @@ def set_tgn(
         all_edges=set(),
         all_embeddings={},
         results_per_epochs={},
-        current_epoch=1,
+        current_epoch=EPOCH_START,
         global_edge_count=0,
-        train_eval_index_split=0,
+        train_eval_index_split=0,  # this number represent number of edges when set_eval function was called
+        memgraph_objects_properties=memgraph_objects_properties_config,
     )
 
 
@@ -326,7 +358,7 @@ def get_tgn_supervised(config: Dict[str, Any], device: torch.device) -> Tuple[TG
 #
 
 
-def sample_negative(negative_num: int) -> (np.array, np.array):
+def sample_negative(negative_num: int) -> Tuple[np.array, np.array]:
     """
     Currently sampling of negative nodes is done in completely random fashion, and it is possible to sample
     source-dest pair that are real edges
@@ -476,6 +508,7 @@ def process_batch_self_supervised() -> float:
         query_module_tgn.optimizer.step()
         query_module_tgn.m_loss.append(loss.item())
 
+    # todo antoniofilipovic - update once we have logging API
     print("POS PROB | NEG PROB", pos_prob.squeeze().cpu(), neg_prob.squeeze().cpu())
     pred_score = np.concatenate(
         [
@@ -588,14 +621,11 @@ def process_batch_supervised() -> float:
     return accuracy
 
 
-def create_torch_tensor(feature: Union[None, Tuple]) -> torch.Tensor:
+def create_torch_tensor(feature: Union[None, Tuple], num_features: int) -> torch.Tensor:
     if feature is None:
-        np_feature = (
-            np.random.randint(
-                0, 100, query_module_tgn.config[TGNParameters.NUM_NODE_FEATURES]
-            )
-            / 100
-        )
+        np_feature = np.random.uniform(
+            0, 1, num_features
+        )  # uniformly sample features from 0 to 1
     else:
         np_feature = np.array(feature)
     return torch.tensor(
@@ -633,12 +663,14 @@ def parse_mgp_edges_into_tgn_batch(edges: mgp.List[mgp.Edge]) -> QueryModuleTGNB
 
         edge_feature = edge.properties.get("features", None)
 
-        query_module_tgn_batch.node_features[src_id] = create_torch_tensor(src_features)
+        query_module_tgn_batch.node_features[src_id] = create_torch_tensor(
+            src_features, query_module_tgn.config[TGNParameters.NUM_NODE_FEATURES]
+        )
         query_module_tgn_batch.node_features[dest_id] = create_torch_tensor(
-            dest_features
+            dest_features, query_module_tgn.config[TGNParameters.NUM_NODE_FEATURES]
         )
         query_module_tgn_batch.edge_features[edge_idx] = create_torch_tensor(
-            edge_feature
+            edge_feature, query_module_tgn.config[TGNParameters.NUM_EDGE_FEATURES]
         )
 
         query_module_tgn_batch.sources = np.append(
@@ -792,8 +824,8 @@ def train_eval_epochs(
 
 
 @mgp.read_proc
-def process_epochs(
-    ctx: mgp.ProcCtx, num_epochs: int, train_eval_percent_split: float = 0.8
+def train_and_eval(
+    ctx: mgp.ProcCtx, num_epochs: int
 ) -> mgp.Record(
     epoch_num=mgp.Number,
     batch_num=mgp.Number,
@@ -806,9 +838,7 @@ def process_epochs(
     train and eval edges if function set_mode("eval") was called at some point and use training edges to train
     further TGN and eval edges to evaluate our model.
 
-    If you didn't call function set_mode("eval"), you will introduce leakage of information in your training set
-    since we will train during whole time of stream until that function is invoked, but for the purpose of
-    exploring you can define train_eval_percent_split parameter and it will split whole dataset
+    If you didn't call function set_mode("eval"), you won't be able to do train and eval.
 
     :param num_epochs: number of epochs used for training and evaluation
     :train_eval_percent_split: dataset split ratio on train and eval
@@ -819,6 +849,11 @@ def process_epochs(
 
     global query_module_tgn
 
+    if not is_tgn_initialized():
+        raise Exception(
+            "TGN is not initialized still. Call `set_params` function in order to initialize it."
+        )
+
     vertices = ctx.graph.vertices
     curr_all_edges = []
     for vertex in vertices:
@@ -826,17 +861,12 @@ def process_epochs(
 
     curr_all_edges = sorted(curr_all_edges, key=lambda x: x.id)
 
-    # note: if you didn't call accidentally mode switch to eval, you can
-    # still do epoch training, with train_eval_percent_split, only you will have leakage
-    # of info in training set with first epoch, not a good practice
-    if query_module_tgn.train_eval_index_split != 0:
-        train_eval_percent_split = (
-            query_module_tgn.train_eval_index_split / query_module_tgn.global_edge_count
+    # note: if you didn't call mode switch to eval, you can't
+    # still do epoch training
+    if query_module_tgn.train_eval_index_split == 0:
+        raise Exception(
+            "Can't call train and eval if you didn't change TGN mode to 'eval'"
         )
-
-    query_module_tgn.train_eval_index_split = int(
-        query_module_tgn.global_edge_count * train_eval_percent_split
-    )
 
     train_eval_epochs(
         num_epochs=num_epochs,
@@ -864,33 +894,34 @@ def get_results(
 
     """
     # get all records for every epoch and every batch inside it as results
+    if not is_tgn_initialized():
+        raise Exception(
+            "TGN is not initialized still. Call `set_params` function in order to initialize it."
+        )
+
     return get_output_records()
 
 
 @mgp.read_proc
-def set_mode(ctx: mgp.ProcCtx, mode: str) -> mgp.Record():
+def set_eval(ctx: mgp.ProcCtx) -> mgp.Record(message=str):
     """
     Purpose of this function is to switch mode from "train" to "eval" at some point during your stream.
     At that point, we will save current edge count, and this information will later be used in function
-    `process_epochs` to split edges from Memgraph in train and eval set
-
-    :param mode: "train" or "eval" mode
+    `train_and_eval` to split edges from Memgraph in train and eval set
 
     :return: mgp.Record(): emtpy record if everything was fine
     """
     global query_module_tgn
 
-    if query_module_tgn.tgn is None:
-        raise Exception("TGN module is not set")
-    if mode == "train":
-        query_module_tgn.tgn_mode = TGNMode.Train
-    elif mode == "eval":
-        query_module_tgn.train_eval_index_split = query_module_tgn.global_edge_count
-        query_module_tgn.tgn_mode = TGNMode.Eval
-    else:
-        raise Exception(f"Expected mode {TGNMode.Train} or {TGNMode.Eval}, got {mode}")
+    if not is_tgn_initialized():
+        raise Exception(
+            "TGN is not initialized still. Call `set_params` function in order to initialize it."
+        )
 
-    return mgp.Record()
+    query_module_tgn.train_eval_index_split = query_module_tgn.global_edge_count
+    query_module_tgn.tgn_mode = TGNMode.Eval
+
+    return mgp.Record(message=f"TGN mode changed to 'eval'.")
 
 
 @mgp.read_proc
@@ -899,7 +930,9 @@ def revert_from_database(ctx: mgp.ProcCtx) -> mgp.Record():
     todo implement
     Revert from database and potential file in var/log/ to which we can save params
     """
-    pass
+    raise NotImplementedError(
+        "You can check what is implemented at our docs page: https://memgraph.com/docs/mage"
+    )
 
 
 @mgp.read_proc
@@ -909,13 +942,15 @@ def save_tgn_params(ctx: mgp.ProcCtx) -> mgp.Record():
     After every batch we could add saving params as checkpoints to var/log/memgraph
     This is how it is done usually in ML
     """
-    pass
+    raise NotImplementedError(
+        "You can check what is implemented at our docs page: https://memgraph.com/docs/mage"
+    )
 
 
 @mgp.read_proc
-def reset(ctx: mgp.ProcCtx) -> mgp.Record():
+def reset(ctx: mgp.ProcCtx) -> mgp.Record(message=str):
     reset_tgn()
-    return mgp.Record()
+    return mgp.Record(message="Reset was successful.")
 
 
 @mgp.read_proc
@@ -935,6 +970,11 @@ def get(ctx: mgp.ProcCtx) -> mgp.Record(node=mgp.Vertex, embedding=mgp.List[floa
     :return: mgp.Record(): emtpy record if everything was fine
     """
     global query_module_tgn
+
+    if not is_tgn_initialized():
+        raise Exception(
+            "TGN is not initialized still. Call `set_params` function in order to initialize it."
+        )
 
     embeddings_dict = {}
 
@@ -972,12 +1012,12 @@ def update(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]) -> mgp.Record():
     Here create more edges
     CALL tgn.set_mode("eval") YIELD *;
     Here create some edges used for evaluation
-    CALL tgn.process_epochs(5) YIELD * RETURN *;
+    CALL tgn.train_and_eval(5) YIELD * RETURN *;
 
     This way all edges **until** you call `CALL tgn.set_mode("eval") YIELD *;` will be used for **training**,
     and all edges after such call will be used for **evaluation**.
 
-    After you make a query `CALL tgn.process_epochs(5) YIELD * RETURN *;`, we will get all edges from our database,
+    After you make a query `CALL tgn.train_and_eval(5) YIELD * RETURN *;`, we will get all edges from our database,
     and because you called tgn.set_mode("eval") at some point, we save at which point it happened at we will split
     train and eval edges in same manner.
 
@@ -986,6 +1026,12 @@ def update(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]) -> mgp.Record():
     :return: mgp.Record(): emtpy record if everything was fine
     """
     global query_module_tgn_batch, query_module_tgn
+
+    if not is_tgn_initialized():
+        raise Exception(
+            "TGN is not initialized still. Call `set_params` function in order to initialize it."
+        )
+
     num_edges = len(edges)
 
     # we track number of edges so
@@ -1031,9 +1077,13 @@ def set_params(
     edge_message_function_type: str,
     message_aggregator_type: str,
     memory_updater_type: str,
-    num_attention_heads=1,
-    learning_rate=1e-4,
-    weight_decay=5e-5,
+    num_attention_heads: int = 1,
+    learning_rate: float = 1e-4,
+    weight_decay: float = 5e-5,
+    device_type: str = "cuda",
+    node_features_property: str = "features",
+    edge_features_property: str = "features",
+    node_label_property: str = "label",
 ) -> mgp.Record():
     """
     With following function you can define parameters used in TGN, as well as what kind of learning you want
@@ -1058,9 +1108,13 @@ def set_params(
     :param edge_message_function_type: message function type, "identity" for concatenation or "mlp" for projection
     :param message_aggregator_type: message aggregator type, "mean" or "last"
     :param memory_updater_type: memory updater type, "gru" or "rnn"
-    :param num_attention_heads: number of attention heads used if you define "graph_attn" as layer type
+    :param num_attention_heads: number of attention heads used if **only** if you define "graph_attn" as layer type
     :param learning_rate: learning rate for optimizer
     :param weight_decay: weight decay used in optimizer
+    :param device_type: type of device you want to use for training - cuda or cpu
+    :param node_features_property: name of features property on nodes from which we read features
+    :param edge_features_property: name of features property on edges from which we read features
+    :param node_label_property: name of label property on nodes from which we read features
 
     :return: mgp.Record(): emtpy record if everything was fine
     """
@@ -1085,6 +1139,12 @@ def set_params(
         ),
         TGNParameters.MEMORY_UPDATER_TYPE: get_memory_updater_type(memory_updater_type),
     }
+    memgraph_objects_property_config = {
+        MemgraphObjectsProperties.NODE_FEATURES_PROPERTY: node_features_property,
+        MemgraphObjectsProperties.EDGE_FEATURES_PROPERTY: edge_features_property,
+        MemgraphObjectsProperties.NODE_LABELS_PROPERTY: node_label_property,
+    }
+
     optimizer_config = {
         OptimizerParameters.LEARNING_RATE: learning_rate,
         OptimizerParameters.WEIGHT_DECAY: weight_decay,
@@ -1096,8 +1156,15 @@ def set_params(
 
     # set learning type
     tgn_learning_type = get_learning_type(learning_type)
+    device_type = get_device_type(device_type)
 
-    set_tgn(tgn_learning_type, tgn_config, optimizer_config)
+    set_tgn(
+        tgn_learning_type,
+        device_type,
+        tgn_config,
+        optimizer_config,
+        memgraph_objects_property_config,
+    )
 
     return mgp.Record()
 
@@ -1168,4 +1235,17 @@ def get_learning_type(learning_type: str) -> LearningType:
         raise Exception(
             f"Wrong learning type, expected {LearningType.Supervised} or"
             f", {LearningType.SelfSupervised}"
+        )
+
+
+def get_device_type(device_type: str) -> DeviceType:
+    if DeviceType(device_type) is DeviceType.CUDA:
+        return DeviceType.CUDA
+
+    elif DeviceType(device_type) is DeviceType.CPU:
+        return DeviceType.CPU
+
+    else:
+        raise Exception(
+            f"Wrong device type, expected {DeviceType.CUDA} or" f", {DeviceType.CPU}"
         )

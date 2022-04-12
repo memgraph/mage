@@ -79,6 +79,13 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
         self.relu = torch.nn.ReLU()
 
     def forward(self, data: GraphSumDataType):
+        node_layers: List[List[Tuple[int, int]]]
+        mappings: List[Dict[Tuple[int, int], int]]
+        edge_layers: List[List[int]]
+        neighbors_arr: List[List[Tuple[int, int]]]
+        features: torch.Tensor
+        edge_features: List[torch.Tensor]
+        time_features: List[torch.Tensor]
         (
             node_layers,
             mappings,
@@ -116,7 +123,7 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
         self,
         features: torch.Tensor,
         rows: List[List[Tuple[int, int]]],
-        nodes: List[int],
+        nodes: List[Tuple[int, int]],
         mapping: Dict[Tuple[int, int], int],
         edge_features: List[torch.Tensor],
         time_features: List[torch.Tensor],
@@ -140,8 +147,9 @@ class TGNLayerGraphSumEmbedding(TGNLayer):
             )
 
             # sum rows, but keep this dimension
-            # shape(1, embedding_dim+edge_features_dim+time_encoding_dim)
+            # shape = (1, embedding_dim+edge_features_dim+time_encoding_dim)
             aggregate_sum = torch.sum(aggregate, dim=0, keepdim=True)
+            # shape = (1, embedding_dim)
             out_linear1 = self.linear_1s[layer](aggregate_sum)
             out_relu_linear1 = self.relu(out_linear1)
 
@@ -207,6 +215,14 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
         )  # this way no need to do torch.permute later <3
 
     def forward(self, data: GraphAttnDataType):
+        node_layers: List[List[Tuple[int, int]]]
+        mappings: List[Dict[Tuple[int, int], int]]
+        edge_layers: List[List[int]]
+        neighbors_arr: List[List[Tuple[int, int]]]
+        features: torch.Tensor
+        edge_features: List[torch.Tensor]
+        time_features: List[torch.Tensor]
+        time_encoder_zeros: torch.Tensor
         (
             node_layers,
             mappings,
@@ -222,26 +238,31 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
 
         for k in range(self.num_of_layers):
             mapping = mappings[k]
+            # shape = N
             nodes = node_layers[k + 1]  # neighbors on next layer
-            # represents how we globally gave index to node,timestamp mapping
+            # represents how we globally gave index to (node,timestamp) mapping
             global_indexes = np.array([mappings[0][(v, t)] for (v, t) in nodes])
             cur_neighbors = [
                 neighbors_arr[index] for index in global_indexes
             ]  # neighbors and timestamps of nodes from next layer
             curr_edges = [edge_features[index] for index in global_indexes]
             curr_time = [time_features[index] for index in global_indexes]
-            # shape (len(nodes), self.num_neighbors * self.key_dim)
+
+            # KEY_DIM = EMBEDDING_DIM + EDGE_FEATURES_DIM + TIME_ENC_DIM
+            # shape = (N, NUM_NEIGHBORS * KEY_DIM)
             aggregate = self._aggregate(
                 out, cur_neighbors, nodes, mapping, curr_edges, curr_time
             )
 
             # add third dimension,
+            # shape = (1, N, NUM_NEIGBORS * KEY_DIM)
             aggregate_unsqueeze = torch.unsqueeze(aggregate, dim=0)
 
             curr_mapped_nodes = np.array([mapping[(v, t)] for (v, t) in nodes])
 
             keys = aggregate_unsqueeze
             values = aggregate_unsqueeze
+            # shape = (N, EMBEDDING_DIM + TIME_ENC_DIM)
             query_concat = torch.concat(
                 (
                     out[curr_mapped_nodes],
@@ -249,15 +270,17 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
                 ),
                 dim=1,
             )
+            # shape = (1, N, EMBEDDING_DIM + TIME_ENC_DIM)
             query = torch.unsqueeze(query_concat, dim=0)
 
             attn_out, _ = self.multi_head_attentions[k](
                 query=query, key=keys, value=values
             )
-
+            # shape = (N, EMBED_DIM + TIME_ENC_DIM)
             attn_out = torch.squeeze(attn_out)
-
+            # shape = (N, EMBED_DIM + TIME_ENC_DIM + EMBED_DIM)
             concat_neigh_out = torch.cat((out[curr_mapped_nodes], attn_out), dim=1)
+            # shape = (N, EMBED_DIM)
             out = self.mlps[k](concat_neigh_out)
         return out
 
@@ -265,7 +288,7 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
         self,
         features: torch.Tensor,
         rows: List[List[Tuple[int, int]]],
-        nodes: List[int],
+        nodes: List[Tuple[int, int]],
         mapping: Dict[Tuple[int, int], int],
         edge_features: List[torch.Tensor],
         time_features: List[torch.Tensor],
@@ -285,11 +308,13 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
             edge_feature_curr = edge_features[i][:]
             time_feature_curr = time_features[i][:]
 
-            # shape(1, num_neighbors * (embedding_dim + edge_features_dim + time_encoding_dim)
+            # shape = (1, num_neighbors * (embedding_dim + edge_features_dim + time_encoding_dim)
             # after doing concatenation on columns side, reshape to have 1 row
             aggregate = torch.concat(
                 (features_curr, edge_feature_curr, time_feature_curr), dim=1
-            ).reshape((1, -1))
+            ).reshape(
+                (1, -1)
+            )  # -1 means to find dim by itself from matrix
 
             out[i, :] = aggregate
 

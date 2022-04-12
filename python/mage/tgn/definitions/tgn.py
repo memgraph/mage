@@ -485,7 +485,7 @@ class TGN(nn.Module):
         return (
             self.edge_features[edge_idx]
             if edge_idx in self.edge_features
-            else torch.zeros(
+            else torch.rand(
                 self.num_edge_features, requires_grad=True, device=self.device
             )
         )
@@ -499,7 +499,6 @@ class TGN(nn.Module):
         return edges_features
 
     def _get_graph_data(self, nodes: np.array, timestamps: np.array) -> GraphDataType:
-
         graph_data_tuple = self._get_graph_sum_data(nodes, timestamps)
         if self.layer_type == TGNLayerType.GraphSumEmbedding:
             return graph_data_tuple
