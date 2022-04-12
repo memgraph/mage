@@ -1064,26 +1064,7 @@ def update(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]) -> mgp.Record():
 @mgp.read_proc
 def set_params(
     ctx: mgp.ProcCtx,
-    learning_type: str,
-    batch_size: int,
-    num_of_layers: int,
-    layer_type: str,
-    memory_dimension: int,
-    time_dimension: int,
-    num_edge_features: int,
-    num_node_features: int,
-    message_dimension: int,
-    num_neighbors: int,
-    edge_message_function_type: str,
-    message_aggregator_type: str,
-    memory_updater_type: str,
-    num_attention_heads: int = 1,
-    learning_rate: float = 1e-4,
-    weight_decay: float = 5e-5,
-    device_type: str = "cuda",
-    node_features_property: str = "features",
-    edge_features_property: str = "features",
-    node_label_property: str = "label",
+    params: mgp.Map,
 ) -> mgp.Record():
     """
     With following function you can define parameters used in TGN, as well as what kind of learning you want
@@ -1120,47 +1101,64 @@ def set_params(
     """
     global query_module_tgn_batch
 
+    learning_type: str = params["learning_type"]
+    batch_size: int = params["batch_size"]
+
     reset_tgn_batch(batch_size)
 
     tgn_config = {
-        TGNParameters.NUM_OF_LAYERS: num_of_layers,
-        TGNParameters.MEMORY_DIMENSION: memory_dimension,
-        TGNParameters.TIME_DIMENSION: time_dimension,
-        TGNParameters.NUM_EDGE_FEATURES: num_edge_features,
-        TGNParameters.NUM_NODE_FEATURES: num_node_features,
-        TGNParameters.MESSAGE_DIMENSION: message_dimension,
-        TGNParameters.NUM_NEIGHBORS: num_neighbors,
-        TGNParameters.LAYER_TYPE: get_tgn_layer_enum(layer_type),
+        TGNParameters.NUM_OF_LAYERS: params[TGNParameters.NUM_OF_LAYERS],
+        TGNParameters.MEMORY_DIMENSION: params[TGNParameters.MEMORY_DIMENSION],
+        TGNParameters.TIME_DIMENSION: params[TGNParameters.TIME_DIMENSION],
+        TGNParameters.NUM_EDGE_FEATURES: params[TGNParameters.NUM_EDGE_FEATURES],
+        TGNParameters.NUM_NODE_FEATURES: params[TGNParameters.NUM_NODE_FEATURES],
+        TGNParameters.MESSAGE_DIMENSION: params[TGNParameters.MESSAGE_DIMENSION],
+        TGNParameters.NUM_NEIGHBORS: params[TGNParameters.NUM_NEIGHBORS],
+        TGNParameters.LAYER_TYPE: get_tgn_layer_enum(params[TGNParameters.LAYER_TYPE]),
         TGNParameters.EDGE_FUNCTION_TYPE: get_edge_message_function_type(
-            edge_message_function_type
+            params[TGNParameters.EDGE_FUNCTION_TYPE]
         ),
         TGNParameters.MESSAGE_AGGREGATOR_TYPE: get_message_aggregator_type(
-            message_aggregator_type
+            params[TGNParameters.MESSAGE_AGGREGATOR_TYPE]
         ),
-        TGNParameters.MEMORY_UPDATER_TYPE: get_memory_updater_type(memory_updater_type),
+        TGNParameters.MEMORY_UPDATER_TYPE: get_memory_updater_type(
+            params[TGNParameters.MEMORY_UPDATER_TYPE]
+        ),
     }
     memgraph_objects_property_config = {
-        MemgraphObjectsProperties.NODE_FEATURES_PROPERTY: node_features_property,
-        MemgraphObjectsProperties.EDGE_FEATURES_PROPERTY: edge_features_property,
-        MemgraphObjectsProperties.NODE_LABELS_PROPERTY: node_label_property,
+        MemgraphObjectsProperties.NODE_FEATURES_PROPERTY: params.get(
+            MemgraphObjectsProperties.NODE_FEATURES_PROPERTY, "features"
+        ),
+        MemgraphObjectsProperties.EDGE_FEATURES_PROPERTY: params.get(
+            MemgraphObjectsProperties.EDGE_FEATURES_PROPERTY, "features"
+        ),
+        MemgraphObjectsProperties.NODE_LABELS_PROPERTY: params.get(
+            MemgraphObjectsProperties.NODE_LABELS_PROPERTY, "label"
+        ),
     }
 
     optimizer_config = {
-        OptimizerParameters.LEARNING_RATE: learning_rate,
-        OptimizerParameters.WEIGHT_DECAY: weight_decay,
+        OptimizerParameters.LEARNING_RATE: params.get(
+            OptimizerParameters.LEARNING_RATE, 1e-4
+        ),
+        OptimizerParameters.WEIGHT_DECAY: params.get(
+            OptimizerParameters.WEIGHT_DECAY, 5e-5
+        ),
     }
     # tgn params
 
     if tgn_config[TGNParameters.LAYER_TYPE] == TGNLayerType.GraphAttentionEmbedding:
-        tgn_config[TGNParameters.NUM_ATTENTION_HEADS] = num_attention_heads
+        tgn_config[TGNParameters.NUM_ATTENTION_HEADS] = params.get(
+            TGNParameters.NUM_ATTENTION_HEADS, 1
+        )
 
     # set learning type
     tgn_learning_type = get_learning_type(learning_type)
-    device_type = get_device_type(device_type)
+    tgn_device_type = get_device_type(params.get("device_type", "cuda"))
 
     set_tgn(
         tgn_learning_type,
-        device_type,
+        tgn_device_type,
         tgn_config,
         optimizer_config,
         memgraph_objects_property_config,

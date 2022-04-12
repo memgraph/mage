@@ -1,5 +1,5 @@
 setup: |-
-    CALL tgn.set_params("supervised", 5, 2, "graph_sum", 100, 100, 7, 10, 100, 5, "identity", "mean", "gru");
+    CALL tgn.set_params({learning_type:'supervised', batch_size:5, num_of_layers:2, layer_type:'graph_sum', memory_dimension:100, time_dimension:100, num_edge_features:7, num_node_features:10, message_dimension:100, num_neighbors:5, edge_message_function_type:'identity',message_aggregator_type:'mean', memory_updater_type:'gru'});
     CREATE TRIGGER create_embeddings ON --> CREATE BEFORE COMMIT EXECUTE CALL tgn.update(createdEdges) YIELD *;
 
 queries:
