@@ -242,11 +242,11 @@ def set_current_batch_size(new_current_batch_size: int) -> int:
 
 
 def append_batch_record_curr_epoch(
-        current_epoch: int, record: mgp.Record
+    current_epoch: int, record: mgp.Record
 ) -> Dict[int, List[mgp.Record]]:
     global query_module_tgn
     assert (
-            current_epoch in query_module_tgn.results_per_epochs
+        current_epoch in query_module_tgn.results_per_epochs
     ), f"Current epoch not defined"
     query_module_tgn.results_per_epochs[current_epoch].append(record)
     return query_module_tgn.results_per_epochs
@@ -276,11 +276,11 @@ def is_tgn_initialized() -> bool:
 
 
 def set_tgn(
-        learning_type: LearningType,
-        device_type: DeviceType,
-        tgn_config: Dict[str, Any],
-        optimizer_config: Dict[str, Any],
-        memgraph_objects_properties_config: Dict[str, Any],
+    learning_type: LearningType,
+    device_type: DeviceType,
+    tgn_config: Dict[str, Any],
+    optimizer_config: Dict[str, Any],
+    memgraph_objects_properties_config: Dict[str, Any],
 ) -> None:
     global query_module_tgn, EPOCH_START
 
@@ -324,7 +324,7 @@ def set_tgn(
 
 
 def get_tgn_self_supervised(
-        config: Dict[str, Any], device: torch.device
+    config: Dict[str, Any], device: torch.device
 ) -> Tuple[TGN, MLP]:
     """
     Set parameters for self supervised learning. Here we try to predict edges.
@@ -343,8 +343,8 @@ def get_tgn_self_supervised(
     # of source embeddings and destination embeddings, but we went with concat since author used concatenation
     # and not Hadamard product, in original implementation
     mlp_in_features_dim = (
-                                  config[TGNParameters.MEMORY_DIMENSION] + config[TGNParameters.NUM_NODE_FEATURES]
-                          ) * 2
+        config[TGNParameters.MEMORY_DIMENSION] + config[TGNParameters.NUM_NODE_FEATURES]
+    ) * 2
 
     mlp = MLP([mlp_in_features_dim, mlp_in_features_dim // 2, 1]).to(device=device)
 
@@ -360,7 +360,7 @@ def get_tgn_supervised(config: Dict[str, Any], device: torch.device) -> Tuple[TG
         tgn = TGNGraphAttentionSupervised(**config).to(device)
 
     mlp_in_features_dim = (
-            config[TGNParameters.MEMORY_DIMENSION] + config[TGNParameters.NUM_NODE_FEATURES]
+        config[TGNParameters.MEMORY_DIMENSION] + config[TGNParameters.NUM_NODE_FEATURES]
     )
 
     # used as probability calculator for label
@@ -421,20 +421,20 @@ def update_mode_reset_grads_check_dims() -> None:
         labels,
     ) = unpack_tgn_batch_data()
     assert (
-            len(sources)
-            == len(destinations)
-            == len(timestamps)
-            == len(edge_features)
-            == len(edge_idxs)
-            == len(labels)
+        len(sources)
+        == len(destinations)
+        == len(timestamps)
+        == len(edge_features)
+        == len(edge_idxs)
+        == len(labels)
     ), f"Batch size training error"
 
 
 def update_embeddings(
-        embeddings_source: np.array,
-        embeddings_dest: np.array,
-        sources: np.array,
-        destinations: np.array,
+    embeddings_source: np.array,
+    embeddings_dest: np.array,
+    sources: np.array,
+    destinations: np.array,
 ) -> None:
     global query_module_tgn
     for i, node in enumerate(sources):
@@ -757,7 +757,7 @@ def process_epoch_batch() -> mgp.Record:
 
 
 def train_eval_epochs(
-        num_epochs: int, train_edges: List[mgp.Edge], eval_edges: List[mgp.Edge]
+    num_epochs: int, train_edges: List[mgp.Edge], eval_edges: List[mgp.Edge]
 ) -> None:
     global query_module_tgn, query_module_tgn_batch
 
@@ -801,8 +801,8 @@ def train_eval_epochs(
             start_index_train_batch = i * batch_size
             end_index_train_batch = min((i + 1) * batch_size, num_train_edges)
             current_edges_batch = train_edges[
-                                  start_index_train_batch:end_index_train_batch
-                                  ]
+                start_index_train_batch:end_index_train_batch
+            ]
 
             # prepare batch
             parse_mgp_edges_into_tgn_batch(current_edges_batch)
@@ -821,8 +821,8 @@ def train_eval_epochs(
             start_index_eval_batch = i * batch_size
             end_index_eval_batch = min((i + 1) * batch_size, num_eval_edges)
             current_edges_batch = eval_edges[
-                                  start_index_eval_batch:end_index_eval_batch
-                                  ]
+                start_index_eval_batch:end_index_eval_batch
+            ]
             # prepare batch
             parse_mgp_edges_into_tgn_batch(current_edges_batch)
             batch_result_record = process_epoch_batch()
@@ -841,7 +841,7 @@ def train_eval_epochs(
 
 @mgp.read_proc
 def train_and_eval(
-        ctx: mgp.ProcCtx, num_epochs: int
+    ctx: mgp.ProcCtx, num_epochs: int
 ) -> mgp.Record(
     epoch_num=mgp.Number,
     batch_num=mgp.Number,
@@ -887,7 +887,7 @@ def train_and_eval(
     train_eval_epochs(
         num_epochs=num_epochs,
         train_edges=curr_all_edges[: query_module_tgn.train_eval_index_split],
-        eval_edges=curr_all_edges[query_module_tgn.train_eval_index_split:],
+        eval_edges=curr_all_edges[query_module_tgn.train_eval_index_split :],
     )
     # get all records for every epoch and every batch inside it as results
     return get_output_records()
@@ -895,7 +895,7 @@ def train_and_eval(
 
 @mgp.read_proc
 def get_results(
-        ctx: mgp.ProcCtx,
+    ctx: mgp.ProcCtx,
 ) -> mgp.Record(
     epoch_num=mgp.Number,
     batch_num=mgp.Number,
@@ -1079,8 +1079,8 @@ def update(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]) -> mgp.Record():
 
 @mgp.read_proc
 def set_params(
-        ctx: mgp.ProcCtx,
-        params: mgp.Map,
+    ctx: mgp.ProcCtx,
+    params: mgp.Map,
 ) -> mgp.Record():
     """
     With following function you can define parameters used in TGN, as well as what kind of learning you want
@@ -1088,30 +1088,33 @@ def set_params(
 
     If you set TGN to "self_supervised" mode, it will try to predict new edges, and with "supervised" mode it will try
     to predict labels
-
+    How to call this method:
+        CALL tgn.set_params({learning_type:'self_supervised', batch_size:200, num_of_layers:2, layer_type:'graph_attn', memory_dimension:20, time_dimension:50, num_edge_features:20,
+        num_node_features:20, message_dimension:100, num_neighbors:15, edge_message_function_type:'identity',message_aggregator_type:'last', memory_updater_type:'gru', num_attention_heads:1});
     Warning: Every time you call this function, old TGN object is cleared and process of learning params is
     restarted
 
-    :param learning_type: "self_supervised" or "supervised" depending on if you want to predict edges or node labels
-    :param batch_size: size of batch to process by TGN, recommended size 200
-    :param num_of_layers: number of layers of graph neural network, 2 is optimal size, GNNs perform worse with bigger size
-    :param layer_type: "graph_attn" or "graph_sum" layer type as defined in original paper
-    :param memory_dimension: dimension of memory tensor of each node
-    :param time_dimension: dimension of time vector from "time2vec" paper
-    :param num_edge_features: number of edge features we will use from each edge
-    :param num_node_features: number of expected node features
-    :param message_dimension: dimension of message, only used if you use MLP as message function type, otherwise ignored
-    :param num_neighbors: number of sampled neighbors
-    :param edge_message_function_type: message function type, "identity" for concatenation or "mlp" for projection
-    :param message_aggregator_type: message aggregator type, "mean" or "last"
-    :param memory_updater_type: memory updater type, "gru" or "rnn"
-    :param num_attention_heads: number of attention heads used if **only** if you define "graph_attn" as layer type
-    :param learning_rate: learning rate for optimizer
-    :param weight_decay: weight decay used in optimizer
-    :param device_type: type of device you want to use for training - cuda or cpu
-    :param node_features_property: name of features property on nodes from which we read features
-    :param edge_features_property: name of features property on edges from which we read features
-    :param node_label_property: name of label property on nodes from which we read features
+    :param params: Dict containing following keys:
+        learning_type: "self_supervised" or "supervised" depending on if you want to predict edges or node labels
+        batch_size: size of batch to process by TGN, recommended size 200
+        num_of_layers: number of layers of graph neural network, 2 is optimal size, GNNs perform worse with bigger size
+        layer_type: "graph_attn" or "graph_sum" layer type as defined in original paper
+        memory_dimension: dimension of memory tensor of each node
+        time_dimension: dimension of time vector from "time2vec" paper
+        num_edge_features: number of edge features we will use from each edge
+        num_node_features: number of expected node features
+        message_dimension: dimension of message, only used if you use MLP as message function type, otherwise ignored
+        num_neighbors: number of sampled neighbors
+        edge_message_function_type: message function type, "identity" for concatenation or "mlp" for projection
+        message_aggregator_type: message aggregator type, "mean" or "last"
+        memory_updater_type: memory updater type, "gru" or "rnn"
+        [optional] num_attention_heads: number of attention heads used if **only** if you define "graph_attn" as layer type
+        [optional] learning_rate: learning rate for optimizer
+        [optional] weight_decay: weight decay used in optimizer
+        [optional] device_type: type of device you want to use for training - cuda or cpu
+        [optional] node_features_property: name of features property on nodes from which we read features
+        [optional] edge_features_property: name of features property on edges from which we read features
+        [optional] node_label_property: name of label property on nodes from which we read features
 
     :return: mgp.Record(): emtpy record if everything was fine
     """
@@ -1123,7 +1126,9 @@ def set_params(
             # defined_types is a dict of types
             return all(
                 k in input_values  # check if exists
-                and is_correctly_typed(defined_types[k], input_values[k])  # check for correct type
+                and is_correctly_typed(
+                    defined_types[k], input_values[k]
+                )  # check for correct type
                 for k in defined_types
             )
         elif isinstance(defined_types, type):
