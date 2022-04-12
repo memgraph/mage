@@ -187,6 +187,22 @@ query_module_tgn_batch: QueryModuleTGNBatch
 
 EPOCH_START = 1
 
+DEFINED_INPUT_TYPES = {
+    "learning_type": str,
+    "batch_size": int,
+    TGNParameters.NUM_OF_LAYERS: int,
+    TGNParameters.LAYER_TYPE: str,
+    TGNParameters.MEMORY_DIMENSION: int,
+    TGNParameters.TIME_DIMENSION: int,
+    TGNParameters.NUM_EDGE_FEATURES: int,
+    TGNParameters.NUM_NODE_FEATURES: int,
+    TGNParameters.MESSAGE_DIMENSION: int,
+    TGNParameters.NUM_NEIGHBORS: int,
+    TGNParameters.EDGE_FUNCTION_TYPE: str,
+    TGNParameters.MESSAGE_AGGREGATOR_TYPE: str,
+    TGNParameters.MEMORY_UPDATER_TYPE: str,
+}
+
 
 #############################
 # global helpers
@@ -226,11 +242,11 @@ def set_current_batch_size(new_current_batch_size: int) -> int:
 
 
 def append_batch_record_curr_epoch(
-    current_epoch: int, record: mgp.Record
+        current_epoch: int, record: mgp.Record
 ) -> Dict[int, List[mgp.Record]]:
     global query_module_tgn
     assert (
-        current_epoch in query_module_tgn.results_per_epochs
+            current_epoch in query_module_tgn.results_per_epochs
     ), f"Current epoch not defined"
     query_module_tgn.results_per_epochs[current_epoch].append(record)
     return query_module_tgn.results_per_epochs
@@ -260,11 +276,11 @@ def is_tgn_initialized() -> bool:
 
 
 def set_tgn(
-    learning_type: LearningType,
-    device_type: DeviceType,
-    tgn_config: Dict[str, Any],
-    optimizer_config: Dict[str, Any],
-    memgraph_objects_properties_config: Dict[str, Any],
+        learning_type: LearningType,
+        device_type: DeviceType,
+        tgn_config: Dict[str, Any],
+        optimizer_config: Dict[str, Any],
+        memgraph_objects_properties_config: Dict[str, Any],
 ) -> None:
     global query_module_tgn, EPOCH_START
 
@@ -308,7 +324,7 @@ def set_tgn(
 
 
 def get_tgn_self_supervised(
-    config: Dict[str, Any], device: torch.device
+        config: Dict[str, Any], device: torch.device
 ) -> Tuple[TGN, MLP]:
     """
     Set parameters for self supervised learning. Here we try to predict edges.
@@ -327,8 +343,8 @@ def get_tgn_self_supervised(
     # of source embeddings and destination embeddings, but we went with concat since author used concatenation
     # and not Hadamard product, in original implementation
     mlp_in_features_dim = (
-        config[TGNParameters.MEMORY_DIMENSION] + config[TGNParameters.NUM_NODE_FEATURES]
-    ) * 2
+                                  config[TGNParameters.MEMORY_DIMENSION] + config[TGNParameters.NUM_NODE_FEATURES]
+                          ) * 2
 
     mlp = MLP([mlp_in_features_dim, mlp_in_features_dim // 2, 1]).to(device=device)
 
@@ -344,7 +360,7 @@ def get_tgn_supervised(config: Dict[str, Any], device: torch.device) -> Tuple[TG
         tgn = TGNGraphAttentionSupervised(**config).to(device)
 
     mlp_in_features_dim = (
-        config[TGNParameters.MEMORY_DIMENSION] + config[TGNParameters.NUM_NODE_FEATURES]
+            config[TGNParameters.MEMORY_DIMENSION] + config[TGNParameters.NUM_NODE_FEATURES]
     )
 
     # used as probability calculator for label
@@ -405,20 +421,20 @@ def update_mode_reset_grads_check_dims() -> None:
         labels,
     ) = unpack_tgn_batch_data()
     assert (
-        len(sources)
-        == len(destinations)
-        == len(timestamps)
-        == len(edge_features)
-        == len(edge_idxs)
-        == len(labels)
+            len(sources)
+            == len(destinations)
+            == len(timestamps)
+            == len(edge_features)
+            == len(edge_idxs)
+            == len(labels)
     ), f"Batch size training error"
 
 
 def update_embeddings(
-    embeddings_source: np.array,
-    embeddings_dest: np.array,
-    sources: np.array,
-    destinations: np.array,
+        embeddings_source: np.array,
+        embeddings_dest: np.array,
+        sources: np.array,
+        destinations: np.array,
 ) -> None:
     global query_module_tgn
     for i, node in enumerate(sources):
@@ -741,7 +757,7 @@ def process_epoch_batch() -> mgp.Record:
 
 
 def train_eval_epochs(
-    num_epochs: int, train_edges: List[mgp.Edge], eval_edges: List[mgp.Edge]
+        num_epochs: int, train_edges: List[mgp.Edge], eval_edges: List[mgp.Edge]
 ) -> None:
     global query_module_tgn, query_module_tgn_batch
 
@@ -785,8 +801,8 @@ def train_eval_epochs(
             start_index_train_batch = i * batch_size
             end_index_train_batch = min((i + 1) * batch_size, num_train_edges)
             current_edges_batch = train_edges[
-                start_index_train_batch:end_index_train_batch
-            ]
+                                  start_index_train_batch:end_index_train_batch
+                                  ]
 
             # prepare batch
             parse_mgp_edges_into_tgn_batch(current_edges_batch)
@@ -805,8 +821,8 @@ def train_eval_epochs(
             start_index_eval_batch = i * batch_size
             end_index_eval_batch = min((i + 1) * batch_size, num_eval_edges)
             current_edges_batch = eval_edges[
-                start_index_eval_batch:end_index_eval_batch
-            ]
+                                  start_index_eval_batch:end_index_eval_batch
+                                  ]
             # prepare batch
             parse_mgp_edges_into_tgn_batch(current_edges_batch)
             batch_result_record = process_epoch_batch()
@@ -825,7 +841,7 @@ def train_eval_epochs(
 
 @mgp.read_proc
 def train_and_eval(
-    ctx: mgp.ProcCtx, num_epochs: int
+        ctx: mgp.ProcCtx, num_epochs: int
 ) -> mgp.Record(
     epoch_num=mgp.Number,
     batch_num=mgp.Number,
@@ -871,7 +887,7 @@ def train_and_eval(
     train_eval_epochs(
         num_epochs=num_epochs,
         train_edges=curr_all_edges[: query_module_tgn.train_eval_index_split],
-        eval_edges=curr_all_edges[query_module_tgn.train_eval_index_split :],
+        eval_edges=curr_all_edges[query_module_tgn.train_eval_index_split:],
     )
     # get all records for every epoch and every batch inside it as results
     return get_output_records()
@@ -879,7 +895,7 @@ def train_and_eval(
 
 @mgp.read_proc
 def get_results(
-    ctx: mgp.ProcCtx,
+        ctx: mgp.ProcCtx,
 ) -> mgp.Record(
     epoch_num=mgp.Number,
     batch_num=mgp.Number,
@@ -1063,8 +1079,8 @@ def update(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]) -> mgp.Record():
 
 @mgp.read_proc
 def set_params(
-    ctx: mgp.ProcCtx,
-    params: mgp.Map,
+        ctx: mgp.ProcCtx,
+        params: mgp.Map,
 ) -> mgp.Record():
     """
     With following function you can define parameters used in TGN, as well as what kind of learning you want
@@ -1099,7 +1115,26 @@ def set_params(
 
     :return: mgp.Record(): emtpy record if everything was fine
     """
-    global query_module_tgn_batch
+    global query_module_tgn_batch, DEFINED_INPUT_TYPES
+
+    # function checks if input values in dictionary are correctly typed
+    def is_correctly_typed(defined_types, input_values):
+        if isinstance(defined_types, dict) and isinstance(input_values, dict):
+            # defined_types is a dict of types
+            return all(
+                k in input_values  # check if exists
+                and is_correctly_typed(defined_types[k], input_values[k])  # check for correct type
+                for k in defined_types
+            )
+        elif isinstance(defined_types, type):
+            return isinstance(input_values, defined_types)
+        else:
+            return False
+
+    if not is_correctly_typed(DEFINED_INPUT_TYPES, params):
+        raise Exception(
+            f"Input dictionary is not correctly typed. Expected following types {DEFINED_INPUT_TYPES}."
+        )
 
     learning_type: str = params["learning_type"]
     batch_size: int = params["batch_size"]
