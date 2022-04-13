@@ -95,7 +95,7 @@ from mage.tgn.definitions.instances import (
 # params and classes
 ##################
 
-
+# params TGN must receive
 class TGNParameters:
     NUM_OF_LAYERS = "num_of_layers"
     LAYER_TYPE = "layer_type"
@@ -121,6 +121,12 @@ class MemgraphObjectsProperties:
     NODE_FEATURES_PROPERTY = "node_features_property"
     EDGE_FEATURES_PROPERTY = "edge_features_property"
     NODE_LABELS_PROPERTY = "node_label_property"
+
+
+class OtherProperties:
+    LEARNING_TYPE = "learning_type"
+    DEVICE_TYPE = "device_type"
+    BATCH_SIZE = "batch_size"
 
 
 class LearningType(enum.Enum):
@@ -201,6 +207,29 @@ DEFINED_INPUT_TYPES = {
     TGNParameters.EDGE_FUNCTION_TYPE: str,
     TGNParameters.MESSAGE_AGGREGATOR_TYPE: str,
     TGNParameters.MEMORY_UPDATER_TYPE: str,
+}
+
+DEFAULT_VALUES = {
+    OtherProperties.LEARNING_TYPE: "self_supervised",
+    OtherProperties.BATCH_SIZE: 200,
+    TGNParameters.NUM_OF_LAYERS: 2,
+    TGNParameters.LAYER_TYPE: "graph_attn",
+    TGNParameters.MEMORY_DIMENSION: 100,
+    TGNParameters.TIME_DIMENSION: 100,
+    TGNParameters.NUM_EDGE_FEATURES: 50,
+    TGNParameters.NUM_NODE_FEATURES: 50,
+    TGNParameters.MESSAGE_DIMENSION: 100,
+    TGNParameters.NUM_NEIGHBORS: 15,
+    TGNParameters.EDGE_FUNCTION_TYPE: "identity",
+    TGNParameters.MESSAGE_AGGREGATOR_TYPE: "last",
+    TGNParameters.MEMORY_UPDATER_TYPE: "gru",
+    TGNParameters.NUM_ATTENTION_HEADS: 1,
+    MemgraphObjectsProperties.NODE_FEATURES_PROPERTY: "features",
+    MemgraphObjectsProperties.EDGE_FEATURES_PROPERTY: "features",
+    MemgraphObjectsProperties.NODE_LABELS_PROPERTY: "label",
+    OptimizerParameters.LEARNING_RATE: 1e-4,
+    OptimizerParameters.WEIGHT_DECAY: 5e-5,
+    OtherProperties.DEVICE_TYPE: "cuda",
 }
 
 
@@ -1126,7 +1155,7 @@ def set_params(
 
     :return: mgp.Record(): emtpy record if everything was fine
     """
-    global query_module_tgn_batch, DEFINED_INPUT_TYPES
+    global query_module_tgn_batch, DEFINED_INPUT_TYPES, DEFAULT_VALUES
 
     # function checks if input values in dictionary are correctly typed
     def is_correctly_typed(defined_types, input_values):
@@ -1144,13 +1173,15 @@ def set_params(
         else:
             return False
 
+    params = {**DEFAULT_VALUES, **params}  # override any default parameters
+    print(params)
     if not is_correctly_typed(DEFINED_INPUT_TYPES, params):
         raise Exception(
             f"Input dictionary is not correctly typed. Expected following types {DEFINED_INPUT_TYPES}."
         )
 
-    learning_type: str = params["learning_type"]
-    batch_size: int = params["batch_size"]
+    learning_type: str = params[OtherProperties.LEARNING_TYPE]
+    batch_size: int = params[OtherProperties.BATCH_SIZE]
 
     reset_tgn_batch(batch_size)
 
@@ -1174,24 +1205,20 @@ def set_params(
         ),
     }
     memgraph_objects_property_config = {
-        MemgraphObjectsProperties.NODE_FEATURES_PROPERTY: params.get(
-            MemgraphObjectsProperties.NODE_FEATURES_PROPERTY, "features"
-        ),
-        MemgraphObjectsProperties.EDGE_FEATURES_PROPERTY: params.get(
-            MemgraphObjectsProperties.EDGE_FEATURES_PROPERTY, "features"
-        ),
-        MemgraphObjectsProperties.NODE_LABELS_PROPERTY: params.get(
-            MemgraphObjectsProperties.NODE_LABELS_PROPERTY, "label"
-        ),
+        MemgraphObjectsProperties.NODE_FEATURES_PROPERTY: params[
+            MemgraphObjectsProperties.NODE_FEATURES_PROPERTY
+        ],
+        MemgraphObjectsProperties.EDGE_FEATURES_PROPERTY: params[
+            MemgraphObjectsProperties.EDGE_FEATURES_PROPERTY
+        ],
+        MemgraphObjectsProperties.NODE_LABELS_PROPERTY: params[
+            MemgraphObjectsProperties.NODE_LABELS_PROPERTY
+        ],
     }
 
     optimizer_config = {
-        OptimizerParameters.LEARNING_RATE: params.get(
-            OptimizerParameters.LEARNING_RATE, 1e-4
-        ),
-        OptimizerParameters.WEIGHT_DECAY: params.get(
-            OptimizerParameters.WEIGHT_DECAY, 5e-5
-        ),
+        OptimizerParameters.LEARNING_RATE: params[OptimizerParameters.LEARNING_RATE],
+        OptimizerParameters.WEIGHT_DECAY: params[OptimizerParameters.WEIGHT_DECAY],
     }
     # tgn params
 
@@ -1202,7 +1229,7 @@ def set_params(
 
     # set learning type
     tgn_learning_type = get_learning_type(learning_type)
-    tgn_device_type = get_device_type(params.get("device_type", "cuda"))
+    tgn_device_type = get_device_type(params[OtherProperties.DEVICE_TYPE])
 
     set_tgn(
         tgn_learning_type,
