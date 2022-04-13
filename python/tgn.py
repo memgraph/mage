@@ -667,17 +667,25 @@ def parse_mgp_edges_into_tgn_batch(edges: mgp.List[mgp.Edge]) -> QueryModuleTGNB
         # update all edges to for negative sampling later used later on
         query_module_tgn.all_edges.add((src_id, dest_id))
 
-        # todo update to have label defined
-        src_features = source.properties.get("features", None)
-        dest_features = dest.properties.get("features", None)
+        node_features_property = query_module_tgn.memgraph_objects_properties[
+            MemgraphObjectsProperties.NODE_FEATURES_PROPERTY
+        ]
+        edge_features_property = query_module_tgn.memgraph_objects_properties[
+            MemgraphObjectsProperties.EDGE_FEATURES_PROPERTY
+        ]
+        node_label_property = query_module_tgn.memgraph_objects_properties[
+            MemgraphObjectsProperties.NODE_LABELS_PROPERTY
+        ]
+        src_features = source.properties.get(node_features_property, None)
+        dest_features = dest.properties.get(node_features_property, None)
 
-        src_label = source.properties.get("label", 0)
-        dest_label = dest.properties.get("label", 0)
+        src_label = source.properties.get(node_label_property, 0)
+        dest_label = dest.properties.get(node_label_property, 0)
 
         timestamp = edge.id
         edge_idx = int(edge.id)
 
-        edge_feature = edge.properties.get("features", None)
+        edge_feature = edge.properties.get(edge_features_property, None)
 
         query_module_tgn_batch.node_features[src_id] = create_torch_tensor(
             src_features, query_module_tgn.config[TGNParameters.NUM_NODE_FEATURES]
