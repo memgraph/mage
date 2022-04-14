@@ -565,7 +565,7 @@ def process_batch_self_supervised() -> float:
         [np.ones(current_batch_size), np.zeros(current_batch_size)]
     )
 
-    accuracy = average_precision_score(true_label, pred_score)
+    average_precision = average_precision_score(true_label, pred_score)
 
     # update embeddings to newest ones that we can return on user request
     update_embeddings(
@@ -575,7 +575,7 @@ def process_batch_self_supervised() -> float:
         destinations,
     )
 
-    return accuracy
+    return average_precision
 
 
 #
@@ -634,7 +634,7 @@ def process_batch_supervised() -> float:
     )
     true_label = np.concatenate([np.array(labels[:, 0]), np.array(labels[:, 1])])
 
-    accuracy = average_precision_score(true_label, pred_score)
+    average_precision = average_precision_score(true_label, pred_score)
 
     # update embeddings to newest ones that we can return on user request
     update_embeddings(
@@ -645,7 +645,7 @@ def process_batch_supervised() -> float:
     )
 
     if query_module_tgn.tgn_mode == TGNMode.Eval:
-        return accuracy
+        return average_precision
 
     # backprop only in case of training
     with torch.no_grad():
@@ -663,7 +663,7 @@ def process_batch_supervised() -> float:
     query_module_tgn.optimizer.step()
     query_module_tgn.m_loss.append(loss.item())
 
-    return accuracy
+    return average_precision
 
 
 def create_torch_tensor(feature: Union[None, Tuple], num_features: int) -> torch.Tensor:
@@ -770,7 +770,7 @@ def reset_tgn() -> None:
 
 def process_epoch_batch() -> mgp.Record:
     batch_start_time = time.time()
-    accuracy = (
+    average_precision = (
         process_batch_self_supervised()
         if query_module_tgn.learning_type == LearningType.SelfSupervised
         else process_batch_supervised()
@@ -781,13 +781,13 @@ def process_epoch_batch() -> mgp.Record:
         epoch_num=get_current_epoch(),
         batch_num=get_current_batch() + 1,  # this is a new record batch
         batch_process_time=round(batch_process_time, 2),
-        accuracy=round(accuracy, 2),
-        accuracy_type=query_module_tgn.tgn_mode.name,
+        average_precision=round(average_precision, 2),
+        batch_type=query_module_tgn.tgn_mode.name,
     )
 
     # add same logging as in core
     print(
-        f"EPOCH {get_current_epoch()} || BATCH {get_current_batch()}, | batch_process_time={batch_process_time}  | accuracy={accuracy}"
+        f"EPOCH {get_current_epoch()} || BATCH {get_current_batch()}, | batch_process_time={batch_process_time}  | average_precision={average_precision}"
     )
 
     return record
@@ -812,7 +812,7 @@ def train_eval_epochs(
         update_epoch_counter()
 
         # initialize container for current epochs where we save records for
-        # accuracy results and batch processing time
+        # average_precision results and batch processing time
         initialize_results_per_epoch(get_current_epoch())
 
         # on every epoch training tgn should have clean state,
@@ -883,8 +883,8 @@ def train_and_eval(
     epoch_num=mgp.Number,
     batch_num=mgp.Number,
     batch_process_time=mgp.Number,
-    accuracy=mgp.Number,
-    accuracy_type=str,
+    average_precision=mgp.Number,
+    batch_type=str,
 ):
     """
     After calling this function from ctx we will get all edges currently in database, split them in ratio of
@@ -937,8 +937,8 @@ def get_results(
     epoch_num=mgp.Number,
     batch_num=mgp.Number,
     batch_process_time=mgp.Number,
-    accuracy=mgp.Number,
-    accuracy_type=str,
+    average_precision=mgp.Number,
+    batch_type=str,
 ):
     """
     This method returns all results from training and evaluation on all epochs
