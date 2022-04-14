@@ -389,6 +389,58 @@ TEST(OnlineBC, UpdateBCDetachDeleteNode) {
   ASSERT_TRUE(mg_test_utility::TestEqualUnorderedMaps(updated_BC, correct_BC));
 }
 
+TEST(OnlineBC, UpdateBCInsertEdgeBothNodesIsolated) {
+  const auto prior_graph = mg_generate::BuildGraph(2, {}, mg_graph::GraphType::kUndirectedGraph);
+
+  auto algorithm = online_bc::OnlineBC();
+  const auto computed_BC = algorithm.Set(*prior_graph, false);
+
+  const auto current_graph = mg_generate::BuildGraph(2, {{0, 1}}, mg_graph::GraphType::kUndirectedGraph);
+
+  const auto updated_BC =
+      algorithm.EdgeUpdate(*prior_graph, *current_graph, online_bc::Operation::CREATE_EDGE, {0, 1}, false);
+
+  const std::unordered_map<std::uint64_t, double> correct_BC = {{0, 0}, {1, 0}};
+
+  ASSERT_TRUE(mg_test_utility::TestEqualUnorderedMaps(updated_BC, correct_BC));
+}
+
+TEST(OnlineBC, UpdateBCInsertEdgeOneNodeIsolated) {
+  const auto prior_graph = mg_generate::BuildGraph(7, {{0, 1}, {0, 2}, {1, 2}, {2, 3}, {3, 4}, {3, 5}, {4, 5}},
+                                                   mg_graph::GraphType::kUndirectedGraph);
+
+  auto algorithm = online_bc::OnlineBC();
+  const auto computed_BC = algorithm.Set(*prior_graph, false);
+
+  const auto current_graph = mg_generate::BuildGraph(
+      7, {{0, 1}, {0, 2}, {1, 2}, {2, 3}, {3, 4}, {3, 5}, {4, 5}, {4, 6}}, mg_graph::GraphType::kUndirectedGraph);
+
+  const auto updated_BC =
+      algorithm.EdgeUpdate(*prior_graph, *current_graph, online_bc::Operation::CREATE_EDGE, {4, 6}, false);
+
+  const std::unordered_map<std::uint64_t, double> correct_BC = {{0, 0}, {1, 0}, {2, 8}, {3, 9}, {4, 5}, {5, 0}, {6, 0}};
+
+  ASSERT_TRUE(mg_test_utility::TestEqualUnorderedMaps(updated_BC, correct_BC));
+}
+
+TEST(OnlineBC, UpdateBCInsertEdgeConnectDisconnected) {
+  const auto prior_graph = mg_generate::BuildGraph(6, {{0, 1}, {0, 2}, {1, 2}, {3, 4}, {3, 5}, {4, 5}},
+                                                   mg_graph::GraphType::kUndirectedGraph);
+
+  auto algorithm = online_bc::OnlineBC();
+  const auto computed_BC = algorithm.Set(*prior_graph, false);
+
+  const auto current_graph = mg_generate::BuildGraph(6, {{0, 1}, {0, 2}, {1, 2}, {2, 3}, {3, 4}, {3, 5}, {4, 5}},
+                                                     mg_graph::GraphType::kUndirectedGraph);
+
+  const auto updated_BC =
+      algorithm.EdgeUpdate(*prior_graph, *current_graph, online_bc::Operation::CREATE_EDGE, {2, 3}, false);
+
+  const std::unordered_map<std::uint64_t, double> correct_BC = {{0, 0}, {1, 0}, {2, 6}, {3, 6}, {4, 0}, {5, 0}};
+
+  ASSERT_TRUE(mg_test_utility::TestEqualUnorderedMaps(updated_BC, correct_BC));
+}
+
 TEST(OnlineBC, Normalize) {
   const auto example_graph = mg_generate::BuildGraph(
       20, {{0, 1},   {0, 3},   {0, 9},   {0, 10},  {1, 2},   {2, 3},   {2, 4},  {3, 5},  {4, 7},

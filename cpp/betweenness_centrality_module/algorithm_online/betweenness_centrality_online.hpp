@@ -64,6 +64,11 @@ class OnlineBC {
   ///@param threads Number of concurrent threads
   void CallBrandesAlgorithm(const mg_graph::GraphView<> &graph, const std::uint64_t threads);
 
+  ///@brief Returns whether the (undirected) graph is connected.
+  ///
+  ///@param graph Current graph
+  bool Connected(const mg_graph::GraphView<> &graph);
+
   ///@brief Returns the nodes and the articulation points of the biconnected component affected by the update.
   ///
   ///@param graph Graph containing affected edge (new graph if edge was created, old graph if edge was deleted)
@@ -111,9 +116,9 @@ class OnlineBC {
   /// Distances to each node from the start node
   /// Each node’s immediate predecessors on the shortest paths from the start node
   /// IDs of nodes visited by the BFS, in reverse order
-  BFSResult iCentralBFS(const mg_graph::GraphView<> &graph, const std::uint64_t start_id,
-                        const bool compensate_for_deleted_node = false, const bool affected_bcc_only = false,
-                        const std::unordered_set<std::uint64_t> &affected_bcc_nodes = {}) const;
+  BFSResult BFS(const mg_graph::GraphView<> &graph, const std::uint64_t start_id,
+                const bool compensate_for_deleted_node = false, const bool affected_bcc_only = false,
+                const std::unordered_set<std::uint64_t> &affected_bcc_nodes = {}) const;
 
   ///@brief Updates the breadth-first search’s data structures after insertion of an edge, starting out from the more
   /// distant node of that edge. Search is restricted to one biconnected component.
@@ -139,7 +144,7 @@ class OnlineBC {
                        const std::unordered_map<std::uint64_t, std::set<std::uint64_t>> &predecessors_initial) const;
 
   ///@brief As the order from PartialBFS() contains only nodes whose distance changes after the update, this function
-  /// adds remaining nodes from iCentralBFS() in correct order (descending by distance).
+  /// adds remaining nodes from BFS() in correct order (descending by distance).
   ///
   ///@param initial_order IDs of nodes visited by the initial BFS, in reverse order
   ///@param initial_distances Distances to each node from the start node

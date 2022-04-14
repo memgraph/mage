@@ -41,8 +41,8 @@ void Weak(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_mem
         q.pop();
 
         // Iterate over inbound edges.
-        for (auto neihgbor : graph->Neighbours(v_id)) {
-          auto next_id = neihgbor.node_id;
+        for (auto neighbor : graph->Neighbours(v_id)) {
+          auto next_id = neighbor.node_id;
 
           if (vertex_component.find(next_id) != vertex_component.end()) {
             continue;
