@@ -553,7 +553,11 @@ def process_batch_self_supervised() -> float:
         query_module_tgn.m_loss.append(loss.item())
 
     # todo antoniofilipovic - update once we have logging API
-    # print("POS PROB | NEG PROB", pos_prob.reshape((-1,)).detach(), neg_prob.reshape((-1,)).detach())
+    print(
+        "POS PROB | NEG PROB",
+        pos_prob.reshape((-1,)).detach(),
+        neg_prob.reshape((-1,)).detach(),
+    )
     pred_score = np.concatenate(
         [
             (pos_prob.reshape((-1,))).detach().numpy(),
