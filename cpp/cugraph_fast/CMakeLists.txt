@@ -1,4 +1,0 @@
-add_query_module(cugraph_fast 1 cugraph_fast_module.cu)
-target_mage_cugraph(cugraph_fast)
-target_link_libraries(cugraph_fast PRIVATE mg_utility)
-target_include_directories(cugraph_fast PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
