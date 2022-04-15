@@ -285,7 +285,7 @@ double GetNumericProperty(mgp_edge *edge, const char *property_name, mgp_memory 
   auto type = mgp::value_get_type(raw_value);
   switch (type) {
     case MGP_VALUE_TYPE_INT:
-      weight = (double)mgp::value_get_int(raw_value);
+      weight = static_cast<double>(mgp::value_get_int(raw_value));
       break;
     case MGP_VALUE_TYPE_DOUBLE:
       weight = mgp::value_get_double(raw_value);

@@ -7,6 +7,7 @@
 #include <limits>
 #include <map>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "data_structures/graph_data.hpp"
 #include "data_structures/graph_view.hpp"
@@ -174,7 +175,7 @@ class Graph : public GraphView<TSize> {
   ///
   /// Creates an directed/undirected edge in the graph depending on graph type.
   /// Edge will contain information about the original node IDs. Throws
-  /// exception if nodes are not contained in  graph.
+  /// exception if nodes are not contained in the graph.
   ///
   ///@param memgraph_id_from Memgraph ID of starting node
   ///@param memgraph_id_to Memgraph ID of ending node
