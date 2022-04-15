@@ -498,6 +498,7 @@ def process_batch_self_supervised() -> float:
     ) = unpack_tgn_batch_data()
 
     current_batch_size = len(sources)
+    print(current_batch_size)
     negative_src, negative_dest = sample_negative(current_batch_size)
 
     graph_data = (
@@ -528,12 +529,11 @@ def process_batch_self_supervised() -> float:
     # score calculation = shape (num_positive_edges + num_negative_edges, 1) ->
     # (num_positive_edges + num_negative_edges)
     # num_positive_edges == num_negative_edges == current_batch_size
-    # todo update so that  num_negative_edges in range [10,25]
+    # todo update so that num_negative_edges in range [10,25]
     score = query_module_tgn.mlp(x).squeeze(dim=0)
 
     pos_score = score[:current_batch_size]
     neg_score = score[current_batch_size:]
-
     pos_prob, neg_prob = pos_score.sigmoid(), neg_score.sigmoid()
 
     if query_module_tgn.tgn_mode == TGNMode.Train:
@@ -543,21 +543,21 @@ def process_batch_self_supervised() -> float:
         neg_label = torch.zeros(
             current_batch_size, dtype=torch.float, device=query_module_tgn.device
         )
-
+        # use reshape to get 1 dimension in every case
         loss = query_module_tgn.criterion(
-            pos_prob.squeeze(), pos_label
-        ) + query_module_tgn.criterion(neg_prob.squeeze(), neg_label)
+            pos_prob.reshape((-1,)), pos_label
+        ) + query_module_tgn.criterion(neg_prob.reshape((-1,)), neg_label)
 
         loss.backward()
         query_module_tgn.optimizer.step()
         query_module_tgn.m_loss.append(loss.item())
 
     # todo antoniofilipovic - update once we have logging API
-    print("POS PROB | NEG PROB", pos_prob.squeeze().cpu(), neg_prob.squeeze().cpu())
+    # print("POS PROB | NEG PROB", pos_prob.reshape((-1,)).detach(), neg_prob.reshape((-1,)).detach())
     pred_score = np.concatenate(
         [
-            (pos_prob.squeeze()).cpu().detach().numpy(),
-            (neg_prob.squeeze()).cpu().detach().numpy(),
+            (pos_prob.reshape((-1,))).detach().numpy(),
+            (neg_prob.reshape((-1,))).detach().numpy(),
         ]
     )
     true_label = np.concatenate(
@@ -880,6 +880,26 @@ def train_eval_epochs(
 # all available read_procs
 
 #####################################################
+@mgp.read_proc
+def predict(
+    ctx: mgp.ProcCtx, vertex_1: mgp.Vertex, vertex_2: mgp.Vertex
+) -> mgp.Record(prediction=mgp.Number):
+    global query_module_tgn
+
+    embedding_source: List[float] = query_module_tgn.all_embeddings[vertex_1.id]
+    embedding_dest = query_module_tgn.all_embeddings[vertex_2.id]
+
+    embedding_src_torch = torch.tensor(
+        embedding_source, device=query_module_tgn.device, dtype=torch.float
+    )
+    embedding_dest_torch = torch.tensor(
+        embedding_dest, device=query_module_tgn.device, dtype=torch.float
+    )
+
+    x = torch.cat([embedding_src_torch, embedding_dest_torch], dim=0)  # along rows
+
+    score = query_module_tgn.mlp(x).squeeze(dim=0)
+    return mgp.Record(prediction=score)
 
 
 @mgp.read_proc
