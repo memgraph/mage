@@ -141,11 +141,18 @@ class Graph : public GraphView<TSize> {
   /// @param[in] edge_id edge ID
   ///
   /// @return double weight
-  const double &GetWeight(TSize edge_id) const {
+  double GetWeight(TSize edge_id) const override {
     if (edge_id < 0 || edge_id >= edges_.size()) {
       throw mg_exception::InvalidIDException();
     }
     return weights_[edge_id];
+  }
+
+  ///
+  ///@brief Return true if graph has weights on edges.
+  ///
+  bool IsWeighted() const override {
+    return !weights_.empty();
   }
 
   /// Creates a node.
