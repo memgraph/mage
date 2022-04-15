@@ -71,7 +71,6 @@ import mgp
 import numpy as np
 import torch
 import torch.nn as nn
-from sklearn.metrics import average_precision_score
 
 from mage.tgn.constants import (
     TGNLayerType,
@@ -564,8 +563,13 @@ def process_batch_self_supervised() -> float:
     true_label = np.concatenate(
         [np.ones(current_batch_size), np.zeros(current_batch_size)]
     )
-
-    average_precision = average_precision_score(true_label, pred_score)
+    # rint - round int to nearest even number
+    # x = 0, x <= 0.5
+    # x = 1, x > 0.5
+    # sum correct labels, divide by total number of labels
+    precision = (
+        np.sum(np.rint(true_label) == np.rint(pred_score)) * 1.0 / len(true_label)
+    )
 
     # update embeddings to newest ones that we can return on user request
     update_embeddings(
@@ -575,7 +579,7 @@ def process_batch_self_supervised() -> float:
         destinations,
     )
 
-    return average_precision
+    return precision
 
 
 #
@@ -634,7 +638,9 @@ def process_batch_supervised() -> float:
     )
     true_label = np.concatenate([np.array(labels[:, 0]), np.array(labels[:, 1])])
 
-    average_precision = average_precision_score(true_label, pred_score)
+    precision = (
+        np.sum(np.rint(true_label) == np.rint(pred_score)) * 1.0 / len(true_label)
+    )
 
     # update embeddings to newest ones that we can return on user request
     update_embeddings(
@@ -645,7 +651,7 @@ def process_batch_supervised() -> float:
     )
 
     if query_module_tgn.tgn_mode == TGNMode.Eval:
-        return average_precision
+        return precision
 
     # backprop only in case of training
     with torch.no_grad():
@@ -663,7 +669,7 @@ def process_batch_supervised() -> float:
     query_module_tgn.optimizer.step()
     query_module_tgn.m_loss.append(loss.item())
 
-    return average_precision
+    return precision
 
 
 def create_torch_tensor(feature: Union[None, Tuple], num_features: int) -> torch.Tensor:
@@ -770,7 +776,7 @@ def reset_tgn() -> None:
 
 def process_epoch_batch() -> mgp.Record:
     batch_start_time = time.time()
-    average_precision = (
+    precision = (
         process_batch_self_supervised()
         if query_module_tgn.learning_type == LearningType.SelfSupervised
         else process_batch_supervised()
@@ -781,13 +787,13 @@ def process_epoch_batch() -> mgp.Record:
         epoch_num=get_current_epoch(),
         batch_num=get_current_batch() + 1,  # this is a new record batch
         batch_process_time=round(batch_process_time, 2),
-        average_precision=round(average_precision, 2),
+        precision=round(precision, 2),
         batch_type=query_module_tgn.tgn_mode.name,
     )
 
     # add same logging as in core
     print(
-        f"EPOCH {get_current_epoch()} || BATCH {get_current_batch()}, | batch_process_time={batch_process_time}  | average_precision={average_precision}"
+        f"EPOCH {get_current_epoch()} || BATCH {get_current_batch()}, | batch_process_time={batch_process_time}  | precision={precision}"
     )
 
     return record
@@ -812,7 +818,7 @@ def train_eval_epochs(
         update_epoch_counter()
 
         # initialize container for current epochs where we save records for
-        # average_precision results and batch processing time
+        # precision results and batch processing time
         initialize_results_per_epoch(get_current_epoch())
 
         # on every epoch training tgn should have clean state,
@@ -883,7 +889,7 @@ def train_and_eval(
     epoch_num=mgp.Number,
     batch_num=mgp.Number,
     batch_process_time=mgp.Number,
-    average_precision=mgp.Number,
+    precision=mgp.Number,
     batch_type=str,
 ):
     """
@@ -937,7 +943,7 @@ def get_results(
     epoch_num=mgp.Number,
     batch_num=mgp.Number,
     batch_process_time=mgp.Number,
-    average_precision=mgp.Number,
+    precision=mgp.Number,
     batch_type=str,
 ):
     """
