@@ -165,10 +165,6 @@ TEST_F(PagerankOnlineTest, DeleteAndRevertGraph) {
   graph = mg_generate::BuildGraph({}, {}, mg_graph::GraphType::kDirectedGraph);
   auto results = pagerank_online_alg::UpdatePagerank(*graph, {}, {}, {0, 1, 2, 7, 4}, {{0, 2}, {0, 7}, {1, 2}, {2, 0}});
 
-  for (auto const [node_id, rank] : results) {
-    std::cout << std::to_string(node_id) << " " << std::to_string(rank) << std::endl;
-  }
-
   graph =
       mg_generate::BuildGraph({0, 1, 2, 7, 4}, {{0, 2}, {0, 7}, {1, 2}, {2, 0}}, mg_graph::GraphType::kDirectedGraph);
   results = pagerank_online_alg::UpdatePagerank(*graph, {0, 1, 2, 7, 4}, {{0, 2}, {0, 7}, {1, 2}, {2, 0}}, {}, {});
