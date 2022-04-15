@@ -14,6 +14,12 @@
 
 #include "mg_cugraph_utility.hpp"
 
+namespace {
+using vertex_t = int64_t;
+using edge_t = int64_t;
+using weight_t = double;
+using result_t = double;
+
 constexpr char const *kProcedurePagerank = "get";
 
 constexpr char const *kArgumentMaxIterations = "max_iterations";
@@ -44,16 +50,16 @@ void PagerankProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memo
     auto cu_graph_view = cu_graph.view();
     auto n_vertices = cu_graph_view.get_number_of_vertices();
 
-    rmm::device_uvector<mg_cugraph::result_t> pagerank_results(n_vertices, stream);
+    rmm::device_uvector<result_t> pagerank_results(n_vertices, stream);
     // IMPORTANT: store_transposed has to be true because cugraph::pagerank
     // only accepts true. It's hard to detect/debug problem because nvcc error
     // messages contain only the top call details + graph_view has many
     // template paremeters.
-    cugraph::pagerank<mg_cugraph::vertex_t, mg_cugraph::edge_t, mg_cugraph::weight_t, mg_cugraph::result_t, false>(
-        handle, cu_graph_view, std::nullopt, std::nullopt, std::nullopt, std::nullopt, pagerank_results.data(),
-        damping_factor, stop_epsilon, max_iterations);
+    cugraph::pagerank<vertex_t, edge_t, weight_t, result_t, false>(handle, cu_graph_view, std::nullopt, std::nullopt,
+                                                                   std::nullopt, std::nullopt, pagerank_results.data(),
+                                                                   damping_factor, stop_epsilon, max_iterations);
 
-    for (mg_cugraph::vertex_t node_id = 0; node_id < pagerank_results.size(); ++node_id) {
+    for (vertex_t node_id = 0; node_id < pagerank_results.size(); ++node_id) {
       auto rank = pagerank_results.element(node_id, stream);
       InsertPagerankRecord(graph, result, memory, mg_graph->GetMemgraphNodeId(node_id), rank);
     }
@@ -63,6 +69,7 @@ void PagerankProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memo
     return;
   }
 }
+}  // namespace
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   mgp_value *default_max_iterations;

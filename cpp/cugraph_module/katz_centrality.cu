@@ -14,6 +14,12 @@
 
 #include "mg_cugraph_utility.hpp"
 
+namespace {
+using vertex_t = int64_t;
+using edge_t = int64_t;
+using weight_t = double;
+using result_t = double;
+
 constexpr char const *kProcedureKatz = "get";
 
 constexpr char const *kArgumentAlpha = "alpha";
@@ -45,19 +51,19 @@ void KatzCentralityProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mg
     auto n_vertices = cu_graph_view.get_number_of_vertices();
 
     auto degrees = cu_graph_view.compute_in_degrees(handle);
-    std::vector<mg_cugraph::edge_t> cu_degrees(degrees.size());
+    std::vector<edge_t> cu_degrees(degrees.size());
     raft::update_host(cu_degrees.data(), degrees.data(), degrees.size(), handle.get_stream());
     handle.sync_stream();
     auto max_it = std::max_element(cu_degrees.begin(), cu_degrees.end());
 
-    mg_cugraph::result_t alpha = mg_cugraph::result_t{alpha_arg} / static_cast<mg_cugraph::result_t>(*max_it + 1);
-    mg_cugraph::result_t beta{beta_arg};
-    mg_cugraph::result_t epsilon{epsilon_arg};
-    rmm::device_uvector<mg_cugraph::result_t> katz_results(n_vertices, stream);
-    cugraph::katz_centrality(handle, cu_graph_view, static_cast<mg_cugraph::result_t *>(nullptr), katz_results.data(),
+    result_t alpha = result_t{alpha_arg} / static_cast<result_t>(*max_it + 1);
+    result_t beta{beta_arg};
+    result_t epsilon{epsilon_arg};
+    rmm::device_uvector<result_t> katz_results(n_vertices, stream);
+    cugraph::katz_centrality(handle, cu_graph_view, static_cast<result_t *>(nullptr), katz_results.data(),
                              alpha, beta, epsilon, std::numeric_limits<std::size_t>::max(), false, true);
 
-    for (mg_cugraph::vertex_t node_id = 0; node_id < katz_results.size(); ++node_id) {
+    for (vertex_t node_id = 0; node_id < katz_results.size(); ++node_id) {
       auto rank = katz_results.element(node_id, stream);
       InsertKatzCentralityRecord(graph, result, memory, mg_graph->GetMemgraphNodeId(node_id), rank);
     }
@@ -67,6 +73,7 @@ void KatzCentralityProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mg
     return;
   }
 }
+}  // namespace
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   mgp_value *default_alpha;
