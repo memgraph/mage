@@ -69,11 +69,42 @@ class GraphView {
   /// @return Edge struct
   virtual const TEdge &GetEdge(TSize edge_id) const = 0;
 
+  ///
+  ///@brief Get the Memgraph Node Id from the inner defined node ID
+  ///
+  ///@param node_id  node ID
+  ///@return std::uint64_t
+  ///
   virtual std::uint64_t GetMemgraphNodeId(TSize node_id) const = 0;
 
+  ///
+  ///@brief Get the Inner Node ID from Memgraph ID
+  ///
+  ///@param memgraph_id Memgraph's internal ID
+  ///@return TSize
+  ///
   virtual TSize GetInnerNodeId(std::uint64_t memgraph_id) const = 0;
 
+  ///
+  ///@brief Check if Memgraph's ID exists in the current graph
+  ///
+  ///@param memgraph_id
+  ///@return true
+  ///@return false
+  ///
   virtual bool NodeExists(std::uint64_t memgraph_id) const = 0;
+
+  /// Gets edge weight by edge ID.
+  ///
+  /// @param[in] edge_id edge ID
+  ///
+  /// @return double weight
+  virtual double GetWeight(TSize edge_id) const = 0;
+
+  ///
+  ///@brief Return true if graph has weights on edges.
+  ///
+  virtual bool IsWeighted() const = 0;
 };
 
 template <typename TSize>
