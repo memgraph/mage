@@ -885,13 +885,21 @@ def train_eval_epochs(
 
 #####################################################
 @mgp.read_proc
-def predict(
+def predict_edge(
     ctx: mgp.ProcCtx, vertex_1: mgp.Vertex, vertex_2: mgp.Vertex
 ) -> mgp.Record(prediction=mgp.Number):
+    """
+    If you were doing link prediction, with this function you can input some of your vertices, and do the predictions
+
+    :params vertex_1 first vertex in prediction
+    :params vertex_2 second vertex in prediction
+
+    :return prediction: score between 0 and 1
+    """
     global query_module_tgn
 
-    embedding_source: List[float] = query_module_tgn.all_embeddings[vertex_1.id]
-    embedding_dest = query_module_tgn.all_embeddings[vertex_2.id]
+    embedding_source: List[float] = query_module_tgn.all_embeddings[int(vertex_1.id)]
+    embedding_dest = query_module_tgn.all_embeddings[int(vertex_2.id)]
 
     embedding_src_torch = torch.tensor(
         embedding_source, device=query_module_tgn.device, dtype=torch.float
@@ -901,9 +909,8 @@ def predict(
     )
 
     x = torch.cat([embedding_src_torch, embedding_dest_torch], dim=0)  # along rows
-
     score = query_module_tgn.mlp(x).squeeze(dim=0)
-    return mgp.Record(prediction=score)
+    return mgp.Record(prediction=float(score))
 
 
 @mgp.read_proc
