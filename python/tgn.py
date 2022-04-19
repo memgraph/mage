@@ -889,7 +889,8 @@ def predict_edge(
     ctx: mgp.ProcCtx, vertex_1: mgp.Vertex, vertex_2: mgp.Vertex
 ) -> mgp.Record(prediction=mgp.Number):
     """
-    If you were doing link prediction, with this function you can input some of your vertices, and do the predictions
+    If you were doing link prediction, with this function you can input some of your vertices, and get the predictions
+    Be careful to input vertices in correct order (src->dest) otherwise you might get wrong prediction
 
     :params vertex_1 first vertex in prediction
     :params vertex_2 second vertex in prediction
