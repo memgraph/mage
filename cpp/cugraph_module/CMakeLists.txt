@@ -22,3 +22,13 @@ add_query_module(cugraph.betweenness_centrality 1 algorithms/betweenness_central
 target_mage_cugraph(cugraph.betweenness_centrality)
 target_link_libraries(cugraph.betweenness_centrality PRIVATE mg_utility)
 target_include_directories(cugraph.betweenness_centrality PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_query_module(cugraph.balanced_cut_clustering 1 algorithms/balanced_cut_clustering.cu)
+target_mage_cugraph(cugraph.balanced_cut_clustering)
+target_link_libraries(cugraph.balanced_cut_clustering PRIVATE mg_utility)
+target_include_directories(cugraph.balanced_cut_clustering PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_query_module(cugraph.spectral_clustering 1 algorithms/spectral_clustering.cu)
+target_mage_cugraph(cugraph.spectral_clustering)
+target_link_libraries(cugraph.spectral_clustering PRIVATE mg_utility)
+target_include_directories(cugraph.spectral_clustering PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
