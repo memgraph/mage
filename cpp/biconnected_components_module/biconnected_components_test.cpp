@@ -13,47 +13,59 @@
 namespace {
 
 bool CheckBCC(std::vector<std::vector<mg_graph::Edge<>>> user,
-              std::vector<std::vector<std::pair<std::uint64_t, std::uint64_t>>> correct) {
-  std::vector<std::set<std::pair<std::uint64_t, std::uint64_t>>> user_bcc, correct_bcc;
+              std::vector<std::vector<std::pair<std::uint64_t, std::uint64_t>>> correct_bcc_edges) {
+  std::vector<std::set<std::pair<std::uint64_t, std::uint64_t>>> user_bcc_edges, correct_bcc_edges_set;
 
-  for (auto &bcc : correct) {
-    correct_bcc.push_back({});
+  for (auto &bcc : correct_bcc_edges) {
+    correct_bcc_edges_set.push_back({});
     for (auto &p : bcc) {
-      correct_bcc.back().insert({p.first, p.second});
-      correct_bcc.back().insert({p.second, p.first});
+      correct_bcc_edges_set.back().insert({p.first, p.second});
+      correct_bcc_edges_set.back().insert({p.second, p.first});
     }
   }
 
   for (auto &bcc : user) {
-    user_bcc.push_back({});
+    user_bcc_edges.push_back({});
     for (const auto &edge : bcc) {
-      user_bcc.back().insert({edge.from, edge.to});
-      user_bcc.back().insert({edge.to, edge.from});
+      user_bcc_edges.back().insert({edge.from, edge.to});
+      user_bcc_edges.back().insert({edge.to, edge.from});
     }
   }
 
-  std::sort(correct_bcc.begin(), correct_bcc.end());
-  std::sort(user_bcc.begin(), user_bcc.end());
+  std::sort(correct_bcc_edges_set.begin(), correct_bcc_edges_set.end());
+  std::sort(user_bcc_edges.begin(), user_bcc_edges.end());
 
-  return user_bcc == correct_bcc;
+  return user_bcc_edges == correct_bcc_edges_set;
 }
 }  // namespace
 
 TEST(BCC, EmptyGraph) {
   auto G = mg_generate::BuildGraph(0, {});
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
+
+  std::unordered_set<std::uint64_t> articulation_points;
+  std::vector<std::unordered_set<std::uint64_t>> bcc_nodes;
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G, articulation_points, bcc_nodes);
+
   ASSERT_TRUE(CheckBCC(BCC, {}));
 }
 
 TEST(BCC, SingleNode) {
   auto G = mg_generate::BuildGraph(1, {});
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
+
+  std::unordered_set<std::uint64_t> articulation_points;
+  std::vector<std::unordered_set<std::uint64_t>> bcc_nodes;
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G, articulation_points, bcc_nodes);
+
   ASSERT_TRUE(CheckBCC(BCC, {}));
 }
 
 TEST(BCC, DisconnectedNodes) {
   auto G = mg_generate::BuildGraph(100, {});
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
+
+  std::unordered_set<std::uint64_t> articulation_points;
+  std::vector<std::unordered_set<std::uint64_t>> bcc_nodes;
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G, articulation_points, bcc_nodes);
+
   ASSERT_TRUE(CheckBCC(BCC, {}));
 }
 
@@ -64,7 +76,11 @@ TEST(BCC, Cycle) {
     E.emplace_back(i, (i + 1) % n);
   }
   auto G = mg_generate::BuildGraph(n, E);
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
+
+  std::unordered_set<std::uint64_t> articulation_points;
+  std::vector<std::unordered_set<std::uint64_t>> bcc_nodes;
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G, articulation_points, bcc_nodes);
+
   ASSERT_TRUE(CheckBCC(BCC, {E}));
 }
 
@@ -75,7 +91,11 @@ TEST(BCC, Cycle) {
 /// (0)(3)   (5)
 TEST(BCC, SmallTree) {
   auto G = mg_generate::BuildGraph(6, {{2, 4}, {1, 4}, {0, 2}, {1, 3}, {1, 5}});
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
+
+  std::unordered_set<std::uint64_t> articulation_points;
+  std::vector<std::unordered_set<std::uint64_t>> bcc_nodes;
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G, articulation_points, bcc_nodes);
+
   ASSERT_TRUE(CheckBCC(BCC, {{{2, 4}}, {{1, 4}}, {{0, 2}}, {{1, 3}}, {{1, 5}}}));
 }
 
@@ -85,7 +105,11 @@ TEST(BCC, RandomTree) {
   for (const auto &edge : G->Edges()) {
     if (edge.from < edge.to) correct_bcc.push_back({{edge.from, edge.to}});
   }
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
+
+  std::unordered_set<std::uint64_t> articulation_points;
+  std::vector<std::unordered_set<std::uint64_t>> bcc_nodes;
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G, articulation_points, bcc_nodes);
+
   ASSERT_TRUE(CheckBCC(BCC, correct_bcc));
 }
 
@@ -96,7 +120,11 @@ TEST(BCC, RandomTree) {
 ///    (2)     (6)
 TEST(BCC, HandmadeConnectedGraph1) {
   auto G = mg_generate::BuildGraph(8, {{0, 1}, {0, 2}, {1, 2}, {1, 3}, {3, 4}, {3, 7}, {4, 5}, {4, 6}, {5, 6}});
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
+
+  std::unordered_set<std::uint64_t> articulation_points;
+  std::vector<std::unordered_set<std::uint64_t>> bcc_nodes;
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G, articulation_points, bcc_nodes);
+
   ASSERT_TRUE(CheckBCC(BCC, {{{0, 1}, {1, 2}, {2, 0}}, {{1, 3}}, {{3, 7}}, {{3, 4}}, {{4, 5}, {5, 6}, {4, 6}}}));
 }
 
@@ -124,7 +152,11 @@ TEST(BCC, HandmadeConnectedGraph2) {
                                         {11, 12},
                                         {12, 13},
                                         {13, 14}});
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
+
+  std::unordered_set<std::uint64_t> articulation_points;
+  std::vector<std::unordered_set<std::uint64_t>> bcc_nodes;
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G, articulation_points, bcc_nodes);
+
   ASSERT_TRUE(CheckBCC(BCC, {{{0, 1}, {1, 2}, {2, 0}},
                              {{1, 3}},
                              {{3, 7}, {7, 5}, {5, 4}, {3, 4}, {4, 6}, {5, 6}},
@@ -149,7 +181,11 @@ TEST(BCC, HandmadeDisconnectedGraph) {
       26, {{0, 1},   {0, 2},   {1, 4},   {1, 3},   {3, 5},   {4, 5},   {2, 6},   {2, 7},   {6, 7},   {8, 9},
            {10, 11}, {11, 12}, {12, 13}, {13, 14}, {10, 14}, {10, 15}, {15, 16}, {16, 17}, {15, 17}, {13, 18},
            {18, 19}, {18, 21}, {18, 20}, {21, 25}, {20, 22}, {22, 23}, {23, 24}, {22, 24}});
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
+
+  std::unordered_set<std::uint64_t> articulation_points;
+  std::vector<std::unordered_set<std::uint64_t>> bcc_nodes;
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G, articulation_points, bcc_nodes);
+
   ASSERT_TRUE(CheckBCC(BCC, {{{0, 1}},
                              {{0, 2}},
                              {{1, 4}, {1, 3}, {4, 5}, {3, 5}},
@@ -176,7 +212,11 @@ TEST(BCC, HandmadeCrossEdge) {
   auto G = mg_generate::BuildGraph(
       14, {{0, 1}, {0, 3}, {1, 3}, {1, 4}, {1, 2}, {3, 4},  {2, 4},   {2, 3},   {2, 5},   {5, 9},   {9, 8},
            {8, 7}, {6, 7}, {6, 8}, {9, 6}, {5, 6}, {7, 10}, {10, 13}, {10, 11}, {10, 12}, {13, 11}, {11, 12}});
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
+
+  std::unordered_set<std::uint64_t> articulation_points;
+  std::vector<std::unordered_set<std::uint64_t>> bcc_nodes;
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G, articulation_points, bcc_nodes);
+
   ASSERT_TRUE(CheckBCC(BCC, {{{0, 1}, {1, 3}, {0, 3}, {1, 4}, {1, 2}, {2, 4}, {3, 4}, {2, 3}},
                              {{2, 5}},
                              {{5, 6}, {6, 7}, {7, 8}, {8, 9}, {9, 5}, {9, 6}, {6, 8}},
@@ -208,7 +248,11 @@ TEST(BCC, HandmadeArticulationPoint) {
                                         {6, 9},
                                         {9, 10},
                                         {6, 10}});
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
+
+  std::unordered_set<std::uint64_t> articulation_points;
+  std::vector<std::unordered_set<std::uint64_t>> bcc_nodes;
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G, articulation_points, bcc_nodes);
+
   ASSERT_TRUE(CheckBCC(BCC, {{{0, 1}, {1, 2}, {2, 0}},
                              {{2, 3}, {2, 4}, {3, 4}},
                              {{4, 5}, {4, 6}, {5, 6}, {5, 8}, {6, 8}},
@@ -218,7 +262,11 @@ TEST(BCC, HandmadeArticulationPoint) {
 TEST(BCC, Performance) {
   auto G = mg_generate::GenRandomGraph(10000, 25000);
   mg_test_utility::Timer timer;
-  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G);
+
+  std::unordered_set<std::uint64_t> articulation_points;
+  std::vector<std::unordered_set<std::uint64_t>> bcc_nodes;
+  auto BCC = bcc_algorithm::GetBiconnectedComponents(*G, articulation_points, bcc_nodes);
+
   auto time_elapsed = timer.Elapsed();
   ASSERT_TRUE(time_elapsed < std::chrono::seconds(1));
 }

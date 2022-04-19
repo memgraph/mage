@@ -15,7 +15,7 @@ namespace betweenness_centrality_util {
 ///@param graph The graph that is traversed by the BFS algorithm
 ///@param visited The container for storing nodes in the order in which they are discovered by the BFS algorithm
 ///@param predecessors The container for storing nodes that are located just before a specific node on
-/// the shortest path from the source node to the beforementioned node
+/// the shortest path from the source node to the aforementioned node
 ///@param shortest_paths_counter The container for storing the number of shortest paths from the source node to
 /// all nodes in the given graph
 ///
