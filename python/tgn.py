@@ -296,6 +296,13 @@ def is_tgn_initialized() -> bool:
     return True
 
 
+def get_link_score(src_tensor: torch.Tensor, dest_tensor: torch.Tensor) -> torch.Tensor:
+    global query_module_tgn
+    # along columns
+    x = torch.cat([src_tensor, dest_tensor], dim=1)
+    return query_module_tgn.mlp(x).squeeze(dim=0)
+
+
 #####################################
 
 # init function
@@ -498,7 +505,6 @@ def process_batch_self_supervised() -> float:
     ) = unpack_tgn_batch_data()
 
     current_batch_size = len(sources)
-    print(current_batch_size)
     negative_src, negative_dest = sample_negative(current_batch_size)
 
     graph_data = (
@@ -521,16 +527,12 @@ def process_batch_self_supervised() -> float:
     embeddings_dest_neg = embeddings_negative[current_batch_size:]
 
     # first row concatenation
-    x1, x2 = torch.cat([embeddings_source, embeddings_source_neg], dim=0), torch.cat(
-        [embeddings_dest, embeddings_dest_neg], dim=0
-    )
-    # columns concatenation
-    x = torch.cat([x1, x2], dim=1)
-    # score calculation = shape (num_positive_edges + num_negative_edges, 1) ->
-    # (num_positive_edges + num_negative_edges)
+    src_embeddings, dest_embeddings = torch.cat(
+        [embeddings_source, embeddings_source_neg], dim=0
+    ), torch.cat([embeddings_dest, embeddings_dest_neg], dim=0)
+    # score shape = (num_positive_edges + num_negative_edges, 1) ->
     # num_positive_edges == num_negative_edges == current_batch_size
-    # todo update so that num_negative_edges in range [10,25]
-    score = query_module_tgn.mlp(x).squeeze(dim=0)
+    score = get_link_score(src_embeddings, dest_embeddings)
 
     pos_score = score[:current_batch_size]
     neg_score = score[current_batch_size:]
@@ -885,7 +887,7 @@ def train_eval_epochs(
 
 #####################################################
 @mgp.read_proc
-def predict_edge(
+def predict_link_score(
     ctx: mgp.ProcCtx, vertex_1: mgp.Vertex, vertex_2: mgp.Vertex
 ) -> mgp.Record(prediction=mgp.Number):
     """
@@ -904,13 +906,13 @@ def predict_edge(
 
     embedding_src_torch = torch.tensor(
         embedding_source, device=query_module_tgn.device, dtype=torch.float
-    )
+    ).reshape(1, -1)
     embedding_dest_torch = torch.tensor(
         embedding_dest, device=query_module_tgn.device, dtype=torch.float
-    )
+    ).reshape(1, -1)
 
-    x = torch.cat([embedding_src_torch, embedding_dest_torch], dim=0)  # along rows
-    score = query_module_tgn.mlp(x).squeeze(dim=0)
+    # column concatenation
+    score = get_link_score(embedding_src_torch, embedding_dest_torch)
     return mgp.Record(prediction=float(score))
 
 
