@@ -888,21 +888,21 @@ def train_eval_epochs(
 #####################################################
 @mgp.read_proc
 def predict_link_score(
-    ctx: mgp.ProcCtx, vertex_1: mgp.Vertex, vertex_2: mgp.Vertex
+    ctx: mgp.ProcCtx, src: mgp.Vertex, dest: mgp.Vertex
 ) -> mgp.Record(prediction=mgp.Number):
     """
     If you were doing link prediction, with this function you can input some of your vertices, and get the predictions
     Be careful to input vertices in correct order (src->dest) otherwise you might get wrong prediction
 
-    :params vertex_1 first vertex in prediction
-    :params vertex_2 second vertex in prediction
+    :params src: src vertex in prediction
+    :params dest: dest vertex in prediction
 
     :return prediction: score between 0 and 1
     """
     global query_module_tgn
 
-    embedding_source: List[float] = query_module_tgn.all_embeddings[int(vertex_1.id)]
-    embedding_dest = query_module_tgn.all_embeddings[int(vertex_2.id)]
+    embedding_source: List[float] = query_module_tgn.all_embeddings[int(src.id)]
+    embedding_dest = query_module_tgn.all_embeddings[int(dest.id)]
 
     embedding_src_torch = torch.tensor(
         embedding_source, device=query_module_tgn.device, dtype=torch.float
