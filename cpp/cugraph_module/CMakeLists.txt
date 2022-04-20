@@ -32,3 +32,8 @@ add_query_module(cugraph.spectral_clustering 1 algorithms/spectral_clustering.cu
 target_mage_cugraph(cugraph.spectral_clustering)
 target_link_libraries(cugraph.spectral_clustering PRIVATE mg_utility)
 target_include_directories(cugraph.spectral_clustering PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_query_module(cugraph.hits 1 algorithms/hits.cu)
+target_mage_cugraph(cugraph.hits)
+target_link_libraries(cugraph.hits PRIVATE mg_utility)
+target_include_directories(cugraph.hits PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
