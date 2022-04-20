@@ -553,17 +553,18 @@ def process_batch_self_supervised() -> float:
         loss.backward()
         query_module_tgn.optimizer.step()
         query_module_tgn.m_loss.append(loss.item())
-
+    pos_prob_cpu = pos_prob.reshape((-1,)).detach().cpu()
+    neg_prob_cpu = neg_prob.reshape((-1,)).detach().cpu()
     # todo antoniofilipovic - update once we have logging API
     print(
         "POS PROB | NEG PROB",
-        pos_prob.reshape((-1,)).detach(),
-        neg_prob.reshape((-1,)).detach(),
+        pos_prob_cpu,
+        neg_prob_cpu,
     )
     pred_score = np.concatenate(
         [
-            (pos_prob.reshape((-1,))).detach().numpy(),
-            (neg_prob.reshape((-1,))).detach().numpy(),
+            pos_prob_cpu.numpy(),
+            neg_prob_cpu.numpy(),
         ]
     )
     true_label = np.concatenate(
@@ -577,10 +578,10 @@ def process_batch_self_supervised() -> float:
         np.sum(np.rint(true_label) == np.rint(pred_score)) * 1.0 / len(true_label)
     )
 
-    # update embeddings to newest ones that we can return on user request
+    # update embeddings to the newest ones that we can return on user request
     update_embeddings(
-        embeddings_source.cpu().detach().numpy(),
-        embeddings_dest.cpu().detach().numpy(),
+        embeddings_source.detach().cpu().numpy(),
+        embeddings_dest.detach().cpu().numpy(),
         sources,
         destinations,
     )
@@ -638,8 +639,8 @@ def process_batch_supervised() -> float:
 
     pred_score = np.concatenate(
         [
-            (src_prob.squeeze()).cpu().detach().numpy(),
-            (dest_prob.squeeze()).cpu().detach().numpy(),
+            (src_prob.squeeze()).detach().cpu().numpy(),
+            (dest_prob.squeeze()).detach().cpu().numpy(),
         ]
     )
     true_label = np.concatenate([np.array(labels[:, 0]), np.array(labels[:, 1])])
@@ -650,8 +651,8 @@ def process_batch_supervised() -> float:
 
     # update embeddings to newest ones that we can return on user request
     update_embeddings(
-        embeddings_source.cpu().detach().numpy(),
-        embeddings_dest.cpu().detach().numpy(),
+        embeddings_source.detach().cpu().numpy(),
+        embeddings_dest.cpu().detach().cpu().numpy(),
         sources,
         destinations,
     )

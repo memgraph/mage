@@ -12,7 +12,7 @@ jobs:
     env:
       DOCKER_ORGANIZATION_NAME: memgraph
       DOCKER_REPOSITORY_NAME: memgraph-mage
-      MEMGRAPH_VERSION: 2.2.0
+      MEMGRAPH_VERSION: 2.2.1
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
@@ -64,7 +64,7 @@ jobs:
       - name: Download memgraph binary
         run: |
           curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11/memgraph_${MEMGRAPH_VERSION}-1_amd64.deb > memgraph-amd64.deb
-          curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION}-1_aarch64.deb > memgraph-arm64.deb
+          curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb > memgraph-arm64.deb
 
       - name: Build & push prod docker images
         run: |
