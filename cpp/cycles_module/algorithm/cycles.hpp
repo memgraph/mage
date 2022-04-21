@@ -1,6 +1,6 @@
-#include <optional>
+#include <cstdint>
 #include <set>
-#include <vector>
+#include <optional>
 
 #include <mg_graph.hpp>
 

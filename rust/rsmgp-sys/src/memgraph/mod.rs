@@ -14,6 +14,7 @@
 //! Abstraction to interact with Memgraph.
 
 use std::ffi::CStr;
+use std::os::raw::c_char;
 
 use crate::list::*;
 use crate::mgp::*;
@@ -94,7 +95,7 @@ mgp_default_mut_ptr!(mgp_value);
 mgp_default_mut_ptr!(mgp_vertex);
 mgp_default_mut_ptr!(mgp_vertices_iterator);
 
-mgp_default_const_ptr!(i8);
+mgp_default_const_ptr!(c_char);
 mgp_default_const_ptr!(u64);
 
 mgp_default_zero!(i32);

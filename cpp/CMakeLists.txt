@@ -17,9 +17,11 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # Compile flags.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall \
-    -Werror=switch -Werror=switch-bool -Werror=return-type")
+    -Werror=switch -Werror=switch-bool")
 # Don't omit frame pointer in RelWithDebInfo, for additional callchain debug.
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
     "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer")
@@ -79,13 +81,13 @@ endfunction()
 # Available query modules.
 include(CTest)
 enable_testing()
-add_subdirectory(betweenness_centrality_module)
-add_subdirectory(biconnected_components_module)
-add_subdirectory(bipartite_matching_module)
-add_subdirectory(bridges_module)
-add_subdirectory(connectivity_module)
-add_subdirectory(cycles_module)
-add_subdirectory(community_detection_module)
-add_subdirectory(pagerank_module)
-add_subdirectory(uuid_module)
+# add_subdirectory(betweenness_centrality_module)
+# add_subdirectory(biconnected_components_module)
+# add_subdirectory(bipartite_matching_module)
+# add_subdirectory(bridges_module)
+# add_subdirectory(connectivity_module)
+# add_subdirectory(cycles_module)
+# add_subdirectory(community_detection_module)
+# add_subdirectory(pagerank_module)
+# add_subdirectory(uuid_module)
 add_cugraph_subdirectory(cugraph_module)
