@@ -4,7 +4,7 @@ FROM debian:bullseye as base
 
 USER root
 
-ARG MG_VERSION=2.2.0
+ARG MG_VERSION=2.2.1
 ARG PY_VERSION_DEFAULT
 ENV MG_VERSION ${MG_VERSION}
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
@@ -75,7 +75,7 @@ COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VE
 
 RUN rm -rf /mage \
     && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
-    && apt-get -y --purge autoremove clang git curl python3-pip python3-setuptools python3-dev cmake build-essential \
+    && apt-get -y --purge autoremove clang git curl python3-pip python3-dev cmake build-essential \
     && apt-get clean
 
 USER memgraph

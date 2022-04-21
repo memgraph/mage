@@ -28,8 +28,9 @@ auto CreateCugraphFromMemgraph(const mg_graph::GraphView<> &mg_graph, raft::hand
                  [](const auto &edge) -> TVertexT { return edge.from; });
   std::transform(mg_edges.begin(), mg_edges.end(), std::back_inserter(mg_dst),
                  [](const auto &edge) -> TVertexT { return edge.to; });
-  std::transform(mg_edges.begin(), mg_edges.end(), std::back_inserter(mg_weight),
-                 [mg_graph](const auto &edge) -> TWeightT { return mg_graph.GetWeight(edge.id); });
+  std::transform(
+      mg_edges.begin(), mg_edges.end(), std::back_inserter(mg_weight),
+      [&mg_graph](const auto &edge) -> TWeightT { return mg_graph.IsWeighted() ? mg_graph.GetWeight(edge.id) : 1.0; });
 
   // Synchronize the data structures to the GPU
   auto stream = handle.get_stream();
@@ -59,8 +60,6 @@ auto CreateCugraphLegacyFromMemgraph(const mg_graph::GraphView<> &mg_graph, raft
   const auto n_edges = mg_edges.size();
   const auto n_vertices = mg_graph.Nodes().size();
 
-  const auto &mg_edges = mg_graph.Edges();
-
   // Flatten the data vector
   std::vector<TVertexT> mg_src;
   mg_src.reserve(mg_edges.size());
@@ -73,8 +72,9 @@ auto CreateCugraphLegacyFromMemgraph(const mg_graph::GraphView<> &mg_graph, raft
                  [](const auto &edge) -> TVertexT { return edge.from; });
   std::transform(mg_edges.begin(), mg_edges.end(), std::back_inserter(mg_dst),
                  [](const auto &edge) -> TVertexT { return edge.to; });
-  std::transform(mg_edges.begin(), mg_edges.end(), std::back_inserter(mg_weight),
-                 [mg_graph](const auto &edge) -> TWeightT { return mg_graph.GetWeight(edge.id); });
+  std::transform(
+      mg_edges.begin(), mg_edges.end(), std::back_inserter(mg_weight),
+      [&mg_graph](const auto &edge) -> TWeightT { return mg_graph.IsWeighted() ? mg_graph.GetWeight(edge.id) : 1.0; });
 
   // Synchronize the data structures to the GPU
   auto stream = handle.get_stream();
