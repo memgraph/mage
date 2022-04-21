@@ -37,3 +37,8 @@ add_query_module(cugraph.hits 1 algorithms/hits.cu)
 target_mage_cugraph(cugraph.hits)
 target_link_libraries(cugraph.hits PRIVATE mg_utility)
 target_include_directories(cugraph.hits PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_query_module(cugraph.shortest_path 1 algorithms/shortest_path.cu)
+target_mage_cugraph(cugraph.shortest_path)
+target_link_libraries(cugraph.shortest_path PRIVATE mg_utility)
+target_include_directories(cugraph.shortest_path PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
