@@ -403,6 +403,10 @@ struct mgp_proc *module_add_read_procedure(struct mgp_module *module, const char
   return MgInvoke<struct mgp_proc *>(mgp_module_add_read_procedure, module, name, cb);
 }
 
+struct mgp_proc *module_add_write_procedure(struct mgp_module *module, const char *name, mgp_proc_cb cb) {
+  return MgInvoke<struct mgp_proc *>(mgp_module_add_write_procedure, module, name, cb);
+}
+
 void proc_add_arg(struct mgp_proc *proc, const char *name, struct mgp_type *type) {
   MgInvokeVoid(mgp_proc_add_arg, proc, name, type);
 }
@@ -421,4 +425,13 @@ void proc_add_deprecated_result(struct mgp_proc *proc, const char *name, struct 
 
 bool must_abort(struct mgp_graph *graph) { return mgp_must_abort(graph); }
 
+// Generation
+struct mgp_vertex *graph_create_vertex(struct mgp_graph *graph, struct mgp_memory *memory) {
+  return MgInvoke<struct mgp_vertex *>(mgp_graph_create_vertex, graph, memory);
+}
+
+struct mgp_edge *graph_create_edge(struct mgp_graph *graph, struct mgp_vertex *from, struct mgp_vertex *to,
+                                   struct mgp_edge_type type, struct mgp_memory *memory) {
+  return MgInvoke<struct mgp_edge *>(mgp_graph_create_edge, graph, from, to, type, memory);
+}
 }  // namespace mgp

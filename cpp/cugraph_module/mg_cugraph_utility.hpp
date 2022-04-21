@@ -1,6 +1,7 @@
 #include <cugraph/algorithms.hpp>
 #include <cugraph/functions.hpp>  // legacy coo_to_csr
 #include <cugraph/graph_functions.hpp>
+#include <cugraph/graph_generators.hpp>
 
 #include <raft/distance/distance.hpp>
 #include <raft/handle.hpp>
@@ -89,5 +90,25 @@ auto CreateCugraphLegacyFromMemgraph(const mg_graph::GraphView<> &mg_graph, raft
       cu_src.data(), cu_dst.data(), mg_weight.data(), static_cast<TVertexT>(n_vertices), static_cast<TEdgeT>(n_edges));
 
   return cugraph::coo_to_csr<TVertexT, TEdgeT, TWeightT>(cooview);
+}
+
+template <typename TVertexT = int64_t, typename TEdgeT = int64_t, typename TWeightT = double>
+auto GenerateCugraphRMAT(std::size_t scale, std::size_t num_edges, raft::handle_t const &handle) {
+  // Synchronize the data structures to the GPU
+  auto stream = handle.get_stream();
+  rmm::device_uvector<TVertexT> cu_src(num_edges, stream);
+  rmm::device_uvector<TVertexT> cu_dst(num_edges, stream);
+
+  std::tie(cu_src, cu_dst) =
+      cugraph::generate_rmat_edgelist<TVertexT>(handle, scale, num_edges, 0.57, 0.19, 0.19, 0, false);
+
+  std::vector<std::pair<std::uint64_t, std::uint64_t>> mg_edges;
+  for (std::size_t i = 0; i < num_edges; ++i) {
+    auto src = static_cast<std::uint64_t>(cu_src.element(i, stream));
+    auto dst = static_cast<std::uint64_t>(cu_dst.element(i, stream));
+
+    mg_edges.emplace_back(src, dst);
+  }
+  return mg_edges;
 }
 }  // namespace mg_cugraph
