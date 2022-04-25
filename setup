@@ -128,6 +128,7 @@ def build(args):
         cmake_args.append("-DCMAKE_BUILD_TYPE=%s" % args.type)
     else:
         cmake_args.append("-DCMAKE_BUILD_TYPE=Release")
+        cmake_args.append("-DMAGE_CUGRAPH_ENABLE=ON")
     if args.cpp_cmake_flags is not None:
         cmake_args += ["-D%s" % arg for arg in args.cpp_cmake_flags]
     subprocess.run(["cmake"] + cmake_args)
@@ -141,9 +142,9 @@ def build(args):
     # NOTE: This is dependent on the cpp/cmake/cugraph ExternalProject_Add (on
     # the INSTALL_DIR).
     all_so = set(glob.glob("**/*.so", recursive=True))
-    cugraph_so = set(glob.glob("cugraph/**/*.so", recursive=True))
-    rapids_so = set(glob.glob("**/librapids*.so", recursive=True))
-    for file in all_so - cugraph_so - rapids_so:
+    # cugraph_so = set(glob.glob("cugraph/**/*.so", recursive=True))
+    # rapids_so = set(glob.glob("**/librapids*.so", recursive=True))
+    for file in all_so:
         shutil.copy2(file, MAGE_BUILD_DIRECTORY)
 
     #################################################
