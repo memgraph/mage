@@ -35,43 +35,52 @@
 # build configuration.
 
 option(MAGE_CUGRAPH_ENABLE "Enable cuGraph build" OFF)
-message(STATUS "------> Enable cuGraph build ${MAGE_CUGRAPH_ENABLE}")
+message(STATUS "MAGE cuGraph build enabled: ${MAGE_CUGRAPH_ENABLE}")
 
 if (MAGE_CUGRAPH_ENABLE)
+  # Version of cuGraph for local build
+  set(MAGE_CUGRAPH_TAG "v22.02.00" CACHE STRING "cuGraph GIT tag to checkout" )
+  set(MAGE_CUGRAPH_REPO "https://github.com/rapidsai/cugraph.git" CACHE STRING "cuGraph GIT repo URL")
+  # Custom MAGE_CUGRAPH_BUILD_TYPE.
+  set(MAGE_CUGRAPH_BUILD_TYPE "Release" CACHE STRING "Passed to cuGraph as CMAKE_BUILD_TYPE")
+  # NATIVE | ALL -> possible because cugraph calls rapids_cuda_init_architectures
+  set(MAGE_CUDA_ARCHITECTURES "NATIVE" CACHE STRING "Passed to cuGraph as CMAKE_CUDA_ARCHITECTURES")
+
   # RAPIDS.cmake is here because rapids_cuda_init_architectures is required to
   # properly set both CMAKE_CUDA_ARCHITECTURES and CUDA_ARCHITECTURES target
   # property.
-  file(DOWNLOAD https://raw.githubusercontent.com/rapidsai/rapids-cmake/branch-21.12/RAPIDS.cmake
+  file(DOWNLOAD "https://raw.githubusercontent.com/rapidsai/rapids-cmake/${MAGE_CUGRAPH_TAG}a/RAPIDS.cmake"
                 ${CMAKE_BINARY_DIR}/RAPIDS.cmake)
   include(${CMAKE_BINARY_DIR}/RAPIDS.cmake)
+
   include(rapids-cuda)
   rapids_cuda_init_architectures("${MEMGRAPH_MAGE_PROJECT_NAME}")
   enable_language(CUDA)
 
-  set(MAGE_CUGRAPH_REPO "https://github.com/rapidsai/cugraph.git" CACHE STRING "cuGraph GIT repo URL")
-  set(MAGE_CUGRAPH_TAG "v22.02.00" CACHE STRING "cuGraph GIT tag to checkout" )
-  # Custom MAGE_CUGRAPH_BUILD_TYPE because Debug build did NOT work.
-  set(MAGE_CUGRAPH_BUILD_TYPE "Release" CACHE STRING "Passed to cuGraph as CMAKE_BUILD_TYPE")
-  # NATIVE | ALL -> possible because cugraph calls rapids_cuda_init_architectures
-  set(MAGE_CUDA_ARCHITECTURES "NATIVE" CACHE STRING "Passed to cuGraph as CMAKE_CUDA_ARCHITECTURES")
   set(CMAKE_CUDA_STANDARD 17)
   set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-  set(MAGE_CUGRAPH_ROOT ${PROJECT_BINARY_DIR}/cugraph)
-  ExternalProject_Add(cugraph-proj
-    PREFIX            "${MAGE_CUGRAPH_ROOT}"
-    INSTALL_DIR       "${MAGE_CUGRAPH_ROOT}"
-    GIT_REPOSITORY    "${MAGE_CUGRAPH_REPO}"
-    GIT_TAG           "${MAGE_CUGRAPH_TAG}"
-    SOURCE_SUBDIR     "cpp"
-    CMAKE_ARGS        "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
-                      "-DCMAKE_BUILD_TYPE=${MAGE_CUGRAPH_BUILD_TYPE}"
-                      "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
-                      "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
-                      "-DCMAKE_CUDA_ARCHITECTURES='${MAGE_CUDA_ARCHITECTURES}'"
-                      "-DBUILD_STATIC_FAISS=ON"
-                      "-DBUILD_TESTS=OFF"
-                      "-DBUILD_CUGRAPH_MG_TESTS=OFF"
-  )
+
+  message(STATUS "MAGE cuGraph root: ${MAGE_CUGRAPH_ROOT}")
+  # Skip downloading if root is configured
+  if (NOT MAGE_CUGRAPH_ROOT)
+    set(MAGE_CUGRAPH_ROOT ${PROJECT_BINARY_DIR}/cugraph)
+    ExternalProject_Add(cugraph-proj
+      PREFIX            "${MAGE_CUGRAPH_ROOT}"
+      INSTALL_DIR       "${MAGE_CUGRAPH_ROOT}"
+      GIT_REPOSITORY    "${MAGE_CUGRAPH_REPO}"
+      GIT_TAG           "${MAGE_CUGRAPH_TAG}"
+      SOURCE_SUBDIR     "cpp"
+      CMAKE_ARGS        "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
+                        "-DCMAKE_BUILD_TYPE=${MAGE_CUGRAPH_BUILD_TYPE}"
+                        "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
+                        "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+                        "-DCMAKE_CUDA_ARCHITECTURES='${MAGE_CUDA_ARCHITECTURES}'"
+                        "-DBUILD_STATIC_FAISS=ON"
+                        "-DBUILD_TESTS=OFF"
+                        "-DBUILD_CUGRAPH_MG_TESTS=OFF"
+    )
+  endif()
+  
   set(MAGE_CUGRAPH_INCLUDE_DIR "${MAGE_CUGRAPH_ROOT}/include")
   set(MAGE_CUGRAPH_LIBRARY_PATH "${MAGE_CUGRAPH_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}cugraph.so")
   add_library(mage_cugraph SHARED IMPORTED)

@@ -49,7 +49,10 @@ def get_arguments():
         "--type", help="Build type", type=BuildType, choices=list(BuildType), required=False
     )
     build_args_parser.add_argument(
-        "--cpp-cmake-flags", nargs="+", help="CMake flags for the cpp part (without -D)", required=False
+        "--gpu", help="GPU Algorithms", action='store_true'
+    )
+    build_args_parser.add_argument(
+        "--cpp-build-flags", nargs="+", help="CMake flags for the cpp part (without -D)", required=False
     )
     build_parser = subparsers.add_parser("build", help="Build memgraph-mage", parents=[build_args_parser])
 
@@ -124,13 +127,10 @@ def build(args):
     os.chdir(CPP_BUILD_DIRECTORY)
     subprocess.run(["ls", "-l"])
     cmake_args = [".."]
-    if args.type is not None:
-        cmake_args.append("-DCMAKE_BUILD_TYPE=%s" % args.type)
-    else:
-        cmake_args.append("-DCMAKE_BUILD_TYPE=Release")
+    if args.gpu:
         cmake_args.append("-DMAGE_CUGRAPH_ENABLE=ON")
-    if args.cpp_cmake_flags is not None:
-        cmake_args += ["-D%s" % arg for arg in args.cpp_cmake_flags]
+    if args.cpp_build_flags is not None:
+        cmake_args += [f"-D{flag}" for flag in args.cpp_build_flags]
     subprocess.run(["cmake"] + cmake_args)
     core_count = mp.cpu_count()
     subprocess.run(["make", f"-j{core_count}"])
