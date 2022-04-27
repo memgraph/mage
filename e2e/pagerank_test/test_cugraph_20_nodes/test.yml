@@ -1,0 +1,36 @@
+query: >
+    CALL cugraph.pagerank.get() YIELD node, rank
+    RETURN node.id AS node, rank
+    ORDER BY rank ASC
+    
+output:
+    - node: 12
+      rank: 0.01
+    - node: 13
+      rank: 0.01
+    - node: 2
+      rank: 0.0175
+    - node: 6
+      rank: 0.0419
+    - node: 4
+      rank: 0.0441
+    - node: 10
+      rank: 0.0542
+    - node: 1
+      rank: 0.0639
+    - node: 7
+      rank: 0.0739
+    - node: 3
+      rank: 0.076
+    - node: 5
+      rank: 0.0767
+    - node: 14
+      rank: 0.0779
+    - node: 8
+      rank: 0.0824
+    - node: 11
+      rank: 0.097
+    - node: 0
+      rank: 0.1295
+    - node: 9
+      rank: 0.1449
