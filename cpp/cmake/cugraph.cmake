@@ -34,7 +34,7 @@
 # Rapids CMake add NATIVE + ALL options as CUDA_ARCHITECTURES which simplifies
 # build configuration.
 
-option(MAGE_CUGRAPH_ENABLE "Enable cuGraph build" OFF)
+option(MAGE_CUGRAPH_ENABLE "Enable cuGraph build" ON)
 message(STATUS "------> Enable cuGraph build ${MAGE_CUGRAPH_ENABLE}")
 
 if (MAGE_CUGRAPH_ENABLE)
@@ -56,22 +56,22 @@ if (MAGE_CUGRAPH_ENABLE)
   set(MAGE_CUDA_ARCHITECTURES "NATIVE" CACHE STRING "Passed to cuGraph as CMAKE_CUDA_ARCHITECTURES")
   set(CMAKE_CUDA_STANDARD 17)
   set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-  set(MAGE_CUGRAPH_ROOT ${PROJECT_BINARY_DIR}/cugraph)
-  ExternalProject_Add(cugraph-proj
-    PREFIX            "${MAGE_CUGRAPH_ROOT}"
-    INSTALL_DIR       "${MAGE_CUGRAPH_ROOT}"
-    GIT_REPOSITORY    "${MAGE_CUGRAPH_REPO}"
-    GIT_TAG           "${MAGE_CUGRAPH_TAG}"
-    SOURCE_SUBDIR     "cpp"
-    CMAKE_ARGS        "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
-                      "-DCMAKE_BUILD_TYPE=${MAGE_CUGRAPH_BUILD_TYPE}"
-                      "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
-                      "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
-                      "-DCMAKE_CUDA_ARCHITECTURES='${MAGE_CUDA_ARCHITECTURES}'"
-                      "-DBUILD_STATIC_FAISS=ON"
-                      "-DBUILD_TESTS=OFF"
-                      "-DBUILD_CUGRAPH_MG_TESTS=OFF"
-  )
+  set(MAGE_CUGRAPH_ROOT /home/memgraph/apusic/mage/cugraph)
+  # ExternalProject_Add(cugraph-proj
+  #   PREFIX            "${MAGE_CUGRAPH_ROOT}"
+  #   INSTALL_DIR       "${MAGE_CUGRAPH_ROOT}"
+  #   GIT_REPOSITORY    "${MAGE_CUGRAPH_REPO}"
+  #   GIT_TAG           "${MAGE_CUGRAPH_TAG}"
+  #   SOURCE_SUBDIR     "cpp"
+  #   CMAKE_ARGS        "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
+  #                     "-DCMAKE_BUILD_TYPE=${MAGE_CUGRAPH_BUILD_TYPE}"
+  #                     "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
+  #                     "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+  #                     "-DCMAKE_CUDA_ARCHITECTURES='${MAGE_CUDA_ARCHITECTURES}'"
+  #                     "-DBUILD_STATIC_FAISS=ON"
+  #                     "-DBUILD_TESTS=OFF"
+  #                     "-DBUILD_CUGRAPH_MG_TESTS=OFF"
+  # )
   set(MAGE_CUGRAPH_INCLUDE_DIR "${MAGE_CUGRAPH_ROOT}/include")
   set(MAGE_CUGRAPH_LIBRARY_PATH "${MAGE_CUGRAPH_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}cugraph.so")
   add_library(mage_cugraph SHARED IMPORTED)
