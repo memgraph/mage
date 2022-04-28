@@ -79,23 +79,23 @@ void GenerateRMAT(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memo
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   mgp_value *default_scale;
-  mgp_value *default_max_edges;
+  mgp_value *default_num_edges;
   try {
     auto *rmat_proc = mgp::module_add_write_procedure(module, kProcedureGenerate, GenerateRMAT);
 
     default_scale = mgp::value_make_int(4, memory);
-    default_max_edges = mgp::value_make_int(100, memory);
+    default_num_edges = mgp::value_make_int(100, memory);
 
     mgp::proc_add_opt_arg(rmat_proc, kArgumentScale, mgp::type_int(), default_scale);
-    mgp::proc_add_opt_arg(rmat_proc, kArgumentNumEdges, mgp::type_int(), default_max_edges);
+    mgp::proc_add_opt_arg(rmat_proc, kArgumentNumEdges, mgp::type_int(), default_num_edges);
   } catch (const std::exception &e) {
     mgp_value_destroy(default_scale);
-    mgp_value_destroy(default_max_edges);
+    mgp_value_destroy(default_num_edges);
     return 1;
   }
 
   mgp_value_destroy(default_scale);
-  mgp_value_destroy(default_max_edges);
+  mgp_value_destroy(default_num_edges);
   return 0;
 }
 
