@@ -25,6 +25,8 @@ constexpr char const *kProcedurePagerank = "get";
 constexpr char const *kArgumentMaxIterations = "max_iterations";
 constexpr char const *kArgumentDampingFactor = "damping_factor";
 constexpr char const *kArgumentStopEpsilon = "stop_epsilon";
+const char *kDefaultWeightProperty = "weight";
+const double kDefaultWeight = 1.0;
 
 constexpr char const *kResultFieldNode = "node";
 constexpr char const *kResultFieldRank = "rank";
@@ -38,14 +40,17 @@ void InsertPagerankRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memo
 
 void PagerankProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *memory) {
   try {
-    auto max_iterations = mgp::value_get_int(mgp::list_at(args, 0));
-    auto damping_factor = mgp::value_get_double(mgp::list_at(args, 1));
-    auto stop_epsilon = mgp::value_get_double(mgp::list_at(args, 2));
+    auto weight_property = mgp::value_get_string(mgp::list_at(args, 0));
+    auto max_iterations = mgp::value_get_int(mgp::list_at(args, 1));
+    auto damping_factor = mgp::value_get_double(mgp::list_at(args, 2));
+    auto stop_epsilon = mgp::value_get_double(mgp::list_at(args, 3));
 
     raft::handle_t handle{};
     auto stream = handle.get_stream();
 
-    auto mg_graph = mg_utility::GetGraphView(graph, result, memory, mg_graph::GraphType::kDirectedGraph);
+    auto mg_graph = mg_utility::GetWeightedGraphView(graph, result, memory, mg_graph::GraphType::kDirectedGraph, weight_property, kDefaultWeight);
+
+
     auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph(*mg_graph.get(), handle);
     auto cu_graph_view = cu_graph.view();
     auto n_vertices = cu_graph_view.get_number_of_vertices();
@@ -75,13 +80,16 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   mgp_value *default_max_iterations;
   mgp_value *default_damping_factor;
   mgp_value *default_stop_epsilon;
+   mgp_value *default_weight_property;
   try {
     auto *pagerank_proc = mgp::module_add_read_procedure(module, kProcedurePagerank, PagerankProc);
 
     default_max_iterations = mgp::value_make_int(100, memory);
     default_damping_factor = mgp::value_make_double(0.85, memory);
     default_stop_epsilon = mgp::value_make_double(1e-5, memory);
+    default_weight_property = mgp::value_make_string(kDefaultWeightProperty, memory);
 
+    mgp::proc_add_opt_arg(pagerank_proc, kDefaultWeightProperty, mgp::type_string(), default_weight_property);
     mgp::proc_add_opt_arg(pagerank_proc, kArgumentMaxIterations, mgp::type_int(), default_max_iterations);
     mgp::proc_add_opt_arg(pagerank_proc, kArgumentDampingFactor, mgp::type_float(), default_damping_factor);
     mgp::proc_add_opt_arg(pagerank_proc, kArgumentStopEpsilon, mgp::type_float(), default_stop_epsilon);
