@@ -80,7 +80,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   mgp_value *default_max_iterations;
   mgp_value *default_damping_factor;
   mgp_value *default_stop_epsilon;
-   mgp_value *default_weight_property;
+  mgp_value *default_weight_property;
   try {
     auto *pagerank_proc = mgp::module_add_read_procedure(module, kProcedurePagerank, PagerankProc);
 
