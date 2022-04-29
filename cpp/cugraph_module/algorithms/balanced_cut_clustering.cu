@@ -28,6 +28,8 @@ constexpr char const *kArgumentEvTolerance = "ev_tolerance";
 constexpr char const *kArgumentEvMaxIter = "ev_max_iter";
 constexpr char const *kArgumentKmeanTolerance = "kmean_tolerance";
 constexpr char const *kArgumentKmeanMaxIter = "kmean_max_iter";
+const char *kDefaultWeightProperty = "weight";
+const double kDefaultWeight = 1.0;
 
 constexpr char const *kResultFieldNode = "node";
 constexpr char const *kResultFieldClusterId = "cluster_id";
@@ -42,17 +44,18 @@ void InsertBalancedCutResult(mgp_graph *graph, mgp_result *result, mgp_memory *m
 void BalancedCutClusteringProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *memory) {
   try {
     // TODO: Not supporting int64_t
-    int num_clusters = mgp::value_get_int(mgp::list_at(args, 0));
-    int num_eigenvectors = mgp::value_get_int(mgp::list_at(args, 1));
-    double ev_tolerance = mgp::value_get_double(mgp::list_at(args, 2));
-    int ev_maxiter = mgp::value_get_int(mgp::list_at(args, 3));
-    double kmean_tolerance = mgp::value_get_double(mgp::list_at(args, 4));
-    int kmean_maxiter = mgp::value_get_int(mgp::list_at(args, 5));
+    auto weight_property = mgp::value_get_string(mgp::list_at(args, 0));
+    int num_clusters = mgp::value_get_int(mgp::list_at(args, 1));
+    int num_eigenvectors = mgp::value_get_int(mgp::list_at(args, 2));
+    double ev_tolerance = mgp::value_get_double(mgp::list_at(args, 3));
+    int ev_maxiter = mgp::value_get_int(mgp::list_at(args, 4));
+    double kmean_tolerance = mgp::value_get_double(mgp::list_at(args, 5));
+    int kmean_maxiter = mgp::value_get_int(mgp::list_at(args, 6));
 
     raft::handle_t handle{};
     auto stream = handle.get_stream();
 
-    auto mg_graph = mg_utility::GetGraphView(graph, result, memory, mg_graph::GraphType::kDirectedGraph);
+    auto mg_graph = mg_utility::GetWeightedGraphView(graph, result, memory, mg_graph::GraphType::kDirectedGraph, weight_property, kDefaultWeight);
     auto n_vertices = mg_graph.get()->Nodes().size();
     // IMPORTANT: Balanced cut cuGraph algorithm works only on legacy code
     auto cu_graph_ptr =
@@ -83,6 +86,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   mgp_value *default_ev_maxiter;
   mgp_value *default_kmean_tolerance;
   mgp_value *default_kmean_maxiter;
+  mgp_value *default_weight_property;
   try {
     auto *balanced_cut_proc = mgp::module_add_read_procedure(module, kProcedureBalancedCut, BalancedCutClusteringProc);
 
@@ -92,7 +96,10 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     default_ev_maxiter = mgp::value_make_int(100, memory);
     default_kmean_tolerance = mgp::value_make_double(0.00001, memory);
     default_kmean_maxiter = mgp::value_make_int(100, memory);
+    default_weight_property = mgp::value_make_string(kDefaultWeightProperty, memory);
 
+
+    mgp::proc_add_opt_arg(balanced_cut_proc, kDefaultWeightProperty, mgp::type_string(), default_weight_property);
     mgp::proc_add_opt_arg(balanced_cut_proc, kArgumentNumClusters, mgp::type_int(), default_num_clusters);
     mgp::proc_add_opt_arg(balanced_cut_proc, kArgumentNumEigenvectors, mgp::type_int(), default_num_eigenvectors);
     mgp::proc_add_opt_arg(balanced_cut_proc, kArgumentEvTolerance, mgp::type_float(), default_ev_tolerance);
