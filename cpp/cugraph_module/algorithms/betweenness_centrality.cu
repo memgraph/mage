@@ -43,6 +43,8 @@ void BetweennessProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_m
     auto stream = handle.get_stream();
 
     auto mg_graph = mg_utility::GetGraphView(graph, result, memory, mg_graph::GraphType::kDirectedGraph);
+    if (mg_graph->Empty()) return;
+
     auto n_vertices = mg_graph.get()->Nodes().size();
     // IMPORTANT: Betweenness centrality cuGraph algorithm works only on legacy code
     auto cu_graph_ptr =

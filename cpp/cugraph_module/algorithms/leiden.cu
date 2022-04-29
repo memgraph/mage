@@ -42,6 +42,8 @@ void LeidenProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory
     auto stream = handle.get_stream();
 
     auto mg_graph = mg_utility::GetGraphView(graph, result, memory, mg_graph::GraphType::kDirectedGraph);
+    if (mg_graph->Empty()) return;
+
     auto n_vertices = mg_graph.get()->Nodes().size();
     // IMPORTANT: Leiden cuGraph algorithm works only on legacy code
     auto cu_graph_ptr =
