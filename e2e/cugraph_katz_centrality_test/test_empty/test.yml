@@ -1,0 +1,6 @@
+query: >
+    CALL cugraph.katz_centrality.get() YIELD node, rank
+    RETURN node.id AS node_id
+    ORDER BY rank DESC, node.id ASC
+
+output: []

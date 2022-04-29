@@ -16,6 +16,7 @@ template <typename TVertexT = int64_t, typename TEdgeT = int64_t, typename TWeig
           bool TStoreTransposed = true, bool TMultiGPU = false>
 auto CreateCugraphFromMemgraph(const mg_graph::GraphView<> &mg_graph, raft::handle_t const &handle) {
   const auto &mg_edges = mg_graph.Edges();
+  const auto &mg_nodes = mg_graph.Nodes();
 
   // Flatten the data vector
   std::vector<TVertexT> mg_src;
@@ -24,6 +25,8 @@ auto CreateCugraphFromMemgraph(const mg_graph::GraphView<> &mg_graph, raft::hand
   mg_dst.reserve(mg_edges.size());
   std::vector<TWeightT> mg_weight;
   mg_weight.reserve(mg_edges.size());
+  std::vector<TVertexT> mg_vertices;
+  mg_vertices.reserve(mg_nodes.size());
 
   std::transform(mg_edges.begin(), mg_edges.end(), std::back_inserter(mg_src),
                  [](const auto &edge) -> TVertexT { return edge.from; });
@@ -32,6 +35,8 @@ auto CreateCugraphFromMemgraph(const mg_graph::GraphView<> &mg_graph, raft::hand
   std::transform(
       mg_edges.begin(), mg_edges.end(), std::back_inserter(mg_weight),
       [&mg_graph](const auto &edge) -> TWeightT { return mg_graph.IsWeighted() ? mg_graph.GetWeight(edge.id) : 1.0; });
+  std::transform(mg_nodes.begin(), mg_nodes.end(), std::back_inserter(mg_vertices),
+                 [](const auto &node) -> TVertexT { return node.id; });
 
   // Synchronize the data structures to the GPU
   auto stream = handle.get_stream();
@@ -41,6 +46,8 @@ auto CreateCugraphFromMemgraph(const mg_graph::GraphView<> &mg_graph, raft::hand
   raft::update_device(cu_dst.data(), mg_dst.data(), mg_dst.size(), stream);
   rmm::device_uvector<TWeightT> cu_weight(mg_weight.size(), stream);
   raft::update_device(cu_weight.data(), mg_weight.data(), mg_weight.size(), stream);
+  rmm::device_uvector<TVertexT> cu_vertices(mg_vertices.size(), stream);
+  raft::update_device(cu_vertices.data(), mg_vertices.data(), mg_vertices.size(), stream);
 
   // TODO: Deal_with/pass edge weights to CuGraph graph.
   // TODO: Allow for multigraphs
@@ -48,7 +55,7 @@ auto CreateCugraphFromMemgraph(const mg_graph::GraphView<> &mg_graph, raft::hand
   // NOTE: Renumbering is not required because graph coming from Memgraph is already correctly numbered.
   std::tie(cu_graph, std::ignore) =
       cugraph::create_graph_from_edgelist<TVertexT, TEdgeT, TWeightT, TStoreTransposed, TMultiGPU>(
-          handle, std::nullopt, std::move(cu_src), std::move(cu_dst), std::move(cu_weight),
+          handle, std::move(cu_vertices), std::move(cu_src), std::move(cu_dst), std::move(cu_weight),
           cugraph::graph_properties_t{false, false}, false, false);
   stream.synchronize_no_throw();
 
