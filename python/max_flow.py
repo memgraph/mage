@@ -181,7 +181,7 @@ def DFS_path_finding(
                 return min(remaining_capacity, flow_bottleneck)
 
     # no path found with this vertex, remove it and its edge
-    path = path[:-2]
+    del path[-2:]
 
     return -1
 
