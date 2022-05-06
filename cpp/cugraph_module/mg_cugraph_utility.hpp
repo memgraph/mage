@@ -71,12 +71,10 @@ auto CreateCugraphLegacyFromMemgraph(const mg_graph::GraphView<> &mg_graph, raft
 
   // Flatten the data vector
   std::vector<TVertexT> mg_deg_sum;
-  mg_deg_sum.reserve(6);
   std::vector<TVertexT> mg_dst;
-  mg_dst.reserve(mg_edges.size());
   std::vector<TWeightT> mg_weight;
-  mg_weight.reserve(mg_edges.size());
-  
+
+  // TODO: Check for the first index
   mg_deg_sum.push_back(0);
   for (std::int64_t v_id = 0; v_id < n_vertices; v_id++) {
     mg_deg_sum.push_back(mg_deg_sum[v_id] + mg_graph.Neighbours(v_id).size());
@@ -91,19 +89,17 @@ auto CreateCugraphLegacyFromMemgraph(const mg_graph::GraphView<> &mg_graph, raft
 
   // Synchronize the data structures to the GPU
   auto stream = handle.get_stream();
-  rmm::mr::device_memory_resource* mr = rmm::mr::get_current_device_resource();
+  rmm::mr::device_memory_resource *mr = rmm::mr::get_current_device_resource();
 
-  rmm::device_buffer offsets_buffer(mg_deg_sum.data(), sizeof(TEdgeT) * (n_vertices + 1), stream, mr);
-  rmm::device_buffer dsts_buffer(mg_dst.data(), sizeof(TVertexT) * (n_edges + 1), stream, mr);
-  rmm::device_buffer weights_buffer(mg_weight.data(), sizeof(TWeightT) * (n_edges + 1), stream, mr);
+  rmm::device_buffer offsets_buffer(mg_deg_sum.data(), sizeof(TEdgeT) * (mg_deg_sum.size()), stream, mr);
+  rmm::device_buffer dsts_buffer(mg_dst.data(), sizeof(TVertexT) * (mg_dst.size()), stream, mr);
+  rmm::device_buffer weights_buffer(mg_weight.data(), sizeof(TWeightT) * (mg_weight.size()), stream, mr);
 
   cugraph::legacy::GraphSparseContents<TVertexT, TEdgeT, TWeightT> csr_contents{
-    static_cast<TVertexT>(n_vertices),
-    static_cast<TEdgeT>(n_edges),
-    std::make_unique<rmm::device_buffer>(std::move(offsets_buffer)),
-    std::make_unique<rmm::device_buffer>(std::move(dsts_buffer)),
-    std::make_unique<rmm::device_buffer>(std::move(weights_buffer))
-  };
+      static_cast<TVertexT>(n_vertices), static_cast<TEdgeT>(n_edges),
+      std::make_unique<rmm::device_buffer>(std::move(offsets_buffer)),
+      std::make_unique<rmm::device_buffer>(std::move(dsts_buffer)),
+      std::make_unique<rmm::device_buffer>(std::move(weights_buffer))};
 
   return std::make_unique<cugraph::legacy::GraphCSR<TVertexT, TEdgeT, TWeightT>>(std::move(csr_contents));
 }

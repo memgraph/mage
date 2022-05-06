@@ -24,6 +24,7 @@ using result_t = double;
 constexpr char const *kProcedureBetweenness = "get";
 
 constexpr char const *kArgumentNormalized = "normalized";
+constexpr char const *kArgumentDirected = "directed";
 
 constexpr char const *kResultFieldNode = "node";
 constexpr char const *kResultFieldRank = "rank";
@@ -38,11 +39,12 @@ void InsertBetweennessRecord(mgp_graph *graph, mgp_result *result, mgp_memory *m
 void BetweennessProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *memory) {
   try {
     auto normalized = mgp::value_get_bool(mgp::list_at(args, 0));
+    auto directed = mgp::value_get_bool(mgp::list_at(args, 1));
 
     raft::handle_t handle{};
     auto stream = handle.get_stream();
 
-    auto mg_graph = mg_utility::GetGraphView(graph, result, memory, mg_graph::GraphType::kDirectedGraph);
+    auto mg_graph = mg_utility::GetGraphView(graph, result, memory, directed ? mg_graph::GraphType::kDirectedGraph : mg_graph::GraphType::kUndirectedGraph);
     if (mg_graph->Empty()) return;
 
     auto n_vertices = mg_graph.get()->Nodes().size();
@@ -50,6 +52,7 @@ void BetweennessProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_m
     auto cu_graph_ptr =
         mg_cugraph::CreateCugraphLegacyFromMemgraph<vertex_t, edge_t, weight_t>(*mg_graph.get(), handle);
     auto cu_graph_view = cu_graph_ptr->view();
+    cu_graph_view.prop.directed = directed;
 
     rmm::device_uvector<result_t> betweenness_result(n_vertices, stream);
     // TODO: Add weights to the betweenness centrality algorithm
@@ -72,12 +75,15 @@ void BetweennessProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_m
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   mgp_value *default_normalized;
+  mgp_value *default_directed;
   try {
     auto *betweenness_proc = mgp::module_add_read_procedure(module, kProcedureBetweenness, BetweennessProc);
 
-    default_normalized = mgp::value_make_bool(100, memory);
+    default_normalized = mgp::value_make_bool(true, memory);
+    default_directed = mgp::value_make_bool(false, memory);
 
     mgp::proc_add_opt_arg(betweenness_proc, kArgumentNormalized, mgp::type_bool(), default_normalized);
+    mgp::proc_add_opt_arg(betweenness_proc, kArgumentDirected, mgp::type_bool(), default_directed);
 
     mgp::proc_add_result(betweenness_proc, kResultFieldNode, mgp::type_node());
     mgp::proc_add_result(betweenness_proc, kResultFieldRank, mgp::type_float());
