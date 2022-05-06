@@ -41,6 +41,8 @@ void LouvainProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memor
     auto stream = handle.get_stream();
 
     auto mg_graph = mg_utility::GetGraphView(graph, result, memory, mg_graph::GraphType::kDirectedGraph);
+    if (mg_graph->Empty()) return;
+    
     // IMPORTANT: Louvain cuGraph algorithm works only on non-transposed graph instances
     auto cu_graph =
         mg_cugraph::CreateCugraphFromMemgraph<vertex_t, edge_t, weight_t, false, false>(*mg_graph.get(), handle);

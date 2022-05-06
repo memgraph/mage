@@ -370,6 +370,10 @@ class Graph : public GraphView<TSize> {
     return memgraph_to_inner_id_.find(memgraph_id) != memgraph_to_inner_id_.end();
   }
 
+  bool Empty() const override {
+    return nodes_.empty();
+  }
+
   /// Removes all edges and nodes from graph.
   void Clear() {
     adj_list_.clear();

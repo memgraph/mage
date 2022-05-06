@@ -125,6 +125,11 @@ class GraphView {
   ///
   virtual bool NodeExists(std::uint64_t memgraph_id) const = 0;
 
+  ///@brief Checks if the current graph is empty.
+  ///
+  ///@return whether graph is empty
+  virtual bool Empty() const = 0;
+
   /// Gets edge weight by edge ID.
   ///
   /// @param[in] edge_id edge ID

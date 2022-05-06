@@ -1,0 +1,6 @@
+query: >
+    CALL cugraph.louvain.get() YIELD node, cluster_id
+    RETURN node.id AS node_id, cluster_id
+    ORDER BY node_id ASC
+
+output: []
