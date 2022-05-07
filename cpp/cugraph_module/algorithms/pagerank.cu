@@ -25,11 +25,12 @@ constexpr char const *kProcedurePagerank = "get";
 constexpr char const *kArgumentMaxIterations = "max_iterations";
 constexpr char const *kArgumentDampingFactor = "damping_factor";
 constexpr char const *kArgumentStopEpsilon = "stop_epsilon";
-const char *kDefaultWeightProperty = "weight";
-const double kDefaultWeight = 1.0;
 
 constexpr char const *kResultFieldNode = "node";
 constexpr char const *kResultFieldRank = "rank";
+
+const double kDefaultWeight = 1.0;
+const char *kDefaultWeightProperty = "weight";
 
 void InsertPagerankRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
                           double rank) {
@@ -48,8 +49,8 @@ void PagerankProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memo
     raft::handle_t handle{};
     auto stream = handle.get_stream();
 
-    auto mg_graph = mg_utility::GetWeightedGraphView(graph, result, memory, mg_graph::GraphType::kDirectedGraph, weight_property, kDefaultWeight);
-
+    auto mg_graph = mg_utility::GetWeightedGraphView(graph, result, memory, mg_graph::GraphType::kDirectedGraph,
+                                                     weight_property, kDefaultWeight);
 
     auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph(*mg_graph.get(), handle);
     auto cu_graph_view = cu_graph.view();

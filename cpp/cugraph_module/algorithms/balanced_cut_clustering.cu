@@ -28,11 +28,12 @@ constexpr char const *kArgumentEvTolerance = "ev_tolerance";
 constexpr char const *kArgumentEvMaxIter = "ev_max_iter";
 constexpr char const *kArgumentKmeanTolerance = "kmean_tolerance";
 constexpr char const *kArgumentKmeanMaxIter = "kmean_max_iter";
-const char *kDefaultWeightProperty = "weight";
-const double kDefaultWeight = 1.0;
 
 constexpr char const *kResultFieldNode = "node";
 constexpr char const *kResultFieldClusterId = "cluster_id";
+
+constexpr char const *kDefaultWeightProperty = "weight";
+const double kDefaultWeight = 1.0;
 
 void InsertBalancedCutResult(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
                              std::int64_t cluster_id) {
@@ -56,11 +57,14 @@ void BalancedCutClusteringProc(mgp_list *args, mgp_graph *graph, mgp_result *res
     auto stream = handle.get_stream();
 
     auto mg_graph = mg_utility::GetWeightedGraphView(graph, result, memory, mg_graph::GraphType::kDirectedGraph, weight_property, kDefaultWeight);
+    if (mg_graph->Empty()) return;
+
     auto n_vertices = mg_graph.get()->Nodes().size();
     // IMPORTANT: Balanced cut cuGraph algorithm works only on legacy code
     auto cu_graph_ptr =
         mg_cugraph::CreateCugraphLegacyFromMemgraph<vertex_t, edge_t, weight_t>(*mg_graph.get(), handle);
     auto cu_graph_view = cu_graph_ptr->view();
+    cu_graph_view.prop.directed = true;
 
     rmm::device_uvector<vertex_t> clustering_result(n_vertices, stream);
     // Only supported for weighted graphs

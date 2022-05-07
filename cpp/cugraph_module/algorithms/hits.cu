@@ -47,7 +47,10 @@ void HITSProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *
     raft::handle_t handle{};
     auto stream = handle.get_stream();
 
+    // Works with unweighted graph
     auto mg_graph = mg_utility::GetGraphView(graph, result, memory, mg_graph::GraphType::kDirectedGraph);
+    if (mg_graph->Empty()) return;
+    
     auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph(*mg_graph.get(), handle);
     auto cu_graph_view = cu_graph.view();
 
@@ -76,8 +79,8 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   try {
     auto *hits_proc = mgp::module_add_read_procedure(module, kProcedureHITS, HITSProc);
 
-    default_tolerance = mgp::value_make_double(1e-8, memory);
-    default_max_iterations = mgp::value_make_int(500, memory);
+    default_tolerance = mgp::value_make_double(1e-5, memory);
+    default_max_iterations = mgp::value_make_int(100, memory);
     default_normalize = mgp::value_make_bool(true, memory);
 
     mgp::proc_add_opt_arg(hits_proc, kArgumentTolerance, mgp::type_float(), default_tolerance);

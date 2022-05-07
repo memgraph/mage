@@ -23,6 +23,11 @@ constexpr char const *kProcedureGenerate = "rmat";
 
 constexpr char const *kArgumentScale = "scale";
 constexpr char const *kArgumentNumEdges = "num_edges";
+constexpr char const *kArgumentParameterA = "a";
+constexpr char const *kArgumentParameterB = "b";
+constexpr char const *kArgumentParameterC = "c";
+constexpr char const *kArgumentSeed = "seed";
+constexpr char const *kArgumentClipAndFlip = "clip_and_flip";
 
 constexpr char const *kFieldMessage = "message";
 
@@ -42,16 +47,23 @@ void GenerateRMAT(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memo
   try {
     auto scale = mgp::value_get_int(mgp::list_at(args, 0));
     auto num_edges = mgp::value_get_int(mgp::list_at(args, 1));
+    auto parameter_a = mgp::value_get_double(mgp::list_at(args, 2));
+    auto parameter_b = mgp::value_get_double(mgp::list_at(args, 3));
+    auto parameter_c = mgp::value_get_double(mgp::list_at(args, 4));
+    auto seed = mgp::value_get_int(mgp::list_at(args, 5));
+    auto clip_and_flip = mgp::value_get_bool(mgp::list_at(args, 6));
 
     raft::handle_t handle{};
 
     auto num_vertices = 1 << scale;  // RMAT generator defines this
-    auto edges = mg_cugraph::GenerateCugraphRMAT(scale, num_edges, handle);
+    auto edges = mg_cugraph::GenerateCugraphRMAT(scale, num_edges, parameter_a, parameter_b, parameter_c, seed,
+                                                 clip_and_flip, handle);
 
     std::vector<std::unique_ptr<mgp_vertex, VertexDelete>> vertices(num_vertices);
     for (std::size_t i = 0; i < num_vertices; ++i) {
       auto new_vertex = mgp::graph_create_vertex(graph, memory);
 
+      // Add labels as arguments
       vertices[i] = std::unique_ptr<mgp_vertex, VertexDelete>(mgp::vertex_copy(new_vertex, memory));
 
       mgp_vertex_destroy(new_vertex);
@@ -64,7 +76,9 @@ void GenerateRMAT(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memo
       mgp_vertex *src_vertex = src_vertex_ptr.get();
       mgp_vertex *dst_vertex = dst_vertex_ptr.get();
 
-      auto new_edge = mgp::graph_create_edge(graph, src_vertex, dst_vertex, mgp_edge_type{.name = "LINK"}, memory);
+      // TODO: Change edge type
+      auto new_edge =
+          mgp::graph_create_edge(graph, src_vertex, dst_vertex, mgp_edge_type{.name = "RELATIONSHIP"}, memory);
 
       mgp_edge_destroy(new_edge);
     }
@@ -80,22 +94,48 @@ void GenerateRMAT(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memo
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   mgp_value *default_scale;
   mgp_value *default_num_edges;
+  mgp_value *default_parameter_a;
+  mgp_value *default_parameter_b;
+  mgp_value *default_parameter_c;
+  mgp_value *default_seed;
+  mgp_value *default_clip_and_flip;
   try {
     auto *rmat_proc = mgp::module_add_write_procedure(module, kProcedureGenerate, GenerateRMAT);
 
     default_scale = mgp::value_make_int(4, memory);
     default_num_edges = mgp::value_make_int(100, memory);
+    default_parameter_a = mgp::value_make_double(0.57, memory);
+    default_parameter_b = mgp::value_make_double(0.19, memory);
+    default_parameter_c = mgp::value_make_double(0.19, memory);
+    default_seed = mgp::value_make_int(0, memory);
+    default_clip_and_flip = mgp::value_make_bool(false, memory);
 
     mgp::proc_add_opt_arg(rmat_proc, kArgumentScale, mgp::type_int(), default_scale);
     mgp::proc_add_opt_arg(rmat_proc, kArgumentNumEdges, mgp::type_int(), default_num_edges);
+    mgp::proc_add_opt_arg(rmat_proc, kArgumentParameterA, mgp::type_float(), default_parameter_a);
+    mgp::proc_add_opt_arg(rmat_proc, kArgumentParameterB, mgp::type_float(), default_parameter_b);
+    mgp::proc_add_opt_arg(rmat_proc, kArgumentParameterC, mgp::type_float(), default_parameter_c);
+    mgp::proc_add_opt_arg(rmat_proc, kArgumentSeed, mgp::type_int(), default_seed);
+    mgp::proc_add_opt_arg(rmat_proc, kArgumentClipAndFlip, mgp::type_bool(), default_clip_and_flip);
+
   } catch (const std::exception &e) {
     mgp_value_destroy(default_scale);
     mgp_value_destroy(default_num_edges);
+    mgp_value_destroy(default_parameter_a);
+    mgp_value_destroy(default_parameter_b);
+    mgp_value_destroy(default_parameter_c);
+    mgp_value_destroy(default_seed);
+    mgp_value_destroy(default_clip_and_flip);
     return 1;
   }
 
   mgp_value_destroy(default_scale);
   mgp_value_destroy(default_num_edges);
+  mgp_value_destroy(default_parameter_a);
+  mgp_value_destroy(default_parameter_b);
+  mgp_value_destroy(default_parameter_c);
+  mgp_value_destroy(default_seed);
+  mgp_value_destroy(default_clip_and_flip);
   return 0;
 }
 

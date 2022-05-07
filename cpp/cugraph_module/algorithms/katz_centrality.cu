@@ -25,6 +25,9 @@ constexpr char const *kProcedureKatz = "get";
 constexpr char const *kArgumentAlpha = "alpha";
 constexpr char const *kArgumentBeta = "beta";
 constexpr char const *kArgumentEpsilon = "epsilon";
+constexpr char const *kArgumentNormalized = "normalized";
+constexpr char const *kArgumentMaxIterations = "directed";
+constexpr char const *kArgumentDirected = "directed";
 
 constexpr char const *kResultFieldNode = "node";
 constexpr char const *kResultFieldRank = "rank";
@@ -41,13 +44,18 @@ void KatzCentralityProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mg
     auto alpha_arg = static_cast<float>(mgp::value_get_double(mgp::list_at(args, 0)));
     auto beta_arg = static_cast<float>(mgp::value_get_double(mgp::list_at(args, 1)));
     auto epsilon_arg = static_cast<float>(mgp::value_get_double(mgp::list_at(args, 2)));
+    auto max_iterations = mgp::value_get_int(mgp::list_at(args, 3));
+    auto normalized = mgp::value_get_bool(mgp::list_at(args, 4));
+    auto directed = mgp::value_get_bool(mgp::list_at(args, 5));
 
     raft::handle_t handle{};
     auto stream = handle.get_stream();
 
-    auto mg_graph = mg_utility::GetGraphView(graph, result, memory, mg_graph::GraphType::kDirectedGraph);
+    // Currently doesn't support for weights
+    auto mg_graph = mg_utility::GetGraphView(
+        graph, result, memory, directed ? mg_graph::GraphType::kDirectedGraph : mg_graph::GraphType::kUndirectedGraph);
     if (mg_graph->Empty()) return;
-    
+
     auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph(*mg_graph.get(), handle);
     auto cu_graph_view = cu_graph.view();
     auto n_vertices = cu_graph_view.get_number_of_vertices();
@@ -56,14 +64,14 @@ void KatzCentralityProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mg
     std::vector<edge_t> cu_degrees(degrees.size());
     raft::update_host(cu_degrees.data(), degrees.data(), degrees.size(), handle.get_stream());
     handle.sync_stream();
-    auto max_it = std::max_element(cu_degrees.begin(), cu_degrees.end());
+    auto max_degree = std::max_element(cu_degrees.begin(), cu_degrees.end());
 
-    result_t alpha = result_t{alpha_arg} / static_cast<result_t>(*max_it + 1);
+    result_t alpha = result_t{alpha_arg} / static_cast<result_t>(*max_degree + 1);
     result_t beta{beta_arg};
     result_t epsilon{epsilon_arg};
     rmm::device_uvector<result_t> katz_results(n_vertices, stream);
-    cugraph::katz_centrality(handle, cu_graph_view, static_cast<result_t *>(nullptr), katz_results.data(),
-                             alpha, beta, epsilon, std::numeric_limits<std::size_t>::max(), false, true);
+    cugraph::katz_centrality(handle, cu_graph_view, static_cast<result_t *>(nullptr), katz_results.data(), alpha, beta,
+                             epsilon, max_iterations, false, normalized, false);
 
     for (vertex_t node_id = 0; node_id < katz_results.size(); ++node_id) {
       auto rank = katz_results.element(node_id, stream);
@@ -81,16 +89,25 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   mgp_value *default_alpha;
   mgp_value *default_beta;
   mgp_value *default_epsilon;
+  mgp_value *default_normalized;
+  mgp_value *default_max_iterations;
+  mgp_value *default_directed;
   try {
     auto *katz_proc = mgp::module_add_read_procedure(module, kProcedureKatz, KatzCentralityProc);
 
     default_alpha = mgp::value_make_double(1.0, memory);
     default_beta = mgp::value_make_double(1.0, memory);
     default_epsilon = mgp::value_make_double(1e-6, memory);
+    default_normalized = mgp::value_make_double(true, memory);
+    default_max_iterations = mgp::value_make_int(100, memory);
+    default_directed = mgp::value_make_bool(true, memory);
 
     mgp::proc_add_opt_arg(katz_proc, kArgumentAlpha, mgp::type_float(), default_alpha);
     mgp::proc_add_opt_arg(katz_proc, kArgumentBeta, mgp::type_float(), default_beta);
     mgp::proc_add_opt_arg(katz_proc, kArgumentEpsilon, mgp::type_float(), default_epsilon);
+    mgp::proc_add_opt_arg(katz_proc, kArgumentNormalized, mgp::type_bool(), default_normalized);
+    mgp::proc_add_opt_arg(katz_proc, kArgumentMaxIterations, mgp::type_int(), default_max_iterations);
+    mgp::proc_add_opt_arg(katz_proc, kArgumentDirected, mgp::type_bool(), default_directed);
 
     mgp::proc_add_result(katz_proc, kResultFieldNode, mgp::type_node());
     mgp::proc_add_result(katz_proc, kResultFieldRank, mgp::type_float());
@@ -99,12 +116,18 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     mgp_value_destroy(default_alpha);
     mgp_value_destroy(default_beta);
     mgp_value_destroy(default_epsilon);
+    mgp_value_destroy(default_normalized);
+    mgp_value_destroy(default_max_iterations);
+    mgp_value_destroy(default_directed);
     return 1;
   }
 
-  mgp_value_destroy(default_alpha);
-  mgp_value_destroy(default_beta);
-  mgp_value_destroy(default_epsilon);
+    mgp_value_destroy(default_alpha);
+    mgp_value_destroy(default_beta);
+    mgp_value_destroy(default_epsilon);
+    mgp_value_destroy(default_normalized);
+    mgp_value_destroy(default_max_iterations);
+    mgp_value_destroy(default_directed);
 
   return 0;
 }

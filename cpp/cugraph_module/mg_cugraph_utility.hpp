@@ -105,14 +105,15 @@ auto CreateCugraphLegacyFromMemgraph(const mg_graph::GraphView<> &mg_graph, raft
 }
 
 template <typename TVertexT = int64_t, typename TEdgeT = int64_t, typename TWeightT = double>
-auto GenerateCugraphRMAT(std::size_t scale, std::size_t num_edges, raft::handle_t const &handle) {
+auto GenerateCugraphRMAT(std::size_t scale, std::size_t num_edges, double a, double b,
+                         double c, std::uint64_t seed, bool clip_and_flip, raft::handle_t const &handle) {
   // Synchronize the data structures to the GPU
   auto stream = handle.get_stream();
   rmm::device_uvector<TVertexT> cu_src(num_edges, stream);
   rmm::device_uvector<TVertexT> cu_dst(num_edges, stream);
 
   std::tie(cu_src, cu_dst) =
-      cugraph::generate_rmat_edgelist<TVertexT>(handle, scale, num_edges, 0.57, 0.19, 0.19, 0, false);
+      cugraph::generate_rmat_edgelist<TVertexT>(handle, scale, num_edges, a, b, c, seed, clip_and_flip);
 
   std::vector<std::pair<std::uint64_t, std::uint64_t>> mg_edges;
   for (std::size_t i = 0; i < num_edges; ++i) {
