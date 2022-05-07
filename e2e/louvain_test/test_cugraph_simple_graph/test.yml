@@ -5,14 +5,15 @@ query: >
 
 output:
     - node_id: 0
-      community_id: 0
+      cluster_id: 0
     - node_id: 1
-      community_id: 1
+      cluster_id: 0
     - node_id: 2
-      community_id: 1
+      cluster_id: 0
     - node_id: 3
-      community_id: 2
+      cluster_id: 0
     - node_id: 4
-      community_id: 3
+      cluster_id: 1
     - node_id: 5
-      community_id: 4
+      cluster_id: 1
+
