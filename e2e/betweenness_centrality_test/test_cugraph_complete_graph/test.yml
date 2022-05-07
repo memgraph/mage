@@ -1,0 +1,17 @@
+query: >
+    CALL cugraph.betweenness_centrality.get(FALSE, FALSE)
+    YIELD node, rank
+    RETURN node.id AS node_id, rank
+    ORDER BY node_id;
+
+output:
+- rank: 0
+  node_id: 0
+- rank: 0
+  node_id: 1
+- rank: 0
+  node_id: 2
+- rank: 0
+  node_id: 3
+- rank: 0
+  node_id: 4

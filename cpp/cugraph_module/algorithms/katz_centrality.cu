@@ -26,7 +26,7 @@ constexpr char const *kArgumentAlpha = "alpha";
 constexpr char const *kArgumentBeta = "beta";
 constexpr char const *kArgumentEpsilon = "epsilon";
 constexpr char const *kArgumentNormalized = "normalized";
-constexpr char const *kArgumentMaxIterations = "directed";
+constexpr char const *kArgumentMaxIterations = "max_iterations";
 constexpr char const *kArgumentDirected = "directed";
 
 constexpr char const *kResultFieldNode = "node";
@@ -44,8 +44,8 @@ void KatzCentralityProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mg
     auto alpha_arg = static_cast<float>(mgp::value_get_double(mgp::list_at(args, 0)));
     auto beta_arg = static_cast<float>(mgp::value_get_double(mgp::list_at(args, 1)));
     auto epsilon_arg = static_cast<float>(mgp::value_get_double(mgp::list_at(args, 2)));
-    auto max_iterations = mgp::value_get_int(mgp::list_at(args, 3));
-    auto normalized = mgp::value_get_bool(mgp::list_at(args, 4));
+    auto normalized = mgp::value_get_bool(mgp::list_at(args, 3));
+    auto max_iterations = mgp::value_get_int(mgp::list_at(args, 4));
     auto directed = mgp::value_get_bool(mgp::list_at(args, 5));
 
     raft::handle_t handle{};
