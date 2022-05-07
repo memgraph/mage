@@ -57,6 +57,8 @@ void SpectralClusteringProc(mgp_list *args, mgp_graph *graph, mgp_result *result
 
     auto mg_graph = mg_utility::GetWeightedGraphView(graph, result, memory, mg_graph::GraphType::kDirectedGraph,
                                                      weight_property, kDefaultWeight);
+    if (mg_graph->Empty()) return;
+    
     auto n_vertices = mg_graph.get()->Nodes().size();
     // IMPORTANT: Spectral clustering cuGraph algorithm works only on legacy code
     auto cu_graph_ptr =

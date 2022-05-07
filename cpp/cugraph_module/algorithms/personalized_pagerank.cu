@@ -55,6 +55,8 @@ void PersonalizedPagerankProc(mgp_list *args, mgp_graph *graph, mgp_result *resu
 
     auto mg_graph = mg_utility::GetWeightedGraphView(graph, result, memory, mg_graph::GraphType::kDirectedGraph,
                                                      weight_property, kDefaultWeight);
+    if (mg_graph->Empty()) return;
+    
     auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph(*mg_graph.get(), handle);
     auto cu_graph_view = cu_graph.view();
     auto n_vertices = cu_graph_view.get_number_of_vertices();

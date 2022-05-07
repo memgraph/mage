@@ -98,7 +98,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     default_alpha = mgp::value_make_double(1.0, memory);
     default_beta = mgp::value_make_double(1.0, memory);
     default_epsilon = mgp::value_make_double(1e-6, memory);
-    default_normalized = mgp::value_make_double(true, memory);
+    default_normalized = mgp::value_make_bool(true, memory);
     default_max_iterations = mgp::value_make_int(100, memory);
     default_directed = mgp::value_make_bool(true, memory);
 
