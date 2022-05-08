@@ -11,14 +11,16 @@ target_include_directories(pagerank PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 ################################################################
 
 # Module tests
-include(GoogleTest)
-set(pagerank_test_src
-    pagerank_test.cpp
-    algorithm/pagerank.cpp)
+if (NOT MAGE_CUGRAPH_ENABLE)
+    include(GoogleTest)
+    set(pagerank_test_src
+        pagerank_test.cpp
+        algorithm/pagerank.cpp)
 
-add_executable(pagerank_test "${pagerank_test_src}")
-target_link_libraries(pagerank_test PRIVATE mg_utility mage_gtest)
-gtest_add_tests(TARGET pagerank_test)
+    add_executable(pagerank_test "${pagerank_test_src}")
+    target_link_libraries(pagerank_test PRIVATE mg_utility mage_gtest)
+    gtest_add_tests(TARGET pagerank_test)
+endif()
 
 ################################################################
 
@@ -36,11 +38,13 @@ target_include_directories(pagerank_online PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 ################################################################
 
 # Module tests
-include(GoogleTest)
-set(pagerank_online_test_src
-    pagerank_online_test.cpp
-    algorithm_online/pagerank.cpp)
+if (NOT MAGE_CUGRAPH_ENABLE)
+    include(GoogleTest)
+    set(pagerank_online_test_src
+        pagerank_online_test.cpp
+        algorithm_online/pagerank.cpp)
 
-add_executable(pagerank_online_test "${pagerank_online_test_src}")
-target_link_libraries(pagerank_online_test PRIVATE mg_utility mage_gtest)
-gtest_add_tests(TARGET pagerank_online_test)
+    add_executable(pagerank_online_test "${pagerank_online_test_src}")
+    target_link_libraries(pagerank_online_test PRIVATE mg_utility mage_gtest)
+    gtest_add_tests(TARGET pagerank_online_test)
+endif()

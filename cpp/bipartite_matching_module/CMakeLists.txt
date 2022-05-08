@@ -9,11 +9,13 @@ target_link_libraries(bipartite_matching PRIVATE mg_utility)
 target_include_directories(bipartite_matching PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Module tests
-include(GoogleTest)
-set(bipartite_matching_test_src 
-    bipartite_matching_test.cpp
-    algorithm/bipartite_matching.cpp)
+if (NOT MAGE_CUGRAPH_ENABLE)
+    include(GoogleTest)
+    set(bipartite_matching_test_src 
+        bipartite_matching_test.cpp
+        algorithm/bipartite_matching.cpp)
 
-add_executable(bipartite_matching_test  "${bipartite_matching_test_src}")
-target_link_libraries(bipartite_matching_test PRIVATE mg_utility mage_gtest)
-gtest_add_tests(TARGET bipartite_matching_test)
+    add_executable(bipartite_matching_test  "${bipartite_matching_test_src}")
+    target_link_libraries(bipartite_matching_test PRIVATE mg_utility mage_gtest)
+    gtest_add_tests(TARGET bipartite_matching_test)
+endif()

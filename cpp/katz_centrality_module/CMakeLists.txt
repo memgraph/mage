@@ -24,7 +24,7 @@ set(katz_test_src
     algorithm/katz.cpp)
 
 add_executable(katz_test "${katz_test_src}")
-target_link_libraries(katz_test PRIVATE mg_utility gtest)
+target_link_libraries(katz_test PRIVATE mg_utility mage_gtest)
 
 # Module tests
 set(katz_online_test_src
@@ -32,4 +32,4 @@ set(katz_online_test_src
     algorithm/katz.cpp)
 
 add_executable(katz_online_test "${katz_online_test_src}")
-target_link_libraries(katz_online_test PRIVATE mg_utility gtest)
+target_link_libraries(katz_online_test PRIVATE mg_utility mage_gtest)

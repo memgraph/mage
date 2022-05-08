@@ -13,15 +13,17 @@ target_include_directories(community_detection PRIVATE ${GRAPPOLO_HEADERS} ${CMA
 target_link_libraries(community_detection PRIVATE mg_utility basic_cd full_syn_opt coloring util OpenMP::OpenMP_CXX)
 
 # Module tests
-include(GoogleTest)
-set(community_detection_test_src
-    community_detection_test.cpp
-    algorithm/louvain.cpp)
+if (NOT MAGE_CUGRAPH_ENABLE)
+    include(GoogleTest)
+    set(community_detection_test_src
+        community_detection_test.cpp
+        algorithm/louvain.cpp)
 
-add_executable(community_detection_test "${community_detection_test_src}")
-target_include_directories(community_detection_test PRIVATE ${GRAPPOLO_HEADERS} ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(community_detection_test PRIVATE mg_utility basic_cd full_syn_opt coloring util OpenMP::OpenMP_CXX gtest)
-gtest_add_tests(TARGET community_detection_test)
+    add_executable(community_detection_test "${community_detection_test_src}")
+    target_include_directories(community_detection_test PRIVATE ${GRAPPOLO_HEADERS} ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(community_detection_test PRIVATE mg_utility basic_cd full_syn_opt coloring util OpenMP::OpenMP_CXX mage_gtest)
+    gtest_add_tests(TARGET community_detection_test)
+endif()
 
 
 ################# LabelRankT
@@ -39,11 +41,13 @@ target_link_libraries(community_detection_online PRIVATE mg_utility)
 target_include_directories(community_detection_online PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Module tests
-include(GoogleTest)
-set(community_detection_online_test_src
-    community_detection_online_test.cpp
-    algorithm_online/community_detection.cpp)
+if (NOT MAGE_CUGRAPH_ENABLE)
+    include(GoogleTest)
+    set(community_detection_online_test_src
+        community_detection_online_test.cpp
+        algorithm_online/community_detection.cpp)
 
-add_executable(community_detection_online_test "${community_detection_online_test_src}")
-target_link_libraries(community_detection_online_test PRIVATE mg_utility mage_gtest)
-gtest_add_tests(TARGET community_detection_online_test)
+    add_executable(community_detection_online_test "${community_detection_online_test_src}")
+    target_link_libraries(community_detection_online_test PRIVATE mg_utility mage_gtest)
+    gtest_add_tests(TARGET community_detection_online_test)
+endif()
