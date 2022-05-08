@@ -16,6 +16,9 @@ ENV PY_VERSION ${PY_VERSION}
 ENV LD_LIBRARY_PATH=/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64:/usr/local/lib
 RUN echo ${PY_VERSION}
 
+# NVIDIA key rotation
+RUN rm /etc/apt/sources.list.d/cuda.list
+
 # Install newest CMake (cuGraph requires >= 20.01)
 RUN apt update && \
     apt install -y software-properties-common lsb-release wget && \
@@ -57,7 +60,10 @@ FROM cugraph-dev as dev
 # Copy and build MAGE
 WORKDIR /mage
 COPY . /mage
-RUN python3 -m  pip install -r /mage/python/requirements.txt && \  
+
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
+    export PATH="/root/.cargo/bin:${PATH}" && \ 
+    python3 -m  pip install -r /mage/python/requirements.txt && \  
     python3 /mage/setup build \ 
             --gpu \
             --cpp-build-flags MAGE_CUGRAPH_ROOT=/opt/conda/envs/rapids/ \
@@ -80,6 +86,9 @@ COPY --from=dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules
 # Copy python build
 COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
 
+# NVIDIA key rotation
+RUN rm /etc/apt/sources.list.d/cuda.list
+
 # Download and install Memgraph
 RUN apt-get update && apt-get install -y \
     libcurl4        `memgraph` \
@@ -97,6 +106,12 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}"
+
+RUN rm -rf /mage \
+    && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
+    && apt-get -y --purge autoremove git curl python3-pip python3-dev cmake build-essential \
+    && apt-get clean
+
 
 USER memgraph
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]

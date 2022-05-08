@@ -3,6 +3,11 @@ target_mage_cugraph(cugraph.pagerank)
 target_link_libraries(cugraph.pagerank PRIVATE mg_utility)
 target_include_directories(cugraph.pagerank PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
+add_query_module(cugraph.personalized_pagerank 1 algorithms/personalized_pagerank.cu)
+target_mage_cugraph(cugraph.personalized_pagerank)
+target_link_libraries(cugraph.personalized_pagerank PRIVATE mg_utility)
+target_include_directories(cugraph.personalized_pagerank PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
 add_query_module(cugraph.louvain 1 algorithms/louvain.cu)
 target_mage_cugraph(cugraph.louvain)
 target_link_libraries(cugraph.louvain PRIVATE mg_utility)
