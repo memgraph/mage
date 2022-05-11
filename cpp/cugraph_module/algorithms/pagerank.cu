@@ -53,7 +53,7 @@ void PagerankProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memo
                                                      weight_property, kDefaultWeight);
     if (mg_graph->Empty()) return;
 
-    auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph(*mg_graph.get(), handle);
+    auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph(*mg_graph.get(), mg_graph::GraphType::kDirectedGraph, handle);
     auto cu_graph_view = cu_graph.view();
     auto n_vertices = cu_graph_view.get_number_of_vertices();
 

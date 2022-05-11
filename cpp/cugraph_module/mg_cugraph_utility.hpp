@@ -14,9 +14,16 @@ namespace mg_cugraph {
 
 template <typename TVertexT = int64_t, typename TEdgeT = int64_t, typename TWeightT = double,
           bool TStoreTransposed = true, bool TMultiGPU = false>
-auto CreateCugraphFromMemgraph(const mg_graph::GraphView<> &mg_graph, raft::handle_t const &handle) {
-  const auto &mg_edges = mg_graph.Edges();
-  const auto &mg_nodes = mg_graph.Nodes();
+auto CreateCugraphFromMemgraph(const mg_graph::GraphView<> &mg_graph, const mg_graph::GraphType graph_type,
+                               raft::handle_t const &handle) {
+  auto mg_edges = mg_graph.Edges();
+  auto mg_nodes = mg_graph.Nodes();
+
+  if (graph_type == mg_graph::GraphType::kUndirectedGraph) {
+    std::vector<mg_graph::Edge<>> undirected_edges(mg_edges.begin(), mg_edges.end());
+    mg_edges.reserve(mg_edges.size() + distance(undirected_edges.begin(), undirected_edges.end()));
+    mg_edges.insert(mg_edges.end(), undirected_edges.begin(), undirected_edges.end());
+  }
 
   // Flatten the data vector
   std::vector<TVertexT> mg_src;
@@ -64,8 +71,8 @@ auto CreateCugraphFromMemgraph(const mg_graph::GraphView<> &mg_graph, raft::hand
 
 template <typename TVertexT = int64_t, typename TEdgeT = int64_t, typename TWeightT = double>
 auto CreateCugraphLegacyFromMemgraph(const mg_graph::GraphView<> &mg_graph, raft::handle_t const &handle) {
-  const auto &mg_nodes = mg_graph.Nodes();
-  const auto &mg_edges = mg_graph.Edges();
+  auto mg_nodes = mg_graph.Nodes();
+  auto mg_edges = mg_graph.Edges();
   const auto n_edges = mg_edges.size();
   const auto n_vertices = mg_nodes.size();
 
@@ -87,6 +94,31 @@ auto CreateCugraphLegacyFromMemgraph(const mg_graph::GraphView<> &mg_graph, raft
     }
   }
 
+  sort(mg_edges.begin(), mg_edges.end(),
+       [](mg_graph::Edge<> &l_edge, mg_graph::Edge<> &r_edge) { return l_edge.from < r_edge.from; });
+
+  std::cout << "Edges sorted: " << std::endl;
+  for (const auto [id, src, dst] : mg_edges) {
+    std::cout << "[" << std::to_string(src) << "," << std::to_string(dst) << "]"
+              << " ";
+  }
+  std::cout << std::endl;
+
+  for (size_t i = 0; i < mg_deg_sum.size(); i++) {
+    std::cout << std::to_string(mg_deg_sum[i]) << " ";
+  }
+  std::cout << std::endl;
+
+  for (size_t i = 0; i < mg_dst.size(); i++) {
+    std::cout << std::to_string(mg_dst[i]) << " ";
+  }
+  std::cout << std::endl;
+
+  for (size_t i = 0; i < mg_weight.size(); i++) {
+    std::cout << std::to_string(mg_weight[i]) << " ";
+  }
+  std::cout << std::endl;
+
   // Synchronize the data structures to the GPU
   auto stream = handle.get_stream();
   rmm::mr::device_memory_resource *mr = rmm::mr::get_current_device_resource();
@@ -105,8 +137,8 @@ auto CreateCugraphLegacyFromMemgraph(const mg_graph::GraphView<> &mg_graph, raft
 }
 
 template <typename TVertexT = int64_t, typename TEdgeT = int64_t, typename TWeightT = double>
-auto GenerateCugraphRMAT(std::size_t scale, std::size_t num_edges, double a, double b,
-                         double c, std::uint64_t seed, bool clip_and_flip, raft::handle_t const &handle) {
+auto GenerateCugraphRMAT(std::size_t scale, std::size_t num_edges, double a, double b, double c, std::uint64_t seed,
+                         bool clip_and_flip, raft::handle_t const &handle) {
   // Synchronize the data structures to the GPU
   auto stream = handle.get_stream();
   rmm::device_uvector<TVertexT> cu_src(num_edges, stream);

@@ -51,7 +51,7 @@ void HITSProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *
     auto mg_graph = mg_utility::GetGraphView(graph, result, memory, mg_graph::GraphType::kDirectedGraph);
     if (mg_graph->Empty()) return;
     
-    auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph(*mg_graph.get(), handle);
+    auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph(*mg_graph.get(), mg_graph::GraphType::kDirectedGraph, handle);
     auto cu_graph_view = cu_graph.view();
 
     rmm::device_uvector<result_t> hubs_result(cu_graph_view.get_number_of_local_vertices(), stream);

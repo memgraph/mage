@@ -43,7 +43,7 @@ void LeidenProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory
     raft::handle_t handle{};
     auto stream = handle.get_stream();
 
-    auto mg_graph = mg_utility::GetGraphView(graph, result, memory, mg_graph::GraphType::kDirectedGraph);
+    auto mg_graph = mg_utility::GetGraphView(graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
     if (mg_graph->Empty()) return;
 
     auto n_vertices = mg_graph.get()->Nodes().size();
@@ -51,7 +51,7 @@ void LeidenProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory
     auto cu_graph_ptr =
         mg_cugraph::CreateCugraphLegacyFromMemgraph<vertex_t, edge_t, weight_t>(*mg_graph.get(), handle);
     auto cu_graph_view = cu_graph_ptr->view();
-    cu_graph_view.prop.directed = true;
+    cu_graph_view.prop.directed = false;
 
     rmm::device_uvector<vertex_t> clustering_result(n_vertices, stream);
     cugraph::leiden<vertex_t, edge_t, weight_t>(handle, cu_graph_view, clustering_result.data(), max_level, resulution);

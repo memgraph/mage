@@ -52,11 +52,12 @@ void KatzCentralityProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mg
     auto stream = handle.get_stream();
 
     // Currently doesn't support for weights
+    auto graph_type = directed ? mg_graph::GraphType::kDirectedGraph : mg_graph::GraphType::kUndirectedGraph;
     auto mg_graph = mg_utility::GetGraphView(
-        graph, result, memory, directed ? mg_graph::GraphType::kDirectedGraph : mg_graph::GraphType::kUndirectedGraph);
+        graph, result, memory, graph_type);
     if (mg_graph->Empty()) return;
 
-    auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph(*mg_graph.get(), handle);
+    auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph(*mg_graph.get(), graph_type, handle);
     auto cu_graph_view = cu_graph.view();
     auto n_vertices = cu_graph_view.get_number_of_vertices();
 
