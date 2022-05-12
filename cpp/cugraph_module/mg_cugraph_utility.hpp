@@ -85,39 +85,17 @@ auto CreateCugraphLegacyFromMemgraph(const mg_graph::GraphView<> &mg_graph, raft
   mg_deg_sum.push_back(0);
   for (std::int64_t v_id = 0; v_id < n_vertices; v_id++) {
     mg_deg_sum.push_back(mg_deg_sum[v_id] + mg_graph.Neighbours(v_id).size());
-  }
 
-  for (const auto mg_node : mg_nodes) {
-    for (const auto dst : mg_graph.Neighbours(mg_node.id)) {
+    auto neighbors = mg_graph.Neighbours(v_id);
+    sort(neighbors.begin(), neighbors.end(), [](mg_graph::Neighbour<> &l_neighbor, mg_graph::Neighbour<> &r_neighbor) {
+      return l_neighbor.node_id < r_neighbor.node_id;
+    });
+
+    for (const auto dst : neighbors) {
       mg_dst.push_back(dst.node_id);
       mg_weight.push_back(mg_graph.IsWeighted() ? mg_graph.GetWeight(dst.edge_id) : 1.0);
     }
   }
-
-  sort(mg_edges.begin(), mg_edges.end(),
-       [](mg_graph::Edge<> &l_edge, mg_graph::Edge<> &r_edge) { return l_edge.from < r_edge.from; });
-
-  std::cout << "Edges sorted: " << std::endl;
-  for (const auto [id, src, dst] : mg_edges) {
-    std::cout << "[" << std::to_string(src) << "," << std::to_string(dst) << "]"
-              << " ";
-  }
-  std::cout << std::endl;
-
-  for (size_t i = 0; i < mg_deg_sum.size(); i++) {
-    std::cout << std::to_string(mg_deg_sum[i]) << " ";
-  }
-  std::cout << std::endl;
-
-  for (size_t i = 0; i < mg_dst.size(); i++) {
-    std::cout << std::to_string(mg_dst[i]) << " ";
-  }
-  std::cout << std::endl;
-
-  for (size_t i = 0; i < mg_weight.size(); i++) {
-    std::cout << std::to_string(mg_weight[i]) << " ";
-  }
-  std::cout << std::endl;
 
   // Synchronize the data structures to the GPU
   auto stream = handle.get_stream();

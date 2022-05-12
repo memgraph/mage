@@ -22,7 +22,7 @@ using weight_t = double;
 
 constexpr char const *kProcedureLeiden = "get";
 
-constexpr char const *kArgumentMaxIterations = "max_level";
+constexpr char const *kArgumentMaxIterations = "max_iter";
 constexpr char const *kArgumentResolution = "resolution";
 
 constexpr char const *kResultFieldNode = "node";
@@ -37,7 +37,7 @@ void InsertLeidenRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory
 
 void LeidenProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *memory) {
   try {
-    auto max_level = mgp::value_get_int(mgp::list_at(args, 0));
+    auto max_iter = mgp::value_get_int(mgp::list_at(args, 0));
     auto resulution = mgp::value_get_double(mgp::list_at(args, 1));
 
     raft::handle_t handle{};
@@ -54,7 +54,7 @@ void LeidenProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory
     cu_graph_view.prop.directed = false;
 
     rmm::device_uvector<vertex_t> clustering_result(n_vertices, stream);
-    cugraph::leiden<vertex_t, edge_t, weight_t>(handle, cu_graph_view, clustering_result.data(), max_level, resulution);
+    cugraph::leiden<vertex_t, edge_t, weight_t>(handle, cu_graph_view, clustering_result.data(), max_iter, resulution);
 
     for (vertex_t node_id = 0; node_id < clustering_result.size(); ++node_id) {
       auto cluster_id = clustering_result.element(node_id, stream);
@@ -69,27 +69,27 @@ void LeidenProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory
 }  // namespace
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
-  mgp_value *default_max_level;
+  mgp_value *default_max_iter;
   mgp_value *default_resolution;
   try {
     auto *leiden_proc = mgp::module_add_read_procedure(module, kProcedureLeiden, LeidenProc);
 
-    default_max_level = mgp::value_make_int(100, memory);
+    default_max_iter = mgp::value_make_int(100, memory);
     default_resolution = mgp::value_make_double(1.0, memory);
 
-    mgp::proc_add_opt_arg(leiden_proc, kArgumentMaxIterations, mgp::type_int(), default_max_level);
+    mgp::proc_add_opt_arg(leiden_proc, kArgumentMaxIterations, mgp::type_int(), default_max_iter);
     mgp::proc_add_opt_arg(leiden_proc, kArgumentResolution, mgp::type_float(), default_resolution);
 
     mgp::proc_add_result(leiden_proc, kResultFieldNode, mgp::type_node());
     mgp::proc_add_result(leiden_proc, kResultFieldClusterId, mgp::type_int());
 
   } catch (const std::exception &e) {
-    mgp_value_destroy(default_max_level);
+    mgp_value_destroy(default_max_iter);
     mgp_value_destroy(default_resolution);
     return 1;
   }
-  
-  mgp_value_destroy(default_max_level);
+
+  mgp_value_destroy(default_max_iter);
   mgp_value_destroy(default_resolution);
   return 0;
 }

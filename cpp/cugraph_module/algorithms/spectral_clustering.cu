@@ -44,13 +44,13 @@ void InsertSpectralClusteringResult(mgp_graph *graph, mgp_result *result, mgp_me
 void SpectralClusteringProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *memory) {
   try {
     // TODO: Not supporting int64_t
-    auto weight_property = mgp::value_get_string(mgp::list_at(args, 0));
-    int num_clusters = mgp::value_get_int(mgp::list_at(args, 1));
-    int num_eigenvectors = mgp::value_get_int(mgp::list_at(args, 2));
-    double ev_tolerance = mgp::value_get_double(mgp::list_at(args, 3));
-    int ev_maxiter = mgp::value_get_int(mgp::list_at(args, 4));
-    double kmean_tolerance = mgp::value_get_double(mgp::list_at(args, 5));
-    int kmean_maxiter = mgp::value_get_int(mgp::list_at(args, 6));
+    int num_clusters = mgp::value_get_int(mgp::list_at(args, 0));
+    int num_eigenvectors = mgp::value_get_int(mgp::list_at(args, 1));
+    double ev_tolerance = mgp::value_get_double(mgp::list_at(args, 2));
+    int ev_maxiter = mgp::value_get_int(mgp::list_at(args, 3));
+    double kmean_tolerance = mgp::value_get_double(mgp::list_at(args, 4));
+    int kmean_maxiter = mgp::value_get_int(mgp::list_at(args, 5));
+    auto weight_property = mgp::value_get_string(mgp::list_at(args, 6));
 
     raft::handle_t handle{};
     auto stream = handle.get_stream();
@@ -58,7 +58,7 @@ void SpectralClusteringProc(mgp_list *args, mgp_graph *graph, mgp_result *result
     auto mg_graph = mg_utility::GetWeightedGraphView(graph, result, memory, mg_graph::GraphType::kUndirectedGraph,
                                                      weight_property, kDefaultWeight);
     if (mg_graph->Empty()) return;
-    
+
     auto n_vertices = mg_graph.get()->Nodes().size();
     // IMPORTANT: Spectral clustering cuGraph algorithm works only on legacy code
     auto cu_graph_ptr =
@@ -85,7 +85,6 @@ void SpectralClusteringProc(mgp_list *args, mgp_graph *graph, mgp_result *result
 }  // namespace
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
-  mgp_value *default_num_clusters;
   mgp_value *default_num_eigenvectors;
   mgp_value *default_ev_tolerance;
   mgp_value *default_ev_maxiter;
@@ -95,28 +94,25 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   try {
     auto *spectral_clustering =
         mgp::module_add_read_procedure(module, kProcedureSpectralClustering, SpectralClusteringProc);
-
-    default_num_clusters = mgp::value_make_int(8, memory);
-    default_num_eigenvectors = mgp::value_make_int(8, memory);
+    default_num_eigenvectors = mgp::value_make_int(2, memory);
     default_ev_tolerance = mgp::value_make_double(0.00001, memory);
     default_ev_maxiter = mgp::value_make_int(100, memory);
     default_kmean_tolerance = mgp::value_make_double(0.00001, memory);
     default_kmean_maxiter = mgp::value_make_int(100, memory);
     default_weight_property = mgp::value_make_string(kDefaultWeightProperty, memory);
 
-    mgp::proc_add_opt_arg(spectral_clustering, kDefaultWeightProperty, mgp::type_string(), default_weight_property);
-    mgp::proc_add_opt_arg(spectral_clustering, kArgumentNumClusters, mgp::type_int(), default_num_clusters);
+    mgp::proc_add_arg(spectral_clustering, kArgumentNumClusters, mgp::type_int());
     mgp::proc_add_opt_arg(spectral_clustering, kArgumentNumEigenvectors, mgp::type_int(), default_num_eigenvectors);
     mgp::proc_add_opt_arg(spectral_clustering, kArgumentEvTolerance, mgp::type_float(), default_ev_tolerance);
     mgp::proc_add_opt_arg(spectral_clustering, kArgumentEvMaxIter, mgp::type_int(), default_ev_maxiter);
     mgp::proc_add_opt_arg(spectral_clustering, kArgumentKmeanTolerance, mgp::type_float(), default_kmean_tolerance);
     mgp::proc_add_opt_arg(spectral_clustering, kArgumentKmeanMaxIter, mgp::type_int(), default_kmean_maxiter);
+    mgp::proc_add_opt_arg(spectral_clustering, kDefaultWeightProperty, mgp::type_string(), default_weight_property);
 
     mgp::proc_add_result(spectral_clustering, kResultFieldNode, mgp::type_node());
     mgp::proc_add_result(spectral_clustering, kResultFieldClusterId, mgp::type_int());
 
   } catch (const std::exception &e) {
-    mgp_value_destroy(default_num_clusters);
     mgp_value_destroy(default_num_eigenvectors);
     mgp_value_destroy(default_ev_tolerance);
     mgp_value_destroy(default_ev_maxiter);
@@ -125,7 +121,6 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     return 1;
   }
 
-  mgp_value_destroy(default_num_clusters);
   mgp_value_destroy(default_num_eigenvectors);
   mgp_value_destroy(default_ev_tolerance);
   mgp_value_destroy(default_ev_maxiter);

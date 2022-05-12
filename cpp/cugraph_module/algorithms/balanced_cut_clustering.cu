@@ -45,18 +45,19 @@ void InsertBalancedCutResult(mgp_graph *graph, mgp_result *result, mgp_memory *m
 void BalancedCutClusteringProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *memory) {
   try {
     // TODO: Not supporting int64_t
-    auto weight_property = mgp::value_get_string(mgp::list_at(args, 0));
-    int num_clusters = mgp::value_get_int(mgp::list_at(args, 1));
-    int num_eigenvectors = mgp::value_get_int(mgp::list_at(args, 2));
-    double ev_tolerance = mgp::value_get_double(mgp::list_at(args, 3));
-    int ev_maxiter = mgp::value_get_int(mgp::list_at(args, 4));
-    double kmean_tolerance = mgp::value_get_double(mgp::list_at(args, 5));
-    int kmean_maxiter = mgp::value_get_int(mgp::list_at(args, 6));
+    int num_clusters = mgp::value_get_int(mgp::list_at(args, 0));
+    int num_eigenvectors = mgp::value_get_int(mgp::list_at(args, 1));
+    double ev_tolerance = mgp::value_get_double(mgp::list_at(args, 2));
+    int ev_maxiter = mgp::value_get_int(mgp::list_at(args, 3));
+    double kmean_tolerance = mgp::value_get_double(mgp::list_at(args, 4));
+    int kmean_maxiter = mgp::value_get_int(mgp::list_at(args, 5));
+    auto weight_property = mgp::value_get_string(mgp::list_at(args, 6));
 
     raft::handle_t handle{};
     auto stream = handle.get_stream();
 
-    auto mg_graph = mg_utility::GetWeightedGraphView(graph, result, memory, mg_graph::GraphType::kUndirectedGraph, weight_property, kDefaultWeight);
+    auto mg_graph = mg_utility::GetWeightedGraphView(graph, result, memory, mg_graph::GraphType::kUndirectedGraph,
+                                                     weight_property, kDefaultWeight);
     if (mg_graph->Empty()) return;
 
     auto n_vertices = mg_graph.get()->Nodes().size();
@@ -68,8 +69,8 @@ void BalancedCutClusteringProc(mgp_list *args, mgp_graph *graph, mgp_result *res
 
     rmm::device_uvector<vertex_t> clustering_result(n_vertices, stream);
     // Only supported for weighted graphs
-    cugraph::ext_raft::balancedCutClustering(cu_graph_view, num_clusters, num_eigenvectors, ev_tolerance, ev_maxiter, kmean_tolerance,
-                                   kmean_maxiter, clustering_result.data());
+    cugraph::ext_raft::balancedCutClustering(cu_graph_view, num_clusters, num_eigenvectors, ev_tolerance, ev_maxiter,
+                                             kmean_tolerance, kmean_maxiter, clustering_result.data());
 
     for (vertex_t node_id = 0; node_id < clustering_result.size(); ++node_id) {
       auto cluster_id = clustering_result.element(node_id, stream);
@@ -84,7 +85,6 @@ void BalancedCutClusteringProc(mgp_list *args, mgp_graph *graph, mgp_result *res
 }  // namespace
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
-  mgp_value *default_num_clusters;
   mgp_value *default_num_eigenvectors;
   mgp_value *default_ev_tolerance;
   mgp_value *default_ev_maxiter;
@@ -94,28 +94,25 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   try {
     auto *balanced_cut_proc = mgp::module_add_read_procedure(module, kProcedureBalancedCut, BalancedCutClusteringProc);
 
-    default_num_clusters = mgp::value_make_int(8, memory);
-    default_num_eigenvectors = mgp::value_make_int(8, memory);
+    default_num_eigenvectors = mgp::value_make_int(2, memory);
     default_ev_tolerance = mgp::value_make_double(0.00001, memory);
     default_ev_maxiter = mgp::value_make_int(100, memory);
     default_kmean_tolerance = mgp::value_make_double(0.00001, memory);
     default_kmean_maxiter = mgp::value_make_int(100, memory);
     default_weight_property = mgp::value_make_string(kDefaultWeightProperty, memory);
 
-
-    mgp::proc_add_opt_arg(balanced_cut_proc, kDefaultWeightProperty, mgp::type_string(), default_weight_property);
-    mgp::proc_add_opt_arg(balanced_cut_proc, kArgumentNumClusters, mgp::type_int(), default_num_clusters);
+    mgp::proc_add_opt_arg(balanced_cut_proc, kArgumentNumClusters, mgp::type_int());
     mgp::proc_add_opt_arg(balanced_cut_proc, kArgumentNumEigenvectors, mgp::type_int(), default_num_eigenvectors);
     mgp::proc_add_opt_arg(balanced_cut_proc, kArgumentEvTolerance, mgp::type_float(), default_ev_tolerance);
     mgp::proc_add_opt_arg(balanced_cut_proc, kArgumentEvMaxIter, mgp::type_int(), default_ev_maxiter);
     mgp::proc_add_opt_arg(balanced_cut_proc, kArgumentKmeanTolerance, mgp::type_float(), default_kmean_tolerance);
     mgp::proc_add_opt_arg(balanced_cut_proc, kArgumentKmeanMaxIter, mgp::type_int(), default_kmean_maxiter);
+    mgp::proc_add_opt_arg(balanced_cut_proc, kDefaultWeightProperty, mgp::type_string(), default_weight_property);
 
     mgp::proc_add_result(balanced_cut_proc, kResultFieldNode, mgp::type_node());
     mgp::proc_add_result(balanced_cut_proc, kResultFieldClusterId, mgp::type_int());
 
   } catch (const std::exception &e) {
-    mgp_value_destroy(default_num_clusters);
     mgp_value_destroy(default_num_eigenvectors);
     mgp_value_destroy(default_ev_tolerance);
     mgp_value_destroy(default_ev_maxiter);
@@ -124,7 +121,6 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     return 1;
   }
 
-  mgp_value_destroy(default_num_clusters);
   mgp_value_destroy(default_num_eigenvectors);
   mgp_value_destroy(default_ev_tolerance);
   mgp_value_destroy(default_ev_maxiter);
