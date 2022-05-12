@@ -25,6 +25,7 @@ constexpr char const *kProcedureHITS = "get";
 constexpr char const *kArgumentTolerance = "tolerance";
 constexpr char const *kArgumentMaxIterations = "max_iterations";
 constexpr char const *kArgumentNormalize = "normalize";
+constexpr char const *kArgumentDirected = "directed";
 
 constexpr char const *kResultFieldNode = "node";
 constexpr char const *kResultFieldHubScore = "hubs";
@@ -43,15 +44,17 @@ void HITSProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *
     auto tolerance = mgp::value_get_double(mgp::list_at(args, 0));
     auto max_iterations = mgp::value_get_int(mgp::list_at(args, 1));
     auto normalize = mgp::value_get_bool(mgp::list_at(args, 2));
+    auto directed = mgp::value_get_bool(mgp::list_at(args, 3));
 
     raft::handle_t handle{};
     auto stream = handle.get_stream();
 
     // Works with unweighted graph
-    auto mg_graph = mg_utility::GetGraphView(graph, result, memory, mg_graph::GraphType::kDirectedGraph);
+    auto graph_type = directed ? mg_graph::GraphType::kDirectedGraph: mg_graph::GraphType::kUndirectedGraph;
+    auto mg_graph = mg_utility::GetGraphView(graph, result, memory, graph_type);
     if (mg_graph->Empty()) return;
-    
-    auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph(*mg_graph.get(), mg_graph::GraphType::kDirectedGraph, handle);
+
+    auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph(*mg_graph.get(), graph_type, handle);
     auto cu_graph_view = cu_graph.view();
 
     rmm::device_uvector<result_t> hubs_result(cu_graph_view.get_number_of_local_vertices(), stream);
@@ -76,16 +79,19 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   mgp_value *default_tolerance;
   mgp_value *default_max_iterations;
   mgp_value *default_normalize;
+  mgp_value *default_directed;
   try {
     auto *hits_proc = mgp::module_add_read_procedure(module, kProcedureHITS, HITSProc);
 
     default_tolerance = mgp::value_make_double(1e-5, memory);
     default_max_iterations = mgp::value_make_int(100, memory);
     default_normalize = mgp::value_make_bool(true, memory);
+    default_normalize = mgp::value_make_bool(true, memory);
 
     mgp::proc_add_opt_arg(hits_proc, kArgumentTolerance, mgp::type_float(), default_tolerance);
     mgp::proc_add_opt_arg(hits_proc, kArgumentMaxIterations, mgp::type_int(), default_max_iterations);
     mgp::proc_add_opt_arg(hits_proc, kArgumentNormalize, mgp::type_bool(), default_normalize);
+    mgp::proc_add_opt_arg(hits_proc, kArgumentDirected, mgp::type_bool(), default_normalize);
 
     mgp::proc_add_result(hits_proc, kResultFieldNode, mgp::type_node());
     mgp::proc_add_result(hits_proc, kResultFieldHubScore, mgp::type_float());
@@ -95,12 +101,14 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     mgp_value_destroy(default_tolerance);
     mgp_value_destroy(default_max_iterations);
     mgp_value_destroy(default_normalize);
+    mgp_value_destroy(default_directed);
     return 1;
   }
 
   mgp_value_destroy(default_tolerance);
   mgp_value_destroy(default_max_iterations);
   mgp_value_destroy(default_normalize);
+  mgp_value_destroy(default_directed);
   return 0;
 }
 

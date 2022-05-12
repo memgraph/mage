@@ -101,7 +101,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     default_kmean_maxiter = mgp::value_make_int(100, memory);
     default_weight_property = mgp::value_make_string(kDefaultWeightProperty, memory);
 
-    mgp::proc_add_opt_arg(balanced_cut_proc, kArgumentNumClusters, mgp::type_int());
+    mgp::proc_add_arg(balanced_cut_proc, kArgumentNumClusters, mgp::type_int());
     mgp::proc_add_opt_arg(balanced_cut_proc, kArgumentNumEigenvectors, mgp::type_int(), default_num_eigenvectors);
     mgp::proc_add_opt_arg(balanced_cut_proc, kArgumentEvTolerance, mgp::type_float(), default_ev_tolerance);
     mgp::proc_add_opt_arg(balanced_cut_proc, kArgumentEvMaxIter, mgp::type_int(), default_ev_maxiter);

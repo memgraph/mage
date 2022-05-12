@@ -23,6 +23,7 @@ constexpr char const *kProcedureLouvain = "get";
 
 constexpr char const *kArgumentMaxIterations = "max_level";
 constexpr char const *kArgumentResolution = "resolution";
+constexpr char const *kArgumentDirected = "directed";
 
 constexpr char const *kResultFieldNode = "node";
 constexpr char const *kResultFieldClusterId = "cluster_id";
@@ -38,16 +39,18 @@ void LouvainProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memor
   try {
     auto max_level = mgp::value_get_int(mgp::list_at(args, 0));
     auto resulution = mgp::value_get_double(mgp::list_at(args, 1));
+    auto directed = mgp::value_get_bool(mgp::list_at(args, 2));
 
     raft::handle_t handle{};
     auto stream = handle.get_stream();
 
-    auto mg_graph = mg_utility::GetGraphView(graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
+    auto graph_type = directed ? mg_graph::GraphType::kDirectedGraph : mg_graph::GraphType::kUndirectedGraph;
+    auto mg_graph = mg_utility::GetGraphView(graph, result, memory, graph_type);
     if (mg_graph->Empty()) return;
 
     // IMPORTANT: Louvain cuGraph algorithm works only on non-transposed graph instances
     auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph<vertex_t, edge_t, weight_t, false, false>(
-        *mg_graph.get(), mg_graph::GraphType::kUndirectedGraph, handle);
+        *mg_graph.get(), graph_type, handle);
     auto cu_graph_view = cu_graph.view();
     auto n_vertices = cu_graph_view.get_number_of_vertices();
 
@@ -69,14 +72,17 @@ void LouvainProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memor
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   mgp_value *default_max_level;
   mgp_value *default_resolution;
+  mgp_value *deafault_directed;
   try {
     auto *louvain_proc = mgp::module_add_read_procedure(module, kProcedureLouvain, LouvainProc);
 
     default_max_level = mgp::value_make_int(100, memory);
     default_resolution = mgp::value_make_double(1.0, memory);
+    deafault_directed = mgp::value_make_bool(true, memory);
 
     mgp::proc_add_opt_arg(louvain_proc, kArgumentMaxIterations, mgp::type_int(), default_max_level);
     mgp::proc_add_opt_arg(louvain_proc, kArgumentResolution, mgp::type_float(), default_resolution);
+    mgp::proc_add_opt_arg(louvain_proc, kArgumentDirected, mgp::type_bool(), deafault_directed);
 
     mgp::proc_add_result(louvain_proc, kResultFieldNode, mgp::type_node());
     mgp::proc_add_result(louvain_proc, kResultFieldClusterId, mgp::type_int());
@@ -84,11 +90,13 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   } catch (const std::exception &e) {
     mgp_value_destroy(default_max_level);
     mgp_value_destroy(default_resolution);
+    mgp_value_destroy(deafault_directed);
     return 1;
   }
 
   mgp_value_destroy(default_max_level);
   mgp_value_destroy(default_resolution);
+  mgp_value_destroy(deafault_directed);
   return 0;
 }
 

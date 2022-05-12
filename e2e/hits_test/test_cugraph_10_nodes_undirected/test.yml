@@ -1,36 +1,36 @@
 query: >
-    CALL cugraph.hits.get(1e-5, 100, FALSE) YIELD authorities, hubs, node
+    CALL cugraph.hits.get(1e-5, 100, TRUE, FALSE) YIELD authorities, hubs, node
     RETURN authorities, hubs, node.id as node
     ORDER BY node ASC;
 
 output:
-- authorities: 0.0873
-  hubs: 0.4315
+- authorities: 0.14698
+  hubs: 0.14698
   node: 0
-- authorities: -0.0
-  hubs: 0.0
+- authorities: 0.1226
+  hubs: 0.1226
   node: 1
-- authorities: -0.0
-  hubs: -0.0
+- authorities: 0.1368
+  hubs: 0.1368
   node: 2
 - authorities: 0.0
   hubs: 0.0
   node: 3
-- authorities: -0.0
-  hubs: -0.0
+- authorities: 0.0948
+  hubs: 0.0948
   node: 4
-- authorities: 0.4127
-  hubs: 0.0685
+- authorities: 0.0696
+  hubs: 0.0696
   node: 5
-- authorities: 0.0436
-  hubs: 0.2158
+- authorities: 0.1468
+  hubs: 0.1468
   node: 6
-- authorities: 0.4127
-  hubs: 0.0685
+- authorities: 0.1852
+  hubs: 0.1852
   node: 7
-- authorities: 0.0436
-  hubs: 0.2158
+- authorities: 0.0969
+  hubs: 0.0969
   node: 8
 - authorities: 0.0
-  hubs: -0.0
+  hubs: 0.0
   node: 9
