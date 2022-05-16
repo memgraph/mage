@@ -72,7 +72,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
 USER memgraph
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
 
-FROM rapidsai/rapidsai:${CUGRAPH_VERSION}-cuda${CUDA_VERSION}-runtime-ubuntu20.04-py${PY_VERSION} as prod
+FROM nvidia/cuda:${CUGRAPH_VERSION}.0-runtime-ubuntu20.04 AS prod
 
 USER root
 ARG MG_VERSION
@@ -82,7 +82,8 @@ ENV PY_VERSION ${PY_VERSION}
 
 # Copy modules
 COPY --from=dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
-
+# Copy cugraph library
+COPY --from=dev /opt/conda/envs/rapids/lib/libcugraph.so /opt/conda/envs/rapids/lib/libcugraph.so
 # Copy python build
 COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
 
@@ -96,6 +97,8 @@ RUN apt-get update && apt-get install -y \
     libssl1.1       `memgraph` \
     libssl-dev       `memgraph` \
     openssl         `memgraph` \
+    curl            `mage-memgraph` \
+    libgomp1         `mage-memgraph` \
     python3         `mage-memgraph` \
     python3-pip         `mage-memgraph` \
     python3-setuptools     `mage-memgraph` \
