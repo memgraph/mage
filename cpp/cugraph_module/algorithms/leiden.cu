@@ -26,13 +26,13 @@ constexpr char const *kArgumentMaxIterations = "max_iter";
 constexpr char const *kArgumentResolution = "resolution";
 
 constexpr char const *kResultFieldNode = "node";
-constexpr char const *kResultFieldClusterId = "cluster_id";
+constexpr char const *kResultFieldPartition = "partition";
 
 void InsertLeidenRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
-                        std::int64_t cluster_id) {
+                        std::int64_t partition) {
   auto *record = mgp::result_new_record(result);
   mg_utility::InsertNodeValueResult(graph, record, kResultFieldNode, node_id, memory);
-  mg_utility::InsertIntValueResult(record, kResultFieldClusterId, cluster_id, memory);
+  mg_utility::InsertIntValueResult(record, kResultFieldPartition, partition, memory);
 }
 
 void LeidenProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *memory) {
@@ -57,8 +57,8 @@ void LeidenProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory
     cugraph::leiden<vertex_t, edge_t, weight_t>(handle, cu_graph_view, clustering_result.data(), max_iter, resulution);
 
     for (vertex_t node_id = 0; node_id < clustering_result.size(); ++node_id) {
-      auto cluster_id = clustering_result.element(node_id, stream);
-      InsertLeidenRecord(graph, result, memory, mg_graph->GetMemgraphNodeId(node_id), cluster_id);
+      auto partition = clustering_result.element(node_id, stream);
+      InsertLeidenRecord(graph, result, memory, mg_graph->GetMemgraphNodeId(node_id), partition);
     }
   } catch (const std::exception &e) {
     // We must not let any exceptions out of our module.
@@ -81,8 +81,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     mgp::proc_add_opt_arg(leiden_proc, kArgumentResolution, mgp::type_float(), default_resolution);
 
     mgp::proc_add_result(leiden_proc, kResultFieldNode, mgp::type_node());
-    mgp::proc_add_result(leiden_proc, kResultFieldClusterId, mgp::type_int());
-
+    mgp::proc_add_result(leiden_proc, kResultFieldPartition, mgp::type_int());
   } catch (const std::exception &e) {
     mgp_value_destroy(default_max_iter);
     mgp_value_destroy(default_resolution);

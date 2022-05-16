@@ -1,37 +1,38 @@
 query: >
-    MATCH (n:Node {id:0}), (m:Node {id:1})
-    CALL cugraph.personalized_pagerank.get([n,m], [0.2, 0.5]) YIELD node,rank
-    RETURN node.id as node, rank
-    ORDER BY rank ASC;
+  MATCH (m:Node {id: 0}), (n:Node {id: 1})
+  CALL cugraph.personalized_pagerank.get([m, n], [0.2, 0.5])
+  YIELD node, pagerank
+  RETURN node.id as node_id, pagerank
+  ORDER BY pagerank ASC;
 
 output:
-    - node: 12
-      rank: 0.0
-    - node: 13
-      rank: 0.0
-    - node: 2
-      rank: 0.0061
-    - node: 6
-      rank: 0.0242
-    - node: 4
-      rank: 0.036
-    - node: 10
-      rank: 0.0461
-    - node: 8
-      rank: 0.0588
-    - node: 14
-      rank: 0.0597
-    - node: 7
-      rank: 0.0598
-    - node: 11
-      rank: 0.0824
-    - node: 3
-      rank: 0.0913
-    - node: 5
-      rank: 0.1041
-    - node: 9
-      rank: 0.1395
-    - node: 0
-      rank: 0.1409
-    - node: 1
-      rank: 0.1511
+  - node_id: 12
+    pagerank: 0.0
+  - node_id: 13
+    pagerank: 0.0
+  - node_id: 2
+    pagerank: 0.0061
+  - node_id: 6
+    pagerank: 0.0242
+  - node_id: 4
+    pagerank: 0.036
+  - node_id: 10
+    pagerank: 0.0461
+  - node_id: 8
+    pagerank: 0.0588
+  - node_id: 14
+    pagerank: 0.0597
+  - node_id: 7
+    pagerank: 0.0598
+  - node_id: 11
+    pagerank: 0.0824
+  - node_id: 3
+    pagerank: 0.0913
+  - node_id: 5
+    pagerank: 0.1041
+  - node_id: 9
+    pagerank: 0.1395
+  - node_id: 0
+    pagerank: 0.1409
+  - node_id: 1
+    pagerank: 0.1511

@@ -30,13 +30,13 @@ constexpr char const *kArgumentMaxIterations = "max_iterations";
 constexpr char const *kArgumentDirected = "directed";
 
 constexpr char const *kResultFieldNode = "node";
-constexpr char const *kResultFieldRank = "rank";
+constexpr char const *kResultFieldKatzCentrality = "katz_centrality";
 
 void InsertKatzCentralityRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
                                 double rank) {
   auto *record = mgp::result_new_record(result);
   mg_utility::InsertNodeValueResult(graph, record, kResultFieldNode, node_id, memory);
-  mg_utility::InsertDoubleValueResult(record, kResultFieldRank, rank, memory);
+  mg_utility::InsertDoubleValueResult(record, kResultFieldKatzCentrality, rank, memory);
 }
 
 void KatzCentralityProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *memory) {
@@ -111,8 +111,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     mgp::proc_add_opt_arg(katz_proc, kArgumentDirected, mgp::type_bool(), default_directed);
 
     mgp::proc_add_result(katz_proc, kResultFieldNode, mgp::type_node());
-    mgp::proc_add_result(katz_proc, kResultFieldRank, mgp::type_float());
-
+    mgp::proc_add_result(katz_proc, kResultFieldKatzCentrality, mgp::type_float());
   } catch (const std::exception &e) {
     mgp_value_destroy(default_alpha);
     mgp_value_destroy(default_beta);
@@ -123,13 +122,12 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     return 1;
   }
 
-    mgp_value_destroy(default_alpha);
-    mgp_value_destroy(default_beta);
-    mgp_value_destroy(default_epsilon);
-    mgp_value_destroy(default_normalized);
-    mgp_value_destroy(default_max_iterations);
-    mgp_value_destroy(default_directed);
-
+  mgp_value_destroy(default_alpha);
+  mgp_value_destroy(default_beta);
+  mgp_value_destroy(default_epsilon);
+  mgp_value_destroy(default_normalized);
+  mgp_value_destroy(default_max_iterations);
+  mgp_value_destroy(default_directed);
   return 0;
 }
 

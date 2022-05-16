@@ -28,18 +28,18 @@ constexpr char const *kArgumentEvTolerance = "ev_tolerance";
 constexpr char const *kArgumentEvMaxIter = "ev_max_iter";
 constexpr char const *kArgumentKmeanTolerance = "kmean_tolerance";
 constexpr char const *kArgumentKmeanMaxIter = "kmean_max_iter";
+constexpr char const *kArgumentWeightProperty = "weight";
 
 constexpr char const *kResultFieldNode = "node";
-constexpr char const *kResultFieldClusterId = "cluster_id";
+constexpr char const *kResultFieldCluster = "cluster";
 
-constexpr char const *kDefaultWeightProperty = "weight";
 const double kDefaultWeight = 1.0;
 
 void InsertBalancedCutResult(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
-                             std::int64_t cluster_id) {
+                             std::int64_t cluster) {
   auto *record = mgp::result_new_record(result);
   mg_utility::InsertNodeValueResult(graph, record, kResultFieldNode, node_id, memory);
-  mg_utility::InsertIntValueResult(record, kResultFieldClusterId, cluster_id, memory);
+  mg_utility::InsertIntValueResult(record, kResultFieldCluster, cluster, memory);
 }
 
 void BalancedCutClusteringProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *memory) {
@@ -73,8 +73,8 @@ void BalancedCutClusteringProc(mgp_list *args, mgp_graph *graph, mgp_result *res
                                              kmean_tolerance, kmean_maxiter, clustering_result.data());
 
     for (vertex_t node_id = 0; node_id < clustering_result.size(); ++node_id) {
-      auto cluster_id = clustering_result.element(node_id, stream);
-      InsertBalancedCutResult(graph, result, memory, mg_graph->GetMemgraphNodeId(node_id), cluster_id);
+      auto cluster = clustering_result.element(node_id, stream);
+      InsertBalancedCutResult(graph, result, memory, mg_graph->GetMemgraphNodeId(node_id), cluster);
     }
   } catch (const std::exception &e) {
     // We must not let any exceptions out of our module.
@@ -99,7 +99,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     default_ev_maxiter = mgp::value_make_int(100, memory);
     default_kmean_tolerance = mgp::value_make_double(0.00001, memory);
     default_kmean_maxiter = mgp::value_make_int(100, memory);
-    default_weight_property = mgp::value_make_string(kDefaultWeightProperty, memory);
+    default_weight_property = mgp::value_make_string(kArgumentWeightProperty, memory);
 
     mgp::proc_add_arg(balanced_cut_proc, kArgumentNumClusters, mgp::type_int());
     mgp::proc_add_opt_arg(balanced_cut_proc, kArgumentNumEigenvectors, mgp::type_int(), default_num_eigenvectors);
@@ -107,11 +107,10 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     mgp::proc_add_opt_arg(balanced_cut_proc, kArgumentEvMaxIter, mgp::type_int(), default_ev_maxiter);
     mgp::proc_add_opt_arg(balanced_cut_proc, kArgumentKmeanTolerance, mgp::type_float(), default_kmean_tolerance);
     mgp::proc_add_opt_arg(balanced_cut_proc, kArgumentKmeanMaxIter, mgp::type_int(), default_kmean_maxiter);
-    mgp::proc_add_opt_arg(balanced_cut_proc, kDefaultWeightProperty, mgp::type_string(), default_weight_property);
+    mgp::proc_add_opt_arg(balanced_cut_proc, kArgumentWeightProperty, mgp::type_string(), default_weight_property);
 
     mgp::proc_add_result(balanced_cut_proc, kResultFieldNode, mgp::type_node());
-    mgp::proc_add_result(balanced_cut_proc, kResultFieldClusterId, mgp::type_int());
-
+    mgp::proc_add_result(balanced_cut_proc, kResultFieldCluster, mgp::type_int());
   } catch (const std::exception &e) {
     mgp_value_destroy(default_num_eigenvectors);
     mgp_value_destroy(default_ev_tolerance);

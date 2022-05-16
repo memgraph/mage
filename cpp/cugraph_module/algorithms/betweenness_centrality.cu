@@ -25,18 +25,18 @@ constexpr char const *kProcedureBetweenness = "get";
 
 constexpr char const *kArgumentNormalized = "normalized";
 constexpr char const *kArgumentDirected = "directed";
+constexpr char const *kArgumentWeightProperty = "weight";
 
 constexpr char const *kResultFieldNode = "node";
-constexpr char const *kResultFieldRank = "rank";
+constexpr char const *kResultFieldBetweennessCentrality = "betweenness_centrality";
 
-constexpr char const *kDefaultWeightProperty = "weight";
 const double kDefaultWeight = 1.0;
 
 void InsertBetweennessRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
                              double rank) {
   auto *record = mgp::result_new_record(result);
   mg_utility::InsertNodeValueResult(graph, record, kResultFieldNode, node_id, memory);
-  mg_utility::InsertDoubleValueResult(record, kResultFieldRank, rank, memory);
+  mg_utility::InsertDoubleValueResult(record, kResultFieldBetweennessCentrality, rank, memory);
 }
 
 void BetweennessProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *memory) {
@@ -89,15 +89,14 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
 
     default_normalized = mgp::value_make_bool(true, memory);
     default_directed = mgp::value_make_bool(false, memory);
-    default_weight_property = mgp::value_make_string(kDefaultWeightProperty, memory);
+    default_weight_property = mgp::value_make_string(kArgumentWeightProperty, memory);
 
     mgp::proc_add_opt_arg(betweenness_proc, kArgumentNormalized, mgp::type_bool(), default_normalized);
     mgp::proc_add_opt_arg(betweenness_proc, kArgumentDirected, mgp::type_bool(), default_directed);
-    mgp::proc_add_opt_arg(betweenness_proc, kDefaultWeightProperty, mgp::type_string(), default_weight_property);
+    mgp::proc_add_opt_arg(betweenness_proc, kArgumentWeightProperty, mgp::type_string(), default_weight_property);
 
     mgp::proc_add_result(betweenness_proc, kResultFieldNode, mgp::type_node());
-    mgp::proc_add_result(betweenness_proc, kResultFieldRank, mgp::type_float());
-
+    mgp::proc_add_result(betweenness_proc, kResultFieldBetweennessCentrality, mgp::type_float());
   } catch (const std::exception &e) {
     mgp_value_destroy(default_normalized);
     mgp_value_destroy(default_directed);

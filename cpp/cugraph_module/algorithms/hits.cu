@@ -86,17 +86,16 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     default_tolerance = mgp::value_make_double(1e-5, memory);
     default_max_iterations = mgp::value_make_int(100, memory);
     default_normalize = mgp::value_make_bool(true, memory);
-    default_normalize = mgp::value_make_bool(true, memory);
+    default_directed = mgp::value_make_bool(true, memory);
 
     mgp::proc_add_opt_arg(hits_proc, kArgumentTolerance, mgp::type_float(), default_tolerance);
     mgp::proc_add_opt_arg(hits_proc, kArgumentMaxIterations, mgp::type_int(), default_max_iterations);
     mgp::proc_add_opt_arg(hits_proc, kArgumentNormalize, mgp::type_bool(), default_normalize);
-    mgp::proc_add_opt_arg(hits_proc, kArgumentDirected, mgp::type_bool(), default_normalize);
+    mgp::proc_add_opt_arg(hits_proc, kArgumentDirected, mgp::type_bool(), default_directed);
 
     mgp::proc_add_result(hits_proc, kResultFieldNode, mgp::type_node());
     mgp::proc_add_result(hits_proc, kResultFieldHubScore, mgp::type_float());
     mgp::proc_add_result(hits_proc, kResultFieldAuthoritiesScore, mgp::type_float());
-
   } catch (const std::exception &e) {
     mgp_value_destroy(default_tolerance);
     mgp_value_destroy(default_max_iterations);
