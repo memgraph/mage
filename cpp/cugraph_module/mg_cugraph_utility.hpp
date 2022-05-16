@@ -19,17 +19,13 @@ auto CreateCugraphFromMemgraph(const mg_graph::GraphView<> &mg_graph, const mg_g
   auto mg_edges = mg_graph.Edges();
   auto mg_nodes = mg_graph.Nodes();
 
-  std::cout << "Num edges" << std::to_string(mg_edges.size()) << std::endl;
   if (graph_type == mg_graph::GraphType::kUndirectedGraph) {
     std::vector<mg_graph::Edge<>> undirected_edges;
     std::transform(mg_edges.begin(), mg_edges.end(), std::back_inserter(undirected_edges),
                    [](const auto &edge) -> mg_graph::Edge<> { return {edge.id, edge.to, edge.from}; });
-
-    std::cout << "Num Uedges" << std::to_string(undirected_edges.size()) << std::endl;               
     mg_edges.reserve(2 * mg_edges.size());
     mg_edges.insert(mg_edges.end(), undirected_edges.begin(), undirected_edges.end());
   }
-  std::cout << "Num edges" << std::to_string(mg_edges.size()) << std::endl;
 
   // Flatten the data vector
   std::vector<TVertexT> mg_src;
@@ -45,7 +41,6 @@ auto CreateCugraphFromMemgraph(const mg_graph::GraphView<> &mg_graph, const mg_g
                  [](const auto &edge) -> TVertexT { return edge.from; });
   std::transform(mg_edges.begin(), mg_edges.end(), std::back_inserter(mg_dst),
                  [](const auto &edge) -> TVertexT { return edge.to; });
-  std::cout << "Num edges" << std::to_string(mg_src.size()) << std::endl;
 
   std::transform(
       mg_edges.begin(), mg_edges.end(), std::back_inserter(mg_weight),
