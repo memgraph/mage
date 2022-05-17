@@ -1,10 +1,8 @@
 import mgp
 from typing import List
 import numpy as np
-import igraph as igraph
-import random
-
-
+from igraphalg import community_leiden
+from scipy.stats import spearmanr
 
 @mgp.read_proc
 def get(
@@ -34,7 +32,7 @@ def get(
     MATCH (s:Stock)-[r:Traded_On]->(d:TradingDay)
     WHERE d.date < "2022-04-27"
     WITH collect(s.ticker) as stocks,collect(r.close - r.open) as daily_returns 
-    CALL construct_portfolio.construct_portfolio(stocks,daily_returns,5,5,0.7)
+    CALL construct_portfolio.get(stocks,daily_returns,5,5,0.7)
     YIELD community_index, community
     RETURN community_index, community;
 
@@ -52,9 +50,7 @@ def get(
       
     correlations = calculate_correlations(stock_trading_values, correlation_measure)
 
-    graph  = create_igraph_from_matrix(correlations)
-    
-    communities = graph.community_leiden(weights=graph.es['weight'], resolution_parameter=resolution_parameter, n_iterations = -1,)
+    communities = community_leiden(None,resolution_parameter= resolution_parameter,n_iterations= -1, mode = 'undirected', multi = False, edge_property='weight', weighted_adjacency = correlations)
 
     return get_records(communities, stock_tickers, stock_trading_values, n_best_performing)
 
@@ -136,23 +132,8 @@ def calculate_correlations(values: List[List[float]], measure: str = 'pearson') 
 
     if measure == 'pearson':
         return abs(np.corrcoef(values))
-
-def create_igraph_from_matrix(matrix: List[List[float]]):
-    """Create igraph graph from weighted 2D matrix 
-
-    Args:
-        matrix (List[List[float]]): weighted matrix
-
-    Returns:
-        Igraph graph
-
-    """
-
-    random.seed(0)
-    igraph.set_random_number_generator(random)
-    graph = igraph.Graph.Weighted_Adjacency(matrix, mode = igraph.ADJ_UNDIRECTED,attr = 'weight',loops = False)
-
-    return graph
+    elif measure == 'spearman':
+        return abs(spearmanr(values))
 
 def get_n_best_performing(stock_trading_values:List[List[float]], members:List[int], n_best_performing:int) -> List[int]:
     """From each community pick number of best performing
