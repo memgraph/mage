@@ -72,7 +72,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
 USER memgraph
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
 
-FROM nvidia/cuda:${CUGRAPH_VERSION}.0-runtime-ubuntu20.04 AS prod
+FROM nvidia/cuda:${CUDA_VERSION}.0-runtime-ubuntu20.04 AS prod
 
 USER root
 ARG MG_VERSION

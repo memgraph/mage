@@ -5,16 +5,16 @@ query: >
 
 output:
   - node_id: 0
-    rank: 0.504
+    pagerank: 0.504
   - node_id: 1
-    rank: 0.083
+    pagerank: 0.083
   - node_id: 2
-    rank: 0.083
+    pagerank: 0.083
   - node_id: 3
-    rank: 0.083
+    pagerank: 0.083
   - node_id: 4
-    rank: 0.083
+    pagerank: 0.083
   - node_id: 5
-    rank: 0.083
+    pagerank: 0.083
   - node_id: 6
-    rank: 0.083
+    pagerank: 0.083

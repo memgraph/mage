@@ -5,18 +5,18 @@ query: >
 
 output:
   - node_id: 0
-    rank: 0.3336
+    pagerank: 0.3336
   - node_id: 1
-    rank: 0.0546
+    pagerank: 0.0546
   - node_id: 2
-    rank: 0.0546
+    pagerank: 0.0546
   - node_id: 3
-    rank: 0.0546
+    pagerank: 0.0546
   - node_id: 4
-    rank: 0.0546
+    pagerank: 0.0546
   - node_id: 5
-    rank: 0.0546
+    pagerank: 0.0546
   - node_id: 6
-    rank: 0.0546
+    pagerank: 0.0546
   - node_id: 7
-    rank: 0.3383
+    pagerank: 0.3383
