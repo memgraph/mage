@@ -1,4 +1,3 @@
-CREATE INDEX ON :Node(id);
 MERGE (a:Node {id: 0}) MERGE (b:Node {id: 5}) MERGE (a)-[:RELATION]->(b);
 MERGE (a:Node {id: 0}) MERGE (b:Node {id: 7}) MERGE (a)-[:RELATION]->(b);
 MERGE (a:Node {id: 0}) MERGE (b:Node {id: 10}) MERGE (a)-[:RELATION]->(b);
@@ -43,4 +42,3 @@ MERGE (a:Node {id: 13}) MERGE (b:Node {id: 14}) MERGE (a)-[:RELATION]->(b);
 MERGE (a:Node {id: 14}) MERGE (b:Node {id: 0}) MERGE (a)-[:RELATION]->(b);
 MERGE (a:Node {id: 14}) MERGE (b:Node {id: 1}) MERGE (a)-[:RELATION]->(b);
 MERGE (a:Node {id: 14}) MERGE (b:Node {id: 3}) MERGE (a)-[:RELATION]->(b);
-DROP INDEX ON :Node(id);

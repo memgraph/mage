@@ -23,6 +23,8 @@ constexpr char const *kProcedureGenerate = "rmat";
 
 constexpr char const *kArgumentScale = "scale";
 constexpr char const *kArgumentNumEdges = "num_edges";
+constexpr char const *kArgumentVertexLabels = "node_labels";
+constexpr char const *kArgumentEdgeType = "edge_type";
 constexpr char const *kArgumentParameterA = "a";
 constexpr char const *kArgumentParameterB = "b";
 constexpr char const *kArgumentParameterC = "c";
@@ -30,6 +32,8 @@ constexpr char const *kArgumentSeed = "seed";
 constexpr char const *kArgumentClipAndFlip = "clip_and_flip";
 
 constexpr char const *kFieldMessage = "message";
+
+constexpr char const *kDefaultEdgeType = "RELATIONSHIP";
 
 void InsertMessageRecord(mgp_result *result, mgp_memory *memory, const char *message) {
   auto *record = mgp::result_new_record(result);
@@ -47,11 +51,13 @@ void GenerateRMAT(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memo
   try {
     auto scale = mgp::value_get_int(mgp::list_at(args, 0));
     auto num_edges = mgp::value_get_int(mgp::list_at(args, 1));
-    auto parameter_a = mgp::value_get_double(mgp::list_at(args, 2));
-    auto parameter_b = mgp::value_get_double(mgp::list_at(args, 3));
-    auto parameter_c = mgp::value_get_double(mgp::list_at(args, 4));
-    auto seed = mgp::value_get_int(mgp::list_at(args, 5));
-    auto clip_and_flip = mgp::value_get_bool(mgp::list_at(args, 6));
+    auto node_labels = mgp::value_get_list(mgp::list_at(args, 2));
+    auto edge_type = mgp::value_get_string(mgp::list_at(args, 3));
+    auto parameter_a = mgp::value_get_double(mgp::list_at(args, 4));
+    auto parameter_b = mgp::value_get_double(mgp::list_at(args, 5));
+    auto parameter_c = mgp::value_get_double(mgp::list_at(args, 6));
+    auto seed = mgp::value_get_int(mgp::list_at(args, 7));
+    auto clip_and_flip = mgp::value_get_bool(mgp::list_at(args, 8));
 
     raft::handle_t handle{};
 
@@ -62,6 +68,11 @@ void GenerateRMAT(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memo
     std::vector<std::unique_ptr<mgp_vertex, VertexDelete>> vertices(num_vertices);
     for (std::size_t i = 0; i < num_vertices; ++i) {
       auto new_vertex = mgp::graph_create_vertex(graph, memory);
+
+      for (size_t i = 0; i < mgp::list_size(node_labels); ++i) {
+        auto label_str = mgp::value_get_string(mgp::list_at(node_labels, i));
+        mgp::vertex_add_label(new_vertex, mgp_label{.name = label_str});
+      }
 
       // Add labels as arguments
       vertices[i] = std::unique_ptr<mgp_vertex, VertexDelete>(mgp::vertex_copy(new_vertex, memory));
@@ -76,13 +87,12 @@ void GenerateRMAT(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memo
       mgp_vertex *src_vertex = src_vertex_ptr.get();
       mgp_vertex *dst_vertex = dst_vertex_ptr.get();
 
-      // TODO: Change edge type
-      auto new_edge =
-          mgp::graph_create_edge(graph, src_vertex, dst_vertex, mgp_edge_type{.name = "RELATIONSHIP"}, memory);
+      auto new_edge = mgp::graph_create_edge(graph, src_vertex, dst_vertex, mgp_edge_type{.name = edge_type}, memory);
 
       mgp_edge_destroy(new_edge);
     }
 
+    InsertMessageRecord(result, memory, "Graph created sucessfully!");
   } catch (const std::exception &e) {
     // We must not let any exceptions out of our module.
     mgp::result_set_error_msg(result, e.what());
@@ -94,6 +104,8 @@ void GenerateRMAT(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memo
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   mgp_value *default_scale;
   mgp_value *default_num_edges;
+  mgp_value *default_node_labels;
+  mgp_value *default_edge_type;
   mgp_value *default_parameter_a;
   mgp_value *default_parameter_b;
   mgp_value *default_parameter_c;
@@ -104,6 +116,10 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
 
     default_scale = mgp::value_make_int(4, memory);
     default_num_edges = mgp::value_make_int(100, memory);
+
+    default_node_labels = mgp::value_make_list(mgp::list_make_empty(0, memory));
+    default_edge_type = mgp::value_make_string(kDefaultEdgeType, memory);
+
     default_parameter_a = mgp::value_make_double(0.57, memory);
     default_parameter_b = mgp::value_make_double(0.19, memory);
     default_parameter_c = mgp::value_make_double(0.19, memory);
@@ -112,15 +128,20 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
 
     mgp::proc_add_opt_arg(rmat_proc, kArgumentScale, mgp::type_int(), default_scale);
     mgp::proc_add_opt_arg(rmat_proc, kArgumentNumEdges, mgp::type_int(), default_num_edges);
+    mgp::proc_add_opt_arg(rmat_proc, kArgumentVertexLabels, mgp::type_list(mgp::type_string()), default_node_labels);
+    mgp::proc_add_opt_arg(rmat_proc, kArgumentEdgeType, mgp::type_string(), default_edge_type);
     mgp::proc_add_opt_arg(rmat_proc, kArgumentParameterA, mgp::type_float(), default_parameter_a);
     mgp::proc_add_opt_arg(rmat_proc, kArgumentParameterB, mgp::type_float(), default_parameter_b);
     mgp::proc_add_opt_arg(rmat_proc, kArgumentParameterC, mgp::type_float(), default_parameter_c);
     mgp::proc_add_opt_arg(rmat_proc, kArgumentSeed, mgp::type_int(), default_seed);
     mgp::proc_add_opt_arg(rmat_proc, kArgumentClipAndFlip, mgp::type_bool(), default_clip_and_flip);
 
+    mgp::proc_add_result(rmat_proc, kFieldMessage, mgp::type_string());
   } catch (const std::exception &e) {
     mgp_value_destroy(default_scale);
     mgp_value_destroy(default_num_edges);
+    mgp_value_destroy(default_node_labels);
+    mgp_value_destroy(default_edge_type);
     mgp_value_destroy(default_parameter_a);
     mgp_value_destroy(default_parameter_b);
     mgp_value_destroy(default_parameter_c);
@@ -131,6 +152,8 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
 
   mgp_value_destroy(default_scale);
   mgp_value_destroy(default_num_edges);
+  mgp_value_destroy(default_node_labels);
+  mgp_value_destroy(default_edge_type);
   mgp_value_destroy(default_parameter_a);
   mgp_value_destroy(default_parameter_b);
   mgp_value_destroy(default_parameter_c);

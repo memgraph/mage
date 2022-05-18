@@ -434,4 +434,8 @@ struct mgp_edge *graph_create_edge(struct mgp_graph *graph, struct mgp_vertex *f
                                    struct mgp_edge_type type, struct mgp_memory *memory) {
   return MgInvoke<struct mgp_edge *>(mgp_graph_create_edge, graph, from, to, type, memory);
 }
+
+void vertex_add_label(struct mgp_vertex *vertex, struct mgp_label label) {
+  MgInvokeVoid(mgp_vertex_add_label, vertex, label);
+}
 }  // namespace mgp
