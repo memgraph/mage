@@ -38,6 +38,12 @@ def get(
 
     """
 
+    if number_of_last_n_trading_days <= 2:
+        raise InvalidNumberOfTradingDaysException("Number of last trading days must be greater than 2.")
+
+    if not correlation_measure in ['pearson','spearman']:
+        raise InvalidCorrelationMeasureException("Correlation measure can only be either pearson or spearman")
+
     stock_tickers = np.sort(np.unique(stocks))
     stock_nodes = get_last_n_days(stocks, len(stock_tickers), number_of_last_n_trading_days)
     stock_trading_values = get_last_n_days(values, len(stock_tickers), number_of_last_n_trading_days)
@@ -50,9 +56,10 @@ def get(
       
     correlations = calculate_correlations(stock_trading_values, correlation_measure)
 
-    communities = community_leiden(None,resolution_parameter= resolution_parameter,n_iterations= -1, mode = 'undirected', multi = False, edge_property='weight', weighted_adjacency = correlations)
+    communities = community_leiden(None,correlations,resolution_parameter= resolution_parameter,n_iterations= -1, mode = 'undirected', multi = False, edge_property='weight')
 
     return get_records(communities, stock_tickers, stock_trading_values, n_best_performing)
+    
 
 def split_data(data: List, number_of_elements_in_each_bin: int) -> List[List[float]]:
     """Function used for splitting data.
@@ -133,7 +140,7 @@ def calculate_correlations(values: List[List[float]], measure: str = 'pearson') 
     if measure == 'pearson':
         return abs(np.corrcoef(values))
     elif measure == 'spearman':
-        return abs(spearmanr(values))
+        return abs(spearmanr(values,axis = 1))
 
 def get_n_best_performing(stock_trading_values:List[List[float]], members:List[int], n_best_performing:int) -> List[int]:
     """From each community pick number of best performing
@@ -156,7 +163,7 @@ def get_n_best_performing(stock_trading_values:List[List[float]], members:List[i
     return members[sorted_indices[-n_best_performing:]]
 
     
-def get_records(communities: List[List[int]], stock_tickers: List[str], stock_trading_values: List[float], n_best_performing: int) -> List[mgp.Record(community_index = int, community = str)]:
+def get_records(communities: List[List[int]], stock_tickers: List[str], stock_trading_values: List[float], n_best_performing: int):
     """Function for creating returning mgp.Record data
 
     Args:
@@ -174,8 +181,14 @@ def get_records(communities: List[List[int]], stock_tickers: List[str], stock_tr
     for i,members in enumerate(communities):
         if n_best_performing > 0:
             members = get_n_best_performing(stock_trading_values,members,n_best_performing)
+
         stocks_in_community = ", ".join(stock_tickers[members])
         records.append(mgp.Record(community_index = i, community = stocks_in_community ))
 
     return records
 
+class InvalidNumberOfTradingDaysException(Exception):
+    pass
+
+class InvalidCorrelationMeasureException(Exception):
+    pass

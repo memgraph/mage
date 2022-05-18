@@ -10,11 +10,25 @@ from mgp_networkx import (
     MemgraphMultiGraph,
     MemgraphGraph,
 )
-
 random.seed(0)
 igraph.set_random_number_generator(random)
 
-def create_igraph_from_matrix(weighted_adjacency: List[List[float]], mode = 'directed',attr = 'weight',multi = False):
+
+## ZBOG PRETVORBE 250ms, Bruno max_flow 70ms
+@mgp.read_proc
+def get_flow(
+    context: mgp.ProcCtx,
+    start_v: mgp.Vertex,
+    end_v: mgp.Vertex,
+    edge_property: str = "weight",
+) -> mgp.Record(max_flow=mgp.Number):
+
+    graph = create_igraph(context, 'directed', True)
+    max_flow = graph.maxflow(start_v.id,end_v.id,capacity=edge_property)
+
+    return mgp.Record(max_flow=max_flow.value)
+
+def create_igraph_from_matrix(weighted_adjacency: List[List[float]], mode = 'directed',attr = "weight",multi = False):
     """Create igraph graph from weighted 2D matrix 
 
     Args:
@@ -29,6 +43,7 @@ def create_igraph_from_matrix(weighted_adjacency: List[List[float]], mode = 'dir
 
     return graph
 
+#DOSTA SPORIJE JER PRVO NAS PRETVARA U NETWORKX GRAPH PA ONDA U IGRAPH GRAPH
 def create_igraph(ctx: mgp.ProcCtx,mode: str,multi: bool):
     if mode == 'directed' and multi:
         return igraph.Graph.from_networkx(MemgraphMultiDiGraph(ctx=ctx))
@@ -39,15 +54,11 @@ def create_igraph(ctx: mgp.ProcCtx,mode: str,multi: bool):
     elif mode == 'undirected' and not multi:
         return igraph.Graph.from_networkx(MemgraphGraph(ctx=ctx))
 
-def community_leiden(ctx: mgp.ProcCtx, resolution_parameter:float,n_iterations:int, mode:str,multi:bool, edge_property:str = "weight", weighted_adjacency: List[List[float]] = None):
-    if weighted_adjacency != None:
-        graph  = create_igraph_from_matrix(weighted_adjacency,mode,edge_property,multi)
-    else:
+def community_leiden(ctx: mgp.ProcCtx, weighted_adjacency: List[List[float]],resolution_parameter:float,n_iterations:int, mode:str,multi:bool, edge_property:str = 'weight'):
+    if ctx:
         graph = create_igraph(ctx,mode,multi)
+    else:
+        graph  = create_igraph_from_matrix(weighted_adjacency,mode = mode,attr = edge_property,multi = multi)
+        
     
     return graph.community_leiden(weights=graph.es[edge_property], resolution_parameter=resolution_parameter, n_iterations = n_iterations)
-
-def max_flow(ctx: mgp.ProcCtx, mode:str, multi:bool, start_index: int, end_index: int, capacity: str):
-    graph = create_igraph(ctx, mode, multi)
-
-    return graph.maxflow(start_index,end_index,capacity)
