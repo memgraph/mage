@@ -15,7 +15,7 @@
 #include "mg_cugraph_utility.hpp"
 
 namespace {
-// TODO: Check Balanced Cut API
+// TODO: Check Balanced Cut API. Update in new cuGraph API.
 using vertex_t = int32_t;
 using edge_t = int32_t;
 using weight_t = double;
@@ -54,14 +54,16 @@ void BalancedCutClusteringProc(mgp_list *args, mgp_graph *graph, mgp_result *res
     int kmean_maxiter = mgp::value_get_int(mgp::list_at(args, 5));
     auto weight_property = mgp::value_get_string(mgp::list_at(args, 6));
 
-    raft::handle_t handle{};
-    auto stream = handle.get_stream();
-
     auto mg_graph = mg_utility::GetWeightedGraphView(graph, result, memory, mg_graph::GraphType::kUndirectedGraph,
                                                      weight_property, kDefaultWeight);
     if (mg_graph->Empty()) return;
 
     auto n_vertices = mg_graph.get()->Nodes().size();
+
+    // Define handle and operation stream
+    raft::handle_t handle{};
+    auto stream = handle.get_stream();
+
     // IMPORTANT: Balanced cut cuGraph algorithm works only on legacy code
     auto cu_graph_ptr =
         mg_cugraph::CreateCugraphLegacyFromMemgraph<vertex_t, edge_t, weight_t>(*mg_graph.get(), handle);
@@ -127,7 +129,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   mgp_value_destroy(default_ev_maxiter);
   mgp_value_destroy(default_kmean_tolerance);
   mgp_value_destroy(default_kmean_maxiter);
-  mgp_value_destroy(default_kmean_maxiter);
+  mgp_value_destroy(default_weight_property);
   return 0;
 }
 

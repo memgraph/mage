@@ -46,13 +46,14 @@ void HITSProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *
     auto normalize = mgp::value_get_bool(mgp::list_at(args, 2));
     auto directed = mgp::value_get_bool(mgp::list_at(args, 3));
 
-    raft::handle_t handle{};
-    auto stream = handle.get_stream();
-
     // Works with unweighted graph
     auto graph_type = directed ? mg_graph::GraphType::kDirectedGraph : mg_graph::GraphType::kUndirectedGraph;
     auto mg_graph = mg_utility::GetGraphView(graph, result, memory, graph_type);
     if (mg_graph->Empty()) return;
+
+    // Define handle and operation stream
+    raft::handle_t handle{};
+    auto stream = handle.get_stream();
 
     auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph(*mg_graph.get(), graph_type, handle);
     auto cu_graph_view = cu_graph.view();

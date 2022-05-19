@@ -58,11 +58,11 @@ COPY . /mage
 
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
     export PATH="/root/.cargo/bin:${PATH}" && \ 
-    python3 -m  pip install -r /mage/python/requirements.txt && \ 
+    python3 -m pip install -r /mage/python/requirements.txt && \ 
     python3 /mage/setup build \ 
-            --gpu \
-            --cpp-build-flags MAGE_CUGRAPH_ROOT=/opt/conda/envs/rapids/ \
-            -p /usr/lib/memgraph/query_modules/ 
+    --gpu \
+    --cpp-build-flags MAGE_CUGRAPH_ROOT=/opt/conda/envs/rapids/ \
+    -p /usr/lib/memgraph/query_modules/ 
 
 USER memgraph
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
@@ -107,7 +107,6 @@ RUN rm -rf /mage \
     && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
     && apt-get -y --purge autoremove curl python3-dev \
     && apt-get clean
-
 
 USER memgraph
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]

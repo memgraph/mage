@@ -15,7 +15,7 @@
 #include "mg_cugraph_utility.hpp"
 
 namespace {
-// TODO: Check Spectral Clustering API
+// TODO: Check Spectral Clustering API. Update in new cuGraph API.
 using vertex_t = int32_t;
 using edge_t = int32_t;
 using weight_t = double;
@@ -34,7 +34,7 @@ constexpr char const *kResultFieldNode = "node";
 constexpr char const *kResultFieldCluster = "cluster";
 
 const double kDefaultWeight = 1.0;
-constexpr char const *kArgumentWeightProperty = "weight_property";
+constexpr char const *kDefaultWeightProperty = "weight";
 
 void InsertSpectralClusteringResult(mgp_graph *graph, mgp_result *result, mgp_memory *memory,
                                     const std::uint64_t node_id, std::int64_t cluster) {
@@ -54,14 +54,16 @@ void SpectralClusteringProc(mgp_list *args, mgp_graph *graph, mgp_result *result
     int kmean_maxiter = mgp::value_get_int(mgp::list_at(args, 5));
     auto weight_property = mgp::value_get_string(mgp::list_at(args, 6));
 
-    raft::handle_t handle{};
-    auto stream = handle.get_stream();
-
     auto mg_graph = mg_utility::GetWeightedGraphView(graph, result, memory, mg_graph::GraphType::kUndirectedGraph,
                                                      weight_property, kDefaultWeight);
     if (mg_graph->Empty()) return;
 
     auto n_vertices = mg_graph.get()->Nodes().size();
+
+    // Define handle and operation stream
+    raft::handle_t handle{};
+    auto stream = handle.get_stream();
+
     // IMPORTANT: Spectral clustering cuGraph algorithm works only on legacy code
     auto cu_graph_ptr =
         mg_cugraph::CreateCugraphLegacyFromMemgraph<vertex_t, edge_t, weight_t>(*mg_graph.get(), handle);
@@ -101,7 +103,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     default_ev_maxiter = mgp::value_make_int(100, memory);
     default_kmean_tolerance = mgp::value_make_double(0.00001, memory);
     default_kmean_maxiter = mgp::value_make_int(100, memory);
-    default_weight_property = mgp::value_make_string(kDefaultWeight, memory);
+    default_weight_property = mgp::value_make_string(kDefaultWeightProperty, memory);
 
     mgp::proc_add_arg(spectral_clustering, kArgumentNumClusters, mgp::type_int());
     mgp::proc_add_opt_arg(spectral_clustering, kArgumentNumEigenvectors, mgp::type_int(), default_num_eigenvectors);

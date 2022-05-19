@@ -15,14 +15,14 @@
 #include "mg_cugraph_utility.hpp"
 
 namespace {
-// TODO: Check Leiden instances
+// TODO: Check Leiden instances. Update in new cuGraph API.
 using vertex_t = int32_t;
 using edge_t = int32_t;
 using weight_t = double;
 
 constexpr char const *kProcedureLeiden = "get";
 
-constexpr char const *kArgumentMaxIterations = "max_iter";
+constexpr char const *kArgumentMaxIterations = "max_iterations";
 constexpr char const *kArgumentResolution = "resolution";
 
 constexpr char const *kResultFieldNode = "node";
@@ -37,16 +37,18 @@ void InsertLeidenRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory
 
 void LeidenProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *memory) {
   try {
-    auto max_iter = mgp::value_get_int(mgp::list_at(args, 0));
+    auto max_iterations = mgp::value_get_int(mgp::list_at(args, 0));
     auto resulution = mgp::value_get_double(mgp::list_at(args, 1));
-
-    raft::handle_t handle{};
-    auto stream = handle.get_stream();
 
     auto mg_graph = mg_utility::GetGraphView(graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
     if (mg_graph->Empty()) return;
 
     auto n_vertices = mg_graph.get()->Nodes().size();
+
+    // Define handle and operation stream
+    raft::handle_t handle{};
+    auto stream = handle.get_stream();
+
     // IMPORTANT: Leiden cuGraph algorithm works only on legacy code
     auto cu_graph_ptr =
         mg_cugraph::CreateCugraphLegacyFromMemgraph<vertex_t, edge_t, weight_t>(*mg_graph.get(), handle);
@@ -54,7 +56,7 @@ void LeidenProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory
     cu_graph_view.prop.directed = false;
 
     rmm::device_uvector<vertex_t> clustering_result(n_vertices, stream);
-    cugraph::leiden<vertex_t, edge_t, weight_t>(handle, cu_graph_view, clustering_result.data(), max_iter, resulution);
+    cugraph::leiden<vertex_t, edge_t, weight_t>(handle, cu_graph_view, clustering_result.data(), max_iterations, resulution);
 
     for (vertex_t node_id = 0; node_id < clustering_result.size(); ++node_id) {
       auto partition = clustering_result.element(node_id, stream);

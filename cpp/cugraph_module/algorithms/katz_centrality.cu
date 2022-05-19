@@ -44,17 +44,18 @@ void KatzCentralityProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mg
     auto alpha_arg = static_cast<float>(mgp::value_get_double(mgp::list_at(args, 0)));
     auto beta_arg = static_cast<float>(mgp::value_get_double(mgp::list_at(args, 1)));
     auto epsilon_arg = static_cast<float>(mgp::value_get_double(mgp::list_at(args, 2)));
-    auto normalized = mgp::value_get_bool(mgp::list_at(args, 3));
-    auto max_iterations = mgp::value_get_int(mgp::list_at(args, 4));
+    auto max_iterations = mgp::value_get_int(mgp::list_at(args, 3));
+    auto normalized = mgp::value_get_bool(mgp::list_at(args, 4));
     auto directed = mgp::value_get_bool(mgp::list_at(args, 5));
-
-    raft::handle_t handle{};
-    auto stream = handle.get_stream();
 
     // Currently doesn't support for weights
     auto graph_type = directed ? mg_graph::GraphType::kDirectedGraph : mg_graph::GraphType::kUndirectedGraph;
     auto mg_graph = mg_utility::GetGraphView(graph, result, memory, graph_type);
     if (mg_graph->Empty()) return;
+
+    // Define handle and operation stream
+    raft::handle_t handle{};
+    auto stream = handle.get_stream();
 
     auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph(*mg_graph.get(), graph_type, handle);
     auto cu_graph_view = cu_graph.view();

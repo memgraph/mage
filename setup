@@ -20,6 +20,7 @@ RS_DIRECTORY = f"{WORK_DIRECTORY}/rust"
 CPP_BUILD_DIRECTORY = f"{CPP_DIRECTORY}/build"
 MG_CONF_DEFAULT_PATH = f"/etc/memgraph/memgraph.conf"
 MG_CONF_QUERY_MODULES_FLAG = "--query-modules-directory"
+MAGE_GPU_BUILD = "MAGE_CUGRAPH_ENABLE=ON"
 
 log.basicConfig(level=log.INFO)
 
@@ -128,7 +129,7 @@ def build(args):
     subprocess.run(["ls", "-l"])
     cmake_args = [".."]
     if args.gpu:
-        cmake_args.append("-DMAGE_CUGRAPH_ENABLE=ON")
+        cmake_args.append(f"-D{MAGE_GPU_BUILD}")
     if args.cpp_build_flags is not None:
         cmake_args += [f"-D{flag}" for flag in args.cpp_build_flags]
     subprocess.run(["cmake"] + cmake_args)
@@ -142,8 +143,6 @@ def build(args):
     # NOTE: This is dependent on the cpp/cmake/cugraph ExternalProject_Add (on
     # the INSTALL_DIR).
     all_so = set(glob.glob("**/*.so", recursive=True))
-    # cugraph_so = set(glob.glob("cugraph/**/*.so", recursive=True))
-    # rapids_so = set(glob.glob("**/librapids*.so", recursive=True))
     for file in all_so:
         shutil.copy2(file, MAGE_BUILD_DIRECTORY)
 
@@ -259,23 +258,23 @@ def run_modules_storage_setup_action(
 
 
 def main():
-    arguments = get_arguments()
+    args = get_arguments()
 
-    if not hasattr(arguments, "action"):
+    if not hasattr(args, "action"):
         log.log(level=log.INFO, msg=HELP_MESSAGE)
         return
 
-    if arguments.action == "all":
+    if args.action == "all":
         run_modules_storage_setup_action()
-        run_build_action(arguments)
+        run_build_action(args)
         return
 
-    if arguments.action == "build":
-        run_build_action(arguments)
+    if args.action == "build":
+        run_build_action(args)
         return
 
-    if arguments.action == "modules_storage":
-        run_modules_storage_setup_action(arguments.path, arguments.conf_path)
+    if args.action == "modules_storage":
+        run_modules_storage_setup_action(args.path, args.conf_path)
         return
 
 

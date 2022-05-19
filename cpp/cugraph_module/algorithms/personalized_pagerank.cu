@@ -46,17 +46,18 @@ void PersonalizedPagerankProc(mgp_list *args, mgp_graph *graph, mgp_result *resu
   try {
     auto l_personalization_vertices = mgp::value_get_list(mgp::list_at(args, 0));
     auto l_personalization_values = mgp::value_get_list(mgp::list_at(args, 1));
-    auto weight_property = mgp::value_get_string(mgp::list_at(args, 2));
-    auto max_iterations = mgp::value_get_int(mgp::list_at(args, 3));
-    auto damping_factor = mgp::value_get_double(mgp::list_at(args, 4));
-    auto stop_epsilon = mgp::value_get_double(mgp::list_at(args, 5));
-
-    raft::handle_t handle{};
-    auto stream = handle.get_stream();
+    auto max_iterations = mgp::value_get_int(mgp::list_at(args, 2));
+    auto damping_factor = mgp::value_get_double(mgp::list_at(args, 3));
+    auto stop_epsilon = mgp::value_get_double(mgp::list_at(args, 4));
+    auto weight_property = mgp::value_get_string(mgp::list_at(args, 5));
 
     auto mg_graph = mg_utility::GetWeightedGraphView(graph, result, memory, mg_graph::GraphType::kDirectedGraph,
                                                      weight_property, kDefaultWeight);
     if (mg_graph->Empty()) return;
+
+    // Define handle and operation stream
+    raft::handle_t handle{};
+    auto stream = handle.get_stream();
 
     auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph(*mg_graph.get(), mg_graph::GraphType::kDirectedGraph, handle);
     auto cu_graph_view = cu_graph.view();

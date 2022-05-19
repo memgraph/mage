@@ -15,7 +15,7 @@
 #include "mg_cugraph_utility.hpp"
 
 namespace {
-// TODO: Check Betweenness instances
+// TODO: Check Betweenness instances. Update in new cuGraph API.
 using vertex_t = int32_t;
 using edge_t = int32_t;
 using weight_t = double;
@@ -55,6 +55,7 @@ void BetweennessProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_m
     if (mg_graph->Empty()) return;
 
     auto n_vertices = mg_graph.get()->Nodes().size();
+
     // IMPORTANT: Betweenness centrality cuGraph algorithm works only on legacy code
     auto cu_graph_ptr =
         mg_cugraph::CreateCugraphLegacyFromMemgraph<vertex_t, edge_t, weight_t>(*mg_graph.get(), handle);
@@ -68,8 +69,6 @@ void BetweennessProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_m
 
     for (vertex_t node_id = 0; node_id < betweenness_result.size(); ++node_id) {
       auto rank = betweenness_result.element(node_id, stream);
-      // There is an offset in the result
-      if (std::abs(rank) < 1e-20) rank = 0;
       InsertBetweennessRecord(graph, result, memory, mg_graph->GetMemgraphNodeId(node_id), rank);
     }
   } catch (const std::exception &e) {

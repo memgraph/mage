@@ -42,17 +42,18 @@ void InsertPagerankRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memo
 
 void PagerankProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *memory) {
   try {
-    auto weight_property = mgp::value_get_string(mgp::list_at(args, 0));
-    auto max_iterations = mgp::value_get_int(mgp::list_at(args, 1));
-    auto damping_factor = mgp::value_get_double(mgp::list_at(args, 2));
-    auto stop_epsilon = mgp::value_get_double(mgp::list_at(args, 3));
-
-    raft::handle_t handle{};
-    auto stream = handle.get_stream();
+    auto max_iterations = mgp::value_get_int(mgp::list_at(args, 0));
+    auto damping_factor = mgp::value_get_double(mgp::list_at(args, 1));
+    auto stop_epsilon = mgp::value_get_double(mgp::list_at(args, 2));
+    auto weight_property = mgp::value_get_string(mgp::list_at(args, 3));
 
     auto mg_graph = mg_utility::GetWeightedGraphView(graph, result, memory, mg_graph::GraphType::kDirectedGraph,
                                                      weight_property, kDefaultWeight);
     if (mg_graph->Empty()) return;
+
+    // Define handle and operation stream
+    raft::handle_t handle{};
+    auto stream = handle.get_stream();
 
     auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph(*mg_graph.get(), mg_graph::GraphType::kDirectedGraph, handle);
     auto cu_graph_view = cu_graph.view();
