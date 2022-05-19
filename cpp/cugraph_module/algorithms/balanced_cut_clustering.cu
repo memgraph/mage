@@ -28,7 +28,7 @@ constexpr char const *kArgumentEvTolerance = "ev_tolerance";
 constexpr char const *kArgumentEvMaxIter = "ev_max_iter";
 constexpr char const *kArgumentKmeanTolerance = "kmean_tolerance";
 constexpr char const *kArgumentKmeanMaxIter = "kmean_max_iter";
-constexpr char const *kArgumentWeightProperty = "weight";
+constexpr char const *kArgumentWeightProperty = "weight_property";
 
 constexpr char const *kResultFieldNode = "node";
 constexpr char const *kResultFieldCluster = "cluster";

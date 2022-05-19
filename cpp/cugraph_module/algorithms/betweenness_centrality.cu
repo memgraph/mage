@@ -25,12 +25,13 @@ constexpr char const *kProcedureBetweenness = "get";
 
 constexpr char const *kArgumentNormalized = "normalized";
 constexpr char const *kArgumentDirected = "directed";
-constexpr char const *kArgumentWeightProperty = "weight";
+constexpr char const *kArgumentWeightProperty = "weight_property";
 
 constexpr char const *kResultFieldNode = "node";
 constexpr char const *kResultFieldBetweennessCentrality = "betweenness_centrality";
 
 const double kDefaultWeight = 1.0;
+constexpr char const *kDefaultWeightProperty = "weight";
 
 void InsertBetweennessRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
                              double rank) {
@@ -89,7 +90,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
 
     default_normalized = mgp::value_make_bool(true, memory);
     default_directed = mgp::value_make_bool(false, memory);
-    default_weight_property = mgp::value_make_string(kArgumentWeightProperty, memory);
+    default_weight_property = mgp::value_make_string(kDefaultWeightProperty, memory);
 
     mgp::proc_add_opt_arg(betweenness_proc, kArgumentNormalized, mgp::type_bool(), default_normalized);
     mgp::proc_add_opt_arg(betweenness_proc, kArgumentDirected, mgp::type_bool(), default_directed);

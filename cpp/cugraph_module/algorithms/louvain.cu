@@ -21,7 +21,7 @@ using weight_t = double;
 
 constexpr char const *kProcedureLouvain = "get";
 
-constexpr char const *kArgumentMaxIterations = "max_level";
+constexpr char const *kArgumentMaxIterations = "max_iterations";
 constexpr char const *kArgumentResolution = "resolution";
 constexpr char const *kArgumentDirected = "directed";
 
@@ -49,8 +49,8 @@ void LouvainProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memor
     if (mg_graph->Empty()) return;
 
     // IMPORTANT: Louvain cuGraph algorithm works only on non-transposed graph instances
-    auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph<vertex_t, edge_t, weight_t, false, false>(
-        *mg_graph.get(), graph_type, handle);
+    auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph<vertex_t, edge_t, weight_t, false, false>(*mg_graph.get(),
+                                                                                                    graph_type, handle);
     auto cu_graph_view = cu_graph.view();
     auto n_vertices = cu_graph_view.get_number_of_vertices();
 

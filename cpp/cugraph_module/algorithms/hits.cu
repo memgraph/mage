@@ -24,7 +24,7 @@ constexpr char const *kProcedureHITS = "get";
 
 constexpr char const *kArgumentTolerance = "tolerance";
 constexpr char const *kArgumentMaxIterations = "max_iterations";
-constexpr char const *kArgumentNormalize = "normalize";
+constexpr char const *kArgumentNormalize = "normalized";
 constexpr char const *kArgumentDirected = "directed";
 
 constexpr char const *kResultFieldNode = "node";
@@ -50,7 +50,7 @@ void HITSProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *
     auto stream = handle.get_stream();
 
     // Works with unweighted graph
-    auto graph_type = directed ? mg_graph::GraphType::kDirectedGraph: mg_graph::GraphType::kUndirectedGraph;
+    auto graph_type = directed ? mg_graph::GraphType::kDirectedGraph : mg_graph::GraphType::kUndirectedGraph;
     auto mg_graph = mg_utility::GetGraphView(graph, result, memory, graph_type);
     if (mg_graph->Empty()) return;
 

@@ -25,8 +25,8 @@ constexpr char const *kProcedureKatz = "get";
 constexpr char const *kArgumentAlpha = "alpha";
 constexpr char const *kArgumentBeta = "beta";
 constexpr char const *kArgumentEpsilon = "epsilon";
-constexpr char const *kArgumentNormalized = "normalized";
 constexpr char const *kArgumentMaxIterations = "max_iterations";
+constexpr char const *kArgumentNormalized = "normalized";
 constexpr char const *kArgumentDirected = "directed";
 
 constexpr char const *kResultFieldNode = "node";
@@ -53,8 +53,7 @@ void KatzCentralityProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mg
 
     // Currently doesn't support for weights
     auto graph_type = directed ? mg_graph::GraphType::kDirectedGraph : mg_graph::GraphType::kUndirectedGraph;
-    auto mg_graph = mg_utility::GetGraphView(
-        graph, result, memory, graph_type);
+    auto mg_graph = mg_utility::GetGraphView(graph, result, memory, graph_type);
     if (mg_graph->Empty()) return;
 
     auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph(*mg_graph.get(), graph_type, handle);
@@ -106,8 +105,8 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     mgp::proc_add_opt_arg(katz_proc, kArgumentAlpha, mgp::type_float(), default_alpha);
     mgp::proc_add_opt_arg(katz_proc, kArgumentBeta, mgp::type_float(), default_beta);
     mgp::proc_add_opt_arg(katz_proc, kArgumentEpsilon, mgp::type_float(), default_epsilon);
-    mgp::proc_add_opt_arg(katz_proc, kArgumentNormalized, mgp::type_bool(), default_normalized);
     mgp::proc_add_opt_arg(katz_proc, kArgumentMaxIterations, mgp::type_int(), default_max_iterations);
+    mgp::proc_add_opt_arg(katz_proc, kArgumentNormalized, mgp::type_bool(), default_normalized);
     mgp::proc_add_opt_arg(katz_proc, kArgumentDirected, mgp::type_bool(), default_directed);
 
     mgp::proc_add_result(katz_proc, kResultFieldNode, mgp::type_node());
