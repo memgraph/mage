@@ -14,7 +14,7 @@ random.seed(0)
 igraph.set_random_number_generator(random)
 
 
-## ZBOG PRETVORBE 250ms, Bruno max_flow 70ms
+## ZBOG PRETVORBE JEDNOG GRAFA U DRUGI PA TRECI igraph:250ms, Bruno max_flow:70ms
 @mgp.read_proc
 def get_flow(
     context: mgp.ProcCtx,
@@ -53,12 +53,3 @@ def create_igraph(ctx: mgp.ProcCtx,mode: str,multi: bool):
         return igraph.Graph.from_networkx(MemgraphDiGraph(ctx=ctx))
     elif mode == 'undirected' and not multi:
         return igraph.Graph.from_networkx(MemgraphGraph(ctx=ctx))
-
-def community_leiden(ctx: mgp.ProcCtx, weighted_adjacency: List[List[float]],resolution_parameter:float,n_iterations:int, mode:str,multi:bool, edge_property:str = 'weight'):
-    if ctx:
-        graph = create_igraph(ctx,mode,multi)
-    else:
-        graph  = create_igraph_from_matrix(weighted_adjacency,mode = mode,attr = edge_property,multi = multi)
-        
-    
-    return graph.community_leiden(weights=graph.es[edge_property], resolution_parameter=resolution_parameter, n_iterations = n_iterations)

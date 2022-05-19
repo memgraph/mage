@@ -1,0 +1,11 @@
+query: >
+    MATCH (s:Stock)-[r:Traded_On]->(d:TradingDay)
+    WITH collect(s.ticker) as stocks,collect(r.close - r.open) as daily_returns 
+    CALL construct_portfolio.get(stocks,daily_returns,3,3,0.7)
+    YIELD community_index, community
+
+output:
+    - community_index: 0
+      community: "AMZN, MSFT, TESLA, ZION"
+    - community_index: 1
+      community: "AAPL, ABT"

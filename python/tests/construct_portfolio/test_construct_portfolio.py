@@ -1,5 +1,4 @@
-from re import A
-import python.construct_portfolio as cp 
+import construct_portfolio as cp 
 import pytest
 import numpy as np
 from typing import List

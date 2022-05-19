@@ -1,7 +1,8 @@
 import mgp
 from typing import List
 import numpy as np
-from igraphalg import community_leiden
+import igraph
+import random
 from scipy.stats import spearmanr
 
 @mgp.read_proc
@@ -15,7 +16,8 @@ def get(
     correlation_measure:str = 'pearson',
 ) -> mgp.Record(community_index = int, community = str):
 
-    """Function for getting communities detected by leiden algorithm.
+    """Procedure for constructing portfolio and getting communities detected by leiden algorithm.
+
     Args:
         stocks: stock node tickers
         values: values used for calculating correlations
@@ -56,7 +58,9 @@ def get(
       
     correlations = calculate_correlations(stock_trading_values, correlation_measure)
 
-    communities = community_leiden(None,correlations,resolution_parameter= resolution_parameter,n_iterations= -1, mode = 'undirected', multi = False, edge_property='weight')
+    graph = create_igraph_from_matrix(correlations)
+
+    communities = graph.community_leiden(weights=graph.es['weight'], resolution_parameter=resolution_parameter, n_iterations = -1)
 
     return get_records(communities, stock_tickers, stock_trading_values, n_best_performing)
     
@@ -74,6 +78,21 @@ def split_data(data: List, number_of_elements_in_each_bin: int) -> List[List[flo
     """
 
     return np.array(np.array_split(data,number_of_elements_in_each_bin))
+
+def create_igraph_from_matrix(matrix: List[List[float]]):
+    """Create igraph graph from weighted 2D matrix 
+    Args:
+        matrix (List[List[float]]): weighted matrix
+    Returns:
+        Igraph graph
+    """
+
+    random.seed(0)
+    igraph.set_random_number_generator(random)
+    graph = igraph.Graph.Weighted_Adjacency(matrix, mode = igraph.ADJ_UNDIRECTED,attr = 'weight',loops = False)
+
+    return graph
+
 
 def get_sorted_indices(stock_tickers: List[str]) -> List[List[int]]:
     """Returns sorted indices
