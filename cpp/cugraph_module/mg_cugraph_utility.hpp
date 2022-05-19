@@ -12,6 +12,20 @@
 
 namespace mg_cugraph {
 
+///
+///@brief Create a cuGraph graph object from a given Memgraph graph. This method generates the graph in the
+/// coordinate view with edge list being defined.
+///
+///@tparam TVertexT Vertex identifier type
+///@tparam TEdgeT Edge identifier type
+///@tparam TWeightT Weight type
+///@tparam TStoreTransposed Store transposed in memory
+///@tparam TMultiGPU Multi-GPU Graph
+///@param mg_graph Memgraph graph object
+///@param graph_type Type of the graph - directed/undirected
+///@param handle Handle for GPU communication
+///@return cuGraph graph object
+///
 template <typename TVertexT = int64_t, typename TEdgeT = int64_t, typename TWeightT = double,
           bool TStoreTransposed = true, bool TMultiGPU = false>
 auto CreateCugraphFromMemgraph(const mg_graph::GraphView<> &mg_graph, const mg_graph::GraphType graph_type,
@@ -22,7 +36,9 @@ auto CreateCugraphFromMemgraph(const mg_graph::GraphView<> &mg_graph, const mg_g
   if (graph_type == mg_graph::GraphType::kUndirectedGraph) {
     std::vector<mg_graph::Edge<>> undirected_edges;
     std::transform(mg_edges.begin(), mg_edges.end(), std::back_inserter(undirected_edges),
-                   [](const auto &edge) -> mg_graph::Edge<> { return {edge.id, edge.to, edge.from}; });
+                   [](const auto &edge) -> mg_graph::Edge<> {
+                     return {edge.id, edge.to, edge.from};
+                   });
     mg_edges.reserve(2 * mg_edges.size());
     mg_edges.insert(mg_edges.end(), undirected_edges.begin(), undirected_edges.end());
   }
@@ -72,6 +88,19 @@ auto CreateCugraphFromMemgraph(const mg_graph::GraphView<> &mg_graph, const mg_g
   return std::move(cu_graph);
 }
 
+///
+///@brief Create a cuGraph legacy graph object from a given Memgraph graph. This method generates the graph in the
+/// Compressed Sparse Row format that defines offsets and indices.  Description is available at [Compressed Sparse
+/// Row Format for Representing Graphs - Terence
+/// Kelly](https://www.usenix.org/system/files/login/articles/login_winter20_16_kelly.pdf)
+///
+///@tparam TVertexT Vertex identifier type
+///@tparam TEdgeT Edge identifier type
+///@tparam TWeightT Weight type
+///@param mg_graph Memgraph graph object
+///@param handle Handle for GPU communication
+///@return cuGraph legacy graph object
+///
 template <typename TVertexT = int64_t, typename TEdgeT = int64_t, typename TWeightT = double>
 auto CreateCugraphLegacyFromMemgraph(const mg_graph::GraphView<> &mg_graph, raft::handle_t const &handle) {
   auto mg_nodes = mg_graph.Nodes();
@@ -117,6 +146,22 @@ auto CreateCugraphLegacyFromMemgraph(const mg_graph::GraphView<> &mg_graph, raft
   return std::make_unique<cugraph::legacy::GraphCSR<TVertexT, TEdgeT, TWeightT>>(std::move(csr_contents));
 }
 
+///
+///@brief RMAT (Recursive MATrix) Generator of a graph.
+///
+///@tparam TVertexT Vertex identifier type
+///@tparam TEdgeT Edge identifier type
+///@tparam TWeightT Weight type
+///@param scale Scale factor for number of vertices. |V| = 2 ** scale
+///@param num_edges Number of edges generated
+///@param a Probability of the first partition
+///@param b Probability of the second partition
+///@param c Probability of the third partition
+///@param seed Random seed applied
+///@param clip_and_flip Clip and flip 
+///@param handle Handle for GPU communication
+///@return Edges in edge list format 
+///
 template <typename TVertexT = int64_t, typename TEdgeT = int64_t, typename TWeightT = double>
 auto GenerateCugraphRMAT(std::size_t scale, std::size_t num_edges, double a, double b, double c, std::uint64_t seed,
                          bool clip_and_flip, raft::handle_t const &handle) {
