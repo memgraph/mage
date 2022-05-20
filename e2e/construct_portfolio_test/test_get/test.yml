@@ -7,6 +7,12 @@ query: >
 
 output:
     - community_index: 0
-      community: "AMZN, MSFT, TESLA, ZION"
-    - community_index: 1
       community: "AAPL, ABT"
+    - community_index: 1
+      community: "AMZN"
+    - community_index: 2
+      community: "MSFT"
+    - community_index: 3
+      community: "TSLA"
+    - community_index: 4
+      community: "ZION"
