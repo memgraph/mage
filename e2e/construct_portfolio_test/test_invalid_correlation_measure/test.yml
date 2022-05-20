@@ -3,7 +3,7 @@ query: >
     WITH collect(s.ticker) as stocks,collect(r.close - r.open) as daily_returns 
     CALL construct_portfolio.get(stocks,daily_returns,3,3,0.7,'random')
     YIELD community_index, community
-    RETURN community_index, community
+    RETURN community_index, community;
 
 exception: >
     Correlation measure can only be either pearson or spearman
