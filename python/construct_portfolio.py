@@ -49,7 +49,7 @@ def get(
 
     stock_tickers = np.sort(np.unique(stocks))
 
-    if len(values) > 0 and len(values) < len(stock_tickers) * 3:
+    if len(values) == 0 or len(values) < len(stock_tickers) * 3:
         raise NotEnoughOfDataException("There need to be atleast three entries of data for each stock")
 
     stock_nodes = get_last_n_days(stocks, len(stock_tickers), number_of_last_n_trading_days)
