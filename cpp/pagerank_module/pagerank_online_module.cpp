@@ -40,7 +40,7 @@ void OnlinePagerankGet(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *re
 
     auto pageranks = pagerank_online_alg::GetPagerank(*graph);
 
-    for (auto const [node_id, rank] : pageranks) {
+    for (auto const &[node_id, rank] : pageranks) {
       InsertPagerankRecord(memgraph_graph, result, memory, node_id, rank);
     }
   } catch (const std::exception &e) {
@@ -59,7 +59,7 @@ void OnlinePagerankSet(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *re
 
     auto pageranks = pagerank_online_alg::SetPagerank(*graph, walks_per_node, walk_stop_epsilon);
 
-    for (auto const [node_id, rank] : pageranks) {
+    for (auto const &[node_id, rank] : pageranks) {
       InsertPagerankRecord(memgraph_graph, result, memory, node_id, rank);
     }
   } catch (const std::exception &e) {
