@@ -13,6 +13,7 @@ from mgp_networkx import (
 random.seed(0)
 igraph.set_random_number_generator(random)
 
+
 @mgp.read_proc
 def get_flow(
     context: mgp.ProcCtx,
@@ -22,11 +23,12 @@ def get_flow(
 ) -> mgp.Record(max_flow=mgp.Number):
 
     graph = create_igraph(context, 'directed', True)
-    max_flow = graph.maxflow(start_v.id,end_v.id,capacity=edge_property)
+    max_flow = graph.maxflow(start_v.id, end_v.id, capacity=edge_property)
 
     return mgp.Record(max_flow=max_flow.value)
 
-def create_igraph_from_matrix(weighted_adjacency: List[List[float]], mode = 'directed',attr = "weight",multi = False):
+
+def create_igraph_from_matrix(weighted_adjacency: List[List[float]], mode='directed', attr="weight", multi=False):
     """Create igraph graph from weighted 2D matrix 
 
     Args:
@@ -37,11 +39,12 @@ def create_igraph_from_matrix(weighted_adjacency: List[List[float]], mode = 'dir
 
     """
 
-    graph = igraph.Graph.Weighted_Adjacency(weighted_adjacency, mode = mode,attr = attr,loops = multi)
+    graph = igraph.Graph.Weighted_Adjacency(weighted_adjacency, mode=mode, attr=attr, loops=multi)
 
     return graph
 
-def create_igraph(ctx: mgp.ProcCtx,mode: str,multi: bool):
+
+def create_igraph(ctx: mgp.ProcCtx, mode: str, multi: bool):
     if mode == 'directed' and multi:
         return igraph.Graph.from_networkx(MemgraphMultiDiGraph(ctx=ctx))
     elif mode == 'undirected' and multi:
