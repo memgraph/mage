@@ -3,17 +3,17 @@ from typing import List
 import numpy as np
 import mage.construct_portfolio.utils as utils
 
+
 @mgp.read_proc
 def get(
     context: mgp.ProcCtx,
     stocks: List[str],
     values: List[float],
-    number_of_last_n_trading_days:int = 3,
-    n_best_performing:int = -1,
-    resolution_parameter:float = 0.6,
-    correlation_measure:str = 'pearson',
-) -> mgp.Record(community_index = int, community = str):
-
+    number_of_last_n_trading_days: int = 3,
+    n_best_performing: int = -1,
+    resolution_parameter: float = 0.6,
+    correlation_measure: str = 'pearson',
+) -> mgp.Record(community_index=int, community=str):
     """Procedure for constructing portfolio and getting communities detected by leiden algorithm.
 
     Args:
@@ -41,9 +41,8 @@ def get(
     if number_of_last_n_trading_days <= 2:
         raise InvalidNumberOfTradingDaysException("Number of last trading days must be greater than 2.")
 
-    if not correlation_measure in ['pearson','spearman']:
+    if not correlation_measure in ['pearson', 'spearman']:
         raise InvalidCorrelationMeasureException("Correlation measure can only be either pearson or spearman")
-
 
     stock_tickers = np.sort(np.unique(stocks))
 
@@ -56,18 +55,18 @@ def get(
     stock_nodes = utils.split_data(stock_nodes, number_of_last_n_trading_days)
 
     sorted_indices = utils.get_sorted_indices(stock_nodes)
-    
+
     stock_trading_values = utils.split_data_and_sort(stock_trading_values, number_of_last_n_trading_days, sorted_indices)
-      
+
     correlations = utils.calculate_correlations(stock_trading_values, correlation_measure)
 
     graph = utils.create_igraph_from_matrix(correlations)
 
-    communities = graph.community_leiden(weights=graph.es['weight'], resolution_parameter=resolution_parameter, n_iterations = -1)
+    communities = graph.community_leiden(weights=graph.es['weight'], resolution_parameter=resolution_parameter, n_iterations=-1)
 
     return get_records(communities, stock_tickers, stock_trading_values, n_best_performing)
-    
-    
+
+
 def get_records(communities: List[List[int]], stock_tickers: List[str], stock_trading_values: List[float], n_best_performing: int):
     """Function for creating returning mgp.Record data
 
@@ -83,20 +82,23 @@ def get_records(communities: List[List[int]], stock_tickers: List[str], stock_tr
     """
 
     records = []
-    for i,members in enumerate(communities):
+    for i, members in enumerate(communities):
         if n_best_performing > 0:
-            members = utils.get_n_best_performing(stock_trading_values,members,n_best_performing)
+            members = utils.get_n_best_performing(stock_trading_values, members, n_best_performing)
 
         stocks_in_community = ", ".join(stock_tickers[members])
-        records.append(mgp.Record(community_index = i, community = stocks_in_community ))
+        records.append(mgp.Record(community_index=i, community=stocks_in_community))
 
     return records
+
 
 class InvalidNumberOfTradingDaysException(Exception):
     pass
 
+
 class InvalidCorrelationMeasureException(Exception):
     pass
+
 
 class NotEnoughOfDataException(Exception):
     pass
