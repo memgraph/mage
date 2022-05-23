@@ -40,13 +40,13 @@ def get_sorted_indices(stock_tickers: List[str]) -> List[List[int]]:
         stock_tickers (List[str]): stock tickers on each day
 
     Returns:
-       List[List[float]]: sorted indices on each day
+       List[List[int]]: sorted indices on each day
 
     """
 
     sorted_indices = []
     for i in range(stock_tickers.shape[0]):
-        sorted_indices.append(np.argsort(stock_tickers[i]))
+        sorted_indices.append(np.argsort(stock_tickers[i]).tolist())
     
     return sorted_indices
 
