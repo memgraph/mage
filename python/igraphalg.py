@@ -13,8 +13,6 @@ from mgp_networkx import (
 random.seed(0)
 igraph.set_random_number_generator(random)
 
-
-## ZBOG PRETVORBE JEDNOG GRAFA U DRUGI PA TRECI igraph:250ms, Bruno max_flow:70ms
 @mgp.read_proc
 def get_flow(
     context: mgp.ProcCtx,
@@ -43,7 +41,6 @@ def create_igraph_from_matrix(weighted_adjacency: List[List[float]], mode = 'dir
 
     return graph
 
-#DOSTA SPORIJE JER PRVO NAS PRETVARA U NETWORKX GRAPH PA ONDA U IGRAPH GRAPH
 def create_igraph(ctx: mgp.ProcCtx,mode: str,multi: bool):
     if mode == 'directed' and multi:
         return igraph.Graph.from_networkx(MemgraphMultiDiGraph(ctx=ctx))

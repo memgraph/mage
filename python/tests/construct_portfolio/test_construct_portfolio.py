@@ -1,4 +1,4 @@
-import construct_portfolio as cp 
+import mage.construct_portfolio.utils as utils 
 import pytest
 import numpy as np
 from typing import List
@@ -26,7 +26,7 @@ def same_array_values(
     ],
 )
 def test_get_last_n_days(data,number_of_stocks,number_of_days):
-    last_n_days_array = cp.get_last_n_days(data,number_of_stocks,number_of_days)
+    last_n_days_array = utils.get_last_n_days(data,number_of_stocks,number_of_days)
 
     assert same_array_values(last_n_days_array, [1,2,3,4,1,2,3,4])
 
@@ -37,7 +37,7 @@ def test_get_last_n_days(data,number_of_stocks,number_of_days):
     ],
 )
 def test_get_sorted_indices(data,):
-    sorted_indices = cp.get_sorted_indices(data)
+    sorted_indices = utils.get_sorted_indices(data)
 
     assert same_array_values(sorted_indices, [[0,1,2],[2,1,0]])
 
@@ -48,7 +48,7 @@ def test_get_sorted_indices(data,):
     ],
 )
 def test_split_data(data,number_of_elements_each_bin):
-    splitted_array = cp.split_data(data,number_of_elements_each_bin)
+    splitted_array = utils.split_data(data,number_of_elements_each_bin)
 
     assert splitted_array.shape[0] == len(data) / number_of_elements_each_bin
 
@@ -59,7 +59,7 @@ def test_split_data(data,number_of_elements_each_bin):
     ],
 )
 def test_split_data(data,number_of_elements_each_bin):
-    splitted_sorted_array = cp.split_data_and_sort(data,number_of_elements_each_bin)
+    splitted_sorted_array = utils.split_data_and_sort(data,number_of_elements_each_bin)
 
     assert same_array_values(splitted_sorted_array, [[1,3,1],[2,2,2],[3,1,3]])
 
@@ -70,7 +70,7 @@ def test_split_data(data,number_of_elements_each_bin):
     ],
 )
 def test_split_data(data,number_of_days,sorted_indices):
-    splitted_sorted_array = cp.split_data_and_sort(data,number_of_days,sorted_indices)
+    splitted_sorted_array = utils.split_data_and_sort(data,number_of_days,sorted_indices)
 
     assert same_array_values(splitted_sorted_array, [[1,3,1],[2,2,2],[3,1,3]])
 
@@ -81,7 +81,7 @@ def test_split_data(data,number_of_days,sorted_indices):
     ],
 )
 def test_get_n_best_performing(data,members,n_best_performing):
-    best_performing = cp.get_n_best_performing(data,members,n_best_performing)
+    best_performing = utils.get_n_best_performing(data,members,n_best_performing)
 
     assert same_array_values(best_performing, [2,1])
 
