@@ -21,7 +21,7 @@ def split_data(data: List, number_of_elements_in_each_bin: int) -> List[List[flo
 
 
 def create_igraph_from_matrix(matrix: List[List[float]]):
-    """Create igraph graph from weighted 2D matrix 
+    """Create igraph graph from weighted 2D matrix
     Args:
         matrix (List[List[float]]): weighted matrix
     Returns:
@@ -30,7 +30,9 @@ def create_igraph_from_matrix(matrix: List[List[float]]):
 
     random.seed(0)
     igraph.set_random_number_generator(random)
-    graph = igraph.Graph.Weighted_Adjacency(matrix, mode=igraph.ADJ_UNDIRECTED, attr='weight', loops=False)
+    graph = igraph.Graph.Weighted_Adjacency(
+        matrix, mode=igraph.ADJ_UNDIRECTED, attr="weight", loops=False
+    )
 
     return graph
 
@@ -58,7 +60,7 @@ def get_last_n_days(data: List, number_of_stocks: int, n: int) -> List:
 
     Args:
         data (List): data
-        number_of_stocks (int): number of stocks 
+        number_of_stocks (int): number of stocks
         n (int): number of days
 
     Returns:
@@ -66,10 +68,12 @@ def get_last_n_days(data: List, number_of_stocks: int, n: int) -> List:
 
     """
 
-    return data[-number_of_stocks * n:]
+    return data[-number_of_stocks * n :]
 
 
-def split_data_and_sort(data: List, number_of_days: int, sorted_indices: List[List[int]]) -> List[List]:
+def split_data_and_sort(
+    data: List, number_of_days: int, sorted_indices: List[List[int]]
+) -> List[List]:
     """Function used for splitting and sorting data.
 
     Args:
@@ -88,7 +92,9 @@ def split_data_and_sort(data: List, number_of_days: int, sorted_indices: List[Li
     return x.transpose()
 
 
-def calculate_correlations(values: List[List[float]], measure: str = 'pearson') -> List[List[float]]:
+def calculate_correlations(
+    values: List[List[float]], measure: str = "pearson"
+) -> List[List[float]]:
     """Calculate correlations between values
 
     Args:
@@ -100,17 +106,19 @@ def calculate_correlations(values: List[List[float]], measure: str = 'pearson') 
 
     """
 
-    if measure == 'pearson':
+    if measure == "pearson":
         return abs(np.corrcoef(values))
-    elif measure == 'spearman':
+    elif measure == "spearman":
         return abs(spearmanr(values, axis=1))
 
 
-def get_n_best_performing(stock_trading_values: List[List[float]], members: List[int], n_best_performing: int) -> List[int]:
+def get_n_best_performing(
+    stock_trading_values: List[List[float]], members: List[int], n_best_performing: int
+) -> List[int]:
     """From each community pick number of best performing
 
     Args:
-        stock_trading_values (List[List[float]]): values of each stock 
+        stock_trading_values (List[List[float]]): values of each stock
         members (List[int]): indicies which are in community
         n_best_performing (int): number of best performing stocks
 
@@ -121,7 +129,9 @@ def get_n_best_performing(stock_trading_values: List[List[float]], members: List
 
     members = np.array(members)
     current_community_stock_trading_values = stock_trading_values[members]
-    mean_current_community_stock_trading_values = np.mean(current_community_stock_trading_values, axis=1)
+    mean_current_community_stock_trading_values = np.mean(
+        current_community_stock_trading_values, axis=1
+    )
     sorted_indices = np.argsort(mean_current_community_stock_trading_values)
 
     return members[sorted_indices[-n_best_performing:]]

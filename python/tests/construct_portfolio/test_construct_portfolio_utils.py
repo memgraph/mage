@@ -3,10 +3,14 @@ import pytest
 import numpy as np
 from typing import List
 
-STOCKS_TICKER_VALUES = np.array([['AAPL', 'TSLA', 'ZION'], [['ZION', 'TSLA', 'AAPL']]], dtype=object)
-STOCKS_TICKER_UNIQUE = np.array(['AAPL', 'TSLA', 'ZION'], dtype=object)
+STOCKS_TICKER_VALUES = np.array(
+    [["AAPL", "TSLA", "ZION"], [["ZION", "TSLA", "AAPL"]]], dtype=object
+)
+STOCKS_TICKER_UNIQUE = np.array(["AAPL", "TSLA", "ZION"], dtype=object)
 STOCK_VALUES = np.array([1, 2, 3, 1, 2, 3, 1, 2, 3], dtype=np.int32)
-STOCK_TRADING_VALUES_SPLITTED = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=np.int32)
+STOCK_TRADING_VALUES_SPLITTED = np.array(
+    [[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=np.int32
+)
 
 
 def same_array_values(
@@ -64,7 +68,9 @@ def test_split_data(data, number_of_elements_each_bin):
     ],
 )
 def test_split_sort_data(data, number_of_days, sorted_indices):
-    splitted_sorted_array = utils.split_data_and_sort(data, number_of_days, sorted_indices)
+    splitted_sorted_array = utils.split_data_and_sort(
+        data, number_of_days, sorted_indices
+    )
 
     assert same_array_values(splitted_sorted_array, [[1, 3, 1], [2, 2, 2], [3, 1, 3]])
 
