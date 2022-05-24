@@ -43,7 +43,7 @@ def get(
             "Number of last trading days must be greater than 2."
         )
 
-    if not correlation_measure in ["pearson", "spearman"]:
+    if correlation_measure not in ["pearson", "spearman"]:
         raise InvalidCorrelationMeasureException(
             "Correlation measure can only be either pearson or spearman"
         )
