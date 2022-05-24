@@ -4,8 +4,10 @@
 #pragma once
 
 #include <algorithm>
+#include <limits>
 #include <map>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "data_structures/graph_data.hpp"
 #include "data_structures/graph_view.hpp"
@@ -70,7 +72,7 @@ class Graph : public GraphView<TSize> {
   ///
   /// @return all incident edges
   const std::vector<TSize> &IncidentEdges(TSize node_id) const override {
-    if (node_id < 0 && node_id >= nodes_.size()) {
+    if (node_id >= nodes_.size()) {
       throw mg_exception::InvalidIDException();
     }
 
@@ -83,7 +85,7 @@ class Graph : public GraphView<TSize> {
   ///
   /// @return vector of neighbours
   const std::vector<TNeighbour> &Neighbours(TSize node_id) const override {
-    if (node_id < 0 && node_id >= nodes_.size()) {
+    if (node_id >= nodes_.size()) {
       throw mg_exception::InvalidIDException();
     }
 
@@ -103,7 +105,7 @@ class Graph : public GraphView<TSize> {
   ///
   /// @return vector of neighbours
   const std::vector<TNeighbour> &InNeighbours(TSize node_id) const {
-    if (node_id < 0 && node_id >= nodes_.size()) {
+    if (node_id >= nodes_.size()) {
       throw mg_exception::InvalidIDException();
     }
 
@@ -116,7 +118,7 @@ class Graph : public GraphView<TSize> {
   ///
   /// @return target Node struct
   const TNode &GetNode(TSize node_id) const override {
-    if (node_id < 0 && node_id >= nodes_.size()) {
+    if (node_id >= nodes_.size()) {
       throw mg_exception::InvalidIDException();
     }
 
@@ -129,7 +131,7 @@ class Graph : public GraphView<TSize> {
   ///
   /// @return Edge struct
   const TEdge &GetEdge(TSize edge_id) const override {
-    if (edge_id < 0 && edge_id >= edges_.size()) {
+    if (edge_id >= edges_.size()) {
       throw mg_exception::InvalidIDException();
     }
     return edges_[edge_id];
@@ -140,11 +142,18 @@ class Graph : public GraphView<TSize> {
   /// @param[in] edge_id edge ID
   ///
   /// @return double weight
-  const double &GetWeight(TSize edge_id) const {
-    if (edge_id < 0 && edge_id >= edges_.size()) {
+  double GetWeight(TSize edge_id) const override {
+    if (edge_id < 0 || edge_id >= edges_.size()) {
       throw mg_exception::InvalidIDException();
     }
     return weights_[edge_id];
+  }
+
+  ///
+  ///@brief Return true if graph has weights on edges.
+  ///
+  bool IsWeighted() const override {
+    return !weights_.empty();
   }
 
   /// Creates a node.
@@ -166,18 +175,24 @@ class Graph : public GraphView<TSize> {
   ///
   /// Creates an directed/undirected edge in the graph depending on graph type.
   /// Edge will contain information about the original node IDs. Throws
-  /// exception if nodes are not contained in  graph.
+  /// exception if nodes are not contained in the graph.
   ///
-  /// @param[in]  from  The from node identifier
-  /// @param[in]  to    The to node identifier
+  ///@param memgraph_id_from Memgraph ID of starting node
+  ///@param memgraph_id_to Memgraph ID of ending node
+  ///@param memgraph_edge_id Memgraph ID of an edge
+  ///@param graph_type Graph type, directed or undirected
   ///
   /// @return     Created edge id
-  TSize CreateEdge(std::uint64_t memgraph_id_from, std::uint64_t memgraph_id_to,
+  ///
+  TSize CreateEdge(std::uint64_t memgraph_id_from, std::uint64_t memgraph_id_to, std::uint64_t memgraph_edge_id,
                    const GraphType graph_type = GraphType::kDirectedGraph) {
     auto from = GetInnerNodeId(memgraph_id_from);
     auto to = GetInnerNodeId(memgraph_id_to);
 
     auto id = edges_.size();
+    inner_to_memgraph_edge_id_.emplace(id, memgraph_edge_id);
+    memgraph_to_inner_edge_id_.emplace(memgraph_edge_id, id);
+
     edges_.push_back({id, from, to});
     adj_list_[from].push_back(id);
     neighbours_[from].emplace_back(to, id);
@@ -191,6 +206,21 @@ class Graph : public GraphView<TSize> {
     }
 
     return id;
+  }
+
+  ///
+  ///@brief Create a Edge object without using Memgraph ID for edge. This is used for the purpose of testing
+  ///
+  ///@param memgraph_id_from Memgraph ID of starting node
+  ///@param memgraph_id_to Memgraph ID of ending node
+  ///@param memgraph_edge_id Memgraph ID of an edge
+  ///@param graph_type Graph type, directed or undirected
+  ///@return TSize
+  ///
+  TSize CreateEdge(std::uint64_t memgraph_id_from, std::uint64_t memgraph_id_to,
+                   const GraphType graph_type = GraphType::kDirectedGraph) {
+    auto id = edges_.size();
+    return CreateEdge(memgraph_id_from, memgraph_id_to, id, graph_type);
   }
 
   /// Creates a weighted edge.
@@ -229,7 +259,7 @@ class Graph : public GraphView<TSize> {
   ///
   /// @return true if edge is valid, otherwise returns false
   bool IsEdgeValid(TSize edge_id) const {
-    if (edge_id < 0 || edge_id >= edges_.size()) {
+    if (edge_id >= edges_.size()) {
       return false;
     }
     if (edges_[edge_id].id == k_deleted_edge_id_) {
@@ -245,10 +275,10 @@ class Graph : public GraphView<TSize> {
   /// @param[in] node_from node id of node on same edge
   /// @param[in] node_to node id of node on same edge
   void EraseEdge(TSize node_from, TSize node_to) {
-    if (node_from < 0 && node_from >= nodes_.size()) {
+    if (node_from >= nodes_.size()) {
       throw mg_exception::InvalidIDException();
     }
-    if (node_to < 0 && node_to >= nodes_.size()) {
+    if (node_to >= nodes_.size()) {
       throw mg_exception::InvalidIDException();
     }
 
@@ -312,8 +342,36 @@ class Graph : public GraphView<TSize> {
     return inner_to_memgraph_id_.at(node_id);
   }
 
+  ///
+  /// Returns the GraphView ID from Memgraph's internal edge ID
+  ///
+  /// @param memgraph_id Memgraphs's inner edge ID
+  ///
+  TSize GetInnerEdgeId(std::uint64_t memgraph_id) const override {
+    if (memgraph_to_inner_edge_id_.find(memgraph_id) == memgraph_to_inner_edge_id_.end()) {
+      throw mg_exception::InvalidIDException();
+    }
+    return memgraph_to_inner_edge_id_.at(memgraph_id);
+  }
+
+  ///
+  /// Returns the Memgraph database edge ID from graph view
+  ///
+  /// @param edge_id view's inner edge ID
+  ///
+  std::uint64_t GetMemgraphEdgeId(TSize edge_id) const override {
+    if (inner_to_memgraph_edge_id_.find(edge_id) == inner_to_memgraph_edge_id_.end()) {
+      throw mg_exception::InvalidIDException();
+    }
+    return inner_to_memgraph_edge_id_.at(edge_id);
+  }
+
   bool NodeExists(std::uint64_t memgraph_id) const override {
     return memgraph_to_inner_id_.find(memgraph_id) != memgraph_to_inner_id_.end();
+  }
+
+  bool Empty() const override {
+    return nodes_.empty();
   }
 
   /// Removes all edges and nodes from graph.
@@ -344,6 +402,9 @@ class Graph : public GraphView<TSize> {
   std::vector<TEdge> edges_;
   std::unordered_map<TSize, std::uint64_t> inner_to_memgraph_id_;
   std::unordered_map<std::uint64_t, TSize> memgraph_to_inner_id_;
+
+  std::unordered_map<TSize, std::uint64_t> inner_to_memgraph_edge_id_;
+  std::unordered_map<std::uint64_t, TSize> memgraph_to_inner_edge_id_;
 
   std::multimap<std::pair<TSize, TSize>, TSize> nodes_to_edge_;
 };
