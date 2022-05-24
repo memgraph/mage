@@ -10,39 +10,59 @@ from typing import List, Tuple
 import mgp
 
 
-def get_created_clusters(number_of_clusters: int, embeddings: List[List[float]], nodes: List[mgp.Vertex]) -> List[
+def get_created_clusters(number_of_clusters: int, embeddings: List[List[float]], nodes: List[mgp.Vertex],
+                         init: str, n_init: int, max_iter: int, tol: float, algorithm: str) -> List[
     Tuple[mgp.Vertex, int]]:
-    kmeans = KMeans(n_clusters=number_of_clusters).fit(embeddings)
+    kmeans = KMeans(n_clusters=number_of_clusters, init=init, n_init=n_init,
+                    max_iter=max_iter, tol=tol, algorithm=algorithm).fit(embeddings)
     return [(nodes[i], label) for i, label in enumerate(kmeans.labels_)]
 
 
-@mgp.write_proc
-def get_clusters(
-        ctx: mgp.ProcCtx, number_of_groups: mgp.Number, embedding_property: str = "embedding") -> mgp.Record(
-    vertex=mgp.Vertex, cluster=mgp.Number):
+def extract_nodes_embeddings(ctx: mgp.ProcCtx, embedding_property: str) -> Tuple[List[mgp.Vertex], List[List[float]]]:
     nodes = []
     embeddings = []
     for node in ctx.graph.vertices:
         nodes.append(node)
         embeddings.append(node.properties.get(embedding_property))
+    return nodes, embeddings
 
-    nodes_labels_list = get_created_clusters(number_of_groups, embeddings, nodes)
+
+@mgp.write_proc
+def get_clusters(
+        ctx: mgp.ProcCtx,
+        n_clusters: mgp.Number,
+        embedding_property: str = "embedding",
+        init: str = "k-means++",
+        n_init: mgp.Number = 10,
+        max_iter: mgp.Number = 10,
+        tol: mgp.Number = 1e-4,
+        algorithm: str = "auto",
+) -> mgp.Record(
+    vertex=mgp.Vertex, cluster=mgp.Number):
+    nodes, embeddings = extract_nodes_embeddings(ctx, embedding_property)
+
+    nodes_labels_list = get_created_clusters(n_clusters, embeddings, nodes,
+                                             init=init, n_init=n_init, max_iter=max_iter, tol=tol, algorithm=algorithm)
     return [mgp.Record(vertex=vertex, cluster=int(label)) for vertex, label in nodes_labels_list]
 
 
 @mgp.write_proc
 def set_clusters(
-        ctx: mgp.ProcCtx, number_of_groups: mgp.Number, embedding_property: str = "embedding",
-        label_property="label") -> mgp.Record( vertex=mgp.Vertex, cluster=mgp.Number):
-    nodes = []
-    embeddings = []
-    for node in ctx.graph.vertices:
-        nodes.append(node)
-        embeddings.append(node.properties.get(embedding_property))
+        ctx: mgp.ProcCtx,
+        n_clusters: mgp.Number,
+        embedding_property: str = "embedding",
+        init: str = "k-means++",
+        n_init: mgp.Number = 10,
+        max_iter: mgp.Number = 10,
+        tol: mgp.Number = 1e-4,
+        algorithm: str = "auto",
+        cluster_property="cluster_id") -> mgp.Record(vertex=mgp.Vertex, cluster=mgp.Number):
+    nodes, embeddings = extract_nodes_embeddings(ctx, embedding_property)
 
-    nodes_labels_list = get_created_clusters(number_of_groups, embeddings, nodes)
+    nodes_labels_list = get_created_clusters(n_clusters, embeddings, nodes,
+                                             init=init, n_init=n_init, max_iter=max_iter, tol=tol, algorithm=algorithm)
 
     for vertex, label in nodes_labels_list:
-        vertex.properties.set(label_property, int(label))
+        vertex.properties.set(cluster_property, int(label))
 
     return [mgp.Record(vertex=vertex, cluster=int(label)) for vertex, label in nodes_labels_list]
