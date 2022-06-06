@@ -74,14 +74,13 @@ std::vector<std::uint64_t> FetchNodeIDs(const mg_graph::GraphView<> &mg_graph, m
 }
 
 void DFS_get_paths(std::unordered_map<std::uint64_t, std::vector<std::pair<std::uint64_t, std::uint64_t>>> &prev,
-                   std::uint64_t target_v, std::uint64_t current_v, std::vector<std::uint64_t> &path, mgp_graph *graph,
-                   mgp_result *result, mgp_memory *memory, mg_utility::EdgeStore &store) {
-  // checking for prev[target] existance is before recursive
+                   std::uint64_t source_v, std::uint64_t current_v, std::vector<std::uint64_t> &path,
+                   mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory, mg_utility::EdgeStore &store,
+                   mg_graph::Graph<uint64_t> &graph) {
   // check if target is source
   if (prev[current_v][0].first == -1) {
 #pragma omp critical
-    InsertPathResult(graph, result, memory, graph.get()->GetMemgraphNodeId(current_v),
-                     graph.get()->GetMemgraphNodeId(target_v), path, store);
+    InsertPathResult(memgraph_graph, result, memory, source_v, graph.GetMemgraphNodeId(current_v), path, store);
     return;
   }
 
@@ -89,7 +88,7 @@ void DFS_get_paths(std::unordered_map<std::uint64_t, std::vector<std::pair<std::
     // could the push_back and pop_back be placed outside of for?
     path.push_back(par.second);
 
-    DFS_get_paths(prev, target_v, par.first, path, graph, result, memory, store);
+    DFS_get_paths(prev, source_v, par.first, path, memgraph_graph, result, memory, store, graph);
 
     path.pop_back();
   }
@@ -124,7 +123,8 @@ void ShortestPath(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
       fibonacci_heap<std::int32_t, std::uint64_t> *priority_queue;
       priority_queue = new fibonacci_heap<std::int32_t, std::uint64_t>([](int k1, int k2) { return k1 < k2; });
       std::unordered_map<std::uint64_t, std::vector<std::pair<std::uint64_t, std::uint64_t>>> prev;
-      std::unordered_map<std::uint64_t, std::uint32_t> dist;
+      std::unordered_map<std::uint64_t, std::uint64_t> dist;
+      std::unordered_set<std::uint64_t> visited;
 
       // warning: assinging -1 to uint
       prev[source].push_back(std::make_pair(-1, -1));
@@ -134,10 +134,7 @@ void ShortestPath(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
         auto [distance, node_id] = priority_queue->get();
         priority_queue->remove();
 
-        // No expansion if distance is higher - if visited and larger dist - skip -> taken care of?
-
-        // critical section inserting a path in Memgraph result - after traversal
-        // provjera if path empty?
+        visited.emplace(node_id);
 
         // Traverse in-neighbors and append to priority queue
         for (auto [nxt_vertex_id, nxt_edge_id] : graph.get()->InNeighbours(node_id)) {
@@ -155,13 +152,20 @@ void ShortestPath(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
             dist[nxt_vertex_id] = nxt_distance;
             priority_queue->update_key(nxt_distance, nxt_vertex_id);
           } else if (nxt_distance == dist[nxt_vertex_id]) {
-            // found a path of similar length
+            // found a path of same length
             prev[nxt_vertex_id].push_back(std::make_pair(node_id, nxt_edge_id));
           }
         }
       }
 
-      DFS_get_paths(prev, target, source, path, memgraph_graph, result, memory, *edge_store.get());
+      // so there is no path of length 0 given
+      visited.erase(source);
+
+      std::vector<std::uint64_t> path = std::vector<std::uint64_t>();
+      uint64_t source_v = graph.get()->GetMemgraphNodeId(source);
+      for (auto target : visited) {
+        DFS_get_paths(prev, source_v, target, path, memgraph_graph, result, memory, *edge_store.get(), *graph.get());
+      }
     }
   } catch (const std::exception &e) {
     mgp::result_set_error_msg(result, e.what());
