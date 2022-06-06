@@ -73,15 +73,15 @@ std::vector<std::uint64_t> FetchNodeIDs(const mg_graph::GraphView<> &mg_graph, m
   return nodes;
 }
 
-// TODO  pass reference?
 void DFS_get_paths(std::unordered_map<std::uint64_t, std::vector<std::pair<std::uint64_t, std::uint64_t>>> &prev,
                    std::uint64_t target_v, std::uint64_t current_v, std::vector<std::uint64_t> &path, mgp_graph *graph,
                    mgp_result *result, mgp_memory *memory, mg_utility::EdgeStore &store) {
-  // checking for prev[target] existance is before recursive, later
+  // checking for prev[target] existance is before recursive
   // check if target is source
   if (prev[current_v][0].first == -1) {
 #pragma omp critical
-    InsertPathResult(graph, result, memory, current_v, target_v, path, store);
+    InsertPathResult(graph, result, memory, graph.get()->GetMemgraphNodeId(current_v),
+                     graph.get()->GetMemgraphNodeId(target_v), path, store);
     return;
   }
 
@@ -120,8 +120,6 @@ void ShortestPath(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
 #pragma omp parallel for
     for (std::size_t i = 0; i < sources_size; ++i) {
       auto source = sources[i];
-
-      // visited? shortest_path_length?
 
       fibonacci_heap<std::int32_t, std::uint64_t> *priority_queue;
       priority_queue = new fibonacci_heap<std::int32_t, std::uint64_t>([](int k1, int k2) { return k1 < k2; });
@@ -163,7 +161,7 @@ void ShortestPath(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
         }
       }
 
-      DFS_get_paths(source, prev, targets);
+      DFS_get_paths(prev, target, source, path, memgraph_graph, result, memory, *edge_store.get());
     }
   } catch (const std::exception &e) {
     mgp::result_set_error_msg(result, e.what());
