@@ -2,7 +2,7 @@
 Purpose of this query module is to offer easy kmeans clustering algorithm on top of the embeddings that you
 might have stored in nodes. All you need to do is call kmeans.get_clusters(5, "embedding") where 5
 represents number of clusters you want to get, and "embedding" represents node property name in which
-embedding of node is stored
+embedding of node is stored 
 """
 from sklearn.cluster import KMeans
 from typing import List, Tuple
