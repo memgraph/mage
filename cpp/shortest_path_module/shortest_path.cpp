@@ -29,21 +29,32 @@ constexpr char const *kFieldSource = "source";
 constexpr char const *kFieldTarget = "target";
 constexpr char const *kFieldPath = "path";
 
-void InsertPathResult(mgp_graph *graph, mgp_result *result, mgp_memory *memory, std::uint64_t source_id,
-                      std::uint64_t target_id, std::vector<std::uint64_t> &edge_ids, mg_utility::EdgeStore &store) {
-  auto *record = mgp::result_new_record(result);
+struct MgConnectorData {
+  mgp_graph *memgraph_graph;
+  mgp_result *result;
+  mgp_memory *memory;
+  mg_utility::EdgeStore &store;
+  mg_graph::Graph<uint64_t> &graph;
+};
+
+void InsertPathResult(struct MgConnectorData &conn, std::uint64_t source_id, std::uint64_t target_id,
+                      std::vector<std::uint64_t> &edge_ids) {
+  // void InsertPathResult(mgp_graph *graph, mgp_result *result, mgp_memory *memory, std::uint64_t source_id,
+  //                       std::uint64_t target_id, std::vector<std::uint64_t> &edge_ids, mg_utility::EdgeStore &store)
+  //                       {
+  auto *record = mgp::result_new_record(conn.result);
 
   auto edges_size = edge_ids.size();
-  auto path = mgp::path_make_with_start(mgp::edge_get_from(store.Get(edge_ids[0])), memory);
+  auto path = mgp::path_make_with_start(mgp::edge_get_from(conn.store.Get(edge_ids[0])), conn.memory);
   for (std::int32_t i = 0; i < edges_size; ++i) {
-    auto edge = store.Get(edge_ids[i]);
+    auto edge = conn.store.Get(edge_ids[i]);
     mgp::path_expand(path, edge);
   }
 
   // Insert records in Memgraph
-  mg_utility::InsertNodeValueResult(graph, record, kFieldSource, source_id, memory);
-  mg_utility::InsertNodeValueResult(graph, record, kFieldTarget, target_id, memory);
-  mg_utility::InsertPathValueResult(record, kFieldPath, path, memory);
+  mg_utility::InsertNodeValueResult(conn.memgraph_graph, record, kFieldSource, source_id, conn.memory);
+  mg_utility::InsertNodeValueResult(conn.memgraph_graph, record, kFieldTarget, target_id, conn.memory);
+  mg_utility::InsertPathValueResult(record, kFieldPath, path, conn.memory);
 }
 
 std::vector<std::uint64_t> TransformNodeIDs(const mg_graph::GraphView<> &mg_graph,
@@ -75,12 +86,12 @@ std::vector<std::uint64_t> FetchNodeIDs(const mg_graph::GraphView<> &mg_graph, m
 
 void DFS_get_paths(std::unordered_map<std::uint64_t, std::vector<std::pair<std::uint64_t, std::uint64_t>>> &prev,
                    std::uint64_t source_v, std::uint64_t current_v, std::vector<std::uint64_t> &path,
-                   mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory, mg_utility::EdgeStore &store,
-                   mg_graph::Graph<uint64_t> &graph) {
+                   struct MgConnectorData &conn) {
   // check if target is source
   if (prev[current_v][0].first == -1) {
 #pragma omp critical
-    InsertPathResult(memgraph_graph, result, memory, source_v, graph.GetMemgraphNodeId(current_v), path, store);
+    InsertPathResult(conn, source_v, conn.graph.GetMemgraphNodeId(current_v), path);
+    // InsertPathResult(memgraph_graph, result, memory, source_v, graph.GetMemgraphNodeId(current_v), path, store);
     return;
   }
 
@@ -88,7 +99,7 @@ void DFS_get_paths(std::unordered_map<std::uint64_t, std::vector<std::pair<std::
     // could the push_back and pop_back be placed outside of for?
     path.push_back(par.second);
 
-    DFS_get_paths(prev, source_v, par.first, path, memgraph_graph, result, memory, store, graph);
+    DFS_get_paths(prev, source_v, par.first, path, conn);
 
     path.pop_back();
   }
@@ -161,10 +172,12 @@ void ShortestPath(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
       // so there is no path of length 0 given
       visited.erase(source);
 
+      MgConnectorData conn = {memgraph_graph, result, memory, *edge_store.get(), *graph.get()};
+
       std::vector<std::uint64_t> path = std::vector<std::uint64_t>();
       uint64_t source_v = graph.get()->GetMemgraphNodeId(source);
       for (auto target : visited) {
-        DFS_get_paths(prev, source_v, target, path, memgraph_graph, result, memory, *edge_store.get(), *graph.get());
+        DFS_get_paths(prev, source_v, target, path, conn);
       }
     }
   } catch (const std::exception &e) {
