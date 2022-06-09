@@ -95,8 +95,6 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
     std::unordered_map<uint64_t, double> node_bc_scores;
 
-    std::cout << (algorithm.Initialized() ? "initialized" : "not") << "\n";
-
     if (!algorithm.Initialized()) {
       node_bc_scores = algorithm.Set(*graph, normalize, threads);
     } else {
