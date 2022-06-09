@@ -87,17 +87,18 @@ std::tuple<std::unordered_set<std::uint64_t>, std::unordered_set<std::uint64_t>>
   std::unordered_set<std::uint64_t> affected_bcc_nodes;
   std::unordered_set<std::uint64_t> affected_bcc_articulation_points;
 
-  const std::pair<std::uint64_t, std::uint64_t> updated_edge_inner(graph.GetInnerNodeId(updated_edge.first),
-                                                                   graph.GetInnerNodeId(updated_edge.second));
+  const std::pair<std::uint64_t, std::uint64_t> updated_edge_inner(
+      {graph.GetInnerNodeId(updated_edge.first), graph.GetInnerNodeId(updated_edge.second)});
+
   for (std::size_t i = 0; i < edges_by_bcc.size(); i++) {
     if (std::any_of(edges_by_bcc[i].begin(), edges_by_bcc[i].end(), [updated_edge_inner](auto &edge) {
           return edge.from == updated_edge_inner.first && edge.to == updated_edge_inner.second;  // if edge in BCC
         })) {
       for (const auto node : nodes_by_bcc[i]) {
-        affected_bcc_nodes.insert(node);
+        affected_bcc_nodes.insert(graph.GetMemgraphNodeId(node));
       }
       for (const auto node : articulation_points_by_bcc) {
-        if (affected_bcc_nodes.count(node)) affected_bcc_articulation_points.insert(graph.GetMemgraphNodeId(node));
+        if (affected_bcc_nodes.count(node)) affected_bcc_articulation_points.insert(node);
       }
     }
   }
