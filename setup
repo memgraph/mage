@@ -181,7 +181,9 @@ def build(args):
         rs_build_flags = ["--release"]
         if args.type is not None and args.type == BuildType.DEBUG:
             rs_build_flags = []
-        subprocess.run(["cargo", "build"] + rs_build_flags)
+        
+        log.log(level=log.INFO, msg=f"Rust command: {str(['cargo', 'build'] + rs_build_flags)}")
+        subprocess.run(["cargo", "build"] + rs_build_flags, shell=True, check=True)
 
         release_dir = os.path.join(project_dir, "target", "%s" % rs_build_mode)
         os.chdir(release_dir)
