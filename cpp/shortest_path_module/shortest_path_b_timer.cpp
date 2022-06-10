@@ -49,6 +49,13 @@ void InsertPathResult(struct MgConnectorData &conn, std::uint64_t source_id, std
   mg_utility::InsertPathValueResult(record, kFieldPath, path, conn.memory);
 }
 
+inline std::chrono::time_point<std::chrono::high_resolution_clock> StartTimer() {
+  return std::chrono::high_resolution_clock::now();
+}
+inline double EndTimer(std::chrono::time_point<std::chrono::high_resolution_clock> start) {
+  return ((std::chrono::duration<double, std::milli>)(std::chrono::high_resolution_clock::now() - start)).count();
+}
+
 std::vector<std::uint64_t> TransformNodeIDs(const mg_graph::GraphView<> &mg_graph,
                                             std::vector<std::uint64_t> &mg_nodes) {
   std::vector<std::uint64_t> nodes;
@@ -102,6 +109,13 @@ typedef std::pair<std::uint32_t, std::uint64_t> iPair;
 void ShortestPath(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
     // Fetch the target & source IDs
+
+    double t1, t2, t3, t4, t5, t6, t7, t8, t9 = 0;
+    double module_time = 0;
+
+    auto start_module = StartTimer();
+    auto st1 = StartTimer();
+
     auto sources_arg =
         !mgp::value_is_null(mgp::list_at(args, 0)) ? mgp::value_get_list(mgp::list_at(args, 0)) : nullptr;
 
@@ -120,9 +134,15 @@ void ShortestPath(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
     auto sources = FetchNodeIDs(*graph.get(), sources_arg);
     auto sources_size = sources.size();
 
+    t1 += EndTimer(st1);
+    omp_set_dynamic(0);
+    omp_set_num_threads(8);
+
     // Dijsktra with priority queue. Parallel for each source
 #pragma omp parallel for
     for (std::size_t i = 0; i < sources_size; ++i) {
+      auto st2 = StartTimer();
+
       auto source = sources[i];
 
       fibonacci_heap<std::int32_t, std::uint64_t> *priority_queue;
@@ -138,16 +158,25 @@ void ShortestPath(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
       // priority_queue.push(std::make_pair(0, source));
       priority_queue->insert(0, source);
 
+      t2 += EndTimer(st2);
+      auto st3 = StartTimer();
+
       // while (!priority_queue.empty()) {
       while (!priority_queue->empty()) {
-        // auto [distance, node_id] = priority_queue.top();
-        // priority_queue.pop();
+        auto st4 = StartTimer();
+
         auto [distance, node_id] = priority_queue->get();
         priority_queue->remove();
+        // auto [distance, node_id] = priority_queue.top();
+        // priority_queue.pop();
 
         if (visited.find(node_id) != visited.end()) continue;
 
         visited.emplace(node_id);
+
+        t4 += EndTimer(st4);
+
+        auto st5 = StartTimer();
 
         // Traverse in-neighbors and append to priority queue
         for (auto [nxt_vertex_id, nxt_edge_id] : graph.get()->InNeighbours(node_id)) {
@@ -171,7 +200,13 @@ void ShortestPath(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
             prev[nxt_vertex_id].push_back(std::make_pair(node_id, nxt_edge_id));
           }
         }
+
+        t5 += EndTimer(st5);
       }
+
+      t3 += EndTimer(st3);
+
+      auto st6 = StartTimer();
 
       // so there is no path of length 0 given
       visited.erase(source);
@@ -183,7 +218,28 @@ void ShortestPath(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
       for (auto target : visited) {
         DFS_get_paths(prev, source_v, target, path, conn);
       }
+
+      t6 += EndTimer(st6);
     }
+
+    module_time = EndTimer(start_module);
+
+    std::cout << "#----------------------------------------------------------#" << std::endl;
+    std::cout << "Fetch Arguments: " << std::to_string(t1) << " ms"
+              << " " << std::to_string((t1 / module_time) * 100) << "%" << std::endl;
+    std::cout << "for loop setup: " << std::to_string(t2) << " ms"
+              << " " << std::to_string((t2 / module_time) * 100) << "%" << std::endl;
+    std::cout << "while loop total: " << std::to_string(t3) << " ms"
+              << " " << std::to_string((t3 / module_time) * 100) << "%" << std::endl;
+    std::cout << "Check visited: " << std::to_string(t4) << " ms"
+              << " " << std::to_string((t4 / module_time) * 100) << "%" << std::endl;
+    std::cout << "Neighbour traversal total: " << std::to_string(t5) << " ms"
+              << " " << std::to_string((t5 / module_time) * 100) << "%" << std::endl;
+    std::cout << "Recursive DFS: " << std::to_string(t6) << " ms"
+              << " " << std::to_string((t6 / module_time) * 100) << "%" << std::endl;
+    std::cout << "Full module time: " << std::to_string(module_time) << " ms" << std::endl;
+    std::cout << "#----------------------------------------------------------#" << std::endl;
+
   } catch (const std::exception &e) {
     mgp::result_set_error_msg(result, e.what());
     return;
