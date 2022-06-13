@@ -183,7 +183,11 @@ def build(args):
             rs_build_flags = []
         
         log.log(level=log.INFO, msg=f"Rust command: {str(['cargo', 'build'] + rs_build_flags)}")
-        subprocess.run(["cargo", "build"] + rs_build_flags, shell=True, check=True)
+        # subprocess.run(["cargo", "build"] + rs_build_flags, shell=True, check=True)
+        subprocess.run(["cargo", "build"] + rs_build_flags, check=True)
+        
+        log.log(level=log.INFO, msg=f"Build finished")
+
 
         release_dir = os.path.join(project_dir, "target", "%s" % rs_build_mode)
         os.chdir(release_dir)
