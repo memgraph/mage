@@ -121,48 +121,48 @@ def build(args):
     #              Load C++ modules                 #
     #################################################
 
-    # # Make build directory
-    # os.makedirs(CPP_BUILD_DIRECTORY, exist_ok=True)
+    # Make build directory
+    os.makedirs(CPP_BUILD_DIRECTORY, exist_ok=True)
 
-    # # Start CMake building
-    # os.chdir(CPP_BUILD_DIRECTORY)
-    # subprocess.run(["ls", "-l"])
-    # cmake_args = [".."]
-    # if args.gpu:
-    #     cmake_args.append(f"-D{MAGE_GPU_BUILD}")
-    # if args.cpp_build_flags is not None:
-    #     cmake_args += [f"-D{flag}" for flag in args.cpp_build_flags]
-    # subprocess.run(["cmake"] + cmake_args)
-    # core_count = mp.cpu_count()
-    # subprocess.run(["make", f"-j{core_count}"])
+    # Start CMake building
+    os.chdir(CPP_BUILD_DIRECTORY)
+    subprocess.run(["ls", "-l"])
+    cmake_args = [".."]
+    if args.gpu:
+        cmake_args.append(f"-D{MAGE_GPU_BUILD}")
+    if args.cpp_build_flags is not None:
+        cmake_args += [f"-D{flag}" for flag in args.cpp_build_flags]
+    subprocess.run(["cmake"] + cmake_args)
+    core_count = mp.cpu_count()
+    subprocess.run(["make", f"-j{core_count}"])
 
-    # # Transfer files to the query modules directory. The transfer is tricky
-    # # because e.g. cugraph generates a bunch of stuff, a new contributor might
-    # # get confused with the amount of stuff that ends up in the dist.
-    # # NOTE: Cugraph only compiles to a SHARED library.
-    # # NOTE: This is dependent on the cpp/cmake/cugraph ExternalProject_Add (on
-    # # the INSTALL_DIR).
-    # all_so = set(glob.glob("**/*.so", recursive=True))
-    # for file in all_so:
-    #     shutil.copy2(file, MAGE_BUILD_DIRECTORY)
+    # Transfer files to the query modules directory. The transfer is tricky
+    # because e.g. cugraph generates a bunch of stuff, a new contributor might
+    # get confused with the amount of stuff that ends up in the dist.
+    # NOTE: Cugraph only compiles to a SHARED library.
+    # NOTE: This is dependent on the cpp/cmake/cugraph ExternalProject_Add (on
+    # the INSTALL_DIR).
+    all_so = set(glob.glob("**/*.so", recursive=True))
+    for file in all_so:
+        shutil.copy2(file, MAGE_BUILD_DIRECTORY)
 
     #################################################
     #             Load Python modules               #
     #################################################
 
-    # os.chdir(PY_DIRECTORY)
-    # ignore_list = [
-    #     "tests",
-    #     "requirements.txt",
-    #     "pytest.ini",
-    #     "htmlcov",
-    #     "__pycache__",
-    #     ".*",
-    # ]
+    os.chdir(PY_DIRECTORY)
+    ignore_list = [
+        "tests",
+        "requirements.txt",
+        "pytest.ini",
+        "htmlcov",
+        "__pycache__",
+        ".*",
+    ]
 
-    # # Copy python repository tree inside dist folder
-    # copytree(PY_DIRECTORY, MAGE_BUILD_DIRECTORY, ignore_list)
-    # os.environ["PYTHONPATH"] = PY_DIRECTORY
+    # Copy python repository tree inside dist folder
+    copytree(PY_DIRECTORY, MAGE_BUILD_DIRECTORY, ignore_list)
+    os.environ["PYTHONPATH"] = PY_DIRECTORY
 
     #################################################
     #              Load Rust modules                #
@@ -181,13 +181,7 @@ def build(args):
         rs_build_flags = ["--release"]
         if args.type is not None and args.type == BuildType.DEBUG:
             rs_build_flags = []
-        
-        log.log(level=log.INFO, msg=f"Rust command: {str(['cargo', 'build'] + rs_build_flags)}")
-        # subprocess.run(["cargo", "build"] + rs_build_flags, shell=True, check=True)
-        subprocess.run(["cargo", "build"] + rs_build_flags, check=True,  env=dict(os.environ, CARGO_LOG="debug"))
-        
-        log.log(level=log.INFO, msg=f"Build finished")
-
+        subprocess.run(["cargo", "build"] + rs_build_flags, check=True,  env=dict(os.environ, CARGO_NET_GIT_FETCH_WITH_CLI="true"))
 
         release_dir = os.path.join(project_dir, "target", "%s" % rs_build_mode)
         os.chdir(release_dir)
