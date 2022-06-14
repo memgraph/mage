@@ -1,9 +1,0 @@
-query: >
-    MATCH (s:Stock)-[r:Traded_On]->(d:TradingDay)
-    WITH collect(s.ticker) as stocks,collect(r.close - r.open) as daily_returns 
-    CALL construct_portfolio.get(stocks,daily_returns,2,3,0.7)
-    YIELD community_index, community
-    RETURN community_index, community;
-    
-exception: >
-    Number of last trading days must be greater than 2.

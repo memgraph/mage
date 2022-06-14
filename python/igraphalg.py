@@ -2,17 +2,6 @@ import igraph
 import mgp
 from collections import defaultdict
 from typing import List
-import random
-
-from mgp_networkx import (
-    MemgraphMultiDiGraph,
-    MemgraphDiGraph,  # noqa: E402
-    MemgraphMultiGraph,
-    MemgraphGraph,
-)
-
-random.seed(0)
-igraph.set_random_number_generator(random)
 
 
 @mgp.read_proc
@@ -23,18 +12,78 @@ def get_flow(
     edge_property: str = "weight",
 ) -> mgp.Record(max_flow=mgp.Number):
 
-    # graph = create_igraph(context, 'directed', True)
     graph = create_igraph_from_ctx(ctx, directed=True)
     max_flow = graph.maxflow(start_v.id, end_v.id, capacity=edge_property)
 
     return mgp.Record(max_flow=max_flow.value)
 
 
-def create_igraph_from_ctx(ctx: mgp.ProcCtx, directed: bool = False):
+@mgp.read_proc
+def pagerank(
+    ctx: mgp.ProcCtx,
+    damping: mgp.Number = 0.85,
+    max_iter: int = 100,
+    tol: mgp.Number = 1e-06,
+    weight: mgp.Nullable[str] = "weight",
+) -> mgp.Record(node=mgp.Vertex, rank=float):
+
+    graph = create_igraph_from_ctx(ctx, directed=False)
+    pg = graph.pagerank(weights=weight, niter=max_iter, damping=damping, eps=tol)
+
+    return [mgp.Record(node=k, rank=v) for k, v in enumerate(pg)]
+
+
+@mgp.read_proc
+def all_simple_paths(
+    ctx: mgp.ProcCtx,
+    source: mgp.Vertex,
+    target: mgp.Vertex,
+    cutoff: mgp.Nullable[int] = None,
+) -> mgp.Record(paths=mgp.List[mgp.List[mgp.Vertex]]):
+    graph = create_igraph_from_ctx(ctx, directed=True)
+
+    return mgp.Record(
+        paths=list(graph.get_all_simple_paths(v=source.id, to=target.id, cutoff=cutoff))
+    )
+
+
+@mgp.read_proc
+def min_cuts(
+    ctx: mgp.ProcCtx,
+    source: mgp.Vertex,
+    target: mgp.Vertex,
+    edge_property: str = "weights"
+) -> mgp.Record(partition=List[mgp.Vertex], cut=List[mgp.Edge], value=float):
+    graph = create_igraph_from_ctx(ctx, directed=True)
+    mincut = graph.mincut(source=source.id, target=target.id, capacity=edge_property)
+
+    return mgp.Record(partition=mincut.partition, cut=mincut.cut, value=mincut.value)
+
+
+@mgp.read_proc
+def community_leiden(ctx: mgp.ProcCtx, edge_property: str = "weigths",
+                     resolution_parameter: float = 0.6,
+                     number_of_iterations: int = -1,
+                     ) -> mgp.Record(community_index=int, community_members=List[mgp.Vertex]):
+    graph = create_igraph_from_ctx(ctx, directed=True)
+    communities = graph.community_leiden(resolution_parameter=resolution_parameter, weights=edge_property, n_iterations=number_of_iterations)
+
+    return [mgp.Record(community_index=i, community_members=members) for i, members in enumerate(communities)]
+
+
+@mgp.read_proc
+def spanning_tree(ctx: mgp.ProcCtx,
+                  edge_property: str = "weigths"
+                  ) -> mgp.Record(tree=List[mgp.Vertex]):
+    graph = create_igraph_from_ctx(ctx, directed=True)
+
+    return mgp.Record(tree=graph.spanning_tree(edge_property, return_tree=False))
+
+def create_igraph_from_ctx(ctx: mgp.ProcCtx, directed: bool = False) -> igraph.Graph:
     vertex_attrs = defaultdict(list)
     edge_list = []
     edge_attrs = defaultdict(list)
-    for vertex in ctx._graph.vertices:
+    for vertex in ctx.graph.vertices:
         for name, value in vertex.properties.items():
             vertex_attrs[name].append(value)
         for edge in vertex.out_edges:
@@ -55,7 +104,7 @@ def create_igraph_from_ctx(ctx: mgp.ProcCtx, directed: bool = False):
 
 def create_igraph_from_matrix(
     weighted_adjacency: List[List[float]], mode="directed", attr="weight", multi=False
-):
+) -> igraph.Graph:
     """Create igraph graph from weighted 2D matrix
 
     Args:
@@ -71,14 +120,3 @@ def create_igraph_from_matrix(
     )
 
     return graph
-
-
-def create_igraph(ctx: mgp.ProcCtx, mode: str, multi: bool):
-    if mode == "directed" and multi:
-        return igraph.Graph.from_networkx(MemgraphMultiDiGraph(ctx=ctx))
-    elif mode == "undirected" and multi:
-        return igraph.Graph.from_networkx(MemgraphMultiGraph(ctx=ctx))
-    elif mode == "directed" and not multi:
-        return igraph.Graph.from_networkx(MemgraphDiGraph(ctx=ctx))
-    elif mode == "undirected" and not multi:
-        return igraph.Graph.from_networkx(MemgraphGraph(ctx=ctx))
