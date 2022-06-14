@@ -28,6 +28,7 @@ HELP_MESSAGE = """\
     For usage info run: python3 setup -h
     """
 
+
 class BuildType(Enum):
     DEBUG = "Debug"
     RELEASE = "Release"
@@ -42,20 +43,29 @@ def get_arguments():
     )
     subparsers = parser.add_subparsers(help="sub-command help", dest="action")
 
-    build_args_parser = argparse.ArgumentParser(description="Build arguments", add_help=False)
+    build_args_parser = argparse.ArgumentParser(
+        description="Build arguments", add_help=False
+    )
     build_args_parser.add_argument(
         "-p", "--path", help="Path to query modules directory", required=False
     )
     build_args_parser.add_argument(
-        "--type", help="Build type", type=BuildType, choices=list(BuildType), required=False
+        "--type",
+        help="Build type",
+        type=BuildType,
+        choices=list(BuildType),
+        required=False,
     )
+    build_args_parser.add_argument("--gpu", help="GPU Algorithms", action="store_true")
     build_args_parser.add_argument(
-        "--gpu", help="GPU Algorithms", action='store_true'
+        "--cpp-build-flags",
+        nargs="+",
+        help="CMake flags for the cpp part (without -D)",
+        required=False,
     )
-    build_args_parser.add_argument(
-        "--cpp-build-flags", nargs="+", help="CMake flags for the cpp part (without -D)", required=False
+    build_parser = subparsers.add_parser(
+        "build", help="Build memgraph-mage", parents=[build_args_parser]
     )
-    build_parser = subparsers.add_parser("build", help="Build memgraph-mage", parents=[build_args_parser])
 
     query_modules_parser = subparsers.add_parser(
         "modules_storage", help="Add path of mage/dist to memgraph.conf "
@@ -75,7 +85,9 @@ def get_arguments():
         default=MAGE_BUILD_DIRECTORY,
     )
 
-    subparsers.add_parser("all", help="Set up memgraph-mage for usage", parents=[build_args_parser])
+    subparsers.add_parser(
+        "all", help="Set up memgraph-mage for usage", parents=[build_args_parser]
+    )
 
     return parser.parse_args()
 
@@ -176,12 +188,20 @@ def build(args):
         os.chdir(project_dir)
         rs_build_mode = "release"
         if args.type is not None:
-            if args.type == BuildType.DEBUG: rs_build_mode = "debug"
-            if args.type == BuildType.RELEASE: rs_build_mode = "release"
+            if args.type == BuildType.DEBUG:
+                rs_build_mode = "debug"
+            if args.type == BuildType.RELEASE:
+                rs_build_mode = "release"
         rs_build_flags = ["--release"]
         if args.type is not None and args.type == BuildType.DEBUG:
             rs_build_flags = []
-        subprocess.run(["cargo", "build"] + rs_build_flags, check=True,  env=dict(os.environ, CARGO_NET_GIT_FETCH_WITH_CLI="true"))
+
+        # Build Rust query modules    
+        subprocess.run(
+            ["cargo", "build"] + rs_build_flags,
+            check=True,
+            env=dict(os.environ, CARGO_NET_GIT_FETCH_WITH_CLI="true"),
+        )
 
         release_dir = os.path.join(project_dir, "target", "%s" % rs_build_mode)
         os.chdir(release_dir)
