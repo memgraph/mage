@@ -184,7 +184,7 @@ def build(args):
         
         log.log(level=log.INFO, msg=f"Rust command: {str(['cargo', 'build'] + rs_build_flags)}")
         # subprocess.run(["cargo", "build"] + rs_build_flags, shell=True, check=True)
-        subprocess.run(["cargo", "build"] + rs_build_flags, check=True)
+        subprocess.run(["cargo", "build"] + rs_build_flags, check=True,  env=dict(os.environ, CARGO_LOG="debug"))
         
         log.log(level=log.INFO, msg=f"Build finished")
 
