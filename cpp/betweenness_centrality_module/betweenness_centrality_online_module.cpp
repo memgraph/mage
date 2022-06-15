@@ -126,7 +126,7 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
         auto prior_graph =
             mg_generate::BuildGraph(graph_nodes_ids, prior_edges_ids, mg_graph::GraphType::kUndirectedGraph);
 
-        node_bc_scores = algorithm.Set(*graph, normalize, threads);
+        node_bc_scores = algorithm.Get(*prior_graph, normalize);
 
         for (const auto created_edge : created_edges) {
           prior_edges_ids.push_back(created_edge);
@@ -259,6 +259,8 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
       return 1;
     }
   }
+
+  algorithm.Reset();
 
   return 0;
 }
