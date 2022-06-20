@@ -1,0 +1,11 @@
+query: >
+    CALL igraphalg.community_leiden() YIELD community_id, community_members
+    RETURN community_id, community_members
+    ORDER BY community_id ASC
+
+output:
+    - community_id: 0
+      community_members: [0,1,2]
+    - community_id: 1
+      community_members: [3,4,5]
+      
