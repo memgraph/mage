@@ -286,7 +286,7 @@ std::vector<std::pair<std::uint64_t, double>> UpdatePagerank(
     return SetPagerank(graph);
   }
 
-  for (const auto edge : deleted_edges) {
+  for (const auto &edge : deleted_edges) {
     UpdateDelete(graph, edge);
   }
   for (const auto vertex : deleted_vertices) {
@@ -295,7 +295,7 @@ std::vector<std::pair<std::uint64_t, double>> UpdatePagerank(
   for (const auto vertex : new_vertices) {
     UpdateCreate(graph, vertex);
   }
-  for (const auto edge : new_edges) {
+  for (const auto &edge : new_edges) {
     UpdateCreate(graph, edge);
   }
 

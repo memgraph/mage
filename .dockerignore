@@ -5,4 +5,5 @@ htmlcov
 dist
 **/__pycache__
 cpp/build
-Dockerfile
+Dockerfile*
+.dockerignore

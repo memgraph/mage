@@ -11,7 +11,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      MEMGRAPH_VERSION: 2.2.1
+      MEMGRAPH_VERSION: 2.3.0
     strategy:
       matrix:
         architecture: ["amd64", "arm64"]
@@ -94,4 +94,4 @@ jobs:
           PYTHONPATH: "$PWD/e2e"
         run: |
           cd e2e
-          python -m pytest .
+          python -m pytest . -k 'not cugraph'
