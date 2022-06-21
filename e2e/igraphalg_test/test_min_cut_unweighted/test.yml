@@ -1,0 +1,9 @@
+query: >
+  MATCH (source {id: 0}), (sink {id: 5})
+  CALL igraphalg.min_cut(source, sink)
+  YIELD partition_vertex_ids, cut_edge_vertex_ids,value RETURN partition_vertex_ids, cut_edge_vertex_ids,value;
+
+output:
+    - cut_edge_vertex_ids : [6,8]
+      partition_vertex_ids: [[0,1,2,3,4],[5]]
+      value: 2.0

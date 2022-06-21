@@ -1,0 +1,7 @@
+query: >
+  MATCH (source {id: 0}), (sink {id: 5})
+  CALL igraphalg.all_simple_paths(source, sink)
+  YIELD paths RETURN paths;
+
+output:
+    - paths: [[0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 5], [0, 1, 3, 4, 5], [0, 1, 3, 5], [0, 2, 3, 4, 5], [0, 2, 3, 5]]
