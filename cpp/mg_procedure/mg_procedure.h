@@ -167,6 +167,15 @@ enum mgp_value_type {
   MGP_VALUE_TYPE_DURATION,
 };
 
+enum mgp_log_level{
+  Trace,
+  Debug,
+  Info,
+  Warn,
+  Error,
+  Critical
+};
+
 /// Free the memory used by the given mgp_value instance.
 void mgp_value_destroy(struct mgp_value *val);
 
@@ -1462,6 +1471,13 @@ typedef void (*mgp_trans_cb)(struct mgp_messages *, struct mgp_graph *, struct m
 /// Return MGP_ERROR_INVALID_ARGUMENT if `name` is not a valid transformation name.
 /// RETURN MGP_ERROR_LOGIC_ERROR if a transformation with the same name was already registered.
 enum mgp_error mgp_module_add_transformation(struct mgp_module *module, const char *name, mgp_trans_cb cb);
+
+enum mgp_error mgp_date_get_day_add1(mgp_date *date, int *day);
+
+enum mgp_error mgp_add_10(int number, int *result);
+
+enum mgp_error mgp_log(const enum mgp_log_level log_level, const char *output);
+
 /// @}
 
 #ifdef __cplusplus

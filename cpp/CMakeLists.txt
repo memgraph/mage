@@ -1,5 +1,5 @@
 # Memgraph Mage C++ Query Modules CMake configuration.
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.14) 
 set(MEMGRAPH_MAGE_PROJECT_NAME "memgraph-mage")
 project("${MEMGRAPH_MAGE_PROJECT_NAME}" LANGUAGES C CXX)
 
@@ -31,6 +31,19 @@ set(CMAKE_SHARED_LIBRARY_PREFIX "")
 
 find_package(Threads REQUIRED)
 include(ExternalProject)
+
+
+include(FetchContent)
+
+# include fmt
+FetchContent_Declare(fmt
+  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+  GIT_TAG master
+)
+FetchContent_MakeAvailable(fmt)
+
+
+
 
 # Install cuGraph (optional)
 include(cugraph)
@@ -91,4 +104,5 @@ add_subdirectory(community_detection_module)
 add_subdirectory(pagerank_module)
 add_subdirectory(uuid_module)
 add_subdirectory(katz_centrality_module)
+add_subdirectory(simple_math_module)
 add_cugraph_subdirectory(cugraph_module)

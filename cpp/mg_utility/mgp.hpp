@@ -7,6 +7,7 @@
 
 #include "mg_exceptions.hpp"
 #include "mg_procedure.h"
+#include <fmt/format.h>
 
 namespace mgp {
 
@@ -438,4 +439,20 @@ struct mgp_edge *graph_create_edge(struct mgp_graph *graph, struct mgp_vertex *f
 void vertex_add_label(struct mgp_vertex *vertex, struct mgp_label label) {
   MgInvokeVoid(mgp_vertex_add_label, vertex, label);
 }
+
+int date_get_day_add1(struct mgp_date *date) {
+  return MgInvoke<int>(mgp_date_get_day_add1, date);
+}
+
+int add_10(int number) {
+  return MgInvoke<int>(mgp_add_10, number);
+}
+
+template <typename... Args>
+void log(const enum mgp_log_level log_level, const char *output) {
+  return MgInvokeVoid(mgp_log, log_level, output);
+}
+
+
+
 }  // namespace mgp

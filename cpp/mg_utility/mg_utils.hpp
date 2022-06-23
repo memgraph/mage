@@ -334,4 +334,12 @@ std::vector<std::uint64_t> GetEdgeIDs(mgp_list *edge_list) {
   }
   return edge_ids;
 }
+
+
+template <typename... Args>
+void log(const enum mgp_log_level log_level, std::string format, Args&&... args) {
+  std::string output = fmt::format(format, args...);
+  mgp::log(log_level, output.c_str());
+}
+
 }  // namespace mg_utility
