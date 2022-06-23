@@ -69,9 +69,9 @@ def min_cut(
     target: mgp.Vertex,
     edge_property: mgp.Nullable[str] = None,
 ) -> mgp.Record(
-    partition_vertex_ids=List[List[int]], cut_edge_vertex_ids=List[int], value=float
+    partition_vertex_ids=List[List[mgp.Vertex]], cut_edge_ids=List[int], value=float
 ):
-    graph, id_mapping, _ = create_igraph_from_ctx(ctx, directed=True)
+    graph, id_mapping, inverted_id_mapping = create_igraph_from_ctx(ctx, directed=True)
     mincut = graph.mincut(
         source=id_mapping[source.id],
         target=id_mapping[target.id],
@@ -79,8 +79,11 @@ def min_cut(
     )
 
     return mgp.Record(
-        partition_vertex_ids=mincut.partition,
-        cut_edge_vertex_ids=mincut.cut,
+        partition_vertex_ids=[
+            convert_vertex_ids_to_mgp_vertices(partition, ctx, inverted_id_mapping)
+            for partition in mincut.partition
+        ],
+        cut_edge_ids=mincut.cut,
         value=mincut.value,
     )
 
@@ -149,6 +152,21 @@ def shortest_path_length(
             target=id_mapping[target.id],
             weights=edge_property,
         )[0][0]
+    )
+
+
+@mgp.read_proc
+def all_shortest_path_lengths(
+    ctx: mgp.ProcCtx,
+    edge_property: mgp.Nullable[str] = None,
+    directed: bool = False,
+) -> mgp.Record(lengths=List[List[float]]):
+    graph, _, _ = create_igraph_from_ctx(ctx, directed=directed)
+
+    return mgp.Record(
+        lengths=graph.shortest_paths(
+            weights=edge_property,
+        )
     )
 
 
