@@ -1,6 +1,6 @@
 query: >
     CALL igraphalg.community_leiden() YIELD community_id, community_members
-    RETURN community_id, extract(node IN community_members | node.id ) AS community_members
+    RETURN community_id, extract(node IN community_members | node.id) AS community_members
     ORDER BY community_id ASC
 
 output:
