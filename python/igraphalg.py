@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import  Dict, List, Tuple
+from typing import Dict, List, Tuple
 
 import igraph
 
@@ -85,6 +85,18 @@ def min_cut(
         ],
         cut_edge_ids=mincut.cut,
         value=mincut.value,
+    )
+
+
+@mgp.read_proc
+def topological_sort(
+    ctx: mgp.ProcCtx,
+) -> mgp.Record(nodes=mgp.Nullable[mgp.List[mgp.Vertex]]):
+    graph, _, inverted_id_mapping = create_igraph_from_ctx(ctx, directed=True)
+    sorted = graph.topological_sorting(mode="out")
+
+    return mgp.Record(
+        nodes=convert_vertex_ids_to_mgp_vertices(sorted, ctx, inverted_id_mapping)
     )
 
 
