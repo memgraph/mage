@@ -30,12 +30,10 @@ def pagerank(
     tol: mgp.Number = 1e-06,
     weight: mgp.Nullable[str] = None,
 ) -> mgp.Record(node=mgp.Vertex, rank=float):
-
     graph, _, inverse_id_mapping = create_igraph_from_ctx(ctx, directed=True)
     pg = graph.pagerank(
         weights=weight, directed=True, niter=max_iter, damping=damping, eps=tol
     )
-
     return [
         mgp.Record(
             node=ctx.graph.get_vertex_by_id(inverse_id_mapping[node_id]), rank=rank
@@ -68,9 +66,7 @@ def min_cut(
     source: mgp.Vertex,
     target: mgp.Vertex,
     edge_property: mgp.Nullable[str] = None,
-) -> mgp.Record(
-    partition_vertex_ids=List[List[mgp.Vertex]], cut_edge_ids=List[int], value=float
-):
+) -> mgp.Record(partition_vertex_ids=List[List[mgp.Vertex]], value=float):
     graph, id_mapping, inverted_id_mapping = create_igraph_from_ctx(ctx, directed=True)
     mincut = graph.mincut(
         source=id_mapping[source.id],
@@ -83,7 +79,6 @@ def min_cut(
             convert_vertex_ids_to_mgp_vertices(partition, ctx, inverted_id_mapping)
             for partition in mincut.partition
         ],
-        cut_edge_ids=mincut.cut,
         value=mincut.value,
     )
 
