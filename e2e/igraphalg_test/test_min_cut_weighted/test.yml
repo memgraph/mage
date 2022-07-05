@@ -1,8 +1,8 @@
 query: >
   MATCH (source {id: 0}), (sink {id: 5})
   CALL igraphalg.min_cut(source, sink, "weight")
-  YIELD partition_vertex_ids, value 
-  RETURN extract(partition IN partition_vertex_ids | extract (node in partition | node.id)) as partition_vertex_ids, value;
+  YIELD partition_vertices, value 
+  RETURN extract(partition IN partition_vertices | extract (node in partition | node.id)) as partition_vertex_ids,value;
 
 output:
     - partition_vertex_ids: [[0,1,2,3],[4,5]]
