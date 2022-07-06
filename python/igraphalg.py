@@ -2,19 +2,25 @@ from typing import List
 
 import mgp
 
-from mgp_igraph import MemgraphIgraph
+from mgp_igraph import (
+    InvalidTopologicalSortingModeException,
+    InvalidPageRankImplementationOption,
+    MemgraphIgraph,
+    PageRankImplementationOptions,
+    TopologicalSortingModes,
+)
 
 
 @mgp.read_proc
 def maxflow(
     ctx: mgp.ProcCtx,
     source: mgp.Vertex,
-    destination: mgp.Vertex,
+    target: mgp.Vertex,
     capacity: str = "weight",
 ) -> mgp.Record(max_flow=mgp.Number):
 
     graph = MemgraphIgraph(ctx=ctx, directed=True)
-    max_flow = graph.maxflow(source=source, destination=destination, capacity=capacity)
+    max_flow = graph.maxflow(source=source, target=target, capacity=capacity)
 
     return mgp.Record(max_flow=max_flow.value)
 
@@ -26,10 +32,25 @@ def pagerank(
     niter: int = 100,
     eps: mgp.Number = 1e-06,
     weights: mgp.Nullable[str] = None,
+    directed: bool = True,
+    implementation: str = "prpack",
 ) -> mgp.Record(node=mgp.Vertex, rank=float):
-    graph = MemgraphIgraph(ctx=ctx, directed=True)
+    if implementation not in [
+        PageRankImplementationOptions.PRPACK.value,
+        PageRankImplementationOptions.ARPACK.value,
+        PageRankImplementationOptions.POWER.value,
+    ]:
+        raise InvalidPageRankImplementationOption(
+            'Implementation can be "prpack", "arpack" or "power".'
+        )
+    graph = MemgraphIgraph(ctx=ctx, directed=directed)
     ranks = graph.pagerank(
-        weights=weights, directed=True, niter=niter, damping=damping, eps=eps
+        weights=weights,
+        directed=directed,
+        niter=niter,
+        damping=damping,
+        eps=eps,
+        implementation=implementation,
     )
 
     return [
@@ -39,7 +60,7 @@ def pagerank(
 
 
 @mgp.read_proc
-def all_simple_paths(
+def get_all_simple_paths(
     ctx: mgp.ProcCtx,
     v: mgp.Vertex,
     to: mgp.Vertex,
@@ -51,7 +72,7 @@ def all_simple_paths(
 
 
 @mgp.read_proc
-def min_cut(
+def mincut(
     ctx: mgp.ProcCtx,
     source: mgp.Vertex,
     target: mgp.Vertex,
@@ -59,22 +80,27 @@ def min_cut(
 ) -> mgp.Record(partition_vertices=List[List[mgp.Vertex]], value=float):
     graph = MemgraphIgraph(ctx=ctx, directed=True)
 
-    cut = graph.mincut(source=source, target=target, capacity=capacity)
-
-    return mgp.Record(
-        partition_vertices=[
-            graph.convert_vertex_ids_to_mgp_vertices(vertex_ids=partition)
-            for partition in cut.partition
-        ],
-        value=cut.value,
+    partition_vertices, value = graph.mincut(
+        source=source, target=target, capacity=capacity
     )
+
+    return mgp.Record(partition_vertices=partition_vertices, value=value)
 
 
 @mgp.read_proc
-def topological_sort(
-    ctx: mgp.ProcCtx, directed: bool = True, mode: str = "out"
-) -> mgp.Record(nodes=mgp.Nullable[mgp.List[mgp.Vertex]]):
-    graph = MemgraphIgraph(ctx=ctx, directed=directed)
+def topological_sorting(
+    ctx: mgp.ProcCtx, mode: str = "out"
+) -> mgp.Record(nodes=mgp.List[mgp.Vertex]):
+
+    if mode not in [
+        TopologicalSortingModes.IN.value,
+        TopologicalSortingModes.OUT.value,
+    ]:
+        raise InvalidTopologicalSortingModeException(
+            'Mode can only be either "out" or "in"'
+        )
+
+    graph = MemgraphIgraph(ctx=ctx, directed=True)
     sorted_nodes = graph.topological_sort(mode=mode)
 
     return mgp.Record(
@@ -85,11 +111,15 @@ def topological_sort(
 @mgp.read_proc
 def community_leiden(
     ctx: mgp.ProcCtx,
-    resolution_parameter: float = 0.6,
-    n_iterations: int = -1,
-    beta: float = 0.01,
+    objective_function: str = "CPM",
     weights: mgp.Nullable[str] = None,
-    objective_function="modularity",
+    resolution_parameter: float = 0.6,
+    beta: float = 0.01,
+    initial_membership: mgp.Nullable[
+        List[mgp.Nullable[List[mgp.Nullable[float]]]]
+    ] = None,
+    n_iterations: int = 2,
+    node_weights: mgp.Nullable[List[mgp.Nullable[float]]] = None,
     directed: bool = False,
 ) -> mgp.Record(community_id=int, community_members=List[mgp.Vertex]):
     graph = MemgraphIgraph(ctx=ctx, directed=directed)
@@ -100,6 +130,8 @@ def community_leiden(
         n_iterations=n_iterations,
         objective_function=objective_function,
         beta=beta,
+        initial_membership=initial_membership,
+        node_weights=node_weights,
     )
 
     return [
@@ -113,9 +145,10 @@ def community_leiden(
 
 @mgp.read_proc
 def spanning_tree(
-    ctx: mgp.ProcCtx, weights: mgp.Nullable[str] = None, directed: bool = True
+    ctx: mgp.ProcCtx,
+    weights: mgp.Nullable[str] = None,
 ) -> mgp.Record(tree=List[List[mgp.Vertex]]):
-    graph = MemgraphIgraph(ctx=ctx, directed=directed)
+    graph = MemgraphIgraph(ctx=ctx, directed=False)
 
     return mgp.Record(tree=graph.spanning_tree(weights=weights))
 

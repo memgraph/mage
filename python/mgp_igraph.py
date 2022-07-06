@@ -1,5 +1,6 @@
 import igraph
 import mgp
+import enum
 from collections import defaultdict
 from typing import Dict, List, Tuple
 
@@ -12,16 +13,22 @@ class MemgraphIgraph(igraph.Graph):
         )
 
     def maxflow(
-        self, source: mgp.Vertex, destination: mgp.Vertex, capacity: str
+        self, source: mgp.Vertex, target: mgp.Vertex, capacity: str
     ) -> igraph.Flow:
         return super().maxflow(
             self.id_mappings[source.id],
-            self.id_mappings[destination.id],
+            self.id_mappings[target.id],
             capacity=capacity,
         )
 
     def pagerank(
-        self, weights: str, directed: bool, niter: int, damping: float, eps: float
+        self,
+        weights: str,
+        directed: bool,
+        niter: int,
+        damping: float,
+        eps: float,
+        implementation: str,
     ) -> List[float]:
         return super().pagerank(
             weights=weights, directed=directed, niter=niter, damping=damping, eps=eps
@@ -31,7 +38,7 @@ class MemgraphIgraph(igraph.Graph):
         self, v: mgp.Vertex, to: mgp.Vertex, cutoff: int
     ) -> List[List[mgp.Vertex]]:
         paths = [
-            self.convert_vertex_ids_to_mgp_vertices(path)
+            self._convert_vertex_ids_to_mgp_vertices(path)
             for path in super().get_all_simple_paths(
                 v=self.id_mappings[v.id], to=self.id_mappings[to.id], cutoff=cutoff
             )
@@ -41,7 +48,7 @@ class MemgraphIgraph(igraph.Graph):
     def topological_sort(self, mode: str) -> List[mgp.Vertex]:
         sorted_vertex_ids = super().topological_sorting(mode=mode)
 
-        return self.convert_vertex_ids_to_mgp_vertices(sorted_vertex_ids)
+        return self._convert_vertex_ids_to_mgp_vertices(sorted_vertex_ids)
 
     def community_leiden(
         self,
@@ -50,6 +57,8 @@ class MemgraphIgraph(igraph.Graph):
         n_iterations,
         beta=0.01,
         objective_function="CPM",
+        initial_membership=None,
+        node_weights=None,
     ) -> List[List[mgp.Vertex]]:
         communities = super().community_leiden(
             resolution_parameter=resolution_parameter,
@@ -57,20 +66,28 @@ class MemgraphIgraph(igraph.Graph):
             n_iterations=n_iterations,
             objective_function=objective_function,
             beta=beta,
+            initial_membership=initial_membership,
+            node_weights=node_weights,
         )
         return [
-            self.convert_vertex_ids_to_mgp_vertices(members) for members in communities
+            self._convert_vertex_ids_to_mgp_vertices(members) for members in communities
         ]
 
     def mincut(
         self, source: mgp.Vertex, target: mgp.Vertex, capacity: str
-    ) -> igraph.Cut:
+    ) -> Tuple[List[mgp.Vertex], float]:
 
-        return super().mincut(
+        cut = super().mincut(
             source=self.id_mappings[source.id],
             target=self.id_mappings[target.id],
             capacity=capacity,
         )
+
+        partition_vertices = [
+            self._convert_vertex_ids_to_mgp_vertices(vertex_ids=partition)
+            for partition in cut.partition
+        ]
+        return partition_vertices, cut.value
 
     def spanning_tree(
         self,
@@ -110,12 +127,12 @@ class MemgraphIgraph(igraph.Graph):
             weights=weights,
         )[0]
 
-        return self.convert_vertex_ids_to_mgp_vertices(path)
+        return self._convert_vertex_ids_to_mgp_vertices(path)
 
     def get_vertex_by_id(self, id: int) -> mgp.Vertex:
         return self.ctx_graph.get_vertex_by_id(self.reverse_id_mappings[id])
 
-    def convert_vertex_ids_to_mgp_vertices(
+    def _convert_vertex_ids_to_mgp_vertices(
         self, vertex_ids: List[int]
     ) -> List[mgp.Vertex]:
 
@@ -194,3 +211,22 @@ class MemgraphIgraph(igraph.Graph):
         )
 
         return id_mapping, inverted_id_mapping
+
+
+class PageRankImplementationOptions(enum.Enum):
+    PRPACK = "prpack"
+    ARPACK = "arpack"
+    POWER = "power"
+
+
+class InvalidPageRankImplementationOption(Exception):
+    pass
+
+
+class TopologicalSortingModes(enum.Enum):
+    IN = "in"
+    OUT = "out"
+
+
+class InvalidTopologicalSortingModeException(Exception):
+    pass

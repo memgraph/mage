@@ -8,4 +8,4 @@ output:
       community_members: [0,1,2]
     - community_id: 1
       community_members: [3,4,5]
-      
+     
