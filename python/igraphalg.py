@@ -41,7 +41,7 @@ def pagerank(
         PageRankImplementationOptions.POWER.value,
     ]:
         raise InvalidPageRankImplementationOption(
-            'Implementation can be "prpack", "arpack" or "power".'
+            'Implementation argument value can be "prpack", "arpack" or "power".'
         )
     graph = MemgraphIgraph(ctx=ctx, directed=directed)
     ranks = graph.pagerank(
@@ -113,7 +113,7 @@ def community_leiden(
     ctx: mgp.ProcCtx,
     objective_function: str = "CPM",
     weights: mgp.Nullable[str] = None,
-    resolution_parameter: float = 0.6,
+    resolution_parameter: float = 1.0,
     beta: float = 0.01,
     initial_membership: mgp.Nullable[
         List[mgp.Nullable[List[mgp.Nullable[float]]]]

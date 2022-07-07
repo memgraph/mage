@@ -5,7 +5,15 @@ query: >
 
 output:
     - community_id: 0
-      community_members: [0,1,2]
+      community_members: [0]
     - community_id: 1
-      community_members: [3,4,5]
-     
+      community_members: [1]
+    - community_id: 2
+      community_members: [2]
+    - community_id: 3
+      community_members: [3]
+    - community_id: 4
+      community_members: [4]
+    - community_id: 5
+      community_members: [5]
+ 
