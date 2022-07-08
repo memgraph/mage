@@ -21,7 +21,7 @@ constexpr char const *kArgumentDeletedVertices = "deleted_vertices";
 constexpr char const *kArgumentDeletedEdges = "deleted_edges";
 
 void InsertPagerankRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
-                          double rank) {
+                          const double rank) {
   auto *record = mgp::result_new_record(result);
 
   mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
@@ -40,7 +40,7 @@ void OnlinePagerankGet(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *re
 
     auto pageranks = pagerank_online_alg::GetPagerank(*graph);
 
-    for (auto const [node_id, rank] : pageranks) {
+    for (auto const &[node_id, rank] : pageranks) {
       InsertPagerankRecord(memgraph_graph, result, memory, node_id, rank);
     }
   } catch (const std::exception &e) {
@@ -59,7 +59,7 @@ void OnlinePagerankSet(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *re
 
     auto pageranks = pagerank_online_alg::SetPagerank(*graph, walks_per_node, walk_stop_epsilon);
 
-    for (auto const [node_id, rank] : pageranks) {
+    for (auto const &[node_id, rank] : pageranks) {
       InsertPagerankRecord(memgraph_graph, result, memory, node_id, rank);
     }
   } catch (const std::exception &e) {
@@ -112,7 +112,6 @@ void OnlinePagerankUpdate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
     auto pageranks =
         pagerank_online_alg::UpdatePagerank(*graph, created_vertices, created_edges, deleted_vertices, deleted_edges);
 
-    auto number_of_nodes = graph->Nodes().size();
     for (auto const [node_id, rank] : pageranks) {
       InsertPagerankRecord(memgraph_graph, result, memory, node_id, rank);
     }

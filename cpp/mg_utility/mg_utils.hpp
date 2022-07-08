@@ -41,13 +41,16 @@ void CreateGraphNode(mg_graph::Graph<TSize> *graph, mgp_vertex *vertex) {
 ///@param graph_type Type of stored graph: Directed/Undirected
 ///
 template <typename TSize>
-void CreateGraphEdge(mg_graph::Graph<TSize> *graph, mgp_vertex *vertex_from, mgp_vertex *vertex_to,
+void CreateGraphEdge(mg_graph::Graph<TSize> *graph, mgp_vertex *vertex_from, mgp_vertex *vertex_to, mgp_edge *edge,
                      const mg_graph::GraphType graph_type) {
   // Get Memgraph internal ID property
   auto memgraph_id_from = mgp::vertex_get_id(vertex_from).as_int;
   auto memgraph_id_to = mgp::vertex_get_id(vertex_to).as_int;
 
-  graph->CreateEdge(memgraph_id_from, memgraph_id_to, graph_type);
+  // Get Memgraph internal edge ID
+  auto memgraph_edge_id = mgp::edge_get_id(edge).as_int;
+
+  graph->CreateEdge(memgraph_id_from, memgraph_id_to, memgraph_edge_id, graph_type);
 }
 
 ///@brief Creates a weighted edge within GraphView. Requires Memgraph’s UIDs for its endpoints.
@@ -146,7 +149,7 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(mgp_graph *memgraph_graph, 
 
     for (auto *out_edge = mgp::edges_iterator_get(edges_it); out_edge; out_edge = mgp::edges_iterator_next(edges_it)) {
       auto vertex_to = mgp::edge_get_to(out_edge);
-      mg_graph::CreateGraphEdge(graph.get(), vertex_from, vertex_to, graph_type);
+      mg_graph::CreateGraphEdge(graph.get(), vertex_from, vertex_to, out_edge, graph_type);
     }
   }
 
@@ -282,7 +285,7 @@ double GetNumericProperty(mgp_edge *edge, const char *property_name, mgp_memory 
   auto type = mgp::value_get_type(raw_value);
   switch (type) {
     case MGP_VALUE_TYPE_INT:
-      weight = (double)mgp::value_get_int(raw_value);
+      weight = static_cast<double>(mgp::value_get_int(raw_value));
       break;
     case MGP_VALUE_TYPE_DOUBLE:
       weight = mgp::value_get_double(raw_value);
@@ -318,5 +321,17 @@ std::vector<std::pair<std::uint64_t, std::uint64_t>> GetEdgeEndpointIDs(mgp_list
   }
 
   return edge_endpoint_ids;
+}
+
+/// Return a vector of edge ids from the mgp_list edge_list
+std::vector<std::uint64_t> GetEdgeIDs(mgp_list *edge_list) {
+  auto size = mgp::list_size(edge_list);
+  auto edge_ids = std::vector<std::uint64_t>(size);
+  for (std::size_t i = 0; i < size; i++) {
+    auto edge = mgp::value_get_edge(mgp::list_at(edge_list, i));
+    auto edge_id = mgp::edge_get_id(edge).as_int;
+    edge_ids[i] = edge_id;
+  }
+  return edge_ids;
 }
 }  // namespace mg_utility

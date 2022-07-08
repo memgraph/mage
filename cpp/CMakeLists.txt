@@ -1,20 +1,27 @@
 # Memgraph Mage C++ Query Modules CMake configuration.
-
 cmake_minimum_required(VERSION 3.9)
+set(MEMGRAPH_MAGE_PROJECT_NAME "memgraph-mage")
+project("${MEMGRAPH_MAGE_PROJECT_NAME}" LANGUAGES C CXX)
 
-project(memgraph-mage)
+# setup CMake module path, defines path for include() and find_package()
+# https://cmake.org/cmake/help/latest/variable/CMAKE_MODULE_PATH.html
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cugraph_cmake)
 
 # Export the compile commands so that we can use clang-tidy. Additional benefit
 # is easier debugging of compilation and linker flags.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Required C++ standard.
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # Compile flags.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall \
-    -Werror=switch -Werror=switch-bool -Werror=return-type")
+    -Werror=switch -Werror=switch-bool")
 # Don't omit frame pointer in RelWithDebInfo, for additional callchain debug.
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
     "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer")
@@ -22,36 +29,35 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
 
-# Install testing dependencies
 find_package(Threads REQUIRED)
-
-# Install gtest
-
 include(ExternalProject)
+
+# Install cuGraph (optional)
+include(cugraph)
+
+# Install testing dependencies (gtest)
 set(GTEST_ROOT ${PROJECT_BINARY_DIR}/gtest)
 ExternalProject_Add(gtest-proj
   PREFIX            ${GTEST_ROOT}
   INSTALL_DIR       ${GTEST_ROOT}
   GIT_REPOSITORY    https://github.com/google/googletest.git
-  GIT_TAG           v1.10.x
+  GIT_TAG           release-1.11.0
   CMAKE_ARGS        "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
                     "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
                     "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
                     "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
-
 set(GTEST_INCLUDE_DIR ${GTEST_ROOT}/include)
 set(GTEST_LIBRARY_PATH ${GTEST_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
 set(GTEST_DEBUG_LIBRARY_PATH ${GTEST_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtestd.a)
-add_library(gtest STATIC IMPORTED)
-set_target_properties(gtest PROPERTIES
+add_library(mage_gtest STATIC IMPORTED)
+set_target_properties(mage_gtest PROPERTIES
   IMPORTED_LOCATION ${GTEST_LIBRARY_PATH}
   IMPORTED_LOCATION_DEBUG ${GTEST_DEBUG_LIBRARY_PATH}
   INTERFACE_LINK_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
 include_directories("${GTEST_INCLUDE_DIR}")
-add_dependencies(gtest gtest-proj)
+add_dependencies(mage_gtest gtest-proj)
 
 # Add OpenMP compiling option
-
 find_package(OpenMP)
 if (OPENMP_FOUND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
@@ -98,3 +104,5 @@ add_subdirectory(cycles_module)
 add_subdirectory(community_detection_module)
 add_subdirectory(pagerank_module)
 add_subdirectory(uuid_module)
+add_subdirectory(katz_centrality_module)
+add_cugraph_subdirectory(cugraph_module)

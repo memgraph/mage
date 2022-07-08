@@ -26,7 +26,10 @@ void GetBiconnectedComponents(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
   try {
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
 
-    auto bccs = bcc_algorithm::GetBiconnectedComponents(*graph);
+    std::unordered_set<std::uint64_t> articulation_points;
+    std::vector<std::unordered_set<std::uint64_t>> bcc_nodes;
+
+    auto bccs = bcc_algorithm::GetBiconnectedComponents(*graph, articulation_points, bcc_nodes);
 
     for (std::uint64_t bcc_id = 0; bcc_id < bccs.size(); bcc_id++) {
       for (const auto &edge : bccs[bcc_id]) {
@@ -49,6 +52,7 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
     auto *proc = mgp::module_add_read_procedure(module, kProcedureGet, GetBiconnectedComponents);
 
     mgp::proc_add_result(proc, fieldBiconnectedComponentID, mgp::type_int());
+    // mgp::proc_add_result(proc, fieldEdgeID, mgp::type_node());
     mgp::proc_add_result(proc, fieldNodeFrom, mgp::type_node());
     mgp::proc_add_result(proc, fieldNodeTo, mgp::type_node());
   } catch (const std::exception &e) {
