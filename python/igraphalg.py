@@ -62,10 +62,13 @@ def get_all_simple_paths(
     v: mgp.Vertex,
     to: mgp.Vertex,
     cutoff: int = -1,
-) -> mgp.Record(paths=mgp.List[mgp.List[mgp.Vertex]]):
+) -> mgp.Record(path=mgp.List[mgp.Vertex]):
     graph = MemgraphIgraph(ctx=ctx, directed=True)
 
-    return mgp.Record(paths=graph.get_all_simple_paths(v=v, to=to, cutoff=cutoff))
+    return [
+        mgp.Record(path=path)
+        for path in graph.get_all_simple_paths(v=v, to=to, cutoff=cutoff)
+    ]
 
 
 @mgp.read_proc
@@ -74,14 +77,18 @@ def mincut(
     source: mgp.Vertex,
     target: mgp.Vertex,
     capacity: mgp.Nullable[str] = None,
-) -> mgp.Record(partition_vertices=List[List[mgp.Vertex]], value=float):
+) -> mgp.Record(node=mgp.Vertex, partition_id=int):
     graph = MemgraphIgraph(ctx=ctx, directed=True)
 
     partition_vertices, value = graph.mincut(
         source=source, target=target, capacity=capacity
     )
 
-    return mgp.Record(partition_vertices=partition_vertices, value=value)
+    return [
+        mgp.Record(node=node, partition_id=i)
+        for i, partition_nodes in enumerate(partition_vertices)
+        for node in partition_nodes
+    ]
 
 
 @mgp.read_proc
@@ -174,13 +181,19 @@ def all_shortest_path_lengths(
     ctx: mgp.ProcCtx,
     weights: mgp.Nullable[str] = None,
     directed: bool = False,
-) -> mgp.Record(nodes=List[mgp.Vertex], lengths=List[List[float]]):
+) -> mgp.Record(src_node=mgp.Vertex, dest_node=mgp.Vertex, length=float):
     graph = MemgraphIgraph(ctx, directed=directed)
+    lengths = graph.all_shortest_path_lengths(weights=weights)
 
-    return mgp.Record(
-        nodes=[vertex for vertex in ctx.graph.vertices],
-        lengths=graph.all_shortest_path_lengths(weights=weights),
-    )
+    return [
+        mgp.Record(
+            src_node=graph.get_vertex_by_id(i),
+            dest_node=graph.get_vertex_by_id(j),
+            length=lengths[i][j],
+        )
+        for j in range(len(lengths[0]))
+        for i in range(len(lengths))
+    ]
 
 
 @mgp.read_proc

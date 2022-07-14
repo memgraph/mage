@@ -1,10 +1,54 @@
 query: >
-  MATCH (source {id: 0}), (sink {id: 5})
   CALL igraphalg.all_shortest_path_lengths("weight")
-  YIELD nodes,lengths
-  RETURN lengths,extract(node in nodes | node.id) as nodes_id;
+  YIELD src_node, dest_node, length
+  RETURN src_node.id as src_node_id, dest_node.id as dest_node_id, length;
 
 output:
-    - nodes_id: [0, 1, 2, 3, 4, 5]
-      lengths: [[0.0, 6.0, 7.0, 11.0, 12.0, 22.0], [6.0, 0.0, 1.0, 5.0, 6.0, 16.0], [7.0, 1.0, 0.0, 6.0, 7.0, 17.0],
-                [11.0, 5.0, 6.0, 0.0, 1.0, 11.0], [12.0, 6.0, 7.0, 1.0, 0.0, 12.0],[22.0, 16.0, 17.0, 11.0, 12.0, 0.0]] 
+    - src_node_id: 0
+      dest_node_id: 0
+      length: 0.0
+    - src_node_id: 1
+      dest_node_id: 0
+      length: 6.0
+    - src_node_id: 2
+      dest_node_id: 0
+      length: 7.0      
+    - src_node_id: 3
+      dest_node_id: 0
+      length: 11.0
+    - src_node_id: 0
+      dest_node_id: 1
+      length: 6.0
+    - src_node_id: 1
+      dest_node_id: 1
+      length: 0.0
+    - src_node_id: 2
+      dest_node_id: 1
+      length: 1.0
+    - src_node_id: 3
+      dest_node_id: 1
+      length: 5.0
+    - src_node_id: 0
+      dest_node_id: 2
+      length: 7.0
+    - src_node_id: 1
+      dest_node_id: 2
+      length: 1.0
+    - src_node_id: 2
+      dest_node_id: 2
+      length: 0.0
+    - src_node_id: 3
+      dest_node_id: 2
+      length: 6.0
+    - src_node_id: 0
+      dest_node_id: 3
+      length: 11.0
+    - src_node_id: 1
+      dest_node_id: 3
+      length: 5.0
+    - src_node_id: 2
+      dest_node_id: 3
+      length: 6.0
+    - src_node_id: 3
+      dest_node_id: 3
+      length: 0.0

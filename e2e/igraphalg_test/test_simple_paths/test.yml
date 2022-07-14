@@ -1,8 +1,13 @@
 query: >
   MATCH (source {id: 0}), (sink {id: 5})
   CALL igraphalg.get_all_simple_paths(source, sink)
-  YIELD paths
-  RETURN extract(path IN paths | extract (node in path | node.id)) AS paths;
+  YIELD path
+  RETURN extract(node in path | node.id) AS path;
 
 output:
-    - paths: [[0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 5], [0, 1, 3, 4, 5], [0, 1, 3, 5], [0, 2, 3, 4, 5], [0, 2, 3, 5]]
+    - path: [0, 1, 2, 3, 4, 5]
+    - path: [0, 1, 2, 3, 5]
+    - path: [0, 1, 3, 4, 5]
+    - path: [0, 1, 3, 5]
+    - path: [0, 2, 3, 4, 5]
+    - path: [0, 2, 3, 5]
