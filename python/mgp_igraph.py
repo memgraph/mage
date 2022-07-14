@@ -12,13 +12,15 @@ class MemgraphIgraph(igraph.Graph):
             ctx=ctx, directed=directed
         )
 
-    def maxflow(
-        self, source: mgp.Vertex, target: mgp.Vertex, capacity: str
-    ) -> igraph.Flow:
-        return super().maxflow(
-            self.id_mappings[source.id],
-            self.id_mappings[target.id],
-            capacity=capacity,
+    def maxflow(self, source: mgp.Vertex, target: mgp.Vertex, capacity: str) -> float:
+        return (
+            super()
+            .maxflow(
+                self.id_mappings[source.id],
+                self.id_mappings[target.id],
+                capacity=capacity,
+            )
+            .value
         )
 
     def pagerank(
@@ -29,14 +31,25 @@ class MemgraphIgraph(igraph.Graph):
         damping: float,
         eps: float,
         implementation: str,
-    ) -> List[float]:
-        return super().pagerank(
-            weights=weights, directed=directed, niter=niter, damping=damping, eps=eps
+    ) -> List[Tuple[mgp.Vertex, float]]:
+        pagerank_values = super().pagerank(
+            weights=weights,
+            directed=directed,
+            niter=niter,
+            damping=damping,
+            eps=eps,
+            implementation=implementation,
         )
+
+        return [
+            (self.get_vertex_by_id(node_id), rank)
+            for node_id, rank in enumerate(pagerank_values)
+        ]
 
     def get_all_simple_paths(
         self, v: mgp.Vertex, to: mgp.Vertex, cutoff: int
     ) -> List[List[mgp.Vertex]]:
+
         paths = [
             self._convert_vertex_ids_to_mgp_vertices(path)
             for path in super().get_all_simple_paths(
@@ -59,7 +72,7 @@ class MemgraphIgraph(igraph.Graph):
         objective_function="CPM",
         initial_membership=None,
         node_weights=None,
-    ) -> List[List[mgp.Vertex]]:
+    ) -> List[Tuple[mgp.Vertex, int]]:
         communities = super().community_leiden(
             resolution_parameter=resolution_parameter,
             weights=weights,
@@ -70,7 +83,9 @@ class MemgraphIgraph(igraph.Graph):
             node_weights=node_weights,
         )
         return [
-            self._convert_vertex_ids_to_mgp_vertices(members) for members in communities
+            (self.get_vertex_by_id(member), i)
+            for i, members in enumerate(communities)
+            for member in members
         ]
 
     def mincut(

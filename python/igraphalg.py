@@ -20,9 +20,9 @@ def maxflow(
 ) -> mgp.Record(max_flow=mgp.Number):
 
     graph = MemgraphIgraph(ctx=ctx, directed=True)
-    max_flow = graph.maxflow(source=source, target=target, capacity=capacity)
+    max_flow_value = graph.maxflow(source=source, target=target, capacity=capacity)
 
-    return mgp.Record(max_flow=max_flow.value)
+    return mgp.Record(max_flow=max_flow_value)
 
 
 @mgp.read_proc
@@ -44,7 +44,7 @@ def pagerank(
             'Implementation argument value can be "prpack", "arpack" or "power".'
         )
     graph = MemgraphIgraph(ctx=ctx, directed=directed)
-    ranks = graph.pagerank(
+    pagerank_values = graph.pagerank(
         weights=weights,
         directed=directed,
         niter=niter,
@@ -53,10 +53,7 @@ def pagerank(
         implementation=implementation,
     )
 
-    return [
-        mgp.Record(node=graph.get_vertex_by_id(node_id), rank=rank)
-        for node_id, rank in enumerate(ranks)
-    ]
+    return [mgp.Record(node=node, rank=rank) for node, rank in pagerank_values]
 
 
 @mgp.read_proc
@@ -121,7 +118,7 @@ def community_leiden(
     n_iterations: int = 2,
     node_weights: mgp.Nullable[List[mgp.Nullable[float]]] = None,
     directed: bool = False,
-) -> mgp.Record(community_id=int, community_members=List[mgp.Vertex]):
+) -> mgp.Record(node=mgp.Vertex, community_id=int):
     graph = MemgraphIgraph(ctx=ctx, directed=directed)
 
     communities = graph.community_leiden(
@@ -136,10 +133,10 @@ def community_leiden(
 
     return [
         mgp.Record(
-            community_id=i,
-            community_members=members,
+            node=member[0],
+            community_id=member[1],
         )
-        for i, members in enumerate(communities)
+        for member in communities
     ]
 
 
