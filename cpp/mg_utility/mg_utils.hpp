@@ -38,18 +38,18 @@ void CreateGraphNode(mg_graph::Graph<TSize> *graph, mgp_vertex *vertex) {
 ///
 ///@tparam TSize -- Vertex ID type
 ///@param graph -- Memgraph’s graph instance
-///@param vertex_from -- Memgraph’s source vertex
-///@param vertex_to -- Memgraph’s destination vertex
+///@param source -- Memgraph’s source vertex
+///@param destination -- Memgraph’s destination vertex
 ///@param graph_type -- Type of stored graph (directed/undirected)
 ///@param weighted -- Graph weightedness
 ///@param weight -- Edge weight
 ///
 template <typename TSize>
-void CreateGraphEdge(mg_graph::Graph<TSize> *graph, mgp_vertex *vertex_from, mgp_vertex *vertex_to, mgp_edge *edge,
+void CreateGraphEdge(mg_graph::Graph<TSize> *graph, mgp_vertex *source, mgp_vertex *destination, mgp_edge *edge,
                      const mg_graph::GraphType graph_type, bool weighted = false, double weight = 0.0) {
   // Get Memgraph-internal endpoint node IDs
-  auto memgraph_id_from = mgp::vertex_get_id(vertex_from).as_int;
-  auto memgraph_id_to = mgp::vertex_get_id(vertex_to).as_int;
+  auto memgraph_id_from = mgp::vertex_get_id(source).as_int;
+  auto memgraph_id_to = mgp::vertex_get_id(destination).as_int;
 
   // Get Memgraph-internal edge ID
   auto memgraph_edge_id = mgp::edge_get_id(edge).as_int;
@@ -149,34 +149,34 @@ std::unique_ptr<mg_graph::Graph<TSize>> GraphViewGetter(
     for (std::size_t i = 0; i < mgp::list_size(subgraph_relationships); i++) {
       auto edge = mgp::value_get_edge(mgp::list_at(subgraph_relationships, i));
 
-      auto from_node = mgp::edge_get_from(edge);
-      auto to_node = mgp::edge_get_to(edge);
+      auto source = mgp::edge_get_from(edge);
+      auto destination = mgp::edge_get_to(edge);
 
-      auto from_id = mgp::vertex_get_id(from_node).as_int;
-      auto to_id = mgp::vertex_get_id(to_node).as_int;
+      auto source_id = mgp::vertex_get_id(source).as_int;
+      auto destination_id = mgp::vertex_get_id(destination).as_int;
 
-      if (subgraph_node_ids.find(from_id) != subgraph_node_ids.end() &&
-          subgraph_node_ids.find(to_id) != subgraph_node_ids.end()) {
+      if (subgraph_node_ids.find(source_id) != subgraph_node_ids.end() &&
+          subgraph_node_ids.find(destination_id) != subgraph_node_ids.end()) {
         double weight = weighted ? mg_utility::GetNumericProperty(edge, weight_property, memory, default_weight) : 0.0;
-        mg_graph::CreateGraphEdge(graph.get(), from_node, to_node, edge, graph_type, weighted, weight);
+        mg_graph::CreateGraphEdge(graph.get(), source, destination, edge, graph_type, weighted, weight);
       }
     }
   } else {
     auto *vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);  // Safe vertex iterator creation
     mg_utility::OnScopeExit delete_vertices_it([&vertices_it] { mgp::vertices_iterator_destroy(vertices_it); });
 
-    for (auto *vertex_from = mgp::vertices_iterator_get(vertices_it); vertex_from;
-         vertex_from = mgp::vertices_iterator_next(vertices_it)) {
-      auto *edges_it = mgp::vertex_iter_out_edges(vertex_from, memory);  // Safe edge iterator creation
+    for (auto *source = mgp::vertices_iterator_get(vertices_it); source;
+         source = mgp::vertices_iterator_next(vertices_it)) {
+      auto *edges_it = mgp::vertex_iter_out_edges(source, memory);  // Safe edge iterator creation
       mg_utility::OnScopeExit delete_edges_it([&edges_it] { mgp::edges_iterator_destroy(edges_it); });
 
       for (auto *out_edge = mgp::edges_iterator_get(edges_it); out_edge;
            out_edge = mgp::edges_iterator_next(edges_it)) {
-        auto vertex_to = mgp::edge_get_to(out_edge);
+        auto destination = mgp::edge_get_to(out_edge);
 
         double weight =
             weighted ? mg_utility::GetNumericProperty(out_edge, weight_property, memory, default_weight) : 0.0;
-        mg_graph::CreateGraphEdge(graph.get(), vertex_from, vertex_to, out_edge, graph_type, weighted, weight);
+        mg_graph::CreateGraphEdge(graph.get(), source, destination, out_edge, graph_type, weighted, weight);
       }
     }
   }
@@ -317,9 +317,9 @@ std::vector<std::pair<std::uint64_t, std::uint64_t>> GetEdgeEndpointIDs(mgp_list
   std::vector<std::pair<std::uint64_t, std::uint64_t>> edge_endpoint_ids;
   for (std::size_t i = 0; i < mgp::list_size(edge_list); i++) {
     auto edge = mgp::value_get_edge(mgp::list_at(edge_list, i));
-    auto from_id = mgp::vertex_get_id(mgp::edge_get_from(edge));
-    auto to_id = mgp::vertex_get_id(mgp::edge_get_to(edge));
-    edge_endpoint_ids.push_back(std::make_pair(from_id.as_int, to_id.as_int));
+    auto source_id = mgp::vertex_get_id(mgp::edge_get_from(edge));
+    auto destination_id = mgp::vertex_get_id(mgp::edge_get_to(edge));
+    edge_endpoint_ids.push_back(std::make_pair(source_id.as_int, destination_id.as_int));
   }
 
   return edge_endpoint_ids;
