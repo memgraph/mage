@@ -93,6 +93,7 @@ def _get_dgl_graph_data(nodes: mgp.List[mgp.Vertex]) -> dgl.graph:
             src_node, dest_node = edge.from_vertex, edge.to_vertex    
             src_id_old = int(src_node.properties.get("id"))
             src_features = src_node.properties.get("features")
+            # print(src_features)
             dest_id_old = int(dest_node.properties.get("id"))
             dest_features = dest_node.properties.get("features")
 
@@ -117,7 +118,7 @@ def _get_dgl_graph_data(nodes: mgp.List[mgp.Vertex]) -> dgl.graph:
                 dest_nodes.append(old_to_new[dest_id_old])
                 # features[old_to_new[dest_id_old], :] = dest_features
 
-    features = torch.tensor(features, dtype=torch.long)
+    features = torch.tensor(features, dtype=torch.float32)
     # print("Features size: ", features.shape)
     # print(len(src_nodes))
     # print(len(dest_nodes))

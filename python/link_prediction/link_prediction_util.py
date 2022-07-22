@@ -5,6 +5,7 @@ import itertools
 import numpy as np
 import scipy.sparse as sp
 import dgl
+from dgl.data import CoraGraphDataset
 from sklearn.metrics import roc_auc_score
 from typing import Tuple
 from GraphSAGE import GraphSAGE
@@ -21,8 +22,19 @@ if __name__ == "__main__":
     train_mask = g.ndata['train_mask']
     val_mask = g.ndata['val_mask']
     test_mask = g.ndata['test_mask']
+    # print(train_mask.shape)
     # get labels
     label = g.ndata['label']
+    print(g.edata)
+
+
+def squarify(M,val):
+    (a,b)=M.shape
+    if a>b:
+        padding=((0,0),(0,a-b))
+    else:
+        padding=((0,b-a),(0,0))
+    return np.pad(M,padding,mode='constant',constant_values=val)
 
 
 def preprocess(g: dgl.graph):
@@ -31,16 +43,28 @@ def preprocess(g: dgl.graph):
     # Split edge set for training and testing
     u, v = g.edges()  # they are automatically splitted into 2 tensors
 
+    print("Maximums ", torch.max(u), torch.max(v))
+
     print(g.number_of_nodes())
     # Now create adjacency matrix
-    adj_matrix = torch.zeros((g.number_of_nodes(), g.number_of_nodes()), dtype=torch.long)
-    for i in range(u.size()[0]):
-        u1, v1 = u[i].item(), v[i].item()
+    # adj_matrix = torch.zeros((g.number_of_nodes(), g.number_of_nodes()), dtype=torch.float32)
+    # for i in range(u.size()[0]):
+    #   u1, v1 = u[i].item(), v[i].item()
         # conv_node1, conv_node2 = old_to_new[u1], old_to_new[v1]
         # print(conv_node1, u1, old_to_new[u1], new_to_old[conv_node1])
         # print(conv_node2, v1, old_to_new[v1], new_to_old[conv_node2])
-        adj_matrix[u1][v1] = 1.0
+    #    adj_matrix[u1][v1] = 1.0
+        # adj_matrix[v1][u1] = 1.0
+    
+    adj = sp.coo_matrix((np.ones(len(u)), (u.numpy(), v.numpy())))
+    adj_matrix = adj.todense()
+    adj_matrix = squarify(adj_matrix, 0)
+    print(adj_matrix.shape)
 
+    adj_neg = 1 - adj_matrix - np.eye(g.number_of_nodes())
+    neg_u, neg_v = np.where(adj_neg != 0)
+
+    print("Is number of edges=size(u) ", g.number_of_edges()==u.size()[0])
     eids = np.arange(g.number_of_edges())  # get all edge ids from number of edges
     eids = np.random.permutation(eids)
     test_size = int(len(eids) * 0.1)  # test size is 10%
@@ -48,13 +72,6 @@ def preprocess(g: dgl.graph):
     test_pos_u, test_pos_v = u[eids[:test_size]], v[eids[:test_size]]
     train_pos_u, train_pos_v = u[eids[test_size:]], v[eids[test_size:]]
 
-    # Find all negative edges and split them for training and testing
-    # adj = sp.coo_matrix((np.ones(len(u)), (u.numpy(), v.numpy())))  # adjacency list
-    # mat = adj.toarray()
-
-    print(adj_matrix)
-    adj_neg = 1 - adj_matrix - torch.eye(g.number_of_nodes(), dtype=torch.long)
-    neg_u, neg_v = np.where(adj_neg != 0)
 
     print(neg_u, neg_v)  # again splitted into two parts
 
@@ -69,7 +86,7 @@ def preprocess(g: dgl.graph):
     train_g = dgl.remove_edges(g, eids[:test_size])
 
 
-# Construct a positive and a negative graph
+    # Construct a positive and a negative graph
     train_pos_g = dgl.graph((train_pos_u, train_pos_v), num_nodes=g.number_of_nodes())
     train_neg_g = dgl.graph((train_neg_u, train_neg_v), num_nodes=g.number_of_nodes())
 
