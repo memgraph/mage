@@ -7,9 +7,21 @@ import mgp
 import numpy as np
 from tqdm import tqdm
 import random
+import typing
+
+TORCH_SEED = 1234567
+NO_CLASSES = 7
+NO_FEATURES = 1433
 
 class Data(object):
-    def __init__(self, x, y, edge_index, train_mask, val_mask, test_mask):
+    def __init__(
+        self, x: torch.tensor, 
+        y: torch.tensor, 
+        edge_index: torch.tensor, 
+        train_mask: torch.tensor, 
+        val_mask: torch.tensor, 
+        test_mask: torch.tensor):
+
         self.x = x
         self.y = y
         self.edge_index = edge_index
@@ -20,9 +32,9 @@ class Data(object):
 class GCN(torch.nn.Module):
     def __init__(self, hidden_channels):
         super().__init__()
-        torch.manual_seed(1234567)
-        self.conv1 = GCNConv(1433, hidden_channels)
-        self.conv2 = GCNConv(hidden_channels, 7)
+        torch.manual_seed(TORCH_SEED)
+        self.conv1 = GCNConv(NO_FEATURES, hidden_channels)
+        self.conv2 = GCNConv(hidden_channels, NO_CLASSES)
         
 
     def forward(self, x, edge_index):
@@ -36,7 +48,7 @@ class GCN(torch.nn.Module):
 
 
 
-def train_model():
+def train_model() -> torch.tensor:
     model.train()
     optimizer.zero_grad()  # Clear gradients.
     out = model(data.x, data.edge_index)  # Perform a single forward pass.
@@ -47,7 +59,7 @@ def train_model():
 
 
 
-def accuracy(mask):
+def accuracy(mask) -> float:
     model.eval()
     out = model(data.x, data.edge_index)
     pred = out.argmax(dim=1)  # Use the class with highest probability.
@@ -55,7 +67,12 @@ def accuracy(mask):
     acc = int(correct.sum()) / int(mask.sum())  # Derive ratio of correct predictions.
     return acc
 
-def convert_data(nodes, edges, train_ratio, val_ratio, test_ratio):
+def convert_data(
+    nodes: typing.List[mgp.Vertex], 
+    edges: typing.List[mgp.Edge], 
+    train_ratio: float, 
+    val_ratio: float, 
+    test_ratio: float)->Data:
     
     assert len(nodes) > 0, "dataset is empty"
     
@@ -108,6 +125,11 @@ def convert_data(nodes, edges, train_ratio, val_ratio, test_ratio):
         edge_index[0][i] = edges[i].from_vertex.properties.get("id")
         edge_index[1][i] = edges[i].to_vertex.properties.get("id")
         
+    global NO_CLASSES
+    NO_CLASSES = len(set(y))
+    global NO_FEATURES
+    NO_FEATURES = np.shape(x)[1]
+
     print("Finished converting data.")
 
     # print("=============================")
@@ -172,6 +194,8 @@ def load_data(
     
     global data
     data = convert_data(nodes, edges, train_ratio, val_ratio, test_ratio)
+    
+
 
     return mgp.Record(no_nodes=len(nodes), no_edges=len(edges))
 
@@ -183,6 +207,11 @@ def train(
     """
     training
     """
+
+    # i tried to ensure loaded dataset below, but somehow NameError doesn't get caught
+    # try: 
+    #     data
+    # except NameError: print("Load dataset first!")
 
     for epoch in range(1, no_epoches+1):
         loss = train_model()
