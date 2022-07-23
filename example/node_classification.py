@@ -13,6 +13,11 @@ TORCH_SEED = 1234567
 NO_CLASSES = 7
 NO_FEATURES = 1433
 
+HIDDEN_CHANNELS = 16
+LEARNING_RATE = 0.01
+WEIGHT_DECAY = 5e-4
+
+
 class Data(object):
     def __init__(
         self, x: torch.tensor, 
@@ -153,10 +158,10 @@ def convert_data(
     return data
 
 
-model = GCN(hidden_channels=16)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
+model = GCN(hidden_channels=HIDDEN_CHANNELS)
+optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 criterion = torch.nn.CrossEntropyLoss()
-total_no_epoches = 0
+total_no_epochs = 0
 
 @mgp.read_proc
 def set_parameters(
@@ -202,8 +207,8 @@ def load_data(
 
 @mgp.read_proc
 def train(
-    no_epoches: int = 100
-) -> mgp.Record(total_epoches=int, validation=float):
+    no_epochs: int = 100
+) -> mgp.Record(total_epochs=int, validation=float):
     """
     training
     """
@@ -213,14 +218,14 @@ def train(
     #     data
     # except NameError: print("Load dataset first!")
 
-    for epoch in range(1, no_epoches+1):
+    for epoch in range(1, no_epochs+1):
         loss = train_model()
         val_acc = accuracy(data.val_mask)
         print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Validation: {val_acc:.4f}' )
     
-    global total_no_epoches
-    total_no_epoches += no_epoches
-    return mgp.Record(total_epoches=total_no_epoches, validation=val_acc)
+    global total_no_epochs
+    total_no_epochs += no_epochs
+    return mgp.Record(total_epochs=total_no_epochs, validation=val_acc)
 
 @mgp.read_proc
 def test() -> mgp.Record(test_acc=float):
