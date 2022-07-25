@@ -8,8 +8,8 @@ import dgl
 from dgl.data import CoraGraphDataset
 from sklearn.metrics import roc_auc_score
 from typing import Tuple
-from GraphSAGE import GraphSAGE
-from DotPredictor import DotPredictor
+from models.GraphSAGE import GraphSAGE
+from predictors.DotPredictor import DotPredictor
 import mgp
 
 
