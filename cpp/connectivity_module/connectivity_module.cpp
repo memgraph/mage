@@ -1,6 +1,7 @@
 #include <queue>
 #include <unordered_map>
 
+#include <mage.hpp>
 #include <mg_exceptions.hpp>
 #include <mg_utils.hpp>
 
@@ -11,53 +12,53 @@ constexpr char const *kProcedureGet = "get";
 constexpr char const *kFieldVertex = "node";
 constexpr char const *kFieldComponentId = "component_id";
 
-void InsertWeaklyComponentResult(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const int component_id,
-                                 const int vertex_id) {
-  auto *record = mgp::result_new_record(result);
-
-  mg_utility::InsertNodeValueResult(graph, record, kFieldVertex, vertex_id, memory);
-  mg_utility::InsertIntValueResult(record, kFieldComponentId, component_id, memory);
-}
-
-/// Finds weakly connected components of a graph.
+/// Finds the weakly connected components of the graph.
 ///
 /// Time complexity: O(|V|+|E|)
 void Weak(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
+    auto graph = mage::Graph(memgraph_graph, memory);
+    auto graph2 = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
 
-    std::unordered_map<std::uint64_t, std::uint64_t> vertex_component;
-    std::uint64_t curr_component = 0;
-    for (auto vertex : graph->Nodes()) {
-      if (vertex_component.find(vertex.id) != vertex_component.end()) continue;
+    std::unordered_map<std::int64_t, std::int64_t> vertex_component;
+    std::int64_t curr_component = 0;
+
+    for (auto vertex : graph.vertices()) {
+      if (vertex_component.find(vertex.id().AsInt()) != vertex_component.end()) continue;
 
       // Run BFS from current vertex.
-      std::queue<std::uint64_t> q;
+      std::queue<std::int64_t> q;
 
-      q.push(vertex.id);
-      vertex_component[vertex.id] = curr_component;
+      q.push(vertex.id().AsInt());
+      vertex_component[vertex.id().AsInt()] = curr_component;
       while (!q.empty()) {
         auto v_id = q.front();
         q.pop();
 
         // Iterate over inbound edges.
-        for (auto neighbor : graph->Neighbours(v_id)) {
-          auto next_id = neighbor.node_id;
-
-          if (vertex_component.find(next_id) != vertex_component.end()) {
+        std::vector<std::int64_t> neighbor_ids;
+        for (auto out_edge : graph.GetVertexById(v_id).out_edges()) {
+          auto destination = out_edge.to();
+          neighbor_ids.push_back(destination.id().AsInt());
+        }
+        for (auto neighbor_id : neighbor_ids) {
+          if (vertex_component.find(neighbor_id) != vertex_component.end()) {
             continue;
           }
-          vertex_component[next_id] = curr_component;
-          q.push(next_id);
+          vertex_component[neighbor_id] = curr_component;
+          q.push(neighbor_id);
         }
       }
-
       ++curr_component;
     }
 
+    auto record_factory = mage::RecordFactory(result, memory);
+
     for (const auto [vertex_id, component_id] : vertex_component) {
       // Insert each weakly component record
-      InsertWeaklyComponentResult(memgraph_graph, result, memory, component_id, graph->GetMemgraphNodeId(vertex_id));
+      auto record = record_factory.NewRecord();
+      record.Insert(kFieldVertex, graph.GetVertexById(vertex_id));
+      record.Insert(kFieldComponentId, component_id);
     }
   } catch (const std::exception &e) {
     // We must not let any exceptions out of our module.
