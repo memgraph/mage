@@ -10,6 +10,7 @@ from sklearn.metrics import roc_auc_score
 from typing import Tuple
 from GraphSAGE import GraphSAGE
 from DotPredictor import DotPredictor
+import mgp
 
 
 if __name__ == "__main__":
@@ -28,6 +29,29 @@ if __name__ == "__main__":
     print(g.edata)
 
 
+def search_vertex(ctx: mgp.ProcCtx, id):
+    """
+    Searches for vertex in the executing context by id.
+    """
+    for vertex in ctx.graph.vertices:
+        if int(vertex.properties.get("id")) == id:
+            return vertex
+    return None
+
+def get_number_of_edges(ctx: mgp.ProcCtx):
+    """
+    :param ctx: Reference to the context execution.
+    :return: Number of edges.
+    """
+    edge_cnt = 0
+    for vertex in ctx.graph.vertices:
+        for edge in vertex.out_edges:
+            edge_cnt += 1
+    return edge_cnt
+
+
+
+
 def squarify(M,val):
     (a,b)=M.shape
     if a>b:
@@ -39,13 +63,11 @@ def squarify(M,val):
 
 def preprocess(g: dgl.graph):
 
-    print("method started")
+    # print("method started")
     # Split edge set for training and testing
     u, v = g.edges()  # they are automatically splitted into 2 tensors
 
-    print("Maximums ", torch.max(u), torch.max(v))
 
-    print(g.number_of_nodes())
     # Now create adjacency matrix
     # adj_matrix = torch.zeros((g.number_of_nodes(), g.number_of_nodes()), dtype=torch.float32)
     # for i in range(u.size()[0]):
@@ -59,12 +81,12 @@ def preprocess(g: dgl.graph):
     adj = sp.coo_matrix((np.ones(len(u)), (u.numpy(), v.numpy())))
     adj_matrix = adj.todense()
     adj_matrix = squarify(adj_matrix, 0)
-    print(adj_matrix.shape)
+    # print(adj_matrix.shape)
 
     adj_neg = 1 - adj_matrix - np.eye(g.number_of_nodes())
     neg_u, neg_v = np.where(adj_neg != 0)
 
-    print("Is number of edges=size(u) ", g.number_of_edges()==u.size()[0])
+    # print("Is number of edges=size(u) ", g.number_of_edges()==u.size()[0])
     eids = np.arange(g.number_of_edges())  # get all edge ids from number of edges
     eids = np.random.permutation(eids)
     test_size = int(len(eids) * 0.1)  # test size is 10%
@@ -73,11 +95,11 @@ def preprocess(g: dgl.graph):
     train_pos_u, train_pos_v = u[eids[test_size:]], v[eids[test_size:]]
 
 
-    print(neg_u, neg_v)  # again splitted into two parts
+    # print(neg_u, neg_v)  # again splitted into two parts
 
     neg_eids = np.random.choice(len(neg_u), g.number_of_edges())
 
-    print(neg_eids.size == g.number_of_edges())  # again true
+    # print(neg_eids.size == g.number_of_edges())  # again true
 
     test_neg_u, test_neg_v = neg_u[neg_eids[:test_size]], neg_v[neg_eids[:test_size]]
     train_neg_u, train_neg_v = neg_u[neg_eids[test_size:]], neg_v[neg_eids[test_size:]]
