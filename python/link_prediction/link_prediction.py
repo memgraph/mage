@@ -5,19 +5,13 @@ import dgl  # geometric deep learning
 from typing import List, Tuple, Dict
 from tests.processing_tests import test_conversion
 from numpy import int32
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import link_prediction_util
 
 
 ##############################
 # classes and data structures
 ##############################
-
-# You can think of link prediction as link classification where the label determines whether edge is or no.
-# Seed
-# https://github.com/williamleif/GraphSAGE/issues/93
-# Memgraph lab 2.2
-# Memgraph internship
 
 @dataclass
 class LinkPredictionParameters:
@@ -35,8 +29,10 @@ class LinkPredictionParameters:
     :param console_log_freq: int ->  how often do you want to print results from your model? Results will be from validation dataset. 
     :param checkpoint_freq: int → Select the number of epochs on which the model will be saved. The model is persisted on disc.
     :param aggregator: str → Aggregator used in models. Can be one of the following: LSTM, pooling, mean.
+    :param metrics: mgp.List[str] -> Metrics used to evaluate model in training on the test/validation set(we don't use validation set to optimize parameters so everything is test set).
+                                Epoch will always be displayed, you can add loss, accuracy, precision, recall, specificity, F1, auc_score etc. 
     """
-    hidden_features_size = [16, 16]  # TODO specify what does this mean in more detail.    
+    hidden_features_size: List = field(default_factory=lambda: [16, 16])  # TODO specify what does this mean in more detail. Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
     layer_type: str = "GAT"
     num_epochs: int = 100
     optimizer: str = "SGD"
@@ -48,20 +44,7 @@ class LinkPredictionParameters:
     console_log_freq: int = 5
     checkpoint_freq: int = 10
     aggregator: str = "mean"
-
-@dataclass
-class LinkPredictionOutputResult:
-    """
-    Metrics that will be returned on query .train() and get_output_results. Idea is later enable customizing metrics that can be displayed and returned by using __setattr__ and del.
-    :param epoch: Epoch when metrics were showing such results.
-    :param loss: Loss value in the specified epoch.
-    :param accuracy: Accuracy in the specified epoch. (TP+TN) / ALL
-    :param auc_score: Area below AUC curve. Probability that a random positive example is positioned to the right of a random negative example.
-    """
-    epoch: int = -1;
-    loss: float = -1.0;
-    accuracy: float = -1.0;
-    auc_score: float = -1.0;
+    metrics: List = field(default_factory=lambda: ["loss", "accuracy", "auc_score"])
 
 
 ##############################
@@ -69,7 +52,7 @@ class LinkPredictionOutputResult:
 ##############################
 
 link_prediction_parameters: LinkPredictionParameters = LinkPredictionParameters()  # parameters currently saved.
-output_results: List[LinkPredictionOutputResult] = list()  # List of all output records.
+training_results: List[Dict[str, float]] = list()  # List of all output records. String is the metric's name and float represents value.
 graph: dgl.graph = None # Reference to the graph.
 
 ##############################
@@ -96,10 +79,13 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
         console_log_freq: int ->  how often do you want to print results from your model? Results will be from validation dataset. 
         checkpoint_freq: int → Select the number of epochs on which the model will be saved. The model is persisted on disc.
         aggregator: str → Aggregator used in models. Can be one of the following: LSTM, pooling, mean.
-
+        metrics: mgp.List[str] -> Metrics used to evaluate model in training. 
     :return: 1 if all sent parameters are successfully saved, 0 otherwise.
     """
     global link_prediction_parameters
+
+    print("START")
+    print(link_prediction_parameters)
 
     validation_status, validation_message = _validate_user_parameters(parameters=parameters)
     if validation_status is False:
@@ -118,12 +104,15 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
         link_prediction_parameters.device_type = "cuda"
     else:
         link_prediction_parameters.device_type = "cpu"
+
+    print("END")
+    print(link_prediction_parameters)
     
     return mgp.Record(status=1, message="OK")
 
 
 @mgp.read_proc
-def train(ctx: mgp.ProcCtx) -> mgp.Record(epoch=int, loss=float, accuracy=float, auc_score=float):
+def train(ctx: mgp.ProcCtx) -> mgp.Record(metrics=mgp.Any):
     """ Train method is used for training the module on the dataset provided with ctx. By taking decision to split the dataset here and not in the separate method, it is impossible to retrain the same model. 
 
     Args:
@@ -132,12 +121,14 @@ def train(ctx: mgp.ProcCtx) -> mgp.Record(epoch=int, loss=float, accuracy=float,
     Returns:
         mgp.Record: It returns performance metrics obtained during the training.
     """
-    global output_results
+    global training_results
+    training_results.clear() # clear records from previous training
+    
+    # graph, new_to_old = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
+    # if test_conversion(graph=graph, new_to_old=new_to_old, ctx=ctx, node_id_property=link_prediction_parameters.node_id_property, node_features_property=link_prediction_parameters.node_features_property) is False:
+    #     print("Remapping failed")
 
-    graph, new_to_old = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
-    if test_conversion(graph=graph, new_to_old=new_to_old, ctx=ctx, node_id_property=link_prediction_parameters.node_id_property, node_features_property=link_prediction_parameters.node_features_property) is False:
-        print("Remapping failed")
-
+ 
     # Train g is a graph which has removed test edges
     # Others are positive and negative train and test graphs
 
@@ -153,8 +144,7 @@ def train(ctx: mgp.ProcCtx) -> mgp.Record(epoch=int, loss=float, accuracy=float,
     # auc_score = link_prediction_util.test(trained_hidden_features, pred, test_pos_g, test_neg_g)
 
     # Return just some generic result
-    rec = mgp.Record(epoch=1, loss=0.95, accuracy=0.99, auc_score=0.86)
-    return rec
+    return mgp.Record(metrics=training_results)
 
 
 @mgp.read_proc
@@ -174,8 +164,8 @@ def predict_link_score(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mg
 
 
 @mgp.read_proc
-def get_output_results(ctx: mgp.ProcCtx) -> mgp.Record(epoch=int, loss=float, accuracy=float, auc_score=float):
-    """This method is used when user wants to get performance data obtained from the last training. It is in the form of LinkPredictionOutputResult data structure.
+def get_training_results(ctx: mgp.ProcCtx) -> mgp.Record(metrics=mgp.Any):
+    """This method is used when user wants to get performance data obtained from the last training. It is in the form of list of records where each record is a Dict[metric_name, metric_value].
 
     Args:
         ctx (mgp.ProcCtx): Reference to the context execution
@@ -183,14 +173,7 @@ def get_output_results(ctx: mgp.ProcCtx) -> mgp.Record(epoch=int, loss=float, ac
     Returns:
         mgp.Record[List[LinkPredictionOutputResult]]: A list of LinkPredictionOutputResults. 
     """
-    # For now just simulate adding results here
-    global output_results
-    # Unfortunately copying
-    results = []
-    for out_res in output_results:
-        results.append(mgp.Record(epoch=out_res.epoch, loss=out_res.loss, accuracy=out_res.accuracy, auc_score=out_res.auc_score))
-    
-    return results
+    return mgp.Record(metrics=training_results)
 
 ##############################
 # Convert to DGL graph, consider extracting such methods to another file.

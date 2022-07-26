@@ -45,6 +45,7 @@ def search_vertex(ctx: mgp.ProcCtx, id, node_id_property):
             return vertex
     return None
 
+
 def get_number_of_edges(ctx: mgp.ProcCtx):
     """
     :param ctx: Reference to the context execution.
@@ -57,13 +58,13 @@ def get_number_of_edges(ctx: mgp.ProcCtx):
     return edge_cnt
 
 
-def squarify(M,val):
-    (a,b)=M.shape
-    if a>b:
-        padding=((0,0),(0,a-b))
+def squarify(M, val):
+    (a, b) = M.shape
+    if a > b:
+        padding = ((0, 0), (0, a - b))
     else:
-        padding=((0,b-a),(0,0))
-    return np.pad(M,padding,mode='constant',constant_values=val)
+        padding = ((0, b - a), (0, 0))
+    return np.pad(M, padding, mode='constant', constant_values=val)
 
 
 def preprocess(g: dgl.graph):
@@ -71,17 +72,16 @@ def preprocess(g: dgl.graph):
     # Split edge set for training and testing
     u, v = g.edges()  # they are automatically splitted into 2 tensors
 
-
     # Now create adjacency matrix
     # adj_matrix = torch.zeros((g.number_of_nodes(), g.number_of_nodes()), dtype=torch.float32)
     # for i in range(u.size()[0]):
     #   u1, v1 = u[i].item(), v[i].item()
-        # conv_node1, conv_node2 = old_to_new[u1], old_to_new[v1]
-        # print(conv_node1, u1, old_to_new[u1], new_to_old[conv_node1])
-        # print(conv_node2, v1, old_to_new[v1], new_to_old[conv_node2])
+    # conv_node1, conv_node2 = old_to_new[u1], old_to_new[v1]
+    # print(conv_node1, u1, old_to_new[u1], new_to_old[conv_node1])
+    # print(conv_node2, v1, old_to_new[v1], new_to_old[conv_node2])
     #    adj_matrix[u1][v1] = 1.0
-        # adj_matrix[v1][u1] = 1.0
-    
+    # adj_matrix[v1][u1] = 1.0
+
     adj = sp.coo_matrix((np.ones(len(u)), (u.numpy(), v.numpy())))
     adj_matrix = adj.todense()
     adj_matrix = squarify(adj_matrix, 0)
@@ -98,7 +98,6 @@ def preprocess(g: dgl.graph):
     test_pos_u, test_pos_v = u[eids[:test_size]], v[eids[:test_size]]
     train_pos_u, train_pos_v = u[eids[test_size:]], v[eids[test_size:]]
 
-
     # print(neg_u, neg_v)  # again splitted into two parts
 
     neg_eids = np.random.choice(len(neg_u), g.number_of_edges())
@@ -110,7 +109,6 @@ def preprocess(g: dgl.graph):
 
     # Now remove the edges from in the test set from the original graph, NOTE: copy is created
     train_g = dgl.remove_edges(g, eids[:test_size])
-
 
     # Construct a positive and a negative graph
     train_pos_g = dgl.graph((train_pos_u, train_pos_v), num_nodes=g.number_of_nodes())
@@ -145,6 +143,20 @@ def train(model: GraphSAGE, pred: DotPredictor, train_g: dgl.graph, train_pos_g:
 
     # ----------- 4. training -------------------------------- #
     all_logits = []
+    """ if epoch % link_prediction_parameters.console_log_freq == 0:
+        epoch_training_result = dict()
+        epoch_training_result["epoch"] = epoch
+        for metric_name in link_prediction_parameters.metrics:  # it is faster to do it in this way than opposite
+            if metric_name == "loss":
+                epoch_training_result["loss"] = 0.087
+            elif metric_name == "accuracy":
+                epoch_training_result["accuracy"] = 0.99
+            elif metric_name == "auc_score":
+                epoch_training_result["auc_score"] = 0.8071661
+            elif metric_name == "F1":
+                epoch_training_result["F1"] = 0.877
+        training_results.append(epoch_training_result)
+ """
     for e in range(100):
         # forward
         # print(train_g.ndata["features"].dtype)
@@ -176,7 +188,7 @@ def test(h, pred: DotPredictor, test_pos_g: dgl.graph, test_neg_g: dgl.graph):
         neg_score = pred(test_neg_g, h)
         score = compute_auc(pos_score, neg_score)
         print("AUC: ", score)
-        return score 
+        return score
 
 
 # Thumbnail credits: Link Prediction with Neo4j, Mark Needham
