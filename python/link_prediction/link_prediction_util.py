@@ -29,12 +29,19 @@ if __name__ == "__main__":
     print(g.edata)
 
 
-def search_vertex(ctx: mgp.ProcCtx, id):
-    """
-    Searches for vertex in the executing context by id.
+def search_vertex(ctx: mgp.ProcCtx, id, node_id_property):
+    """Searches for vertex in the executing context by id.
+
+    Args:
+        ctx (mgp.ProcCtx): A reference to the context execution
+        id (_type_): Id to be searched for.
+        node_id_property (_type_): Property name where the id is saved.
+
+    Returns:
+        _type_: _description_
     """
     for vertex in ctx.graph.vertices:
-        if int(vertex.properties.get("id")) == id:
+        if int(vertex.properties.get(node_id_property)) == id:
             return vertex
     return None
 
@@ -50,8 +57,6 @@ def get_number_of_edges(ctx: mgp.ProcCtx):
     return edge_cnt
 
 
-
-
 def squarify(M,val):
     (a,b)=M.shape
     if a>b:
@@ -63,7 +68,6 @@ def squarify(M,val):
 
 def preprocess(g: dgl.graph):
 
-    # print("method started")
     # Split edge set for training and testing
     u, v = g.edges()  # they are automatically splitted into 2 tensors
 
