@@ -29,9 +29,11 @@ class GraphSAGE(torch.nn.Module):
         Returns:
             torch.Tensor: Features after iterating over all layers. 
         """
+        print("SAGE shape: ", h.shape)
         for index, layer in enumerate(self.layers):
             h = layer(g, h)
             if index != len(self.layers) - 1:  # Apply relu to every layer except last one
                 h = F.relu(h)
+            print("SAGE shape: ", h.shape)
         return h
         

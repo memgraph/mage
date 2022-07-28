@@ -35,9 +35,9 @@ class LinkPredictionParameters:
     :param attn_num_heads: List[int] -> GAT can support usage of more than one head in each layers except last one. Only used in GAT, not in GraphSage.
 
     """
-    hidden_features_size: List = field(default_factory=lambda: [1433, 16, 16])  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
-    layer_type: str = "graph_attn"
-    num_epochs: int = 5
+    hidden_features_size: List = field(default_factory=lambda: [1433, 64, 16])  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
+    layer_type: str = "graph_sage"
+    num_epochs: int = 1
     optimizer: str = "ADAM"
     learning_rate: float = 0.01
     split_ratio: float = 0.8
@@ -179,9 +179,6 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
 
     src_features = src_vertex.properties.get(link_prediction_parameters.node_features_property)
     dest_features = dest_vertex.properties.get(link_prediction_parameters.node_features_property)
-    features = []
-    features.append(src_features)
-    features.append(dest_features)
     features = torch.zeros((2708, 1433), dtype=torch.float32) # TODO: Cache this values from training. 
     features[0, :] = torch.FloatTensor(src_features)
     features[1, :] = torch.FloatTensor(dest_features)

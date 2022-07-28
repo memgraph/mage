@@ -111,6 +111,7 @@ def preprocess(graph: dgl.graph, split_ratio: float) -> Tuple[dgl.graph, dgl.gra
 
     u, v = graph.edges()  # they are automatically splitted into 2 tensors
 
+
     adj = sp.coo_matrix((np.ones(len(u)), (u.numpy(), v.numpy())))  # adjacency list graph representation
     adj_matrix = adj.todense()  # convert to dense matrix representation
     adj_matrix = squarify(adj_matrix, 0)  # pad if needed
@@ -126,7 +127,6 @@ def preprocess(graph: dgl.graph, split_ratio: float) -> Tuple[dgl.graph, dgl.gra
     eids = np.random.permutation(eids)  # randomly permute edges
 
     test_size = int(len(eids) * (1 - split_ratio))  # test size is 1-split_ratio specified by the user
-    train_size = graph.number_of_edges() - test_size  # train size is the rest
     # u and v have size equal to number of edges. So positive graph can be created directly from it.
     test_pos_u, test_pos_v = u[eids[:test_size]], v[eids[:test_size]]
     train_pos_u, train_pos_v = u[eids[test_size:]], v[eids[test_size:]]
@@ -143,6 +143,7 @@ def preprocess(graph: dgl.graph, split_ratio: float) -> Tuple[dgl.graph, dgl.gra
 
     # Now remove the edges from in the test set from the original graph, NOTE: copy is created
     train_g = dgl.remove_edges(graph, eids[:test_size])
+    test_g = dgl.remove_edges(graph, eids[test_size:])
 
     # Construct a positive and a negative graph
     train_pos_g = dgl.graph((train_pos_u, train_pos_v), num_nodes=graph.number_of_nodes())
@@ -168,7 +169,7 @@ def compute_loss(pos_score: torch.Tensor, neg_score: torch.Tensor) -> float:
     Returns:
         float: Computed loss. 
     """
-    scores = torch.squeeze(torch.cat([pos_score, neg_score]))  # Squeeze for removing dimensions
+    scores = torch.cat([pos_score, neg_score])  # Squeeze for removing dimensions
     labels = torch.cat([torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])])
     return F.binary_cross_entropy_with_logits(scores, labels)
 
@@ -215,7 +216,6 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
                    
     # Training
 
-
     for epoch in range(1, num_epochs+1):
         # train_g.ndata[node_features_property], torch.float32, num_nodes*feature_size
 
@@ -224,9 +224,17 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
         h = model(train_g, train_g.ndata[node_features_property])  # h is torch.float32 that has shape: nodes*hidden_features_size[-1]
 
         # print(train_g)
+        
+        gu, gv, edge_ids = train_pos_g.edges(form="all", order="eid")
+        print("GU: ", gu)
+        print("GV: ", gv)
+        print("EDGE IDS: ", edge_ids)
+        pos_score = torch.squeeze(predictor(train_pos_g, h))  # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_pos-g. Scores are here actually logits.
+        neg_score = torch.squeeze(predictor(train_neg_g, h))  # returns vector of negative edge scores, torch.float32, shape: num_edges in the graph of train_neg_g. Scores are actually logits.
 
-        pos_score = torch.squeeze(predictor(train_pos_g, h))  # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_g. Scores are here actually logits.
-        neg_score = torch.squeeze(predictor(train_neg_g, h))  # returns vector of negative edge scores, torch.float32, shape: num_edges in the graph of train_g. Scores are actually logits.
+        edge_id = train_pos_g.edge_ids(gu[0], gv[0])
+        print("Edge id: ", edge_id)
+        print("Pos score: ", pos_score[edge_id])
 
         scores = torch.cat([pos_score, neg_score]).detach().numpy()  # concatenated positive and negative scores
         labels = torch.cat([torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])]).detach().numpy()  # concatenation of labels
@@ -239,6 +247,7 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
         model.eval()
         # Turn of gradient calculation
         with torch.no_grad():
+
             pos_score_test = torch.squeeze(predictor(test_pos_g, h))
             neg_score_test = torch.squeeze(predictor(test_neg_g, h))
             scores_test = torch.cat([pos_score_test, neg_score_test]).detach().numpy()
@@ -282,7 +291,7 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
         loss_output.backward()
         optimizer.step()
 
-    visualize(training_results=training_results, test_results=test_results)
+    # visualize(training_results=training_results, test_results=test_results)
 
     return training_results, h, predictor
 

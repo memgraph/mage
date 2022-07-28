@@ -25,4 +25,5 @@ class DotPredictor(nn.Module):
             # source node feature 'h' and destination node feature 'h'.
             g.apply_edges(fn.u_dot_v('h', 'h', 'score'))
             # u_dot_v returns a 1-element vector for each edge so you need to squeeze it.
+            print(g.edata['score'][:, 0])
             return g.edata['score'][:, 0]
