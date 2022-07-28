@@ -7,7 +7,7 @@ import torch
 def test_conversion(graph: dgl.graph, new_to_old: Dict[int, int], ctx: mgp.ProcCtx, 
                     node_id_property: str, node_features_property: str) -> bool:
     """
-    Tests whether conversion to dgl graph went successfully. Checks how features are mapped.
+    Tests whether conversion from ctx.ProcCtx graph to dgl graph went successfully. Checks how features are mapped.
 
     Args:
         graph (dgl.graph): Reference to the dgl graph.

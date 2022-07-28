@@ -1,14 +1,26 @@
+import dgl
 import dgl.function as fn
+import torch
 import torch.nn as nn
+
 
 # You can also define some more complex predictors like MLP or something
 
 
 class DotPredictor(nn.Module):
-    def forward(self, g, h):
+    def forward(self, g: dgl.graph, h: torch.Tensor) -> torch.Tensor:
+        """Prediction method of DotPredictor. It sets edge scores by calculating dot product 
+        between node neighbors.         
+
+        Args:
+            g (dgl.graph): A reference to the graph. 
+            h (torch.Tensor): Hidden features tensor. 
+
+        Returns:
+            torch.Tensor: A tensor of edge scores. 
+        """
         with g.local_scope():
             g.ndata['h'] = h # h is node feature
-            # print(h)
             # Compute a new edge feature named 'score' by a dot-product between the
             # source node feature 'h' and destination node feature 'h'.
             g.apply_edges(fn.u_dot_v('h', 'h', 'score'))
