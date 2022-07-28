@@ -11,7 +11,8 @@ def convert_data(
     nodes: mgp.List[mgp.Vertex], 
     edges: mgp.List[mgp.Edge], 
     train_ratio: float,
-    params: typing.Dict)->Data:
+    params: typing.Dict,
+    reindexing: typing.Dict)->Data:
     
     try:
         assert len(nodes) > 0, "dataset is empty"
@@ -30,9 +31,7 @@ def convert_data(
     masks = np.zeros((len(nodes)))
     
     
-    # reindexing = {} # for unordered ids
-    # for i in range(len(nodes)): 
-    #     reindexing[nodes[i].properties.get("id")] = i
+    inv_reindexing = {v: k for k, v in reindexing.items()}
 
 
 
@@ -60,8 +59,8 @@ def convert_data(
         
 
     for i in tqdm(range(len(edges))):
-        edge_index[0][i] = edges[i].from_vertex.properties.get(params["node_id_property"])
-        edge_index[1][i] = edges[i].to_vertex.properties.get(params["node_id_property"])
+        edge_index[0][i] = inv_reindexing[edges[i].from_vertex.properties.get(params["node_id_property"])]
+        edge_index[1][i] = inv_reindexing[edges[i].to_vertex.properties.get(params["node_id_property"])]
         
 
     print("Finished converting data.")

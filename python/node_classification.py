@@ -45,6 +45,7 @@ class TrainParams:
 
 class OtherParams:
     DEVICE_TYPE = "device_type"
+    PATH_TO_MODELS = "/home/mateo/mage/pytorch_models/model"
 
 # all None until set_params are executed
 data: Data = None
@@ -99,16 +100,24 @@ def declare_globals(params: typing.Dict):
     global_params = params
 
 def declare_model_and_data(ctx: mgp.ProcCtx):
+    global global_params
     nodes = list(iter(ctx.graph.vertices))
+    
+    reindexing = {}
+    for i in range(len(nodes)):
+        reindexing[i] = nodes[i].properties.get(global_params["node_id_property"])
+
     edges = []
     for vertex in ctx.graph.vertices:
         for edge in vertex.out_edges:
             edges.append(edge)
 
     global data
-    global global_params
-    data = convert_data(nodes, edges, global_params[DataParams.SPLIT_RATIO], global_params)
+    data = convert_data(
+        nodes, edges, global_params[DataParams.SPLIT_RATIO], global_params, reindexing)
 
+    # print(data)
+    # print(data.edge_index.max())
 
     global_params[ModelParams.IN_CHANNELS] = np.shape(data.x.detach().numpy())[1]
     print(global_params[ModelParams.IN_CHANNELS])
@@ -238,3 +247,22 @@ def get_training_data() -> mgp.Record(
             train_log=logged_data[k]["train"],
             val_log=logged_data[k]["val"]) for k in range(len(logged_data))
         ]
+
+@mgp.read_proc
+def save_model() -> mgp.Record():
+    global model
+    torch.save(model.state_dict(), OtherParams.PATH_TO_MODELS)
+    return mgp.Record()
+
+@mgp.read_proc
+def load_model() -> mgp.Record():
+    global model
+    model.load_state_dict(torch.load(OtherParams.PATH_TO_MODELS))
+    return mgp.Record()
+
+@mgp.read_proc
+def predict() -> mgp.Record(accuracy=float, precision=float):
+    
+    dict = metrics(data.train_mask+data.val_mask, model, data, global_params[DataParams.METRICS])
+    
+    return mgp.Record(accuracy=dict["accuracy"], precision=dict["precision"])
