@@ -226,15 +226,15 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
         # print(train_g)
         
         gu, gv, edge_ids = train_pos_g.edges(form="all", order="eid")
-        print("GU: ", gu)
-        print("GV: ", gv)
-        print("EDGE IDS: ", edge_ids)
+        # print("GU: ", gu)
+        # print("GV: ", gv)
+        # print("EDGE IDS: ", edge_ids)
         pos_score = torch.squeeze(predictor(train_pos_g, h))  # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_pos-g. Scores are here actually logits.
         neg_score = torch.squeeze(predictor(train_neg_g, h))  # returns vector of negative edge scores, torch.float32, shape: num_edges in the graph of train_neg_g. Scores are actually logits.
 
         edge_id = train_pos_g.edge_ids(gu[0], gv[0])
-        print("Edge id: ", edge_id)
-        print("Pos score: ", pos_score[edge_id])
+        # print("Edge id: ", edge_id)
+        # print("Pos score: ", pos_score[edge_id])
 
         scores = torch.cat([pos_score, neg_score]).detach().numpy()  # concatenated positive and negative scores
         labels = torch.cat([torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])]).detach().numpy()  # concatenation of labels
@@ -293,7 +293,7 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
 
     # visualize(training_results=training_results, test_results=test_results)
 
-    return training_results, h, predictor
+    return training_results, h, predictor, model
 
 
 def predict(h: torch.Tensor, predictor: torch.nn.Module, graph: dgl.graph) -> torch.Tensor:
@@ -311,5 +311,20 @@ def predict(h: torch.Tensor, predictor: torch.nn.Module, graph: dgl.graph) -> to
         # h has shape of number of nodes that was trained on*hidden_features_size[:-1]
         scores = predictor(graph, h)
         print("Scores: ", scores)
-        print("Sigmoid scores: ", torch.sigmoid(scores))
+        # print("Sigmoid scores: ", torch.sigmoid(scores))
         return torch.sigmoid(scores)
+
+
+def new_predict(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl.graph, node_features_property) -> float:
+    with torch.no_grad():
+        h = model(graph, graph.ndata[node_features_property])
+        scores = predictor(graph, h)
+        print("Scores: ", scores)
+        # print("Sigmoid scores: ", torch.sigmoid(scores))
+        return torch.sigmoid(scores)[0].item()
+#
+
+# Existing
+# 591017->49847
+# 49847->2440
+# non-existing

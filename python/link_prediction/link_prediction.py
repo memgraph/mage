@@ -37,7 +37,7 @@ class LinkPredictionParameters:
     """
     hidden_features_size: List = field(default_factory=lambda: [1433, 64, 16])  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
     layer_type: str = "graph_sage"
-    num_epochs: int = 1
+    num_epochs: int = 5
     optimizer: str = "ADAM"
     learning_rate: float = 0.01
     split_ratio: float = 0.8
@@ -61,6 +61,7 @@ training_results: List[Dict[str, float]] = list()  # List of all output records.
 graph: dgl.graph = None # Reference to the graph.
 h: torch.Tensor = None # hidden features
 predictor: torch.nn.Module = None # Predictor for calculating edge scores
+model: torch.nn.Module = None
 
 ##############################
 # All read procedures
@@ -134,12 +135,13 @@ def train(ctx: mgp.ProcCtx) -> mgp.Record(status=str, metrics=mgp.Any):
     Returns:
         mgp.Record: It returns performance metrics obtained during the training.
     """
-    global training_results, predictor, h
+    global training_results, predictor, h, model
     training_results.clear() # clear records from previous training
     predictor = None # Delete old predictor and create a new one in link_prediction_util.train method\
     h = None # delete old hidden features
+    model = None
     
-    graph, new_to_old = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
+    graph, new_to_old, _ = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
     """ if test_conversion(graph=graph, new_to_old=new_to_old, ctx=ctx, node_id_property=link_prediction_parameters.node_id_property, node_features_property=link_prediction_parameters.node_features_property) is False:
         print("Remapping failed")
         return mgp.Record(status="Preprocessing failed", metrics=[])
@@ -153,7 +155,7 @@ def train(ctx: mgp.ProcCtx) -> mgp.Record(status=str, metrics=mgp.Any):
         return mgp.Record(status="Preprocessing failed", metrics=[])
 
 
-    training_results, h, predictor = link_prediction_util.train(link_prediction_parameters.hidden_features_size, link_prediction_parameters.layer_type,
+    training_results, h, predictor, model = link_prediction_util.train(link_prediction_parameters.hidden_features_size, link_prediction_parameters.layer_type,
         link_prediction_parameters.num_epochs, link_prediction_parameters.optimizer, link_prediction_parameters.learning_rate,
         link_prediction_parameters.node_features_property, link_prediction_parameters.console_log_freq, link_prediction_parameters.checkpoint_freq,
         link_prediction_parameters.aggregator, link_prediction_parameters.metrics, link_prediction_parameters.predictor_type, link_prediction_parameters.predictor_hidden_size,
@@ -165,7 +167,7 @@ def train(ctx: mgp.ProcCtx) -> mgp.Record(status=str, metrics=mgp.Any):
 
 @mgp.read_proc
 def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -> mgp.Record(score=mgp.Number):
-    """Predicts edge score determined by source and destination vertex.
+    """Predicts edge score determined by source and destination vertex. Currently works as transductive prediction method.
 
     Args:
         ctx (mgp.Record): The reference to the context execution.
@@ -177,21 +179,51 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     """
     global predictor, h
 
-    src_features = src_vertex.properties.get(link_prediction_parameters.node_features_property)
-    dest_features = dest_vertex.properties.get(link_prediction_parameters.node_features_property)
-    features = torch.zeros((2708, 1433), dtype=torch.float32) # TODO: Cache this values from training. 
-    features[0, :] = torch.FloatTensor(src_features)
-    features[1, :] = torch.FloatTensor(dest_features)
-    # Create graph representation of this edge
-    graph = dgl.graph(([], []), num_nodes=2708)    
-    graph.add_edges(0, 1)
-    graph.ndata[link_prediction_parameters.node_features_property] = features
+    # Create dgl graph representation
+    prediction_graph, _, old_to_new = _get_dgl_graph_data(ctx)
+    # Get ids
+    src_id_old = int(src_vertex.properties.get(link_prediction_parameters.node_id_property))
+    dest_id_old = int(dest_vertex.properties.get(link_prediction_parameters.node_id_property))
+
+    # Map to new indexes
+    src_id_new = old_to_new[src_id_old]
+    dest_id_new = old_to_new[dest_id_old]
+
+
 
     # Call utils module
-    edge_probabilities = link_prediction_util.predict(h=h, predictor=predictor, graph=graph)
+    edge_probabilities = link_prediction_util.predict(h=h, predictor=predictor, graph=prediction_graph)
+    
+    edge_id = prediction_graph.edge_ids(src_id_new, dest_id_new)
 
-    result = mgp.Record(score=edge_probabilities[0].item())
+    result = mgp.Record(score=edge_probabilities[edge_id].item())
     return result
+
+@mgp.read_proc
+def new_predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -> mgp.Record(score=mgp.Number):
+
+    global predictor, model
+
+    # Create dgl graph representation
+    prediction_graph = dgl.graph(([0], [1]))
+    src_features = src_vertex.properties.get(link_prediction_parameters.node_features_property)
+    dest_features = dest_vertex.properties.get(link_prediction_parameters.node_features_property)
+    features = []
+    features.append(src_features)
+    features.append(dest_features)
+
+    features = torch.tensor(features, dtype=torch.float32)  # use float for storing tensor of features
+    prediction_graph.ndata[link_prediction_parameters.node_features_property] = features
+  
+    # Call utils module
+    score = link_prediction_util.new_predict(model=model, predictor=predictor, graph=prediction_graph, node_features_property=link_prediction_parameters.node_features_property)
+    
+    result = mgp.Record(score=score)
+    return result
+
+
+
+
 
 
 @mgp.read_proc
@@ -211,14 +243,14 @@ def get_training_results(ctx: mgp.ProcCtx) -> mgp.Record(metrics=mgp.Any):
 ##############################
 
 
-def _get_dgl_graph_data(ctx: mgp.ProcCtx) -> Tuple[dgl.graph, Dict[int32, int32]]:
+def _get_dgl_graph_data(ctx: mgp.ProcCtx) -> Tuple[dgl.graph, Dict[int32, int32], Dict[int32, int32]]:
     """Creates dgl representation of the graph.
 
     Args:
         ctx (mgp.ProcCtx): The reference to the context execution.
 
     Returns:
-        Tuple[dgl.graph, Dict[int32, int32]]: Tuple of DGL graph representation and dictionary of mapping new to old index.
+        Tuple[dgl.graph, Dict[int32, int32], Dict[int32, int32]]: Tuple of DGL graph representation, dictionary of mapping new to old index and dictionary of mapping old to new index. 
     """    
     src_nodes, dest_nodes = [], []  # for saving the edges
 
@@ -257,7 +289,7 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx) -> Tuple[dgl.graph, Dict[int32, int32]
     g = dgl.graph((src_nodes, dest_nodes))
     g.ndata[link_prediction_parameters.node_features_property] = features
     # g = dgl.add_self_loop(g) # TODO: How, why what? But needed for GAT, otherwise 0-in-degree nodes:u
-    return g, new_to_old
+    return g, new_to_old, old_to_new
 
 
 def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
