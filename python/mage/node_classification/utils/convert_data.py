@@ -8,8 +8,8 @@ import typing
 import sys
 
 def convert_data(
-    nodes: typing.List[mgp.Vertex], 
-    edges: typing.List[mgp.Edge], 
+    nodes: mgp.List[mgp.Vertex], 
+    edges: mgp.List[mgp.Edge], 
     train_ratio: float,
     params: typing.Dict)->Data:
     
@@ -26,7 +26,6 @@ def convert_data(
     edge_index = np.zeros((2,len(edges)))
     train_mask = np.zeros((len(nodes)))
     val_mask = np.zeros((len(nodes)))
-    test_mask = np.zeros((len(nodes)))
     
     masks = np.zeros((len(nodes)))
     
@@ -58,8 +57,7 @@ def convert_data(
             train_mask[i] = 1
         elif masks[i] == 2:
             val_mask[i] = 1
-        else:
-            test_mask[i] = 1
+        
 
     for i in tqdm(range(len(edges))):
         edge_index[0][i] = edges[i].from_vertex.properties.get(params["node_id_property"])
@@ -74,7 +72,6 @@ def convert_data(
     # print(np.shape(edge_index))
     # print(np.shape(train_mask))
     # print(np.shape(val_mask))
-    # print(np.shape(test_mask))
     # print("=============================")
 
 
@@ -84,5 +81,6 @@ def convert_data(
     train_mask = torch.tensor(train_mask, dtype=torch.bool)
     val_mask = torch.tensor(val_mask, dtype=torch.bool)
 
-    data = Data(x=x, y=y, edge_index=edge_index, train_mask=train_mask, val_mask=val_mask, test_mask=test_mask)
+    data = Data(x=x, y=y, edge_index=edge_index, train_mask=train_mask, val_mask=val_mask)
+
     return data

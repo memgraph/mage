@@ -5,7 +5,6 @@ import sys
 import mgp
 import typing
 
-from python.mage.node_classification.globals.globals import ModelParams
 
 class InductiveModel(torch.nn.Module):
     def __init__(self, layer_type: str, in_channels: int, hidden_features_size: mgp.List[int], out_channels: int, aggr: str):
@@ -20,11 +19,14 @@ class InductiveModel(torch.nn.Module):
             sys.exit(1)
         global aggregator
         Conv = getattr(torch_geometric.nn, layer_type + "Conv")
-        self.convs.append(Conv(in_channels,hidden_features_size[0], aggr = aggr))
-        for i in range(0, len(hidden_features_size) - 1):
-            self.convs.append(Conv(hidden_features_size[i], hidden_features_size[i+1], aggr = aggr))
-        self.convs.append(Conv(hidden_features_size[-1], out_channels, aggr = aggr))
-
+        if len(hidden_features_size) > 0:
+            self.convs.append(Conv(in_channels,hidden_features_size[0], aggr = aggr))
+            for i in range(0, len(hidden_features_size) - 1):
+                self.convs.append(Conv(hidden_features_size[i], hidden_features_size[i+1], aggr = aggr))
+            self.convs.append(Conv(hidden_features_size[-1], out_channels, aggr = aggr))
+        else:
+            self.convs.append(Conv(in_channels, out_channels, aggr = aggr))
+            
     def forward(self, x, edge_index):
         for i in range(len(self.convs)):
             x = self.convs[i](x, edge_index)

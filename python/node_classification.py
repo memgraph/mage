@@ -1,105 +1,205 @@
 import mgp
-from mage.node_classification.utils.convert_data import *
+from tqdm import tqdm
 from mage.node_classification.metrics import *
 from mage.node_classification.train_model import *
-from mage.node_classification.globals.globals import *
-
+from torch_geometric.data import Data
+from mage.node_classification.model.inductive_model import InductiveModel
+from mage.node_classification.utils.convert_data import convert_data
+import torch
+import numpy as np
 import sys
+import typing
+import mgp
 
-@mgp.read_proc
-def set_model_parameters(
-    hidden_features_size: mgp.List[int] = [16],
-    layer_type: str = "GAT",
-    num_epochs: int = 100,
-    optimizer: str = "Adam",
-    learning_rate: float = 0.001,
-    split_ratio: float = 0.8,
-    node_features_property: str = "features",
-    node_id_property: str = "id",
-    device_type: str = "cpu",
-    console_log_freq: int = 5,
-    checkpoint_freq: int = 5,
-    aggregator: str = "mean"
-) -> mgp.Record(
-    hidden_features_size = mgp.List[int],
-    layer_type = str,
-    num_epochs = int,
-    optimizer = str,
-    learning_rate = float,
-    split_ratio = float,
-    node_features_property = str,
-    node_id_property = str,
-    device_type = str,
-    console_log_freq = int,
-    checkpoint_freq = int,
-    aggregator = str
-):
-    """
-    set parameters of model and opt
+##############################
+# constants
+##############################
 
-    opt is Adam, criterion is cross entropy loss
-    """
-    
-    hidden_features_size = hidden_features_size 
-    layer_type = layer_type
-    num_epochs = num_epochs
-    optimizer = optimizer
-    learning_rate = learning_rate
-    split_ratio = split_ratio
-    node_features_property = node_features_property
-    node_id_property = node_id_property
-    device_type = device_type
-    console_log_freq = console_log_freq
-    checkpoint_freq = checkpoint_freq
-    aggregator = aggregator
-    
 
-    return mgp.Record(
-        hidden_features_size,
-        layer_type,
-        num_epochs,
-        optimizer,
-        learning_rate,
-        split_ratio,
-        node_features_property,
-        node_id_property,
-        device_type,
-        console_log_freq,
-        checkpoint_freq,
-        aggregator
-    )
+class ModelParams:
+    IN_CHANNELS = "in_channels"
+    OUT_CHANNELS = "out_channels"
+    HIDDEN_FEATURES_SIZE = "hidden_features_size"
+    LAYER_TYPE = "layer_type"
+    AGGREGATOR = "aggregator"
 
-@mgp.read_proc
-def load_data(
-    ctx: mgp.ProcCtx,
-    train_ratio: float = 0.8,
-    val_ratio: float = 0.1,
-    test_ratio: float = 0.1
-) -> mgp.Record(no_nodes=int, no_edges=int):
-    """
-    loading data, must be executed before training
-    """
+class OptimizerParams:
+    OPTIMIZER = "optimizer"
+    LEARNING_RATE = "learning_rate"
+    WEIGHT_DECAY = "weight_decay"
 
+class DataParams:
+    SPLIT_RATIO = "split_ratio"
+    METRICS = "metrics"
+
+class MemgraphParams:
+    NODE_FEATURES_PROPERTY = "node_features_property"
+    NODE_ID_PROPERTY = "node_id_property"
+    NODE_CLASS_PROPERTY = "node_class_property"
+
+class TrainParams:
+    NUM_EPOCHS = "num_epochs"
+    CONSOLE_LOG_FREQ = "console_log_freq"
+    CHECKPOINT_FREQ = "checkpoint_freq"
+    TOTAL_NO_EPOCHS = "total_no_epochs"
+
+class OtherParams:
+    DEVICE_TYPE = "device_type"
+
+# all None until set_params are executed
+data: Data = None
+model: InductiveModel = None
+opt = None
+criterion = None
+global_params: typing.Dict
+logged_data: mgp.List = []
+
+DEFINED_INPUT_TYPES = {
+    ModelParams.HIDDEN_FEATURES_SIZE: list,
+    ModelParams.LAYER_TYPE: str,
+    TrainParams.NUM_EPOCHS: int,
+    OptimizerParams.OPTIMIZER: str,
+    OptimizerParams.LEARNING_RATE: float,
+    OptimizerParams.WEIGHT_DECAY: float,
+    DataParams.SPLIT_RATIO: float,
+    MemgraphParams.NODE_FEATURES_PROPERTY: str,
+    MemgraphParams.NODE_ID_PROPERTY: str,
+    OtherParams.DEVICE_TYPE: str,
+    TrainParams.CONSOLE_LOG_FREQ: int,
+    TrainParams.CHECKPOINT_FREQ: int,
+    ModelParams.AGGREGATOR: str,
+    DataParams.METRICS: list
+}
+
+DEFAULT_VALUES = {
+    ModelParams.HIDDEN_FEATURES_SIZE: [16],
+    ModelParams.LAYER_TYPE: "SAGE",
+    TrainParams.NUM_EPOCHS: 100,
+    OptimizerParams.OPTIMIZER: "Adam",
+    OptimizerParams.LEARNING_RATE: 0.1,
+    OptimizerParams.WEIGHT_DECAY: 5e-4,
+    DataParams.SPLIT_RATIO: 0.8,
+    MemgraphParams.NODE_FEATURES_PROPERTY: "features",
+    MemgraphParams.NODE_ID_PROPERTY: "id",
+    MemgraphParams.NODE_CLASS_PROPERTY: "class",
+    OtherParams.DEVICE_TYPE: "cpu",
+    TrainParams.CONSOLE_LOG_FREQ: 5,
+    TrainParams.CHECKPOINT_FREQ: 5,
+    ModelParams.AGGREGATOR: "mean",
+    DataParams.METRICS: ["loss", "accuracy", "f1_score", "precision", "recall", "num_wrong_examples"],
+}
+
+
+##############################
+# set model parameters
+##############################
+
+def declare_globals(params: typing.Dict):
+    global global_params
+    global_params = params
+
+def declare_model_and_data(ctx: mgp.ProcCtx):
     nodes = list(iter(ctx.graph.vertices))
     edges = []
     for vertex in ctx.graph.vertices:
         for edge in vertex.out_edges:
             edges.append(edge)
-    
+
     global data
-    data = convert_data(nodes, edges, train_ratio, val_ratio, test_ratio)
+    global global_params
+    data = convert_data(nodes, edges, global_params[DataParams.SPLIT_RATIO], global_params)
+
+
+    global_params[ModelParams.IN_CHANNELS] = np.shape(data.x.detach().numpy())[1]
+    print(global_params[ModelParams.IN_CHANNELS])
+    global_params[ModelParams.OUT_CHANNELS] = len(set(data.y.detach().numpy()))
+    print(len(set(data.y.detach().numpy())))
     
-    return mgp.Record(no_nodes=len(nodes), no_edges=len(edges))
+    global model
+    model = InductiveModel(
+        layer_type=global_params[ModelParams.LAYER_TYPE], 
+        in_channels=global_params[ModelParams.IN_CHANNELS], 
+        hidden_features_size=global_params[ModelParams.HIDDEN_FEATURES_SIZE], 
+        out_channels=global_params[ModelParams.OUT_CHANNELS],
+        aggr = global_params[ModelParams.AGGREGATOR]
+    )
+
+    global opt
+    # obtain function by its name from library
+    Optim = getattr(torch.optim, global_params[OptimizerParams.OPTIMIZER])
+    opt = Optim(
+        model.parameters(), 
+        lr=global_params[OptimizerParams.LEARNING_RATE], 
+        weight_decay=global_params[OptimizerParams.WEIGHT_DECAY])
+
+    global criterion
+    criterion = torch.nn.CrossEntropyLoss()
+
+
+
+@mgp.read_proc
+def set_model_parameters(
+    ctx: mgp.ProcCtx,
+    params: mgp.Map = {}
+) -> mgp.Record():
+    """
+    In: context, dictionary of all parameters
+
+    Out: empty mgp.Record()
+    """
+    global DEFINED_INPUT_TYPES, DEFAULT_VALUES
+
+    # function checks if input values in dictionary are correctly typed
+    def is_correctly_typed(defined_types, input_values):
+        if isinstance(defined_types, dict) and isinstance(input_values, dict):
+            # defined_types is a dict of types
+            return all(
+                k in input_values  # check if exists
+                and is_correctly_typed(
+                    defined_types[k], input_values[k]
+                )  # check for correct type
+                for k in defined_types
+            )
+        elif isinstance(defined_types, type):
+            return isinstance(input_values, defined_types)
+        else:
+            return False
+
+    # mgconsole bug
+    if "hidden_features_size" in params.keys():
+        params["hidden_features_size"] = list(params["hidden_features_size"])
+    if "metrics" in params.keys():
+        params["metrics"] = list(params["metrics"])
+
+    params = {**DEFAULT_VALUES, **params}  # override any default parameters
+    
+    print(params)
+    
+    if not is_correctly_typed(DEFINED_INPUT_TYPES, params):
+        raise Exception(
+            f"Input dictionary is not correctly typed. Expected following types {DEFINED_INPUT_TYPES}."
+        )
+
+    
+    declare_globals(params)
+    declare_model_and_data(ctx)
+
+    return mgp.Record()
+
+##############################
+# train
+##############################
 
 
 @mgp.read_proc
 def train(
     no_epochs: int = 100
-) -> mgp.Record(total_epochs=int, accuracy=float, precision=float, recall=float, f1_score=float):
+) -> mgp.Record():
     """
     training
     """
     
+    global data
     try: 
         assert data != None, "Dataset is not loaded. Load dataset first!" 
     except AssertionError as e: 
@@ -107,21 +207,34 @@ def train(
         sys.exit(1)
 
 
-    for epoch in range(1, no_epochs+1):
+    for epoch in tqdm(range(1, no_epochs+1)):
         loss = train_model(model, opt, data, criterion)
-        a, p, r, f = metrics(data.val_mask, model, data)
-        print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Accuracy: {a:.4f}, Precision: {p:.4f}, Recall: {r:.4f}, F1-score: {f:.4f}' )
+        
+        global logged_data
+        
+        if epoch % global_params[TrainParams.CONSOLE_LOG_FREQ] == 0:
+            dict_train = metrics(data.train_mask, model, data, global_params[DataParams.METRICS])
+            dict_val = metrics(data.val_mask, model, data, global_params[DataParams.METRICS])
+            logged_data.append({"epoch": epoch,"loss": loss, "train": dict_train, "val": dict_val})
+        
+        
+            print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Accuracy: {logged_data[-1]["train"]["accuracy"]:.4f}, Accuracy: {logged_data[-1]["val"]["accuracy"]:.4f}' )
         # print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}')
 
-    global total_no_epochs
-    total_no_epochs += no_epochs
-    return mgp.Record(total_epochs=total_no_epochs, accuracy=a, precision=p, recall=r, f1_score=f)
+    return mgp.Record()
+
+##############################
+# get training data
+##############################
 
 @mgp.read_proc
-def test() -> mgp.Record(accuracy=float, precision=float, recall=float, f1_score=float):
-    """
-    testing
-    """
-    a, p, r, f = metrics(data.test_mask)
+def get_training_data() -> mgp.Record(
+    epoch=int, loss=float, train_log=mgp.Any, val_log=mgp.Any):
     
-    return mgp.Record(accuracy=a, precision=p, recall=r, f1_score=f)
+    return [
+        mgp.Record(
+            epoch=logged_data[k]["epoch"],
+            loss=logged_data[k]["loss"],
+            train_log=logged_data[k]["train"],
+            val_log=logged_data[k]["val"]) for k in range(len(logged_data))
+        ]
