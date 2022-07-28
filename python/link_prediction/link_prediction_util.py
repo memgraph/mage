@@ -1,4 +1,3 @@
-from operator import mod
 import torch
 import torch.nn.functional as F
 import numpy as np
@@ -107,8 +106,7 @@ def preprocess(graph: dgl.graph, split_ratio: float) -> Tuple[dgl.graph, dgl.gra
     # First set all seeds
     random.seed(717112397)
     np.random.seed(717112397)
-    torch.manual_seed(71712397) # set it for both cpu and cuda
-
+    torch.manual_seed(717112397) # set it for both cpu and cuda
 
     u, v = graph.edges()  # they are automatically splitted into 2 tensors
 
@@ -169,14 +167,14 @@ def compute_loss(pos_score: torch.Tensor, neg_score: torch.Tensor) -> float:
     Returns:
         float: Computed loss. 
     """
-    scores = torch.cat([pos_score, neg_score])
+    scores = torch.squeeze(torch.cat([pos_score, neg_score]))  # Squeeze for removing dimensions
     labels = torch.cat([torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])])
     return F.binary_cross_entropy_with_logits(scores, labels)
 
 
 def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, optimizer_type: str,
           learning_rate: float, node_features_property: str, console_log_freq: int, checkpoint_freq: int,
-          aggregator: str, metrics: List[str], predictor_type: str, predictor_hidden_size: int, train_g: dgl.graph, train_pos_g: dgl.graph,
+          aggregator: str, metrics: List[str], predictor_type: str, predictor_hidden_size: int, attn_num_heads: List[int], train_g: dgl.graph, train_pos_g: dgl.graph,
           train_neg_g: dgl.graph, test_pos_g: dgl.graph, test_neg_g: dgl.graph) -> Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]:
     """Real train method where training occurs. Parameters from LinkPredictionParameters are sent here. They aren't sent as whole class because of circular dependency.
 
@@ -189,11 +187,12 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
         node_features_property: (str): property name where the node features are saved.
         console_log_freq (int): How often results will be printed. All results that are printed in the terminal will be returned to the client calling Memgraph.
         checkpoint_freq (int): Select the number of epochs on which the model will be saved. The model is persisted on the disc. 
-        aggregator (str): Aggregator used in models. Can be one of the following: LSTM, pooling, mean.
+        aggregator (str): Aggregator used in models. Can be one of the following: lstm, pool, gcn and mean. 
         metrics (List[str]): Metrics used to evaluate model in training on the test/validation set(we don't use validation set to optimize parameters so everything is test set).
             Epoch will always be displayed, you can add loss, accuracy, precision, recall, specificity, F1, auc_score etc.
         predictor_type (str): Type of the predictor. Predictor is used for combining node scores to edge scores. 
         predictor_hidden_size (int): Size of the hidden layer in MLPPredictor. It will only be used for the MLPPredictor. 
+        attn_num_heads (int): Number of attention heads per each layer. It will be used only for GAT type of network.
         train_g (dgl.graph): A reference to the created training graph without test edges. 
         train_pos_g (dgl.graph): Positive training graph. 
         train_neg_g (dgl.graph): Negative training graph. 
@@ -206,7 +205,7 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
 
     # Create a model
     model = factory.create_model(layer_type=layer_type, hidden_features_size=hidden_features_size,
-                                 aggregator=aggregator)
+                                 aggregator=aggregator, attn_num_heads=attn_num_heads)
     # Create a predictor
     predictor = factory.create_predictor(predictor_type=predictor_type, predictor_hidden_size=predictor_hidden_size)
     # Create an optimizer
@@ -225,8 +224,8 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
 
         # print(train_g)
 
-        pos_score = predictor(train_pos_g, h)  # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_g. Scores are here actually logits.
-        neg_score = predictor(train_neg_g, h)  # returns vector of negative edge scores, torch.float32, shape: num_edges in the graph of train_g. Scores are actually logits.
+        pos_score = torch.squeeze(predictor(train_pos_g, h))  # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_g. Scores are here actually logits.
+        neg_score = torch.squeeze(predictor(train_neg_g, h))  # returns vector of negative edge scores, torch.float32, shape: num_edges in the graph of train_g. Scores are actually logits.
 
         scores = torch.cat([pos_score, neg_score]).detach().numpy()  # concatenated positive and negative scores
         labels = torch.cat([torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])]).detach().numpy()  # concatenation of labels
@@ -239,8 +238,8 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
         model.eval()
         # Turn of gradient calculation
         with torch.no_grad():
-            pos_score_test = predictor(test_pos_g, h)
-            neg_score_test = predictor(test_neg_g, h)
+            pos_score_test = torch.squeeze(predictor(test_pos_g, h))
+            neg_score_test = torch.squeeze(predictor(test_neg_g, h))
             scores_test = torch.cat([pos_score_test, neg_score_test]).detach().numpy()
             labels_test = torch.cat([torch.ones(pos_score_test.shape[0]), torch.zeros(neg_score_test.shape[0])]).detach().numpy()
 

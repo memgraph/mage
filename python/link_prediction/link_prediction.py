@@ -1,4 +1,3 @@
-from email import message
 import mgp  # Python API
 import torch
 import dgl  # geometric deep learning
@@ -33,11 +32,11 @@ class LinkPredictionParameters:
                                 Epoch will always be displayed, you can add loss, accuracy, precision, recall, specificity, F1, auc_score etc. 
     :param predictor_type: str -> Type of the predictor. Predictor is used for combining node scores to edge scores. 
     :param predictor_hidden_size: int -> Size of the hidden layer in MLP predictor. It will be used only for the MLP predictor. 
-    :param attn_num_heads: int -> GAT can support usage of more than one head. Only used in GAT, not in GraphSage.
+    :param attn_num_heads: List[int] -> GAT can support usage of more than one head in each layers except last one. Only used in GAT, not in GraphSage.
 
     """
     hidden_features_size: List = field(default_factory=lambda: [1433, 16, 16])  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
-    layer_type: str = "graph_sage"
+    layer_type: str = "graph_attn"
     num_epochs: int = 30
     optimizer: str = "ADAM"
     learning_rate: float = 0.01
@@ -51,7 +50,7 @@ class LinkPredictionParameters:
     metrics: List = field(default_factory=lambda: ["loss", "accuracy", "auc_score", "precision", "recall", "f1", "num_wrong_examples"])
     predictor_type: str = "dot"
     predictor_hidden_size: int = 16
-    attn_num_heads: int = 2
+    attn_num_heads: List[int] = field(default_factory=lambda: [3, 1])
 
 ##############################
 # global parameters
@@ -68,7 +67,7 @@ predictor: torch.nn.Module = None # Predictor for calculating edge scores
 ##############################
 
 @mgp.read_proc
-def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(status=mgp.Number, message=str):
+def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(status=mgp.Any, message=str):
     """Saves parameters to the global parameters link_prediction_parameters. Specific parsing is needed because we want enable user to call it with a subset of parameters, no need to send them all. 
     We will use some kind of reflection to most easily update parameters.
 
@@ -90,7 +89,7 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
         metrics: mgp.List[str] -> Metrics used to evaluate model in training. 
         predictor_type str: Type of the predictor. Predictor is used for combining node scores to edge scores. 
         predictor_hidden_size: int -> Size of the hidden layer in MLP predictor. It will be used only for the MLP predictor. 
-        attn_num_heads: int -> GAT can support usage of more than one head. Only used in GAT, not in GraphSage.
+        attn_num_heads: List[int] -> GAT can support usage of more than one head in each layer except last one. Only used in GAT, not in GraphSage.
 
     Returns:
         mgp.Record:
@@ -158,7 +157,7 @@ def train(ctx: mgp.ProcCtx) -> mgp.Record(status=str, metrics=mgp.Any):
         link_prediction_parameters.num_epochs, link_prediction_parameters.optimizer, link_prediction_parameters.learning_rate,
         link_prediction_parameters.node_features_property, link_prediction_parameters.console_log_freq, link_prediction_parameters.checkpoint_freq,
         link_prediction_parameters.aggregator, link_prediction_parameters.metrics, link_prediction_parameters.predictor_type, link_prediction_parameters.predictor_hidden_size,
-        train_g, train_pos_g, train_neg_g, test_pos_g, test_neg_g)
+        link_prediction_parameters.attn_num_heads, train_g, train_pos_g, train_neg_g, test_pos_g, test_neg_g)
 
 
     return mgp.Record(status="OK", metrics=training_results)
@@ -260,6 +259,7 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx) -> Tuple[dgl.graph, Dict[int32, int32]
     features = torch.tensor(features, dtype=torch.float32)  # use float for storing tensor of features
     g = dgl.graph((src_nodes, dest_nodes))
     g.ndata[link_prediction_parameters.node_features_property] = features
+    # g = dgl.add_self_loop(g) # TODO: How, why what? But needed for GAT, otherwise 0-in-degree nodes:u
     return g, new_to_old
 
 
@@ -272,6 +272,11 @@ def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
     Returns:
         bool: True if every parameter value is appropriate, False otherwise.
     """
+    # Hidden features size
+    hidden_features_size = parameters["hidden_features_size"]
+    for hid_size in hidden_features_size:
+        if hid_size <= 0:
+            return False, "Layer size must be greater than 0. "
 
     # Layer type check
     layer_type = parameters["layer_type"].lower()
@@ -348,12 +353,18 @@ def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
         return False, "Size of the hidden layer must be greater than 0 when using MLPPredictor. "
 
     # Attention heads
-    attn_num_heads = int(parameters["attn_num_heads"])
-    if layer_type == "graph_attn" and attn_num_heads <= 0:
-        return False, "GAT allows only positive, larger than 0 values for number of attention heads. "
+    attn_num_heads = parameters["attn_num_heads"]
+    if layer_type == "graph_attn":
+
+        if len(attn_num_heads) != len(hidden_features_size) - 1:
+            return False, "Specified network with {} layers but given attention heads data for {} layers. ".format(len(hidden_features_size) -1, len(attn_num_heads))
+
+        if attn_num_heads[-1] != 1:
+            return False, "Last GAT layer must contain only one attention head. "
+
+        for num_heads in attn_num_heads:
+            if num_heads <= 0:
+                return False, "GAT allows only positive, larger than 0 values for number of attention heads. "
 
     return True, "OK"
-
-    
-
 

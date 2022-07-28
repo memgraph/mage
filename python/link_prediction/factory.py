@@ -1,6 +1,7 @@
 from typing import List
 import torch
 from models.GraphSAGE import GraphSAGE
+from models.GAT import GAT 
 from predictors.DotPredictor import DotPredictor
 from predictors.MLPPredictor import MLPPredictor
 import itertools
@@ -22,12 +23,14 @@ def create_optimizer(optimizer_type: str, learning_rate: float, model: torch.nn.
         return torch.optim.SGD(itertools.chain(model.parameters(), predictor.parameters()), lr=learning_rate)
 
 
-def create_model(layer_type: str, hidden_features_size: List[int], aggregator: str) -> torch.nn.Module:
+def create_model(layer_type: str, hidden_features_size: List[int], aggregator: str, attn_num_heads: List[int]) -> torch.nn.Module:
     """Creates a model given a layer type and sizes of the hidden layers.
 
     Args:
         layer_type (str): Layer type. 
         hidden_features_size (List[int]): Defines the size of each hidden layer in the architecture. 
+        aggregator str: Type of the aggregator that will be used in GraphSage. Ignored for GAT. 
+        attn_num_heads List[int] : Number of heads for each layer used in the graph attention network. Ignored for GraphSage. 
 
     Returns:
         torch.nn.Module: Model used in the link prediction task.
@@ -35,7 +38,7 @@ def create_model(layer_type: str, hidden_features_size: List[int], aggregator: s
     if layer_type.lower() == "graph_sage":
         return GraphSAGE(hidden_features_size=hidden_features_size, aggregator=aggregator)
     elif layer_type.lower() == "graph_attn":
-        raise Exception("GAT is not yet supported")
+        return GAT(hidden_features_size=hidden_features_size, attn_num_heads=attn_num_heads)
 
 
 def create_predictor(predictor_type: str, predictor_hidden_size: int) -> torch.nn.Module:

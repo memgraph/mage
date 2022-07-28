@@ -6,12 +6,12 @@ from typing import List
 
 
 class GraphSAGE(torch.nn.Module):
-    def __init__(self, hidden_features_size: List[int], aggregator: str) -> None:
+    def __init__(self, hidden_features_size: List[int], aggregator: str):
         """Initializes modules with sizes.
 
         Args:
             hidden_features_size (List[int]): First element is the feature size and the rest specifies layer size. 
-            aggregator str:  Aggregator used in models. Can be one of the following: LSTM, Pooling, Mean
+            aggregator str:  Aggregator used in models. Can be one of the following: lstm, gcn, mean and pool. 
         """
         super(GraphSAGE, self).__init__()
         self.layers = torch.nn.ModuleList([])
@@ -24,7 +24,7 @@ class GraphSAGE(torch.nn.Module):
 
         Args:
             g (dgl.graph): A reference to the graph. 
-            h (torch.Tensor): Input features of the graph's nodes.
+            h (torch.Tensor): Input features of the graph's nodes. Shape: num_nodes*input_features
 
         Returns:
             torch.Tensor: Features after iterating over all layers. 
