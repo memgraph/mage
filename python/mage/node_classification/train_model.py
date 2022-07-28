@@ -7,4 +7,4 @@ def train_model(model, opt, data, criterion) -> torch.tensor:
     loss = criterion(out[data.train_mask], data.y[data.train_mask])  # Compute the loss solely based on the training nodes.
     loss.backward()  # Derive gradients.
     opt.step()  # Update parameters based on gradients.
-    return loss
+    return loss.item()
