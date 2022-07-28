@@ -37,7 +37,7 @@ class LinkPredictionParameters:
     """
     hidden_features_size: List = field(default_factory=lambda: [1433, 16, 16])  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
     layer_type: str = "graph_attn"
-    num_epochs: int = 30
+    num_epochs: int = 5
     optimizer: str = "ADAM"
     learning_rate: float = 0.01
     split_ratio: float = 0.8

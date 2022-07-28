@@ -18,6 +18,7 @@ from tests.dgl_adjacency_test import test_adjacency_matrix
 from typing import List
 import factory
 import random
+from training_visualizer import visualize
 
 
 if __name__ == "__main__":
@@ -281,7 +282,8 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
         loss_output.backward()
         optimizer.step()
 
-            
+    visualize(training_results=training_results, test_results=test_results)
+
     return training_results, h, predictor
 
 
