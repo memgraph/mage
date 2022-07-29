@@ -176,8 +176,8 @@ def compute_loss(pos_score: torch.Tensor, neg_score: torch.Tensor) -> float:
 
 def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, optimizer_type: str,
           learning_rate: float, node_features_property: str, console_log_freq: int, checkpoint_freq: int,
-          aggregator: str, metrics: List[str], predictor_type: str, predictor_hidden_size: int, attn_num_heads: List[int], train_g: dgl.graph, train_pos_g: dgl.graph,
-          train_neg_g: dgl.graph, test_pos_g: dgl.graph, test_neg_g: dgl.graph) -> Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]:
+          aggregator: str, metrics: List[str], predictor_type: str, predictor_hidden_size: int, attn_num_heads: List[int], tr_acc_patience: int, train_g: dgl.graph, train_pos_g: dgl.graph,
+          train_neg_g: dgl.graph, val_pos_g: dgl.graph, val_neg_g: dgl.graph) -> Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]:
     """Real train method where training occurs. Parameters from LinkPredictionParameters are sent here. They aren't sent as whole class because of circular dependency.
 
     Args:
@@ -195,15 +195,16 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
         predictor_type (str): Type of the predictor. Predictor is used for combining node scores to edge scores. 
         predictor_hidden_size (int): Size of the hidden layer in MLPPredictor. It will only be used for the MLPPredictor. 
         attn_num_heads (int): Number of attention heads per each layer. It will be used only for GAT type of network.
+        tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on test set be tolerated before stopping the training. 
         train_g (dgl.graph): A reference to the created training graph without test edges. 
         train_pos_g (dgl.graph): Positive training graph. 
         train_neg_g (dgl.graph): Negative training graph. 
-        test_pos_g (dgl.graph): Positive test graph.
-        test_neg_g (dgl.graph): Negative test graph.
+        val_pos_g (dgl.graph): Positive validation graph.
+        val_neg_g (dgl.graph): Negative validation graph.
     Returns:
         Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]: Training results, predictor and hidden features tensor. 
     """
-    training_results, test_results = [], []
+    training_results, validation_results = [], []
 
     # Create a model
     model = factory.create_model(layer_type=layer_type, hidden_features_size=hidden_features_size,
@@ -215,6 +216,7 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
                                          model=model, predictor=predictor)
                    
     # Training
+    max_val_acc, num_val_acc_drop = -1.0, 0  # last maximal accuracy and number of epochs it is dropping
 
     for epoch in range(1, num_epochs+1):
         # train_g.ndata[node_features_property], torch.float32, num_nodes*feature_size
@@ -232,7 +234,7 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
         pos_score = torch.squeeze(predictor(train_pos_g, h))  # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_pos-g. Scores are here actually logits.
         neg_score = torch.squeeze(predictor(train_neg_g, h))  # returns vector of negative edge scores, torch.float32, shape: num_edges in the graph of train_neg_g. Scores are actually logits.
 
-        edge_id = train_pos_g.edge_ids(gu[0], gv[0])
+        # edge_id = train_pos_g.edge_ids(gu[0], gv[0])
         # print("Edge id: ", edge_id)
         # print("Pos score: ", pos_score[edge_id])
 
@@ -248,48 +250,65 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
         # Turn of gradient calculation
         with torch.no_grad():
 
-            pos_score_test = torch.squeeze(predictor(test_pos_g, h))
-            neg_score_test = torch.squeeze(predictor(test_neg_g, h))
-            scores_test = torch.cat([pos_score_test, neg_score_test]).detach().numpy()
-            labels_test = torch.cat([torch.ones(pos_score_test.shape[0]), torch.zeros(neg_score_test.shape[0])]).detach().numpy()
-
-            loss_output_test = compute_loss(pos_score_test, neg_score_test)
-
+            pos_score_val = torch.squeeze(predictor(val_pos_g, h))
+            neg_score_val = torch.squeeze(predictor(val_neg_g, h))
+            scores_val = torch.cat([pos_score_val, neg_score_val]).detach().numpy()
+            labels_val = torch.cat([torch.ones(pos_score_val.shape[0]), torch.zeros(neg_score_val.shape[0])]).detach().numpy()
+            # Calculate loss for validation dataset
+            loss_output_test = compute_loss(pos_score_val, neg_score_val)
+            # Calculate here accuracy for validation dataset because of patience check
+            acc_val = accuracy_score(labels_val, scores_val > 0.5)
+            
             if epoch % console_log_freq == 0:
                 epoch_training_result = OrderedDict()  # Temporary result per epoch
-                epoch_test_result = OrderedDict()
+                epoch_val_result = OrderedDict()
                 epoch_training_result["epoch"] = epoch
-                epoch_test_result["epoch"] = epoch
+                epoch_val_result["epoch"] = epoch
                 for metric_name in metrics:  # it is faster to do it in this way than trying to search for it
                     if metric_name == "loss":
                         epoch_training_result["loss"] = loss_output.item()
-                        epoch_test_result["loss"] = loss_output_test.item()
+                        epoch_val_result["loss"] = loss_output_test.item()
                     elif metric_name == "accuracy":
                         epoch_training_result["accuracy"] = accuracy_score(labels, scores > 0.5) 
-                        epoch_test_result["accuracy"] = accuracy_score(labels_test, scores_test > 0.5)
+                        epoch_val_result["accuracy"] = acc_val
                     elif metric_name == "auc_score":
                         epoch_training_result["auc_score"] = roc_auc_score(labels, scores)
-                        epoch_test_result["auc_score"] = roc_auc_score(labels_test, scores_test > 0.5)
+                        epoch_val_result["auc_score"] = roc_auc_score(labels_val, scores_val > 0.5)
                     elif metric_name == "f1":
                         epoch_training_result["f1"] = f1_score(labels, scores > 0.5)
-                        epoch_test_result["f1"] = f1_score(labels_test, scores_test > 0.5)
+                        epoch_val_result["f1"] = f1_score(labels_val, scores_val > 0.5)
                     elif metric_name == "precision":
                         epoch_training_result["precision"] = precision_score(labels, scores > 0.5)
-                        epoch_test_result["precision"] = precision_score(labels_test, scores_test > 0.5)
+                        epoch_val_result["precision"] = precision_score(labels_val, scores_val > 0.5)
                     elif metric_name == "recall":
                         epoch_training_result["recall"] = recall_score(labels, scores > 0.5)
-                        epoch_test_result["recall"] = recall_score(labels_test, scores_test > 0.5)
+                        epoch_val_result["recall"] = recall_score(labels_val, scores_val > 0.5)
                     elif metric_name == "num_wrong_examples":
                         epoch_training_result["num_wrong_examples"] = np.not_equal(np.array(labels, dtype=bool), scores > 0.5).sum().item()
-                        epoch_test_result["num_wrong_examples"] = np.not_equal(np.array(labels_test, dtype=bool ), scores_test > 0.5).sum().item()
+                        epoch_val_result["num_wrong_examples"] = np.not_equal(np.array(labels_val, dtype=bool ), scores_val > 0.5).sum().item()
                 training_results.append(epoch_training_result)
-                test_results.append(epoch_test_result)
-                print(epoch_test_result)
+                validation_results.append(epoch_val_result)
+                print(epoch_val_result)
+
+            # Update patience variables
+            if acc_val <= max_val_acc:
+                # print("Acc val: ", acc_val)
+                # print("Max val acc: ", max_val_acc)
+                num_val_acc_drop += 1
+            else:
+                max_val_acc = acc_val
+                num_val_acc_drop = 0
+            
+            # Stop the training
+            if num_val_acc_drop == tr_acc_patience:
+                print("Stopped because of accuracy validation criteria. ")
+                break
 
         # backward
         optimizer.zero_grad()
         loss_output.backward()
         optimizer.step()
+
 
     # visualize(training_results=training_results, test_results=test_results)
 

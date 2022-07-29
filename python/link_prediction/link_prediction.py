@@ -33,11 +33,12 @@ class LinkPredictionParameters:
     :param predictor_type: str -> Type of the predictor. Predictor is used for combining node scores to edge scores. 
     :param predictor_hidden_size: int -> Size of the hidden layer in MLP predictor. It will be used only for the MLP predictor. 
     :param attn_num_heads: List[int] -> GAT can support usage of more than one head in each layers except last one. Only used in GAT, not in GraphSage.
+    :param tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on test set be tolerated before stopping the training. 
 
     """
     hidden_features_size: List = field(default_factory=lambda: [1433, 64, 16])  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
     layer_type: str = "graph_sage"
-    num_epochs: int = 5
+    num_epochs: int = 100
     optimizer: str = "ADAM"
     learning_rate: float = 0.01
     split_ratio: float = 0.8
@@ -51,6 +52,7 @@ class LinkPredictionParameters:
     predictor_type: str = "dot"
     predictor_hidden_size: int = 16
     attn_num_heads: List[int] = field(default_factory=lambda: [3, 1])
+    tr_acc_patience: int = 5
 
 ##############################
 # global parameters
@@ -91,6 +93,8 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
         predictor_type str: Type of the predictor. Predictor is used for combining node scores to edge scores. 
         predictor_hidden_size: int -> Size of the hidden layer in MLP predictor. It will be used only for the MLP predictor. 
         attn_num_heads: List[int] -> GAT can support usage of more than one head in each layer except last one. Only used in GAT, not in GraphSage.
+        tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on test set be tolerated before stopping the training. 
+
 
     Returns:
         mgp.Record:
@@ -159,7 +163,7 @@ def train(ctx: mgp.ProcCtx) -> mgp.Record(status=str, metrics=mgp.Any):
         link_prediction_parameters.num_epochs, link_prediction_parameters.optimizer, link_prediction_parameters.learning_rate,
         link_prediction_parameters.node_features_property, link_prediction_parameters.console_log_freq, link_prediction_parameters.checkpoint_freq,
         link_prediction_parameters.aggregator, link_prediction_parameters.metrics, link_prediction_parameters.predictor_type, link_prediction_parameters.predictor_hidden_size,
-        link_prediction_parameters.attn_num_heads, train_g, train_pos_g, train_neg_g, test_pos_g, test_neg_g)
+        link_prediction_parameters.attn_num_heads, link_prediction_parameters.tr_acc_patience, train_g, train_pos_g, train_neg_g, test_pos_g, test_neg_g)
 
 
     return mgp.Record(status="OK", metrics=training_results)
@@ -394,6 +398,13 @@ def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
         for num_heads in attn_num_heads:
             if num_heads <= 0:
                 return False, "GAT allows only positive, larger than 0 values for number of attention heads. "
+
+    # Training accuracy patience
+    tr_acc_patience = int(parameters["tr_acc_patience"])
+    if tr_acc_patience <= 0:
+        return False, "Training acc patience flag must be larger than 0."
+
+
 
     return True, "OK"
 
