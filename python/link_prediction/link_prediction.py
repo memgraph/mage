@@ -64,7 +64,9 @@ class LinkPredictionParameters:
 link_prediction_parameters: LinkPredictionParameters = LinkPredictionParameters()  # parameters currently saved.
 training_results: List[Dict[str, float]] = list()  # List of all output training records. String is the metric's name and float represents value.
 validation_results: List[Dict[str, float]] = list() # List of all output validation results. String is the metric's name and float represents value in the Dictionary inside.
-graph: dgl.graph = None # Reference to the graph.
+graph: dgl.graph = None # Reference to the graph. This includes training and validation. 
+new_to_old: Dict[int, int] = None  # Mapping of DGL indexes to original dataset indexes
+old_to_new: Dict[int, int] = None  # Mapping of original dataset indexes to DGL indexes
 predictor: torch.nn.Module = None # Predictor for calculating edge scores
 model: torch.nn.Module = None
 
@@ -143,12 +145,12 @@ def train(ctx: mgp.ProcCtx) -> mgp.Record(status=str, training_results=mgp.Any, 
         mgp.Record: It returns performance metrics obtained during the training on the training and validation dataset.
     """
     # Get global context
-    global training_resuts, validation_results, predictor, model
+    global training_results, validation_results, predictor, model, graph, new_to_old, old_to_new
     # Reset parameters of the old training
     _reset_train_predict_parameters()
     
     # Get some
-    graph, new_to_old, _ = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
+    graph, new_to_old, old_to_new = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
     
     # TEST: Currently disabled
     """ if test_conversion(graph=graph, new_to_old=new_to_old, ctx=ctx, node_id_property=link_prediction_parameters.node_id_property, node_features_property=link_prediction_parameters.node_features_property) is False:
@@ -175,62 +177,54 @@ def train(ctx: mgp.ProcCtx) -> mgp.Record(status=str, training_results=mgp.Any, 
 
     return mgp.Record(status="OK", training_results=training_results, validation_results=validation_results)
 
-# Not used currently
 @mgp.read_proc
-def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -> mgp.Record(score=mgp.Number): 
-    """Predicts edge score determined by source and destination vertex. Currently works as transductive prediction method.
+def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -> mgp.Record(score=mgp.Number):
+    """Predict method. We assume here semi-inductive learning process where queried nodes are somehow connected to the original graph. It is assumed that nodes are already added to the original graph and our goal
+    is to predict whether there is an edge between two nodes or not. Even if the edge exists, method can be used. 
+
 
     Args:
-        ctx (mgp.Record): The reference to the context execution.
-        src_vertex (mgp.Vertex): Source vertex.
-        dest_vertex (mgp.Vertex) Destination vertex.
+        ctx (mgp.ProcCtx): A reference to the context execution
 
     Returns:
-        mgp.Record: A score between 0 and 1.
+        score: Probability that two nodes are connected
     """
-    """ global predictor, h
+    global graph, predictor, model
 
     # Create dgl graph representation
-    prediction_graph, _, old_to_new = _get_dgl_graph_data(ctx)
-    # Get ids
-    src_id_old = int(src_vertex.properties.get(link_prediction_parameters.node_id_property))
-    dest_id_old = int(dest_vertex.properties.get(link_prediction_parameters.node_id_property))
+    src_old_id = int(src_vertex.properties.get(link_prediction_parameters.node_id_property))
+    dest_old_id = int(dest_vertex.properties.get(link_prediction_parameters.node_id_property))
 
-    # Map to new indexes
-    src_id_new = old_to_new[src_id_old]
-    dest_id_new = old_to_new[dest_id_old]
+    # Get dgl ids
+    src_id = old_to_new[src_old_id]
+    dest_id = old_to_new[dest_old_id]
 
+    edge_added, edge_id = False, -1
 
+    print("Number of edges before: ", graph.number_of_edges())
 
+    # Check if there is an edge between two nodes
+    if graph.has_edges_between(src_id, dest_id) is True:
+        print("Nodes {} and {} are already connected. ".format(src_old_id, dest_old_id))
+        edge_id = graph.edge_ids(src_id, dest_id)
+    else:
+        edge_added = True
+        print("Nodes {} and {} are not connected. ".format(src_old_id, dest_old_id))
+        graph.add_edges(src_id, dest_id)
+        edge_id = graph.edge_ids(src_id, dest_id)
+
+    print("Edge id: ", edge_id)
+    print("Number of edges after adding new edge: ", graph.number_of_edges())
     # Call utils module
-    edge_probabilities = link_prediction_util.predict(h=h, predictor=predictor, graph=prediction_graph)
-    
-    edge_id = prediction_graph.edge_ids(src_id_new, dest_id_new)
-
-    result = mgp.Record(score=edge_probabilities[edge_id].item())
-    return result """
-    return mgp.Record(score=0.2)
-
-@mgp.read_proc
-def new_predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -> mgp.Record(score=mgp.Number):
-
-    global predictor, model
-
-    # Create dgl graph representation
-    prediction_graph = dgl.graph(([0], [1]))
-    src_features = src_vertex.properties.get(link_prediction_parameters.node_features_property)
-    dest_features = dest_vertex.properties.get(link_prediction_parameters.node_features_property)
-    features = []
-    features.append(src_features)
-    features.append(dest_features)
-
-    features = torch.tensor(features, dtype=torch.float32)  # use float for storing tensor of features
-    prediction_graph.ndata[link_prediction_parameters.node_features_property] = features
-  
-    # Call utils module
-    score = link_prediction_util.new_predict(model=model, predictor=predictor, graph=prediction_graph, node_features_property=link_prediction_parameters.node_features_property)
-    
+    score = link_prediction_util.predict(model=model, predictor=predictor, graph=graph, node_features_property=link_prediction_parameters.node_features_property, edge_id=edge_id)
     result = mgp.Record(score=score)
+   
+    # Remove edge if necessary
+    if edge_added is True:
+        graph.remove_edges(edge_id)
+
+    print("Number of edges after: ", graph.number_of_edges())
+    
     return result
 
 @mgp.read_proc
@@ -458,9 +452,10 @@ def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
 def _reset_train_predict_parameters() -> None:
     """Reset global parameters that are returned by train method and used by predict method. 
     """
-    global training_results, validation_results, predictor, model
+    global training_results, validation_results, predictor, model, graph
     training_results.clear()  # clear training records from previous training
     validation_results.clear()  # clear validation record from previous training
     predictor = None  # Delete old predictor and create a new one in link_prediction_util.train method\
     model = None  # Annulate old model
+    graph = None 
  

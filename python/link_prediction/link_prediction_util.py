@@ -315,35 +315,38 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
     return training_results, validation_results, predictor, model
 
 
-def predict(h: torch.Tensor, predictor: torch.nn.Module, graph: dgl.graph) -> torch.Tensor:
-    """Predicts edge scores for given graph. This method can be called for one or more edges. 
+def predict(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl.graph, node_features_property: str, edge_id: int) -> float:
+    """Predicts edge scores for given graph. This method is called to obtain edge probability for edge with id=edge_id.
 
     Args:
-        h (torch.Tensor): Hidden features tensor. 
+        model (torch.nn.Module): A reference to the trained model. 
         predictor (torch.nn.Module): A reference to the predictor. 
-        graph (dgl.graph): Graph that needs to be tested. At minimum it should contains 2 nodes with 1 edge connecting them. 
+        graph (dgl.graph): A reference to the graph. This is semi-inductive setting so new nodes are appended to the original graph(train+validation).
+        node_features_property (str): Name of the features property. 
 
     Returns:
-        torch.Tensor: Edge scores ran through sigmoid to get probabilities. 
+        float: Edge score. 
     """
-    with torch.no_grad():
-        # h has shape of number of nodes that was trained on*hidden_features_size[:-1]
-        scores = predictor(graph, h)
-        print("Scores: ", scores)
-        # print("Sigmoid scores: ", torch.sigmoid(scores))
-        return torch.sigmoid(scores)
-
-
-def new_predict(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl.graph, node_features_property) -> float:
     with torch.no_grad():
         h = model(graph, graph.ndata[node_features_property])
         scores = predictor(graph, h)
         print("Scores: ", scores)
-        # print("Sigmoid scores: ", torch.sigmoid(scores))
-        return torch.sigmoid(scores)[0].item()
-#
+        return torch.sigmoid(scores)[edge_id].item()
 
 # Existing
 # 591017->49847
 # 49847->2440
+# 591017->2440
+# 1128856->75969
+# 31336->31349
 # non-existing
+# 31336->1106406
+# 31336->37879
+# 31336->1126012
+# 31336->1107140
+# 31336->1102850
+# 31336->1106148
+# 31336->1123188
+# 31336->1128990
+
+
