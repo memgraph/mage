@@ -202,7 +202,7 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
         val_pos_g (dgl.graph): Positive validation graph.
         val_neg_g (dgl.graph): Negative validation graph.
     Returns:
-        Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]: Training results, predictor and hidden features tensor. 
+        Tuple[List[Dict[str, float]], List[Dict[str, float]], torch.nn.Module, torch.nn.Module]: Training results, validation results, predictor and trained model. 
     """
     training_results, validation_results = [], []
 
@@ -227,7 +227,7 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
 
         # print(train_g)
         
-        gu, gv, edge_ids = train_pos_g.edges(form="all", order="eid")
+        # gu, gv, edge_ids = train_pos_g.edges(form="all", order="eid")
         # print("GU: ", gu)
         # print("GV: ", gv)
         # print("EDGE IDS: ", edge_ids)
@@ -301,7 +301,7 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
             
             # Stop the training
             if num_val_acc_drop == tr_acc_patience:
-                print("Stopped because of accuracy validation criteria. ")
+                print("Stopped because of validation criteria. ")
                 break
 
         # backward
@@ -312,7 +312,7 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
 
     # visualize(training_results=training_results, test_results=test_results)
 
-    return training_results, h, predictor, model
+    return training_results, validation_results, predictor, model
 
 
 def predict(h: torch.Tensor, predictor: torch.nn.Module, graph: dgl.graph) -> torch.Tensor:

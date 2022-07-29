@@ -6,6 +6,7 @@ from tests.processing_tests import test_conversion
 from numpy import dtype, int32
 from dataclasses import dataclass, field
 import link_prediction_util
+import benchmark
 
 
 ##############################
@@ -58,16 +59,19 @@ class LinkPredictionParameters:
 # global parameters
 ##############################
 
+
+# TODO: Code reorganization
 link_prediction_parameters: LinkPredictionParameters = LinkPredictionParameters()  # parameters currently saved.
-training_results: List[Dict[str, float]] = list()  # List of all output records. String is the metric's name and float represents value.
+training_results: List[Dict[str, float]] = list()  # List of all output training records. String is the metric's name and float represents value.
+validation_results: List[Dict[str, float]] = list() # List of all output validation results. String is the metric's name and float represents value in the Dictionary inside.
 graph: dgl.graph = None # Reference to the graph.
-h: torch.Tensor = None # hidden features
 predictor: torch.nn.Module = None # Predictor for calculating edge scores
 model: torch.nn.Module = None
 
 ##############################
 # All read procedures
 ##############################
+
 
 @mgp.read_proc
 def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(status=mgp.Any, message=str):
@@ -128,24 +132,25 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
     
     return mgp.Record(status=1, message="OK")
 
-
 @mgp.read_proc
-def train(ctx: mgp.ProcCtx) -> mgp.Record(status=str, metrics=mgp.Any):
+def train(ctx: mgp.ProcCtx) -> mgp.Record(status=str, training_results=mgp.Any, validation_results=mgp.Any):
     """ Train method is used for training the module on the dataset provided with ctx. By taking decision to split the dataset here and not in the separate method, it is impossible to retrain the same model. 
 
     Args:
         ctx (mgp.ProcCtx, optional): Reference to the process execution.
 
     Returns:
-        mgp.Record: It returns performance metrics obtained during the training.
+        mgp.Record: It returns performance metrics obtained during the training on the training and validation dataset.
     """
-    global training_results, predictor, h, model
-    training_results.clear() # clear records from previous training
-    predictor = None # Delete old predictor and create a new one in link_prediction_util.train method\
-    h = None # delete old hidden features
-    model = None
+    # Get global context
+    global training_resuts, validation_results, predictor, model
+    # Reset parameters of the old training
+    _reset_train_predict_parameters()
     
+    # Get some
     graph, new_to_old, _ = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
+    
+    # TEST: Currently disabled
     """ if test_conversion(graph=graph, new_to_old=new_to_old, ctx=ctx, node_id_property=link_prediction_parameters.node_id_property, node_features_property=link_prediction_parameters.node_features_property) is False:
         print("Remapping failed")
         return mgp.Record(status="Preprocessing failed", metrics=[])
@@ -153,24 +158,26 @@ def train(ctx: mgp.ProcCtx) -> mgp.Record(status=str, metrics=mgp.Any):
  
     """ Train g is a graph which has removed test edges. Others are positive and negative train and test graphs
     """
+    # TODO: Change this to validation
+
     train_g, train_pos_g, train_neg_g, test_pos_g, test_neg_g = link_prediction_util.preprocess(graph, link_prediction_parameters.split_ratio)
     if train_g is None or train_pos_g is None or train_neg_g is None or test_pos_g is None or test_neg_g is None:
         print("Preprocessing failed. ")
         return mgp.Record(status="Preprocessing failed", metrics=[])
 
 
-    training_results, h, predictor, model = link_prediction_util.train(link_prediction_parameters.hidden_features_size, link_prediction_parameters.layer_type,
+    training_results, validation_results, predictor, model = link_prediction_util.train(link_prediction_parameters.hidden_features_size, link_prediction_parameters.layer_type,
         link_prediction_parameters.num_epochs, link_prediction_parameters.optimizer, link_prediction_parameters.learning_rate,
         link_prediction_parameters.node_features_property, link_prediction_parameters.console_log_freq, link_prediction_parameters.checkpoint_freq,
         link_prediction_parameters.aggregator, link_prediction_parameters.metrics, link_prediction_parameters.predictor_type, link_prediction_parameters.predictor_hidden_size,
         link_prediction_parameters.attn_num_heads, link_prediction_parameters.tr_acc_patience, train_g, train_pos_g, train_neg_g, test_pos_g, test_neg_g)
 
 
-    return mgp.Record(status="OK", metrics=training_results)
+    return mgp.Record(status="OK", training_results=training_results, validation_results=validation_results)
 
-
+# Not used currently
 @mgp.read_proc
-def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -> mgp.Record(score=mgp.Number):
+def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -> mgp.Record(score=mgp.Number): 
     """Predicts edge score determined by source and destination vertex. Currently works as transductive prediction method.
 
     Args:
@@ -181,7 +188,7 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     Returns:
         mgp.Record: A score between 0 and 1.
     """
-    global predictor, h
+    """ global predictor, h
 
     # Create dgl graph representation
     prediction_graph, _, old_to_new = _get_dgl_graph_data(ctx)
@@ -201,7 +208,8 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     edge_id = prediction_graph.edge_ids(src_id_new, dest_id_new)
 
     result = mgp.Record(score=edge_probabilities[edge_id].item())
-    return result
+    return result """
+    return mgp.Record(score=0.2)
 
 @mgp.read_proc
 def new_predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -> mgp.Record(score=mgp.Number):
@@ -225,10 +233,50 @@ def new_predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Verte
     result = mgp.Record(score=score)
     return result
 
+@mgp.read_proc
+def benchmark(ctx: mgp.ProcCtx, num_runs: int) -> mgp.Record(status=str, test_results=mgp.Any):
+    """Benchmark method runs train method on different seeds for num_runs times to get as much as possible accurate results. 
+
+    Args:
+        ctx (mgp.ProcCtx): A reference to the context execution. 
+        num_runs (int): Number of runs.
+
+    Returns:
+        mgp.Record:
+            status (str): Status message
+            test_results: Average test results obtained after training for num_runs times. 
+    """    
+    # NOTE: THIS SHOULD BE HIDDEN FOR OUT USERS, BUT ENABLE THIS IN THE DEVELOPMENT SUPPORT
+
+    # Get the global context
+    global training_results, validation_results, predictor, model
+    # Reset parameters obtained from the training
+    _reset_train_predict_parameters()
+
+    # Get DGL graph data representation
+    graph, new_to_old, _ = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
+    """ if test_conversion(graph=graph, new_to_old=new_to_old, ctx=ctx, node_id_property=link_prediction_parameters.node_id_property, node_features_property=link_prediction_parameters.node_features_property) is False:
+        print("Remapping failed")
+        return mgp.Record(status="Preprocessing failed", metrics=[])
+    """
+ 
+    """ Train g is a graph which has removed test edges. Others are positive and negative train and test graphs
+    """
+
+    # Split the data
+    train_g, train_pos_g, train_neg_g, test_pos_g, test_neg_g = link_prediction_util.preprocess(graph, link_prediction_parameters.split_ratio)
+    if train_g is None or train_pos_g is None or train_neg_g is None or test_pos_g is None or test_neg_g is None:
+        print("Preprocessing failed. ")
+        return mgp.Record(status="Preprocessing failed", metrics=[])
 
 
+    test_results = benchmark.get_avg_seed_results(num_runs, link_prediction_parameters.hidden_features_size, link_prediction_parameters.layer_type,
+        link_prediction_parameters.num_epochs, link_prediction_parameters.optimizer, link_prediction_parameters.learning_rate,
+        link_prediction_parameters.node_features_property, link_prediction_parameters.console_log_freq, link_prediction_parameters.checkpoint_freq,
+        link_prediction_parameters.aggregator, link_prediction_parameters.metrics, link_prediction_parameters.predictor_type, link_prediction_parameters.predictor_hidden_size,
+        link_prediction_parameters.attn_num_heads, link_prediction_parameters.tr_acc_patience, train_g, train_pos_g, train_neg_g, test_pos_g, test_neg_g)
 
-
+    return mgp.Record(status="OK",  test_results=test_results)
 
 @mgp.read_proc
 def get_training_results(ctx: mgp.ProcCtx) -> mgp.Record(metrics=mgp.Any):
@@ -294,7 +342,6 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx) -> Tuple[dgl.graph, Dict[int32, int32]
     g.ndata[link_prediction_parameters.node_features_property] = features
     # g = dgl.add_self_loop(g) # TODO: How, why what? But needed for GAT, otherwise 0-in-degree nodes:u
     return g, new_to_old, old_to_new
-
 
 def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
     """Validates parameters user sent through method set_model_parameters
@@ -408,3 +455,12 @@ def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
 
     return True, "OK"
 
+def _reset_train_predict_parameters() -> None:
+    """Reset global parameters that are returned by train method and used by predict method. 
+    """
+    global training_results, validation_results, predictor, model
+    training_results.clear()  # clear training records from previous training
+    validation_results.clear()  # clear validation record from previous training
+    predictor = None  # Delete old predictor and create a new one in link_prediction_util.train method\
+    model = None  # Annulate old model
+ 
