@@ -1,0 +1,30 @@
+MATCH (v1:PAPER {id: 1103394})
+            MATCH (v2:PAPER {id: 10435}) 
+            CALL link_prediction.predict(v1, v2)
+            YIELD *
+            RETURN *;
+            
+MATCH (v1:PAPER {id: 1136814})
+            MATCH (v2:PAPER {id: 35}) 
+            CALL link_prediction.predict(v1, v2)
+            YIELD *
+            RETURN *;
+            
+MATCH (v1:PAPER {id: 688361})
+            MATCH (v2:PAPER {id: 32083}) 
+            CALL link_prediction.predict(v1, v2)
+            YIELD *
+            RETURN *;
+            
+MATCH (v1:PAPER {id: 645016})
+            MATCH (v2:PAPER {id: 644843}) 
+            CALL link_prediction.predict(v1, v2)
+            YIELD *
+            RETURN *;
+            
+MATCH (v1:PAPER {id: 1153811})
+            MATCH (v2:PAPER {id: 52847}) 
+            CALL link_prediction.predict(v1, v2)
+            YIELD *
+            RETURN *;
+            

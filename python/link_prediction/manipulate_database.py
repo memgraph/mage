@@ -39,13 +39,14 @@ def labels_list_to_cypher(labels: list) -> str:
 
     return command
 
-def delete_edges(num_delete_edges: int, file_name: str, node_id_property: str) -> None:
+def delete_edges(num_delete_edges: int, file_name: str, node_id_property: str, file_prediction_commands: str) -> None:
     """Deletes num_delete_edges random relationships. Creates CREATE commands and saves it to the file so later relationships can be recreated. 
 
     Args:
         num_delete_edges (int): Number of edges to be deleted. 
         file_name (str): Name of the file where it should be saved. 
         node_id_property (str): Property name where the id is saved. 
+        file_prediction_commands (str): File where prediction methods will be saved. 
     Returns:
         nothing
     """    
@@ -60,7 +61,7 @@ def delete_edges(num_delete_edges: int, file_name: str, node_id_property: str) -
 
     )
 
-    create_commands = []
+    create_commands, prediction_commands = [], []
     vertex_ids_delete = []
 
     for result in results:
@@ -92,15 +93,30 @@ def delete_edges(num_delete_edges: int, file_name: str, node_id_property: str) -
             MATCH (v1{v1_labels} {{{node_id_property}: {v1_properties.my_dict[node_id_property]}}})-[e]->(v2{v2_labels} {{{node_id_property}: {v2_properties.my_dict[node_id_property]}}}) 
             DELETE e;
         """
-        print("DELETE COMMAND: ")
-        print(delete_command)
+        # print("DELETE COMMAND: ")
+        # print(delete_command)
 
         memgraph.execute(delete_command)
 
+        # Add support for prediction methods
+        predict_command = f"""MATCH (v1{v1_labels} {{{node_id_property}: {v1_properties.my_dict[node_id_property]}}})
+            MATCH (v2{v2_labels} {{{node_id_property}: {v2_properties.my_dict[node_id_property]}}}) 
+            CALL link_prediction.predict(v1, v2)
+            YIELD *
+            RETURN *;
+            """
+        prediction_commands.append(predict_command)
 
+
+    # Save create commands
     with open(file=file_name, mode="w") as f:
         for comm in create_commands:
             f.write("%s\n" % comm)
+
+    # Save predict commands
+    with open(file=prediction_file_name, mode="w") as f:
+        for pred_comm in prediction_commands:
+            f.write("%s\n" % pred_comm)
 
 
     return results
@@ -133,7 +149,8 @@ def read_commands_script(file_name: str) -> None:
 
 if __name__ == "__main__":
     memgraph = Memgraph("127.0.0.1", 7687)
-    file_name = "./cora_creation_commands.txt"
-    # delete_edges(num_delete_edges=5, file_name=file_name, node_id_property="id")
-    read_commands_script(file_name=file_name)
+    file_name = "./cora_creation_commands.txt"  # where CREATE commands will be created
+    prediction_file_name = "./prediction_commands.txt"  # where PREDICTION commands will be created
+    delete_edges(num_delete_edges=5, file_name=file_name, node_id_property="id", file_prediction_commands=prediction_file_name)
+    # read_commands_script(file_name=file_name)
     
