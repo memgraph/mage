@@ -149,8 +149,8 @@ def read_commands_script(file_name: str) -> None:
 
 if __name__ == "__main__":
     memgraph = Memgraph("127.0.0.1", 7687)
-    file_name = "./cora_creation_commands.txt"  # where CREATE commands will be created
-    prediction_file_name = "./prediction_commands.txt"  # where PREDICTION commands will be created
+    file_name = "./commands/cora_creation_commands.txt"  # where CREATE commands will be created
+    prediction_file_name = "./commands/prediction_commands.txt"  # where PREDICTION commands will be created
     delete_edges(num_delete_edges=5, file_name=file_name, node_id_property="id", file_prediction_commands=prediction_file_name)
     # read_commands_script(file_name=file_name)
     

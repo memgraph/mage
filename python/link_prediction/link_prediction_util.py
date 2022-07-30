@@ -89,7 +89,7 @@ def squarify(M: np.matrix, val: int) -> np.matrix:
 
 
 def preprocess(graph: dgl.graph, split_ratio: float) -> Tuple[dgl.graph, dgl.graph, dgl.graph, dgl.graph, dgl.graph]:
-    """Preprocess method splits dataset in training and validation set(herein test set.) This method is also used for setting numpy and torch random seed. 
+    """Preprocess method splits dataset in training and validation set. This method is also used for setting numpy and torch random seed. 
 
     Args:
         graph (dgl.graph): A reference to the dgl graph representation.
@@ -97,21 +97,23 @@ def preprocess(graph: dgl.graph, split_ratio: float) -> Tuple[dgl.graph, dgl.gra
 
     Returns:
         Tuple[dgl.graph, dgl.graph, dgl.graph, dgl.graph, dgl.graph]:
-            1. Training graph without edges from test set.
+            1. Training graph without edges from validation set.
             2. Positive training graph
             3. Negative training graph
-            4. Positive test graph
-            5. Negative test graph
+            4. Positive validation graph
+            5. Negative validation graph
     """
 
     # First set all seeds
-    random.seed(717112397)
-    np.random.seed(717112397)
-    torch.manual_seed(717112397) # set it for both cpu and cuda
+    rnd_seed = 717112397
+    random.seed(rnd_seed)
+    np.random.seed(rnd_seed)
+    torch.manual_seed(rnd_seed) # set it for both cpu and cuda
 
-    u, v = graph.edges()  # they are automatically splitted into 2 tensors
+    # Get source and destination nodes for all edges
+    u, v = graph.edges()  
 
-
+    # Manipulate graph representation
     adj = sp.coo_matrix((np.ones(len(u)), (u.numpy(), v.numpy())))  # adjacency list graph representation
     adj_matrix = adj.todense()  # convert to dense matrix representation
     adj_matrix = squarify(adj_matrix, 0)  # pad if needed
@@ -120,16 +122,18 @@ def preprocess(graph: dgl.graph, split_ratio: float) -> Tuple[dgl.graph, dgl.gra
     if test_adjacency_matrix(graph, adj_matrix) is False:
         return None, None, None, None, None
 
-    adj_neg = 1 - adj_matrix - np.eye(graph.number_of_nodes())  # Create negative adj_matrix in order to more easily sample negative edges
+    # Create negative adj_matrix in order to more easily sample negative edges
+
+    adj_neg = 1 - adj_matrix - np.eye(graph.number_of_nodes())
     neg_u, neg_v = np.where(adj_neg != 0)  # Find all non-existing edges
 
     eids = np.arange(graph.number_of_edges())  # get all edge ids from number of edges and create a numpy vector from it.
     eids = np.random.permutation(eids)  # randomly permute edges
 
-    test_size = int(len(eids) * (1 - split_ratio))  # test size is 1-split_ratio specified by the user
+    val_size = int(len(eids) * (1 - split_ratio))  # val size is 1-split_ratio specified by the user
     # u and v have size equal to number of edges. So positive graph can be created directly from it.
-    test_pos_u, test_pos_v = u[eids[:test_size]], v[eids[:test_size]]
-    train_pos_u, train_pos_v = u[eids[test_size:]], v[eids[test_size:]]
+    val_pos_u, val_pos_v = u[eids[:val_size]], v[eids[:val_size]]
+    train_pos_u, train_pos_v = u[eids[val_size:]], v[eids[val_size:]]
 
     # Number of positive edges + number of negative edges should always be graph.number_of_nodes() * graph.number_of_nodes()\
     assert len(u) + len(neg_u) == graph.number_of_nodes() * (graph.number_of_nodes() - 1)
@@ -137,24 +141,22 @@ def preprocess(graph: dgl.graph, split_ratio: float) -> Tuple[dgl.graph, dgl.gra
 
     neg_eids = np.random.choice(len(neg_u), graph.number_of_edges())  # sample with replacement from negative edges
 
-    # Create negative train and test dataset
-    test_neg_u, test_neg_v = neg_u[neg_eids[:test_size]], neg_v[neg_eids[:test_size]]
-    train_neg_u, train_neg_v = neg_u[neg_eids[test_size:]], neg_v[neg_eids[test_size:]]
+    # Create negative train and validation dataset
+    val_neg_u, val_neg_v = neg_u[neg_eids[:val_size]], neg_v[neg_eids[:val_size]]
+    train_neg_u, train_neg_v = neg_u[neg_eids[val_size:]], neg_v[neg_eids[val_size:]]
 
-    # Now remove the edges from in the test set from the original graph, NOTE: copy is created
-    train_g = dgl.remove_edges(graph, eids[:test_size])
-    test_g = dgl.remove_edges(graph, eids[test_size:])
+    # Now remove the edges from the validation set from the original graph, NOTE: copy is created
+    train_g = dgl.remove_edges(graph, eids[:val_size])
+    val_g = dgl.remove_edges(graph, eids[val_size:])
 
     # Construct a positive and a negative graph
     train_pos_g = dgl.graph((train_pos_u, train_pos_v), num_nodes=graph.number_of_nodes())
     train_neg_g = dgl.graph((train_neg_u, train_neg_v), num_nodes=graph.number_of_nodes())
 
-    test_pos_g = dgl.graph((test_pos_u, test_pos_v), num_nodes=graph.number_of_nodes())
-    test_neg_g = dgl.graph((test_neg_u, test_neg_v), num_nodes=graph.number_of_nodes())
+    val_pos_g = dgl.graph((val_pos_u, val_pos_v), num_nodes=graph.number_of_nodes())
+    val_neg_g = dgl.graph((val_neg_u, val_neg_v), num_nodes=graph.number_of_nodes())
 
-    # TODO: number of nodes in each of the subgraphs.
-
-    return train_g, train_pos_g, train_neg_g, test_pos_g, test_neg_g
+    return train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g
 
     # Link prediction requires computation of representation of pairs of nodes
 
@@ -174,47 +176,35 @@ def compute_loss(pos_score: torch.Tensor, neg_score: torch.Tensor) -> float:
     return F.binary_cross_entropy_with_logits(scores, labels)
 
 
-def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, optimizer_type: str,
-          learning_rate: float, node_features_property: str, console_log_freq: int, checkpoint_freq: int,
-          aggregator: str, metrics: List[str], predictor_type: str, predictor_hidden_size: int, attn_num_heads: List[int], tr_acc_patience: int, train_g: dgl.graph, train_pos_g: dgl.graph,
+def train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: torch.optim.Optimizer, num_epochs: int,
+          node_features_property: str, console_log_freq: int, checkpoint_freq: int,
+          metrics: List[str], tr_acc_patience: int, train_g: dgl.graph, train_pos_g: dgl.graph,
           train_neg_g: dgl.graph, val_pos_g: dgl.graph, val_neg_g: dgl.graph) -> Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]:
     """Real train method where training occurs. Parameters from LinkPredictionParameters are sent here. They aren't sent as whole class because of circular dependency.
 
     Args:
-        hidden_features_size (List[int]): Defines the size of each hidden layer in the architecture. 
-        layer_type (str): layer type
+        model (torch.nn.Module): A reference to the model. 
+        predictor (torch.nn.Module): A reference to the edge predictor.
+        optimizer (torch.optim.Optimizer): A reference to the training optimizer. 
         num_epochs (int): number of epochs for model training.
-        optimizer_type (str): can be one of the following: ADAM, SGD…
-        learning_rate (float): learning rate for optimizer
         node_features_property: (str): property name where the node features are saved.
         console_log_freq (int): How often results will be printed. All results that are printed in the terminal will be returned to the client calling Memgraph.
         checkpoint_freq (int): Select the number of epochs on which the model will be saved. The model is persisted on the disc. 
-        aggregator (str): Aggregator used in models. Can be one of the following: lstm, pool, gcn and mean. 
-        metrics (List[str]): Metrics used to evaluate model in training on the test/validation set(we don't use validation set to optimize parameters so everything is test set).
+        metrics (List[str]): Metrics used to evaluate model in training on the validation set.
             Epoch will always be displayed, you can add loss, accuracy, precision, recall, specificity, F1, auc_score etc.
-        predictor_type (str): Type of the predictor. Predictor is used for combining node scores to edge scores. 
-        predictor_hidden_size (int): Size of the hidden layer in MLPPredictor. It will only be used for the MLPPredictor. 
-        attn_num_heads (int): Number of attention heads per each layer. It will be used only for GAT type of network.
-        tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on test set be tolerated before stopping the training. 
-        train_g (dgl.graph): A reference to the created training graph without test edges. 
+        tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on validation set be tolerated before stopping the training. 
+        train_g (dgl.graph): A reference to the created training graph without validation edges. 
         train_pos_g (dgl.graph): Positive training graph. 
         train_neg_g (dgl.graph): Negative training graph. 
         val_pos_g (dgl.graph): Positive validation graph.
         val_neg_g (dgl.graph): Negative validation graph.
     Returns:
-        Tuple[List[Dict[str, float]], List[Dict[str, float]], torch.nn.Module, torch.nn.Module]: Training results, validation results, predictor and trained model. 
+        Tuple[List[Dict[str, float]], List[Dict[str, float]]: Training results, validation results
     """
+    
     training_results, validation_results = [], []
 
-    # Create a model
-    model = factory.create_model(layer_type=layer_type, hidden_features_size=hidden_features_size,
-                                 aggregator=aggregator, attn_num_heads=attn_num_heads)
-    # Create a predictor
-    predictor = factory.create_predictor(predictor_type=predictor_type, predictor_hidden_size=predictor_hidden_size)
-    # Create an optimizer
-    optimizer = factory.create_optimizer(optimizer_type=optimizer_type, learning_rate=learning_rate,
-                                         model=model, predictor=predictor)
-                   
+                  
     # Training
     max_val_acc, num_val_acc_drop = -1.0, 0  # last maximal accuracy and number of epochs it is dropping
 
@@ -225,12 +215,12 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
 
         h = model(train_g, train_g.ndata[node_features_property])  # h is torch.float32 that has shape: nodes*hidden_features_size[-1]
 
-        # print(train_g)
         
         # gu, gv, edge_ids = train_pos_g.edges(form="all", order="eid")
         # print("GU: ", gu)
         # print("GV: ", gv)
         # print("EDGE IDS: ", edge_ids)
+        
         pos_score = torch.squeeze(predictor(train_pos_g, h))  # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_pos-g. Scores are here actually logits.
         neg_score = torch.squeeze(predictor(train_neg_g, h))  # returns vector of negative edge scores, torch.float32, shape: num_edges in the graph of train_neg_g. Scores are actually logits.
 
@@ -245,8 +235,9 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
 
         loss_output = compute_loss(pos_score, neg_score)
 
-        # Now switch to validation mode to get results on test set(= validation set)
+        # Now switch to validation mode to get results on validation set/ 
         model.eval()
+
         # Turn of gradient calculation
         with torch.no_grad():
 
@@ -255,7 +246,7 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
             scores_val = torch.cat([pos_score_val, neg_score_val]).detach().numpy()
             labels_val = torch.cat([torch.ones(pos_score_val.shape[0]), torch.zeros(neg_score_val.shape[0])]).detach().numpy()
             # Calculate loss for validation dataset
-            loss_output_test = compute_loss(pos_score_val, neg_score_val)
+            loss_output_val = compute_loss(pos_score_val, neg_score_val)
             # Calculate here accuracy for validation dataset because of patience check
             acc_val = accuracy_score(labels_val, scores_val > 0.5)
             
@@ -267,7 +258,7 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
                 for metric_name in metrics:  # it is faster to do it in this way than trying to search for it
                     if metric_name == "loss":
                         epoch_training_result["loss"] = loss_output.item()
-                        epoch_val_result["loss"] = loss_output_test.item()
+                        epoch_val_result["loss"] = loss_output_val.item()
                     elif metric_name == "accuracy":
                         epoch_training_result["accuracy"] = accuracy_score(labels, scores > 0.5) 
                         epoch_val_result["accuracy"] = acc_val
@@ -310,9 +301,9 @@ def train(hidden_features_size: List[int], layer_type: str, num_epochs: int, opt
         optimizer.step()
 
 
-    # visualize(training_results=training_results, test_results=test_results)
+    # visualize(training_results=training_results, validation_results=validation_results)
 
-    return training_results, validation_results, predictor, model
+    return training_results, validation_results
 
 
 def predict(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl.graph, node_features_property: str, edge_id: int) -> float:

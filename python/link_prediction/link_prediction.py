@@ -7,7 +7,7 @@ from numpy import dtype, int32
 from dataclasses import dataclass, field
 import link_prediction_util
 import benchmark
-
+import factory
 
 ##############################
 # classes and data structures
@@ -146,6 +146,7 @@ def train(ctx: mgp.ProcCtx) -> mgp.Record(status=str, training_results=mgp.Any, 
     """
     # Get global context
     global training_results, validation_results, predictor, model, graph, new_to_old, old_to_new
+
     # Reset parameters of the old training
     _reset_train_predict_parameters()
     
@@ -160,20 +161,31 @@ def train(ctx: mgp.ProcCtx) -> mgp.Record(status=str, training_results=mgp.Any, 
  
     """ Train g is a graph which has removed test edges. Others are positive and negative train and test graphs
     """
+    
     # TODO: Change this to validation
 
-    train_g, train_pos_g, train_neg_g, test_pos_g, test_neg_g = link_prediction_util.preprocess(graph, link_prediction_parameters.split_ratio)
-    if train_g is None or train_pos_g is None or train_neg_g is None or test_pos_g is None or test_neg_g is None:
+    train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g = link_prediction_util.preprocess(graph, link_prediction_parameters.split_ratio)
+    if train_g is None or train_pos_g is None or train_neg_g is None or val_pos_g is None or val_neg_g is None:
         print("Preprocessing failed. ")
         return mgp.Record(status="Preprocessing failed", metrics=[])
 
 
-    training_results, validation_results, predictor, model = link_prediction_util.train(link_prediction_parameters.hidden_features_size, link_prediction_parameters.layer_type,
-        link_prediction_parameters.num_epochs, link_prediction_parameters.optimizer, link_prediction_parameters.learning_rate,
-        link_prediction_parameters.node_features_property, link_prediction_parameters.console_log_freq, link_prediction_parameters.checkpoint_freq,
-        link_prediction_parameters.aggregator, link_prediction_parameters.metrics, link_prediction_parameters.predictor_type, link_prediction_parameters.predictor_hidden_size,
-        link_prediction_parameters.attn_num_heads, link_prediction_parameters.tr_acc_patience, train_g, train_pos_g, train_neg_g, test_pos_g, test_neg_g)
-
+    # Create a model
+    model = factory.create_model(layer_type=link_prediction_parameters.layer_type, hidden_features_size=link_prediction_parameters.hidden_features_size,
+                                 aggregator=link_prediction_parameters.aggregator, attn_num_heads=link_prediction_parameters.attn_num_heads)
+    # Create a predictor
+    predictor = factory.create_predictor(predictor_type=link_prediction_parameters.predictor_type, predictor_hidden_size=link_prediction_parameters.predictor_hidden_size)
+    
+    # Create an optimizer
+    optimizer = factory.create_optimizer(optimizer_type=link_prediction_parameters.optimizer, learning_rate=link_prediction_parameters.learning_rate,
+                                         model=model, predictor=predictor)
+      
+    # Collect training and validation results from utils model
+    training_results, validation_results = link_prediction_util.train(model, predictor, optimizer,
+        link_prediction_parameters.num_epochs, link_prediction_parameters.node_features_property, 
+        link_prediction_parameters.console_log_freq, link_prediction_parameters.checkpoint_freq,
+        link_prediction_parameters.metrics, link_prediction_parameters.tr_acc_patience, 
+        train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g)
 
     return mgp.Record(status="OK", training_results=training_results, validation_results=validation_results)
 
