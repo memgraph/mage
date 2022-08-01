@@ -135,7 +135,12 @@ def preprocess(graph: dgl.graph, split_ratio: float) -> Tuple[dgl.graph, dgl.gra
     val_pos_u, val_pos_v = u[eids[:val_size]], v[eids[:val_size]]
     train_pos_u, train_pos_v = u[eids[val_size:]], v[eids[val_size:]]
 
-    # Number of positive edges + number of negative edges should always be graph.number_of_nodes() * graph.number_of_nodes()\
+    # Number of positive edges + number of negative edges should always be graph.number_of_nodes() * graph.number_of_nodes()
+
+    print("len(u): ", len(u))
+    print("len(neg)u): ", len(neg_u))
+    print("Num nodes: ", graph.number_of_nodes())
+
     assert len(u) + len(neg_u) == graph.number_of_nodes() * (graph.number_of_nodes() - 1)
     assert len(v) + len(neg_v) == graph.number_of_nodes() * (graph.number_of_nodes() - 1)
 
@@ -188,6 +193,29 @@ def train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: torch.o
         Tuple[List[Dict[str, float]], List[Dict[str, float]]: Training results, validation results
     """
 
+    print("train_g: ", train_g)
+    print("train_pos_g: ", train_pos_g)
+    print("train_neg_g: ", train_neg_g)
+    print("val_pos_g: ", val_pos_g)
+    print("val_neg_g: ", val_neg_g)
+
+    tr_pos_edges_u, tr_pos_edges_v = train_pos_g.edges()
+    tr_neg_edges_u, tr_neg_edges_v = train_neg_g.edges()
+
+    print("tr pos u: ", tr_pos_edges_u)
+    print("tr pos v: ", tr_pos_edges_v)
+    print("tr neg u: ", tr_neg_edges_u)
+    print("tr neg v: ", tr_neg_edges_v)
+
+    val_pos_edges_u, val_pos_edges_v = val_pos_g.edges()
+    val_neg_edges_u, val_neg_edges_v = val_neg_g.edges()
+
+    print("val pos u: ", val_pos_edges_u)
+    print("val pos v: ", val_pos_edges_v)
+    print("val neg u: ", val_neg_edges_u)
+    print("val neg v: ", val_neg_edges_v)
+    
+
     training_results, validation_results = [], []
 
     # Training
@@ -206,13 +234,18 @@ def train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: torch.o
 
         h = torch.squeeze(model(train_g, train_g.ndata[node_features_property]))  # h is torch.float32 that has shape: nodes*hidden_features_size[-1]. Node embeddings.
 
+        print("Node embeddings shape: ", h.shape)
+
         # gu, gv, edge_ids = train_pos_g.edges(form="all", order="eid")
         # print("GU: ", gu)
         # print("GV: ", gv)
         # print("EDGE IDS: ", edge_ids)
 
-        pos_score = torch.squeeze(predictor(train_pos_g, h))  # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_pos-g. Scores are here actually logits.
-        neg_score = torch.squeeze(predictor(train_neg_g, h))  # returns vector of negative edge scores, torch.float32, shape: num_edges in the graph of train_neg_g. Scores are actually logits.
+        pos_score = torch.squeeze(predictor(train_pos_g, h), 1)  # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_pos-g. Scores are here actually logits.
+        neg_score = torch.squeeze(predictor(train_neg_g, h), 1)  # returns vector of negative edge scores, torch.float32, shape: num_edges in the graph of train_neg_g. Scores are actually logits.
+
+        print("pos score shape: ", pos_score.shape)
+        print("neg score shape: ", neg_score.shape)
 
         # edge_id = train_pos_g.edge_ids(gu[0], gv[0])
         # print("Edge id: ", edge_id)
@@ -235,8 +268,8 @@ def train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: torch.o
         # Turn of gradient calculation
         with torch.no_grad():
 
-            pos_score_val = torch.squeeze(predictor(val_pos_g, h))
-            neg_score_val = torch.squeeze(predictor(val_neg_g, h))
+            pos_score_val = torch.squeeze(predictor(val_pos_g, h), 1)
+            neg_score_val = torch.squeeze(predictor(val_neg_g, h), 1)
             scores_val = torch.cat([pos_score_val, neg_score_val])
             probs_val = m(scores_val)  # probabilities
             classes_val = probs_val > 0.5

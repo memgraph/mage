@@ -20,10 +20,11 @@ class DotPredictor(nn.Module):
             torch.Tensor: A tensor of edge scores. 
         """
         with g.local_scope():
+            print("Number of edges in dot predictor: ", g.number_of_edges())
+            print("H: ", h)
             g.ndata['h'] = h # h is node feature
             # Compute a new edge feature named 'score' by a dot-product between the
             # source node feature 'h' and destination node feature 'h'.
             g.apply_edges(fn.u_dot_v('h', 'h', 'score'))
             # u_dot_v returns a 1-element vector for each edge so you need to squeeze it.
-            # print(g.edata['score'][:, 0])
-            return g.edata['score'][:, 0]
+            return g.edata['score']

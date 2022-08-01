@@ -37,7 +37,7 @@ class LinkPredictionParameters:
     :param model_save_path: str -> Path where the link prediction model will be saved every checkpoint_freq epochs.
 
     """
-    hidden_features_size: List = field(default_factory=lambda: [1433, 128, 64, 32])  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
+    hidden_features_size: List = field(default_factory=lambda: [3, 3])  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
     layer_type: str = "graph_attn"
     num_epochs: int = 100
     optimizer: str = "SGD"
@@ -50,7 +50,7 @@ class LinkPredictionParameters:
     checkpoint_freq: int = 10
     aggregator: str = "pool"
     metrics: List = field(default_factory=lambda: ["loss", "accuracy", "auc_score", "precision", "recall", "f1", "num_wrong_examples"])
-    predictor_type: str = "mlp"
+    predictor_type: str = "dot"
     attn_num_heads: List[int] = field(default_factory=lambda: [8, 8, 1])
     tr_acc_patience: int = 100
     model_save_path: str = "/home/andi/Memgraph/code/mage/python/link_prediction/model.pt"
@@ -148,14 +148,17 @@ def train(ctx: mgp.ProcCtx) -> mgp.Record(status=str, training_results=mgp.Any, 
     # Reset parameters of the old training
     _reset_train_predict_parameters()
 
-    # Check if the dataset is empty. 
+    # Check if the dataset is empty. E2E handling. 
     if len(ctx.graph.vertices) == 0:
         return mgp.Record(status="Empty dataset. ", training_results=training_results, validation_results=validation_results)
-
 
     # Get some
     graph, new_to_old, old_to_new = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
     
+    # Check if there are no edges in the dataset, assume that it cannot learn effectively without edges. E2E handling.
+    if graph.number_of_edges() == 0:
+        return mgp.Record(status="No edges in the dataset. ", training_results=training_results, validation_results=validation_results)
+
     # TEST: Currently disabled
     """ if test_conversion(graph=graph, new_to_old=new_to_old, ctx=ctx, node_id_property=link_prediction_parameters.node_id_property, node_features_property=link_prediction_parameters.node_features_property) is False:
         print("Remapping failed")
@@ -345,6 +348,9 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx) -> Tuple[dgl.graph, Dict[int32, int32]
             else:
                 dest_nodes.append(old_to_new[dest_id_old])
     features = torch.tensor(features, dtype=torch.float32)  # use float for storing tensor of features
+    print("Src nodes: ", src_nodes)
+    print("Dest nodes: ", dest_nodes)
+    print("Features: ", features)
     g = dgl.graph((src_nodes, dest_nodes))
     g.ndata[link_prediction_parameters.node_features_property] = features
     # g = dgl.add_self_loop(g) # TODO: How, why what? But needed for GAT, otherwise 0-in-degree nodes:u

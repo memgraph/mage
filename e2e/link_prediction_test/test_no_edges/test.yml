@@ -1,0 +1,12 @@
+# We don't allow training without edges because it is assumed that it is not possible to train without positive examples.
+
+query: >
+  CALL link_prediction.train()
+  YIELD status, training_results, validation_results
+  RETURN status, training_results, validation_results;
+
+output: 
+  - status: "No edges in the dataset. "
+    training_results: []
+    validation_results: []
+

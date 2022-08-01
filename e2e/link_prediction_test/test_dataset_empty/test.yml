@@ -1,0 +1,12 @@
+# Completely empty dataset. We expect it not to fail, don't allow training and return with status message.
+
+query: >
+  CALL link_prediction.train()
+  YIELD status, training_results, validation_results
+  RETURN status, training_results, validation_results;
+
+output: 
+  - status: "Empty dataset. "
+    training_results: []
+    validation_results: []
+
