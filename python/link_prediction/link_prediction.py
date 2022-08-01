@@ -34,6 +34,7 @@ class LinkPredictionParameters:
     :param predictor_type: str -> Type of the predictor. Predictor is used for combining node scores to edge scores. 
     :param attn_num_heads: List[int] -> GAT can support usage of more than one head in each layers except last one. Only used in GAT, not in GraphSage.
     :param tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on test set be tolerated before stopping the training. 
+    :param model_save_path: str -> Path where the link prediction model will be saved every checkpoint_freq epochs.
 
     """
     hidden_features_size: List = field(default_factory=lambda: [1433, 128, 64, 32])  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
@@ -52,6 +53,7 @@ class LinkPredictionParameters:
     predictor_type: str = "mlp"
     attn_num_heads: List[int] = field(default_factory=lambda: [8, 8, 1])
     tr_acc_patience: int = 100
+    model_save_path: str = "/home/andi/Memgraph/code/mage/python/link_prediction/model.pt"
 
 ##############################
 # global parameters
@@ -95,6 +97,7 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
         predictor_type str: Type of the predictor. Predictor is used for combining node scores to edge scores. 
         attn_num_heads: List[int] -> GAT can support usage of more than one head in each layer except last one. Only used in GAT, not in GraphSage.
         tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on test set be tolerated before stopping the training. 
+        model_save_path: str -> Path where the link prediction model will be saved every checkpoint_freq epochs. 
 
 
     Returns:
@@ -144,7 +147,12 @@ def train(ctx: mgp.ProcCtx) -> mgp.Record(status=str, training_results=mgp.Any, 
 
     # Reset parameters of the old training
     _reset_train_predict_parameters()
-    
+
+    # Check if the dataset is empty. 
+    if len(ctx.graph.vertices) == 0:
+        return mgp.Record(status="Empty dataset. ", training_results=training_results, validation_results=validation_results)
+
+
     # Get some
     graph, new_to_old, old_to_new = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
     
@@ -176,7 +184,7 @@ def train(ctx: mgp.ProcCtx) -> mgp.Record(status=str, training_results=mgp.Any, 
     training_results, validation_results = link_prediction_util.train(model, predictor, optimizer,
         link_prediction_parameters.num_epochs, link_prediction_parameters.node_features_property, 
         link_prediction_parameters.console_log_freq, link_prediction_parameters.checkpoint_freq,
-        link_prediction_parameters.metrics, link_prediction_parameters.tr_acc_patience, 
+        link_prediction_parameters.metrics, link_prediction_parameters.tr_acc_patience, link_prediction_parameters.model_save_path,
         train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g)
 
     return mgp.Record(status="OK", training_results=training_results, validation_results=validation_results)
@@ -352,100 +360,120 @@ def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
         bool: True if every parameter value is appropriate, False otherwise.
     """
     # Hidden features size
-    hidden_features_size = parameters["hidden_features_size"]
-    for hid_size in hidden_features_size:
-        if hid_size <= 0:
-            return False, "Layer size must be greater than 0. "
+    if "hidden_features_size" in parameters.keys():
+        hidden_features_size = parameters["hidden_features_size"]
+        for hid_size in hidden_features_size:
+            if hid_size <= 0:
+                return False, "Layer size must be greater than 0. "
 
     # Layer type check
-    layer_type = parameters["layer_type"].lower()
-    if layer_type != "graph_attn" and layer_type != "graph_sage":
-        return False, "Unknown layer type, this module supports only graph_attn and graph_sage. "
+    if "layer_type" in parameters.keys():
+        layer_type = parameters["layer_type"].lower()
+        if layer_type != "graph_attn" and layer_type != "graph_sage":
+            return False, "Unknown layer type, this module supports only graph_attn and graph_sage. "
 
     # Num epochs
-    num_epochs = int(parameters["num_epochs"])
-    if num_epochs <= 0:
-        return False, "Number of epochs must be greater than 0. "
+    if "num_epochs" in parameters.keys():
+        num_epochs = int(parameters["num_epochs"])
+        if num_epochs <= 0:
+            return False, "Number of epochs must be greater than 0. "
 
     # Optimizer check
-    optimizer = parameters["optimizer"].upper()
-    if optimizer != "ADAM" and optimizer != "SGD":
-        return False, "Unknown optimizer, this module supports only ADAM and SGD. "
+    if "optimizer" in parameters.keys():
+        optimizer = parameters["optimizer"].upper()
+        if optimizer != "ADAM" and optimizer != "SGD":
+            return False, "Unknown optimizer, this module supports only ADAM and SGD. "
 
     # Learning rate check
-    learning_rate = float(parameters["learning_rate"])
-    if learning_rate <= 0.0:
-        return False, "Learning rate must be greater than 0. "
+    if "learning_rate" in parameters.keys():
+        learning_rate = float(parameters["learning_rate"])
+        if learning_rate <= 0.0:
+            return False, "Learning rate must be greater than 0. "
 
     # Split ratio check
-    split_ratio = float(parameters["split_ratio"])
-    if split_ratio <= 0.0:
-        return False, "Split ratio must be greater than 0. "
+    if "split_ratio" in parameters.keys():
+        split_ratio = float(parameters["split_ratio"])
+        if split_ratio <= 0.0:
+            return False, "Split ratio must be greater than 0. "
 
     # node_features_property check
-    node_features_property = parameters["node_features_property"]
-    if node_features_property == "":
-        return False, "You must specify name of nodes' features property. "
+    if "node_features_property" in parameters.keys():
+        node_features_property = parameters["node_features_property"]
+        if node_features_property == "":
+            return False, "You must specify name of nodes' features property. "
     
     # node_id_property check
-    node_id_property = parameters["node_id_property"]
-    if node_id_property == "":
-        return False, "You must specify name of nodes' id property. "
+    if "node_id_property" in parameters.keys():
+        node_id_property = parameters["node_id_property"]
+        if node_id_property == "":
+            return False, "You must specify name of nodes' id property. "
     
     # device_type check
-    device_type = parameters["device_type"].lower()
-    if device_type != "cpu" and torch.device != "cuda":
-        return False, "Only cpu and cuda are supported as devices. "
+    if "device_type" in parameters.keys():
+        device_type = parameters["device_type"].lower()
+        if device_type != "cpu" and torch.device != "cuda":
+            return False, "Only cpu and cuda are supported as devices. "
 
     # console_log_freq check
-    console_log_freq = int(parameters["console_log_freq"])
-    if console_log_freq <= 0:
-        return False, "Console log frequency must be greater than 0. "
+    if "console_log_freq" in parameters.keys():
+        console_log_freq = int(parameters["console_log_freq"])
+        if console_log_freq <= 0:
+            return False, "Console log frequency must be greater than 0. "
     
     # checkpoint freq check
-    checkpoint_freq = int(parameters["checkpoint_freq"])
-    if checkpoint_freq <= 0:
-        return False, "Checkpoint frequency must be greter than 0. "
+    if "checkpoint_freq" in parameters.keys():
+        checkpoint_freq = int(parameters["checkpoint_freq"])
+        if checkpoint_freq <= 0:
+            return False, "Checkpoint frequency must be greter than 0. "
 
     # aggregator check
-    aggregator = parameters["aggregator"].lower()
-    if aggregator != "mean" and aggregator != "lstm" and aggregator != "pool" and aggregator != "gcn":
-        return False, "Aggregator must be one of the following: mean, pool, lstm or gcn. "
+    if "aggregator" in parameters.keys():
+        aggregator = parameters["aggregator"].lower()
+        if aggregator != "mean" and aggregator != "lstm" and aggregator != "pool" and aggregator != "gcn":
+            return False, "Aggregator must be one of the following: mean, pool, lstm or gcn. "
 
     # metrics check
-    metrics = parameters["metrics"]
-    for metric in metrics:
-        _metric = metric.lower()
-        if _metric != "loss" and _metric != "accuracy" and _metric != "f1" and \
-            _metric != "auc_score" and _metric != "precision" and _metric != "recall" and \
-            _metric != "specificity" and _metric != "num_wrong_examples":
-            return False, "Metric name " + _metric + " is not supported!"
+    if "metrics" in parameters.keys():
+        metrics = parameters["metrics"]
+        for metric in metrics:
+            _metric = metric.lower()
+            if _metric != "loss" and _metric != "accuracy" and _metric != "f1" and \
+                _metric != "auc_score" and _metric != "precision" and _metric != "recall" and \
+                _metric != "specificity" and _metric != "num_wrong_examples":
+                return False, "Metric name " + _metric + " is not supported!"
             
     # Predictor type
-    predictor_type = parameters["predictor_type"].lower()
-    if predictor_type != "dot" and predictor_type != "mlp":
-        return False, "Predictor " + predictor_type + " is not supported. "
+    if "predictor_type" in parameters.keys():
+        predictor_type = parameters["predictor_type"].lower()
+        if predictor_type != "dot" and predictor_type != "mlp":
+            return False, "Predictor " + predictor_type + " is not supported. "
 
     # Attention heads
-    attn_num_heads = parameters["attn_num_heads"]
-    if layer_type == "graph_attn":
+    if "attn_num_heads" in parameters.keys():
+        attn_num_heads = parameters["attn_num_heads"]
+        if layer_type == "graph_attn":
 
-        if len(attn_num_heads) != len(hidden_features_size) - 1:
-            return False, "Specified network with {} layers but given attention heads data for {} layers. ".format(len(hidden_features_size) -1, len(attn_num_heads))
+            if len(attn_num_heads) != len(hidden_features_size) - 1:
+                return False, "Specified network with {} layers but given attention heads data for {} layers. ".format(len(hidden_features_size) -1, len(attn_num_heads))
 
-        if attn_num_heads[-1] != 1:
-            return False, "Last GAT layer must contain only one attention head. "
+            if attn_num_heads[-1] != 1:
+                return False, "Last GAT layer must contain only one attention head. "
 
-        for num_heads in attn_num_heads:
-            if num_heads <= 0:
-                return False, "GAT allows only positive, larger than 0 values for number of attention heads. "
+            for num_heads in attn_num_heads:
+                if num_heads <= 0:
+                    return False, "GAT allows only positive, larger than 0 values for number of attention heads. "
 
     # Training accuracy patience
-    tr_acc_patience = int(parameters["tr_acc_patience"])
-    if tr_acc_patience <= 0:
-        return False, "Training acc patience flag must be larger than 0."
+    if "tr_acc_patience" in parameters.keys():
+        tr_acc_patience = int(parameters["tr_acc_patience"])
+        if tr_acc_patience <= 0:
+            return False, "Training acc patience flag must be larger than 0."
 
-
+    # model_save_path
+    if "model_save_path" in parameters.keys():
+        model_save_path = parameters["model_save_path"]
+        if model_save_path == "":
+            return False, "Path must be != "" "
 
     return True, "OK"
 

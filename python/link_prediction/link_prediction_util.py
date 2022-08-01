@@ -163,7 +163,7 @@ def preprocess(graph: dgl.graph, split_ratio: float) -> Tuple[dgl.graph, dgl.gra
 
 def train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: torch.optim.Optimizer, num_epochs: int,
           node_features_property: str, console_log_freq: int, checkpoint_freq: int,
-          metrics: List[str], tr_acc_patience: int, train_g: dgl.graph, train_pos_g: dgl.graph,
+          metrics: List[str], tr_acc_patience: int, model_save_path: str, train_g: dgl.graph, train_pos_g: dgl.graph,
           train_neg_g: dgl.graph, val_pos_g: dgl.graph, val_neg_g: dgl.graph) -> Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]:
     """Real train method where training occurs. Parameters from LinkPredictionParameters are sent here. They aren't sent as whole class because of circular dependency.
 
@@ -178,6 +178,7 @@ def train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: torch.o
         metrics (List[str]): Metrics used to evaluate model in training on the validation set.
             Epoch will always be displayed, you can add loss, accuracy, precision, recall, specificity, F1, auc_score etc.
         tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on validation set be tolerated before stopping the training. 
+        model_save_path: str -> Path where the model will be saved every checkpoint_freq epochs. 
         train_g (dgl.graph): A reference to the created training graph without validation edges. 
         train_pos_g (dgl.graph): Positive training graph. 
         train_neg_g (dgl.graph): Negative training graph. 
@@ -294,6 +295,10 @@ def train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: torch.o
             if num_val_acc_drop == tr_acc_patience:
                 print("Stopped because of validation criteria. ")
                 break
+
+            # Save the model if necessary
+            if epoch % checkpoint_freq == 0:
+                torch.save(model, model_save_path)
 
     # visualize(training_results=training_results, validation_results=validation_results)
     return training_results, validation_results
