@@ -157,9 +157,9 @@ class Graph : public GraphView<TSize> {
   /// Creates a node.
   ///
   /// @return     Created node id
-  TSize CreateNode(std::uint64_t memgraph_id) {
+  std::optional<TSize> CreateNode(std::uint64_t memgraph_id) {
     if (memgraph_to_inner_id_.find(memgraph_id) != memgraph_to_inner_id_.end()) {
-      return 0;
+      return std::nullopt;
     }
 
     auto id = nodes_.size();
@@ -173,31 +173,37 @@ class Graph : public GraphView<TSize> {
     return id;
   }
 
-  /// Creates a directed/undirected edge (per graph type) in the graph.
-  /// The edge object contains information about the endpoint node IDs.
+  /// Creates a directed/undirected edge (per graph type) in the GraphView.
+  /// Edges are defined by three Memgraph IDs: (source_node, destination_node, edge). If no edge ID is given, the
+  /// assumed value is (M + 1) for a GraphView with M edges.
+  ///
   /// Throws an exception if the endpoints are not in the graph.
   ///
-  ///@param memgraph_id_from -- origin node’s Memgraph ID
+  ///@param memgraph_id_from -- source node’s Memgraph ID
   ///@param memgraph_id_to -- destination node’s Memgraph ID
-  ///@param memgraph_edge_id -- edge’s Memgraph ID
   ///@param graph_type -- graph type (directed or undirected)
+  ///@param memgraph_edge_id -- edge’s Memgraph ID
   ///@param weighted -- whether the graph is weighted
   ///@param weight -- edge weight
   ///
   /// @return new edge’s inner ID
   ///
-  TSize CreateEdge(std::uint64_t memgraph_id_from, std::uint64_t memgraph_id_to, std::uint64_t memgraph_edge_id,
-                   const GraphType graph_type = GraphType::kDirectedGraph, bool weighted = false, double weight = 0.0) {
-    if (memgraph_to_inner_edge_id_.find(memgraph_edge_id) != memgraph_to_inner_edge_id_.end()) {
-      return 0;
+  std::optional<TSize> CreateEdge(std::uint64_t memgraph_id_from, std::uint64_t memgraph_id_to,
+                                  const GraphType graph_type = GraphType::kDirectedGraph,
+                                  std::optional<std::uint64_t> memgraph_edge_id = std::nullopt, bool weighted = false,
+                                  double weight = 0.0) {
+    std::uint64_t edge_id = (!memgraph_edge_id) ? edges_.size() : *memgraph_edge_id;
+
+    if (memgraph_to_inner_edge_id_.find(edge_id) != memgraph_to_inner_edge_id_.end()) {
+      return std::nullopt;
     }
 
     auto from = GetInnerNodeId(memgraph_id_from);
     auto to = GetInnerNodeId(memgraph_id_to);
 
     auto id = edges_.size();
-    inner_to_memgraph_edge_id_.emplace(id, memgraph_edge_id);
-    memgraph_to_inner_edge_id_.emplace(memgraph_edge_id, id);
+    inner_to_memgraph_edge_id_.emplace(id, edge_id);
+    memgraph_to_inner_edge_id_.emplace(edge_id, id);
 
     edges_.push_back({id, from, to});
     adj_list_[from].push_back(id);
@@ -213,24 +219,6 @@ class Graph : public GraphView<TSize> {
     }
 
     return id;
-  }
-
-  ///
-  ///@brief Create an Edge object without using a Memgraph edge ID. To be used only in testing.
-  ///
-  ///@param memgraph_id_from -- origin node’s Memgraph ID
-  ///@param memgraph_id_to -- destination node’s Memgraph ID
-  ///@param memgraph_edge_id -- edge’s Memgraph ID
-  ///@param graph_type -- graph type (directed or undirected)
-  ///@param weighted -- whether the graph is weighted
-  ///@param weight -- edge weight
-  ///
-  /// @return new edge’s inner ID
-  ///
-  TSize CreateEdge(std::uint64_t memgraph_id_from, std::uint64_t memgraph_id_to,
-                   const GraphType graph_type = GraphType::kDirectedGraph, bool weighted = false, double weight = 0.0) {
-    auto id = edges_.size();
-    return CreateEdge(memgraph_id_from, memgraph_id_to, id, graph_type, weighted, weight);
   }
 
   /// Gets all valid edges.

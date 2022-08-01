@@ -54,7 +54,7 @@ void CreateGraphEdge(mg_graph::Graph<TSize> *graph, mgp_vertex *source, mgp_vert
   // Get Memgraph-internal edge ID
   auto memgraph_edge_id = mgp::edge_get_id(edge).as_int;
 
-  graph->CreateEdge(memgraph_id_from, memgraph_id_to, memgraph_edge_id, graph_type, weighted, weight);
+  graph->CreateEdge(memgraph_id_from, memgraph_id_to, graph_type, memgraph_edge_id, weighted, weight);
 }
 }  // namespace mg_graph
 
