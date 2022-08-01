@@ -32,35 +32,31 @@ class LinkPredictionParameters:
     :param metrics: mgp.List[str] -> Metrics used to evaluate model in training on the test/validation set(we don't use validation set to optimize parameters so everything is test set).
                                 Epoch will always be displayed, you can add loss, accuracy, precision, recall, specificity, F1, auc_score etc. 
     :param predictor_type: str -> Type of the predictor. Predictor is used for combining node scores to edge scores. 
-    :param predictor_hidden_size: int -> Size of the hidden layer in MLP predictor. It will be used only for the MLP predictor. 
     :param attn_num_heads: List[int] -> GAT can support usage of more than one head in each layers except last one. Only used in GAT, not in GraphSage.
     :param tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on test set be tolerated before stopping the training. 
 
     """
-    hidden_features_size: List = field(default_factory=lambda: [1433, 64, 16])  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
-    layer_type: str = "graph_sage"
+    hidden_features_size: List = field(default_factory=lambda: [1433, 128, 64, 32])  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
+    layer_type: str = "graph_attn"
     num_epochs: int = 100
-    optimizer: str = "ADAM"
-    learning_rate: float = 0.01
+    optimizer: str = "SGD"
+    learning_rate: float = 0.5
     split_ratio: float = 0.8
     node_features_property: str = "features"
     node_id_property: str = "id"
     device_type: str = "cpu" 
     console_log_freq: int = 1
     checkpoint_freq: int = 10
-    aggregator: str = "mean"
+    aggregator: str = "pool"
     metrics: List = field(default_factory=lambda: ["loss", "accuracy", "auc_score", "precision", "recall", "f1", "num_wrong_examples"])
-    predictor_type: str = "dot"
-    predictor_hidden_size: int = 16
-    attn_num_heads: List[int] = field(default_factory=lambda: [3, 1])
-    tr_acc_patience: int = 5
+    predictor_type: str = "mlp"
+    attn_num_heads: List[int] = field(default_factory=lambda: [8, 8, 1])
+    tr_acc_patience: int = 100
 
 ##############################
 # global parameters
 ##############################
 
-
-# TODO: Code reorganization
 link_prediction_parameters: LinkPredictionParameters = LinkPredictionParameters()  # parameters currently saved.
 training_results: List[Dict[str, float]] = list()  # List of all output training records. String is the metric's name and float represents value.
 validation_results: List[Dict[str, float]] = list() # List of all output validation results. String is the metric's name and float represents value in the Dictionary inside.
@@ -97,7 +93,6 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
         aggregator: str → Aggregator used in models. Can be one of the following: lstm, pool, mean, gcn. 
         metrics: mgp.List[str] -> Metrics used to evaluate model in training. 
         predictor_type str: Type of the predictor. Predictor is used for combining node scores to edge scores. 
-        predictor_hidden_size: int -> Size of the hidden layer in MLP predictor. It will be used only for the MLP predictor. 
         attn_num_heads: List[int] -> GAT can support usage of more than one head in each layer except last one. Only used in GAT, not in GraphSage.
         tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on test set be tolerated before stopping the training. 
 
@@ -162,19 +157,16 @@ def train(ctx: mgp.ProcCtx) -> mgp.Record(status=str, training_results=mgp.Any, 
     """ Train g is a graph which has removed test edges. Others are positive and negative train and test graphs
     """
     
-    # TODO: Change this to validation
-
     train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g = link_prediction_util.preprocess(graph, link_prediction_parameters.split_ratio)
     if train_g is None or train_pos_g is None or train_neg_g is None or val_pos_g is None or val_neg_g is None:
         print("Preprocessing failed. ")
         return mgp.Record(status="Preprocessing failed", metrics=[])
 
-
     # Create a model
     model = factory.create_model(layer_type=link_prediction_parameters.layer_type, hidden_features_size=link_prediction_parameters.hidden_features_size,
                                  aggregator=link_prediction_parameters.aggregator, attn_num_heads=link_prediction_parameters.attn_num_heads)
     # Create a predictor
-    predictor = factory.create_predictor(predictor_type=link_prediction_parameters.predictor_type, predictor_hidden_size=link_prediction_parameters.predictor_hidden_size)
+    predictor = factory.create_predictor(predictor_type=link_prediction_parameters.predictor_type, predictor_hidden_size=link_prediction_parameters.hidden_features_size[-1])
     
     # Create an optimizer
     optimizer = factory.create_optimizer(optimizer_type=link_prediction_parameters.optimizer, learning_rate=link_prediction_parameters.learning_rate,
@@ -279,14 +271,15 @@ def benchmark(ctx: mgp.ProcCtx, num_runs: int) -> mgp.Record(status=str, test_re
     test_results = benchmark.get_avg_seed_results(num_runs, link_prediction_parameters.hidden_features_size, link_prediction_parameters.layer_type,
         link_prediction_parameters.num_epochs, link_prediction_parameters.optimizer, link_prediction_parameters.learning_rate,
         link_prediction_parameters.node_features_property, link_prediction_parameters.console_log_freq, link_prediction_parameters.checkpoint_freq,
-        link_prediction_parameters.aggregator, link_prediction_parameters.metrics, link_prediction_parameters.predictor_type, link_prediction_parameters.predictor_hidden_size,
+        link_prediction_parameters.aggregator, link_prediction_parameters.metrics, link_prediction_parameters.predictor_type, link_prediction_parameters.hidden_features_size[-1],
         link_prediction_parameters.attn_num_heads, link_prediction_parameters.tr_acc_patience, train_g, train_pos_g, train_neg_g, test_pos_g, test_neg_g)
 
     return mgp.Record(status="OK",  test_results=test_results)
 
 @mgp.read_proc
-def get_training_results(ctx: mgp.ProcCtx) -> mgp.Record(metrics=mgp.Any):
-    """This method is used when user wants to get performance data obtained from the last training. It is in the form of list of records where each record is a Dict[metric_name, metric_value].
+def get_training_results(ctx: mgp.ProcCtx) -> mgp.Record(tr_metrics=mgp.Any, val_metrics=mgp.Any):
+    """This method is used when user wants to get performance data obtained from the last training. It is in the form of list of records where each record is a Dict[metric_name, metric_value]. Training and validation
+    results are returned. 
 
     Args:
         ctx (mgp.ProcCtx): Reference to the context execution
@@ -294,7 +287,7 @@ def get_training_results(ctx: mgp.ProcCtx) -> mgp.Record(metrics=mgp.Any):
     Returns:
         mgp.Record[List[LinkPredictionOutputResult]]: A list of LinkPredictionOutputResults. 
     """
-    return mgp.Record(metrics=training_results)
+    return mgp.Record(tr_metrics=training_results, val_metrics=validation_results)
 
 ##############################
 # Convert to DGL graph, consider extracting such methods to another file.
@@ -433,11 +426,6 @@ def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
     if predictor_type != "dot" and predictor_type != "mlp":
         return False, "Predictor " + predictor_type + " is not supported. "
 
-    # Predictor hidden size
-    predictor_hidden_size = int(parameters["predictor_hidden_size"])
-    if predictor_type == "mlp" and predictor_hidden_size <= 0:
-        return False, "Size of the hidden layer must be greater than 0 when using MLPPredictor. "
-
     # Attention heads
     attn_num_heads = parameters["attn_num_heads"]
     if layer_type == "graph_attn":
@@ -464,10 +452,12 @@ def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
 def _reset_train_predict_parameters() -> None:
     """Reset global parameters that are returned by train method and used by predict method. 
     """
-    global training_results, validation_results, predictor, model, graph
+    global training_results, validation_results, predictor, model, graph, new_to_old, old_to_new
     training_results.clear()  # clear training records from previous training
     validation_results.clear()  # clear validation record from previous training
     predictor = None  # Delete old predictor and create a new one in link_prediction_util.train method\
     model = None  # Annulate old model
-    graph = None 
+    graph = None # Set graph to None
+    old_to_new = None
+    new_to_old = None
  

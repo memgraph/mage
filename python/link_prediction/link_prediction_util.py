@@ -105,13 +105,13 @@ def preprocess(graph: dgl.graph, split_ratio: float) -> Tuple[dgl.graph, dgl.gra
     """
 
     # First set all seeds
-    rnd_seed = 717112397
+    rnd_seed = 0
     random.seed(rnd_seed)
     np.random.seed(rnd_seed)
-    torch.manual_seed(rnd_seed) # set it for both cpu and cuda
+    torch.manual_seed(rnd_seed)  # set it for both cpu and cuda
 
     # Get source and destination nodes for all edges
-    u, v = graph.edges()  
+    u, v = graph.edges()
 
     # Manipulate graph representation
     adj = sp.coo_matrix((np.ones(len(u)), (u.numpy(), v.numpy())))  # adjacency list graph representation
@@ -147,7 +147,7 @@ def preprocess(graph: dgl.graph, split_ratio: float) -> Tuple[dgl.graph, dgl.gra
 
     # Now remove the edges from the validation set from the original graph, NOTE: copy is created
     train_g = dgl.remove_edges(graph, eids[:val_size])
-    val_g = dgl.remove_edges(graph, eids[val_size:])
+    # val_g = dgl.remove_edges(graph, eids[val_size:])
 
     # Construct a positive and a negative graph
     train_pos_g = dgl.graph((train_pos_u, train_pos_v), num_nodes=graph.number_of_nodes())
@@ -159,21 +159,6 @@ def preprocess(graph: dgl.graph, split_ratio: float) -> Tuple[dgl.graph, dgl.gra
     return train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g
 
     # Link prediction requires computation of representation of pairs of nodes
-
-
-def compute_loss(pos_score: torch.Tensor, neg_score: torch.Tensor) -> float:
-    """Computes loss by usage of binary cross entropy. It expects logits not class probabilities. Before computing loss, it will compute sigmoid over logits -> more efficient operation when done both at once.
-
-    Args:
-        pos_score (torch.Tensor): Tensor of scores of all positive edges. 
-        neg_score (torch.Tensor): Tensor of scores of all negative edges. 
-
-    Returns:
-        float: Computed loss. 
-    """
-    scores = torch.cat([pos_score, neg_score])  # Squeeze for removing dimensions
-    labels = torch.cat([torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])])
-    return F.binary_cross_entropy_with_logits(scores, labels)
 
 
 def train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: torch.optim.Optimizer, num_epochs: int,
@@ -201,26 +186,30 @@ def train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: torch.o
     Returns:
         Tuple[List[Dict[str, float]], List[Dict[str, float]]: Training results, validation results
     """
-    
+
     training_results, validation_results = [], []
 
-                  
     # Training
     max_val_acc, num_val_acc_drop = -1.0, 0  # last maximal accuracy and number of epochs it is dropping
 
-    for epoch in range(1, num_epochs+1):
+    # Initialize loss
+    loss = torch.nn.BCELoss()
+
+    # Initialize activation func
+    m = torch.nn.Sigmoid()
+
+    for epoch in range(1, num_epochs + 1):
         # train_g.ndata[node_features_property], torch.float32, num_nodes*feature_size
 
         model.train()  # switch to training mode
 
-        h = model(train_g, train_g.ndata[node_features_property])  # h is torch.float32 that has shape: nodes*hidden_features_size[-1]
+        h = torch.squeeze(model(train_g, train_g.ndata[node_features_property]))  # h is torch.float32 that has shape: nodes*hidden_features_size[-1]. Node embeddings.
 
-        
         # gu, gv, edge_ids = train_pos_g.edges(form="all", order="eid")
         # print("GU: ", gu)
         # print("GV: ", gv)
         # print("EDGE IDS: ", edge_ids)
-        
+
         pos_score = torch.squeeze(predictor(train_pos_g, h))  # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_pos-g. Scores are here actually logits.
         neg_score = torch.squeeze(predictor(train_neg_g, h))  # returns vector of negative edge scores, torch.float32, shape: num_edges in the graph of train_neg_g. Scores are actually logits.
 
@@ -228,14 +217,18 @@ def train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: torch.o
         # print("Edge id: ", edge_id)
         # print("Pos score: ", pos_score[edge_id])
 
-        scores = torch.cat([pos_score, neg_score]).detach().numpy()  # concatenated positive and negative scores
-        labels = torch.cat([torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])]).detach().numpy()  # concatenation of labels
+        scores = torch.cat([pos_score, neg_score]) # concatenated positive and negative scores
+        probs = m(scores)  # probabilities
+        classes = probs > 0.5  # classify
+        labels = torch.cat([torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])])  # concatenation of labels
+        loss_output = loss(probs, labels)
 
-        # TODO:: Do they need to have same size?
+        # backward
+        optimizer.zero_grad()
+        loss_output.backward()
+        optimizer.step()
 
-        loss_output = compute_loss(pos_score, neg_score)
-
-        # Now switch to validation mode to get results on validation set/ 
+        # Now switch to validation mode to get results on validation set/
         model.eval()
 
         # Turn of gradient calculation
@@ -243,13 +236,20 @@ def train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: torch.o
 
             pos_score_val = torch.squeeze(predictor(val_pos_g, h))
             neg_score_val = torch.squeeze(predictor(val_neg_g, h))
-            scores_val = torch.cat([pos_score_val, neg_score_val]).detach().numpy()
-            labels_val = torch.cat([torch.ones(pos_score_val.shape[0]), torch.zeros(neg_score_val.shape[0])]).detach().numpy()
+            scores_val = torch.cat([pos_score_val, neg_score_val])
+            probs_val = m(scores_val)  # probabilities
+            classes_val = probs_val > 0.5
+            labels_val = torch.cat([torch.ones(pos_score_val.shape[0]), torch.zeros(neg_score_val.shape[0])])
+
             # Calculate loss for validation dataset
-            loss_output_val = compute_loss(pos_score_val, neg_score_val)
+            loss_output_val = loss(probs_val, labels_val)
             # Calculate here accuracy for validation dataset because of patience check
-            acc_val = accuracy_score(labels_val, scores_val > 0.5)
-            
+            acc_val = accuracy_score(labels_val, probs_val > 0.5)
+
+            print("Ratio of positively predicted examples: ", torch.sum(probs_val > 0.5).item() / (probs_val).shape[0])
+            print("Validation labels: ", labels_val)
+            print("Validation classifications: ", probs_val > 0.5)
+
             if epoch % console_log_freq == 0:
                 epoch_training_result = OrderedDict()  # Temporary result per epoch
                 epoch_val_result = OrderedDict()
@@ -260,23 +260,23 @@ def train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: torch.o
                         epoch_training_result["loss"] = loss_output.item()
                         epoch_val_result["loss"] = loss_output_val.item()
                     elif metric_name == "accuracy":
-                        epoch_training_result["accuracy"] = accuracy_score(labels, scores > 0.5) 
+                        epoch_training_result["accuracy"] = accuracy_score(labels, classes)
                         epoch_val_result["accuracy"] = acc_val
                     elif metric_name == "auc_score":
-                        epoch_training_result["auc_score"] = roc_auc_score(labels, scores)
-                        epoch_val_result["auc_score"] = roc_auc_score(labels_val, scores_val > 0.5)
+                        epoch_training_result["auc_score"] = roc_auc_score(labels, probs)
+                        epoch_val_result["auc_score"] = roc_auc_score(labels_val, probs_val)
                     elif metric_name == "f1":
-                        epoch_training_result["f1"] = f1_score(labels, scores > 0.5)
-                        epoch_val_result["f1"] = f1_score(labels_val, scores_val > 0.5)
+                        epoch_training_result["f1"] = f1_score(labels, classes)
+                        epoch_val_result["f1"] = f1_score(labels_val, classes_val)
                     elif metric_name == "precision":
-                        epoch_training_result["precision"] = precision_score(labels, scores > 0.5)
-                        epoch_val_result["precision"] = precision_score(labels_val, scores_val > 0.5)
+                        epoch_training_result["precision"] = precision_score(labels, classes)
+                        epoch_val_result["precision"] = precision_score(labels_val, classes_val)
                     elif metric_name == "recall":
-                        epoch_training_result["recall"] = recall_score(labels, scores > 0.5)
-                        epoch_val_result["recall"] = recall_score(labels_val, scores_val > 0.5)
+                        epoch_training_result["recall"] = recall_score(labels, classes)
+                        epoch_val_result["recall"] = recall_score(labels_val, classes_val)
                     elif metric_name == "num_wrong_examples":
-                        epoch_training_result["num_wrong_examples"] = np.not_equal(np.array(labels, dtype=bool), scores > 0.5).sum().item()
-                        epoch_val_result["num_wrong_examples"] = np.not_equal(np.array(labels_val, dtype=bool ), scores_val > 0.5).sum().item()
+                        epoch_training_result["num_wrong_examples"] = np.not_equal(np.array(labels, dtype=bool), classes).sum().item()
+                        epoch_val_result["num_wrong_examples"] = np.not_equal(np.array(labels_val, dtype=bool), classes_val).sum().item()
                 training_results.append(epoch_training_result)
                 validation_results.append(epoch_val_result)
                 print(epoch_val_result)
@@ -289,20 +289,13 @@ def train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: torch.o
             else:
                 max_val_acc = acc_val
                 num_val_acc_drop = 0
-            
+
             # Stop the training
             if num_val_acc_drop == tr_acc_patience:
                 print("Stopped because of validation criteria. ")
                 break
 
-        # backward
-        optimizer.zero_grad()
-        loss_output.backward()
-        optimizer.step()
-
-
     # visualize(training_results=training_results, validation_results=validation_results)
-
     return training_results, validation_results
 
 
@@ -339,5 +332,3 @@ def predict(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl.graph
 # 31336->1106148
 # 31336->1123188
 # 31336->1128990
-
-

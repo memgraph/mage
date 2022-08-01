@@ -21,7 +21,8 @@ def create_optimizer(optimizer_type: str, learning_rate: float, model: torch.nn.
         return torch.optim.Adam(itertools.chain(model.parameters(), predictor.parameters()), lr=learning_rate)
     elif optimizer_type.upper() == "SGD":
         return torch.optim.SGD(itertools.chain(model.parameters(), predictor.parameters()), lr=learning_rate)
-
+    else:
+        raise Exception(f"Optimizer {optimizer_type} not supported. ")
 
 def create_model(layer_type: str, hidden_features_size: List[int], aggregator: str, attn_num_heads: List[int]) -> torch.nn.Module:
     """Creates a model given a layer type and sizes of the hidden layers.
@@ -39,7 +40,8 @@ def create_model(layer_type: str, hidden_features_size: List[int], aggregator: s
         return GraphSAGE(hidden_features_size=hidden_features_size, aggregator=aggregator)
     elif layer_type.lower() == "graph_attn":
         return GAT(hidden_features_size=hidden_features_size, attn_num_heads=attn_num_heads)
-
+    else:
+        raise Exception(f"Layer type {layer_type} not supported. ")
 
 def create_predictor(predictor_type: str, predictor_hidden_size: int) -> torch.nn.Module:
     """Create a predictor based on a given predictor type. 
@@ -55,3 +57,5 @@ def create_predictor(predictor_type: str, predictor_hidden_size: int) -> torch.n
         return DotPredictor()
     elif predictor_type.lower() == "mlp":
         return MLPPredictor(h_feats=predictor_hidden_size)
+    else:
+        raise Exception(f"Predictor type {predictor_type} not supported. ")
