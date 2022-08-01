@@ -1,3 +1,4 @@
+import re
 import torch
 import torch.nn.functional as F
 import numpy as np
@@ -51,7 +52,7 @@ def search_vertex(ctx: mgp.ProcCtx, id: int, node_id_property: str) -> mgp.Nulla
 
 
 def get_number_of_edges(ctx: mgp.ProcCtx) -> int:
-    """Returns number of edges for graph from execution context. 
+    """Returns number of edges for graph from execution context.
 
     Args:
         ctx (mgp.ProcCtx): A reference to the execution context.
@@ -66,11 +67,11 @@ def get_number_of_edges(ctx: mgp.ProcCtx) -> int:
 
 
 def squarify(M: np.matrix, val: int) -> np.matrix:
-    """Converts rectangular matrix into square one by padding it with value val. 
+    """Converts rectangular matrix into square one by padding it with value val.
 
     Args:
-        M (numpy.matrix): Matrix that needs to be padded. 
-        val (numpy.matrix): Matrix padding value/ 
+        M (numpy.matrix): Matrix that needs to be padded.
+        val (numpy.matrix): Matrix padding value/
 
     Returns:
         numpy.matrix: Padded matrix
@@ -87,7 +88,7 @@ def test_adjacency_matrix(graph: dgl.graph, adj_matrix: np.matrix) -> bool:
     """Tests whether the adjacency matrix correctly encodes edges from dgl graph
 
     Args:
-        graph (dgl.graph): A reference to the original graph we are working with. 
+        graph (dgl.graph): A reference to the original graph we are working with.
         adj_matrix (np.matrix): Graph's adjacency matrix
 
     Returns:
@@ -122,16 +123,16 @@ def test_adjacency_matrix(graph: dgl.graph, adj_matrix: np.matrix) -> bool:
 
 def create_negative_graphs(adj_matrix: np.matrix, number_of_nodes: int, number_of_edges: int,
                            val_size: int) -> Tuple[dgl.graph, dgl.graph]:
-    """Creates negative training and validation graph. 
+    """Creates negative training and validation graph.
 
     Args:
-        adj_matrix (np.matrix): Adjacency matrix. 
+        adj_matrix (np.matrix): Adjacency matrix.
         number_of_nodes (int): Number of nodes in the whole graph.
-        number_of_edges (int): Number of edges in the whole graph. 
+        number_of_edges (int): Number of edges in the whole graph.
         val_size (int): Validation dataset size.
 
     Returns:
-        Tuple[dgl.graph, dgl.graph]: Negative training and negative validation graph. 
+        Tuple[dgl.graph, dgl.graph]: Negative training and negative validation graph.
     """
     adj_neg = 1 - adj_matrix - np.eye(number_of_nodes)
     neg_u, neg_v = np.where(adj_neg != 0)  # Find all non-existing edges
@@ -155,7 +156,7 @@ def create_positive_graphs(graph: dgl.graph, val_size: int) -> Tuple[dgl.graph, 
     graph.
 
     Args:
-        graph (dgl.graph): Whole training graph. 
+        graph (dgl.graph): Whole training graph.
         val_size (int): Validation dataset size.
 
     Returns:
@@ -179,7 +180,7 @@ def create_positive_graphs(graph: dgl.graph, val_size: int) -> Tuple[dgl.graph, 
 
 
 def preprocess(graph: dgl.graph, split_ratio: float) -> Tuple[dgl.graph, dgl.graph, dgl.graph, dgl.graph, dgl.graph]:
-    """Preprocess method splits dataset in training and validation set. This method is also used for setting numpy and torch random seed. 
+    """Preprocess method splits dataset in training and validation set. This method is also used for setting numpy and torch random seed.
 
     Args:
         graph (dgl.graph): A reference to the dgl graph representation.
@@ -211,10 +212,10 @@ def preprocess(graph: dgl.graph, split_ratio: float) -> Tuple[dgl.graph, dgl.gra
     # Check if conversion to adjacency matrix went OK
     if test_adjacency_matrix(graph, adj_matrix) is False:
         return None, None, None, None, None
-    
+
     # val size is 1-split_ratio specified by the user
-    val_size = int(graph.number_of_edges() * (1 - split_ratio)) 
-    
+    val_size = int(graph.number_of_edges() * (1 - split_ratio))
+
     # Create positive training and positive validation graph
     train_g, train_pos_g, val_pos_g = create_positive_graphs(graph, val_size)
 
@@ -223,6 +224,46 @@ def preprocess(graph: dgl.graph, split_ratio: float) -> Tuple[dgl.graph, dgl.gra
 
     return train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g
 
+
+def classify(probs: torch.tensor, threshold: float) -> torch.tensor:
+    """Classifies based on probabilities of the class with the label one.
+
+    Args:
+        probs (torch.tensor): Edge probabilities.
+
+    Returns:
+        torch.tensor: classes
+    """
+
+    return probs > threshold    
+
+
+def evaluate(metrics: List[str], labels: torch.tensor, probs: torch.tensor, result: Dict[str, float], threshold: float) -> None:
+    """Returns all metrics specified in metrics list based on labels and predicted classes. In-place modification of dictionary.
+
+    Args:
+        metrics (List[str]): List of string metrics.
+        labels (torch.tensor): Predefined labels.
+        probs (torch.tensor): Probabilities of the class with the label one.
+        result (Dict[str, float]): Prepopulated result that needs to be modified.
+        threshold (float): classification threshold. 0.5 for sigmoid etc.
+    """
+    classes = classify(probs, threshold)
+    for metric_name in metrics:
+        if metric_name == "accuracy":
+            result["accuracy"] = accuracy_score(labels, classes)
+        elif metric_name == "auc_score":
+            result["auc_score"] = roc_auc_score(labels, probs)
+        elif metric_name == "f1":
+            result["f1"] = f1_score(labels, classes)
+        elif metric_name == "precision":
+            result["precision"] = precision_score(labels, classes)
+        elif metric_name == "recall":
+            result["recall"] = recall_score(labels, classes)
+        elif metric_name == "num_wrong_examples":
+            result["num_wrong_examples"] = np.not_equal(np.array(labels, dtype=bool), classes).sum().item()
+
+
 def inner_train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: torch.optim.Optimizer, num_epochs: int,
                 node_features_property: str, console_log_freq: int, checkpoint_freq: int,
                 metrics: List[str], tr_acc_patience: int, model_save_path: str, train_g: dgl.graph, train_pos_g: dgl.graph,
@@ -230,20 +271,20 @@ def inner_train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: t
     """Real train method where training occurs. Parameters from LinkPredictionParameters are sent here. They aren't sent as whole class because of circular dependency.
 
     Args:
-        model (torch.nn.Module): A reference to the model. 
+        model (torch.nn.Module): A reference to the model.
         predictor (torch.nn.Module): A reference to the edge predictor.
-        optimizer (torch.optim.Optimizer): A reference to the training optimizer. 
+        optimizer (torch.optim.Optimizer): A reference to the training optimizer.
         num_epochs (int): number of epochs for model training.
         node_features_property: (str): property name where the node features are saved.
         console_log_freq (int): How often results will be printed. All results that are printed in the terminal will be returned to the client calling Memgraph.
-        checkpoint_freq (int): Select the number of epochs on which the model will be saved. The model is persisted on the disc. 
+        checkpoint_freq (int): Select the number of epochs on which the model will be saved. The model is persisted on the disc.
         metrics (List[str]): Metrics used to evaluate model in training on the validation set.
             Epoch will always be displayed, you can add loss, accuracy, precision, recall, specificity, F1, auc_score etc.
-        tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on validation set be tolerated before stopping the training. 
-        model_save_path: str -> Path where the model will be saved every checkpoint_freq epochs. 
-        train_g (dgl.graph): A reference to the created training graph without validation edges. 
-        train_pos_g (dgl.graph): Positive training graph. 
-        train_neg_g (dgl.graph): Negative training graph. 
+        tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on validation set be tolerated before stopping the training.
+        model_save_path: str -> Path where the model will be saved every checkpoint_freq epochs.
+        train_g (dgl.graph): A reference to the created training graph without validation edges.
+        train_pos_g (dgl.graph): Positive training graph.
+        train_neg_g (dgl.graph): Negative training graph.
         val_pos_g (dgl.graph): Positive validation graph.
         val_neg_g (dgl.graph): Negative validation graph.
     Returns:
@@ -283,7 +324,7 @@ def inner_train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: t
     loss = torch.nn.BCELoss()
 
     # Initialize activation func
-    m = torch.nn.Sigmoid()
+    m, threshold = torch.nn.Sigmoid(), 0.5
 
     for epoch in range(1, num_epochs + 1):
         # train_g.ndata[node_features_property], torch.float32, num_nodes*feature_size
@@ -311,7 +352,6 @@ def inner_train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: t
 
         scores = torch.cat([pos_score, neg_score])  # concatenated positive and negative scores
         probs = m(scores)  # probabilities
-        classes = probs > 0.5  # classify
         labels = torch.cat([torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])])  # concatenation of labels
         loss_output = loss(probs, labels)
 
@@ -326,68 +366,51 @@ def inner_train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: t
         # Turn of gradient calculation
         with torch.no_grad():
 
-            pos_score_val = predictor(val_pos_g, h)
-            neg_score_val = predictor(val_neg_g, h)
-            scores_val = torch.cat([pos_score_val, neg_score_val])
-            probs_val = m(scores_val)  # probabilities
-            classes_val = probs_val > 0.5
-            labels_val = torch.cat([torch.ones(pos_score_val.shape[0]), torch.zeros(neg_score_val.shape[0])])
-
-            # Calculate loss for validation dataset
-            loss_output_val = loss(probs_val, labels_val)
-            # Calculate here accuracy for validation dataset because of patience check
-            acc_val = accuracy_score(labels_val, probs_val > 0.5)
-
-            # print(val_pos_g.number_of_edges())
-            # print("Ratio of positively predicted examples: ", torch.sum(probs_val > 0.5).item() / (probs_val).shape[0])
-
-            print("Validation labels: ", labels_val)
-            print("Validation classifications: ", probs_val > 0.5)
-
             if epoch % console_log_freq == 0:
                 epoch_training_result = OrderedDict()  # Temporary result per epoch
                 epoch_val_result = OrderedDict()
+                # Set initial metrics for training result
                 epoch_training_result["epoch"] = epoch
-                epoch_val_result["epoch"] = epoch
-                for metric_name in metrics:  # it is faster to do it in this way than trying to search for it
-                    if metric_name == "loss":
-                        epoch_training_result["loss"] = loss_output.item()
-                        epoch_val_result["loss"] = loss_output_val.item()
-                    elif metric_name == "accuracy":
-                        epoch_training_result["accuracy"] = accuracy_score(labels, classes)
-                        epoch_val_result["accuracy"] = acc_val
-                    elif metric_name == "auc_score":
-                        epoch_training_result["auc_score"] = roc_auc_score(labels, probs)
-                        epoch_val_result["auc_score"] = roc_auc_score(labels_val, probs_val)
-                    elif metric_name == "f1":
-                        epoch_training_result["f1"] = f1_score(labels, classes)
-                        epoch_val_result["f1"] = f1_score(labels_val, classes_val)
-                    elif metric_name == "precision":
-                        epoch_training_result["precision"] = precision_score(labels, classes)
-                        epoch_val_result["precision"] = precision_score(labels_val, classes_val)
-                    elif metric_name == "recall":
-                        epoch_training_result["recall"] = recall_score(labels, classes)
-                        epoch_val_result["recall"] = recall_score(labels_val, classes_val)
-                    elif metric_name == "num_wrong_examples":
-                        epoch_training_result["num_wrong_examples"] = np.not_equal(np.array(labels, dtype=bool), classes).sum().item()
-                        epoch_val_result["num_wrong_examples"] = np.not_equal(np.array(labels_val, dtype=bool), classes_val).sum().item()
+                epoch_training_result["loss"] = loss_output.item()
+                evaluate(metrics, labels, probs, epoch_training_result, threshold)
                 training_results.append(epoch_training_result)
-                validation_results.append(epoch_val_result)
-                print(epoch_val_result)
 
-            # Update patience variables
-            if acc_val <= max_val_acc:
-                # print("Acc val: ", acc_val)
-                # print("Max val acc: ", max_val_acc)
-                num_val_acc_drop += 1
-            else:
-                max_val_acc = acc_val
-                num_val_acc_drop = 0
+                # Validation metrics if they can be calculated
+                if val_pos_g.number_of_edges() > 0:
+                    # Evaluate on positive and negative dataset
+                    pos_score_val = predictor(val_pos_g, h)
+                    neg_score_val = predictor(val_neg_g, h)
+                    # Concatenate scores
+                    scores_val = torch.cat([pos_score_val, neg_score_val])
+                    probs_val = m(scores_val)  # probabilities
+                    labels_val = torch.cat([torch.ones(pos_score_val.shape[0]), torch.zeros(neg_score_val.shape[0])])
 
-            # Stop the training
-            if num_val_acc_drop == tr_acc_patience:
-                print("Stopped because of validation criteria. ")
-                break
+                    # print("Ratio of positively predicted examples: ", torch.sum(probs_val > 0.5).item() / (probs_val).shape[0])
+                    
+                    # Set initial metrics for validation result
+                    loss_output_val = loss(probs_val, labels_val)
+                    epoch_val_result["epoch"] = epoch
+                    epoch_val_result["loss"] = loss_output_val.item()
+                    evaluate(metrics, labels_val, probs_val, epoch_val_result, threshold)
+                    validation_results.append(epoch_val_result)
+
+                    # Patience check
+                    if epoch_val_result["accuracy"] <= max_val_acc:
+                        # print("Acc val: ", acc_val)
+                        # print("Max val acc: ", max_val_acc)
+                        num_val_acc_drop += 1
+                    else:
+                        max_val_acc = epoch_val_result["accuracy"]
+                        num_val_acc_drop = 0
+                    
+                    print(epoch_val_result)
+
+                    # Stop the training if necessary
+                    if num_val_acc_drop == tr_acc_patience:
+                        print("Stopped because of validation criteria. ")
+                        break
+                else:
+                    print(epoch_training_result)
 
             # Save the model if necessary
             if epoch % checkpoint_freq == 0:
