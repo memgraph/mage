@@ -10,6 +10,7 @@ from mage.link_prediction import preprocess, inner_train, inner_predict, create_
 # classes and data structures
 ##############################
 
+
 @dataclass
 class LinkPredictionParameters:
     """Parameters user in LinkPrediction module.
@@ -37,16 +38,16 @@ class LinkPredictionParameters:
     layer_type: str = "graph_sage"
     num_epochs: int = 100
     optimizer: str = "SGD"
-    learning_rate: float = 0.4 
+    learning_rate: float = 0.4
     split_ratio: float = 0.8
     node_features_property: str = "features"
     node_id_property: str = "id"
-    device_type: str = "cpu" 
+    device_type: str = "cpu"
     console_log_freq: int = 1
     checkpoint_freq: int = 10
     aggregator: str = "pool"
     metrics: List = field(default_factory=lambda: ["loss", "accuracy", "auc_score", "precision", "recall", "f1", "num_wrong_examples"])
-    predictor_type: str = "dot"
+    predictor_type: str = "mlp"
     attn_num_heads: List[int] = field(default_factory=lambda: [8, 8, 1])
     tr_acc_patience: int = 8
     model_save_path: str = "/home/andi/Memgraph/code/mage/python/mage/link_prediction/model.pt"  # TODO: When the development finishes
@@ -55,13 +56,14 @@ class LinkPredictionParameters:
 # global parameters
 ##############################
 
+
 link_prediction_parameters: LinkPredictionParameters = LinkPredictionParameters()  # parameters currently saved.
 training_results: List[Dict[str, float]] = list()  # List of all output training records. String is the metric's name and float represents value.
-validation_results: List[Dict[str, float]] = list() # List of all output validation results. String is the metric's name and float represents value in the Dictionary inside.
-graph: dgl.graph = None # Reference to the graph. This includes training and validation. 
+validation_results: List[Dict[str, float]] = list()  # List of all output validation results. String is the metric's name and float represents value in the Dictionary inside.
+graph: dgl.graph = None  # Reference to the graph. This includes training and validation.
 new_to_old: Dict[int, int] = None  # Mapping of DGL indexes to original dataset indexes
 old_to_new: Dict[int, int] = None  # Mapping of original dataset indexes to DGL indexes
-predictor: torch.nn.Module = None # Predictor for calculating edge scores
+predictor: torch.nn.Module = None  # Predictor for calculating edge scores
 model: torch.nn.Module = None
 
 ##############################
@@ -99,7 +101,7 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
     Returns:
         mgp.Record:
             status (bool): True if everything went OK, False otherwise.
-    """    
+    """
     global link_prediction_parameters
 
     print("START")
@@ -125,8 +127,9 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
 
     print("END")
     print(link_prediction_parameters)
-    
+
     return mgp.Record(status=1, message="OK")
+
 
 @mgp.read_proc
 def train(ctx: mgp.ProcCtx) -> mgp.Record(status=str, training_results=mgp.Any, validation_results=mgp.Any):
@@ -144,13 +147,13 @@ def train(ctx: mgp.ProcCtx) -> mgp.Record(status=str, training_results=mgp.Any, 
     # Reset parameters of the old training
     _reset_train_predict_parameters()
 
-    # Check if the dataset is empty. E2E handling. 
+    # Check if the dataset is empty. E2E handling.
     if len(ctx.graph.vertices) == 0:
         return mgp.Record(status="Empty dataset. ", training_results=training_results, validation_results=validation_results)
 
     # Get some
     graph, new_to_old, old_to_new = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
-    
+
     # Check if there are no edges in the dataset, assume that it cannot learn effectively without edges. E2E handling.
     if graph.number_of_edges() == 0:
         return mgp.Record(status="No edges in the dataset. ", training_results=training_results, validation_results=validation_results)
@@ -159,34 +162,35 @@ def train(ctx: mgp.ProcCtx) -> mgp.Record(status=str, training_results=mgp.Any, 
     """ if conversion_to_dgl_test(graph=graph, new_to_old=new_to_old, ctx=ctx, node_id_property=link_prediction_parameters.node_id_property, node_features_property=link_prediction_parameters.node_features_property) is False:
         print("Remapping failed")
         return mgp.Record(status="Preprocessing failed", metrics=[])
-    """
- 
+     """
+
     """ Train g is a graph which has removed test edges. Others are positive and negative train and test graphs
     """
-    
+
     train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g = preprocess(graph, link_prediction_parameters.split_ratio)
     if train_g is None or train_pos_g is None or train_neg_g is None or val_pos_g is None or val_neg_g is None:
         print("Preprocessing failed. ")
         return mgp.Record(status="Preprocessing failed", metrics=[])
-
+ 
     # Create a model
     model = create_model(layer_type=link_prediction_parameters.layer_type, hidden_features_size=link_prediction_parameters.hidden_features_size,
-                                 aggregator=link_prediction_parameters.aggregator, attn_num_heads=link_prediction_parameters.attn_num_heads)
+                         aggregator=link_prediction_parameters.aggregator, attn_num_heads=link_prediction_parameters.attn_num_heads)
     # Create a predictor
     predictor = create_predictor(predictor_type=link_prediction_parameters.predictor_type, predictor_hidden_size=link_prediction_parameters.hidden_features_size[-1])
-    
+
     # Create an optimizer
     optimizer = create_optimizer(optimizer_type=link_prediction_parameters.optimizer, learning_rate=link_prediction_parameters.learning_rate,
-                                         model=model, predictor=predictor)
-      
+                                 model=model, predictor=predictor)
+
     # Collect training and validation results from utils model
     training_results, validation_results = inner_train(model, predictor, optimizer,
-        link_prediction_parameters.num_epochs, link_prediction_parameters.node_features_property, 
-        link_prediction_parameters.console_log_freq, link_prediction_parameters.checkpoint_freq,
-        link_prediction_parameters.metrics, link_prediction_parameters.tr_acc_patience, link_prediction_parameters.model_save_path,
-        train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g)
+                                                       link_prediction_parameters.num_epochs, link_prediction_parameters.node_features_property,
+                                                       link_prediction_parameters.console_log_freq, link_prediction_parameters.checkpoint_freq,
+                                                       link_prediction_parameters.metrics, link_prediction_parameters.tr_acc_patience, link_prediction_parameters.model_save_path,
+                                                       train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g)
 
     return mgp.Record(status="OK", training_results=training_results, validation_results=validation_results)
+
 
 @mgp.read_proc
 def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -> mgp.Record(score=mgp.Number):
@@ -229,14 +233,15 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     # Call utils module
     score = inner_predict(model=model, predictor=predictor, graph=graph, node_features_property=link_prediction_parameters.node_features_property, edge_id=edge_id)
     result = mgp.Record(score=score)
-   
+
     # Remove edge if necessary
     if edge_added is True:
         graph.remove_edges(edge_id)
 
     print("Number of edges after: ", graph.number_of_edges())
-    
+
     return result
+
 
 @mgp.read_proc
 def benchmark(ctx: mgp.ProcCtx, num_runs: int) -> mgp.Record(status=str, test_results=mgp.Any):
@@ -250,7 +255,7 @@ def benchmark(ctx: mgp.ProcCtx, num_runs: int) -> mgp.Record(status=str, test_re
         mgp.Record:
             status (str): Status message
             test_results: Average test results obtained after training for num_runs times. 
-    """    
+    """
     # NOTE: THIS SHOULD BE HIDDEN FOR OUT USERS, BUT ENABLE THIS IN THE DEVELOPMENT SUPPORT
 
     # Get the global context
@@ -264,7 +269,7 @@ def benchmark(ctx: mgp.ProcCtx, num_runs: int) -> mgp.Record(status=str, test_re
         print("Remapping failed")
         return mgp.Record(status="Preprocessing failed", metrics=[])
     """
- 
+
     """ Train g is a graph which has removed test edges. Others are positive and negative train and test graphs
     """
 
@@ -274,14 +279,14 @@ def benchmark(ctx: mgp.ProcCtx, num_runs: int) -> mgp.Record(status=str, test_re
         print("Preprocessing failed. ")
         return mgp.Record(status="Preprocessing failed", metrics=[])
 
-
     test_results = benchmark.get_avg_seed_results(num_runs, link_prediction_parameters.hidden_features_size, link_prediction_parameters.layer_type,
-        link_prediction_parameters.num_epochs, link_prediction_parameters.optimizer, link_prediction_parameters.learning_rate,
-        link_prediction_parameters.node_features_property, link_prediction_parameters.console_log_freq, link_prediction_parameters.checkpoint_freq,
-        link_prediction_parameters.aggregator, link_prediction_parameters.metrics, link_prediction_parameters.predictor_type, link_prediction_parameters.hidden_features_size[-1],
-        link_prediction_parameters.attn_num_heads, link_prediction_parameters.tr_acc_patience, train_g, train_pos_g, train_neg_g, test_pos_g, test_neg_g)
+                                                  link_prediction_parameters.num_epochs, link_prediction_parameters.optimizer, link_prediction_parameters.learning_rate,
+                                                  link_prediction_parameters.node_features_property, link_prediction_parameters.console_log_freq, link_prediction_parameters.checkpoint_freq,
+                                                  link_prediction_parameters.aggregator, link_prediction_parameters.metrics, link_prediction_parameters.predictor_type, link_prediction_parameters.hidden_features_size[-1],
+                                                  link_prediction_parameters.attn_num_heads, link_prediction_parameters.tr_acc_patience, train_g, train_pos_g, train_neg_g, test_pos_g, test_neg_g)
 
-    return mgp.Record(status="OK",  test_results=test_results)
+    return mgp.Record(status="OK", test_results=test_results)
+
 
 @mgp.read_proc
 def get_training_results(ctx: mgp.ProcCtx) -> mgp.Record(tr_metrics=mgp.Any, val_metrics=mgp.Any):
@@ -301,6 +306,33 @@ def get_training_results(ctx: mgp.ProcCtx) -> mgp.Record(tr_metrics=mgp.Any, val
 ##############################
 
 
+def _process_vertex_help_func(old_index: int, nodes_list: List[int], features: List, ind: int,
+                              old_to_new: Dict[int, int], new_to_old: Dict[int, int], node_features: List) -> int:
+    """Helper function to avoid code duplication in _get_dgl_graph_data.
+
+    Args:
+        old_index (int): Index from context execution. 
+        nodes_list (List[int]): src_nodes or dest_nodes. See _get_dgl_graph_data for more details. 
+        features (List): List of features. See _get_dgl_graph_data for more details.
+        ind (int): ind from _get_dgl_graph_data
+        old_to_new (Dict[int, int]): Mapping of old to new index.
+        new_to_old (Dict[int, int]): Mapping of new to old index. 
+        node_features (List): Feature list.
+
+    Returns:
+        int: Since list and dict are mutable, function only needs to return new ind. It can stay the same or be incremented by one.
+    """
+    if old_index not in old_to_new.keys():
+        new_to_old[ind] = old_index
+        old_to_new[old_index] = ind
+        nodes_list.append(ind)
+        features.append(node_features)
+        return ind+1
+    else:
+        nodes_list.append(old_to_new[old_index])
+        return ind
+
+
 def _get_dgl_graph_data(ctx: mgp.ProcCtx) -> Tuple[dgl.graph, Dict[int32, int32], Dict[int32, int32]]:
     """Creates dgl representation of the graph.
 
@@ -309,7 +341,7 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx) -> Tuple[dgl.graph, Dict[int32, int32]
 
     Returns:
         Tuple[dgl.graph, Dict[int32, int32], Dict[int32, int32]]: Tuple of DGL graph representation, dictionary of mapping new to old index and dictionary of mapping old to new index. 
-    """    
+    """
     src_nodes, dest_nodes = [], []  # for saving the edges
 
     new_to_old = dict()  # map of new node index to old node index
@@ -319,30 +351,19 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx) -> Tuple[dgl.graph, Dict[int32, int32]
 
     for vertex in ctx.graph.vertices:
         for edge in vertex.out_edges:
+            # Process source vertex first
             src_node, dest_node = edge.from_vertex, edge.to_vertex
             src_id_old = int(src_node.properties.get(link_prediction_parameters.node_id_property))
             src_features = src_node.properties.get(link_prediction_parameters.node_features_property)
+            ind = _process_vertex_help_func(src_id_old, src_nodes, features, ind, old_to_new, new_to_old, src_features)
+            
+            # Process destination vertex next
             dest_id_old = int(dest_node.properties.get(link_prediction_parameters.node_id_property))
             dest_features = dest_node.properties.get(link_prediction_parameters.node_features_property)
+            ind = _process_vertex_help_func(dest_id_old, dest_nodes, features, ind, old_to_new, new_to_old, dest_features)
 
-            if src_id_old not in old_to_new.keys():
-                new_to_old[ind] = src_id_old
-                old_to_new[src_id_old] = ind
-                src_nodes.append(ind)
-                features.append(src_features)  # do very simple remapping
-                ind += 1
-            else:
-                src_nodes.append(old_to_new[src_id_old])
-
-            # Repeat the same for destination node
-            if dest_id_old not in old_to_new.keys():
-                new_to_old[ind] = dest_id_old
-                old_to_new[dest_id_old] = ind
-                dest_nodes.append(ind)
-                features.append(dest_features)
-                ind += 1
-            else:
-                dest_nodes.append(old_to_new[dest_id_old])
+           
+            
     features = torch.tensor(features, dtype=torch.float32)  # use float for storing tensor of features
     # print("Src nodes: ", src_nodes)
     # print("Dest nodes: ", dest_nodes)
@@ -351,6 +372,7 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx) -> Tuple[dgl.graph, Dict[int32, int32]
     g.ndata[link_prediction_parameters.node_features_property] = features
     # g = dgl.add_self_loop(g) # TODO: How, why what? But needed for GAT, otherwise 0-in-degree nodes:u
     return g, new_to_old, old_to_new
+
 
 def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
     """Validates parameters user sent through method set_model_parameters
@@ -403,13 +425,13 @@ def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
         node_features_property = parameters["node_features_property"]
         if node_features_property == "":
             return False, "You must specify name of nodes' features property. "
-    
+
     # node_id_property check
     if "node_id_property" in parameters.keys():
         node_id_property = parameters["node_id_property"]
         if node_id_property == "":
             return False, "You must specify name of nodes' id property. "
-    
+
     # device_type check
     if "device_type" in parameters.keys():
         device_type = parameters["device_type"].lower()
@@ -421,7 +443,7 @@ def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
         console_log_freq = int(parameters["console_log_freq"])
         if console_log_freq <= 0:
             return False, "Console log frequency must be greater than 0. "
-    
+
     # checkpoint freq check
     if "checkpoint_freq" in parameters.keys():
         checkpoint_freq = int(parameters["checkpoint_freq"])
@@ -440,10 +462,10 @@ def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
         for metric in metrics:
             _metric = metric.lower()
             if _metric != "loss" and _metric != "accuracy" and _metric != "f1" and \
-                _metric != "auc_score" and _metric != "precision" and _metric != "recall" and \
-                _metric != "specificity" and _metric != "num_wrong_examples":
+                    _metric != "auc_score" and _metric != "precision" and _metric != "recall" and \
+                    _metric != "specificity" and _metric != "num_wrong_examples":
                 return False, "Metric name " + _metric + " is not supported!"
-            
+
     # Predictor type
     if "predictor_type" in parameters.keys():
         predictor_type = parameters["predictor_type"].lower()
@@ -456,7 +478,7 @@ def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
         if layer_type == "graph_attn":
 
             if len(attn_num_heads) != len(hidden_features_size) - 1:
-                return False, "Specified network with {} layers but given attention heads data for {} layers. ".format(len(hidden_features_size) -1, len(attn_num_heads))
+                return False, "Specified network with {} layers but given attention heads data for {} layers. ".format(len(hidden_features_size) - 1, len(attn_num_heads))
 
             if attn_num_heads[-1] != 1:
                 return False, "Last GAT layer must contain only one attention head. "
@@ -479,6 +501,7 @@ def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
 
     return True, "OK"
 
+
 def _reset_train_predict_parameters() -> None:
     """Reset global parameters that are returned by train method and used by predict method. 
     """
@@ -487,12 +510,13 @@ def _reset_train_predict_parameters() -> None:
     validation_results.clear()  # clear validation record from previous training
     predictor = None  # Delete old predictor and create a new one in link_prediction_util.train method\
     model = None  # Annulate old model
-    graph = None # Set graph to None
+    graph = None  # Set graph to None
     old_to_new = None
     new_to_old = None
 
-def conversion_to_dgl_test(graph: dgl.graph, new_to_old: Dict[int, int], ctx: mgp.ProcCtx, 
-                    node_id_property: str, node_features_property: str) -> bool:
+
+def conversion_to_dgl_test(graph: dgl.graph, new_to_old: Dict[int, int], ctx: mgp.ProcCtx,
+                           node_id_property: str, node_features_property: str) -> bool:
     """
     Tests whether conversion from ctx.ProcCtx graph to dgl graph went successfully. Checks how features are mapped.
 
@@ -507,12 +531,13 @@ def conversion_to_dgl_test(graph: dgl.graph, new_to_old: Dict[int, int], ctx: mg
         bool: True if everything went OK and False if test failed.
     """
     for vertex in graph.nodes():
-        vertex_id=vertex.item()
-        old_id=new_to_old[vertex_id]
-        vertex=search_vertex(ctx=ctx, id=old_id, node_id_property=node_id_property)
+        vertex_id = vertex.item()
+        print(f"Testing vertex: {vertex_id}")
+        old_id = new_to_old[vertex_id]
+        vertex = search_vertex(ctx=ctx, id=old_id, node_id_property=node_id_property)
         if vertex is None:
             return False
-        old_features=vertex.properties.get(node_features_property)
+        old_features = vertex.properties.get(node_features_property)
         if torch.equal(graph.ndata[node_features_property][vertex_id], torch.tensor(old_features, dtype=torch.float32)) is False:
             return False
 
@@ -526,4 +551,3 @@ def conversion_to_dgl_test(graph: dgl.graph, new_to_old: Dict[int, int], ctx: mg
         return False
 
     return True
-

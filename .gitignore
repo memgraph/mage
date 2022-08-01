@@ -195,3 +195,5 @@ dist/
 **/build
 *htmlcov
 *.coverage
+
+**/mg_data

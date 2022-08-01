@@ -13,7 +13,7 @@ from sklearn.metrics import f1_score
 from typing import Dict, Tuple, List
 import mgp
 import random
-from mage.link_prediction.training_visualizer import visualize # without .training_visualizer it is circular import
+from mage.link_prediction.training_visualizer import visualize  # without .training_visualizer it is circular import
 
 
 if __name__ == "__main__":
@@ -61,7 +61,7 @@ def get_number_of_edges(ctx: mgp.ProcCtx) -> int:
     """
     edge_cnt = 0
     for vertex in ctx.graph.vertices:
-        edge_cnt += len(vertex.out_edges)
+        edge_cnt += len(list(vertex.out_edges))
     return edge_cnt
 
 
@@ -94,9 +94,8 @@ def test_adjacency_matrix(graph: dgl.graph, adj_matrix: np.matrix) -> bool:
         bool: True if adjacency matrix and graph are equivalent, False otherwise
     """
 
-
     if adj_matrix.shape[0] != graph.number_of_nodes() or \
-        adj_matrix.shape[1] != graph.number_of_nodes():
+            adj_matrix.shape[1] != graph.number_of_nodes():
         return False
 
     # To check that indeed adjacency matrix is equivalent to graph we need to check both directions to get bijection.
@@ -106,20 +105,78 @@ def test_adjacency_matrix(graph: dgl.graph, adj_matrix: np.matrix) -> bool:
     num_edges = graph.number_of_edges()
 
     for i in range(num_edges):
-        v1, v2 =  u[i].item(), v[i].item()
+        v1, v2 = u[i].item(), v[i].item()
         if adj_matrix[v1][v2] != 1.0:
             return False
 
-    
     # Now test the direction adj_matrix->graph
     for i in range(adj_matrix.shape[0]):
         for j in range(adj_matrix.shape[1]):
-             if adj_matrix[i][j] == 1.0:
+            if adj_matrix[i][j] == 1.0:
                 if graph.has_edges_between(i, j) is False:
                     return False
 
     # If we are here
     return True
+
+
+def create_negative_graphs(adj_matrix: np.matrix, number_of_nodes: int, number_of_edges: int,
+                           val_size: int) -> Tuple[dgl.graph, dgl.graph]:
+    """Creates negative training and validation graph. 
+
+    Args:
+        adj_matrix (np.matrix): Adjacency matrix. 
+        number_of_nodes (int): Number of nodes in the whole graph.
+        number_of_edges (int): Number of edges in the whole graph. 
+        val_size (int): Validation dataset size.
+
+    Returns:
+        Tuple[dgl.graph, dgl.graph]: Negative training and negative validation graph. 
+    """
+    adj_neg = 1 - adj_matrix - np.eye(number_of_nodes)
+    neg_u, neg_v = np.where(adj_neg != 0)  # Find all non-existing edges
+
+    # Sample with replacement from negative edges
+    neg_eids = np.random.choice(len(neg_u), number_of_edges)
+
+    # Create negative train and validation dataset
+    val_neg_u, val_neg_v = neg_u[neg_eids[:val_size]], neg_v[neg_eids[:val_size]]
+    train_neg_u, train_neg_v = neg_u[neg_eids[val_size:]], neg_v[neg_eids[val_size:]]
+
+    # Create negative training and validation graph
+    train_neg_g = dgl.graph((train_neg_u, train_neg_v), num_nodes=number_of_nodes)
+    val_neg_g = dgl.graph((val_neg_u, val_neg_v), num_nodes=number_of_nodes)
+
+    return train_neg_g, val_neg_g
+
+
+def create_positive_graphs(graph: dgl.graph, val_size: int) -> Tuple[dgl.graph, dgl.graph, dgl.graph]:
+    """Creates positive training and validation graph. Also removes validation edges from the training
+    graph.
+
+    Args:
+        graph (dgl.graph): Whole training graph. 
+        val_size (int): Validation dataset size.
+
+    Returns:
+        Tuple[dgl.graph, dgl.graph, dgl.graph]: training graph with features, positive training and positive validation graphs.
+    """
+    eids = np.arange(graph.number_of_edges())  # get all edge ids from number of edges and create a numpy vector from it.
+    eids = np.random.permutation(eids)  # randomly permute edges
+
+    # Get validation and training source and destination vertices
+    u, v = graph.edges()
+    val_pos_u, val_pos_v = u[eids[:val_size]], v[eids[:val_size]]
+    train_pos_u, train_pos_v = u[eids[val_size:]], v[eids[val_size:]]
+
+    # Remove validation edges from the training graph
+    train_g = dgl.remove_edges(graph, eids[:val_size])
+
+    train_pos_g = dgl.graph((train_pos_u, train_pos_v), num_nodes=graph.number_of_nodes())
+    val_pos_g = dgl.graph((val_pos_u, val_pos_v), num_nodes=graph.number_of_nodes())
+
+    return train_g, train_pos_g, val_pos_g
+
 
 def preprocess(graph: dgl.graph, split_ratio: float) -> Tuple[dgl.graph, dgl.graph, dgl.graph, dgl.graph, dgl.graph]:
     """Preprocess method splits dataset in training and validation set. This method is also used for setting numpy and torch random seed. 
@@ -154,55 +211,22 @@ def preprocess(graph: dgl.graph, split_ratio: float) -> Tuple[dgl.graph, dgl.gra
     # Check if conversion to adjacency matrix went OK
     if test_adjacency_matrix(graph, adj_matrix) is False:
         return None, None, None, None, None
+    
+    # val size is 1-split_ratio specified by the user
+    val_size = int(graph.number_of_edges() * (1 - split_ratio)) 
+    
+    # Create positive training and positive validation graph
+    train_g, train_pos_g, val_pos_g = create_positive_graphs(graph, val_size)
 
-    # Create negative adj_matrix in order to more easily sample negative edges
-
-    adj_neg = 1 - adj_matrix - np.eye(graph.number_of_nodes())
-    neg_u, neg_v = np.where(adj_neg != 0)  # Find all non-existing edges
-
-    eids = np.arange(graph.number_of_edges())  # get all edge ids from number of edges and create a numpy vector from it.
-    eids = np.random.permutation(eids)  # randomly permute edges
-
-    val_size = int(len(eids) * (1 - split_ratio))  # val size is 1-split_ratio specified by the user
-    # u and v have size equal to number of edges. So positive graph can be created directly from it.
-    val_pos_u, val_pos_v = u[eids[:val_size]], v[eids[:val_size]]
-    train_pos_u, train_pos_v = u[eids[val_size:]], v[eids[val_size:]]
-
-    # Number of positive edges + number of negative edges should always be graph.number_of_nodes() * graph.number_of_nodes()
-
-    # print("len(u): ", len(u))
-    # print("len(neg)u): ", len(neg_u))
-    # print("Num nodes: ", graph.number_of_nodes())
-
-    assert len(u) + len(neg_u) == graph.number_of_nodes() * (graph.number_of_nodes() - 1)
-    assert len(v) + len(neg_v) == graph.number_of_nodes() * (graph.number_of_nodes() - 1)
-
-    neg_eids = np.random.choice(len(neg_u), graph.number_of_edges())  # sample with replacement from negative edges
-
-    # Create negative train and validation dataset
-    val_neg_u, val_neg_v = neg_u[neg_eids[:val_size]], neg_v[neg_eids[:val_size]]
-    train_neg_u, train_neg_v = neg_u[neg_eids[val_size:]], neg_v[neg_eids[val_size:]]
-
-    # Now remove the edges from the validation set from the original graph, NOTE: copy is created
-    train_g = dgl.remove_edges(graph, eids[:val_size])
-    # val_g = dgl.remove_edges(graph, eids[val_size:])
-
-    # Construct a positive and a negative graph
-    train_pos_g = dgl.graph((train_pos_u, train_pos_v), num_nodes=graph.number_of_nodes())
-    train_neg_g = dgl.graph((train_neg_u, train_neg_v), num_nodes=graph.number_of_nodes())
-
-    val_pos_g = dgl.graph((val_pos_u, val_pos_v), num_nodes=graph.number_of_nodes())
-    val_neg_g = dgl.graph((val_neg_u, val_neg_v), num_nodes=graph.number_of_nodes())
+    # Create negative training and negative validation graph
+    train_neg_g, val_neg_g = create_negative_graphs(adj_matrix, graph.number_of_nodes(), graph.number_of_edges(), val_size)
 
     return train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g
 
-    # Link prediction requires computation of representation of pairs of nodes
-
-
 def inner_train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: torch.optim.Optimizer, num_epochs: int,
-          node_features_property: str, console_log_freq: int, checkpoint_freq: int,
-          metrics: List[str], tr_acc_patience: int, model_save_path: str, train_g: dgl.graph, train_pos_g: dgl.graph,
-          train_neg_g: dgl.graph, val_pos_g: dgl.graph, val_neg_g: dgl.graph) -> Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]:
+                node_features_property: str, console_log_freq: int, checkpoint_freq: int,
+                metrics: List[str], tr_acc_patience: int, model_save_path: str, train_g: dgl.graph, train_pos_g: dgl.graph,
+                train_neg_g: dgl.graph, val_pos_g: dgl.graph, val_neg_g: dgl.graph) -> Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]:
     """Real train method where training occurs. Parameters from LinkPredictionParameters are sent here. They aren't sent as whole class because of circular dependency.
 
     Args:
@@ -226,8 +250,8 @@ def inner_train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: t
         Tuple[List[Dict[str, float]], List[Dict[str, float]]: Training results, validation results
     """
 
-    # print("train_g: ", train_g)
-    # print("train_pos_g: ", train_pos_g)
+    # print("train_g: ", train_g.ndata[node_features_property])
+    # print("train_pos_g: ", train_pos_g[node_features_property])
     # print("train_neg_g: ", train_neg_g)
     # print("val_pos_g: ", val_pos_g)
     # print("val_neg_g: ", val_neg_g)
@@ -247,7 +271,7 @@ def inner_train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: t
     # print("val pos v: ", val_pos_edges_v)
     # print("val neg u: ", val_neg_edges_u)
     # print("val neg v: ", val_neg_edges_v)
-    
+
     # TODO: Handle the case when the validation graphs are empty
 
     training_results, validation_results = [], []
@@ -285,7 +309,7 @@ def inner_train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: t
         # print("Edge id: ", edge_id)
         # print("Pos score: ", pos_score[edge_id])
 
-        scores = torch.cat([pos_score, neg_score]) # concatenated positive and negative scores
+        scores = torch.cat([pos_score, neg_score])  # concatenated positive and negative scores
         probs = m(scores)  # probabilities
         classes = probs > 0.5  # classify
         labels = torch.cat([torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])])  # concatenation of labels
@@ -314,7 +338,9 @@ def inner_train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: t
             # Calculate here accuracy for validation dataset because of patience check
             acc_val = accuracy_score(labels_val, probs_val > 0.5)
 
-            print("Ratio of positively predicted examples: ", torch.sum(probs_val > 0.5).item() / (probs_val).shape[0])
+            # print(val_pos_g.number_of_edges())
+            # print("Ratio of positively predicted examples: ", torch.sum(probs_val > 0.5).item() / (probs_val).shape[0])
+
             print("Validation labels: ", labels_val)
             print("Validation classifications: ", probs_val > 0.5)
 
