@@ -466,8 +466,8 @@ def _get_dgl_graph_data(
             src_nodes.append(old_to_new[src_id])
             dest_nodes.append(old_to_new[dest_id])
 
-    print("Src nodes: ", src_nodes)
-    print("Dest nodes: ", dest_nodes)
+    # print("Src nodes: ", src_nodes)
+    # print("Dest nodes: ", dest_nodes)
     # print("Features: ", features)
     # print("Ind: ", ind)
     features = torch.tensor(features, dtype=torch.float32)  # use float for storing tensor of features

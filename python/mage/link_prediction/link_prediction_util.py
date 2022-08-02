@@ -74,7 +74,7 @@ def test_adjacency_matrix(graph: dgl.graph, adj_matrix: np.matrix):
 
     for i in range(num_edges):
         v1, v2 = u[i].item(), v[i].item()
-        print("Testing edge: ", v1, v2)
+        # print("Testing edge: ", v1, v2)
         if adj_matrix[v1, v2] == 0.0:  # Handle the case with duplicate edges
             raise Exception(f"Graph edge {v1} {v2} not written to adj_matrix. ")
 
@@ -296,11 +296,11 @@ def inner_train(
         Tuple[List[Dict[str, float]], List[Dict[str, float]]: Training results, validation results
     """
 
-    print("train_g: ", train_g.edges())
-    print("train_pos_g: ", train_pos_g)
-    print("train_neg_g: ", train_neg_g)
-    print("val_pos_g: ", val_pos_g.edges())
-    print("val_neg_g: ", val_neg_g)
+    # print("train_g: ", train_g.edges())
+    # print("train_pos_g: ", train_pos_g)
+    # print("train_neg_g: ", train_neg_g)
+    # print("val_pos_g: ", val_pos_g.edges())
+    # print("val_neg_g: ", val_neg_g)
 
     tr_pos_edges_u, tr_pos_edges_v = train_pos_g.edges()
     tr_neg_edges_u, tr_neg_edges_v = train_neg_g.edges()

@@ -161,7 +161,7 @@ if __name__ == "__main__":
     )
     prediction_file_name = "./commands/prediction_commands.txt"  # where PREDICTION commands will be created
     delete_edges(
-        num_delete_edges=5,
+        num_delete_edges=10,
         file_name=file_name,
         node_id_property="id",
         file_prediction_commands=prediction_file_name,
