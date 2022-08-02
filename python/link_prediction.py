@@ -59,7 +59,7 @@ class LinkPredictionParameters:
     hidden_features_size: List = field(
         default_factory=lambda: [1433, 64, 32, 16]
     )  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
-    layer_type: str = GRAPH_SAGE
+    layer_type: str = GRAPH_ATTN
     num_epochs: int = 100
     optimizer: str = ADAM_OPT
     learning_rate: float = 0.01
@@ -80,7 +80,7 @@ class LinkPredictionParameters:
             "num_wrong_examples",
         ]
     )
-    predictor_type: str =  DOT_PREDICTOR
+    predictor_type: str =  MLP_PREDICTOR
     attn_num_heads: List[int] = field(default_factory=lambda: [8, 4, 1])
     tr_acc_patience: int = 8
     model_save_path: str = (
@@ -207,7 +207,7 @@ def train(
         raise Exception("No edges in the dataset. ")
 
     # TEST: Currently disabled
-    # conversion_to_dgl_test(graph=graph, new_to_old=new_to_old, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property)
+    conversion_to_dgl_test(graph=graph, new_to_old=new_to_old, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property)
 
     """ Train g is a graph which has removed test edges. Others are positive and negative train and test graphs
     """
@@ -273,7 +273,7 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     Returns:
         score: Probability that two nodes are connected
     """
-    global graph, predictor, model
+    global graph, predictor, model, old_to_new, new_to_old
 
     # Create dgl graph representation
     src_old_id = src_vertex.id
@@ -466,14 +466,14 @@ def _get_dgl_graph_data(
             src_nodes.append(old_to_new[src_id])
             dest_nodes.append(old_to_new[dest_id])
 
-    # print("Src nodes: ", src_nodes)
-    # print("Dest nodes: ", dest_nodes)
+    print("Src nodes: ", src_nodes)
+    print("Dest nodes: ", dest_nodes)
     # print("Features: ", features)
     # print("Ind: ", ind)
     features = torch.tensor(features, dtype=torch.float32)  # use float for storing tensor of features
     g = dgl.graph((src_nodes, dest_nodes), num_nodes=ind)
     g.ndata[link_prediction_parameters.node_features_property] = features
-    # g = dgl.add_self_loop(g) # TODO: How, why what? But needed for GAT, otherwise 0-in-degree nodes:u
+    g = dgl.add_self_loop(g) 
     return g, new_to_old, old_to_new
 
 
@@ -650,7 +650,7 @@ def conversion_to_dgl_test(
     """
     for vertex in graph.nodes():
         vertex_id = vertex.item()
-        print(f"Testing vertex: {vertex_id}")
+        # print(f"Testing vertex: {vertex_id}")
         old_id = new_to_old[vertex_id]
         vertex = ctx.graph.get_vertex_by_id(old_id)
         if vertex is None:
@@ -671,5 +671,5 @@ def conversion_to_dgl_test(
         raise Exception("Wrong number of nodes. ")
 
     # Check number of edges
-    if graph.number_of_edges() != get_number_of_edges(ctx):
+    if graph.number_of_edges() != get_number_of_edges(ctx) + len(ctx.graph.vertices):  # because of self-loop added
         raise Exception("Wrong number of edges")

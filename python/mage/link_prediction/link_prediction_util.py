@@ -17,6 +17,8 @@ import random
 from mage.link_prediction.training_visualizer import (
     visualize,
 )  # without .training_visualizer it is circular import
+import matplotlib.pyplot as plt
+import networkx as nx
 
 
 if __name__ == "__main__":
@@ -50,29 +52,6 @@ def get_number_of_edges(ctx: mgp.ProcCtx) -> int:
         edge_cnt += len(list(vertex.out_edges))
     return edge_cnt
 
-
-def squarify(M: np.matrix, number_of_nodes: int, val: int) -> np.matrix:
-    """Converts rectangular matrix into square one by padding it with value val.
-
-    Args:
-        M (numpy.matrix): Matrix that needs to be padded.
-        val (numpy.matrix): Matrix padding value.
-        number_of_nodes (int): DGL number of nodes -> needed here to cover the case of disconnected graph.
-
-    Returns:
-        numpy.matrix: Padded matrix
-    """
-
-    (a, b) = M.shape
-    prior = number_of_nodes - max(a, b)
-    print("Prior: ", prior)
-    if a > b:
-        padding = ((0, prior), (0, a - b + prior))
-    else:
-        padding = ((0, b - a + prior), (0, prior))
-    return np.pad(M, padding, mode="constant", constant_values=val)
-
-
 def test_adjacency_matrix(graph: dgl.graph, adj_matrix: np.matrix):
     """Tests whether the adjacency matrix correctly encodes edges from dgl graph
 
@@ -81,11 +60,8 @@ def test_adjacency_matrix(graph: dgl.graph, adj_matrix: np.matrix):
         adj_matrix (np.matrix): Graph's adjacency matrix
     """
 
-    if (
-        adj_matrix.shape[0] != graph.number_of_nodes()
-        or adj_matrix.shape[1] != graph.number_of_nodes()
-    ):
-        return False
+    if(adj_matrix.shape[0] != graph.number_of_nodes() or adj_matrix.shape[1] != graph.number_of_nodes()): 
+        raise Exception("Adjacency matrix wrong shape")
 
     # To check that indeed adjacency matrix is equivalent to graph we need to check both directions to get bijection.
 
@@ -93,22 +69,21 @@ def test_adjacency_matrix(graph: dgl.graph, adj_matrix: np.matrix):
     u, v = graph.edges()
     num_edges = graph.number_of_edges()
 
-    # print("u: ", u)
-    # print("v: ", v)
+    print("u: ", u)
+    print("v: ", v)
 
     for i in range(num_edges):
         v1, v2 = u[i].item(), v[i].item()
-        if adj_matrix[v1][v2] != 1.0:
+        print("Testing edge: ", v1, v2)
+        if adj_matrix[v1, v2] == 0.0:  # Handle the case with duplicate edges
             raise Exception(f"Graph edge {v1} {v2} not written to adj_matrix. ")
 
     # Now test the direction adj_matrix->graph
     for i in range(adj_matrix.shape[0]):
         for j in range(adj_matrix.shape[1]):
-            if adj_matrix[i][j] == 1.0:
+            if adj_matrix[i, j] > 0.0:  # Handle the case with duplicate edges
                 if graph.has_edges_between(i, j) is False:
-                    raise Exception(
-                        f"Non-existing edge {i} {j} in the adjacency matrix. "
-                    )
+                    raise Exception(f"Non-existing edge {i} {j} in the adjacency matrix. ")
 
 
 def create_negative_graphs(
@@ -125,8 +100,11 @@ def create_negative_graphs(
     Returns:
         Tuple[dgl.graph, dgl.graph]: Negative training and negative validation graph.
     """
-    adj_neg = 1 - adj_matrix - np.eye(number_of_nodes)
-    neg_u, neg_v = np.where(adj_neg != 0)  # Find all non-existing edges
+    adj_neg = 1 - adj_matrix
+    neg_u, neg_v = np.where(adj_neg > 0)  # Find all non-existing edges. Move from != 0 because of duplicate edges so you could have negative values in adj_neg.
+
+    print("Neg u: ", neg_u)
+    print("Neg v: ", neg_v)
 
     # Cannot sample anything, raise a Exception. E2E handling.
     if len(neg_u) == 0 and len(neg_v) == 0:
@@ -159,9 +137,7 @@ def create_positive_graphs(
     Returns:
         Tuple[dgl.graph, dgl.graph, dgl.graph]: training graph with features, positive training and positive validation graphs.
     """
-    eids = np.arange(
-        graph.number_of_edges()
-    )  # get all edge ids from number of edges and create a numpy vector from it.
+    eids = np.arange(graph.number_of_edges())  # get all edge ids from number of edges and create a numpy vector from it.
     eids = np.random.permutation(eids)  # randomly permute edges
 
     # Get validation and training source and destination vertices
@@ -172,9 +148,8 @@ def create_positive_graphs(
     # Remove validation edges from the training graph
     train_g = dgl.remove_edges(graph, eids[:val_size])
 
-    train_pos_g = dgl.graph(
-        (train_pos_u, train_pos_v), num_nodes=graph.number_of_nodes()
-    )
+    train_pos_g = dgl.graph((train_pos_u, train_pos_v), num_nodes=graph.number_of_nodes())
+
     val_pos_g = dgl.graph((val_pos_u, val_pos_v), num_nodes=graph.number_of_nodes())
 
     return train_g, train_pos_g, val_pos_g
@@ -207,16 +182,14 @@ def preprocess(
     # Get source and destination nodes for all edges
     u, v = graph.edges()
 
-    # Manipulate graph representation
-    adj = sp.coo_matrix(
-        (np.ones(len(u)), (u.numpy(), v.numpy()))
-    )  # adjacency list graph representation
+    adj = sp.coo_matrix((np.ones(len(u)), (u.numpy(), v.numpy())))  # adjacency list graph representation
+    # print("Adjacency list: ", adj.shape)
+    # print(adj)
     adj_matrix = adj.todense()  # convert to dense matrix representation
-    adj_matrix = squarify(
-        adj_matrix, number_of_nodes=graph.number_of_nodes(), val=0
-    )  # pad if needed
+    # print("Adj matrix: ", adj_matrix.shape)
+    # print(adj_matrix)
 
-    # Check if conversion to adjacency matrix went OK. Exdeption will be thrown otherwise.
+    # Check if conversion to adjacency matrix went OK. Exception will be thrown otherwise.
     test_adjacency_matrix(graph, adj_matrix)
 
     # val size is 1-split_ratio specified by the user
@@ -323,10 +296,10 @@ def inner_train(
         Tuple[List[Dict[str, float]], List[Dict[str, float]]: Training results, validation results
     """
 
-    print("train_g: ", train_g)
+    print("train_g: ", train_g.edges())
     print("train_pos_g: ", train_pos_g)
     print("train_neg_g: ", train_neg_g)
-    print("val_pos_g: ", val_pos_g)
+    print("val_pos_g: ", val_pos_g.edges())
     print("val_neg_g: ", val_neg_g)
 
     tr_pos_edges_u, tr_pos_edges_v = train_pos_g.edges()
@@ -390,6 +363,10 @@ def inner_train(
         # print("Pos score: ", pos_score[edge_id])
 
         scores = torch.cat([pos_score, neg_score])  # concatenated positive and negative scores
+        # scores = F.normalize(scores, dim=0)
+        print("Negative scores: ", torch.sum(scores < 0).item())
+        print("Positive scores: ", torch.sum(scores > 0).item())
+
         probs = m(scores)  # probabilities
         labels = torch.cat([torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])])  # concatenation of labels
         loss_output = loss(probs, labels)
@@ -421,11 +398,12 @@ def inner_train(
                     neg_score_val = predictor(val_neg_g, h)
                     # Concatenate scores
                     scores_val = torch.cat([pos_score_val, neg_score_val])
+                    # scores_val = F.normalize(scores_val, dim=0)
                     probs_val = m(scores_val)  # probabilities
                     labels_val = torch.cat([torch.ones(pos_score_val.shape[0]), torch.zeros(neg_score_val.shape[0]),])
 
-                    print("Ratio of positively predicted examples: ", torch.sum(probs_val > 0.5).item() / (probs_val).shape[0])
-
+                    print("Ratio of positively val predicted examples: ", torch.sum(probs_val > 0.5).item() / (probs_val).shape[0])
+                    print("Ratio of positively train predicted examples: ", torch.sum(probs > 0.5).item() / probs.shape[0])
                     # Set initial metrics for validation result
                     loss_output_val = loss(probs_val, labels_val)
                     epoch_val_result["epoch"] = epoch

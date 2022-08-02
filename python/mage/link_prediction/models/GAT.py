@@ -25,7 +25,7 @@ class GAT(torch.nn.Module):
                 GATConv(
                     in_feats=in_feats,
                     out_feats=out_feats,
-                    num_heads=1,
+                    num_heads=num_heads,
                     allow_zero_in_degree=True
                 )
             )
