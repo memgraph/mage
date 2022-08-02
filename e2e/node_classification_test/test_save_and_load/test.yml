@@ -1,20 +1,26 @@
 query: >
-        CALL node_classification.set_model_parameters({path_to_model: '/home/mateo/Desktop/model'}) YIELD *;
+        CALL node_classification.set_model_parameters({path_to_model: '../pytorch_models/model1'}) YIELD *;
 
 output:
         - in_channels: 34
           out_channels: 4
           num_samples: 34
-          path: "/home/mateo/Desktop/model"
+          path: ../pytorch_models/model1
 
 query: >
         CALL node_classification.save_model() YIELD *;
 
-output: 
-        - path: "/home/mateo/Desktop/model"
+output:
+        - path: ../pytorch_models/model1
+
 
 query: >
         CALL node_classification.load_model() YIELD *;
 
-output: 
-        - path: '/home/mateo/Desktop/model'
+output:
+        - path: ../pytorch_models/model1
+
+query: >
+        CALL node_classification.reset() YIELD *;
+
+output: []

@@ -6,10 +6,16 @@ output:
         - in_channels: 34
           out_channels: 4
           num_samples: 34
-          path: /home/mateo/mage/pytorch_models/model
+          path: ../pytorch_models/model
 
 query: >
-        CALL node_classification.train() YIELD *;
+        CALL node_classification.train(10) YIELD epoch RETURN epoch;
 
 output:
-        - train_accuracy: 1
+        - epoch: 5
+        - epoch: 10
+
+query: >
+        CALL node_classification.reset() YIELD *;
+
+output: []

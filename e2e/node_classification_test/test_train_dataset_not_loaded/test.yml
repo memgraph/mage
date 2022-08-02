@@ -1,0 +1,6 @@
+# behavior of train if we don't load dataset first
+query: >
+        CALL node_classification.train() YIELD epoch RETURN epoch;
+
+exception: >
+        Dataset is not loaded. Load dataset first!
