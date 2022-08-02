@@ -422,12 +422,7 @@ def inner_train(
                     # Concatenate scores
                     scores_val = torch.cat([pos_score_val, neg_score_val])
                     probs_val = m(scores_val)  # probabilities
-                    labels_val = torch.cat(
-                        [
-                            torch.ones(pos_score_val.shape[0]),
-                            torch.zeros(neg_score_val.shape[0]),
-                        ]
-                    )
+                    labels_val = torch.cat([torch.ones(pos_score_val.shape[0]), torch.zeros(neg_score_val.shape[0]),])
 
                     print("Ratio of positively predicted examples: ", torch.sum(probs_val > 0.5).item() / (probs_val).shape[0])
 

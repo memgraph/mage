@@ -43,6 +43,7 @@ class GAT(torch.nn.Module):
 
         for index, layer in enumerate(self.layers):
             h = layer(g, h)
+            print("GAT shape: ", h.shape)
             h = torch.mean(h, dim=1)
             print("GAT shape: ", h.shape)
             if index != len(self.layers) - 1:  # Apply elu to every layer except last one

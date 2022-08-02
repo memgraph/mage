@@ -1,3 +1,4 @@
+from telnetlib import DO
 import mgp  # Python API
 import torch
 import dgl  # geometric deep learning
@@ -58,10 +59,10 @@ class LinkPredictionParameters:
     hidden_features_size: List = field(
         default_factory=lambda: [1433, 64, 32, 16]
     )  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
-    layer_type: str = GRAPH_ATTN
+    layer_type: str = GRAPH_SAGE
     num_epochs: int = 100
-    optimizer: str = SGD_OPT
-    learning_rate: float = 0.4
+    optimizer: str = ADAM_OPT
+    learning_rate: float = 0.01
     split_ratio: float = 0.8
     node_features_property: str = "features"
     device_type: str = CPU_DEVICE
@@ -79,8 +80,8 @@ class LinkPredictionParameters:
             "num_wrong_examples",
         ]
     )
-    predictor_type: str = DOT_PREDICTOR
-    attn_num_heads: List[int] = field(default_factory=lambda: [4, 2, 1])
+    predictor_type: str =  DOT_PREDICTOR
+    attn_num_heads: List[int] = field(default_factory=lambda: [8, 4, 1])
     tr_acc_patience: int = 8
     model_save_path: str = (
         "/home/andi/Memgraph/code/mage/python/mage/link_prediction/model.pt"  # TODO: When the development finishes
@@ -222,11 +223,9 @@ def train(
         attn_num_heads=link_prediction_parameters.attn_num_heads,
     )
     # Create a predictor
-    predictor_hidden_size = (
-        link_prediction_parameters.hidden_features_size[-1]
-        if link_prediction_parameters.layer_type == GRAPH_SAGE
-        else int(link_prediction_parameters.hidden_features_size[-1])
-    )
+    predictor_hidden_size = link_prediction_parameters.hidden_features_size[-1]
+    
+
     predictor = create_predictor(
         predictor_type=link_prediction_parameters.predictor_type,
         predictor_hidden_size=predictor_hidden_size,
