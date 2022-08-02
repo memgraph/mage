@@ -1,0 +1,8 @@
+query: >
+        CALL node_classification.set_model_parameters() YIELD *;
+
+output:
+        - in_channels: 34
+          out_channels: 4
+          num_samples: 34
+          path: /home/mateo/mage/pytorch_models/model

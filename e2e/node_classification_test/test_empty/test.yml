@@ -1,0 +1,5 @@
+query: >
+        CALL node_classification.set_model_parameters() YIELD *;
+
+exception: >
+        dataset is empty

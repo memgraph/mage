@@ -1,0 +1,15 @@
+# this test is used for sanity check if model overfits on small dataset
+query: >
+        CALL node_classification.set_model_parameters({layer_type: 'SAGE', hidden_features_size: [16, 16]}) YIELD *;
+
+output:
+        - in_channels: 34
+          out_channels: 4
+          num_samples: 34
+          path: /home/mateo/mage/pytorch_models/model
+
+query: >
+        CALL node_classification.train() YIELD *;
+
+output:
+        - train_accuracy: 1
