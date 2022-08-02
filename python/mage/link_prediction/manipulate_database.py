@@ -7,14 +7,12 @@ import numpy as np
 import ast
 
 
-class MemgraphPrintDict():
-    """Class that wraps dictionary by printing repr of value and key without quotes to be Cypher compatible. 
-    """
+class MemgraphPrintDict:
+    """Class that wraps dictionary by printing repr of value and key without quotes to be Cypher compatible."""
 
     def __init__(self, my_dict) -> None:
         self.my_dict = my_dict
 
-    
     def __str__(self) -> str:
         s = ""
         items_len = len(self.my_dict.keys())
@@ -24,8 +22,9 @@ class MemgraphPrintDict():
                 s += ", "
         return s
 
+
 def labels_list_to_cypher(labels: list) -> str:
-    """Generates Cypher labels list representation command. 
+    """Generates Cypher labels list representation command.
 
     Args:
         labels (list): List of labels
@@ -39,17 +38,23 @@ def labels_list_to_cypher(labels: list) -> str:
 
     return command
 
-def delete_edges(num_delete_edges: int, file_name: str, node_id_property: str, file_prediction_commands: str) -> None:
-    """Deletes num_delete_edges random relationships. Creates CREATE commands and saves it to the file so later relationships can be recreated. 
+
+def delete_edges(
+    num_delete_edges: int,
+    file_name: str,
+    node_id_property: str,
+    file_prediction_commands: str,
+) -> None:
+    """Deletes num_delete_edges random relationships. Creates CREATE commands and saves it to the file so later relationships can be recreated.
 
     Args:
-        num_delete_edges (int): Number of edges to be deleted. 
-        file_name (str): Name of the file where it should be saved. 
-        node_id_property (str): Property name where the id is saved. 
-        file_prediction_commands (str): File where prediction methods will be saved. 
+        num_delete_edges (int): Number of edges to be deleted.
+        file_name (str): Name of the file where it should be saved.
+        node_id_property (str): Property name where the id is saved.
+        file_prediction_commands (str): File where prediction methods will be saved.
     Returns:
         nothing
-    """    
+    """
 
     results = memgraph.execute_and_fetch(
         f"""
@@ -58,7 +63,6 @@ def delete_edges(num_delete_edges: int, file_name: str, node_id_property: str, f
         ORDER BY rand()
         LIMIT {num_delete_edges};
         """
-
     )
 
     create_commands, prediction_commands = [], []
@@ -66,28 +70,34 @@ def delete_edges(num_delete_edges: int, file_name: str, node_id_property: str, f
 
     for result in results:
         # Handle first node
-        v1_properties, v1_labels = MemgraphPrintDict(result["v1"]._properties), labels_list_to_cypher(list(result["v1"]._labels))
+        v1_properties, v1_labels = MemgraphPrintDict(
+            result["v1"]._properties
+        ), labels_list_to_cypher(list(result["v1"]._labels))
         # del v1_properties.my_dict["features"]
         vertex_ids_delete.append(v1_properties.my_dict["id"])
 
         # Handle second node
-        v2_properties, v2_labels = MemgraphPrintDict(result["v2"]._properties), labels_list_to_cypher(list(result["v2"]._labels))
- 
+        v2_properties, v2_labels = MemgraphPrintDict(
+            result["v2"]._properties
+        ), labels_list_to_cypher(list(result["v2"]._labels))
+
         # del v2_properties.my_dict["features"]
         # Handle edge
-        edge_properties, edge_labels = MemgraphPrintDict(result["e"]._properties), result["e"]._type
+        edge_properties, edge_labels = (
+            MemgraphPrintDict(result["e"]._properties),
+            result["e"]._type,
+        )
 
-
-        # Create command for later, and save it to some my file. 
+        # Create command for later, and save it to some my file.
         create_command = f"""MATCH (v1{v1_labels} {{{node_id_property}: {v1_properties.my_dict[node_id_property]}}})
             MATCH (v2{v2_labels} {{{node_id_property}: {v2_properties.my_dict[node_id_property]}}}) 
             CREATE (v1)-[e:{edge_labels} {{{edge_properties}}}]->(v2)
             RETURN v1, e, v2;
             """
-        
+
         # print(create_command)
         create_commands.append(create_command)
-        
+
         # Delete command
         delete_command = f"""
             MATCH (v1{v1_labels} {{{node_id_property}: {v1_properties.my_dict[node_id_property]}}})-[e]->(v2{v2_labels} {{{node_id_property}: {v2_properties.my_dict[node_id_property]}}}) 
@@ -107,7 +117,6 @@ def delete_edges(num_delete_edges: int, file_name: str, node_id_property: str, f
             """
         prediction_commands.append(predict_command)
 
-
     # Save create commands
     with open(file=file_name, mode="w") as f:
         for comm in create_commands:
@@ -118,12 +127,11 @@ def delete_edges(num_delete_edges: int, file_name: str, node_id_property: str, f
         for pred_comm in prediction_commands:
             f.write("%s\n" % pred_comm)
 
-
     return results
-    
+
 
 def read_commands_script(file_name: str) -> None:
-    """Reads commands from file name and executes them. 
+    """Reads commands from file name and executes them.
 
     Args:
         file_name (str): _description_
@@ -134,7 +142,7 @@ def read_commands_script(file_name: str) -> None:
             line = f.readline()
             if not line:
                 break
-            elif line.isspace() is True: # empty line so execute command
+            elif line.isspace() is True:  # empty line so execute command
                 print("Command: ")
                 print(command)
                 memgraph.execute(command)
@@ -142,15 +150,20 @@ def read_commands_script(file_name: str) -> None:
                 command = ""  # annulate old command
             else:
                 command += line
-        
-        f.truncate(0)
 
+        f.truncate(0)
 
 
 if __name__ == "__main__":
     memgraph = Memgraph("127.0.0.1", 7687)
-    file_name = "./commands/cora_creation_commands.txt"  # where CREATE commands will be created
+    file_name = (
+        "./commands/cora_creation_commands.txt"  # where CREATE commands will be created
+    )
     prediction_file_name = "./commands/prediction_commands.txt"  # where PREDICTION commands will be created
-    delete_edges(num_delete_edges=5, file_name=file_name, node_id_property="id", file_prediction_commands=prediction_file_name)
+    delete_edges(
+        num_delete_edges=5,
+        file_name=file_name,
+        node_id_property="id",
+        file_prediction_commands=prediction_file_name,
+    )
     # read_commands_script(file_name=file_name)
-    

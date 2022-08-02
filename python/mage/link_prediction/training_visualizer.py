@@ -2,7 +2,9 @@ from typing import List, Dict
 import matplotlib.pyplot as plt
 
 
-def visualize(training_results: List[Dict[str, float]], test_results: List[Dict[str, float]]) -> None:
+def visualize(
+    training_results: List[Dict[str, float]], test_results: List[Dict[str, float]]
+) -> None:
     """Visualize training results obtained during ML training. It assumes that training and test results are of same size=validated after same number of epochs.
     Goal is to create drawing function that draws at most 4 subplots at the same figure and is dynamically adapting to the number of metrics sent.
 
@@ -41,7 +43,7 @@ def visualize(training_results: List[Dict[str, float]], test_results: List[Dict[
         plt.ylabel(metric_name)
         plt.plot(epochs, tr_metrics[metric_name], label="TRAIN")
         plt.plot(epochs, test_metrics[metric_name], label="TEST")
-        plt.legend(loc='upper right')
+        plt.legend(loc="upper right")
         i += 1
         if i == 4:
             plt.suptitle("Training metrics")
