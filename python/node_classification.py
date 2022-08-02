@@ -1,14 +1,17 @@
+from gqlalchemy import Memgraph
 import mgp
 from tqdm import tqdm
 from mage.node_classification.metrics import *
-from mage.node_classification.train_model import *
 from torch_geometric.data import Data
 from mage.node_classification.model.inductive_model import InductiveModel
 from mage.node_classification.utils.convert_data import convert_data
+from mage.node_classification.train_model import model_train_step
 import torch
 import numpy as np
 import sys
 import mgp
+import os
+
 
 ##############################
 # constants
@@ -24,7 +27,6 @@ class ModelParams:
 
 
 class OptimizerParams:
-    OPTIMIZER = "optimizer"
     LEARNING_RATE = "learning_rate"
     WEIGHT_DECAY = "weight_decay"
 
@@ -44,27 +46,27 @@ class TrainParams:
     NUM_EPOCHS = "num_epochs"
     CONSOLE_LOG_FREQ = "console_log_freq"
     CHECKPOINT_FREQ = "checkpoint_freq"
-    TOTAL_NO_EPOCHS = "total_no_epochs"
 
 
 class OtherParams:
     DEVICE_TYPE = "device_type"
-    PATH_TO_MODELS = "/home/mateo/mage/pytorch_models/model"
+    PATH_TO_MODEL = "path_to_model"
 
 
-# all None until set_params are executed
-data: Data = None
-model: InductiveModel = None
-opt = None
-criterion = None
-global_params: mgp.Map
-logged_data: mgp.List = []
+class Modelling:
+    # all None until set_params are executed
+    data: Data = None
+    model: InductiveModel = None
+    opt = None
+    criterion = None
+    global_params: mgp.Map
+    logged_data: mgp.List = []
+
 
 DEFINED_INPUT_TYPES = {
     ModelParams.HIDDEN_FEATURES_SIZE: list,
     ModelParams.LAYER_TYPE: str,
     TrainParams.NUM_EPOCHS: int,
-    OptimizerParams.OPTIMIZER: str,
     OptimizerParams.LEARNING_RATE: float,
     OptimizerParams.WEIGHT_DECAY: float,
     DataParams.SPLIT_RATIO: float,
@@ -74,14 +76,14 @@ DEFINED_INPUT_TYPES = {
     TrainParams.CONSOLE_LOG_FREQ: int,
     TrainParams.CHECKPOINT_FREQ: int,
     ModelParams.AGGREGATOR: str,
-    DataParams.METRICS: list
+    DataParams.METRICS: list,
+    OtherParams.PATH_TO_MODEL: str,
 }
 
 DEFAULT_VALUES = {
     ModelParams.HIDDEN_FEATURES_SIZE: [16],
     ModelParams.LAYER_TYPE: "SAGE",
     TrainParams.NUM_EPOCHS: 100,
-    OptimizerParams.OPTIMIZER: "Adam",
     OptimizerParams.LEARNING_RATE: 0.1,
     OptimizerParams.WEIGHT_DECAY: 5e-4,
     DataParams.SPLIT_RATIO: 0.8,
@@ -92,13 +94,22 @@ DEFAULT_VALUES = {
     TrainParams.CONSOLE_LOG_FREQ: 5,
     TrainParams.CHECKPOINT_FREQ: 5,
     ModelParams.AGGREGATOR: "mean",
-    DataParams.METRICS: ["loss", "accuracy", "f1_score", "precision", "recall", "num_wrong_examples"],
+    DataParams.METRICS: [
+        "loss",
+        "accuracy",
+        "f1_score",
+        "precision",
+        "recall",
+        "num_wrong_examples",
+    ],
+    OtherParams.PATH_TO_MODEL: "../pytorch_models/model",
 }
 
 
 ##############################
 # set model parameters
 ##############################
+
 
 def declare_globals(params: mgp.Map):
     """This function declares dictionary of global parameters to given dictionary.
@@ -121,56 +132,54 @@ def declare_model_and_data(ctx: mgp.ProcCtx):
 
     reindexing = {}
     for i in range(len(nodes)):
-        reindexing[i] = nodes[i].properties.get(global_params["node_id_property"])
+        reindexing[i] = nodes[i].properties.get(
+            global_params[MemgraphParams.NODE_ID_PROPERTY]
+        )
 
     edges = []
     for vertex in ctx.graph.vertices:
         for edge in vertex.out_edges:
             edges.append(edge)
 
-    global data
     data = convert_data(
-        nodes, edges, global_params[DataParams.SPLIT_RATIO], global_params, reindexing)
+        nodes, edges, global_params[DataParams.SPLIT_RATIO], global_params, reindexing
+    )
 
     # print(data)
     # print(data.edge_index.max())
 
-    global_params[ModelParams.IN_CHANNELS] = np.shape(data.x.detach().numpy())[1]
-    print(global_params[ModelParams.IN_CHANNELS])
-    global_params[ModelParams.OUT_CHANNELS] = len(set(data.y.detach().numpy()))
-    print(len(set(data.y.detach().numpy())))
+    global_params[ModelParams.IN_CHANNELS] = np.shape(Modelling.data.x.detach().numpy())[1]
 
-    global model
-    model = InductiveModel(
+    global_params[ModelParams.OUT_CHANNELS] = len(set(Modelling.data.y.detach().numpy()))
+
+    global Modelling
+    Modelling.model = InductiveModel(
         layer_type=global_params[ModelParams.LAYER_TYPE],
         in_channels=global_params[ModelParams.IN_CHANNELS],
         hidden_features_size=global_params[ModelParams.HIDDEN_FEATURES_SIZE],
         out_channels=global_params[ModelParams.OUT_CHANNELS],
-        aggr=global_params[ModelParams.AGGREGATOR]
+        aggr=global_params[ModelParams.AGGREGATOR],
     )
 
-    global opt
     # obtain function by its name from library
-    Optim = getattr(torch.optim, global_params[OptimizerParams.OPTIMIZER])
-    opt = Optim(
-        model.parameters(),
+    Modelling.opt = torch.optim.Adam(
+        Modelling.model.parameters(),
         lr=global_params[OptimizerParams.LEARNING_RATE],
-        weight_decay=global_params[OptimizerParams.WEIGHT_DECAY])
+        weight_decay=global_params[OptimizerParams.WEIGHT_DECAY],
+    )
 
-    global criterion
-    criterion = torch.nn.CrossEntropyLoss()
+    Modelling.criterion = torch.nn.CrossEntropyLoss()
 
 
 @mgp.read_proc
 def set_model_parameters(
-    ctx: mgp.ProcCtx,
-    params: mgp.Map = {}
-) -> mgp.Record():
-    """The purpose of this function is to initialize all global variables. Parameter 
+    ctx: mgp.ProcCtx, params: mgp.Map = {}
+) -> mgp.Record(in_channels=int, out_channels=int, num_samples=int, path=str):
+    """The purpose of this function is to initialize all global variables. Parameter
     params is used for variables written in query module. It first checks
-    if (new) variables in params are defined appropriately. If so, map of default 
-    global parameters is overriden with user defined dictionary params. 
-    After that it executes previously defined functions declare_globals and 
+    if (new) variables in params are defined appropriately. If so, map of default
+    global parameters is overriden with user defined dictionary params.
+    After that it executes previously defined functions declare_globals and
     declare_model_and_data and sets each global variable to some value.
 
     Args:
@@ -178,11 +187,15 @@ def set_model_parameters(
         params: (mgp.Map, optional): user defined parameters from query module. Defaults to {}
 
     Raises:
-        Exception: exception is raised if some variable in dictionary params is not 
+        Exception: exception is raised if some variable in dictionary params is not
                     defined as it should be
 
     Returns:
-        mgp.Record(): empty record
+        mgp.Record(
+            in_channels (int): number of input channels,
+            out_channels (int): number of output channels
+            num_sample(int): number of samples
+        )
     """
     global DEFINED_INPUT_TYPES, DEFAULT_VALUES
 
@@ -203,10 +216,10 @@ def set_model_parameters(
             return False
 
     # mgconsole bug
-    if "hidden_features_size" in params.keys():
-        params["hidden_features_size"] = list(params["hidden_features_size"])
-    if "metrics" in params.keys():
-        params["metrics"] = list(params["metrics"])
+    if ModelParams.HIDDEN_FEATURES_SIZE in params.keys():
+        params[ModelParams.HIDDEN_FEATURES_SIZE] = list(params[ModelParams.HIDDEN_FEATURES_SIZE])
+    if DataParams.METRICS in params.keys():
+        params[DataParams.METRICS] = list(params["metrics"])
 
     params = {**DEFAULT_VALUES, **params}  # override any default parameters
 
@@ -220,7 +233,13 @@ def set_model_parameters(
     declare_globals(params)
     declare_model_and_data(ctx)
 
-    return mgp.Record()
+    return mgp.Record(
+        in_channels=global_params[ModelParams.IN_CHANNELS],
+        out_channels=global_params[ModelParams.OUT_CHANNELS],
+        num_samples=np.shape(Modelling.data.x)[0],
+        path=global_params[OtherParams.PATH_TO_MODEL],
+    )
+
 
 ##############################
 # train
@@ -228,12 +247,10 @@ def set_model_parameters(
 
 
 @mgp.read_proc
-def train(
-    no_epochs: int = 100
-) -> mgp.Record():
-    """This function performs training of model. Before her, function set_model_parameters 
-    must be defined. Otherwise, global variables data and model will be equal 
-    to None and AssertionError will be raised. 
+def train(no_epochs: int = 100) -> mgp.Record(train_accuracy=float):
+    """This function performs training of model. Before her, function set_model_parameters
+    must be defined. Otherwise, global variables data and model will be equal
+    to None and AssertionError will be raised.
 
     Args:
         no_epochs (int, optional): number of epochs. Defaults to 100 )->mgp.Record(.
@@ -242,30 +259,43 @@ def train(
         _type_: _description_
     """
 
-    global data
+    global Modelling
     try:
-        assert data != None, "Dataset is not loaded. Load dataset first!"
+        assert Modelling.data != None, "Dataset is not loaded. Load dataset first!"
     except AssertionError as e:
         print(e)
         sys.exit(1)
 
     global_params[TrainParams.NUM_EPOCHS] = no_epochs
-    global_params[TrainParams.TOTAL_NO_EPOCHS] += no_epochs
 
     for epoch in tqdm(range(1, no_epochs + 1)):
-        loss = train_model(model, opt, data, criterion)
+        loss = model_train_step(Modelling.model, Modelling.opt, Modelling.data, Modelling.criterion)
 
         global logged_data
 
         if epoch % global_params[TrainParams.CONSOLE_LOG_FREQ] == 0:
-            dict_train = metrics(data.train_mask, model, data, global_params[DataParams.METRICS])
-            dict_val = metrics(data.val_mask, model, data, global_params[DataParams.METRICS])
-            logged_data.append({"epoch": epoch, "loss": loss, "train": dict_train, "val": dict_val})
+            dict_train = metrics(
+                Modelling.data.train_mask, Modelling.model, Modelling.data, global_params[DataParams.METRICS]
+            )
+            dict_val = metrics(
+                Modelling.data.val_mask, model, Modelling.data, global_params[DataParams.METRICS]
+            )
+            logged_data.append(
+                {"epoch": epoch, "loss": loss, "train": dict_train, "val": dict_val}
+            )
 
-            print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Accuracy: {logged_data[-1]["train"]["accuracy"]:.4f}, Accuracy: {logged_data[-1]["val"]["accuracy"]:.4f}')
+            print(
+                f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Accuracy: {logged_data[-1]["train"]["accuracy"]:.4f}, Accuracy: {logged_data[-1]["val"]["accuracy"]:.4f}'
+            )
         # print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}')
 
-    return mgp.Record()
+    return [mgp.Record(
+            epoch=logged_data[k]["epoch"],
+            loss=logged_data[k]["loss"],
+            train_log=logged_data[k]["train"],
+            val_log=logged_data[k]["val"]) for k in range(len(logged_data))
+    ]
+
 
 ##############################
 # get training data
@@ -274,8 +304,9 @@ def train(
 
 @mgp.read_proc
 def get_training_data() -> mgp.Record(
-        epoch=int, loss=float, train_log=mgp.Any, val_log=mgp.Any):
-    """This function is used so user can see what is logged data from training. 
+    epoch=int, loss=float, train_log=mgp.Any, val_log=mgp.Any
+):
+    """This function is used so user can see what is logged data from training.
 
 
     Returns:
@@ -294,49 +325,61 @@ def get_training_data() -> mgp.Record(
             epoch=logged_data[k]["epoch"],
             loss=logged_data[k]["loss"],
             train_log=logged_data[k]["train"],
-            val_log=logged_data[k]["val"]) for k in range(len(logged_data))
+            val_log=logged_data[k]["val"],
+        )
+        for k in range(len(logged_data))
     ]
+
+
 ##############################
 # model loading and saving, predict
 ##############################
 
 
 @mgp.read_proc
-def save_model() -> mgp.Record():
-    """This function save model to previously defined PATH_TO_MODELS.
+def save_model() -> mgp.Record(path=str):
+    """This function saves model to previously defined path_to_model.
 
     Returns:
-        mgp.Record(): empty record
+        mgp.Record(path (str): path to model): return record
     """
+
     global model
-    torch.save(model.state_dict(), OtherParams.PATH_TO_MODELS)
-    return mgp.Record()
+    if model == None:
+        raise AssertionError("model is not loaded")
+    torch.save(model.state_dict(), global_params[OtherParams.PATH_TO_MODEL])
+    return mgp.Record(path=global_params[OtherParams.PATH_TO_MODEL])
 
 
 @mgp.read_proc
-def load_model() -> mgp.Record():
-    """This function loads model to previously defined PATH_TO_MODELS.
+def load_model() -> mgp.Record(path=str):
+    """This function loads model to previously defined path_to_model.
 
     Returns:
-        mgp.Record(): empty record
+        mgp.Record(path (str): path to model): return record
     """
     global model
-    model.load_state_dict(torch.load(OtherParams.PATH_TO_MODELS))
-    return mgp.Record()
+
+    if not os.path.exists(global_params[OtherParams.PATH_TO_MODEL]):
+        raise Exception(
+            "path ", global_params[OtherParams.PATH_TO_MODEL], " don't exist"
+        )
+
+    model.load_state_dict(torch.load(global_params[OtherParams.PATH_TO_MODEL]))
+    return mgp.Record(path=global_params[OtherParams.PATH_TO_MODEL])
 
 
 @mgp.read_proc
-def predict() -> mgp.Record(mgp.Map):
+def predict() -> mgp.Record(dict=mgp.Map):
     """This function predicts metrics on all nodes. It is suggested that user previously
     loads unseen test data to predict on it.
-
-    TODO: discuss if this should be implemented without additional loading from Jupyter Notebook
-
 
     Returns:
         mgp.Record(mgp.Map: dictionary of all metrics): record to return
     """
 
-    dict = metrics(data.train_mask + data.val_mask, model, data, global_params[DataParams.METRICS])
+    dict = metrics(
+        Modelling.data.train_mask + Modelling.data.val_mask, Modelling.model, Modelling.data, global_params[DataParams.METRICS]
+    )
 
-    return mgp.Record(dict)
+    return mgp.Record(dict=dict)

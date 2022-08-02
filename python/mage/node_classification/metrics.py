@@ -8,22 +8,19 @@ from torch_geometric.data import Data
 
 
 def metrics(
-    mask: torch.tensor,
-    model: InductiveModel,
-    data: Data,
-    options: mgp.List[str]
-) -> mgp.Map[str, float]:
+    mask: torch.tensor, model: InductiveModel, data: Data, options: mgp.List[str]
+) -> mgp.Map:
     """Selected metrics calculated for current model and data.
 
     Args:
-        mask (torch.tensor): used to mask which embeddings should be used  
+        mask (torch.tensor): used to mask which embeddings should be used
         model (InductiveModel): model variable
         data (Data): dataset variable
         options (mgp.List[str]): list of options to be calculated
 
     Returns:
-        mgp.Map[str, float]: dictionary of calculated metrics
-    """    
+        mgp.Map: dictionary of calculated metrics
+    """
     model.eval()
     out = model(data.x, data.edge_index)
 
@@ -37,23 +34,43 @@ def metrics(
     ret = {}
 
     if "accuracy" in options:
-        A = Accuracy(num_classes=len(set(data.y.detach().numpy())), multiclass=True, average='macro')
+        A = Accuracy(
+            num_classes=len(set(data.y.detach().numpy())),
+            multiclass=True,
+            average="macro",
+        )
         ret["accuracy"] = float(A(pred[mask], data.y[mask]).detach().numpy())
 
     if "auc_score" in options:
-        Auc = AUC(num_classes=len(set(data.y.detach().numpy())), multiclass=True, average='macro')
+        Auc = AUC(
+            num_classes=len(set(data.y.detach().numpy())),
+            multiclass=True,
+            average="macro",
+        )
         ret["auc_score"] = float(Auc(pred[mask], data.y[mask]).detach().numpy())
 
     if "precision" in options:
-        P = Precision(num_classes=len(set(data.y.detach().numpy())), multiclass=True, average='macro')
+        P = Precision(
+            num_classes=len(set(data.y.detach().numpy())),
+            multiclass=True,
+            average="macro",
+        )
         ret["precision"] = float(P(pred[mask], data.y[mask]).detach().numpy())
 
     if "recall" in options:
-        R = Recall(num_classes=len(set(data.y.detach().numpy())), multiclass=True, average='macro')
+        R = Recall(
+            num_classes=len(set(data.y.detach().numpy())),
+            multiclass=True,
+            average="macro",
+        )
         ret["recall"] = float(R(pred[mask], data.y[mask]).detach().numpy())
 
     if "f1_score" in options:
-        F = F1Score(num_classes=len(set(data.y.detach().numpy())), multiclass=True, average='macro')
+        F = F1Score(
+            num_classes=len(set(data.y.detach().numpy())),
+            multiclass=True,
+            average="macro",
+        )
         ret["f1_score"] = float(F(pred[mask], data.y[mask]).detach().numpy())
 
     return ret
