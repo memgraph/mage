@@ -26,7 +26,7 @@ class GAT(torch.nn.Module):
                     in_feats=in_feats,
                     out_feats=out_feats,
                     num_heads=1,
-                    allow_zero_in_degree=True,
+                    allow_zero_in_degree=True
                 )
             )
 
@@ -43,8 +43,8 @@ class GAT(torch.nn.Module):
 
         for index, layer in enumerate(self.layers):
             h = layer(g, h)
-            if (
-                index != len(self.layers) - 1
-            ):  # Apply elu to every layer except last one
+            h = torch.mean(h, dim=1)
+            print("GAT shape: ", h.shape)
+            if index != len(self.layers) - 1:  # Apply elu to every layer except last one
                 h = F.elu(h)
         return h

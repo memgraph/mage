@@ -93,8 +93,8 @@ def test_adjacency_matrix(graph: dgl.graph, adj_matrix: np.matrix):
     u, v = graph.edges()
     num_edges = graph.number_of_edges()
 
-    print("u: ", u)
-    print("v: ", v)
+    # print("u: ", u)
+    # print("v: ", v)
 
     for i in range(num_edges):
         v1, v2 = u[i].item(), v[i].item()
@@ -345,8 +345,6 @@ def inner_train(
     # print("val neg u: ", val_neg_edges_u)
     # print("val neg v: ", val_neg_edges_v)
 
-    # TODO: Handle the case when the validation graphs are empty
-
     training_results, validation_results = [], []
 
     # Training
@@ -391,13 +389,9 @@ def inner_train(
         # print("Edge id: ", edge_id)
         # print("Pos score: ", pos_score[edge_id])
 
-        scores = torch.cat(
-            [pos_score, neg_score]
-        )  # concatenated positive and negative scores
+        scores = torch.cat([pos_score, neg_score])  # concatenated positive and negative scores
         probs = m(scores)  # probabilities
-        labels = torch.cat(
-            [torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])]
-        )  # concatenation of labels
+        labels = torch.cat([torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])])  # concatenation of labels
         loss_output = loss(probs, labels)
 
         # backward
@@ -435,7 +429,7 @@ def inner_train(
                         ]
                     )
 
-                    # print("Ratio of positively predicted examples: ", torch.sum(probs_val > 0.5).item() / (probs_val).shape[0])
+                    print("Ratio of positively predicted examples: ", torch.sum(probs_val > 0.5).item() / (probs_val).shape[0])
 
                     # Set initial metrics for validation result
                     loss_output_val = loss(probs_val, labels_val)

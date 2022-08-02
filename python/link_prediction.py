@@ -56,7 +56,7 @@ class LinkPredictionParameters:
     """
 
     hidden_features_size: List = field(
-        default_factory=lambda: [1433, 128, 64, 32, 16]
+        default_factory=lambda: [1433, 64, 32, 16]
     )  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
     layer_type: str = GRAPH_ATTN
     num_epochs: int = 100
@@ -79,10 +79,12 @@ class LinkPredictionParameters:
             "num_wrong_examples",
         ]
     )
-    predictor_type: str = MLP_PREDICTOR
-    attn_num_heads: List[int] = field(default_factory=lambda: [8, 8, 8, 1])
+    predictor_type: str = DOT_PREDICTOR
+    attn_num_heads: List[int] = field(default_factory=lambda: [4, 2, 1])
     tr_acc_patience: int = 8
-    model_save_path: str = "/home/andi/Memgraph/code/mage/python/mage/link_prediction/model.pt"  # TODO: When the development finishes
+    model_save_path: str = (
+        "/home/andi/Memgraph/code/mage/python/mage/link_prediction/model.pt"  # TODO: When the development finishes
+    )
 
 
 ##############################
@@ -90,22 +92,16 @@ class LinkPredictionParameters:
 ##############################
 
 
-link_prediction_parameters: LinkPredictionParameters = (
-    LinkPredictionParameters()
-)  # parameters currently saved.
+link_prediction_parameters: LinkPredictionParameters = LinkPredictionParameters()  # parameters currently saved.
 training_results: List[
     Dict[str, float]
-] = (
-    list()
-)  # List of all output training records. String is the metric's name and float represents value.
+] = list()  # List of all output training records. String is the metric's name and float represents value.
 validation_results: List[
     Dict[str, float]
 ] = (
     list()
 )  # List of all output validation results. String is the metric's name and float represents value in the Dictionary inside.
-graph: dgl.graph = (
-    None  # Reference to the graph. This includes training and validation.
-)
+graph: dgl.graph = None  # Reference to the graph. This includes training and validation.
 new_to_old: Dict[int, int] = None  # Mapping of DGL indexes to original dataset indexes
 old_to_new: Dict[int, int] = None  # Mapping of original dataset indexes to DGL indexes
 predictor: torch.nn.Module = None  # Predictor for calculating edge scores
@@ -117,9 +113,7 @@ model: torch.nn.Module = None
 
 
 @mgp.read_proc
-def set_model_parameters(
-    ctx: mgp.ProcCtx, parameters: mgp.Map
-) -> mgp.Record(status=mgp.Any, message=str):
+def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(status=mgp.Any, message=str):
     """Saves parameters to the global parameters link_prediction_parameters. Specific parsing is needed because we want enable user to call it with a subset of parameters, no need to send them all.
     We will use some kind of reflection to most easily update parameters.
 
@@ -153,9 +147,7 @@ def set_model_parameters(
     print("START")
     print(link_prediction_parameters)
 
-    validation_status, validation_message = _validate_user_parameters(
-        parameters=parameters
-    )
+    validation_status, validation_message = _validate_user_parameters(parameters=parameters)
     if validation_status is False:
         return mgp.Record(status=validation_status, message=validation_message)
 
@@ -171,10 +163,7 @@ def set_model_parameters(
             return mgp.Record(status=1, message=repr(exception))
 
     # Device type handling
-    if (
-        link_prediction_parameters.device_type == CUDA_DEVICE
-        and torch.cuda.is_available() is True
-    ):
+    if link_prediction_parameters.device_type == CUDA_DEVICE and torch.cuda.is_available() is True:
         link_prediction_parameters.device_type = CUDA_DEVICE
     else:
         link_prediction_parameters.device_type = CPU_DEVICE
@@ -223,9 +212,7 @@ def train(
     """
 
     # Split the data
-    train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g = preprocess(
-        graph, link_prediction_parameters.split_ratio
-    )
+    train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g = preprocess(graph, link_prediction_parameters.split_ratio)
 
     # Create a model
     model = create_model(
@@ -272,15 +259,11 @@ def train(
         val_neg_g,
     )
 
-    return mgp.Record(
-        training_results=training_results, validation_results=validation_results
-    )
+    return mgp.Record(training_results=training_results, validation_results=validation_results)
 
 
 @mgp.read_proc
-def predict(
-    ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex
-) -> mgp.Record(score=mgp.Number):
+def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -> mgp.Record(score=mgp.Number):
     """Predict method. We assume here semi-inductive learning process where queried nodes are somehow connected to the original graph. It is assumed that nodes are already added to the original graph and our goal
     is to predict whether there is an edge between two nodes or not. Even if the edge exists, method can be used.
 
@@ -337,9 +320,7 @@ def predict(
 
 
 @mgp.read_proc
-def benchmark(
-    ctx: mgp.ProcCtx, num_runs: int
-) -> mgp.Record(status=str, test_results=mgp.Any):
+def benchmark(ctx: mgp.ProcCtx, num_runs: int) -> mgp.Record(status=str, test_results=mgp.Any):
     """Benchmark method runs train method on different seeds for num_runs times to get as much as possible accurate results.
 
     Args:
@@ -359,9 +340,7 @@ def benchmark(
     _reset_train_predict_parameters()
 
     # Get DGL graph data representation
-    graph, new_to_old, _ = _get_dgl_graph_data(
-        ctx
-    )  # dgl representation of the graph and dict new to old index
+    graph, new_to_old, _ = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
     """ if test_conversion(graph=graph, new_to_old=new_to_old, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property) is False:
         print("Remapping failed")
         return mgp.Record(status="Preprocessing failed", metrics=[])
@@ -474,23 +453,15 @@ def _get_dgl_graph_data(
     for vertex in ctx.graph.vertices:
         # Process source vertex
         src_id = vertex.id
-        src_features = vertex.properties.get(
-            link_prediction_parameters.node_features_property
-        )
-        ind = _process_help_function(
-            ind, src_id, old_to_new, new_to_old, features, src_features
-        )
+        src_features = vertex.properties.get(link_prediction_parameters.node_features_property)
+        ind = _process_help_function(ind, src_id, old_to_new, new_to_old, features, src_features)
 
         for edge in vertex.out_edges:
             # Process destination vertex next
             dest_node = edge.to_vertex
             dest_id = dest_node.id
-            dest_features = dest_node.properties.get(
-                link_prediction_parameters.node_features_property
-            )
-            ind = _process_help_function(
-                ind, dest_id, old_to_new, new_to_old, features, dest_features
-            )
+            dest_features = dest_node.properties.get(link_prediction_parameters.node_features_property)
+            ind = _process_help_function(ind, dest_id, old_to_new, new_to_old, features, dest_features)
 
             # Create dgl graph
             src_nodes.append(old_to_new[src_id])
@@ -498,11 +469,9 @@ def _get_dgl_graph_data(
 
     # print("Src nodes: ", src_nodes)
     # print("Dest nodes: ", dest_nodes)
-    print("Features: ", features)
-    print("Ind: ", ind)
-    features = torch.tensor(
-        features, dtype=torch.float32
-    )  # use float for storing tensor of features
+    # print("Features: ", features)
+    # print("Ind: ", ind)
+    features = torch.tensor(features, dtype=torch.float32)  # use float for storing tensor of features
     g = dgl.graph((src_nodes, dest_nodes), num_nodes=ind)
     g.ndata[link_prediction_parameters.node_features_property] = features
     # g = dgl.add_self_loop(g) # TODO: How, why what? But needed for GAT, otherwise 0-in-degree nodes:u
@@ -585,12 +554,7 @@ def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
     # aggregator check
     if "aggregator" in parameters.keys():
         aggregator = parameters["aggregator"].lower()
-        if (
-            aggregator != MEAN_AGG
-            and aggregator != LSTM_AGG
-            and aggregator != POOL_AGG
-            and aggregator != GCN_AGG
-        ):
+        if aggregator != MEAN_AGG and aggregator != LSTM_AGG and aggregator != POOL_AGG and aggregator != GCN_AGG:
             return (
                 False,
                 "Aggregator must be one of the following: mean, pool, lstm or gcn. ",
