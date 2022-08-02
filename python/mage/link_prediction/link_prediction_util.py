@@ -34,23 +34,6 @@ if __name__ == "__main__":
     print(g.edata)
 
 
-def search_vertex(ctx: mgp.ProcCtx, id: int, node_id_property: str) -> mgp.Nullable[mgp.Vertex]:
-    """Searches for vertex in the executing context by id.
-
-    Args:
-        ctx (mgp.ProcCtx): A reference to the context execution
-        id (int): Id to be searched for.
-        node_id_property (str): Property name where the id is saved.
-
-    Returns:
-        mgp.Nullable[mgp.Vertex] : Vertex with specified id, otherwise None.
-    """
-    for vertex in ctx.graph.vertices:
-        if int(vertex.properties.get(node_id_property)) == id:
-            return vertex
-    return None
-
-
 def get_number_of_edges(ctx: mgp.ProcCtx) -> int:
     """Returns number of edges for graph from execution context.
 
@@ -136,6 +119,10 @@ def create_negative_graphs(adj_matrix: np.matrix, number_of_nodes: int, number_o
     """
     adj_neg = 1 - adj_matrix - np.eye(number_of_nodes)
     neg_u, neg_v = np.where(adj_neg != 0)  # Find all non-existing edges
+
+    # Cannot sample anything, raise a Exception. E2E handling.
+    if len(neg_u) == 0 and len(neg_v) == 0:
+        raise Exception("Fully connected graphs are not supported. ")
 
     # Sample with replacement from negative edges
     neg_eids = np.random.choice(len(neg_u), number_of_edges)

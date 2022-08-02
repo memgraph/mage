@@ -38,5 +38,4 @@ class MLPPredictor(torch.nn.Module):
         with g.local_scope():
             g.ndata['node_embeddings'] = node_embeddings
             g.apply_edges(self.apply_edges)
-            scores = g.edata["score"]
             return g.edata["score"]

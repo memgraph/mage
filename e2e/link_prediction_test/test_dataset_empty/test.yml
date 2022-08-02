@@ -2,11 +2,7 @@
 
 query: >
   CALL link_prediction.train()
-  YIELD status, training_results, validation_results
-  RETURN status, training_results, validation_results;
-
-output: 
-  - status: "Empty dataset. "
-    training_results: []
-    validation_results: []
-
+  YIELD training_results, validation_results
+  RETURN training_results, validation_results;
+exception: 
+  "Empty dataset. "

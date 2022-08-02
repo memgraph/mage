@@ -4,6 +4,7 @@ from mage.link_prediction.models.GraphSAGE import GraphSAGE
 from mage.link_prediction.models.GAT import GAT 
 from mage.link_prediction.predictors.DotPredictor import DotPredictor
 from mage.link_prediction.predictors.MLPPredictor import MLPPredictor
+from mage.link_prediction.constants import ADAM_OPT, SGD_OPT, GRAPH_ATTN, GRAPH_SAGE, DOT_PREDICTOR, MLP_PREDICTOR
 import itertools
 
 def create_optimizer(optimizer_type: str, learning_rate: float, model: torch.nn.Module, predictor: torch.nn.Module) -> torch.optim.Optimizer:
@@ -17,9 +18,9 @@ def create_optimizer(optimizer_type: str, learning_rate: float, model: torch.nn.
     Returns:
         torch.nn.Optimizer: Optimizer used in the training.
     """
-    if optimizer_type.upper() == "ADAM":
+    if optimizer_type.upper() == ADAM_OPT:
         return torch.optim.Adam(itertools.chain(model.parameters(), predictor.parameters()), lr=learning_rate)
-    elif optimizer_type.upper() == "SGD":
+    elif optimizer_type.upper() == SGD_OPT:
         return torch.optim.SGD(itertools.chain(model.parameters(), predictor.parameters()), lr=learning_rate)
     else:
         raise Exception(f"Optimizer {optimizer_type} not supported. ")
@@ -36,9 +37,9 @@ def create_model(layer_type: str, hidden_features_size: List[int], aggregator: s
     Returns:
         torch.nn.Module: Model used in the link prediction task.
     """
-    if layer_type.lower() == "graph_sage":
+    if layer_type.lower() == GRAPH_SAGE:
         return GraphSAGE(hidden_features_size=hidden_features_size, aggregator=aggregator)
-    elif layer_type.lower() == "graph_attn":
+    elif layer_type.lower() == GRAPH_ATTN:
         return GAT(hidden_features_size=hidden_features_size, attn_num_heads=attn_num_heads)
     else:
         raise Exception(f"Layer type {layer_type} not supported. ")
@@ -53,9 +54,9 @@ def create_predictor(predictor_type: str, predictor_hidden_size: int) -> torch.n
     Returns:
         torch.nn.Module: Predictor implemented in predictors module.
     """
-    if predictor_type.lower() == "dot":
+    if predictor_type.lower() == DOT_PREDICTOR:
         return DotPredictor()
-    elif predictor_type.lower() == "mlp":
+    elif predictor_type.lower() == MLP_PREDICTOR:
         return MLPPredictor(h_feats=predictor_hidden_size)
     else:
         raise Exception(f"Predictor type {predictor_type} not supported. ")
