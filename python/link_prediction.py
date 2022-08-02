@@ -47,7 +47,7 @@ class LinkPredictionParameters:
     checkpoint_freq: int = 10
     aggregator: str = POOL_AGG
     metrics: List = field(default_factory=lambda: ["loss", "accuracy", "auc_score", "precision", "recall", "f1", "num_wrong_examples"])
-    predictor_type: str = DOT_PREDICTOR
+    predictor_type: str = MLP_PREDICTOR
     attn_num_heads: List[int] = field(default_factory=lambda: [8, 8, 8, 1])
     tr_acc_patience: int = 8
     model_save_path: str = "/home/andi/Memgraph/code/mage/python/mage/link_prediction/model.pt"  # TODO: When the development finishes
@@ -157,13 +157,10 @@ def train(ctx: mgp.ProcCtx) -> mgp.Record(training_results=mgp.Any, validation_r
     if graph.number_of_edges() == 0:
         raise Exception("No edges in the dataset. ")
 
-    # If graph cannot be splitted in training and test dataset. E2E handling.
-    if int((1.0 - link_prediction_parameters.split_ratio) * graph.number_of_edges()) == 0:
-        raise Exception("Graph too small to have a validation dataset. ")
 
     # TEST: Currently disabled
-    """ conversion_to_dgl_test(graph=graph, new_to_old=new_to_old, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property)
-    """
+    # conversion_to_dgl_test(graph=graph, new_to_old=new_to_old, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property)
+    
 
     """ Train g is a graph which has removed test edges. Others are positive and negative train and test graphs
     """
@@ -175,7 +172,7 @@ def train(ctx: mgp.ProcCtx) -> mgp.Record(training_results=mgp.Any, validation_r
     model = create_model(layer_type=link_prediction_parameters.layer_type, hidden_features_size=link_prediction_parameters.hidden_features_size,
                          aggregator=link_prediction_parameters.aggregator, attn_num_heads=link_prediction_parameters.attn_num_heads)
     # Create a predictor
-    predictor_hidden_size = link_prediction_parameters.hidden_features_size[-1] if link_prediction_parameters.layer_type == GRAPH_SAGE else int(link_prediction_parameters.hidden_features_size[-1] / 2)
+    predictor_hidden_size = link_prediction_parameters.hidden_features_size[-1] if link_prediction_parameters.layer_type == GRAPH_SAGE else int(link_prediction_parameters.hidden_features_size[-1])
     predictor = create_predictor(predictor_type=link_prediction_parameters.predictor_type, predictor_hidden_size=predictor_hidden_size)
 
     # Create an optimizer
@@ -305,31 +302,26 @@ def get_training_results(ctx: mgp.ProcCtx) -> mgp.Record(tr_metrics=mgp.Any, val
 ##############################
 
 
-def _process_vertex_help_func(old_index: int, nodes_list: List[int], features: List, ind: int,
-                              old_to_new: Dict[int, int], new_to_old: Dict[int, int], node_features: List) -> int:
-    """Helper function to avoid code duplication in _get_dgl_graph_data.
+def _process_help_function(ind: int, old_index: int, old_to_new: Dict[int, int], new_to_old: Dict[int, int], features: List, node_features: List[int]):
+    """Helper function for _get_dgl_graph_data
 
     Args:
-        old_index (int): Index from context execution. 
-        nodes_list (List[int]): src_nodes or dest_nodes. See _get_dgl_graph_data for more details. 
-        features (List): List of features. See _get_dgl_graph_data for more details.
-        ind (int): ind from _get_dgl_graph_data
-        old_to_new (Dict[int, int]): Mapping of old to new index.
-        new_to_old (Dict[int, int]): Mapping of new to old index. 
-        node_features (List): Feature list.
+        ind (int): Index vertex counter.
+        old_index (int): Original index
+        old_to_new (Dict[int, int]): mappings from old to new indexes.
+        new_to_old (Dict[int, int]): mappings from new to old indexes.
+        features (List): Saves all features.
+        node_features (List[int]): Node features.
 
     Returns:
-        int: Since list and dict are mutable, function only needs to return new ind. It can stay the same or be incremented by one.
+       None
     """
     if old_index not in old_to_new.keys():
         new_to_old[ind] = old_index
         old_to_new[old_index] = ind
-        nodes_list.append(ind)
         features.append(node_features)
-        return ind + 1
-    else:
-        nodes_list.append(old_to_new[old_index])
-        return ind
+        return ind+1
+    return ind
 
 
 def _get_dgl_graph_data(ctx: mgp.ProcCtx) -> Tuple[dgl.graph, Dict[int32, int32], Dict[int32, int32]]:
@@ -349,23 +341,30 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx) -> Tuple[dgl.graph, Dict[int32, int32]
     ind = 0
 
     for vertex in ctx.graph.vertices:
+        # Process source vertex
+        src_id = vertex.id
+        src_features = vertex.properties.get(link_prediction_parameters.node_features_property)
+        ind = _process_help_function(ind, src_id, old_to_new, new_to_old, features, src_features)
+
+
         for edge in vertex.out_edges:
-            # Process source vertex first
-            src_node, dest_node = edge.from_vertex, edge.to_vertex
-            src_id_old = src_node.id
-            src_features = src_node.properties.get(link_prediction_parameters.node_features_property)
-            ind = _process_vertex_help_func(src_id_old, src_nodes, features, ind, old_to_new, new_to_old, src_features)
-
             # Process destination vertex next
-            dest_id_old = dest_node.id
+            dest_node = edge.to_vertex
+            dest_id = dest_node.id
             dest_features = dest_node.properties.get(link_prediction_parameters.node_features_property)
-            ind = _process_vertex_help_func(dest_id_old, dest_nodes, features, ind, old_to_new, new_to_old, dest_features)
+            ind = _process_help_function(ind, dest_id, old_to_new, new_to_old, features, dest_features)
 
-    features = torch.tensor(features, dtype=torch.float32)  # use float for storing tensor of features
+            # Create dgl graph
+            src_nodes.append(old_to_new[src_id])
+            dest_nodes.append(old_to_new[dest_id])
+            
+
     # print("Src nodes: ", src_nodes)
     # print("Dest nodes: ", dest_nodes)
-    # print("Features: ", features)
-    g = dgl.graph((src_nodes, dest_nodes))
+    print("Features: ", features)
+    print("Ind: ", ind)
+    features = torch.tensor(features, dtype=torch.float32)  # use float for storing tensor of features
+    g = dgl.graph((src_nodes, dest_nodes), num_nodes=ind)
     g.ndata[link_prediction_parameters.node_features_property] = features
     # g = dgl.add_self_loop(g) # TODO: How, why what? But needed for GAT, otherwise 0-in-degree nodes:u
     return g, new_to_old, old_to_new

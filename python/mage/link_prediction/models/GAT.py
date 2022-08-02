@@ -17,7 +17,7 @@ class GAT(torch.nn.Module):
         self.layers = torch.nn.ModuleList()
         for i in range(len(hidden_features_size) - 1):
             in_feats, out_feats, num_heads = hidden_features_size[i], hidden_features_size[i+1], attn_num_heads[i]
-            self.layers.append(GATConv(in_feats=in_feats, out_feats=out_feats, num_heads=num_heads, allow_zero_in_degree=True))
+            self.layers.append(GATConv(in_feats=in_feats, out_feats=out_feats, num_heads=1, allow_zero_in_degree=True))
 
 
     def forward(self, g: dgl.graph, h: torch.Tensor) -> torch.Tensor:

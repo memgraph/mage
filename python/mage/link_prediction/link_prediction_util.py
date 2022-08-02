@@ -49,33 +49,34 @@ def get_number_of_edges(ctx: mgp.ProcCtx) -> int:
     return edge_cnt
 
 
-def squarify(M: np.matrix, val: int) -> np.matrix:
+def squarify(M: np.matrix, number_of_nodes: int, val: int) -> np.matrix:
     """Converts rectangular matrix into square one by padding it with value val.
 
     Args:
         M (numpy.matrix): Matrix that needs to be padded.
-        val (numpy.matrix): Matrix padding value/
+        val (numpy.matrix): Matrix padding value.
+        number_of_nodes (int): DGL number of nodes -> needed here to cover the case of disconnected graph.
 
     Returns:
         numpy.matrix: Padded matrix
     """
+    
     (a, b) = M.shape
+    prior = number_of_nodes - max(a, b)
+    print("Prior: ", prior)
     if a > b:
-        padding = ((0, 0), (0, a - b))
+        padding = ((0, prior), (0, a - b + prior))
     else:
-        padding = ((0, b - a), (0, 0))
+        padding = ((0, b - a + prior), (0, prior))
     return np.pad(M, padding, mode='constant', constant_values=val)
 
 
-def test_adjacency_matrix(graph: dgl.graph, adj_matrix: np.matrix) -> bool:
+def test_adjacency_matrix(graph: dgl.graph, adj_matrix: np.matrix):
     """Tests whether the adjacency matrix correctly encodes edges from dgl graph
 
     Args:
         graph (dgl.graph): A reference to the original graph we are working with.
         adj_matrix (np.matrix): Graph's adjacency matrix
-
-    Returns:
-        bool: True if adjacency matrix and graph are equivalent, False otherwise
     """
 
     if adj_matrix.shape[0] != graph.number_of_nodes() or \
@@ -88,20 +89,20 @@ def test_adjacency_matrix(graph: dgl.graph, adj_matrix: np.matrix) -> bool:
     u, v = graph.edges()
     num_edges = graph.number_of_edges()
 
+    print("u: ", u)
+    print("v: ", v)
+
     for i in range(num_edges):
         v1, v2 = u[i].item(), v[i].item()
         if adj_matrix[v1][v2] != 1.0:
-            return False
+            raise Exception(f"Graph edge {v1} {v2} not written to adj_matrix. ")
 
     # Now test the direction adj_matrix->graph
     for i in range(adj_matrix.shape[0]):
         for j in range(adj_matrix.shape[1]):
             if adj_matrix[i][j] == 1.0:
                 if graph.has_edges_between(i, j) is False:
-                    return False
-
-    # If we are here
-    return True
+                    raise Exception(f"Non-existing edge {i} {j} in the adjacency matrix. ")
 
 
 def create_negative_graphs(adj_matrix: np.matrix, number_of_nodes: int, number_of_edges: int,
@@ -194,14 +195,16 @@ def preprocess(graph: dgl.graph, split_ratio: float) -> Tuple[dgl.graph, dgl.gra
     # Manipulate graph representation
     adj = sp.coo_matrix((np.ones(len(u)), (u.numpy(), v.numpy())))  # adjacency list graph representation
     adj_matrix = adj.todense()  # convert to dense matrix representation
-    adj_matrix = squarify(adj_matrix, 0)  # pad if needed
+    adj_matrix = squarify(adj_matrix, number_of_nodes=graph.number_of_nodes(), val=0)  # pad if needed
 
-    # Check if conversion to adjacency matrix went OK
-    if test_adjacency_matrix(graph, adj_matrix) is False:
-        return None, None, None, None, None
+    # Check if conversion to adjacency matrix went OK. Exdeption will be thrown otherwise.
+    test_adjacency_matrix(graph, adj_matrix)
 
     # val size is 1-split_ratio specified by the user
     val_size = int(graph.number_of_edges() * (1 - split_ratio))
+    # E2E handling
+    if val_size == 0:
+        raise Exception("Graph too small to have a validation dataset. ")
 
     # Create positive training and positive validation graph
     train_g, train_pos_g, val_pos_g = create_positive_graphs(graph, val_size)
@@ -278,11 +281,11 @@ def inner_train(model: torch.nn.Module, predictor: torch.nn.Module, optimizer: t
         Tuple[List[Dict[str, float]], List[Dict[str, float]]: Training results, validation results
     """
 
-    # print("train_g: ", train_g.ndata[node_features_property])
-    # print("train_pos_g: ", train_pos_g[node_features_property])
-    # print("train_neg_g: ", train_neg_g)
-    # print("val_pos_g: ", val_pos_g)
-    # print("val_neg_g: ", val_neg_g)
+    print("train_g: ", train_g)
+    print("train_pos_g: ", train_pos_g)
+    print("train_neg_g: ", train_neg_g)
+    print("val_pos_g: ", val_pos_g)
+    print("val_neg_g: ", val_neg_g)
 
     tr_pos_edges_u, tr_pos_edges_v = train_pos_g.edges()
     tr_neg_edges_u, tr_neg_edges_v = train_neg_g.edges()
