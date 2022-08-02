@@ -1,15 +1,8 @@
 query: >
-        CALL node_classification.set_model_parameters({path_to_model: '../first_easter_egg/model'}) YIELD *;
-
-output:
-        - in_channels: 34
-          out_channels: 4
-          num_samples: 34
-          path: ../first_easter_egg/model
-
-query: >
+        CALL node_classification.set_model_parameters({path_to_model: '../first_easter_egg/model'}) YIELD *
         CALL node_classification.load_model() YIELD *;
 
-exception: file not found on path
+exception: >
+        file not found on path
 
 # this test somehow does not work
