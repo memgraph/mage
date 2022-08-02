@@ -76,8 +76,10 @@ ExternalProject_Add(uuid-proj
                     "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
                     "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
 set(UUID_INCLUDE_DIR ${UUID_ROOT}/include)
-include_directories(${UUID_INCLUDE_DIR}/gsl)
-include_directories(${UUID_INCLUDE_DIR})
+add_library(mage_uuid INTERFACE)
+target_include_directories(mage_uuid INTERFACE ${UUID_INCLUDE_DIR}/gsl)
+target_include_directories(mage_uuid INTERFACE ${UUID_INCLUDE_DIR})
+add_dependencies(mage_uuid uuid-proj)
 
 # mg_procedure library
 add_library(mg_procedure INTERFACE)
@@ -95,14 +97,4 @@ endfunction()
 # Available query modules.
 include(CTest)
 enable_testing()
-add_subdirectory(betweenness_centrality_module)
-add_subdirectory(biconnected_components_module)
-add_subdirectory(bipartite_matching_module)
-add_subdirectory(bridges_module)
-add_subdirectory(connectivity_module)
-add_subdirectory(cycles_module)
-add_subdirectory(community_detection_module)
-add_subdirectory(pagerank_module)
 add_subdirectory(uuid_module)
-add_subdirectory(katz_centrality_module)
-add_cugraph_subdirectory(cugraph_module)
