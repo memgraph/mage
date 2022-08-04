@@ -59,8 +59,10 @@ class Modelling:
     model: InductiveModel = None
     opt = None
     criterion = None
-    global_params: mgp.Map
-    logged_data: mgp.List = []
+
+
+global_params: mgp.Map
+logged_data: mgp.List = []
 
 
 DEFINED_INPUT_TYPES = {
@@ -141,18 +143,21 @@ def declare_model_and_data(ctx: mgp.ProcCtx):
         for edge in vertex.out_edges:
             edges.append(edge)
 
-    data = convert_data(
+    Modelling.data = convert_data(
         nodes, edges, global_params[DataParams.SPLIT_RATIO], global_params, reindexing
     )
 
     # print(data)
     # print(data.edge_index.max())
 
-    global_params[ModelParams.IN_CHANNELS] = np.shape(Modelling.data.x.detach().numpy())[1]
+    global_params[ModelParams.IN_CHANNELS] = np.shape(
+        Modelling.data.x.detach().numpy()
+    )[1]
 
-    global_params[ModelParams.OUT_CHANNELS] = len(set(Modelling.data.y.detach().numpy()))
+    global_params[ModelParams.OUT_CHANNELS] = len(
+        set(Modelling.data.y.detach().numpy())
+    )
 
-    global Modelling
     Modelling.model = InductiveModel(
         layer_type=global_params[ModelParams.LAYER_TYPE],
         in_channels=global_params[ModelParams.IN_CHANNELS],
@@ -216,9 +221,17 @@ def set_model_parameters(
             return False
 
     # mgconsole bug
-    if ModelParams.HIDDEN_FEATURES_SIZE in params.keys():
-        params[ModelParams.HIDDEN_FEATURES_SIZE] = list(params[ModelParams.HIDDEN_FEATURES_SIZE])
-    if DataParams.METRICS in params.keys():
+    if (
+        ModelParams.HIDDEN_FEATURES_SIZE in params.keys()
+        and type(params[ModelParams.HIDDEN_FEATURES_SIZE]) == tuple
+    ):
+        params[ModelParams.HIDDEN_FEATURES_SIZE] = list(
+            params[ModelParams.HIDDEN_FEATURES_SIZE]
+        )
+    if (
+        DataParams.METRICS in params.keys()
+        and type(params[DataParams.METRICS]) == tuple
+    ):
         params[DataParams.METRICS] = list(params["metrics"])
 
     params = {**DEFAULT_VALUES, **params}  # override any default parameters
@@ -247,7 +260,9 @@ def set_model_parameters(
 
 
 @mgp.read_proc
-def train(no_epochs: int = 100) -> mgp.Record(train_accuracy=float):
+def train(
+    no_epochs: int = 100,
+) -> mgp.Record(epoch=int, loss=float, train_log=mgp.Any, val_log=mgp.Any):
     """This function performs training of model. Before her, function set_model_parameters
     must be defined. Otherwise, global variables data and model will be equal
     to None and AssertionError will be raised.
@@ -260,25 +275,30 @@ def train(no_epochs: int = 100) -> mgp.Record(train_accuracy=float):
     """
 
     global Modelling
-    try:
-        assert Modelling.data != None, "Dataset is not loaded. Load dataset first!"
-    except AssertionError as e:
-        print(e)
-        sys.exit(1)
+    if Modelling.data == None:
+        raise Exception("Dataset is not loaded. Load dataset first!")
 
     global_params[TrainParams.NUM_EPOCHS] = no_epochs
 
     for epoch in tqdm(range(1, no_epochs + 1)):
-        loss = model_train_step(Modelling.model, Modelling.opt, Modelling.data, Modelling.criterion)
+        loss = model_train_step(
+            Modelling.model, Modelling.opt, Modelling.data, Modelling.criterion
+        )
 
         global logged_data
 
         if epoch % global_params[TrainParams.CONSOLE_LOG_FREQ] == 0:
             dict_train = metrics(
-                Modelling.data.train_mask, Modelling.model, Modelling.data, global_params[DataParams.METRICS]
+                Modelling.data.train_mask,
+                Modelling.model,
+                Modelling.data,
+                global_params[DataParams.METRICS],
             )
             dict_val = metrics(
-                Modelling.data.val_mask, model, Modelling.data, global_params[DataParams.METRICS]
+                Modelling.data.val_mask,
+                Modelling.model,
+                Modelling.data,
+                global_params[DataParams.METRICS],
             )
             logged_data.append(
                 {"epoch": epoch, "loss": loss, "train": dict_train, "val": dict_val}
@@ -289,11 +309,14 @@ def train(no_epochs: int = 100) -> mgp.Record(train_accuracy=float):
             )
         # print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}')
 
-    return [mgp.Record(
+    return [
+        mgp.Record(
             epoch=logged_data[k]["epoch"],
             loss=logged_data[k]["loss"],
             train_log=logged_data[k]["train"],
-            val_log=logged_data[k]["val"]) for k in range(len(logged_data))
+            val_log=logged_data[k]["val"],
+        )
+        for k in range(len(logged_data))
     ]
 
 
@@ -344,10 +367,9 @@ def save_model() -> mgp.Record(path=str):
         mgp.Record(path (str): path to model): return record
     """
 
-    global model
-    if model == None:
+    if Modelling.model == None:
         raise AssertionError("model is not loaded")
-    torch.save(model.state_dict(), global_params[OtherParams.PATH_TO_MODEL])
+    torch.save(Modelling.model.state_dict(), global_params[OtherParams.PATH_TO_MODEL])
     return mgp.Record(path=global_params[OtherParams.PATH_TO_MODEL])
 
 
@@ -360,12 +382,12 @@ def load_model() -> mgp.Record(path=str):
     """
     global model
 
-    if not os.path.exists(global_params[OtherParams.PATH_TO_MODEL]):
-        raise Exception(
-            "path ", global_params[OtherParams.PATH_TO_MODEL], " don't exist"
-        )
+    if not os.path.exists(os.path.abspath(global_params[OtherParams.PATH_TO_MODEL])):
+        raise Exception("file not found on path")
 
-    model.load_state_dict(torch.load(global_params[OtherParams.PATH_TO_MODEL]))
+    Modelling.model.load_state_dict(
+        torch.load(global_params[OtherParams.PATH_TO_MODEL])
+    )
     return mgp.Record(path=global_params[OtherParams.PATH_TO_MODEL])
 
 
@@ -379,7 +401,21 @@ def predict() -> mgp.Record(dict=mgp.Map):
     """
 
     dict = metrics(
-        Modelling.data.train_mask + Modelling.data.val_mask, Modelling.model, Modelling.data, global_params[DataParams.METRICS]
+        Modelling.data.train_mask + Modelling.data.val_mask,
+        Modelling.model,
+        Modelling.data,
+        global_params[DataParams.METRICS],
     )
 
     return mgp.Record(dict=dict)
+
+
+@mgp.read_proc
+def reset():
+    if "global_params" in globals().keys():
+        del globals()["global_params"]
+
+    if "logged_data" in globals().keys():
+        del globals()["logged_data"]
+
+    return mgp.Record()
