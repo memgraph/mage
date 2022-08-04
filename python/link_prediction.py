@@ -9,6 +9,7 @@ from mage.link_prediction import (
     preprocess,
     inner_train,
     inner_predict,
+    inner_predict2,
     create_model,
     create_optimizer,
     create_predictor,
@@ -61,7 +62,7 @@ class LinkPredictionParameters:
     hidden_features_size: List = field(
         default_factory=lambda: [64, 32, 16]
     )  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
-    layer_type: str = GRAPH_SAGE
+    layer_type: str = GRAPH_ATTN
     num_epochs: int = 100
     optimizer: str = ADAM_OPT
     learning_rate: float = 0.01
@@ -82,7 +83,7 @@ class LinkPredictionParameters:
             "num_wrong_examples",
         ]
     )
-    predictor_type: str =  MLP_PREDICTOR
+    predictor_type: str =  DOT_PREDICTOR
     attn_num_heads: List[int] = field(default_factory=lambda: [8, 4, 1])
     tr_acc_patience: int = 8
     context_save_dir: str = (
@@ -309,7 +310,7 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
         graph.add_edges(src_id, dest_id)
         edge_id = graph.edge_ids(src_id, dest_id)
 
-    # print("Edge id: ", edge_id)
+    print("Edge id: ", edge_id)
     # print("Number of edges after adding new edge: ", graph.number_of_edges())
 
     # Insert into the hidden_features_size if needed.
@@ -323,6 +324,15 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
         node_features_property=link_prediction_parameters.node_features_property,
         edge_id=edge_id,
     )
+
+    score_pred = inner_predict2(
+        model=model, 
+        predictor=predictor, 
+        graph=graph, 
+        node_features_property=link_prediction_parameters.node_features_property,
+        src_node=src_id, 
+        dest_node=dest_id)
+
     result = mgp.Record(score=score)
 
     # Remove edge if necessary
@@ -363,6 +373,7 @@ def test(ctx: mgp.ProcCtx, src_vertices: List[int], dest_vertices: List[int]) ->
 
 @mgp.read_proc
 def get_training_results(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_results=mgp.Any):
+
     """This method is used when user wants to get performance data obtained from the last training. It is in the form of list of records where each record is a Dict[metric_name, metric_value]. Training and validation
     results are returned.
 
@@ -758,13 +769,7 @@ def _conversion_to_dgl_test(
             raise Exception("Non-mapped vertex. ")
 
         old_features = vertex.properties.get(node_features_property)
-        if (
-            torch.equal(
-                graph.ndata[node_features_property][vertex_id],
-                torch.tensor(old_features, dtype=torch.float32),
-            )
-            is False
-        ):
+        if not torch.equal(graph.ndata[node_features_property][vertex_id], torch.tensor(old_features, dtype=torch.float32),):
             raise Exception("Features not mapped. ")
 
     # Check number of nodes

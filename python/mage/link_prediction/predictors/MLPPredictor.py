@@ -3,7 +3,6 @@ import torch
 import torch.nn.functional as F
 import dgl
 
-
 class MLPPredictor(torch.nn.Module):
     def __init__(self, h_feats: int) -> None:
         super().__init__()
@@ -19,7 +18,7 @@ class MLPPredictor(torch.nn.Module):
         Returns:
             Dict: A dictionary of new edge features
         """
-
+        print(edges.src["node_embeddings"].shape)
         h = torch.cat([edges.src["node_embeddings"], edges.dst["node_embeddings"]], 1)
         return {"score": self.W2(F.relu(self.W1(h))).squeeze(1)}
 
@@ -37,3 +36,7 @@ class MLPPredictor(torch.nn.Module):
             g.ndata["node_embeddings"] = node_embeddings
             g.apply_edges(self.apply_edges)
             return g.edata["score"]
+
+
+    def forward_edge(self, src_node: int, dest_node: int):
+        pass

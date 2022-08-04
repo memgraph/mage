@@ -27,3 +27,7 @@ class DotPredictor(nn.Module):
             g.apply_edges(fn.u_dot_v("node_embeddings", "node_embeddings", "score"))
             # u_dot_v returns a 1-element vector for each edge so you need to squeeze it.
             return torch.squeeze(g.edata["score"], 1)
+
+    def forward_pred(self, node_embeddings: torch.Tensor, src_node: int, dest_node: int):
+        return torch.dot(node_embeddings[src_node], node_embeddings[dest_node])
+    

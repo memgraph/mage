@@ -346,8 +346,8 @@ def inner_train(
         # print("GV: ", gv)
         # print("EDGE IDS: ", edge_ids)
 
-        pos_score = predictor(train_pos_g, h)  # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_pos-g. Scores are here actually logits.
-        neg_score = predictor(train_neg_g, h)  # returns vector of negative edge scores, torch.float32, shape: num_edges in the graph of train_neg_g. Scores are actually logits.
+        pos_score = predictor.forward(train_pos_g, h)  # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_pos-g. Scores are here actually logits.
+        neg_score = predictor.forward(train_neg_g, h)  # returns vector of negative edge scores, torch.float32, shape: num_edges in the graph of train_neg_g. Scores are actually logits.
 
         # print("pos score shape: ", pos_score.shape)
         # print("neg score shape: ", neg_score.shape)
@@ -388,8 +388,8 @@ def inner_train(
                 # Validation metrics if they can be calculated
                 if val_pos_g.number_of_edges() > 0:
                     # Evaluate on positive and negative dataset
-                    pos_score_val = predictor(val_pos_g, h)
-                    neg_score_val = predictor(val_neg_g, h)
+                    pos_score_val = predictor.forward(val_pos_g, h)
+                    neg_score_val = predictor.forward(val_neg_g, h)
                     # Concatenate scores
                     scores_val = torch.cat([pos_score_val, neg_score_val])
                     # scores_val = F.normalize(scores_val, dim=0)
@@ -462,13 +462,29 @@ def inner_predict(
     Returns:
         float: Edge score.
     """
+    print("Number of nodes: ", graph.number_of_nodes())
+    print("Number of edges: ", graph.number_of_edges())
     with torch.no_grad():
-        h = model(graph, graph.ndata[node_features_property])
-        scores = predictor(graph, h)
-        # print("Scores: ", scores)
+        h = model(graph, graph.ndata[node_features_property]) # nodes*final_layer
+        # print("H shape: ", h.shape)
+        scores = predictor.forward(graph, h)
+        # print("Scores: ", scores.shape) # num_edges
         probs = torch.sigmoid(scores)
+        print("Probability: ", probs[edge_id].item())
         # print("negative: ", torch.sum(probs < 0.5).item() / probs.shape[0])  # a small probability of negative ones
         return probs[edge_id].item()
+
+
+def inner_predict2(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl.graph, node_features_property: str, 
+                    src_node: int, dest_node: int):
+
+    with torch.no_grad():
+        h = model(graph, graph.ndata[node_features_property])
+        score = predictor.forward_pred(h, src_node, dest_node)
+        prob = torch.sigmoid(score)
+        print("Probability: ", prob.item())
+        return prob
+        
 
 
 # Existing

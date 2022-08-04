@@ -2,6 +2,7 @@ from mage.link_prediction.link_prediction_util import (
     inner_train,
     preprocess,
     inner_predict,
+    inner_predict2,
     get_number_of_edges,
 )
 
