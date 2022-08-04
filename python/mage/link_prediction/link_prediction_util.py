@@ -1,4 +1,3 @@
-import re
 import torch
 import torch.nn.functional as F
 import numpy as np
@@ -426,6 +425,9 @@ def inner_train(
             # Save the model if necessary
             if epoch % checkpoint_freq == 0:
                 torch.save(model, model_save_path)
+
+    # Save model at the end of the training
+    torch.save(model, model_save_path)
 
     # visualize(training_results=training_results, validation_results=validation_results)
     return training_results, validation_results

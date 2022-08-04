@@ -1,4 +1,3 @@
-from telnetlib import DO
 import mgp  # Python API
 import torch
 import dgl  # geometric deep learning
@@ -31,7 +30,6 @@ from mage.link_prediction import (
 ##############################
 # classes and data structures
 ##############################
-
 
 @dataclass
 class LinkPredictionParameters:
@@ -94,14 +92,8 @@ class LinkPredictionParameters:
 
 
 link_prediction_parameters: LinkPredictionParameters = LinkPredictionParameters()  # parameters currently saved.
-training_results: List[
-    Dict[str, float]
-] = list()  # List of all output training records. String is the metric's name and float represents value.
-validation_results: List[
-    Dict[str, float]
-] = (
-    list()
-)  # List of all output validation results. String is the metric's name and float represents value in the Dictionary inside.
+training_results: List[Dict[str, float]] = list()  # List of all output training records. String is the metric's name and float represents value.
+validation_results: List[Dict[str, float]] = (list())  # List of all output validation results. String is the metric's name and float represents value in the Dictionary inside.
 graph: dgl.graph = None  # Reference to the graph. This includes training and validation.
 new_to_old: Dict[int, int] = None  # Mapping of DGL indexes to original dataset indexes
 old_to_new: Dict[int, int] = None  # Mapping of original dataset indexes to DGL indexes
@@ -201,14 +193,8 @@ def train(
     # Reset parameters of the old training
     _reset_train_predict_parameters()
 
-    # Check if the dataset is empty. E2E handling.
-    if len(ctx.graph.vertices) == 0:
-        raise Exception("Empty dataset. ")
-
-    # Get some
-    graph, new_to_old, old_to_new = _get_dgl_graph_data(
-        ctx
-    )  # dgl representation of the graph and dict new to old index
+    # Get some data
+    graph, new_to_old, old_to_new = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
 
     # Check if there are no edges in the dataset, assume that it cannot learn effectively without edges. E2E handling.
     if graph.number_of_edges() == 0:
@@ -285,6 +271,16 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     """
     global graph, predictor, model, old_to_new, new_to_old
 
+    print("Model: ", model)
+
+    # If the model isn't available
+    if model is None:
+        raise Exception("No trained model available to the system. Train or load it first. ")
+
+    # You called predict after session was lost
+    if graph is None:         
+        graph, new_to_old, old_to_new = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
+
     # Create dgl graph representation
     src_old_id = src_vertex.id
     dest_old_id = dest_vertex.id
@@ -293,6 +289,7 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     src_id = old_to_new[src_old_id]
     dest_id = old_to_new[dest_old_id]
 
+    # Init edge properties
     edge_added, edge_id = False, -1
 
     print("Number of edges before: ", graph.number_of_edges())
@@ -309,6 +306,7 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
 
     print("Edge id: ", edge_id)
     print("Number of edges after adding new edge: ", graph.number_of_edges())
+
     # Call utils module
     score = inner_predict(
         model=model,
@@ -330,7 +328,7 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
 
 @mgp.read_proc
 def benchmark(ctx: mgp.ProcCtx, num_runs: int) -> mgp.Record(status=str, test_results=mgp.Any):
-    """Benchmark method runs train method on different seeds for num_runs times to get as much as possible accurate results.
+    """Benchmark method runs train method on different seeds for num_runs times to get as much as possible accurate results. It will be disabled later.
 
     Args:
         ctx (mgp.ProcCtx): A reference to the context execution.
@@ -406,11 +404,26 @@ def get_training_results(
 
     return mgp.Record(training_results=training_results, validation_results=validation_results)
 
+@mgp.read_proc
+def load_model(ctx: mgp.ProcCtx, path: str) -> mgp.Record(status=mgp.Any):
+    """Loads torch model from given path. If the path doesn't exist, underlying exception is thrown.
+    Currently there is no effect.
+
+    Args:
+        ctx (mgp.ProcCtx): A reference to the context execution.
+
+    Returns:
+        status(mgp.Any): True just to indicate that loading went well.
+    """
+
+    global model
+    model = torch.load(path)
+    return mgp.Record(status=True)
+
 
 ##############################
-# Convert to DGL graph, consider extracting such methods to another file.
+# Private helper methods.
 ##############################
-
 
 def _process_help_function(
     ind: int,
@@ -503,13 +516,23 @@ def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
     # Hidden features size
     if HIDDEN_FEATURES_SIZE in parameters.keys():
         hidden_features_size = parameters[HIDDEN_FEATURES_SIZE]
+
+        # Because list cannot be sent through mgp.
+        if type(hidden_features_size) != tuple:
+            return False, "hidden_features_size not an iterable object. "
+
         for hid_size in hidden_features_size:
             if hid_size <= 0:
                 return False, "Layer size must be greater than 0. "
 
     # Layer type check
     if "layer_type" in parameters.keys():
-        layer_type = parameters["layer_type"].lower()
+        layer_type = parameters["layer_type"]
+        
+        # Check typing
+        if type(layer_type) != str:
+            return False, "layer_type must be string. "
+
         if layer_type != GRAPH_ATTN and layer_type != GRAPH_SAGE:
             return (
                 False,
@@ -518,55 +541,100 @@ def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
 
     # Num epochs
     if "num_epochs" in parameters.keys():
-        num_epochs = int(parameters["num_epochs"])
+        num_epochs = parameters["num_epochs"]
+
+        # Check typing
+        if type(num_epochs) != int:
+            return False, "num_epochs must be int. "
+
         if num_epochs <= 0:
             return False, "Number of epochs must be greater than 0. "
 
     # Optimizer check
     if "optimizer" in parameters.keys():
-        optimizer = parameters["optimizer"].upper()
+        optimizer = parameters["optimizer"]
+
+        # Check typing
+        if type(optimizer) != str:
+            return False, "optimizer must be a string. "
+
         if optimizer != ADAM_OPT and optimizer != SGD_OPT:
             return False, "Unknown optimizer, this module supports only ADAM and SGD. "
 
     # Learning rate check
     if "learning_rate" in parameters.keys():
-        learning_rate = float(parameters["learning_rate"])
+        learning_rate = parameters["learning_rate"]
+
+        # Check typing
+        if type(learning_rate) != float:
+            return False, "learning_rate must be a float. "
+
         if learning_rate <= 0.0:
             return False, "Learning rate must be greater than 0. "
 
     # Split ratio check
     if "split_ratio" in parameters.keys():
-        split_ratio = float(parameters["split_ratio"])
+        split_ratio = parameters["split_ratio"]
+
+        # Check typing
+        if type(split_ratio) != float:
+            return False, "split_ratio must be a float. "
+
         if split_ratio <= 0.0:
             return False, "Split ratio must be greater than 0. "
 
     # node_features_property check
     if "node_features_property" in parameters.keys():
         node_features_property = parameters["node_features_property"]
+
+        # Check typing
+        if type(node_features_property) != str:
+            return False, "node_features_property must be a string. "
+
         if node_features_property == "":
             return False, "You must specify name of nodes' features property. "
 
     # device_type check
     if "device_type" in parameters.keys():
-        device_type = parameters["device_type"].lower()
+        device_type = parameters["device_type"]
+
+        # Check typing
+        if type(device_type) != str:
+            return False, "device_type must be a string. "
+
         if device_type != CPU_DEVICE and torch.device != CUDA_DEVICE:
             return False, "Only cpu and cuda are supported as devices. "
 
     # console_log_freq check
     if "console_log_freq" in parameters.keys():
-        console_log_freq = int(parameters["console_log_freq"])
+        console_log_freq = parameters["console_log_freq"]
+
+        # Check typing
+        if type(console_log_freq) != int:
+            return False, "console_log_freq must be an int. "
+
         if console_log_freq <= 0:
             return False, "Console log frequency must be greater than 0. "
 
     # checkpoint freq check
     if "checkpoint_freq" in parameters.keys():
-        checkpoint_freq = int(parameters["checkpoint_freq"])
+        checkpoint_freq = parameters["checkpoint_freq"]
+
+        # Check typing
+        if type(checkpoint_freq) != int:
+            return False, "checkpoint_freq must be an int. "
+
         if checkpoint_freq <= 0:
             return False, "Checkpoint frequency must be greter than 0. "
 
     # aggregator check
     if "aggregator" in parameters.keys():
-        aggregator = parameters["aggregator"].lower()
+        aggregator = parameters["aggregator"]
+
+        # Check typing
+        if type(aggregator) != str:
+            return False, "aggregator must be a string. "
+
         if aggregator != MEAN_AGG and aggregator != LSTM_AGG and aggregator != POOL_AGG and aggregator != GCN_AGG:
             return (
                 False,
@@ -576,6 +644,11 @@ def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
     # metrics check
     if "metrics" in parameters.keys():
         metrics = parameters["metrics"]
+
+        # Check typing
+        if type(metrics) != tuple:
+            return False, "metrics must be an iterable object. "
+
         for metric in metrics:
             _metric = metric.lower()
             if (
@@ -592,14 +665,25 @@ def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
 
     # Predictor type
     if "predictor_type" in parameters.keys():
-        predictor_type = parameters["predictor_type"].lower()
+        predictor_type = parameters["predictor_type"]
+
+        # Check typing
+        if type(predictor_type) != str:
+            return False, "predictor_type must be a string. "
+
         if predictor_type != DOT_PREDICTOR and predictor_type != MLP_PREDICTOR:
             return False, "Predictor " + predictor_type + " is not supported. "
 
     # Attention heads
     if "attn_num_heads" in parameters.keys():
         attn_num_heads = parameters["attn_num_heads"]
+
         if layer_type == GRAPH_ATTN:
+
+            # Check typing
+            if type(attn_num_heads) != tuple:
+                return False, "attn_num_heads must be an iterable object. "
+
 
             if len(attn_num_heads) != len(hidden_features_size):
                 return (
@@ -621,13 +705,23 @@ def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
 
     # Training accuracy patience
     if "tr_acc_patience" in parameters.keys():
-        tr_acc_patience = int(parameters["tr_acc_patience"])
+        tr_acc_patience = parameters["tr_acc_patience"]
+
+        # Check typing
+        if type(tr_acc_patience) != int:
+            return False, "tr_acc_patience must be an iterable object. "
+
         if tr_acc_patience <= 0:
             return False, "Training acc patience flag must be larger than 0."
 
     # model_save_path
     if "model_save_path" in parameters.keys():
         model_save_path = parameters["model_save_path"]
+
+        # Check typing
+        if type(model_save_path) != str:
+            return False, "model_save_path must be a string. "
+
         if model_save_path == "":
             return False, "Path must be != " " "
 
@@ -662,6 +756,11 @@ def conversion_to_dgl_test(
         node_features_property (str): Property namer where the node features are saved`
 
     """
+
+    # Check if the dataset is empty. E2E handling.
+    if len(ctx.graph.vertices) == 0:
+        raise Exception("Empty dataset. ")
+
     for vertex in graph.nodes():
         vertex_id = vertex.item()
         # print(f"Testing vertex: {vertex_id}")
