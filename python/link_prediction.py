@@ -52,12 +52,12 @@ class LinkPredictionParameters:
                                 Epoch will always be displayed, you can add loss, accuracy, precision, recall, specificity, F1, auc_score etc.
     :param predictor_type: str -> Type of the predictor. Predictor is used for combining node scores to edge scores.
     :param attn_num_heads: List[int] -> GAT can support usage of more than one head in each layers except last one. Only used in GAT, not in GraphSage.
-    :param tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on test set be tolerated before stopping the training.
+    :param tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on validation set be tolerated before stopping the training.
     :param model_save_path: str -> Path where the link prediction model will be saved every checkpoint_freq epochs.
     """
 
     hidden_features_size: List = field(
-        default_factory=lambda: [1433, 64, 32, 16]
+        default_factory=lambda: [64, 32, 16]
     )  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
     layer_type: str = GRAPH_ATTN
     num_epochs: int = 100
@@ -141,7 +141,8 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
 
     Returns:
         mgp.Record:
-            status (bool): True if everything went OK, False otherwise.
+            status (bool): True if parameters were successfully updated, False otherwise.
+            message(str): Additional explanation why method failed or OK otherwise.
     """
     global link_prediction_parameters
 
@@ -155,7 +156,7 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
     for key, value in parameters.items():
         if not hasattr(link_prediction_parameters, key):
             return mgp.Record(
-                status=0,
+                status=1,
                 message="No attribute " + key + " in class LinkPredictionParameters",
             )
         try:
@@ -168,6 +169,13 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
         link_prediction_parameters.device_type = CUDA_DEVICE
     else:
         link_prediction_parameters.device_type = CPU_DEVICE
+
+    # Lists handling=generator expression + unpacking
+    if type(link_prediction_parameters.hidden_features_size) == tuple:
+        link_prediction_parameters.hidden_features_size = [*(x for x in link_prediction_parameters.hidden_features_size)]
+
+    if type(link_prediction_parameters.attn_num_heads) == tuple:
+        link_prediction_parameters.attn_num_heads = [*(x for x in link_prediction_parameters.attn_num_heads)]
 
     print("END")
     print(link_prediction_parameters)
@@ -263,12 +271,14 @@ def train(
 
 @mgp.read_proc
 def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -> mgp.Record(score=mgp.Number):
-    """Predict method. We assume here semi-inductive learning process where queried nodes are somehow connected to the original graph. It is assumed that nodes are already added to the original graph and our goal
-    is to predict whether there is an edge between two nodes or not. Even if the edge exists, method can be used.
+    """Predict method. It is assumed that nodes are already added to the original graph and our goal is to predict whether there is an edge between two nodes or not. Even if the edge exists,
+     method can be used.
 
 
     Args:
         ctx (mgp.ProcCtx): A reference to the context execution
+        src_vertex (mgp.Vertex): Source vertex.
+        dest_vertex (mgp.Vertex): Destination vertex.
 
     Returns:
         score: Probability that two nodes are connected
@@ -382,7 +392,7 @@ def benchmark(ctx: mgp.ProcCtx, num_runs: int) -> mgp.Record(status=str, test_re
 @mgp.read_proc
 def get_training_results(
     ctx: mgp.ProcCtx,
-) -> mgp.Record(tr_metrics=mgp.Any, val_metrics=mgp.Any):
+) -> mgp.Record(training_results=mgp.Any, validation_results=mgp.Any):
     """This method is used when user wants to get performance data obtained from the last training. It is in the form of list of records where each record is a Dict[metric_name, metric_value]. Training and validation
     results are returned.
 
@@ -394,7 +404,7 @@ def get_training_results(
     """
     global training_results, validation_results
 
-    return mgp.Record(tr_metrics=training_results, val_metrics=validation_results)
+    return mgp.Record(training_results=training_results, validation_results=validation_results)
 
 
 ##############################
@@ -442,6 +452,9 @@ def _get_dgl_graph_data(
     Returns:
         Tuple[dgl.graph, Dict[int32, int32], Dict[int32, int32]]: Tuple of DGL graph representation, dictionary of mapping new to old index and dictionary of mapping old to new index.
     """
+
+    global link_prediction_parameters
+
     src_nodes, dest_nodes = [], []  # for saving the edges
 
     new_to_old = dict()  # map of new node index to old node index
@@ -471,6 +484,7 @@ def _get_dgl_graph_data(
     # print("Features: ", features)
     # print("Ind: ", ind)
     features = torch.tensor(features, dtype=torch.float32)  # use float for storing tensor of features
+    link_prediction_parameters.hidden_features_size.insert(0, features.shape[1])
     g = dgl.graph((src_nodes, dest_nodes), num_nodes=ind)
     g.ndata[link_prediction_parameters.node_features_property] = features
     g = dgl.add_self_loop(g) 
@@ -587,7 +601,7 @@ def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
         attn_num_heads = parameters["attn_num_heads"]
         if layer_type == GRAPH_ATTN:
 
-            if len(attn_num_heads) != len(hidden_features_size) - 1:
+            if len(attn_num_heads) != len(hidden_features_size):
                 return (
                     False,
                     "Specified network with {} layers but given attention heads data for {} layers. ".format(

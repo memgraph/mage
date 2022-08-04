@@ -195,7 +195,7 @@ def preprocess(
     # val size is 1-split_ratio specified by the user
     val_size = int(graph.number_of_edges() * (1 - split_ratio))
     # E2E handling
-    if val_size == 0:
+    if split_ratio < 1.0 and val_size == 0:
         raise Exception("Graph too small to have a validation dataset. ")
 
     # Create positive training and positive validation graph
@@ -337,9 +337,7 @@ def inner_train(
 
         model.train()  # switch to training mode
 
-        h = torch.squeeze(
-            model(train_g, train_g.ndata[node_features_property])
-        )  # h is torch.float32 that has shape: nodes*hidden_features_size[-1]. Node embeddings.
+        h = torch.squeeze(model(train_g, train_g.ndata[node_features_property]))  # h is torch.float32 that has shape: nodes*hidden_features_size[-1]. Node embeddings.
 
         # print("Node embeddings shape: ", h.shape)
 
@@ -348,12 +346,8 @@ def inner_train(
         # print("GV: ", gv)
         # print("EDGE IDS: ", edge_ids)
 
-        pos_score = predictor(
-            train_pos_g, h
-        )  # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_pos-g. Scores are here actually logits.
-        neg_score = predictor(
-            train_neg_g, h
-        )  # returns vector of negative edge scores, torch.float32, shape: num_edges in the graph of train_neg_g. Scores are actually logits.
+        pos_score = predictor(train_pos_g, h)  # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_pos-g. Scores are here actually logits.
+        neg_score = predictor(train_neg_g, h)  # returns vector of negative edge scores, torch.float32, shape: num_edges in the graph of train_neg_g. Scores are actually logits.
 
         # print("pos score shape: ", pos_score.shape)
         # print("neg score shape: ", neg_score.shape)
@@ -408,9 +402,7 @@ def inner_train(
                     loss_output_val = loss(probs_val, labels_val)
                     epoch_val_result["epoch"] = epoch
                     epoch_val_result["loss"] = loss_output_val.item()
-                    evaluate(
-                        metrics, labels_val, probs_val, epoch_val_result, threshold
-                    )
+                    evaluate(metrics, labels_val, probs_val, epoch_val_result, threshold)
                     validation_results.append(epoch_val_result)
 
                     # Patience check
