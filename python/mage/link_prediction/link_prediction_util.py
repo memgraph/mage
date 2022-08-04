@@ -483,7 +483,7 @@ def inner_predict2(model: torch.nn.Module, predictor: torch.nn.Module, graph: dg
         score = predictor.forward_pred(h, src_node, dest_node)
         prob = torch.sigmoid(score)
         print("Probability: ", prob.item())
-        return prob
+        return prob.item()
         
 
 

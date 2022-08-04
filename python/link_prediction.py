@@ -83,7 +83,7 @@ class LinkPredictionParameters:
             "num_wrong_examples",
         ]
     )
-    predictor_type: str =  DOT_PREDICTOR
+    predictor_type: str =  MLP_PREDICTOR
     attn_num_heads: List[int] = field(default_factory=lambda: [8, 4, 1])
     tr_acc_patience: int = 8
     context_save_dir: str = (
@@ -301,14 +301,12 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     # print("Number of edges before: ", graph.number_of_edges())
 
     # Check if there is an edge between two nodes
-    if graph.has_edges_between(src_id, dest_id):
-        # print("Nodes {} and {} are already connected. ".format(src_old_id, dest_old_id))
-        edge_id = graph.edge_ids(src_id, dest_id)
-    else:
+    if not graph.has_edges_between(src_id, dest_id):
         edge_added = True
         # print("Nodes {} and {} are not connected. ".format(src_old_id, dest_old_id))
         graph.add_edges(src_id, dest_id)
-        edge_id = graph.edge_ids(src_id, dest_id)
+    
+    edge_id = graph.edge_ids(src_id, dest_id)
 
     print("Edge id: ", edge_id)
     # print("Number of edges after adding new edge: ", graph.number_of_edges())
@@ -317,15 +315,7 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     _load_feature_size(graph.ndata[link_prediction_parameters.node_features_property].shape[1])
 
     # Call utils module
-    score = inner_predict(
-        model=model,
-        predictor=predictor,
-        graph=graph,
-        node_features_property=link_prediction_parameters.node_features_property,
-        edge_id=edge_id,
-    )
-
-    score_pred = inner_predict2(
+    score = inner_predict2(
         model=model, 
         predictor=predictor, 
         graph=graph, 

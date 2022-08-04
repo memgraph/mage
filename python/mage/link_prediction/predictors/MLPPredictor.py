@@ -18,7 +18,6 @@ class MLPPredictor(torch.nn.Module):
         Returns:
             Dict: A dictionary of new edge features
         """
-        print(edges.src["node_embeddings"].shape)
         h = torch.cat([edges.src["node_embeddings"], edges.dst["node_embeddings"]], 1)
         return {"score": self.W2(F.relu(self.W1(h))).squeeze(1)}
 
@@ -38,5 +37,16 @@ class MLPPredictor(torch.nn.Module):
             return g.edata["score"]
 
 
-    def forward_edge(self, src_node: int, dest_node: int):
-        pass
+    def forward_pred(self, node_embeddings: torch.Tensor, src_node: int, dest_node: int) -> float:
+        """Efficient implementation for predict method of DotPredictor.
+
+        Args:
+            node_embeddings (torch.Tensor): Final node embeddings computed.
+            src_node (int): Source node of the edge.
+            dest_node (int): Destination node of the edge.
+
+        Returns:
+            float: Edge score computed.
+        """
+        h = torch.cat([node_embeddings[src_node], node_embeddings[dest_node]])
+        return self.W2(F.relu(self.W1(h)))

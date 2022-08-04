@@ -3,13 +3,7 @@ MATCH (v1:PAPER {id: 513189})
         CALL link_prediction.predict(v1, v2)
         YIELD *
         RETURN *;
-        
-MATCH (v1:PAPER {id: 636511})
-        MATCH (v2:PAPER {id: 910}) 
-        CALL link_prediction.predict(v1, v2)
-        YIELD *
-        RETURN *;
-        
+
 MATCH (v1:PAPER {id: 57948})
         MATCH (v2:PAPER {id: 12210}) 
         CALL link_prediction.predict(v1, v2)
@@ -136,9 +130,9 @@ MATCH (v1:PAPER {id: 1131301})
         YIELD *
         RETURN *;
         
-MATCH (v1:PAPER {id: 108047})
-        MATCH (v2:PAPER {id: 54129}) 
-        CALL link_prediction.predict(v1, v2)
+MATCH (v2:PAPER {id: 108047})
+        MATCH (v3:PAPER {id: 54129}) 
+        CALL link_prediction.predict(v2, v2)
         YIELD *
         RETURN *;
         
