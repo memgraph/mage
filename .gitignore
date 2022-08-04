@@ -197,8 +197,7 @@ dist/
 *.coverage
 
 **/mg_data
-python/mage/link_prediction/commands/prediction_commands.txt
-python/mage/link_prediction/commands/cora_creation_commands.txt
+python/mage/link_prediction/commands/
 python/mage/link_prediction/manipulate_database.py
 python/mage/link_prediction/training_visualizer.py
-python/mage/link_prediction/model.pt
+python/mage/link_prediction/context/

@@ -16,8 +16,9 @@ import random
 from mage.link_prediction.training_visualizer import (
     visualize,
 )  # without .training_visualizer it is circular import
-import matplotlib.pyplot as plt
-import networkx as nx
+from mage.link_prediction.constants import (
+    MODEL_NAME, PREDICTOR_NAME
+)
 
 
 if __name__ == "__main__":
@@ -265,7 +266,7 @@ def inner_train(
     checkpoint_freq: int,
     metrics: List[str],
     tr_acc_patience: int,
-    model_save_path: str,
+    context_save_dir: str,
     train_g: dgl.graph,
     train_pos_g: dgl.graph,
     train_neg_g: dgl.graph,
@@ -285,7 +286,7 @@ def inner_train(
         metrics (List[str]): Metrics used to evaluate model in training on the validation set.
             Epoch will always be displayed, you can add loss, accuracy, precision, recall, specificity, F1, auc_score etc.
         tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on validation set be tolerated before stopping the training.
-        model_save_path: str -> Path where the model will be saved every checkpoint_freq epochs.
+        context_save_dir: str -> Path where the model and predictor will be saved every checkpoint_freq epochs.
         train_g (dgl.graph): A reference to the created training graph without validation edges.
         train_pos_g (dgl.graph): Positive training graph.
         train_neg_g (dgl.graph): Negative training graph.
@@ -424,14 +425,24 @@ def inner_train(
 
             # Save the model if necessary
             if epoch % checkpoint_freq == 0:
-                torch.save(model, model_save_path)
-
+                _save_context(model, predictor, context_save_dir)
+                
     # Save model at the end of the training
-    torch.save(model, model_save_path)
+    _save_context(model, predictor, context_save_dir)
 
     # visualize(training_results=training_results, validation_results=validation_results)
     return training_results, validation_results
 
+def _save_context(model: torch.nn.Module, predictor: torch.nn.Module, context_save_dir: str):
+    """Saves model and predictor to path.
+
+    Args:
+        context_save_dir: str -> Path where the model and predictor will be saved every checkpoint_freq epochs.
+        model (torch.nn.Module): A reference to the model.
+        predictor (torch.nn.Module): A reference to the predictor.
+    """
+    torch.save(model, context_save_dir + MODEL_NAME)
+    torch.save(predictor, context_save_dir + PREDICTOR_NAME)
 
 def inner_predict(
     model: torch.nn.Module,
@@ -454,8 +465,10 @@ def inner_predict(
     with torch.no_grad():
         h = model(graph, graph.ndata[node_features_property])
         scores = predictor(graph, h)
-        print("Scores: ", scores)
-        return torch.sigmoid(scores)[edge_id].item()
+        # print("Scores: ", scores)
+        probs = torch.sigmoid(scores)
+        # print("negative: ", torch.sum(probs < 0.5).item() / probs.shape[0])  # a small probability of negative ones
+        return probs[edge_id].item()
 
 
 # Existing

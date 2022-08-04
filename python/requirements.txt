@@ -6,5 +6,5 @@ python-Levenshtein==0.12.1
 gensim==4.0.0.
 torch==1.10.1
 six==1.16.0
-dgl==0.9.0
+dgl==0.9
 scikit-learn==1.1.1

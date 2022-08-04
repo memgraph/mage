@@ -1,50 +1,5000 @@
-MATCH (v1:PAPER {id: 573964})
-            MATCH (v2:PAPER {id: 35}) 
-            CREATE (v1)-[e:CITES {}]->(v2)
-            RETURN v1, e, v2;
-            
-MATCH (v1:PAPER {id: 1154276})
-            MATCH (v2:PAPER {id: 733167}) 
-            CREATE (v1)-[e:CITES {}]->(v2)
-            RETURN v1, e, v2;
-            
-MATCH (v1:PAPER {id: 230884})
-            MATCH (v2:PAPER {id: 2665}) 
-            CREATE (v1)-[e:CITES {}]->(v2)
-            RETURN v1, e, v2;
-            
+MATCH (v1:PAPER {id: 513189})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 636511})
+        MATCH (v2:PAPER {id: 910}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 57948})
+        MATCH (v2:PAPER {id: 12210}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 51866})
+        MATCH (v2:PAPER {id: 51879}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1128935})
+        MATCH (v2:PAPER {id: 75969}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1130915})
+        MATCH (v2:PAPER {id: 633721}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 46079})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 684372})
+        MATCH (v2:PAPER {id: 910}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 160705})
+        MATCH (v2:PAPER {id: 910}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 33303})
+        MATCH (v2:PAPER {id: 5600}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 444191})
+        MATCH (v2:PAPER {id: 17363}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 18785})
+        MATCH (v2:PAPER {id: 18781}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1116336})
+        MATCH (v2:PAPER {id: 1717}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 12165})
+        MATCH (v2:PAPER {id: 12182}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 28287})
+        MATCH (v2:PAPER {id: 4584}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1153183})
+        MATCH (v2:PAPER {id: 264347}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 593240})
+        MATCH (v2:PAPER {id: 578845}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 63835})
+        MATCH (v2:PAPER {id: 64519}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1117786})
+        MATCH (v2:PAPER {id: 2440}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1133004})
+        MATCH (v2:PAPER {id: 2696}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1113459})
+        MATCH (v2:PAPER {id: 153598}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 288})
+        MATCH (v2:PAPER {id: 40151}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131301})
+        MATCH (v2:PAPER {id: 644577}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 108047})
+        MATCH (v2:PAPER {id: 54129}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 662416})
+        MATCH (v2:PAPER {id: 12631}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 20592})
+        MATCH (v2:PAPER {id: 20584}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1105231})
+        MATCH (v2:PAPER {id: 61312}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 358884})
+        MATCH (v2:PAPER {id: 13212}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 47570})
+        MATCH (v2:PAPER {id: 10183}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1111265})
+        MATCH (v2:PAPER {id: 24043}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1113614})
+        MATCH (v2:PAPER {id: 134128}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152663})
+        MATCH (v2:PAPER {id: 218410}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 129558})
+        MATCH (v2:PAPER {id: 941}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1113182})
+        MATCH (v2:PAPER {id: 134128}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1153728})
+        MATCH (v2:PAPER {id: 1959}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 15076})
+        MATCH (v2:PAPER {id: 24043}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 12155})
+        MATCH (v2:PAPER {id: 20602}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 582343})
+        MATCH (v2:PAPER {id: 46452}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 134128})
+        MATCH (v2:PAPER {id: 6220}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 39199})
+        MATCH (v2:PAPER {id: 32276}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1154233})
+        MATCH (v2:PAPER {id: 714256}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 184157})
+        MATCH (v2:PAPER {id: 17208}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1119671})
+        MATCH (v2:PAPER {id: 2663}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 45189})
+        MATCH (v2:PAPER {id: 89547}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 9513})
+        MATCH (v2:PAPER {id: 9515}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 194617})
+        MATCH (v2:PAPER {id: 10531}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 6125})
+        MATCH (v2:PAPER {id: 12350}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 107251})
+        MATCH (v2:PAPER {id: 22563}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 18833})
+        MATCH (v2:PAPER {id: 18832}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1102400})
+        MATCH (v2:PAPER {id: 1237}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 27510})
+        MATCH (v2:PAPER {id: 103482}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1134348})
+        MATCH (v2:PAPER {id: 189572}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1127551})
+        MATCH (v2:PAPER {id: 561789}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1129994})
+        MATCH (v2:PAPER {id: 106590}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 510718})
+        MATCH (v2:PAPER {id: 4329}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 28290})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131300})
+        MATCH (v2:PAPER {id: 561809}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 131042})
+        MATCH (v2:PAPER {id: 24966}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1125393})
+        MATCH (v2:PAPER {id: 509379}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1123188})
+        MATCH (v2:PAPER {id: 12638}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 950052})
+        MATCH (v2:PAPER {id: 1365}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 120039})
+        MATCH (v2:PAPER {id: 3220}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1113438})
+        MATCH (v2:PAPER {id: 141324}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 128})
+        MATCH (v2:PAPER {id: 4584}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 431206})
+        MATCH (v2:PAPER {id: 6910}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 159897})
+        MATCH (v2:PAPER {id: 28957}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1120444})
+        MATCH (v2:PAPER {id: 6767}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 8079})
+        MATCH (v2:PAPER {id: 27249}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1104999})
+        MATCH (v2:PAPER {id: 56115}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 315266})
+        MATCH (v2:PAPER {id: 33231}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 56167})
+        MATCH (v2:PAPER {id: 53942}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 561581})
+        MATCH (v2:PAPER {id: 561674}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 39124})
+        MATCH (v2:PAPER {id: 8079}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1103038})
+        MATCH (v2:PAPER {id: 14529}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 310742})
+        MATCH (v2:PAPER {id: 3191}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1115701})
+        MATCH (v2:PAPER {id: 202520}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 66794})
+        MATCH (v2:PAPER {id: 18777}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 579008})
+        MATCH (v2:PAPER {id: 575077}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1104007})
+        MATCH (v2:PAPER {id: 1246}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1130653})
+        MATCH (v2:PAPER {id: 20193}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 662572})
+        MATCH (v2:PAPER {id: 78994}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 248395})
+        MATCH (v2:PAPER {id: 58552}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 128540})
+        MATCH (v2:PAPER {id: 44455}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 801170})
+        MATCH (v2:PAPER {id: 87417}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 34979})
+        MATCH (v2:PAPER {id: 13982}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 49895})
+        MATCH (v2:PAPER {id: 6741}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 594649})
+        MATCH (v2:PAPER {id: 593201}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 6917})
+        MATCH (v2:PAPER {id: 4649}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 289085})
+        MATCH (v2:PAPER {id: 264556}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1154232})
+        MATCH (v2:PAPER {id: 714256}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 593329})
+        MATCH (v2:PAPER {id: 19045}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1105764})
+        MATCH (v2:PAPER {id: 45212}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 300071})
+        MATCH (v2:PAPER {id: 6814}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1132418})
+        MATCH (v2:PAPER {id: 145176}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 3828})
+        MATCH (v2:PAPER {id: 943}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 568045})
+        MATCH (v2:PAPER {id: 195150}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 102406})
+        MATCH (v2:PAPER {id: 2653}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 693143})
+        MATCH (v2:PAPER {id: 66751}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 6939})
+        MATCH (v2:PAPER {id: 63915}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1103038})
+        MATCH (v2:PAPER {id: 14549}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 594047})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 654177})
+        MATCH (v2:PAPER {id: 40886}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 35863})
+        MATCH (v2:PAPER {id: 6213}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 235679})
+        MATCH (v2:PAPER {id: 235678}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1121254})
+        MATCH (v2:PAPER {id: 33231}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 387795})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1120169})
+        MATCH (v2:PAPER {id: 85449}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 310530})
+        MATCH (v2:PAPER {id: 1959}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 436796})
+        MATCH (v2:PAPER {id: 1365}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 340075})
+        MATCH (v2:PAPER {id: 1365}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 74749})
+        MATCH (v2:PAPER {id: 2354}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1125393})
+        MATCH (v2:PAPER {id: 47682}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1129629})
+        MATCH (v2:PAPER {id: 594047}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 634938})
+        MATCH (v2:PAPER {id: 287787}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131748})
+        MATCH (v2:PAPER {id: 3229}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131360})
+        MATCH (v2:PAPER {id: 1688}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1109891})
+        MATCH (v2:PAPER {id: 16485}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 8821})
+        MATCH (v2:PAPER {id: 66596}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 35343})
+        MATCH (v2:PAPER {id: 3229}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 110162})
+        MATCH (v2:PAPER {id: 3101}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 238099})
+        MATCH (v2:PAPER {id: 6935}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 377303})
+        MATCH (v2:PAPER {id: 195792}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 8213})
+        MATCH (v2:PAPER {id: 114}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 237489})
+        MATCH (v2:PAPER {id: 2665}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 38480})
+        MATCH (v2:PAPER {id: 114}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 112378})
+        MATCH (v2:PAPER {id: 40886}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1114502})
+        MATCH (v2:PAPER {id: 5966}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 25702})
+        MATCH (v2:PAPER {id: 15076}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 25805})
+        MATCH (v2:PAPER {id: 124734}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1107010})
+        MATCH (v2:PAPER {id: 22386}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 67246})
+        MATCH (v2:PAPER {id: 31769}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 28641})
+        MATCH (v2:PAPER {id: 12182}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 12960})
+        MATCH (v2:PAPER {id: 19231}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1106630})
+        MATCH (v2:PAPER {id: 70281}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1110531})
+        MATCH (v2:PAPER {id: 3240}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1153150})
+        MATCH (v2:PAPER {id: 137359}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1153866})
+        MATCH (v2:PAPER {id: 133615}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131258})
+        MATCH (v2:PAPER {id: 642621}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1135358})
+        MATCH (v2:PAPER {id: 1272}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 91852})
+        MATCH (v2:PAPER {id: 20179}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1113739})
+        MATCH (v2:PAPER {id: 4584}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1106052})
+        MATCH (v2:PAPER {id: 23258}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 96847})
+        MATCH (v2:PAPER {id: 6163}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 75121})
+        MATCH (v2:PAPER {id: 85688}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 649739})
+        MATCH (v2:PAPER {id: 19621}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 16474})
+        MATCH (v2:PAPER {id: 16471}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1132809})
+        MATCH (v2:PAPER {id: 8594}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1110000})
+        MATCH (v2:PAPER {id: 3187}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1136397})
+        MATCH (v2:PAPER {id: 240321}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 683404})
+        MATCH (v2:PAPER {id: 108983}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1154074})
+        MATCH (v2:PAPER {id: 103430}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 34266})
+        MATCH (v2:PAPER {id: 45533}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1110426})
+        MATCH (v2:PAPER {id: 22431}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 77515})
+        MATCH (v2:PAPER {id: 12210}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 645571})
+        MATCH (v2:PAPER {id: 440815}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 675847})
+        MATCH (v2:PAPER {id: 6130}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1116268})
+        MATCH (v2:PAPER {id: 27241}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1133930})
+        MATCH (v2:PAPER {id: 653628}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1109830})
+        MATCH (v2:PAPER {id: 162075}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1117184})
+        MATCH (v2:PAPER {id: 1481}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1110438})
+        MATCH (v2:PAPER {id: 4330}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 205196})
+        MATCH (v2:PAPER {id: 815073}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
 MATCH (v1:PAPER {id: 646913})
-            MATCH (v2:PAPER {id: 503883}) 
-            CREATE (v1)-[e:CITES {}]->(v2)
-            RETURN v1, e, v2;
-            
+        MATCH (v2:PAPER {id: 646900}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1153280})
+        MATCH (v2:PAPER {id: 82920}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 12199})
+        MATCH (v2:PAPER {id: 12198}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1103315})
+        MATCH (v2:PAPER {id: 20534}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1107215})
+        MATCH (v2:PAPER {id: 1952}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152075})
+        MATCH (v2:PAPER {id: 2654}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152633})
+        MATCH (v2:PAPER {id: 77438}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131607})
+        MATCH (v2:PAPER {id: 230884}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 195361})
+        MATCH (v2:PAPER {id: 6213}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 887})
+        MATCH (v2:PAPER {id: 210871}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1153024})
+        MATCH (v2:PAPER {id: 24476}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1154232})
+        MATCH (v2:PAPER {id: 39890}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 4329})
+        MATCH (v2:PAPER {id: 4330}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1127657})
+        MATCH (v2:PAPER {id: 11335}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 91975})
+        MATCH (v2:PAPER {id: 89547}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1123239})
+        MATCH (v2:PAPER {id: 2696}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131647})
+        MATCH (v2:PAPER {id: 1365}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 751408})
+        MATCH (v2:PAPER {id: 2665}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152490})
+        MATCH (v2:PAPER {id: 12330}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 124828})
+        MATCH (v2:PAPER {id: 24966}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1120858})
+        MATCH (v2:PAPER {id: 5348}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1134056})
+        MATCH (v2:PAPER {id: 709518}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 6213})
+        MATCH (v2:PAPER {id: 4584}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 51045})
+        MATCH (v2:PAPER {id: 51052}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1153577})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 68505})
+        MATCH (v2:PAPER {id: 4804}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 6917})
+        MATCH (v2:PAPER {id: 1272}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 20526})
+        MATCH (v2:PAPER {id: 6169}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1120713})
+        MATCH (v2:PAPER {id: 10430}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 594543})
+        MATCH (v2:PAPER {id: 54129}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 751408})
+        MATCH (v2:PAPER {id: 230884}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 31932})
+        MATCH (v2:PAPER {id: 3243}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 884094})
+        MATCH (v2:PAPER {id: 633585}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 409725})
+        MATCH (v2:PAPER {id: 8766}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152421})
+        MATCH (v2:PAPER {id: 14062}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 3095})
+        MATCH (v2:PAPER {id: 10430}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 148399})
+        MATCH (v2:PAPER {id: 12247}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 593210})
+        MATCH (v2:PAPER {id: 459216}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 25794})
+        MATCH (v2:PAPER {id: 50838}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1153275})
+        MATCH (v2:PAPER {id: 79809}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1139928})
+        MATCH (v2:PAPER {id: 101263}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 147870})
+        MATCH (v2:PAPER {id: 25702}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 131318})
+        MATCH (v2:PAPER {id: 13213}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152421})
+        MATCH (v2:PAPER {id: 82920}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 649731})
+        MATCH (v2:PAPER {id: 23507}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 521855})
+        MATCH (v2:PAPER {id: 189571}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 696342})
+        MATCH (v2:PAPER {id: 230879}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 28202})
+        MATCH (v2:PAPER {id: 117}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1105764})
+        MATCH (v2:PAPER {id: 72406}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 35061})
+        MATCH (v2:PAPER {id: 32083}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 578337})
+        MATCH (v2:PAPER {id: 2665}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 28471})
+        MATCH (v2:PAPER {id: 114}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 28278})
+        MATCH (v2:PAPER {id: 117}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 509315})
+        MATCH (v2:PAPER {id: 66805}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 6935})
+        MATCH (v2:PAPER {id: 63915}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 733167})
+        MATCH (v2:PAPER {id: 1717}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 33904})
+        MATCH (v2:PAPER {id: 33895}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1103031})
+        MATCH (v2:PAPER {id: 14430}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 128202})
+        MATCH (v2:PAPER {id: 128203}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 263279})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 25181})
+        MATCH (v2:PAPER {id: 59798}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1125467})
+        MATCH (v2:PAPER {id: 3236}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 52847})
+        MATCH (v2:PAPER {id: 7032}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 30901})
+        MATCH (v2:PAPER {id: 3243}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 33303})
+        MATCH (v2:PAPER {id: 3084}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1272})
+        MATCH (v2:PAPER {id: 4584}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 33818})
+        MATCH (v2:PAPER {id: 9586}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 6913})
+        MATCH (v2:PAPER {id: 646289}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 22883})
+        MATCH (v2:PAPER {id: 34961}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1113934})
+        MATCH (v2:PAPER {id: 1481}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 195150})
+        MATCH (v2:PAPER {id: 39127}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 509379})
+        MATCH (v2:PAPER {id: 63486}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 20593})
+        MATCH (v2:PAPER {id: 20584}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1118823})
+        MATCH (v2:PAPER {id: 46547}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 308920})
+        MATCH (v2:PAPER {id: 16008}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1105530})
+        MATCH (v2:PAPER {id: 67292}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1107140})
+        MATCH (v2:PAPER {id: 17201}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1114364})
+        MATCH (v2:PAPER {id: 127940}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 595056})
+        MATCH (v2:PAPER {id: 6213}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 415693})
+        MATCH (v2:PAPER {id: 287787}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 696343})
+        MATCH (v2:PAPER {id: 230879}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 591017})
+        MATCH (v2:PAPER {id: 75969}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 6184})
+        MATCH (v2:PAPER {id: 19621}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 642847})
+        MATCH (v2:PAPER {id: 38537}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 118682})
+        MATCH (v2:PAPER {id: 39165}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 141347})
+        MATCH (v2:PAPER {id: 14062}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131374})
+        MATCH (v2:PAPER {id: 646809}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 11325})
+        MATCH (v2:PAPER {id: 23738}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 272720})
+        MATCH (v2:PAPER {id: 45189}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1121254})
+        MATCH (v2:PAPER {id: 6818}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 59715})
+        MATCH (v2:PAPER {id: 54131}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 69397})
+        MATCH (v2:PAPER {id: 3220}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 656231})
+        MATCH (v2:PAPER {id: 170798}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131359})
+        MATCH (v2:PAPER {id: 646900}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 110163})
+        MATCH (v2:PAPER {id: 3101}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 34355})
+        MATCH (v2:PAPER {id: 906}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 103515})
+        MATCH (v2:PAPER {id: 8865}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 593105})
+        MATCH (v2:PAPER {id: 94639}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 194223})
+        MATCH (v2:PAPER {id: 35922}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 19697})
+        MATCH (v2:PAPER {id: 24966}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 83461})
+        MATCH (v2:PAPER {id: 63486}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 434})
+        MATCH (v2:PAPER {id: 114}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 29708})
+        MATCH (v2:PAPER {id: 29492}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 27230})
+        MATCH (v2:PAPER {id: 23546}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 6170})
+        MATCH (v2:PAPER {id: 114}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1115375})
+        MATCH (v2:PAPER {id: 282700}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131611})
+        MATCH (v2:PAPER {id: 608326}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 98698})
+        MATCH (v2:PAPER {id: 84021}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1107140})
+        MATCH (v2:PAPER {id: 2354}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 245955})
+        MATCH (v2:PAPER {id: 17821}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 594387})
+        MATCH (v2:PAPER {id: 579008}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 714256})
+        MATCH (v2:PAPER {id: 39890}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 672064})
+        MATCH (v2:PAPER {id: 6213}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 950986})
+        MATCH (v2:PAPER {id: 205196}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 9581})
+        MATCH (v2:PAPER {id: 31489}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 578347})
+        MATCH (v2:PAPER {id: 99023}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1136397})
+        MATCH (v2:PAPER {id: 4335}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 69392})
+        MATCH (v2:PAPER {id: 240321}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 239829})
+        MATCH (v2:PAPER {id: 14529}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 134128})
+        MATCH (v2:PAPER {id: 218410}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 136766})
+        MATCH (v2:PAPER {id: 2440}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 14549})
+        MATCH (v2:PAPER {id: 7047}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 568857})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 194645})
+        MATCH (v2:PAPER {id: 28447}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152975})
+        MATCH (v2:PAPER {id: 36162}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 90470})
+        MATCH (v2:PAPER {id: 189566}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1117786})
+        MATCH (v2:PAPER {id: 63931}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1107136})
+        MATCH (v2:PAPER {id: 17811}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 86840})
+        MATCH (v2:PAPER {id: 5966}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1120731})
+        MATCH (v2:PAPER {id: 13195}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1130915})
+        MATCH (v2:PAPER {id: 3229}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1153262})
+        MATCH (v2:PAPER {id: 9716}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1104435})
+        MATCH (v2:PAPER {id: 44121}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 578845})
+        MATCH (v2:PAPER {id: 292277}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 589923})
+        MATCH (v2:PAPER {id: 77438}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1130847})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131270})
+        MATCH (v2:PAPER {id: 126793}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 763010})
+        MATCH (v2:PAPER {id: 7297}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1116974})
+        MATCH (v2:PAPER {id: 45533}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 267003})
+        MATCH (v2:PAPER {id: 434}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1105450})
+        MATCH (v2:PAPER {id: 65650}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1115790})
+        MATCH (v2:PAPER {id: 227286}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1116410})
+        MATCH (v2:PAPER {id: 219976}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 6378})
+        MATCH (v2:PAPER {id: 6385}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 59244})
+        MATCH (v2:PAPER {id: 89335}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1153899})
+        MATCH (v2:PAPER {id: 594511}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 27612})
+        MATCH (v2:PAPER {id: 12350}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 590022})
+        MATCH (v2:PAPER {id: 589923}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 628751})
+        MATCH (v2:PAPER {id: 205196}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 576795})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1130680})
+        MATCH (v2:PAPER {id: 68224}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1154103})
+        MATCH (v2:PAPER {id: 169280}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 15889})
+        MATCH (v2:PAPER {id: 3085}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 521855})
+        MATCH (v2:PAPER {id: 39890}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 6917})
+        MATCH (v2:PAPER {id: 135765}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1114192})
+        MATCH (v2:PAPER {id: 5348}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1114502})
+        MATCH (v2:PAPER {id: 263279}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 27250})
+        MATCH (v2:PAPER {id: 45052}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1109185})
+        MATCH (v2:PAPER {id: 147870}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 751408})
+        MATCH (v2:PAPER {id: 230879}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152991})
+        MATCH (v2:PAPER {id: 71736}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 108983})
+        MATCH (v2:PAPER {id: 35778}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 714975})
+        MATCH (v2:PAPER {id: 6786}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 198443})
+        MATCH (v2:PAPER {id: 119686}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 6130})
+        MATCH (v2:PAPER {id: 672071}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 650834})
+        MATCH (v2:PAPER {id: 62329}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 510718})
+        MATCH (v2:PAPER {id: 18777}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 566664})
+        MATCH (v2:PAPER {id: 20193}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 35061})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1115959})
+        MATCH (v2:PAPER {id: 13654}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 99023})
+        MATCH (v2:PAPER {id: 578337}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 35343})
+        MATCH (v2:PAPER {id: 35335}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 7432})
+        MATCH (v2:PAPER {id: 114}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 12211})
+        MATCH (v2:PAPER {id: 12182}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 6539})
+        MATCH (v2:PAPER {id: 157805}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1116397})
+        MATCH (v2:PAPER {id: 91853}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1130600})
+        MATCH (v2:PAPER {id: 1365}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1118332})
+        MATCH (v2:PAPER {id: 114}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 117316})
+        MATCH (v2:PAPER {id: 38205}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1108175})
+        MATCH (v2:PAPER {id: 18781}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1108728})
+        MATCH (v2:PAPER {id: 137359}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1127812})
+        MATCH (v2:PAPER {id: 249421}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 101145})
+        MATCH (v2:PAPER {id: 89308}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 66794})
+        MATCH (v2:PAPER {id: 28957}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 28278})
+        MATCH (v2:PAPER {id: 6214}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 521207})
+        MATCH (v2:PAPER {id: 5062}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1120049})
+        MATCH (v2:PAPER {id: 16485}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1106330})
+        MATCH (v2:PAPER {id: 3232}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1115790})
+        MATCH (v2:PAPER {id: 75983}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 976284})
+        MATCH (v2:PAPER {id: 45189}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 385067})
+        MATCH (v2:PAPER {id: 5064}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 197054})
+        MATCH (v2:PAPER {id: 41714}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1031453})
+        MATCH (v2:PAPER {id: 4584}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 23738})
+        MATCH (v2:PAPER {id: 27895}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 217139})
+        MATCH (v2:PAPER {id: 11335}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1113852})
+        MATCH (v2:PAPER {id: 74749}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1118017})
+        MATCH (v2:PAPER {id: 157401}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1106418})
+        MATCH (v2:PAPER {id: 86258}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1103383})
+        MATCH (v2:PAPER {id: 22241}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1105450})
+        MATCH (v2:PAPER {id: 65653}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 409255})
+        MATCH (v2:PAPER {id: 7537}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 34266})
+        MATCH (v2:PAPER {id: 87482}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 294145})
+        MATCH (v2:PAPER {id: 62607}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1136397})
+        MATCH (v2:PAPER {id: 25702}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1120643})
+        MATCH (v2:PAPER {id: 8874}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1138755})
+        MATCH (v2:PAPER {id: 171954}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152917})
+        MATCH (v2:PAPER {id: 4330}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 689439})
+        MATCH (v2:PAPER {id: 616336}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1130931})
+        MATCH (v2:PAPER {id: 154982}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 3192})
+        MATCH (v2:PAPER {id: 16008}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1125258})
+        MATCH (v2:PAPER {id: 114966}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 628500})
+        MATCH (v2:PAPER {id: 4584}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1120170})
+        MATCH (v2:PAPER {id: 6215}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 340299})
+        MATCH (v2:PAPER {id: 1365}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 188318})
+        MATCH (v2:PAPER {id: 35797}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1135746})
+        MATCH (v2:PAPER {id: 38722}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1154076})
+        MATCH (v2:PAPER {id: 646809}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1115670})
+        MATCH (v2:PAPER {id: 6935}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1123087})
+        MATCH (v2:PAPER {id: 202639}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 365294})
+        MATCH (v2:PAPER {id: 28504}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 39165})
+        MATCH (v2:PAPER {id: 31483}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 646357})
+        MATCH (v2:PAPER {id: 642894}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1153003})
+        MATCH (v2:PAPER {id: 9708}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 23258})
+        MATCH (v2:PAPER {id: 114}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152436})
+        MATCH (v2:PAPER {id: 28265}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 486840})
+        MATCH (v2:PAPER {id: 35852}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1128935})
+        MATCH (v2:PAPER {id: 75972}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131752})
+        MATCH (v2:PAPER {id: 577227}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 133553})
+        MATCH (v2:PAPER {id: 141160}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 66563})
+        MATCH (v2:PAPER {id: 66556}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1112686})
+        MATCH (v2:PAPER {id: 143476}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 18833})
+        MATCH (v2:PAPER {id: 18834}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 28485})
+        MATCH (v2:PAPER {id: 6213}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1107567})
+        MATCH (v2:PAPER {id: 12238}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 12576})
+        MATCH (v2:PAPER {id: 6213}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 782486})
+        MATCH (v2:PAPER {id: 1365}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 242637})
+        MATCH (v2:PAPER {id: 202639}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1128856})
+        MATCH (v2:PAPER {id: 591016}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1108841})
+        MATCH (v2:PAPER {id: 139865}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 3229})
+        MATCH (v2:PAPER {id: 30817}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1120019})
+        MATCH (v2:PAPER {id: 384428}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 627024})
+        MATCH (v2:PAPER {id: 278403}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1127851})
+        MATCH (v2:PAPER {id: 49844}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 628667})
+        MATCH (v2:PAPER {id: 28350}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1114118})
+        MATCH (v2:PAPER {id: 119712}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1154068})
+        MATCH (v2:PAPER {id: 137868}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 66594})
+        MATCH (v2:PAPER {id: 3233}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1108834})
+        MATCH (v2:PAPER {id: 3229}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 91581})
+        MATCH (v2:PAPER {id: 137868}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 94713})
+        MATCH (v2:PAPER {id: 12182}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 39474})
+        MATCH (v2:PAPER {id: 1694}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 56119})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 57948})
+        MATCH (v2:PAPER {id: 15429}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 38846})
+        MATCH (v2:PAPER {id: 74975}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
 MATCH (v1:PAPER {id: 449841})
-            MATCH (v2:PAPER {id: 135766}) 
-            CREATE (v1)-[e:CITES {}]->(v2)
-            RETURN v1, e, v2;
-            
-MATCH (v1:PAPER {id: 753264})
-            MATCH (v2:PAPER {id: 753070}) 
-            CREATE (v1)-[e:CITES {}]->(v2)
-            RETURN v1, e, v2;
-            
-MATCH (v1:PAPER {id: 1111230})
-            MATCH (v2:PAPER {id: 6213}) 
-            CREATE (v1)-[e:CITES {}]->(v2)
-            RETURN v1, e, v2;
-            
-MATCH (v1:PAPER {id: 69284})
-            MATCH (v2:PAPER {id: 1688}) 
-            CREATE (v1)-[e:CITES {}]->(v2)
-            RETURN v1, e, v2;
-            
-MATCH (v1:PAPER {id: 714748})
-            MATCH (v2:PAPER {id: 65074}) 
-            CREATE (v1)-[e:CITES {}]->(v2)
-            RETURN v1, e, v2;
-            
-MATCH (v1:PAPER {id: 675649})
-            MATCH (v2:PAPER {id: 25702}) 
-            CREATE (v1)-[e:CITES {}]->(v2)
-            RETURN v1, e, v2;
-            
+        MATCH (v2:PAPER {id: 4649}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 887})
+        MATCH (v2:PAPER {id: 198653}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 100961})
+        MATCH (v2:PAPER {id: 35797}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 260979})
+        MATCH (v2:PAPER {id: 37541}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 12198})
+        MATCH (v2:PAPER {id: 10177}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 4660})
+        MATCH (v2:PAPER {id: 2653}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 95225})
+        MATCH (v2:PAPER {id: 12198}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1103031})
+        MATCH (v2:PAPER {id: 14429}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 246618})
+        MATCH (v2:PAPER {id: 103515}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 259702})
+        MATCH (v2:PAPER {id: 82920}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 31043})
+        MATCH (v2:PAPER {id: 910}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1123867})
+        MATCH (v2:PAPER {id: 10169}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 561568})
+        MATCH (v2:PAPER {id: 153063}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1153816})
+        MATCH (v2:PAPER {id: 61069}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152448})
+        MATCH (v2:PAPER {id: 36162}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1125895})
+        MATCH (v2:PAPER {id: 28385}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 155736})
+        MATCH (v2:PAPER {id: 28649}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 693143})
+        MATCH (v2:PAPER {id: 573535}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 54131})
+        MATCH (v2:PAPER {id: 103515}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 686015})
+        MATCH (v2:PAPER {id: 75674}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131277})
+        MATCH (v2:PAPER {id: 137868}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1129015})
+        MATCH (v2:PAPER {id: 594039}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 88356})
+        MATCH (v2:PAPER {id: 18773}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1114125})
+        MATCH (v2:PAPER {id: 128}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1122642})
+        MATCH (v2:PAPER {id: 90655}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 411092})
+        MATCH (v2:PAPER {id: 4649}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131266})
+        MATCH (v2:PAPER {id: 45052}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 686015})
+        MATCH (v2:PAPER {id: 27627}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 54131})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152711})
+        MATCH (v2:PAPER {id: 241821}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 6334})
+        MATCH (v2:PAPER {id: 10169}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1114864})
+        MATCH (v2:PAPER {id: 1481}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 854434})
+        MATCH (v2:PAPER {id: 3243}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1135750})
+        MATCH (v2:PAPER {id: 171954}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 3229})
+        MATCH (v2:PAPER {id: 6184}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 263498})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 592975})
+        MATCH (v2:PAPER {id: 248425}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 78549})
+        MATCH (v2:PAPER {id: 33818}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 595056})
+        MATCH (v2:PAPER {id: 57119}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1105672})
+        MATCH (v2:PAPER {id: 70281}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 577331})
+        MATCH (v2:PAPER {id: 503883}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 103543})
+        MATCH (v2:PAPER {id: 126926}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 592975})
+        MATCH (v2:PAPER {id: 592973}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 6923})
+        MATCH (v2:PAPER {id: 2440}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 124734})
+        MATCH (v2:PAPER {id: 59626}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 345340})
+        MATCH (v2:PAPER {id: 6224}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 628500})
+        MATCH (v2:PAPER {id: 6214}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152244})
+        MATCH (v2:PAPER {id: 38829}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 54129})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1106492})
+        MATCH (v2:PAPER {id: 84020}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 49847})
+        MATCH (v2:PAPER {id: 2440}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1128977})
+        MATCH (v2:PAPER {id: 593060}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1121569})
+        MATCH (v2:PAPER {id: 75318}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1107567})
+        MATCH (v2:PAPER {id: 12165}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 31336})
+        MATCH (v2:PAPER {id: 31353}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 52835})
+        MATCH (v2:PAPER {id: 39127}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1102442})
+        MATCH (v2:PAPER {id: 1999}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 648106})
+        MATCH (v2:PAPER {id: 648121}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 628815})
+        MATCH (v2:PAPER {id: 4584}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131348})
+        MATCH (v2:PAPER {id: 7537}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1106287})
+        MATCH (v2:PAPER {id: 19621}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 684972})
+        MATCH (v2:PAPER {id: 395553}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 243483})
+        MATCH (v2:PAPER {id: 22229}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1135125})
+        MATCH (v2:PAPER {id: 27543}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 636511})
+        MATCH (v2:PAPER {id: 32276}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1119471})
+        MATCH (v2:PAPER {id: 12169}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 711527})
+        MATCH (v2:PAPER {id: 57764}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1126044})
+        MATCH (v2:PAPER {id: 523010}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 240791})
+        MATCH (v2:PAPER {id: 35061}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 28350})
+        MATCH (v2:PAPER {id: 114}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1117049})
+        MATCH (v2:PAPER {id: 321004}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 237376})
+        MATCH (v2:PAPER {id: 89547}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 503877})
+        MATCH (v2:PAPER {id: 141324}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 65653})
+        MATCH (v2:PAPER {id: 8224}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 649739})
+        MATCH (v2:PAPER {id: 123825}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 20193})
+        MATCH (v2:PAPER {id: 10798}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 411005})
+        MATCH (v2:PAPER {id: 131317}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152564})
+        MATCH (v2:PAPER {id: 3112}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1050679})
+        MATCH (v2:PAPER {id: 3229}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1112767})
+        MATCH (v2:PAPER {id: 3229}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1113995})
+        MATCH (v2:PAPER {id: 1365}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152290})
+        MATCH (v2:PAPER {id: 85452}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1105394})
+        MATCH (v2:PAPER {id: 114}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 390894})
+        MATCH (v2:PAPER {id: 50336}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 28485})
+        MATCH (v2:PAPER {id: 6209}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 390894})
+        MATCH (v2:PAPER {id: 50337}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1153287})
+        MATCH (v2:PAPER {id: 95594}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1033})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 94641})
+        MATCH (v2:PAPER {id: 575077}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 181782})
+        MATCH (v2:PAPER {id: 6209}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 63832})
+        MATCH (v2:PAPER {id: 12576}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 3192})
+        MATCH (v2:PAPER {id: 3191}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1110998})
+        MATCH (v2:PAPER {id: 188318}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 643734})
+        MATCH (v2:PAPER {id: 200630}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 6151})
+        MATCH (v2:PAPER {id: 887}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 561581})
+        MATCH (v2:PAPER {id: 153063}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1106771})
+        MATCH (v2:PAPER {id: 45533}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1107728})
+        MATCH (v2:PAPER {id: 115188}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131180})
+        MATCH (v2:PAPER {id: 642894}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 32872})
+        MATCH (v2:PAPER {id: 17201}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1129610})
+        MATCH (v2:PAPER {id: 210872}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 105899})
+        MATCH (v2:PAPER {id: 4329}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1107062})
+        MATCH (v2:PAPER {id: 1033}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 399370})
+        MATCH (v2:PAPER {id: 60170}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 709113})
+        MATCH (v2:PAPER {id: 8594}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1125944})
+        MATCH (v2:PAPER {id: 28964}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1153003})
+        MATCH (v2:PAPER {id: 368605}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 566488})
+        MATCH (v2:PAPER {id: 20193}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 8703})
+        MATCH (v2:PAPER {id: 4649}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 243483})
+        MATCH (v2:PAPER {id: 62634}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1129683})
+        MATCH (v2:PAPER {id: 608326}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1128943})
+        MATCH (v2:PAPER {id: 578669}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 18619})
+        MATCH (v2:PAPER {id: 27627}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 293974})
+        MATCH (v2:PAPER {id: 37888}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 13686})
+        MATCH (v2:PAPER {id: 6184}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1105531})
+        MATCH (v2:PAPER {id: 33231}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 696346})
+        MATCH (v2:PAPER {id: 230879}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 5038})
+        MATCH (v2:PAPER {id: 38722}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1126050})
+        MATCH (v2:PAPER {id: 13972}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1153148})
+        MATCH (v2:PAPER {id: 10796}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 582343})
+        MATCH (v2:PAPER {id: 18615}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 608191})
+        MATCH (v2:PAPER {id: 141342}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 853155})
+        MATCH (v2:PAPER {id: 853116}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1130808})
+        MATCH (v2:PAPER {id: 230879}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1123068})
+        MATCH (v2:PAPER {id: 6782}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 38480})
+        MATCH (v2:PAPER {id: 6213}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1106330})
+        MATCH (v2:PAPER {id: 39131}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 593240})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 395075})
+        MATCH (v2:PAPER {id: 8874}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 211875})
+        MATCH (v2:PAPER {id: 10169}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 129897})
+        MATCH (v2:PAPER {id: 1997}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1123188})
+        MATCH (v2:PAPER {id: 12631}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 395547})
+        MATCH (v2:PAPER {id: 4329}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 33013})
+        MATCH (v2:PAPER {id: 17476}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 631052})
+        MATCH (v2:PAPER {id: 30817}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1153097})
+        MATCH (v2:PAPER {id: 7537}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 636098})
+        MATCH (v2:PAPER {id: 3231}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 187354})
+        MATCH (v2:PAPER {id: 3218}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 184157})
+        MATCH (v2:PAPER {id: 17201}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 198653})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 133566})
+        MATCH (v2:PAPER {id: 133563}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 66990})
+        MATCH (v2:PAPER {id: 400356}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152150})
+        MATCH (v2:PAPER {id: 12631}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 206371})
+        MATCH (v2:PAPER {id: 69296}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 12195})
+        MATCH (v2:PAPER {id: 67415}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1128227})
+        MATCH (v2:PAPER {id: 44368}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1104055})
+        MATCH (v2:PAPER {id: 2653}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 32260})
+        MATCH (v2:PAPER {id: 28632}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 39904})
+        MATCH (v2:PAPER {id: 22835}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1121867})
+        MATCH (v2:PAPER {id: 59045}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 907845})
+        MATCH (v2:PAPER {id: 129287}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 40125})
+        MATCH (v2:PAPER {id: 34315}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 35343})
+        MATCH (v2:PAPER {id: 27174}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 116552})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 231198})
+        MATCH (v2:PAPER {id: 69198}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 644470})
+        MATCH (v2:PAPER {id: 642798}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 230300})
+        MATCH (v2:PAPER {id: 6216}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 910})
+        MATCH (v2:PAPER {id: 25702}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 192734})
+        MATCH (v2:PAPER {id: 1272}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152244})
+        MATCH (v2:PAPER {id: 20193}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1153160})
+        MATCH (v2:PAPER {id: 15429}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 80515})
+        MATCH (v2:PAPER {id: 7532}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 470511})
+        MATCH (v2:PAPER {id: 77829}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 68463})
+        MATCH (v2:PAPER {id: 5966}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 91975})
+        MATCH (v2:PAPER {id: 114}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 503871})
+        MATCH (v2:PAPER {id: 45605}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 73327})
+        MATCH (v2:PAPER {id: 198866}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1125993})
+        MATCH (v2:PAPER {id: 521269}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1105718})
+        MATCH (v2:PAPER {id: 71336}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 22566})
+        MATCH (v2:PAPER {id: 22564}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1125909})
+        MATCH (v2:PAPER {id: 65057}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 593105})
+        MATCH (v2:PAPER {id: 22229}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 118436})
+        MATCH (v2:PAPER {id: 118435}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1136449})
+        MATCH (v2:PAPER {id: 763009}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 87363})
+        MATCH (v2:PAPER {id: 19045}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 899085})
+        MATCH (v2:PAPER {id: 72805}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1130808})
+        MATCH (v2:PAPER {id: 2665}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1129442})
+        MATCH (v2:PAPER {id: 31353}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 249421})
+        MATCH (v2:PAPER {id: 18313}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1109439})
+        MATCH (v2:PAPER {id: 1997}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 753070})
+        MATCH (v2:PAPER {id: 753047}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1128935})
+        MATCH (v2:PAPER {id: 592830}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 240791})
+        MATCH (v2:PAPER {id: 45605}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 34266})
+        MATCH (v2:PAPER {id: 74427}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 334153})
+        MATCH (v2:PAPER {id: 216878}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 141171})
+        MATCH (v2:PAPER {id: 7537}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 636511})
+        MATCH (v2:PAPER {id: 174425}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 390889})
+        MATCH (v2:PAPER {id: 66990}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1123530})
+        MATCH (v2:PAPER {id: 66563}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 429805})
+        MATCH (v2:PAPER {id: 3220}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 13960})
+        MATCH (v2:PAPER {id: 6213}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 647447})
+        MATCH (v2:PAPER {id: 287787}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 144212})
+        MATCH (v2:PAPER {id: 41714}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131557})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 521251})
+        MATCH (v2:PAPER {id: 521183}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 108963})
+        MATCH (v2:PAPER {id: 108962}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 164})
+        MATCH (v2:PAPER {id: 4804}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 646195})
+        MATCH (v2:PAPER {id: 38537}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1103979})
+        MATCH (v2:PAPER {id: 34315}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1120643})
+        MATCH (v2:PAPER {id: 48781}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 235670})
+        MATCH (v2:PAPER {id: 235678}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 561582})
+        MATCH (v2:PAPER {id: 561581}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 59045})
+        MATCH (v2:PAPER {id: 27243}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 682815})
+        MATCH (v2:PAPER {id: 35061}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131236})
+        MATCH (v2:PAPER {id: 644093}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 2354})
+        MATCH (v2:PAPER {id: 137790}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 66982})
+        MATCH (v2:PAPER {id: 35922}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 20534})
+        MATCH (v2:PAPER {id: 13972}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 28641})
+        MATCH (v2:PAPER {id: 28640}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131277})
+        MATCH (v2:PAPER {id: 645084}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1110563})
+        MATCH (v2:PAPER {id: 22835}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 6775})
+        MATCH (v2:PAPER {id: 6784}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 447224})
+        MATCH (v2:PAPER {id: 134219}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 576257})
+        MATCH (v2:PAPER {id: 910}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 35490})
+        MATCH (v2:PAPER {id: 887}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 4637})
+        MATCH (v2:PAPER {id: 12169}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 124064})
+        MATCH (v2:PAPER {id: 4584}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 4804})
+        MATCH (v2:PAPER {id: 9515}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152143})
+        MATCH (v2:PAPER {id: 1365}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1128437})
+        MATCH (v2:PAPER {id: 582343}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 35070})
+        MATCH (v2:PAPER {id: 11335}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1114222})
+        MATCH (v2:PAPER {id: 3235}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 248119})
+        MATCH (v2:PAPER {id: 93273}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 197783})
+        MATCH (v2:PAPER {id: 2654}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1107312})
+        MATCH (v2:PAPER {id: 7419}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 38480})
+        MATCH (v2:PAPER {id: 6214}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1115701})
+        MATCH (v2:PAPER {id: 20924}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 289781})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131719})
+        MATCH (v2:PAPER {id: 612306}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1123068})
+        MATCH (v2:PAPER {id: 31083}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131360})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1107455})
+        MATCH (v2:PAPER {id: 6213}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 314459})
+        MATCH (v2:PAPER {id: 80491}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1115375})
+        MATCH (v2:PAPER {id: 2665}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 28350})
+        MATCH (v2:PAPER {id: 6213}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 459214})
+        MATCH (v2:PAPER {id: 243483}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 628764})
+        MATCH (v2:PAPER {id: 628888}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 87915})
+        MATCH (v2:PAPER {id: 23070}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 23546})
+        MATCH (v2:PAPER {id: 2440}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 39474})
+        MATCH (v2:PAPER {id: 1688}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 39403})
+        MATCH (v2:PAPER {id: 114}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 31097})
+        MATCH (v2:PAPER {id: 10796}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 645897})
+        MATCH (v2:PAPER {id: 643221}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 157761})
+        MATCH (v2:PAPER {id: 4804}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152379})
+        MATCH (v2:PAPER {id: 89547}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131557})
+        MATCH (v2:PAPER {id: 286513}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 341188})
+        MATCH (v2:PAPER {id: 28350}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 307015})
+        MATCH (v2:PAPER {id: 82920}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1107215})
+        MATCH (v2:PAPER {id: 70444}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1127541})
+        MATCH (v2:PAPER {id: 561674}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 200480})
+        MATCH (v2:PAPER {id: 6344}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1105505})
+        MATCH (v2:PAPER {id: 66782}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 23774})
+        MATCH (v2:PAPER {id: 20534}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 49843})
+        MATCH (v2:PAPER {id: 2440}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1132706})
+        MATCH (v2:PAPER {id: 3220}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1128542})
+        MATCH (v2:PAPER {id: 27530}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 561610})
+        MATCH (v2:PAPER {id: 153063}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 310530})
+        MATCH (v2:PAPER {id: 3828}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1115456})
+        MATCH (v2:PAPER {id: 34257}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 753265})
+        MATCH (v2:PAPER {id: 4330}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 686061})
+        MATCH (v2:PAPER {id: 27623}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1105531})
+        MATCH (v2:PAPER {id: 28957}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 6818})
+        MATCH (v2:PAPER {id: 29723}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1127851})
+        MATCH (v2:PAPER {id: 4649}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1128256})
+        MATCH (v2:PAPER {id: 11337}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 561364})
+        MATCH (v2:PAPER {id: 3191}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 647408})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1104261})
+        MATCH (v2:PAPER {id: 40151}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 446271})
+        MATCH (v2:PAPER {id: 202522}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131634})
+        MATCH (v2:PAPER {id: 427606}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 341188})
+        MATCH (v2:PAPER {id: 117}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1118764})
+        MATCH (v2:PAPER {id: 12182}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 595056})
+        MATCH (v2:PAPER {id: 48766}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 647413})
+        MATCH (v2:PAPER {id: 503883}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131754})
+        MATCH (v2:PAPER {id: 654519}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1128198})
+        MATCH (v2:PAPER {id: 576691}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1114398})
+        MATCH (v2:PAPER {id: 192870}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 10186})
+        MATCH (v2:PAPER {id: 2354}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1153280})
+        MATCH (v2:PAPER {id: 14062}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1129021})
+        MATCH (v2:PAPER {id: 594119}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 157401})
+        MATCH (v2:PAPER {id: 3229}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1107567})
+        MATCH (v2:PAPER {id: 10531}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 628459})
+        MATCH (v2:PAPER {id: 628458}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 49843})
+        MATCH (v2:PAPER {id: 22431}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152564})
+        MATCH (v2:PAPER {id: 15889}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1122704})
+        MATCH (v2:PAPER {id: 325314}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 300071})
+        MATCH (v2:PAPER {id: 33231}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 601561})
+        MATCH (v2:PAPER {id: 3236}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 33895})
+        MATCH (v2:PAPER {id: 58758}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 78557})
+        MATCH (v2:PAPER {id: 33823}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 39130})
+        MATCH (v2:PAPER {id: 3240}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1128974})
+        MATCH (v2:PAPER {id: 35797}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131198})
+        MATCH (v2:PAPER {id: 307015}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 140569})
+        MATCH (v2:PAPER {id: 5194}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 54131})
+        MATCH (v2:PAPER {id: 28851}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 509315})
+        MATCH (v2:PAPER {id: 102061}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 910})
+        MATCH (v2:PAPER {id: 906}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1113934})
+        MATCH (v2:PAPER {id: 20924}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1106547})
+        MATCH (v2:PAPER {id: 6213}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152761})
+        MATCH (v2:PAPER {id: 8872}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 631052})
+        MATCH (v2:PAPER {id: 19621}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 574710})
+        MATCH (v2:PAPER {id: 127033}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 395553})
+        MATCH (v2:PAPER {id: 12330}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1118245})
+        MATCH (v2:PAPER {id: 114}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1125469})
+        MATCH (v2:PAPER {id: 293974}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 90655})
+        MATCH (v2:PAPER {id: 34266}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 27627})
+        MATCH (v2:PAPER {id: 24966}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1113459})
+        MATCH (v2:PAPER {id: 6213}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 189774})
+        MATCH (v2:PAPER {id: 73162}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 41417})
+        MATCH (v2:PAPER {id: 10435}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1154103})
+        MATCH (v2:PAPER {id: 12631}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1111899})
+        MATCH (v2:PAPER {id: 936}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 136768})
+        MATCH (v2:PAPER {id: 63931}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1107674})
+        MATCH (v2:PAPER {id: 28290}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1133846})
+        MATCH (v2:PAPER {id: 154023}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1128985})
+        MATCH (v2:PAPER {id: 54132}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1817})
+        MATCH (v2:PAPER {id: 1956}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 93923})
+        MATCH (v2:PAPER {id: 1272}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1104379})
+        MATCH (v2:PAPER {id: 13885}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 23258})
+        MATCH (v2:PAPER {id: 136665}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 63832})
+        MATCH (v2:PAPER {id: 28290}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 12165})
+        MATCH (v2:PAPER {id: 12195}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1154524})
+        MATCH (v2:PAPER {id: 235679}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 75674})
+        MATCH (v2:PAPER {id: 117}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 12330})
+        MATCH (v2:PAPER {id: 2702}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 928873})
+        MATCH (v2:PAPER {id: 370366}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1103979})
+        MATCH (v2:PAPER {id: 906}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 593091})
+        MATCH (v2:PAPER {id: 97645}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1104999})
+        MATCH (v2:PAPER {id: 12576}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 55968})
+        MATCH (v2:PAPER {id: 27631}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 92065})
+        MATCH (v2:PAPER {id: 24966}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 63549})
+        MATCH (v2:PAPER {id: 24966}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 112813})
+        MATCH (v2:PAPER {id: 20193}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 6220})
+        MATCH (v2:PAPER {id: 6213}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 400473})
+        MATCH (v2:PAPER {id: 29492}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1117942})
+        MATCH (v2:PAPER {id: 341188}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 589923})
+        MATCH (v2:PAPER {id: 36802}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 57764})
+        MATCH (v2:PAPER {id: 12337}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 197054})
+        MATCH (v2:PAPER {id: 8872}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1109581})
+        MATCH (v2:PAPER {id: 117}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152272})
+        MATCH (v2:PAPER {id: 35905}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1133196})
+        MATCH (v2:PAPER {id: 175256}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 77515})
+        MATCH (v2:PAPER {id: 15429}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131312})
+        MATCH (v2:PAPER {id: 16819}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1130454})
+        MATCH (v2:PAPER {id: 626531}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1116842})
+        MATCH (v2:PAPER {id: 2653}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 7532})
+        MATCH (v2:PAPER {id: 80491}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1119505})
+        MATCH (v2:PAPER {id: 375605}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1105011})
+        MATCH (v2:PAPER {id: 6913}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 235670})
+        MATCH (v2:PAPER {id: 57773}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1129572})
+        MATCH (v2:PAPER {id: 194617}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1050679})
+        MATCH (v2:PAPER {id: 427606}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1106112})
+        MATCH (v2:PAPER {id: 114}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1112665})
+        MATCH (v2:PAPER {id: 6344}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1123756})
+        MATCH (v2:PAPER {id: 124952}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 20526})
+        MATCH (v2:PAPER {id: 28227}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 144212})
+        MATCH (v2:PAPER {id: 190706}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 173884})
+        MATCH (v2:PAPER {id: 51909}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1135894})
+        MATCH (v2:PAPER {id: 739816}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1102625})
+        MATCH (v2:PAPER {id: 5966}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1122704})
+        MATCH (v2:PAPER {id: 2665}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 215912})
+        MATCH (v2:PAPER {id: 194617}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 15076})
+        MATCH (v2:PAPER {id: 32276}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131257})
+        MATCH (v2:PAPER {id: 643221}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 129042})
+        MATCH (v2:PAPER {id: 1949}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 75695})
+        MATCH (v2:PAPER {id: 5348}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 368431})
+        MATCH (v2:PAPER {id: 27249}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 686030})
+        MATCH (v2:PAPER {id: 27623}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152272})
+        MATCH (v2:PAPER {id: 31353}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 210309})
+        MATCH (v2:PAPER {id: 15429}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 192850})
+        MATCH (v2:PAPER {id: 45189}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 45605})
+        MATCH (v2:PAPER {id: 35061}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 444240})
+        MATCH (v2:PAPER {id: 1272}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1129835})
+        MATCH (v2:PAPER {id: 193354}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 235679})
+        MATCH (v2:PAPER {id: 235683}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 545647})
+        MATCH (v2:PAPER {id: 11335}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131607})
+        MATCH (v2:PAPER {id: 2658}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 13269})
+        MATCH (v2:PAPER {id: 50336}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1153166})
+        MATCH (v2:PAPER {id: 1953}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 45599})
+        MATCH (v2:PAPER {id: 132806}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 49844})
+        MATCH (v2:PAPER {id: 22431}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 56115})
+        MATCH (v2:PAPER {id: 56112}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 9513})
+        MATCH (v2:PAPER {id: 102884}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1135358})
+        MATCH (v2:PAPER {id: 10796}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1114352})
+        MATCH (v2:PAPER {id: 4330}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 884094})
+        MATCH (v2:PAPER {id: 632796}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1105428})
+        MATCH (v2:PAPER {id: 8703}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 17208})
+        MATCH (v2:PAPER {id: 13193}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 189856})
+        MATCH (v2:PAPER {id: 189566}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1119751})
+        MATCH (v2:PAPER {id: 166420}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1108728})
+        MATCH (v2:PAPER {id: 137380}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1110426})
+        MATCH (v2:PAPER {id: 3218}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152358})
+        MATCH (v2:PAPER {id: 82920}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 168958})
+        MATCH (v2:PAPER {id: 35335}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 170798})
+        MATCH (v2:PAPER {id: 887}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 19045})
+        MATCH (v2:PAPER {id: 887}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1121459})
+        MATCH (v2:PAPER {id: 112378}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 38829})
+        MATCH (v2:PAPER {id: 117328}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 22563})
+        MATCH (v2:PAPER {id: 23738}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1109873})
+        MATCH (v2:PAPER {id: 120817}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131274})
+        MATCH (v2:PAPER {id: 644843}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 299197})
+        MATCH (v2:PAPER {id: 85299}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 976334})
+        MATCH (v2:PAPER {id: 887}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 672064})
+        MATCH (v2:PAPER {id: 202639}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 124064})
+        MATCH (v2:PAPER {id: 6213}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 561595})
+        MATCH (v2:PAPER {id: 561610}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 6334})
+        MATCH (v2:PAPER {id: 6767}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 152731})
+        MATCH (v2:PAPER {id: 43186}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 10186})
+        MATCH (v2:PAPER {id: 10174}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 561613})
+        MATCH (v2:PAPER {id: 153063}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 440815})
+        MATCH (v2:PAPER {id: 5086}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 41666})
+        MATCH (v2:PAPER {id: 15429}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 170798})
+        MATCH (v2:PAPER {id: 1959}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152761})
+        MATCH (v2:PAPER {id: 35061}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1120643})
+        MATCH (v2:PAPER {id: 397488}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 628668})
+        MATCH (v2:PAPER {id: 6213}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 949217})
+        MATCH (v2:PAPER {id: 340078}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 105899})
+        MATCH (v2:PAPER {id: 27623}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 39210})
+        MATCH (v2:PAPER {id: 39199}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1035})
+        MATCH (v2:PAPER {id: 45605}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1133008})
+        MATCH (v2:PAPER {id: 688824}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1153728})
+        MATCH (v2:PAPER {id: 73327}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 55968})
+        MATCH (v2:PAPER {id: 6213}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 42207})
+        MATCH (v2:PAPER {id: 20602}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1109439})
+        MATCH (v2:PAPER {id: 7032}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1128946})
+        MATCH (v2:PAPER {id: 593022}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 32872})
+        MATCH (v2:PAPER {id: 117}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 608292})
+        MATCH (v2:PAPER {id: 8865}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 299197})
+        MATCH (v2:PAPER {id: 85324}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 17476})
+        MATCH (v2:PAPER {id: 117}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1114629})
+        MATCH (v2:PAPER {id: 6169}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 180373})
+        MATCH (v2:PAPER {id: 27174}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1152308})
+        MATCH (v2:PAPER {id: 56167}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 395075})
+        MATCH (v2:PAPER {id: 8872}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 212777})
+        MATCH (v2:PAPER {id: 10798}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 703953})
+        MATCH (v2:PAPER {id: 6913}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1154123})
+        MATCH (v2:PAPER {id: 672070}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 949511})
+        MATCH (v2:PAPER {id: 3229}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131116})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 573535})
+        MATCH (v2:PAPER {id: 66751}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1107861})
+        MATCH (v2:PAPER {id: 5966}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1114336})
+        MATCH (v2:PAPER {id: 10183}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1112929})
+        MATCH (v2:PAPER {id: 4330}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 645016})
+        MATCH (v2:PAPER {id: 644843}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 31769})
+        MATCH (v2:PAPER {id: 3229}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1114512})
+        MATCH (v2:PAPER {id: 263482}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 582343})
+        MATCH (v2:PAPER {id: 25794}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1126029})
+        MATCH (v2:PAPER {id: 6155}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1108834})
+        MATCH (v2:PAPER {id: 910}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 20534})
+        MATCH (v2:PAPER {id: 6163}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 423463})
+        MATCH (v2:PAPER {id: 3191}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 486840})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 649731})
+        MATCH (v2:PAPER {id: 1365}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 30901})
+        MATCH (v2:PAPER {id: 368431}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 583318})
+        MATCH (v2:PAPER {id: 177998}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1120169})
+        MATCH (v2:PAPER {id: 46491}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1103162})
+        MATCH (v2:PAPER {id: 17477}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 552469})
+        MATCH (v2:PAPER {id: 1272}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 582343})
+        MATCH (v2:PAPER {id: 4660}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 12347})
+        MATCH (v2:PAPER {id: 16485}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 241133})
+        MATCH (v2:PAPER {id: 6213}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 55801})
+        MATCH (v2:PAPER {id: 67633}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1121313})
+        MATCH (v2:PAPER {id: 129045}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131471})
+        MATCH (v2:PAPER {id: 1999}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 671293})
+        MATCH (v2:PAPER {id: 40151}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1106052})
+        MATCH (v2:PAPER {id: 18251}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131274})
+        MATCH (v2:PAPER {id: 16819}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131728})
+        MATCH (v2:PAPER {id: 112378}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 3101})
+        MATCH (v2:PAPER {id: 1949}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 593105})
+        MATCH (v2:PAPER {id: 592993}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131334})
+        MATCH (v2:PAPER {id: 644577}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 157805})
+        MATCH (v2:PAPER {id: 1272}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 118682})
+        MATCH (v2:PAPER {id: 162664}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 135765})
+        MATCH (v2:PAPER {id: 4649}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 593091})
+        MATCH (v2:PAPER {id: 85352}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 116087})
+        MATCH (v2:PAPER {id: 116084}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1109566})
+        MATCH (v2:PAPER {id: 118873}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 289779})
+        MATCH (v2:PAPER {id: 87417}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 118259})
+        MATCH (v2:PAPER {id: 6209}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 643239})
+        MATCH (v2:PAPER {id: 643221}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1129835})
+        MATCH (v2:PAPER {id: 193352}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131300})
+        MATCH (v2:PAPER {id: 137868}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 114189})
+        MATCH (v2:PAPER {id: 31479}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 762980})
+        MATCH (v2:PAPER {id: 763010}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 2665})
+        MATCH (v2:PAPER {id: 8581}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 646195})
+        MATCH (v2:PAPER {id: 16819}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 22876})
+        MATCH (v2:PAPER {id: 22874}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 633585})
+        MATCH (v2:PAPER {id: 31489}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 211432})
+        MATCH (v2:PAPER {id: 97377}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 254923})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 5086})
+        MATCH (v2:PAPER {id: 3191}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 131117})
+        MATCH (v2:PAPER {id: 29492}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 6210})
+        MATCH (v2:PAPER {id: 28350}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 145176})
+        MATCH (v2:PAPER {id: 24966}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 108962})
+        MATCH (v2:PAPER {id: 108974}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 248425})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 27174})
+        MATCH (v2:PAPER {id: 3229}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 88356})
+        MATCH (v2:PAPER {id: 39126}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 70970})
+        MATCH (v2:PAPER {id: 141342}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 3233})
+        MATCH (v2:PAPER {id: 3240}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 82087})
+        MATCH (v2:PAPER {id: 82098}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131267})
+        MATCH (v2:PAPER {id: 24966}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 399339})
+        MATCH (v2:PAPER {id: 6214}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1132486})
+        MATCH (v2:PAPER {id: 230884}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1129367})
+        MATCH (v2:PAPER {id: 82920}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 31927})
+        MATCH (v2:PAPER {id: 563613}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 566664})
+        MATCH (v2:PAPER {id: 566653}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 545647})
+        MATCH (v2:PAPER {id: 5959}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1140543})
+        MATCH (v2:PAPER {id: 120817}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 289780})
+        MATCH (v2:PAPER {id: 289781}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 423463})
+        MATCH (v2:PAPER {id: 3192}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 644334})
+        MATCH (v2:PAPER {id: 16819}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1115456})
+        MATCH (v2:PAPER {id: 284414}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131277})
+        MATCH (v2:PAPER {id: 645088}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 372862})
+        MATCH (v2:PAPER {id: 6941}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1128943})
+        MATCH (v2:PAPER {id: 592993}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 103537})
+        MATCH (v2:PAPER {id: 28957}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 289885})
+        MATCH (v2:PAPER {id: 20924}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 96845})
+        MATCH (v2:PAPER {id: 59715}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1108167})
+        MATCH (v2:PAPER {id: 25805}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1125469})
+        MATCH (v2:PAPER {id: 35778}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1138619})
+        MATCH (v2:PAPER {id: 814836}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 95188})
+        MATCH (v2:PAPER {id: 64271}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1153816})
+        MATCH (v2:PAPER {id: 8874}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 144212})
+        MATCH (v2:PAPER {id: 45605}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 77438})
+        MATCH (v2:PAPER {id: 36131}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 593859})
+        MATCH (v2:PAPER {id: 66564}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 12631})
+        MATCH (v2:PAPER {id: 6898}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1105574})
+        MATCH (v2:PAPER {id: 5454}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 385572})
+        MATCH (v2:PAPER {id: 180399}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1128945})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 86923})
+        MATCH (v2:PAPER {id: 18532}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131334})
+        MATCH (v2:PAPER {id: 643239}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1118302})
+        MATCH (v2:PAPER {id: 263482}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1123188})
+        MATCH (v2:PAPER {id: 6898}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1140289})
+        MATCH (v2:PAPER {id: 853118}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1107171})
+        MATCH (v2:PAPER {id: 103531}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 217115})
+        MATCH (v2:PAPER {id: 15429}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 562123})
+        MATCH (v2:PAPER {id: 1365}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 643597})
+        MATCH (v2:PAPER {id: 202639}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 45061})
+        MATCH (v2:PAPER {id: 11339}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1118209})
+        MATCH (v2:PAPER {id: 20601}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 10435})
+        MATCH (v2:PAPER {id: 22564}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1104055})
+        MATCH (v2:PAPER {id: 36140}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 12946})
+        MATCH (v2:PAPER {id: 910}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 94416})
+        MATCH (v2:PAPER {id: 61417}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1127619})
+        MATCH (v2:PAPER {id: 2440}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 578649})
+        MATCH (v2:PAPER {id: 578646}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 28287})
+        MATCH (v2:PAPER {id: 114}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 608191})
+        MATCH (v2:PAPER {id: 575077}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1106388})
+        MATCH (v2:PAPER {id: 6935}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 23545})
+        MATCH (v2:PAPER {id: 27230}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1104851})
+        MATCH (v2:PAPER {id: 52784}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 299195})
+        MATCH (v2:PAPER {id: 6152}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 684986})
+        MATCH (v2:PAPER {id: 4330}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 561593})
+        MATCH (v2:PAPER {id: 153063}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 56119})
+        MATCH (v2:PAPER {id: 12576}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1119708})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 203646})
+        MATCH (v2:PAPER {id: 270456}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 212777})
+        MATCH (v2:PAPER {id: 61417}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 25772})
+        MATCH (v2:PAPER {id: 77758}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1153195})
+        MATCH (v2:PAPER {id: 267824}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1956})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1153943})
+        MATCH (v2:PAPER {id: 82920}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 249858})
+        MATCH (v2:PAPER {id: 59626}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1114331})
+        MATCH (v2:PAPER {id: 259701}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 884094})
+        MATCH (v2:PAPER {id: 40605}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1104999})
+        MATCH (v2:PAPER {id: 28290}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1128959})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1919})
+        MATCH (v2:PAPER {id: 35778}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 117315})
+        MATCH (v2:PAPER {id: 117316}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1118823})
+        MATCH (v2:PAPER {id: 46491}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1102761})
+        MATCH (v2:PAPER {id: 8821}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 644093})
+        MATCH (v2:PAPER {id: 16819}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 682815})
+        MATCH (v2:PAPER {id: 175256}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 853150})
+        MATCH (v2:PAPER {id: 1365}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1109199})
+        MATCH (v2:PAPER {id: 148170}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 66556})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 20850})
+        MATCH (v2:PAPER {id: 3231}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1131163})
+        MATCH (v2:PAPER {id: 642593}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 561238})
+        MATCH (v2:PAPER {id: 35}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1117760})
+        MATCH (v2:PAPER {id: 134128}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 59045})
+        MATCH (v2:PAPER {id: 2653}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        
+MATCH (v1:PAPER {id: 1114664})
+        MATCH (v2:PAPER {id: 51879}) 
+        CREATE (v1)-[e:CITES {}]->(v2)
+        RETURN v1, e, v2;
+        

@@ -25,4 +25,6 @@ from mage.link_prediction.constants import (
     POOL_AGG,
     GCN_AGG,
     HIDDEN_FEATURES_SIZE,
+    MODEL_NAME,
+    PREDICTOR_NAME,
 )

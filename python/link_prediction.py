@@ -1,3 +1,4 @@
+from matplotlib.style import context
 import mgp  # Python API
 import torch
 import dgl  # geometric deep learning
@@ -25,6 +26,8 @@ from mage.link_prediction import (
     POOL_AGG,
     GCN_AGG,
     HIDDEN_FEATURES_SIZE,
+    MODEL_NAME,
+    PREDICTOR_NAME,
 )
 
 ##############################
@@ -51,13 +54,14 @@ class LinkPredictionParameters:
     :param predictor_type: str -> Type of the predictor. Predictor is used for combining node scores to edge scores.
     :param attn_num_heads: List[int] -> GAT can support usage of more than one head in each layers except last one. Only used in GAT, not in GraphSage.
     :param tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on validation set be tolerated before stopping the training.
-    :param model_save_path: str -> Path where the link prediction model will be saved every checkpoint_freq epochs.
+    :param context_save_dir: str -> Path where the model and predictor will be saved every checkpoint_freq epochs.
+
     """
 
     hidden_features_size: List = field(
         default_factory=lambda: [64, 32, 16]
     )  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
-    layer_type: str = GRAPH_ATTN
+    layer_type: str = GRAPH_SAGE
     num_epochs: int = 100
     optimizer: str = ADAM_OPT
     learning_rate: float = 0.01
@@ -81,15 +85,14 @@ class LinkPredictionParameters:
     predictor_type: str =  MLP_PREDICTOR
     attn_num_heads: List[int] = field(default_factory=lambda: [8, 4, 1])
     tr_acc_patience: int = 8
-    model_save_path: str = (
-        "/home/andi/Memgraph/code/mage/python/mage/link_prediction/model.pt"  # TODO: When the development finishes
+    context_save_dir: str = (
+        "./mage/python/mage/link_prediction/context/"  # TODO: When the development finishes
     )
 
 
 ##############################
 # global parameters
 ##############################
-
 
 link_prediction_parameters: LinkPredictionParameters = LinkPredictionParameters()  # parameters currently saved.
 training_results: List[Dict[str, float]] = list()  # List of all output training records. String is the metric's name and float represents value.
@@ -99,6 +102,7 @@ new_to_old: Dict[int, int] = None  # Mapping of DGL indexes to original dataset 
 old_to_new: Dict[int, int] = None  # Mapping of original dataset indexes to DGL indexes
 predictor: torch.nn.Module = None  # Predictor for calculating edge scores
 model: torch.nn.Module = None
+features_size_loaded: bool = False  # If size of the features was already inserted.
 
 ##############################
 # All read procedures
@@ -201,10 +205,13 @@ def train(
         raise Exception("No edges in the dataset. ")
 
     # TEST: Currently disabled
-    conversion_to_dgl_test(graph=graph, new_to_old=new_to_old, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property)
+    _conversion_to_dgl_test(graph=graph, new_to_old=new_to_old, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property)
 
     """ Train g is a graph which has removed test edges. Others are positive and negative train and test graphs
     """
+
+    # Insert in the hidden_features_size structure if needed
+    _load_feature_size(graph.ndata[link_prediction_parameters.node_features_property].shape[1])
 
     # Split the data
     train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g = preprocess(graph, link_prediction_parameters.split_ratio)
@@ -244,7 +251,7 @@ def train(
         link_prediction_parameters.checkpoint_freq,
         link_prediction_parameters.metrics,
         link_prediction_parameters.tr_acc_patience,
-        link_prediction_parameters.model_save_path,
+        link_prediction_parameters.context_save_dir,
         train_g,
         train_pos_g,
         train_neg_g,
@@ -271,8 +278,6 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     """
     global graph, predictor, model, old_to_new, new_to_old
 
-    print("Model: ", model)
-
     # If the model isn't available
     if model is None:
         raise Exception("No trained model available to the system. Train or load it first. ")
@@ -292,20 +297,23 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     # Init edge properties
     edge_added, edge_id = False, -1
 
-    print("Number of edges before: ", graph.number_of_edges())
+    # print("Number of edges before: ", graph.number_of_edges())
 
     # Check if there is an edge between two nodes
     if graph.has_edges_between(src_id, dest_id):
-        print("Nodes {} and {} are already connected. ".format(src_old_id, dest_old_id))
+        # print("Nodes {} and {} are already connected. ".format(src_old_id, dest_old_id))
         edge_id = graph.edge_ids(src_id, dest_id)
     else:
         edge_added = True
-        print("Nodes {} and {} are not connected. ".format(src_old_id, dest_old_id))
+        # print("Nodes {} and {} are not connected. ".format(src_old_id, dest_old_id))
         graph.add_edges(src_id, dest_id)
         edge_id = graph.edge_ids(src_id, dest_id)
 
-    print("Edge id: ", edge_id)
-    print("Number of edges after adding new edge: ", graph.number_of_edges())
+    # print("Edge id: ", edge_id)
+    # print("Number of edges after adding new edge: ", graph.number_of_edges())
+
+    # Insert into the hidden_features_size if needed.
+    _load_feature_size(graph.ndata[link_prediction_parameters.node_features_property].shape[1])
 
     # Call utils module
     score = inner_predict(
@@ -321,76 +329,40 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     if edge_added:
         graph.remove_edges(edge_id)
 
-    print("Number of edges after: ", graph.number_of_edges())
+    # print("Number of edges after: ", graph.number_of_edges())
 
     return result
 
 
 @mgp.read_proc
-def benchmark(ctx: mgp.ProcCtx, num_runs: int) -> mgp.Record(status=str, test_results=mgp.Any):
-    """Benchmark method runs train method on different seeds for num_runs times to get as much as possible accurate results. It will be disabled later.
+def test(ctx: mgp.ProcCtx, src_vertices: List[int], dest_vertices: List[int]) -> mgp.Record(scores=mgp.Any, accuracy=mgp.Number):
+    """Offers completely the same functionality as predict.
+    Instead of receiving references to the source and destination vertex, it received list of source and destination vertices.
+    Closed for public.
 
     Args:
         ctx (mgp.ProcCtx): A reference to the context execution.
-        num_runs (int): Number of runs.
+        src_vertices (List[int]): Source vertices for every edge. Based on Memgraph's id property.
+        dest_vertices (List[int]): Dest vertices for every edge. Based on Memgraph's id property.
 
     Returns:
-        mgp.Record:
-            status (str): Status message
-            test_results: Average test results obtained after training for num_runs times.
-    """
-    # NOTE: THIS SHOULD BE HIDDEN FOR OUT USERS, BUT ENABLE THIS IN THE DEVELOPMENT SUPPORT
-
-    # Get the global context
-    global training_results, validation_results, predictor, model
-    # Reset parameters obtained from the training
-    _reset_train_predict_parameters()
-
-    # Get DGL graph data representation
-    graph, new_to_old, _ = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
-    """ if test_conversion(graph=graph, new_to_old=new_to_old, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property) is False:
-        print("Remapping failed")
-        return mgp.Record(status="Preprocessing failed", metrics=[])
+        Scores for every edge and final accuracy.
     """
 
-    """ Train g is a graph which has removed test edges. Others are positive and negative train and test graphs
-    """
+    scores = []
 
-    # Split the data
-    train_g, train_pos_g, train_neg_g, test_pos_g, test_neg_g = preprocess(
-        graph, link_prediction_parameters.split_ratio
-    )
+    for i in range(len(src_vertices)):
+        src_vertex = ctx.graph.get_vertex_by_id(src_vertices[i])
+        dest_vertex = ctx.graph.get_vertex_by_id(dest_vertices[i])
+        record = predict(ctx, src_vertex, dest_vertex)
+        scores.append(record.fields["score"])
 
-    test_results = benchmark.get_avg_seed_results(
-        num_runs,
-        link_prediction_parameters.hidden_features_size,
-        link_prediction_parameters.layer_type,
-        link_prediction_parameters.num_epochs,
-        link_prediction_parameters.optimizer,
-        link_prediction_parameters.learning_rate,
-        link_prediction_parameters.node_features_property,
-        link_prediction_parameters.console_log_freq,
-        link_prediction_parameters.checkpoint_freq,
-        link_prediction_parameters.aggregator,
-        link_prediction_parameters.metrics,
-        link_prediction_parameters.predictor_type,
-        link_prediction_parameters.hidden_features_size[-1],
-        link_prediction_parameters.attn_num_heads,
-        link_prediction_parameters.tr_acc_patience,
-        train_g,
-        train_pos_g,
-        train_neg_g,
-        test_pos_g,
-        test_neg_g,
-    )
+    acc = torch.sum(torch.tensor(scores, requires_grad=False) > 0.5).item() / len(scores)
 
-    return mgp.Record(status="OK", test_results=test_results)
-
+    return mgp.Record(scores=scores, accuracy=acc)
 
 @mgp.read_proc
-def get_training_results(
-    ctx: mgp.ProcCtx,
-) -> mgp.Record(training_results=mgp.Any, validation_results=mgp.Any):
+def get_training_results(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_results=mgp.Any):
     """This method is used when user wants to get performance data obtained from the last training. It is in the form of list of records where each record is a Dict[metric_name, metric_value]. Training and validation
     results are returned.
 
@@ -405,9 +377,10 @@ def get_training_results(
     return mgp.Record(training_results=training_results, validation_results=validation_results)
 
 @mgp.read_proc
-def load_model(ctx: mgp.ProcCtx, path: str) -> mgp.Record(status=mgp.Any):
+def load_context(ctx: mgp.ProcCtx, path: str = link_prediction_parameters.context_save_dir) -> mgp.Record(status=mgp.Any):
     """Loads torch model from given path. If the path doesn't exist, underlying exception is thrown.
-    Currently there is no effect.
+    If the path argument is not given, it loads from the default path. If the user has changed path and the context was deleted 
+    then he/she needs to send that parameter here.
 
     Args:
         ctx (mgp.ProcCtx): A reference to the context execution.
@@ -416,14 +389,28 @@ def load_model(ctx: mgp.ProcCtx, path: str) -> mgp.Record(status=mgp.Any):
         status(mgp.Any): True just to indicate that loading went well.
     """
 
-    global model
-    model = torch.load(path)
+    global model, predictor
+    model = torch.load(path + MODEL_NAME)
+    predictor = torch.load(path + PREDICTOR_NAME)
     return mgp.Record(status=True)
 
 
 ##############################
 # Private helper methods.
 ##############################
+
+def _load_feature_size(features_size: int):
+    """Inserts feature size if not already inserted.
+
+    Args:
+        features_size (int): Features size.
+    """
+    global features_size_loaded
+
+    if not features_size_loaded:
+        link_prediction_parameters.hidden_features_size.insert(0, features_size)
+        features_size_loaded = True
+
 
 def _process_help_function(
     ind: int,
@@ -497,7 +484,6 @@ def _get_dgl_graph_data(
     # print("Features: ", features)
     # print("Ind: ", ind)
     features = torch.tensor(features, dtype=torch.float32)  # use float for storing tensor of features
-    link_prediction_parameters.hidden_features_size.insert(0, features.shape[1])
     g = dgl.graph((src_nodes, dest_nodes), num_nodes=ind)
     g.ndata[link_prediction_parameters.node_features_property] = features
     g = dgl.add_self_loop(g) 
@@ -729,7 +715,9 @@ def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
 
 
 def _reset_train_predict_parameters() -> None:
-    """Reset global parameters that are returned by train method and used by predict method."""
+    """Reset global parameters that are returned by train method and used by predict method.
+    No need to reset features_size_loaded. 
+    """
     global training_results, validation_results, predictor, model, graph, new_to_old, old_to_new
     training_results.clear()  # clear training records from previous training
     validation_results.clear()  # clear validation record from previous training
@@ -740,7 +728,7 @@ def _reset_train_predict_parameters() -> None:
     new_to_old = None
 
 
-def conversion_to_dgl_test(
+def _conversion_to_dgl_test(
     graph: dgl.graph,
     new_to_old: Dict[int, int],
     ctx: mgp.ProcCtx,

@@ -6,6 +6,8 @@ from gqlalchemy import Memgraph, Create, Node, Relationship
 import numpy as np
 import ast
 
+from py import test
+
 
 class MemgraphPrintDict:
     """Class that wraps dictionary by printing repr of value and key without quotes to be Cypher compatible."""
@@ -44,14 +46,20 @@ def delete_edges(
     file_name: str,
     node_id_property: str,
     file_prediction_commands: str,
+    file_test_command: str
 ) -> None:
-    """Deletes num_delete_edges random relationships. Creates CREATE commands and saves it to the file so later relationships can be recreated.
+    """Deletes num_delete_edges random relationships.
+    Creates CREATE commands and saves it to the file so later relationships can be recreated.
+    Creates PREDICT commands for each edge separately.
+    CREATES PREDICT command for testing all edges at once. 
+    Every time, old files are deleted(file_prediction_command, file_name and file_test_command)
 
     Args:
         num_delete_edges (int): Number of edges to be deleted.
         file_name (str): Name of the file where it should be saved.
         node_id_property (str): Property name where the id is saved.
         file_prediction_commands (str): File where prediction methods will be saved.
+        file_test_command (str): Path to the file where test command should be saved.
     Returns:
         nothing
     """
@@ -66,34 +74,30 @@ def delete_edges(
     )
 
     create_commands, prediction_commands = [], []
-    vertex_ids_delete = []
+    vertex_ids_delete = []  # from node_id_property
+
+    vertex_ids_test_src, vertex_ids_test_dest = [], []  # source and destination vertices from memgraph's _id property
 
     for result in results:
         # Handle first node
-        v1_properties, v1_labels = MemgraphPrintDict(
-            result["v1"]._properties
-        ), labels_list_to_cypher(list(result["v1"]._labels))
-        # del v1_properties.my_dict["features"]
-        vertex_ids_delete.append(v1_properties.my_dict["id"])
+        v1_id, v1_properties, v1_labels = result["v1"]._id, MemgraphPrintDict(result["v1"]._properties), labels_list_to_cypher(list(result["v1"]._labels))
+        vertex_ids_delete.append(v1_properties.my_dict[node_id_property])
+        vertex_ids_test_src.append(v1_id)
 
         # Handle second node
-        v2_properties, v2_labels = MemgraphPrintDict(
-            result["v2"]._properties
-        ), labels_list_to_cypher(list(result["v2"]._labels))
+        v2_id, v2_properties, v2_labels = result["v2"]._id, MemgraphPrintDict(result["v2"]._properties), labels_list_to_cypher(list(result["v2"]._labels))
+        vertex_ids_test_dest.append(v2_id)
 
         # del v2_properties.my_dict["features"]
         # Handle edge
-        edge_properties, edge_labels = (
-            MemgraphPrintDict(result["e"]._properties),
-            result["e"]._type,
-        )
+        edge_properties, edge_labels = (MemgraphPrintDict(result["e"]._properties), result["e"]._type,)
 
         # Create command for later, and save it to some my file.
         create_command = f"""MATCH (v1{v1_labels} {{{node_id_property}: {v1_properties.my_dict[node_id_property]}}})
-            MATCH (v2{v2_labels} {{{node_id_property}: {v2_properties.my_dict[node_id_property]}}}) 
-            CREATE (v1)-[e:{edge_labels} {{{edge_properties}}}]->(v2)
-            RETURN v1, e, v2;
-            """
+        MATCH (v2{v2_labels} {{{node_id_property}: {v2_properties.my_dict[node_id_property]}}}) 
+        CREATE (v1)-[e:{edge_labels} {{{edge_properties}}}]->(v2)
+        RETURN v1, e, v2;
+        """
 
         # print(create_command)
         create_commands.append(create_command)
@@ -110,11 +114,11 @@ def delete_edges(
 
         # Add support for prediction methods
         predict_command = f"""MATCH (v1{v1_labels} {{{node_id_property}: {v1_properties.my_dict[node_id_property]}}})
-            MATCH (v2{v2_labels} {{{node_id_property}: {v2_properties.my_dict[node_id_property]}}}) 
-            CALL link_prediction.predict(v1, v2)
-            YIELD *
-            RETURN *;
-            """
+        MATCH (v2{v2_labels} {{{node_id_property}: {v2_properties.my_dict[node_id_property]}}}) 
+        CALL link_prediction.predict(v1, v2)
+        YIELD *
+        RETURN *;
+        """
         prediction_commands.append(predict_command)
 
     # Save create commands
@@ -123,9 +127,20 @@ def delete_edges(
             f.write("%s\n" % comm)
 
     # Save predict commands
-    with open(file=prediction_file_name, mode="w") as f:
+    with open(file=file_prediction_commands, mode="w") as f:
         for pred_comm in prediction_commands:
             f.write("%s\n" % pred_comm)
+
+    # Test command
+    test_command = f"""CALL link_prediction.test({vertex_ids_test_src}, {vertex_ids_test_dest})
+    YIELD *
+    RETURN *;
+    """
+
+    print("Test command: ", test_command)
+    with open(file=file_test_command, mode="w") as f:
+        f.write(test_command)
+
 
     return results
 
@@ -160,10 +175,12 @@ if __name__ == "__main__":
         "./commands/cora_creation_commands.txt"  # where CREATE commands will be created
     )
     prediction_file_name = "./commands/prediction_commands.txt"  # where PREDICTION commands will be created
+    test_file_name = "./commands/test_command.txt"
     delete_edges(
-        num_delete_edges=10,
+        num_delete_edges=1000,
         file_name=file_name,
         node_id_property="id",
         file_prediction_commands=prediction_file_name,
+        file_test_command=test_file_name
     )
     # read_commands_script(file_name=file_name)
