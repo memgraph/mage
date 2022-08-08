@@ -121,8 +121,8 @@ link_prediction_parameters: LinkPredictionParameters = LinkPredictionParameters(
 training_results: List[Dict[str, float]] = list()  # List of all output training records. String is the metric's name and float represents value.
 validation_results: List[Dict[str, float]] = (list())  # List of all output validation results. String is the metric's name and float represents value in the Dictionary inside.
 graph: dgl.graph = None  # Reference to the graph. This includes training and validation.
-new_to_old: Dict[int, int] = None  # Mapping of DGL indexes to original dataset indexes
-old_to_new: Dict[int, int] = None  # Mapping of original dataset indexes to DGL indexes
+reindex_dgl: Dict[int, int] = None  # Mapping of DGL indexes to original dataset indexes
+reindex_orig: Dict[int, int] = None  # Mapping of original dataset indexes to DGL indexes
 predictor: torch.nn.Module = None  # Predictor for calculating edge scores
 model: torch.nn.Module = None
 features_size_loaded: bool = False  # If size of the features was already inserted.
@@ -207,20 +207,20 @@ def train(
         mgp.Record: It returns performance metrics obtained during the training on the training and validation dataset.
     """
     # Get global context
-    global training_results, validation_results, predictor, model, graph, new_to_old, old_to_new
+    global training_results, validation_results, predictor, model, graph, reindex_dgl, reindex_orig
 
     # Reset parameters of the old training
     _reset_train_predict_parameters()
 
     # Get some data
-    graph, new_to_old, old_to_new = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
+    graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
 
     # Check if there are no edges in the dataset, assume that it cannot learn effectively without edges. E2E handling.
     if graph.number_of_edges() == 0:
         raise Exception("No edges in the dataset. ")
 
     # TEST: Currently disabled
-    _conversion_to_dgl_test(graph=graph, new_to_old=new_to_old, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property)
+    _conversion_to_dgl_test(graph=graph, reindex_dgl=reindex_dgl, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property)
 
     """ Train g is a graph which has removed test edges. Others are positive and negative train and test graphs
     """
@@ -290,7 +290,7 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     Returns:
         score: Probability that two nodes are connected
     """
-    global graph, predictor, model, old_to_new, new_to_old
+    global graph, predictor, model, reindex_orig, reindex_dgl
 
     # If the model isn't available
     if model is None:
@@ -298,15 +298,15 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
 
     # You called predict after session was lost
     if graph is None:         
-        graph, new_to_old, old_to_new = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
+        graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
 
     # Create dgl graph representation
     src_old_id = src_vertex.id
     dest_old_id = dest_vertex.id
 
     # Get dgl ids
-    src_id = old_to_new[src_old_id]
-    dest_id = old_to_new[dest_old_id]
+    src_id = reindex_orig[src_old_id]
+    dest_id = reindex_orig[dest_old_id]
 
     # Init edge properties
     edge_added, edge_id = False, -1
@@ -429,8 +429,8 @@ def _load_feature_size(features_size: int):
 def _process_help_function(
     ind: int,
     old_index: int,
-    old_to_new: Dict[int, int],
-    new_to_old: Dict[int, int],
+    reindex_orig: Dict[int, int],
+    reindex_dgl: Dict[int, int],
     features: List,
     node_features: List[int],
 ):
@@ -439,17 +439,17 @@ def _process_help_function(
     Args:
         ind (int): Index vertex counter.
         old_index (int): Original index
-        old_to_new (Dict[int, int]): mappings from old to new indexes.
-        new_to_old (Dict[int, int]): mappings from new to old indexes.
+        reindex_orig (Dict[int, int]): mappings from old to new indexes.
+        reindex_dgl (Dict[int, int]): mappings from new to old indexes.
         features (List): Saves all features.
         node_features (List[int]): Node features.
 
     Returns:
        None
     """
-    if old_index not in old_to_new.keys():
-        new_to_old[ind] = old_index
-        old_to_new[old_index] = ind
+    if old_index not in reindex_orig.keys():
+        reindex_dgl[ind] = old_index
+        reindex_orig[old_index] = ind
         features.append(node_features)
         return ind + 1
     return ind
@@ -471,8 +471,8 @@ def _get_dgl_graph_data(
 
     src_nodes, dest_nodes = [], []  # for saving the edges
 
-    new_to_old = dict()  # map of new node index to old node index
-    old_to_new = dict()  # map of old node index to new node index
+    reindex_dgl = dict()  # map of new node index to old node index
+    reindex_orig = dict()  # map of old node index to new node index
     features = []  # map of new node index to its feature
     ind = 0
 
@@ -480,18 +480,18 @@ def _get_dgl_graph_data(
         # Process source vertex
         src_id = vertex.id
         src_features = vertex.properties.get(link_prediction_parameters.node_features_property)
-        ind = _process_help_function(ind, src_id, old_to_new, new_to_old, features, src_features)
+        ind = _process_help_function(ind, src_id, reindex_orig, reindex_dgl, features, src_features)
 
         for edge in vertex.out_edges:
             # Process destination vertex next
             dest_node = edge.to_vertex
             dest_id = dest_node.id
             dest_features = dest_node.properties.get(link_prediction_parameters.node_features_property)
-            ind = _process_help_function(ind, dest_id, old_to_new, new_to_old, features, dest_features)
+            ind = _process_help_function(ind, dest_id, reindex_orig, reindex_dgl, features, dest_features)
 
             # Create dgl graph
-            src_nodes.append(old_to_new[src_id])
-            dest_nodes.append(old_to_new[dest_id])
+            src_nodes.append(reindex_orig[src_id])
+            dest_nodes.append(reindex_orig[dest_id])
 
     # print("Src nodes: ", src_nodes)
     # print("Dest nodes: ", dest_nodes)
@@ -501,7 +501,7 @@ def _get_dgl_graph_data(
     g = dgl.graph((src_nodes, dest_nodes), num_nodes=ind)
     g.ndata[link_prediction_parameters.node_features_property] = features
     g = dgl.add_self_loop(g) 
-    return g, new_to_old, old_to_new
+    return g, reindex_dgl, reindex_orig
 
 
 def _validate_user_parameters(parameters: mgp.Map) -> None:
@@ -706,19 +706,19 @@ def _reset_train_predict_parameters() -> None:
     """Reset global parameters that are returned by train method and used by predict method.
     No need to reset features_size_loaded. 
     """
-    global training_results, validation_results, predictor, model, graph, new_to_old, old_to_new
+    global training_results, validation_results, predictor, model, graph, reindex_dgl, reindex_orig
     training_results.clear()  # clear training records from previous training
     validation_results.clear()  # clear validation record from previous training
     predictor = None  # Delete old predictor and create a new one in link_prediction_util.train method\
     model = None  # Annulate old model
     graph = None  # Set graph to None
-    old_to_new = None
-    new_to_old = None
+    reindex_orig = None
+    reindex_dgl = None
 
 
 def _conversion_to_dgl_test(
     graph: dgl.graph,
-    new_to_old: Dict[int, int],
+    reindex_dgl: Dict[int, int],
     ctx: mgp.ProcCtx,
     node_features_property: str,
 ) -> None:
@@ -727,7 +727,7 @@ def _conversion_to_dgl_test(
 
     Args:
         graph (dgl.graph): Reference to the dgl graph.
-        new_to_old (Dict[int, int]): Mapping from new indexes to old indexes.
+        reindex_dgl (Dict[int, int]): Mapping from new indexes to old indexes.
         ctx (mgp.ProcCtx): Reference to the context execution.
         node_features_property (str): Property namer where the node features are saved`
 
@@ -740,7 +740,7 @@ def _conversion_to_dgl_test(
     for vertex in graph.nodes():
         vertex_id = vertex.item()
         # print(f"Testing vertex: {vertex_id}")
-        old_id = new_to_old[vertex_id]
+        old_id = reindex_dgl[vertex_id]
         vertex = ctx.graph.get_vertex_by_id(old_id)
         if vertex is None:
             raise Exception(f"The conversion to DGL failed. Vertex with id {vertex.id} is not mapped to DGL graph. ")
