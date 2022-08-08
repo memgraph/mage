@@ -13,30 +13,39 @@ from sklearn.metrics import f1_score
 from typing import Dict, Tuple, List
 import mgp
 import random
-from mage.link_prediction.training_visualizer import (
-    visualize,
-)  # without .training_visualizer it is circular import
 from mage.link_prediction.constants import (
-    MODEL_NAME, PREDICTOR_NAME
+    MODEL_NAME, PREDICTOR_NAME, LOSS, ACCURACY, AUC_SCORE, PRECISION, RECALL, NUM_WRONG_EXAMPLES, F1, EPOCH
 )
+import dgl.function as fn
+from dgl.nn import SAGEConv
+import tqdm
+import sklearn.metrics
 
 
-if __name__ == "__main__":
-    # Just for testing, will be deleted
-    dataset = CoraGraphDataset()
-    g = dataset[0]
-    num_class = dataset.num_classes
-    # get node feature
-    feat = g.ndata["feat"]
-    # get data split
-    train_mask = g.ndata["train_mask"]
-    val_mask = g.ndata["val_mask"]
-    test_mask = g.ndata["test_mask"]
-    # print(train_mask.shape)
-    # get labels
-    label = g.ndata["label"]
-    print(g.edata)
+class Model(torch.nn.Module):
+    def __init__(self, in_feats, h_feats):
+        super(Model, self).__init__()
+        self.conv1 = SAGEConv(in_feats, h_feats, aggregator_type='mean')
+        self.conv2 = SAGEConv(h_feats, h_feats, aggregator_type='mean')
+        self.h_feats = h_feats
 
+    def forward(self, mfgs, x):
+        h_dst = x[:mfgs[0].num_dst_nodes()]
+        h = self.conv1(mfgs[0], (x, h_dst))
+        h = F.relu(h)
+        h_dst = h[:mfgs[1].num_dst_nodes()]
+        h = self.conv2(mfgs[1], (h, h_dst))
+        return h
+
+class DotPredictor(torch.nn.Module):
+    def forward(self, g, h):
+        with g.local_scope():
+            g.ndata['h'] = h
+            # Compute a new edge feature named 'score' by a dot-product between the
+            # source node feature 'h' and destination node feature 'h'.
+            g.apply_edges(fn.u_dot_v('h', 'h', 'score'))
+            # u_dot_v returns a 1-element vector for each edge so you need to squeeze it.
+            return g.edata['score'][:, 0]
 
 def get_number_of_edges(ctx: mgp.ProcCtx) -> int:
     """Returns number of edges for graph from execution context.
@@ -52,77 +61,89 @@ def get_number_of_edges(ctx: mgp.ProcCtx) -> int:
         edge_cnt += len(list(vertex.out_edges))
     return edge_cnt
 
-def test_adjacency_matrix(graph: dgl.graph, adj_matrix: np.matrix):
-    """Tests whether the adjacency matrix correctly encodes edges from dgl graph
+def test_negative_samples(graph: dgl.graph, src_nodes, dest_nodes):
+    for i in range(len(src_nodes)):
+        if graph.has_edges_between(src_nodes[i], dest_nodes[i]):
+            raise Exception("Negative sampling test failed")
 
-    Args:
-        graph (dgl.graph): A reference to the original graph we are working with.
-        adj_matrix (np.matrix): Graph's adjacency matrix
-    """
+    print("TEST PASSED OK")
 
-    if(adj_matrix.shape[0] != graph.number_of_nodes() or adj_matrix.shape[1] != graph.number_of_nodes()): 
-        raise Exception("Adjacency matrix wrong shape")
-
-    # To check that indeed adjacency matrix is equivalent to graph we need to check both directions to get bijection.
-
-    # First test direction: graph->adj_matrix
-    u, v = graph.edges()
-    num_edges = graph.number_of_edges()
-
-    print("u: ", u)
-    print("v: ", v)
-
-    for i in range(num_edges):
-        v1, v2 = u[i].item(), v[i].item()
-        # print("Testing edge: ", v1, v2)
-        if adj_matrix[v1, v2] == 0.0:  # Handle the case with duplicate edges
-            raise Exception(f"Graph edge {v1} {v2} not written to adj_matrix. ")
-
-    # Now test the direction adj_matrix->graph
-    for i in range(adj_matrix.shape[0]):
-        for j in range(adj_matrix.shape[1]):
-            if adj_matrix[i, j] > 0.0:  # Handle the case with duplicate edges
-                if graph.has_edges_between(i, j) is False:
-                    raise Exception(f"Non-existing edge {i} {j} in the adjacency matrix. ")
-
-
-def create_negative_graphs(
-    adj_matrix: np.matrix, number_of_nodes: int, number_of_edges: int, val_size: int
-) -> Tuple[dgl.graph, dgl.graph]:
+def create_negative_graphs2(graph: dgl.graph, val_size: int) -> Tuple[dgl.graph, dgl.graph]:
     """Creates negative training and validation graph.
 
+    Args:
+        graph (dgl.graph): A reference to the original graph. 
+        val_size (int): Validation dataset size.
+
+    Returns:
+        Tuple[dgl.graph, dgl.graph]: Negative training and negative validation graph.
+    """
+
+    # Sample negative edges to avoid creating adjacency matrix
+    neg_u, neg_v = dgl.sampling.global_uniform_negative_sampling(graph, graph.number_of_edges(), exclude_self_loops=False)
+
+    # Cannot sample anything, raise a Exception. E2E handling.
+    if len(neg_u) < graph.number_of_edges():
+        raise Exception("Fully connected graphs are not supported. ")
+    
+    # Create negative train and validation dataset
+    val_neg_u, val_neg_v = neg_u[:val_size], neg_v[:val_size]
+    train_neg_u, train_neg_v = neg_u[val_size:], neg_v[val_size:]
+
+    print("Train neg u: ", train_neg_u[0:100])
+    print("Train neg v: ", train_neg_v[0:100])
+    print("Val neg u: ", val_neg_u[0:100])
+    print("Val neg v: ", val_neg_v[0:100])
+
+
+    test_negative_samples(graph, val_neg_u, val_neg_v)
+    test_negative_samples(graph, train_neg_u, train_neg_v)
+    
+    # Create negative training and validation graph
+    train_neg_g = dgl.graph((train_neg_u, train_neg_v), num_nodes=graph.number_of_nodes())
+    val_neg_g = dgl.graph((val_neg_u, val_neg_v), num_nodes=graph.number_of_nodes())
+
+    return train_neg_g, val_neg_g
+
+def create_negative_graphs(
+    adj_matrix: np.matrix, graph: dgl.graph, val_size: int
+) -> Tuple[dgl.graph, dgl.graph]:
+    """Creates negative training and validation graph.
     Args:
         adj_matrix (np.matrix): Adjacency matrix.
         number_of_nodes (int): Number of nodes in the whole graph.
         number_of_edges (int): Number of edges in the whole graph.
         val_size (int): Validation dataset size.
-
     Returns:
         Tuple[dgl.graph, dgl.graph]: Negative training and negative validation graph.
     """
     adj_neg = 1 - adj_matrix
     neg_u, neg_v = np.where(adj_neg > 0)  # Find all non-existing edges. Move from != 0 because of duplicate edges so you could have negative values in adj_neg.
 
-    print("Neg u: ", neg_u)
-    print("Neg v: ", neg_v)
-
     # Cannot sample anything, raise a Exception. E2E handling.
     if len(neg_u) == 0 and len(neg_v) == 0:
         raise Exception("Fully connected graphs are not supported. ")
 
     # Sample with replacement from negative edges
-    neg_eids = np.random.choice(len(neg_u), number_of_edges)
+    neg_eids = np.random.choice(len(neg_u), graph.number_of_edges())
 
     # Create negative train and validation dataset
     val_neg_u, val_neg_v = neg_u[neg_eids[:val_size]], neg_v[neg_eids[:val_size]]
     train_neg_u, train_neg_v = neg_u[neg_eids[val_size:]], neg_v[neg_eids[val_size:]]
 
+    # print("Train neg u: ", train_neg_u[0:100])
+    # print("Train neg v: ", train_neg_v[0:100])
+    # print("Val neg u: ", val_neg_u[0:100])
+    # print("Val neg v: ", val_neg_v[0:100])
+    
+    # test_negative_samples(graph, val_neg_u, val_neg_v)
+    # test_negative_samples(graph, train_neg_u, train_neg_v)
+
     # Create negative training and validation graph
-    train_neg_g = dgl.graph((train_neg_u, train_neg_v), num_nodes=number_of_nodes)
-    val_neg_g = dgl.graph((val_neg_u, val_neg_v), num_nodes=number_of_nodes)
+    train_neg_g = dgl.graph((train_neg_u, train_neg_v), num_nodes=graph.number_of_nodes())
+    val_neg_g = dgl.graph((val_neg_u, val_neg_v), num_nodes=graph.number_of_nodes())
 
     return train_neg_g, val_neg_g
-
 
 def create_positive_graphs(
     graph: dgl.graph, val_size: int
@@ -154,10 +175,7 @@ def create_positive_graphs(
 
     return train_g, train_pos_g, val_pos_g
 
-
-def preprocess(
-    graph: dgl.graph, split_ratio: float
-) -> Tuple[dgl.graph, dgl.graph, dgl.graph, dgl.graph, dgl.graph]:
+def preprocess(graph: dgl.graph, split_ratio: float) -> Tuple[dgl.graph, dgl.graph, dgl.graph, dgl.graph, dgl.graph]:
     """Preprocess method splits dataset in training and validation set. This method is also used for setting numpy and torch random seed.
 
     Args:
@@ -179,7 +197,6 @@ def preprocess(
     np.random.seed(rnd_seed)
     torch.manual_seed(rnd_seed)  # set it for both cpu and cuda
 
-    # Get source and destination nodes for all edges
     u, v = graph.edges()
 
     adj = sp.coo_matrix((np.ones(len(u)), (u.numpy(), v.numpy())))  # adjacency list graph representation
@@ -189,25 +206,23 @@ def preprocess(
     # print("Adj matrix: ", adj_matrix.shape)
     # print(adj_matrix)
 
-    # Check if conversion to adjacency matrix went OK. Exception will be thrown otherwise.
-    test_adjacency_matrix(graph, adj_matrix)
-
     # val size is 1-split_ratio specified by the user
     val_size = int(graph.number_of_edges() * (1 - split_ratio))
     # E2E handling
     if split_ratio < 1.0 and val_size == 0:
         raise Exception("Graph too small to have a validation dataset. ")
 
-    # Create positive training and positive validation graph
+   
+    # Create negative training and negative validation graph
+    # train_neg_g, val_neg_g = create_negative_graphs2(graph, val_size)
+
+    train_neg_g, val_neg_g = create_negative_graphs(adj_matrix, graph, val_size)
+    
+     # Create positive training and positive validation graph
     train_g, train_pos_g, val_pos_g = create_positive_graphs(graph, val_size)
 
-    # Create negative training and negative validation graph
-    train_neg_g, val_neg_g = create_negative_graphs(
-        adj_matrix, graph.number_of_nodes(), graph.number_of_edges(), val_size
-    )
 
     return train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g
-
 
 def classify(probs: torch.tensor, threshold: float) -> torch.tensor:
     """Classifies based on probabilities of the class with the label one.
@@ -220,7 +235,6 @@ def classify(probs: torch.tensor, threshold: float) -> torch.tensor:
     """
 
     return probs > threshold
-
 
 def evaluate(
     metrics: List[str],
@@ -240,23 +254,112 @@ def evaluate(
     """
     classes = classify(probs, threshold)
     for metric_name in metrics:
-        if metric_name == "accuracy":
-            result["accuracy"] = accuracy_score(labels, classes)
-        elif metric_name == "auc_score":
-            result["auc_score"] = roc_auc_score(labels, probs)
-        elif metric_name == "f1":
-            result["f1"] = f1_score(labels, classes)
-        elif metric_name == "precision":
-            result["precision"] = precision_score(labels, classes)
-        elif metric_name == "recall":
-            result["recall"] = recall_score(labels, classes)
-        elif metric_name == "num_wrong_examples":
-            result["num_wrong_examples"] = (
+        if metric_name == ACCURACY:
+            result[ACCURACY] = accuracy_score(labels, classes)
+        elif metric_name == AUC_SCORE:
+            result[AUC_SCORE] = roc_auc_score(labels, probs)
+        elif metric_name == F1:
+            result[F1] = f1_score(labels, classes)
+        elif metric_name == PRECISION:
+            result[PRECISION] = precision_score(labels, classes)
+        elif metric_name == RECALL:
+            result[RECALL] = recall_score(labels, classes)
+        elif metric_name == NUM_WRONG_EXAMPLES:
+            result[NUM_WRONG_EXAMPLES] = (
                 np.not_equal(np.array(labels, dtype=bool), classes).sum().item()
             )
+def inner_train2(train_g: dgl.graph, train_pos_g: dgl.graph, train_neg_g: dgl.graph, val_pos_g: dgl.graph,
+    val_neg_g: dgl.graph, model: torch.nn.Module, predictor: torch.nn.Module, optimizer: torch.optim.Optimizer, num_epochs: int,
+    node_features_property: str, console_log_freq: int, checkpoint_freq: int, metrics: List[str], tr_acc_patience: int,
+    context_save_dir: str,) -> Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]:
+    # Start rock and roll
+    negative_sampler = dgl.dataloading.negative_sampler.Uniform(5)
+    sampler = dgl.dataloading.MultiLayerNeighborSampler([4, 4])
 
+    train_dataloader = dgl.dataloading.EdgeDataLoader(
+        train_g,                                  # The graph
+        torch.arange(train_g.number_of_edges()),  # The edges to iterate over
+        sampler,                                # The neighbor sampler
+        negative_sampler=negative_sampler,      # The negative sampler
+        device="cpu",                          # Put the MFGs on CPU or GPU
+        # The following arguments are inherited from PyTorch DataLoader.
+        batch_size=512,    # Batch size
+        shuffle=True,       # Whether to shuffle the nodes for every epoch
+        drop_last=False,    # Whether to drop the last incomplete batch
+        num_workers=0       # Number of sampler processes
+    )
+
+    val_pos_g.ndata[node_features_property] = train_g.ndata[node_features_property]
+
+    validation_dataloader = dgl.dataloading.EdgeDataLoader(
+        val_pos_g,                                  # The graph
+        torch.arange(val_pos_g.number_of_edges()),  # The edges to iterate over
+        sampler,                                # The neighbor sampler
+        negative_sampler=negative_sampler,      # The negative sampler
+        device="cpu",                          # Put the MFGs on CPU or GPU
+        # The following arguments are inherited from PyTorch DataLoader.
+        batch_size=512,    # Batch size
+        shuffle=True,       # Whether to shuffle the nodes for every epoch
+        drop_last=False,    # Whether to drop the last incomplete batch
+        num_workers=0       # Number of sampler processes
+    )
+
+    node_features = train_g.ndata[node_features_property]
+
+    model = Model(node_features.shape[1], 128)
+    # predictor = DotPredictor()
+    opt = torch.optim.Adam(list(model.parameters()) + list(predictor.parameters()))
+
+    best_accuracy = 0
+    best_model_path = 'model.pt'
+    for epoch in range(100):
+        with tqdm.tqdm(train_dataloader) as tq:
+            for step, (input_nodes, pos_graph, neg_graph, mfgs) in enumerate(tq):
+                # feature copy from CPU to GPU takes place here
+                inputs = mfgs[0].srcdata[node_features_property]
+
+                outputs = model(mfgs, inputs)
+                pos_score = predictor.forward(pos_graph, outputs)
+                neg_score = predictor.forward(neg_graph, outputs)
+
+                score = torch.cat([pos_score, neg_score])
+                probs = torch.sigmoid(score)
+                classes = classify(probs, 0.5)
+                label = torch.cat([torch.ones_like(pos_score), torch.zeros_like(neg_score)])
+                loss = F.binary_cross_entropy_with_logits(score, label)
+
+                tr_acc = accuracy_score(label, classes)
+
+                print("Tr acc: ", tr_acc)
+
+                opt.zero_grad()
+                loss.backward()
+                opt.step()
+
+                tq.set_postfix({'loss': '%.03f' % loss.item()}, refresh=False)
+
+                # Evaluation on the whole validation set
+                model.eval()
+                input_nodes_val, pos_graph_val, neg_graph_val, mfgs_val = next(iter(validation_dataloader))
+                inputs_val = mfgs_val[0].srcdata[node_features_property]
+                outputs_val = model(mfgs_val, inputs_val)
+                pos_score_val = predictor.forward(pos_graph_val, outputs_val)
+                neg_score_val = predictor.forward(neg_graph_val, outputs_val)
+
+                score_val = torch.cat([pos_score_val, neg_score_val])
+                probs_val = torch.sigmoid(score_val)
+                classes_val = classify(probs_val, 0.5)
+                label_val = torch.cat([torch.ones_like(pos_score_val), torch.zeros_like(neg_score_val)])
+
+                val_acc = accuracy_score(label_val, classes_val)
+                print("Val acc: ", val_acc)
 
 def inner_train(
+    train_g: dgl.graph,
+    train_pos_g: dgl.graph,
+    train_neg_g: dgl.graph,
+    val_pos_g: dgl.graph,
+    val_neg_g: dgl.graph,
     model: torch.nn.Module,
     predictor: torch.nn.Module,
     optimizer: torch.optim.Optimizer,
@@ -266,12 +369,8 @@ def inner_train(
     checkpoint_freq: int,
     metrics: List[str],
     tr_acc_patience: int,
-    context_save_dir: str,
-    train_g: dgl.graph,
-    train_pos_g: dgl.graph,
-    train_neg_g: dgl.graph,
-    val_pos_g: dgl.graph,
-    val_neg_g: dgl.graph,
+    context_save_dir: str
+
 ) -> Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]:
     """Real train method where training occurs. Parameters from LinkPredictionParameters are sent here. They aren't sent as whole class because of circular dependency.
 
@@ -296,11 +395,11 @@ def inner_train(
         Tuple[List[Dict[str, float]], List[Dict[str, float]]: Training results, validation results
     """
 
-    # print("train_g: ", train_g.edges())
-    # print("train_pos_g: ", train_pos_g)
-    # print("train_neg_g: ", train_neg_g)
-    # print("val_pos_g: ", val_pos_g.edges())
-    # print("val_neg_g: ", val_neg_g)
+    print("train_g: ", train_g.number_of_edges())
+    print("train_pos_g: ", train_pos_g.number_of_edges())
+    print("train_neg_g: ", train_neg_g.number_of_edges())
+    print("val_pos_g: ", val_pos_g.number_of_edges())
+    print("val_neg_g: ", val_neg_g.number_of_edges())
 
     tr_pos_edges_u, tr_pos_edges_v = train_pos_g.edges()
     tr_neg_edges_u, tr_neg_edges_v = train_neg_g.edges()
@@ -380,8 +479,8 @@ def inner_train(
                 epoch_training_result = OrderedDict()  # Temporary result per epoch
                 epoch_val_result = OrderedDict()
                 # Set initial metrics for training result
-                epoch_training_result["epoch"] = epoch
-                epoch_training_result["loss"] = loss_output.item()
+                epoch_training_result[EPOCH] = epoch
+                epoch_training_result[LOSS] = loss_output.item()
                 evaluate(metrics, labels, probs, epoch_training_result, threshold)
                 training_results.append(epoch_training_result)
 
@@ -400,18 +499,18 @@ def inner_train(
                     print("Ratio of positively train predicted examples: ", torch.sum(probs > 0.5).item() / probs.shape[0])
                     # Set initial metrics for validation result
                     loss_output_val = loss(probs_val, labels_val)
-                    epoch_val_result["epoch"] = epoch
-                    epoch_val_result["loss"] = loss_output_val.item()
+                    epoch_val_result[EPOCH] = epoch
+                    epoch_val_result[LOSS] = loss_output_val.item()
                     evaluate(metrics, labels_val, probs_val, epoch_val_result, threshold)
                     validation_results.append(epoch_val_result)
 
                     # Patience check
-                    if epoch_val_result["accuracy"] <= max_val_acc:
+                    if epoch_val_result[ACCURACY] <= max_val_acc:
                         # print("Acc val: ", acc_val)
                         # print("Max val acc: ", max_val_acc)
                         num_val_acc_drop += 1
                     else:
-                        max_val_acc = epoch_val_result["accuracy"]
+                        max_val_acc = epoch_val_result[ACCURACY]
                         num_val_acc_drop = 0
 
                     print(epoch_val_result)
@@ -444,49 +543,29 @@ def _save_context(model: torch.nn.Module, predictor: torch.nn.Module, context_sa
     torch.save(model, context_save_dir + MODEL_NAME)
     torch.save(predictor, context_save_dir + PREDICTOR_NAME)
 
-def inner_predict(
-    model: torch.nn.Module,
-    predictor: torch.nn.Module,
-    graph: dgl.graph,
-    node_features_property: str,
-    edge_id: int,
-) -> float:
+def inner_predict(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl.graph, node_features_property: str, 
+                    src_node: int, dest_node: int) -> float:
     """Predicts edge scores for given graph. This method is called to obtain edge probability for edge with id=edge_id.
 
     Args:
         model (torch.nn.Module): A reference to the trained model.
         predictor (torch.nn.Module): A reference to the predictor.
         graph (dgl.graph): A reference to the graph. This is semi-inductive setting so new nodes are appended to the original graph(train+validation).
-        node_features_property (str): Name of the features property.
+        node_features_property (str): Property name of the features.
+        src_node (int): Source node of the edge.
+        dest_node (int): Destination node of the edge. 
 
     Returns:
         float: Edge score.
     """
-    print("Number of nodes: ", graph.number_of_nodes())
-    print("Number of edges: ", graph.number_of_edges())
-    with torch.no_grad():
-        h = model(graph, graph.ndata[node_features_property]) # nodes*final_layer
-        # print("H shape: ", h.shape)
-        scores = predictor.forward(graph, h)
-        # print("Scores: ", scores.shape) # num_edges
-        probs = torch.sigmoid(scores)
-        print("Probability: ", probs[edge_id].item())
-        # print("negative: ", torch.sum(probs < 0.5).item() / probs.shape[0])  # a small probability of negative ones
-        return probs[edge_id].item()
-
-
-def inner_predict2(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl.graph, node_features_property: str, 
-                    src_node: int, dest_node: int):
 
     with torch.no_grad():
         h = model(graph, graph.ndata[node_features_property])
         score = predictor.forward_pred(h, src_node, dest_node)
         prob = torch.sigmoid(score)
-        print("Probability: ", prob.item())
+        # print("Probability: ", prob.item())
         return prob.item()
         
-
-
 # Existing
 # 591017->49847
 # 49847->2440

@@ -1,4 +1,3 @@
-from matplotlib.style import context
 import mgp  # Python API
 import torch
 import dgl  # geometric deep learning
@@ -8,8 +7,8 @@ from dataclasses import dataclass, field
 from mage.link_prediction import (
     preprocess,
     inner_train,
+    inner_train2,
     inner_predict,
-    inner_predict2,
     create_model,
     create_optimizer,
     create_predictor,
@@ -26,9 +25,32 @@ from mage.link_prediction import (
     LSTM_AGG,
     POOL_AGG,
     GCN_AGG,
+    LAYER_TYPE,
+    NUM_EPOCHS,
+    OPTIMIZER,
+    LEARNING_RATE,
+    SPLIT_RATIO,
+    NODE_FEATURES_PROPERTY,
+    DEVICE_TYPE,
+    CONSOLE_LOG_FREQ,
+    CHECKPOINT_FREQ,
+    AGGREGATOR,
+    METRICS,
+    LAYER_TYPE,
+    PREDICTOR_TYPE,
+    ATTN_NUM_HEADS,
+    TR_ACC_PATIENCE,
+    MODEL_SAVE_PATH,
     HIDDEN_FEATURES_SIZE,
     MODEL_NAME,
     PREDICTOR_NAME,
+    AUC_SCORE,
+    ACCURACY,
+    PRECISION,
+    RECALL,
+    NUM_WRONG_EXAMPLES,
+    LOSS,
+    F1,
 )
 
 ##############################
@@ -60,7 +82,7 @@ class LinkPredictionParameters:
     """
 
     hidden_features_size: List = field(
-        default_factory=lambda: [64, 32, 16]
+        default_factory=lambda: [64, 16, 8]
     )  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
     layer_type: str = GRAPH_ATTN
     num_epochs: int = 100
@@ -74,20 +96,20 @@ class LinkPredictionParameters:
     aggregator: str = POOL_AGG
     metrics: List = field(
         default_factory=lambda: [
-            "loss",
-            "accuracy",
-            "auc_score",
-            "precision",
-            "recall",
-            "f1",
-            "num_wrong_examples",
+            LOSS,
+            ACCURACY,
+            AUC_SCORE,
+            PRECISION,
+            RECALL,
+            F1,
+            NUM_WRONG_EXAMPLES,
         ]
     )
     predictor_type: str =  MLP_PREDICTOR
-    attn_num_heads: List[int] = field(default_factory=lambda: [8, 4, 1])
-    tr_acc_patience: int = 8
+    attn_num_heads: List[int] = field(default_factory=lambda: [4, 2, 1])
+    tr_acc_patience: int = 5
     context_save_dir: str = (
-        "./mage/python/mage/link_prediction/context/"  # TODO: When the development finishes
+        "./python/mage/link_prediction/context/"  # TODO: When the development finishes
     )
 
 
@@ -143,13 +165,8 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
     """
     global link_prediction_parameters
 
-    print("START")
-    print(link_prediction_parameters)
-
-    validation_status, validation_message = _validate_user_parameters(parameters=parameters)
-    if validation_status is False:
-        return mgp.Record(status=validation_status, message=validation_message)
-
+    _validate_user_parameters(parameters=parameters)
+    
     for key, value in parameters.items():
         if not hasattr(link_prediction_parameters, key):
             return mgp.Record(
@@ -173,9 +190,6 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
 
     if type(link_prediction_parameters.attn_num_heads) == tuple:
         link_prediction_parameters.attn_num_heads = [*(x for x in link_prediction_parameters.attn_num_heads)]
-
-    print("END")
-    print(link_prediction_parameters)
 
     return mgp.Record(status=1, message="OK")
 
@@ -226,7 +240,6 @@ def train(
     )
     # Create a predictor
     predictor_hidden_size = link_prediction_parameters.hidden_features_size[-1]
-    
 
     predictor = create_predictor(
         predictor_type=link_prediction_parameters.predictor_type,
@@ -243,6 +256,11 @@ def train(
 
     # Collect training and validation results from utils model
     training_results, validation_results = inner_train(
+        train_g,
+        train_pos_g,
+        train_neg_g,
+        val_pos_g,
+        val_neg_g,
         model,
         predictor,
         optimizer,
@@ -253,11 +271,6 @@ def train(
         link_prediction_parameters.metrics,
         link_prediction_parameters.tr_acc_patience,
         link_prediction_parameters.context_save_dir,
-        train_g,
-        train_pos_g,
-        train_neg_g,
-        val_pos_g,
-        val_neg_g,
     )
 
     return mgp.Record(training_results=training_results, validation_results=validation_results)
@@ -308,14 +321,14 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     
     edge_id = graph.edge_ids(src_id, dest_id)
 
-    print("Edge id: ", edge_id)
+    # print("Edge id: ", edge_id)
     # print("Number of edges after adding new edge: ", graph.number_of_edges())
 
     # Insert into the hidden_features_size if needed.
     _load_feature_size(graph.ndata[link_prediction_parameters.node_features_property].shape[1])
 
     # Call utils module
-    score = inner_predict2(
+    score = inner_predict(
         model=model, 
         predictor=predictor, 
         graph=graph, 
@@ -491,228 +504,202 @@ def _get_dgl_graph_data(
     return g, new_to_old, old_to_new
 
 
-def _validate_user_parameters(parameters: mgp.Map) -> Tuple[bool, str]:
+def _validate_user_parameters(parameters: mgp.Map) -> None:
     """Validates parameters user sent through method set_model_parameters
 
     Args:
         parameters (mgp.Map): Parameters sent by user.
 
     Returns:
-        bool: True if every parameter value is appropriate, False otherwise.
+        Nothing or raises an exception if something is wrong.
     """
+    # Hacky Python
+    def raise_(ex):
+        raise ex
+
+    # Define lambda type checkers
+    type_checker = lambda arg, mess, real_type: None if type(arg) == real_type else raise_(Exception(mess))
+
+
     # Hidden features size
     if HIDDEN_FEATURES_SIZE in parameters.keys():
         hidden_features_size = parameters[HIDDEN_FEATURES_SIZE]
 
         # Because list cannot be sent through mgp.
-        if type(hidden_features_size) != tuple:
-            return False, "hidden_features_size not an iterable object. "
+        type_checker(hidden_features_size, "hidden_features_size not an iterable object. ", tuple)
 
         for hid_size in hidden_features_size:
             if hid_size <= 0:
-                return False, "Layer size must be greater than 0. "
+                 raise Exception("Layer size must be greater than 0. ")
 
     # Layer type check
-    if "layer_type" in parameters.keys():
-        layer_type = parameters["layer_type"]
+    if LAYER_TYPE in parameters.keys():
+        layer_type = parameters[LAYER_TYPE]
         
         # Check typing
-        if type(layer_type) != str:
-            return False, "layer_type must be string. "
+        type_checker(layer_type, "layer_type must be string. ", str)
 
         if layer_type != GRAPH_ATTN and layer_type != GRAPH_SAGE:
-            return (
-                False,
-                "Unknown layer type, this module supports only graph_attn and graph_sage. ",
-            )
+             raise Exception("Unknown layer type, this module supports only graph_attn and graph_sage. ")
 
     # Num epochs
-    if "num_epochs" in parameters.keys():
-        num_epochs = parameters["num_epochs"]
+    if NUM_EPOCHS in parameters.keys():
+        num_epochs = parameters[NUM_EPOCHS]
 
         # Check typing
-        if type(num_epochs) != int:
-            return False, "num_epochs must be int. "
+        type_checker(num_epochs, "num_epochs must be int. ", int)
 
         if num_epochs <= 0:
-            return False, "Number of epochs must be greater than 0. "
+             raise Exception("Number of epochs must be greater than 0. ")
 
     # Optimizer check
-    if "optimizer" in parameters.keys():
-        optimizer = parameters["optimizer"]
+    if OPTIMIZER in parameters.keys():
+        optimizer = parameters[OPTIMIZER]
 
         # Check typing
-        if type(optimizer) != str:
-            return False, "optimizer must be a string. "
+        type_checker(optimizer, "optimizer must be a string. ", str)
 
         if optimizer != ADAM_OPT and optimizer != SGD_OPT:
-            return False, "Unknown optimizer, this module supports only ADAM and SGD. "
+             raise Exception("Unknown optimizer, this module supports only ADAM and SGD. ")
 
     # Learning rate check
-    if "learning_rate" in parameters.keys():
-        learning_rate = parameters["learning_rate"]
+    if LEARNING_RATE in parameters.keys():
+        learning_rate = parameters[LEARNING_RATE]
 
         # Check typing
-        if type(learning_rate) != float:
-            return False, "learning_rate must be a float. "
+        type_checker(learning_rate, "learning rate must be a float. ", float)
 
         if learning_rate <= 0.0:
-            return False, "Learning rate must be greater than 0. "
+             raise Exception("Learning rate must be greater than 0. ")
 
     # Split ratio check
-    if "split_ratio" in parameters.keys():
-        split_ratio = parameters["split_ratio"]
+    if SPLIT_RATIO in parameters.keys():
+        split_ratio = parameters[SPLIT_RATIO]
 
         # Check typing
-        if type(split_ratio) != float:
-            return False, "split_ratio must be a float. "
+        type_checker(split_ratio, "split_ratio must be a float. ", float)
 
         if split_ratio <= 0.0:
-            return False, "Split ratio must be greater than 0. "
+             raise Exception("Split ratio must be greater than 0. ")
 
     # node_features_property check
-    if "node_features_property" in parameters.keys():
-        node_features_property = parameters["node_features_property"]
+    if NODE_FEATURES_PROPERTY in parameters.keys():
+        node_features_property = parameters[NODE_FEATURES_PROPERTY]
 
         # Check typing
-        if type(node_features_property) != str:
-            return False, "node_features_property must be a string. "
+        type_checker(node_features_property, "node_features_property must be a string. ", str)
 
         if node_features_property == "":
-            return False, "You must specify name of nodes' features property. "
+            raise Exception("You must specify name of nodes' features property. ")
 
     # device_type check
-    if "device_type" in parameters.keys():
-        device_type = parameters["device_type"]
+    if DEVICE_TYPE in parameters.keys():
+        device_type = parameters[DEVICE_TYPE]
 
         # Check typing
-        if type(device_type) != str:
-            return False, "device_type must be a string. "
+        type_checker(device_type, "device_type must be a string. ", str)
 
         if device_type != CPU_DEVICE and torch.device != CUDA_DEVICE:
-            return False, "Only cpu and cuda are supported as devices. "
+            raise Exception("Only cpu and cuda are supported as devices. ")
 
     # console_log_freq check
-    if "console_log_freq" in parameters.keys():
-        console_log_freq = parameters["console_log_freq"]
+    if CONSOLE_LOG_FREQ in parameters.keys():
+        console_log_freq = parameters[CONSOLE_LOG_FREQ]
 
         # Check typing
-        if type(console_log_freq) != int:
-            return False, "console_log_freq must be an int. "
+        type_checker(console_log_freq, "console_log_freq must be an int. ", int)
 
         if console_log_freq <= 0:
-            return False, "Console log frequency must be greater than 0. "
+            raise Exception("Console log frequency must be greater than 0. ")
 
     # checkpoint freq check
-    if "checkpoint_freq" in parameters.keys():
-        checkpoint_freq = parameters["checkpoint_freq"]
+    if CHECKPOINT_FREQ in parameters.keys():
+        checkpoint_freq = parameters[CHECKPOINT_FREQ]
 
         # Check typing
-        if type(checkpoint_freq) != int:
-            return False, "checkpoint_freq must be an int. "
+        type_checker(checkpoint_freq, "checkpoint_freq must be an int. ", int)
 
         if checkpoint_freq <= 0:
-            return False, "Checkpoint frequency must be greter than 0. "
+             raise Exception("Checkpoint frequency must be greter than 0. ")
 
     # aggregator check
-    if "aggregator" in parameters.keys():
-        aggregator = parameters["aggregator"]
+    if AGGREGATOR in parameters.keys():
+        aggregator = parameters[AGGREGATOR]
 
         # Check typing
-        if type(aggregator) != str:
-            return False, "aggregator must be a string. "
+        type_checker(aggregator, "aggregator must be a string. ", str)
 
         if aggregator != MEAN_AGG and aggregator != LSTM_AGG and aggregator != POOL_AGG and aggregator != GCN_AGG:
-            return (
-                False,
-                "Aggregator must be one of the following: mean, pool, lstm or gcn. ",
-            )
+             raise Exception("Aggregator must be one of the following: mean, pool, lstm or gcn. ")
 
     # metrics check
-    if "metrics" in parameters.keys():
-        metrics = parameters["metrics"]
+    if METRICS in parameters.keys():
+        metrics = parameters[METRICS]
 
         # Check typing
-        if type(metrics) != tuple:
-            return False, "metrics must be an iterable object. "
+        type_checker(metrics, "metrics must be an iterable object. ", tuple)
 
         for metric in metrics:
             _metric = metric.lower()
             if (
-                _metric != "loss"
-                and _metric != "accuracy"
-                and _metric != "f1"
-                and _metric != "auc_score"
-                and _metric != "precision"
-                and _metric != "recall"
-                and _metric != "specificity"
-                and _metric != "num_wrong_examples"
+                _metric != LOSS
+                and _metric != ACCURACY
+                and _metric != F1
+                and _metric != AUC_SCORE
+                and _metric != PRECISION
+                and _metric != RECALL
+                and _metric != NUM_WRONG_EXAMPLES
             ):
-                return False, "Metric name " + _metric + " is not supported!"
+                 raise Exception("Metric name " + _metric + " is not supported!")
 
     # Predictor type
-    if "predictor_type" in parameters.keys():
-        predictor_type = parameters["predictor_type"]
+    if PREDICTOR_TYPE in parameters.keys():
+        predictor_type = parameters[PREDICTOR_TYPE]
 
         # Check typing
-        if type(predictor_type) != str:
-            return False, "predictor_type must be a string. "
+        type_checker(predictor_type, "predictor_type must be a string. ", str)
 
         if predictor_type != DOT_PREDICTOR and predictor_type != MLP_PREDICTOR:
-            return False, "Predictor " + predictor_type + " is not supported. "
+             raise Exception("Predictor " + predictor_type + " is not supported. ")
 
     # Attention heads
-    if "attn_num_heads" in parameters.keys():
-        attn_num_heads = parameters["attn_num_heads"]
+    if ATTN_NUM_HEADS in parameters.keys():
+        attn_num_heads = parameters[ATTN_NUM_HEADS]
 
         if layer_type == GRAPH_ATTN:
 
             # Check typing
-            if type(attn_num_heads) != tuple:
-                return False, "attn_num_heads must be an iterable object. "
-
+            type_checker(attn_num_heads, "attn_num_heads must be an iterable object. ", tuple)
 
             if len(attn_num_heads) != len(hidden_features_size):
-                return (
-                    False,
-                    "Specified network with {} layers but given attention heads data for {} layers. ".format(
-                        len(hidden_features_size) - 1, len(attn_num_heads)
-                    ),
-                )
+                 raise Exception("Specified network with {} layers but given attention heads data for {} layers. ".format(len(hidden_features_size) - 1, len(attn_num_heads)))
 
             if attn_num_heads[-1] != 1:
-                return False, "Last GAT layer must contain only one attention head. "
+                 raise Exception("Last GAT layer must contain only one attention head. ")
 
             for num_heads in attn_num_heads:
                 if num_heads <= 0:
-                    return (
-                        False,
-                        "GAT allows only positive, larger than 0 values for number of attention heads. ",
-                    )
+                    raise Exception("GAT allows only positive, larger than 0 values for number of attention heads. ")
 
     # Training accuracy patience
-    if "tr_acc_patience" in parameters.keys():
-        tr_acc_patience = parameters["tr_acc_patience"]
+    if TR_ACC_PATIENCE in parameters.keys():
+        tr_acc_patience = parameters[TR_ACC_PATIENCE]
 
         # Check typing
-        if type(tr_acc_patience) != int:
-            return False, "tr_acc_patience must be an iterable object. "
+        type_checker(tr_acc_patience, "tr_acc_patience must be an iterable object. ", int)
 
         if tr_acc_patience <= 0:
-            return False, "Training acc patience flag must be larger than 0."
+             raise Exception("Training acc patience flag must be larger than 0.")
 
     # model_save_path
-    if "model_save_path" in parameters.keys():
-        model_save_path = parameters["model_save_path"]
+    if MODEL_SAVE_PATH in parameters.keys():
+        model_save_path = parameters[MODEL_SAVE_PATH]
 
         # Check typing
-        if type(model_save_path) != str:
-            return False, "model_save_path must be a string. "
+        type_checker(model_save_path, "model_save_path must be a string. ", str)
 
         if model_save_path == "":
-            return False, "Path must be != " " "
-
-    return True, "OK"
+             raise Exception("Path must be != " " ")
 
 
 def _reset_train_predict_parameters() -> None:
@@ -748,7 +735,7 @@ def _conversion_to_dgl_test(
 
     # Check if the dataset is empty. E2E handling.
     if len(ctx.graph.vertices) == 0:
-        raise Exception("Empty dataset. ")
+        raise Exception("The conversion to DGL failed. The dataset is empty. ")
 
     for vertex in graph.nodes():
         vertex_id = vertex.item()
@@ -756,16 +743,16 @@ def _conversion_to_dgl_test(
         old_id = new_to_old[vertex_id]
         vertex = ctx.graph.get_vertex_by_id(old_id)
         if vertex is None:
-            raise Exception("Non-mapped vertex. ")
+            raise Exception(f"The conversion to DGL failed. Vertex with id {vertex.id} is not mapped to DGL graph. ")
 
         old_features = vertex.properties.get(node_features_property)
         if not torch.equal(graph.ndata[node_features_property][vertex_id], torch.tensor(old_features, dtype=torch.float32),):
-            raise Exception("Features not mapped. ")
+            raise Exception("The conversion to DGL failed. Stored graph does not contain the same features as the converted DGL graph. ")
 
     # Check number of nodes
     if graph.number_of_nodes() != len(ctx.graph.vertices):
-        raise Exception("Wrong number of nodes. ")
+        raise Exception("The conversion to DGL failed. Stored graph does not contain the same number of nodes (41) as the converted DGL graph (26).")
 
     # Check number of edges
-    if graph.number_of_edges() != get_number_of_edges(ctx) + len(ctx.graph.vertices):  # because of self-loop added
-        raise Exception("Wrong number of edges")
+    # if graph.number_of_edges() != get_number_of_edges(ctx):
+    #    raise Exception("Wrong number of edges")

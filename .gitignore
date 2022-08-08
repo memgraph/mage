@@ -196,8 +196,5 @@ dist/
 *htmlcov
 *.coverage
 
-**/mg_data
-python/mage/link_prediction/commands/*
 python/mage/link_prediction/context/*
-python/mage/link_prediction/manipulate_database.py
-python/mage/link_prediction/training_visualizer.py
+mg_data/

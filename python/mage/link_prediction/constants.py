@@ -1,15 +1,46 @@
+# Models
 GRAPH_SAGE = "graph_sage"
 GRAPH_ATTN = "graph_attn"
+# Optimizers
 ADAM_OPT = "ADAM"
 SGD_OPT = "SGD"
+# Devices
 CUDA_DEVICE = "cuda"
 CPU_DEVICE = "cpu"
+# Predictors
 DOT_PREDICTOR = "dot"
 MLP_PREDICTOR = "mlp"
+# Aggregators
 MEAN_AGG = "mean"
 LSTM_AGG = "lstm"
 POOL_AGG = "pool"
 GCN_AGG = "gcn"
+# Parameter names
+LAYER_TYPE = "layer_type"
+NUM_EPOCHS = "num_epochs"
+OPTIMIZER = "optimizer"
+LEARNING_RATE = "learning_rate"
+SPLIT_RATIO = "split_ratio"
+NODE_FEATURES_PROPERTY = "node_features_property"
+DEVICE_TYPE = "device_type"
+CONSOLE_LOG_FREQ = "console_log_freq"
+CHECKPOINT_FREQ = "checkpoint_freq"
+AGGREGATOR = "aggregator"
+METRICS = "metrics"
+PREDICTOR_TYPE = "predictor_type"
+ATTN_NUM_HEADS = "attn_num_heads"
+TR_ACC_PATIENCE = "tr_acc_patience"
+MODEL_SAVE_PATH = "model_save_path"
 HIDDEN_FEATURES_SIZE = "hidden_features_size"
+# Context
 MODEL_NAME = "model.pt"
 PREDICTOR_NAME = "predictor.pt"
+# Metrics
+LOSS = "loss"
+ACCURACY = "accuracy"
+AUC_SCORE = "auc_score"
+PRECISION = "precision"
+RECALL = "recall"
+F1 = "f1"
+NUM_WRONG_EXAMPLES = "num_wrong_examples"
+EPOCH = "epoch"

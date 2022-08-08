@@ -1,8 +1,8 @@
 from mage.link_prediction.link_prediction_util import (
     inner_train,
+    inner_train2,
     preprocess,
     inner_predict,
-    inner_predict2,
     get_number_of_edges,
 )
 
@@ -25,7 +25,31 @@ from mage.link_prediction.constants import (
     LSTM_AGG,
     POOL_AGG,
     GCN_AGG,
+    LAYER_TYPE,
+    NUM_EPOCHS,
+    OPTIMIZER,
+    LEARNING_RATE,
+    SPLIT_RATIO,
+    NODE_FEATURES_PROPERTY,
+    DEVICE_TYPE,
+    CONSOLE_LOG_FREQ,
+    CHECKPOINT_FREQ,
+    AGGREGATOR,
+    METRICS,
+    PREDICTOR_TYPE,
+    ATTN_NUM_HEADS,
+    TR_ACC_PATIENCE,
+    MODEL_SAVE_PATH,
     HIDDEN_FEATURES_SIZE,
     MODEL_NAME,
     PREDICTOR_NAME,
+    LOSS,
+    ACCURACY,
+    AUC_SCORE,
+    PRECISION,
+    RECALL,
+    F1,
+    NUM_WRONG_EXAMPLES,
+    EPOCH
+
 )
