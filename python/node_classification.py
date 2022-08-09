@@ -3,7 +3,7 @@ import mgp
 from tqdm import tqdm
 from mage.node_classification.metrics import *
 from torch_geometric.data import Data
-from mage.node_classification.model.inductive_model import InductiveModel
+#from mage.node_classification.model.inductive_model import InductiveModel
 from mage.node_classification.utils.convert_data import convert_data
 from mage.node_classification.train_model import model_train_step
 import torch
@@ -12,6 +12,88 @@ import sys
 import mgp
 import os
 
+
+################################################################
+import torch
+import torch_geometric
+import torch.nn.functional as F
+import sys
+import mgp
+
+class LayerType:
+    gat = "GAT"
+    gatv2 = "GATv2"
+    sage = "SAGE"
+
+
+class InductiveModel(torch.nn.Module):
+    def __init__(
+        self,
+        layer_type: str,
+        in_channels: int,
+        hidden_features_size: mgp.List[int],
+        out_channels: int,
+        aggr: str,
+        heads: int = 3,
+        dropout: float = 0.6
+    ):
+        """Initialization of model.
+
+        Args:
+            layer_type (str): type of layer
+            in_channels (int): dimension of input channels
+            hidden_features_size (mgp.List[int]): list of dimensions of hidden features
+            out_channels (int): dimension of output channels
+            aggr (str): aggregator type
+        """
+
+        super(InductiveModel, self).__init__()
+
+        self.convs = torch.nn.ModuleList()
+        self.bns = torch.nn.ModuleList()
+
+        if layer_type not in {LayerType.gat, LayerType.gatv2, LayerType.sage}:
+            raise Exception("Available models are GAT, GATv2 and SAGE")
+            
+        conv = getattr(torch_geometric.nn, layer_type + "Conv")
+        if len(hidden_features_size) > 0:
+            # dodat heads
+            self.convs.append(conv(in_channels, hidden_features_size[0], aggr=aggr, heads=heads, dropout=dropout, concat=True))
+            self.bns.append(torch.nn.BatchNorm1d(hidden_features_size[0]*heads))
+            for i in range(0, len(hidden_features_size) - 1):
+                self.convs.append(
+                    conv(
+                        hidden_features_size[i]*heads, hidden_features_size[i + 1], aggr=aggr, heads=heads, dropout=dropout, concat=True
+                    )
+                )
+                self.bns.append(torch.nn.BatchNorm1d(hidden_features_size[i + 1]*heads))
+            self.convs.append(conv(hidden_features_size[-1]*heads, out_channels, aggr=aggr, heads=heads, dropout=dropout, concat=False))
+        else:
+            self.convs.append(conv(in_channels, out_channels, aggr=aggr))
+
+    def forward(self, x: torch.tensor, edge_index: torch.tensor) -> torch.tensor:
+        """Forward propagation
+
+        Args:
+            x (torch.tensor): matrix of embeddings
+            edge_index (torch.tensor): matrix of edges
+
+        Returns:
+            torch.tensor: embeddings after last layer of network is applied
+        """
+
+        for i in range(len(self.convs)):
+            x = self.convs[i](x, edge_index)
+
+            # apply relu and dropout on all layers except last one
+            if i < len(self.convs) - 1:
+                #x = self.bns[i](x)
+                x = x.relu()
+                #x = F.dropout(x, p=0.5, training=self.training)
+
+        return x
+
+################################################################
 
 ##############################
 # constants
@@ -130,22 +212,23 @@ def declare_model_and_data(ctx: mgp.ProcCtx):
         ctx (mgp.ProcCtx): current context
     """
     global global_params
-    nodes = list(iter(ctx.graph.vertices))
+    if Modelling.data == None:
+        nodes = list(iter(ctx.graph.vertices))
 
-    reindexing = {}
-    for i in range(len(nodes)):
-        reindexing[i] = nodes[i].properties.get(
-            global_params[MemgraphParams.NODE_ID_PROPERTY]
+        reindexing = {}
+        for i in range(len(nodes)):
+            # inner DB id property
+            reindexing[i] = nodes[i].properties.get("id")
+
+        edges = []
+        for vertex in ctx.graph.vertices:
+            #print(vertex.properties.get(global_params[MemgraphParams.NODE_ID_PROPERTY]))
+            for edge in vertex.out_edges:
+                edges.append(edge)
+
+        Modelling.data = convert_data(
+            nodes, edges, global_params[DataParams.SPLIT_RATIO], global_params, reindexing
         )
-
-    edges = []
-    for vertex in ctx.graph.vertices:
-        for edge in vertex.out_edges:
-            edges.append(edge)
-
-    Modelling.data = convert_data(
-        nodes, edges, global_params[DataParams.SPLIT_RATIO], global_params, reindexing
-    )
 
     # print(data)
     # print(data.edge_index.max())
@@ -220,7 +303,6 @@ def set_model_parameters(
         else:
             return False
 
-    # mgconsole bug
     if (
         ModelParams.HIDDEN_FEATURES_SIZE in params.keys()
         and type(params[ModelParams.HIDDEN_FEATURES_SIZE]) == tuple
@@ -288,6 +370,12 @@ def train(
         global logged_data
 
         if epoch % global_params[TrainParams.CONSOLE_LOG_FREQ] == 0:
+            #######################
+            out = Modelling.model(Modelling.data.x, Modelling.data.edge_index)
+            pred = out.argmax(dim=1)
+            confmat = ConfusionMatrix(num_classes=len(set(Modelling.data.y.detach().numpy())))
+            print(confmat(pred[Modelling.data.train_mask],Modelling.data.y[Modelling.data.train_mask])) 
+            #####################################  
             dict_train = metrics(
                 Modelling.data.train_mask,
                 Modelling.model,
@@ -309,6 +397,14 @@ def train(
             )
         # print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}')
 
+    ###########################################################
+    # import weightwatcher as ww
+
+    # watcher = ww.WeightWatcher(model=Modelling.model)
+    # details = watcher.analyze()
+    # summary = watcher.get_summary(details)
+    # print(summary)
+    ###########################################################
     return [
         mgp.Record(
             epoch=logged_data[k]["epoch"],
@@ -383,7 +479,7 @@ def load_model() -> mgp.Record(path=str):
     global model
 
     if not os.path.exists(os.path.abspath(global_params[OtherParams.PATH_TO_MODEL])):
-        raise Exception("file not found on path")
+        raise Exception(f"File {global_params[OtherParams.PATH_TO_MODEL]} not found on system. Please provide the valid path.")
 
     Modelling.model.load_state_dict(
         torch.load(global_params[OtherParams.PATH_TO_MODEL])
@@ -411,11 +507,13 @@ def predict() -> mgp.Record(dict=mgp.Map):
 
 
 @mgp.read_proc
-def reset():
+def reset() -> mgp.Record(status=str):
     if "global_params" in globals().keys():
-        del globals()["global_params"]
+        globals.pop("global_params")
 
     if "logged_data" in globals().keys():
-        del globals()["logged_data"]
+        globals.pop("logged_data")
 
-    return mgp.Record()
+    return mgp.Record(status="Global parameters and logged data have been reseted.")
+
+
