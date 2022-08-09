@@ -1,6 +1,7 @@
 from mage.link_prediction.link_prediction_util import (
     inner_train,
-    inner_train2,
+    inner_train_batch,
+    inner_train_heterographs,
     preprocess,
     inner_predict,
     get_number_of_edges,

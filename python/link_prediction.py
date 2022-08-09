@@ -8,7 +8,8 @@ from collections import defaultdict
 from mage.link_prediction import (
     preprocess,
     inner_train,
-    inner_train2,
+    inner_train_batch,
+    inner_train_heterographs,
     inner_predict,
     create_model,
     create_optimizer,
@@ -247,7 +248,8 @@ def train(
         _load_feature_size(graph.ndata[link_prediction_parameters.node_features_property].shape[1])
 
     # Split the data
-    train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g = preprocess(graph, link_prediction_parameters.split_ratio)
+    if not HETERO: 
+        train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g = preprocess(graph, link_prediction_parameters.split_ratio)
 
     # Create a model
     model = create_model(
@@ -273,23 +275,39 @@ def train(
     )
 
     # Collect training and validation results from utils model
-    training_results, validation_results = inner_train(
-        train_g,
-        train_pos_g,
-        train_neg_g,
-        val_pos_g,
-        val_neg_g,
-        model,
-        predictor,
-        optimizer,
-        link_prediction_parameters.num_epochs,
-        link_prediction_parameters.node_features_property,
-        link_prediction_parameters.console_log_freq,
-        link_prediction_parameters.checkpoint_freq,
-        link_prediction_parameters.metrics,
-        link_prediction_parameters.tr_acc_patience,
-        link_prediction_parameters.context_save_dir,
-    )
+    if HETERO:
+        training_results, validation_results = inner_train_heterographs(
+            graph,
+            model,
+            predictor,
+            optimizer,
+            link_prediction_parameters.num_epochs,
+            link_prediction_parameters.node_features_property,
+            link_prediction_parameters.console_log_freq,
+            link_prediction_parameters.checkpoint_freq,
+            link_prediction_parameters.metrics,
+            link_prediction_parameters.tr_acc_patience,
+            link_prediction_parameters.context_save_dir,
+        )
+    else:
+        training_results, validation_results = inner_train(
+            train_g,
+            train_pos_g,
+            train_neg_g,
+            val_pos_g,
+            val_neg_g,
+            model,
+            predictor,
+            optimizer,
+            link_prediction_parameters.num_epochs,
+            link_prediction_parameters.node_features_property,
+            link_prediction_parameters.console_log_freq,
+            link_prediction_parameters.checkpoint_freq,
+            link_prediction_parameters.metrics,
+            link_prediction_parameters.tr_acc_patience,
+            link_prediction_parameters.context_save_dir,
+        )
+
 
     return mgp.Record(training_results=training_results, validation_results=validation_results)
 
@@ -549,9 +567,9 @@ def _get_dgl_hetero_graph_data(
             _process_hetero_help_function(mem_indexes, dest_id, dest_type, dest_features, reindex_orig, reindex_dgl, index_dgl_to_features) 
 
             # Define edge
-            src_nodes[src_type].append(reindex_orig[src_type][src_id])
-            dest_nodes[dest_type].append(reindex_orig[dest_type][dest_id])
-
+            src_nodes[edge_type].append(reindex_orig[src_type][src_id])
+            dest_nodes[edge_type].append(reindex_orig[dest_type][dest_id])
+            
             # Define type triplet
             type_triplet = (src_type, edge_type, dest_type)
             if type_triplet not in type_triplets:
@@ -560,16 +578,17 @@ def _get_dgl_hetero_graph_data(
     data_dict = dict()   # data_dict has specific type that DGL requires to create a heterograph 
 
     # Create a heterograph
+    print(type_triplets)
     for type_triplet in type_triplets:
-        data_dict[type_triplet] = torch.tensor(src_nodes[type_triplet[0]]), torch.tensor(dest_nodes[type_triplet[2]])
-    g = dgl.heterograph(data_dict)
+        data_dict[type_triplet] = torch.tensor(src_nodes[type_triplet[1]]), torch.tensor(dest_nodes[type_triplet[1]])
 
-    # print(len(src_nodes["Customer"]))
-    # print(len(dest_nodes["Plan"]), len(set(dest_nodes["Plan"])), max(dest_nodes["Plan"]))
-    # print(len(g.nodes("Customer")), g.nodes("Customer"))
-    # print(len(g.nodes("Plan")), len(set(g.nodes("Plan"))), g.nodes("Plan"))
+    g = dgl.heterograph(data_dict)  
+    print(len(src_nodes["SUBSCRIBES_TO"]), len(src_nodes["CONNECTS_TO"]))
+    print(len(dest_nodes["SUBSCRIBES_TO"]), len(set(dest_nodes["SUBSCRIBES_TO"])), max(dest_nodes["SUBSCRIBES_TO"]))
+    print(len(dest_nodes["CONNECTS_TO"]), len(set(dest_nodes["CONNECTS_TO"])), max(dest_nodes["CONNECTS_TO"]))
+    print(len(g.nodes("Customer")), g.nodes("Plan"))
 
-    # Create features
+       # Create features
     features = defaultdict(list) #  feature is a dictionary from node_type to features
     for node_type in g.ntypes:
         # print("Node type: ", node_type)

@@ -16,15 +16,15 @@ import random
 from mage.link_prediction.constants import (
     MODEL_NAME, PREDICTOR_NAME, LOSS, ACCURACY, AUC_SCORE, PRECISION, RECALL, NUM_WRONG_EXAMPLES, F1, EPOCH
 )
+from mage.link_prediction.models import HeteroModel
 import dgl.function as fn
 from dgl.nn import SAGEConv
 import tqdm
 import sklearn.metrics
 
-
-class Model(torch.nn.Module):
+class BatchModel(torch.nn.Module):
     def __init__(self, in_feats, h_feats):
-        super(Model, self).__init__()
+        super(BatchModel, self).__init__()
         self.conv1 = SAGEConv(in_feats, h_feats, aggregator_type='mean')
         self.conv2 = SAGEConv(h_feats, h_feats, aggregator_type='mean')
         self.h_feats = h_feats
@@ -67,6 +67,13 @@ def test_negative_samples(graph: dgl.graph, src_nodes, dest_nodes):
             raise Exception("Negative sampling test failed")
 
     print("TEST PASSED OK")
+
+def construct_negative_heterograph(graph, k, etype):
+    utype, edge_type, vtype = etype
+    src, dst = graph.edges(etype=edge_type)
+    neg_src = src.repeat_interleave(k)
+    neg_dst = torch.randint(0, graph.num_nodes(vtype), (len(src) * k,))
+    return dgl.heterograph({etype: (neg_src, neg_dst)}, num_nodes_dict={ntype: graph.num_nodes(ntype) for ntype in graph.ntypes})
 
 def create_negative_graphs2(graph: dgl.graph, val_size: int) -> Tuple[dgl.graph, dgl.graph]:
     """Creates negative training and validation graph.
@@ -268,7 +275,7 @@ def evaluate(
             result[NUM_WRONG_EXAMPLES] = (
                 np.not_equal(np.array(labels, dtype=bool), classes).sum().item()
             )
-def inner_train2(train_g: dgl.graph, train_pos_g: dgl.graph, train_neg_g: dgl.graph, val_pos_g: dgl.graph,
+def inner_train_batch(train_g: dgl.graph, train_pos_g: dgl.graph, train_neg_g: dgl.graph, val_pos_g: dgl.graph,
     val_neg_g: dgl.graph, model: torch.nn.Module, predictor: torch.nn.Module, optimizer: torch.optim.Optimizer, num_epochs: int,
     node_features_property: str, console_log_freq: int, checkpoint_freq: int, metrics: List[str], tr_acc_patience: int,
     context_save_dir: str,) -> Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]:
@@ -306,7 +313,7 @@ def inner_train2(train_g: dgl.graph, train_pos_g: dgl.graph, train_neg_g: dgl.gr
 
     node_features = train_g.ndata[node_features_property]
 
-    model = Model(node_features.shape[1], 128)
+    model = BatchModel(node_features.shape[1], 128)
     # predictor = DotPredictor()
     opt = torch.optim.Adam(list(model.parameters()) + list(predictor.parameters()))
 
@@ -353,6 +360,73 @@ def inner_train2(train_g: dgl.graph, train_pos_g: dgl.graph, train_neg_g: dgl.gr
 
                 val_acc = accuracy_score(label_val, classes_val)
                 print("Val acc: ", val_acc)
+
+def compute_loss_heterograph(pos_score, neg_score):
+    # Margin loss
+    n_edges = pos_score.shape[0]
+    return (1 - pos_score.unsqueeze(1) + neg_score.view(n_edges, -1)).clamp(min=0).mean()
+
+
+def inner_train_heterographs(
+    g: dgl.graph,
+    model: torch.nn.Module,
+    predictor: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+    num_epochs: int,
+    node_features_property: str,
+    console_log_freq: int,
+    checkpoint_freq: int,
+    metrics: List[str],
+    tr_acc_patience: int,
+    context_save_dir: str
+
+) -> Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]:
+    """Real train method where training occurs. Parameters from LinkPredictionParameters are sent here. They aren't sent as whole class because of circular dependency.
+
+    Args:
+        model (torch.nn.Module): A reference to the model.
+        predictor (torch.nn.Module): A reference to the edge predictor.
+        optimizer (torch.optim.Optimizer): A reference to the training optimizer.
+        num_epochs (int): number of epochs for model training.
+        node_features_property: (str): property name where the node features are saved.
+        console_log_freq (int): How often results will be printed. All results that are printed in the terminal will be returned to the client calling Memgraph.
+        checkpoint_freq (int): Select the number of epochs on which the model will be saved. The model is persisted on the disc.
+        metrics (List[str]): Metrics used to evaluate model in training on the validation set.
+            Epoch will always be displayed, you can add loss, accuracy, precision, recall, specificity, F1, auc_score etc.
+        tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on validation set be tolerated before stopping the training.
+        context_save_dir: str -> Path where the model and predictor will be saved every checkpoint_freq epochs.
+        train_g (dgl.graph): A reference to the created training graph without validation edges.
+        train_pos_g (dgl.graph): Positive training graph.
+        train_neg_g (dgl.graph): Negative training graph.
+        val_pos_g (dgl.graph): Positive validation graph.
+        val_neg_g (dgl.graph): Negative validation graph.
+    Returns:
+        Tuple[List[Dict[str, float]], List[Dict[str, float]]: Training results, validation results
+    """
+    training_results, validation_results = [], []
+
+    k = 5
+    print("E types: ", g.etypes)
+    model = HeteroModel(18, 20, 5, g.etypes)
+    customer_feats = g.nodes["Customer"].data[node_features_property]
+    plan_feats = g.nodes["Plan"].data[node_features_property]
+    node_features = {'Customer': customer_feats, 'Plan': plan_feats}
+    opt = torch.optim.Adam(model.parameters())
+    for epoch in range(10):
+        negative_graph = construct_negative_heterograph(g, k, ("Customer", "SUBSCRIBES_TO", "Plan"))
+        som = ("Customer", "SUBSCRIBES_TO", "Plan")
+        pos_score, neg_score = model(g, negative_graph, node_features, som)
+        print(pos_score.keys())
+        print(neg_score)
+        loss = compute_loss_heterograph(pos_score[som], neg_score)
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+        print(loss.item())
+   
+
+    return training_results, validation_results
+
 
 def inner_train(
     train_g: dgl.graph,
