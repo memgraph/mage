@@ -4,6 +4,7 @@ import dgl  # geometric deep learning
 from typing import List, Tuple, Dict
 from numpy import int32
 from dataclasses import dataclass, field
+from collections import defaultdict
 from mage.link_prediction import (
     preprocess,
     inner_train,
@@ -126,6 +127,8 @@ reindex_orig: Dict[int, int] = None  # Mapping of original dataset indexes to DG
 predictor: torch.nn.Module = None  # Predictor for calculating edge scores
 model: torch.nn.Module = None
 features_size_loaded: bool = False  # If size of the features was already inserted.
+HETERO = True
+align_method = "proj_0"
 
 ##############################
 # All read procedures
@@ -213,20 +216,35 @@ def train(
     _reset_train_predict_parameters()
 
     # Get some data
-    graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
+    # Dealing with heterogeneous graphs
+    if HETERO:  # DEBUG ONLY
+        graph, reindex_dgl, reindex_orig = _get_dgl_hetero_graph_data(ctx)  # dgl representation of the graph and dict new to old index
+    else:
+        graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
+
 
     # Check if there are no edges in the dataset, assume that it cannot learn effectively without edges. E2E handling.
     if graph.number_of_edges() == 0:
         raise Exception("No edges in the dataset. ")
 
     # TEST: Currently disabled
-    _conversion_to_dgl_test(graph=graph, reindex_dgl=reindex_dgl, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property)
+    # Dealing with heterogeneous graphs.
+    if HETERO:
+        _conversion_to_dgl_hetero_test(graph=graph, reindex_dgl=reindex_dgl, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property)
+    else:
+        _conversion_to_dgl_test(graph=graph, reindex_dgl=reindex_dgl, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property)
+
 
     """ Train g is a graph which has removed test edges. Others are positive and negative train and test graphs
     """
 
     # Insert in the hidden_features_size structure if needed
-    _load_feature_size(graph.ndata[link_prediction_parameters.node_features_property].shape[1])
+    if HETERO:
+        # Before loading we will project features of those node types that aren't of same dimensionality, TODO: Add this as some kind of general preprocessing step
+        ftr_size = _proj_0(graph)        
+        _load_feature_size(ftr_size)
+    else:
+        _load_feature_size(graph.ndata[link_prediction_parameters.node_features_property].shape[1])
 
     # Split the data
     train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g = preprocess(graph, link_prediction_parameters.split_ratio)
@@ -413,6 +431,25 @@ def load_context(ctx: mgp.ProcCtx, path: str = link_prediction_parameters.contex
 # Private helper methods.
 ##############################
 
+def _proj_0(graph: dgl.graph):
+    ftr_size_max = 0
+    for node_type in graph.ntypes:  # Not costly, iterates only over node types.
+        node_type_features = graph.ndata[link_prediction_parameters.node_features_property][node_type]
+        ftr_size_max = max(ftr_size_max, node_type_features.shape[1])
+    
+    features = defaultdict(list)
+
+    for node_type in graph.ntypes:
+        p1d = (0, ftr_size_max - graph.ndata[link_prediction_parameters.node_features_property][node_type].shape[1])  # Padding left if 0 and padding right is dim_goal - arr.shape[1]
+        
+        features[node_type] = torch.nn.functional.pad(graph.ndata[link_prediction_parameters.node_features_property][node_type], 
+                    p1d, mode="constant", value=0)
+
+
+    graph.ndata[link_prediction_parameters.node_features_property] = features
+
+    return ftr_size_max
+
 def _load_feature_size(features_size: int):
     """Inserts feature size if not already inserted.
 
@@ -453,6 +490,104 @@ def _process_help_function(
         features.append(node_features)
         return ind + 1
     return ind
+
+
+def _process_hetero_help_function(mem_indexes: Dict[str, int], old_index: int, type_: str, features: List[int], reindex_orig: Dict[str, Dict[int, int]], reindex_dgl: Dict[str, Dict[int, int]], 
+                                  index_dgl_to_features: Dict[str, Dict[int, List[int]]]) -> None:
+    if type_ not in reindex_orig.keys():  # Label not seen before
+        reindex_orig[type_] = dict()  # Mapping of old to new indexes for given type_
+        reindex_dgl[type_] = dict()   # Mapping of new to old indexes for given type_
+        index_dgl_to_features[type_] = dict()  # Mapping of new index to its feature
+
+    # Check if old_index has been seen for this label
+    if old_index not in reindex_orig[type_].keys():
+        ind = mem_indexes[type_]  # get current counter
+        reindex_dgl[type_][ind] = old_index  # save new_to_old relationship
+        reindex_orig[type_][old_index] = ind  # save old_to_new relationship
+        index_dgl_to_features[type_][ind] = eval(features)  # Save new to features relationship. TODO: Remove that when we done with Cypher converting from String to List
+        mem_indexes[type_] += 1
+
+
+def _get_dgl_hetero_graph_data(
+    ctx: mgp.ProcCtx,
+) -> Tuple[dgl.graph, Dict[int32, int32], Dict[int32, int32]]:
+    """Creates dgl representation of the graph.
+
+    Args:
+        ctx (mgp.ProcCtx): The reference to the context execution.
+
+    Returns:
+        Tuple[dgl.graph, Dict[int32, int32], Dict[int32, int32]]: Tuple of DGL graph representation, dictionary of mapping new to old index and dictionary of mapping old to new index.
+    """
+
+    global link_prediction_parameters
+
+    reindex_dgl = dict()  # map of label to new node index to old node index
+    reindex_orig = dict()  # map of label to old node index to new node index
+    mem_indexes = defaultdict(int)  # map of label to indexes. All indexes are by default indexed 0.
+
+    type_triplets = []  # list of tuples where each tuple is in following form(src_type, edge_type, dst_type), e.g. ("Customer", "SUBSCRIBES_TO", "Plan")
+    index_dgl_to_features = dict()  # dgl indexes to features
+
+    src_nodes, dest_nodes = defaultdict(list), defaultdict(list) # label to node IDs -> Tuple of node-tensors format from DGL
+
+    for vertex in ctx.graph.vertices:
+        # Process source vertex
+        src_id, src_type, src_features = vertex.id, vertex.labels[0].name, vertex.properties.get(link_prediction_parameters.node_features_property)
+        
+        # Process hetero label stuff
+        _process_hetero_help_function(mem_indexes, src_id, src_type, src_features, reindex_orig, reindex_dgl, index_dgl_to_features) 
+
+        for edge in vertex.out_edges:
+            edge_type = edge.type.name
+
+            # Process destination vertex next
+            dest_node = edge.to_vertex
+            dest_id, dest_type, dest_features = dest_node.id, dest_node.labels[0].name, dest_node.properties.get(link_prediction_parameters.node_features_property) # TODO: Add this parameter somewhere somehow
+
+            # Handle mappings
+            _process_hetero_help_function(mem_indexes, dest_id, dest_type, dest_features, reindex_orig, reindex_dgl, index_dgl_to_features) 
+
+            # Define edge
+            src_nodes[src_type].append(reindex_orig[src_type][src_id])
+            dest_nodes[dest_type].append(reindex_orig[dest_type][dest_id])
+
+            # Define type triplet
+            type_triplet = (src_type, edge_type, dest_type)
+            if type_triplet not in type_triplets:
+                type_triplets.append(type_triplet)
+
+    data_dict = dict()   # data_dict has specific type that DGL requires to create a heterograph 
+
+    # Create a heterograph
+    for type_triplet in type_triplets:
+        data_dict[type_triplet] = torch.tensor(src_nodes[type_triplet[0]]), torch.tensor(dest_nodes[type_triplet[2]])
+    g = dgl.heterograph(data_dict)
+
+    # print(len(src_nodes["Customer"]))
+    # print(len(dest_nodes["Plan"]), len(set(dest_nodes["Plan"])), max(dest_nodes["Plan"]))
+    # print(len(g.nodes("Customer")), g.nodes("Customer"))
+    # print(len(g.nodes("Plan")), len(set(g.nodes("Plan"))), g.nodes("Plan"))
+
+    # Create features
+    features = defaultdict(list) #  feature is a dictionary from node_type to features
+    for node_type in g.ntypes:
+        # print("Node type: ", node_type)
+        # print(f"Num nodes for {node_type}: ", len(g.nodes(node_type)))
+        # print(f"Nodes for {node_type}", g.nodes(node_type))
+        for node in g.nodes(node_type):
+            node_id = node.item()
+            features[node_type].append(index_dgl_to_features[node_type][node_id])
+
+        features[node_type] = torch.tensor(features[node_type], dtype=torch.float32)
+        # print("Features shape: ", features[node_type].shape)
+
+    g.ndata[link_prediction_parameters.node_features_property] = features
+
+
+    # TODO: Cannot add self-loop like before because multiple node types aren't supported
+
+    return g, reindex_dgl, reindex_orig
 
 
 def _get_dgl_graph_data(
@@ -715,6 +850,48 @@ def _reset_train_predict_parameters() -> None:
     reindex_orig = None
     reindex_dgl = None
 
+
+def _conversion_to_dgl_hetero_test(
+    graph: dgl.graph,
+    reindex_dgl: Dict[str, Dict[int, int]],
+    ctx: mgp.ProcCtx,
+    node_features_property: str,
+) -> None:
+    """
+    Tests whether conversion from ctx.ProcCtx graph to dgl graph went successfully. Checks how features are mapped. Throws exception if something fails.
+
+    Args:
+        graph (dgl.graph): Reference to the dgl heterogeneous graph.
+        reindex_dgl (Dict[int, int]): Mapping from new indexes to old indexes.
+        ctx (mgp.ProcCtx): Reference to the context execution.
+        node_features_property (str): Property namer where the node features are saved`
+
+    """
+
+    # Check if the dataset is empty. E2E handling.
+    if len(ctx.graph.vertices) == 0:
+        raise Exception("The conversion to DGL failed. The dataset is empty. ")
+
+    for node_type in graph.ntypes:
+        for vertex in graph.nodes(node_type):
+            vertex_id = vertex.item()
+            # print(f"Testing vertex: {vertex_id}")
+            old_id = reindex_dgl[node_type][vertex_id]
+            vertex = ctx.graph.get_vertex_by_id(old_id)
+            if vertex is None:
+                raise Exception(f"The conversion to DGL failed. Vertex with id {vertex.id} is not mapped to DGL graph. ")
+
+            old_features = eval(vertex.properties.get(node_features_property))  # TODO: After dealing with Cypher modules
+            if not torch.equal(graph.ndata[node_features_property][node_type][vertex_id], torch.tensor(old_features, dtype=torch.float32),):
+                raise Exception("The conversion to DGL failed. Stored graph does not contain the same features as the converted DGL graph. ")
+
+    # Check number of nodes
+    if graph.number_of_nodes() != len(ctx.graph.vertices):
+        raise Exception("The conversion to DGL failed. Stored graph does not contain the same number of nodes (41) as the converted DGL graph (26).")
+
+    # Check number of edges
+    # if graph.number_of_edges() != get_number_of_edges(ctx):
+    #    raise Exception("Wrong number of edges")
 
 def _conversion_to_dgl_test(
     graph: dgl.graph,
