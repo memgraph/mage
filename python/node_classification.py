@@ -3,7 +3,7 @@ import mgp
 from tqdm import tqdm
 from mage.node_classification.metrics import *
 from torch_geometric.data import Data
-#from mage.node_classification.model.inductive_model import InductiveModel
+from mage.node_classification.model.inductive_model import InductiveModel, GATJK
 from mage.node_classification.utils.convert_data import convert_data
 from mage.node_classification.train_model import model_train_step
 import torch
@@ -12,88 +12,6 @@ import sys
 import mgp
 import os
 
-
-################################################################
-import torch
-import torch_geometric
-import torch.nn.functional as F
-import sys
-import mgp
-
-class LayerType:
-    gat = "GAT"
-    gatv2 = "GATv2"
-    sage = "SAGE"
-
-
-class InductiveModel(torch.nn.Module):
-    def __init__(
-        self,
-        layer_type: str,
-        in_channels: int,
-        hidden_features_size: mgp.List[int],
-        out_channels: int,
-        aggr: str,
-        heads: int = 3,
-        dropout: float = 0.6
-    ):
-        """Initialization of model.
-
-        Args:
-            layer_type (str): type of layer
-            in_channels (int): dimension of input channels
-            hidden_features_size (mgp.List[int]): list of dimensions of hidden features
-            out_channels (int): dimension of output channels
-            aggr (str): aggregator type
-        """
-
-        super(InductiveModel, self).__init__()
-
-        self.convs = torch.nn.ModuleList()
-        self.bns = torch.nn.ModuleList()
-
-        if layer_type not in {LayerType.gat, LayerType.gatv2, LayerType.sage}:
-            raise Exception("Available models are GAT, GATv2 and SAGE")
-            
-        conv = getattr(torch_geometric.nn, layer_type + "Conv")
-        if len(hidden_features_size) > 0:
-            # dodat heads
-            self.convs.append(conv(in_channels, hidden_features_size[0], aggr=aggr, heads=heads, dropout=dropout, concat=True))
-            self.bns.append(torch.nn.BatchNorm1d(hidden_features_size[0]*heads))
-            for i in range(0, len(hidden_features_size) - 1):
-                self.convs.append(
-                    conv(
-                        hidden_features_size[i]*heads, hidden_features_size[i + 1], aggr=aggr, heads=heads, dropout=dropout, concat=True
-                    )
-                )
-                self.bns.append(torch.nn.BatchNorm1d(hidden_features_size[i + 1]*heads))
-            self.convs.append(conv(hidden_features_size[-1]*heads, out_channels, aggr=aggr, heads=heads, dropout=dropout, concat=False))
-        else:
-            self.convs.append(conv(in_channels, out_channels, aggr=aggr))
-
-    def forward(self, x: torch.tensor, edge_index: torch.tensor) -> torch.tensor:
-        """Forward propagation
-
-        Args:
-            x (torch.tensor): matrix of embeddings
-            edge_index (torch.tensor): matrix of edges
-
-        Returns:
-            torch.tensor: embeddings after last layer of network is applied
-        """
-
-        for i in range(len(self.convs)):
-            x = self.convs[i](x, edge_index)
-
-            # apply relu and dropout on all layers except last one
-            if i < len(self.convs) - 1:
-                #x = self.bns[i](x)
-                x = x.relu()
-                #x = F.dropout(x, p=0.5, training=self.training)
-
-        return x
-
-################################################################
 
 ##############################
 # constants
@@ -138,7 +56,8 @@ class OtherParams:
 class Modelling:
     # all None until set_params are executed
     data: Data = None
-    model: InductiveModel = None
+    # model: InductiveModel = None
+    model: GATJK = None
     opt = None
     criterion = None
 
@@ -241,8 +160,15 @@ def declare_model_and_data(ctx: mgp.ProcCtx):
         set(Modelling.data.y.detach().numpy())
     )
 
-    Modelling.model = InductiveModel(
-        layer_type=global_params[ModelParams.LAYER_TYPE],
+    # Modelling.model = InductiveModel(
+    #     layer_type=global_params[ModelParams.LAYER_TYPE],
+    #     in_channels=global_params[ModelParams.IN_CHANNELS],
+    #     hidden_features_size=global_params[ModelParams.HIDDEN_FEATURES_SIZE],
+    #     out_channels=global_params[ModelParams.OUT_CHANNELS],
+    #     aggr=global_params[ModelParams.AGGREGATOR],
+    # )
+
+    Modelling.model = GATJK(
         in_channels=global_params[ModelParams.IN_CHANNELS],
         hidden_features_size=global_params[ModelParams.HIDDEN_FEATURES_SIZE],
         out_channels=global_params[ModelParams.OUT_CHANNELS],
@@ -375,6 +301,7 @@ def train(
             pred = out.argmax(dim=1)
             confmat = ConfusionMatrix(num_classes=len(set(Modelling.data.y.detach().numpy())))
             print(confmat(pred[Modelling.data.train_mask],Modelling.data.y[Modelling.data.train_mask])) 
+            print(pred[Modelling.data.train_mask])
             #####################################  
             dict_train = metrics(
                 Modelling.data.train_mask,
@@ -489,7 +416,7 @@ def load_model() -> mgp.Record(path=str):
 
 @mgp.read_proc
 def predict() -> mgp.Record(dict=mgp.Map):
-    """This function predicts metrics on all nodes. It is suggested that user previously
+    """This function predicts metrics on one node. It is suggested that user previously
     loads unseen test data to predict on it.
 
     Returns:

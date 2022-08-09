@@ -1,13 +1,13 @@
 import torch
 from torch_geometric.data import Data
 from mage.node_classification.model.inductive_model import InductiveModel
+import mgp
 
-
-def model_train_step(model: InductiveModel, opt, data: Data, criterion) -> torch.tensor:
+def model_train_step(model: mgp.Any, opt, data: Data, criterion) -> torch.tensor:
     """In this function, one epoch of training is performed.
 
     Args:
-        model (InductiveModel): object for model
+        model (Any): object for model
         opt (_type_): model optimizer
         data (Data): prepared dataset for training
         criterion (_type_): criterion for loss calculation
@@ -16,9 +16,12 @@ def model_train_step(model: InductiveModel, opt, data: Data, criterion) -> torch
     Returns:
         torch.tensor: calculated loss
     """
+    
     model.train()
     opt.zero_grad()  # Clear gradients.
     out = model(data.x, data.edge_index)  # Perform a single forward pass.
+    
+
     loss = criterion(
         out[data.train_mask], data.y[data.train_mask]
     )  # Compute the loss solely based on the training nodes.
