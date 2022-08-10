@@ -1,3 +1,4 @@
+from unittest import result
 import mgp  # Python API
 import torch
 import dgl  # geometric deep learning
@@ -5,6 +6,7 @@ from typing import List, Tuple, Dict
 from numpy import int32
 from dataclasses import dataclass, field
 from collections import defaultdict
+from heapq import heappop, heappush, heapify
 from mage.link_prediction import (
     preprocess,
     preprocess_heterographs,
@@ -132,7 +134,7 @@ reindex_orig: Dict[int, int] = None  # Mapping of original dataset indexes to DG
 predictor: torch.nn.Module = None  # Predictor for calculating edge scores
 model: torch.nn.Module = None
 features_size_loaded: bool = False  # If size of the features was already inserted.
-HETERO = False
+HETERO = True
 align_method = "proj_0"
 
 ##############################
@@ -405,6 +407,42 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
 
     return result
 
+@mgp.read_proc
+def recommend(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: mgp.List[mgp.Vertex], k: int) -> mgp.Record(score=mgp.Number, recommendation=mgp.Vertex):
+    """Recommend method. It is assumed that nodes are already added to the original graph and our goal is to predict whether there is an edge between two nodes or not. Even if the edge exists,
+     method can be used. Recommends k nodes based on edge scores. 
+
+
+    Args:
+        ctx (mgp.ProcCtx): A reference to the context execution
+        src_vertex (mgp.Vertex): Source vertex.
+        dest_vertex (mgp.Vertex): Destination vertex.
+
+    Returns:
+        score: Probability that two nodes are connected
+    """
+    global graph, predictor, model, reindex_orig, reindex_dgl, HETERO
+
+    # If the model isn't available
+    if model is None:
+        raise Exception("No trained model available to the system. Train or load it first. ")
+
+    # You called predict after session was lost
+    if graph is None:
+        if HETERO:             
+            graph, reindex_dgl, reindex_orig = _get_dgl_hetero_graph_data(ctx)  # dgl representation of the graph and dict new to old index
+        else:
+            graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
+
+    results = []
+    for i, dest_vertex in enumerate(dest_vertices):  # TODO: Can be implemented much faster by directly using matrix multiplication.
+        heappush(results, (-predict(ctx, src_vertex, dest_vertex).fields["score"], i, dest_vertex))  # Build in O(n). Add i to break ties where all predict values are the same.
+    
+    recommendations = []
+    for i in range(k):
+        score, i, recommendation = heappop(results)
+        recommendations.append(mgp.Record(score=-score, recommendation=recommendation))
+    return recommendations
 
 @mgp.read_proc
 def test(ctx: mgp.ProcCtx, src_vertices: List[int], dest_vertices: List[int]) -> mgp.Record(scores=mgp.Any, accuracy=mgp.Number):
@@ -490,6 +528,7 @@ def _proj_0(graph: dgl.graph):
     graph.ndata[link_prediction_parameters.node_features_property] = features
 
     return ftr_size_max
+
 
 def _load_feature_size(features_size: int):
     """Inserts feature size if not already inserted.
