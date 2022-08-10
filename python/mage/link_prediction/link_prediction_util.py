@@ -3,7 +3,6 @@ import torch.nn.functional as F
 import numpy as np
 import scipy.sparse as sp
 import dgl
-from dgl.data import CoraGraphDataset
 from collections import OrderedDict
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import accuracy_score
@@ -16,7 +15,6 @@ import random
 from mage.link_prediction.constants import (
     MODEL_NAME, PREDICTOR_NAME, LOSS, ACCURACY, AUC_SCORE, PRECISION, RECALL, NUM_WRONG_EXAMPLES, F1, EPOCH
 )
-from mage.link_prediction.models import HeteroModel
 import dgl.function as fn
 from dgl.nn import SAGEConv
 import tqdm
@@ -444,7 +442,7 @@ def inner_train_heterographs(
         train_pos_g (dgl.graph): Positive training graph.
         val_pos_g (dgl.graph): Positive validation graph.
         relation (Tuple[str, str, str]): src_type, edge_type, dest_type that determines edges important for prediction. For those we need to create 
-                                        negative edges.
+            negative edges.
         model (torch.nn.Module): A reference to the model.
         predictor (torch.nn.Module): A reference to the edge predictor.
         optimizer (torch.optim.Optimizer): A reference to the training optimizer.
@@ -770,7 +768,7 @@ def _save_context(model: torch.nn.Module, predictor: torch.nn.Module, context_sa
     torch.save(predictor, context_save_dir + PREDICTOR_NAME)
 
 def inner_predict(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl.graph, node_features_property: str, 
-                    src_node: int, dest_node: int) -> float:
+                    src_node: int, dest_node: int, relation: Tuple[str, str, str]=None) -> float:
     """Predicts edge scores for given graph. This method is called to obtain edge probability for edge with id=edge_id.
 
     Args:
@@ -780,6 +778,8 @@ def inner_predict(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl
         node_features_property (str): Property name of the features.
         src_node (int): Source node of the edge.
         dest_node (int): Destination node of the edge. 
+        relation (Tuple[str, str, str]): src_type, edge_type, dest_type that determines edges important for prediction. For those we need to create 
+            negative edges.
 
     Returns:
         float: Edge score.
@@ -787,7 +787,13 @@ def inner_predict(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl
 
     with torch.no_grad():
         h = model(graph, graph.ndata[node_features_property])
-        score = predictor.forward_pred(h, src_node, dest_node)
+        if relation is None:
+            src_embedding, dest_embedding = h[src_node], h[dest_node]
+        else:
+            src_embedding, dest_embedding = h[relation[0]][src_node], h[relation[2]][dest_node]
+        score = predictor.forward_pred(src_embedding, dest_embedding)
+        # scores = predictor.forward(graph, h, relation=relation)
+        # print("Scores: ", torch.sum(scores < 0.5).item())
         prob = torch.sigmoid(score)
         # print("Probability: ", prob.item())
         return prob.item()
@@ -807,3 +813,8 @@ def inner_predict(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl
 # 31336->1106148
 # 31336->1123188
 # 31336->1128990
+
+# Telecom recommendations
+# 8779-QRDMV
+# 7495-OOKFY
+

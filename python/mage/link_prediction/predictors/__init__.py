@@ -1,3 +1,2 @@
 from mage.link_prediction.predictors.DotPredictor import DotPredictor
 from mage.link_prediction.predictors.MLPPredictor import MLPPredictor
-from mage.link_prediction.predictors.HeteroDotPredictor import HeteroDotProductPredictor

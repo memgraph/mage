@@ -37,16 +37,15 @@ class MLPPredictor(torch.nn.Module):
             return g.edata["score"]
 
 
-    def forward_pred(self, node_embeddings: torch.Tensor, src_node: int, dest_node: int) -> float:
+    def forward_pred(self, src_embedding: torch.Tensor, dest_embedding: torch.Tensor) -> float:
         """Efficient implementation for predict method of DotPredictor.
 
         Args:
-            node_embeddings (torch.Tensor): Final node embeddings computed.
-            src_node (int): Source node of the edge.
-            dest_node (int): Destination node of the edge.
+            src_embedding (torch.Tensor): Embedding of the source node.
+            dest_embedding (torch.Tensor): Embedding of the destination node.
 
         Returns:
             float: Edge score computed.
         """
-        h = torch.cat([node_embeddings[src_node], node_embeddings[dest_node]])
+        h = torch.cat([src_embedding, dest_embedding])
         return self.W2(F.relu(self.W1(h)))

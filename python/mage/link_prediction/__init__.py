@@ -52,6 +52,6 @@ from mage.link_prediction.constants import (
     RECALL,
     F1,
     NUM_WRONG_EXAMPLES,
-    EPOCH
-
+    EPOCH,
+    TARGET_RELATION
 )
