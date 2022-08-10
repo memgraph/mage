@@ -68,14 +68,14 @@ def test_negative_samples(graph: dgl.graph, src_nodes, dest_nodes):
 
     print("TEST PASSED OK")
 
-def construct_negative_heterograph(graph, k, etype):
-    utype, edge_type, vtype = etype
-    src, dst = graph.edges(etype=edge_type)
+def construct_negative_heterograph(graph, k, relation):
+    _, edge_type, dest_type = relation
+    src, dst = graph.edges(etype=edge_type)  # get only edges of this edge type
     neg_src = src.repeat_interleave(k)
-    neg_dst = torch.randint(0, graph.num_nodes(vtype), (len(src) * k,))
-    return dgl.heterograph({etype: (neg_src, neg_dst)}, num_nodes_dict={ntype: graph.num_nodes(ntype) for ntype in graph.ntypes})
+    neg_dst = torch.randint(0, graph.num_nodes(dest_type), (len(src) * k,))
+    return dgl.heterograph({relation: (neg_src, neg_dst)}, num_nodes_dict={ntype: graph.num_nodes(ntype) for ntype in graph.ntypes})
 
-def create_negative_graphs2(graph: dgl.graph, val_size: int) -> Tuple[dgl.graph, dgl.graph]:
+def create_negative_graphs_batch(graph: dgl.graph, val_size: int) -> Tuple[dgl.graph, dgl.graph]:
     """Creates negative training and validation graph.
 
     Args:
@@ -112,9 +112,7 @@ def create_negative_graphs2(graph: dgl.graph, val_size: int) -> Tuple[dgl.graph,
 
     return train_neg_g, val_neg_g
 
-def create_negative_graphs(
-    adj_matrix: np.matrix, graph: dgl.graph, val_size: int
-) -> Tuple[dgl.graph, dgl.graph]:
+def create_negative_heterographs(adj_matrix: np.matrix, graph: dgl.graph, val_size: int) -> Tuple[dgl.graph, dgl.graph]:
     """Creates negative training and validation graph.
     Args:
         adj_matrix (np.matrix): Adjacency matrix.
@@ -152,9 +150,70 @@ def create_negative_graphs(
 
     return train_neg_g, val_neg_g
 
-def create_positive_graphs(
-    graph: dgl.graph, val_size: int
-) -> Tuple[dgl.graph, dgl.graph, dgl.graph]:
+def create_negative_graphs(adj_matrix: np.matrix, graph: dgl.graph, val_size: int) -> Tuple[dgl.graph, dgl.graph]:
+    """Creates negative training and validation graph.
+    Args:
+        adj_matrix (np.matrix): Adjacency matrix.
+        number_of_nodes (int): Number of nodes in the whole graph.
+        number_of_edges (int): Number of edges in the whole graph.
+        val_size (int): Validation dataset size.
+    Returns:
+        Tuple[dgl.graph, dgl.graph]: Negative training and negative validation graph.
+    """
+    adj_neg = 1 - adj_matrix
+    neg_u, neg_v = np.where(adj_neg > 0)  # Find all non-existing edges. Move from != 0 because of duplicate edges so you could have negative values in adj_neg.
+
+    # Cannot sample anything, raise a Exception. E2E handling.
+    if len(neg_u) == 0 and len(neg_v) == 0:
+        raise Exception("Fully connected graphs are not supported. ")
+
+    # Sample with replacement from negative edges
+    neg_eids = np.random.choice(len(neg_u), graph.number_of_edges())
+
+    # Create negative train and validation dataset
+    val_neg_u, val_neg_v = neg_u[neg_eids[:val_size]], neg_v[neg_eids[:val_size]]
+    train_neg_u, train_neg_v = neg_u[neg_eids[val_size:]], neg_v[neg_eids[val_size:]]
+
+    # print("Train neg u: ", train_neg_u[0:100])
+    # print("Train neg v: ", train_neg_v[0:100])
+    # print("Val neg u: ", val_neg_u[0:100])
+    # print("Val neg v: ", val_neg_v[0:100])
+    
+    # test_negative_samples(graph, val_neg_u, val_neg_v)
+    # test_negative_samples(graph, train_neg_u, train_neg_v)
+
+    # Create negative training and validation graph
+    train_neg_g = dgl.graph((train_neg_u, train_neg_v), num_nodes=graph.number_of_nodes())
+    val_neg_g = dgl.graph((val_neg_u, val_neg_v), num_nodes=graph.number_of_nodes())
+
+    return train_neg_g, val_neg_g
+
+def create_positive_heterographs(graph: dgl.graph, val_size: int, relation: Tuple[str, str, str]) -> Tuple[dgl.graph, dgl.graph, dgl.graph]:
+    """Creates positive training and validation graph. Also removes validation edges from the training
+    graph.
+
+    Args:
+        graph (dgl.graph): Whole training graph.
+        val_size (int): Validation dataset size.
+        relation (Tuple[str, str, str]): src_type, edge_type, dest_type that determines edges important for prediction. For those we need to create 
+                                        negative edges.
+
+    Returns:
+        Tuple[dgl.graph, dgl.graph]: positive training and positive validation graphs with features embedded inside.
+    """
+    # Get edges of specific edge type
+    edge_type_u, _ = graph.edges(etype=relation)
+    graph_edges_len = len(edge_type_u)
+    eids = np.arange(graph_edges_len)  # get all edge ids from number of edges and create a numpy vector from it.
+    eids = np.random.permutation(eids)  # randomly permute edges
+
+    # Create new positive graphs by copying original graph and removing corresponding edges
+    train_pos_g = dgl.remove_edges(graph, eids=eids[:val_size], etype=relation)
+    val_pos_g = dgl.remove_edges(graph, eids=eids[val_size:], etype=relation)
+
+    return train_pos_g, val_pos_g
+
+def create_positive_graphs(graph: dgl.graph, val_size: int) -> Tuple[dgl.graph, dgl.graph, dgl.graph]:
     """Creates positive training and validation graph. Also removes validation edges from the training
     graph.
 
@@ -182,6 +241,55 @@ def create_positive_graphs(
 
     return train_g, train_pos_g, val_pos_g
 
+def preprocess_heterographs(graph: dgl.graph, split_ratio: float, relation: Tuple[str, str, str]) -> Tuple[dgl.graph, dgl.graph, dgl.graph, dgl.graph, dgl.graph]:
+    """Preprocess method splits dataset in training and validation set. This method is also used for setting numpy and torch random seed.
+
+    Args:
+        graph (dgl.graph): A reference to the dgl graph representation.
+        split_ratio (float): Split ratio training to validation set. E.g 0.8 indicates that 80% is used as training set and 20% for validation set.
+        relation (Tuple[str, str, str]): src_type, edge_type, dest_type that determines edges important for prediction. For those we need to create 
+                                        negative edges.
+
+    Returns:
+        Tuple[dgl.graph, dgl.graph, dgl.graph, dgl.graph, dgl.graph]:
+            1. Training graph without edges from validation set.
+            2. Positive training graph
+            3. Negative training graph
+            4. Positive validation graph
+            5. Negative validation graph
+    """
+
+    # First set all seeds
+    rnd_seed = 0
+    random.seed(rnd_seed)
+    np.random.seed(rnd_seed)
+    torch.manual_seed(rnd_seed)  # set it for both cpu and cuda
+
+    src_type, edge_type, dest_type = relation  # unpack relation to source and destination node type and edge type that is between them
+
+    u, v = graph.edges(etype=edge_type)
+
+    adj = sp.coo_matrix((np.ones(len(u)), (u.numpy(), v.numpy())))  # adjacency list graph representation
+    adj_matrix = adj.todense()  # convert to dense matrix representation
+
+    # val size is 1-split_ratio specified by the user
+    val_size = int(graph.number_of_edges() * (1 - split_ratio))
+    # E2E handling
+    if split_ratio < 1.0 and val_size == 0:
+        raise Exception("Graph too small to have a validation dataset. ")
+   
+    # Create negative training and negative validation graph
+    # train_neg_g, val_neg_g = create_negative_graphs2(graph, val_size)
+
+    # train_neg_g, val_neg_g = create_negative_heterographs(adj_matrix, graph, val_size)
+    
+     # Create positive training and positive validation graph
+    train_pos_g, val_pos_g = create_positive_heterographs(graph, val_size, relation)
+
+
+    # return train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g
+    return train_pos_g, None, val_pos_g, None
+
 def preprocess(graph: dgl.graph, split_ratio: float) -> Tuple[dgl.graph, dgl.graph, dgl.graph, dgl.graph, dgl.graph]:
     """Preprocess method splits dataset in training and validation set. This method is also used for setting numpy and torch random seed.
 
@@ -207,11 +315,7 @@ def preprocess(graph: dgl.graph, split_ratio: float) -> Tuple[dgl.graph, dgl.gra
     u, v = graph.edges()
 
     adj = sp.coo_matrix((np.ones(len(u)), (u.numpy(), v.numpy())))  # adjacency list graph representation
-    # print("Adjacency list: ", adj.shape)
-    # print(adj)
     adj_matrix = adj.todense()  # convert to dense matrix representation
-    # print("Adj matrix: ", adj_matrix.shape)
-    # print(adj_matrix)
 
     # val size is 1-split_ratio specified by the user
     val_size = int(graph.number_of_edges() * (1 - split_ratio))
@@ -361,14 +465,13 @@ def inner_train_batch(train_g: dgl.graph, train_pos_g: dgl.graph, train_neg_g: d
                 val_acc = accuracy_score(label_val, classes_val)
                 print("Val acc: ", val_acc)
 
-def compute_loss_heterograph(pos_score, neg_score):
-    # Margin loss
-    n_edges = pos_score.shape[0]
-    return (1 - pos_score.unsqueeze(1) + neg_score.view(n_edges, -1)).clamp(min=0).mean()
-
-
 def inner_train_heterographs(
     g: dgl.graph,
+    train_pos_g: dgl.graph,
+    train_neg_g: dgl.graph,
+    val_pos_g: dgl.graph,
+    val_neg_g: dgl.graph,
+    relation: Tuple[str, str, str],
     model: torch.nn.Module,
     predictor: torch.nn.Module,
     optimizer: torch.optim.Optimizer,
@@ -379,11 +482,12 @@ def inner_train_heterographs(
     metrics: List[str],
     tr_acc_patience: int,
     context_save_dir: str
-
 ) -> Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]:
     """Real train method where training occurs. Parameters from LinkPredictionParameters are sent here. They aren't sent as whole class because of circular dependency.
 
     Args:
+        relation (Tuple[str, str, str]): src_type, edge_type, dest_type that determines edges important for prediction. For those we need to create 
+                                        negative edges.
         model (torch.nn.Module): A reference to the model.
         predictor (torch.nn.Module): A reference to the edge predictor.
         optimizer (torch.optim.Optimizer): A reference to the training optimizer.
@@ -404,29 +508,56 @@ def inner_train_heterographs(
         Tuple[List[Dict[str, float]], List[Dict[str, float]]: Training results, validation results
     """
     training_results, validation_results = [], []
-
+    rnd_seed = 0
+    random.seed(rnd_seed)
+    np.random.seed(rnd_seed)
+    torch.manual_seed(rnd_seed)  # set it for both cpu and cuda
     k = 5
     print("E types: ", g.etypes)
-    model = HeteroModel(18, 20, 5, g.etypes)
+    model = HeteroModel(18, 20, 10, g.etypes)
     customer_feats = g.nodes["Customer"].data[node_features_property]
     plan_feats = g.nodes["Plan"].data[node_features_property]
     node_features = {'Customer': customer_feats, 'Plan': plan_feats}
     opt = torch.optim.Adam(model.parameters())
-    for epoch in range(10):
-        negative_graph = construct_negative_heterograph(g, k, ("Customer", "SUBSCRIBES_TO", "Plan"))
-        som = ("Customer", "SUBSCRIBES_TO", "Plan")
-        pos_score, neg_score = model(g, negative_graph, node_features, som)
-        print(pos_score.keys())
-        print(neg_score)
-        loss = compute_loss_heterograph(pos_score[som], neg_score)
+    loss = torch.nn.BCELoss()
+    m, threshold = torch.nn.Sigmoid(), 0.5
+    for epoch in range(num_epochs):
+        relation = ("Customer", "SUBSCRIBES_TO", "Plan")
+        negative_graph = construct_negative_heterograph(g, k, relation)  # TODO: change so it samples for every relation
+        pos_score, neg_score = model(g, negative_graph, node_features, relation)
+        pos_score = torch.squeeze(pos_score[relation])
+        neg_score = torch.squeeze(neg_score)
+        scores = torch.cat([pos_score, neg_score])  # concatenated positive and negative scores
+        probs = m(scores)
+        classes = classify(probs, threshold)
+        labels = torch.cat([torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])])  # concatenation of labels
+        acc = accuracy_score(labels, classes)
+        loss_output = loss(probs, labels)
+        # loss = compute_loss_heterograph(pos_score, neg_score)
         opt.zero_grad()
-        loss.backward()
+        loss_output.backward()
         opt.step()
-        print(loss.item())
+
+        # Validation pipeline
+        # with torch.no_grad():
+        #     negative_graph_val = construct_negative_heterograph(val_pos_g, k, relation)  # change so it samples for every relation
+        #     pos_score_val, neg_score_val = model(val_pos_g, negative_graph_val, node_features, relation)
+        #     pos_score_val = torch.squeeze(pos_score_val[relation])
+        #     neg_score_val = torch.squeeze(neg_score_val)
+        #     scores_val = torch.cat([pos_score_val, neg_score_val])  # concatenated positive and negative scores
+        #     probs_val = m(scores_val)
+        #     classes_val = classify(probs_val, threshold)
+        #     labels_val = torch.cat([torch.ones(pos_score_val.shape[0]), torch.zeros(neg_score_val.shape[0])])  # concatenation of labels
+        #     acc_val = accuracy_score(labels_val, classes_val)
+        #     loss_output_val = loss(probs_val, labels_val)
+
+        print(f"Epoch: {epoch} Loss: {loss_output.item()} TrAcc: {acc}")
+
+    print("Graph: ", g)
+    print("Negative graph: ", negative_graph)
    
 
     return training_results, validation_results
-
 
 def inner_train(
     train_g: dgl.graph,
@@ -510,7 +641,7 @@ def inner_train(
 
         model.train()  # switch to training mode
 
-        h = torch.squeeze(model(train_g, train_g.ndata[node_features_property]))  # h is torch.float32 that has shape: nodes*hidden_features_size[-1]. Node embeddings.
+        h = torch.squeeze(model(train_pos_g, train_g.ndata[node_features_property]))  # h is torch.float32 that has shape: nodes*hidden_features_size[-1]. Node embeddings.
 
         # print("Node embeddings shape: ", h.shape)
 

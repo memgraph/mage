@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from collections import defaultdict
 from mage.link_prediction import (
     preprocess,
+    preprocess_heterographs,
     inner_train,
     inner_train_batch,
     inner_train_heterographs,
@@ -247,8 +248,12 @@ def train(
     else:
         _load_feature_size(graph.ndata[link_prediction_parameters.node_features_property].shape[1])
 
+    relation = ("Customer", "SUBSCRIBES_TO", "Plan")
+
     # Split the data
-    if not HETERO: 
+    if HETERO:
+        train_pos_g, train_neg_g, val_pos_g, val_neg_g = preprocess_heterographs(graph, link_prediction_parameters.split_ratio, relation)
+    else:
         train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g = preprocess(graph, link_prediction_parameters.split_ratio)
 
     # Create a model
@@ -278,6 +283,11 @@ def train(
     if HETERO:
         training_results, validation_results = inner_train_heterographs(
             graph,
+            train_pos_g, 
+            train_neg_g, 
+            val_pos_g, 
+            val_neg_g,
+            relation,
             model,
             predictor,
             optimizer,
@@ -307,7 +317,6 @@ def train(
             link_prediction_parameters.tr_acc_patience,
             link_prediction_parameters.context_save_dir,
         )
-
 
     return mgp.Record(training_results=training_results, validation_results=validation_results)
 
@@ -578,15 +587,15 @@ def _get_dgl_hetero_graph_data(
     data_dict = dict()   # data_dict has specific type that DGL requires to create a heterograph 
 
     # Create a heterograph
-    print(type_triplets)
+    # print(type_triplets)
     for type_triplet in type_triplets:
         data_dict[type_triplet] = torch.tensor(src_nodes[type_triplet[1]]), torch.tensor(dest_nodes[type_triplet[1]])
 
     g = dgl.heterograph(data_dict)  
-    print(len(src_nodes["SUBSCRIBES_TO"]), len(src_nodes["CONNECTS_TO"]))
-    print(len(dest_nodes["SUBSCRIBES_TO"]), len(set(dest_nodes["SUBSCRIBES_TO"])), max(dest_nodes["SUBSCRIBES_TO"]))
-    print(len(dest_nodes["CONNECTS_TO"]), len(set(dest_nodes["CONNECTS_TO"])), max(dest_nodes["CONNECTS_TO"]))
-    print(len(g.nodes("Customer")), g.nodes("Plan"))
+    # print(len(src_nodes["SUBSCRIBES_TO"]), len(src_nodes["CONNECTS_TO"]))
+    # print(len(dest_nodes["SUBSCRIBES_TO"]), len(set(dest_nodes["SUBSCRIBES_TO"])), max(dest_nodes["SUBSCRIBES_TO"]))
+    # print(len(dest_nodes["CONNECTS_TO"]), len(set(dest_nodes["CONNECTS_TO"])), max(dest_nodes["CONNECTS_TO"]))
+    # print(len(g.nodes("Customer")), g.nodes("Plan"))
 
        # Create features
     features = defaultdict(list) #  feature is a dictionary from node_type to features
