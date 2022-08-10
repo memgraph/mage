@@ -1,26 +1,27 @@
 import torch
 from torch_geometric.data import Data
-from mage.node_classification.model.inductive_model import InductiveModel
+from mage.node_classification.models.inductive_model import InductiveModel
 import mgp
 
-def model_train_step(model: mgp.Any, opt, data: Data, criterion) -> torch.tensor:
+
+def model_train_step(
+    model: mgp.Any, opt: mgp.Any, data: Data, criterion: mgp.Any
+) -> torch.tensor:
     """In this function, one epoch of training is performed.
 
     Args:
         model (Any): object for model
-        opt (_type_): model optimizer
+        opt (Any): model optimizer
         data (Data): prepared dataset for training
-        criterion (_type_): criterion for loss calculation
-        TODO: don't know type of opt and criterion. How to find out those?
+        criterion (Any): criterion for loss calculation
 
     Returns:
-        torch.tensor: calculated loss
+        torch.tensor: loss calculated when training step is performed
     """
-    
+
     model.train()
     opt.zero_grad()  # Clear gradients.
     out = model(data.x, data.edge_index)  # Perform a single forward pass.
-    
 
     loss = criterion(
         out[data.train_mask], data.y[data.train_mask]

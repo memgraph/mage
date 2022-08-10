@@ -4,11 +4,9 @@ import mgp
 import numpy as np
 from tqdm import tqdm
 import random
-import typing
-import sys
 
 
-def convert_data(
+def extract_from_database(
     nodes: mgp.List[mgp.Vertex],
     edges: mgp.List[mgp.Edge],
     train_ratio: float,
@@ -67,10 +65,7 @@ def convert_data(
 
         y[i] = nodes[i].properties.get(params["node_class_property"])
 
-        if masks[i] == 1:
-            train_mask[i] = 1
-        elif masks[i] == 2:
-            val_mask[i] = 1
+        train_mask[i], val_mask[i] = 2 - masks[i], masks[i] - 1
 
     for i in tqdm(range(len(edges))):
         edge_index[0][i] = inv_reindexing[

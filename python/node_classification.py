@@ -1,15 +1,13 @@
-from gqlalchemy import Memgraph
+from torch_geometric.data import Data
+from mage.node_classification.models.inductive_model import InductiveModel
+from mage.node_classification.models.gatjk import GATJK
+from mage.node_classification.utils.metrics import metrics
+from mage.node_classification.utils.extract_from_database import extract_from_database
+from mage.node_classification.models.train_model import model_train_step
 import mgp
 from tqdm import tqdm
-from mage.node_classification.metrics import *
-from torch_geometric.data import Data
-from mage.node_classification.model.inductive_model import InductiveModel, GATJK
-from mage.node_classification.utils.convert_data import convert_data
-from mage.node_classification.train_model import model_train_step
 import torch
 import numpy as np
-import sys
-import mgp
 import os
 
 
@@ -24,6 +22,13 @@ class ModelParams:
     HIDDEN_FEATURES_SIZE = "hidden_features_size"
     LAYER_TYPE = "layer_type"
     AGGREGATOR = "aggregator"
+
+
+class LayerType:
+    gat = "GAT"
+    gatv2 = "GATv2"
+    sage = "SAGE"
+    gatjk = "GATJK"
 
 
 class OptimizerParams:
@@ -51,6 +56,7 @@ class TrainParams:
 class OtherParams:
     DEVICE_TYPE = "device_type"
     PATH_TO_MODEL = "path_to_model"
+    REINDEXING = "reindexing"
 
 
 class Modelling:
@@ -81,6 +87,7 @@ DEFINED_INPUT_TYPES = {
     ModelParams.AGGREGATOR: str,
     DataParams.METRICS: list,
     OtherParams.PATH_TO_MODEL: str,
+    OtherParams.REINDEXING: dict,
 }
 
 DEFAULT_VALUES = {
@@ -106,6 +113,7 @@ DEFAULT_VALUES = {
         "num_wrong_examples",
     ],
     OtherParams.PATH_TO_MODEL: "../pytorch_models/model",
+    OtherParams.REINDEXING: {},
 }
 
 
@@ -134,23 +142,23 @@ def declare_model_and_data(ctx: mgp.ProcCtx):
     if Modelling.data == None:
         nodes = list(iter(ctx.graph.vertices))
 
-        reindexing = {}
         for i in range(len(nodes)):
             # inner DB id property
-            reindexing[i] = nodes[i].properties.get("id")
+            global_params[OtherParams.REINDEXING][i] = nodes[i].properties.get("id")
 
         edges = []
         for vertex in ctx.graph.vertices:
-            #print(vertex.properties.get(global_params[MemgraphParams.NODE_ID_PROPERTY]))
+            # print(vertex.properties.get(global_params[MemgraphParams.NODE_ID_PROPERTY]))
             for edge in vertex.out_edges:
                 edges.append(edge)
 
-        Modelling.data = convert_data(
-            nodes, edges, global_params[DataParams.SPLIT_RATIO], global_params, reindexing
+        Modelling.data = extract_from_database(
+            nodes,
+            edges,
+            global_params[DataParams.SPLIT_RATIO],
+            global_params,
+            global_params[OtherParams.REINDEXING],
         )
-
-    # print(data)
-    # print(data.edge_index.max())
 
     global_params[ModelParams.IN_CHANNELS] = np.shape(
         Modelling.data.x.detach().numpy()
@@ -160,22 +168,30 @@ def declare_model_and_data(ctx: mgp.ProcCtx):
         set(Modelling.data.y.detach().numpy())
     )
 
-    # Modelling.model = InductiveModel(
-    #     layer_type=global_params[ModelParams.LAYER_TYPE],
-    #     in_channels=global_params[ModelParams.IN_CHANNELS],
-    #     hidden_features_size=global_params[ModelParams.HIDDEN_FEATURES_SIZE],
-    #     out_channels=global_params[ModelParams.OUT_CHANNELS],
-    #     aggr=global_params[ModelParams.AGGREGATOR],
-    # )
+    if global_params[ModelParams.LAYER_TYPE] not in {
+        LayerType.gat,
+        LayerType.gatv2,
+        LayerType.gatjk,
+        LayerType.sage,
+    }:
+        raise Exception("Available models are GAT, GATv2, GATJK and SAGE")
 
-    Modelling.model = GATJK(
-        in_channels=global_params[ModelParams.IN_CHANNELS],
-        hidden_features_size=global_params[ModelParams.HIDDEN_FEATURES_SIZE],
-        out_channels=global_params[ModelParams.OUT_CHANNELS],
-        aggr=global_params[ModelParams.AGGREGATOR],
-    )
+    if global_params[ModelParams.LAYER_TYPE] == "GATJK":
+        Modelling.model = GATJK(
+            in_channels=global_params[ModelParams.IN_CHANNELS],
+            hidden_features_size=global_params[ModelParams.HIDDEN_FEATURES_SIZE],
+            out_channels=global_params[ModelParams.OUT_CHANNELS],
+            aggr=global_params[ModelParams.AGGREGATOR],
+        )
+    else:
+        Modelling.model = InductiveModel(
+            layer_type=global_params[ModelParams.LAYER_TYPE],
+            in_channels=global_params[ModelParams.IN_CHANNELS],
+            hidden_features_size=global_params[ModelParams.HIDDEN_FEATURES_SIZE],
+            out_channels=global_params[ModelParams.OUT_CHANNELS],
+            aggr=global_params[ModelParams.AGGREGATOR],
+        )
 
-    # obtain function by its name from library
     Modelling.opt = torch.optim.Adam(
         Modelling.model.parameters(),
         lr=global_params[OptimizerParams.LEARNING_RATE],
@@ -188,7 +204,26 @@ def declare_model_and_data(ctx: mgp.ProcCtx):
 @mgp.read_proc
 def set_model_parameters(
     ctx: mgp.ProcCtx, params: mgp.Map = {}
-) -> mgp.Record(in_channels=int, out_channels=int, num_samples=int, path=str):
+) -> mgp.Record(
+    in_channels=int,
+    out_channels=int,
+    hidden_features_size=list,
+    layer_type=str,
+    aggregator=str,
+    num_samples=int,
+    learning_rate=float,
+    weight_decay=float,
+    split_ratio=float,
+    metrics=mgp.Any,
+    node_features_property=str,
+    node_id_property=str,
+    node_class_property=str,
+    num_epochs=int,
+    console_log_freq=int,
+    checkpoint_freq=int,
+    device_type=str,
+    path_to_model=str,
+):
     """The purpose of this function is to initialize all global variables. Parameter
     params is used for variables written in query module. It first checks
     if (new) variables in params are defined appropriately. If so, map of default
@@ -205,11 +240,30 @@ def set_model_parameters(
                     defined as it should be
 
     Returns:
-        mgp.Record(
-            in_channels (int): number of input channels,
-            out_channels (int): number of output channels
-            num_sample(int): number of samples
-        )
+    mgp.Record(
+        in_channels (int): number of input channels
+        out_channels (int): number of out channels
+        hidden_features_size (list): list of hidden features
+        layer_type (str): type of layer
+        aggregator (str): type of aggregator
+        num_samples (int): number of samples
+        learning_rate (float): learning rate
+        weight_decay (float): weight decay
+        split_ratio (float): ratio between training and validation data
+        metrics (list): list of metrics to be calculated
+        node_features_property (str): name of nodes features property
+        node_id_property (str): name of nodes id property
+        node_class_property (str): name of nodes class property
+        num_epochs (int): number of epochs
+        console_log_freq (int): frequency of logging metrics
+        checkpoint_freq (int): frequency of saving models
+        device_type (str): cpu or cuda
+        path_to_model (str): path where model is load and saved
+        data (Any): data
+        model (Any): model
+        opt (Any): optimizer
+        criterion (Any): criterion
+    )
     """
     global DEFINED_INPUT_TYPES, DEFAULT_VALUES
 
@@ -257,8 +311,22 @@ def set_model_parameters(
     return mgp.Record(
         in_channels=global_params[ModelParams.IN_CHANNELS],
         out_channels=global_params[ModelParams.OUT_CHANNELS],
+        hidden_features_size=global_params[ModelParams.HIDDEN_FEATURES_SIZE],
+        layer_type=global_params[ModelParams.LAYER_TYPE],
+        aggregator=global_params[ModelParams.AGGREGATOR],
         num_samples=np.shape(Modelling.data.x)[0],
-        path=global_params[OtherParams.PATH_TO_MODEL],
+        learning_rate=global_params[OptimizerParams.LEARNING_RATE],
+        weight_decay=global_params[OptimizerParams.WEIGHT_DECAY],
+        split_ratio=global_params[DataParams.SPLIT_RATIO],
+        metrics=global_params[DataParams.METRICS],
+        node_features_property=global_params[MemgraphParams.NODE_FEATURES_PROPERTY],
+        node_id_property=global_params[MemgraphParams.NODE_ID_PROPERTY],
+        node_class_property=global_params[MemgraphParams.NODE_CLASS_PROPERTY],
+        num_epochs=global_params[TrainParams.NUM_EPOCHS],
+        console_log_freq=global_params[TrainParams.CONSOLE_LOG_FREQ],
+        checkpoint_freq=global_params[TrainParams.CHECKPOINT_FREQ],
+        device_type=global_params[OtherParams.DEVICE_TYPE],
+        path_to_model=global_params[OtherParams.PATH_TO_MODEL],
     )
 
 
@@ -271,8 +339,8 @@ def set_model_parameters(
 def train(
     no_epochs: int = 100,
 ) -> mgp.Record(epoch=int, loss=float, train_log=mgp.Any, val_log=mgp.Any):
-    """This function performs training of model. Before her, function set_model_parameters
-    must be defined. Otherwise, global variables data and model will be equal
+    """This function performs training of model. Before it, function set_model_parameters
+    must be executed. Otherwise, global variables data and model will be equal
     to None and AssertionError will be raised.
 
     Args:
@@ -296,13 +364,7 @@ def train(
         global logged_data
 
         if epoch % global_params[TrainParams.CONSOLE_LOG_FREQ] == 0:
-            #######################
-            out = Modelling.model(Modelling.data.x, Modelling.data.edge_index)
-            pred = out.argmax(dim=1)
-            confmat = ConfusionMatrix(num_classes=len(set(Modelling.data.y.detach().numpy())))
-            print(confmat(pred[Modelling.data.train_mask],Modelling.data.y[Modelling.data.train_mask])) 
-            print(pred[Modelling.data.train_mask])
-            #####################################  
+
             dict_train = metrics(
                 Modelling.data.train_mask,
                 Modelling.model,
@@ -324,14 +386,6 @@ def train(
             )
         # print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}')
 
-    ###########################################################
-    # import weightwatcher as ww
-
-    # watcher = ww.WeightWatcher(model=Modelling.model)
-    # details = watcher.analyze()
-    # summary = watcher.get_summary(details)
-    # print(summary)
-    ###########################################################
     return [
         mgp.Record(
             epoch=logged_data[k]["epoch"],
@@ -406,7 +460,9 @@ def load_model() -> mgp.Record(path=str):
     global model
 
     if not os.path.exists(os.path.abspath(global_params[OtherParams.PATH_TO_MODEL])):
-        raise Exception(f"File {global_params[OtherParams.PATH_TO_MODEL]} not found on system. Please provide the valid path.")
+        raise Exception(
+            f"File {global_params[OtherParams.PATH_TO_MODEL]} not found on system. Please provide the valid path."
+        )
 
     Modelling.model.load_state_dict(
         torch.load(global_params[OtherParams.PATH_TO_MODEL])
@@ -415,22 +471,46 @@ def load_model() -> mgp.Record(path=str):
 
 
 @mgp.read_proc
-def predict() -> mgp.Record(dict=mgp.Map):
+def predict(vertex: mgp.Vertex) -> mgp.Record(predicted_value=int):
     """This function predicts metrics on one node. It is suggested that user previously
     loads unseen test data to predict on it.
+    Subgraph (where predict is performed) is consisted of node and self loop to it.
+
+    Example of usage:
+        MATCH (n {id: 1}) CALL node_classification.predict(n) YIELD * RETURN predicted_value;
+
+        # note: if node with property id = 1 doesn't exist, query module won't be called
+
+    Args:
+        vertex (mgp.Vertex): node to predict on
 
     Returns:
-        mgp.Record(mgp.Map: dictionary of all metrics): record to return
+        mgp.Record(predicted_class (int): predicted class): record to return
     """
-
-    dict = metrics(
-        Modelling.data.train_mask + Modelling.data.val_mask,
-        Modelling.model,
-        Modelling.data,
-        global_params[DataParams.METRICS],
+    global global_params
+    id = vertex.properties.get(global_params[MemgraphParams.NODE_ID_PROPERTY])
+    features = vertex.properties.get(
+        global_params[MemgraphParams.NODE_FEATURES_PROPERTY]
     )
 
-    return mgp.Record(dict=dict)
+    # it is assumed vertex does not always have truth label
+    # truth = vertex.properties.get(global_params[MemgraphParams.NODE_CLASS_PROPERTY])
+
+    inv_reindexing = {v: k for k, v in global_params[OtherParams.REINDEXING].items()}
+
+    Modelling.model.eval()
+    out = Modelling.model(Modelling.data.x, Modelling.data.edge_index)
+    pred = out.argmax(dim=1)
+
+    if not torch.equal(
+        torch.tensor(np.array(features), dtype=torch.float32),
+        Modelling.data.x[inv_reindexing[id]],
+    ):
+        raise AssertionError("features from node are different from database features")
+
+    predicted_class = (int)(pred.detach().numpy()[inv_reindexing[id]])
+
+    return mgp.Record(predicted_class=predicted_class)
 
 
 @mgp.read_proc
@@ -442,5 +522,3 @@ def reset() -> mgp.Record(status=str):
         globals.pop("logged_data")
 
     return mgp.Record(status="Global parameters and logged data have been reseted.")
-
-

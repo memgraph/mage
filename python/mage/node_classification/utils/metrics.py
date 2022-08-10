@@ -1,20 +1,17 @@
 import torch
 import mgp
-import typing
 from torchmetrics import ConfusionMatrix, Accuracy, AUC, Precision, Recall, F1Score
-
-from mage.node_classification.model.inductive_model import InductiveModel
 from torch_geometric.data import Data
 
 
 def metrics(
-    mask: torch.tensor, model: InductiveModel, data: Data, options: mgp.List[str]
+    mask: torch.tensor, model: mgp.Any, data: Data, options: mgp.List[str]
 ) -> mgp.Map:
     """Selected metrics calculated for current model and data.
 
     Args:
         mask (torch.tensor): used to mask which embeddings should be used
-        model (InductiveModel): model variable
+        model (mgp.Any): model variable
         data (Data): dataset variable
         options (mgp.List[str]): list of options to be calculated
 
@@ -26,17 +23,19 @@ def metrics(
 
     pred = out.argmax(dim=1)  # Use the class with highest probability.
 
-    # confmat = ConfusionMatrix(num_classes=len(set(data.y.detach().numpy())))
-    # print(confmat(pred[mask],data.y[mask]))
-
-    # "accuracy", "auc_score", "precision", "recall", "num_wrong_examples"
+    confmat = ConfusionMatrix(num_classes=len(set(data.y.detach().numpy())))
+    print(confmat(pred[mask], data.y[mask]))
 
     ret = {}
+
+    multiclass = False
+    if len(set(Data.y)) > 2:
+        multiclass = True
 
     if "accuracy" in options:
         A = Accuracy(
             num_classes=len(set(data.y.detach().numpy())),
-            multiclass=True,
+            multiclass=multiclass,
             average="macro",
         )
         ret["accuracy"] = float(A(pred[mask], data.y[mask]).detach().numpy())
@@ -44,7 +43,7 @@ def metrics(
     if "auc_score" in options:
         Auc = AUC(
             num_classes=len(set(data.y.detach().numpy())),
-            multiclass=True,
+            multiclass=multiclass,
             average="macro",
         )
         ret["auc_score"] = float(Auc(pred[mask], data.y[mask]).detach().numpy())
@@ -52,7 +51,7 @@ def metrics(
     if "precision" in options:
         P = Precision(
             num_classes=len(set(data.y.detach().numpy())),
-            multiclass=True,
+            multiclass=multiclass,
             average="macro",
         )
         ret["precision"] = float(P(pred[mask], data.y[mask]).detach().numpy())
@@ -60,7 +59,7 @@ def metrics(
     if "recall" in options:
         R = Recall(
             num_classes=len(set(data.y.detach().numpy())),
-            multiclass=True,
+            multiclass=multiclass,
             average="macro",
         )
         ret["recall"] = float(R(pred[mask], data.y[mask]).detach().numpy())
@@ -68,7 +67,7 @@ def metrics(
     if "f1_score" in options:
         F = F1Score(
             num_classes=len(set(data.y.detach().numpy())),
-            multiclass=True,
+            multiclass=multiclass,
             average="macro",
         )
         ret["f1_score"] = float(F(pred[mask], data.y[mask]).detach().numpy())
