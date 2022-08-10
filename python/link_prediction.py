@@ -110,7 +110,7 @@ class LinkPredictionParameters:
     )
     predictor_type: str =  MLP_PREDICTOR
     attn_num_heads: List[int] = field(default_factory=lambda: [4, 2, 1])
-    tr_acc_patience: int = 5
+    tr_acc_patience: int = 10
     context_save_dir: str = (
         "./python/mage/link_prediction/context/"  # TODO: When the development finishes
     )
@@ -129,7 +129,7 @@ reindex_orig: Dict[int, int] = None  # Mapping of original dataset indexes to DG
 predictor: torch.nn.Module = None  # Predictor for calculating edge scores
 model: torch.nn.Module = None
 features_size_loaded: bool = False  # If size of the features was already inserted.
-HETERO = True
+HETERO = False
 align_method = "proj_0"
 
 ##############################
@@ -252,7 +252,7 @@ def train(
 
     # Split the data
     if HETERO:
-        train_pos_g, train_neg_g, val_pos_g, val_neg_g = preprocess_heterographs(graph, link_prediction_parameters.split_ratio, relation)
+        train_pos_g, val_pos_g = preprocess_heterographs(graph, link_prediction_parameters.split_ratio, relation)
     else:
         train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g = preprocess(graph, link_prediction_parameters.split_ratio)
 
@@ -284,9 +284,7 @@ def train(
         training_results, validation_results = inner_train_heterographs(
             graph,
             train_pos_g, 
-            train_neg_g, 
             val_pos_g, 
-            val_neg_g,
             relation,
             model,
             predictor,
