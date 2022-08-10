@@ -21,7 +21,7 @@ class MLPPredictor(torch.nn.Module):
         h = torch.cat([edges.src["node_embeddings"], edges.dst["node_embeddings"]], 1)
         return {"score": self.W2(F.relu(self.W1(h))).squeeze(1)}
 
-    def forward(self, g: dgl.graph, node_embeddings: torch.Tensor) -> torch.Tensor:
+    def forward(self, g: dgl.graph, node_embeddings: torch.Tensor, relation=None) -> torch.Tensor:
         """Calculates forward pass of MLPPredictor.
 
         Args:
@@ -33,7 +33,7 @@ class MLPPredictor(torch.nn.Module):
         """
         with g.local_scope():
             g.ndata["node_embeddings"] = node_embeddings
-            g.apply_edges(self.apply_edges)
+            g.apply_edges(self.apply_edges, etype=relation)
             return g.edata["score"]
 
 

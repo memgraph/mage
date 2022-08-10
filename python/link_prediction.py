@@ -85,9 +85,9 @@ class LinkPredictionParameters:
     """
 
     hidden_features_size: List = field(
-        default_factory=lambda: [64, 16, 8]
+        default_factory=lambda: [20, 10]
     )  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
-    layer_type: str = GRAPH_ATTN
+    layer_type: str = GRAPH_SAGE
     num_epochs: int = 100
     optimizer: str = ADAM_OPT
     learning_rate: float = 0.01
@@ -108,8 +108,8 @@ class LinkPredictionParameters:
             NUM_WRONG_EXAMPLES,
         ]
     )
-    predictor_type: str =  MLP_PREDICTOR
-    attn_num_heads: List[int] = field(default_factory=lambda: [4, 2, 1])
+    predictor_type: str =  DOT_PREDICTOR
+    attn_num_heads: List[int] = field(default_factory=lambda: [4, 1])
     tr_acc_patience: int = 10
     context_save_dir: str = (
         "./python/mage/link_prediction/context/"  # TODO: When the development finishes
@@ -129,7 +129,7 @@ reindex_orig: Dict[int, int] = None  # Mapping of original dataset indexes to DG
 predictor: torch.nn.Module = None  # Predictor for calculating edge scores
 model: torch.nn.Module = None
 features_size_loaded: bool = False  # If size of the features was already inserted.
-HETERO = False
+HETERO = True
 align_method = "proj_0"
 
 ##############################
@@ -256,12 +256,19 @@ def train(
     else:
         train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g = preprocess(graph, link_prediction_parameters.split_ratio)
 
+    if HETERO:
+        edge_types = graph.etypes
+    else:
+        edge_types = None
+
     # Create a model
     model = create_model(
         layer_type=link_prediction_parameters.layer_type,
         hidden_features_size=link_prediction_parameters.hidden_features_size,
         aggregator=link_prediction_parameters.aggregator,
         attn_num_heads=link_prediction_parameters.attn_num_heads,
+        hetero=HETERO,
+        edge_types=edge_types
     )
     # Create a predictor
     predictor_hidden_size = link_prediction_parameters.hidden_features_size[-1]
@@ -282,7 +289,6 @@ def train(
     # Collect training and validation results from utils model
     if HETERO:
         training_results, validation_results = inner_train_heterographs(
-            graph,
             train_pos_g, 
             val_pos_g, 
             relation,
