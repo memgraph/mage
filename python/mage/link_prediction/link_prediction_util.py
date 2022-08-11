@@ -3,17 +3,17 @@ import torch.nn.functional as F
 import numpy as np
 import scipy.sparse as sp
 import dgl
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
 from sklearn.metrics import f1_score
-from typing import Dict, Tuple, List
+from typing import Callable, Dict, Tuple, List
 import mgp
 import random
 from mage.link_prediction.constants import (
-    MODEL_NAME, PREDICTOR_NAME, LOSS, ACCURACY, AUC_SCORE, PRECISION, RECALL, NUM_WRONG_EXAMPLES, F1, EPOCH
+    MODEL_NAME, NEG_PRED_EXAMPLES, POS_PRED_EXAMPLES, PREDICTOR_NAME, LOSS, ACCURACY, AUC_SCORE, PRECISION, RECALL, F1, EPOCH
 )
 import dgl.function as fn
 from dgl.nn import SAGEConv
@@ -143,6 +143,48 @@ def preprocess(graph: dgl.graph, split_ratio: float, relation: Tuple[str, str, s
     # return train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g
     return train_pos_g, val_pos_g
 
+def preprocess_batch(graph: dgl.graph, split_ratio: float, relation: Tuple[str, str, str]) -> Tuple[dgl.graph, dgl.graph, dgl.graph, dgl.graph, dgl.graph]:
+    """Preprocess method splits dataset in training and validation set. This method is also used for setting numpy and torch random seed.
+
+    Args:
+        graph (dgl.graph): A reference to the dgl graph representation.
+        split_ratio (float): Split ratio training to validation set. E.g 0.8 indicates that 80% is used as training set and 20% for validation set.
+        relation (Tuple[str, str, str]): src_type, edge_type, dest_type that determines edges important for prediction. For those we need to create 
+                                        negative edges.
+
+    Returns:
+        Tuple[Dict[Tuple[str, str, str], List[int]], Dict[Tuple[str, str, str], List[int]]:
+            1. Training mask: target relation to training edge IDs
+            2. Validation mask: target relation to validation edge IDS
+    """
+
+    # First set all seeds
+    rnd_seed = 0
+    random.seed(rnd_seed)
+    np.random.seed(rnd_seed)
+    torch.manual_seed(rnd_seed)  # set it for both cpu and cuda
+
+    # val size is 1-split_ratio specified by the user
+    val_size = int(graph.number_of_edges() * (1 - split_ratio))
+
+    # If user wants to split the dataset but it is too small, then raise an Exception
+    if split_ratio < 1.0 and val_size == 0:
+        raise Exception("Graph too small to have a validation dataset. ")
+    
+    # Get edge IDS
+    edge_type_u, _ = graph.edges(etype=relation)
+    graph_edges_len = len(edge_type_u)
+    eids = np.arange(graph_edges_len)  # get all edge ids from number of edges and create a numpy vector from it.
+    eids = np.random.permutation(eids)  # randomly permute edges
+
+    # Get training and validation edges
+    tr_eids, val_eids = eids[val_size:], eids[:val_size]
+
+    # Create and masks that will be used in the batch training
+    train_eid_dict, val_eid_dict = {relation: tr_eids}, {relation: val_eids}
+
+    return train_eid_dict, val_eid_dict
+
 def classify(probs: torch.tensor, threshold: float) -> torch.tensor:
     """Classifies based on probabilities of the class with the label one.
 
@@ -155,7 +197,8 @@ def classify(probs: torch.tensor, threshold: float) -> torch.tensor:
 
     return probs > threshold
 
-def evaluate(metrics: List[str], labels: torch.tensor, probs: torch.tensor, result: Dict[str, float], threshold: float,) -> None:
+def evaluate(metrics: List[str], labels: torch.tensor, probs: torch.tensor, result: Dict[str, float], threshold: float, epoch: int, loss: float,
+            operator: Callable[[float, float], float]) -> None:
     """Returns all metrics specified in metrics list based on labels and predicted classes. In-place modification of dictionary.
 
     Args:
@@ -164,107 +207,172 @@ def evaluate(metrics: List[str], labels: torch.tensor, probs: torch.tensor, resu
         probs (torch.tensor): Probabilities of the class with the label one.
         result (Dict[str, float]): Prepopulated result that needs to be modified.
         threshold (float): classification threshold. 0.5 for sigmoid etc.
+    Returns:
+        Dict[str, float]: Metrics embedded in dictionary -> name-value shape
     """
     classes = classify(probs, threshold)
+    result[EPOCH] = epoch
+    result[LOSS] = operator(result[LOSS], loss)
     for metric_name in metrics:
         if metric_name == ACCURACY:
-            result[ACCURACY] = accuracy_score(labels, classes)
+            result[ACCURACY] = operator(result[ACCURACY], accuracy_score(labels, classes))
         elif metric_name == AUC_SCORE:
-            result[AUC_SCORE] = roc_auc_score(labels, probs)
+            result[AUC_SCORE] = operator(result[AUC_SCORE], roc_auc_score(labels, probs.detach()))
         elif metric_name == F1:
-            result[F1] = f1_score(labels, classes)
+            result[F1] = operator(result[F1], f1_score(labels, classes))
         elif metric_name == PRECISION:
-            result[PRECISION] = precision_score(labels, classes)
+            result[PRECISION] = operator(result[PRECISION], precision_score(labels, classes))
         elif metric_name == RECALL:
-            result[RECALL] = recall_score(labels, classes)
-        elif metric_name == NUM_WRONG_EXAMPLES:
-            result[NUM_WRONG_EXAMPLES] = (np.not_equal(np.array(labels, dtype=bool), classes).sum().item())
+            result[RECALL] = operator(result[RECALL], recall_score(labels, classes))
+        elif metric_name == POS_PRED_EXAMPLES:
+            result[POS_PRED_EXAMPLES] = operator(result[POS_PRED_EXAMPLES], (probs > 0.5).sum().item())
+        elif metric_name == NEG_PRED_EXAMPLES:
+            result[NEG_PRED_EXAMPLES] = operator(result[NEG_PRED_EXAMPLES], (probs < 0.5).sum().item())
 
-def inner_train_batch(train_g: dgl.graph, train_pos_g: dgl.graph, train_neg_g: dgl.graph, val_pos_g: dgl.graph,
-    val_neg_g: dgl.graph, model: torch.nn.Module, predictor: torch.nn.Module, optimizer: torch.optim.Optimizer, num_epochs: int,
-    node_features_property: str, console_log_freq: int, checkpoint_freq: int, metrics: List[str], tr_acc_patience: int,
-    context_save_dir: str,) -> Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]:
-    # Start rock and roll
-    negative_sampler = dgl.dataloading.negative_sampler.Uniform(5)
-    sampler = dgl.dataloading.MultiLayerNeighborSampler([4, 4])
+def batch_forward_pass(model: torch.nn.Module, predictor: torch.nn.Module, loss: torch.nn.BCELoss, m: torch.nn.Sigmoid, 
+                    relation: Tuple[str, str, str], input_features: Dict[str, torch.Tensor], pos_graph: dgl.graph, 
+                    neg_graph: dgl.graph, blocks: List[dgl.graph]):
 
-    train_dataloader = dgl.dataloading.EdgeDataLoader(
-        train_g,                                  # The graph
-        torch.arange(train_g.number_of_edges()),  # The edges to iterate over
+    outputs = model.forward(blocks, input_features)
+
+    # Deal with edge scores
+    pos_score = predictor.forward(pos_graph, outputs, relation=relation)
+    neg_score = predictor.forward(neg_graph, outputs, relation=relation)
+    scores = torch.cat([pos_score, neg_score])  # concatenated positive and negative score
+    # probabilities
+    probs = m(scores)
+    labels = torch.cat([torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])])  # concatenation of labels
+    loss_output = loss(probs, labels)
+
+    return probs, labels, loss_output
+
+
+def inner_train_batch(graph: dgl.graph,
+                    train_eid_dict,
+                    val_eid_dict, 
+                    relation: Tuple[str, str, str],
+                    model: torch.nn.Module, 
+                    predictor: torch.nn.Module, 
+                    optimizer: torch.optim.Optimizer,
+                    num_epochs: int,
+                    node_features_property: str, 
+                    console_log_freq: int, 
+                    checkpoint_freq: int, 
+                    metrics: List[str], 
+                    tr_acc_patience: int, 
+                    context_save_dir: str,) -> Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]:
+
+    # Define what will be returned
+    training_results, validation_results = [], []
+
+    # Define necessary parameters
+    k = 5  # Number of negative edges per one positivr
+    num_layers = 2  # Number of layers in the GNN architecture
+    batch_size = 512
+    num_workers = 4  # Number of sampling processes
+
+    # First define all necessary samplers
+    k = 5
+    num_layers = 2
+    negative_sampler = dgl.dataloading.negative_sampler.Uniform(k=k)
+    sampler = dgl.dataloading.MultiLayerFullNeighborSampler(num_layers=num_layers)  # gather messages from all node neighbors
+    sampler = dgl.dataloading.as_edge_prediction_sampler(sampler, negative_sampler=negative_sampler)  # TODO: Add "self" and change that to reverse edges sometime
+
+    # TODO: Can you use same sampler for training and validation DataLoader?
+
+    # Define training and validation dictionaries
+    # For heterogeneous full neighbor sampling we need to define a dictionary of edge types and edge ID tensors instead of a dictionary of node types and node ID tensors
+    # DataLoader iterates over a set of edges in mini-batches, yielding the subgraph induced by the edge mini-batch and message flow graphs (MFGs) to be consumed by the module below.
+    # first MFG, which is identical to all the necessary nodes needed for computing the final representations
+    # Feed the list of MFGs and the input node features to the multilayer GNN and get the outputs.
+
+    # Define training EdgeDataLoader
+    train_dataloader = dgl.dataloading.DataLoader(
+        graph,                                  # The graph
+        train_eid_dict,  # The edges to iterate over
         sampler,                                # The neighbor sampler
-        negative_sampler=negative_sampler,      # The negative sampler
-        device="cpu",                          # Put the MFGs on CPU or GPU
-        # The following arguments are inherited from PyTorch DataLoader.
-        batch_size=512,    # Batch size
+        batch_size=batch_size,    # Batch size
         shuffle=True,       # Whether to shuffle the nodes for every epoch
         drop_last=False,    # Whether to drop the last incomplete batch
-        num_workers=0       # Number of sampler processes
+        num_workers=num_workers       # Number of sampler processes
     )
 
-    val_pos_g.ndata[node_features_property] = train_g.ndata[node_features_property]
-
-    validation_dataloader = dgl.dataloading.EdgeDataLoader(
-        val_pos_g,                                  # The graph
-        torch.arange(val_pos_g.number_of_edges()),  # The edges to iterate over
+    # Define validation EdgeDataLoader
+    validation_dataloader = dgl.dataloading.DataLoader(
+        graph,                                  # The graph
+        val_eid_dict,  # The edges to iterate over
         sampler,                                # The neighbor sampler
-        negative_sampler=negative_sampler,      # The negative sampler
-        device="cpu",                          # Put the MFGs on CPU or GPU
-        # The following arguments are inherited from PyTorch DataLoader.
-        batch_size=512,    # Batch size
+        batch_size=batch_size,    # Batch size
         shuffle=True,       # Whether to shuffle the nodes for every epoch
         drop_last=False,    # Whether to drop the last incomplete batch
-        num_workers=0       # Number of sampler processes
+        num_workers=num_workers       # Number of sampler processes
     )
 
-    node_features = train_g.ndata[node_features_property]
+    # Initialize loss
+    loss = torch.nn.BCELoss()
 
-    model = BatchModel(node_features.shape[1], 128)
-    # predictor = DotPredictor()
-    opt = torch.optim.Adam(list(model.parameters()) + list(predictor.parameters()))
+    # Initialize activation func
+    m, threshold = torch.nn.Sigmoid(), 0.5
 
-    best_accuracy = 0
-    best_model_path = 'model.pt'
-    for epoch in range(100):
-        with tqdm.tqdm(train_dataloader) as tq:
-            for step, (input_nodes, pos_graph, neg_graph, mfgs) in enumerate(tq):
-                # feature copy from CPU to GPU takes place here
-                inputs = mfgs[0].srcdata[node_features_property]
+    # Define lambda functions for operating on dictionaries
+    add_: Callable[[float, float], float] = lambda prior, later: prior + later
+    avg_: Callable[[float, float], float] = lambda prior, size: prior/size
+    format_float: Callable[[float], float] = lambda prior: round(prior, 2)
 
-                outputs = model(mfgs, inputs)
-                pos_score = predictor.forward(pos_graph, outputs)
-                neg_score = predictor.forward(neg_graph, outputs)
+    for epoch in range(1, num_epochs+1):
+        # Evaluation epoch
+        if epoch % console_log_freq == 0:
+            print("Epoch: ", epoch)
+            epoch_training_result = defaultdict(float)
+            epoch_validation_result = defaultdict(float)
+        
+        # Training batch
+        num_batches = 0
+        model.train()
+        for _, pos_graph, neg_graph, blocks in train_dataloader:
+            # Get input features needed to compute representations of second block
+            input_features = blocks[0].ndata[node_features_property]
+            # Perform forward pass
+            probs, labels, loss_output = batch_forward_pass(model, predictor, loss, m, relation, input_features, pos_graph, neg_graph, blocks)
 
-                score = torch.cat([pos_score, neg_score])
-                probs = torch.sigmoid(score)
-                classes = classify(probs, 0.5)
-                label = torch.cat([torch.ones_like(pos_score), torch.zeros_like(neg_score)])
-                loss = F.binary_cross_entropy_with_logits(score, label)
+            # Make an optimization step
+            optimizer.zero_grad()
+            loss_output.backward()
+            optimizer.step()
 
-                tr_acc = accuracy_score(label, classes)
+            # Evaluate on training set
+            if epoch % console_log_freq == 0:
+                evaluate(metrics, labels, probs, epoch_training_result, threshold, epoch, loss_output.item(), add_)
 
-                print("Tr acc: ", tr_acc)
+            # Increment num batches
+            num_batches +=1 
 
-                opt.zero_grad()
-                loss.backward()
-                opt.step()
+        # Edit train results and evaluate on validation set
+        if epoch % console_log_freq == 0:
+            epoch_training_result = {key: format_float(avg_(val, num_batches)) if key != EPOCH else val for key, val in epoch_training_result.items()}
+            training_results.append(epoch_training_result)
 
-                tq.set_postfix({'loss': '%.03f' % loss.item()}, refresh=False)
+            # Evaluate on the validation set
+            model.eval()
+            with torch.no_grad():
+                num_batches = 0
+                for _, pos_graph, neg_graph, blocks in validation_dataloader:
+                    input_features = blocks[0].ndata[node_features_property]
+                    # Perform forward pass
+                    probs, labels, loss_output = batch_forward_pass(model, predictor, loss, m, relation, input_features, pos_graph, neg_graph, blocks)
 
-                # Evaluation on the whole validation set
-                model.eval()
-                input_nodes_val, pos_graph_val, neg_graph_val, mfgs_val = next(iter(validation_dataloader))
-                inputs_val = mfgs_val[0].srcdata[node_features_property]
-                outputs_val = model(mfgs_val, inputs_val)
-                pos_score_val = predictor.forward(pos_graph_val, outputs_val)
-                neg_score_val = predictor.forward(neg_graph_val, outputs_val)
+                    # Add to the epoch_validation_result for saving
+                    evaluate(metrics, labels, probs, epoch_validation_result, threshold, epoch, loss_output.item(), add_)
+                    num_batches += 1
 
-                score_val = torch.cat([pos_score_val, neg_score_val])
-                probs_val = torch.sigmoid(score_val)
-                classes_val = classify(probs_val, 0.5)
-                label_val = torch.cat([torch.ones_like(pos_score_val), torch.zeros_like(neg_score_val)])
+            # Average over batches    
+            epoch_validation_result = {key: format_float(avg_(val, num_batches)) if key != EPOCH else val for key, val in epoch_validation_result.items()}
+            validation_results.append(epoch_validation_result)
 
-                val_acc = accuracy_score(label_val, classes_val)
-                print("Val acc: ", val_acc)
+
+    return training_results, validation_results
+
+               
 
 def inner_train(
     train_pos_g: dgl.graph,
@@ -320,6 +428,10 @@ def inner_train(
     # Features
     graph_features = {node_type: train_pos_g.nodes[node_type].data[node_features_property] for node_type in train_pos_g.ntypes}
 
+
+    # Lambda function for operating on metrics
+    set_: Callable[[float, float], float] = lambda prior, later: later
+
     for epoch in range(1, num_epochs + 1):
         # switch to training mode
         model.train() 
@@ -327,8 +439,8 @@ def inner_train(
         train_neg_g = construct_negative_heterograph(train_pos_g, k, relation)
 
         # Get embeddings
-        h = model(train_pos_g, graph_features) 
-        
+        h = model.forward_util(train_pos_g, graph_features) 
+
         # Get edge scores and probabilities
         pos_score = predictor.forward(train_pos_g, h, relation=relation) # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_pos-g. Scores are here actually logits.
         neg_score = predictor.forward(train_neg_g, h, relation=relation)  # returns vector of negative edge scores, torch.float32, shape: num_edges in the graph of train_neg_g. Scores are actually logits.
@@ -351,13 +463,10 @@ def inner_train(
         with torch.no_grad():
             # Time for writing
             if epoch % console_log_freq == 0:
-                epoch_training_result = OrderedDict()  # Temporary result per epoch
-                epoch_val_result = OrderedDict()
-                # Set initial metrics for training result
-                epoch_training_result[EPOCH] = epoch
-                epoch_training_result[LOSS] = loss_output.item()
+                epoch_training_result = defaultdict(float)  # Temporary result per epoch
+                epoch_val_result = defaultdict(float)
                 # Evaluate based on given metrics
-                evaluate(metrics, labels, probs, epoch_training_result, threshold)
+                evaluate(metrics, labels, probs, epoch_training_result, threshold, epoch, loss_output.item(), set_)
                 training_results.append(epoch_training_result)
 
                 # Validation metrics if they can be calculated
@@ -365,7 +474,7 @@ def inner_train(
                     # Create negative validation graph
                     val_neg_g = construct_negative_heterograph(val_pos_g, k, relation)
                     # Get embeddings
-                    h_val = model(val_pos_g, graph_features) 
+                    h_val = model.forward_util(val_pos_g, graph_features) 
         
                     # Get edge scores and probabilities
                     pos_score_val = predictor.forward(val_pos_g, h_val, relation=relation)  # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_pos-g. Scores are here actually logits.
@@ -382,10 +491,8 @@ def inner_train(
 
                     # Set initial metrics for validation result
                     loss_output_val = loss(probs_val, labels_val)
-                    epoch_val_result[EPOCH] = epoch
-                    epoch_val_result[LOSS] = loss_output_val.item()
                     # Evaluate based on given metrics
-                    evaluate(metrics, labels_val, probs_val, epoch_val_result, threshold)
+                    evaluate(metrics, labels_val, probs_val, epoch_val_result, threshold, epoch, loss_output_val.item(), set_)
                     validation_results.append(epoch_val_result)
 
                     # Patience check

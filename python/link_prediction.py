@@ -9,6 +9,7 @@ from collections import defaultdict
 from heapq import heappop, heappush, heapify
 from mage.link_prediction import (
     preprocess,
+    preprocess_batch,
     inner_train,
     inner_train_batch,
     inner_predict,
@@ -50,7 +51,8 @@ from mage.link_prediction import (
     ACCURACY,
     PRECISION,
     RECALL,
-    NUM_WRONG_EXAMPLES,
+    POS_PRED_EXAMPLES,
+    NEG_PRED_EXAMPLES,
     LOSS,
     F1,
     TARGET_RELATION
@@ -89,7 +91,7 @@ class LinkPredictionParameters:
         default_factory=lambda: [20, 10]
     )  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
     layer_type: str = GRAPH_SAGE
-    num_epochs: int = 100
+    num_epochs: int = 10
     optimizer: str = ADAM_OPT
     learning_rate: float = 0.01
     split_ratio: float = 0.8
@@ -106,7 +108,8 @@ class LinkPredictionParameters:
             PRECISION,
             RECALL,
             F1,
-            NUM_WRONG_EXAMPLES,
+            POS_PRED_EXAMPLES,
+            NEG_PRED_EXAMPLES
         ]
     )
     predictor_type: str =  MLP_PREDICTOR
@@ -132,6 +135,7 @@ predictor: torch.nn.Module = None  # Predictor for calculating edge scores
 model: torch.nn.Module = None
 features_size_loaded: bool = False  # If size of the features was already inserted.
 HETERO = None 
+BATCH = True
 align_method = "proj_0"
 
 ##############################
@@ -237,7 +241,10 @@ def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_
     _load_feature_size(ftr_size)
 
     # Split the data
-    train_pos_g, val_pos_g = preprocess(graph, link_prediction_parameters.split_ratio, link_prediction_parameters.target_relation)
+    if BATCH:
+        train_eid_dict, val_eid_dict = preprocess_batch(graph=graph, split_ratio=link_prediction_parameters.split_ratio, relation=link_prediction_parameters.target_relation)
+    else:
+        train_pos_g, val_pos_g = preprocess(graph, link_prediction_parameters.split_ratio, link_prediction_parameters.target_relation)
 
     print(f"Hetero: {HETERO} Etypes: {graph.etypes}")
 
@@ -264,21 +271,36 @@ def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_
         predictor=predictor,
     )
 
-    # Collect training and validation results from utils model
-    training_results, validation_results = inner_train(
-        train_pos_g, 
-        val_pos_g, 
-        link_prediction_parameters.target_relation,
-        model,
-        predictor,
-        optimizer,
-        link_prediction_parameters.num_epochs,
-        link_prediction_parameters.node_features_property,
-        link_prediction_parameters.console_log_freq,
-        link_prediction_parameters.checkpoint_freq,
-        link_prediction_parameters.metrics,
-        link_prediction_parameters.tr_acc_patience,
-        link_prediction_parameters.context_save_dir,
+    if BATCH:
+        training_results, validation_results = inner_train_batch(graph,
+            train_eid_dict, 
+            val_eid_dict, 
+            link_prediction_parameters.target_relation,
+            model,
+            predictor,
+            optimizer,
+            link_prediction_parameters.num_epochs,
+            link_prediction_parameters.node_features_property,
+            link_prediction_parameters.console_log_freq,
+            link_prediction_parameters.checkpoint_freq,
+            link_prediction_parameters.metrics,
+            link_prediction_parameters.tr_acc_patience,
+            link_prediction_parameters.context_save_dir,
+        )
+    else:
+        training_results, validation_results = inner_train(train_pos_g, 
+            val_pos_g, 
+            link_prediction_parameters.target_relation,
+            model,
+            predictor,
+            optimizer,
+            link_prediction_parameters.num_epochs,
+            link_prediction_parameters.node_features_property,
+            link_prediction_parameters.console_log_freq,
+            link_prediction_parameters.checkpoint_freq,
+            link_prediction_parameters.metrics,
+            link_prediction_parameters.tr_acc_patience,
+            link_prediction_parameters.context_save_dir,
     )
     
     # Return results
@@ -755,7 +777,8 @@ def _validate_user_parameters(parameters: mgp.Map) -> None:
                 and _metric != AUC_SCORE
                 and _metric != PRECISION
                 and _metric != RECALL
-                and _metric != NUM_WRONG_EXAMPLES
+                and _metric != POS_PRED_EXAMPLES
+                and _metric != NEG_PRED_EXAMPLES
             ):
                  raise Exception("Metric name " + _metric + " is not supported!")
 

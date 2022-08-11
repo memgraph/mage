@@ -2,6 +2,7 @@ from mage.link_prediction.link_prediction_util import (
     inner_train,
     inner_train_batch,
     preprocess,
+    preprocess_batch,
     inner_predict,
     get_number_of_edges,
 )
@@ -49,7 +50,8 @@ from mage.link_prediction.constants import (
     PRECISION,
     RECALL,
     F1,
-    NUM_WRONG_EXAMPLES,
+    POS_PRED_EXAMPLES,
+    NEG_PRED_EXAMPLES,
     EPOCH,
     TARGET_RELATION
 )
