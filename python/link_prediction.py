@@ -9,15 +9,12 @@ from collections import defaultdict
 from heapq import heappop, heappush, heapify
 from mage.link_prediction import (
     preprocess,
-    preprocess_heterographs,
     inner_train,
     inner_train_batch,
-    inner_train_heterographs,
     inner_predict,
     create_model,
     create_optimizer,
     create_predictor,
-    get_number_of_edges,
     GRAPH_SAGE,
     GRAPH_ATTN,
     ADAM_OPT,
@@ -91,7 +88,7 @@ class LinkPredictionParameters:
     hidden_features_size: List = field(
         default_factory=lambda: [20, 10]
     )  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
-    layer_type: str = GRAPH_ATTN
+    layer_type: str = GRAPH_SAGE
     num_epochs: int = 100
     optimizer: str = ADAM_OPT
     learning_rate: float = 0.01
@@ -134,14 +131,12 @@ reindex_orig: Dict[int, int] = None  # Mapping of original dataset indexes to DG
 predictor: torch.nn.Module = None  # Predictor for calculating edge scores
 model: torch.nn.Module = None
 features_size_loaded: bool = False  # If size of the features was already inserted.
-HETERO = True # Just for debugging
-# HETERO_REAL = False
+HETERO = None 
 align_method = "proj_0"
 
 ##############################
 # All read procedures
 ##############################
-
 
 @mgp.read_proc
 def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(status=mgp.Any, message=str):
@@ -204,11 +199,8 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
 
     return mgp.Record(status=1, message="OK")
 
-
 @mgp.read_proc
-def train(
-    ctx: mgp.ProcCtx,
-) -> mgp.Record(training_results=mgp.Any, validation_results=mgp.Any):
+def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_results=mgp.Any):
     """Train method is used for training the module on the dataset provided with ctx. By taking decision to split the dataset here and not in the separate method, it is impossible to retrain the same model.
 
     Args:
@@ -225,46 +217,29 @@ def train(
 
     # Get some data
     # Dealing with heterogeneous graphs
-    # if HETERO:  # DEBUG ONLY
-    graph, reindex_dgl, reindex_orig = _get_dgl_hetero_graph_data(ctx)  # dgl representation of the graph and dict new to old index
-    # else:
-    #     graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
-
+    graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
 
     # Check if there are no edges in the dataset, assume that it cannot learn effectively without edges. E2E handling.
     if graph.number_of_edges() == 0:
         raise Exception("No edges in the dataset. ")
 
-    # TEST: Currently disabled
-    # Dealing with heterogeneous graphs.
-    if HETERO:
-        _conversion_to_dgl_hetero_test(graph=graph, reindex_dgl=reindex_dgl, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property)
-    else:
-        _conversion_to_dgl_test(graph=graph, reindex_dgl=reindex_dgl, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property)
-
-
-    """ Train g is a graph which has removed test edges. Others are positive and negative train and test graphs
-    """
+    # Test conversion
+    _conversion_to_dgl_test(graph=graph, reindex_dgl=reindex_dgl, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property)
 
     # Insert in the hidden_features_size structure if needed
     if HETERO:
-        # Before loading we will project features of those node types that aren't of same dimensionality, TODO: Add this as some kind of general preprocessing step
+        # Before loading we will project features of those node types that aren't of same dimensionality
+        # TODO: Add this as some kind of general preprocessing step. But then be careful to add parameters to the model.
         ftr_size = _proj_0(graph)        
-        _load_feature_size(ftr_size)
     else:
-        _load_feature_size(graph.ndata[link_prediction_parameters.node_features_property].shape[1])
+        ftr_size = graph.ndata[link_prediction_parameters.node_features_property].shape[1]
 
+    _load_feature_size(ftr_size)
 
     # Split the data
-    if HETERO:
-        train_pos_g, val_pos_g = preprocess_heterographs(graph, link_prediction_parameters.split_ratio, link_prediction_parameters.target_relation)
-    else:
-        train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g = preprocess(graph, link_prediction_parameters.split_ratio)
+    train_pos_g, val_pos_g = preprocess(graph, link_prediction_parameters.split_ratio, link_prediction_parameters.target_relation)
 
-    if HETERO:
-        edge_types = graph.etypes
-    else:
-        edge_types = None
+    print(f"Hetero: {HETERO} Etypes: {graph.etypes}")
 
     # Create a model
     model = create_model(
@@ -272,15 +247,13 @@ def train(
         hidden_features_size=link_prediction_parameters.hidden_features_size,
         aggregator=link_prediction_parameters.aggregator,
         attn_num_heads=link_prediction_parameters.attn_num_heads,
-        hetero=HETERO,
-        edge_types=edge_types
+        edge_types=graph.etypes
     )
-    # Create a predictor
-    predictor_hidden_size = link_prediction_parameters.hidden_features_size[-1]
 
+    # Create a predictor
     predictor = create_predictor(
         predictor_type=link_prediction_parameters.predictor_type,
-        predictor_hidden_size=predictor_hidden_size,
+        predictor_hidden_size=link_prediction_parameters.hidden_features_size[-1],
     )
 
     # Create an optimizer
@@ -292,43 +265,24 @@ def train(
     )
 
     # Collect training and validation results from utils model
-    if HETERO:
-        training_results, validation_results = inner_train_heterographs(
-            train_pos_g, 
-            val_pos_g, 
-            link_prediction_parameters.target_relation,
-            model,
-            predictor,
-            optimizer,
-            link_prediction_parameters.num_epochs,
-            link_prediction_parameters.node_features_property,
-            link_prediction_parameters.console_log_freq,
-            link_prediction_parameters.checkpoint_freq,
-            link_prediction_parameters.metrics,
-            link_prediction_parameters.tr_acc_patience,
-            link_prediction_parameters.context_save_dir,
-        )
-    else:
-        training_results, validation_results = inner_train(
-            train_g,
-            train_pos_g,
-            train_neg_g,
-            val_pos_g,
-            val_neg_g,
-            model,
-            predictor,
-            optimizer,
-            link_prediction_parameters.num_epochs,
-            link_prediction_parameters.node_features_property,
-            link_prediction_parameters.console_log_freq,
-            link_prediction_parameters.checkpoint_freq,
-            link_prediction_parameters.metrics,
-            link_prediction_parameters.tr_acc_patience,
-            link_prediction_parameters.context_save_dir,
-        )
-
+    training_results, validation_results = inner_train(
+        train_pos_g, 
+        val_pos_g, 
+        link_prediction_parameters.target_relation,
+        model,
+        predictor,
+        optimizer,
+        link_prediction_parameters.num_epochs,
+        link_prediction_parameters.node_features_property,
+        link_prediction_parameters.console_log_freq,
+        link_prediction_parameters.checkpoint_freq,
+        link_prediction_parameters.metrics,
+        link_prediction_parameters.tr_acc_patience,
+        link_prediction_parameters.context_save_dir,
+    )
+    
+    # Return results
     return mgp.Record(training_results=training_results, validation_results=validation_results)
-
 
 @mgp.read_proc
 def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -> mgp.Record(score=mgp.Number):
@@ -430,19 +384,19 @@ def recommend(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: mgp.List[
 
     # You called predict after session was lost
     if graph is None:
-        if HETERO:             
-            graph, reindex_dgl, reindex_orig = _get_dgl_hetero_graph_data(ctx)  # dgl representation of the graph and dict new to old index
-        else:
-            graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
+        graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx) 
 
+    # Save edge scores and vertices
     results = []
     for i, dest_vertex in enumerate(dest_vertices):  # TODO: Can be implemented much faster by directly using matrix multiplication.
         heappush(results, (-predict(ctx, src_vertex, dest_vertex).fields["score"], i, dest_vertex))  # Build in O(n). Add i to break ties where all predict values are the same.
     
+    # Extract recommendations
     recommendations = []
     for i in range(k):
         score, i, recommendation = heappop(results)
         recommendations.append(mgp.Record(score=-score, recommendation=recommendation))
+
     return recommendations
 
 @mgp.read_proc
@@ -542,67 +496,50 @@ def _load_feature_size(features_size: int):
         features_size_loaded = True
 
 
-def _process_help_function(
-    ind: int,
-    old_index: int,
-    reindex_orig: Dict[int, int],
-    reindex_dgl: Dict[int, int],
-    features: List,
-    node_features: List[int],
-):
-    """Helper function for _get_dgl_graph_data
+def _process_help_function(mem_indexes: Dict[str, int], old_index: int, type_: str, features: List[int], reindex_orig: Dict[str, Dict[int, int]], reindex_dgl: Dict[str, Dict[int, int]], 
+                                  index_dgl_to_features: Dict[str, Dict[int, List[int]]]) -> None:
+    """Helper function for mapping original Memgraph graph to DGL representation.
 
     Args:
-        ind (int): Index vertex counter.
-        old_index (int): Original index
-        reindex_orig (Dict[int, int]): mappings from old to new indexes.
-        reindex_dgl (Dict[int, int]): mappings from new to old indexes.
-        features (List): Saves all features.
-        node_features (List[int]): Node features.
-
-    Returns:
-       None
+        mem_indexes (Dict[str, int]): Saves counters for each node type. 
+        old_index (int): Memgraph's node index.
+        type_ (str): Node type.
+        features (List[int]): Node features.
+        reindex_orig (Dict[str, Dict[int, int]]): Mapping from original indexes to DGL indexes for each node type.
+        reindex_dgl (Dict[str, Dict[int, int]]): Mapping from DGL indexes to the original indexes for each node type.
+        index_dgl_to_features (Dict[str, Dict[int, List[int]]]): DGL indexes to features for each node type.
     """
-    if old_index not in reindex_orig.keys():
-        reindex_dgl[ind] = old_index
-        reindex_orig[old_index] = ind
-        features.append(node_features)
-        return ind + 1
-    return ind
-
-
-def _process_hetero_help_function(mem_indexes: Dict[str, int], old_index: int, type_: str, features: List[int], reindex_orig: Dict[str, Dict[int, int]], reindex_dgl: Dict[str, Dict[int, int]], 
-                                  index_dgl_to_features: Dict[str, Dict[int, List[int]]]) -> None:
-    if type_ not in reindex_orig.keys():  # Label not seen before
+    if type_ not in reindex_orig.keys():  # Node type not seen before
         reindex_orig[type_] = dict()  # Mapping of old to new indexes for given type_
         reindex_dgl[type_] = dict()   # Mapping of new to old indexes for given type_
-        index_dgl_to_features[type_] = dict()  # Mapping of new index to its feature
+        index_dgl_to_features[type_] = dict()  # Mapping of new index to its feature for given type_
 
     # Check if old_index has been seen for this label
     if old_index not in reindex_orig[type_].keys():
         ind = mem_indexes[type_]  # get current counter
         reindex_dgl[type_][ind] = old_index  # save new_to_old relationship
         reindex_orig[type_][old_index] = ind  # save old_to_new relationship
+        # Check if list is given as a string
         if type(features) == str:
             index_dgl_to_features[type_][ind] = eval(features)  # Save new to features relationship. TODO: Remove that when we done with Cypher converting from String to List
         else:
             index_dgl_to_features[type_][ind] = features
+
         mem_indexes[type_] += 1
 
 
-def _get_dgl_hetero_graph_data(
-    ctx: mgp.ProcCtx,
-) -> Tuple[dgl.graph, Dict[int32, int32], Dict[int32, int32]]:
-    """Creates dgl representation of the graph.
+def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32], Dict[int32, int32]]:
+    """Creates dgl representation of the graph. It works with heterogeneous and homogeneous.
 
     Args:
         ctx (mgp.ProcCtx): The reference to the context execution.
 
     Returns:
-        Tuple[dgl.graph, Dict[int32, int32], Dict[int32, int32]]: Tuple of DGL graph representation, dictionary of mapping new to old index and dictionary of mapping old to new index.
+        Tuple[dgl.graph, Dict[str, Dict[int32, int32]], Dict[str, Dict[int32, int32]]: Tuple of DGL graph representation, dictionary of mapping new 
+        to old index and dictionary of mapping old to new index for each node type.
     """
 
-    global link_prediction_parameters
+    global link_prediction_parameters, HETERO
 
     reindex_dgl = dict()  # map of label to new node index to old node index
     reindex_orig = dict()  # map of label to old node index to new node index
@@ -613,14 +550,17 @@ def _get_dgl_hetero_graph_data(
 
     src_nodes, dest_nodes = defaultdict(list), defaultdict(list) # label to node IDs -> Tuple of node-tensors format from DGL
 
+    # Iterate over all vertices
     for vertex in ctx.graph.vertices:
         # Process source vertex
         src_id, src_type, src_features = vertex.id, vertex.labels[0].name, vertex.properties.get(link_prediction_parameters.node_features_property)
         
         # Process hetero label stuff
-        _process_hetero_help_function(mem_indexes, src_id, src_type, src_features, reindex_orig, reindex_dgl, index_dgl_to_features) 
-
+        _process_help_function(mem_indexes, src_id, src_type, src_features, reindex_orig, reindex_dgl, index_dgl_to_features) 
+        
+        # Get all out edges
         for edge in vertex.out_edges:
+            # Get edge information
             edge_type = edge.type.name
 
             # Process destination vertex next
@@ -628,7 +568,7 @@ def _get_dgl_hetero_graph_data(
             dest_id, dest_type, dest_features = dest_node.id, dest_node.labels[0].name, dest_node.properties.get(link_prediction_parameters.node_features_property) # TODO: Add this parameter somewhere somehow
 
             # Handle mappings
-            _process_hetero_help_function(mem_indexes, dest_id, dest_type, dest_features, reindex_orig, reindex_dgl, index_dgl_to_features) 
+            _process_help_function(mem_indexes, dest_id, dest_type, dest_features, reindex_orig, reindex_dgl, index_dgl_to_features) 
 
             # Define edge
             src_nodes[edge_type].append(reindex_orig[src_type][src_id])
@@ -639,85 +579,35 @@ def _get_dgl_hetero_graph_data(
             if type_triplet not in type_triplets:
                 type_triplets.append(type_triplet)
 
-    data_dict = dict()   # data_dict has specific type that DGL requires to create a heterograph 
-
+    # data_dict has specific type that DGL requires to create a heterograph 
+    data_dict = dict()   
+    
     # Create a heterograph
     print("Type triplets: ", type_triplets)
     for type_triplet in type_triplets:
         data_dict[type_triplet] = torch.tensor(src_nodes[type_triplet[1]]), torch.tensor(dest_nodes[type_triplet[1]])
 
     g = dgl.heterograph(data_dict)  
+
     # Create features
     for node_type in g.ntypes:
         node_features = []
-        print("Node type: ", node_type)
-        print(f"Num nodes for {node_type}: ", len(g.nodes(node_type)))
-        print(f"Nodes for {node_type}", g.nodes(node_type))
         for node in g.nodes(node_type):
             node_id = node.item()
             node_features.append(index_dgl_to_features[node_type][node_id])
 
         node_features = torch.tensor(node_features, dtype=torch.float32)
-        print("Features shape: ", node_features.shape)
         g.nodes[node_type].data[link_prediction_parameters.node_features_property] = node_features
 
-    print("Graph: ", g)
     
     # Infer target relation
-    if len(type_triplets) == 1:  # Only one type of src_type, edge_type and dest_type
+    if len(type_triplets) == 1:  # Only one type of src_type, edge_type and dest_type -> it must be homogeneous graph
         link_prediction_parameters.target_relation = type_triplets[0]
+        HETERO = False
+    else:
+        # Target relation needs to be specified by the user
+        HETERO = True
 
-    # TODO: Cannot add self-loop like before because multiple node types aren't supported. Solution: Don't add self-loops by yourself
-
-    return g, reindex_dgl, reindex_orig
-
-
-def _get_dgl_graph_data(
-    ctx: mgp.ProcCtx,
-) -> Tuple[dgl.graph, Dict[int32, int32], Dict[int32, int32]]:
-    """Creates dgl representation of the graph.
-
-    Args:
-        ctx (mgp.ProcCtx): The reference to the context execution.
-
-    Returns:
-        Tuple[dgl.graph, Dict[int32, int32], Dict[int32, int32]]: Tuple of DGL graph representation, dictionary of mapping new to old index and dictionary of mapping old to new index.
-    """
-
-    global link_prediction_parameters
-
-    src_nodes, dest_nodes = [], []  # for saving the edges
-
-    reindex_dgl = dict()  # map of new node index to old node index
-    reindex_orig = dict()  # map of old node index to new node index
-    features = []  # map of new node index to its feature
-    ind = 0
-
-    for vertex in ctx.graph.vertices:
-        # Process source vertex
-        src_id = vertex.id
-        src_features = vertex.properties.get(link_prediction_parameters.node_features_property)
-        ind = _process_help_function(ind, src_id, reindex_orig, reindex_dgl, features, src_features)
-
-        for edge in vertex.out_edges:
-            # Process destination vertex next
-            dest_node = edge.to_vertex
-            dest_id = dest_node.id
-            dest_features = dest_node.properties.get(link_prediction_parameters.node_features_property)
-            ind = _process_help_function(ind, dest_id, reindex_orig, reindex_dgl, features, dest_features)
-
-            # Create dgl graph
-            src_nodes.append(reindex_orig[src_id])
-            dest_nodes.append(reindex_orig[dest_id])
-
-    # print("Src nodes: ", src_nodes)
-    # print("Dest nodes: ", dest_nodes)
-    # print("Features: ", features)
-    # print("Ind: ", ind)
-    features = torch.tensor(features, dtype=torch.float32)  # use float for storing tensor of features
-    g = dgl.graph((src_nodes, dest_nodes), num_nodes=ind)
-    g.ndata[link_prediction_parameters.node_features_property] = features
-    g = dgl.add_self_loop(g) 
     return g, reindex_dgl, reindex_orig
 
 
@@ -943,7 +833,7 @@ def _reset_train_predict_parameters() -> None:
     reindex_dgl = None
 
 
-def _conversion_to_dgl_hetero_test(
+def _conversion_to_dgl_test(
     graph: dgl.graph,
     reindex_dgl: Dict[str, Dict[int, int]],
     ctx: mgp.ProcCtx,
@@ -957,75 +847,33 @@ def _conversion_to_dgl_hetero_test(
         reindex_dgl (Dict[int, int]): Mapping from new indexes to old indexes.
         ctx (mgp.ProcCtx): Reference to the context execution.
         node_features_property (str): Property namer where the node features are saved`
-
     """
 
     # Check if the dataset is empty. E2E handling.
     if len(ctx.graph.vertices) == 0:
         raise Exception("The conversion to DGL failed. The dataset is empty. ")
 
+    # Find all node types.
     for node_type in graph.ntypes:
         for vertex in graph.nodes(node_type):
+            # Get int from torch.Tensor
             vertex_id = vertex.item()
-            # print(f"Testing vertex: {vertex_id}")
+            # Find vertex in Memgraph
             old_id = reindex_dgl[node_type][vertex_id]
             vertex = ctx.graph.get_vertex_by_id(old_id)
             if vertex is None:
                 raise Exception(f"The conversion to DGL failed. Vertex with id {vertex.id} is not mapped to DGL graph. ")
 
+            # Get features, check if they are given as string
             if type(vertex.properties.get(node_features_property)) == str:
                 old_features = eval(vertex.properties.get(node_features_property))  # TODO: After dealing with Cypher modules
             else:
                 old_features = vertex.properties.get(node_features_property)
             
+            # Check if equal
             if not torch.equal(graph.nodes[node_type].data[node_features_property][vertex_id], torch.tensor(old_features, dtype=torch.float32),):
                 raise Exception("The conversion to DGL failed. Stored graph does not contain the same features as the converted DGL graph. ")
 
     # Check number of nodes
     if graph.number_of_nodes() != len(ctx.graph.vertices):
-        raise Exception("The conversion to DGL failed. Stored graph does not contain the same number of nodes (41) as the converted DGL graph (26).")
-
-    # Check number of edges
-    # if graph.number_of_edges() != get_number_of_edges(ctx):
-    #    raise Exception("Wrong number of edges")
-
-def _conversion_to_dgl_test(
-    graph: dgl.graph,
-    reindex_dgl: Dict[int, int],
-    ctx: mgp.ProcCtx,
-    node_features_property: str,
-) -> None:
-    """
-    Tests whether conversion from ctx.ProcCtx graph to dgl graph went successfully. Checks how features are mapped. Throws exception if something fails.
-
-    Args:
-        graph (dgl.graph): Reference to the dgl graph.
-        reindex_dgl (Dict[int, int]): Mapping from new indexes to old indexes.
-        ctx (mgp.ProcCtx): Reference to the context execution.
-        node_features_property (str): Property namer where the node features are saved`
-
-    """
-
-    # Check if the dataset is empty. E2E handling.
-    if len(ctx.graph.vertices) == 0:
-        raise Exception("The conversion to DGL failed. The dataset is empty. ")
-
-    for vertex in graph.nodes():
-        vertex_id = vertex.item()
-        # print(f"Testing vertex: {vertex_id}")
-        old_id = reindex_dgl[vertex_id]
-        vertex = ctx.graph.get_vertex_by_id(old_id)
-        if vertex is None:
-            raise Exception(f"The conversion to DGL failed. Vertex with id {vertex.id} is not mapped to DGL graph. ")
-
-        old_features = vertex.properties.get(node_features_property)
-        if not torch.equal(graph.ndata[node_features_property][vertex_id], torch.tensor(old_features, dtype=torch.float32),):
-            raise Exception("The conversion to DGL failed. Stored graph does not contain the same features as the converted DGL graph. ")
-
-    # Check number of nodes
-    if graph.number_of_nodes() != len(ctx.graph.vertices):
-        raise Exception("The conversion to DGL failed. Stored graph does not contain the same number of nodes (41) as the converted DGL graph (26).")
-
-    # Check number of edges
-    # if graph.number_of_edges() != get_number_of_edges(ctx):
-    #    raise Exception("Wrong number of edges")
+        raise Exception("The conversion to DGL failed. Stored graph does not contain the same number of nodes as the converted DGL graph.")

@@ -84,84 +84,8 @@ def construct_negative_heterograph(graph: dgl.graph, k: int, relation: Tuple[str
     neg_dst = torch.randint(0, graph.num_nodes(dest_type), (len(src) * k,))
     return dgl.heterograph({relation: (neg_src, neg_dst)}, num_nodes_dict={ntype: graph.num_nodes(ntype) for ntype in graph.ntypes})
 
-def create_negative_graphs_batch(graph: dgl.graph, val_size: int) -> Tuple[dgl.graph, dgl.graph]:
-    """Creates negative training and validation graph.
-
-    Args:
-        graph (dgl.graph): A reference to the original graph. 
-        val_size (int): Validation dataset size.
-
-    Returns:
-        Tuple[dgl.graph, dgl.graph]: Negative training and negative validation graph.
-    """
-
-    # Sample negative edges to avoid creating adjacency matrix
-    neg_u, neg_v = dgl.sampling.global_uniform_negative_sampling(graph, graph.number_of_edges(), exclude_self_loops=False)
-
-    # Cannot sample anything, raise a Exception. E2E handling.
-    if len(neg_u) < graph.number_of_edges():
-        raise Exception("Fully connected graphs are not supported. ")
-    
-    # Create negative train and validation dataset
-    val_neg_u, val_neg_v = neg_u[:val_size], neg_v[:val_size]
-    train_neg_u, train_neg_v = neg_u[val_size:], neg_v[val_size:]
-
-    print("Train neg u: ", train_neg_u[0:100])
-    print("Train neg v: ", train_neg_v[0:100])
-    print("Val neg u: ", val_neg_u[0:100])
-    print("Val neg v: ", val_neg_v[0:100])
-
-
-    test_negative_samples(graph, val_neg_u, val_neg_v)
-    test_negative_samples(graph, train_neg_u, train_neg_v)
-    
-    # Create negative training and validation graph
-    train_neg_g = dgl.graph((train_neg_u, train_neg_v), num_nodes=graph.number_of_nodes())
-    val_neg_g = dgl.graph((val_neg_u, val_neg_v), num_nodes=graph.number_of_nodes())
-
-    return train_neg_g, val_neg_g
-
-def create_negative_graphs(adj_matrix: np.matrix, graph: dgl.graph, val_size: int) -> Tuple[dgl.graph, dgl.graph]:
-    """Creates negative training and validation graph.
-    Args:
-        adj_matrix (np.matrix): Adjacency matrix.
-        number_of_nodes (int): Number of nodes in the whole graph.
-        number_of_edges (int): Number of edges in the whole graph.
-        val_size (int): Validation dataset size.
-    Returns:
-        Tuple[dgl.graph, dgl.graph]: Negative training and negative validation graph.
-    """
-    adj_neg = 1 - adj_matrix
-    neg_u, neg_v = np.where(adj_neg > 0)  # Find all non-existing edges. Move from != 0 because of duplicate edges so you could have negative values in adj_neg.
-
-    # Cannot sample anything, raise a Exception. E2E handling.
-    if len(neg_u) == 0 and len(neg_v) == 0:
-        raise Exception("Fully connected graphs are not supported. ")
-
-    # Sample with replacement from negative edges
-    neg_eids = np.random.choice(len(neg_u), graph.number_of_edges())
-
-    # Create negative train and validation dataset
-    val_neg_u, val_neg_v = neg_u[neg_eids[:val_size]], neg_v[neg_eids[:val_size]]
-    train_neg_u, train_neg_v = neg_u[neg_eids[val_size:]], neg_v[neg_eids[val_size:]]
-
-    # print("Train neg u: ", train_neg_u[0:100])
-    # print("Train neg v: ", train_neg_v[0:100])
-    # print("Val neg u: ", val_neg_u[0:100])
-    # print("Val neg v: ", val_neg_v[0:100])
-    
-    # test_negative_samples(graph, val_neg_u, val_neg_v)
-    # test_negative_samples(graph, train_neg_u, train_neg_v)
-
-    # Create negative training and validation graph
-    train_neg_g = dgl.graph((train_neg_u, train_neg_v), num_nodes=graph.number_of_nodes())
-    val_neg_g = dgl.graph((val_neg_u, val_neg_v), num_nodes=graph.number_of_nodes())
-
-    return train_neg_g, val_neg_g
-
-def create_positive_heterographs(graph: dgl.graph, val_size: int, relation: Tuple[str, str, str]) -> Tuple[dgl.graph, dgl.graph, dgl.graph]:
-    """Creates positive training and validation heterogeneous graph. Also removes validation edges from the training.
-    graph.
+def split_train_val(graph: dgl.graph, val_size: int, relation: Tuple[str, str, str]) -> Tuple[dgl.graph, dgl.graph, dgl.graph]:
+    """Creates positive training and validation heterogeneous graph.
 
     Args:
         graph (dgl.graph): Whole training graph.
@@ -172,47 +96,20 @@ def create_positive_heterographs(graph: dgl.graph, val_size: int, relation: Tupl
     Returns:
         Tuple[dgl.graph, dgl.graph]: positive training and positive validation graphs with features embedded inside.
     """
+
     # Get edges of specific edge type
     edge_type_u, _ = graph.edges(etype=relation)
     graph_edges_len = len(edge_type_u)
     eids = np.arange(graph_edges_len)  # get all edge ids from number of edges and create a numpy vector from it.
     eids = np.random.permutation(eids)  # randomly permute edges
 
-    # Create new positive graphs by copying original graph and removing corresponding edges
+    # Create new positive graphs by copying original graph and removing edges of a specific relation
     train_pos_g = dgl.remove_edges(graph, eids=eids[:val_size], etype=relation)
     val_pos_g = dgl.remove_edges(graph, eids=eids[val_size:], etype=relation)
 
     return train_pos_g, val_pos_g
 
-def create_positive_graphs(graph: dgl.graph, val_size: int) -> Tuple[dgl.graph, dgl.graph, dgl.graph]:
-    """Creates positive training and validation graph. Also removes validation edges from the training
-    graph.
-
-    Args:
-        graph (dgl.graph): Whole training graph.
-        val_size (int): Validation dataset size.
-
-    Returns:
-        Tuple[dgl.graph, dgl.graph, dgl.graph]: training graph with features, positive training and positive validation graphs.
-    """
-    eids = np.arange(graph.number_of_edges())  # get all edge ids from number of edges and create a numpy vector from it.
-    eids = np.random.permutation(eids)  # randomly permute edges
-
-    # Get validation and training source and destination vertices
-    u, v = graph.edges()
-    val_pos_u, val_pos_v = u[eids[:val_size]], v[eids[:val_size]]
-    train_pos_u, train_pos_v = u[eids[val_size:]], v[eids[val_size:]]
-
-    # Remove validation edges from the training graph
-    train_g = dgl.remove_edges(graph, eids[:val_size])
-
-    train_pos_g = dgl.graph((train_pos_u, train_pos_v), num_nodes=graph.number_of_nodes())
-
-    val_pos_g = dgl.graph((val_pos_u, val_pos_v), num_nodes=graph.number_of_nodes())
-
-    return train_g, train_pos_g, val_pos_g
-
-def preprocess_heterographs(graph: dgl.graph, split_ratio: float, relation: Tuple[str, str, str]) -> Tuple[dgl.graph, dgl.graph, dgl.graph, dgl.graph, dgl.graph]:
+def preprocess(graph: dgl.graph, split_ratio: float, relation: Tuple[str, str, str]) -> Tuple[dgl.graph, dgl.graph, dgl.graph, dgl.graph, dgl.graph]:
     """Preprocess method splits dataset in training and validation set. This method is also used for setting numpy and torch random seed.
 
     Args:
@@ -235,60 +132,16 @@ def preprocess_heterographs(graph: dgl.graph, split_ratio: float, relation: Tupl
 
     # val size is 1-split_ratio specified by the user
     val_size = int(graph.number_of_edges() * (1 - split_ratio))
-    # E2E handling
+
+    # If user wants to split the dataset but it is too small, then raise an Exception
     if split_ratio < 1.0 and val_size == 0:
         raise Exception("Graph too small to have a validation dataset. ")
    
      # Create positive training and positive validation graph
-    train_pos_g, val_pos_g = create_positive_heterographs(graph, val_size, relation)
+    train_pos_g, val_pos_g = split_train_val(graph, val_size, relation)
 
     # return train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g
     return train_pos_g, val_pos_g
-
-def preprocess(graph: dgl.graph, split_ratio: float) -> Tuple[dgl.graph, dgl.graph, dgl.graph, dgl.graph, dgl.graph]:
-    """Preprocess method splits dataset in training and validation set. This method is also used for setting numpy and torch random seed.
-
-    Args:
-        graph (dgl.graph): A reference to the dgl graph representation.
-        split_ratio (float): Split ratio training to validation set. E.g 0.8 indicates that 80% is used as training set and 20% for validation set.
-
-    Returns:
-        Tuple[dgl.graph, dgl.graph, dgl.graph, dgl.graph, dgl.graph]:
-            1. Training graph without edges from validation set.
-            2. Positive training graph
-            3. Negative training graph
-            4. Positive validation graph
-            5. Negative validation graph
-    """
-
-    # First set all seeds
-    rnd_seed = 0
-    random.seed(rnd_seed)
-    np.random.seed(rnd_seed)
-    torch.manual_seed(rnd_seed)  # set it for both cpu and cuda
-
-    u, v = graph.edges()
-
-    adj = sp.coo_matrix((np.ones(len(u)), (u.numpy(), v.numpy())))  # adjacency list graph representation
-    adj_matrix = adj.todense()  # convert to dense matrix representation
-
-    # val size is 1-split_ratio specified by the user
-    val_size = int(graph.number_of_edges() * (1 - split_ratio))
-    # E2E handling
-    if split_ratio < 1.0 and val_size == 0:
-        raise Exception("Graph too small to have a validation dataset. ")
-
-   
-    # Create negative training and negative validation graph
-    # train_neg_g, val_neg_g = create_negative_graphs2(graph, val_size)
-
-    train_neg_g, val_neg_g = create_negative_graphs(adj_matrix, graph, val_size)
-    
-     # Create positive training and positive validation graph
-    train_g, train_pos_g, val_pos_g = create_positive_graphs(graph, val_size)
-
-
-    return train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g
 
 def classify(probs: torch.tensor, threshold: float) -> torch.tensor:
     """Classifies based on probabilities of the class with the label one.
@@ -302,13 +155,7 @@ def classify(probs: torch.tensor, threshold: float) -> torch.tensor:
 
     return probs > threshold
 
-def evaluate(
-    metrics: List[str],
-    labels: torch.tensor,
-    probs: torch.tensor,
-    result: Dict[str, float],
-    threshold: float,
-) -> None:
+def evaluate(metrics: List[str], labels: torch.tensor, probs: torch.tensor, result: Dict[str, float], threshold: float,) -> None:
     """Returns all metrics specified in metrics list based on labels and predicted classes. In-place modification of dictionary.
 
     Args:
@@ -331,9 +178,8 @@ def evaluate(
         elif metric_name == RECALL:
             result[RECALL] = recall_score(labels, classes)
         elif metric_name == NUM_WRONG_EXAMPLES:
-            result[NUM_WRONG_EXAMPLES] = (
-                np.not_equal(np.array(labels, dtype=bool), classes).sum().item()
-            )
+            result[NUM_WRONG_EXAMPLES] = (np.not_equal(np.array(labels, dtype=bool), classes).sum().item())
+
 def inner_train_batch(train_g: dgl.graph, train_pos_g: dgl.graph, train_neg_g: dgl.graph, val_pos_g: dgl.graph,
     val_neg_g: dgl.graph, model: torch.nn.Module, predictor: torch.nn.Module, optimizer: torch.optim.Optimizer, num_epochs: int,
     node_features_property: str, console_log_freq: int, checkpoint_freq: int, metrics: List[str], tr_acc_patience: int,
@@ -420,7 +266,7 @@ def inner_train_batch(train_g: dgl.graph, train_pos_g: dgl.graph, train_neg_g: d
                 val_acc = accuracy_score(label_val, classes_val)
                 print("Val acc: ", val_acc)
 
-def inner_train_heterographs(
+def inner_train(
     train_pos_g: dgl.graph,
     val_pos_g: dgl.graph,
     relation: Tuple[str, str, str],
@@ -438,7 +284,6 @@ def inner_train_heterographs(
     """Real train method where training occurs. Parameters from LinkPredictionParameters are sent here. They aren't sent as whole class because of circular dependency.
 
     Args:
-        graph (dgl.graph): A reference to the original graph.
         train_pos_g (dgl.graph): Positive training graph.
         val_pos_g (dgl.graph): Positive validation graph.
         relation (Tuple[str, str, str]): src_type, edge_type, dest_type that determines edges important for prediction. For those we need to create 
@@ -454,18 +299,15 @@ def inner_train_heterographs(
             Epoch will always be displayed, you can add loss, accuracy, precision, recall, specificity, F1, auc_score etc.
         tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on validation set be tolerated before stopping the training.
         context_save_dir: str -> Path where the model and predictor will be saved every checkpoint_freq epochs.
-        train_g (dgl.graph): A reference to the created training graph without validation edges.
-        train_pos_g (dgl.graph): Positive training graph.
-        train_neg_g (dgl.graph): Negative training graph.
-        val_pos_g (dgl.graph): Positive validation graph.
-        val_neg_g (dgl.graph): Negative validation graph.
     Returns:
         Tuple[List[Dict[str, float]], List[Dict[str, float]]: Training results, validation results
     """
     # Save results collections
     training_results, validation_results = [], []
+    
+    # Negative edges per one positive
+    k = 1 
 
-    k = 1  # Negative edges per one positive
     # Training
     max_val_acc, num_val_acc_drop = (-1.0, 0,)  # last maximal accuracy and number of epochs it is dropping
 
@@ -483,17 +325,17 @@ def inner_train_heterographs(
         model.train() 
         # Create negative graph
         train_neg_g = construct_negative_heterograph(train_pos_g, k, relation)
-        # Hidden embeddings
+
+        # Get embeddings
         h = model(train_pos_g, graph_features) 
         
-        # Deal with scores
-
+        # Get edge scores and probabilities
         pos_score = predictor.forward(train_pos_g, h, relation=relation) # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_pos-g. Scores are here actually logits.
         neg_score = predictor.forward(train_neg_g, h, relation=relation)  # returns vector of negative edge scores, torch.float32, shape: num_edges in the graph of train_neg_g. Scores are actually logits.
-    
         scores = torch.cat([pos_score, neg_score])  # concatenated positive and negative scores
 
-        probs = m(scores)  # probabilities
+        # probabilities
+        probs = m(scores)
         labels = torch.cat([torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])])  # concatenation of labels
         loss_output = loss(probs, labels)
 
@@ -507,13 +349,14 @@ def inner_train_heterographs(
 
         # Turn of gradient calculation
         with torch.no_grad():
-
+            # Time for writing
             if epoch % console_log_freq == 0:
                 epoch_training_result = OrderedDict()  # Temporary result per epoch
                 epoch_val_result = OrderedDict()
                 # Set initial metrics for training result
                 epoch_training_result[EPOCH] = epoch
                 epoch_training_result[LOSS] = loss_output.item()
+                # Evaluate based on given metrics
                 evaluate(metrics, labels, probs, epoch_training_result, threshold)
                 training_results.append(epoch_training_result)
 
@@ -521,30 +364,32 @@ def inner_train_heterographs(
                 if val_pos_g.number_of_edges() > 0:
                     # Create negative validation graph
                     val_neg_g = construct_negative_heterograph(val_pos_g, k, relation)
+                    # Get embeddings
                     h_val = model(val_pos_g, graph_features) 
         
-                    # Deal with scores
+                    # Get edge scores and probabilities
                     pos_score_val = predictor.forward(val_pos_g, h_val, relation=relation)  # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_pos-g. Scores are here actually logits.
                     neg_score_val = predictor.forward(val_neg_g, h_val, relation=relation)  # returns vector of negative edge scores, torch.float32, shape: num_edges in the graph of train_neg_g. Scores are actually logits.
-
                     scores_val = torch.cat([pos_score_val, neg_score_val])  # concatenated positive and negative scores
                     
-                    probs_val = m(scores_val)  # probabilities
+                    # Probabilities
+                    probs_val = m(scores_val)
                     labels_val = torch.cat([torch.ones(pos_score_val.shape[0]), torch.zeros(neg_score_val.shape[0]),])
 
+                    # For DEBUG only
                     print("Ratio of positively val predicted examples: ", torch.sum(probs_val > 0.5).item() / (probs_val).shape[0])
                     print("Ratio of positively train predicted examples: ", torch.sum(probs > 0.5).item() / probs.shape[0])
+
                     # Set initial metrics for validation result
                     loss_output_val = loss(probs_val, labels_val)
                     epoch_val_result[EPOCH] = epoch
                     epoch_val_result[LOSS] = loss_output_val.item()
+                    # Evaluate based on given metrics
                     evaluate(metrics, labels_val, probs_val, epoch_val_result, threshold)
                     validation_results.append(epoch_val_result)
 
                     # Patience check
                     if epoch_val_result[ACCURACY] <= max_val_acc:
-                        # print("Acc val: ", acc_val)
-                        # print("Max val acc: ", max_val_acc)
                         num_val_acc_drop += 1
                     else:
                         max_val_acc = epoch_val_result[ACCURACY]
@@ -566,190 +411,6 @@ def inner_train_heterographs(
     # Save model at the end of the training
     _save_context(model, predictor, context_save_dir)
 
-    # visualize(training_results=training_results, validation_results=validation_results)
-    return training_results, validation_results
-
-def inner_train(
-    train_g: dgl.graph,
-    train_pos_g: dgl.graph,
-    train_neg_g: dgl.graph,
-    val_pos_g: dgl.graph,
-    val_neg_g: dgl.graph,
-    model: torch.nn.Module,
-    predictor: torch.nn.Module,
-    optimizer: torch.optim.Optimizer,
-    num_epochs: int,
-    node_features_property: str,
-    console_log_freq: int,
-    checkpoint_freq: int,
-    metrics: List[str],
-    tr_acc_patience: int,
-    context_save_dir: str
-
-) -> Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]:
-    """Real train method where training occurs. Parameters from LinkPredictionParameters are sent here. They aren't sent as whole class because of circular dependency.
-
-    Args:
-        model (torch.nn.Module): A reference to the model.
-        predictor (torch.nn.Module): A reference to the edge predictor.
-        optimizer (torch.optim.Optimizer): A reference to the training optimizer.
-        num_epochs (int): number of epochs for model training.
-        node_features_property: (str): property name where the node features are saved.
-        console_log_freq (int): How often results will be printed. All results that are printed in the terminal will be returned to the client calling Memgraph.
-        checkpoint_freq (int): Select the number of epochs on which the model will be saved. The model is persisted on the disc.
-        metrics (List[str]): Metrics used to evaluate model in training on the validation set.
-            Epoch will always be displayed, you can add loss, accuracy, precision, recall, specificity, F1, auc_score etc.
-        tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on validation set be tolerated before stopping the training.
-        context_save_dir: str -> Path where the model and predictor will be saved every checkpoint_freq epochs.
-        train_g (dgl.graph): A reference to the created training graph without validation edges.
-        train_pos_g (dgl.graph): Positive training graph.
-        train_neg_g (dgl.graph): Negative training graph.
-        val_pos_g (dgl.graph): Positive validation graph.
-        val_neg_g (dgl.graph): Negative validation graph.
-    Returns:
-        Tuple[List[Dict[str, float]], List[Dict[str, float]]: Training results, validation results
-    """
-
-    print("train_g: ", train_g.number_of_edges())
-    print("train_pos_g: ", train_pos_g.number_of_edges())
-    print("train_neg_g: ", train_neg_g.number_of_edges())
-    print("val_pos_g: ", val_pos_g.number_of_edges())
-    print("val_neg_g: ", val_neg_g.number_of_edges())
-
-    tr_pos_edges_u, tr_pos_edges_v = train_pos_g.edges()
-    tr_neg_edges_u, tr_neg_edges_v = train_neg_g.edges()
-
-    # print("tr pos u: ", tr_pos_edges_u)
-    # print("tr pos v: ", tr_pos_edges_v)
-    # print("tr neg u: ", tr_neg_edges_u)
-    # print("tr neg v: ", tr_neg_edges_v)
-
-    val_pos_edges_u, val_pos_edges_v = val_pos_g.edges()
-    val_neg_edges_u, val_neg_edges_v = val_neg_g.edges()
-
-    # print("val pos u: ", val_pos_edges_u)
-    # print("val pos v: ", val_pos_edges_v)
-    # print("val neg u: ", val_neg_edges_u)
-    # print("val neg v: ", val_neg_edges_v)
-
-    training_results, validation_results = [], []
-
-    # Training
-    max_val_acc, num_val_acc_drop = (-1.0, 0,)  # last maximal accuracy and number of epochs it is dropping
-
-    # Initialize loss
-    loss = torch.nn.BCELoss()
-
-    # Initialize activation func
-    m, threshold = torch.nn.Sigmoid(), 0.5
-
-    for epoch in range(1, num_epochs + 1):
-        # train_g.ndata[node_features_property], torch.float32, num_nodes*feature_size
-
-        model.train()  # switch to training mode
-
-        h = model(train_pos_g, train_g.ndata[node_features_property])  # h is torch.float32 that has shape: nodes*hidden_features_size[-1]. Node embeddings.
-
-        # print("Node embeddings shape: ", h.shape)
-
-        # gu, gv, edge_ids = train_pos_g.edges(form="all", order="eid")
-        # print("GU: ", gu)
-        # print("GV: ", gv)
-        # print("EDGE IDS: ", edge_ids)
-
-        pos_score = predictor.forward(train_pos_g, h)  # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_pos-g. Scores are here actually logits.
-        neg_score = predictor.forward(train_neg_g, h)  # returns vector of negative edge scores, torch.float32, shape: num_edges in the graph of train_neg_g. Scores are actually logits.
-
-        pos_score = pos_score.view(-1)
-        neg_score = neg_score.view(-1)
-
-        # print("pos score shape: ", pos_score.shape)
-        # print("neg score shape: ", neg_score.shape)
-
-        # edge_id = train_pos_g.edge_ids(gu[0], gv[0])
-        # print("Edge id: ", edge_id)
-        # print("Pos score: ", pos_score[edge_id])
-
-        scores = torch.cat([pos_score, neg_score])  # concatenated positive and negative scores
-        # scores = F.normalize(scores, dim=0)
-        print("Negative scores: ", torch.sum(scores < 0).item())
-        print("Positive scores: ", torch.sum(scores > 0).item())
-
-        probs = m(scores)  # probabilities
-        labels = torch.cat([torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])])  # concatenation of labels
-        loss_output = loss(probs, labels)
-
-        # backward
-        optimizer.zero_grad()
-        loss_output.backward()
-        optimizer.step()
-
-        # Now switch to validation mode to get results on validation set/
-        model.eval()
-
-        # Turn of gradient calculation
-        with torch.no_grad():
-
-            if epoch % console_log_freq == 0:
-                epoch_training_result = OrderedDict()  # Temporary result per epoch
-                epoch_val_result = OrderedDict()
-                # Set initial metrics for training result
-                epoch_training_result[EPOCH] = epoch
-                epoch_training_result[LOSS] = loss_output.item()
-                evaluate(metrics, labels, probs, epoch_training_result, threshold)
-                training_results.append(epoch_training_result)
-
-                # Validation metrics if they can be calculated
-                if val_pos_g.number_of_edges() > 0:
-                    # Evaluate on positive and negative dataset
-                    h_val = model(val_pos_g, train_g.ndata[node_features_property]) # Big question is whether to calculate h_val or leave only h from the training.
-                    pos_score_val = predictor.forward(val_pos_g, h_val)
-                    neg_score_val = predictor.forward(val_neg_g, h_val)
-                    # Process shapes
-                    pos_score_val = pos_score_val.view(-1)
-                    neg_score_val = neg_score_val.view(-1)
-
-                    # Concatenate scores
-                    scores_val = torch.cat([pos_score_val, neg_score_val])
-                    # scores_val = F.normalize(scores_val, dim=0)
-                    probs_val = m(scores_val)  # probabilities
-                    labels_val = torch.cat([torch.ones(pos_score_val.shape[0]), torch.zeros(neg_score_val.shape[0]),])
-
-                    print("Ratio of positively val predicted examples: ", torch.sum(probs_val > 0.5).item() / (probs_val).shape[0])
-                    print("Ratio of positively train predicted examples: ", torch.sum(probs > 0.5).item() / probs.shape[0])
-                    # Set initial metrics for validation result
-                    loss_output_val = loss(probs_val, labels_val)
-                    epoch_val_result[EPOCH] = epoch
-                    epoch_val_result[LOSS] = loss_output_val.item()
-                    evaluate(metrics, labels_val, probs_val, epoch_val_result, threshold)
-                    validation_results.append(epoch_val_result)
-
-                    # Patience check
-                    if epoch_val_result[ACCURACY] <= max_val_acc:
-                        # print("Acc val: ", acc_val)
-                        # print("Max val acc: ", max_val_acc)
-                        num_val_acc_drop += 1
-                    else:
-                        max_val_acc = epoch_val_result[ACCURACY]
-                        num_val_acc_drop = 0
-
-                    print(epoch_val_result)
-
-                    # Stop the training if necessary
-                    if num_val_acc_drop == tr_acc_patience:
-                        print("Stopped because of validation criteria. ")
-                        break
-                else:
-                    print(epoch_training_result)
-
-            # Save the model if necessary
-            if epoch % checkpoint_freq == 0:
-                _save_context(model, predictor, context_save_dir)
-                
-    # Save model at the end of the training
-    _save_context(model, predictor, context_save_dir)
-
-    # visualize(training_results=training_results, validation_results=validation_results)
     return training_results, validation_results
 
 def _save_context(model: torch.nn.Module, predictor: torch.nn.Module, context_save_dir: str):

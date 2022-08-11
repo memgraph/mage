@@ -6,19 +6,16 @@ from typing import List
 
 
 class GAT(torch.nn.Module):
-    def __init__(self, hidden_features_size: List[int], attn_num_heads: List[int], hetero: bool, edge_types: List[str]):
+    def __init__(self, hidden_features_size: List[int], attn_num_heads: List[int], edge_types: List[str]):
         """Initializes GAT module with layer sizes.
 
         Args:
             hidden_features_size (List[int]): First element is the feature size and the rest specifies layer size.
             attn_num_heads List[int]: List of number of heads for each layer. Last layer must have only one head.
-            hetero (bool): Only for the debugging, later it will be removed. True if operating on
-                heterogeneous graphs, false for homogeneous. 
             edge_types (List[str]): All edge types that are occurring in the heterogeneous network.
         """
         super(GAT, self).__init__()
         self.layers = torch.nn.ModuleList()
-        self.hetero = hetero
         for i in range(len(hidden_features_size) - 1):
             in_feats, out_feats, num_heads = (
                 hidden_features_size[i],
@@ -26,12 +23,10 @@ class GAT(torch.nn.Module):
                 attn_num_heads[i],
             )
             gat_layer = GATConv(in_feats=in_feats, out_feats=out_feats, num_heads=num_heads, allow_zero_in_degree=True)
-            if self.hetero:
-                self.layers.append(
-                    HeteroGraphConv({edge_type: gat_layer for edge_type in edge_types}, aggregate="sum")
-                )
-            else:
-                self.layers.append(gat_layer)
+            self.layers.append(
+                HeteroGraphConv({edge_type: gat_layer for edge_type in edge_types}, aggregate="sum")
+            )
+ 
 
     def forward(self, g: dgl.graph, h: torch.Tensor) -> torch.Tensor:
         """Forward method goes over every layer in the PyTorch's ModuleList.
@@ -45,14 +40,9 @@ class GAT(torch.nn.Module):
         """
         for index, layer in enumerate(self.layers):
             h = layer(g, h)
-            if self.hetero:
-                h = {k: torch.mean(v, dim=1) for k, v in h.items()}
-            else:
-                h = torch.mean(h, dim=1)
+            h = {k: torch.mean(v, dim=1) for k, v in h.items()}
             if index != len(self.layers) - 1:  # Apply elu to every layer except last one
-                if self.hetero:
-                    h = {k: torch.nn.functional.elu(v) for k, v in h.items()}
-                else:
-                    h = torch.nn.functional.elu(h)
+                h = {k: torch.nn.functional.elu(v) for k, v in h.items()}
+        
         return h
 
