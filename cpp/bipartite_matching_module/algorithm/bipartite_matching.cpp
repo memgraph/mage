@@ -64,7 +64,7 @@ std::uint64_t MaximumMatching(const std::vector<std::pair<std::uint64_t, std::ui
   std::unordered_set<std::uint64_t> group_a;
   std::unordered_set<std::uint64_t> group_b;
 
-  for (const auto [from, to] : bipartite_edges) {
+  for (const auto &[from, to] : bipartite_edges) {
     group_a.insert(from);
     group_b.insert(to);
   }
@@ -76,7 +76,7 @@ std::uint64_t MaximumMatching(const std::vector<std::pair<std::uint64_t, std::ui
   std::vector<std::optional<std::uint64_t>> matched(size_b + 1, std::nullopt);
 
   std::vector<std::vector<std::uint64_t>> adj_list(size_a + 1);
-  for (const auto [from, to] : bipartite_edges) adj_list[from].push_back(to);
+  for (const auto &[from, to] : bipartite_edges) adj_list[from].push_back(to);
 
   std::uint64_t maximum_matching = 0;
   for (std::uint64_t node = 1; node <= size_a; ++node) {

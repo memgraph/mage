@@ -18,7 +18,7 @@ namespace LabelRankT {
 ///@return -- whether a is subset of b
 template <class T>
 bool IsSubset(const std::unordered_set<T> &a, const std::unordered_set<T> &b) {
-  return std::includes(a.begin(), a.end(), b.begin(), b.end());
+  return std::all_of(a.begin(), a.end(), [&](const T &value) { return b.find(value) != b.end(); });
 }
 
 std::vector<std::uint64_t> LabelRankT::NodesMemgraphIDs() const {
@@ -331,12 +331,12 @@ std::unordered_map<std::uint64_t, std::int64_t> LabelRankT::UpdateLabels(
   std::unordered_set<std::uint64_t> changed_nodes(modified_nodes.begin(), modified_nodes.end());
   std::unordered_set<std::uint64_t> to_delete(deleted_nodes.begin(), deleted_nodes.end());
 
-  for (const auto [from, to] : modified_edges) {
+  for (const auto &[from, to] : modified_edges) {
     changed_nodes.insert(from);
     changed_nodes.insert(to);
   }
 
-  for (const auto [from, to] : deleted_edges) {
+  for (const auto &[from, to] : deleted_edges) {
     if (to_delete.count(from) == 0) changed_nodes.insert(from);
     if (to_delete.count(to) == 0) changed_nodes.insert(to);
   }

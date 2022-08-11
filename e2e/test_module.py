@@ -20,13 +20,12 @@ class TestConstants:
     QUERY = "query"
     TEST_FILE = "test.yml"
     TEST_MODULE_DIR_SUFFIX = "_test"
+    TEST_GROUP_DIR_SUFFIX = "_group"
 
     ONLINE_TEST_E2E_SETUP = "setup"
     ONLINE_TEST_E2E_CLEANUP = "cleanup"
     ONLINE_TEST_E2E_INPUT_QUERIES = "queries"
     ONLINE_TEST_SUBDIR_PREFIX = "test_online"
-
-    ABSOLUTE_TOLERANCE = 1e-3
 
 
 def _node_to_dict(data):
@@ -53,18 +52,29 @@ def prepare_tests():
     tests = []
 
     test_path = Path().cwd()
+
     for module_test_dir in test_path.iterdir():
         if not module_test_dir.is_dir() or not module_test_dir.name.endswith(
             TestConstants.TEST_MODULE_DIR_SUFFIX
         ):
             continue
 
-        for test_dir in module_test_dir.iterdir():
-            if not test_dir.is_dir():
+        for test_or_group_dir in module_test_dir.iterdir():
+            if not test_or_group_dir.is_dir():
                 continue
-            tests.append(
-                pytest.param(test_dir, id=f"{module_test_dir.stem}-{test_dir.stem}")
-            )
+
+            if test_or_group_dir.name.endswith(TestConstants.TEST_GROUP_DIR_SUFFIX):
+                for test_dir in test_or_group_dir.iterdir():
+                    if not test_dir.is_dir():
+                        continue
+
+                    tests.append(
+                        pytest.param(test_dir, id=f"{module_test_dir.stem}-{test_or_group_dir.stem}-{test_dir.stem}")
+                    )
+            else:
+                tests.append(
+                    pytest.param(test_or_group_dir, id=f"{module_test_dir.stem}-{test_or_group_dir.stem}")
+                )
     return tests
 
 
@@ -139,17 +149,18 @@ def _test_online(test_dir: Path, db: Memgraph):
     if setup_cyphers:
         _execute_cyphers(setup_cyphers.splitlines(), db)
 
-    # Execute cypher queries and compare them with results
-    for input_cyphers_raw, test_dict in zip(
-        checkpoint_input_cyphers, checkpoint_test_dicts
-    ):
-        input_cyphers = input_cyphers_raw.splitlines()
-        _execute_cyphers(input_cyphers, db)
-        _run_test(test_dict, db)
-
-    # Run optional cleanup queries
-    if cleanup_cyphers:
-        _execute_cyphers(cleanup_cyphers.splitlines(), db)
+    try:
+        # Execute cypher queries and compare them with results
+        for input_cyphers_raw, test_dict in zip(
+                checkpoint_input_cyphers, checkpoint_test_dicts
+        ):
+            input_cyphers = input_cyphers_raw.splitlines()
+            _execute_cyphers(input_cyphers, db)
+            _run_test(test_dict, db)
+    finally:
+        # Run optional cleanup queries
+        if cleanup_cyphers:
+            _execute_cyphers(cleanup_cyphers.splitlines(), db)
 
 
 @pytest.mark.parametrize("test_dir", tests)
