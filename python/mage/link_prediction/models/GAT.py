@@ -26,7 +26,7 @@ class GAT(torch.nn.Module):
                 attn_num_heads[i],
             )
             gat_layer = GATConv(in_feats=in_feats, out_feats=out_feats, num_heads=num_heads, allow_zero_in_degree=True)
-            if hetero:
+            if self.hetero:
                 self.layers.append(
                     HeteroGraphConv({edge_type: gat_layer for edge_type in edge_types}, aggregate="sum")
                 )
@@ -43,7 +43,6 @@ class GAT(torch.nn.Module):
         Returns:
             torch.Tensor: Features after iterating over all layers.
         """
-
         for index, layer in enumerate(self.layers):
             h = layer(g, h)
             if self.hetero:

@@ -475,21 +475,22 @@ def inner_train_heterographs(
     # Initialize activation func
     m, threshold = torch.nn.Sigmoid(), 0.5
 
+    # Features
+    graph_features = {node_type: train_pos_g.nodes[node_type].data[node_features_property] for node_type in train_pos_g.ntypes}
+
     for epoch in range(1, num_epochs + 1):
         # switch to training mode
         model.train() 
         # Create negative graph
         train_neg_g = construct_negative_heterograph(train_pos_g, k, relation)
         # Hidden embeddings
-        h = model(train_pos_g, train_pos_g.ndata[node_features_property]) 
+        h = model(train_pos_g, graph_features) 
         
         # Deal with scores
-        pos_score = predictor.forward(train_pos_g, h, relation=relation)[relation]  # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_pos-g. Scores are here actually logits.
-        neg_score = predictor.forward(train_neg_g, h, relation=relation)  # returns vector of negative edge scores, torch.float32, shape: num_edges in the graph of train_neg_g. Scores are actually logits.
-        
-        pos_score = pos_score.view(-1)
-        neg_score = neg_score.view(-1)
 
+        pos_score = predictor.forward(train_pos_g, h, relation=relation) # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_pos-g. Scores are here actually logits.
+        neg_score = predictor.forward(train_neg_g, h, relation=relation)  # returns vector of negative edge scores, torch.float32, shape: num_edges in the graph of train_neg_g. Scores are actually logits.
+    
         scores = torch.cat([pos_score, neg_score])  # concatenated positive and negative scores
 
         probs = m(scores)  # probabilities
@@ -520,16 +521,11 @@ def inner_train_heterographs(
                 if val_pos_g.number_of_edges() > 0:
                     # Create negative validation graph
                     val_neg_g = construct_negative_heterograph(val_pos_g, k, relation)
-                    h_val = model(val_pos_g, val_pos_g.ndata[node_features_property]) 
+                    h_val = model(val_pos_g, graph_features) 
         
                     # Deal with scores
-                    pos_score_val = predictor.forward(val_pos_g, h_val, relation=relation)[relation]  # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_pos-g. Scores are here actually logits.
+                    pos_score_val = predictor.forward(val_pos_g, h_val, relation=relation)  # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_pos-g. Scores are here actually logits.
                     neg_score_val = predictor.forward(val_neg_g, h_val, relation=relation)  # returns vector of negative edge scores, torch.float32, shape: num_edges in the graph of train_neg_g. Scores are actually logits.
-
-                    pos_score_val = pos_score_val.view(-1)
-                    neg_score_val = neg_score_val.view(-1)
-
-                    print(pos_score_val.shape, neg_score_val.shape)
 
                     scores_val = torch.cat([pos_score_val, neg_score_val])  # concatenated positive and negative scores
                     

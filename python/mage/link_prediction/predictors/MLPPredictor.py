@@ -18,23 +18,29 @@ class MLPPredictor(torch.nn.Module):
         Returns:
             Dict: A dictionary of new edge features
         """
+        print("Edges: ", edges.src, edges.dst, edges.src["node_embeddings"].shape)
         h = torch.cat([edges.src["node_embeddings"], edges.dst["node_embeddings"]], 1)
         return {"score": self.W2(F.relu(self.W1(h))).squeeze(1)}
 
-    def forward(self, g: dgl.graph, node_embeddings: torch.Tensor, relation=None) -> torch.Tensor:
+    def forward(self, g: dgl.graph, node_embeddings: Dict[str, torch.Tensor], relation=None) -> torch.Tensor:
         """Calculates forward pass of MLPPredictor.
 
         Args:
             g (dgl.graph): A reference to the graph for which edge scores will be computed.
-            node_embeddings (torch.Tensor): node embeddings.
+            node_embeddings (Dict[str, torch.Tensor]): node embeddings for each node type.
 
         Returns:
             torch.Tensor: A tensor of edge scores.
         """
         with g.local_scope():
-            g.ndata["node_embeddings"] = node_embeddings
+            for node_type in node_embeddings.keys():  # Iterate over all node_types. # TODO: Maybe it can be removed if features are already saved in the graph.
+                g.nodes[node_type].data["node_embeddings"] = node_embeddings[node_type]
+
             g.apply_edges(self.apply_edges, etype=relation)
-            return g.edata["score"]
+            scores = g.edata["score"]
+            if type(scores) == dict:
+                scores = scores[relation]
+            return scores.view(-1)
 
 
     def forward_pred(self, src_embedding: torch.Tensor, dest_embedding: torch.Tensor) -> float:
