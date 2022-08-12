@@ -42,8 +42,8 @@ from mage.link_prediction import (
     ATTN_NUM_HEADS,
     TR_ACC_PATIENCE,
     MODEL_SAVE_PATH,
-    TARGET_RELATION,
     CONTEXT_SAVE_DIR,
+    TARGET_EDGE_TYPE,
     NUM_NEG_PER_POS_EDGE,
     BATCH_SIZE,
     SAMPLING_WORKERS,
@@ -85,8 +85,7 @@ class LinkPredictionParameters:
     :param attn_num_heads: List[int] -> GAT can support usage of more than one head in each layers except last one. Only used in GAT, not in GraphSage.
     :param tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on validation set be tolerated before stopping the training.
     :param context_save_dir: str -> Path where the model and predictor will be saved every checkpoint_freq epochs.
-    :param target_relation (Tuple[str, str, str]): src_type, edge_type, dest_type that determines edges important for prediction. These edge type will be used
-        for training and prediction.
+    :param target_edge_type: str -> Unique edge type that is used for training.
     :param num_neg_per_pos_edge (int): Number of negative edges that will be sampled per one positive edge in the mini-batch.
     :param num_layers (int): Number of layers in the GNN architecture.
     :param batch_size (int): Batch size used in both training and validation procedure.
@@ -121,11 +120,11 @@ class LinkPredictionParameters:
             NEG_PRED_EXAMPLES
         ]
     )
-    predictor_type: str =  MLP_PREDICTOR
+    predictor_type: str =  DOT_PREDICTOR
     attn_num_heads: List[int] = field(default_factory=lambda: [4, 1])
     tr_acc_patience: int = 5
     context_save_dir: str = "./python/mage/link_prediction/context/"  # TODO: When the development finishes
-    target_relation: Tuple[str, str, str] = ("Customer", "SUBSCRIBES_TO", "Plan")
+    target_edge_type: str = "SUBSCRIBES_TO"
     num_neg_per_pos_edge: int = 5
     batch_size: int = 512
     sampling_workers: int = 4
@@ -144,7 +143,6 @@ predictor: torch.nn.Module = None  # Predictor for calculating edge scores
 model: torch.nn.Module = None
 features_size_loaded: bool = False  # If size of the features was already inserted.
 HETERO = None 
-align_method = "proj_0"
 
 ##############################
 # All read procedures
@@ -173,8 +171,12 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
         predictor_type str: Type of the predictor. Predictor is used for combining node scores to edge scores.
         attn_num_heads: List[int] -> GAT can support usage of more than one head in each layer except last one. Only used in GAT, not in GraphSage.
         tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on test set be tolerated before stopping the training.
-        model_save_path: str -> Path where the link prediction model will be saved every checkpoint_freq epochs.
-
+        context_save_dir: str -> Path where the model and predictor will be saved every checkpoint_freq epochs.
+        target_edge_type: str -> Unique edge type that is used for training.
+        num_neg_per_pos_edge (int): Number of negative edges that will be sampled per one positive edge in the mini-batch.
+        num_layers (int): Number of layers in the GNN architecture.
+        batch_size (int): Batch size used in both training and validation procedure.
+        sampling_workers (int): Number of workers that will cooperate in the sampling procedure in the training and validation.
 
     Returns:
         mgp.Record:
@@ -222,7 +224,7 @@ def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_
         mgp.Record: It returns performance metrics obtained during the training on the training and validation dataset.
     """
     # Get global context
-    global training_results, validation_results, predictor, model, graph, reindex_dgl, reindex_orig, HETERO
+    global training_results, validation_results, predictor, model, graph, reindex_dgl, reindex_orig, features_size_loaded, HETERO
 
     # Reset parameters of the old training
     _reset_train_predict_parameters()
@@ -230,23 +232,23 @@ def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_
     # Get some data
     # Dealing with heterogeneous graphs
     graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
- 
-    # Test conversion
-    _conversion_to_dgl_test(graph=graph, reindex_dgl=reindex_dgl, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property)
-
+  
     # Insert in the hidden_features_size structure if needed
-    if HETERO:
-        # Before loading we will project features of those node types that aren't of same dimensionality
-        # TODO: Add this as some kind of general preprocessing step. But then be careful to add parameters to the model.
-        ftr_size = _proj_0(graph)        
-    else:
-        ftr_size = graph.ndata[link_prediction_parameters.node_features_property].shape[1]
+    if not features_size_loaded:
+        if HETERO:
+            ftr_size = max(value.shape[1] for value in graph.ndata[link_prediction_parameters.node_features_property].values())
+        else:
+            ftr_size = graph.ndata[link_prediction_parameters.node_features_property].shape[1]
 
-    _load_feature_size(ftr_size)
+        print("Ftr size: ", ftr_size)
+
+        # Load feature size in the hidden_features_size 
+        _load_feature_size(ftr_size)
 
     # Split the data
-    train_eid_dict, val_eid_dict = preprocess(graph=graph, split_ratio=link_prediction_parameters.split_ratio, relation=link_prediction_parameters.target_relation)
-    
+    train_eid_dict, val_eid_dict = preprocess(graph=graph, split_ratio=link_prediction_parameters.split_ratio, 
+        target_edge_type=link_prediction_parameters.target_edge_type)
+
     # Create a model
     model = create_model(
         layer_type=link_prediction_parameters.layer_type,
@@ -274,7 +276,7 @@ def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_
     training_results, validation_results = inner_train(graph,
         train_eid_dict, 
         val_eid_dict, 
-        link_prediction_parameters.target_relation,
+        link_prediction_parameters.target_edge_type,
         model,
         predictor,
         optimizer,
@@ -296,9 +298,8 @@ def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_
 
 @mgp.read_proc
 def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -> mgp.Record(score=mgp.Number):
-    """Predict method. It is assumed that nodes are already added to the original graph and our goal is to predict whether there is an edge between two nodes or not. Even if the edge exists,
-     method can be used.
-
+    """Predict method. It is assumed that nodes are added to the original Memgraph graph. It supports both situations, when the edge doesn't exist and when
+    the edge exists.
 
     Args:
         ctx (mgp.ProcCtx): A reference to the context execution
@@ -311,40 +312,36 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     # TODO: what if new node is created after training and before predict? You have to map it dgl.graph representation immediately. 
     global graph, predictor, model, reindex_orig, reindex_dgl, HETERO
 
-    # If the model isn't available
-    if model is None:
+    # If the model isn't available. Model is available if this method is called right after training or loaded from context.
+    # Same goes for predictor.
+    if model is None or predictor is None:
         raise Exception("No trained model available to the system. Train or load it first. ")
 
-    # You called predict after session was lost
-    if graph is None:         
-        graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
+
+    # TODO: Problem because maybe something was reindexed, check if this actually a problem
+    # Load graph again so you find nodes that were possibly added between train and prediction
+    graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
 
     # Create dgl graph representation
     src_old_id, src_type = src_vertex.id, src_vertex.labels[0].name
     dest_old_id, dest_type = dest_vertex.id, dest_vertex.labels[0].name
 
     # Get dgl ids
-    if HETERO:
-        src_id = reindex_orig[src_type][src_old_id]
-        dest_id = reindex_orig[dest_type][dest_old_id]
-        target_relation = link_prediction_parameters.target_relation # TODO: Change that when merging everything into one module
-    else:
-        src_id = reindex_orig[src_old_id]
-        dest_id = reindex_orig[dest_old_id]
-        target_relation = None
-
+    src_id = reindex_orig[src_type][src_old_id]
+    dest_id = reindex_orig[dest_type][dest_old_id]
+    
     # Init edge properties
     edge_added, edge_id = False, -1
 
     # print("Number of edges before: ", graph.number_of_edges())
 
     # Check if there is an edge between two nodes
-    if not graph.has_edges_between(src_id, dest_id, etype=target_relation):
+    if not graph.has_edges_between(src_id, dest_id, etype=link_prediction_parameters.target_edge_type):
         edge_added = True
         # print("Nodes {} and {} are not connected. ".format(src_old_id, dest_old_id))
-        graph.add_edges(src_id, dest_id, etype=target_relation)
+        graph.add_edges(src_id, dest_id, etype=link_prediction_parameters.target_edge_type)
     
-    edge_id = graph.edge_ids(src_id, dest_id, etype=target_relation)
+    edge_id = graph.edge_ids(src_id, dest_id, etype=link_prediction_parameters.target_edge_type)
 
     # print("Edge id: ", edge_id)
     # print("Number of edges after adding new edge: ", graph.number_of_edges())
@@ -361,13 +358,13 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
         node_features_property=link_prediction_parameters.node_features_property,
         src_node=src_id, 
         dest_node=dest_id,
-        relation=target_relation)
+        target_edge_type=link_prediction_parameters.target_edge_type)
 
     result = mgp.Record(score=score)
 
     # Remove edge if necessary
     if edge_added:
-        graph.remove_edges(edge_id, etype=target_relation)
+        graph.remove_edges(edge_id, etype=link_prediction_parameters.target_edge_type)
 
     # print("Number of edges after: ", graph.number_of_edges())
 
@@ -471,19 +468,21 @@ def load_context(ctx: mgp.ProcCtx, path: str = link_prediction_parameters.contex
     predictor = torch.load(path + PREDICTOR_NAME)
     return mgp.Record(status=True)
 
-
 ##############################
 # Private helper methods.
 ##############################
+def _proj_0(graph: dgl.graph) -> None:
+    """Performs projection on all node features to the max_feature_size by padding it with 0.
 
-def _proj_0(graph: dgl.graph):
+    Args:
+        graph (dgl.graph): A reference to the original graph.
+    """
     global link_prediction_parameters
     ftr_size_max = 0
     for node_type in graph.ntypes:  # Not costly, iterates only over node types.
         node_type_features = graph.nodes[node_type].data[link_prediction_parameters.node_features_property]
         ftr_size_max = max(ftr_size_max, node_type_features.shape[1])
 
-    print("Ftr size max: ", ftr_size_max)
     for node_type in graph.ntypes:
         p1d = (0, ftr_size_max - graph.nodes[node_type].data[link_prediction_parameters.node_features_property].shape[1])  # Padding left if 0 and padding right is dim_goal - arr.shape[1]
         
@@ -491,19 +490,16 @@ def _proj_0(graph: dgl.graph):
                     p1d, mode="constant", value=0)
 
 
-    return ftr_size_max
-
 def _load_feature_size(features_size: int):
-    """Inserts feature size if not already inserted.
+    """Inserts feature size to the hidden_features_size array.
 
     Args:
         features_size (int): Features size.
     """
-    global features_size_loaded
+    global link_prediction_parameters, features_size_loaded
 
-    if not features_size_loaded:
-        link_prediction_parameters.hidden_features_size.insert(0, features_size)
-        features_size_loaded = True
+    link_prediction_parameters.hidden_features_size.insert(0, features_size)
+    features_size_loaded = True
 
 def _process_help_function(mem_indexes: Dict[str, int], old_index: int, type_: str, features: List[int], reindex_orig: Dict[str, Dict[int, int]], reindex_dgl: Dict[str, Dict[int, int]], 
                                   index_dgl_to_features: Dict[str, Dict[int, List[int]]]) -> None:
@@ -601,7 +597,7 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
         data_dict[type_triplet] = torch.tensor(src_nodes[type_triplet[1]]), torch.tensor(dest_nodes[type_triplet[1]])
 
     g = dgl.heterograph(data_dict)  
-
+    
     # Create features
     for node_type in g.ntypes:
         node_features = []
@@ -611,16 +607,21 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
 
         node_features = torch.tensor(node_features, dtype=torch.float32)
         g.nodes[node_type].data[link_prediction_parameters.node_features_property] = node_features
-
     
     # Infer target relation
     if len(type_triplets) == 1:  # Only one type of src_type, edge_type and dest_type -> it must be homogeneous graph
-        link_prediction_parameters.target_relation = type_triplets[0]
+        link_prediction_parameters.target_edge_type = type_triplets[0][1]
         HETERO = False
     else:
         # Target relation needs to be specified by the user
         HETERO = True
 
+    # Test conversion. Note: Do a conversion before you upscale features.
+    _conversion_to_dgl_test(graph=g, reindex_dgl=reindex_dgl, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property)
+
+    # Upscale features so they are all of same size
+    _proj_0(g) 
+    
     return g, reindex_dgl, reindex_orig
 
 def _validate_user_parameters(parameters: mgp.Map) -> None:
@@ -828,21 +829,18 @@ def _validate_user_parameters(parameters: mgp.Map) -> None:
         context_save_dir = parameters[CONTEXT_SAVE_DIR]
 
         # check typing
-        type_checker(context_save_dir, "context_save_dir must be a string", str)
+        type_checker(context_save_dir, "context_save_dir must be a string. ", str)
 
         if context_save_dir == "":
             raise Exception("Path must not be empty string. ")
+    
+    # target edge type
+    if TARGET_EDGE_TYPE in parameters.keys():
+        target_edge_type = parameters[TARGET_EDGE_TYPE]
 
-    # target relation
-    if TARGET_RELATION in parameters.keys():
-        target_relation = parameters[TARGET_RELATION]
-
-        # Check typing
-        type_checker(target_relation, "target_relation must be a tuple", tuple)
-
-        for type_ in target_relation:
-            type_checker(type_, "All elements of target_relation must be a string. ", str)
-
+        # check typing
+        type_checker(target_edge_type, "target edge tyupe must be a string. ", str)
+    
     # num_neg_per_positive_edge
     if NUM_NEG_PER_POS_EDGE in parameters.keys():
         num_neg_per_pos_edge = parameters[NUM_NEG_PER_POS_EDGE]
@@ -866,9 +864,9 @@ def _validate_user_parameters(parameters: mgp.Map) -> None:
 
 def _reset_train_predict_parameters() -> None:
     """Reset global parameters that are returned by train method and used by predict method.
-    No need to reset features_size_loaded and hetero currently. 
+    No need to reset features_size_loaded currently. 
     """
-    global training_results, validation_results, predictor, model, graph, reindex_dgl, reindex_orig
+    global training_results, validation_results, predictor, model, graph, reindex_dgl, reindex_orig, HETERO
     training_results.clear()  # clear training records from previous training
     validation_results.clear()  # clear validation record from previous training
     predictor = None  # Delete old predictor and create a new one in link_prediction_util.train method\
@@ -876,6 +874,7 @@ def _reset_train_predict_parameters() -> None:
     graph = None  # Set graph to None
     reindex_orig = None
     reindex_dgl = None
+    HETERO = None
 
 def _conversion_to_dgl_test(
     graph: dgl.graph,

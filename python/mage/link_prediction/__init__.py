@@ -41,7 +41,7 @@ from mage.link_prediction.constants import (
     TR_ACC_PATIENCE,
     MODEL_SAVE_PATH,
     CONTEXT_SAVE_DIR,
-    TARGET_RELATION,
+    TARGET_EDGE_TYPE,
     NUM_NEG_PER_POS_EDGE,
     BATCH_SIZE,
     SAMPLING_WORKERS,
@@ -58,5 +58,4 @@ from mage.link_prediction.constants import (
     POS_PRED_EXAMPLES,
     NEG_PRED_EXAMPLES,
     EPOCH,
-    TARGET_RELATION
 )

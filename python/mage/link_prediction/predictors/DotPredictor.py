@@ -5,19 +5,15 @@ import torch.nn as nn
 from typing import Tuple, Dict
 
 
-# You can also define some more complex predictors like MLP or something
-
-
 class DotPredictor(nn.Module):
-    def forward(self, g: dgl.graph, node_embeddings: Dict[str, torch.Tensor], relation: Tuple[str, str, str]=None) -> torch.Tensor:
+    def forward(self, g: dgl.graph, node_embeddings: Dict[str, torch.Tensor], target_edge_type: str=None) -> torch.Tensor:
         """Prediction method of DotPredictor. It sets edge scores by calculating dot product
         between node neighbors.
 
         Args:
             g (dgl.graph): A reference to the graph.
             node_embeddings: (Dict[str, torch.Tensor]): Node embeddings for each node type.
-            relation (Tuple[str, str, str]): src_type, edge_type, dest_type that determines edges important for prediction. For those we need to create 
-                                        negative edges. 
+            target_edge_type: str -> Unique edge type that is used for training.
 
         Returns:
             torch.Tensor: A tensor of edge scores.
@@ -28,10 +24,13 @@ class DotPredictor(nn.Module):
 
             # Compute a new edge feature named 'score' by a dot-product between the
             # embedding of source node and embedding of destination node.
-            g.apply_edges(fn.u_dot_v("node_embeddings", "node_embeddings", "score"), etype=relation)
+            g.apply_edges(fn.u_dot_v("node_embeddings", "node_embeddings", "score"), etype=target_edge_type)
             scores = g.edata["score"]
-            if type(scores) == dict: # heterogeneous graphs
-                scores = scores[relation]
+            if type(scores) == dict:
+                for key, val in scores.items():
+                    if key[1] == target_edge_type:
+                        scores = val;
+                        break
             return scores.view(-1)
 
     def forward_pred(self, src_embedding: torch.Tensor, dest_embedding: torch.Tensor) -> float:
