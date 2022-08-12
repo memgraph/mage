@@ -1,3 +1,4 @@
+from platform import node
 import torch
 import torch.nn.functional as F
 import numpy as np
@@ -30,7 +31,7 @@ def get_number_of_edges(ctx: mgp.ProcCtx) -> int:
         edge_cnt += len(list(vertex.out_edges))
     return edge_cnt
 
-def preprocess(graph: dgl.graph, split_ratio: float, target_edge_type: str) -> Tuple[dgl.graph, dgl.graph, dgl.graph, dgl.graph, dgl.graph]:
+def preprocess(graph: dgl.graph, split_ratio: float, target_relation: str) -> Tuple[dgl.graph, dgl.graph, dgl.graph, dgl.graph, dgl.graph]:
     """Preprocess method splits dataset in training and validation set by creating necessary masks for distinguishing those two. 
         This method is also used for setting numpy and torch random seed.
 
@@ -59,7 +60,7 @@ def preprocess(graph: dgl.graph, split_ratio: float, target_edge_type: str) -> T
         raise Exception("Graph too small to have a validation dataset. ")
     
     # Get edge IDS
-    edge_type_u, _ = graph.edges(etype=target_edge_type)
+    edge_type_u, _ = graph.edges(etype=target_relation)
     graph_edges_len = len(edge_type_u)
     eids = np.arange(graph_edges_len)  # get all edge ids from number of edges and create a numpy vector from it.
     eids = np.random.permutation(eids)  # randomly permute edges
@@ -68,7 +69,7 @@ def preprocess(graph: dgl.graph, split_ratio: float, target_edge_type: str) -> T
     tr_eids, val_eids = eids[val_size:], eids[:val_size]
 
     # Create and masks that will be used in the batch training
-    train_eid_dict, val_eid_dict = {target_edge_type: tr_eids}, {target_edge_type: val_eids}
+    train_eid_dict, val_eid_dict = {target_relation: tr_eids}, {target_relation: val_eids}
 
     return train_eid_dict, val_eid_dict
 
@@ -121,7 +122,7 @@ def evaluate(metrics: List[str], labels: torch.tensor, probs: torch.tensor, resu
             result[NEG_EXAMPLES] = operator(result[NEG_EXAMPLES], (labels == 0).sum().item())
 
 def batch_forward_pass(model: torch.nn.Module, predictor: torch.nn.Module, loss: torch.nn.Module, m: torch.nn.Module, 
-                    target_edge_type: str, input_features: Dict[str, torch.Tensor], pos_graph: dgl.graph, 
+                    target_relation: str, input_features: Dict[str, torch.Tensor], pos_graph: dgl.graph, 
                     neg_graph: dgl.graph, blocks: List[dgl.graph]) -> Tuple[torch.Tensor, torch.Tensor, torch.nn.Module]:
     """Performs one forward batch pass
 
@@ -130,7 +131,7 @@ def batch_forward_pass(model: torch.nn.Module, predictor: torch.nn.Module, loss:
         predictor (torch.nn.Module): A reference to the edge predictor.
         loss (torch.nn.Module): Loss function.
         m (torch.nn.Module): The activation function.
-        target_edge_type: str -> Unique edge type that is used for training.
+        target_relation: str -> Unique edge type that is used for training.
         input_features (Dict[str, torch.Tensor]): A reference to the input_features that are needed to compute representations for second block.
         pos_graph (dgl.graph): A reference to the positive graph. All edges that should be included.
         neg_graph (dgl.graph): A reference to the negative graph. All edges that shouldn't be included.
@@ -145,8 +146,8 @@ def batch_forward_pass(model: torch.nn.Module, predictor: torch.nn.Module, loss:
     outputs = model.forward(blocks, input_features)
 
     # Deal with edge scores
-    pos_score = predictor.forward(pos_graph, outputs, target_edge_type=target_edge_type)
-    neg_score = predictor.forward(neg_graph, outputs, target_edge_type=target_edge_type)
+    pos_score = predictor.forward(pos_graph, outputs, target_relation=target_relation)
+    neg_score = predictor.forward(neg_graph, outputs, target_relation=target_relation)
     scores = torch.cat([pos_score, neg_score])  # concatenated positive and negative score
     # probabilities
     probs = m(scores)
@@ -158,7 +159,7 @@ def batch_forward_pass(model: torch.nn.Module, predictor: torch.nn.Module, loss:
 def inner_train(graph: dgl.graph,
                     train_eid_dict,
                     val_eid_dict, 
-                    target_edge_type: str,
+                    target_relation: str,
                     model: torch.nn.Module, 
                     predictor: torch.nn.Module, 
                     optimizer: torch.optim.Optimizer,
@@ -180,7 +181,7 @@ def inner_train(graph: dgl.graph,
         graph (dgl.graph): A reference to the original graph. 
         train_eid_dict (_type_): Mask that identifies training part of the graph. This included only edges from a given relation.
         val_eid_dict (_type_): Mask that identifies validation part of the graph. This included only edges from a given relation.
-        target_edge_type: str -> Unique edge type that is used for training.
+        target_relation: str -> Unique edge type that is used for training.
         model (torch.nn.Module): A reference to the model that will be trained.
         predictor (torch.nn.Module): A reference to the edge predictor.
         optimizer (torch.optim.Optimizer): A reference to the training optimizer.
@@ -264,7 +265,7 @@ def inner_train(graph: dgl.graph,
             # Get input features needed to compute representations of second block
             input_features = blocks[0].ndata[node_features_property]
             # Perform forward pass
-            probs, labels, loss_output = batch_forward_pass(model, predictor, loss, m, target_edge_type, input_features, pos_graph, neg_graph, blocks)
+            probs, labels, loss_output = batch_forward_pass(model, predictor, loss, m, target_relation, input_features, pos_graph, neg_graph, blocks)
 
             # Make an optimization step
             optimizer.zero_grad()
@@ -290,7 +291,7 @@ def inner_train(graph: dgl.graph,
                 for _, pos_graph, neg_graph, blocks in validation_dataloader:
                     input_features = blocks[0].ndata[node_features_property]
                     # Perform forward pass
-                    probs, labels, loss_output = batch_forward_pass(model, predictor, loss, m, target_edge_type, input_features, pos_graph, neg_graph, blocks)
+                    probs, labels, loss_output = batch_forward_pass(model, predictor, loss, m, target_relation, input_features, pos_graph, neg_graph, blocks)
 
                     # Add to the epoch_validation_result for saving
                     evaluate(metrics, labels, probs, epoch_validation_result, threshold, epoch, loss_output.item(), add_)
@@ -335,7 +336,7 @@ def _save_context(model: torch.nn.Module, predictor: torch.nn.Module, context_sa
     torch.save(predictor, context_save_dir + PREDICTOR_NAME)
 
 def inner_predict(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl.graph, node_features_property: str, 
-                    src_node: int, dest_node: int, target_edge_type: str=None) -> float:
+                    src_node: int, dest_node: int, target_relation: str=None) -> float:
     """Predicts edge scores for given graph. This method is called to obtain edge probability for edge with id=edge_id.
 
     Args:
@@ -345,18 +346,24 @@ def inner_predict(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl
         node_features_property (str): Property name of the features.
         src_node (int): Source node of the edge.
         dest_node (int): Destination node of the edge. 
-        target_edge_type: str -> Unique edge type that is used for training.
+        target_relation: str -> Unique edge type that is used for training.
 
     Returns:
         float: Edge score.
     """
-
+    # TODO: CHANEG
+    graph_features = {node_type: graph.nodes[node_type].data[node_features_property] for node_type in graph.ntypes}
+    print("Target relation: ", target_relation)
     with torch.no_grad():
-        h = model(graph, graph.ndata[node_features_property])
-        if target_edge_type is None:
-            src_embedding, dest_embedding = h[src_node], h[dest_node]
-        else:
-            src_embedding, dest_embedding = h[target_edge_type[0]][src_node], h[target_edge_type[2]][dest_node]
+        h = model.forward_util(graph, graph_features)
+        print("H: ", h)
+        if type(target_relation) == tuple:  # Tuple[str, str, str] identification
+            src_embedding, dest_embedding = h[target_relation[0]][src_node], h[target_relation[2]][dest_node]
+        elif type(target_relation) == str:  # Edge type identification
+            for key, val in h.items():
+                if key[1] == target_relation:            
+                    src_embedding, dest_embedding = val[src_node], val[dest_node]
+        
         score = predictor.forward_pred(src_embedding, dest_embedding)
         # print("Scores: ", torch.sum(scores < 0.5).item())
         prob = torch.sigmoid(score)

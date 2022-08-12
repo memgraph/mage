@@ -1,7 +1,7 @@
 import mgp  # Python API
 import torch
 import dgl  # geometric deep learning
-from typing import List, Tuple, Dict
+from typing import Callable, List, Tuple, Dict
 from numpy import int32
 from dataclasses import dataclass, field
 from collections import defaultdict
@@ -43,7 +43,7 @@ from mage.link_prediction import (
     TR_ACC_PATIENCE,
     MODEL_SAVE_PATH,
     CONTEXT_SAVE_DIR,
-    TARGET_EDGE_TYPE,
+    TARGET_RELATION,
     NUM_NEG_PER_POS_EDGE,
     BATCH_SIZE,
     SAMPLING_WORKERS,
@@ -85,7 +85,7 @@ class LinkPredictionParameters:
     :param attn_num_heads: List[int] -> GAT can support usage of more than one head in each layers except last one. Only used in GAT, not in GraphSage.
     :param tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on validation set be tolerated before stopping the training.
     :param context_save_dir: str -> Path where the model and predictor will be saved every checkpoint_freq epochs.
-    :param target_edge_type: str -> Unique edge type that is used for training.
+    :param target_relation: str -> Unique edge type that is used for training.
     :param num_neg_per_pos_edge (int): Number of negative edges that will be sampled per one positive edge in the mini-batch.
     :param num_layers (int): Number of layers in the GNN architecture.
     :param batch_size (int): Batch size used in both training and validation procedure.
@@ -120,11 +120,11 @@ class LinkPredictionParameters:
             NEG_PRED_EXAMPLES
         ]
     )
-    predictor_type: str =  DOT_PREDICTOR
+    predictor_type: str =  MLP_PREDICTOR
     attn_num_heads: List[int] = field(default_factory=lambda: [4, 1])
     tr_acc_patience: int = 5
     context_save_dir: str = "./python/mage/link_prediction/context/"  # TODO: When the development finishes
-    target_edge_type: str = "SUBSCRIBES_TO"
+    target_relation: str = None
     num_neg_per_pos_edge: int = 5
     batch_size: int = 512
     sampling_workers: int = 4
@@ -143,6 +143,13 @@ predictor: torch.nn.Module = None  # Predictor for calculating edge scores
 model: torch.nn.Module = None
 features_size_loaded: bool = False  # If size of the features was already inserted.
 HETERO = None 
+labels_concat = ":"  # string to separate labels if dealing with multiple labels per node
+
+
+
+# Lambda function to concat list of labels
+merge_labels: Callable[[List[mgp.Label]], str] = lambda labels: labels_concat.join([label.name for label in labels])
+
 
 ##############################
 # All read procedures
@@ -172,7 +179,7 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
         attn_num_heads: List[int] -> GAT can support usage of more than one head in each layer except last one. Only used in GAT, not in GraphSage.
         tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on test set be tolerated before stopping the training.
         context_save_dir: str -> Path where the model and predictor will be saved every checkpoint_freq epochs.
-        target_edge_type: str -> Unique edge type that is used for training.
+        target_relation: str -> Unique edge type that is used for training.
         num_neg_per_pos_edge (int): Number of negative edges that will be sampled per one positive edge in the mini-batch.
         num_layers (int): Number of layers in the GNN architecture.
         batch_size (int): Batch size used in both training and validation procedure.
@@ -240,14 +247,13 @@ def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_
         else:
             ftr_size = graph.ndata[link_prediction_parameters.node_features_property].shape[1]
 
-        print("Ftr size: ", ftr_size)
 
         # Load feature size in the hidden_features_size 
         _load_feature_size(ftr_size)
 
     # Split the data
     train_eid_dict, val_eid_dict = preprocess(graph=graph, split_ratio=link_prediction_parameters.split_ratio, 
-        target_edge_type=link_prediction_parameters.target_edge_type)
+        target_relation=link_prediction_parameters.target_relation)
 
     # Create a model
     model = create_model(
@@ -276,7 +282,7 @@ def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_
     training_results, validation_results = inner_train(graph,
         train_eid_dict, 
         val_eid_dict, 
-        link_prediction_parameters.target_edge_type,
+        link_prediction_parameters.target_relation,
         model,
         predictor,
         optimizer,
@@ -310,21 +316,19 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
         score: Probability that two nodes are connected
     """
     # TODO: what if new node is created after training and before predict? You have to map it dgl.graph representation immediately. 
-    global graph, predictor, model, reindex_orig, reindex_dgl, HETERO
+    global graph, predictor, model, reindex_orig, reindex_dgl, HETERO, features_size_loaded
 
     # If the model isn't available. Model is available if this method is called right after training or loaded from context.
     # Same goes for predictor.
     if model is None or predictor is None:
         raise Exception("No trained model available to the system. Train or load it first. ")
 
-
-    # TODO: Problem because maybe something was reindexed, check if this actually a problem
     # Load graph again so you find nodes that were possibly added between train and prediction
     graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
 
     # Create dgl graph representation
-    src_old_id, src_type = src_vertex.id, src_vertex.labels[0].name
-    dest_old_id, dest_type = dest_vertex.id, dest_vertex.labels[0].name
+    src_old_id, src_type = src_vertex.id, merge_labels(src_vertex.labels)
+    dest_old_id, dest_type = dest_vertex.id, merge_labels(dest_vertex.labels)
 
     # Get dgl ids
     src_id = reindex_orig[src_type][src_old_id]
@@ -333,22 +337,23 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     # Init edge properties
     edge_added, edge_id = False, -1
 
-    # print("Number of edges before: ", graph.number_of_edges())
-
     # Check if there is an edge between two nodes
-    if not graph.has_edges_between(src_id, dest_id, etype=link_prediction_parameters.target_edge_type):
+    if not graph.has_edges_between(src_id, dest_id, etype=link_prediction_parameters.target_relation):
         edge_added = True
         # print("Nodes {} and {} are not connected. ".format(src_old_id, dest_old_id))
-        graph.add_edges(src_id, dest_id, etype=link_prediction_parameters.target_edge_type)
+        graph.add_edges(src_id, dest_id, etype=link_prediction_parameters.target_relation)
     
-    edge_id = graph.edge_ids(src_id, dest_id, etype=link_prediction_parameters.target_edge_type)
+    edge_id = graph.edge_ids(src_id, dest_id, etype=link_prediction_parameters.target_relation)
 
-    # print("Edge id: ", edge_id)
-    # print("Number of edges after adding new edge: ", graph.number_of_edges())
+     # Insert in the hidden_features_size structure if needed and it is needed only if the session was lost between training and predict method call.
+    if not features_size_loaded:
+        if HETERO:
+            ftr_size = max(value.shape[1] for value in graph.ndata[link_prediction_parameters.node_features_property].values())
+        else:
+            ftr_size = graph.ndata[link_prediction_parameters.node_features_property].shape[1]
 
-    # Insert into the hidden_features_size if needed.
-    # TODO: When is this needed?
-    # _load_feature_size(graph.ndata[link_prediction_parameters.node_features_property].shape[1])
+        # Load feature size in the hidden_features_size 
+        _load_feature_size(ftr_size)
 
     # Call utils module
     score = inner_predict(
@@ -358,13 +363,13 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
         node_features_property=link_prediction_parameters.node_features_property,
         src_node=src_id, 
         dest_node=dest_id,
-        target_edge_type=link_prediction_parameters.target_edge_type)
+        target_relation=link_prediction_parameters.target_relation)
 
     result = mgp.Record(score=score)
 
     # Remove edge if necessary
     if edge_added:
-        graph.remove_edges(edge_id, etype=link_prediction_parameters.target_edge_type)
+        graph.remove_edges(edge_id, etype=link_prediction_parameters.target_relation)
 
     # print("Number of edges after: ", graph.number_of_edges())
 
@@ -554,10 +559,12 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
 
     src_nodes, dest_nodes = defaultdict(list), defaultdict(list) # label to node IDs -> Tuple of node-tensors format from DGL
 
+    edge_types = set()
+
     # Iterate over all vertices
     for vertex in ctx.graph.vertices:
         # Process source vertex
-        src_id, src_type, src_features = vertex.id, vertex.labels[0].name, vertex.properties.get(link_prediction_parameters.node_features_property)
+        src_id, src_type, src_features = vertex.id, merge_labels(vertex.labels), vertex.properties.get(link_prediction_parameters.node_features_property)
         
         # Process hetero label stuff
         _process_help_function(mem_indexes, src_id, src_type, src_features, reindex_orig, reindex_dgl, index_dgl_to_features) 
@@ -569,32 +576,43 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
 
             # Process destination vertex next
             dest_node = edge.to_vertex
-            dest_id, dest_type, dest_features = dest_node.id, dest_node.labels[0].name, dest_node.properties.get(link_prediction_parameters.node_features_property) # TODO: Add this parameter somewhere somehow
+            dest_id, dest_type, dest_features = dest_node.id, merge_labels(dest_node.labels), dest_node.properties.get(link_prediction_parameters.node_features_property)
+ 
+            # Define type triplet
+            type_triplet = (src_type, edge_type, dest_type)
+            
+            type_triplet_in = type_triplet in type_triplets
+            
+            # Before processing node dest node and edge, check if this edge_type has occurred with different src_type or dest_type
+            if edge_type in edge_types and not type_triplet_in and edge_type == link_prediction_parameters.target_relation:
+                raise Exception(f"Edges of edge type {edge_type} are used for training and there are already edges with this edge type but with different combination of source and destination node. ")
 
+            # Add to the type triplets
+            if not type_triplet_in:
+                type_triplets.append(type_triplet)
+
+            # Add to the edge_types set
+            edge_types.add(edge_type)
+            
             # Handle mappings
             _process_help_function(mem_indexes, dest_id, dest_type, dest_features, reindex_orig, reindex_dgl, index_dgl_to_features) 
 
             # Define edge
-            src_nodes[edge_type].append(reindex_orig[src_type][src_id])
-            dest_nodes[edge_type].append(reindex_orig[dest_type][dest_id])
+            src_nodes[type_triplet].append(reindex_orig[src_type][src_id])
+            dest_nodes[type_triplet].append(reindex_orig[dest_type][dest_id])
             
-            # Define type triplet
-            type_triplet = (src_type, edge_type, dest_type)
-            if type_triplet not in type_triplets:
-                type_triplets.append(type_triplet)
-
-
+            
     # Check if there are no edges in the dataset, assume that it cannot learn effectively without edges. E2E handling.
     if len(src_nodes.keys()) == 0:
         raise Exception("No edges in the dataset. ")
  
     # data_dict has specific type that DGL requires to create a heterograph 
-    data_dict = dict()   
+    data_dict = dict()  
+
     
-    # Create a heterograph
-    print("Type triplets: ", type_triplets)
+    # Create a heterograp
     for type_triplet in type_triplets:
-        data_dict[type_triplet] = torch.tensor(src_nodes[type_triplet[1]]), torch.tensor(dest_nodes[type_triplet[1]])
+        data_dict[type_triplet] = torch.tensor(src_nodes[type_triplet]), torch.tensor(dest_nodes[type_triplet])
 
     g = dgl.heterograph(data_dict)  
     
@@ -610,7 +628,7 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
     
     # Infer target relation
     if len(type_triplets) == 1:  # Only one type of src_type, edge_type and dest_type -> it must be homogeneous graph
-        link_prediction_parameters.target_edge_type = type_triplets[0][1]
+        link_prediction_parameters.target_relation = type_triplets[0][1]
         HETERO = False
     else:
         # Target relation needs to be specified by the user
@@ -835,11 +853,13 @@ def _validate_user_parameters(parameters: mgp.Map) -> None:
             raise Exception("Path must not be empty string. ")
     
     # target edge type
-    if TARGET_EDGE_TYPE in parameters.keys():
-        target_edge_type = parameters[TARGET_EDGE_TYPE]
+    if TARGET_RELATION in parameters.keys():
+        target_relation = parameters[TARGET_RELATION]
 
         # check typing
-        type_checker(target_edge_type, "target edge tyupe must be a string. ", str)
+        type_checker(target_relation, "target edge tyupe must be a string. ", str)
+    else:
+        raise Exception("Target relation or target edge type must be specified. ")
     
     # num_neg_per_positive_edge
     if NUM_NEG_PER_POS_EDGE in parameters.keys():

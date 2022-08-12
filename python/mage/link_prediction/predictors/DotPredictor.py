@@ -6,14 +6,14 @@ from typing import Tuple, Dict
 
 
 class DotPredictor(nn.Module):
-    def forward(self, g: dgl.graph, node_embeddings: Dict[str, torch.Tensor], target_edge_type: str=None) -> torch.Tensor:
+    def forward(self, g: dgl.graph, node_embeddings: Dict[str, torch.Tensor], target_relation: str=None) -> torch.Tensor:
         """Prediction method of DotPredictor. It sets edge scores by calculating dot product
         between node neighbors.
 
         Args:
             g (dgl.graph): A reference to the graph.
             node_embeddings: (Dict[str, torch.Tensor]): Node embeddings for each node type.
-            target_edge_type: str -> Unique edge type that is used for training.
+            target_relation: str -> Unique edge type that is used for training.
 
         Returns:
             torch.Tensor: A tensor of edge scores.
@@ -24,13 +24,16 @@ class DotPredictor(nn.Module):
 
             # Compute a new edge feature named 'score' by a dot-product between the
             # embedding of source node and embedding of destination node.
-            g.apply_edges(fn.u_dot_v("node_embeddings", "node_embeddings", "score"), etype=target_edge_type)
+            g.apply_edges(fn.u_dot_v("node_embeddings", "node_embeddings", "score"), etype=target_relation)
             scores = g.edata["score"]
             if type(scores) == dict:
-                for key, val in scores.items():
-                    if key[1] == target_edge_type:
-                        scores = val;
-                        break
+                if type(target_relation) == tuple: # Tuple[str, str, str] identification
+                    scores = scores[target_relation]
+                elif type(target_relation) == str:  # edge type identification
+                    for key, val in scores.items():
+                        if key[1] == target_relation:
+                            scores = val;
+                            break
             return scores.view(-1)
 
     def forward_pred(self, src_embedding: torch.Tensor, dest_embedding: torch.Tensor) -> float:

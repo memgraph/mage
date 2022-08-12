@@ -21,13 +21,13 @@ class MLPPredictor(torch.nn.Module):
         h = torch.cat([edges.src["node_embeddings"], edges.dst["node_embeddings"]], 1)
         return {"score": self.W2(F.relu(self.W1(h))).squeeze(1)}
 
-    def forward(self, g: dgl.graph, node_embeddings: Dict[str, torch.Tensor], target_edge_type: str=None) -> torch.Tensor:
+    def forward(self, g: dgl.graph, node_embeddings: Dict[str, torch.Tensor], target_relation: str=None) -> torch.Tensor:
         """Calculates forward pass of MLPPredictor.
 
         Args:
             g (dgl.graph): A reference to the graph for which edge scores will be computed.
             node_embeddings (Dict[str, torch.Tensor]): node embeddings for each node type.
-            target_edge_type: str -> Unique edge type that is used for training.
+            target_relation: str -> Unique edge type that is used for training.
         Returns:
             torch.Tensor: A tensor of edge scores.
         """
@@ -35,13 +35,16 @@ class MLPPredictor(torch.nn.Module):
             for node_type in node_embeddings.keys():  # Iterate over all node_types. # TODO: Maybe it can be removed if features are already saved in the graph.
                 g.nodes[node_type].data["node_embeddings"] = node_embeddings[node_type]
 
-            g.apply_edges(self.apply_edges, etype=target_edge_type)
+            g.apply_edges(self.apply_edges, etype=target_relation)
             scores = g.edata["score"]
             if type(scores) == dict:
-                for key, val in scores.items():
-                    if key[1] == target_edge_type:
-                        scores = val
-                        break
+                if type(target_relation) == tuple: # Tuple[str, str, str] identification
+                    scores = scores[target_relation]
+                elif type(target_relation) == str:  # edge type identification
+                    for key, val in scores.items():
+                        if key[1] == target_relation:
+                            scores = val;
+                            break
             return scores.view(-1)
 
 
