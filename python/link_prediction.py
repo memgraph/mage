@@ -1,4 +1,3 @@
-from unittest import result
 import mgp  # Python API
 import torch
 import dgl  # geometric deep learning
@@ -6,12 +5,10 @@ from typing import List, Tuple, Dict
 from numpy import int32
 from dataclasses import dataclass, field
 from collections import defaultdict
-from heapq import heappop, heappush, heapify
+from heapq import heappop, heappush 
 from mage.link_prediction import (
     preprocess,
-    preprocess_batch,
     inner_train,
-    inner_train_batch,
     inner_predict,
     create_model,
     create_optimizer,
@@ -28,6 +25,7 @@ from mage.link_prediction import (
     LSTM_AGG,
     POOL_AGG,
     GCN_AGG,
+    HIDDEN_FEATURES_SIZE,
     LAYER_TYPE,
     NUM_EPOCHS,
     OPTIMIZER,
@@ -44,20 +42,24 @@ from mage.link_prediction import (
     ATTN_NUM_HEADS,
     TR_ACC_PATIENCE,
     MODEL_SAVE_PATH,
-    HIDDEN_FEATURES_SIZE,
+    TARGET_RELATION,
+    CONTEXT_SAVE_DIR,
+    NUM_NEG_PER_POS_EDGE,
+    BATCH_SIZE,
+    SAMPLING_WORKERS,
     MODEL_NAME,
     PREDICTOR_NAME,
     AUC_SCORE,
     ACCURACY,
     PRECISION,
     RECALL,
+    POS_EXAMPLES,
+    NEG_EXAMPLES,
     POS_PRED_EXAMPLES,
     NEG_PRED_EXAMPLES,
     LOSS,
     F1,
-    TARGET_RELATION
 )
-# TODO: remove hetero
 ##############################
 # classes and data structures
 ##############################
@@ -85,6 +87,11 @@ class LinkPredictionParameters:
     :param context_save_dir: str -> Path where the model and predictor will be saved every checkpoint_freq epochs.
     :param target_relation (Tuple[str, str, str]): src_type, edge_type, dest_type that determines edges important for prediction. These edge type will be used
         for training and prediction.
+    :param num_neg_per_pos_edge (int): Number of negative edges that will be sampled per one positive edge in the mini-batch.
+    :param num_layers (int): Number of layers in the GNN architecture.
+    :param batch_size (int): Batch size used in both training and validation procedure.
+    :param sampling_workers (int): Number of workers that will cooperate in the sampling procedure in the training and validation.
+
     """
 
     hidden_features_size: List = field(
@@ -108,6 +115,8 @@ class LinkPredictionParameters:
             PRECISION,
             RECALL,
             F1,
+            POS_EXAMPLES,
+            NEG_EXAMPLES,
             POS_PRED_EXAMPLES,
             NEG_PRED_EXAMPLES
         ]
@@ -115,11 +124,11 @@ class LinkPredictionParameters:
     predictor_type: str =  MLP_PREDICTOR
     attn_num_heads: List[int] = field(default_factory=lambda: [4, 1])
     tr_acc_patience: int = 5
-    context_save_dir: str = (
-        "./python/mage/link_prediction/context/"  # TODO: When the development finishes
-    )
+    context_save_dir: str = "./python/mage/link_prediction/context/"  # TODO: When the development finishes
     target_relation: Tuple[str, str, str] = ("Customer", "SUBSCRIBES_TO", "Plan")
-
+    num_neg_per_pos_edge: int = 5
+    batch_size: int = 512
+    sampling_workers: int = 4
 
 ##############################
 # global parameters
@@ -135,7 +144,6 @@ predictor: torch.nn.Module = None  # Predictor for calculating edge scores
 model: torch.nn.Module = None
 features_size_loaded: bool = False  # If size of the features was already inserted.
 HETERO = None 
-BATCH = True
 align_method = "proj_0"
 
 ##############################
@@ -222,11 +230,7 @@ def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_
     # Get some data
     # Dealing with heterogeneous graphs
     graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
-
-    # Check if there are no edges in the dataset, assume that it cannot learn effectively without edges. E2E handling.
-    if graph.number_of_edges() == 0:
-        raise Exception("No edges in the dataset. ")
-
+ 
     # Test conversion
     _conversion_to_dgl_test(graph=graph, reindex_dgl=reindex_dgl, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property)
 
@@ -241,13 +245,8 @@ def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_
     _load_feature_size(ftr_size)
 
     # Split the data
-    if BATCH:
-        train_eid_dict, val_eid_dict = preprocess_batch(graph=graph, split_ratio=link_prediction_parameters.split_ratio, relation=link_prediction_parameters.target_relation)
-    else:
-        train_pos_g, val_pos_g = preprocess(graph, link_prediction_parameters.split_ratio, link_prediction_parameters.target_relation)
-
-    print(f"Hetero: {HETERO} Etypes: {graph.etypes}")
-
+    train_eid_dict, val_eid_dict = preprocess(graph=graph, split_ratio=link_prediction_parameters.split_ratio, relation=link_prediction_parameters.target_relation)
+    
     # Create a model
     model = create_model(
         layer_type=link_prediction_parameters.layer_type,
@@ -271,36 +270,25 @@ def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_
         predictor=predictor,
     )
 
-    if BATCH:
-        training_results, validation_results = inner_train_batch(graph,
-            train_eid_dict, 
-            val_eid_dict, 
-            link_prediction_parameters.target_relation,
-            model,
-            predictor,
-            optimizer,
-            link_prediction_parameters.num_epochs,
-            link_prediction_parameters.node_features_property,
-            link_prediction_parameters.console_log_freq,
-            link_prediction_parameters.checkpoint_freq,
-            link_prediction_parameters.metrics,
-            link_prediction_parameters.tr_acc_patience,
-            link_prediction_parameters.context_save_dir,
-        )
-    else:
-        training_results, validation_results = inner_train(train_pos_g, 
-            val_pos_g, 
-            link_prediction_parameters.target_relation,
-            model,
-            predictor,
-            optimizer,
-            link_prediction_parameters.num_epochs,
-            link_prediction_parameters.node_features_property,
-            link_prediction_parameters.console_log_freq,
-            link_prediction_parameters.checkpoint_freq,
-            link_prediction_parameters.metrics,
-            link_prediction_parameters.tr_acc_patience,
-            link_prediction_parameters.context_save_dir,
+    # Call training method
+    training_results, validation_results = inner_train(graph,
+        train_eid_dict, 
+        val_eid_dict, 
+        link_prediction_parameters.target_relation,
+        model,
+        predictor,
+        optimizer,
+        link_prediction_parameters.num_epochs,
+        link_prediction_parameters.node_features_property,
+        link_prediction_parameters.console_log_freq,
+        link_prediction_parameters.checkpoint_freq,
+        link_prediction_parameters.metrics,
+        link_prediction_parameters.tr_acc_patience,
+        link_prediction_parameters.context_save_dir,
+        link_prediction_parameters.num_neg_per_pos_edge,
+        len(link_prediction_parameters.hidden_features_size) -1,
+        link_prediction_parameters.batch_size,
+        link_prediction_parameters.sampling_workers
     )
     
     # Return results
@@ -320,6 +308,7 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     Returns:
         score: Probability that two nodes are connected
     """
+    # TODO: what if new node is created after training and before predict? You have to map it dgl.graph representation immediately. 
     global graph, predictor, model, reindex_orig, reindex_dgl, HETERO
 
     # If the model isn't available
@@ -504,7 +493,6 @@ def _proj_0(graph: dgl.graph):
 
     return ftr_size_max
 
-
 def _load_feature_size(features_size: int):
     """Inserts feature size if not already inserted.
 
@@ -516,7 +504,6 @@ def _load_feature_size(features_size: int):
     if not features_size_loaded:
         link_prediction_parameters.hidden_features_size.insert(0, features_size)
         features_size_loaded = True
-
 
 def _process_help_function(mem_indexes: Dict[str, int], old_index: int, type_: str, features: List[int], reindex_orig: Dict[str, Dict[int, int]], reindex_dgl: Dict[str, Dict[int, int]], 
                                   index_dgl_to_features: Dict[str, Dict[int, List[int]]]) -> None:
@@ -549,7 +536,6 @@ def _process_help_function(mem_indexes: Dict[str, int], old_index: int, type_: s
 
         mem_indexes[type_] += 1
 
-
 def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32], Dict[int32, int32]]:
     """Creates dgl representation of the graph. It works with heterogeneous and homogeneous.
 
@@ -579,7 +565,7 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
         
         # Process hetero label stuff
         _process_help_function(mem_indexes, src_id, src_type, src_features, reindex_orig, reindex_dgl, index_dgl_to_features) 
-        
+ 
         # Get all out edges
         for edge in vertex.out_edges:
             # Get edge information
@@ -601,6 +587,11 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
             if type_triplet not in type_triplets:
                 type_triplets.append(type_triplet)
 
+
+    # Check if there are no edges in the dataset, assume that it cannot learn effectively without edges. E2E handling.
+    if len(src_nodes.keys()) == 0:
+        raise Exception("No edges in the dataset. ")
+ 
     # data_dict has specific type that DGL requires to create a heterograph 
     data_dict = dict()   
     
@@ -631,7 +622,6 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
         HETERO = True
 
     return g, reindex_dgl, reindex_orig
-
 
 def _validate_user_parameters(parameters: mgp.Map) -> None:
     """Validates parameters user sent through method set_model_parameters
@@ -777,6 +767,8 @@ def _validate_user_parameters(parameters: mgp.Map) -> None:
                 and _metric != AUC_SCORE
                 and _metric != PRECISION
                 and _metric != RECALL
+                and _metric != POS_EXAMPLES
+                and _metric != NEG_EXAMPLES
                 and _metric != POS_PRED_EXAMPLES
                 and _metric != NEG_PRED_EXAMPLES
             ):
@@ -830,6 +822,16 @@ def _validate_user_parameters(parameters: mgp.Map) -> None:
 
         if model_save_path == "":
              raise Exception("Path must be != " " ")
+    
+    # context save dir
+    if CONTEXT_SAVE_DIR in parameters.keys():
+        context_save_dir = parameters[CONTEXT_SAVE_DIR]
+
+        # check typing
+        type_checker(context_save_dir, "context_save_dir must be a string", str)
+
+        if context_save_dir == "":
+            raise Exception("Path must not be empty string. ")
 
     # target relation
     if TARGET_RELATION in parameters.keys():
@@ -841,6 +843,26 @@ def _validate_user_parameters(parameters: mgp.Map) -> None:
         for type_ in target_relation:
             type_checker(type_, "All elements of target_relation must be a string. ", str)
 
+    # num_neg_per_positive_edge
+    if NUM_NEG_PER_POS_EDGE in parameters.keys():
+        num_neg_per_pos_edge = parameters[NUM_NEG_PER_POS_EDGE]
+
+        # Check typing
+        type_checker(num_neg_per_pos_edge, "number of negative edges per positive one must be an int. ", int)
+    
+    # batch size
+    if BATCH_SIZE in parameters.keys():
+        batch_size = parameters[BATCH_SIZE]
+
+        # Check typing
+        type_checker(batch_size,"batch_size must be an int", int)
+
+    # sampling workers
+    if SAMPLING_WORKERS in parameters.keys():
+        sampling_workers = parameters[SAMPLING_WORKERS]
+
+        # check typing
+        type_checker(sampling_workers, "sampling_workers must be and int", int)
 
 def _reset_train_predict_parameters() -> None:
     """Reset global parameters that are returned by train method and used by predict method.
@@ -854,7 +876,6 @@ def _reset_train_predict_parameters() -> None:
     graph = None  # Set graph to None
     reindex_orig = None
     reindex_dgl = None
-
 
 def _conversion_to_dgl_test(
     graph: dgl.graph,
@@ -898,5 +919,5 @@ def _conversion_to_dgl_test(
                 raise Exception("The conversion to DGL failed. Stored graph does not contain the same features as the converted DGL graph. ")
 
     # Check number of nodes
-    if graph.number_of_nodes() != len(ctx.graph.vertices):
-        raise Exception("The conversion to DGL failed. Stored graph does not contain the same number of nodes as the converted DGL graph.")
+    # if graph.number_of_nodes() != len(ctx.graph.vertices):
+    #     raise Exception(f"The conversion to DGL failed. Stored graph does not contain the same number of nodes({len(ctx.graph.vertices)}) as the converted DGL graph({graph.number_of_nodes()}).")

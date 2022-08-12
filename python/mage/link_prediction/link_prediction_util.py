@@ -1,9 +1,8 @@
 import torch
 import torch.nn.functional as F
 import numpy as np
-import scipy.sparse as sp
 import dgl
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import precision_score
@@ -13,37 +12,10 @@ from typing import Callable, Dict, Tuple, List
 import mgp
 import random
 from mage.link_prediction.constants import (
-    MODEL_NAME, NEG_PRED_EXAMPLES, POS_PRED_EXAMPLES, PREDICTOR_NAME, LOSS, ACCURACY, AUC_SCORE, PRECISION, RECALL, F1, EPOCH
+    MODEL_NAME, NEG_PRED_EXAMPLES, POS_PRED_EXAMPLES, PREDICTOR_NAME, LOSS, ACCURACY, AUC_SCORE, PRECISION, RECALL, F1, EPOCH,
+    POS_EXAMPLES, NEG_EXAMPLES
 )
-import dgl.function as fn
-from dgl.nn import SAGEConv
-import tqdm
-import sklearn.metrics
 
-class BatchModel(torch.nn.Module):
-    def __init__(self, in_feats, h_feats):
-        super(BatchModel, self).__init__()
-        self.conv1 = SAGEConv(in_feats, h_feats, aggregator_type='mean')
-        self.conv2 = SAGEConv(h_feats, h_feats, aggregator_type='mean')
-        self.h_feats = h_feats
-
-    def forward(self, mfgs, x):
-        h_dst = x[:mfgs[0].num_dst_nodes()]
-        h = self.conv1(mfgs[0], (x, h_dst))
-        h = F.relu(h)
-        h_dst = h[:mfgs[1].num_dst_nodes()]
-        h = self.conv2(mfgs[1], (h, h_dst))
-        return h
-
-class DotPredictor(torch.nn.Module):
-    def forward(self, g, h):
-        with g.local_scope():
-            g.ndata['h'] = h
-            # Compute a new edge feature named 'score' by a dot-product between the
-            # source node feature 'h' and destination node feature 'h'.
-            g.apply_edges(fn.u_dot_v('h', 'h', 'score'))
-            # u_dot_v returns a 1-element vector for each edge so you need to squeeze it.
-            return g.edata['score'][:, 0]
 
 def get_number_of_edges(ctx: mgp.ProcCtx) -> int:
     """Returns number of edges for graph from execution context.
@@ -59,92 +31,9 @@ def get_number_of_edges(ctx: mgp.ProcCtx) -> int:
         edge_cnt += len(list(vertex.out_edges))
     return edge_cnt
 
-def test_negative_samples(graph: dgl.graph, src_nodes, dest_nodes):
-    for i in range(len(src_nodes)):
-        if graph.has_edges_between(src_nodes[i], dest_nodes[i]):
-            raise Exception("Negative sampling test failed")
-
-    print("TEST PASSED OK")
-
-def construct_negative_heterograph(graph: dgl.graph, k: int, relation: Tuple[str, str, str]) -> dgl.graph:
-    """Constructs negative heterograph which is actually a homogeneous graph. It works by creating negative examples for specified relation.
-
-    Args:
-        graph (dgl.graph): A reference to the original graph.
-        k (int): Number of negative edges per one positive.
-        relation (Tuple[str, str, str]): src_type, edge_type, dest_type that determines edges important for prediction. For those we need to create 
-                                        negative edges.
-
-    Returns:
-        dgl.graph: Created negative heterograph.
-    """
-    _, edge_type, dest_type = relation
-    src, dst = graph.edges(etype=edge_type)  # get only edges of this edge type
-    neg_src = src.repeat_interleave(k)
-    neg_dst = torch.randint(0, graph.num_nodes(dest_type), (len(src) * k,))
-    return dgl.heterograph({relation: (neg_src, neg_dst)}, num_nodes_dict={ntype: graph.num_nodes(ntype) for ntype in graph.ntypes})
-
-def split_train_val(graph: dgl.graph, val_size: int, relation: Tuple[str, str, str]) -> Tuple[dgl.graph, dgl.graph, dgl.graph]:
-    """Creates positive training and validation heterogeneous graph.
-
-    Args:
-        graph (dgl.graph): Whole training graph.
-        val_size (int): Validation dataset size.
-        relation (Tuple[str, str, str]): src_type, edge_type, dest_type that determines edges important for prediction. For those we need to create 
-                                        negative edges.
-
-    Returns:
-        Tuple[dgl.graph, dgl.graph]: positive training and positive validation graphs with features embedded inside.
-    """
-
-    # Get edges of specific edge type
-    edge_type_u, _ = graph.edges(etype=relation)
-    graph_edges_len = len(edge_type_u)
-    eids = np.arange(graph_edges_len)  # get all edge ids from number of edges and create a numpy vector from it.
-    eids = np.random.permutation(eids)  # randomly permute edges
-
-    # Create new positive graphs by copying original graph and removing edges of a specific relation
-    train_pos_g = dgl.remove_edges(graph, eids=eids[:val_size], etype=relation)
-    val_pos_g = dgl.remove_edges(graph, eids=eids[val_size:], etype=relation)
-
-    return train_pos_g, val_pos_g
-
 def preprocess(graph: dgl.graph, split_ratio: float, relation: Tuple[str, str, str]) -> Tuple[dgl.graph, dgl.graph, dgl.graph, dgl.graph, dgl.graph]:
-    """Preprocess method splits dataset in training and validation set. This method is also used for setting numpy and torch random seed.
-
-    Args:
-        graph (dgl.graph): A reference to the dgl graph representation.
-        split_ratio (float): Split ratio training to validation set. E.g 0.8 indicates that 80% is used as training set and 20% for validation set.
-        relation (Tuple[str, str, str]): src_type, edge_type, dest_type that determines edges important for prediction. For those we need to create 
-                                        negative edges.
-
-    Returns:
-        Tuple[dgl.graph, dgl.graph]:
-            1. Positive training graph
-            2. Positive validation graph
-    """
-
-    # First set all seeds
-    rnd_seed = 0
-    random.seed(rnd_seed)
-    np.random.seed(rnd_seed)
-    torch.manual_seed(rnd_seed)  # set it for both cpu and cuda
-
-    # val size is 1-split_ratio specified by the user
-    val_size = int(graph.number_of_edges() * (1 - split_ratio))
-
-    # If user wants to split the dataset but it is too small, then raise an Exception
-    if split_ratio < 1.0 and val_size == 0:
-        raise Exception("Graph too small to have a validation dataset. ")
-   
-     # Create positive training and positive validation graph
-    train_pos_g, val_pos_g = split_train_val(graph, val_size, relation)
-
-    # return train_g, train_pos_g, train_neg_g, val_pos_g, val_neg_g
-    return train_pos_g, val_pos_g
-
-def preprocess_batch(graph: dgl.graph, split_ratio: float, relation: Tuple[str, str, str]) -> Tuple[dgl.graph, dgl.graph, dgl.graph, dgl.graph, dgl.graph]:
-    """Preprocess method splits dataset in training and validation set. This method is also used for setting numpy and torch random seed.
+    """Preprocess method splits dataset in training and validation set by creating necessary masks for distinguishing those two. 
+        This method is also used for setting numpy and torch random seed.
 
     Args:
         graph (dgl.graph): A reference to the dgl graph representation.
@@ -228,10 +117,32 @@ def evaluate(metrics: List[str], labels: torch.tensor, probs: torch.tensor, resu
             result[POS_PRED_EXAMPLES] = operator(result[POS_PRED_EXAMPLES], (probs > 0.5).sum().item())
         elif metric_name == NEG_PRED_EXAMPLES:
             result[NEG_PRED_EXAMPLES] = operator(result[NEG_PRED_EXAMPLES], (probs < 0.5).sum().item())
+        elif metric_name == POS_EXAMPLES:
+            result[POS_EXAMPLES] = operator(result[POS_EXAMPLES], (labels == 1).sum().item())
+        elif metric_name == NEG_EXAMPLES:
+            result[NEG_EXAMPLES] = operator(result[NEG_EXAMPLES], (labels == 0).sum().item())
 
-def batch_forward_pass(model: torch.nn.Module, predictor: torch.nn.Module, loss: torch.nn.BCELoss, m: torch.nn.Sigmoid, 
+def batch_forward_pass(model: torch.nn.Module, predictor: torch.nn.Module, loss: torch.nn.Module, m: torch.nn.Module, 
                     relation: Tuple[str, str, str], input_features: Dict[str, torch.Tensor], pos_graph: dgl.graph, 
-                    neg_graph: dgl.graph, blocks: List[dgl.graph]):
+                    neg_graph: dgl.graph, blocks: List[dgl.graph]) -> Tuple[torch.Tensor, torch.Tensor, torch.nn.Module]:
+    """Performs one forward batch pass
+
+    Args:
+        model (torch.nn.Module): A reference to the model that needs to be trained. 
+        predictor (torch.nn.Module): A reference to the edge predictor.
+        loss (torch.nn.Module): Loss function.
+        m (torch.nn.Module): The activation function.
+        relation (Tuple[str, str, str]): [src_type, edge_type, dest_type] identifies edges on which model will be trained for prediction
+        input_features (Dict[str, torch.Tensor]): A reference to the input_features that are needed to compute representations for second block.
+        pos_graph (dgl.graph): A reference to the positive graph. All edges that should be included.
+        neg_graph (dgl.graph): A reference to the negative graph. All edges that shouldn't be included.
+        blocks (List[dgl.graph]): First DGLBlock(MFG) is equivalent to all necessary nodes that are needed to compute final representation.
+            Second DGLBlock(MFG) is a mini-batch.
+
+    Returns:
+         Tuple[torch.Tensor, torch.Tensor, torch.nn.Module]: First tensor are calculated probabilities, second tensor are true labels and the last tensor
+            is a reference to the loss.
+    """
 
     outputs = model.forward(blocks, input_features)
 
@@ -246,8 +157,7 @@ def batch_forward_pass(model: torch.nn.Module, predictor: torch.nn.Module, loss:
 
     return probs, labels, loss_output
 
-
-def inner_train_batch(graph: dgl.graph,
+def inner_train(graph: dgl.graph,
                     train_eid_dict,
                     val_eid_dict, 
                     relation: Tuple[str, str, str],
@@ -260,26 +170,45 @@ def inner_train_batch(graph: dgl.graph,
                     checkpoint_freq: int, 
                     metrics: List[str], 
                     tr_acc_patience: int, 
-                    context_save_dir: str,) -> Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]:
+                    context_save_dir: str,
+                    num_neg_per_pos_edge: int,
+                    num_layers: int,
+                    batch_size: int,
+                    sampling_workers: int
+                    ) -> Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]:
+    """Batch training method. 
 
+    Args:
+        graph (dgl.graph): A reference to the original graph. 
+        train_eid_dict (_type_): Mask that identifies training part of the graph. This included only edges from a given relation.
+        val_eid_dict (_type_): Mask that identifies validation part of the graph. This included only edges from a given relation.
+        relation (Tuple[str, str, str]): [src_type, edge_type, dest_type] identifies edges on which model will be trained for prediction
+        model (torch.nn.Module): A reference to the model that will be trained.
+        predictor (torch.nn.Module): A reference to the edge predictor.
+        optimizer (torch.optim.Optimizer): A reference to the training optimizer.
+        num_epochs (int): number of epochs for model training.
+        node_features_property: (str): property name where the node features are saved.
+        console_log_freq (int): How often results will be printed. All results that are printed in the terminal will be returned to the client calling Memgraph.
+        checkpoint_freq (int): Select the number of epochs on which the model will be saved. The model is persisted on the disc.
+        metrics (List[str]): Metrics used to evaluate model in training on the validation set.
+            Epoch will always be displayed, you can add loss, accuracy, precision, recall, specificity, F1, auc_score etc.
+        tr_acc_patience (int): Training patience, for how many epoch will accuracy drop on validation set be tolerated before stopping the training.
+        context_save_dir (str): Path where the model and predictor will be saved every checkpoint_freq epochs.
+        num_neg_per_pos_edge (int): Number of negative edges that will be sampled per one positive edge in the mini-batch.
+        num_layers (int): Number of layers in the GNN architecture.
+        batch_size (int): Batch size used in both training and validation procedure.
+        sampling_workers (int): Number of workers that will cooperate in the sampling procedure in the training and validation.
+    Returns:
+        Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]: Training and validation results. _
+    """
     # Define what will be returned
     training_results, validation_results = [], []
 
-    # Define necessary parameters
-    k = 5  # Number of negative edges per one positivr
-    num_layers = 2  # Number of layers in the GNN architecture
-    batch_size = 512
-    num_workers = 4  # Number of sampling processes
-
     # First define all necessary samplers
-    k = 5
-    num_layers = 2
-    negative_sampler = dgl.dataloading.negative_sampler.Uniform(k=k)
+    negative_sampler = dgl.dataloading.negative_sampler.Uniform(k=num_neg_per_pos_edge)
     sampler = dgl.dataloading.MultiLayerFullNeighborSampler(num_layers=num_layers)  # gather messages from all node neighbors
-    sampler = dgl.dataloading.as_edge_prediction_sampler(sampler, negative_sampler=negative_sampler)  # TODO: Add "self" and change that to reverse edges sometime
-
-    # TODO: Can you use same sampler for training and validation DataLoader?
-
+    sampler = dgl.dataloading.as_edge_prediction_sampler(sampler, negative_sampler=negative_sampler, exclude="self")  # TODO: Add "self" and change that to reverse edges sometime
+    
     # Define training and validation dictionaries
     # For heterogeneous full neighbor sampling we need to define a dictionary of edge types and edge ID tensors instead of a dictionary of node types and node ID tensors
     # DataLoader iterates over a set of edges in mini-batches, yielding the subgraph induced by the edge mini-batch and message flow graphs (MFGs) to be consumed by the module below.
@@ -294,7 +223,7 @@ def inner_train_batch(graph: dgl.graph,
         batch_size=batch_size,    # Batch size
         shuffle=True,       # Whether to shuffle the nodes for every epoch
         drop_last=False,    # Whether to drop the last incomplete batch
-        num_workers=num_workers       # Number of sampler processes
+        num_workers=sampling_workers       # Number of sampler processes
     )
 
     # Define validation EdgeDataLoader
@@ -305,7 +234,7 @@ def inner_train_batch(graph: dgl.graph,
         batch_size=batch_size,    # Batch size
         shuffle=True,       # Whether to shuffle the nodes for every epoch
         drop_last=False,    # Whether to drop the last incomplete batch
-        num_workers=num_workers       # Number of sampler processes
+        num_workers=sampling_workers       # Number of sampler processes
     )
 
     # Initialize loss
@@ -319,6 +248,10 @@ def inner_train_batch(graph: dgl.graph,
     avg_: Callable[[float, float], float] = lambda prior, size: prior/size
     format_float: Callable[[float], float] = lambda prior: round(prior, 2)
 
+    # Training
+    max_val_acc, num_val_acc_drop = (-1.0, 0,)  # last maximal accuracy and number of epochs it is dropping
+
+    # Iterate for every epoch
     for epoch in range(1, num_epochs+1):
         # Evaluation epoch
         if epoch % console_log_freq == 0:
@@ -365,155 +298,27 @@ def inner_train_batch(graph: dgl.graph,
                     evaluate(metrics, labels, probs, epoch_validation_result, threshold, epoch, loss_output.item(), add_)
                     num_batches += 1
 
-            # Average over batches    
-            epoch_validation_result = {key: format_float(avg_(val, num_batches)) if key != EPOCH else val for key, val in epoch_validation_result.items()}
-            validation_results.append(epoch_validation_result)
+            if num_batches > 0: # Because it is possible that user specified not to have a validation dataset
+                # Average over batches    
+                epoch_validation_result = {key: format_float(avg_(val, num_batches)) if key != EPOCH else val for key, val in epoch_validation_result.items()}
+                validation_results.append(epoch_validation_result)
 
-
-    return training_results, validation_results
-
-               
-
-def inner_train(
-    train_pos_g: dgl.graph,
-    val_pos_g: dgl.graph,
-    relation: Tuple[str, str, str],
-    model: torch.nn.Module,
-    predictor: torch.nn.Module,
-    optimizer: torch.optim.Optimizer,
-    num_epochs: int,
-    node_features_property: str,
-    console_log_freq: int,
-    checkpoint_freq: int,
-    metrics: List[str],
-    tr_acc_patience: int,
-    context_save_dir: str
-) -> Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]:
-    """Real train method where training occurs. Parameters from LinkPredictionParameters are sent here. They aren't sent as whole class because of circular dependency.
-
-    Args:
-        train_pos_g (dgl.graph): Positive training graph.
-        val_pos_g (dgl.graph): Positive validation graph.
-        relation (Tuple[str, str, str]): src_type, edge_type, dest_type that determines edges important for prediction. For those we need to create 
-            negative edges.
-        model (torch.nn.Module): A reference to the model.
-        predictor (torch.nn.Module): A reference to the edge predictor.
-        optimizer (torch.optim.Optimizer): A reference to the training optimizer.
-        num_epochs (int): number of epochs for model training.
-        node_features_property: (str): property name where the node features are saved.
-        console_log_freq (int): How often results will be printed. All results that are printed in the terminal will be returned to the client calling Memgraph.
-        checkpoint_freq (int): Select the number of epochs on which the model will be saved. The model is persisted on the disc.
-        metrics (List[str]): Metrics used to evaluate model in training on the validation set.
-            Epoch will always be displayed, you can add loss, accuracy, precision, recall, specificity, F1, auc_score etc.
-        tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on validation set be tolerated before stopping the training.
-        context_save_dir: str -> Path where the model and predictor will be saved every checkpoint_freq epochs.
-    Returns:
-        Tuple[List[Dict[str, float]], List[Dict[str, float]]: Training results, validation results
-    """
-    # Save results collections
-    training_results, validation_results = [], []
-    
-    # Negative edges per one positive
-    k = 1 
-
-    # Training
-    max_val_acc, num_val_acc_drop = (-1.0, 0,)  # last maximal accuracy and number of epochs it is dropping
-
-    # Initialize loss
-    loss = torch.nn.BCELoss()
-
-    # Initialize activation func
-    m, threshold = torch.nn.Sigmoid(), 0.5
-
-    # Features
-    graph_features = {node_type: train_pos_g.nodes[node_type].data[node_features_property] for node_type in train_pos_g.ntypes}
-
-
-    # Lambda function for operating on metrics
-    set_: Callable[[float, float], float] = lambda prior, later: later
-
-    for epoch in range(1, num_epochs + 1):
-        # switch to training mode
-        model.train() 
-        # Create negative graph
-        train_neg_g = construct_negative_heterograph(train_pos_g, k, relation)
-
-        # Get embeddings
-        h = model.forward_util(train_pos_g, graph_features) 
-
-        # Get edge scores and probabilities
-        pos_score = predictor.forward(train_pos_g, h, relation=relation) # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_pos-g. Scores are here actually logits.
-        neg_score = predictor.forward(train_neg_g, h, relation=relation)  # returns vector of negative edge scores, torch.float32, shape: num_edges in the graph of train_neg_g. Scores are actually logits.
-        scores = torch.cat([pos_score, neg_score])  # concatenated positive and negative scores
-
-        # probabilities
-        probs = m(scores)
-        labels = torch.cat([torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])])  # concatenation of labels
-        loss_output = loss(probs, labels)
-
-        # backward
-        optimizer.zero_grad()
-        loss_output.backward()
-        optimizer.step()
-
-        # Now switch to validation mode to get results on validation set/
-        model.eval()
-
-        # Turn of gradient calculation
-        with torch.no_grad():
-            # Time for writing
-            if epoch % console_log_freq == 0:
-                epoch_training_result = defaultdict(float)  # Temporary result per epoch
-                epoch_val_result = defaultdict(float)
-                # Evaluate based on given metrics
-                evaluate(metrics, labels, probs, epoch_training_result, threshold, epoch, loss_output.item(), set_)
-                training_results.append(epoch_training_result)
-
-                # Validation metrics if they can be calculated
-                if val_pos_g.number_of_edges() > 0:
-                    # Create negative validation graph
-                    val_neg_g = construct_negative_heterograph(val_pos_g, k, relation)
-                    # Get embeddings
-                    h_val = model.forward_util(val_pos_g, graph_features) 
-        
-                    # Get edge scores and probabilities
-                    pos_score_val = predictor.forward(val_pos_g, h_val, relation=relation)  # returns vector of positive edge scores, torch.float32, shape: num_edges in the graph of train_pos-g. Scores are here actually logits.
-                    neg_score_val = predictor.forward(val_neg_g, h_val, relation=relation)  # returns vector of negative edge scores, torch.float32, shape: num_edges in the graph of train_neg_g. Scores are actually logits.
-                    scores_val = torch.cat([pos_score_val, neg_score_val])  # concatenated positive and negative scores
-                    
-                    # Probabilities
-                    probs_val = m(scores_val)
-                    labels_val = torch.cat([torch.ones(pos_score_val.shape[0]), torch.zeros(neg_score_val.shape[0]),])
-
-                    # For DEBUG only
-                    print("Ratio of positively val predicted examples: ", torch.sum(probs_val > 0.5).item() / (probs_val).shape[0])
-                    print("Ratio of positively train predicted examples: ", torch.sum(probs > 0.5).item() / probs.shape[0])
-
-                    # Set initial metrics for validation result
-                    loss_output_val = loss(probs_val, labels_val)
-                    # Evaluate based on given metrics
-                    evaluate(metrics, labels_val, probs_val, epoch_val_result, threshold, epoch, loss_output_val.item(), set_)
-                    validation_results.append(epoch_val_result)
-
+                if ACCURACY in metrics:  # If user doesn't want to have accuracy information, it cannot be checked for patience.
                     # Patience check
-                    if epoch_val_result[ACCURACY] <= max_val_acc:
+                    if epoch_validation_result[ACCURACY] <= max_val_acc:
                         num_val_acc_drop += 1
                     else:
-                        max_val_acc = epoch_val_result[ACCURACY]
+                        max_val_acc = epoch_validation_result[ACCURACY]
                         num_val_acc_drop = 0
-
-                    print(epoch_val_result)
 
                     # Stop the training if necessary
                     if num_val_acc_drop == tr_acc_patience:
                         print("Stopped because of validation criteria. ")
                         break
-                else:
-                    print(epoch_training_result)
 
-            # Save the model if necessary
-            if epoch % checkpoint_freq == 0:
-                _save_context(model, predictor, context_save_dir)
+        # Save the model if necessary
+        if epoch % checkpoint_freq == 0:
+            _save_context(model, predictor, context_save_dir)
 
     # Save model at the end of the training
     _save_context(model, predictor, context_save_dir)
