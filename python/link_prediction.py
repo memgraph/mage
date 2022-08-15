@@ -1,6 +1,7 @@
 import mgp  # Python API
 import torch
 import dgl  # geometric deep learning
+from dgl import AddSelfLoop
 from typing import Callable, List, Tuple, Dict
 from numpy import int32
 from dataclasses import dataclass, field
@@ -142,10 +143,7 @@ reindex_orig: Dict[int, int] = None  # Mapping of original dataset indexes to DG
 predictor: torch.nn.Module = None  # Predictor for calculating edge scores
 model: torch.nn.Module = None
 features_size_loaded: bool = False  # If size of the features was already inserted.
-HETERO = None 
 labels_concat = ":"  # string to separate labels if dealing with multiple labels per node
-self_loop_edge_type = "MEMGRAPH_SELF_LOOP"
-
 
 # Lambda function to concat list of labels
 merge_labels: Callable[[List[mgp.Label]], str] = lambda labels: labels_concat.join([label.name for label in labels])
@@ -231,23 +229,20 @@ def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_
         mgp.Record: It returns performance metrics obtained during the training on the training and validation dataset.
     """
     # Get global context
-    global training_results, validation_results, predictor, model, graph, reindex_dgl, reindex_orig, features_size_loaded, HETERO
+    global training_results, validation_results, predictor, model, graph, reindex_dgl, reindex_orig, features_size_loaded
 
     # Reset parameters of the old training
     _reset_train_predict_parameters()
 
     # Get some data
     # Dealing with heterogeneous graphs
-    graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
-  
+    graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index    
+    
+    
     # Insert in the hidden_features_size structure if needed
     if not features_size_loaded:
-        if HETERO:
-            ftr_size = max(value.shape[1] for value in graph.ndata[link_prediction_parameters.node_features_property].values())
-        else:
-            ftr_size = graph.ndata[link_prediction_parameters.node_features_property].shape[1]
-
-
+        # Get feature size
+        ftr_size = max(graph.nodes[node_type].data[link_prediction_parameters.node_features_property].shape[1] for node_type in graph.ntypes)
         # Load feature size in the hidden_features_size 
         _load_feature_size(ftr_size)
 
@@ -316,7 +311,7 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
         score: Probability that two nodes are connected
     """
     # TODO: what if new node is created after training and before predict? You have to map it dgl.graph representation immediately. 
-    global graph, predictor, model, reindex_orig, reindex_dgl, HETERO, features_size_loaded
+    global graph, predictor, model, reindex_orig, reindex_dgl, features_size_loaded
 
     # If the model isn't available. Model is available if this method is called right after training or loaded from context.
     # Same goes for predictor.
@@ -347,11 +342,8 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
 
      # Insert in the hidden_features_size structure if needed and it is needed only if the session was lost between training and predict method call.
     if not features_size_loaded:
-        if HETERO:
-            ftr_size = max(value.shape[1] for value in graph.ndata[link_prediction_parameters.node_features_property].values())
-        else:
-            ftr_size = graph.ndata[link_prediction_parameters.node_features_property].shape[1]
-
+        # Get feature size
+        ftr_size = max(graph.nodes[node_type].data[link_prediction_parameters.node_features_property].shape[1] for node_type in graph.ntypes)
         # Load feature size in the hidden_features_size 
         _load_feature_size(ftr_size)
 
@@ -390,7 +382,7 @@ def recommend(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: mgp.List[
     Returns:
         score: Probability that two nodes are connected
     """
-    global graph, predictor, model, reindex_orig, reindex_dgl, HETERO
+    global graph, predictor, model, reindex_orig, reindex_dgl
 
     print(f"Dest vertices: {len(dest_vertices)}")
 
@@ -403,11 +395,8 @@ def recommend(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: mgp.List[
 
      # Insert in the hidden_features_size structure if needed and it is needed only if the session was lost between training and predict method call.
     if not features_size_loaded:
-        if HETERO:
-            ftr_size = max(value.shape[1] for value in graph.ndata[link_prediction_parameters.node_features_property].values())
-        else:
-            ftr_size = graph.ndata[link_prediction_parameters.node_features_property].shape[1]
-
+        # Get feature size
+        ftr_size = max(graph.nodes[node_type].data[link_prediction_parameters.node_features_property].shape[1] for node_type in graph.ntypes)
         # Load feature size in the hidden_features_size 
         _load_feature_size(ftr_size)
     
@@ -596,7 +585,7 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
         to old index and dictionary of mapping old to new index for each node type.
     """
 
-    global link_prediction_parameters, HETERO
+    global link_prediction_parameters
 
     reindex_dgl = dict()  # map of label to new node index to old node index
     reindex_orig = dict()  # map of label to old node index to new node index
@@ -663,6 +652,10 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
 
     g = dgl.heterograph(data_dict)  
     
+    # Add self-loop support
+    transform = AddSelfLoop(allow_duplicate=False, new_etypes=True)
+    g = transform(g)
+
     # Create features
     for node_type in g.ntypes:
         node_features = []
@@ -673,14 +666,6 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
         node_features = torch.tensor(node_features, dtype=torch.float32)
         g.nodes[node_type].data[link_prediction_parameters.node_features_property] = node_features
     
-    # Infer target relation
-    if len(type_triplets) == 1:  # Only one type of src_type, edge_type and dest_type -> it must be homogeneous graph
-        link_prediction_parameters.target_relation = type_triplets[0][1]
-        HETERO = False
-    else:
-        # Target relation needs to be specified by the user
-        HETERO = True
-
     # Test conversion. Note: Do a conversion before you upscale features.
     _conversion_to_dgl_test(graph=g, reindex_dgl=reindex_dgl, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property)
 
@@ -933,7 +918,7 @@ def _reset_train_predict_parameters() -> None:
     """Reset global parameters that are returned by train method and used by predict method.
     No need to reset features_size_loaded currently. 
     """
-    global training_results, validation_results, predictor, model, graph, reindex_dgl, reindex_orig, HETERO
+    global training_results, validation_results, predictor, model, graph, reindex_dgl, reindex_orig
     training_results.clear()  # clear training records from previous training
     validation_results.clear()  # clear validation record from previous training
     predictor = None  # Delete old predictor and create a new one in link_prediction_util.train method\
@@ -941,7 +926,6 @@ def _reset_train_predict_parameters() -> None:
     graph = None  # Set graph to None
     reindex_orig = None
     reindex_dgl = None
-    HETERO = None
 
 def _conversion_to_dgl_test(
     graph: dgl.graph,
