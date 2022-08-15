@@ -144,7 +144,7 @@ model: torch.nn.Module = None
 features_size_loaded: bool = False  # If size of the features was already inserted.
 HETERO = None 
 labels_concat = ":"  # string to separate labels if dealing with multiple labels per node
-
+self_loop_edge_type = "MEMGRAPH_SELF_LOOP"
 
 
 # Lambda function to concat list of labels
@@ -363,7 +363,8 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
         node_features_property=link_prediction_parameters.node_features_property,
         src_node=src_id, 
         dest_node=dest_id,
-        target_relation=link_prediction_parameters.target_relation)
+        src_type=src_type,
+        dest_type=dest_type,)
 
     result = mgp.Record(score=score)
 
@@ -391,18 +392,65 @@ def recommend(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: mgp.List[
     """
     global graph, predictor, model, reindex_orig, reindex_dgl, HETERO
 
+    print(f"Dest vertices: {len(dest_vertices)}")
+
     # If the model isn't available
     if model is None:
         raise Exception("No trained model available to the system. Train or load it first. ")
 
     # You called predict after session was lost
-    if graph is None:
-        graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx) 
+    graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx)
 
+     # Insert in the hidden_features_size structure if needed and it is needed only if the session was lost between training and predict method call.
+    if not features_size_loaded:
+        if HETERO:
+            ftr_size = max(value.shape[1] for value in graph.ndata[link_prediction_parameters.node_features_property].values())
+        else:
+            ftr_size = graph.ndata[link_prediction_parameters.node_features_property].shape[1]
+
+        # Load feature size in the hidden_features_size 
+        _load_feature_size(ftr_size)
+    
+    # Create dgl graph representation
+    src_old_id, src_type = src_vertex.id, merge_labels(src_vertex.labels)
+
+    # Get dgl ids
+    src_id = reindex_orig[src_type][src_old_id]
+    
     # Save edge scores and vertices
     results = []
     for i, dest_vertex in enumerate(dest_vertices):  # TODO: Can be implemented much faster by directly using matrix multiplication.
-        heappush(results, (-predict(ctx, src_vertex, dest_vertex).fields["score"], i, dest_vertex))  # Build in O(n). Add i to break ties where all predict values are the same.
+        # Get dest vertex
+        dest_old_id, dest_type = dest_vertex.id, merge_labels(dest_vertex.labels)
+        dest_id = reindex_orig[dest_type][dest_old_id]
+        
+        # Init edge properties
+        edge_added, edge_id = False, -1
+
+        # Check if there is an edge between two nodes
+        if not graph.has_edges_between(src_id, dest_id, etype=link_prediction_parameters.target_relation):
+            edge_added = True
+            # print("Nodes {} and {} are not connected. ".format(src_old_id, dest_old_id))
+            graph.add_edges(src_id, dest_id, etype=link_prediction_parameters.target_relation)
+    
+        edge_id = graph.edge_ids(src_id, dest_id, etype=link_prediction_parameters.target_relation)
+
+        # Call utils module
+        score = inner_predict(
+            model=model, 
+            predictor=predictor, 
+            graph=graph, 
+            node_features_property=link_prediction_parameters.node_features_property,
+            src_node=src_id, 
+            dest_node=dest_id,
+            src_type=src_type,
+            dest_type=dest_type,)
+    
+         # Remove edge if necessary
+        if edge_added:
+           graph.remove_edges(edge_id, etype=link_prediction_parameters.target_relation)
+        
+        heappush(results, (-score, i, dest_vertex))  # Build in O(n). Add i to break ties where all predict values are the same.
     
     # Extract recommendations
     recommendations = []
@@ -609,8 +657,7 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
     # data_dict has specific type that DGL requires to create a heterograph 
     data_dict = dict()  
 
-    
-    # Create a heterograp
+    # Create a heterograph
     for type_triplet in type_triplets:
         data_dict[type_triplet] = torch.tensor(src_nodes[type_triplet]), torch.tensor(dest_nodes[type_triplet])
 
@@ -936,7 +983,3 @@ def _conversion_to_dgl_test(
             # Check if equal
             if not torch.equal(graph.nodes[node_type].data[node_features_property][vertex_id], torch.tensor(old_features, dtype=torch.float32),):
                 raise Exception("The conversion to DGL failed. Stored graph does not contain the same features as the converted DGL graph. ")
-
-    # Check number of nodes
-    # if graph.number_of_nodes() != len(ctx.graph.vertices):
-    #     raise Exception(f"The conversion to DGL failed. Stored graph does not contain the same number of nodes({len(ctx.graph.vertices)}) as the converted DGL graph({graph.number_of_nodes()}).")

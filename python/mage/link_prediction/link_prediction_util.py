@@ -142,9 +142,7 @@ def batch_forward_pass(model: torch.nn.Module, predictor: torch.nn.Module, loss:
          Tuple[torch.Tensor, torch.Tensor, torch.nn.Module]: First tensor are calculated probabilities, second tensor are true labels and the last tensor
             is a reference to the loss.
     """
-
     outputs = model.forward(blocks, input_features)
-
     # Deal with edge scores
     pos_score = predictor.forward(pos_graph, outputs, target_relation=target_relation)
     neg_score = predictor.forward(neg_graph, outputs, target_relation=target_relation)
@@ -336,7 +334,7 @@ def _save_context(model: torch.nn.Module, predictor: torch.nn.Module, context_sa
     torch.save(predictor, context_save_dir + PREDICTOR_NAME)
 
 def inner_predict(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl.graph, node_features_property: str, 
-                    src_node: int, dest_node: int, target_relation: str=None) -> float:
+                    src_node: int, dest_node: int, src_type=str, dest_type=str) -> float:
     """Predicts edge scores for given graph. This method is called to obtain edge probability for edge with id=edge_id.
 
     Args:
@@ -346,24 +344,16 @@ def inner_predict(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl
         node_features_property (str): Property name of the features.
         src_node (int): Source node of the edge.
         dest_node (int): Destination node of the edge. 
-        target_relation: str -> Unique edge type that is used for training.
+        src_type (str): Type of the source node.
+        dest_type (str): Type of the destination node.
 
     Returns:
         float: Edge score.
     """
-    # TODO: CHANEG
     graph_features = {node_type: graph.nodes[node_type].data[node_features_property] for node_type in graph.ntypes}
-    print("Target relation: ", target_relation)
     with torch.no_grad():
         h = model.forward_util(graph, graph_features)
-        print("H: ", h)
-        if type(target_relation) == tuple:  # Tuple[str, str, str] identification
-            src_embedding, dest_embedding = h[target_relation[0]][src_node], h[target_relation[2]][dest_node]
-        elif type(target_relation) == str:  # Edge type identification
-            for key, val in h.items():
-                if key[1] == target_relation:            
-                    src_embedding, dest_embedding = val[src_node], val[dest_node]
-        
+        src_embedding, dest_embedding = h[src_type][src_node], h[dest_type][dest_node]
         score = predictor.forward_pred(src_embedding, dest_embedding)
         # print("Scores: ", torch.sum(scores < 0.5).item())
         prob = torch.sigmoid(score)
