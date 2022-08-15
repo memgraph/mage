@@ -888,8 +888,9 @@ def _validate_user_parameters(parameters: mgp.Map) -> None:
     if TARGET_RELATION in parameters.keys():
         target_relation = parameters[TARGET_RELATION]
 
-        # check typing
-        type_checker(target_relation, "target edge tyupe must be a string. ", str)
+       # check typing
+        if type(target_relation) != tuple and type(target_relation) != str:
+            raise Exception("target relation must be a string or a tuple. ")
     else:
         raise Exception("Target relation or target edge type must be specified. ")
     

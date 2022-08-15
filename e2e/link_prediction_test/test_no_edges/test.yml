@@ -4,5 +4,4 @@ query: >
   CALL link_prediction.train()
   YIELD training_results, validation_results
   RETURN training_results, validation_results;
-exception: 
-  "No edges in the dataset. "
+exception: "No edges in the dataset. "

@@ -1,7 +1,6 @@
 query: >
-  CALL link_prediction.set_model_parameters({split_ratio: 0.5, hidden_features_size: [3, 2]}) YIELD *;
+  CALL link_prediction.set_model_parameters({split_ratio: 0.5, hidden_features_size: [3, 2], target_relation: "CITES"}}) YIELD *;
   CALL link_prediction.train()
   YIELD training_results, validation_results
   RETURN training_results, validation_results;
-exception: 
-  "Graph too small to have a validation dataset. "
+exception: "Graph too small to have a validation dataset. "
