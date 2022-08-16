@@ -51,20 +51,20 @@ def preprocess(graph: dgl.graph, split_ratio: float, target_relation: str) -> Tu
     random.seed(rnd_seed)
     np.random.seed(rnd_seed)
     torch.manual_seed(rnd_seed)  # set it for both cpu and cuda
-
-    # val size is 1-split_ratio specified by the user
-    val_size = int(graph.number_of_edges() * (1 - split_ratio))
-
-    # If user wants to split the dataset but it is too small, then raise an Exception
-    if split_ratio < 1.0 and val_size == 0:
-        raise Exception("Graph too small to have a validation dataset. ")
-    
+ 
     # Get edge IDS
     edge_type_u, _ = graph.edges(etype=target_relation)
     graph_edges_len = len(edge_type_u)
     eids = np.arange(graph_edges_len)  # get all edge ids from number of edges and create a numpy vector from it.
     eids = np.random.permutation(eids)  # randomly permute edges
 
+    # val size is 1-split_ratio specified by the user
+    val_size = int(graph_edges_len * (1 - split_ratio))
+
+    # If user wants to split the dataset but it is too small, then raise an Exception
+    if split_ratio < 1.0 and val_size == 0:
+        raise Exception("Graph too small to have a validation dataset. ")
+    
     # Get training and validation edges
     tr_eids, val_eids = eids[val_size:], eids[:val_size]
 

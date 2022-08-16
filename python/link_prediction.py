@@ -531,7 +531,6 @@ def _proj_0(graph: dgl.graph) -> None:
         graph.nodes[node_type].data[link_prediction_parameters.node_features_property] = torch.nn.functional.pad(graph.nodes[node_type].data[link_prediction_parameters.node_features_property], 
                     p1d, mode="constant", value=0)
 
-
 def _load_feature_size(features_size: int):
     """Inserts feature size to the hidden_features_size array.
 
@@ -655,6 +654,8 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
     # Add self-loop support
     transform = AddSelfLoop(allow_duplicate=False, new_etypes=True)
     g = transform(g)
+
+    print(f"Created graph: {g}")
 
     # Create features
     for node_type in g.ntypes:
