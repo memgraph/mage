@@ -89,9 +89,10 @@ def evaluate(metrics: List[str], labels: torch.tensor, probs: torch.tensor, resu
     Args:
         metrics (List[str]): List of string metrics.
         labels (torch.tensor): Predefined labels.
-        probs (torch.tensor): Probabilities of the class with the label one.
-        result (Dict[str, float]): Prepopulated result that needs to be modified.
-        threshold (float): classification threshold. 0.5 for sigmoid etc.
+        probs (torch.tensor): Probabilities of src_nodes = blocks[0].srcdata[dgl.NID]
+    dst_nodes = blocks[0].dstdata[dgl.NID]
+    print(f"Src nodes: {src_nodes}")
+    print(f"Dest nodes: {dst_nodes}")hreshold. 0.5 for sigmoid etc.
     Returns:
         Dict[str, float]: Metrics embedded in dictionary -> name-value shape
     """
@@ -155,7 +156,7 @@ def batch_forward_pass(model: torch.nn.Module, predictor: torch.nn.Module, loss:
     neg_score = predictor.forward(neg_graph, outputs, target_relation=target_relation)
     scores = torch.cat([pos_score, neg_score])  # concatenated positive and negative score
     # probabilities
-    probs = m(scores)
+    probs = m(scores).cpu()
     labels = torch.cat([torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])])  # concatenation of labels
     loss_output = loss(probs, labels)
 
@@ -205,13 +206,14 @@ def inner_train(graph: dgl.graph,
     Returns:
         Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]: Training and validation results. _
     """
+    device = torch.device("cpu")
     # Define what will be returned
     training_results, validation_results = [], []
 
     # First define all necessary samplers
-    negative_sampler = dgl.dataloading.negative_sampler.Uniform(k=num_neg_per_pos_edge)
-    sampler = dgl.dataloading.MultiLayerFullNeighborSampler(num_layers=num_layers)  # gather messages from all node neighbors
-    sampler = dgl.dataloading.as_edge_prediction_sampler(sampler, negative_sampler=negative_sampler, exclude="self")  # TODO: Add "self" and change that to reverse edges sometime
+    negative_sampler = dgl.dataloading.negative_sampler.GlobalUniform(k=num_neg_per_pos_edge, replace=False)
+    sampler = dgl.dataloading.MultiLayerFullNeighborSampler(num_layers=num_layers, output_device=device)  # gather messages from all node neighbors
+    sampler = dgl.dataloading.as_edge_prediction_sampler(sampler, negative_sampler=negative_sampler)  # TODO: Add "self" and change that to reverse edges sometime
     
     # Define training and validation dictionaries
     # For heterogeneous full neighbor sampling we need to define a dictionary of edge types and edge ID tensors instead of a dictionary of node types and node ID tensors
@@ -227,7 +229,8 @@ def inner_train(graph: dgl.graph,
         batch_size=batch_size,    # Batch size
         shuffle=True,       # Whether to shuffle the nodes for every epoch
         drop_last=False,    # Whether to drop the last incomplete batch
-        num_workers=sampling_workers       # Number of sampler processes
+        num_workers=sampling_workers, # Number of sampling processes
+        device=device       
     )
 
     # Define validation EdgeDataLoader
@@ -238,7 +241,8 @@ def inner_train(graph: dgl.graph,
         batch_size=batch_size,    # Batch size
         shuffle=True,       # Whether to shuffle the nodes for every epoch
         drop_last=False,    # Whether to drop the last incomplete batch
-        num_workers=sampling_workers       # Number of sampler processes
+        num_workers=sampling_workers,       # Number of sampler processes
+        device=device
     )
 
     print(f"Canonical etypes: {graph.canonical_etypes}")
@@ -268,28 +272,33 @@ def inner_train(graph: dgl.graph,
         # Training batch
         num_batches = 0
         model.train()
+        tr_finished = False
         for _, pos_graph, neg_graph, blocks in train_dataloader:
-            # Get input features needed to compute representations of second block
-            input_features = blocks[0].ndata[node_features_property]
+            input_features = blocks[0].srcdata[node_features_property]
+
             # Perform forward pass
             probs, labels, loss_output = batch_forward_pass(model, predictor, loss, m, target_relation, input_features, pos_graph, neg_graph, blocks)
 
             # Make an optimization step
             optimizer.zero_grad()
-            loss_output.backward()
+            loss_output.backward()  # ***This line generates warning***
             optimizer.step()
 
             # Evaluate on training set
             if epoch % console_log_freq == 0:
                 evaluate(metrics, labels, probs, epoch_training_result, threshold, epoch, loss_output.item(), add_)
-
-            # Increment num batches
+                            # Increment num batches
             num_batches +=1 
-
+        
         # Edit train results and evaluate on validation set
         if epoch % console_log_freq == 0:
             epoch_training_result = {key: format_float(avg_(val, num_batches)) if key != EPOCH else val for key, val in epoch_training_result.items()}
             training_results.append(epoch_training_result)
+            
+            # Check if training finished
+            if ACCURACY in metrics and epoch_training_result[ACCURACY] == 1.0 and epoch > 1:
+                print("Model reached accuracy of 1.0, exiting...")
+                tr_finished = True
 
             # Evaluate on the validation set
             model.eval()
@@ -325,6 +334,10 @@ def inner_train(graph: dgl.graph,
         # Save the model if necessary
         if epoch % checkpoint_freq == 0:
             _save_context(model, predictor, context_save_dir)
+
+        # All examples learnt
+        if tr_finished:
+            break
 
     # Save model at the end of the training
     _save_context(model, predictor, context_save_dir)
