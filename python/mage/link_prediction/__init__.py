@@ -58,4 +58,8 @@ from mage.link_prediction.constants import (
     POS_PRED_EXAMPLES,
     NEG_PRED_EXAMPLES,
     EPOCH,
+    TRUE_POSITIVES,
+    FALSE_POSITIVES,
+    TRUE_NEGATIVES,
+    FALSE_NEGATIVES
 )

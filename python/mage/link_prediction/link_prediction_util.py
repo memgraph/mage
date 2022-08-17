@@ -1,20 +1,17 @@
+from pickle import FALSE
 from platform import node
 import torch
 import torch.nn.functional as F
 import numpy as np
 import dgl
 from collections import defaultdict
-from sklearn.metrics import roc_auc_score
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import precision_score
-from sklearn.metrics import recall_score
-from sklearn.metrics import f1_score
+from sklearn.metrics import roc_auc_score, accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 from typing import Callable, Dict, Tuple, List
 import mgp
 import random
 from mage.link_prediction.constants import (
-    MODEL_NAME, NEG_PRED_EXAMPLES, POS_PRED_EXAMPLES, PREDICTOR_NAME, LOSS, ACCURACY, AUC_SCORE, PRECISION, RECALL, F1, EPOCH,
-    POS_EXAMPLES, NEG_EXAMPLES
+    FALSE_NEGATIVES, FALSE_POSITIVES, MODEL_NAME, NEG_PRED_EXAMPLES, POS_PRED_EXAMPLES, PREDICTOR_NAME, LOSS, ACCURACY, AUC_SCORE, PRECISION, RECALL, F1, EPOCH,
+    POS_EXAMPLES, NEG_EXAMPLES, TRUE_NEGATIVES, TRUE_POSITIVES
 )
 
 def get_number_of_edges(ctx: mgp.ProcCtx) -> int:
@@ -101,6 +98,7 @@ def evaluate(metrics: List[str], labels: torch.tensor, probs: torch.tensor, resu
     classes = classify(probs, threshold)
     result[EPOCH] = epoch
     result[LOSS] = operator(result[LOSS], loss)
+    tn, fp, fn, tp = confusion_matrix(labels, classes).ravel()
     for metric_name in metrics:
         if metric_name == ACCURACY:
             result[ACCURACY] = operator(result[ACCURACY], accuracy_score(labels, classes))
@@ -113,13 +111,22 @@ def evaluate(metrics: List[str], labels: torch.tensor, probs: torch.tensor, resu
         elif metric_name == RECALL:
             result[RECALL] = operator(result[RECALL], recall_score(labels, classes))
         elif metric_name == POS_PRED_EXAMPLES:
-            result[POS_PRED_EXAMPLES] = operator(result[POS_PRED_EXAMPLES], (probs > 0.5).sum().item())
+            result[POS_PRED_EXAMPLES] = operator(result[POS_PRED_EXAMPLES], classes.sum().item())
         elif metric_name == NEG_PRED_EXAMPLES:
-            result[NEG_PRED_EXAMPLES] = operator(result[NEG_PRED_EXAMPLES], (probs < 0.5).sum().item())
+            result[NEG_PRED_EXAMPLES] = operator(result[NEG_PRED_EXAMPLES], classes.sum().item())
         elif metric_name == POS_EXAMPLES:
             result[POS_EXAMPLES] = operator(result[POS_EXAMPLES], (labels == 1).sum().item())
         elif metric_name == NEG_EXAMPLES:
             result[NEG_EXAMPLES] = operator(result[NEG_EXAMPLES], (labels == 0).sum().item())
+        elif metric_name == TRUE_POSITIVES:
+            result[TRUE_POSITIVES] = operator(result[TRUE_POSITIVES], tp)
+        elif metric_name == FALSE_POSITIVES:
+            result[FALSE_POSITIVES] = operator(result[FALSE_POSITIVES], fp)
+        elif metric_name == TRUE_NEGATIVES:
+            result[TRUE_NEGATIVES] = operator(result[TRUE_NEGATIVES], tn)
+        elif metric_name == FALSE_NEGATIVES:
+            result[FALSE_NEGATIVES] = operator(result[FALSE_NEGATIVES], fn)
+
 
 def batch_forward_pass(model: torch.nn.Module, predictor: torch.nn.Module, loss: torch.nn.Module, m: torch.nn.Module, 
                     target_relation: str, input_features: Dict[str, torch.Tensor], pos_graph: dgl.graph, 
@@ -233,6 +240,8 @@ def inner_train(graph: dgl.graph,
         drop_last=False,    # Whether to drop the last incomplete batch
         num_workers=sampling_workers       # Number of sampler processes
     )
+
+    print(f"Canonical etypes: {graph.canonical_etypes}")
 
     # Initialize loss
     loss = torch.nn.BCELoss()

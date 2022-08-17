@@ -16,30 +16,27 @@ class GraphSAGE(torch.nn.Module):
         """
         super(GraphSAGE, self).__init__()
         self.layers = torch.nn.ModuleList([])
+        print(f"Graph edge types: {edge_types}")
         for i in range(len(hidden_features_size) - 1):
             in_feats, out_feats = hidden_features_size[i], hidden_features_size[i + 1]
             sage_layer = SAGEConv(in_feats=in_feats, out_feats=out_feats, aggregator_type=aggregator)
             self.layers.append(HeteroGraphConv({edge_type: sage_layer for edge_type in edge_types}, aggregate="sum"))
 
      
-    def forward(self, blocks: List[dgl.graph], input_features: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def forward(self, blocks: List[dgl.graph], h: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """Performs forward pass on batches.
 
         Args:
             blocks (List[dgl.heterograph.DGLBlock]): First block is DGLBlock of all nodes that are needed to compute representations for second block. Second block is sampled graph.
-            input_features (Dict[str, torch.Tensor]): Input features for every node type.
+            h (Dict[str, torch.Tensor]): Input features for every node type.
 
         Returns:
             Dict[str, torch.Tensor]: Embeddings for every node type. 
         """
-        h = self.layers[0](blocks[0], input_features)
-        h = {k: torch.nn.functional.relu(v) for k, v in h.items()}
-        num_layers = len(self.layers)
-        for i in range(1, num_layers):
-            h = self.layers[i](blocks[1], h)
-            if (i != len(self.layers) - 1):  # Apply relu to every layer except last one
+        for index, layer in enumerate(self.layers):
+            h = layer(blocks[index], h)
+            if (index != len(self.layers) - 1):  # Apply relu to every layer except last one
                 h = {k: torch.nn.functional.relu(v) for k, v in h.items()}
-
         return h
        
 

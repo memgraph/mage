@@ -27,24 +27,21 @@ class GAT(torch.nn.Module):
                 HeteroGraphConv({edge_type: gat_layer for edge_type in edge_types}, aggregate="sum")
             )
 
-    def forward(self, blocks: List[dgl.graph], input_features: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def forward(self, blocks: List[dgl.graph], h: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """Performs forward pass on batches.
 
         Args:
             blocks (List[dgl.heterograph.DGLBlock]): First block is DGLBlock of all nodes that are needed to compute representations for second block. Second block is sampled graph.
-            input_features (Dict[str, torch.Tensor]): Input features for every node type.
+            h (Dict[str, torch.Tensor]): Input features for every node type.
 
         Returns:
             Dict[str, torch.Tensor]: Embeddings for every node type. 
-        """
-        h = self.layers[0](blocks[0], input_features)
-        h = {k: torch.mean(v, dim=1) for k, v in h.items()}
-        h = {k: torch.nn.functional.relu(v) for k, v in h.items()}
-        num_layers = len(self.layers)
-        for i in range(1, num_layers):
-            h = self.layers[i](blocks[1], h)
-            if (i != len(self.layers) - 1):  # Apply relu to every layer except last one
-                h = {k: torch.nn.functional.relu(v) for k, v in h.items()}
+        """ 
+        for index, layer in enumerate(self.layers):
+            h = layer(blocks[index], h)
+            h = {k: torch.mean(v, dim=1) for k, v in h.items()}
+            if (index != len(self.layers) - 1):  # Apply elu to every layer except last one
+                h = {k: torch.nn.functional.elu(v) for k, v in h.items()}
 
         return h
 

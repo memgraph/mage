@@ -60,6 +60,10 @@ from mage.link_prediction import (
     NEG_PRED_EXAMPLES,
     LOSS,
     F1,
+    TRUE_POSITIVES,
+    FALSE_POSITIVES,
+    TRUE_NEGATIVES,
+    FALSE_NEGATIVES
 )
 ##############################
 # classes and data structures
@@ -97,7 +101,7 @@ class LinkPredictionParameters:
     hidden_features_size: List = field(
         default_factory=lambda: [20, 10]
     )  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
-    layer_type: str = GRAPH_SAGE
+    layer_type: str = GRAPH_ATTN
     num_epochs: int = 10
     optimizer: str = ADAM_OPT
     learning_rate: float = 0.01
@@ -115,10 +119,10 @@ class LinkPredictionParameters:
             PRECISION,
             RECALL,
             F1,
-            POS_EXAMPLES,
-            NEG_EXAMPLES,
-            POS_PRED_EXAMPLES,
-            NEG_PRED_EXAMPLES
+            TRUE_POSITIVES,
+            FALSE_POSITIVES,
+            TRUE_NEGATIVES,
+            FALSE_NEGATIVES
         ]
     )
     predictor_type: str =  MLP_PREDICTOR
@@ -147,7 +151,6 @@ labels_concat = ":"  # string to separate labels if dealing with multiple labels
 
 # Lambda function to concat list of labels
 merge_labels: Callable[[List[mgp.Label]], str] = lambda labels: labels_concat.join([label.name for label in labels])
-
 
 ##############################
 # All read procedures
@@ -238,13 +241,15 @@ def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_
     # Dealing with heterogeneous graphs
     graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index    
     
-    
     # Insert in the hidden_features_size structure if needed
     if not features_size_loaded:
         # Get feature size
         ftr_size = max(graph.nodes[node_type].data[link_prediction_parameters.node_features_property].shape[1] for node_type in graph.ntypes)
+        print(f"Ftr size: {ftr_size}")
         # Load feature size in the hidden_features_size 
         _load_feature_size(ftr_size)
+
+    print(link_prediction_parameters.hidden_features_size)
 
     # Split the data
     train_eid_dict, val_eid_dict = preprocess(graph=graph, split_ratio=link_prediction_parameters.split_ratio, 
@@ -262,7 +267,7 @@ def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_
     # Create a predictor
     predictor = create_predictor(
         predictor_type=link_prediction_parameters.predictor_type,
-        predictor_hidden_size=link_prediction_parameters.hidden_features_size[-1],
+        predictor_hidden_size=link_prediction_parameters.hidden_features_size[-1]
     )
 
     # Create an optimizer
@@ -450,33 +455,6 @@ def recommend(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: mgp.List[
     return recommendations
 
 @mgp.read_proc
-def test(ctx: mgp.ProcCtx, src_vertices: List[int], dest_vertices: List[int]) -> mgp.Record(scores=mgp.Any, accuracy=mgp.Number):
-    """Offers completely the same functionality as predict.
-    Instead of receiving references to the source and destination vertex, it received list of source and destination vertices.
-    Closed for public.
-
-    Args:
-        ctx (mgp.ProcCtx): A reference to the context execution.
-        src_vertices (List[int]): Source vertices for every edge. Based on Memgraph's id property.
-        dest_vertices (List[int]): Dest vertices for every edge. Based on Memgraph's id property.
-
-    Returns:
-        Scores for every edge and final accuracy.
-    """
-
-    scores = []
-
-    for i in range(len(src_vertices)):
-        src_vertex = ctx.graph.get_vertex_by_id(src_vertices[i])
-        dest_vertex = ctx.graph.get_vertex_by_id(dest_vertices[i])
-        record = predict(ctx, src_vertex, dest_vertex)
-        scores.append(record.fields["score"])
-
-    acc = torch.sum(torch.tensor(scores, requires_grad=False) > 0.5).item() / len(scores)
-
-    return mgp.Record(scores=scores, accuracy=acc)
-
-@mgp.read_proc
 def get_training_results(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_results=mgp.Any):
 
     """This method is used when user wants to get performance data obtained from the last training. It is in the form of list of records where each record is a Dict[metric_name, metric_value]. Training and validation
@@ -508,6 +486,19 @@ def load_context(ctx: mgp.ProcCtx, path: str = link_prediction_parameters.contex
     global model, predictor
     model = torch.load(path + MODEL_NAME)
     predictor = torch.load(path + PREDICTOR_NAME)
+    return mgp.Record(status=True)
+
+@mgp.read_proc
+def reset_parameters(ctx: mgp.ProcCtx) -> mgp.Record(status=mgp.Any):
+    """Resets all parameters except features size loaded. 
+
+    Args:
+        ctx (mgp.ProcCtx): A reference to the execution context. 
+
+    Returns:
+        status: True if all passed ok.
+    """
+    _reset_train_predict_parameters()
     return mgp.Record(status=True)
 
 ##############################
@@ -713,6 +704,9 @@ def _validate_user_parameters(parameters: mgp.Map) -> None:
         if layer_type != GRAPH_ATTN and layer_type != GRAPH_SAGE:
              raise Exception("Unknown layer type, this module supports only graph_attn and graph_sage. ")
 
+        if layer_type == GRAPH_ATTN and HIDDEN_FEATURES_SIZE in parameters.keys() and ATTN_NUM_HEADS not in parameters.keys():
+            raise Exception("Attention heads must be specified when specified graph attention layer and hidden features sizes. ")
+
     # Num epochs
     if NUM_EPOCHS in parameters.keys():
         num_epochs = parameters[NUM_EPOCHS]
@@ -823,6 +817,10 @@ def _validate_user_parameters(parameters: mgp.Map) -> None:
                 and _metric != NEG_EXAMPLES
                 and _metric != POS_PRED_EXAMPLES
                 and _metric != NEG_PRED_EXAMPLES
+                and _metric != TRUE_POSITIVES
+                and _metric != FALSE_POSITIVES
+                and _metric != TRUE_NEGATIVES
+                and _metric != FALSE_NEGATIVES
             ):
                  raise Exception("Metric name " + _metric + " is not supported!")
 
