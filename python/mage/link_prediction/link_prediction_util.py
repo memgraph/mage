@@ -128,7 +128,6 @@ def evaluate(metrics: List[str], labels: torch.tensor, probs: torch.tensor, resu
         elif metric_name == FALSE_NEGATIVES:
             result[FALSE_NEGATIVES] = operator(result[FALSE_NEGATIVES], fn)
 
-
 def batch_forward_pass(model: torch.nn.Module, predictor: torch.nn.Module, loss: torch.nn.Module, m: torch.nn.Module, 
                     target_relation: str, input_features: Dict[str, torch.Tensor], pos_graph: dgl.graph, 
                     neg_graph: dgl.graph, blocks: List[dgl.graph]) -> Tuple[torch.Tensor, torch.Tensor, torch.nn.Module]:
@@ -213,7 +212,7 @@ def inner_train(graph: dgl.graph,
     # First define all necessary samplers
     negative_sampler = dgl.dataloading.negative_sampler.GlobalUniform(k=num_neg_per_pos_edge, replace=False)
     sampler = dgl.dataloading.MultiLayerFullNeighborSampler(num_layers=num_layers, output_device=device)  # gather messages from all node neighbors
-    sampler = dgl.dataloading.as_edge_prediction_sampler(sampler, negative_sampler=negative_sampler)  # TODO: Add "self" and change that to reverse edges sometime
+    sampler = dgl.dataloading.as_edge_prediction_sampler(sampler, negative_sampler=negative_sampler, exclude="self")  # TODO: Add "self" and change that to reverse edges sometime
     
     # Define training and validation dictionaries
     # For heterogeneous full neighbor sampling we need to define a dictionary of edge types and edge ID tensors instead of a dictionary of node types and node ID tensors
@@ -274,7 +273,7 @@ def inner_train(graph: dgl.graph,
         model.train()
         tr_finished = False
         for _, pos_graph, neg_graph, blocks in train_dataloader:
-            input_features = blocks[0].srcdata[node_features_property]
+            input_features = blocks[0].ndata[node_features_property]
 
             # Perform forward pass
             probs, labels, loss_output = batch_forward_pass(model, predictor, loss, m, target_relation, input_features, pos_graph, neg_graph, blocks)
@@ -373,6 +372,8 @@ def inner_predict(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl
         float: Edge score.
     """
     graph_features = {node_type: graph.nodes[node_type].data[node_features_property] for node_type in graph.ntypes}
+    print("Graph features: ", graph_features)
+    print("Graph features2: ", graph.ndata[node_features_property])
     with torch.no_grad():
         h = model.forward_util(graph, graph_features)
         src_embedding, dest_embedding = h[src_type][src_node], h[dest_type][dest_node]

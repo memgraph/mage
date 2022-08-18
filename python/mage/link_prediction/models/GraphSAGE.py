@@ -6,21 +6,27 @@ from typing import Dict, List
 
 
 class GraphSAGE(torch.nn.Module):
-    def __init__(self, hidden_features_size: List[int], aggregator: str, edge_types: List[str]):
+    def __init__(self, in_feats: int, hidden_features_size: List[int], aggregator: str, feat_drops: List[float], edge_types: List[str]):
         """Initializes modules with sizes.
 
         Args:
+            in_feats (int): Defines the size of the input features.
             hidden_features_size (List[int]): First element is the feature size and the rest specifies layer size.
             aggregator (str):  Aggregator used in models. Can be one of the following: lstm, gcn, mean and pool.
+            feat_drops (List[float]): Features dropout rate for each layer.
             edge_types (List[str]): All edge types that are occurring in the heterogeneous network.
         """
         super(GraphSAGE, self).__init__()
-        self.layers = torch.nn.ModuleList([])
-        print(f"Graph edge types: {edge_types}")
-        for i in range(len(hidden_features_size) - 1):
-            in_feats, out_feats = hidden_features_size[i], hidden_features_size[i + 1]
-            sage_layer = SAGEConv(in_feats=in_feats, out_feats=out_feats, aggregator_type=aggregator)
+        self.layers = torch.nn.ModuleList()
+        self.num_layers = len(hidden_features_size)
+        # Define activations
+        activations = [torch.nn.functional.relu for _ in range(self.num_layers - 1)]  # All activations except last layer
+        activations.append(None)
+        # Create layers
+        for i in range(self.num_layers):
+            sage_layer = SAGEConv(in_feats=in_feats, out_feats=hidden_features_size[i], aggregator_type=aggregator, feat_drop=feat_drops[i], activation=activations[i])
             self.layers.append(HeteroGraphConv({edge_type: sage_layer for edge_type in edge_types}, aggregate="sum"))
+            in_feats = hidden_features_size[i]
 
      
     def forward(self, blocks: List[dgl.graph], h: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
@@ -35,25 +41,4 @@ class GraphSAGE(torch.nn.Module):
         """
         for index, layer in enumerate(self.layers):
             h = layer(blocks[index], h)
-            if (index != len(self.layers) - 1):  # Apply relu to every layer except last one
-                h = {k: torch.nn.functional.relu(v) for k, v in h.items()}
-        return h
-       
-
-    def forward_util(self, g: dgl.graph, h: torch.Tensor) -> torch.Tensor:
-        """Forward method goes over every layer in the PyTorch's ModuleList.
-
-        Args:
-            g (dgl.graph): A reference to the graph.
-            h (torch.Tensor): Input features of the graph's nodes. Shape: num_nodes*input_features
-
-        Returns:
-            torch.Tensor: Features after iterating over all layers.
-        """
-       # print("SAGE shape: ", h.shape)
-        for index, layer in enumerate(self.layers):
-            h = layer(g, h)
-            if (index != len(self.layers) - 1):  # Apply relu to every layer except last one
-                h = {k: torch.nn.functional.relu(v) for k, v in h.items()}
-
         return h

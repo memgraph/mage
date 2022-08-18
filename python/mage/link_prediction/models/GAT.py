@@ -6,26 +6,35 @@ from typing import Dict, List
 
 
 class GAT(torch.nn.Module):
-    def __init__(self, hidden_features_size: List[int], attn_num_heads: List[int], edge_types: List[str]):
+    def __init__(self, in_feats: int, hidden_features_size: List[int], attn_num_heads: List[int],
+        feat_drops: List[float], attn_drops: List[float], alphas: List[float], 
+        residuals: List[bool], edge_types: List[str]):
         """Initializes GAT module with layer sizes.
 
         Args:
+            in_feats (int): Defines the size of the input features.
             hidden_features_size (List[int]): First element is the feature size and the rest specifies layer size.
             attn_num_heads List[int]: List of number of heads for each layer. Last layer must have only one head.
+            feat_drops List[float]: Dropout rate on feature for each layer.
+            attn_drops List[float]: Dropout rate on attention weights for each layer.
+            alphas List[float]: LeakyReLU angle of negative slope for each layer.
+            residuals List[bool]: Use residual connection for each layer or not.
             edge_types (List[str]): All edge types that are occurring in the heterogeneous network.
         """
         super(GAT, self).__init__()
         self.layers = torch.nn.ModuleList()
-        for i in range(len(hidden_features_size) - 1):
-            in_feats, out_feats, num_heads = (
-                hidden_features_size[i],
-                hidden_features_size[i + 1],
-                attn_num_heads[i],
-            )
-            gat_layer = GATConv(in_feats=in_feats, out_feats=out_feats, num_heads=num_heads, allow_zero_in_degree=True)
+        self.num_layers = len(hidden_features_size)
+        # Define activations
+        activations = [torch.nn.functional.elu for _ in range(self.num_layers - 1)]  # All activations except last layer
+        activations.append(None)
+        # Iterate through all layers
+        for i in range(self.num_layers):
+            gat_layer = GATConv(in_feats=in_feats, out_feats=hidden_features_size[i], num_heads=attn_num_heads[i], feat_drop=feat_drops[i], attn_drop=attn_drops[i], negative_slope=alphas[i], 
+                residual=residuals[i], activation=activations[i], allow_zero_in_degree=True)
             self.layers.append(
                 HeteroGraphConv({edge_type: gat_layer for edge_type in edge_types}, aggregate="sum")
             )
+            in_feats = hidden_features_size[i]
 
     def forward(self, blocks: List[dgl.graph], h: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """Performs forward pass on batches.
@@ -39,27 +48,6 @@ class GAT(torch.nn.Module):
         """ 
         for index, layer in enumerate(self.layers):
             h = layer(blocks[index], h)
-            h = {k: torch.mean(v, dim=1) for k, v in h.items()}
-            if (index != len(self.layers) - 1):  # Apply elu to every layer except last one
-                h = {k: torch.nn.functional.elu(v) for k, v in h.items()}
-
+            h = {k: torch.mean(v, dim=1) for k, v in h.items()}  # TODO: Do we need it.    
         return h
-
-    def forward_util(self, g: dgl.graph, h: torch.Tensor) -> torch.Tensor:
-        """Forward method goes over every layer in the PyTorch's ModuleList.
-
-        Args:
-            g (dgl.graph): A reference to the graph.
-            h (torch.Tensor): Input features of the graph's nodes. Shape: num_nodes*input_features_size
-
-        Returns:
-            torch.Tensor: Features after iterating over all layers.
-        """
-        for index, layer in enumerate(self.layers):
-            h = layer(g, h)
-            h = {k: torch.mean(v, dim=1) for k, v in h.items()}
-            if index != len(self.layers) - 1:  # Apply elu to every layer except last one
-                h = {k: torch.nn.functional.elu(v) for k, v in h.items()}
-        
-        return h
-
+ 

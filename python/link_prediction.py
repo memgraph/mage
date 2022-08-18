@@ -1,8 +1,11 @@
 import mgp  # Python API
+import json
 import torch
+import scipy
 import dgl  # geometric deep learning
 from dgl import AddSelfLoop
 from typing import Callable, List, Tuple, Dict
+from sklearn.model_selection import ParameterSampler
 from numpy import int32
 from dataclasses import dataclass, field
 from collections import defaultdict
@@ -48,6 +51,10 @@ from mage.link_prediction import (
     NUM_NEG_PER_POS_EDGE,
     BATCH_SIZE,
     SAMPLING_WORKERS,
+    NUM_LAYERS,
+    RESIDUAL,
+    DROPOUT,
+    ALPHA,
     MODEL_NAME,
     PREDICTOR_NAME,
     AUC_SCORE,
@@ -72,6 +79,7 @@ from mage.link_prediction import (
 @dataclass
 class LinkPredictionParameters:
     """Parameters user in LinkPrediction module.
+    :param in_feats: int -> Defines the size of the input features. It will be automatically inferred by algorithm.
     :param hidden_features_size: List[int] -> Defines the size of each hidden layer in the architecture.
     :param layer_type: str -> Layer type
     :param num_epochs: int -> Number of epochs for model training
@@ -97,7 +105,7 @@ class LinkPredictionParameters:
     :param sampling_workers (int): Number of workers that will cooperate in the sampling procedure in the training and validation.
 
     """
-
+    in_feats: int = None
     hidden_features_size: List = field(
         default_factory=lambda: [20, 10]
     )  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
@@ -146,7 +154,6 @@ reindex_dgl: Dict[int, int] = None  # Mapping of DGL indexes to original dataset
 reindex_orig: Dict[int, int] = None  # Mapping of original dataset indexes to DGL indexes
 predictor: torch.nn.Module = None  # Predictor for calculating edge scores
 model: torch.nn.Module = None
-features_size_loaded: bool = False  # If size of the features was already inserted.
 labels_concat = ":"  # string to separate labels if dealing with multiple labels per node
 
 # Lambda function to concat list of labels
@@ -232,7 +239,7 @@ def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_
         mgp.Record: It returns performance metrics obtained during the training on the training and validation dataset.
     """
     # Get global context
-    global training_results, validation_results, predictor, model, graph, reindex_dgl, reindex_orig, features_size_loaded
+    global training_results, validation_results, predictor, model, graph, reindex_dgl, reindex_orig, link_prediction_parameters
 
     # Reset parameters of the old training
     _reset_train_predict_parameters()
@@ -242,25 +249,32 @@ def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_
     graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index    
     
     # Insert in the hidden_features_size structure if needed
-    if not features_size_loaded:
+    if link_prediction_parameters.in_feats is None:
         # Get feature size
         ftr_size = max(graph.nodes[node_type].data[link_prediction_parameters.node_features_property].shape[1] for node_type in graph.ntypes)
         print(f"Ftr size: {ftr_size}")
         # Load feature size in the hidden_features_size 
         _load_feature_size(ftr_size)
 
-    print(link_prediction_parameters.hidden_features_size)
+    print(link_prediction_parameters.in_feats, link_prediction_parameters.hidden_features_size)
 
     # Split the data
     train_eid_dict, val_eid_dict = preprocess(graph=graph, split_ratio=link_prediction_parameters.split_ratio, 
         target_relation=link_prediction_parameters.target_relation)
 
+    num_layers = len(link_prediction_parameters.hidden_features_size)
+
     # Create a model
     model = create_model(
         layer_type=link_prediction_parameters.layer_type,
+        in_feats=link_prediction_parameters.in_feats,
         hidden_features_size=link_prediction_parameters.hidden_features_size,
         aggregator=link_prediction_parameters.aggregator,
         attn_num_heads=link_prediction_parameters.attn_num_heads,
+        feat_drops=[0.0 for _ in range(num_layers)],
+        attn_drops=[0.0 for _ in range(num_layers)],
+        alphas=[0.2 for _ in range(num_layers)],
+        residuals=[False for _ in range(num_layers)],
         edge_types=graph.etypes
     )
 
@@ -294,13 +308,141 @@ def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_
         link_prediction_parameters.tr_acc_patience,
         link_prediction_parameters.context_save_dir,
         link_prediction_parameters.num_neg_per_pos_edge,
-        len(link_prediction_parameters.hidden_features_size) -1,
+        num_layers,
         link_prediction_parameters.batch_size,
         link_prediction_parameters.sampling_workers
     )
     
     # Return results
     return mgp.Record(training_results=training_results, validation_results=validation_results)
+
+@mgp.read_proc
+def hyperparameter_tuning(ctx: mgp.ProcCtx, num_search_trials: int) -> mgp.Record(best_parameters=mgp.Any, best_training_result=mgp.Any, best_validation_result=mgp.Any):
+    """Optimize parameters. Function will not be enabled for user.
+
+    Args:
+        ctx (mgp.ProcCtx, optional): Reference to the process execution.
+        num_search_trials (int): Number of search trials.
+
+    Returns:
+        mgp.Record: It returns performance metrics obtained during the training on the training and validation dataset.
+    """
+    global link_prediction_parameters
+
+    # For saving best results
+    best_parameters, best_training_result, best_validation_result = None, None, None
+    delimiter = "****************************************"
+
+    # Get some data
+    # Dealing with heterogeneous graphs
+    graph, _, _ = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index    
+    
+    # Insert in the hidden_features_size structure if needed
+    if link_prediction_parameters.in_feats is None:
+        # Get feature size
+        ftr_size = max(graph.nodes[node_type].data[link_prediction_parameters.node_features_property].shape[1] for node_type in graph.ntypes)
+        print(f"Ftr size: {ftr_size}")
+        # Load feature size in the hidden_features_size 
+        _load_feature_size(ftr_size)
+
+    print(link_prediction_parameters.hidden_features_size)
+
+    # Split the data
+    train_eid_dict, val_eid_dict = preprocess(graph=graph, split_ratio=link_prediction_parameters.split_ratio, 
+        target_relation=link_prediction_parameters.target_relation)
+
+    # Specify search space
+    gat_search_space = {
+        NUM_LAYERS: [1, 2, 3],
+        HIDDEN_FEATURES_SIZE: [16, 32, 64, 128, 256, 512],
+        ATTN_NUM_HEADS: [2, 4, 6],
+        DROPOUT: scipy.stats.uniform(0, 0.6),
+        ALPHA: scipy.stats.uniform(0, 0.6),
+        RESIDUAL: [True, False],
+        LEARNING_RATE: [0.0001, 0.0005, 0.001, 0.01, 0.1],
+        BATCH_SIZE: [32, 64, 128, 256, 512],
+        PREDICTOR_TYPE: [MLP_PREDICTOR, DOT_PREDICTOR]
+    }
+ 
+    configure_generator = ParameterSampler(gat_search_space, n_iter=num_search_trials)
+
+    
+    with open("./python/mage/link_prediction/results.txt", "w") as f:
+        for configure in configure_generator:
+            num_layers = configure[NUM_LAYERS]
+            hidden_features_size = [configure[HIDDEN_FEATURES_SIZE]] * num_layers
+            attn_num_heads = [configure[ATTN_NUM_HEADS]] * num_layers
+            dropouts = [configure[DROPOUT]] * num_layers
+            alphas = [configure[ALPHA]] * num_layers
+            residuals = [configure[RESIDUAL]] * num_layers
+            lr = configure[LEARNING_RATE]
+            batch_size = configure[BATCH_SIZE]
+            predictor_type = configure[PREDICTOR_TYPE]
+
+            # Create a model
+            model = create_model(
+                layer_type=GRAPH_ATTN,
+                in_feats=link_prediction_parameters.in_feats,
+                hidden_features_size=hidden_features_size,
+                aggregator=link_prediction_parameters.aggregator,  # only for gat
+                attn_num_heads=attn_num_heads,
+                feat_drops=dropouts,
+                attn_drops=dropouts,
+                alphas=alphas,
+                residuals=residuals,
+                edge_types=graph.etypes
+            )
+
+            # Create a predictor
+            predictor = create_predictor(
+                predictor_type=predictor_type,
+                predictor_hidden_size=hidden_features_size[-1]
+            )
+
+            # Create an optimizer
+            optimizer = create_optimizer(
+                optimizer_type=link_prediction_parameters.optimizer,
+                learning_rate=lr,
+                model=model,
+                predictor=predictor,
+            )
+
+            # Call training method
+            training_results, validation_results = inner_train(graph,
+                train_eid_dict, 
+                val_eid_dict, 
+                link_prediction_parameters.target_relation,
+                model,
+                predictor,
+                optimizer,
+                link_prediction_parameters.num_epochs,
+                link_prediction_parameters.node_features_property,
+                link_prediction_parameters.console_log_freq,
+                link_prediction_parameters.checkpoint_freq,
+                link_prediction_parameters.metrics,
+                link_prediction_parameters.tr_acc_patience,
+                link_prediction_parameters.context_save_dir,
+                link_prediction_parameters.num_neg_per_pos_edge,
+                num_layers,
+                batch_size,
+                link_prediction_parameters.sampling_workers
+            )
+
+            validation_result = validation_results[-1]
+
+            f.write(json.dumps(configure) + "\n")
+            f.write(json.dumps(validation_result) + "\n")
+            f.write(delimiter + "\n")
+
+            if best_validation_result is None or best_validation_result[F1] < validation_result[F1]:
+                best_training_result = training_results[-1]
+                best_validation_result = validation_result
+                best_parameters = configure
+    
+    
+    # Return results
+    return mgp.Record(best_parameters=best_parameters, best_training_result=best_training_result, best_validation_result=best_validation_result)
+
 
 @mgp.read_proc
 def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -> mgp.Record(score=mgp.Number):
@@ -316,7 +458,7 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
         score: Probability that two nodes are connected
     """
     # TODO: what if new node is created after training and before predict? You have to map it dgl.graph representation immediately. 
-    global graph, predictor, model, reindex_orig, reindex_dgl, features_size_loaded
+    global graph, predictor, model, reindex_orig, reindex_dgl, link_prediction_parameters
 
     # If the model isn't available. Model is available if this method is called right after training or loaded from context.
     # Same goes for predictor.
@@ -346,7 +488,7 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     edge_id = graph.edge_ids(src_id, dest_id, etype=link_prediction_parameters.target_relation)
 
      # Insert in the hidden_features_size structure if needed and it is needed only if the session was lost between training and predict method call.
-    if not features_size_loaded:
+    if link_prediction_parameters.in_feats is None:
         # Get feature size
         ftr_size = max(graph.nodes[node_type].data[link_prediction_parameters.node_features_property].shape[1] for node_type in graph.ntypes)
         # Load feature size in the hidden_features_size 
@@ -387,7 +529,7 @@ def recommend(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: mgp.List[
     Returns:
         score: Probability that two nodes are connected
     """
-    global graph, predictor, model, reindex_orig, reindex_dgl
+    global graph, predictor, model, reindex_orig, reindex_dgl, link_prediction_parameters
 
     print(f"Dest vertices: {len(dest_vertices)}")
 
@@ -399,7 +541,7 @@ def recommend(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: mgp.List[
     graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx)
 
      # Insert in the hidden_features_size structure if needed and it is needed only if the session was lost between training and predict method call.
-    if not features_size_loaded:
+    if link_prediction_parameters.in_feats is None:
         # Get feature size
         ftr_size = max(graph.nodes[node_type].data[link_prediction_parameters.node_features_property].shape[1] for node_type in graph.ntypes)
         # Load feature size in the hidden_features_size 
@@ -490,7 +632,7 @@ def load_context(ctx: mgp.ProcCtx, path: str = link_prediction_parameters.contex
 
 @mgp.read_proc
 def reset_parameters(ctx: mgp.ProcCtx) -> mgp.Record(status=mgp.Any):
-    """Resets all parameters except features size loaded. 
+    """Resets all parameters.
 
     Args:
         ctx (mgp.ProcCtx): A reference to the execution context. 
@@ -528,10 +670,8 @@ def _load_feature_size(features_size: int):
     Args:
         features_size (int): Features size.
     """
-    global link_prediction_parameters, features_size_loaded
-
-    link_prediction_parameters.hidden_features_size.insert(0, features_size)
-    features_size_loaded = True
+    global link_prediction_parameters
+    link_prediction_parameters.in_feats = features_size
 
 def _process_help_function(mem_indexes: Dict[str, int], old_index: int, type_: str, features: List[int], reindex_orig: Dict[str, Dict[int, int]], reindex_dgl: Dict[str, Dict[int, int]], 
                                   index_dgl_to_features: Dict[str, Dict[int, List[int]]]) -> None:
@@ -682,7 +822,6 @@ def _validate_user_parameters(parameters: mgp.Map) -> None:
     # Define lambda type checkers
     type_checker = lambda arg, mess, real_type: None if type(arg) == real_type else raise_(Exception(mess))
 
-
     # Hidden features size
     if HIDDEN_FEATURES_SIZE in parameters.keys():
         hidden_features_size = parameters[HIDDEN_FEATURES_SIZE]
@@ -691,6 +830,7 @@ def _validate_user_parameters(parameters: mgp.Map) -> None:
         type_checker(hidden_features_size, "hidden_features_size not an iterable object. ", tuple)
 
         for hid_size in hidden_features_size:
+            type_checker(hid_size, "layer_size must be an int", int)
             if hid_size <= 0:
                  raise Exception("Layer size must be greater than 0. ")
 
@@ -915,8 +1055,7 @@ def _validate_user_parameters(parameters: mgp.Map) -> None:
         type_checker(sampling_workers, "sampling_workers must be and int", int)
 
 def _reset_train_predict_parameters() -> None:
-    """Reset global parameters that are returned by train method and used by predict method.
-    No need to reset features_size_loaded currently. 
+    """Reset global parameters that are returned by train method and used by predict method. 
     """
     global training_results, validation_results, predictor, model, graph, reindex_dgl, reindex_orig
     training_results.clear()  # clear training records from previous training

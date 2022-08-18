@@ -198,3 +198,5 @@ dist/
 
 python/mage/link_prediction/context/*
 mg_data/
+python/mage/link_prediction/hyperparameter_tuning.py
+python/mage/link_prediction/results.txt
