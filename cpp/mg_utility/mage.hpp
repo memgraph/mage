@@ -518,12 +518,8 @@ class Vertex {
   Properties properties() const { return Properties(mgp::vertex_iter_properties(ptr_, memory_), memory_); }
   Value operator[](const std::string_view property_name) const;
 
-  Edges adjacent_edges(Graph graph) const;
   Edges in_edges() const;
   Edges out_edges() const;
-
-  Vertices in_neighbors() const;
-  Vertices out_neighbors() const;
 
   /// \exception std::runtime_error node property contains value with unknown type
   bool operator==(const Vertex &other) const;
@@ -1788,10 +1784,6 @@ inline bool Vertex::HasLabel(std::string_view label) const {
 }
 
 inline Value Vertex::operator[](const std::string_view property_name) const { return properties()[property_name]; }
-
-inline Edges Vertex::adjacent_edges(Graph graph) const {
-  if (graph.directed()) return out_edges();
-}
 
 inline Edges Vertex::in_edges() const {
   auto edge_iterator = mgp::vertex_iter_in_edges(ptr_, memory_);
