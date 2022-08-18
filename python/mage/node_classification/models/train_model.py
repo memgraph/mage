@@ -1,11 +1,11 @@
 import torch
-from torch_geometric.data import Data
-from mage.node_classification.models.inductive_model import InductiveModel
+from torch_geometric.loader import NeighborLoader
 import mgp
+from tqdm import tqdm
 
 
-def model_train_step(
-    model: mgp.Any, opt: mgp.Any, data: Data, criterion: mgp.Any
+def train_epoch(
+    model: mgp.Any, opt: mgp.Any, data: mgp.Any, criterion: mgp.Any, batch_size: int
 ) -> torch.tensor:
     """In this function, one epoch of training is performed.
 
@@ -21,11 +21,30 @@ def model_train_step(
 
     model.train()
     opt.zero_grad()  # Clear gradients.
-    out = model(data.x, data.edge_index)  # Perform a single forward pass.
 
-    loss = criterion(
-        out[data.train_mask], data.y[data.train_mask]
-    )  # Compute the loss solely based on the training nodes.
-    loss.backward()  # Derive gradients.
-    opt.step()  # Update parameters based on gradients.
-    return loss.item()
+    loader = NeighborLoader(
+        data=data,
+        # Sample 30 neighbors for each node for 2 iterations
+        num_neighbors=[30] * 2,
+        # Use a default batch size for sampling training nodes
+        batch_size=batch_size,
+        input_nodes=data.train_mask,
+    )
+
+    ret = 0
+    ret_val = 0
+    for n, batch in enumerate(loader):
+
+        out = model(batch.x, batch.edge_index)  # Perform a single forward pass.
+        loss = criterion(
+            out[batch.train_mask], batch.y[batch.train_mask]
+        )  # Compute the loss solely based on the training nodes.
+        loss.backward()  # Derive gradients.
+        opt.step()  # Update parameters based on gradients.
+        val_loss = criterion(
+            out[batch.val_mask], batch.y[batch.val_mask]
+        )
+        ret += loss.item()
+        ret_val += val_loss.item()
+
+    return ret / (n + 1), ret_val / (n + 1)

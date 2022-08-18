@@ -3,7 +3,7 @@ from mage.node_classification.models.inductive_model import InductiveModel
 from mage.node_classification.models.gatjk import GATJK
 from mage.node_classification.utils.metrics import metrics
 from mage.node_classification.utils.extract_from_database import extract_from_database
-from mage.node_classification.models.train_model import model_train_step
+from mage.node_classification.models.train_model import train_epoch
 import mgp
 from tqdm import tqdm
 import torch
@@ -51,12 +51,16 @@ class TrainParams:
     NUM_EPOCHS = "num_epochs"
     CONSOLE_LOG_FREQ = "console_log_freq"
     CHECKPOINT_FREQ = "checkpoint_freq"
+    BATCH_SIZE = "batch_size"
 
 
 class OtherParams:
     DEVICE_TYPE = "device_type"
     PATH_TO_MODEL = "path_to_model"
     REINDEXING = "reindexing"
+    PATH_TO_MODEL_LAST = "path_to_model_last"
+    PATH_TO_MODEL_SECOND_LAST = "path_to_model_second_last"
+    PATH_TO_MODEL_THIRD_LAST = "path_to_model_third_last"
 
 
 class Modelling:
@@ -84,6 +88,7 @@ DEFINED_INPUT_TYPES = {
     OtherParams.DEVICE_TYPE: str,
     TrainParams.CONSOLE_LOG_FREQ: int,
     TrainParams.CHECKPOINT_FREQ: int,
+    TrainParams.BATCH_SIZE: int,
     ModelParams.AGGREGATOR: str,
     DataParams.METRICS: list,
     OtherParams.PATH_TO_MODEL: str,
@@ -103,6 +108,7 @@ DEFAULT_VALUES = {
     OtherParams.DEVICE_TYPE: "cpu",
     TrainParams.CONSOLE_LOG_FREQ: 5,
     TrainParams.CHECKPOINT_FREQ: 5,
+    TrainParams.BATCH_SIZE: 64,
     ModelParams.AGGREGATOR: "mean",
     DataParams.METRICS: [
         "loss",
@@ -112,7 +118,10 @@ DEFAULT_VALUES = {
         "recall",
         "num_wrong_examples",
     ],
-    OtherParams.PATH_TO_MODEL: "../pytorch_models/model",
+    OtherParams.PATH_TO_MODEL: "pytorch_models/model",
+    OtherParams.PATH_TO_MODEL_LAST: "pytorch_models/model_last",
+    OtherParams.PATH_TO_MODEL_SECOND_LAST: "pytorch_models/model_second_last",
+    OtherParams.PATH_TO_MODEL_THIRD_LAST: "pytorch_models/model_third_last",
     OtherParams.REINDEXING: {},
 }
 
@@ -180,8 +189,7 @@ def declare_model_and_data(ctx: mgp.ProcCtx):
         Modelling.model = GATJK(
             in_channels=global_params[ModelParams.IN_CHANNELS],
             hidden_features_size=global_params[ModelParams.HIDDEN_FEATURES_SIZE],
-            out_channels=global_params[ModelParams.OUT_CHANNELS],
-            aggr=global_params[ModelParams.AGGREGATOR],
+            out_channels=global_params[ModelParams.OUT_CHANNELS]
         )
     else:
         Modelling.model = InductiveModel(
@@ -298,7 +306,7 @@ def set_model_parameters(
 
     params = {**DEFAULT_VALUES, **params}  # override any default parameters
 
-    print(params)
+    #print(params)
 
     if not is_correctly_typed(DEFINED_INPUT_TYPES, params):
         raise Exception(
@@ -337,8 +345,8 @@ def set_model_parameters(
 
 @mgp.read_proc
 def train(
-    no_epochs: int = 100,
-) -> mgp.Record(epoch=int, loss=float, train_log=mgp.Any, val_log=mgp.Any):
+    no_epochs: int = 100, patience: int = 10
+) -> mgp.Record(epoch=int, loss=float, val_loss=float, train_log=mgp.Any, val_log=mgp.Any):
     """This function performs training of model. Before it, function set_model_parameters
     must be executed. Otherwise, global variables data and model will be equal
     to None and AssertionError will be raised.
@@ -353,13 +361,37 @@ def train(
     global Modelling
     if Modelling.data == None:
         raise Exception("Dataset is not loaded. Load dataset first!")
-
+    
     global_params[TrainParams.NUM_EPOCHS] = no_epochs
+    
+    try:
+        os.mkdir(os.getcwd()+'/pytorch_models')
+    except FileExistsError as e:
+        print(e)
+    second_last, third_last = False, False
+    
+    last_loss = 100
+    trigger_times = 0
 
     for epoch in tqdm(range(1, no_epochs + 1)):
-        loss = model_train_step(
-            Modelling.model, Modelling.opt, Modelling.data, Modelling.criterion
+        loss, val_loss = train_epoch(
+            Modelling.model, Modelling.opt, Modelling.data, Modelling.criterion, global_params[TrainParams.BATCH_SIZE]
         )
+        
+        # Early stopping
+        
+        if val_loss > last_loss:
+            trigger_times += 1
+            print('Trigger Times:', trigger_times)
+
+            if trigger_times >= patience:
+                print('Early stopping!')
+                break
+
+        else:
+            trigger_times = 0
+
+        last_loss = val_loss
 
         global logged_data
 
@@ -378,18 +410,36 @@ def train(
                 global_params[DataParams.METRICS],
             )
             logged_data.append(
-                {"epoch": epoch, "loss": loss, "train": dict_train, "val": dict_val}
+                {"epoch": epoch, "loss": loss, "val_loss": val_loss, "train": dict_train, "val": dict_val}
             )
 
             print(
-                f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Accuracy: {logged_data[-1]["train"]["accuracy"]:.4f}, Accuracy: {logged_data[-1]["val"]["accuracy"]:.4f}'
+                f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Val Loss: {val_loss:.4f}, Accuracy: {logged_data[-1]["train"]["accuracy"]:.4f}, Accuracy: {logged_data[-1]["val"]["accuracy"]:.4f}'
             )
         # print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}')
 
+        
+        if epoch % global_params[TrainParams.CHECKPOINT_FREQ] == 0:
+            
+            if third_last and second_last:
+                torch.save(torch.load(global_params[OtherParams.PATH_TO_MODEL_SECOND_LAST]), global_params[OtherParams.PATH_TO_MODEL_THIRD_LAST])
+            if second_last:
+                torch.save(torch.load(global_params[OtherParams.PATH_TO_MODEL_LAST]), global_params[OtherParams.PATH_TO_MODEL_SECOND_LAST])
+            
+            import pathlib
+            print(pathlib.Path().resolve())
+            torch.save(Modelling.model.state_dict(), global_params[OtherParams.PATH_TO_MODEL_LAST])
+            if not second_last:
+                second_last = True
+            elif not third_last:
+                third_last = True
+
+            
     return [
         mgp.Record(
             epoch=logged_data[k]["epoch"],
             loss=logged_data[k]["loss"],
+            val_loss=logged_data[k]["val_loss"],
             train_log=logged_data[k]["train"],
             val_log=logged_data[k]["val"],
         )
@@ -424,6 +474,7 @@ def get_training_data() -> mgp.Record(
         mgp.Record(
             epoch=logged_data[k]["epoch"],
             loss=logged_data[k]["loss"],
+            val_loss=logged_data[k]["val_loss"],
             train_log=logged_data[k]["train"],
             val_log=logged_data[k]["val"],
         )

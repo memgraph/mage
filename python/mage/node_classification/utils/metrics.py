@@ -29,7 +29,7 @@ def metrics(
     ret = {}
 
     multiclass = False
-    if len(set(Data.y)) > 2:
+    if len(set(data.y.detach().numpy())) > 2:
         multiclass = True
 
     if "accuracy" in options:
