@@ -50,7 +50,8 @@ TDest MemcpyCast(TSrc src) {
 }  // namespace util
 
 // Forward declarations
-class GraphVertices;
+class Vertices;
+using GraphVertices = Vertices;
 class GraphEdges;
 class Edges;
 class Vertex;
@@ -116,16 +117,16 @@ class Graph {
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-// GraphVertices:
+// Vertices:
 
-class GraphVertices {
+class Vertices {
  public:
-  explicit GraphVertices(mgp_vertices_iterator *vertices_iterator, mgp_memory *memory)
+  explicit Vertices(mgp_vertices_iterator *vertices_iterator, mgp_memory *memory)
       : vertices_iterator_(vertices_iterator), memory_(memory){};
 
   class Iterator {
    public:
-    friend class GraphVertices;
+    friend class Vertices;
 
     Iterator(mgp_vertices_iterator *vertices_iterator, mgp_memory *memory);
     ~Iterator();
@@ -243,9 +244,6 @@ class Edges {
 
 /// \brief View of node properties.
 class Properties {
- private:
-  using KeyValuePair = std::pair<std::string_view, Value>;
-
  public:
   explicit Properties(mgp_properties_iterator *properties_iterator, mgp_memory *memory);
 
@@ -412,6 +410,14 @@ class List {
 ////////////////////////////////////////////////////////////////////////////////
 // Map:
 
+struct MapItem {
+  std::string_view key;
+  Value value;
+
+  bool operator==(MapItem other) { return key == other.key && value == other.value; }
+  bool operator!=(MapItem other) { return !(*this == other); }
+};
+
 /// \brief Wrapper class for \ref mgp_map.
 class Map {
  private:
@@ -434,6 +440,31 @@ class Map {
   Map &operator=(Map &&other) = delete;
 
   ~Map();
+
+  class Iterator {
+   public:
+    friend class Map;
+
+    Iterator(mgp_map_items_iterator *map_items_iterator, mgp_memory *memory);
+    ~Iterator();
+    Iterator &operator++();
+    bool operator==(Iterator other) const;
+    bool operator!=(Iterator other) const { return !(*this == other); }
+    MapItem operator*();
+    // iterator traits
+    using difference_type = MapItem;
+    using value_type = MapItem;
+    using pointer = const MapItem *;
+    using reference = const MapItem &;
+    using iterator_category = std::forward_iterator_tag;
+
+   private:
+    mgp_map_items_iterator *map_items_iterator_ = nullptr;
+    mgp_memory *memory_;
+  };
+
+  Iterator begin();
+  Iterator end();
 
   size_t size() const { return mgp::map_size(ptr_); }
   bool empty() const { return size() == 0; }
@@ -487,11 +518,12 @@ class Vertex {
   Properties properties() const { return Properties(mgp::vertex_iter_properties(ptr_, memory_), memory_); }
   Value operator[](const std::string_view property_name) const;
 
+  Edges adjacent_edges(Graph graph) const;
   Edges in_edges() const;
   Edges out_edges() const;
 
-  GraphVertices in_neighbors() const;
-  GraphVertices out_neighbors() const;
+  Vertices in_neighbors() const;
+  Vertices out_neighbors() const;
 
   /// \exception std::runtime_error node property contains value with unknown type
   bool operator==(const Vertex &other) const;
@@ -1280,9 +1312,9 @@ bool Graph::Contains(const Edge &edge) const {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// GraphVertices:
+// Vertices:
 
-inline GraphVertices::Iterator::Iterator(mgp_vertices_iterator *vertices_iterator, mgp_memory *memory)
+inline Vertices::Iterator::Iterator(mgp_vertices_iterator *vertices_iterator, mgp_memory *memory)
     : memory_(memory), vertices_iterator_(vertices_iterator) {
   if (vertices_iterator_ == nullptr) return;
   if (mgp::vertices_iterator_get(vertices_iterator_) == nullptr) {
@@ -1291,13 +1323,13 @@ inline GraphVertices::Iterator::Iterator(mgp_vertices_iterator *vertices_iterato
   }
 }
 
-inline GraphVertices::Iterator::~Iterator() {
+inline Vertices::Iterator::~Iterator() {
   if (vertices_iterator_ != nullptr) {
     mgp::vertices_iterator_destroy(vertices_iterator_);
   }
 }
 
-inline GraphVertices::Iterator &GraphVertices::Iterator::operator++() {
+inline Vertices::Iterator &Vertices::Iterator::operator++() {
   if (vertices_iterator_ != nullptr) {
     auto next = mgp::vertices_iterator_next(vertices_iterator_);
 
@@ -1311,13 +1343,13 @@ inline GraphVertices::Iterator &GraphVertices::Iterator::operator++() {
   return *this;
 }
 
-inline GraphVertices::Iterator GraphVertices::Iterator::operator++(int) {
-  GraphVertices::Iterator retval = *this;
+inline Vertices::Iterator Vertices::Iterator::operator++(int) {
+  Vertices::Iterator retval = *this;
   ++(*this);
   return retval;
 }
 
-inline bool GraphVertices::Iterator::operator==(Iterator other) const {
+inline bool Vertices::Iterator::operator==(Iterator other) const {
   if (vertices_iterator_ == nullptr && other.vertices_iterator_ == nullptr) {
     return true;
   }
@@ -1329,16 +1361,16 @@ inline bool GraphVertices::Iterator::operator==(Iterator other) const {
          index_ == other.index_;
 }
 
-inline Vertex GraphVertices::Iterator::operator*() {
+inline Vertex Vertices::Iterator::operator*() {
   if (vertices_iterator_ == nullptr) return Vertex((const mgp_vertex *)nullptr, memory_);
 
   auto vertex = Vertex(mgp::vertices_iterator_get(vertices_iterator_), memory_);
   return vertex;
 }
 
-inline GraphVertices::Iterator GraphVertices::begin() { return Iterator(vertices_iterator_, memory_); }
+inline Vertices::Iterator Vertices::begin() { return Iterator(vertices_iterator_, memory_); }
 
-inline GraphVertices::Iterator GraphVertices::end() { return Iterator(nullptr, memory_); }
+inline Vertices::Iterator Vertices::end() { return Iterator(nullptr, memory_); }
 
 ////////////////////////////////////////////////////////////////////////////////
 // GraphEdges:
@@ -1634,6 +1666,60 @@ inline bool List::operator==(const List &other) const { return util::ListsEqual(
 ////////////////////////////////////////////////////////////////////////////////
 // Map:
 
+inline Map::Iterator::Iterator(mgp_map_items_iterator *map_items_iterator, mgp_memory *memory)
+    : map_items_iterator_(map_items_iterator), memory_(memory) {
+  if (map_items_iterator_ == nullptr) return;
+  if (mgp::map_items_iterator_get(map_items_iterator_) == nullptr) {
+    mgp::map_items_iterator_destroy(map_items_iterator_);
+    map_items_iterator_ = nullptr;
+  }
+}
+
+inline Map::Iterator::~Iterator() {
+  if (map_items_iterator_ != nullptr) {
+    mgp::map_items_iterator_destroy(map_items_iterator_);
+  }
+}
+
+inline Map::Iterator &Map::Iterator::operator++() {
+  if (map_items_iterator_ != nullptr) {
+    auto next = mgp::map_items_iterator_next(map_items_iterator_);
+
+    if (next == nullptr) {
+      mgp::map_items_iterator_destroy(map_items_iterator_);
+      map_items_iterator_ = nullptr;
+      return *this;
+    }
+  }
+  return *this;
+}
+
+inline bool Map::Iterator::operator==(Iterator other) const {
+  if (map_items_iterator_ == nullptr && other.map_items_iterator_ == nullptr) {
+    return true;
+  }
+  if (map_items_iterator_ == nullptr || other.map_items_iterator_ == nullptr) {
+    return false;
+  }
+  return mgp::map_items_iterator_get(map_items_iterator_) == mgp::map_items_iterator_get(other.map_items_iterator_);
+}
+
+inline MapItem Map::Iterator::operator*() {
+  // TODO: this should be handled better
+  if (map_items_iterator_ == nullptr) return;
+
+  auto raw_map_item = mgp::map_items_iterator_get(map_items_iterator_);
+
+  auto map_key = mgp::map_item_key(raw_map_item);
+  auto map_value = Value(mgp::map_item_value(raw_map_item), memory_);
+
+  return MapItem{.key = map_key, .value = map_value};
+}
+
+inline Map::Iterator Map::begin() { return Iterator(mgp::map_iter_items(ptr_, memory_), memory_); }
+
+inline Map::Iterator Map::end() { return Iterator(nullptr, memory_); }
+
 inline Map::Map(Map &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
 
 inline Map::Map(const std::map<std::string_view, Value> &items, mgp_memory *memory) {
@@ -1702,6 +1788,10 @@ inline bool Vertex::HasLabel(std::string_view label) const {
 }
 
 inline Value Vertex::operator[](const std::string_view property_name) const { return properties()[property_name]; }
+
+inline Edges Vertex::adjacent_edges(Graph graph) const {
+  if (graph.directed()) return out_edges();
+}
 
 inline Edges Vertex::in_edges() const {
   auto edge_iterator = mgp::vertex_iter_in_edges(ptr_, memory_);
