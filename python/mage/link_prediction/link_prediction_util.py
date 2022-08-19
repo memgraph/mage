@@ -1,6 +1,8 @@
+from cgitb import enable
 from pickle import FALSE
 from platform import node
 import torch
+from torch import autocast
 import torch.nn.functional as F
 import numpy as np
 import dgl
@@ -178,7 +180,8 @@ def inner_train(graph: dgl.graph,
                     num_neg_per_pos_edge: int,
                     num_layers: int,
                     batch_size: int,
-                    sampling_workers: int
+                    sampling_workers: int,
+                    device_type: str
                     ) -> Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]:
     """Batch training method. 
 
@@ -202,16 +205,16 @@ def inner_train(graph: dgl.graph,
         num_layers (int): Number of layers in the GNN architecture.
         batch_size (int): Batch size used in both training and validation procedure.
         sampling_workers (int): Number of workers that will cooperate in the sampling procedure in the training and validation.
+        device_type (str): cpu or cuda
     Returns:
         Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]: Training and validation results. _
     """
-    device = torch.device("cpu")
     # Define what will be returned
     training_results, validation_results = [], []
 
     # First define all necessary samplers
     negative_sampler = dgl.dataloading.negative_sampler.GlobalUniform(k=num_neg_per_pos_edge, replace=False)
-    sampler = dgl.dataloading.MultiLayerFullNeighborSampler(num_layers=num_layers, output_device=device)  # gather messages from all node neighbors
+    sampler = dgl.dataloading.MultiLayerFullNeighborSampler(num_layers=num_layers)  # gather messages from all node neighbors
     sampler = dgl.dataloading.as_edge_prediction_sampler(sampler, negative_sampler=negative_sampler, exclude="self")  # TODO: Add "self" and change that to reverse edges sometime
     
     # Define training and validation dictionaries
@@ -229,7 +232,6 @@ def inner_train(graph: dgl.graph,
         shuffle=True,       # Whether to shuffle the nodes for every epoch
         drop_last=False,    # Whether to drop the last incomplete batch
         num_workers=sampling_workers, # Number of sampling processes
-        device=device       
     )
 
     # Define validation EdgeDataLoader
@@ -241,7 +243,6 @@ def inner_train(graph: dgl.graph,
         shuffle=True,       # Whether to shuffle the nodes for every epoch
         drop_last=False,    # Whether to drop the last incomplete batch
         num_workers=sampling_workers,       # Number of sampler processes
-        device=device
     )
 
     print(f"Canonical etypes: {graph.canonical_etypes}")
@@ -261,44 +262,38 @@ def inner_train(graph: dgl.graph,
     max_val_acc, num_val_acc_drop = (-1.0, 0,)  # last maximal accuracy and number of epochs it is dropping
 
     # Iterate for every epoch
+    print(device_type)
     for epoch in range(1, num_epochs+1):
         # Evaluation epoch
         if epoch % console_log_freq == 0:
             print("Epoch: ", epoch)
             epoch_training_result = defaultdict(float)
             epoch_validation_result = defaultdict(float)
-        
         # Training batch
         num_batches = 0
         model.train()
         tr_finished = False
         for _, pos_graph, neg_graph, blocks in train_dataloader:
             input_features = blocks[0].ndata[node_features_property]
-
             # Perform forward pass
             probs, labels, loss_output = batch_forward_pass(model, predictor, loss, m, target_relation, input_features, pos_graph, neg_graph, blocks)
-
             # Make an optimization step
             optimizer.zero_grad()
             loss_output.backward()  # ***This line generates warning***
             optimizer.step()
-
             # Evaluate on training set
             if epoch % console_log_freq == 0:
                 evaluate(metrics, labels, probs, epoch_training_result, threshold, epoch, loss_output.item(), add_)
-                            # Increment num batches
+            # Increment num batches
             num_batches +=1 
-        
         # Edit train results and evaluate on validation set
         if epoch % console_log_freq == 0:
             epoch_training_result = {key: format_float(avg_(val, num_batches)) if key != EPOCH else val for key, val in epoch_training_result.items()}
             training_results.append(epoch_training_result)
-            
             # Check if training finished
             if ACCURACY in metrics and epoch_training_result[ACCURACY] == 1.0 and epoch > 1:
                 print("Model reached accuracy of 1.0, exiting...")
                 tr_finished = True
-
             # Evaluate on the validation set
             model.eval()
             with torch.no_grad():
@@ -307,16 +302,13 @@ def inner_train(graph: dgl.graph,
                     input_features = blocks[0].ndata[node_features_property]
                     # Perform forward pass
                     probs, labels, loss_output = batch_forward_pass(model, predictor, loss, m, target_relation, input_features, pos_graph, neg_graph, blocks)
-
                     # Add to the epoch_validation_result for saving
                     evaluate(metrics, labels, probs, epoch_validation_result, threshold, epoch, loss_output.item(), add_)
                     num_batches += 1
-
             if num_batches > 0: # Because it is possible that user specified not to have a validation dataset
                 # Average over batches    
                 epoch_validation_result = {key: format_float(avg_(val, num_batches)) if key != EPOCH else val for key, val in epoch_validation_result.items()}
                 validation_results.append(epoch_validation_result)
-
                 if ACCURACY in metrics:  # If user doesn't want to have accuracy information, it cannot be checked for patience.
                     # Patience check
                     if epoch_validation_result[ACCURACY] <= max_val_acc:
@@ -324,16 +316,14 @@ def inner_train(graph: dgl.graph,
                     else:
                         max_val_acc = epoch_validation_result[ACCURACY]
                         num_val_acc_drop = 0
-
                     # Stop the training if necessary
                     if num_val_acc_drop == tr_acc_patience:
                         print("Stopped because of validation criteria. ")
                         break
-
+                
         # Save the model if necessary
         if epoch % checkpoint_freq == 0:
             _save_context(model, predictor, context_save_dir)
-
         # All examples learnt
         if tr_finished:
             break
@@ -382,24 +372,3 @@ def inner_predict(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl
         prob = torch.sigmoid(score)
         # print("Probability: ", prob.item())
         return prob.item()
-        
-# Existing
-# 591017->49847
-# 49847->2440
-# 591017->2440
-# 1128856->75969
-# 31336->31349
-# non-existing
-# 31336->1106406
-# 31336->37879
-# 31336->1126012
-# 31336->1107140
-# 31336->1102850
-# 31336->1106148
-# 31336->1123188
-# 31336->1128990
-
-# Telecom recommendations
-# 8779-QRDMV
-# 7495-OOKFY
-

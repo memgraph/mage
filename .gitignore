@@ -200,3 +200,5 @@ python/mage/link_prediction/context/*
 mg_data/
 python/mage/link_prediction/hyperparameter_tuning.py
 python/mage/link_prediction/results.txt
+python/mage/link_prediction/random_customer_results.txt
+python/mage/link_prediction/cora_results.txt

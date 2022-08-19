@@ -136,7 +136,7 @@ class LinkPredictionParameters:
     predictor_type: str =  MLP_PREDICTOR
     attn_num_heads: List[int] = field(default_factory=lambda: [4, 1])
     tr_acc_patience: int = 5
-    context_save_dir: str = "./python/mage/link_prediction/context/"  # TODO: When the development finishes
+    context_save_dir: str = "/home/andi/Memgraph/code/mage/python/mage/link_prediction/context/"  # TODO: When the development finishes
     target_relation: str = None
     num_neg_per_pos_edge: int = 5
     batch_size: int = 512
@@ -206,7 +206,7 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
         if not hasattr(link_prediction_parameters, key):
             return mgp.Record(
                 status=1,
-                message="No attribute " + key + " in class LinkPredictionParameters",
+                message="Unknown parameter. ",
             )
         try:
             setattr(link_prediction_parameters, key, value)
@@ -310,7 +310,8 @@ def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_
         link_prediction_parameters.num_neg_per_pos_edge,
         num_layers,
         link_prediction_parameters.batch_size,
-        link_prediction_parameters.sampling_workers
+        link_prediction_parameters.sampling_workers,
+        link_prediction_parameters.device_type
     )
     
     # Return results
@@ -360,15 +361,17 @@ def hyperparameter_tuning(ctx: mgp.ProcCtx, num_search_trials: int) -> mgp.Recor
         ALPHA: scipy.stats.uniform(0, 0.6),
         RESIDUAL: [True, False],
         LEARNING_RATE: [0.0001, 0.0005, 0.001, 0.01, 0.1],
-        BATCH_SIZE: [32, 64, 128, 256, 512],
+        BATCH_SIZE: [128, 256, 512],
         PREDICTOR_TYPE: [MLP_PREDICTOR, DOT_PREDICTOR]
     }
  
     configure_generator = ParameterSampler(gat_search_space, n_iter=num_search_trials)
 
     
-    with open("./python/mage/link_prediction/results.txt", "w") as f:
-        for configure in configure_generator:
+    with open("/home/andi/Memgraph/code/mage/python/mage/link_prediction/results.txt", "w") as f:
+        for i, configure in enumerate(configure_generator):
+            print("Configuration num: ", i+1)
+            print("Configuration: ", configure)
             num_layers = configure[NUM_LAYERS]
             hidden_features_size = [configure[HIDDEN_FEATURES_SIZE]] * num_layers
             attn_num_heads = [configure[ATTN_NUM_HEADS]] * num_layers
@@ -425,7 +428,8 @@ def hyperparameter_tuning(ctx: mgp.ProcCtx, num_search_trials: int) -> mgp.Recor
                 link_prediction_parameters.num_neg_per_pos_edge,
                 num_layers,
                 batch_size,
-                link_prediction_parameters.sampling_workers
+                link_prediction_parameters.sampling_workers,
+                link_prediction_parameters.device_type
             )
 
             validation_result = validation_results[-1]
@@ -433,11 +437,13 @@ def hyperparameter_tuning(ctx: mgp.ProcCtx, num_search_trials: int) -> mgp.Recor
             f.write(json.dumps(configure) + "\n")
             f.write(json.dumps(validation_result) + "\n")
             f.write(delimiter + "\n")
+            f.flush()
 
             if best_validation_result is None or best_validation_result[F1] < validation_result[F1]:
                 best_training_result = training_results[-1]
                 best_validation_result = validation_result
                 best_parameters = configure
+                print(best_validation_result)
     
     
     # Return results
@@ -516,7 +522,7 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     return result
 
 @mgp.read_proc
-def recommend(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: mgp.List[mgp.Vertex], k: int) -> mgp.Record(score=mgp.Number, recommendation=mgp.Vertex):
+def recommended_vertex(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: mgp.List[mgp.Vertex], k: int) -> mgp.Record(score=mgp.Number, recommendation=mgp.Vertex):
     """Recommend method. It is assumed that nodes are already added to the original graph and our goal is to predict whether there is an edge between two nodes or not. Even if the edge exists,
      method can be used. Recommends k nodes based on edge scores. 
 
@@ -610,10 +616,13 @@ def get_training_results(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.A
     """
     global training_results, validation_results
 
+    if training_results is None or validation_results is None:
+        raise Exception("Training results are outdated or train method wasn't called. ")
+
     return mgp.Record(training_results=training_results, validation_results=validation_results)
 
 @mgp.read_proc
-def load_context(ctx: mgp.ProcCtx, path: str = link_prediction_parameters.context_save_dir) -> mgp.Record(status=mgp.Any):
+def load_model(ctx: mgp.ProcCtx, path: str = link_prediction_parameters.context_save_dir) -> mgp.Record(status=mgp.Any):
     """Loads torch model from given path. If the path doesn't exist, underlying exception is thrown.
     If the path argument is not given, it loads from the default path. If the user has changed path and the context was deleted 
     then he/she needs to send that parameter here.
@@ -1058,8 +1067,8 @@ def _reset_train_predict_parameters() -> None:
     """Reset global parameters that are returned by train method and used by predict method. 
     """
     global training_results, validation_results, predictor, model, graph, reindex_dgl, reindex_orig
-    training_results.clear()  # clear training records from previous training
-    validation_results.clear()  # clear validation record from previous training
+    training_results = None  # clear training records from previous training
+    validation_results = None  # clear validation record from previous training
     predictor = None  # Delete old predictor and create a new one in link_prediction_util.train method\
     model = None  # Annulate old model
     graph = None  # Set graph to None
