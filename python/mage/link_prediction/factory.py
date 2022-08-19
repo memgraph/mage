@@ -31,16 +31,11 @@ def create_optimizer(
     Returns:
         torch.nn.Optimizer: Optimizer used in the training.
     """
-    if optimizer_type.upper() == ADAM_OPT:
-        return torch.optim.Adam(
-            itertools.chain(model.parameters(), predictor.parameters()),
-            lr=learning_rate,
-        )
-    elif optimizer_type.upper() == SGD_OPT:
-        return torch.optim.SGD(
-            itertools.chain(model.parameters(), predictor.parameters()),
-            lr=learning_rate,
-        )
+    optimizer_jump_table = {ADAM_OPT: torch.optim.Adam, SGD_OPT: torch.optim.SGD}
+    optimizer_type = optimizer_type.upper()
+    if optimizer_type in optimizer_jump_table:
+        return optimizer_jump_table[optimizer_type](itertools.chain(model.parameters(), predictor.parameters()),
+            lr=learning_rate,)
     else:
         raise Exception(f"Optimizer {optimizer_type} not supported. ")
 
@@ -80,7 +75,6 @@ def create_model(
             alphas=alphas, residuals=residuals, edge_types=edge_types)
     else:
         raise Exception(f"Layer type {layer_type} not supported. ")
-
 
 def create_predictor(predictor_type: str, predictor_hidden_size: int) -> torch.nn.Module:
     """Create a predictor based on a given predictor type.

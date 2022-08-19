@@ -2,6 +2,9 @@ from typing import Dict, Tuple
 import torch
 import torch.nn.functional as F
 import dgl
+from mage.link_prediction.constants import (
+    NODE_EMBEDDINGS, EDGE_SCORE
+)
 
 class MLPPredictor(torch.nn.Module):
     def __init__(self, h_feats: int) -> None:
@@ -18,8 +21,8 @@ class MLPPredictor(torch.nn.Module):
         Returns:
             Dict: A dictionary of new edge features
         """
-        h = torch.cat([edges.src["node_embeddings"], edges.dst["node_embeddings"]], 1)
-        return {"score": self.W2(F.relu(self.W1(h))).squeeze(1)}
+        h = torch.cat([edges.src[NODE_EMBEDDINGS], edges.dst[NODE_EMBEDDINGS]], 1)
+        return {EDGE_SCORE: self.W2(F.relu(self.W1(h))).squeeze(1)}
 
     def forward(self, g: dgl.graph, node_embeddings: Dict[str, torch.Tensor], target_relation: str=None) -> torch.Tensor:
         """Calculates forward pass of MLPPredictor.
@@ -33,10 +36,10 @@ class MLPPredictor(torch.nn.Module):
         """
         with g.local_scope():
             for node_type in node_embeddings.keys():  # Iterate over all node_types. # TODO: Maybe it can be removed if features are already saved in the graph.
-                g.nodes[node_type].data["node_embeddings"] = node_embeddings[node_type]
+                g.nodes[node_type].data[NODE_EMBEDDINGS] = node_embeddings[node_type]
 
             g.apply_edges(self.apply_edges, etype=target_relation)
-            scores = g.edata["score"]
+            scores = g.edata[EDGE_SCORE]
             if type(scores) == dict:
                 if type(target_relation) == tuple: # Tuple[str, str, str] identification
                     scores = scores[target_relation]

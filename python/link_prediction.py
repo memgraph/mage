@@ -17,6 +17,17 @@ from mage.link_prediction import (
     create_model,
     create_optimizer,
     create_predictor,
+    proj_0,
+    validate_user_parameters,
+    Metrics,
+    Predictors,
+    Reindex,
+    Context,
+    Models,
+    Optimizers,
+    Devices,
+    Aggregators,
+    Parameters,
     GRAPH_SAGE,
     GRAPH_ATTN,
     ADAM_OPT,
@@ -70,8 +81,11 @@ from mage.link_prediction import (
     TRUE_POSITIVES,
     FALSE_POSITIVES,
     TRUE_NEGATIVES,
-    FALSE_NEGATIVES
+    FALSE_NEGATIVES,
+    DGL,
+    MEMGRAPH
 )
+from mage.python.mage.link_prediction.constants import DGL
 ##############################
 # classes and data structures
 ##############################
@@ -109,9 +123,9 @@ class LinkPredictionParameters:
     hidden_features_size: List = field(
         default_factory=lambda: [20, 10]
     )  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
-    layer_type: str = GRAPH_ATTN
+    layer_type: str = ModelConstants.GRAPH_ATTN
     num_epochs: int = 10
-    optimizer: str = ADAM_OPT
+    optimizer: str = OptimizerConstants.ADAM_OPT
     learning_rate: float = 0.01
     split_ratio: float = 0.8
     node_features_property: str = "features"
@@ -121,16 +135,16 @@ class LinkPredictionParameters:
     aggregator: str = POOL_AGG
     metrics: List = field(
         default_factory=lambda: [
-            LOSS,
-            ACCURACY,
-            AUC_SCORE,
-            PRECISION,
-            RECALL,
-            F1,
-            TRUE_POSITIVES,
-            FALSE_POSITIVES,
-            TRUE_NEGATIVES,
-            FALSE_NEGATIVES
+            MetricsConstants.LOSS,
+            MetricsConstants.ACCURACY,
+            MetricsConstants.AUC_SCORE,
+            MetricsConstants.PRECISION,
+            MetricsConstants.RECALL,
+            MetricsConstants.F1,
+            MetricsConstants.TRUE_POSITIVES,
+            MetricsConstants.FALSE_POSITIVES,
+            MetricsConstants.TRUE_NEGATIVES,
+            MetricsConstants.FALSE_NEGATIVES
         ]
     )
     predictor_type: str =  MLP_PREDICTOR
@@ -150,8 +164,7 @@ link_prediction_parameters: LinkPredictionParameters = LinkPredictionParameters(
 training_results: List[Dict[str, float]] = list()  # List of all output training records. String is the metric's name and float represents value.
 validation_results: List[Dict[str, float]] = (list())  # List of all output validation results. String is the metric's name and float represents value in the Dictionary inside.
 graph: dgl.graph = None  # Reference to the graph. This includes training and validation.
-reindex_dgl: Dict[int, int] = None  # Mapping of DGL indexes to original dataset indexes
-reindex_orig: Dict[int, int] = None  # Mapping of original dataset indexes to DGL indexes
+reindex: Dict[str, Dict[str, Dict[int, int]]] = None  # Mapping of DGL indexes to original dataset indexes for all node types and reverse.
 predictor: torch.nn.Module = None  # Predictor for calculating edge scores
 model: torch.nn.Module = None
 labels_concat = ":"  # string to separate labels if dealing with multiple labels per node
@@ -200,7 +213,7 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
     """
     global link_prediction_parameters
 
-    _validate_user_parameters(parameters=parameters)
+    validate_user_parameters(parameters=parameters)
     
     for key, value in parameters.items():
         if not hasattr(link_prediction_parameters, key):
@@ -239,14 +252,14 @@ def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_
         mgp.Record: It returns performance metrics obtained during the training on the training and validation dataset.
     """
     # Get global context
-    global training_results, validation_results, predictor, model, graph, reindex_dgl, reindex_orig, link_prediction_parameters
+    global training_results, validation_results, predictor, model, graph, reindex, link_prediction_parameters
 
     # Reset parameters of the old training
     _reset_train_predict_parameters()
 
     # Get some data
     # Dealing with heterogeneous graphs
-    graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index    
+    graph, reindex = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index    
     
     # Insert in the hidden_features_size structure if needed
     if link_prediction_parameters.in_feats is None:
@@ -463,8 +476,7 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     Returns:
         score: Probability that two nodes are connected
     """
-    # TODO: what if new node is created after training and before predict? You have to map it dgl.graph representation immediately. 
-    global graph, predictor, model, reindex_orig, reindex_dgl, link_prediction_parameters
+    global graph, predictor, model, reindex, link_prediction_parameters
 
     # If the model isn't available. Model is available if this method is called right after training or loaded from context.
     # Same goes for predictor.
@@ -472,15 +484,15 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
         raise Exception("No trained model available to the system. Train or load it first. ")
 
     # Load graph again so you find nodes that were possibly added between train and prediction
-    graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
+    graph, reindex = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
 
     # Create dgl graph representation
     src_old_id, src_type = src_vertex.id, merge_labels(src_vertex.labels)
     dest_old_id, dest_type = dest_vertex.id, merge_labels(dest_vertex.labels)
 
     # Get dgl ids
-    src_id = reindex_orig[src_type][src_old_id]
-    dest_id = reindex_orig[dest_type][dest_old_id]
+    src_id = reindex[MEMGRAPH][src_type][src_old_id]
+    dest_id = reindex[MEMGRAPH][dest_type][dest_old_id]
     
     # Init edge properties
     edge_added, edge_id = False, -1
@@ -535,7 +547,7 @@ def recommended_vertex(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: 
     Returns:
         score: Probability that two nodes are connected
     """
-    global graph, predictor, model, reindex_orig, reindex_dgl, link_prediction_parameters
+    global graph, predictor, model, reindex, link_prediction_parameters
 
     print(f"Dest vertices: {len(dest_vertices)}")
 
@@ -544,7 +556,7 @@ def recommended_vertex(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: 
         raise Exception("No trained model available to the system. Train or load it first. ")
 
     # You called predict after session was lost
-    graph, reindex_dgl, reindex_orig = _get_dgl_graph_data(ctx)
+    graph, reindex = _get_dgl_graph_data(ctx)
 
      # Insert in the hidden_features_size structure if needed and it is needed only if the session was lost between training and predict method call.
     if link_prediction_parameters.in_feats is None:
@@ -557,14 +569,14 @@ def recommended_vertex(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: 
     src_old_id, src_type = src_vertex.id, merge_labels(src_vertex.labels)
 
     # Get dgl ids
-    src_id = reindex_orig[src_type][src_old_id]
+    src_id = reindex[MEMGRAPH][src_type][src_old_id]
     
     # Save edge scores and vertices
     results = []
     for i, dest_vertex in enumerate(dest_vertices):  # TODO: Can be implemented much faster by directly using matrix multiplication.
         # Get dest vertex
         dest_old_id, dest_type = dest_vertex.id, merge_labels(dest_vertex.labels)
-        dest_id = reindex_orig[dest_type][dest_old_id]
+        dest_id = reindex[MEMGRAPH][dest_type][dest_old_id]
         
         # Init edge properties
         edge_added, edge_id = False, -1
@@ -655,24 +667,6 @@ def reset_parameters(ctx: mgp.ProcCtx) -> mgp.Record(status=mgp.Any):
 ##############################
 # Private helper methods.
 ##############################
-def _proj_0(graph: dgl.graph) -> None:
-    """Performs projection on all node features to the max_feature_size by padding it with 0.
-
-    Args:
-        graph (dgl.graph): A reference to the original graph.
-    """
-    global link_prediction_parameters
-    ftr_size_max = 0
-    for node_type in graph.ntypes:  # Not costly, iterates only over node types.
-        node_type_features = graph.nodes[node_type].data[link_prediction_parameters.node_features_property]
-        ftr_size_max = max(ftr_size_max, node_type_features.shape[1])
-
-    for node_type in graph.ntypes:
-        p1d = (0, ftr_size_max - graph.nodes[node_type].data[link_prediction_parameters.node_features_property].shape[1])  # Padding left if 0 and padding right is dim_goal - arr.shape[1]
-        
-        graph.nodes[node_type].data[link_prediction_parameters.node_features_property] = torch.nn.functional.pad(graph.nodes[node_type].data[link_prediction_parameters.node_features_property], 
-                    p1d, mode="constant", value=0)
-
 def _load_feature_size(features_size: int):
     """Inserts feature size to the hidden_features_size array.
 
@@ -682,7 +676,7 @@ def _load_feature_size(features_size: int):
     global link_prediction_parameters
     link_prediction_parameters.in_feats = features_size
 
-def _process_help_function(mem_indexes: Dict[str, int], old_index: int, type_: str, features: List[int], reindex_orig: Dict[str, Dict[int, int]], reindex_dgl: Dict[str, Dict[int, int]], 
+def _process_help_function(mem_indexes: Dict[str, int], old_index: int, type_: str, features: List[int], reindex: Dict[str, Dict[str, Dict[int, int]]], 
                                   index_dgl_to_features: Dict[str, Dict[int, List[int]]]) -> None:
     """Helper function for mapping original Memgraph graph to DGL representation.
 
@@ -691,20 +685,18 @@ def _process_help_function(mem_indexes: Dict[str, int], old_index: int, type_: s
         old_index (int): Memgraph's node index.
         type_ (str): Node type.
         features (List[int]): Node features.
-        reindex_orig (Dict[str, Dict[int, int]]): Mapping from original indexes to DGL indexes for each node type.
-        reindex_dgl (Dict[str, Dict[int, int]]): Mapping from DGL indexes to the original indexes for each node type.
+        reindex (Dict[str, Dict[str, Dict[int, int]]]): Mapping from original indexes to DGL indexes for each node type and reverse. 
         index_dgl_to_features (Dict[str, Dict[int, List[int]]]): DGL indexes to features for each node type.
     """
-    if type_ not in reindex_orig.keys():  # Node type not seen before
-        reindex_orig[type_] = dict()  # Mapping of old to new indexes for given type_
-        reindex_dgl[type_] = dict()   # Mapping of new to old indexes for given type_
-        index_dgl_to_features[type_] = dict()  # Mapping of new index to its feature for given type_
+    if type_ not in reindex[DGL].keys():  # Node type not seen before
+        reindex[DGL][type_] = dict()  # Mapping of old to new indexes for given type_
+        reindex[MEMGRAPH][type_] = dict()
 
     # Check if old_index has been seen for this label
-    if old_index not in reindex_orig[type_].keys():
+    if old_index not in reindex[MEMGRAPH][type_].keys():
         ind = mem_indexes[type_]  # get current counter
-        reindex_dgl[type_][ind] = old_index  # save new_to_old relationship
-        reindex_orig[type_][old_index] = ind  # save old_to_new relationship
+        reindex[DGL][type_][ind] = old_index  # save new_to_old relationship
+        reindex[MEMGRAPH][type_][old_index] = ind  # save old_to_new relationship
         # Check if list is given as a string
         if type(features) == str:
             index_dgl_to_features[type_][ind] = eval(features)  # Save new to features relationship. TODO: Remove that when we done with Cypher converting from String to List
@@ -726,12 +718,11 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
 
     global link_prediction_parameters
 
-    reindex_dgl = dict()  # map of label to new node index to old node index
-    reindex_orig = dict()  # map of label to old node index to new node index
+    reindex = defaultdict(dict)  # map of label to new node index to old node index
     mem_indexes = defaultdict(int)  # map of label to indexes. All indexes are by default indexed 0.
 
     type_triplets = []  # list of tuples where each tuple is in following form(src_type, edge_type, dst_type), e.g. ("Customer", "SUBSCRIBES_TO", "Plan")
-    index_dgl_to_features = dict()  # dgl indexes to features
+    index_dgl_to_features = defaultdict(dict)  # dgl indexes to features
 
     src_nodes, dest_nodes = defaultdict(list), defaultdict(list) # label to node IDs -> Tuple of node-tensors format from DGL
 
@@ -743,7 +734,7 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
         src_id, src_type, src_features = vertex.id, merge_labels(vertex.labels), vertex.properties.get(link_prediction_parameters.node_features_property)
         
         # Process hetero label stuff
-        _process_help_function(mem_indexes, src_id, src_type, src_features, reindex_orig, reindex_dgl, index_dgl_to_features) 
+        _process_help_function(mem_indexes, src_id, src_type, src_features, reindex, index_dgl_to_features) 
  
         # Get all out edges
         for edge in vertex.out_edges:
@@ -771,11 +762,11 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
             edge_types.add(edge_type)
             
             # Handle mappings
-            _process_help_function(mem_indexes, dest_id, dest_type, dest_features, reindex_orig, reindex_dgl, index_dgl_to_features) 
+            _process_help_function(mem_indexes, dest_id, dest_type, dest_features, reindex, index_dgl_to_features) 
 
             # Define edge
-            src_nodes[type_triplet].append(reindex_orig[src_type][src_id])
-            dest_nodes[type_triplet].append(reindex_orig[dest_type][dest_id])
+            src_nodes[type_triplet].append(reindex[MEMGRAPH][src_type][src_id])
+            dest_nodes[type_triplet].append(reindex[MEMGRAPH][dest_type][dest_id])
             
             
     # Check if there are no edges in the dataset, assume that it cannot learn effectively without edges. E2E handling.
@@ -808,276 +799,27 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
         g.nodes[node_type].data[link_prediction_parameters.node_features_property] = node_features
     
     # Test conversion. Note: Do a conversion before you upscale features.
-    _conversion_to_dgl_test(graph=g, reindex_dgl=reindex_dgl, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property)
+    _conversion_to_dgl_test(graph=g, reindex=reindex, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property)
 
     # Upscale features so they are all of same size
-    _proj_0(g) 
+    proj_0(g) 
     
-    return g, reindex_dgl, reindex_orig
-
-def _validate_user_parameters(parameters: mgp.Map) -> None:
-    """Validates parameters user sent through method set_model_parameters
-
-    Args:
-        parameters (mgp.Map): Parameters sent by user.
-
-    Returns:
-        Nothing or raises an exception if something is wrong.
-    """
-    # Hacky Python
-    def raise_(ex):
-        raise ex
-
-    # Define lambda type checkers
-    type_checker = lambda arg, mess, real_type: None if type(arg) == real_type else raise_(Exception(mess))
-
-    # Hidden features size
-    if HIDDEN_FEATURES_SIZE in parameters.keys():
-        hidden_features_size = parameters[HIDDEN_FEATURES_SIZE]
-
-        # Because list cannot be sent through mgp.
-        type_checker(hidden_features_size, "hidden_features_size not an iterable object. ", tuple)
-
-        for hid_size in hidden_features_size:
-            type_checker(hid_size, "layer_size must be an int", int)
-            if hid_size <= 0:
-                 raise Exception("Layer size must be greater than 0. ")
-
-    # Layer type check
-    if LAYER_TYPE in parameters.keys():
-        layer_type = parameters[LAYER_TYPE]
-        
-        # Check typing
-        type_checker(layer_type, "layer_type must be string. ", str)
-
-        if layer_type != GRAPH_ATTN and layer_type != GRAPH_SAGE:
-             raise Exception("Unknown layer type, this module supports only graph_attn and graph_sage. ")
-
-        if layer_type == GRAPH_ATTN and HIDDEN_FEATURES_SIZE in parameters.keys() and ATTN_NUM_HEADS not in parameters.keys():
-            raise Exception("Attention heads must be specified when specified graph attention layer and hidden features sizes. ")
-
-    # Num epochs
-    if NUM_EPOCHS in parameters.keys():
-        num_epochs = parameters[NUM_EPOCHS]
-
-        # Check typing
-        type_checker(num_epochs, "num_epochs must be int. ", int)
-
-        if num_epochs <= 0:
-             raise Exception("Number of epochs must be greater than 0. ")
-
-    # Optimizer check
-    if OPTIMIZER in parameters.keys():
-        optimizer = parameters[OPTIMIZER]
-
-        # Check typing
-        type_checker(optimizer, "optimizer must be a string. ", str)
-
-        if optimizer != ADAM_OPT and optimizer != SGD_OPT:
-             raise Exception("Unknown optimizer, this module supports only ADAM and SGD. ")
-
-    # Learning rate check
-    if LEARNING_RATE in parameters.keys():
-        learning_rate = parameters[LEARNING_RATE]
-
-        # Check typing
-        type_checker(learning_rate, "learning rate must be a float. ", float)
-
-        if learning_rate <= 0.0:
-             raise Exception("Learning rate must be greater than 0. ")
-
-    # Split ratio check
-    if SPLIT_RATIO in parameters.keys():
-        split_ratio = parameters[SPLIT_RATIO]
-
-        # Check typing
-        type_checker(split_ratio, "split_ratio must be a float. ", float)
-
-        if split_ratio <= 0.0:
-             raise Exception("Split ratio must be greater than 0. ")
-
-    # node_features_property check
-    if NODE_FEATURES_PROPERTY in parameters.keys():
-        node_features_property = parameters[NODE_FEATURES_PROPERTY]
-
-        # Check typing
-        type_checker(node_features_property, "node_features_property must be a string. ", str)
-
-        if node_features_property == "":
-            raise Exception("You must specify name of nodes' features property. ")
-
-    # device_type check
-    if DEVICE_TYPE in parameters.keys():
-        device_type = parameters[DEVICE_TYPE]
-
-        # Check typing
-        type_checker(device_type, "device_type must be a string. ", str)
-
-        if device_type != CPU_DEVICE and torch.device != CUDA_DEVICE:
-            raise Exception("Only cpu and cuda are supported as devices. ")
-
-    # console_log_freq check
-    if CONSOLE_LOG_FREQ in parameters.keys():
-        console_log_freq = parameters[CONSOLE_LOG_FREQ]
-
-        # Check typing
-        type_checker(console_log_freq, "console_log_freq must be an int. ", int)
-
-        if console_log_freq <= 0:
-            raise Exception("Console log frequency must be greater than 0. ")
-
-    # checkpoint freq check
-    if CHECKPOINT_FREQ in parameters.keys():
-        checkpoint_freq = parameters[CHECKPOINT_FREQ]
-
-        # Check typing
-        type_checker(checkpoint_freq, "checkpoint_freq must be an int. ", int)
-
-        if checkpoint_freq <= 0:
-             raise Exception("Checkpoint frequency must be greter than 0. ")
-
-    # aggregator check
-    if AGGREGATOR in parameters.keys():
-        aggregator = parameters[AGGREGATOR]
-
-        # Check typing
-        type_checker(aggregator, "aggregator must be a string. ", str)
-
-        if aggregator != MEAN_AGG and aggregator != LSTM_AGG and aggregator != POOL_AGG and aggregator != GCN_AGG:
-             raise Exception("Aggregator must be one of the following: mean, pool, lstm or gcn. ")
-
-    # metrics check
-    if METRICS in parameters.keys():
-        metrics = parameters[METRICS]
-
-        # Check typing
-        type_checker(metrics, "metrics must be an iterable object. ", tuple)
-
-        for metric in metrics:
-            _metric = metric.lower()
-            if (
-                _metric != LOSS
-                and _metric != ACCURACY
-                and _metric != F1
-                and _metric != AUC_SCORE
-                and _metric != PRECISION
-                and _metric != RECALL
-                and _metric != POS_EXAMPLES
-                and _metric != NEG_EXAMPLES
-                and _metric != POS_PRED_EXAMPLES
-                and _metric != NEG_PRED_EXAMPLES
-                and _metric != TRUE_POSITIVES
-                and _metric != FALSE_POSITIVES
-                and _metric != TRUE_NEGATIVES
-                and _metric != FALSE_NEGATIVES
-            ):
-                 raise Exception("Metric name " + _metric + " is not supported!")
-
-    # Predictor type
-    if PREDICTOR_TYPE in parameters.keys():
-        predictor_type = parameters[PREDICTOR_TYPE]
-
-        # Check typing
-        type_checker(predictor_type, "predictor_type must be a string. ", str)
-
-        if predictor_type != DOT_PREDICTOR and predictor_type != MLP_PREDICTOR:
-             raise Exception("Predictor " + predictor_type + " is not supported. ")
-
-    # Attention heads
-    if ATTN_NUM_HEADS in parameters.keys():
-        attn_num_heads = parameters[ATTN_NUM_HEADS]
-
-        if layer_type == GRAPH_ATTN:
-
-            # Check typing
-            type_checker(attn_num_heads, "attn_num_heads must be an iterable object. ", tuple)
-
-            if len(attn_num_heads) != len(hidden_features_size):
-                 raise Exception("Specified network with {} layers but given attention heads data for {} layers. ".format(len(hidden_features_size) - 1, len(attn_num_heads)))
-
-            if attn_num_heads[-1] != 1:
-                 raise Exception("Last GAT layer must contain only one attention head. ")
-
-            for num_heads in attn_num_heads:
-                if num_heads <= 0:
-                    raise Exception("GAT allows only positive, larger than 0 values for number of attention heads. ")
-
-    # Training accuracy patience
-    if TR_ACC_PATIENCE in parameters.keys():
-        tr_acc_patience = parameters[TR_ACC_PATIENCE]
-
-        # Check typing
-        type_checker(tr_acc_patience, "tr_acc_patience must be an iterable object. ", int)
-
-        if tr_acc_patience <= 0:
-             raise Exception("Training acc patience flag must be larger than 0.")
-
-    # model_save_path
-    if MODEL_SAVE_PATH in parameters.keys():
-        model_save_path = parameters[MODEL_SAVE_PATH]
-
-        # Check typing
-        type_checker(model_save_path, "model_save_path must be a string. ", str)
-
-        if model_save_path == "":
-             raise Exception("Path must be != " " ")
-    
-    # context save dir
-    if CONTEXT_SAVE_DIR in parameters.keys():
-        context_save_dir = parameters[CONTEXT_SAVE_DIR]
-
-        # check typing
-        type_checker(context_save_dir, "context_save_dir must be a string. ", str)
-
-        if context_save_dir == "":
-            raise Exception("Path must not be empty string. ")
-    
-    # target edge type
-    if TARGET_RELATION in parameters.keys():
-        target_relation = parameters[TARGET_RELATION]
-
-       # check typing
-        if type(target_relation) != tuple and type(target_relation) != str:
-            raise Exception("target relation must be a string or a tuple. ")
-    else:
-        raise Exception("Target relation or target edge type must be specified. ")
-    
-    # num_neg_per_positive_edge
-    if NUM_NEG_PER_POS_EDGE in parameters.keys():
-        num_neg_per_pos_edge = parameters[NUM_NEG_PER_POS_EDGE]
-
-        # Check typing
-        type_checker(num_neg_per_pos_edge, "number of negative edges per positive one must be an int. ", int)
-    
-    # batch size
-    if BATCH_SIZE in parameters.keys():
-        batch_size = parameters[BATCH_SIZE]
-
-        # Check typing
-        type_checker(batch_size,"batch_size must be an int", int)
-
-    # sampling workers
-    if SAMPLING_WORKERS in parameters.keys():
-        sampling_workers = parameters[SAMPLING_WORKERS]
-
-        # check typing
-        type_checker(sampling_workers, "sampling_workers must be and int", int)
+    return g, reindex
 
 def _reset_train_predict_parameters() -> None:
     """Reset global parameters that are returned by train method and used by predict method. 
     """
-    global training_results, validation_results, predictor, model, graph, reindex_dgl, reindex_orig
+    global training_results, validation_results, predictor, model, graph, reindex
     training_results = None  # clear training records from previous training
     validation_results = None  # clear validation record from previous training
     predictor = None  # Delete old predictor and create a new one in link_prediction_util.train method\
     model = None  # Annulate old model
     graph = None  # Set graph to None
-    reindex_orig = None
-    reindex_dgl = None
+    reindex = None
 
 def _conversion_to_dgl_test(
     graph: dgl.graph,
-    reindex_dgl: Dict[str, Dict[int, int]],
+    reindex: Dict[str, Dict[str, Dict[int, int]]],
     ctx: mgp.ProcCtx,
     node_features_property: str,
 ) -> None:
@@ -1086,7 +828,7 @@ def _conversion_to_dgl_test(
 
     Args:
         graph (dgl.graph): Reference to the dgl heterogeneous graph.
-        reindex_dgl (Dict[int, int]): Mapping from new indexes to old indexes.
+        reindex (Dict[str, Dict[str, Dict[int, int]]]): Mapping from new indexes to old indexes for all node types and reverse.
         ctx (mgp.ProcCtx): Reference to the context execution.
         node_features_property (str): Property namer where the node features are saved`
     """
@@ -1101,7 +843,7 @@ def _conversion_to_dgl_test(
             # Get int from torch.Tensor
             vertex_id = vertex.item()
             # Find vertex in Memgraph
-            old_id = reindex_dgl[node_type][vertex_id]
+            old_id = reindex[DGL][node_type][vertex_id]
             vertex = ctx.graph.get_vertex_by_id(old_id)
             if vertex is None:
                 raise Exception(f"The conversion to DGL failed. Vertex with id {vertex.id} is not mapped to DGL graph. ")

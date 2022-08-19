@@ -2,7 +2,10 @@ import dgl
 import dgl.function as fn
 import torch
 import torch.nn as nn
-from typing import Tuple, Dict
+from typing import Dict
+from mage.link_prediction.constants import (
+    NODE_EMBEDDINGS, EDGE_SCORE
+)
 
 
 class DotPredictor(nn.Module):
@@ -20,12 +23,12 @@ class DotPredictor(nn.Module):
         """
         with g.local_scope():
             for node_type in node_embeddings.keys():  # Iterate over all node_types. # TODO: Maybe it can be removed if features are already saved in the graph.
-                g.nodes[node_type].data["node_embeddings"] = node_embeddings[node_type]
+                g.nodes[node_type].data[NODE_EMBEDDINGS] = node_embeddings[node_type]
 
             # Compute a new edge feature named 'score' by a dot-product between the
             # embedding of source node and embedding of destination node.
-            g.apply_edges(fn.u_dot_v("node_embeddings", "node_embeddings", "score"), etype=target_relation)
-            scores = g.edata["score"]
+            g.apply_edges(fn.u_dot_v(NODE_EMBEDDINGS, NODE_EMBEDDINGS, EDGE_SCORE), etype=target_relation)
+            scores = g.edata[EDGE_SCORE]
             if type(scores) == dict:
                 if type(target_relation) == tuple: # Tuple[str, str, str] identification
                     scores = scores[target_relation]

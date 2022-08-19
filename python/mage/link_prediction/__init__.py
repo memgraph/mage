@@ -3,12 +3,27 @@ from mage.link_prediction.link_prediction_util import (
     preprocess,
     inner_predict,
     get_number_of_edges,
+    proj_0,
+    validate_user_parameters
 )
 
 from mage.link_prediction.factory import (
     create_model,
     create_optimizer,
     create_predictor,
+)
+
+from mage.link_prediction.constants_dir.constants import (
+    Metrics,
+    Predictors,
+    Reindex,
+    Context,
+    Models,
+    Optimizers,
+    Devices,
+    Aggregators,
+    Parameters
+
 )
 
 from mage.link_prediction.constants import (
@@ -65,5 +80,7 @@ from mage.link_prediction.constants import (
     TRUE_POSITIVES,
     FALSE_POSITIVES,
     TRUE_NEGATIVES,
-    FALSE_NEGATIVES
+    FALSE_NEGATIVES,
+    DGL,
+    MEMGRAPH
 )

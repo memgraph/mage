@@ -60,3 +60,9 @@ TRUE_POSITIVES = "true_positives"
 FALSE_POSITIVES = "false_positives"
 TRUE_NEGATIVES = "true_negatives"
 FALSE_NEGATIVES = "false_negatives"
+# Predictor constants
+NODE_EMBEDDINGS = "node_embeddings"
+EDGE_SCORE = "edge_score"
+# Reindex
+DGL = "dgl"  # DGL to Memgraph indexes
+MEMGRAPH = "memgraph"  # Memgraph to DGL indexes
