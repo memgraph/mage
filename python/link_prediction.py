@@ -28,64 +28,8 @@ from mage.link_prediction import (
     Devices,
     Aggregators,
     Parameters,
-    GRAPH_SAGE,
-    GRAPH_ATTN,
-    ADAM_OPT,
-    SGD_OPT,
-    CUDA_DEVICE,
-    CPU_DEVICE,
-    DOT_PREDICTOR,
-    MLP_PREDICTOR,
-    MEAN_AGG,
-    LSTM_AGG,
-    POOL_AGG,
-    GCN_AGG,
-    HIDDEN_FEATURES_SIZE,
-    LAYER_TYPE,
-    NUM_EPOCHS,
-    OPTIMIZER,
-    LEARNING_RATE,
-    SPLIT_RATIO,
-    NODE_FEATURES_PROPERTY,
-    DEVICE_TYPE,
-    CONSOLE_LOG_FREQ,
-    CHECKPOINT_FREQ,
-    AGGREGATOR,
-    METRICS,
-    LAYER_TYPE,
-    PREDICTOR_TYPE,
-    ATTN_NUM_HEADS,
-    TR_ACC_PATIENCE,
-    MODEL_SAVE_PATH,
-    CONTEXT_SAVE_DIR,
-    TARGET_RELATION,
-    NUM_NEG_PER_POS_EDGE,
-    BATCH_SIZE,
-    SAMPLING_WORKERS,
-    NUM_LAYERS,
-    RESIDUAL,
-    DROPOUT,
-    ALPHA,
-    MODEL_NAME,
-    PREDICTOR_NAME,
-    AUC_SCORE,
-    ACCURACY,
-    PRECISION,
-    RECALL,
-    POS_EXAMPLES,
-    NEG_EXAMPLES,
-    POS_PRED_EXAMPLES,
-    NEG_PRED_EXAMPLES,
-    LOSS,
-    F1,
-    TRUE_POSITIVES,
-    FALSE_POSITIVES,
-    TRUE_NEGATIVES,
-    FALSE_NEGATIVES,
-    DGL,
-    MEMGRAPH
-)
-from mage.python.mage.link_prediction.constants import DGL
+   )
+
 ##############################
 # classes and data structures
 ##############################
@@ -123,31 +67,31 @@ class LinkPredictionParameters:
     hidden_features_size: List = field(
         default_factory=lambda: [20, 10]
     )  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
-    layer_type: str = ModelConstants.GRAPH_ATTN
+    layer_type: str = Models.GRAPH_ATTN
     num_epochs: int = 10
-    optimizer: str = OptimizerConstants.ADAM_OPT
+    optimizer: str = Optimizers.ADAM_OPT
     learning_rate: float = 0.01
     split_ratio: float = 0.8
     node_features_property: str = "features"
-    device_type: str = CPU_DEVICE
+    device_type: str = Devices.CPU_DEVICE
     console_log_freq: int = 1
     checkpoint_freq: int = 10
-    aggregator: str = POOL_AGG
+    aggregator: str = Aggregators.POOL_AGG
     metrics: List = field(
         default_factory=lambda: [
-            MetricsConstants.LOSS,
-            MetricsConstants.ACCURACY,
-            MetricsConstants.AUC_SCORE,
-            MetricsConstants.PRECISION,
-            MetricsConstants.RECALL,
-            MetricsConstants.F1,
-            MetricsConstants.TRUE_POSITIVES,
-            MetricsConstants.FALSE_POSITIVES,
-            MetricsConstants.TRUE_NEGATIVES,
-            MetricsConstants.FALSE_NEGATIVES
+            Metrics.LOSS,
+            Metrics.ACCURACY,
+            Metrics.AUC_SCORE,
+            Metrics.PRECISION,
+            Metrics.RECALL,
+            Metrics.F1,
+            Metrics.TRUE_POSITIVES,
+            Metrics.FALSE_POSITIVES,
+            Metrics.TRUE_NEGATIVES,
+            Metrics.FALSE_NEGATIVES
         ]
     )
-    predictor_type: str =  MLP_PREDICTOR
+    predictor_type: str =  Predictors.MLP_PREDICTOR
     attn_num_heads: List[int] = field(default_factory=lambda: [4, 1])
     tr_acc_patience: int = 5
     context_save_dir: str = "/home/andi/Memgraph/code/mage/python/mage/link_prediction/context/"  # TODO: When the development finishes
@@ -227,10 +171,10 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
             return mgp.Record(status=1, message=repr(exception))
 
     # Device type handling
-    if link_prediction_parameters.device_type == CUDA_DEVICE and torch.cuda.is_available() is True:
-        link_prediction_parameters.device_type = CUDA_DEVICE
+    if link_prediction_parameters.device_type == Devices.CUDA_DEVICE and torch.cuda.is_available() is True:
+        link_prediction_parameters.device_type = Devices.CUDA_DEVICE
     else:
-        link_prediction_parameters.device_type = CPU_DEVICE
+        link_prediction_parameters.device_type = Devices.CPU_DEVICE
 
     # Lists handling=generator expression + unpacking
     if type(link_prediction_parameters.hidden_features_size) == tuple:
@@ -367,15 +311,15 @@ def hyperparameter_tuning(ctx: mgp.ProcCtx, num_search_trials: int) -> mgp.Recor
 
     # Specify search space
     gat_search_space = {
-        NUM_LAYERS: [1, 2, 3],
-        HIDDEN_FEATURES_SIZE: [16, 32, 64, 128, 256, 512],
-        ATTN_NUM_HEADS: [2, 4, 6],
-        DROPOUT: scipy.stats.uniform(0, 0.6),
-        ALPHA: scipy.stats.uniform(0, 0.6),
-        RESIDUAL: [True, False],
-        LEARNING_RATE: [0.0001, 0.0005, 0.001, 0.01, 0.1],
-        BATCH_SIZE: [128, 256, 512],
-        PREDICTOR_TYPE: [MLP_PREDICTOR, DOT_PREDICTOR]
+        Parameters.NUM_LAYERS: [1, 2, 3],
+        Parameters.HIDDEN_FEATURES_SIZE: [32, 64, 128, 256],
+        Parameters.ATTN_NUM_HEADS: [2, 4, 6],
+        Parameters.DROPOUT: scipy.stats.uniform(0, 0.6),
+        Parameters.ALPHA: scipy.stats.uniform(0, 0.6),
+        Parameters.RESIDUAL: [True, False],
+        Parameters.LEARNING_RATE: [0.0001, 0.0005, 0.001, 0.01, 0.1],
+        Parameters.BATCH_SIZE: [128, 256, 512],
+        Parameters.PREDICTOR_TYPE: [Predictors.MLP_PREDICTOR, Predictors.DOT_PREDICTOR]
     }
  
     configure_generator = ParameterSampler(gat_search_space, n_iter=num_search_trials)
@@ -385,19 +329,19 @@ def hyperparameter_tuning(ctx: mgp.ProcCtx, num_search_trials: int) -> mgp.Recor
         for i, configure in enumerate(configure_generator):
             print("Configuration num: ", i+1)
             print("Configuration: ", configure)
-            num_layers = configure[NUM_LAYERS]
-            hidden_features_size = [configure[HIDDEN_FEATURES_SIZE]] * num_layers
-            attn_num_heads = [configure[ATTN_NUM_HEADS]] * num_layers
-            dropouts = [configure[DROPOUT]] * num_layers
-            alphas = [configure[ALPHA]] * num_layers
-            residuals = [configure[RESIDUAL]] * num_layers
-            lr = configure[LEARNING_RATE]
-            batch_size = configure[BATCH_SIZE]
-            predictor_type = configure[PREDICTOR_TYPE]
+            num_layers = configure[Parameters.NUM_LAYERS]
+            hidden_features_size = [configure[Parameters.HIDDEN_FEATURES_SIZE]] * num_layers
+            attn_num_heads = [configure[Parameters.ATTN_NUM_HEADS]] * num_layers
+            dropouts = [configure[Parameters.DROPOUT]] * num_layers
+            alphas = [configure[Parameters.ALPHA]] * num_layers
+            residuals = [configure[Parameters.RESIDUAL]] * num_layers
+            lr = configure[Parameters.LEARNING_RATE]
+            batch_size = configure[Parameters.BATCH_SIZE]
+            predictor_type = configure[Parameters.PREDICTOR_TYPE]
 
             # Create a model
             model = create_model(
-                layer_type=GRAPH_ATTN,
+                layer_type=Models.GRAPH_ATTN,
                 in_feats=link_prediction_parameters.in_feats,
                 hidden_features_size=hidden_features_size,
                 aggregator=link_prediction_parameters.aggregator,  # only for gat
@@ -452,7 +396,7 @@ def hyperparameter_tuning(ctx: mgp.ProcCtx, num_search_trials: int) -> mgp.Recor
             f.write(delimiter + "\n")
             f.flush()
 
-            if best_validation_result is None or best_validation_result[F1] < validation_result[F1]:
+            if best_validation_result is None or best_validation_result[Metrics.F1] < validation_result[Metrics.F1]:
                 best_training_result = training_results[-1]
                 best_validation_result = validation_result
                 best_parameters = configure
@@ -491,8 +435,8 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     dest_old_id, dest_type = dest_vertex.id, merge_labels(dest_vertex.labels)
 
     # Get dgl ids
-    src_id = reindex[MEMGRAPH][src_type][src_old_id]
-    dest_id = reindex[MEMGRAPH][dest_type][dest_old_id]
+    src_id = reindex[Reindex.MEMGRAPH][src_type][src_old_id]
+    dest_id = reindex[Reindex.MEMGRAPH][dest_type][dest_old_id]
     
     # Init edge properties
     edge_added, edge_id = False, -1
@@ -569,14 +513,14 @@ def recommended_vertex(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: 
     src_old_id, src_type = src_vertex.id, merge_labels(src_vertex.labels)
 
     # Get dgl ids
-    src_id = reindex[MEMGRAPH][src_type][src_old_id]
+    src_id = reindex[Reindex.MEMGRAPH][src_type][src_old_id]
     
     # Save edge scores and vertices
     results = []
-    for i, dest_vertex in enumerate(dest_vertices):  # TODO: Can be implemented much faster by directly using matrix multiplication.
+    for i, dest_vertex in enumerate(dest_vertices):
         # Get dest vertex
         dest_old_id, dest_type = dest_vertex.id, merge_labels(dest_vertex.labels)
-        dest_id = reindex[MEMGRAPH][dest_type][dest_old_id]
+        dest_id = reindex[Reindex.MEMGRAPH][dest_type][dest_old_id]
         
         # Init edge properties
         edge_added, edge_id = False, -1
@@ -647,8 +591,8 @@ def load_model(ctx: mgp.ProcCtx, path: str = link_prediction_parameters.context_
     """
 
     global model, predictor
-    model = torch.load(path + MODEL_NAME)
-    predictor = torch.load(path + PREDICTOR_NAME)
+    model = torch.load(path + Context.MODEL_NAME)
+    predictor = torch.load(path + Context.PREDICTOR_NAME)
     return mgp.Record(status=True)
 
 @mgp.read_proc
@@ -688,15 +632,15 @@ def _process_help_function(mem_indexes: Dict[str, int], old_index: int, type_: s
         reindex (Dict[str, Dict[str, Dict[int, int]]]): Mapping from original indexes to DGL indexes for each node type and reverse. 
         index_dgl_to_features (Dict[str, Dict[int, List[int]]]): DGL indexes to features for each node type.
     """
-    if type_ not in reindex[DGL].keys():  # Node type not seen before
-        reindex[DGL][type_] = dict()  # Mapping of old to new indexes for given type_
-        reindex[MEMGRAPH][type_] = dict()
+    if type_ not in reindex[Reindex.DGL].keys():  # Node type not seen before
+        reindex[Reindex.DGL][type_] = dict()  # Mapping of old to new indexes for given type_
+        reindex[Reindex.MEMGRAPH][type_] = dict()
 
     # Check if old_index has been seen for this label
-    if old_index not in reindex[MEMGRAPH][type_].keys():
+    if old_index not in reindex[Reindex.MEMGRAPH][type_].keys():
         ind = mem_indexes[type_]  # get current counter
-        reindex[DGL][type_][ind] = old_index  # save new_to_old relationship
-        reindex[MEMGRAPH][type_][old_index] = ind  # save old_to_new relationship
+        reindex[Reindex.DGL][type_][ind] = old_index  # save new_to_old relationship
+        reindex[Reindex.MEMGRAPH][type_][old_index] = ind  # save old_to_new relationship
         # Check if list is given as a string
         if type(features) == str:
             index_dgl_to_features[type_][ind] = eval(features)  # Save new to features relationship. TODO: Remove that when we done with Cypher converting from String to List
@@ -765,8 +709,8 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
             _process_help_function(mem_indexes, dest_id, dest_type, dest_features, reindex, index_dgl_to_features) 
 
             # Define edge
-            src_nodes[type_triplet].append(reindex[MEMGRAPH][src_type][src_id])
-            dest_nodes[type_triplet].append(reindex[MEMGRAPH][dest_type][dest_id])
+            src_nodes[type_triplet].append(reindex[Reindex.MEMGRAPH][src_type][src_id])
+            dest_nodes[type_triplet].append(reindex[Reindex.MEMGRAPH][dest_type][dest_id])
             
             
     # Check if there are no edges in the dataset, assume that it cannot learn effectively without edges. E2E handling.
@@ -843,7 +787,7 @@ def _conversion_to_dgl_test(
             # Get int from torch.Tensor
             vertex_id = vertex.item()
             # Find vertex in Memgraph
-            old_id = reindex[DGL][node_type][vertex_id]
+            old_id = reindex[Reindex.DGL][node_type][vertex_id]
             vertex = ctx.graph.get_vertex_by_id(old_id)
             if vertex is None:
                 raise Exception(f"The conversion to DGL failed. Vertex with id {vertex.id} is not mapped to DGL graph. ")

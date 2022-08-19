@@ -11,15 +11,15 @@ from sklearn.metrics import roc_auc_score, accuracy_score, precision_score, reca
 from typing import Callable, Dict, Tuple, List
 import mgp
 import random
-from mage.link_prediction.constants import (
-    FALSE_NEGATIVES, FALSE_POSITIVES, MODEL_NAME, NEG_PRED_EXAMPLES, POS_PRED_EXAMPLES, PREDICTOR_NAME, LOSS, ACCURACY, AUC_SCORE, PRECISION, RECALL, F1, EPOCH,
-    POS_EXAMPLES, NEG_EXAMPLES, TRUE_NEGATIVES, TRUE_POSITIVES, HIDDEN_FEATURES_SIZE, 
-    LAYER_TYPE, GRAPH_ATTN, GRAPH_SAGE, NUM_EPOCHS, OPTIMIZER, ADAM_OPT, SGD_OPT, 
-    LEARNING_RATE, SPLIT_RATIO, NODE_FEATURES_PROPERTY, DEVICE_TYPE, CPU_DEVICE, CUDA_DEVICE,
-    CONSOLE_LOG_FREQ, CHECKPOINT_FREQ, AGGREGATOR, MEAN_AGG, LSTM_AGG, POOL_AGG, GCN_AGG,
-    METRICS, PREDICTOR_TYPE, DOT_PREDICTOR, MLP_PREDICTOR, ATTN_NUM_HEADS, TR_ACC_PATIENCE,
-    MODEL_SAVE_PATH, CONTEXT_SAVE_DIR, TARGET_RELATION, NUM_NEG_PER_POS_EDGE, BATCH_SIZE,
-    SAMPLING_WORKERS, 
+from mage.python.mage.link_prediction.constants import (
+    Metrics,
+    Models,
+    Predictors,
+    Optimizers,
+    Context,
+    Devices,
+    Aggregators,
+    Parameters
 )
 
 def validate_user_parameters(parameters: mgp.Map) -> None:
@@ -39,8 +39,8 @@ def validate_user_parameters(parameters: mgp.Map) -> None:
     type_checker = lambda arg, mess, real_type: None if type(arg) == real_type else raise_(Exception(mess))
 
     # Hidden features size
-    if HIDDEN_FEATURES_SIZE in parameters.keys():
-        hidden_features_size = parameters[HIDDEN_FEATURES_SIZE]
+    if Parameters.HIDDEN_FEATURES_SIZE in parameters.keys():
+        hidden_features_size = parameters[Parameters.HIDDEN_FEATURES_SIZE]
 
         # Because list cannot be sent through mgp.
         type_checker(hidden_features_size, "hidden_features_size not an iterable object. ", tuple)
@@ -51,21 +51,21 @@ def validate_user_parameters(parameters: mgp.Map) -> None:
                  raise Exception("Layer size must be greater than 0. ")
 
     # Layer type check
-    if LAYER_TYPE in parameters.keys():
-        layer_type = parameters[LAYER_TYPE]
+    if Parameters.LAYER_TYPE in parameters.keys():
+        layer_type = parameters[Parameters.LAYER_TYPE]
         
         # Check typing
         type_checker(layer_type, "layer_type must be string. ", str)
 
-        if layer_type != GRAPH_ATTN and layer_type != GRAPH_SAGE:
+        if layer_type != Models.GRAPH_ATTN and layer_type != Models.GRAPH_SAGE:
              raise Exception("Unknown layer type, this module supports only graph_attn and graph_sage. ")
 
-        if layer_type == GRAPH_ATTN and HIDDEN_FEATURES_SIZE in parameters.keys() and ATTN_NUM_HEADS not in parameters.keys():
+        if layer_type == Models.GRAPH_ATTN and Parameters.HIDDEN_FEATURES_SIZE in parameters.keys() and Parameters.ATTN_NUM_HEADS not in parameters.keys():
             raise Exception("Attention heads must be specified when specified graph attention layer and hidden features sizes. ")
 
     # Num epochs
-    if NUM_EPOCHS in parameters.keys():
-        num_epochs = parameters[NUM_EPOCHS]
+    if Parameters.NUM_EPOCHS in parameters.keys():
+        num_epochs = parameters[Parameters.NUM_EPOCHS]
 
         # Check typing
         type_checker(num_epochs, "num_epochs must be int. ", int)
@@ -74,18 +74,18 @@ def validate_user_parameters(parameters: mgp.Map) -> None:
              raise Exception("Number of epochs must be greater than 0. ")
 
     # Optimizer check
-    if OPTIMIZER in parameters.keys():
-        optimizer = parameters[OPTIMIZER]
+    if Parameters.OPTIMIZER in parameters.keys():
+        optimizer = parameters[Parameters.OPTIMIZER]
 
         # Check typing
         type_checker(optimizer, "optimizer must be a string. ", str)
 
-        if optimizer != ADAM_OPT and optimizer != SGD_OPT:
+        if optimizer != Optimizers.ADAM_OPT and optimizer != Optimizers.SGD_OPT:
              raise Exception("Unknown optimizer, this module supports only ADAM and SGD. ")
 
     # Learning rate check
-    if LEARNING_RATE in parameters.keys():
-        learning_rate = parameters[LEARNING_RATE]
+    if Parameters.LEARNING_RATE in parameters.keys():
+        learning_rate = parameters[Parameters.LEARNING_RATE]
 
         # Check typing
         type_checker(learning_rate, "learning rate must be a float. ", float)
@@ -94,8 +94,8 @@ def validate_user_parameters(parameters: mgp.Map) -> None:
              raise Exception("Learning rate must be greater than 0. ")
 
     # Split ratio check
-    if SPLIT_RATIO in parameters.keys():
-        split_ratio = parameters[SPLIT_RATIO]
+    if Parameters.SPLIT_RATIO in parameters.keys():
+        split_ratio = parameters[Parameters.SPLIT_RATIO]
 
         # Check typing
         type_checker(split_ratio, "split_ratio must be a float. ", float)
@@ -104,8 +104,8 @@ def validate_user_parameters(parameters: mgp.Map) -> None:
              raise Exception("Split ratio must be greater than 0. ")
 
     # node_features_property check
-    if NODE_FEATURES_PROPERTY in parameters.keys():
-        node_features_property = parameters[NODE_FEATURES_PROPERTY]
+    if Parameters.NODE_FEATURES_PROPERTY in parameters.keys():
+        node_features_property = parameters[Parameters.NODE_FEATURES_PROPERTY]
 
         # Check typing
         type_checker(node_features_property, "node_features_property must be a string. ", str)
@@ -114,18 +114,18 @@ def validate_user_parameters(parameters: mgp.Map) -> None:
             raise Exception("You must specify name of nodes' features property. ")
 
     # device_type check
-    if DEVICE_TYPE in parameters.keys():
-        device_type = parameters[DEVICE_TYPE]
+    if Parameters.DEVICE_TYPE in parameters.keys():
+        device_type = parameters[Parameters.DEVICE_TYPE]
 
         # Check typing
         type_checker(device_type, "device_type must be a string. ", str)
 
-        if device_type != CPU_DEVICE and torch.device != CUDA_DEVICE:
+        if device_type != Devices.CPU_DEVICE and torch.device != Devices.CUDA_DEVICE:
             raise Exception("Only cpu and cuda are supported as devices. ")
 
     # console_log_freq check
-    if CONSOLE_LOG_FREQ in parameters.keys():
-        console_log_freq = parameters[CONSOLE_LOG_FREQ]
+    if Parameters.CONSOLE_LOG_FREQ in parameters.keys():
+        console_log_freq = parameters[Parameters.CONSOLE_LOG_FREQ]
 
         # Check typing
         type_checker(console_log_freq, "console_log_freq must be an int. ", int)
@@ -134,8 +134,8 @@ def validate_user_parameters(parameters: mgp.Map) -> None:
             raise Exception("Console log frequency must be greater than 0. ")
 
     # checkpoint freq check
-    if CHECKPOINT_FREQ in parameters.keys():
-        checkpoint_freq = parameters[CHECKPOINT_FREQ]
+    if Parameters.CHECKPOINT_FREQ in parameters.keys():
+        checkpoint_freq = parameters[Parameters.CHECKPOINT_FREQ]
 
         # Check typing
         type_checker(checkpoint_freq, "checkpoint_freq must be an int. ", int)
@@ -144,18 +144,19 @@ def validate_user_parameters(parameters: mgp.Map) -> None:
              raise Exception("Checkpoint frequency must be greter than 0. ")
 
     # aggregator check
-    if AGGREGATOR in parameters.keys():
-        aggregator = parameters[AGGREGATOR]
+    if Parameters.AGGREGATOR in parameters.keys():
+        aggregator = parameters[Parameters.AGGREGATOR]
 
         # Check typing
         type_checker(aggregator, "aggregator must be a string. ", str)
 
-        if aggregator != MEAN_AGG and aggregator != LSTM_AGG and aggregator != POOL_AGG and aggregator != GCN_AGG:
-             raise Exception("Aggregator must be one of the following: mean, pool, lstm or gcn. ")
+        if aggregator != Aggregators.MEAN_AGG and aggregator != Aggregators.LSTM_AGG and aggregator != Aggregators.POOL_AGG and \
+                aggregator != Aggregators.GCN_AGG:
+            raise Exception("Aggregator must be one of the following: mean, pool, lstm or gcn. ")
 
     # metrics check
-    if METRICS in parameters.keys():
-        metrics = parameters[METRICS]
+    if Parameters.METRICS in parameters.keys():
+        metrics = parameters[Parameters.METRICS]
 
         # Check typing
         type_checker(metrics, "metrics must be an iterable object. ", tuple)
@@ -163,38 +164,38 @@ def validate_user_parameters(parameters: mgp.Map) -> None:
         for metric in metrics:
             _metric = metric.lower()
             if (
-                _metric != LOSS
-                and _metric != ACCURACY
-                and _metric != F1
-                and _metric != AUC_SCORE
-                and _metric != PRECISION
-                and _metric != RECALL
-                and _metric != POS_EXAMPLES
-                and _metric != NEG_EXAMPLES
-                and _metric != POS_PRED_EXAMPLES
-                and _metric != NEG_PRED_EXAMPLES
-                and _metric != TRUE_POSITIVES
-                and _metric != FALSE_POSITIVES
-                and _metric != TRUE_NEGATIVES
-                and _metric != FALSE_NEGATIVES
+                _metric != Metrics.LOSS
+                and _metric != Metrics.ACCURACY
+                and _metric != Metrics.F1
+                and _metric != Metrics.AUC_SCORE
+                and _metric != Metrics.PRECISION
+                and _metric != Metrics.RECALL
+                and _metric != Metrics.POS_EXAMPLES
+                and _metric != Metrics.NEG_EXAMPLES
+                and _metric != Metrics.POS_PRED_EXAMPLES
+                and _metric != Metrics.NEG_PRED_EXAMPLES
+                and _metric != Metrics.TRUE_POSITIVES
+                and _metric != Metrics.FALSE_POSITIVES
+                and _metric != Metrics.TRUE_NEGATIVES
+                and _metric != Metrics.FALSE_NEGATIVES
             ):
                  raise Exception("Metric name " + _metric + " is not supported!")
 
     # Predictor type
-    if PREDICTOR_TYPE in parameters.keys():
-        predictor_type = parameters[PREDICTOR_TYPE]
+    if Parameters.PREDICTOR_TYPE in parameters.keys():
+        predictor_type = parameters[Parameters.PREDICTOR_TYPE]
 
         # Check typing
         type_checker(predictor_type, "predictor_type must be a string. ", str)
 
-        if predictor_type != DOT_PREDICTOR and predictor_type != MLP_PREDICTOR:
+        if predictor_type != Predictors.DOT_PREDICTOR and predictor_type != Predictors.MLP_PREDICTOR:
              raise Exception("Predictor " + predictor_type + " is not supported. ")
 
     # Attention heads
-    if ATTN_NUM_HEADS in parameters.keys():
-        attn_num_heads = parameters[ATTN_NUM_HEADS]
+    if Parameters.ATTN_NUM_HEADS in parameters.keys():
+        attn_num_heads = parameters[Parameters.ATTN_NUM_HEADS]
 
-        if layer_type == GRAPH_ATTN:
+        if layer_type == Models.GRAPH_ATTN:
 
             # Check typing
             type_checker(attn_num_heads, "attn_num_heads must be an iterable object. ", tuple)
@@ -210,8 +211,8 @@ def validate_user_parameters(parameters: mgp.Map) -> None:
                     raise Exception("GAT allows only positive, larger than 0 values for number of attention heads. ")
 
     # Training accuracy patience
-    if TR_ACC_PATIENCE in parameters.keys():
-        tr_acc_patience = parameters[TR_ACC_PATIENCE]
+    if Parameters.TR_ACC_PATIENCE in parameters.keys():
+        tr_acc_patience = parameters[Parameters.TR_ACC_PATIENCE]
 
         # Check typing
         type_checker(tr_acc_patience, "tr_acc_patience must be an iterable object. ", int)
@@ -220,8 +221,8 @@ def validate_user_parameters(parameters: mgp.Map) -> None:
              raise Exception("Training acc patience flag must be larger than 0.")
 
     # model_save_path
-    if MODEL_SAVE_PATH in parameters.keys():
-        model_save_path = parameters[MODEL_SAVE_PATH]
+    if Parameters.MODEL_SAVE_PATH in parameters.keys():
+        model_save_path = parameters[Parameters.MODEL_SAVE_PATH]
 
         # Check typing
         type_checker(model_save_path, "model_save_path must be a string. ", str)
@@ -230,8 +231,8 @@ def validate_user_parameters(parameters: mgp.Map) -> None:
              raise Exception("Path must be != " " ")
     
     # context save dir
-    if CONTEXT_SAVE_DIR in parameters.keys():
-        context_save_dir = parameters[CONTEXT_SAVE_DIR]
+    if Parameters.CONTEXT_SAVE_DIR in parameters.keys():
+        context_save_dir = parameters[Parameters.CONTEXT_SAVE_DIR]
 
         # check typing
         type_checker(context_save_dir, "context_save_dir must be a string. ", str)
@@ -240,8 +241,8 @@ def validate_user_parameters(parameters: mgp.Map) -> None:
             raise Exception("Path must not be empty string. ")
     
     # target edge type
-    if TARGET_RELATION in parameters.keys():
-        target_relation = parameters[TARGET_RELATION]
+    if Parameters.TARGET_RELATION in parameters.keys():
+        target_relation = parameters[Parameters.TARGET_RELATION]
 
        # check typing
         if type(target_relation) != tuple and type(target_relation) != str:
@@ -250,26 +251,25 @@ def validate_user_parameters(parameters: mgp.Map) -> None:
         raise Exception("Target relation or target edge type must be specified. ")
     
     # num_neg_per_positive_edge
-    if NUM_NEG_PER_POS_EDGE in parameters.keys():
-        num_neg_per_pos_edge = parameters[NUM_NEG_PER_POS_EDGE]
+    if Parameters.NUM_NEG_PER_POS_EDGE in parameters.keys():
+        num_neg_per_pos_edge = parameters[Parameters.NUM_NEG_PER_POS_EDGE]
 
         # Check typing
         type_checker(num_neg_per_pos_edge, "number of negative edges per positive one must be an int. ", int)
     
     # batch size
-    if BATCH_SIZE in parameters.keys():
-        batch_size = parameters[BATCH_SIZE]
+    if Parameters.BATCH_SIZE in parameters.keys():
+        batch_size = parameters[Parameters.BATCH_SIZE]
 
         # Check typing
         type_checker(batch_size,"batch_size must be an int", int)
 
     # sampling workers
-    if SAMPLING_WORKERS in parameters.keys():
-        sampling_workers = parameters[SAMPLING_WORKERS]
+    if Parameters.SAMPLING_WORKERS in parameters.keys():
+        sampling_workers = parameters[Parameters.SAMPLING_WORKERS]
 
         # check typing
         type_checker(sampling_workers, "sampling_workers must be and int", int)
-
 
 def proj_0(graph: dgl.graph, node_features_property: str) -> None:
     """Performs projection on all node features to the max_feature_size by padding it with 0.
@@ -371,36 +371,36 @@ def evaluate(metrics: List[str], labels: torch.tensor, probs: torch.tensor, resu
         Dict[str, float]: Metrics embedded in dictionary -> name-value shape
     """
     classes = classify(probs, threshold)
-    result[EPOCH] = epoch
-    result[LOSS] = operator(result[LOSS], loss)
+    result[Metrics.EPOCH] = epoch
+    result[Metrics.LOSS] = operator(result[Metrics.LOSS], loss)
     tn, fp, fn, tp = confusion_matrix(labels, classes).ravel()
     for metric_name in metrics:
-        if metric_name == ACCURACY:
-            result[ACCURACY] = operator(result[ACCURACY], accuracy_score(labels, classes))
-        elif metric_name == AUC_SCORE:
-            result[AUC_SCORE] = operator(result[AUC_SCORE], roc_auc_score(labels, probs.detach()))
-        elif metric_name == F1:
-            result[F1] = operator(result[F1], f1_score(labels, classes))
-        elif metric_name == PRECISION:
-            result[PRECISION] = operator(result[PRECISION], precision_score(labels, classes))
-        elif metric_name == RECALL:
-            result[RECALL] = operator(result[RECALL], recall_score(labels, classes))
-        elif metric_name == POS_PRED_EXAMPLES:
-            result[POS_PRED_EXAMPLES] = operator(result[POS_PRED_EXAMPLES], classes.sum().item())
-        elif metric_name == NEG_PRED_EXAMPLES:
-            result[NEG_PRED_EXAMPLES] = operator(result[NEG_PRED_EXAMPLES], classes.sum().item())
-        elif metric_name == POS_EXAMPLES:
-            result[POS_EXAMPLES] = operator(result[POS_EXAMPLES], (labels == 1).sum().item())
-        elif metric_name == NEG_EXAMPLES:
-            result[NEG_EXAMPLES] = operator(result[NEG_EXAMPLES], (labels == 0).sum().item())
-        elif metric_name == TRUE_POSITIVES:
-            result[TRUE_POSITIVES] = operator(result[TRUE_POSITIVES], tp)
-        elif metric_name == FALSE_POSITIVES:
-            result[FALSE_POSITIVES] = operator(result[FALSE_POSITIVES], fp)
-        elif metric_name == TRUE_NEGATIVES:
-            result[TRUE_NEGATIVES] = operator(result[TRUE_NEGATIVES], tn)
-        elif metric_name == FALSE_NEGATIVES:
-            result[FALSE_NEGATIVES] = operator(result[FALSE_NEGATIVES], fn)
+        if metric_name == Metrics.ACCURACY:
+            result[Metrics.ACCURACY] = operator(result[Metrics.ACCURACY], accuracy_score(labels, classes))
+        elif metric_name == Metrics.AUC_SCORE:
+            result[Metrics.AUC_SCORE] = operator(result[Metrics.AUC_SCORE], roc_auc_score(labels, probs.detach()))
+        elif metric_name == Metrics.F1:
+            result[Metrics.F1] = operator(result[Metrics.F1], f1_score(labels, classes))
+        elif metric_name == Metrics.PRECISION:
+            result[Metrics.PRECISION] = operator(result[Metrics.PRECISION], precision_score(labels, classes))
+        elif metric_name == Metrics.RECALL:
+            result[Metrics.RECALL] = operator(result[Metrics.RECALL], recall_score(labels, classes))
+        elif metric_name == Metrics.POS_PRED_EXAMPLES:
+            result[Metrics.POS_PRED_EXAMPLES] = operator(result[Metrics.POS_PRED_EXAMPLES], classes.sum().item())
+        elif metric_name == Metrics.NEG_PRED_EXAMPLES:
+            result[Metrics.NEG_PRED_EXAMPLES] = operator(result[Metrics.NEG_PRED_EXAMPLES], classes.sum().item())
+        elif metric_name == Metrics.POS_EXAMPLES:
+            result[Metrics.POS_EXAMPLES] = operator(result[Metrics.POS_EXAMPLES], (labels == 1).sum().item())
+        elif metric_name == Metrics.NEG_EXAMPLES:
+            result[Metrics.NEG_EXAMPLES] = operator(result[Metrics.NEG_EXAMPLES], (labels == 0).sum().item())
+        elif metric_name == Metrics.TRUE_POSITIVES:
+            result[Metrics.TRUE_POSITIVES] = operator(result[Metrics.TRUE_POSITIVES], tp)
+        elif metric_name == Metrics.FALSE_POSITIVES:
+            result[Metrics.FALSE_POSITIVES] = operator(result[Metrics.FALSE_POSITIVES], fp)
+        elif metric_name == Metrics.TRUE_NEGATIVES:
+            result[Metrics.TRUE_NEGATIVES] = operator(result[Metrics.TRUE_NEGATIVES], tn)
+        elif metric_name == Metrics.FALSE_NEGATIVES:
+            result[Metrics.FALSE_NEGATIVES] = operator(result[Metrics.FALSE_NEGATIVES], fn)
 
 def batch_forward_pass(model: torch.nn.Module, predictor: torch.nn.Module, loss: torch.nn.Module, m: torch.nn.Module, 
                     target_relation: str, input_features: Dict[str, torch.Tensor], pos_graph: dgl.graph, 
@@ -560,10 +560,10 @@ def inner_train(graph: dgl.graph,
             num_batches +=1 
         # Edit train results and evaluate on validation set
         if epoch % console_log_freq == 0:
-            epoch_training_result = {key: format_float(avg_(val, num_batches)) if key != EPOCH else val for key, val in epoch_training_result.items()}
+            epoch_training_result = {key: format_float(avg_(val, num_batches)) if key != Metrics.EPOCH else val for key, val in epoch_training_result.items()}
             training_results.append(epoch_training_result)
             # Check if training finished
-            if ACCURACY in metrics and epoch_training_result[ACCURACY] == 1.0 and epoch > 1:
+            if Metrics.ACCURACY in metrics and epoch_training_result[Metrics.ACCURACY] == 1.0 and epoch > 1:
                 print("Model reached accuracy of 1.0, exiting...")
                 tr_finished = True
             # Evaluate on the validation set
@@ -579,14 +579,14 @@ def inner_train(graph: dgl.graph,
                     num_batches += 1
             if num_batches > 0: # Because it is possible that user specified not to have a validation dataset
                 # Average over batches    
-                epoch_validation_result = {key: format_float(avg_(val, num_batches)) if key != EPOCH else val for key, val in epoch_validation_result.items()}
+                epoch_validation_result = {key: format_float(avg_(val, num_batches)) if key != Metrics.EPOCH else val for key, val in epoch_validation_result.items()}
                 validation_results.append(epoch_validation_result)
-                if ACCURACY in metrics:  # If user doesn't want to have accuracy information, it cannot be checked for patience.
+                if Metrics.ACCURACY in metrics:  # If user doesn't want to have accuracy information, it cannot be checked for patience.
                     # Patience check
-                    if epoch_validation_result[ACCURACY] <= max_val_acc:
+                    if epoch_validation_result[Metrics.ACCURACY] <= max_val_acc:
                         num_val_acc_drop += 1
                     else:
-                        max_val_acc = epoch_validation_result[ACCURACY]
+                        max_val_acc = epoch_validation_result[Metrics.ACCURACY]
                         num_val_acc_drop = 0
                     # Stop the training if necessary
                     if num_val_acc_drop == tr_acc_patience:
@@ -613,8 +613,8 @@ def _save_context(model: torch.nn.Module, predictor: torch.nn.Module, context_sa
         model (torch.nn.Module): A reference to the model.
         predictor (torch.nn.Module): A reference to the predictor.
     """
-    torch.save(model, context_save_dir + MODEL_NAME)
-    torch.save(predictor, context_save_dir + PREDICTOR_NAME)
+    torch.save(model, context_save_dir + Context.MODEL_NAME)
+    torch.save(predictor, context_save_dir + Context.PREDICTOR_NAME)
 
 def inner_predict(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl.graph, node_features_property: str, 
                     src_node: int, dest_node: int, src_type=str, dest_type=str) -> float:
