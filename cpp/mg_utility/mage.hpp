@@ -86,13 +86,7 @@ class Id {
 
 class Graph {
  public:
-  explicit Graph(mgp_graph *graph, mgp_memory *memory, bool weighted, bool directed, bool multigraph)
-      : graph_(graph), memory_(memory), weighted_(weighted), directed_(directed), multigraph_(multigraph) {}
-
-  inline bool weighted() const { return weighted_; }
-  inline bool directed() const { return directed_; }
-  /// \brief Returns whether the graph is a multigraph (allows for parallel edges).
-  inline bool multigraph() const { return multigraph_; }
+  explicit Graph(mgp_graph *graph, mgp_memory *memory) : graph_(graph), memory_(memory) {}
 
   /// \brief Returns the graph order (number of vertices).
   int64_t order() const;
@@ -111,9 +105,6 @@ class Graph {
  private:
   mgp_graph *graph_;
   mgp_memory *memory_;
-  bool weighted_;
-  bool directed_;
-  bool multigraph_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -161,14 +152,13 @@ class Vertices {
 
 class GraphEdges {
  public:
-  explicit GraphEdges(mgp_graph *graph, bool directed, mgp_memory *memory)
-      : graph_(graph), directed_(directed), memory_(memory){};
+  explicit GraphEdges(mgp_graph *graph, mgp_memory *memory) : graph_(graph), memory_(memory){};
 
   class Iterator {
    public:
     friend class GraphEdges;
 
-    Iterator(mgp_vertices_iterator *vertices_iterator, bool directed, mgp_memory *memory);
+    Iterator(mgp_vertices_iterator *vertices_iterator, mgp_memory *memory);
     ~Iterator();
     Iterator &operator++();
     bool operator==(Iterator other) const;
@@ -183,10 +173,8 @@ class GraphEdges {
 
    private:
     mgp_vertices_iterator *vertices_iterator_ = nullptr;
-    mgp_edges_iterator *in_edges_iterator_ = nullptr;
     mgp_edges_iterator *out_edges_iterator_ = nullptr;
     mgp_memory *memory_;
-    bool directed_ = false;
     size_t index_ = 0;
   };
 
@@ -195,7 +183,6 @@ class GraphEdges {
 
  private:
   mgp_graph *graph_;
-  bool directed_ = false;
   mgp_memory *memory_;
 };
 
@@ -1290,7 +1277,7 @@ inline GraphVertices Graph::vertices() const {
   return GraphVertices(vertices_it, memory_);
 }
 
-inline GraphEdges Graph::edges() const { return GraphEdges(graph_, directed_, memory_); }
+inline GraphEdges Graph::edges() const { return GraphEdges(graph_, memory_); }
 
 inline Vertex Graph::GetVertexById(const Id vertex_id) const {
   auto vertex =
@@ -1371,8 +1358,8 @@ inline Vertices::Iterator Vertices::end() { return Iterator(nullptr, memory_); }
 ////////////////////////////////////////////////////////////////////////////////
 // GraphEdges:
 
-inline GraphEdges::Iterator::Iterator(mgp_vertices_iterator *vertices_iterator, bool directed, mgp_memory *memory)
-    : vertices_iterator_(vertices_iterator), directed_(directed), memory_(memory) {
+inline GraphEdges::Iterator::Iterator(mgp_vertices_iterator *vertices_iterator, mgp_memory *memory)
+    : vertices_iterator_(vertices_iterator), memory_(memory) {
   // Positions the iterator over the first existing edge
 
   if (vertices_iterator_ == nullptr) return;
@@ -1384,35 +1371,22 @@ inline GraphEdges::Iterator::Iterator(mgp_vertices_iterator *vertices_iterator, 
     if (vertex == nullptr) {
       mgp::vertices_iterator_destroy(vertices_iterator_);
       vertices_iterator_ = nullptr;
-      break;
+      return;
     }
 
     // Check if vertex has out-edges
     out_edges_iterator_ = mgp::vertex_iter_out_edges(vertex, memory_);
     auto edge = mgp::edges_iterator_get(out_edges_iterator_);
-    if (edge != nullptr) break;
+    if (edge != nullptr) return;
 
     mgp::edges_iterator_destroy(out_edges_iterator_);
     out_edges_iterator_ = nullptr;
-
-    // Check if vertex has in-edges (skip if graph is directed)
-    if (directed) continue;
-
-    in_edges_iterator_ = mgp::vertex_iter_in_edges(vertex, memory_);
-    edge = mgp::edges_iterator_get(in_edges_iterator_);
-    if (edge != nullptr) break;
-
-    mgp::edges_iterator_destroy(in_edges_iterator_);
-    in_edges_iterator_ = nullptr;
   }
 }
 
 inline GraphEdges::Iterator::~Iterator() {
   if (vertices_iterator_ != nullptr) {
     mgp::vertices_iterator_destroy(vertices_iterator_);
-  }
-  if (in_edges_iterator_ != nullptr) {
-    mgp::edges_iterator_destroy(in_edges_iterator_);
   }
   if (out_edges_iterator_ != nullptr) {
     mgp::edges_iterator_destroy(out_edges_iterator_);
@@ -1429,14 +1403,6 @@ inline GraphEdges::Iterator &GraphEdges::Iterator::operator++() {
 
   mgp::edges_iterator_destroy(out_edges_iterator_);
   out_edges_iterator_ = nullptr;
-
-  if (!directed_) {
-    auto edge = mgp::edges_iterator_get(in_edges_iterator_);
-    if (edge != nullptr) return *this;
-
-    mgp::edges_iterator_destroy(in_edges_iterator_);
-    in_edges_iterator_ = nullptr;
-  }
 
   // 2. Move onto the next vertices
 
@@ -1458,16 +1424,6 @@ inline GraphEdges::Iterator &GraphEdges::Iterator::operator++() {
 
     mgp::edges_iterator_destroy(out_edges_iterator_);
     out_edges_iterator_ = nullptr;
-
-    // Check if vertex has in-edges (skip if graph is directed)
-    if (directed_) continue;
-
-    in_edges_iterator_ = mgp::vertex_iter_in_edges(vertex, memory_);
-    edge = mgp::edges_iterator_get(in_edges_iterator_);
-    if (edge != nullptr) return *this;
-
-    mgp::edges_iterator_destroy(in_edges_iterator_);
-    in_edges_iterator_ = nullptr;
   }
 
   mgp::vertices_iterator_destroy(vertices_iterator_);
@@ -1476,32 +1432,14 @@ inline GraphEdges::Iterator &GraphEdges::Iterator::operator++() {
 }
 
 inline bool GraphEdges::Iterator::operator==(Iterator other) const {
-  if (!directed_ && out_edges_iterator_ == nullptr && other.out_edges_iterator_ == nullptr) {
+  if (out_edges_iterator_ == nullptr && other.out_edges_iterator_ == nullptr) {
     return true;
   }
-  if (directed_ && out_edges_iterator_ == nullptr && other.out_edges_iterator_ == nullptr &&
-      in_edges_iterator_ == nullptr && other.in_edges_iterator_ == nullptr) {
-    return true;
-  }
-
-  if (!directed_ && (out_edges_iterator_ == nullptr || other.out_edges_iterator_ == nullptr)) {
+  if (out_edges_iterator_ == nullptr || other.out_edges_iterator_ == nullptr) {
     return false;
-  }
-
-  if (directed_ && (out_edges_iterator_ == nullptr || other.out_edges_iterator_ == nullptr ||
-                    in_edges_iterator_ == nullptr || other.in_edges_iterator_ == nullptr)) {
-    return false;
-  }
-
-  if (directed_) {
-    return mgp::edge_equal(mgp::edges_iterator_get(out_edges_iterator_),
-                           mgp::edges_iterator_get(other.out_edges_iterator_)) &&
-           index_ == other.index_;
   }
   return mgp::edge_equal(mgp::edges_iterator_get(out_edges_iterator_),
                          mgp::edges_iterator_get(other.out_edges_iterator_)) &&
-         mgp::edge_equal(mgp::edges_iterator_get(in_edges_iterator_),
-                         mgp::edges_iterator_get(other.in_edges_iterator_)) &&
          index_ == other.index_;
 }
 
@@ -1510,20 +1448,12 @@ inline Edge GraphEdges::Iterator::operator*() {
     return Edge(mgp::edges_iterator_get(out_edges_iterator_), memory_);
   }
 
-  if (directed_) return Edge((const mgp_edge *)nullptr, memory_);
-
-  if (in_edges_iterator_ != nullptr) {
-    return Edge(mgp::edges_iterator_get(in_edges_iterator_), memory_);
-  }
-
   return Edge((const mgp_edge *)nullptr, memory_);
 }
 
-inline GraphEdges::Iterator GraphEdges::begin() {
-  return Iterator(mgp::graph_iter_vertices(graph_, memory_), directed_, memory_);
-}
+inline GraphEdges::Iterator GraphEdges::begin() { return Iterator(mgp::graph_iter_vertices(graph_, memory_), memory_); }
 
-inline GraphEdges::Iterator GraphEdges::end() { return Iterator(nullptr, directed_, memory_); }
+inline GraphEdges::Iterator GraphEdges::end() { return Iterator(nullptr, memory_); }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Edges:
