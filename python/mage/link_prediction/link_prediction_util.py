@@ -483,7 +483,8 @@ def inner_train(graph: dgl.graph,
     # First define all necessary samplers
     negative_sampler = dgl.dataloading.negative_sampler.GlobalUniform(k=num_neg_per_pos_edge, replace=False)
     sampler = dgl.dataloading.MultiLayerFullNeighborSampler(num_layers=num_layers)  # gather messages from all node neighbors
-    sampler = dgl.dataloading.as_edge_prediction_sampler(sampler, negative_sampler=negative_sampler, exclude="self")  # TODO: Add "self" and change that to reverse edges sometime
+    reverse_etypes = {"SUBSCRIBES_TO": "USED_BY", "USED_BY": "SUBSCRIBES_TO"}
+    sampler = dgl.dataloading.as_edge_prediction_sampler(sampler, negative_sampler=negative_sampler, exclude="reverse_types", reverse_etypes=reverse_etypes)  # TODO: Add "self" and change that to reverse edges sometime
     
     # Define training and validation dictionaries
     # For heterogeneous full neighbor sampling we need to define a dictionary of edge types and edge ID tensors instead of a dictionary of node types and node ID tensors
