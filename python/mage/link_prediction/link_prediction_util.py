@@ -1,8 +1,4 @@
-from cgitb import enable
-from pickle import FALSE
-from platform import node
 import torch
-from torch import autocast
 import torch.nn.functional as F
 import numpy as np
 import dgl
@@ -11,7 +7,7 @@ from sklearn.metrics import roc_auc_score, accuracy_score, precision_score, reca
 from typing import Callable, Dict, Tuple, List
 import mgp
 import random
-from mage.python.mage.link_prediction.constants import (
+from mage.link_prediction.constants import (
     Metrics,
     Models,
     Predictors,
@@ -637,7 +633,7 @@ def inner_predict(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl
     print("Graph features: ", graph_features)
     print("Graph features2: ", graph.ndata[node_features_property])
     with torch.no_grad():
-        h = model.forward_util(graph, graph_features)
+        h = model.forward(graph, graph_features)
         src_embedding, dest_embedding = h[src_type][src_node], h[dest_type][dest_node]
         score = predictor.forward_pred(src_embedding, dest_embedding)
         # print("Scores: ", torch.sum(scores < 0.5).item())

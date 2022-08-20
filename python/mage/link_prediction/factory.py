@@ -5,12 +5,9 @@ from mage.link_prediction.models.GAT import GAT
 from mage.link_prediction.predictors.DotPredictor import DotPredictor
 from mage.link_prediction.predictors.MLPPredictor import MLPPredictor
 from mage.link_prediction.constants import (
-    ADAM_OPT,
-    SGD_OPT,
-    GRAPH_ATTN,
-    GRAPH_SAGE,
-    DOT_PREDICTOR,
-    MLP_PREDICTOR,
+    Models,
+    Predictors,
+    Optimizers
 )
 import itertools
 
@@ -31,7 +28,7 @@ def create_optimizer(
     Returns:
         torch.nn.Optimizer: Optimizer used in the training.
     """
-    optimizer_jump_table = {ADAM_OPT: torch.optim.Adam, SGD_OPT: torch.optim.SGD}
+    optimizer_jump_table = {Optimizers.ADAM_OPT: torch.optim.Adam, Optimizers.SGD_OPT: torch.optim.SGD}
     optimizer_type = optimizer_type.upper()
     if optimizer_type in optimizer_jump_table:
         return optimizer_jump_table[optimizer_type](itertools.chain(model.parameters(), predictor.parameters()),
@@ -68,9 +65,9 @@ def create_model(
     Returns:
         torch.nn.Module: Model used in the link prediction task.
     """
-    if layer_type.lower() == GRAPH_SAGE:
+    if layer_type.lower() == Models.GRAPH_SAGE:
         return GraphSAGE(in_feats=in_feats, hidden_features_size=hidden_features_size, aggregator=aggregator, feat_drops=feat_drops, edge_types=edge_types)
-    elif layer_type.lower() == GRAPH_ATTN:
+    elif layer_type.lower() == Models.GRAPH_ATTN:
         return GAT(in_feats=in_feats, hidden_features_size=hidden_features_size, attn_num_heads=attn_num_heads, feat_drops=feat_drops, attn_drops=attn_drops,
             alphas=alphas, residuals=residuals, edge_types=edge_types)
     else:
@@ -85,9 +82,9 @@ def create_predictor(predictor_type: str, predictor_hidden_size: int) -> torch.n
     Returns:
         torch.nn.Module: Predictor implemented in predictors module.
     """
-    if predictor_type.lower() == DOT_PREDICTOR:
+    if predictor_type.lower() == Predictors.DOT_PREDICTOR:
         return DotPredictor()
-    elif predictor_type.lower() == MLP_PREDICTOR:
+    elif predictor_type.lower() == Predictors.MLP_PREDICTOR:
         return MLPPredictor(h_feats=predictor_hidden_size)
     else:
         raise Exception(f"Predictor type {predictor_type} not supported. ")

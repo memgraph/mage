@@ -13,7 +13,7 @@ from mage.link_prediction.factory import (
     create_predictor,
 )
 
-from mage.python.mage.link_prediction.constants import (
+from mage.link_prediction.constants import (
     Metrics,
     Predictors,
     Reindex,

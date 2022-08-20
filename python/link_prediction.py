@@ -746,7 +746,7 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
     _conversion_to_dgl_test(graph=g, reindex=reindex, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property)
 
     # Upscale features so they are all of same size
-    proj_0(g) 
+    proj_0(g, link_prediction_parameters.node_features_property) 
     
     return g, reindex
 
