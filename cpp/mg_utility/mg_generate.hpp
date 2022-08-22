@@ -45,7 +45,7 @@ std::unique_ptr<mg_graph::Graph<>> BuildWeightedGraph(
   for (const auto &[endpoints, weight] : edges) {
     auto from = endpoints.first;
     auto to = endpoints.second;
-    G->CreateWeightedEdge(from, to, weight, graph_type);
+    G->CreateEdge(from, to, graph_type, std::nullopt, true, weight);
   }
 
   return G;
