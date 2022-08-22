@@ -50,4 +50,18 @@ class GAT(torch.nn.Module):
             h = layer(blocks[index], h)
             h = {k: torch.mean(v, dim=1) for k, v in h.items()}  # TODO: Do we need it.    
         return h
- 
+    
+    def online_forward(self, graph: dgl.graph, h: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """Performs forward pass on batches.
+
+        Args:
+            graph (dgl.heterograph): Whole graph instance used in prediction.
+            h (Dict[str, torch.Tensor]): Input features for every node type.
+
+        Returns:
+            Dict[str, torch.Tensor]: Embeddings for every node type. 
+        """ 
+        for layer in self.layers:
+            h = layer(graph, h)
+            h = {k: torch.mean(v, dim=1) for k, v in h.items()}  # TODO: Do we need it.    
+        return h

@@ -631,10 +631,10 @@ def inner_predict(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl
         float: Edge score.
     """
     graph_features = {node_type: graph.nodes[node_type].data[node_features_property] for node_type in graph.ntypes}
-    print("Graph features: ", graph_features)
-    print("Graph features2: ", graph.ndata[node_features_property])
+    # print("Graph features: ", graph_features)
+    # print("Graph features2: ", graph.ndata[node_features_property])
     with torch.no_grad():
-        h = model.forward(graph, graph_features)
+        h = model.online_forward(graph, graph.ndata[node_features_property])
         src_embedding, dest_embedding = h[src_type][src_node], h[dest_type][dest_node]
         score = predictor.forward_pred(src_embedding, dest_embedding)
         # print("Scores: ", torch.sum(scores < 0.5).item())

@@ -552,7 +552,8 @@ def recommended_vertex(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: 
     
     # Extract recommendations
     recommendations = []
-    for i in range(k):
+    pop_size = min(k, len(results))
+    for i in range(pop_size):
         score, i, recommendation = heappop(results)
         recommendations.append(mgp.Record(score=-score, recommendation=recommendation))
 
