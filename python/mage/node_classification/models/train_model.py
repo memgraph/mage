@@ -1,11 +1,9 @@
 import torch
-from torch_geometric.loader import NeighborLoader, HGTLoader
+from torch_geometric.loader import NeighborLoader, HGTLoader, ImbalancedSampler
 import mgp
 from tqdm import tqdm
+from torchmetrics import ConfusionMatrix
 
-def oversample(batch):
-    print(sum(batch.y))
-    return batch
 
 def train_epoch(
     model: mgp.Any,
@@ -27,46 +25,88 @@ def train_epoch(
         torch.tensor: loss calculated when training step is performed
     """
 
-    model.train()
-    opt.zero_grad()  # Clear gradients.
 
-    loader = loader = HGTLoader(
+    train_input_nodes = (observed_attribute, data[observed_attribute].train_mask)
+    val_input_nodes = (observed_attribute, data[observed_attribute].val_mask)
+
+    train_loader = HGTLoader(
         data=data,
         # Sample 512 nodes per type and per iteration for 4 iterations
         num_samples={key: [512] * 4 for key in data.node_types},
-        # Use a batch size of 128 for sampling training nodes of type paper
+        shuffle=True,
         batch_size=batch_size,
-        input_nodes=(observed_attribute, data[observed_attribute].train_mask),
+        input_nodes=train_input_nodes,
+    )
+
+    val_loader = HGTLoader(
+        data=data,
+        # Sample 512 nodes per type and per iteration for 4 iterations
+        num_samples={key: [512] * 4 for key in data.node_types},
+        shuffle=False,
+        batch_size=batch_size,
+        input_nodes=val_input_nodes
     )
 
     ret = 0
     ret_val = 0
-    for n, batch in enumerate(loader):
+    
+    model.train()
+    for n, batch in enumerate(train_loader):
+        opt.zero_grad()  # Clear gradients.
 
-        out = model(
-            batch.x_dict, batch.edge_index_dict
-        )  # Perform a single forward pass.
-        #print(batch.edge_index_dict)
-        
-        
-        
-        #batch[observed_attribute] = oversample(batch[observed_attribute])
+        out = model(batch.x_dict, batch.edge_index_dict)[
+            observed_attribute
+        ]  # Perform a single forward pass.
 
         loss = criterion(
-            out[observed_attribute][batch[observed_attribute].train_mask],
-            batch[observed_attribute].y[batch[observed_attribute].train_mask],
+            out, batch[observed_attribute].y
         )  # Compute the loss solely based on the training nodes.
 
         loss.backward()  # Derive gradients.
         opt.step()  # Update parameters based on gradients.
-        val_loss = criterion(
-            out[observed_attribute][batch[observed_attribute].val_mask],
-            batch[observed_attribute].y[batch[observed_attribute].val_mask],
-        )
+
         ret += loss.item()
+
+    model.eval()
+    for n, batch in enumerate(val_loader):
+        out = model(batch.x_dict, batch.edge_index_dict)[observed_attribute]
+        val_loss = criterion(out, batch[observed_attribute].y)
         ret_val += val_loss.item()
 
     return ret / (n + 1), ret_val / (n + 1)
+
+    # model.train()
+    # opt.zero_grad()  # Clear gradients.
+    # out = model(data.x_dict, data.edge_index_dict)  # Perform a single forward pass.
+
+    # pred = out[observed_attribute].argmax(
+    #     dim=1
+    # )  # Use the class with highest probability.
+    # mask = data[observed_attribute].train_mask
+
+    # confmat = ConfusionMatrix(
+    #     num_classes=len(set(data[observed_attribute].y.detach().numpy()))
+    # )
+    # print("TRAINING:")
+    # print(confmat(pred[mask], data[observed_attribute].y[mask]))
+
+    # mask = data[observed_attribute].val_mask
+    # print("VALIDATION:")
+    # print(confmat(pred[mask], data[observed_attribute].y[mask]))
+
+    # loss = criterion(
+    #     out[observed_attribute][
+    #         data[observed_attribute].train_mask
+    #     ],
+    #     data[observed_attribute].y[
+    #         data[observed_attribute].train_mask
+    #     ],
+    # )  # Compute the loss solely based on the training nodes.
+
+    # loss.backward()  # Derive gradients.
+    # opt.step()  # Update parameters based on gradients.
+
+    # return loss.item()
 
 
 # def train_epoch(
