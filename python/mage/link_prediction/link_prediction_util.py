@@ -525,7 +525,7 @@ def inner_train(graph: dgl.graph,
     # Define lambda functions for operating on dictionaries
     add_: Callable[[float, float], float] = lambda prior, later: prior + later
     avg_: Callable[[float, float], float] = lambda prior, size: prior/size
-    format_float: Callable[[float], float] = lambda prior: round(prior, 2)
+    format_float: Callable[[float], float] = lambda prior: round(prior, 3)
 
     # Training
     max_val_acc, num_val_acc_drop = (-1.0, 0,)  # last maximal accuracy and number of epochs it is dropping

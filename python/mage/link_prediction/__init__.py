@@ -4,7 +4,8 @@ from mage.link_prediction.link_prediction_util import (
     inner_predict,
     get_number_of_edges,
     proj_0,
-    validate_user_parameters
+    validate_user_parameters,
+    classify
 )
 
 from mage.link_prediction.factory import (

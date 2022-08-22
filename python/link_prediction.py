@@ -10,8 +10,10 @@ from numpy import int32
 from dataclasses import dataclass, field
 from collections import defaultdict
 from heapq import heappop, heappush 
+from sklearn.metrics import precision_score, recall_score, average_precision_score
 from mage.link_prediction import (
     preprocess,
+    classify,
     inner_train,
     inner_predict,
     create_model,
@@ -406,7 +408,6 @@ def hyperparameter_tuning(ctx: mgp.ProcCtx, num_search_trials: int) -> mgp.Recor
     # Return results
     return mgp.Record(best_parameters=best_parameters, best_training_result=best_training_result, best_validation_result=best_validation_result)
 
-
 @mgp.read_proc
 def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -> mgp.Record(score=mgp.Number):
     """Predict method. It is assumed that nodes are added to the original Memgraph graph. It supports both situations, when the edge doesn't exist and when
@@ -478,7 +479,8 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     return result
 
 @mgp.read_proc
-def recommended_vertex(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: mgp.List[mgp.Vertex], k: int) -> mgp.Record(score=mgp.Number, recommendation=mgp.Vertex):
+def recommended_vertex(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: mgp.List[mgp.Vertex], k: int) -> mgp.Record(score=mgp.Number, 
+    recommendation=mgp.Vertex):
     """Recommend method. It is assumed that nodes are already added to the original graph and our goal is to predict whether there is an edge between two nodes or not. Even if the edge exists,
      method can be used. Recommends k nodes based on edge scores. 
 
@@ -514,9 +516,13 @@ def recommended_vertex(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: 
 
     # Get dgl ids
     src_id = reindex[Reindex.MEMGRAPH][src_type][src_old_id]
+
+    # Save if edge exists for every destination node by mapping dest old id to bool
+    existing_edges: Dict[int, bool] = dict()
     
-    # Save edge scores and vertices
-    results = []
+    # Save edge scores and vertices for each dest vertex.
+    results: List[Tuple[float, int, mgp.Vertex]] = []  
+
     for i, dest_vertex in enumerate(dest_vertices):
         # Get dest vertex
         dest_old_id, dest_type = dest_vertex.id, merge_labels(dest_vertex.labels)
@@ -530,6 +536,9 @@ def recommended_vertex(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: 
             edge_added = True
             # print("Nodes {} and {} are not connected. ".format(src_old_id, dest_old_id))
             graph.add_edges(src_id, dest_id, etype=link_prediction_parameters.target_relation)
+            existing_edges[dest_old_id] = False
+        else:
+            existing_edges[dest_old_id] = True
     
         edge_id = graph.edge_ids(src_id, dest_id, etype=link_prediction_parameters.target_relation)
 
@@ -550,14 +559,48 @@ def recommended_vertex(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: 
         
         heappush(results, (-score, i, dest_vertex))  # Build in O(n). Add i to break ties where all predict values are the same.
     
-    # Extract recommendations
-    recommendations = []
+    # Extract recommendations and metrics
+    top_recommendations, top_scores, top_labels = [], [], []  # scores=probability, recommendation=mgp.Vertex, labels save info if edges exist or not
     pop_size = min(k, len(results))
+
     for i in range(pop_size):
         score, i, recommendation = heappop(results)
-        recommendations.append(mgp.Record(score=-score, recommendation=recommendation))
+        if -score < 0.5:  # No need to continue because that is not predicted edge
+            break
+        # Handle vertex
+        top_recommendations.append(recommendation) # vertices
+        # Handle score
+        top_scores.append(-score) # floats
+        # Handle labels
+        recommendation_old_id = recommendation.id
+        if existing_edges[recommendation_old_id]:  # "relevant" edge
+            top_labels.append(1)
+        else:
+            top_labels.append(0)
 
-    return recommendations
+    # Update k value
+    new_k = len(top_scores)
+
+    # Calculate recommendation metrics
+    top_scores_t = torch.tensor(top_scores)
+    top_classes = classify(top_scores_t, 0.5)
+    precision_at_k = precision_score(top_labels, top_classes)
+    recall_at_k = recall_score(top_labels, top_classes)
+    f1_at_k = 2 * precision_at_k * recall_at_k / (precision_at_k + recall_at_k)
+    ap = average_precision_score(top_labels, top_scores) # average precision
+
+    # Create final return results
+    return_results = []
+    for i in range(len(top_scores)):
+        return_results.append(mgp.Record(score=top_scores[i], recommendation=top_recommendations[i]))
+
+    print("*** Recommendation metrics ***")
+    print(f"Precision@{new_k}: {round(precision_at_k, 3)}")
+    print(f"Recall@{new_k}: {round(recall_at_k, 3)} ")
+    print(f"F1@{new_k}: {round(f1_at_k, 3)}")
+    print(f"AP: {round(ap, 3)}")
+
+    return return_results
 
 @mgp.read_proc
 def get_training_results(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_results=mgp.Any):
