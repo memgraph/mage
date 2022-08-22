@@ -1,7 +1,7 @@
 query: >
     CALL degree_centrality.get() YIELD node, degree
     RETURN node.id AS node, degree
-    ORDER BY degree DESC, node ASC
+    ORDER BY node ASC 
 
 output:
   - degree: 0.5000

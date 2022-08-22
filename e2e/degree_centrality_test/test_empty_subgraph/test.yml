@@ -1,5 +1,5 @@
 query: >
-    CALL degree_centrality.get() YIELD node, degree
+    CALL degree_centrality.get_subgraph([], []) YIELD node, degree
     RETURN node.id AS node, degree
     ORDER BY node ASC 
 

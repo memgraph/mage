@@ -4,6 +4,8 @@
 
 namespace degree_cenntrality_alg {
 
-std::vector<double> GetDegreeCentrality(const mg_graph::GraphView<> &graph);
+enum class AlgorithmType { kUndirected = 0, kOut = 1, kIn = 2 };
+
+std::vector<double> GetDegreeCentrality(const mg_graph::GraphView<> &graph, const AlgorithmType algorithm_type);
 
 }  // namespace degree_cenntrality_alg
