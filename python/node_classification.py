@@ -9,6 +9,7 @@ from tqdm import tqdm
 import torch
 import numpy as np
 import os
+from torch_geometric.nn import to_hetero
 
 
 ##############################
@@ -54,10 +55,17 @@ class TrainParams:
     BATCH_SIZE = "batch_size"
 
 
+class HeteroParams:
+    FEATURES_NAME = "features_name"
+    OBSERVED_ATTRIBUTE = "observed_attribute"
+    CLASS_NAME = "class_name"
+    REINDEXING = "reindexing"
+    INV_REINDEXING = "inv_reindexing"
+
+
 class OtherParams:
     DEVICE_TYPE = "device_type"
     PATH_TO_MODEL = "path_to_model"
-    REINDEXING = "reindexing"
     PATH_TO_MODEL_LAST = "path_to_model_last"
     PATH_TO_MODEL_SECOND_LAST = "path_to_model_second_last"
     PATH_TO_MODEL_THIRD_LAST = "path_to_model_third_last"
@@ -91,8 +99,15 @@ DEFINED_INPUT_TYPES = {
     TrainParams.BATCH_SIZE: int,
     ModelParams.AGGREGATOR: str,
     DataParams.METRICS: list,
+    HeteroParams.OBSERVED_ATTRIBUTE: str,
+    HeteroParams.FEATURES_NAME: str,
+    HeteroParams.CLASS_NAME: str,
+    HeteroParams.REINDEXING: dict,
+    HeteroParams.INV_REINDEXING: dict,
     OtherParams.PATH_TO_MODEL: str,
-    OtherParams.REINDEXING: dict,
+    OtherParams.PATH_TO_MODEL_LAST: str,
+    OtherParams.PATH_TO_MODEL_SECOND_LAST: str,
+    OtherParams.PATH_TO_MODEL_THIRD_LAST: str,
 }
 
 DEFAULT_VALUES = {
@@ -118,11 +133,15 @@ DEFAULT_VALUES = {
         "recall",
         "num_wrong_examples",
     ],
+    HeteroParams.OBSERVED_ATTRIBUTE: "",
+    HeteroParams.FEATURES_NAME: "features",
+    HeteroParams.CLASS_NAME: "class",
+    HeteroParams.REINDEXING: {},
+    HeteroParams.INV_REINDEXING: {},
     OtherParams.PATH_TO_MODEL: "pytorch_models/model",
     OtherParams.PATH_TO_MODEL_LAST: "pytorch_models/model_last",
     OtherParams.PATH_TO_MODEL_SECOND_LAST: "pytorch_models/model_second_last",
     OtherParams.PATH_TO_MODEL_THIRD_LAST: "pytorch_models/model_third_last",
-    OtherParams.REINDEXING: {},
 }
 
 
@@ -149,32 +168,30 @@ def declare_model_and_data(ctx: mgp.ProcCtx):
     """
     global global_params
     if Modelling.data == None:
-        nodes = list(iter(ctx.graph.vertices))
-
-        for i in range(len(nodes)):
-            # inner DB id property
-            global_params[OtherParams.REINDEXING][i] = nodes[i].properties.get("id")
-
-        edges = []
-        for vertex in ctx.graph.vertices:
-            # print(vertex.properties.get(global_params[MemgraphParams.NODE_ID_PROPERTY]))
-            for edge in vertex.out_edges:
-                edges.append(edge)
-
-        Modelling.data = extract_from_database(
-            nodes,
-            edges,
+        (
+            Modelling.data,
+            global_params[HeteroParams.OBSERVED_ATTRIBUTE],
+            global_params[HeteroParams.REINDEXING],
+            global_params[HeteroParams.INV_REINDEXING],
+        ) = extract_from_database(
+            ctx,
             global_params[DataParams.SPLIT_RATIO],
-            global_params,
-            global_params[OtherParams.REINDEXING],
+            global_params[HeteroParams.FEATURES_NAME],
+            global_params[HeteroParams.CLASS_NAME],
         )
-
+    print(Modelling.data[global_params[HeteroParams.OBSERVED_ATTRIBUTE]])
     global_params[ModelParams.IN_CHANNELS] = np.shape(
-        Modelling.data.x.detach().numpy()
+        Modelling.data[global_params[HeteroParams.OBSERVED_ATTRIBUTE]]
+        .x.detach()
+        .numpy()
     )[1]
 
     global_params[ModelParams.OUT_CHANNELS] = len(
-        set(Modelling.data.y.detach().numpy())
+        set(
+            Modelling.data[global_params[HeteroParams.OBSERVED_ATTRIBUTE]]
+            .y.detach()
+            .numpy()
+        )
     )
 
     if global_params[ModelParams.LAYER_TYPE] not in {
@@ -187,18 +204,41 @@ def declare_model_and_data(ctx: mgp.ProcCtx):
 
     if global_params[ModelParams.LAYER_TYPE] == "GATJK":
         Modelling.model = GATJK(
-            in_channels=global_params[ModelParams.IN_CHANNELS],
-            hidden_features_size=global_params[ModelParams.HIDDEN_FEATURES_SIZE],
-            out_channels=global_params[ModelParams.OUT_CHANNELS]
+            in_channels=np.shape(
+                Modelling.data.x_dict[global_params[HeteroParams.OBSERVED_ATTRIBUTE]]
+                .detach()
+                .numpy()
+            )[1],
+            hidden_features_size=[16, 16],
+            out_channels=len(
+                set(
+                    Modelling.data[global_params[HeteroParams.OBSERVED_ATTRIBUTE]]
+                    .y.detach()
+                    .numpy()
+                )
+            ),
         )
     else:
         Modelling.model = InductiveModel(
             layer_type=global_params[ModelParams.LAYER_TYPE],
-            in_channels=global_params[ModelParams.IN_CHANNELS],
-            hidden_features_size=global_params[ModelParams.HIDDEN_FEATURES_SIZE],
-            out_channels=global_params[ModelParams.OUT_CHANNELS],
+            in_channels=np.shape(
+                Modelling.data.x_dict[global_params[HeteroParams.OBSERVED_ATTRIBUTE]]
+                .detach()
+                .numpy()
+            )[1],
+            hidden_features_size=[16, 16],
+            out_channels=len(
+                set(
+                    Modelling.data[global_params[HeteroParams.OBSERVED_ATTRIBUTE]]
+                    .y.detach()
+                    .numpy()
+                )
+            ),
             aggr=global_params[ModelParams.AGGREGATOR],
         )
+
+    metadata = (Modelling.data.node_types, Modelling.data.edge_types)
+    Modelling.model = to_hetero(Modelling.model, metadata)
 
     Modelling.opt = torch.optim.Adam(
         Modelling.model.parameters(),
@@ -306,8 +346,6 @@ def set_model_parameters(
 
     params = {**DEFAULT_VALUES, **params}  # override any default parameters
 
-    #print(params)
-
     if not is_correctly_typed(DEFINED_INPUT_TYPES, params):
         raise Exception(
             f"Input dictionary is not correctly typed. Expected following types {DEFINED_INPUT_TYPES}."
@@ -322,7 +360,9 @@ def set_model_parameters(
         hidden_features_size=global_params[ModelParams.HIDDEN_FEATURES_SIZE],
         layer_type=global_params[ModelParams.LAYER_TYPE],
         aggregator=global_params[ModelParams.AGGREGATOR],
-        num_samples=np.shape(Modelling.data.x)[0],
+        num_samples=np.shape(
+            Modelling.data[global_params[HeteroParams.OBSERVED_ATTRIBUTE]].x
+        )[0],
         learning_rate=global_params[OptimizerParams.LEARNING_RATE],
         weight_decay=global_params[OptimizerParams.WEIGHT_DECAY],
         split_ratio=global_params[DataParams.SPLIT_RATIO],
@@ -346,7 +386,9 @@ def set_model_parameters(
 @mgp.read_proc
 def train(
     no_epochs: int = 100, patience: int = 10
-) -> mgp.Record(epoch=int, loss=float, val_loss=float, train_log=mgp.Any, val_log=mgp.Any):
+) -> mgp.Record(
+    epoch=int, loss=float, val_loss=float, train_log=mgp.Any, val_log=mgp.Any
+):
     """This function performs training of model. Before it, function set_model_parameters
     must be executed. Otherwise, global variables data and model will be equal
     to None and AssertionError will be raised.
@@ -361,31 +403,36 @@ def train(
     global Modelling
     if Modelling.data == None:
         raise Exception("Dataset is not loaded. Load dataset first!")
-    
+
     global_params[TrainParams.NUM_EPOCHS] = no_epochs
-    
+
     try:
-        os.mkdir(os.getcwd()+'/pytorch_models')
+        os.mkdir(os.getcwd() + "/pytorch_models")
     except FileExistsError as e:
         print(e)
     second_last, third_last = False, False
-    
+
     last_loss = 100
     trigger_times = 0
 
     for epoch in tqdm(range(1, no_epochs + 1)):
         loss, val_loss = train_epoch(
-            Modelling.model, Modelling.opt, Modelling.data, Modelling.criterion, global_params[TrainParams.BATCH_SIZE]
+            Modelling.model,
+            Modelling.opt,
+            Modelling.data,
+            Modelling.criterion,
+            global_params[TrainParams.BATCH_SIZE],
+            global_params[HeteroParams.OBSERVED_ATTRIBUTE],
         )
-        
+
         # Early stopping
-        
+
         if val_loss > last_loss:
             trigger_times += 1
-            print('Trigger Times:', trigger_times)
+            print("Trigger Times:", trigger_times)
 
             if trigger_times >= patience:
-                print('Early stopping!')
+                print("Early stopping!")
                 break
 
         else:
@@ -398,19 +445,29 @@ def train(
         if epoch % global_params[TrainParams.CONSOLE_LOG_FREQ] == 0:
 
             dict_train = metrics(
-                Modelling.data.train_mask,
+                Modelling.data[
+                    global_params[HeteroParams.OBSERVED_ATTRIBUTE]
+                ].train_mask,
                 Modelling.model,
                 Modelling.data,
                 global_params[DataParams.METRICS],
+                global_params[HeteroParams.OBSERVED_ATTRIBUTE],
             )
             dict_val = metrics(
-                Modelling.data.val_mask,
+                Modelling.data[global_params[HeteroParams.OBSERVED_ATTRIBUTE]].val_mask,
                 Modelling.model,
                 Modelling.data,
                 global_params[DataParams.METRICS],
+                global_params[HeteroParams.OBSERVED_ATTRIBUTE],
             )
             logged_data.append(
-                {"epoch": epoch, "loss": loss, "val_loss": val_loss, "train": dict_train, "val": dict_val}
+                {
+                    "epoch": epoch,
+                    "loss": loss,
+                    "val_loss": val_loss,
+                    "train": dict_train,
+                    "val": dict_val,
+                }
             )
 
             print(
@@ -418,23 +475,31 @@ def train(
             )
         # print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}')
 
-        
         if epoch % global_params[TrainParams.CHECKPOINT_FREQ] == 0:
-            
+
             if third_last and second_last:
-                torch.save(torch.load(global_params[OtherParams.PATH_TO_MODEL_SECOND_LAST]), global_params[OtherParams.PATH_TO_MODEL_THIRD_LAST])
+                torch.save(
+                    torch.load(global_params[OtherParams.PATH_TO_MODEL_SECOND_LAST]),
+                    global_params[OtherParams.PATH_TO_MODEL_THIRD_LAST],
+                )
             if second_last:
-                torch.save(torch.load(global_params[OtherParams.PATH_TO_MODEL_LAST]), global_params[OtherParams.PATH_TO_MODEL_SECOND_LAST])
-            
+                torch.save(
+                    torch.load(global_params[OtherParams.PATH_TO_MODEL_LAST]),
+                    global_params[OtherParams.PATH_TO_MODEL_SECOND_LAST],
+                )
+
             import pathlib
+
             print(pathlib.Path().resolve())
-            torch.save(Modelling.model.state_dict(), global_params[OtherParams.PATH_TO_MODEL_LAST])
+            torch.save(
+                Modelling.model.state_dict(),
+                global_params[OtherParams.PATH_TO_MODEL_LAST],
+            )
             if not second_last:
                 second_last = True
             elif not third_last:
                 third_last = True
 
-            
     return [
         mgp.Record(
             epoch=logged_data[k]["epoch"],
@@ -540,26 +605,22 @@ def predict(vertex: mgp.Vertex) -> mgp.Record(predicted_value=int):
     """
     global global_params
     id = vertex.properties.get(global_params[MemgraphParams.NODE_ID_PROPERTY])
-    features = vertex.properties.get(
-        global_params[MemgraphParams.NODE_FEATURES_PROPERTY]
-    )
-
-    # it is assumed vertex does not always have truth label
-    # truth = vertex.properties.get(global_params[MemgraphParams.NODE_CLASS_PROPERTY])
-
-    inv_reindexing = {v: k for k, v in global_params[OtherParams.REINDEXING].items()}
+    features = vertex.properties.get(global_params[HeteroParams.FEATURES_NAME])
 
     Modelling.model.eval()
-    out = Modelling.model(Modelling.data.x, Modelling.data.edge_index)
-    pred = out.argmax(dim=1)
+    out = Modelling.model(Modelling.data.x_dict, Modelling.data.edge_index_dict)
+    pred = out[global_params[HeteroParams.OBSERVED_ATTRIBUTE]].argmax(dim=1)
 
+    data = Modelling.data[global_params[HeteroParams.OBSERVED_ATTRIBUTE]]
     if not torch.equal(
         torch.tensor(np.array(features), dtype=torch.float32),
-        Modelling.data.x[inv_reindexing[id]],
+        data.x[global_params[HeteroParams.INV_REINDEXING][id]],
     ):
         raise AssertionError("features from node are different from database features")
 
-    predicted_class = (int)(pred.detach().numpy()[inv_reindexing[id]])
+    predicted_class = (int)(
+        pred.detach().numpy()[global_params[HeteroParams.INV_REINDEXING][id]]
+    )
 
     return mgp.Record(predicted_class=predicted_class)
 

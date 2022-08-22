@@ -258,6 +258,6 @@ def run(ctx: mgp.ProcCtx, num_epochs=100, train_ratio=0.8):
         print("Epoch: ", i, "Loss: ", loss)
 
     # print(list(Modelling.model.parameters()))
-    # print(np.sum(np.array(data[Parameters.OBSERVED_ATTRIBUTE].val_mask)))
-    # print(data[Parameters.OBSERVED_ATTRIBUTE].val_mask)
+    # print(np.sum(np.array(data[observed_attribute].val_mask)))
+    # print(data[observed_attribute].val_mask)
     return mgp.Record()
