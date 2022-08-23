@@ -21,6 +21,24 @@ from mage.link_prediction.constants import (
 
 reverse_relation = lambda target_relation: "rev_" + target_relation if type(target_relation) == str else (target_relation[2], "rev_" + target_relation[1], target_relation[0])
 
+def add_self_loop(g: dgl.heterograph, self_loop_edge_type: str) -> dgl.heterograph:
+    data_dict = dict()
+    num_nodes_dict = dict()
+    # Copy old edges
+    for etype in g.canonical_etypes:
+        data_dict[etype] = g.edges(etype=etype)
+
+    # Add self etypes
+    device = g.device
+    idtype = g.idtype
+    for ntype in g.ntypes:
+        nids = torch.arange(start=0, end=g.num_nodes(ntype), step=1, dtype=idtype, device=device)
+        data_dict[(ntype, 'self', ntype)] = (nids, nids)
+        num_nodes_dict[ntype] = g.num_nodes(ntype)
+
+    return dgl.heterograph(data_dict=data_dict, num_nodes_dict=num_nodes_dict, idtype=idtype, device=device)
+
+
 def validate_user_parameters(parameters: mgp.Map) -> None:
     """Validates parameters user sent through method set_model_parameters
 
@@ -280,6 +298,14 @@ def validate_user_parameters(parameters: mgp.Map) -> None:
         if last_activation_function != Activations.SIGMOID:
             raise Exception(f"Only {Activations.SIGMOID} is currently supported. ")
 
+    # add reverse edges
+    if Parameters.ADD_REVERSE_EDGES in parameters.keys():
+        add_reverse_edges = parameters[Parameters.ADD_REVERSE_EDGES]
+
+        # check typing
+        type_checker(add_reverse_edges, "add_reverse_edges should be a bool. ", bool)
+        
+
 def proj_0(graph: dgl.graph, node_features_property: str) -> None:
     """Performs projection on all node features to the max_feature_size by padding it with 0.
 
@@ -432,6 +458,8 @@ def batch_forward_pass(model: torch.nn.Module, predictor: torch.nn.Module, loss:
          Tuple[torch.Tensor, torch.Tensor, torch.nn.Module]: First tensor are calculated probabilities, second tensor are true labels and the last tensor
             is a reference to the loss.
     """
+    # print(f"Pos graph: {pos_graph}")
+    # print(f"Neg graph: {neg_graph}")
     outputs = model.forward(blocks, input_features)
     # Deal with edge scores
     pos_score = predictor.forward(pos_graph, outputs, target_relation=target_relation)
@@ -503,10 +531,15 @@ def inner_train(graph: dgl.graph,
     
     # Create reverse target relation
     reverse_target_relation = reverse_relation(target_relation)
-    reverse_etypes = {target_relation: reverse_target_relation, reverse_target_relation: target_relation}
-    sampler = dgl.dataloading.as_edge_prediction_sampler(sampler, negative_sampler=negative_sampler, exclude="reverse_types", 
-        reverse_etypes=reverse_etypes)
+    if reverse_target_relation not in graph.etypes and reverse_target_relation not in graph.canonical_etypes:
+        # same source and destination node
+        sampler = dgl.dataloading.as_edge_prediction_sampler(sampler, negative_sampler=negative_sampler, exclude="self")
+    else:
+        reverse_etypes = {target_relation: reverse_target_relation, reverse_target_relation: target_relation}
+        sampler = dgl.dataloading.as_edge_prediction_sampler(sampler, negative_sampler=negative_sampler, exclude="reverse_types", 
+            reverse_etypes=reverse_etypes)
     
+   
     # Define training and validation dictionaries
     # For heterogeneous full neighbor sampling we need to define a dictionary of edge types and edge ID tensors instead of a dictionary of node types and node ID tensors
     # DataLoader iterates over a set of edges in mini-batches, yielding the subgraph induced by the edge mini-batch and message flow graphs (MFGs) to be consumed by the module below.
@@ -648,11 +681,12 @@ def inner_predict(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl
     Returns:
         float: Edge score.
     """
+    # TODO: Change so it is incoming parameter(more efficient for recommend)
     graph_features = {node_type: graph.nodes[node_type].data[node_features_property] for node_type in graph.ntypes}
     # print("Graph features: ", graph_features)
     # print("Graph features2: ", graph.ndata[node_features_property])
     with torch.no_grad():
-        h = model.online_forward(graph, graph.ndata[node_features_property])
+        h = model.online_forward(graph, graph_features)
         src_embedding, dest_embedding = h[src_type][src_node], h[dest_type][dest_node]
         score = predictor.forward_pred(src_embedding, dest_embedding)
         # print("Scores: ", torch.sum(scores < 0.5).item())

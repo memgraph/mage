@@ -90,6 +90,7 @@ class Parameters:
     RESIDUAL = "residual"
     ALPHA = "alpha"
     LAST_ACTIVATION_FUNCTION = "last_activation_function"
+    ADD_REVERSE_EDGES = "add_reverse_edges"
     
 
 

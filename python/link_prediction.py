@@ -1,3 +1,4 @@
+from math import fabs
 import mgp  # Python API
 import json
 import torch
@@ -12,6 +13,7 @@ from collections import defaultdict
 from heapq import heappop, heappush 
 from sklearn.metrics import precision_score, recall_score, average_precision_score
 from mage.link_prediction import (
+    add_self_loop,
     preprocess,
     classify,
     inner_train,
@@ -104,6 +106,7 @@ class LinkPredictionParameters:
     batch_size: int = 512
     sampling_workers: int = 4
     last_activation_function = Activations.SIGMOID
+    add_reverse_edges = False  # only allowed in some cases
 
 ##############################
 # global parameters
@@ -188,7 +191,7 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
     if type(link_prediction_parameters.attn_num_heads) == tuple:
         link_prediction_parameters.attn_num_heads = [*(x for x in link_prediction_parameters.attn_num_heads)]
 
-    return mgp.Record(status=1, message="OK")
+    return mgp.Record(status=True, message="OK")
 
 @mgp.read_proc
 def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_results=mgp.Any):
@@ -483,6 +486,8 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
 
     result = mgp.Record(score=score)
 
+    print(f"Score: {score}")
+
     # Remove edge if necessary
     if edge_added:
         graph.remove_edges(edge_id, etype=link_prediction_parameters.target_relation)
@@ -734,14 +739,26 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
 
     edge_types = set()
 
+    isolated_nodes = []  # saves old ids 
+
     # Iterate over all vertices
     for vertex in ctx.graph.vertices:
         # Process source vertex
         src_id, src_type, src_features = vertex.id, merge_labels(vertex.labels), vertex.properties.get(link_prediction_parameters.node_features_property)
+
+        src_isolated_node = True
+        for _ in vertex.in_edges:
+            src_isolated_node = False
+            break
         
-        # Process hetero label stuff
-        _process_help_function(mem_indexes, src_id, src_type, src_features, reindex, index_dgl_to_features) 
- 
+        if src_isolated_node:
+            for _ in vertex.out_edges:
+                src_isolated_node = False
+                break
+
+        if not src_isolated_node:
+            _process_help_function(mem_indexes, src_id, src_type, src_features, reindex, index_dgl_to_features) 
+
         # Get all out edges
         for edge in vertex.out_edges:
             # Get edge information
@@ -773,7 +790,10 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
             # Define edge
             src_nodes[type_triplet].append(reindex[Reindex.MEMGRAPH][src_type][src_id])
             dest_nodes[type_triplet].append(reindex[Reindex.MEMGRAPH][dest_type][dest_id])
-            
+
+        # Append old id
+        if src_isolated_node:
+            isolated_nodes.append(src_id)
             
     # Check if there are no edges in the dataset, assume that it cannot learn effectively without edges. E2E handling.
     if len(src_nodes.keys()) == 0:
@@ -786,17 +806,45 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
     for type_triplet in type_triplets:
         data_dict[type_triplet] = torch.tensor(src_nodes[type_triplet]), torch.tensor(dest_nodes[type_triplet])
 
-    g = dgl.heterograph(data_dict)  
-    
-    # Add undirected support
-    reverse_edges_transform = AddReverse(copy_edata=True, sym_new_etype=False)
-    # Add self-loop support
-    self_loop_transform = AddSelfLoop(allow_duplicate=False, new_etypes=True)
-    # Create transform composition
-    transform = Compose([reverse_edges_transform, self_loop_transform])
-    g = transform(g)  # unfortunately copying is done 2 times
+    g = dgl.heterograph(data_dict)      
+    # print(f"Original graph")
+    # for etype in g.canonical_etypes:
+    #     print(f"Etype: {etype} Edges: {g.edges(etype=etype)}")
+    # print()
 
-    print(f"Created graph: {g}")
+    # Process isolated nodes by appending them to the end
+    for isolated_node_id in isolated_nodes:
+        isolated_node = ctx.graph.get_vertex_by_id(isolated_node_id)
+        isolated_node_type, isolated_node_features = merge_labels(isolated_node.labels), isolated_node.properties.get(link_prediction_parameters.node_features_property)
+        _process_help_function(mem_indexes, isolated_node_id, isolated_node_type, isolated_node_features, reindex, index_dgl_to_features)
+        g.add_nodes(1, ntype=isolated_node_type)
+
+    # print(f"Disconnected processing graph")
+    # for etype in g.canonical_etypes:
+    #     print(f"Etype: {etype} Edges: {g.edges(etype=etype)}")
+    # print()
+
+    if link_prediction_parameters.add_reverse_edges:
+        # Add undirected support
+        reverse_edges_transform = AddReverse(copy_edata=True, sym_new_etype=False)
+        # Add self-loop support
+        # self_loop_transform = AddSelfLoop(allow_duplicate=False, new_etypes=True)
+        # Create transform composition
+        # transform = Compose([reverse_edges_transform, self_loop_transform])
+        g = reverse_edges_transform(g)  # unfortunately copying is done 2 times
+        print()
+        print("After reverse edges transform")
+        for etype in g.canonical_etypes:
+            print(f"Etype: {etype} Edges: {g.edges(etype=etype)}")
+        print()
+
+    # Custom made self-loop function
+    g = add_self_loop(g, "self")
+
+    # print("After self loop transform")
+    # for etype in g.canonical_etypes:
+    #     print(f"Etype: {etype} Edges: {g.edges(etype=etype)}")
+
 
     # Create features
     for node_type in g.ntypes:
@@ -807,6 +855,7 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
 
         node_features = torch.tensor(node_features, dtype=torch.float32)
         g.nodes[node_type].data[link_prediction_parameters.node_features_property] = node_features
+
     
     # Test conversion. Note: Do a conversion before you upscale features.
     _conversion_to_dgl_test(graph=g, reindex=reindex, ctx=ctx, node_features_property=link_prediction_parameters.node_features_property)
@@ -867,3 +916,10 @@ def _conversion_to_dgl_test(
             # Check if equal
             if not torch.equal(graph.nodes[node_type].data[node_features_property][vertex_id], torch.tensor(old_features, dtype=torch.float32),):
                 raise Exception("The conversion to DGL failed. Stored graph does not contain the same features as the converted DGL graph. ")
+
+    total_edges = 0    
+    for etype in graph.canonical_etypes:
+        print(f"Etype: {etype} Graph num edges: {graph.number_of_edges(etype=etype)}")
+        total_edges += graph.number_of_edges(etype=etype)
+    print(f"Total edges: {total_edges}")
+    

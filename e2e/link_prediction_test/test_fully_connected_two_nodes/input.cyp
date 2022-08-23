@@ -1,1 +1,0 @@
-MERGE (v1:PAPER {id: 1, features: [1, 2, 3]}) MERGE (v2:PAPER {id: 2, features: [1.54, 0.3, 1.78]}) CREATE (v1)<-[e1:CITES {}]-(v2) CREATE (v1)-[e2:CITES {}]->(v2);

@@ -5,8 +5,10 @@ from mage.link_prediction.link_prediction_util import (
     get_number_of_edges,
     proj_0,
     validate_user_parameters,
-    classify
+    classify,
+    add_self_loop
 )
+
 
 from mage.link_prediction.factory import (
     create_model,

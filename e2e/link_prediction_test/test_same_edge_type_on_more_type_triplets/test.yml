@@ -1,7 +1,0 @@
-query: >
-  CALL link_prediction.set_model_parameters({hidden_features_size: [3, 2], split_ratio: 1.0, target_edge_type: "CITES"}) YIELD *
-  CALL link_prediction.train()
-  YIELD training_results, validation_results
-  RETURN training_results, validation_results;
-
-exception: "Ambiguous edge types."

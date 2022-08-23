@@ -1,7 +1,0 @@
-query: >-
-  CALL link_prediction.get_training_results()
-  YIELD training_results, validation_results
-  RETURN training_results, validation_results;
-output:
-  - validation_results: []
-    training_results: []
