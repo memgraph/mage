@@ -305,7 +305,6 @@ def validate_user_parameters(parameters: mgp.Map) -> None:
         # check typing
         type_checker(add_reverse_edges, "add_reverse_edges should be a bool. ", bool)
         
-
 def proj_0(graph: dgl.graph, node_features_property: str) -> None:
     """Performs projection on all node features to the max_feature_size by padding it with 0.
 

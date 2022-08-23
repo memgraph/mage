@@ -153,10 +153,13 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
         tr_acc_patience: int -> Training patience, for how many epoch will accuracy drop on test set be tolerated before stopping the training.
         context_save_dir: str -> Path where the model and predictor will be saved every checkpoint_freq epochs.
         target_relation: str -> Unique edge type that is used for training.
-        num_neg_per_pos_edge (int): Number of negative edges that will be sampled per one positive edge in the mini-batch.
-        num_layers (int): Number of layers in the GNN architecture.
-        batch_size (int): Batch size used in both training and validation procedure.
+        num_neg_per_pos_edge: int -> Number of negative edges that will be sampled per one positive edge in the mini-batch.
+        batch_size : Batch size used in both training and validation procedure.
         sampling_workers (int): Number of workers that will cooperate in the sampling procedure in the training and validation.
+        last_activation_function (str) → Activation function that is applied after the last layer in the model and before the predictor_type. Currently, only sigmoid is supported.
+        add_reverse_edges (bool) -> Whether the module should add reverse edges for each in the obtained graph. If the source and destination nodes are of the same type, edges of the same edge type will 
+            be created. If the source and destination nodes are different, then prefix rev_ will be added to the previous edge type. Reverse edges will be excluded as message passing edges for corresponding supervision edges. 
+        
 
     Returns:
         mgp.Record:
@@ -170,13 +173,13 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
     for key, value in parameters.items():
         if not hasattr(link_prediction_parameters, key):
             return mgp.Record(
-                status=1,
+                status=False,
                 message="Unknown parameter. ",
             )
         try:
             setattr(link_prediction_parameters, key, value)
         except Exception as exception:
-            return mgp.Record(status=1, message=repr(exception))
+            return mgp.Record(status=False, message=repr(exception))
 
     # Device type handling
     if link_prediction_parameters.device_type == Devices.CUDA_DEVICE and torch.cuda.is_available() is True:
