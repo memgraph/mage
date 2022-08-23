@@ -867,14 +867,3 @@ def _conversion_to_dgl_test(
             # Check if equal
             if not torch.equal(graph.nodes[node_type].data[node_features_property][vertex_id], torch.tensor(old_features, dtype=torch.float32),):
                 raise Exception("The conversion to DGL failed. Stored graph does not contain the same features as the converted DGL graph. ")
-
-    total_num_edges = 0
-    with open("./edges.txt", "a") as f:
-        for etype in graph.canonical_etypes:
-            f.write(f"Etype: {etype}, Num edges: {graph.number_of_edges(etype=etype)}\n")
-            total_num_edges += graph.number_of_edges(etype=etype)
-            f.write(f"Edges: {graph.edges(form='all', etype=etype)}\n")
-    
-
-
-    print(f"Total number of edges: {total_num_edges}")

@@ -19,6 +19,8 @@ from mage.link_prediction.constants import (
     Parameters
 )
 
+reverse_relation = lambda target_relation: "rev_" + target_relation if type(target_relation) == str else (target_relation[2], "rev_" + target_relation[1], target_relation[0])
+
 def validate_user_parameters(parameters: mgp.Map) -> None:
     """Validates parameters user sent through method set_model_parameters
 
@@ -278,7 +280,6 @@ def validate_user_parameters(parameters: mgp.Map) -> None:
         if last_activation_function != Activations.SIGMOID:
             raise Exception(f"Only {Activations.SIGMOID} is currently supported. ")
 
-
 def proj_0(graph: dgl.graph, node_features_property: str) -> None:
     """Performs projection on all node features to the max_feature_size by padding it with 0.
 
@@ -501,7 +502,7 @@ def inner_train(graph: dgl.graph,
     sampler = dgl.dataloading.MultiLayerFullNeighborSampler(num_layers=num_layers)  # gather messages from all node neighbors
     
     # Create reverse target relation
-    reverse_target_relation = (target_relation[2], "rev_" + target_relation[1], target_relation[0])
+    reverse_target_relation = reverse_relation(target_relation)
     reverse_etypes = {target_relation: reverse_target_relation, reverse_target_relation: target_relation}
     sampler = dgl.dataloading.as_edge_prediction_sampler(sampler, negative_sampler=negative_sampler, exclude="reverse_types", 
         reverse_etypes=reverse_etypes)
