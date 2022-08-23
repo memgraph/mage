@@ -7,7 +7,8 @@ from mage.link_prediction.predictors.MLPPredictor import MLPPredictor
 from mage.link_prediction.constants import (
     Models,
     Predictors,
-    Optimizers
+    Optimizers,
+    Activations
 )
 import itertools
 
@@ -88,3 +89,18 @@ def create_predictor(predictor_type: str, predictor_hidden_size: int) -> torch.n
         return MLPPredictor(h_feats=predictor_hidden_size)
     else:
         raise Exception(f"Predictor type {predictor_type} not supported. ")
+
+def create_activation_function(act_func: str) -> Tuple[torch.nn.Module, float]:
+    """Creates activation function based on a given name.
+
+    Args:
+        act_func (str): Name of the activation function.
+
+    Returns:
+        torch.nn.Module: Created activation function
+        float: Classification threshold
+    """
+    if act_func == Activations.SIGMOID:
+        return torch.nn.Sigmoid(), 0.5
+    else:
+        raise Exception(f"Currently, only {Activations.SIGMOID} is supported. ")

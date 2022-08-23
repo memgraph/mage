@@ -3,7 +3,7 @@ import json
 import torch
 import scipy
 import dgl  # geometric deep learning
-from dgl import AddSelfLoop
+from dgl import AddSelfLoop, AddReverse, Compose
 from typing import Callable, List, Tuple, Dict
 from sklearn.model_selection import ParameterSampler
 from numpy import int32
@@ -19,6 +19,7 @@ from mage.link_prediction import (
     create_model,
     create_optimizer,
     create_predictor,
+    create_activation_function,
     proj_0,
     validate_user_parameters,
     Metrics,
@@ -30,6 +31,7 @@ from mage.link_prediction import (
     Devices,
     Aggregators,
     Parameters,
+    Activations
    )
 
 ##############################
@@ -101,6 +103,7 @@ class LinkPredictionParameters:
     num_neg_per_pos_edge: int = 5
     batch_size: int = 512
     sampling_workers: int = 4
+    last_activation_function = Activations.SIGMOID
 
 ##############################
 # global parameters
@@ -250,6 +253,9 @@ def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_
         model=model,
         predictor=predictor,
     )
+    
+    # Create activation function
+    m, threshold = create_activation_function(act_func=link_prediction_parameters.last_activation_function)
 
     # Call training method
     training_results, validation_results = inner_train(graph,
@@ -260,6 +266,8 @@ def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_
         predictor,
         optimizer,
         link_prediction_parameters.num_epochs,
+        m,
+        threshold,
         link_prediction_parameters.node_features_property,
         link_prediction_parameters.console_log_freq,
         link_prediction_parameters.checkpoint_freq,
@@ -369,6 +377,9 @@ def hyperparameter_tuning(ctx: mgp.ProcCtx, num_search_trials: int) -> mgp.Recor
                 predictor=predictor,
             )
 
+            # Create activation function
+            m, threshold = create_activation_function(act_func=link_prediction_parameters.last_activation_function)
+
             # Call training method
             training_results, validation_results = inner_train(graph,
                 train_eid_dict, 
@@ -379,6 +390,8 @@ def hyperparameter_tuning(ctx: mgp.ProcCtx, num_search_trials: int) -> mgp.Recor
                 optimizer,
                 link_prediction_parameters.num_epochs,
                 link_prediction_parameters.node_features_property,
+                m,
+                threshold,
                 link_prediction_parameters.console_log_freq,
                 link_prediction_parameters.checkpoint_freq,
                 link_prediction_parameters.metrics,
@@ -563,9 +576,14 @@ def recommended_vertex(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: 
     top_recommendations, top_scores, top_labels = [], [], []  # scores=probability, recommendation=mgp.Vertex, labels save info if edges exist or not
     pop_size = min(k, len(results))
 
+    if link_prediction_parameters.last_activation_function == Activations.SIGMOID:
+        threshold = 0.5
+    else:
+        raise Exception(f"Currently, only {Activations.SIGMOID} is supported. ")
+
     for i in range(pop_size):
         score, i, recommendation = heappop(results)
-        if -score < 0.5:  # No need to continue because that is not predicted edge
+        if -score < threshold:  # No need to continue because that is not predicted edge
             break
         # Handle vertex
         top_recommendations.append(recommendation) # vertices
@@ -583,7 +601,7 @@ def recommended_vertex(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: 
 
     # Calculate recommendation metrics
     top_scores_t = torch.tensor(top_scores)
-    top_classes = classify(top_scores_t, 0.5)
+    top_classes = classify(top_scores_t, threshold)
     precision_at_k = precision_score(top_labels, top_classes)
     recall_at_k = recall_score(top_labels, top_classes)
     f1_at_k = 2 * precision_at_k * recall_at_k / (precision_at_k + recall_at_k)
@@ -770,9 +788,13 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
 
     g = dgl.heterograph(data_dict)  
     
+    # Add undirected support
+    reverse_edges_transform = AddReverse(copy_edata=True, sym_new_etype=False)
     # Add self-loop support
-    transform = AddSelfLoop(allow_duplicate=False, new_etypes=True)
-    g = transform(g)
+    self_loop_transform = AddSelfLoop(allow_duplicate=False, new_etypes=True)
+    # Create transform composition
+    transform = Compose([reverse_edges_transform, self_loop_transform])
+    g = transform(g)  # unfortunately copying is done 2 times
 
     print(f"Created graph: {g}")
 
@@ -845,3 +867,14 @@ def _conversion_to_dgl_test(
             # Check if equal
             if not torch.equal(graph.nodes[node_type].data[node_features_property][vertex_id], torch.tensor(old_features, dtype=torch.float32),):
                 raise Exception("The conversion to DGL failed. Stored graph does not contain the same features as the converted DGL graph. ")
+
+    total_num_edges = 0
+    with open("./edges.txt", "a") as f:
+        for etype in graph.canonical_etypes:
+            f.write(f"Etype: {etype}, Num edges: {graph.number_of_edges(etype=etype)}\n")
+            total_num_edges += graph.number_of_edges(etype=etype)
+            f.write(f"Edges: {graph.edges(form='all', etype=etype)}\n")
+    
+
+
+    print(f"Total number of edges: {total_num_edges}")

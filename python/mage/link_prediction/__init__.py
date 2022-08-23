@@ -12,6 +12,7 @@ from mage.link_prediction.factory import (
     create_model,
     create_optimizer,
     create_predictor,
+    create_activation_function
 )
 
 from mage.link_prediction.constants import (
@@ -23,6 +24,7 @@ from mage.link_prediction.constants import (
     Optimizers,
     Devices,
     Aggregators,
-    Parameters
+    Parameters,
+    Activations
 )
 

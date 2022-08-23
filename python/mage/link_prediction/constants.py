@@ -59,6 +59,10 @@ class Aggregators:
     GCN_AGG = "gcn"
 
 @dataclass
+class Activations:
+    SIGMOID = "sigmoid"
+
+@dataclass
 class Parameters:
     HIDDEN_FEATURES_SIZE = "hidden_features_size"
     LAYER_TYPE = "layer_type"
@@ -85,6 +89,9 @@ class Parameters:
     DROPOUT = "dropout"
     RESIDUAL = "residual"
     ALPHA = "alpha"
+    LAST_ACTIVATION_FUNCTION = "last_activation_function"
+    
+
 
 
 

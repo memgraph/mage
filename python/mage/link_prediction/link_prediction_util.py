@@ -8,6 +8,7 @@ from typing import Callable, Dict, Tuple, List
 import mgp
 import random
 from mage.link_prediction.constants import (
+    Activations,
     Metrics,
     Models,
     Predictors,
@@ -267,6 +268,17 @@ def validate_user_parameters(parameters: mgp.Map) -> None:
         # check typing
         type_checker(sampling_workers, "sampling_workers must be and int", int)
 
+    # last activation function
+    if Parameters.LAST_ACTIVATION_FUNCTION in parameters.keys():
+        last_activation_function = parameters[Parameters.LAST_ACTIVATION_FUNCTION]
+
+        # check typing
+        type_checker(last_activation_function, "last_activation_function should be a string", str)
+        
+        if last_activation_function != Activations.SIGMOID:
+            raise Exception(f"Only {Activations.SIGMOID} is currently supported. ")
+
+
 def proj_0(graph: dgl.graph, node_features_property: str) -> None:
     """Performs projection on all node features to the max_feature_size by padding it with 0.
 
@@ -439,6 +451,8 @@ def inner_train(graph: dgl.graph,
                     predictor: torch.nn.Module, 
                     optimizer: torch.optim.Optimizer,
                     num_epochs: int,
+                    m: torch.nn.Module,
+                    threshold: float,
                     node_features_property: str, 
                     console_log_freq: int, 
                     checkpoint_freq: int, 
@@ -462,6 +476,8 @@ def inner_train(graph: dgl.graph,
         predictor (torch.nn.Module): A reference to the edge predictor.
         optimizer (torch.optim.Optimizer): A reference to the training optimizer.
         num_epochs (int): number of epochs for model training.
+        m (torch.nn.Module): Activation function.
+        threshold (float): Classification threshold for given activation function.
         node_features_property: (str): property name where the node features are saved.
         console_log_freq (int): How often results will be printed. All results that are printed in the terminal will be returned to the client calling Memgraph.
         checkpoint_freq (int): Select the number of epochs on which the model will be saved. The model is persisted on the disc.
@@ -483,8 +499,12 @@ def inner_train(graph: dgl.graph,
     # First define all necessary samplers
     negative_sampler = dgl.dataloading.negative_sampler.GlobalUniform(k=num_neg_per_pos_edge, replace=False)
     sampler = dgl.dataloading.MultiLayerFullNeighborSampler(num_layers=num_layers)  # gather messages from all node neighbors
-    reverse_etypes = {"SUBSCRIBES_TO": "USED_BY", "USED_BY": "SUBSCRIBES_TO"}
-    sampler = dgl.dataloading.as_edge_prediction_sampler(sampler, negative_sampler=negative_sampler, exclude="reverse_types", reverse_etypes=reverse_etypes)  # TODO: Add "self" and change that to reverse edges sometime
+    
+    # Create reverse target relation
+    reverse_target_relation = (target_relation[2], "rev_" + target_relation[1], target_relation[0])
+    reverse_etypes = {target_relation: reverse_target_relation, reverse_target_relation: target_relation}
+    sampler = dgl.dataloading.as_edge_prediction_sampler(sampler, negative_sampler=negative_sampler, exclude="reverse_types", 
+        reverse_etypes=reverse_etypes)
     
     # Define training and validation dictionaries
     # For heterogeneous full neighbor sampling we need to define a dictionary of edge types and edge ID tensors instead of a dictionary of node types and node ID tensors
@@ -518,9 +538,6 @@ def inner_train(graph: dgl.graph,
 
     # Initialize loss
     loss = torch.nn.BCELoss()
-
-    # Initialize activation func
-    m, threshold = torch.nn.Sigmoid(), 0.5
 
     # Define lambda functions for operating on dictionaries
     add_: Callable[[float, float], float] = lambda prior, later: prior + later
