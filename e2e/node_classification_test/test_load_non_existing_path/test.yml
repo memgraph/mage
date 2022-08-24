@@ -1,8 +1,0 @@
-query: >
-        CALL node_classification.set_model_parameters({path_to_model: '../first_easter_egg/model'}) YIELD *
-        CALL node_classification.load_model() YIELD *;
-
-exception: >
-        file not found on path
-
-# this test somehow does not work

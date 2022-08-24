@@ -1,0 +1,5 @@
+query: >
+        CALL node_classification.load_model() YIELD *;
+
+exception: >
+        File model.pt not found on system. Please provide the valid path.

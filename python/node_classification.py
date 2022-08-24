@@ -75,6 +75,7 @@ class OtherParams:
     PATH_TO_MODEL_LAST = "path_to_model_last"
     PATH_TO_MODEL_SECOND_LAST = "path_to_model_second_last"
     PATH_TO_MODEL_THIRD_LAST = "path_to_model_third_last"
+    PATIENCE = "patience"
 
 
 # main variables for modelling
@@ -114,12 +115,13 @@ DEFINED_INPUT_TYPES = {
     OtherParams.PATH_TO_MODEL_LAST: str,
     OtherParams.PATH_TO_MODEL_SECOND_LAST: str,
     OtherParams.PATH_TO_MODEL_THIRD_LAST: str,
+    OtherParams.PATIENCE: int
 }
 
 # dictionary of default values for input types
 DEFAULT_VALUES = {
-    ModelParams.HIDDEN_FEATURES_SIZE: [16],
-    ModelParams.LAYER_TYPE: "SAGE",
+    ModelParams.HIDDEN_FEATURES_SIZE: [16, 16],
+    ModelParams.LAYER_TYPE: "GATJK",
     TrainParams.NUM_EPOCHS: 100,
     OptimizerParams.LEARNING_RATE: 0.1,
     OptimizerParams.WEIGHT_DECAY: 5e-4,
@@ -143,10 +145,11 @@ DEFAULT_VALUES = {
     HeteroParams.CLASS_NAME: "class",
     HeteroParams.REINDEXING: {},
     HeteroParams.INV_REINDEXING: {},
-    OtherParams.PATH_TO_MODEL: "pytorch_models/model",
-    OtherParams.PATH_TO_MODEL_LAST: "pytorch_models/model_last",
-    OtherParams.PATH_TO_MODEL_SECOND_LAST: "pytorch_models/model_second_last",
-    OtherParams.PATH_TO_MODEL_THIRD_LAST: "pytorch_models/model_third_last",
+    OtherParams.PATH_TO_MODEL: "",
+    OtherParams.PATH_TO_MODEL_LAST: "",
+    OtherParams.PATH_TO_MODEL_SECOND_LAST: "",
+    OtherParams.PATH_TO_MODEL_THIRD_LAST: "",
+    OtherParams.PATIENCE: 10
 }
 
 
@@ -193,7 +196,7 @@ def declare_data(ctx: mgp.ProcCtx):
     )
 
 
-def declare_model(ctx: mgp.ProcCtx):
+def declare_model():
     """This function initializes global variables model, opt and criterion.
 
     Args:
@@ -208,7 +211,9 @@ def declare_model(ctx: mgp.ProcCtx):
         LayerType.gatjk,
         LayerType.sage,
     }:
-        raise Exception("Available models are GAT, GATv2, GATJK and SAGE")
+        raise Exception(
+            "You didn't choose one of currently available models (GAT, GATv2, GATJK and SAGE). Please choose one of them."
+        )
 
     # choose model architecture according to layer type
     if DEFAULT_VALUES[ModelParams.LAYER_TYPE] == "GATJK":
@@ -240,6 +245,30 @@ def declare_model(ctx: mgp.ProcCtx):
 
     # set default criterion
     Modelling.criterion = torch.nn.CrossEntropyLoss()
+
+
+def declare_paths():
+    """This function initializes global variables paths."""
+    global DEFAULT_VALUES
+    # either make new folder for saving models, or use existing one with exactly this name
+    try:
+        os.mkdir(os.getcwd() + "/torch_models")
+    except FileExistsError as e:
+        print("Folder torch_models already exists.")
+
+
+    DEFAULT_VALUES[OtherParams.PATH_TO_MODEL] = os.path.join(
+        os.getcwd(), "/torch_models/"
+    )
+    DEFAULT_VALUES[OtherParams.PATH_TO_MODEL_LAST] = os.path.join(
+        os.getcwd(), "/torch_models/model_last.pt"
+    )
+    DEFAULT_VALUES[OtherParams.PATH_TO_MODEL_SECOND_LAST] = os.path.join(
+        os.getcwd(), "/torch_models/model_second_last.pt"
+    )
+    DEFAULT_VALUES[OtherParams.PATH_TO_MODEL_THIRD_LAST] = os.path.join(
+        os.getcwd(), "/torch_models/model_third_last.pt"
+    )
 
 
 @mgp.read_proc
@@ -338,20 +367,25 @@ def set_model_parameters(
         params[DataParams.METRICS] = list(params["metrics"])
 
     # override any default parameters
-    DEFAULT_VALUES = {**DEFAULT_VALUES, **params}  
+    DEFAULT_VALUES = {**DEFAULT_VALUES, **params}
 
+    
     # raise exception if some variable in dictionary params is not defined as it should be
     if not is_correctly_typed(DEFINED_INPUT_TYPES, DEFAULT_VALUES):
-        raise Exception(
-            f"Input dictionary is not correctly typed. Expected following types {DEFINED_INPUT_TYPES}."
-        )
+        raise Exception("Input dictionary is not correctly typed.")
+
+    if not ctx.graph.vertices:
+        raise Exception("Graph is empty.")
 
     # if data is not already defined, define it
     if Modelling.data == None:
         declare_data(ctx)
 
-    # define model in each case
-    declare_model(ctx)
+    # define model
+    declare_model()
+
+    # define paths
+    declare_paths()
 
     return mgp.Record(
         in_channels=DEFAULT_VALUES[ModelParams.IN_CHANNELS],
@@ -382,7 +416,7 @@ def set_model_parameters(
 
 @mgp.read_proc
 def train(
-    no_epochs: int = 100, patience: int = 10
+    no_epochs: int = 100,
 ) -> mgp.Record(
     epoch=int, loss=float, val_loss=float, train_log=mgp.Any, val_log=mgp.Any
 ):
@@ -398,19 +432,14 @@ def train(
     """
 
     global Modelling
-    
+
     # if data is not defined, raise exception
     if Modelling.data == None:
-        raise Exception("Dataset is not loaded. Load dataset first!")
-
+        raise Exception(
+            "Dataset is not loaded. If you wish to continue, load dataset first."
+        )
 
     DEFAULT_VALUES[TrainParams.NUM_EPOCHS] = no_epochs
-
-    # either make new folder for saving models, or use existing one
-    try:
-        os.mkdir(os.getcwd() + "/pytorch_models")
-    except FileExistsError as e:
-        print(e)
 
     # saving last three models is supported
     second_last, third_last = False, False
@@ -436,7 +465,7 @@ def train(
             trigger_times += 1
             print("Trigger Times:", trigger_times)
 
-            if trigger_times >= patience:
+            if trigger_times >= DEFAULT_VALUES[OtherParams.PATIENCE]:
                 print("Early stopping!")
                 break
 
@@ -481,7 +510,7 @@ def train(
             print(
                 f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Val Loss: {val_loss:.4f}, Accuracy: {logged_data[-1]["train"]["accuracy"]:.4f}, Accuracy: {logged_data[-1]["val"]["accuracy"]:.4f}'
             )
-        
+
         # save model every checkpoint_freq epochs
         if epoch % DEFAULT_VALUES[TrainParams.CHECKPOINT_FREQ] == 0:
 
@@ -558,37 +587,62 @@ def get_training_data() -> mgp.Record(
 
 
 @mgp.read_proc
-def save_model() -> mgp.Record(path=str):
+def save_model(name: str="model") -> mgp.Record(path=str, status=str):
     """This function saves model to previously defined path_to_model.
 
+    Args:
+        name (str, optional): name of model. Defaults to "model".
+
     Returns:
-        mgp.Record(path (str): path to model): return record
+        mgp.Record(path (str): path to saved model): return record
     """
 
     if Modelling.model == None:
-        raise AssertionError("model is not loaded")
-    torch.save(Modelling.model.state_dict(), DEFAULT_VALUES[OtherParams.PATH_TO_MODEL])
-    return mgp.Record(path=DEFAULT_VALUES[OtherParams.PATH_TO_MODEL])
+        raise Exception(
+            "Saving is not enabled until model is not initialized or loaded."
+        )
+
+    # either make new folder for saving models, or use existing one
+    try:
+        os.mkdir(os.getcwd() + "/torch_models")
+        DEFAULT_VALUES[OtherParams.PATH_TO_MODEL] = os.getcwd() + "/torch_models"
+    except FileExistsError:
+        print("Folder torch_models already exists.")
+
+    path_to_save = os.path.join(DEFAULT_VALUES[OtherParams.PATH_TO_MODEL], name + ".pt")
+    torch.save(Modelling.model.state_dict(), path_to_save)
+    return mgp.Record(path=path_to_save, status="Model has been successfully saved.")
 
 
 @mgp.read_proc
-def load_model() -> mgp.Record(path=str):
+def load_model(name: str="model") -> mgp.Record(path=str, status=str):
     """This function loads model to previously defined path_to_model.
 
+    Args:
+        name (str, optional): name of model. Defaults to "model".
+    
     Returns:
-        mgp.Record(path (str): path to model): return record
+        mgp.Record(path (str): path to loaded model): return record
     """
     global model
 
-    if not os.path.exists(os.path.abspath(DEFAULT_VALUES[OtherParams.PATH_TO_MODEL])):
+    try:
+        os.mkdir(os.getcwd() + "/torch_models")
+        DEFAULT_VALUES[OtherParams.PATH_TO_MODEL] = os.getcwd() + "/torch_models"
+    except FileExistsError:
+        print("Folder torch_models already exists.")
+
+    path_to_load = os.path.join(DEFAULT_VALUES[OtherParams.PATH_TO_MODEL], name + ".pt" )
+    if not os.path.exists(path_to_load):
+        name_pt = name + ".pt"
         raise Exception(
-            f"File {DEFAULT_VALUES[OtherParams.PATH_TO_MODEL]} not found on system. Please provide the valid path."
+            f"File {name_pt} not found on system. Please provide the valid path."
         )
 
     Modelling.model.load_state_dict(
-        torch.load(DEFAULT_VALUES[OtherParams.PATH_TO_MODEL])
+        torch.load(path_to_load)
     )
-    return mgp.Record(path=DEFAULT_VALUES[OtherParams.PATH_TO_MODEL])
+    return mgp.Record(path=path_to_load, status="Model has been successfully loaded.")
 
 
 @mgp.read_proc
@@ -621,7 +675,9 @@ def predict(vertex: mgp.Vertex) -> mgp.Record(predicted_value=int):
         torch.tensor(np.array(features), dtype=torch.float32),
         data.x[DEFAULT_VALUES[HeteroParams.INV_REINDEXING][id]],
     ):
-        raise AssertionError("features from node are different from database features")
+        raise AssertionError(
+            "In-memory and database features are not equal, as they should be."
+        )
 
     predicted_class = (int)(
         pred.detach().numpy()[DEFAULT_VALUES[HeteroParams.INV_REINDEXING][id]]
@@ -633,9 +689,9 @@ def predict(vertex: mgp.Vertex) -> mgp.Record(predicted_value=int):
 @mgp.read_proc
 def reset() -> mgp.Record(status=str):
     if "DEFAULT_VALUES" in globals().keys():
-        globals.pop("DEFAULT_VALUES")
+        globals().pop("DEFAULT_VALUES")
 
     if "logged_data" in globals().keys():
-        globals.pop("logged_data")
+        globals().pop("logged_data")
 
     return mgp.Record(status="Global parameters and logged data have been reseted.")

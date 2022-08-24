@@ -1,12 +1,13 @@
 # this test is used for sanity check if model overfits on small dataset
 query: >
-        CALL node_classification.set_model_parameters({layer_type: 'SAGE', hidden_features_size: [16, 16]}) YIELD *;
+        CALL node_classification.set_model_parameters({layer_type: 'SAGE', hidden_features_size: [16, 16]}) 
+        YIELD in_channels, out_channels
+        RETURN in_channels, out_channels;
 
 output:
         - in_channels: 34
           out_channels: 4
-          num_samples: 34
-          path: ../pytorch_models/model
+          
 
 query: >
         CALL node_classification.train(10) YIELD epoch RETURN epoch;
@@ -18,4 +19,5 @@ output:
 query: >
         CALL node_classification.reset() YIELD *;
 
-output: []
+output:
+        - status: Global parameters and logged data have been reseted.

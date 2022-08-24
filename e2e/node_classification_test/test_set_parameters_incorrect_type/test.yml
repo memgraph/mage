@@ -3,4 +3,4 @@ query: >
         CALL node_classification.set_model_parameters({hidden_features_size: 10}) YIELD *;
 
 exception: >
-        Input dictionary is not correctly typed. Expected following types {'hidden_features_size': <class 'list'>, 'layer_type': <class 'str'>, 'num_epochs': <class 'int'>, 'learning_rate': <class 'float'>, 'weight_decay': <class 'float'>, 'split_ratio': <class 'float'>, 'node_features_property': <class 'str'>, 'node_id_property': <class 'str'>, 'device_type': <class 'str'>, 'console_log_freq': <class 'int'>, 'checkpoint_freq': <class 'int'>, 'aggregator': <class 'str'>, 'metrics': <class 'list'>, 'path_to_model': <class 'str'>}.
+        Input dictionary is not correctly typed.

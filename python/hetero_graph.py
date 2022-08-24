@@ -22,9 +22,9 @@ class Modelling:
 
 
 class Parameters:
-    FEATURES_NAME = "features"
-    OBSERVED_ATTRIBUTE = "PAPER"
-    CLASS_NAME = "class"
+    FEATURES_NAME = "embedding"
+    OBSERVED_ATTRIBUTE = "CLAIM"
+    CLASS_NAME = "fraud"
 
 
 def model_train_step(
@@ -190,17 +190,17 @@ def run(ctx: mgp.ProcCtx, num_epochs=100, train_ratio=0.8):
     # MASKS
     #######################
 
-    training_generator = HGTLoader(
-        data,
-        num_samples={key: [512] * 4 for key in data.node_types},
-        batch_size=128,
-        input_nodes=(
-            Parameters.OBSERVED_ATTRIBUTE,
-            data[Parameters.OBSERVED_ATTRIBUTE].train_mask,
-        ),
-    )
+    # training_generator = HGTLoader(
+    #     data,
+    #     num_samples={key: [512] * 4 for key in data.node_types},
+    #     batch_size=128,
+    #     input_nodes=(
+    #         Parameters.OBSERVED_ATTRIBUTE,
+    #         data[Parameters.OBSERVED_ATTRIBUTE].train_mask,
+    #     ),
+    # )
 
-    print(next(iter(training_generator)))
+    # print(next(iter(training_generator)))
 
     no_observed = np.shape(data[Parameters.OBSERVED_ATTRIBUTE].x)[0]
     masks = np.zeros((no_observed))
@@ -221,7 +221,7 @@ def run(ctx: mgp.ProcCtx, num_epochs=100, train_ratio=0.8):
             (int)(masks[i]) - 1
         )
 
-    print(Modelling.data)
+    
     data = T.ToUndirected()(data)
     # data = T.AddSelfLoops()(data)
     #########################
