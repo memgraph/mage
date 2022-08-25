@@ -62,7 +62,7 @@ class Value;
 
 mgp_memory *memory;
 
-/* #region Graph (Graph, Vertices, GraphEdges, Edges, Properties & Labels) */
+/* #region Graph (Id, Graph, Vertices, GraphEdges, Edges, Properties & Labels) */
 
 /// Wrapper for int64_t IDs to prevent dangerous implicit conversions.
 class Id {
@@ -79,6 +79,8 @@ class Id {
 
   bool operator==(const Id &other) const { return id_ == other.id_; }
   bool operator!=(const Id &other) const { return !(*this == other); }
+
+  bool operator<(const Id &other) const { return id_ < other.id_; }
 
  private:
   explicit Id(int64_t id) : id_(id) {}
@@ -397,7 +399,7 @@ class Map {
   Iterator begin();
   Iterator end();
 
-  // void Insert(std::string_view key, const Value &value);
+  void Insert(std::string_view key, const Value &value);
   void Insert(std::string_view key, Value &&value);
 
   // void Erase(std::string_view key); // (requires mgp_map_erase in the MGP API)
@@ -413,7 +415,7 @@ class Map {
 /* #endregion */
 
 /* #region Graph elements (Vertex, Edge & Path) */
-
+// value types are underlyingly uint8_t values
 /// \brief Wrapper class for \ref mgp_vertex.
 class Vertex {
  public:
@@ -446,6 +448,8 @@ class Vertex {
 
   Edges in_edges() const;
   Edges out_edges() const;
+
+  bool operator<(const Vertex &other) const { return id() < other.id(); }
 
   /// \exception std::runtime_error node property contains value with unknown type
   bool operator==(const Vertex &other) const;
@@ -496,6 +500,8 @@ class Edge {
   /// unknown type
   bool operator!=(const Edge &other) const { return !(*this == other); }
 
+  bool operator<(const Edge &other) const { return id() < other.id(); }
+
  private:
   mgp_edge *ptr_;
 };
@@ -539,6 +545,8 @@ class Path {
   bool operator==(const Path &other) const;
   /// \exception std::runtime_error path contains elements with unknown value
   bool operator!=(const Path &other) const { return !(*this == other); }
+
+  bool operator<(const Path &other) const { return length() < other.length(); }
 
  private:
   mgp_path *ptr_;
@@ -589,6 +597,8 @@ class Date {
   Date operator-(const Duration &dur) const;
   Duration operator-(const Date &other) const;
 
+  bool operator<(const Date &other) const;
+
  private:
   mgp_date *ptr_;
 };
@@ -638,6 +648,8 @@ class LocalTime {
   LocalTime operator+(const Duration &dur) const;
   LocalTime operator-(const Duration &dur) const;
   Duration operator-(const LocalTime &other) const;
+
+  bool operator<(const LocalTime &other) const;
 
  private:
   mgp_local_time *ptr_;
@@ -696,6 +708,8 @@ class LocalDateTime {
   LocalDateTime operator-(const Duration &dur) const;
   Duration operator-(const LocalDateTime &other) const;
 
+  bool operator<(const LocalDateTime &other) const;
+
  private:
   mgp_local_date_time *ptr_;
 };
@@ -745,6 +759,8 @@ class Duration {
   Duration operator+(const Duration &other) const { return Duration(mgp::duration_add(ptr_, other.ptr_, memory)); }
   Duration operator-(const Duration &other) const { return Duration(mgp::duration_sub(ptr_, other.ptr_, memory)); }
   Duration operator-() const { return Duration(mgp::duration_neg(ptr_, memory)); }
+
+  bool operator<(const Duration &other) const;
 
  private:
   mgp_duration *ptr_;
@@ -855,6 +871,8 @@ class Value {
 
   ~Value();
 
+  const mgp_value *ptr() const { return ptr_; }
+
   /// \exception std::runtime_error the value type is unknown
   ValueType type() const;
 
@@ -908,7 +926,7 @@ class Value {
   /// \exception std::runtime_error the value type is unknown
   bool operator!=(const Value &other) const { return !(*this == other); }
 
-  const mgp_value *ptr() const { return ptr_; }
+  bool operator<(const Value &other) const { return type() < other.type(); }
 
  private:
   mgp_value *ptr_;
@@ -921,6 +939,8 @@ struct MapItem {
 
   bool operator==(MapItem &other) const;
   bool operator!=(MapItem &other) const;
+
+  bool operator<(const MapItem &other) const { return key < other.key; }
 };
 
 /* #endregion */
@@ -1141,7 +1161,7 @@ inline ValueType ConvertType(mgp_value_type type) {
 }
 }  // namespace util
 
-/* #region Graph (Graph, Vertices, GraphEdges, Edges, Properties & Labels) */
+/* #region Graph (Id, Graph, Vertices, GraphEdges, Edges, Properties & Labels) */
 
 // Graph:
 
@@ -1504,7 +1524,7 @@ inline Map::Iterator Map::begin() { return Iterator(mgp::map_iter_items(ptr_, me
 
 inline Map::Iterator Map::end() { return Iterator(nullptr); }
 
-// inline void Map::Insert(std::string_view key, const Value &value) { mgp::map_insert(ptr_, key.data(), value.ptr_); }
+inline void Map::Insert(std::string_view key, const Value &value) { mgp::map_insert(ptr_, key.data(), value.ptr_); }
 
 inline void Map::Insert(std::string_view key, Value &&value) {
   mgp::map_insert(ptr_, key.data(), value.ptr_);
@@ -1635,6 +1655,11 @@ inline Date Date::operator-(const Duration &dur) const { return Date(mgp::date_s
 
 inline Duration Date::operator-(const Date &other) const { return Duration(mgp::date_diff(ptr_, other.ptr_, memory)); }
 
+inline bool Date::operator<(const Date &other) const {
+  auto difference = mgp::date_diff(ptr_, other.ptr_, memory);
+  return (mgp::duration_get_microseconds(difference) < 0);
+}
+
 // LocalTime:
 
 inline LocalTime::~LocalTime() {
@@ -1655,6 +1680,11 @@ inline LocalTime LocalTime::operator-(const Duration &dur) const {
 
 inline Duration LocalTime::operator-(const LocalTime &other) const {
   return Duration(mgp::local_time_diff(ptr_, other.ptr_, memory));
+}
+
+inline bool LocalTime::operator<(const LocalTime &other) const {
+  auto difference = mgp::local_time_diff(ptr_, other.ptr_, memory);
+  return (mgp::duration_get_microseconds(difference) < 0);
 }
 
 // LocalDateTime:
@@ -1681,6 +1711,11 @@ inline Duration LocalDateTime::operator-(const LocalDateTime &other) const {
   return Duration(mgp::local_date_time_diff(ptr_, other.ptr_, memory));
 }
 
+inline bool LocalDateTime::operator<(const LocalDateTime &other) const {
+  auto difference = mgp::local_date_time_diff(ptr_, other.ptr_, memory);
+  return (mgp::duration_get_microseconds(difference) < 0);
+}
+
 // Duration:
 
 inline Duration::~Duration() {
@@ -1690,6 +1725,11 @@ inline Duration::~Duration() {
 }
 
 inline bool Duration::operator==(const Duration &other) const { return util::DurationsEqual(ptr_, other.ptr_); }
+
+inline bool Duration::operator<(const Duration &other) const {
+  auto difference = mgp::duration_sub(ptr_, other.ptr_, memory);
+  return (mgp::duration_get_microseconds(difference) < 0);
+}
 /* #endregion */
 
 /* #endregion */
@@ -1876,3 +1916,45 @@ inline const Record RecordFactory::NewRecord() const {
 /* #endregion */
 
 }  // namespace mage
+
+namespace std {
+template <>
+struct hash<mage::Id> {
+  size_t operator()(const mage::Id &x) const { return hash<int64_t>()(x.AsInt()); };
+};
+
+template <>
+struct hash<mage::Vertex> {
+  size_t operator()(const mage::Vertex &x) const { return hash<int64_t>()(x.id().AsInt()); };
+};
+
+template <>
+struct hash<mage::Edge> {
+  size_t operator()(const mage::Edge &x) const { return hash<int64_t>()(x.id().AsInt()); };
+};
+
+template <>
+struct hash<mage::Date> {
+  size_t operator()(const mage::Date &x) const { return hash<int64_t>()(x.timestamp()); };
+};
+
+template <>
+struct hash<mage::LocalTime> {
+  size_t operator()(const mage::LocalTime &x) const { return hash<int64_t>()(x.timestamp()); };
+};
+
+template <>
+struct hash<mage::LocalDateTime> {
+  size_t operator()(const mage::LocalDateTime &x) const { return hash<int64_t>()(x.timestamp()); };
+};
+
+template <>
+struct hash<mage::Duration> {
+  size_t operator()(const mage::Duration &x) const { return hash<int64_t>()(x.microseconds()); };
+};
+
+template <>
+struct hash<mage::MapItem> {
+  size_t operator()(const mage::MapItem &x) const { return hash<std::string_view>()(x.key); };
+};
+}  // namespace std
