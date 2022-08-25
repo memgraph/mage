@@ -1,4 +1,3 @@
-from math import fabs
 import mgp  # Python API
 import json
 import torch
@@ -459,6 +458,15 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     src_old_id, src_type = src_vertex.id, merge_labels(src_vertex.labels)
     dest_old_id, dest_type = dest_vertex.id, merge_labels(dest_vertex.labels)
 
+    # Check if src_type and dest_type are of the same target relation
+    if type(link_prediction_parameters.target_relation) == tuple:
+        if src_type != link_prediction_parameters.target_relation[0] or dest_type != link_prediction_parameters.target_relation[2]:
+            raise Exception("Prediction can be only computed on edges on which model was trained. ")
+    else:
+        for etype in graph.canonical_etypes:
+            if link_prediction_parameters.target_relation == etype[1] and (etype[0] != src_type or etype[2] != dest_type):    
+                raise Exception("Prediction can be only computed on edges on which model was trained. ")
+
     # Get dgl ids
     src_id = reindex[Reindex.MEMGRAPH][src_type][src_old_id]
     dest_id = reindex[Reindex.MEMGRAPH][dest_type][dest_old_id]
@@ -543,6 +551,16 @@ def recommended_vertex(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: 
     # Create dgl graph representation
     src_old_id, src_type = src_vertex.id, merge_labels(src_vertex.labels)
 
+    # Check if src_type is of the same target relation
+    if type(link_prediction_parameters.target_relation) == tuple:
+        if src_type != link_prediction_parameters.target_relation[0]:
+            raise Exception("Prediction can be only computed on edges on which model was trained. ")
+    else:
+        for etype in graph.canonical_etypes:
+            if link_prediction_parameters.target_relation == etype[1] and etype[0] != src_type:    
+                raise Exception("Prediction can be only computed on edges on which model was trained. ")
+
+
     # Get dgl ids
     src_id = reindex[Reindex.MEMGRAPH][src_type][src_old_id]
 
@@ -556,6 +574,16 @@ def recommended_vertex(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertices: 
         # Get dest vertex
         dest_old_id, dest_type = dest_vertex.id, merge_labels(dest_vertex.labels)
         dest_id = reindex[Reindex.MEMGRAPH][dest_type][dest_old_id]
+
+        # Check if dest_type is of the same target relation
+        if type(link_prediction_parameters.target_relation) == tuple:
+            if dest_type != link_prediction_parameters.target_relation[2]:
+             raise Exception("Prediction can be only computed on edges on which model was trained. ")
+        else:
+            for etype in graph.canonical_etypes:
+                if link_prediction_parameters.target_relation == etype[1] and etype[2] != dest_type:    
+                    raise Exception("Prediction can be only computed on edges on which model was trained. ")
+
         
         # Init edge properties
         edge_added, edge_id = False, -1
