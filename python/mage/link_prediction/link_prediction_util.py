@@ -479,8 +479,8 @@ def batch_forward_pass(model: torch.nn.Module, predictor: torch.nn.Module, loss:
     # probabilities
     probs = m(scores)
     labels = torch.cat([torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])])  # concatenation of labels
-    weights = torch.cat([torch.ones(pos_score.shape[0], dtype=torch.float32), torch.Tensor([1.0 / num_neg_per_pos_edge for _ in range(neg_score.shape[0])])])
-    loss_output = loss(probs, labels, weight=weights)
+    # weights = torch.cat([torch.ones(pos_score.shape[0], dtype=torch.float32), torch.Tensor([1.0 / num_neg_per_pos_edge for _ in range(neg_score.shape[0])])])
+    loss_output = loss(probs, labels)
 
     return probs, labels, loss_output
 
@@ -587,8 +587,8 @@ def inner_train(graph: dgl.graph,
 
     # Initialize loss
     # weights = torch.
-    # loss = torch.nn.BCELoss()
-    loss = F.binary_cross_entropy
+    loss = torch.nn.BCELoss()
+    # loss = F.binary_cross_entropy
 
     # Define lambda functions for operating on dictionaries
     add_: Callable[[float, float], float] = lambda prior, later: prior + later
