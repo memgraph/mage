@@ -91,6 +91,7 @@ class Parameters:
     ALPHA = "alpha"
     LAST_ACTIVATION_FUNCTION = "last_activation_function"
     ADD_REVERSE_EDGES = "add_reverse_edges"
+    ADD_SELF_LOOPS = "add_self_loops"
     
 
 

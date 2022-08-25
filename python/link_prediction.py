@@ -67,11 +67,15 @@ class LinkPredictionParameters:
     :param num_layers (int): Number of layers in the GNN architecture.
     :param batch_size (int): Batch size used in both training and validation procedure.
     :param sampling_workers (int): Number of workers that will cooperate in the sampling procedure in the training and validation.
+    :param last_activation_function (str) → Activation function that is applied after the last layer in the model and before the predictor_type. Currently, only sigmoid is supported.
+    :param add_reverse_edges (bool) -> Whether the module should add reverse edges for each in the obtained graph. If the source and destination nodes are of the same type, edges of the same edge type will 
+            be created. If the source and destination nodes are different, then prefix rev_ will be added to the previous edge type. Reverse edges will be excluded as message passing edges for corresponding supervision edges. 
+    :param add_self_loops (bool) -> Whether the module should add self loop edges to every node in the graph with edge_type set to "self".
 
     """
     in_feats: int = None
     hidden_features_size: List = field(
-        default_factory=lambda: [20, 10]
+        default_factory=lambda: [128, 128]
     )  # Cannot add typing because of the way Python is implemented(no default things in dataclass, list is immutable something like this)
     layer_type: str = Models.GRAPH_ATTN
     num_epochs: int = 10
@@ -98,15 +102,16 @@ class LinkPredictionParameters:
         ]
     )
     predictor_type: str =  Predictors.MLP_PREDICTOR
-    attn_num_heads: List[int] = field(default_factory=lambda: [4, 1])
+    attn_num_heads: List[int] = field(default_factory=lambda: [4, 4])
     tr_acc_patience: int = 5
     context_save_dir: str = "/home/andi/Memgraph/code/mage/python/mage/link_prediction/context/"  # TODO: When the development finishes
     target_relation: str = None
-    num_neg_per_pos_edge: int = 5
+    num_neg_per_pos_edge: int = 1
     batch_size: int = 512
     sampling_workers: int = 4
     last_activation_function = Activations.SIGMOID
     add_reverse_edges = False  # only allowed in some cases
+    add_self_loops = False  # for automatically adding self-loop
 
 ##############################
 # global parameters
@@ -159,8 +164,8 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
         last_activation_function (str) → Activation function that is applied after the last layer in the model and before the predictor_type. Currently, only sigmoid is supported.
         add_reverse_edges (bool) -> Whether the module should add reverse edges for each in the obtained graph. If the source and destination nodes are of the same type, edges of the same edge type will 
             be created. If the source and destination nodes are different, then prefix rev_ will be added to the previous edge type. Reverse edges will be excluded as message passing edges for corresponding supervision edges. 
+        add_self_loops (bool) -> Whether the module should add self loop edges to every node in the graph with edge_type set to "self".
         
-
     Returns:
         mgp.Record:
             status (bool): True if parameters were successfully updated, False otherwise.
@@ -309,7 +314,7 @@ def hyperparameter_tuning(ctx: mgp.ProcCtx, num_search_trials: int) -> mgp.Recor
 
     # Get some data
     # Dealing with heterogeneous graphs
-    graph, _, _ = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index    
+    graph, _,  = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index    
     
     # Insert in the hidden_features_size structure if needed
     if link_prediction_parameters.in_feats is None:
@@ -333,7 +338,7 @@ def hyperparameter_tuning(ctx: mgp.ProcCtx, num_search_trials: int) -> mgp.Recor
         Parameters.DROPOUT: scipy.stats.uniform(0, 0.6),
         Parameters.ALPHA: scipy.stats.uniform(0, 0.6),
         Parameters.RESIDUAL: [True, False],
-        Parameters.LEARNING_RATE: [0.0001, 0.0005, 0.001, 0.01, 0.1],
+        Parameters.LEARNING_RATE: [0.0005, 0.001, 0.01, 0.1],
         Parameters.BATCH_SIZE: [128, 256, 512],
         Parameters.PREDICTOR_TYPE: [Predictors.MLP_PREDICTOR, Predictors.DOT_PREDICTOR]
     }
@@ -395,9 +400,9 @@ def hyperparameter_tuning(ctx: mgp.ProcCtx, num_search_trials: int) -> mgp.Recor
                 predictor,
                 optimizer,
                 link_prediction_parameters.num_epochs,
-                link_prediction_parameters.node_features_property,
                 m,
                 threshold,
+                link_prediction_parameters.node_features_property,
                 link_prediction_parameters.console_log_freq,
                 link_prediction_parameters.checkpoint_freq,
                 link_prediction_parameters.metrics,
@@ -438,7 +443,7 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
         dest_vertex (mgp.Vertex): Destination vertex.
 
     Returns:
-        score: Probability that two nodes are connected
+        score: probability that two nodes are connected
     """
     global graph, predictor, model, reindex, link_prediction_parameters
 
@@ -487,9 +492,12 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
         src_type=src_type,
         dest_type=dest_type,)
 
-    result = mgp.Record(score=score)
+    if link_prediction_parameters.last_activation_function == Activations.SIGMOID:
+        threshold = 0.5
+    else:
+        raise Exception(f"Currently, only {Activations.SIGMOID} is supported. ")
 
-    print(f"Score: {score}")
+    result = mgp.Record(score=score)
 
     # Remove edge if necessary
     if edge_added:
@@ -809,11 +817,11 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
     for type_triplet in type_triplets:
         data_dict[type_triplet] = torch.tensor(src_nodes[type_triplet]), torch.tensor(dest_nodes[type_triplet])
 
-    g = dgl.heterograph(data_dict)      
-    # print(f"Original graph")
-    # for etype in g.canonical_etypes:
-    #     print(f"Etype: {etype} Edges: {g.edges(etype=etype)}")
-    # print()
+    g = dgl.heterograph(data_dict)     
+
+    # Infer automatically target relation if the graph is homogeneous and the user didn't provide its own target relation
+    if len(type_triplets) == 1 and link_prediction_parameters.target_relation is None:
+        link_prediction_parameters.target_relation = type_triplets[0]
 
     # Process isolated nodes by appending them to the end
     for isolated_node_id in isolated_nodes:
@@ -822,31 +830,19 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
         _process_help_function(mem_indexes, isolated_node_id, isolated_node_type, isolated_node_features, reindex, index_dgl_to_features)
         g.add_nodes(1, ntype=isolated_node_type)
 
-    # print(f"Disconnected processing graph")
-    # for etype in g.canonical_etypes:
-    #     print(f"Etype: {etype} Edges: {g.edges(etype=etype)}")
-    # print()
-
     if link_prediction_parameters.add_reverse_edges:
         # Add undirected support
         reverse_edges_transform = AddReverse(copy_edata=True, sym_new_etype=False)
-        # Add self-loop support
-        # self_loop_transform = AddSelfLoop(allow_duplicate=False, new_etypes=True)
-        # Create transform composition
-        # transform = Compose([reverse_edges_transform, self_loop_transform])
         g = reverse_edges_transform(g)  # unfortunately copying is done 2 times
-        print()
-        print("After reverse edges transform")
-        for etype in g.canonical_etypes:
-            print(f"Etype: {etype} Edges: {g.edges(etype=etype)}")
-        print()
+    
+    
+    if link_prediction_parameters.add_self_loops:
+        # Custom made self-loop function
+        g = add_self_loop(g, "self")
 
-    # Custom made self-loop function
-    g = add_self_loop(g, "self")
-
-    # print("After self loop transform")
-    # for etype in g.canonical_etypes:
-    #     print(f"Etype: {etype} Edges: {g.edges(etype=etype)}")
+    print("After self loop transform")
+    for etype in g.canonical_etypes:
+        print(f"Etype: {etype} Edges: {g.number_of_edges(etype=etype)} {g.edges(etype=etype)}")
 
 
     # Create features

@@ -19,9 +19,21 @@ from mage.link_prediction.constants import (
     Parameters
 )
 
-reverse_relation = lambda target_relation: "rev_" + target_relation if type(target_relation) == str else (target_relation[2], "rev_" + target_relation[1], target_relation[0])
+# Function for obtaining reverse_relation naming given original relation
+reverse_relation = lambda relation: "rev_" + relation if type(relation) == str else (relation[2], "rev_" + relation[1], relation[0])
+
 
 def add_self_loop(g: dgl.heterograph, self_loop_edge_type: str) -> dgl.heterograph:
+    """Adds self loop to each node with edge type set to self_loop_edge)_type. Creates a new copy of the graph because DGL doesn't support modifying heterograph's
+    context.
+
+    Args:
+        g (dgl.heterograph): A reference to the original heterograph.
+        self_loop_edge_type (str): Name of the self_loop_edge_type. 
+
+    Returns:
+        dgl.heterograph: New heterograph with added self-loop edges.
+   """
     data_dict = dict()
     num_nodes_dict = dict()
     # Copy old edges
@@ -33,7 +45,7 @@ def add_self_loop(g: dgl.heterograph, self_loop_edge_type: str) -> dgl.heterogra
     idtype = g.idtype
     for ntype in g.ntypes:
         nids = torch.arange(start=0, end=g.num_nodes(ntype), step=1, dtype=idtype, device=device)
-        data_dict[(ntype, 'self', ntype)] = (nids, nids)
+        data_dict[(ntype, self_loop_edge_type, ntype)] = (nids, nids)
         num_nodes_dict[ntype] = g.num_nodes(ntype)
 
     return dgl.heterograph(data_dict=data_dict, num_nodes_dict=num_nodes_dict, idtype=idtype, device=device)
@@ -212,20 +224,15 @@ def validate_user_parameters(parameters: mgp.Map) -> None:
     if Parameters.ATTN_NUM_HEADS in parameters.keys():
         attn_num_heads = parameters[Parameters.ATTN_NUM_HEADS]
 
-        if layer_type == Models.GRAPH_ATTN:
-
-            # Check typing
-            type_checker(attn_num_heads, "attn_num_heads must be an iterable object. ", tuple)
-
-            if len(attn_num_heads) != len(hidden_features_size):
-                 raise Exception("Specified network with {} layers but given attention heads data for {} layers. ".format(len(hidden_features_size) - 1, len(attn_num_heads)))
-
-            if attn_num_heads[-1] != 1:
-                 raise Exception("Last GAT layer must contain only one attention head. ")
-
-            for num_heads in attn_num_heads:
-                if num_heads <= 0:
-                    raise Exception("GAT allows only positive, larger than 0 values for number of attention heads. ")
+        # Check typing
+        type_checker(attn_num_heads, "attn_num_heads must be an iterable object. ", tuple)
+        if len(attn_num_heads) != len(hidden_features_size):
+             raise Exception("Specified network with {} layers but given attention heads data for {} layers. ".format(len(hidden_features_size) - 1, len(attn_num_heads)))
+        # if attn_num_heads[-1] != 1:
+        #      raise Exception("Last GAT layer must contain only one attention head. ")
+        for num_heads in attn_num_heads:
+            if num_heads <= 0:
+                raise Exception("GAT allows only positive, larger than 0 values for number of attention heads. ")
 
     # Training accuracy patience
     if Parameters.TR_ACC_PATIENCE in parameters.keys():
@@ -264,8 +271,6 @@ def validate_user_parameters(parameters: mgp.Map) -> None:
        # check typing
         if type(target_relation) != tuple and type(target_relation) != str:
             raise Exception("target relation must be a string or a tuple. ")
-    else:
-        raise Exception("Target relation or target edge type must be specified. ")
     
     # num_neg_per_positive_edge
     if Parameters.NUM_NEG_PER_POS_EDGE in parameters.keys():
@@ -304,6 +309,13 @@ def validate_user_parameters(parameters: mgp.Map) -> None:
 
         # check typing
         type_checker(add_reverse_edges, "add_reverse_edges should be a bool. ", bool)
+
+    # add_self_loops
+    if Parameters.ADD_SELF_LOOPS in parameters.keys():
+        add_self_loops = parameters[Parameters.ADD_SELF_LOOPS]
+
+        # check typing
+        type_checker(add_self_loops, "add_self_loops should be a bool. ", bool)
         
 def proj_0(graph: dgl.graph, node_features_property: str) -> None:
     """Performs projection on all node features to the max_feature_size by padding it with 0.
@@ -532,8 +544,11 @@ def inner_train(graph: dgl.graph,
     reverse_target_relation = reverse_relation(target_relation)
     if reverse_target_relation not in graph.etypes and reverse_target_relation not in graph.canonical_etypes:
         # same source and destination node
+        print(f"Self batch handling")
+
         sampler = dgl.dataloading.as_edge_prediction_sampler(sampler, negative_sampler=negative_sampler, exclude="self")
     else:
+        print(f"Reverse batch handling: {reverse_target_relation}")
         reverse_etypes = {target_relation: reverse_target_relation, reverse_target_relation: target_relation}
         sampler = dgl.dataloading.as_edge_prediction_sampler(sampler, negative_sampler=negative_sampler, exclude="reverse_types", 
             reverse_etypes=reverse_etypes)
