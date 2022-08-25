@@ -926,8 +926,6 @@ class Value {
   /// \exception std::runtime_error the value type is unknown
   bool operator!=(const Value &other) const { return !(*this == other); }
 
-  bool operator<(const Value &other) const { return type() < other.type(); }
-
  private:
   mgp_value *ptr_;
 };
@@ -1933,6 +1931,8 @@ struct hash<mage::Edge> {
   size_t operator()(const mage::Edge &x) const { return hash<int64_t>()(x.id().AsInt()); };
 };
 
+// TODO how do I hash a Path
+
 template <>
 struct hash<mage::Date> {
   size_t operator()(const mage::Date &x) const { return hash<int64_t>()(x.timestamp()); };
@@ -1952,6 +1952,8 @@ template <>
 struct hash<mage::Duration> {
   size_t operator()(const mage::Duration &x) const { return hash<int64_t>()(x.microseconds()); };
 };
+
+// TODO how do I hash a Value
 
 template <>
 struct hash<mage::MapItem> {
