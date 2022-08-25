@@ -513,7 +513,7 @@ class Path {
   friend class Record;
 
  public:
-  explicit Path(mgp_path *ptr) : ptr_(ptr){};
+  explicit Path(mgp_path *ptr) : ptr_(mgp::path_copy(ptr, memory)){};
 
   /// \brief Create a Path from a copy of the given \ref mg_path.
   explicit Path(const mgp_path *const_ptr) : Path(mgp::path_copy(const_cast<mgp_path *>(const_ptr), memory)) {}
@@ -526,7 +526,7 @@ class Path {
   Path &operator=(const Path &other);
   Path &operator=(Path &&other);
 
-  // ~Path();
+  ~Path();
 
   /// Length of the path is number of edges.
   size_t length() const { return mgp::path_size(ptr_); }
@@ -1608,11 +1608,11 @@ inline Path::Path(Path &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
 
 inline Path::Path(const Vertex &start_vertex) : ptr_(mgp::path_make_with_start(start_vertex.ptr_, memory)) {}
 
-// inline Path::~Path() {
-//   if (ptr_ != nullptr) {
-//     mgp::path_destroy(ptr_);
-//   }
-// }
+inline Path::~Path() {
+  if (ptr_ != nullptr) {
+    mgp::path_destroy(ptr_);
+  }
+}
 
 inline Vertex Path::GetVertexAt(size_t index) const {
   auto vertex_ptr = mgp::path_vertex_at(ptr_, index);
