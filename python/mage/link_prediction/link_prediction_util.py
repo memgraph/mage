@@ -450,7 +450,7 @@ def evaluate(metrics: List[str], labels: torch.tensor, probs: torch.tensor, resu
 
 def batch_forward_pass(model: torch.nn.Module, predictor: torch.nn.Module, loss: torch.nn.Module, m: torch.nn.Module, 
                     target_relation: str, input_features: Dict[str, torch.Tensor], pos_graph: dgl.graph, 
-                    neg_graph: dgl.graph, blocks: List[dgl.graph]) -> Tuple[torch.Tensor, torch.Tensor, torch.nn.Module]:
+                neg_graph: dgl.graph, blocks: List[dgl.graph], num_neg_per_pos_edge: int) -> Tuple[torch.Tensor, torch.Tensor, torch.nn.Module]:
     """Performs one forward batch pass
 
     Args:
@@ -477,9 +477,10 @@ def batch_forward_pass(model: torch.nn.Module, predictor: torch.nn.Module, loss:
     neg_score = predictor.forward(neg_graph, outputs, target_relation=target_relation)
     scores = torch.cat([pos_score, neg_score])  # concatenated positive and negative score
     # probabilities
-    probs = m(scores).cpu()
+    probs = m(scores)
     labels = torch.cat([torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])])  # concatenation of labels
-    loss_output = loss(probs, labels)
+    weights = torch.cat([torch.ones(pos_score.shape[0], dtype=torch.float32), torch.Tensor([1.0 / num_neg_per_pos_edge for _ in range(neg_score.shape[0])])])
+    loss_output = loss(probs, labels, weight=weights)
 
     return probs, labels, loss_output
 
@@ -585,7 +586,9 @@ def inner_train(graph: dgl.graph,
     print(f"Canonical etypes: {graph.canonical_etypes}")
 
     # Initialize loss
-    loss = torch.nn.BCELoss()
+    # weights = torch.
+    # loss = torch.nn.BCELoss()
+    loss = F.binary_cross_entropy
 
     # Define lambda functions for operating on dictionaries
     add_: Callable[[float, float], float] = lambda prior, later: prior + later
@@ -610,7 +613,8 @@ def inner_train(graph: dgl.graph,
         for _, pos_graph, neg_graph, blocks in train_dataloader:
             input_features = blocks[0].ndata[node_features_property]
             # Perform forward pass
-            probs, labels, loss_output = batch_forward_pass(model, predictor, loss, m, target_relation, input_features, pos_graph, neg_graph, blocks)
+            probs, labels, loss_output = batch_forward_pass(model, predictor, loss, m, target_relation, input_features, pos_graph, neg_graph, 
+                blocks, num_neg_per_pos_edge)
             # Make an optimization step
             optimizer.zero_grad()
             loss_output.backward()  # ***This line generates warning***
@@ -635,7 +639,8 @@ def inner_train(graph: dgl.graph,
                 for _, pos_graph, neg_graph, blocks in validation_dataloader:
                     input_features = blocks[0].ndata[node_features_property]
                     # Perform forward pass
-                    probs, labels, loss_output = batch_forward_pass(model, predictor, loss, m, target_relation, input_features, pos_graph, neg_graph, blocks)
+                    probs, labels, loss_output = batch_forward_pass(model, predictor, loss, m, target_relation, input_features, pos_graph, neg_graph, 
+                        blocks, num_neg_per_pos_edge)
                     # Add to the epoch_validation_result for saving
                     evaluate(metrics, labels, probs, epoch_validation_result, threshold, epoch, loss_output.item(), add_)
                     num_batches += 1
