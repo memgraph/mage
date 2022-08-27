@@ -121,6 +121,8 @@ struct mgp_value *value_make_duration(struct mgp_duration *val) {
 
 // TODO: implement within MGP API
 struct mgp_value *value_copy(struct mgp_value *val, struct mgp_memory *memory);
+// with primitive types ({bool, int, double, string}), create a new identical value
+// otherwise call mgp_##TYPE_copy and convert tpye
 
 // Destroy value
 
@@ -335,8 +337,9 @@ struct mgp_list *list_make_empty(size_t capacity, struct mgp_memory *memory) {
   return MgInvoke<struct mgp_list *>(mgp_list_make_empty, capacity, memory);
 }
 
-// TODO: implement within MGP API
-struct mgp_list *list_copy(struct mgp_list *list, struct mgp_memory *memory);
+struct mgp_list *list_copy(struct mgp_list *list, struct mgp_memory *memory) {
+  return MgInvoke<struct mgp_list *>(mgp_list_copy, list, memory);
+}
 
 void list_destroy(struct mgp_list *list) { mgp_list_destroy(list); }
 
@@ -360,8 +363,9 @@ struct mgp_map *map_make_empty(struct mgp_memory *memory) {
   return MgInvoke<struct mgp_map *>(mgp_map_make_empty, memory);
 }
 
-// TODO: implement within MGP API
-struct mgp_map *map_copy(struct mgp_map *map, struct mgp_memory *memory);
+struct mgp_map *map_copy(struct mgp_map *map, struct mgp_memory *memory) {
+  return MgInvoke<struct mgp_map *>(mgp_map_copy, map, memory);
+}
 
 void map_destroy(struct mgp_map *map) { mgp_map_destroy(map); }
 

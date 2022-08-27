@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include <mg_utils.hpp>
+
 #include "mg_procedure.h"
 #include "mgp.hpp"
 
@@ -300,10 +302,21 @@ class List {
   friend class Record;
 
  public:
-  explicit List(mgp_list *ptr) : ptr_(ptr) {}
+  explicit List(mgp_list *ptr) : ptr_(mgp::list_copy(ptr, memory)) {}
+
+  List(List &&other);
+
+  explicit List(size_t capacity) : List(mgp::list_make_empty(capacity, memory)) {}
+
+  explicit List(const std::vector<Value> &values);
+  explicit List(std::vector<Value> &&values);
+
+  explicit List(const std::initializer_list<Value> list);
 
   List &operator=(const List &other) = delete;
   List &operator=(List &&other) = delete;
+
+  ~List();
 
   size_t size() const { return mgp::list_size(ptr_); }
   bool empty() const { return size() == 0; }
@@ -367,10 +380,21 @@ class Map {
   friend class Record;
 
  public:
-  explicit Map(mgp_map *ptr) : ptr_(ptr) {}
+  explicit Map(mgp_map *ptr) : ptr_(mgp::map_copy(ptr, memory)) {}
+
+  Map(Map &&other);
+
+  explicit Map(mgp_memory *memory) : Map(mgp::map_make_empty(memory)) {}
+
+  explicit Map(const std::map<std::string_view, Value> &items);
+  explicit Map(std::map<std::string_view, Value> &&items);
+
+  Map(const std::initializer_list<std::pair<std::string_view, Value>> items);
 
   Map &operator=(const Map &other) = delete;
   Map &operator=(Map &&other) = delete;
+
+  ~Map();
 
   size_t size() const { return mgp::map_size(ptr_); }
   bool empty() const { return size() == 0; }
@@ -545,8 +569,6 @@ class Path {
   bool operator==(const Path &other) const;
   /// \exception std::runtime_error path contains elements with unknown value
   bool operator!=(const Path &other) const { return !(*this == other); }
-
-  bool operator<(const Path &other) const { return length() < other.length(); }
 
  private:
   mgp_path *ptr_;
@@ -1448,6 +1470,32 @@ inline std::string_view Labels::operator[](size_t index) const { return mgp::ver
 
 // List:
 
+inline List::List(List &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
+
+inline List::List(const std::vector<Value> &values) : List(values.size()) {
+  for (const auto &value : values) {
+    Append(value);
+  }
+}
+
+inline List::List(std::vector<Value> &&values) : List(values.size()) {
+  for (auto &value : values) {
+    Append(std::move(value));
+  }
+}
+
+inline List::List(const std::initializer_list<Value> values) : List(values.size()) {
+  for (const auto &value : values) {
+    Append(value);
+  }
+}
+
+inline List::~List() {
+  if (ptr_ != nullptr) {
+    mgp::list_destroy(ptr_);
+  }
+}
+
 inline Value List::Iterator::operator*() const { return (*iterable_)[index_]; }
 
 inline const Value List::operator[](size_t index) const { return Value(mgp::list_at(ptr_, index)); }
@@ -1467,6 +1515,33 @@ inline bool MapItem::operator==(MapItem &other) const { return key == other.key 
 inline bool MapItem::operator!=(MapItem &other) const { return !(*this == other); }
 
 // Map:
+
+inline Map::Map(Map &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
+
+inline Map::Map(const std::map<std::string_view, Value> &items) : Map(mgp::map_make_empty(memory)) {
+  for (const auto &[key, value] : items) {
+    Insert(key, value);
+  }
+}
+
+inline Map::Map(std::map<std::string_view, Value> &&items) : Map(mgp::map_make_empty(memory)) {
+  for (auto &[key, value] : items) {
+    Insert(key, value);
+  }
+}
+
+inline Map::Map(const std::initializer_list<std::pair<std::string_view, Value>> items)
+    : Map(mgp::map_make_empty(memory)) {
+  for (const auto &[key, value] : items) {
+    Insert(key, value);
+  }
+}
+
+inline Map::~Map() {
+  if (ptr_ != nullptr) {
+    mgp::map_destroy(ptr_);
+  }
+}
 
 inline Map::Iterator::Iterator(mgp_map_items_iterator *map_items_iterator) : map_items_iterator_(map_items_iterator) {
   if (map_items_iterator_ == nullptr) return;
@@ -1913,6 +1988,37 @@ inline const Record RecordFactory::NewRecord() const {
 }
 /* #endregion */
 
+class ProcedureWrapper {
+ private:
+ public:
+  ProcedureWrapper() = default;
+
+  static void MGPProc(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+    mage::memory = memory;
+
+    // convert args
+    // convert graph
+    // create result factory
+
+    // call callback
+
+    try {
+      std::cout << "w\n";
+      auto path_1 = mgp::value_get_path(mgp::list_at(args, 0));
+      std::cout << "w\n";
+      // auto path_2 = mgp::path_copy(path_1, memory);
+      auto x = mage::Path(path_1);
+      std::cout << "w\n";
+
+      auto *record = mgp::result_new_record(result);
+      mg_utility::InsertIntValueResult(record, "out", 2, memory);
+    } catch (const std::exception &e) {
+      // We must not let any exceptions out of our module.
+      mgp::result_set_error_msg(result, e.what());
+      return;
+    }
+  }
+};
 }  // namespace mage
 
 namespace std {
@@ -1930,8 +2036,6 @@ template <>
 struct hash<mage::Edge> {
   size_t operator()(const mage::Edge &x) const { return hash<int64_t>()(x.id().AsInt()); };
 };
-
-// TODO how do I hash a Path
 
 template <>
 struct hash<mage::Date> {
@@ -1952,8 +2056,6 @@ template <>
 struct hash<mage::Duration> {
   size_t operator()(const mage::Duration &x) const { return hash<int64_t>()(x.microseconds()); };
 };
-
-// TODO how do I hash a Value
 
 template <>
 struct hash<mage::MapItem> {
