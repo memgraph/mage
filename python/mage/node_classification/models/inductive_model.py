@@ -1,7 +1,7 @@
+import mgp
 import torch
 import torch_geometric
 import torch.nn.functional as F
-import mgp
 
 
 class InductiveModel(torch.nn.Module):
