@@ -303,10 +303,10 @@ def set_model_parameters(
     device_type=str,
     path_to_model=str,
 ):
-    """The purpose of this function is to initialize all global variables. Parameter
-    params is used for variables written in query module. It first checks
-    if (new) variables in params are defined appropriately. If so, map of default
-    global parameters is overriden with user defined dictionary params.
+    """The purpose of this function is to initialize all global variables. 
+    _You_ can change those via **params** dictionary. 
+    It checks if variables in **params** are defined appropriately. If so, 
+    map of default global parameters is overriden with user defined dictionary params.
     After that it executes previously defined functions declare_globals and
     declare_model_and_data and sets each global variable to some value.
 
@@ -327,18 +327,12 @@ def set_model_parameters(
         weight_decay (float): weight decay
         split_ratio (float): ratio between training and validation data
         metrics (list): list of metrics to be calculated
-        node_features_property (str): name of nodes features property
         node_id_property (str): name of nodes id property
-        node_class_property (str): name of nodes class property
         num_epochs (int): number of epochs
         console_log_freq (int): frequency of logging metrics
         checkpoint_freq (int): frequency of saving models
         device_type (str): cpu or cuda
         path_to_model (str): path where model is load and saved
-        data (Any): data
-        model (Any): model
-        opt (Any): optimizer
-        criterion (Any): criterion
     )
     """
     global DEFINED_INPUT_TYPES, DEFAULT_VALUES, current_values
@@ -459,15 +453,23 @@ def train(
 ) -> mgp.Record(
     epoch=int, loss=float, val_loss=float, train_log=mgp.Any, val_log=mgp.Any
 ):
-    """This function performs training of model. Before it, function set_model_parameters
-    must be executed. Otherwise, global variables data and model will be equal
-    to None and AssertionError will be raised.
+    """This function performs training of model. It first declares data, model, 
+    optimizer and criterion. Then it performs training.
 
     Args:
-        no_epochs (int, optional): number of epochs. Defaults to 100 )->mgp.Record(.
+        ctx (mgp.ProcCtx): context of process
+        no_epochs (int, optional): number of epochs. Defaults to 100.
+
+    Raises:
+        Exception: raised if graph is empty
 
     Returns:
-        _type_: _description_
+        list of mgp.Record of
+        epoch (int): epoch number
+        loss (float): loss of model on training data
+        val_loss (float): loss of model on validation data
+        train_log (list): list of metrics on training data
+        val_log (list): list of metrics on validation data
     """
     global model, current_values
 
@@ -619,8 +621,13 @@ def save_model() -> mgp.Record(path=str, status=str):
     """This function saves model to model saving folder. If there are already total
     of max_models_to_keep models in model saving folder, oldest model is deleted.
 
+    Exception: raised if model is not initialized or defined
+
     Returns:
-        mgp.Record(path (str): path to saved model): return record
+        mgp.Record(
+            path (str): path to saved model
+            status (str): status of saving model
+            ): return record
     """
 
     if model == None:
@@ -637,10 +644,10 @@ def save_model() -> mgp.Record(path=str, status=str):
 
 @mgp.read_proc
 def load_model(num: int = 0) -> mgp.Record(path=str, status=str):
-    """This function loads model from saved models.
+    """This function loads model from defined folder for saved models.
 
     Args:
-        num (int, optional): ordinary number of model to load. Defaults to 0 (newest model).
+        num (int, optional): ordinary number of model to load from default map. Defaults to 0 (newest model).
 
     Returns:
         mgp.Record(path (str): path to loaded model): return record
@@ -662,7 +669,6 @@ def load_model(num: int = 0) -> mgp.Record(path=str, status=str):
 def predict(ctx: mgp.ProcCtx, vertex: mgp.Vertex) -> mgp.Record(predicted_value=int):
     """This function predicts metrics on one node. It is suggested that user previously
     loads unseen test data to predict on it.
-    Subgraph (where predict is performed) is consisted of node and self loop to it.
 
     Example of usage:
         MATCH (n {id: 1}) CALL node_classification.predict(n) YIELD * RETURN predicted_value;
@@ -700,6 +706,12 @@ def predict(ctx: mgp.ProcCtx, vertex: mgp.Vertex) -> mgp.Record(predicted_value=
 
 @mgp.read_proc
 def reset() -> mgp.Record(status=str):
+    """This function resets all variables to default values.
+    
+    Returns:
+        mgp.Record(status (str): status of reset): record to return
+    """
+
     # set model and logged_data to None
     global model, current_values, logged_data
     model = None
