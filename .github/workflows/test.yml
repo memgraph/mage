@@ -66,6 +66,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r ./python/tests/requirements.txt
           pip install -r ./python/requirements.txt
+      
+      - name: Install DGL from source
+        run: |
+	  git clone --recurse-submodules https://github.com/dmlc/dgl.git
+	  cd dgl
+          mkdir build
+          cd build
+          cmake ..
+          make -j4
+          cd ../python
+          python setup.py install	
 
       - name: C++ Modules unit tests
         if: matrix.target == 'dev'
