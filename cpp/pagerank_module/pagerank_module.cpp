@@ -4,10 +4,13 @@
 
 namespace {
 constexpr char const *kProcedureGet = "get";
+const char *kProcedureGetSubgraph = "get_subgraph";
 
 constexpr char const *kFieldNode = "node";
 constexpr char const *kFieldRank = "rank";
 
+const char *kArgumentSubgraphNodes = "subgraph_nodes";
+const char *kArgumentSubgraphRelationships = "subgraph_relationships";
 constexpr char const *kArgumentMaxIterations = "max_iterations";
 constexpr char const *kArgumentDampingFactor = "damping_factor";
 constexpr char const *kArgumentStopEpsilon = "stop_epsilon";
@@ -27,13 +30,22 @@ void InsertPagerankRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memo
 /// @param memgraphGraph Memgraph graph instance
 /// @param result Memgraph result storage
 /// @param memory Memgraph memory storage
-void PagerankWrapper(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void PagerankWrapper(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory, bool subgraph) {
   try {
-    auto max_iterations = mgp::value_get_int(mgp::list_at(args, 0));
-    auto damping_factor = mgp::value_get_double(mgp::list_at(args, 1));
-    auto stop_epsilon = mgp::value_get_double(mgp::list_at(args, 2));
+    mgp_list *subgraph_nodes, *subgraph_relationships;
+    int i = 0;
+    if (subgraph) {
+      subgraph_nodes = mgp::value_get_list(mgp::list_at(args, i++));
+      subgraph_relationships = mgp::value_get_list(mgp::list_at(args, i++));
+    }
+    auto max_iterations = mgp::value_get_int(mgp::list_at(args, i++));
+    auto damping_factor = mgp::value_get_double(mgp::list_at(args, i++));
+    auto stop_epsilon = mgp::value_get_double(mgp::list_at(args, i++));
 
-    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
+    auto graph = subgraph
+                     ? mg_utility::GetSubgraphView(memgraph_graph, result, memory, subgraph_nodes,
+                                                   subgraph_relationships, mg_graph::GraphType::kDirectedGraph)
+                     : mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
 
     const auto &graph_edges = graph->Edges();
     std::vector<pagerank_alg::EdgePair> pagerank_edges;
@@ -57,26 +69,49 @@ void PagerankWrapper(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
     return;
   }
 }
+
+void OnGraph(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  PagerankWrapper(args, memgraph_graph, result, memory, false);
+}
+
+void OnSubgraph(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  PagerankWrapper(args, memgraph_graph, result, memory, true);
+}
+
 }  // namespace
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
-  mgp_value *default_max_iterations;
-  mgp_value *default_damping_factor;
-  mgp_value *default_stop_epsilon;
+  mgp_value *default_max_iterations = mgp::value_make_int(100, memory);
+  ;
+  mgp_value *default_damping_factor = mgp::value_make_double(0.85, memory);
+  ;
+  mgp_value *default_stop_epsilon = mgp::value_make_double(1e-5, memory);
   try {
-    auto *pagerank_proc = mgp::module_add_read_procedure(module, kProcedureGet, PagerankWrapper);
+    {
+      auto *proc = mgp::module_add_read_procedure(module, kProcedureGet, OnGraph);
 
-    default_max_iterations = mgp::value_make_int(100, memory);
-    default_damping_factor = mgp::value_make_double(0.85, memory);
-    default_stop_epsilon = mgp::value_make_double(1e-5, memory);
+      mgp::proc_add_opt_arg(proc, kArgumentMaxIterations, mgp::type_int(), default_max_iterations);
+      mgp::proc_add_opt_arg(proc, kArgumentDampingFactor, mgp::type_float(), default_damping_factor);
+      mgp::proc_add_opt_arg(proc, kArgumentStopEpsilon, mgp::type_float(), default_stop_epsilon);
 
-    mgp::proc_add_opt_arg(pagerank_proc, kArgumentMaxIterations, mgp::type_int(), default_max_iterations);
-    mgp::proc_add_opt_arg(pagerank_proc, kArgumentDampingFactor, mgp::type_float(), default_damping_factor);
-    mgp::proc_add_opt_arg(pagerank_proc, kArgumentStopEpsilon, mgp::type_float(), default_stop_epsilon);
+      // Query module output record
+      mgp::proc_add_result(proc, kFieldNode, mgp::type_node());
+      mgp::proc_add_result(proc, kFieldRank, mgp::type_float());
+    }
 
-    // Query module output record
-    mgp::proc_add_result(pagerank_proc, kFieldNode, mgp::type_node());
-    mgp::proc_add_result(pagerank_proc, kFieldRank, mgp::type_float());
+    {
+      auto *proc = mgp::module_add_read_procedure(module, kProcedureGetSubgraph, OnSubgraph);
+
+      mgp::proc_add_arg(proc, kArgumentSubgraphNodes, mgp::type_list(mgp::type_node()));
+      mgp::proc_add_arg(proc, kArgumentSubgraphRelationships, mgp::type_list(mgp::type_relationship()));
+      mgp::proc_add_opt_arg(proc, kArgumentMaxIterations, mgp::type_int(), default_max_iterations);
+      mgp::proc_add_opt_arg(proc, kArgumentDampingFactor, mgp::type_float(), default_damping_factor);
+      mgp::proc_add_opt_arg(proc, kArgumentStopEpsilon, mgp::type_float(), default_stop_epsilon);
+
+      // Query module output record
+      mgp::proc_add_result(proc, kFieldNode, mgp::type_node());
+      mgp::proc_add_result(proc, kFieldRank, mgp::type_float());
+    }
 
   } catch (const std::exception &e) {
     // Destroy values if exception occurs earlier

@@ -1,0 +1,25 @@
+query: >
+    MATCH (n)-[e]->(m)
+    WHERE n.id <= 6 AND m.id <= 6
+    WITH COLLECT(e) AS edges
+    MATCH (n) WHERE n.id <= 6
+    WITH COLLECT(n) AS nodes, edges
+    CALL pagerank.get_subgraph(nodes, edges, 1000) YIELD node, rank
+    RETURN node.id AS node, rank
+    ORDER BY node ASC
+
+output:
+    - node: 0
+      rank: 0.504
+    - node: 1
+      rank: 0.083
+    - node: 2
+      rank: 0.083
+    - node: 3
+      rank: 0.083
+    - node: 4
+      rank: 0.083
+    - node: 5
+      rank: 0.083
+    - node: 6
+      rank: 0.083
