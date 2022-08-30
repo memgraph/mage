@@ -32,8 +32,6 @@ class ModelParams:
     AGGREGATOR = "aggregator"
 
 
-
-
 # parameters for optimizer
 class OptimizerParams:
     LEARNING_RATE = "learning_rate"
@@ -79,18 +77,14 @@ class OtherParams:
     PATIENCE = "patience"
     MODEL_SAVING_FOLDER = "model_saving_folder"
 
+
 GAT_MODEL = "GAT"
 GATV2_MODEL = "GATv2"
 SAGE_MODEL = "SAGE"
 GAT_WITH_JK = "GATJK"
 
 # dictionary of models
-MODELS = {
-    GAT_MODEL: GAT,
-    GATV2_MODEL: GATv2,
-    SAGE_MODEL: SAGE,
-    GAT_WITH_JK: GATJK
-}
+MODELS = {GAT_MODEL: GAT, GATV2_MODEL: GATv2, SAGE_MODEL: SAGE, GAT_WITH_JK: GATJK}
 
 global model, current_values
 
@@ -242,10 +236,8 @@ def declare_model(data: mgp.Any):
         args = args_gatjk
     else:
         args = args_inductive
-    
+
     model = MODELS[layer_type](*args)
-
-
 
     # convert model to hetero structure
     # (if graph is homogeneous, we also do this conversion since all calculations are same)
@@ -303,9 +295,9 @@ def set_model_parameters(
     device_type=str,
     path_to_model=str,
 ):
-    """The purpose of this function is to initialize all global variables. 
-    _You_ can change those via **params** dictionary. 
-    It checks if variables in **params** are defined appropriately. If so, 
+    """The purpose of this function is to initialize all global variables.
+    _You_ can change those via **params** dictionary.
+    It checks if variables in **params** are defined appropriately. If so,
     map of default global parameters is overriden with user defined dictionary params.
     After that it executes previously defined functions declare_globals and
     declare_model_and_data and sets each global variable to some value.
@@ -453,7 +445,7 @@ def train(
 ) -> mgp.Record(
     epoch=int, loss=float, val_loss=float, train_log=mgp.Any, val_log=mgp.Any
 ):
-    """This function performs training of model. It first declares data, model, 
+    """This function performs training of model. It first declares data, model,
     optimizer and criterion. Then it performs training.
 
     Args:
@@ -583,7 +575,7 @@ def train(
 
 @mgp.read_proc
 def get_training_data() -> mgp.Record(
-    epoch=int, loss=float, train_log=mgp.Any, val_log=mgp.Any
+    epoch=int, loss=float, val_loss=float, train_log=mgp.Any, val_log=mgp.Any
 ):
     """This function is used so user can see what is logged data from training.
 
@@ -592,6 +584,7 @@ def get_training_data() -> mgp.Record(
         mgp.Record(
             epoch (int): epoch number of record of logged data row
             loss (float): loss in logged data row
+            val_loss (float): validation loss in logged data row
             train_log (mgp.Any): training parameters of record of logged data row
             val_log (mgp.Any): validation parameters of record of logged data row
             ): record to return
@@ -643,7 +636,7 @@ def save_model() -> mgp.Record(path=str, status=str):
 
 
 @mgp.read_proc
-def load_model(num: int = 0) -> mgp.Record(path=str, status=str):
+def load_model(ctx: mgp.ProcCtx, num: int = 0) -> mgp.Record(path=str, status=str):
     """This function loads model from defined folder for saved models.
 
     Args:
@@ -653,6 +646,9 @@ def load_model(num: int = 0) -> mgp.Record(path=str, status=str):
         mgp.Record(path (str): path to loaded model): return record
     """
     global model
+
+    data = declare_data(ctx)
+    _, _ = declare_model(data)
 
     model_saving_folder, models = fetch_saved_models()
 
@@ -666,7 +662,7 @@ def load_model(num: int = 0) -> mgp.Record(path=str, status=str):
 
 
 @mgp.read_proc
-def predict(ctx: mgp.ProcCtx, vertex: mgp.Vertex) -> mgp.Record(predicted_value=int):
+def predict(ctx: mgp.ProcCtx, vertex: mgp.Vertex) -> mgp.Record(predicted_class=int):
     """This function predicts metrics on one node. It is suggested that user previously
     loads unseen test data to predict on it.
 
@@ -687,19 +683,20 @@ def predict(ctx: mgp.ProcCtx, vertex: mgp.Vertex) -> mgp.Record(predicted_value=
     # define fresh data
     data = declare_data(ctx)
 
-    # define model
-    _, _ = declare_model(ctx)
+    if model == None:
+        raise Exception("You should load model first.")
 
-    if current_values[MemgraphParams.NODE_ID_PROPERTY] in vertex.properties:
-        id = vertex.properties.get(current_values[MemgraphParams.NODE_ID_PROPERTY])
 
     model.eval()
     out = model(data.x_dict, data.edge_index_dict)
     pred = out[current_values[HeteroParams.OBSERVED_ATTRIBUTE]].argmax(dim=1)
 
-    predicted_class = (int)(
-        pred.detach().numpy()[current_values[HeteroParams.INV_REINDEXING][id]]
-    )
+    inv_reindexing = HeteroParams.INV_REINDEXING
+    observed_attribute = current_values[HeteroParams.OBSERVED_ATTRIBUTE]
+    
+    position = current_values[inv_reindexing][observed_attribute][vertex.id]
+
+    predicted_class = int(pred.detach().numpy()[position])
 
     return mgp.Record(predicted_class=predicted_class)
 
@@ -707,7 +704,7 @@ def predict(ctx: mgp.ProcCtx, vertex: mgp.Vertex) -> mgp.Record(predicted_value=
 @mgp.read_proc
 def reset() -> mgp.Record(status=str):
     """This function resets all variables to default values.
-    
+
     Returns:
         mgp.Record(status (str): status of reset): record to return
     """

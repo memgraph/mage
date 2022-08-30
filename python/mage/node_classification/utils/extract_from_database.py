@@ -38,7 +38,8 @@ def nodes_fetching(
 
         # add node type to list of node types (concatenate them if there are more than 1 label)
         if len(node.labels) > 0:
-            node_type = "_".join(name for name in node.labels)
+            
+            node_type = "_".join(node.labels[i].name for i in range(len(node.labels)))
             node_types.append(node_type)
         else:
             raise Exception(f"Node {node.id} has no labels.")
@@ -61,7 +62,7 @@ def nodes_fetching(
 
     # apply Counter to obtain the number of each node type
     node_types = Counter(node_types)
-
+    print(node_types)
     # auxiliary dictionaries for reindexing and inverse reindexing
     append_counter = defaultdict(int)
     reindexing, inv_reindexing = defaultdict(dict), defaultdict(dict)
@@ -87,18 +88,17 @@ def nodes_fetching(
                 np.zeros((no_nodes_of_type,), dtype=int), dtype=torch.bool
             )
 
+    node_types = []
     # now fill the tensors with the nodes from the database
     for node in nodes:
         if features_name not in node.properties:
             continue  # if features are not available, skip the node
 
         if len(node.labels) > 0:
-            node_type = "_".join(name for name in node.labels)
-            node_types.append(node_type)
+            node_type = node_type = "_".join(node.labels[i].name for i in range(len(node.labels)))
         else:
-            raise Exception("Node has no labels.")
+            raise Exception(f"Node {node.id} has no labels.")
             
-        
         # add feature vector from database to tensor
         # it is checked at the start of the loop if features are available
         data[node_type].x[append_counter[node_type]] = np.add(
