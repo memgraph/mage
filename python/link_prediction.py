@@ -243,10 +243,10 @@ def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_
         hidden_features_size=link_prediction_parameters.hidden_features_size,
         aggregator=link_prediction_parameters.aggregator,
         attn_num_heads=link_prediction_parameters.attn_num_heads,
-        feat_drops=[0.0 for _ in range(num_layers)],
-        attn_drops=[0.0 for _ in range(num_layers)],
-        alphas=[0.2 for _ in range(num_layers)],
-        residuals=[False for _ in range(num_layers)],
+        feat_drops=[0.09164 for _ in range(num_layers)],
+        attn_drops=[0.09164 for _ in range(num_layers)],
+        alphas=[0.512857 for _ in range(num_layers)],
+        residuals=[True for _ in range(num_layers)],
         edge_types=graph.etypes
     )
 
