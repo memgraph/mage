@@ -81,6 +81,7 @@ endfunction()
 # Available query modules.
 include(CTest)
 enable_testing()
+add_subdirectory(api_test_module)
 add_subdirectory(betweenness_centrality_module)
 add_subdirectory(biconnected_components_module)
 add_subdirectory(bipartite_matching_module)

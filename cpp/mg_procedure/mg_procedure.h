@@ -150,7 +150,7 @@ struct mgp_duration;
 
 /// All available types that can be stored in a mgp_value
 enum mgp_value_type {
-  // NOTE: New types need to be appended, so as not to break ABI.
+  // NOTE: New types need to be appended, so as not to break API.
   MGP_VALUE_TYPE_NULL,
   MGP_VALUE_TYPE_BOOL,
   MGP_VALUE_TYPE_INT,
@@ -166,6 +166,8 @@ enum mgp_value_type {
   MGP_VALUE_TYPE_LOCAL_DATE_TIME,
   MGP_VALUE_TYPE_DURATION,
 };
+
+enum mgp_error mgp_value_copy(struct mgp_value *val, struct mgp_memory *memory, struct mgp_value **result);
 
 /// Free the memory used by the given mgp_value instance.
 void mgp_value_destroy(struct mgp_value *val);

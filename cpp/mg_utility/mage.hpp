@@ -52,19 +52,19 @@ TDest MemcpyCast(TSrc src) {
 }  // namespace util
 
 // Forward declarations
-class Vertices;
-using GraphVertices = Vertices;
-class GraphEdges;
-class Edges;
-class Vertex;
-class Edge;
+class Nodes;
+using GraphNodes = Nodes;
+class GraphRelationships;
+class Relationships;
+class Node;
+class Relationship;
 struct MapItem;
 class Duration;
 class Value;
 
 mgp_memory *memory;
 
-/* #region Graph (Id, Graph, Vertices, GraphEdges, Edges, Properties & Labels) */
+/* #region Graph (Id, Graph, Nodes, GraphRelationships, Relationships, Properties & Labels) */
 
 /// Wrapper for int64_t IDs to prevent dangerous implicit conversions.
 class Id {
@@ -94,116 +94,48 @@ class Graph {
  public:
   explicit Graph(mgp_graph *graph) : graph_(graph) {}
 
-  /// \brief Returns the graph order (number of vertices).
+  /// \brief Returns the graph order (number of nodes).
   int64_t order() const;
-  /// \brief Returns the graph size (number of edges).
+  /// \brief Returns the graph size (number of relationships).
   int64_t size() const;
 
-  GraphVertices vertices() const;
-  GraphEdges edges() const;
+  GraphNodes nodes() const;
+  GraphRelationships relationships() const;
 
-  Vertex GetVertexById(const Id vertex_id) const;
+  Node GetNodeById(const Id node_id) const;
 
-  bool Contains(const Id vertex_id) const;
-  bool Contains(const Vertex &vertex) const;
-  bool Contains(const Edge &edge) const;
-
- private:
-  mgp_graph *graph_;
-};
-
-class Vertices {
- public:
-  explicit Vertices(mgp_vertices_iterator *vertices_iterator) : vertices_iterator_(vertices_iterator){};
-
-  class Iterator {
-   public:
-    friend class Vertices;
-
-    explicit Iterator(mgp_vertices_iterator *vertices_iterator);
-    ~Iterator();
-    Iterator &operator++();
-    Iterator operator++(int);
-    bool operator==(Iterator other) const;
-    bool operator!=(Iterator other) const { return !(*this == other); }
-    Vertex operator*();
-    // iterator traits
-    using difference_type = Vertex;
-    using value_type = Vertex;
-    using pointer = const Vertex *;
-    using reference = const Vertex &;
-    using iterator_category = std::forward_iterator_tag;
-
-   private:
-    mgp_vertices_iterator *vertices_iterator_ = nullptr;
-    size_t index_ = 0;
-  };
-
-  Iterator begin();
-  Iterator end();
-
- private:
-  mgp_vertices_iterator *vertices_iterator_ = nullptr;
-};
-
-class GraphEdges {
- public:
-  explicit GraphEdges(mgp_graph *graph) : graph_(graph){};
-
-  class Iterator {
-   public:
-    friend class GraphEdges;
-
-    explicit Iterator(mgp_vertices_iterator *vertices_iterator);
-    ~Iterator();
-    Iterator &operator++();
-    bool operator==(Iterator other) const;
-    bool operator!=(Iterator other) const { return !(*this == other); }
-    Edge operator*();
-    // iterator traits
-    using difference_type = Edge;
-    using value_type = Edge;
-    using pointer = const Edge *;
-    using reference = const Edge &;
-    using iterator_category = std::forward_iterator_tag;
-
-   private:
-    mgp_vertices_iterator *vertices_iterator_ = nullptr;
-    mgp_edges_iterator *out_edges_iterator_ = nullptr;
-    size_t index_ = 0;
-  };
-
-  Iterator begin();
-  Iterator end();
+  bool Contains(const Id node_id) const;
+  bool Contains(const Node &node) const;
+  bool Contains(const Relationship &relationship) const;
 
  private:
   mgp_graph *graph_;
 };
 
-class Edges {
+class Nodes {
  public:
-  explicit Edges(mgp_edges_iterator *edges_iterator) : edges_iterator_(edges_iterator){};
+  explicit Nodes(mgp_vertices_iterator *nodes_iterator) : nodes_iterator_(nodes_iterator){};
 
   class Iterator {
    public:
-    friend class Edges;
+    friend class Nodes;
 
-    explicit Iterator(mgp_edges_iterator *edges_iterator);
+    explicit Iterator(mgp_vertices_iterator *nodes_iterator);
     ~Iterator();
     Iterator &operator++();
     Iterator operator++(int);
     bool operator==(Iterator other) const;
     bool operator!=(Iterator other) const { return !(*this == other); }
-    Edge operator*();
+    Node operator*();
     // iterator traits
-    using difference_type = Edge;
-    using value_type = Edge;
-    using pointer = const Edge *;
-    using reference = const Edge &;
+    using difference_type = Node;
+    using value_type = Node;
+    using pointer = const Node *;
+    using reference = const Node &;
     using iterator_category = std::forward_iterator_tag;
 
    private:
-    mgp_edges_iterator *edges_iterator_ = nullptr;
+    mgp_vertices_iterator *nodes_iterator_ = nullptr;
     size_t index_ = 0;
   };
 
@@ -211,7 +143,76 @@ class Edges {
   Iterator end();
 
  private:
-  mgp_edges_iterator *edges_iterator_ = nullptr;
+  mgp_vertices_iterator *nodes_iterator_ = nullptr;
+};
+
+class GraphRelationships {
+ public:
+  explicit GraphRelationships(mgp_graph *graph) : graph_(graph){};
+
+  class Iterator {
+   public:
+    friend class GraphRelationships;
+
+    explicit Iterator(mgp_vertices_iterator *nodes_iterator);
+    ~Iterator();
+    Iterator &operator++();
+    bool operator==(Iterator other) const;
+    bool operator!=(Iterator other) const { return !(*this == other); }
+    Relationship operator*();
+    // iterator traits
+    using difference_type = Relationship;
+    using value_type = Relationship;
+    using pointer = const Relationship *;
+    using reference = const Relationship &;
+    using iterator_category = std::forward_iterator_tag;
+
+   private:
+    mgp_vertices_iterator *nodes_iterator_ = nullptr;
+    mgp_edges_iterator *out_relationships_iterator_ = nullptr;
+    size_t index_ = 0;
+  };
+
+  Iterator begin();
+  Iterator end();
+
+ private:
+  mgp_graph *graph_;
+};
+
+class Relationships {
+ public:
+  explicit Relationships(mgp_edges_iterator *relationships_iterator)
+      : relationships_iterator_(relationships_iterator){};
+
+  class Iterator {
+   public:
+    friend class Relationships;
+
+    explicit Iterator(mgp_edges_iterator *relationships_iterator);
+    ~Iterator();
+    Iterator &operator++();
+    Iterator operator++(int);
+    bool operator==(Iterator other) const;
+    bool operator!=(Iterator other) const { return !(*this == other); }
+    Relationship operator*();
+    // iterator traits
+    using difference_type = Relationship;
+    using value_type = Relationship;
+    using pointer = const Relationship *;
+    using reference = const Relationship &;
+    using iterator_category = std::forward_iterator_tag;
+
+   private:
+    mgp_edges_iterator *relationships_iterator_ = nullptr;
+    size_t index_ = 0;
+  };
+
+  Iterator begin();
+  Iterator end();
+
+ private:
+  mgp_edges_iterator *relationships_iterator_ = nullptr;
 };
 
 /// \brief View of node properties.
@@ -253,9 +254,9 @@ class Properties {
 /// \brief View of node labels.
 class Labels {
  public:
-  explicit Labels(mgp_vertex *vertex_ptr) : vertex_ptr_(vertex_ptr) {}
+  explicit Labels(mgp_vertex *node_ptr) : node_ptr_(node_ptr) {}
 
-  size_t size() const { return mgp::vertex_labels_count(vertex_ptr_); }
+  size_t size() const { return mgp::vertex_labels_count(node_ptr_); }
 
   /// \brief Return node’s label at position `index`.
   std::string_view operator[](size_t index) const;
@@ -287,7 +288,7 @@ class Labels {
   Iterator end() { return Iterator(this, size()); }
 
  private:
-  mgp_vertex *vertex_ptr_;
+  mgp_vertex *node_ptr_;
 };
 /* #endregion */
 
@@ -360,7 +361,15 @@ class List {
   /// considered undefined.
   void Append(Value &&value);
 
-  void AppendExtend(Value &value);
+  /// \brief Extends the list and appends the given `value` to it.
+  /// The `value` is copied.
+  void AppendExtend(const Value &value);
+  /// \brief Extends the list and appends the given `value` to it.
+  /// \note
+  /// It takes the ownership of the `value` by moving it.
+  /// Behaviour of accessing the `value` after performing this operation is
+  /// considered undefined.
+  void AppendExtend(Value &&value);
 
   // Value Pop(); // (requires mgp_list_pop in the MGP API):
 
@@ -438,29 +447,28 @@ class Map {
 };
 /* #endregion */
 
-/* #region Graph elements (Vertex, Edge & Path) */
+/* #region Graph elements (Node, Relationship & Path) */
 // value types are underlyingly uint8_t values
 /// \brief Wrapper class for \ref mgp_vertex.
-class Vertex {
+class Node {
  public:
   friend class Graph;
   friend class Path;
   friend class Value;
   friend class Record;
 
-  explicit Vertex(mgp_vertex *ptr) : ptr_(mgp::vertex_copy(ptr, memory)) {}
+  explicit Node(mgp_vertex *ptr) : ptr_(mgp::vertex_copy(ptr, memory)) {}
 
   /// \brief Create a Node from a copy of the given \ref mgp_vertex.
-  explicit Vertex(const mgp_vertex *const_ptr)
-      : Vertex(mgp::vertex_copy(const_cast<mgp_vertex *>(const_ptr), memory)) {}
+  explicit Node(const mgp_vertex *const_ptr) : Node(mgp::vertex_copy(const_cast<mgp_vertex *>(const_ptr), memory)) {}
 
-  Vertex(const Vertex &other);
-  Vertex(Vertex &&other);
+  Node(const Node &other);
+  Node(Node &&other);
 
-  Vertex &operator=(const Vertex &other) = delete;
-  Vertex &operator=(Vertex &&other) = delete;
+  Node &operator=(const Node &other) = delete;
+  Node &operator=(Node &&other) = delete;
 
-  ~Vertex();
+  ~Node();
 
   Id id() const { return Id::FromInt(mgp::vertex_get_id(ptr_).as_int); }
 
@@ -470,47 +478,48 @@ class Vertex {
   Properties properties() const { return Properties(mgp::vertex_iter_properties(ptr_, memory)); }
   Value operator[](const std::string_view property_name) const;
 
-  Edges in_edges() const;
-  Edges out_edges() const;
+  Relationships in_relationships() const;
+  Relationships out_relationships() const;
 
-  bool operator<(const Vertex &other) const { return id() < other.id(); }
+  bool operator<(const Node &other) const { return id() < other.id(); }
 
   /// \exception std::runtime_error node property contains value with unknown type
-  bool operator==(const Vertex &other) const;
+  bool operator==(const Node &other) const;
   /// \exception std::runtime_error node property contains value with unknown type
-  bool operator!=(const Vertex &other) const { return !(*this == other); }
+  bool operator!=(const Node &other) const { return !(*this == other); }
 
  private:
   mgp_vertex *ptr_;
 };
 
 /// \brief Wrapper class for \ref mgp_edge.
-class Edge {
+class Relationship {
  private:
   friend class Value;
   friend class Path;
   friend class Record;
 
  public:
-  explicit Edge(mgp_edge *ptr) : ptr_(mgp::edge_copy(ptr, memory)) {}
+  explicit Relationship(mgp_edge *ptr) : ptr_(mgp::edge_copy(ptr, memory)) {}
 
   /// \brief Create a Relationship from a copy of the given \ref mgp_edge.
-  explicit Edge(const mgp_edge *const_ptr) : Edge(mgp::edge_copy(const_cast<mgp_edge *>(const_ptr), memory)) {}
+  explicit Relationship(const mgp_edge *const_ptr)
+      : Relationship(mgp::edge_copy(const_cast<mgp_edge *>(const_ptr), memory)) {}
 
-  Edge(const Edge &other);
-  Edge(Edge &&other);
+  Relationship(const Relationship &other);
+  Relationship(Relationship &&other);
 
-  Edge &operator=(const Edge &other) = delete;
-  Edge &operator=(Edge &&other) = delete;
+  Relationship &operator=(const Relationship &other) = delete;
+  Relationship &operator=(Relationship &&other) = delete;
 
-  ~Edge();
+  ~Relationship();
 
   Id id() const { return Id::FromInt(mgp::edge_get_id(ptr_).as_int); }
 
   /// \brief Return the ID of the relationship’s source node.
-  Vertex from() const { return Vertex(mgp::edge_get_from(ptr_)); }
+  Node from() const { return Node(mgp::edge_get_from(ptr_)); }
   /// \brief Return the ID of the relationship’s destination node.
-  Vertex to() const { return Vertex(mgp::edge_get_to(ptr_)); }
+  Node to() const { return Node(mgp::edge_get_to(ptr_)); }
 
   std::string_view type() const;
 
@@ -519,12 +528,12 @@ class Edge {
 
   /// \exception std::runtime_error relationship property contains value with
   /// unknown type
-  bool operator==(const Edge &other) const;
+  bool operator==(const Relationship &other) const;
   /// \exception std::runtime_error relationship property contains value with
   /// unknown type
-  bool operator!=(const Edge &other) const { return !(*this == other); }
+  bool operator!=(const Relationship &other) const { return !(*this == other); }
 
-  bool operator<(const Edge &other) const { return id() < other.id(); }
+  bool operator<(const Relationship &other) const { return id() < other.id(); }
 
  private:
   mgp_edge *ptr_;
@@ -542,7 +551,7 @@ class Path {
   /// \brief Create a Path from a copy of the given \ref mg_path.
   explicit Path(const mgp_path *const_ptr) : Path(mgp::path_copy(const_cast<mgp_path *>(const_ptr), memory)) {}
 
-  explicit Path(const Vertex &start_vertex);
+  explicit Path(const Node &start_node);
 
   Path(const Path &other);
   Path(Path &&other);
@@ -552,18 +561,18 @@ class Path {
 
   ~Path();
 
-  /// Length of the path is number of edges.
+  /// Length of the path is number of relationships.
   size_t length() const { return mgp::path_size(ptr_); }
 
-  /// \brief Returns the vertex at the given `index`.
+  /// \brief Returns the node at the given `index`.
   /// \pre `index` should be less than or equal to length of the path.
-  Vertex GetVertexAt(size_t index) const;
+  Node GetNodeAt(size_t index) const;
 
-  /// \brief Returns the edge at the given `index`.
+  /// \brief Returns the relationship at the given `index`.
   /// \pre `index` should be less than length of the path.
-  Edge GetEdgeAt(size_t index) const;
+  Relationship GetRelationshipAt(size_t index) const;
 
-  void Expand(const Edge &edge);
+  void Expand(const Relationship &relationship);
 
   /// \exception std::runtime_error path contains elements with unknown value
   bool operator==(const Path &other) const;
@@ -800,8 +809,8 @@ enum class ValueType : uint8_t {
   String,
   List,
   Map,
-  Vertex,
-  Edge,
+  Node,
+  Relationship,
   Path,
   Date,
   LocalTime,
@@ -820,7 +829,7 @@ class Value {
   friend class Duration;
   friend class Record;
 
-  explicit Value(mgp_value *ptr_) : ptr_(ptr_){};
+  explicit Value(mgp_value *ptr) : ptr_(mgp::value_copy(ptr, memory)){};
 
   // Primitive type constructors:
   explicit Value(bool value) : Value(mgp::value_make_bool(value, memory)){};
@@ -829,7 +838,7 @@ class Value {
   explicit Value(double value) : Value(mgp::value_make_double(value, memory)){};
 
   // String constructors:
-  explicit Value(const std::string_view value) : Value(mgp::value_make_string(value.data(), memory)){};
+  explicit Value(const std::string_view value) : Value(mgp::value_make_string(value.data(), memory)) {}
   explicit Value(const char *value) : Value(mgp::value_make_string(value, memory)){};
 
   // Container constructors:
@@ -844,6 +853,30 @@ class Value {
     delete &map;
     map.ptr_ = nullptr;
   }
+
+  /// \brief Constructs a node value and takes ownership of the given `node`.
+  /// \note The behavior of accessing the `node` after performing this operation is undefined.
+  explicit Value(Node &&node) {
+    Value(mgp::value_make_vertex(const_cast<mgp_vertex *>(node.ptr_)));
+    delete &node;
+    node.ptr_ = nullptr;
+  };
+
+  /// \brief Constructs an relationship value and takes ownership of the given `relationship`.
+  /// \note The behavior of accessing the `relationship` after performing this operation is undefined.
+  explicit Value(Relationship &&relationship) {
+    Value(mgp::value_make_edge(relationship.ptr_));
+    delete &relationship;
+    relationship.ptr_ = nullptr;
+  };
+
+  /// \brief Constructs a path value and takes ownership of the given `path`.
+  /// \note The behavior of accessing the `path` after performing this operation is undefined.
+  explicit Value(Path &&path) {
+    Value(mgp::value_make_path(path.ptr_));
+    delete &path;
+    path.ptr_ = nullptr;
+  };
 
   // Temporal type constructors:
   explicit Value(Date &&date) {
@@ -867,30 +900,6 @@ class Value {
     duration.ptr_ = nullptr;
   }
 
-  /// \brief Constructs a vertex value and takes ownership of the given `vertex`.
-  /// \note The behavior of accessing the `vertex` after performing this operation is undefined.
-  explicit Value(Vertex &&vertex) {
-    Value(mgp::value_make_vertex(const_cast<mgp_vertex *>(vertex.ptr_)));
-    delete &vertex;
-    vertex.ptr_ = nullptr;
-  };
-
-  /// \brief Constructs an edge value and takes ownership of the given `edge`.
-  /// \note The behavior of accessing the `edge` after performing this operation is undefined.
-  explicit Value(Edge &&edge) {
-    Value(mgp::value_make_edge(edge.ptr_));
-    delete &edge;
-    edge.ptr_ = nullptr;
-  };
-
-  /// \brief Constructs a path value and takes ownership of the given `path`.
-  /// \note The behavior of accessing the `path` after performing this operation is undefined.
-  explicit Value(Path &&path) {
-    Value(mgp::value_make_path(path.ptr_));
-    delete &path;
-    path.ptr_ = nullptr;
-  };
-
   ~Value();
 
   const mgp_value *ptr() const { return ptr_; }
@@ -913,9 +922,9 @@ class Value {
   /// \pre value type is Type::Map
   const Map ValueMap() const;
   /// \pre value type is Type::Node
-  const Vertex ValueVertex() const;
-  /// \pre value type is Type::Edge
-  const Edge ValueEdge() const;
+  const Node ValueNode() const;
+  /// \pre value type is Type::Relationship
+  const Relationship ValueRelationship() const;
   /// \pre value type is Type::Path
   const Path ValuePath() const;
   /// \pre value type is Type::Date
@@ -935,8 +944,8 @@ class Value {
   bool IsString() const;
   bool IsList() const;
   bool IsMap() const;
-  bool IsVertex() const;
-  bool IsEdge() const;
+  bool IsNode() const;
+  bool IsRelationship() const;
   bool IsPath() const;
   bool IsDate() const;
   bool IsLocalTime() const;
@@ -975,12 +984,14 @@ class Record {
   void Insert(const char *field_name, double value);
   void Insert(const char *field_name, const char *value);
   void Insert(const char *field_name, std::string_view value);
+  void Insert(const char *field_name, const List &list);
   // TODO (convert STL vector to MGP):
   // void Insert(const char *field_name, const std::vector<Value> &list);
+  void Insert(const char *field_name, const Map &map);
   // TODO (convert STL map to MGP):
   // void Insert(const char *field_name, const std::map<std::to_string, Value> &map);
-  void Insert(const char *field_name, const Vertex &vertex);
-  void Insert(const char *field_name, const Edge &edge);
+  void Insert(const char *field_name, const Node &node);
+  void Insert(const char *field_name, const Relationship &relationship);
   void Insert(const char *field_name, const Path &path);
   void Insert(const char *field_name, const Date &date);
   void Insert(const char *field_name, const LocalTime &local_time);
@@ -1010,8 +1021,8 @@ class RecordFactory {
 namespace util {
 inline bool ValuesEqual(mgp_value *value1, mgp_value *value2);
 
-inline bool VerticesEqual(mgp_vertex *node1, mgp_vertex *node2) {
-  // In query module contexts, vertices with the same ID are considered identical
+inline bool NodesEqual(mgp_vertex *node1, mgp_vertex *node2) {
+  // In query module contexts, nodes with the same ID are considered identical
   if (node1 == node2) {
     return true;
   }
@@ -1021,12 +1032,12 @@ inline bool VerticesEqual(mgp_vertex *node1, mgp_vertex *node2) {
   return true;
 }
 
-inline bool EdgesEqual(mgp_edge *edge1, mgp_edge *edge2) {
-  // In query module contexts, edges with the same ID are considered identical
-  if (edge1 == edge2) {
+inline bool RelationshipsEqual(mgp_edge *relationship1, mgp_edge *relationship2) {
+  // In query module contexts, relationships with the same ID are considered identical
+  if (relationship1 == relationship2) {
     return true;
   }
-  if (mgp::edge_get_id(edge1).as_int != mgp::edge_get_id(edge2).as_int) {
+  if (mgp::edge_get_id(relationship1).as_int != mgp::edge_get_id(relationship2).as_int) {
     return false;
   }
   return true;
@@ -1042,14 +1053,14 @@ inline bool PathsEqual(mgp_path *path1, mgp_path *path2) {
   }
   const auto path_size = mgp::path_size(path1);
   for (size_t i = 0; i < path_size; ++i) {
-    if (!util::VerticesEqual(mgp::path_vertex_at(path1, i), mgp::path_vertex_at(path2, i))) {
+    if (!util::NodesEqual(mgp::path_vertex_at(path1, i), mgp::path_vertex_at(path2, i))) {
       return false;
     }
-    if (!util::EdgesEqual(mgp::path_edge_at(path1, i), mgp::path_edge_at(path2, i))) {
+    if (!util::RelationshipsEqual(mgp::path_edge_at(path1, i), mgp::path_edge_at(path2, i))) {
       return false;
     }
   }
-  return util::VerticesEqual(mgp::path_vertex_at(path1, path_size), mgp::path_vertex_at(path2, path_size));
+  return util::NodesEqual(mgp::path_vertex_at(path1, path_size), mgp::path_vertex_at(path2, path_size));
 }
 
 inline bool ListsEqual(mgp_list *list1, mgp_list *list2) {
@@ -1124,11 +1135,10 @@ inline bool ValuesEqual(mgp_value *value1, mgp_value *value2) {
       return util::ListsEqual(mgp::value_get_list(value1), mgp::value_get_list(value2));
     case MGP_VALUE_TYPE_MAP:
       return util::MapsEqual(mgp::value_get_map(value1), mgp::value_get_map(value2));
-      break;
     case MGP_VALUE_TYPE_VERTEX:
-      return util::VerticesEqual(mgp::value_get_vertex(value1), mgp::value_get_vertex(value2));
+      return util::NodesEqual(mgp::value_get_vertex(value1), mgp::value_get_vertex(value2));
     case MGP_VALUE_TYPE_EDGE:
-      return util::EdgesEqual(mgp::value_get_edge(value1), mgp::value_get_edge(value2));
+      return util::RelationshipsEqual(mgp::value_get_edge(value1), mgp::value_get_edge(value2));
     case MGP_VALUE_TYPE_PATH:
       return util::PathsEqual(mgp::value_get_path(value1), mgp::value_get_path(value2));
     case MGP_VALUE_TYPE_DATE:
@@ -1160,9 +1170,9 @@ inline ValueType ConvertType(mgp_value_type type) {
     case MGP_VALUE_TYPE_MAP:
       return ValueType::Map;
     case MGP_VALUE_TYPE_VERTEX:
-      return ValueType::Vertex;
+      return ValueType::Node;
     case MGP_VALUE_TYPE_EDGE:
-      return ValueType::Edge;
+      return ValueType::Relationship;
     case MGP_VALUE_TYPE_PATH:
       return ValueType::Path;
     case MGP_VALUE_TYPE_DATE:
@@ -1181,13 +1191,13 @@ inline ValueType ConvertType(mgp_value_type type) {
 }
 }  // namespace util
 
-/* #region Graph (Id, Graph, Vertices, GraphEdges, Edges, Properties & Labels) */
+/* #region Graph (Id, Graph, Nodes, GraphRelationships, Relationships, Properties & Labels) */
 
 // Graph:
 
 int64_t Graph::order() const {
   int64_t i = 0;
-  for (const auto &v : vertices()) {
+  for (const auto &v : nodes()) {
     i++;
   }
   return i;
@@ -1195,59 +1205,59 @@ int64_t Graph::order() const {
 
 int64_t Graph::size() const {
   int64_t i = 0;
-  for (const auto &_ : edges()) {
+  for (const auto &_ : relationships()) {
     i++;
   }
   return i;
 }
 
-inline GraphVertices Graph::vertices() const {
-  auto vertices_it = mgp::graph_iter_vertices(graph_, memory);
-  if (vertices_it == nullptr) {
+inline GraphNodes Graph::nodes() const {
+  auto nodes_it = mgp::graph_iter_vertices(graph_, memory);
+  if (nodes_it == nullptr) {
     throw mg_exception::NotEnoughMemoryException();
   }
-  return GraphVertices(vertices_it);
+  return GraphNodes(nodes_it);
 }
 
-inline GraphEdges Graph::edges() const { return GraphEdges(graph_); }
+inline GraphRelationships Graph::relationships() const { return GraphRelationships(graph_); }
 
-inline Vertex Graph::GetVertexById(const Id vertex_id) const {
-  auto vertex = mgp::graph_get_vertex_by_id(graph_, mgp_vertex_id{.as_int = vertex_id.AsInt()}, memory);
-  return Vertex(vertex);
+inline Node Graph::GetNodeById(const Id node_id) const {
+  auto node = mgp::graph_get_vertex_by_id(graph_, mgp_vertex_id{.as_int = node_id.AsInt()}, memory);
+  return Node(node);
 }
 
-bool Graph::Contains(const Id vertex_id) const { return GetVertexById(vertex_id).ptr_ != nullptr; }
-bool Graph::Contains(const Vertex &vertex) const { return Contains(vertex.id()); }
-bool Graph::Contains(const Edge &edge) const {
-  for (const auto &graph_edge : edges()) {
-    if (edge == graph_edge) return true;
+bool Graph::Contains(const Id node_id) const { return GetNodeById(node_id).ptr_ != nullptr; }
+bool Graph::Contains(const Node &node) const { return Contains(node.id()); }
+bool Graph::Contains(const Relationship &relationship) const {
+  for (const auto &graph_relationship : relationships()) {
+    if (relationship == graph_relationship) return true;
   }
   return false;
 }
 
-// Vertices:
+// Nodes:
 
-inline Vertices::Iterator::Iterator(mgp_vertices_iterator *vertices_iterator) : vertices_iterator_(vertices_iterator) {
-  if (vertices_iterator_ == nullptr) return;
-  if (mgp::vertices_iterator_get(vertices_iterator_) == nullptr) {
-    mgp::vertices_iterator_destroy(vertices_iterator_);
-    vertices_iterator_ = nullptr;
+inline Nodes::Iterator::Iterator(mgp_vertices_iterator *nodes_iterator) : nodes_iterator_(nodes_iterator) {
+  if (nodes_iterator_ == nullptr) return;
+  if (mgp::vertices_iterator_get(nodes_iterator_) == nullptr) {
+    mgp::vertices_iterator_destroy(nodes_iterator_);
+    nodes_iterator_ = nullptr;
   }
 }
 
-inline Vertices::Iterator::~Iterator() {
-  if (vertices_iterator_ != nullptr) {
-    mgp::vertices_iterator_destroy(vertices_iterator_);
+inline Nodes::Iterator::~Iterator() {
+  if (nodes_iterator_ != nullptr) {
+    mgp::vertices_iterator_destroy(nodes_iterator_);
   }
 }
 
-inline Vertices::Iterator &Vertices::Iterator::operator++() {
-  if (vertices_iterator_ != nullptr) {
-    auto next = mgp::vertices_iterator_next(vertices_iterator_);
+inline Nodes::Iterator &Nodes::Iterator::operator++() {
+  if (nodes_iterator_ != nullptr) {
+    auto next = mgp::vertices_iterator_next(nodes_iterator_);
 
     if (next == nullptr) {
-      mgp::vertices_iterator_destroy(vertices_iterator_);
-      vertices_iterator_ = nullptr;
+      mgp::vertices_iterator_destroy(nodes_iterator_);
+      nodes_iterator_ = nullptr;
       return *this;
     }
     index_++;
@@ -1255,158 +1265,160 @@ inline Vertices::Iterator &Vertices::Iterator::operator++() {
   return *this;
 }
 
-inline Vertices::Iterator Vertices::Iterator::operator++(int) {
-  Vertices::Iterator retval = *this;
+inline Nodes::Iterator Nodes::Iterator::operator++(int) {
+  Nodes::Iterator retval = *this;
   ++(*this);
   return retval;
 }
 
-inline bool Vertices::Iterator::operator==(Iterator other) const {
-  if (vertices_iterator_ == nullptr && other.vertices_iterator_ == nullptr) {
+inline bool Nodes::Iterator::operator==(Iterator other) const {
+  if (nodes_iterator_ == nullptr && other.nodes_iterator_ == nullptr) {
     return true;
   }
-  if (vertices_iterator_ == nullptr || other.vertices_iterator_ == nullptr) {
+  if (nodes_iterator_ == nullptr || other.nodes_iterator_ == nullptr) {
     return false;
   }
-  return mgp::vertex_equal(mgp::vertices_iterator_get(vertices_iterator_),
-                           mgp::vertices_iterator_get(other.vertices_iterator_)) &&
+  return mgp::vertex_equal(mgp::vertices_iterator_get(nodes_iterator_),
+                           mgp::vertices_iterator_get(other.nodes_iterator_)) &&
          index_ == other.index_;
 }
 
-inline Vertex Vertices::Iterator::operator*() {
-  if (vertices_iterator_ == nullptr) return Vertex((const mgp_vertex *)nullptr);
+inline Node Nodes::Iterator::operator*() {
+  if (nodes_iterator_ == nullptr) return Node((const mgp_vertex *)nullptr);
 
-  auto vertex = Vertex(mgp::vertices_iterator_get(vertices_iterator_));
-  return vertex;
+  auto node = Node(mgp::vertices_iterator_get(nodes_iterator_));
+  return node;
 }
 
-inline Vertices::Iterator Vertices::begin() { return Iterator(vertices_iterator_); }
+inline Nodes::Iterator Nodes::begin() { return Iterator(nodes_iterator_); }
 
-inline Vertices::Iterator Vertices::end() { return Iterator(nullptr); }
+inline Nodes::Iterator Nodes::end() { return Iterator(nullptr); }
 
-// GraphEdges:
+// GraphRelationships:
 
-inline GraphEdges::Iterator::Iterator(mgp_vertices_iterator *vertices_iterator)
-    : vertices_iterator_(vertices_iterator) {
-  // Positions the iterator over the first existing edge
+inline GraphRelationships::Iterator::Iterator(mgp_vertices_iterator *nodes_iterator) : nodes_iterator_(nodes_iterator) {
+  // Positions the iterator over the first existing relationship
 
-  if (vertices_iterator_ == nullptr) return;
+  if (nodes_iterator_ == nullptr) return;
 
-  // Go through the adjacent vertices of each graph node
-  for (auto vertex = mgp::vertices_iterator_get(vertices_iterator_); vertex;
-       vertex = mgp::vertices_iterator_next(vertices_iterator_)) {
-    // Check if vertex exists
-    if (vertex == nullptr) {
-      mgp::vertices_iterator_destroy(vertices_iterator_);
-      vertices_iterator_ = nullptr;
+  // Go through the adjacent nodes of each graph node
+  for (auto node = mgp::vertices_iterator_get(nodes_iterator_); node;
+       node = mgp::vertices_iterator_next(nodes_iterator_)) {
+    // Check if node exists
+    if (node == nullptr) {
+      mgp::vertices_iterator_destroy(nodes_iterator_);
+      nodes_iterator_ = nullptr;
       return;
     }
 
-    // Check if vertex has out-edges
-    out_edges_iterator_ = mgp::vertex_iter_out_edges(vertex, memory);
-    auto edge = mgp::edges_iterator_get(out_edges_iterator_);
-    if (edge != nullptr) return;
+    // Check if node has out-relationships
+    out_relationships_iterator_ = mgp::vertex_iter_out_edges(node, memory);
+    auto relationship = mgp::edges_iterator_get(out_relationships_iterator_);
+    if (relationship != nullptr) return;
 
-    mgp::edges_iterator_destroy(out_edges_iterator_);
-    out_edges_iterator_ = nullptr;
+    mgp::edges_iterator_destroy(out_relationships_iterator_);
+    out_relationships_iterator_ = nullptr;
   }
 }
 
-inline GraphEdges::Iterator::~Iterator() {
-  if (vertices_iterator_ != nullptr) {
-    mgp::vertices_iterator_destroy(vertices_iterator_);
+inline GraphRelationships::Iterator::~Iterator() {
+  if (nodes_iterator_ != nullptr) {
+    mgp::vertices_iterator_destroy(nodes_iterator_);
   }
-  if (out_edges_iterator_ != nullptr) {
-    mgp::edges_iterator_destroy(out_edges_iterator_);
+  if (out_relationships_iterator_ != nullptr) {
+    mgp::edges_iterator_destroy(out_relationships_iterator_);
   }
 }
 
-inline GraphEdges::Iterator &GraphEdges::Iterator::operator++() {
-  // Moves the iterator onto the next existing edge
+inline GraphRelationships::Iterator &GraphRelationships::Iterator::operator++() {
+  // Moves the iterator onto the next existing relationship
 
-  // 1. Check if the current vertex has remaining edges to iterate over
+  // 1. Check if the current node has remaining relationships to iterate over
 
-  auto edge = mgp::edges_iterator_get(out_edges_iterator_);
-  if (edge != nullptr) return *this;
+  auto relationship = mgp::edges_iterator_get(out_relationships_iterator_);
+  if (relationship != nullptr) return *this;
 
-  mgp::edges_iterator_destroy(out_edges_iterator_);
-  out_edges_iterator_ = nullptr;
+  mgp::edges_iterator_destroy(out_relationships_iterator_);
+  out_relationships_iterator_ = nullptr;
 
-  // 2. Move onto the next vertices
+  // 2. Move onto the next nodes
 
-  if (vertices_iterator_ != nullptr) {
-    for (auto vertex = mgp::vertices_iterator_get(vertices_iterator_); vertex;
-         vertex = mgp::vertices_iterator_next(vertices_iterator_)) {
-      // Check if vertex exists
-      if (vertex == nullptr) {
-        mgp::vertices_iterator_destroy(vertices_iterator_);
-        vertices_iterator_ = nullptr;
+  if (nodes_iterator_ != nullptr) {
+    for (auto node = mgp::vertices_iterator_get(nodes_iterator_); node;
+         node = mgp::vertices_iterator_next(nodes_iterator_)) {
+      // Check if node exists
+      if (node == nullptr) {
+        mgp::vertices_iterator_destroy(nodes_iterator_);
+        nodes_iterator_ = nullptr;
         return *this;
       }
 
-      // Check if vertex has out-edges
-      out_edges_iterator_ = mgp::vertex_iter_out_edges(vertex, memory);
-      auto edge = mgp::edges_iterator_get(out_edges_iterator_);
-      if (edge != nullptr) return *this;
+      // Check if node has out-relationships
+      out_relationships_iterator_ = mgp::vertex_iter_out_edges(node, memory);
+      auto relationship = mgp::edges_iterator_get(out_relationships_iterator_);
+      if (relationship != nullptr) return *this;
 
-      mgp::edges_iterator_destroy(out_edges_iterator_);
-      out_edges_iterator_ = nullptr;
+      mgp::edges_iterator_destroy(out_relationships_iterator_);
+      out_relationships_iterator_ = nullptr;
     }
 
-    mgp::vertices_iterator_destroy(vertices_iterator_);
-    vertices_iterator_ = nullptr;
+    mgp::vertices_iterator_destroy(nodes_iterator_);
+    nodes_iterator_ = nullptr;
   }
   return *this;
 }
 
-inline bool GraphEdges::Iterator::operator==(Iterator other) const {
-  if (out_edges_iterator_ == nullptr && other.out_edges_iterator_ == nullptr) {
+inline bool GraphRelationships::Iterator::operator==(Iterator other) const {
+  if (out_relationships_iterator_ == nullptr && other.out_relationships_iterator_ == nullptr) {
     return true;
   }
-  if (out_edges_iterator_ == nullptr || other.out_edges_iterator_ == nullptr) {
+  if (out_relationships_iterator_ == nullptr || other.out_relationships_iterator_ == nullptr) {
     return false;
   }
-  return mgp::edge_equal(mgp::edges_iterator_get(out_edges_iterator_),
-                         mgp::edges_iterator_get(other.out_edges_iterator_)) &&
+  return mgp::edge_equal(mgp::edges_iterator_get(out_relationships_iterator_),
+                         mgp::edges_iterator_get(other.out_relationships_iterator_)) &&
          index_ == other.index_;
 }
 
-inline Edge GraphEdges::Iterator::operator*() {
-  if (out_edges_iterator_ != nullptr) {
-    return Edge(mgp::edges_iterator_get(out_edges_iterator_));
+inline Relationship GraphRelationships::Iterator::operator*() {
+  if (out_relationships_iterator_ != nullptr) {
+    return Relationship(mgp::edges_iterator_get(out_relationships_iterator_));
   }
 
-  return Edge((mgp_edge *)nullptr);
+  return Relationship((mgp_edge *)nullptr);
 }
 
-inline GraphEdges::Iterator GraphEdges::begin() { return Iterator(mgp::graph_iter_vertices(graph_, memory)); }
+inline GraphRelationships::Iterator GraphRelationships::begin() {
+  return Iterator(mgp::graph_iter_vertices(graph_, memory));
+}
 
-inline GraphEdges::Iterator GraphEdges::end() { return Iterator(nullptr); }
+inline GraphRelationships::Iterator GraphRelationships::end() { return Iterator(nullptr); }
 
-// Edges:
+// Relationships:
 
-inline Edges::Iterator::Iterator(mgp_edges_iterator *edges_iterator) : edges_iterator_(edges_iterator) {
-  if (edges_iterator_ == nullptr) return;
-  if (mgp::edges_iterator_get(edges_iterator_) == nullptr) {
-    mgp::edges_iterator_destroy(edges_iterator_);
-    edges_iterator_ = nullptr;
+inline Relationships::Iterator::Iterator(mgp_edges_iterator *relationships_iterator)
+    : relationships_iterator_(relationships_iterator) {
+  if (relationships_iterator_ == nullptr) return;
+  if (mgp::edges_iterator_get(relationships_iterator_) == nullptr) {
+    mgp::edges_iterator_destroy(relationships_iterator_);
+    relationships_iterator_ = nullptr;
   }
 }
 
-inline Edges::Iterator::~Iterator() {
+inline Relationships::Iterator::~Iterator() {
   std::cout << "destroy\n";
-  if (edges_iterator_ != nullptr) {
-    mgp::edges_iterator_destroy(edges_iterator_);
+  if (relationships_iterator_ != nullptr) {
+    mgp::edges_iterator_destroy(relationships_iterator_);
   }
 }
 
-inline Edges::Iterator &Edges::Iterator::operator++() {
-  if (edges_iterator_ != nullptr) {
-    auto next = mgp::edges_iterator_next(edges_iterator_);
+inline Relationships::Iterator &Relationships::Iterator::operator++() {
+  if (relationships_iterator_ != nullptr) {
+    auto next = mgp::edges_iterator_next(relationships_iterator_);
 
     if (next == nullptr) {
-      mgp::edges_iterator_destroy(edges_iterator_);
-      edges_iterator_ = nullptr;
+      mgp::edges_iterator_destroy(relationships_iterator_);
+      relationships_iterator_ = nullptr;
       return *this;
     }
     index_++;
@@ -1414,33 +1426,34 @@ inline Edges::Iterator &Edges::Iterator::operator++() {
   return *this;
 }
 
-inline Edges::Iterator Edges::Iterator::operator++(int) {
-  Edges::Iterator retval = *this;
+inline Relationships::Iterator Relationships::Iterator::operator++(int) {
+  Relationships::Iterator retval = *this;
   ++(*this);
   return retval;
 }
 
-inline bool Edges::Iterator::operator==(Iterator other) const {
-  if (edges_iterator_ == nullptr && other.edges_iterator_ == nullptr) {
+inline bool Relationships::Iterator::operator==(Iterator other) const {
+  if (relationships_iterator_ == nullptr && other.relationships_iterator_ == nullptr) {
     return true;
   }
-  if (edges_iterator_ == nullptr || other.edges_iterator_ == nullptr) {
+  if (relationships_iterator_ == nullptr || other.relationships_iterator_ == nullptr) {
     return false;
   }
-  return mgp::edge_equal(mgp::edges_iterator_get(edges_iterator_), mgp::edges_iterator_get(other.edges_iterator_)) &&
+  return mgp::edge_equal(mgp::edges_iterator_get(relationships_iterator_),
+                         mgp::edges_iterator_get(other.relationships_iterator_)) &&
          index_ == other.index_;
 }
 
-inline Edge Edges::Iterator::operator*() {
-  if (edges_iterator_ == nullptr) return Edge((mgp_edge *)nullptr);
+inline Relationship Relationships::Iterator::operator*() {
+  if (relationships_iterator_ == nullptr) return Relationship((mgp_edge *)nullptr);
 
-  auto edge = Edge(mgp::edges_iterator_get(edges_iterator_));
-  return edge;
+  auto relationship = Relationship(mgp::edges_iterator_get(relationships_iterator_));
+  return relationship;
 }
 
-inline Edges::Iterator Edges::begin() { return Iterator(edges_iterator_); }
+inline Relationships::Iterator Relationships::begin() { return Iterator(relationships_iterator_); }
 
-inline Edges::Iterator Edges::end() { return Iterator(nullptr); }
+inline Relationships::Iterator Relationships::end() { return Iterator(nullptr); }
 
 // Properties:
 
@@ -1461,7 +1474,7 @@ inline bool Properties::operator==(const Properties &other) const { return prope
 
 inline std::string_view Labels::Iterator::operator*() const { return (*iterable_)[index_]; }
 
-inline std::string_view Labels::operator[](size_t index) const { return mgp::vertex_label_at(vertex_ptr_, index).name; }
+inline std::string_view Labels::operator[](size_t index) const { return mgp::vertex_label_at(node_ptr_, index).name; }
 /* #endregion */
 
 /* #region Types */
@@ -1474,7 +1487,7 @@ inline List::List(List &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
 
 inline List::List(const std::vector<Value> &values) : List(values.size()) {
   for (const auto &value : values) {
-    Append(value);
+    AppendExtend(value);
   }
 }
 
@@ -1486,7 +1499,7 @@ inline List::List(std::vector<Value> &&values) : List(values.size()) {
 
 inline List::List(const std::initializer_list<Value> values) : List(values.size()) {
   for (const auto &value : values) {
-    Append(value);
+    AppendExtend(value);
   }
 }
 
@@ -1500,14 +1513,21 @@ inline Value List::Iterator::operator*() const { return (*iterable_)[index_]; }
 
 inline const Value List::operator[](size_t index) const { return Value(mgp::list_at(ptr_, index)); }
 
-inline void List::Append(const Value &value) { mgp::list_append(ptr_, value.ptr_); }
+inline void List::Append(const Value &value) { mgp::list_append(ptr_, mgp::value_copy(value.ptr_, memory)); }
 
 inline void List::Append(Value &&value) {
   mgp::list_append(ptr_, value.ptr_);
   value.ptr_ = nullptr;
 }
 
-inline void List::AppendExtend(Value &value) { mgp::list_append_extend(ptr_, value.ptr_); }
+inline void List::AppendExtend(const Value &value) {
+  mgp::list_append_extend(ptr_, mgp::value_copy(value.ptr_, memory));
+}
+
+inline void List::AppendExtend(Value &&value) {
+  mgp::list_append_extend(ptr_, value.ptr_);
+  value.ptr_ = nullptr;
+}
 
 inline bool List::operator==(const List &other) const { return util::ListsEqual(ptr_, other.ptr_); }
 
@@ -1597,7 +1617,9 @@ inline Map::Iterator Map::begin() { return Iterator(mgp::map_iter_items(ptr_, me
 
 inline Map::Iterator Map::end() { return Iterator(nullptr); }
 
-inline void Map::Insert(std::string_view key, const Value &value) { mgp::map_insert(ptr_, key.data(), value.ptr_); }
+inline void Map::Insert(std::string_view key, const Value &value) {
+  mgp::map_insert(ptr_, key.data(), mgp::value_copy(value.ptr_, memory));
+}
 
 inline void Map::Insert(std::string_view key, Value &&value) {
   mgp::map_insert(ptr_, key.data(), value.ptr_);
@@ -1614,66 +1636,71 @@ inline const Value Map::operator[](std::string_view key) const { return Value(mg
 inline const Value Map::at(std::string_view key) const { return Value(mgp::map_at(ptr_, key.data())); }
 /* #endregion */
 
-/* #region Graph elements (Vertex, Edge & Path) */
+/* #region Graph elements (Node, Relationship & Path) */
 
-// Vertex:
+// Node:
 
-inline Vertex::Vertex(const Vertex &other) : Vertex(mgp::vertex_copy(other.ptr_, memory)) {}
+inline Node::Node(const Node &other) : Node(mgp::vertex_copy(other.ptr_, memory)) {}
 
-inline Vertex::Vertex(Vertex &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
+inline Node::Node(Node &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
 
-inline Vertex::~Vertex() {
+inline Node::~Node() {
   if (ptr_ != nullptr) {
+    std::cout << "destroying: \n";
     mgp::vertex_destroy(ptr_);
   }
 }
 
-inline bool Vertex::HasLabel(std::string_view label) const {
-  for (const auto vertex_label : labels()) {
-    if (label == vertex_label) {
+inline bool Node::HasLabel(std::string_view label) const {
+  for (const auto node_label : labels()) {
+    if (label == node_label) {
       return true;
     }
   }
   return false;
 }
 
-inline Value Vertex::operator[](const std::string_view property_name) const { return properties()[property_name]; }
+inline Value Node::operator[](const std::string_view property_name) const { return properties()[property_name]; }
 
-inline Edges Vertex::in_edges() const {
-  auto edge_iterator = mgp::vertex_iter_in_edges(ptr_, memory);
-  if (edge_iterator == nullptr) {
+inline Relationships Node::in_relationships() const {
+  auto relationship_iterator = mgp::vertex_iter_in_edges(ptr_, memory);
+  if (relationship_iterator == nullptr) {
     throw NotEnoughMemoryException();
   }
-  return Edges(edge_iterator);
+  return Relationships(relationship_iterator);
 }
 
-inline Edges Vertex::out_edges() const {
-  auto edge_iterator = mgp::vertex_iter_out_edges(ptr_, memory);
-  if (edge_iterator == nullptr) {
+inline Relationships Node::out_relationships() const {
+  auto relationship_iterator = mgp::vertex_iter_out_edges(ptr_, memory);
+  if (relationship_iterator == nullptr) {
     throw NotEnoughMemoryException();
   }
-  return Edges(edge_iterator);
+  return Relationships(relationship_iterator);
 }
 
-inline bool Vertex::operator==(const Vertex &other) const { return util::VerticesEqual(ptr_, other.ptr_); }
+inline bool Node::operator==(const Node &other) const { return util::NodesEqual(ptr_, other.ptr_); }
 
-// Edge:
+// Relationship:
 
-inline Edge::Edge(const Edge &other) : Edge(mgp::edge_copy(other.ptr_, memory)) {}
+inline Relationship::Relationship(const Relationship &other) : Relationship(mgp::edge_copy(other.ptr_, memory)) {}
 
-inline Edge::Edge(Edge &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
+inline Relationship::Relationship(Relationship &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
 
-inline Edge::~Edge() {
+inline Relationship::~Relationship() {
   if (ptr_ != nullptr) {
     mgp::edge_destroy(ptr_);
   }
 }
 
-inline std::string_view Edge::type() const { return mgp::edge_get_type(ptr_).name; }
+inline std::string_view Relationship::type() const { return mgp::edge_get_type(ptr_).name; }
 
-inline Value Edge::operator[](const std::string_view property_name) const { return properties()[property_name]; }
+inline Value Relationship::operator[](const std::string_view property_name) const {
+  return properties()[property_name];
+}
 
-inline bool Edge::operator==(const Edge &other) const { return util::EdgesEqual(ptr_, other.ptr_); }
+inline bool Relationship::operator==(const Relationship &other) const {
+  return util::RelationshipsEqual(ptr_, other.ptr_);
+}
 
 // Path:
 
@@ -1681,7 +1708,7 @@ inline Path::Path(const Path &other) : ptr_(mgp::path_copy(other.ptr_, memory)) 
 
 inline Path::Path(Path &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
 
-inline Path::Path(const Vertex &start_vertex) : ptr_(mgp::path_make_with_start(start_vertex.ptr_, memory)) {}
+inline Path::Path(const Node &start_node) : ptr_(mgp::path_make_with_start(start_node.ptr_, memory)) {}
 
 inline Path::~Path() {
   if (ptr_ != nullptr) {
@@ -1689,23 +1716,23 @@ inline Path::~Path() {
   }
 }
 
-inline Vertex Path::GetVertexAt(size_t index) const {
-  auto vertex_ptr = mgp::path_vertex_at(ptr_, index);
-  if (vertex_ptr == nullptr) {
+inline Node Path::GetNodeAt(size_t index) const {
+  auto node_ptr = mgp::path_vertex_at(ptr_, index);
+  if (node_ptr == nullptr) {
     throw IndexException("Index value out of bounds.");
   }
-  return Vertex(vertex_ptr);
+  return Node(node_ptr);
 }
 
-inline Edge Path::GetEdgeAt(size_t index) const {
-  auto edge_ptr = mgp::path_edge_at(ptr_, index);
-  if (edge_ptr == nullptr) {
+inline Relationship Path::GetRelationshipAt(size_t index) const {
+  auto relationship_ptr = mgp::path_edge_at(ptr_, index);
+  if (relationship_ptr == nullptr) {
     throw IndexException("Index value out of bounds.");
   }
-  return Edge(edge_ptr);
+  return Relationship(relationship_ptr);
 }
 
-inline void Path::Expand(const Edge &edge) { mgp::path_expand(ptr_, edge.ptr_); }
+inline void Path::Expand(const Relationship &relationship) { mgp::path_expand(ptr_, relationship.ptr_); }
 
 inline bool Path::operator==(const Path &other) const { return util::PathsEqual(ptr_, other.ptr_); }
 /* #endregion */
@@ -1827,7 +1854,6 @@ inline std::int64_t Value::ValueInt() const {
   if (type() != ValueType::Int) {
     throw ValueException("Type of value is wrong: expected Int.");
   }
-  std::cout << "ds\n";
   return mgp::value_get_int(ptr_);
 }
 
@@ -1869,18 +1895,18 @@ inline const Map Value::ValueMap() const {
   return Map(mgp::value_get_map(ptr_));
 }
 
-inline const Vertex Value::ValueVertex() const {
-  if (type() != ValueType::Vertex) {
-    throw ValueException("Type of value is wrong: expected Vertex.");
+inline const Node Value::ValueNode() const {
+  if (type() != ValueType::Node) {
+    throw ValueException("Type of value is wrong: expected Node.");
   }
-  return Vertex(mgp::value_get_vertex(ptr_));
+  return Node(mgp::value_get_vertex(ptr_));
 }
 
-inline const Edge Value::ValueEdge() const {
-  if (type() != ValueType::Edge) {
-    throw ValueException("Type of value is wrong: expected Edge.");
+inline const Relationship Value::ValueRelationship() const {
+  if (type() != ValueType::Relationship) {
+    throw ValueException("Type of value is wrong: expected Relationship.");
   }
-  return Edge(mgp::value_get_edge(ptr_));
+  return Relationship(mgp::value_get_edge(ptr_));
 }
 
 inline const Path Value::ValuePath() const {
@@ -1926,8 +1952,8 @@ inline bool Value::IsNumeric() const { return IsInt() || IsDouble(); }
 inline bool Value::IsString() const { return mgp::value_is_string(ptr_); }
 inline bool Value::IsList() const { return mgp::value_is_list(ptr_); }
 inline bool Value::IsMap() const { return mgp::value_is_map(ptr_); }
-inline bool Value::IsVertex() const { return mgp::value_is_vertex(ptr_); }
-inline bool Value::IsEdge() const { return mgp::value_is_edge(ptr_); }
+inline bool Value::IsNode() const { return mgp::value_is_vertex(ptr_); }
+inline bool Value::IsRelationship() const { return mgp::value_is_edge(ptr_); }
 inline bool Value::IsPath() const { return mgp::value_is_path(ptr_); }
 inline bool Value::IsDate() const { return mgp::value_is_date(ptr_); }
 inline bool Value::IsLocalTime() const { return mgp::value_is_local_time(ptr_); }
@@ -1944,19 +1970,25 @@ inline void Record::Insert(const char *field_name, std::int64_t value) { Insert(
 inline void Record::Insert(const char *field_name, double value) { Insert(field_name, Value(value)); }
 inline void Record::Insert(const char *field_name, const char *value) { Insert(field_name, Value(value)); }
 inline void Record::Insert(const char *field_name, std::string_view value) { Insert(field_name, Value(value)); }
+inline void Record::Insert(const char *field_name, const List &list) {
+  Insert(field_name, Value(mgp::value_make_list(mgp::list_copy(list.ptr_, memory))));
+}
 // TODO (convert STL vector to MGP):
 // inline void Record::Insert(const char *field_name, std::vector<Value> &list) {
 //   Insert(field_name, Value(mgp::value_make_list(mgp::list_copy(list.ptr_, memory))));
 // }
+inline void Record::Insert(const char *field_name, const Map &map) {
+  Insert(field_name, Value(mgp::value_make_map(mgp::map_copy(map.ptr_, memory))));
+}
 // TODO (convert STL map to MGP):
 // inline void Record::Insert(const char *field_name, std::map<std::string_view, Value> &list) {
 //   Insert(field_name, Value(mgp::value_make_map(mgp::map_copy(map.ptr_, memory))));
 // }
-inline void Record::Insert(const char *field_name, const Vertex &vertex) {
-  Insert(field_name, Value(mgp::value_make_vertex(mgp::vertex_copy(vertex.ptr_, memory))));
+inline void Record::Insert(const char *field_name, const Node &node) {
+  Insert(field_name, Value(mgp::value_make_vertex(mgp::vertex_copy(node.ptr_, memory))));
 }
-inline void Record::Insert(const char *field_name, const Edge &edge) {
-  Insert(field_name, Value(mgp::value_make_edge(mgp::edge_copy(edge.ptr_, memory))));
+inline void Record::Insert(const char *field_name, const Relationship &relationship) {
+  Insert(field_name, Value(mgp::value_make_edge(mgp::edge_copy(relationship.ptr_, memory))));
 }
 inline void Record::Insert(const char *field_name, const Path &path) {
   Insert(field_name, Value(mgp::value_make_path(mgp::path_copy(path.ptr_, memory))));
@@ -2028,13 +2060,13 @@ struct hash<mage::Id> {
 };
 
 template <>
-struct hash<mage::Vertex> {
-  size_t operator()(const mage::Vertex &x) const { return hash<int64_t>()(x.id().AsInt()); };
+struct hash<mage::Node> {
+  size_t operator()(const mage::Node &x) const { return hash<int64_t>()(x.id().AsInt()); };
 };
 
 template <>
-struct hash<mage::Edge> {
-  size_t operator()(const mage::Edge &x) const { return hash<int64_t>()(x.id().AsInt()); };
+struct hash<mage::Relationship> {
+  size_t operator()(const mage::Relationship &x) const { return hash<int64_t>()(x.id().AsInt()); };
 };
 
 template <>

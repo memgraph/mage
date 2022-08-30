@@ -1,0 +1,20 @@
+query: >
+    MATCH (v: Node {id:0})-[e]-()
+    MATCH path = ()-[*]->()
+    CALL api_test_module.run(1,
+                             1.1,
+                             "text",
+                             ["a", "b", "c"],
+                             {a: "y", b: "x", c: "z"},
+                             v,
+                             e,
+                             path, 
+                             date("1947-07-30"), 
+                             localTime("09:15:00"), 
+                             localDateTime("2021-10-05T14:15:00"), 
+                             duration("PT2M2.33S")) 
+    YIELD node, component_id
+    RETURN node.id AS node_id, component_id
+    ORDER BY node_id, component_id
+
+output: []

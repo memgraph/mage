@@ -1,0 +1,8 @@
+query: >
+    MATCH path = ()-[*]->()
+    CALL api_test_module.path_check(path) 
+    YIELD out
+    RETURN out;
+
+output:
+    - out: 2

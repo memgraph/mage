@@ -120,9 +120,11 @@ struct mgp_value *value_make_duration(struct mgp_duration *val) {
 // Copy value
 
 // TODO: implement within MGP API
-struct mgp_value *value_copy(struct mgp_value *val, struct mgp_memory *memory);
 // with primitive types ({bool, int, double, string}), create a new identical value
 // otherwise call mgp_##TYPE_copy and convert tpye
+struct mgp_value *value_copy(struct mgp_value *val, struct mgp_memory *memory) {
+  return MgInvoke<struct mgp_value *>(mgp_value_copy, val, memory);
+}
 
 // Destroy value
 
