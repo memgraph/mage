@@ -4,12 +4,7 @@ from mage.link_prediction.models.GraphSAGE import GraphSAGE
 from mage.link_prediction.models.GAT import GAT
 from mage.link_prediction.predictors.DotPredictor import DotPredictor
 from mage.link_prediction.predictors.MLPPredictor import MLPPredictor
-from mage.link_prediction.constants import (
-    Models,
-    Predictors,
-    Optimizers,
-    Activations
-)
+from mage.link_prediction.constants import Models, Predictors, Optimizers, Activations
 import itertools
 
 
@@ -29,13 +24,19 @@ def create_optimizer(
     Returns:
         torch.nn.Optimizer: Optimizer used in the training.
     """
-    optimizer_jump_table = {Optimizers.ADAM_OPT: torch.optim.Adam, Optimizers.SGD_OPT: torch.optim.SGD}
+    optimizer_jump_table = {
+        Optimizers.ADAM_OPT: torch.optim.Adam,
+        Optimizers.SGD_OPT: torch.optim.SGD,
+    }
     optimizer_type = optimizer_type.upper()
     if optimizer_type in optimizer_jump_table:
-        return optimizer_jump_table[optimizer_type](itertools.chain(model.parameters(), predictor.parameters()),
-            lr=learning_rate,)
+        return optimizer_jump_table[optimizer_type](
+            itertools.chain(model.parameters(), predictor.parameters()),
+            lr=learning_rate,
+        )
     else:
         raise Exception(f"Optimizer {optimizer_type} not supported. ")
+
 
 def create_model(
     layer_type: str,
@@ -48,6 +49,7 @@ def create_model(
     alphas: List[float],
     residuals: List[bool],
     edge_types: List[str],
+    device: torch.device,
 ) -> torch.nn.Module:
     """Creates a model given a layer type and sizes of the hidden layers.
 
@@ -67,14 +69,33 @@ def create_model(
         torch.nn.Module: Model used in the link prediction task.
     """
     if layer_type.lower() == Models.GRAPH_SAGE:
-        return GraphSAGE(in_feats=in_feats, hidden_features_size=hidden_features_size, aggregator=aggregator, feat_drops=feat_drops, edge_types=edge_types)
+        return GraphSAGE(
+            in_feats=in_feats,
+            hidden_features_size=hidden_features_size,
+            aggregator=aggregator,
+            feat_drops=feat_drops,
+            edge_types=edge_types,
+            device=device,
+        )
     elif layer_type.lower() == Models.GRAPH_ATTN:
-        return GAT(in_feats=in_feats, hidden_features_size=hidden_features_size, attn_num_heads=attn_num_heads, feat_drops=feat_drops, attn_drops=attn_drops,
-            alphas=alphas, residuals=residuals, edge_types=edge_types)
+        return GAT(
+            in_feats=in_feats,
+            hidden_features_size=hidden_features_size,
+            attn_num_heads=attn_num_heads,
+            feat_drops=feat_drops,
+            attn_drops=attn_drops,
+            alphas=alphas,
+            residuals=residuals,
+            edge_types=edge_types,
+            device=device,
+        )
     else:
         raise Exception(f"Layer type {layer_type} not supported. ")
 
-def create_predictor(predictor_type: str, predictor_hidden_size: int) -> torch.nn.Module:
+
+def create_predictor(
+    predictor_type: str, predictor_hidden_size: int, device: torch.device
+) -> torch.nn.Module:
     """Create a predictor based on a given predictor type.
 
     Args:
@@ -86,9 +107,10 @@ def create_predictor(predictor_type: str, predictor_hidden_size: int) -> torch.n
     if predictor_type.lower() == Predictors.DOT_PREDICTOR:
         return DotPredictor()
     elif predictor_type.lower() == Predictors.MLP_PREDICTOR:
-        return MLPPredictor(h_feats=predictor_hidden_size)
+        return MLPPredictor(h_feats=predictor_hidden_size, device=device)
     else:
         raise Exception(f"Predictor type {predictor_type} not supported. ")
+
 
 def create_activation_function(act_func: str) -> Tuple[torch.nn.Module, float]:
     """Creates activation function based on a given name.

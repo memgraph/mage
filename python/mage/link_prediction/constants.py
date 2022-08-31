@@ -19,6 +19,7 @@ class Metrics:
     TRUE_NEGATIVES = "true_negatives"
     FALSE_NEGATIVES = "false_negatives"
 
+
 @dataclass
 class Predictors:
     NODE_EMBEDDINGS = "node_embeddings"
@@ -26,30 +27,36 @@ class Predictors:
     DOT_PREDICTOR = "dot"
     MLP_PREDICTOR = "mlp"
 
+
 @dataclass
 class Reindex:
     DGL = "dgl"  # DGL to Memgraph indexes
     MEMGRAPH = "memgraph"  # Memgraph to DGL indexes
+
 
 @dataclass
 class Context:
     MODEL_NAME = "model.pt"
     PREDICTOR_NAME = "predictor.pt"
 
-@dataclass 
+
+@dataclass
 class Models:
     GRAPH_SAGE = "graph_sage"
     GRAPH_ATTN = "graph_attn"
+
 
 @dataclass
 class Optimizers:
     ADAM_OPT = "ADAM"
     SGD_OPT = "SGD"
 
+
 @dataclass
 class Devices:
     CUDA_DEVICE = "cuda"
     CPU_DEVICE = "cpu"
+
 
 @dataclass
 class Aggregators:
@@ -58,9 +65,11 @@ class Aggregators:
     POOL_AGG = "pool"
     GCN_AGG = "gcn"
 
+
 @dataclass
 class Activations:
     SIGMOID = "sigmoid"
+
 
 @dataclass
 class Parameters:
@@ -92,9 +101,3 @@ class Parameters:
     LAST_ACTIVATION_FUNCTION = "last_activation_function"
     ADD_REVERSE_EDGES = "add_reverse_edges"
     ADD_SELF_LOOPS = "add_self_loops"
-    
-
-
-
-
-

@@ -7,11 +7,11 @@ from mage.link_prediction.constants import (
 )
 
 class MLPPredictor(torch.nn.Module):
-    def __init__(self, h_feats: int) -> None:
+    def __init__(self, h_feats: int, device: torch.device) -> None:
         super().__init__()
 
-        self.W1 = torch.nn.Linear(h_feats * 2, h_feats)
-        self.W2 = torch.nn.Linear(h_feats, 1)
+        self.W1 = torch.nn.Linear(h_feats * 2, h_feats, device=device)
+        self.W2 = torch.nn.Linear(h_feats, 1, device=device)
 
     def apply_edges(self, edges: Tuple[torch.Tensor, torch.Tensor]) -> Dict:
         """Computes a scalar score for each edge of the given graph.

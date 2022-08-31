@@ -6,9 +6,18 @@ from typing import Dict, List
 
 
 class GAT(torch.nn.Module):
-    def __init__(self, in_feats: int, hidden_features_size: List[int], attn_num_heads: List[int],
-        feat_drops: List[float], attn_drops: List[float], alphas: List[float], 
-        residuals: List[bool], edge_types: List[str]):
+    def __init__(
+        self,
+        in_feats: int,
+        hidden_features_size: List[int],
+        attn_num_heads: List[int],
+        feat_drops: List[float],
+        attn_drops: List[float],
+        alphas: List[float],
+        residuals: List[bool],
+        edge_types: List[str],
+        device: torch.device,
+    ):
         """Initializes GAT module with layer sizes.
 
         Args:
@@ -25,18 +34,34 @@ class GAT(torch.nn.Module):
         self.layers = torch.nn.ModuleList()
         self.num_layers = len(hidden_features_size)
         # Define activations
-        activations = [torch.nn.functional.elu for _ in range(self.num_layers - 1)]  # All activations except last layer
+        activations = [
+            torch.nn.functional.elu for _ in range(self.num_layers - 1)
+        ]  # All activations except last layer
         activations.append(None)
         # Iterate through all layers
         for i in range(self.num_layers):
-            gat_layer = GATConv(in_feats=in_feats, out_feats=hidden_features_size[i], num_heads=attn_num_heads[i], feat_drop=feat_drops[i], attn_drop=attn_drops[i], negative_slope=alphas[i], 
-                residual=residuals[i], activation=activations[i], allow_zero_in_degree=True)
+            gat_layer = GATConv(
+                in_feats=in_feats,
+                out_feats=hidden_features_size[i],
+                num_heads=attn_num_heads[i],
+                feat_drop=feat_drops[i],
+                attn_drop=attn_drops[i],
+                negative_slope=alphas[i],
+                residual=residuals[i],
+                activation=activations[i],
+                allow_zero_in_degree=True,
+            ).to(device)
+
             self.layers.append(
-                HeteroGraphConv({edge_type: gat_layer for edge_type in edge_types}, aggregate="sum")
+                HeteroGraphConv(
+                    {edge_type: gat_layer for edge_type in edge_types}, aggregate="sum"
+                ).to(device)
             )
             in_feats = hidden_features_size[i]
 
-    def forward(self, blocks: List[dgl.graph], h: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def forward(
+        self, blocks: List[dgl.graph], h: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         """Performs forward pass on batches.
 
         Args:
@@ -44,14 +69,16 @@ class GAT(torch.nn.Module):
             h (Dict[str, torch.Tensor]): Input features for every node type.
 
         Returns:
-            Dict[str, torch.Tensor]: Embeddings for every node type. 
-        """ 
+            Dict[str, torch.Tensor]: Embeddings for every node type.
+        """
         for index, layer in enumerate(self.layers):
             h = layer(blocks[index], h)
-            h = {k: torch.mean(v, dim=1) for k, v in h.items()}  # TODO: Do we need it.    
+            h = {k: torch.mean(v, dim=1) for k, v in h.items()}
         return h
-    
-    def online_forward(self, graph: dgl.graph, h: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+
+    def online_forward(
+        self, graph: dgl.graph, h: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         """Performs forward pass on batches.
 
         Args:
@@ -59,9 +86,9 @@ class GAT(torch.nn.Module):
             h (Dict[str, torch.Tensor]): Input features for every node type.
 
         Returns:
-            Dict[str, torch.Tensor]: Embeddings for every node type. 
-        """ 
+            Dict[str, torch.Tensor]: Embeddings for every node type.
+        """
         for layer in self.layers:
             h = layer(graph, h)
-            h = {k: torch.mean(v, dim=1) for k, v in h.items()}  # TODO: Do we need it.    
+            h = {k: torch.mean(v, dim=1) for k, v in h.items()}
         return h

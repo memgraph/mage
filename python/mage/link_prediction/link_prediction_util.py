@@ -503,7 +503,7 @@ def inner_train(graph: dgl.graph,
                     num_layers: int,
                     batch_size: int,
                     sampling_workers: int,
-                    device_type: str
+                    device: torch.device
                     ) -> Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]:
     """Batch training method. 
 
@@ -529,7 +529,7 @@ def inner_train(graph: dgl.graph,
         num_layers (int): Number of layers in the GNN architecture.
         batch_size (int): Batch size used in both training and validation procedure.
         sampling_workers (int): Number of workers that will cooperate in the sampling procedure in the training and validation.
-        device_type (str): cpu or cuda
+        device (torch.device): cpu or cuda
     Returns:
         Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]: Training and validation results. _
     """
@@ -538,7 +538,7 @@ def inner_train(graph: dgl.graph,
 
     # First define all necessary samplers
     negative_sampler = dgl.dataloading.negative_sampler.GlobalUniform(k=num_neg_per_pos_edge, replace=False)
-    sampler = dgl.dataloading.MultiLayerFullNeighborSampler(num_layers=num_layers)  # gather messages from all node neighbors
+    sampler = dgl.dataloading.MultiLayerFullNeighborSampler(num_layers=num_layers, output_device=device)  # gather messages from all node neighbors
     
     # Create reverse target relation
     reverse_target_relation = reverse_relation(target_relation)
@@ -565,6 +565,7 @@ def inner_train(graph: dgl.graph,
         graph,                                  # The graph
         train_eid_dict,  # The edges to iterate over
         sampler,                                # The neighbor sampler
+        device=device,
         batch_size=batch_size,    # Batch size
         shuffle=True,       # Whether to shuffle the nodes for every epoch
         drop_last=False,    # Whether to drop the last incomplete batch
@@ -576,6 +577,7 @@ def inner_train(graph: dgl.graph,
         graph,                                  # The graph
         val_eid_dict,  # The edges to iterate over
         sampler,                                # The neighbor sampler
+        device=device,
         batch_size=batch_size,    # Batch size
         shuffle=True,       # Whether to shuffle the nodes for every epoch
         drop_last=False,    # Whether to drop the last incomplete batch
@@ -597,8 +599,6 @@ def inner_train(graph: dgl.graph,
     # Training
     max_val_acc, num_val_acc_drop = (-1.0, 0,)  # last maximal accuracy and number of epochs it is dropping
 
-    # Iterate for every epoch
-    print(device_type)
     for epoch in range(1, num_epochs+1):
         # Evaluation epoch
         if epoch % console_log_freq == 0:
