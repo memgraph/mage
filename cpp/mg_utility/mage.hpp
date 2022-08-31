@@ -127,7 +127,7 @@ class Nodes {
     bool operator==(Iterator other) const;
     bool operator!=(Iterator other) const { return !(*this == other); }
     Node operator*();
-    // iterator traits
+    // Traits
     using difference_type = Node;
     using value_type = Node;
     using pointer = const Node *;
@@ -160,7 +160,7 @@ class GraphRelationships {
     bool operator==(Iterator other) const;
     bool operator!=(Iterator other) const { return !(*this == other); }
     Relationship operator*();
-    // iterator traits
+    // Traits
     using difference_type = Relationship;
     using value_type = Relationship;
     using pointer = const Relationship *;
@@ -196,7 +196,7 @@ class Relationships {
     bool operator==(Iterator other) const;
     bool operator!=(Iterator other) const { return !(*this == other); }
     Relationship operator*();
-    // iterator traits
+    // Traits
     using difference_type = Relationship;
     using value_type = Relationship;
     using pointer = const Relationship *;
@@ -305,6 +305,9 @@ class List {
  public:
   explicit List(mgp_list *ptr) : ptr_(mgp::list_copy(ptr, memory)) {}
 
+  /// \brief Create a Map from a copy of the given \ref mgp_map.
+  explicit List(const mgp_list *const_ptr) : List(mgp::list_copy(const_cast<mgp_list *>(const_ptr), memory)) {}
+
   List(List &&other);
 
   explicit List(size_t capacity) : List(mgp::list_make_empty(capacity, memory)) {}
@@ -391,6 +394,9 @@ class Map {
  public:
   explicit Map(mgp_map *ptr) : ptr_(mgp::map_copy(ptr, memory)) {}
 
+  /// \brief Create a Map from a copy of the given \ref mgp_map.
+  explicit Map(const mgp_map *const_ptr) : Map(mgp::map_copy(const_cast<mgp_map *>(const_ptr), memory)) {}
+
   Map(Map &&other);
 
   explicit Map(mgp_memory *memory) : Map(mgp::map_make_empty(memory)) {}
@@ -418,7 +424,7 @@ class Map {
     bool operator==(Iterator other) const;
     bool operator!=(Iterator other) const { return !(*this == other); }
     MapItem operator*();
-    // iterator traits
+    // Traits
     using difference_type = MapItem;
     using value_type = MapItem;
     using pointer = const MapItem *;
@@ -436,8 +442,7 @@ class Map {
   void Insert(std::string_view key, Value &&value);
 
   // void Erase(std::string_view key); // (requires mgp_map_erase in the MGP API)
-
-  // void Clear();
+  // void Clear(); // (requires mgp_map_clear in the MGP API)
 
   Value const operator[](std::string_view key) const;
   Value const at(std::string_view key) const;
@@ -448,7 +453,6 @@ class Map {
 /* #endregion */
 
 /* #region Graph elements (Node, Relationship & Path) */
-// value types are underlyingly uint8_t values
 /// \brief Wrapper class for \ref mgp_vertex.
 class Node {
  public:
@@ -462,8 +466,8 @@ class Node {
   /// \brief Create a Node from a copy of the given \ref mgp_vertex.
   explicit Node(const mgp_vertex *const_ptr) : Node(mgp::vertex_copy(const_cast<mgp_vertex *>(const_ptr), memory)) {}
 
-  Node(const Node &other);
-  Node(Node &&other);
+  Node(const Node &other) : Node(other.ptr_) {}
+  Node(Node &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
 
   Node &operator=(const Node &other) = delete;
   Node &operator=(Node &&other) = delete;
@@ -506,8 +510,8 @@ class Relationship {
   explicit Relationship(const mgp_edge *const_ptr)
       : Relationship(mgp::edge_copy(const_cast<mgp_edge *>(const_ptr), memory)) {}
 
-  Relationship(const Relationship &other);
-  Relationship(Relationship &&other);
+  Relationship(const Relationship &other) : Relationship(other.ptr_) {}
+  Relationship(Relationship &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
 
   Relationship &operator=(const Relationship &other) = delete;
   Relationship &operator=(Relationship &&other) = delete;
@@ -546,15 +550,15 @@ class Path {
   friend class Record;
 
  public:
-  explicit Path(mgp_path *ptr) : ptr_(mgp::path_copy(ptr, memory)){};
+  explicit Path(mgp_path *ptr) : ptr_(mgp::path_copy(ptr, memory)) {}
 
   /// \brief Create a Path from a copy of the given \ref mg_path.
   explicit Path(const mgp_path *const_ptr) : Path(mgp::path_copy(const_cast<mgp_path *>(const_ptr), memory)) {}
 
   explicit Path(const Node &start_node);
 
-  Path(const Path &other);
-  Path(Path &&other);
+  Path(const Path &other) : Path(other.ptr_) {}
+  Path(Path &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
 
   Path &operator=(const Path &other);
   Path &operator=(Path &&other);
@@ -607,7 +611,7 @@ class Date {
     Date(mgp::date_from_parameters(params, memory));
   }
 
-  explicit Date(const Date &other) : Date(mgp::date_copy(other.ptr_, memory)){};
+  explicit Date(const Date &other) : Date(other.ptr_) {}
   explicit Date(Date &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
 
   Date &operator=(const Date &other) = delete;
@@ -657,7 +661,7 @@ class LocalTime {
     LocalTime(mgp::local_time_from_parameters(params, memory));
   }
 
-  explicit LocalTime(const LocalTime &other) : LocalTime(mgp::local_time_copy(other.ptr_, memory)) {}
+  explicit LocalTime(const LocalTime &other) : LocalTime(other.ptr_) {}
   explicit LocalTime(LocalTime &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; };
 
   LocalTime &operator=(const LocalTime &other) = delete;
@@ -713,7 +717,7 @@ class LocalDateTime {
     LocalDateTime(mgp::local_date_time_from_parameters(params, memory));
   }
 
-  explicit LocalDateTime(const LocalDateTime &other) : LocalDateTime(mgp::local_date_time_copy(other.ptr_, memory)){};
+  explicit LocalDateTime(const LocalDateTime &other) : LocalDateTime(other.ptr_) {}
   explicit LocalDateTime(LocalDateTime &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; };
 
   LocalDateTime &operator=(const LocalDateTime &other) = delete;
@@ -776,7 +780,7 @@ class Duration {
     Duration(mgp::duration_from_parameters(params, memory));
   }
 
-  explicit Duration(const Duration &other) : Duration(mgp::duration_copy(other.ptr_, memory)) {}
+  explicit Duration(const Duration &other) : Duration(other.ptr_) {}
   explicit Duration(Duration &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; };
 
   Duration &operator=(const Duration &other) = delete;
@@ -1406,7 +1410,6 @@ inline Relationships::Iterator::Iterator(mgp_edges_iterator *relationships_itera
 }
 
 inline Relationships::Iterator::~Iterator() {
-  std::cout << "destroy\n";
   if (relationships_iterator_ != nullptr) {
     mgp::edges_iterator_destroy(relationships_iterator_);
   }
@@ -1626,11 +1629,6 @@ inline void Map::Insert(std::string_view key, Value &&value) {
   value.ptr_ = nullptr;
 }
 
-// inline void Map::Clear() {
-//   mgp::map_destroy(ptr_);
-//   ptr_ = mgp::map_make_empty(memory);
-// }
-
 inline const Value Map::operator[](std::string_view key) const { return Value(mgp::map_at(ptr_, key.data())); }
 
 inline const Value Map::at(std::string_view key) const { return Value(mgp::map_at(ptr_, key.data())); }
@@ -1640,13 +1638,8 @@ inline const Value Map::at(std::string_view key) const { return Value(mgp::map_a
 
 // Node:
 
-inline Node::Node(const Node &other) : Node(mgp::vertex_copy(other.ptr_, memory)) {}
-
-inline Node::Node(Node &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
-
 inline Node::~Node() {
   if (ptr_ != nullptr) {
-    std::cout << "destroying: \n";
     mgp::vertex_destroy(ptr_);
   }
 }
@@ -1682,10 +1675,6 @@ inline bool Node::operator==(const Node &other) const { return util::NodesEqual(
 
 // Relationship:
 
-inline Relationship::Relationship(const Relationship &other) : Relationship(mgp::edge_copy(other.ptr_, memory)) {}
-
-inline Relationship::Relationship(Relationship &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
-
 inline Relationship::~Relationship() {
   if (ptr_ != nullptr) {
     mgp::edge_destroy(ptr_);
@@ -1703,10 +1692,6 @@ inline bool Relationship::operator==(const Relationship &other) const {
 }
 
 // Path:
-
-inline Path::Path(const Path &other) : ptr_(mgp::path_copy(other.ptr_, memory)) {}
-
-inline Path::Path(Path &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
 
 inline Path::Path(const Node &start_node) : ptr_(mgp::path_make_with_start(start_node.ptr_, memory)) {}
 
