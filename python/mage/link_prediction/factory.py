@@ -1,7 +1,7 @@
 from typing import List, Tuple
 import torch
-from mage.link_prediction.models.GraphSAGE import GraphSAGE
-from mage.link_prediction.models.GAT import GAT
+from mage.link_prediction.models.graph_sage import GraphSAGE
+from mage.link_prediction.models.gat import GAT
 from mage.link_prediction.predictors.DotPredictor import DotPredictor
 from mage.link_prediction.predictors.MLPPredictor import MLPPredictor
 from mage.link_prediction.constants import Models, Predictors, Optimizers, Activations

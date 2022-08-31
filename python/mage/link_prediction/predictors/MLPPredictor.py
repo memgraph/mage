@@ -2,9 +2,8 @@ from typing import Dict, Tuple
 import torch
 import torch.nn.functional as F
 import dgl
-from mage.link_prediction.constants import (
-    Predictors
-)
+from mage.link_prediction.constants import Predictors
+
 
 class MLPPredictor(torch.nn.Module):
     def __init__(self, h_feats: int, device: torch.device) -> None:
@@ -21,10 +20,21 @@ class MLPPredictor(torch.nn.Module):
         Returns:
             Dict: A dictionary of new edge features
         """
-        h = torch.cat([edges.src[Predictors.NODE_EMBEDDINGS], edges.dst[Predictors.NODE_EMBEDDINGS]], 1)
+        h = torch.cat(
+            [
+                edges.src[Predictors.NODE_EMBEDDINGS],
+                edges.dst[Predictors.NODE_EMBEDDINGS],
+            ],
+            1,
+        )
         return {Predictors.EDGE_SCORE: self.W2(F.relu(self.W1(h))).squeeze(1)}
 
-    def forward(self, g: dgl.graph, node_embeddings: Dict[str, torch.Tensor], target_relation: str=None) -> torch.Tensor:
+    def forward(
+        self,
+        g: dgl.graph,
+        node_embeddings: Dict[str, torch.Tensor],
+        target_relation: str = None,
+    ) -> torch.Tensor:
         """Calculates forward pass of MLPPredictor.
 
         Args:
@@ -35,23 +45,32 @@ class MLPPredictor(torch.nn.Module):
             torch.Tensor: A tensor of edge scores.
         """
         with g.local_scope():
-            for node_type in node_embeddings.keys():  # Iterate over all node_types. # TODO: Maybe it can be removed if features are already saved in the graph.
-                g.nodes[node_type].data[Predictors.NODE_EMBEDDINGS] = node_embeddings[node_type]
+            for (
+                node_type
+            ) in (
+                node_embeddings.keys()
+            ):  # Iterate over all node_types. # TODO: Maybe it can be removed if features are already saved in the graph.
+                g.nodes[node_type].data[Predictors.NODE_EMBEDDINGS] = node_embeddings[
+                    node_type
+                ]
 
             g.apply_edges(self.apply_edges, etype=target_relation)
             scores = g.edata[Predictors.EDGE_SCORE]
             if type(scores) == dict:
-                if type(target_relation) == tuple: # Tuple[str, str, str] identification
+                if (
+                    type(target_relation) == tuple
+                ):  # Tuple[str, str, str] identification
                     scores = scores[target_relation]
                 elif type(target_relation) == str:  # edge type identification
                     for key, val in scores.items():
                         if key[1] == target_relation:
-                            scores = val;
+                            scores = val
                             break
             return scores.view(-1)
 
-
-    def forward_pred(self, src_embedding: torch.Tensor, dest_embedding: torch.Tensor) -> float:
+    def forward_pred(
+        self, src_embedding: torch.Tensor, dest_embedding: torch.Tensor
+    ) -> float:
         """Efficient implementation for predict method of DotPredictor.
 
         Args:

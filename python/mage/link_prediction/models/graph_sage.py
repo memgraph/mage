@@ -1,6 +1,5 @@
-from dgl.nn import SAGEConv, HeteroGraphConv
 import dgl
-import torch.nn.functional as F
+from dgl.nn import SAGEConv, HeteroGraphConv
 import torch
 from typing import Dict, List
 

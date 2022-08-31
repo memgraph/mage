@@ -2,24 +2,27 @@ import torch
 import numpy as np
 import dgl
 from collections import defaultdict
-from sklearn.metrics import roc_auc_score, accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+from sklearn.metrics import (
+    roc_auc_score,
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    confusion_matrix,
+)
 from typing import Callable, Dict, Tuple, List
-import mgp
 import random
 from mage.link_prediction.constants import (
-    Activations,
     Metrics,
-    Models,
-    Predictors,
-    Optimizers,
     Context,
-    Devices,
-    Aggregators,
-    Parameters
 )
 
 # Function for obtaining reverse_relation naming given original relation
-reverse_relation = lambda relation: "rev_" + relation if type(relation) == str else (relation[2], "rev_" + relation[1], relation[0])
+reverse_relation = (
+    lambda relation: "rev_" + relation
+    if type(relation) == str
+    else (relation[2], "rev_" + relation[1], relation[0])
+)
 
 
 def add_self_loop(g: dgl.heterograph, self_loop_edge_type: str) -> dgl.heterograph:
@@ -28,11 +31,11 @@ def add_self_loop(g: dgl.heterograph, self_loop_edge_type: str) -> dgl.heterogra
 
     Args:
         g (dgl.heterograph): A reference to the original heterograph.
-        self_loop_edge_type (str): Name of the self_loop_edge_type. 
+        self_loop_edge_type (str): Name of the self_loop_edge_type.
 
     Returns:
         dgl.heterograph: New heterograph with added self-loop edges.
-   """
+    """
     data_dict = dict()
     num_nodes_dict = dict()
     # Copy old edges
@@ -44,278 +47,17 @@ def add_self_loop(g: dgl.heterograph, self_loop_edge_type: str) -> dgl.heterogra
     print(f"Device when copying the heterograph instance: {device}")
     idtype = g.idtype
     for ntype in g.ntypes:
-        nids = torch.arange(start=0, end=g.num_nodes(ntype), step=1, dtype=idtype, device=device)
+        nids = torch.arange(
+            start=0, end=g.num_nodes(ntype), step=1, dtype=idtype, device=device
+        )
         data_dict[(ntype, self_loop_edge_type, ntype)] = (nids, nids)
         num_nodes_dict[ntype] = g.num_nodes(ntype)
 
-    return dgl.heterograph(data_dict=data_dict, num_nodes_dict=num_nodes_dict, idtype=idtype, device=device)
+    return dgl.heterograph(
+        data_dict=data_dict, num_nodes_dict=num_nodes_dict, idtype=idtype, device=device
+    )
 
-def validate_user_parameters(parameters: mgp.Map) -> None:
-    """Validates parameters user sent through method set_model_parameters
 
-    Args:
-        parameters (mgp.Map): Parameters sent by user.
-
-    Returns:
-        Nothing or raises an exception if something is wrong.
-    """
-    # Hacky Python
-    def raise_(ex):
-        raise ex
-
-    # Define lambda type checkers
-    type_checker = lambda arg, mess, real_type: None if type(arg) == real_type else raise_(Exception(mess))
-
-    # Hidden features size
-    if Parameters.HIDDEN_FEATURES_SIZE in parameters.keys():
-        hidden_features_size = parameters[Parameters.HIDDEN_FEATURES_SIZE]
-
-        # Because list cannot be sent through mgp.
-        type_checker(hidden_features_size, "hidden_features_size not an iterable object. ", tuple)
-
-        for hid_size in hidden_features_size:
-            type_checker(hid_size, "layer_size must be an int", int)
-            if hid_size <= 0:
-                 raise Exception("Layer size must be greater than 0. ")
-
-    # Layer type check
-    if Parameters.LAYER_TYPE in parameters.keys():
-        layer_type = parameters[Parameters.LAYER_TYPE]
-        
-        # Check typing
-        type_checker(layer_type, "layer_type must be string. ", str)
-
-        if layer_type != Models.GRAPH_ATTN and layer_type != Models.GRAPH_SAGE:
-             raise Exception("Unknown layer type, this module supports only graph_attn and graph_sage. ")
-
-        if layer_type == Models.GRAPH_ATTN and Parameters.HIDDEN_FEATURES_SIZE in parameters.keys() and Parameters.ATTN_NUM_HEADS not in parameters.keys():
-            raise Exception("Attention heads must be specified when specified graph attention layer and hidden features sizes. ")
-
-    # Num epochs
-    if Parameters.NUM_EPOCHS in parameters.keys():
-        num_epochs = parameters[Parameters.NUM_EPOCHS]
-
-        # Check typing
-        type_checker(num_epochs, "num_epochs must be int. ", int)
-
-        if num_epochs <= 0:
-             raise Exception("Number of epochs must be greater than 0. ")
-
-    # Optimizer check
-    if Parameters.OPTIMIZER in parameters.keys():
-        optimizer = parameters[Parameters.OPTIMIZER]
-
-        # Check typing
-        type_checker(optimizer, "optimizer must be a string. ", str)
-
-        if optimizer != Optimizers.ADAM_OPT and optimizer != Optimizers.SGD_OPT:
-             raise Exception("Unknown optimizer, this module supports only ADAM and SGD. ")
-
-    # Learning rate check
-    if Parameters.LEARNING_RATE in parameters.keys():
-        learning_rate = parameters[Parameters.LEARNING_RATE]
-
-        # Check typing
-        type_checker(learning_rate, "learning rate must be a float. ", float)
-
-        if learning_rate <= 0.0:
-             raise Exception("Learning rate must be greater than 0. ")
-
-    # Split ratio check
-    if Parameters.SPLIT_RATIO in parameters.keys():
-        split_ratio = parameters[Parameters.SPLIT_RATIO]
-
-        # Check typing
-        type_checker(split_ratio, "split_ratio must be a float. ", float)
-
-        if split_ratio <= 0.0:
-             raise Exception("Split ratio must be greater than 0. ")
-
-    # node_features_property check
-    if Parameters.NODE_FEATURES_PROPERTY in parameters.keys():
-        node_features_property = parameters[Parameters.NODE_FEATURES_PROPERTY]
-
-        # Check typing
-        type_checker(node_features_property, "node_features_property must be a string. ", str)
-
-        if node_features_property == "":
-            raise Exception("You must specify name of nodes' features property. ")
-
-    # device_type check
-    if Parameters.DEVICE_TYPE in parameters.keys():
-        device_type = parameters[Parameters.DEVICE_TYPE]
-
-        # Check typing
-        type_checker(device_type, "device_type must be a string. ", str)
-
-        if device_type != Devices.CPU_DEVICE and torch.device != Devices.CUDA_DEVICE:
-            raise Exception("Only cpu and cuda are supported as devices. ")
-
-    # console_log_freq check
-    if Parameters.CONSOLE_LOG_FREQ in parameters.keys():
-        console_log_freq = parameters[Parameters.CONSOLE_LOG_FREQ]
-
-        # Check typing
-        type_checker(console_log_freq, "console_log_freq must be an int. ", int)
-
-        if console_log_freq <= 0:
-            raise Exception("Console log frequency must be greater than 0. ")
-
-    # checkpoint freq check
-    if Parameters.CHECKPOINT_FREQ in parameters.keys():
-        checkpoint_freq = parameters[Parameters.CHECKPOINT_FREQ]
-
-        # Check typing
-        type_checker(checkpoint_freq, "checkpoint_freq must be an int. ", int)
-
-        if checkpoint_freq <= 0:
-             raise Exception("Checkpoint frequency must be greter than 0. ")
-
-    # aggregator check
-    if Parameters.AGGREGATOR in parameters.keys():
-        aggregator = parameters[Parameters.AGGREGATOR]
-
-        # Check typing
-        type_checker(aggregator, "aggregator must be a string. ", str)
-
-        if aggregator != Aggregators.MEAN_AGG and aggregator != Aggregators.LSTM_AGG and aggregator != Aggregators.POOL_AGG and \
-                aggregator != Aggregators.GCN_AGG:
-            raise Exception("Aggregator must be one of the following: mean, pool, lstm or gcn. ")
-
-    # metrics check
-    if Parameters.METRICS in parameters.keys():
-        metrics = parameters[Parameters.METRICS]
-
-        # Check typing
-        type_checker(metrics, "metrics must be an iterable object. ", tuple)
-
-        for metric in metrics:
-            _metric = metric.lower()
-            if (
-                _metric != Metrics.LOSS
-                and _metric != Metrics.ACCURACY
-                and _metric != Metrics.F1
-                and _metric != Metrics.AUC_SCORE
-                and _metric != Metrics.PRECISION
-                and _metric != Metrics.RECALL
-                and _metric != Metrics.POS_EXAMPLES
-                and _metric != Metrics.NEG_EXAMPLES
-                and _metric != Metrics.POS_PRED_EXAMPLES
-                and _metric != Metrics.NEG_PRED_EXAMPLES
-                and _metric != Metrics.TRUE_POSITIVES
-                and _metric != Metrics.FALSE_POSITIVES
-                and _metric != Metrics.TRUE_NEGATIVES
-                and _metric != Metrics.FALSE_NEGATIVES
-            ):
-                 raise Exception("Metric name " + _metric + " is not supported!")
-
-    # Predictor type
-    if Parameters.PREDICTOR_TYPE in parameters.keys():
-        predictor_type = parameters[Parameters.PREDICTOR_TYPE]
-
-        # Check typing
-        type_checker(predictor_type, "predictor_type must be a string. ", str)
-
-        if predictor_type != Predictors.DOT_PREDICTOR and predictor_type != Predictors.MLP_PREDICTOR:
-             raise Exception("Predictor " + predictor_type + " is not supported. ")
-
-    # Attention heads
-    if Parameters.ATTN_NUM_HEADS in parameters.keys():
-        attn_num_heads = parameters[Parameters.ATTN_NUM_HEADS]
-
-        # Check typing
-        type_checker(attn_num_heads, "attn_num_heads must be an iterable object. ", tuple)
-        if len(attn_num_heads) != len(hidden_features_size):
-             raise Exception("Specified network with {} layers but given attention heads data for {} layers. ".format(len(hidden_features_size) - 1, len(attn_num_heads)))
-        # if attn_num_heads[-1] != 1:
-        #      raise Exception("Last GAT layer must contain only one attention head. ")
-        for num_heads in attn_num_heads:
-            if num_heads <= 0:
-                raise Exception("GAT allows only positive, larger than 0 values for number of attention heads. ")
-
-    # Training accuracy patience
-    if Parameters.TR_ACC_PATIENCE in parameters.keys():
-        tr_acc_patience = parameters[Parameters.TR_ACC_PATIENCE]
-
-        # Check typing
-        type_checker(tr_acc_patience, "tr_acc_patience must be an iterable object. ", int)
-
-        if tr_acc_patience <= 0:
-             raise Exception("Training acc patience flag must be larger than 0.")
-
-    # model_save_path
-    if Parameters.MODEL_SAVE_PATH in parameters.keys():
-        model_save_path = parameters[Parameters.MODEL_SAVE_PATH]
-
-        # Check typing
-        type_checker(model_save_path, "model_save_path must be a string. ", str)
-
-        if model_save_path == "":
-             raise Exception("Path must be != " " ")
-    
-    # context save dir
-    if Parameters.CONTEXT_SAVE_DIR in parameters.keys():
-        context_save_dir = parameters[Parameters.CONTEXT_SAVE_DIR]
-
-        # check typing
-        type_checker(context_save_dir, "context_save_dir must be a string. ", str)
-
-        if context_save_dir == "":
-            raise Exception("Path must not be empty string. ")
-    
-    # target edge type
-    if Parameters.TARGET_RELATION in parameters.keys():
-        target_relation = parameters[Parameters.TARGET_RELATION]
-
-       # check typing
-        if type(target_relation) != tuple and type(target_relation) != str:
-            raise Exception("target relation must be a string or a tuple. ")
-    
-    # num_neg_per_positive_edge
-    if Parameters.NUM_NEG_PER_POS_EDGE in parameters.keys():
-        num_neg_per_pos_edge = parameters[Parameters.NUM_NEG_PER_POS_EDGE]
-
-        # Check typing
-        type_checker(num_neg_per_pos_edge, "number of negative edges per positive one must be an int. ", int)
-    
-    # batch size
-    if Parameters.BATCH_SIZE in parameters.keys():
-        batch_size = parameters[Parameters.BATCH_SIZE]
-
-        # Check typing
-        type_checker(batch_size,"batch_size must be an int", int)
-
-    # sampling workers
-    if Parameters.SAMPLING_WORKERS in parameters.keys():
-        sampling_workers = parameters[Parameters.SAMPLING_WORKERS]
-
-        # check typing
-        type_checker(sampling_workers, "sampling_workers must be and int", int)
-
-    # last activation function
-    if Parameters.LAST_ACTIVATION_FUNCTION in parameters.keys():
-        last_activation_function = parameters[Parameters.LAST_ACTIVATION_FUNCTION]
-
-        # check typing
-        type_checker(last_activation_function, "last_activation_function should be a string", str)
-        
-        if last_activation_function != Activations.SIGMOID:
-            raise Exception(f"Only {Activations.SIGMOID} is currently supported. ")
-
-    # add reverse edges
-    if Parameters.ADD_REVERSE_EDGES in parameters.keys():
-        add_reverse_edges = parameters[Parameters.ADD_REVERSE_EDGES]
-
-        # check typing
-        type_checker(add_reverse_edges, "add_reverse_edges should be a bool. ", bool)
-
-    # add_self_loops
-    if Parameters.ADD_SELF_LOOPS in parameters.keys():
-        add_self_loops = parameters[Parameters.ADD_SELF_LOOPS]
-
-        # check typing
-        type_checker(add_self_loops, "add_self_loops should be a bool. ", bool)
-        
 def proj_0(graph: dgl.graph, node_features_property: str) -> None:
     """Performs projection on all node features to the max_feature_size by padding it with 0.
 
@@ -328,33 +70,29 @@ def proj_0(graph: dgl.graph, node_features_property: str) -> None:
         ftr_size_max = max(ftr_size_max, node_type_features.shape[1])
 
     for node_type in graph.ntypes:
-        p1d = (0, ftr_size_max - graph.nodes[node_type].data[node_features_property].shape[1])  # Padding left if 0 and padding right is dim_goal - arr.shape[1]
-        
-        graph.nodes[node_type].data[node_features_property] = torch.nn.functional.pad(graph.nodes[node_type].data[node_features_property], 
-                    p1d, mode="constant", value=0)
+        p1d = (
+            0,
+            ftr_size_max - graph.nodes[node_type].data[node_features_property].shape[1],
+        )  # Padding left if 0 and padding right is dim_goal - arr.shape[1]
 
-def get_number_of_edges(ctx: mgp.ProcCtx) -> int:
-    """Returns number of edges for graph from execution context.
+        graph.nodes[node_type].data[node_features_property] = torch.nn.functional.pad(
+            graph.nodes[node_type].data[node_features_property],
+            p1d,
+            mode="constant",
+            value=0,
+        )
 
-    Args:
-        ctx (mgp.ProcCtx): A reference to the execution context.
 
-    Returns:
-        int: A number of edges.
-    """
-    edge_cnt = 0
-    for vertex in ctx.graph.vertices:
-        edge_cnt += len(list(vertex.out_edges))
-    return edge_cnt
-
-def preprocess(graph: dgl.graph, split_ratio: float, target_relation: str) -> Tuple[dgl.graph, dgl.graph, dgl.graph, dgl.graph, dgl.graph]:
-    """Preprocess method splits dataset in training and validation set by creating necessary masks for distinguishing those two. 
+def preprocess(
+    graph: dgl.graph, split_ratio: float, target_relation: str
+) -> Tuple[dgl.graph, dgl.graph, dgl.graph, dgl.graph, dgl.graph]:
+    """Preprocess method splits dataset in training and validation set by creating necessary masks for distinguishing those two.
         This method is also used for setting numpy and torch random seed.
 
     Args:
         graph (dgl.graph): A reference to the dgl graph representation.
         split_ratio (float): Split ratio training to validation set. E.g 0.8 indicates that 80% is used as training set and 20% for validation set.
-        relation (Tuple[str, str, str]): [src_type, edge_type, dest_type] identifies edges on which model will be trained for prediction 
+        relation (Tuple[str, str, str]): [src_type, edge_type, dest_type] identifies edges on which model will be trained for prediction
 
     Returns:
         Tuple[Dict[Tuple[str, str, str], List[int]], Dict[Tuple[str, str, str], List[int]]:
@@ -367,11 +105,13 @@ def preprocess(graph: dgl.graph, split_ratio: float, target_relation: str) -> Tu
     random.seed(rnd_seed)
     np.random.seed(rnd_seed)
     torch.manual_seed(rnd_seed)  # set it for both cpu and cuda
- 
+
     # Get edge IDS
     edge_type_u, _ = graph.edges(etype=target_relation)
     graph_edges_len = len(edge_type_u)
-    eids = np.arange(graph_edges_len)  # get all edge ids from number of edges and create a numpy vector from it.
+    eids = np.arange(
+        graph_edges_len
+    )  # get all edge ids from number of edges and create a numpy vector from it.
     eids = np.random.permutation(eids)  # randomly permute edges
 
     # val size is 1-split_ratio specified by the user
@@ -380,14 +120,17 @@ def preprocess(graph: dgl.graph, split_ratio: float, target_relation: str) -> Tu
     # If user wants to split the dataset but it is too small, then raise an Exception
     if split_ratio < 1.0 and val_size == 0:
         raise Exception("Graph too small to have a validation dataset. ")
-    
+
     # Get training and validation edges
     tr_eids, val_eids = eids[val_size:], eids[:val_size]
 
     # Create and masks that will be used in the batch training
-    train_eid_dict, val_eid_dict = {target_relation: tr_eids}, {target_relation: val_eids}
+    train_eid_dict, val_eid_dict = {target_relation: tr_eids}, {
+        target_relation: val_eids
+    }
 
     return train_eid_dict, val_eid_dict
+
 
 def classify(probs: torch.tensor, threshold: float) -> torch.tensor:
     """Classifies based on probabilities of the class with the label one.
@@ -401,8 +144,17 @@ def classify(probs: torch.tensor, threshold: float) -> torch.tensor:
 
     return probs > threshold
 
-def evaluate(metrics: List[str], labels: torch.tensor, probs: torch.tensor, result: Dict[str, float], threshold: float, epoch: int, loss: float,
-            operator: Callable[[float, float], float]) -> None:
+
+def evaluate(
+    metrics: List[str],
+    labels: torch.tensor,
+    probs: torch.tensor,
+    result: Dict[str, float],
+    threshold: float,
+    epoch: int,
+    loss: float,
+    operator: Callable[[float, float], float],
+) -> None:
     """Returns all metrics specified in metrics list based on labels and predicted classes. In-place modification of dictionary.
 
     Args:
@@ -421,39 +173,73 @@ def evaluate(metrics: List[str], labels: torch.tensor, probs: torch.tensor, resu
     tn, fp, fn, tp = confusion_matrix(labels, classes).ravel()
     for metric_name in metrics:
         if metric_name == Metrics.ACCURACY:
-            result[Metrics.ACCURACY] = operator(result[Metrics.ACCURACY], accuracy_score(labels, classes))
+            result[Metrics.ACCURACY] = operator(
+                result[Metrics.ACCURACY], accuracy_score(labels, classes)
+            )
         elif metric_name == Metrics.AUC_SCORE:
-            result[Metrics.AUC_SCORE] = operator(result[Metrics.AUC_SCORE], roc_auc_score(labels, probs.detach()))
+            result[Metrics.AUC_SCORE] = operator(
+                result[Metrics.AUC_SCORE], roc_auc_score(labels, probs.detach())
+            )
         elif metric_name == Metrics.F1:
             result[Metrics.F1] = operator(result[Metrics.F1], f1_score(labels, classes))
         elif metric_name == Metrics.PRECISION:
-            result[Metrics.PRECISION] = operator(result[Metrics.PRECISION], precision_score(labels, classes))
+            result[Metrics.PRECISION] = operator(
+                result[Metrics.PRECISION], precision_score(labels, classes)
+            )
         elif metric_name == Metrics.RECALL:
-            result[Metrics.RECALL] = operator(result[Metrics.RECALL], recall_score(labels, classes))
+            result[Metrics.RECALL] = operator(
+                result[Metrics.RECALL], recall_score(labels, classes)
+            )
         elif metric_name == Metrics.POS_PRED_EXAMPLES:
-            result[Metrics.POS_PRED_EXAMPLES] = operator(result[Metrics.POS_PRED_EXAMPLES], classes.sum().item())
+            result[Metrics.POS_PRED_EXAMPLES] = operator(
+                result[Metrics.POS_PRED_EXAMPLES], classes.sum().item()
+            )
         elif metric_name == Metrics.NEG_PRED_EXAMPLES:
-            result[Metrics.NEG_PRED_EXAMPLES] = operator(result[Metrics.NEG_PRED_EXAMPLES], classes.sum().item())
+            result[Metrics.NEG_PRED_EXAMPLES] = operator(
+                result[Metrics.NEG_PRED_EXAMPLES], classes.sum().item()
+            )
         elif metric_name == Metrics.POS_EXAMPLES:
-            result[Metrics.POS_EXAMPLES] = operator(result[Metrics.POS_EXAMPLES], (labels == 1).sum().item())
+            result[Metrics.POS_EXAMPLES] = operator(
+                result[Metrics.POS_EXAMPLES], (labels == 1).sum().item()
+            )
         elif metric_name == Metrics.NEG_EXAMPLES:
-            result[Metrics.NEG_EXAMPLES] = operator(result[Metrics.NEG_EXAMPLES], (labels == 0).sum().item())
+            result[Metrics.NEG_EXAMPLES] = operator(
+                result[Metrics.NEG_EXAMPLES], (labels == 0).sum().item()
+            )
         elif metric_name == Metrics.TRUE_POSITIVES:
-            result[Metrics.TRUE_POSITIVES] = operator(result[Metrics.TRUE_POSITIVES], tp)
+            result[Metrics.TRUE_POSITIVES] = operator(
+                result[Metrics.TRUE_POSITIVES], tp
+            )
         elif metric_name == Metrics.FALSE_POSITIVES:
-            result[Metrics.FALSE_POSITIVES] = operator(result[Metrics.FALSE_POSITIVES], fp)
+            result[Metrics.FALSE_POSITIVES] = operator(
+                result[Metrics.FALSE_POSITIVES], fp
+            )
         elif metric_name == Metrics.TRUE_NEGATIVES:
-            result[Metrics.TRUE_NEGATIVES] = operator(result[Metrics.TRUE_NEGATIVES], tn)
+            result[Metrics.TRUE_NEGATIVES] = operator(
+                result[Metrics.TRUE_NEGATIVES], tn
+            )
         elif metric_name == Metrics.FALSE_NEGATIVES:
-            result[Metrics.FALSE_NEGATIVES] = operator(result[Metrics.FALSE_NEGATIVES], fn)
+            result[Metrics.FALSE_NEGATIVES] = operator(
+                result[Metrics.FALSE_NEGATIVES], fn
+            )
 
-def batch_forward_pass(model: torch.nn.Module, predictor: torch.nn.Module, loss: torch.nn.Module, m: torch.nn.Module, 
-                    target_relation: str, input_features: Dict[str, torch.Tensor], pos_graph: dgl.graph, 
-                neg_graph: dgl.graph, blocks: List[dgl.graph], num_neg_per_pos_edge: int) -> Tuple[torch.Tensor, torch.Tensor, torch.nn.Module]:
+
+def batch_forward_pass(
+    model: torch.nn.Module,
+    predictor: torch.nn.Module,
+    loss: torch.nn.Module,
+    m: torch.nn.Module,
+    target_relation: str,
+    input_features: Dict[str, torch.Tensor],
+    pos_graph: dgl.graph,
+    neg_graph: dgl.graph,
+    blocks: List[dgl.graph],
+    num_neg_per_pos_edge: int,
+) -> Tuple[torch.Tensor, torch.Tensor, torch.nn.Module]:
     """Performs one forward batch pass
 
     Args:
-        model (torch.nn.Module): A reference to the model that needs to be trained. 
+        model (torch.nn.Module): A reference to the model that needs to be trained.
         predictor (torch.nn.Module): A reference to the edge predictor.
         loss (torch.nn.Module): Loss function.
         m (torch.nn.Module): The activation function.
@@ -474,41 +260,47 @@ def batch_forward_pass(model: torch.nn.Module, predictor: torch.nn.Module, loss:
     # Deal with edge scores
     pos_score = predictor.forward(pos_graph, outputs, target_relation=target_relation)
     neg_score = predictor.forward(neg_graph, outputs, target_relation=target_relation)
-    scores = torch.cat([pos_score, neg_score])  # concatenated positive and negative score
+    scores = torch.cat(
+        [pos_score, neg_score]
+    )  # concatenated positive and negative score
     # probabilities
     probs = m(scores)
-    labels = torch.cat([torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])])  # concatenation of labels
+    labels = torch.cat(
+        [torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])]
+    )  # concatenation of labels
     # weights = torch.cat([torch.ones(pos_score.shape[0], dtype=torch.float32), torch.Tensor([1.0 / num_neg_per_pos_edge for _ in range(neg_score.shape[0])])])
     loss_output = loss(probs, labels)
 
     return probs, labels, loss_output
 
-def inner_train(graph: dgl.graph,
-                    train_eid_dict,
-                    val_eid_dict, 
-                    target_relation: str,
-                    model: torch.nn.Module, 
-                    predictor: torch.nn.Module, 
-                    optimizer: torch.optim.Optimizer,
-                    num_epochs: int,
-                    m: torch.nn.Module,
-                    threshold: float,
-                    node_features_property: str, 
-                    console_log_freq: int, 
-                    checkpoint_freq: int, 
-                    metrics: List[str], 
-                    tr_acc_patience: int, 
-                    context_save_dir: str,
-                    num_neg_per_pos_edge: int,
-                    num_layers: int,
-                    batch_size: int,
-                    sampling_workers: int,
-                    device: torch.device
-                    ) -> Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]:
-    """Batch training method. 
+
+def inner_train(
+    graph: dgl.graph,
+    train_eid_dict,
+    val_eid_dict,
+    target_relation: str,
+    model: torch.nn.Module,
+    predictor: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+    num_epochs: int,
+    m: torch.nn.Module,
+    threshold: float,
+    node_features_property: str,
+    console_log_freq: int,
+    checkpoint_freq: int,
+    metrics: List[str],
+    tr_acc_patience: int,
+    context_save_dir: str,
+    num_neg_per_pos_edge: int,
+    num_layers: int,
+    batch_size: int,
+    sampling_workers: int,
+    device: torch.device,
+) -> Tuple[List[Dict[str, float]], torch.nn.Module, torch.Tensor]:
+    """Batch training method.
 
     Args:
-        graph (dgl.graph): A reference to the original graph. 
+        graph (dgl.graph): A reference to the original graph.
         train_eid_dict (_type_): Mask that identifies training part of the graph. This included only edges from a given relation.
         val_eid_dict (_type_): Mask that identifies validation part of the graph. This included only edges from a given relation.
         target_relation: str -> Unique edge type that is used for training.
@@ -537,23 +329,38 @@ def inner_train(graph: dgl.graph,
     training_results, validation_results = [], []
 
     # First define all necessary samplers
-    negative_sampler = dgl.dataloading.negative_sampler.GlobalUniform(k=num_neg_per_pos_edge, replace=False)
-    sampler = dgl.dataloading.MultiLayerFullNeighborSampler(num_layers=num_layers, output_device=device)  # gather messages from all node neighbors
-    
+    negative_sampler = dgl.dataloading.negative_sampler.GlobalUniform(
+        k=num_neg_per_pos_edge, replace=False
+    )
+    sampler = dgl.dataloading.MultiLayerFullNeighborSampler(
+        num_layers=num_layers, output_device=device
+    )  # gather messages from all node neighbors
+
     # Create reverse target relation
     reverse_target_relation = reverse_relation(target_relation)
-    if reverse_target_relation not in graph.etypes and reverse_target_relation not in graph.canonical_etypes:
+    if (
+        reverse_target_relation not in graph.etypes
+        and reverse_target_relation not in graph.canonical_etypes
+    ):
         # same source and destination node
         print(f"Self batch handling")
 
-        sampler = dgl.dataloading.as_edge_prediction_sampler(sampler, negative_sampler=negative_sampler, exclude="self")
+        sampler = dgl.dataloading.as_edge_prediction_sampler(
+            sampler, negative_sampler=negative_sampler, exclude="self"
+        )
     else:
         print(f"Reverse batch handling: {reverse_target_relation}")
-        reverse_etypes = {target_relation: reverse_target_relation, reverse_target_relation: target_relation}
-        sampler = dgl.dataloading.as_edge_prediction_sampler(sampler, negative_sampler=negative_sampler, exclude="reverse_types", 
-            reverse_etypes=reverse_etypes)
-    
-   
+        reverse_etypes = {
+            target_relation: reverse_target_relation,
+            reverse_target_relation: target_relation,
+        }
+        sampler = dgl.dataloading.as_edge_prediction_sampler(
+            sampler,
+            negative_sampler=negative_sampler,
+            exclude="reverse_types",
+            reverse_etypes=reverse_etypes,
+        )
+
     # Define training and validation dictionaries
     # For heterogeneous full neighbor sampling we need to define a dictionary of edge types and edge ID tensors instead of a dictionary of node types and node ID tensors
     # DataLoader iterates over a set of edges in mini-batches, yielding the subgraph induced by the edge mini-batch and message flow graphs (MFGs) to be consumed by the module below.
@@ -562,26 +369,26 @@ def inner_train(graph: dgl.graph,
 
     # Define training EdgeDataLoader
     train_dataloader = dgl.dataloading.DataLoader(
-        graph,                                  # The graph
+        graph,  # The graph
         train_eid_dict,  # The edges to iterate over
-        sampler,                                # The neighbor sampler
+        sampler,  # The neighbor sampler
         device=device,
-        batch_size=batch_size,    # Batch size
-        shuffle=True,       # Whether to shuffle the nodes for every epoch
-        drop_last=False,    # Whether to drop the last incomplete batch
-        num_workers=sampling_workers, # Number of sampling processes
+        batch_size=batch_size,  # Batch size
+        shuffle=True,  # Whether to shuffle the nodes for every epoch
+        drop_last=False,  # Whether to drop the last incomplete batch
+        num_workers=sampling_workers,  # Number of sampling processes
     )
 
     # Define validation EdgeDataLoader
     validation_dataloader = dgl.dataloading.DataLoader(
-        graph,                                  # The graph
+        graph,  # The graph
         val_eid_dict,  # The edges to iterate over
-        sampler,                                # The neighbor sampler
+        sampler,  # The neighbor sampler
         device=device,
-        batch_size=batch_size,    # Batch size
-        shuffle=True,       # Whether to shuffle the nodes for every epoch
-        drop_last=False,    # Whether to drop the last incomplete batch
-        num_workers=sampling_workers,       # Number of sampler processes
+        batch_size=batch_size,  # Batch size
+        shuffle=True,  # Whether to shuffle the nodes for every epoch
+        drop_last=False,  # Whether to drop the last incomplete batch
+        num_workers=sampling_workers,  # Number of sampler processes
     )
 
     print(f"Canonical etypes: {graph.canonical_etypes}")
@@ -593,13 +400,16 @@ def inner_train(graph: dgl.graph,
 
     # Define lambda functions for operating on dictionaries
     add_: Callable[[float, float], float] = lambda prior, later: prior + later
-    avg_: Callable[[float, float], float] = lambda prior, size: prior/size
+    avg_: Callable[[float, float], float] = lambda prior, size: prior / size
     format_float: Callable[[float], float] = lambda prior: round(prior, 3)
 
     # Training
-    max_val_acc, num_val_acc_drop = (-1.0, 0,)  # last maximal accuracy and number of epochs it is dropping
+    max_val_acc, num_val_acc_drop = (
+        -1.0,
+        0,
+    )  # last maximal accuracy and number of epochs it is dropping
 
-    for epoch in range(1, num_epochs+1):
+    for epoch in range(1, num_epochs + 1):
         # Evaluation epoch
         if epoch % console_log_freq == 0:
             print("Epoch: ", epoch)
@@ -612,23 +422,51 @@ def inner_train(graph: dgl.graph,
         for _, pos_graph, neg_graph, blocks in train_dataloader:
             input_features = blocks[0].ndata[node_features_property]
             # Perform forward pass
-            probs, labels, loss_output = batch_forward_pass(model, predictor, loss, m, target_relation, input_features, pos_graph, neg_graph, 
-                blocks, num_neg_per_pos_edge)
+            probs, labels, loss_output = batch_forward_pass(
+                model,
+                predictor,
+                loss,
+                m,
+                target_relation,
+                input_features,
+                pos_graph,
+                neg_graph,
+                blocks,
+                num_neg_per_pos_edge,
+            )
             # Make an optimization step
             optimizer.zero_grad()
             loss_output.backward()  # ***This line generates warning***
             optimizer.step()
             # Evaluate on training set
             if epoch % console_log_freq == 0:
-                evaluate(metrics, labels, probs, epoch_training_result, threshold, epoch, loss_output.item(), add_)
+                evaluate(
+                    metrics,
+                    labels,
+                    probs,
+                    epoch_training_result,
+                    threshold,
+                    epoch,
+                    loss_output.item(),
+                    add_,
+                )
             # Increment num batches
-            num_batches +=1 
+            num_batches += 1
         # Edit train results and evaluate on validation set
         if epoch % console_log_freq == 0:
-            epoch_training_result = {key: format_float(avg_(val, num_batches)) if key != Metrics.EPOCH else val for key, val in epoch_training_result.items()}
+            epoch_training_result = {
+                key: format_float(avg_(val, num_batches))
+                if key != Metrics.EPOCH
+                else val
+                for key, val in epoch_training_result.items()
+            }
             training_results.append(epoch_training_result)
             # Check if training finished
-            if Metrics.ACCURACY in metrics and epoch_training_result[Metrics.ACCURACY] == 1.0 and epoch > 1:
+            if (
+                Metrics.ACCURACY in metrics
+                and epoch_training_result[Metrics.ACCURACY] == 1.0
+                and epoch > 1
+            ):
                 print("Model reached accuracy of 1.0, exiting...")
                 tr_finished = True
             # Evaluate on the validation set
@@ -638,16 +476,44 @@ def inner_train(graph: dgl.graph,
                 for _, pos_graph, neg_graph, blocks in validation_dataloader:
                     input_features = blocks[0].ndata[node_features_property]
                     # Perform forward pass
-                    probs, labels, loss_output = batch_forward_pass(model, predictor, loss, m, target_relation, input_features, pos_graph, neg_graph, 
-                        blocks, num_neg_per_pos_edge)
+                    probs, labels, loss_output = batch_forward_pass(
+                        model,
+                        predictor,
+                        loss,
+                        m,
+                        target_relation,
+                        input_features,
+                        pos_graph,
+                        neg_graph,
+                        blocks,
+                        num_neg_per_pos_edge,
+                    )
                     # Add to the epoch_validation_result for saving
-                    evaluate(metrics, labels, probs, epoch_validation_result, threshold, epoch, loss_output.item(), add_)
+                    evaluate(
+                        metrics,
+                        labels,
+                        probs,
+                        epoch_validation_result,
+                        threshold,
+                        epoch,
+                        loss_output.item(),
+                        add_,
+                    )
                     num_batches += 1
-            if num_batches > 0: # Because it is possible that user specified not to have a validation dataset
-                # Average over batches    
-                epoch_validation_result = {key: format_float(avg_(val, num_batches)) if key != Metrics.EPOCH else val for key, val in epoch_validation_result.items()}
+            if (
+                num_batches > 0
+            ):  # Because it is possible that user specified not to have a validation dataset
+                # Average over batches
+                epoch_validation_result = {
+                    key: format_float(avg_(val, num_batches))
+                    if key != Metrics.EPOCH
+                    else val
+                    for key, val in epoch_validation_result.items()
+                }
                 validation_results.append(epoch_validation_result)
-                if Metrics.ACCURACY in metrics:  # If user doesn't want to have accuracy information, it cannot be checked for patience.
+                if (
+                    Metrics.ACCURACY in metrics
+                ):  # If user doesn't want to have accuracy information, it cannot be checked for patience.
                     # Patience check
                     if epoch_validation_result[Metrics.ACCURACY] <= max_val_acc:
                         num_val_acc_drop += 1
@@ -658,7 +524,7 @@ def inner_train(graph: dgl.graph,
                     if num_val_acc_drop == tr_acc_patience:
                         print("Stopped because of validation criteria. ")
                         break
-                
+
         # Save the model if necessary
         if epoch % checkpoint_freq == 0:
             _save_context(model, predictor, context_save_dir)
@@ -671,7 +537,10 @@ def inner_train(graph: dgl.graph,
 
     return training_results, validation_results
 
-def _save_context(model: torch.nn.Module, predictor: torch.nn.Module, context_save_dir: str):
+
+def _save_context(
+    model: torch.nn.Module, predictor: torch.nn.Module, context_save_dir: str
+):
     """Saves model and predictor to path.
 
     Args:
@@ -682,8 +551,17 @@ def _save_context(model: torch.nn.Module, predictor: torch.nn.Module, context_sa
     torch.save(model, context_save_dir + Context.MODEL_NAME)
     torch.save(predictor, context_save_dir + Context.PREDICTOR_NAME)
 
-def inner_predict(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl.graph, node_features_property: str, 
-                    src_node: int, dest_node: int, src_type=str, dest_type=str) -> float:
+
+def inner_predict(
+    model: torch.nn.Module,
+    predictor: torch.nn.Module,
+    graph: dgl.graph,
+    node_features_property: str,
+    src_node: int,
+    dest_node: int,
+    src_type=str,
+    dest_type=str,
+) -> float:
     """Predicts edge scores for given graph. This method is called to obtain edge probability for edge with id=edge_id.
 
     Args:
@@ -692,7 +570,7 @@ def inner_predict(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl
         graph (dgl.graph): A reference to the graph. This is semi-inductive setting so new nodes are appended to the original graph(train+validation).
         node_features_property (str): Property name of the features.
         src_node (int): Source node of the edge.
-        dest_node (int): Destination node of the edge. 
+        dest_node (int): Destination node of the edge.
         src_type (str): Type of the source node.
         dest_type (str): Type of the destination node.
 
@@ -700,7 +578,10 @@ def inner_predict(model: torch.nn.Module, predictor: torch.nn.Module, graph: dgl
         float: Edge score.
     """
     # TODO: Change so it is incoming parameter(more efficient for recommend)
-    graph_features = {node_type: graph.nodes[node_type].data[node_features_property] for node_type in graph.ntypes}
+    graph_features = {
+        node_type: graph.nodes[node_type].data[node_features_property]
+        for node_type in graph.ntypes
+    }
     # print("Graph features: ", graph_features)
     # print("Graph features2: ", graph.ndata[node_features_property])
     with torch.no_grad():
