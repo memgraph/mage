@@ -45,32 +45,24 @@ class MLPPredictor(torch.nn.Module):
             torch.Tensor: A tensor of edge scores.
         """
         with g.local_scope():
-            for (
-                node_type
-            ) in (
-                node_embeddings.keys()
-            ):  # Iterate over all node_types. # TODO: Maybe it can be removed if features are already saved in the graph.
-                g.nodes[node_type].data[Predictors.NODE_EMBEDDINGS] = node_embeddings[
-                    node_type
-                ]
+            for node_type in node_embeddings.keys():  # Iterate over all node_types.
+                g.nodes[node_type].data[Predictors.NODE_EMBEDDINGS] = node_embeddings[node_type]
 
             g.apply_edges(self.apply_edges, etype=target_relation)
             scores = g.edata[Predictors.EDGE_SCORE]
-            if type(scores) == dict:
-                if (
-                    type(target_relation) == tuple
-                ):  # Tuple[str, str, str] identification
-                    scores = scores[target_relation]
-                elif type(target_relation) == str:  # edge type identification
-                    for key, val in scores.items():
-                        if key[1] == target_relation:
-                            scores = val
-                            break
-            return scores.view(-1)
 
-    def forward_pred(
-        self, src_embedding: torch.Tensor, dest_embedding: torch.Tensor
-    ) -> float:
+            if type(scores) != dict:
+                return scores.view(-1)
+
+            if type(target_relation) == tuple:  # Tuple[str, str, str] identification
+                return scores[target_relation].view(-1)
+
+            if type(target_relation) == str:  # edge type identification
+                for key, val in scores.items():
+                    if key[1] == target_relation:
+                        return val.view(-1)
+
+    def forward_pred(self, src_embedding: torch.Tensor, dest_embedding: torch.Tensor) -> float:
         """Efficient implementation for predict method of DotPredictor.
 
         Args:

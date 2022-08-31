@@ -41,15 +41,11 @@ class GraphSAGE(torch.nn.Module):
                 activation=activations[i],
             ).to(device)
             self.layers.append(
-                HeteroGraphConv(
-                    {edge_type: sage_layer for edge_type in edge_types}, aggregate="sum"
-                ).to(device)
+                HeteroGraphConv({edge_type: sage_layer for edge_type in edge_types}, aggregate="sum").to(device)
             )
             in_feats = hidden_features_size[i]
 
-    def forward(
-        self, blocks: List[dgl.graph], h: Dict[str, torch.Tensor]
-    ) -> Dict[str, torch.Tensor]:
+    def forward(self, blocks: List[dgl.graph], h: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """Performs forward pass on batches.
 
         Args:
@@ -61,11 +57,10 @@ class GraphSAGE(torch.nn.Module):
         """
         for index, layer in enumerate(self.layers):
             h = layer(blocks[index], h)
+
         return h
 
-    def online_forward(
-        self, graph: dgl.graph, h: Dict[str, torch.Tensor]
-    ) -> Dict[str, torch.Tensor]:
+    def online_forward(self, graph: dgl.graph, h: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """Performs forward pass on batches.
 
         Args:
@@ -77,4 +72,5 @@ class GraphSAGE(torch.nn.Module):
         """
         for layer in self.layers:
             h = layer(graph, h)
+
         return h
