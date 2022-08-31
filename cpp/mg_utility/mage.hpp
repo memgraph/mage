@@ -833,7 +833,7 @@ class Value {
   friend class Duration;
   friend class Record;
 
-  explicit Value(mgp_value *ptr) : ptr_(mgp::value_copy(ptr, memory)){};
+  explicit Value(mgp_value *ptr) : ptr_(mgp::value_copy(ptr, memory)) {}
 
   // Primitive type constructors:
   explicit Value(bool value) : Value(mgp::value_make_bool(value, memory)){};
@@ -842,8 +842,8 @@ class Value {
   explicit Value(double value) : Value(mgp::value_make_double(value, memory)){};
 
   // String constructors:
-  explicit Value(const std::string_view value) : Value(mgp::value_make_string(value.data(), memory)) {}
-  explicit Value(const char *value) : Value(mgp::value_make_string(value, memory)){};
+  // explicit Value(const std::string_view value) : Value(mgp::value_make_string(value.data(), memory)) {}
+  // explicit Value(const char *value) : Value(mgp::value_make_string(value, memory)){};
 
   // Container constructors:
   explicit Value(List &&list) {
@@ -883,26 +883,34 @@ class Value {
   };
 
   // Temporal type constructors:
+
   explicit Value(Date &&date) {
     Value(mgp::value_make_date(date.ptr_));
     delete &date;
     date.ptr_ = nullptr;
   }
+
   explicit Value(LocalTime &&local_time) {
     Value(mgp::value_make_local_time(local_time.ptr_));
     delete &local_time;
     local_time.ptr_ = nullptr;
   }
+
   explicit Value(LocalDateTime &&local_date_time) {
     Value(mgp::value_make_local_date_time(local_date_time.ptr_));
     delete &local_date_time;
     local_date_time.ptr_ = nullptr;
   }
+
   explicit Value(Duration &&duration) {
     Value(mgp::value_make_duration(duration.ptr_));
     delete &duration;
     duration.ptr_ = nullptr;
   }
+
+  Value() = default;
+  Value(const Value &other) : Value(other.ptr_) {}
+  Value(Value &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; };
 
   ~Value();
 
@@ -1954,7 +1962,7 @@ inline bool Value::operator==(const Value &other) const { return util::ValuesEqu
 inline void Record::Insert(const char *field_name, std::int64_t value) { Insert(field_name, Value(value)); }
 inline void Record::Insert(const char *field_name, double value) { Insert(field_name, Value(value)); }
 inline void Record::Insert(const char *field_name, const char *value) { Insert(field_name, Value(value)); }
-inline void Record::Insert(const char *field_name, std::string_view value) { Insert(field_name, Value(value)); }
+// inline void Record::Insert(const char *field_name, std::string_view value) { Insert(field_name, Value(value)); }
 inline void Record::Insert(const char *field_name, const List &list) {
   Insert(field_name, Value(mgp::value_make_list(mgp::list_copy(list.ptr_, memory))));
 }
@@ -1962,9 +1970,9 @@ inline void Record::Insert(const char *field_name, const List &list) {
 // inline void Record::Insert(const char *field_name, std::vector<Value> &list) {
 //   Insert(field_name, Value(mgp::value_make_list(mgp::list_copy(list.ptr_, memory))));
 // }
-inline void Record::Insert(const char *field_name, const Map &map) {
-  Insert(field_name, Value(mgp::value_make_map(mgp::map_copy(map.ptr_, memory))));
-}
+// inline void Record::Insert(const char *field_name, const Map &map) {
+//   Insert(field_name, Value(mgp::value_make_map(mgp::map_copy(map.ptr_, memory))));
+// }
 // TODO (convert STL map to MGP):
 // inline void Record::Insert(const char *field_name, std::map<std::string_view, Value> &list) {
 //   Insert(field_name, Value(mgp::value_make_map(mgp::map_copy(map.ptr_, memory))));
