@@ -124,6 +124,7 @@ reindex: Dict[str, Dict[str, Dict[int, int]]] = None  # Mapping of DGL indexes t
 predictor: torch.nn.Module = None  # Predictor for calculating edge scores
 model: torch.nn.Module = None
 labels_concat = ":"  # string to separate labels if dealing with multiple labels per node
+device = None  # reference to the device where the model will be executed, CPU or CUDA
 
 # Lambda function to concat list of labels
 merge_labels: Callable[[List[mgp.Label]], str] = lambda labels: labels_concat.join([label.name for label in labels])
@@ -170,7 +171,7 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
             status (bool): True if parameters were successfully updated, False otherwise.
             message(str): Additional explanation why method failed or OK otherwise.
     """
-    global link_prediction_parameters
+    global link_prediction_parameters, device
 
     validate_user_parameters(parameters=parameters)
     
@@ -188,8 +189,10 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
     # Device type handling
     if link_prediction_parameters.device_type == Devices.CUDA_DEVICE and torch.cuda.is_available() is True:
         link_prediction_parameters.device_type = Devices.CUDA_DEVICE
+        device = torch.device(Devices.CUDA_DEVICE)
     else:
         link_prediction_parameters.device_type = Devices.CPU_DEVICE
+        device = torch.device(Devices.CPU_DEVICE)
 
     # Lists handling=generator expression + unpacking
     if type(link_prediction_parameters.hidden_features_size) == tuple:
@@ -224,16 +227,14 @@ def train(ctx: mgp.ProcCtx,) -> mgp.Record(training_results=mgp.Any, validation_
     if link_prediction_parameters.in_feats is None:
         # Get feature size
         ftr_size = max(graph.nodes[node_type].data[link_prediction_parameters.node_features_property].shape[1] for node_type in graph.ntypes)
-        print(f"Ftr size: {ftr_size}")
         # Load feature size in the hidden_features_size 
         _load_feature_size(ftr_size)
-
-    print(link_prediction_parameters.in_feats, link_prediction_parameters.hidden_features_size)
 
     # Split the data
     train_eid_dict, val_eid_dict = preprocess(graph=graph, split_ratio=link_prediction_parameters.split_ratio, 
         target_relation=link_prediction_parameters.target_relation)
 
+    # Extract number of layers
     num_layers = len(link_prediction_parameters.hidden_features_size)
 
     # Create a model
@@ -766,7 +767,7 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
         to old index and dictionary of mapping old to new index for each node type.
     """
 
-    global link_prediction_parameters
+    global link_prediction_parameters, device
 
     reindex = defaultdict(dict)  # map of label to new node index to old node index
     mem_indexes = defaultdict(int)  # map of label to indexes. All indexes are by default indexed 0.
@@ -785,16 +786,18 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
         # Process source vertex
         src_id, src_type, src_features = vertex.id, merge_labels(vertex.labels), vertex.properties.get(link_prediction_parameters.node_features_property)
 
+        # Find if the node is disconnected from the rest of the graph
         src_isolated_node = True
-        for _ in vertex.in_edges:
+        for _ in vertex.in_edges:  # Check incoming edges first
             src_isolated_node = False
             break
         
         if src_isolated_node:
-            for _ in vertex.out_edges:
+            for _ in vertex.out_edges:  # Then check outgoing edges
                 src_isolated_node = False
                 break
-
+        
+        # If it isn't isolated node than map all indexes. Must be done before iterating over outgoing edges.
         if not src_isolated_node:
             _process_help_function(mem_indexes, src_id, src_type, src_features, reindex, index_dgl_to_features) 
 
@@ -809,7 +812,7 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
  
             # Define type triplet
             type_triplet = (src_type, edge_type, dest_type)
-            
+            # If this type triplet was already processed
             type_triplet_in = type_triplet in type_triplets
             
             # Before processing node dest node and edge, check if this edge_type has occurred with different src_type or dest_type
@@ -843,9 +846,9 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
 
     # Create a heterograph
     for type_triplet in type_triplets:
-        data_dict[type_triplet] = torch.tensor(src_nodes[type_triplet]), torch.tensor(dest_nodes[type_triplet])
+        data_dict[type_triplet] = torch.tensor(src_nodes[type_triplet], device=device), torch.tensor(dest_nodes[type_triplet], device=device)
 
-    g = dgl.heterograph(data_dict)     
+    g = dgl.heterograph(data_dict, device=device)     
 
     # Infer automatically target relation if the graph is homogeneous and the user didn't provide its own target relation
     if len(type_triplets) == 1 and link_prediction_parameters.target_relation is None:
@@ -858,20 +861,20 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
         _process_help_function(mem_indexes, isolated_node_id, isolated_node_type, isolated_node_features, reindex, index_dgl_to_features)
         g.add_nodes(1, ntype=isolated_node_type)
 
+    # Add undirected support if specified by user
     if link_prediction_parameters.add_reverse_edges:
-        # Add undirected support
         reverse_edges_transform = AddReverse(copy_edata=True, sym_new_etype=False)
-        g = reverse_edges_transform(g)  # unfortunately copying is done 2 times
+        g = reverse_edges_transform(g)  # unfortunately copying is done
     
     
+    # Custom made self-loop function is specified by the user.
     if link_prediction_parameters.add_self_loops:
-        # Custom made self-loop function
         g = add_self_loop(g, "self")
 
-    print("After self loop transform")
-    for etype in g.canonical_etypes:
-        print(f"Etype: {etype} Edges: {g.number_of_edges(etype=etype)} {g.edges(etype=etype)}")
 
+    # print("After self loop transform")
+    # for etype in g.canonical_etypes:
+    #     print(f"Etype: {etype} Edges: {g.number_of_edges(etype=etype)} {g.edges(etype=etype)}")
 
     # Create features
     for node_type in g.ntypes:
@@ -880,7 +883,7 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
             node_id = node.item()
             node_features.append(index_dgl_to_features[node_type][node_id])
 
-        node_features = torch.tensor(node_features, dtype=torch.float32)
+        node_features = torch.tensor(node_features, dtype=torch.float32, device=device)
         g.nodes[node_type].data[link_prediction_parameters.node_features_property] = node_features
 
     
@@ -895,13 +898,14 @@ def _get_dgl_graph_data(ctx: mgp.ProcCtx,) -> Tuple[dgl.graph, Dict[int32, int32
 def _reset_train_predict_parameters() -> None:
     """Reset global parameters that are returned by train method and used by predict method. 
     """
-    global training_results, validation_results, predictor, model, graph, reindex
+    global training_results, validation_results, predictor, model, graph, reindex, device
     training_results = None  # clear training records from previous training
     validation_results = None  # clear validation record from previous training
     predictor = None  # Delete old predictor and create a new one in link_prediction_util.train method\
     model = None  # Annulate old model
     graph = None  # Set graph to None
-    reindex = None
+    reindex = None  # Delete indexing stuff
+    device = None  # user needs to set the device again
 
 def _conversion_to_dgl_test(
     graph: dgl.graph,
@@ -941,12 +945,7 @@ def _conversion_to_dgl_test(
                 old_features = vertex.properties.get(node_features_property)
             
             # Check if equal
-            if not torch.equal(graph.nodes[node_type].data[node_features_property][vertex_id], torch.tensor(old_features, dtype=torch.float32),):
+            if not torch.equal(graph.nodes[node_type].data[node_features_property][vertex_id], torch.tensor(old_features, dtype=torch.float32, device=device),):
                 raise Exception("The conversion to DGL failed. Stored graph does not contain the same features as the converted DGL graph. ")
 
-    total_edges = 0    
-    for etype in graph.canonical_etypes:
-        print(f"Etype: {etype} Graph num edges: {graph.number_of_edges(etype=etype)}")
-        total_edges += graph.number_of_edges(etype=etype)
-    print(f"Total edges: {total_edges}")
     

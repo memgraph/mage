@@ -1,5 +1,4 @@
 import torch
-import torch.nn.functional as F
 import numpy as np
 import dgl
 from collections import defaultdict
@@ -42,6 +41,7 @@ def add_self_loop(g: dgl.heterograph, self_loop_edge_type: str) -> dgl.heterogra
 
     # Add self etypes
     device = g.device
+    print(f"Device when copying the heterograph instance: {device}")
     idtype = g.idtype
     for ntype in g.ntypes:
         nids = torch.arange(start=0, end=g.num_nodes(ntype), step=1, dtype=idtype, device=device)
@@ -49,7 +49,6 @@ def add_self_loop(g: dgl.heterograph, self_loop_edge_type: str) -> dgl.heterogra
         num_nodes_dict[ntype] = g.num_nodes(ntype)
 
     return dgl.heterograph(data_dict=data_dict, num_nodes_dict=num_nodes_dict, idtype=idtype, device=device)
-
 
 def validate_user_parameters(parameters: mgp.Map) -> None:
     """Validates parameters user sent through method set_model_parameters
