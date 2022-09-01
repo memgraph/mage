@@ -2122,12 +2122,7 @@ struct Return {
 };
 
 class ProcedureWrapper {
- private:
  public:
-  // std::function<void(std::vector<mage::Value>, mage::Graph, mage::RecordFactory)> callback_;
-
-  // static void (*callback_)(std::vector<mage::Value>, mage::Graph, mage::RecordFactory);
-
   ProcedureWrapper() = default;
 
   void AddQueryProcedure(void (*callback)(struct mgp_list *, struct mgp_graph *, struct mgp_result *,
