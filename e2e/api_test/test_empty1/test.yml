@@ -1,7 +1,8 @@
 query: >
     MATCH (v: Node {id:0})-[e]-()
     MATCH path = ()-[*]->()
-    CALL api_test_module.run(1,
+    CALL api_test_module.run(true,
+                             1,
                              1.1,
                              "text",
                              ["a", "b", "c"],

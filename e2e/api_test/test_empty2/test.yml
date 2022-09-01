@@ -5,4 +5,4 @@ query: >
     RETURN out;
 
 output:
-    - out: 2
+    - out: 0
