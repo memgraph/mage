@@ -49,8 +49,9 @@ COPY . /mage
 #MAGE
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
     && export PATH="/root/.cargo/bin:${PATH}" \
-    && python3 -m  pip install -r /mage/python/requirements.txt \
-    && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/
+    && python3 -m pip install -r /mage/python/requirements.txt \
+    && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/ \
+    && python3 -m pip install dgl -f https://data.dgl.ai/wheels/repo.html
 
 
 USER memgraph
