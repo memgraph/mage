@@ -11,7 +11,7 @@ from collections import defaultdict
 
 
 def nodes_fetching(
-    ctx: mgp.ProcCtx, features_name: str, class_name: str, data: HeteroData, device: str
+    ctx: mgp.ProcCtx, features_name: str, class_name: str, data: HeteroData
 ) -> typing.Tuple[HeteroData, typing.Dict, typing.Dict, str]:
     """
     This procedure fetches the nodes from the database and returns them in HeteroData object.
@@ -120,8 +120,7 @@ def nodes_fetching(
         # increase append_counter by 1
         append_counter[node_type] += 1
 
-    data = data.to(device)
-    
+
     return data, reindexing, inv_reindexing, observed_attribute
 
 
@@ -129,8 +128,7 @@ def edges_fetching(
     ctx: mgp.ProcCtx,
     features_name: str,
     inv_reindexing: defaultdict,
-    data: HeteroData,
-    device: str,
+    data: HeteroData
 ) -> HeteroData:
     """This procedure fetches the edges from the database and returns them in HeteroData object.
 
@@ -178,7 +176,6 @@ def edges_fetching(
         data[edge_type].edge_index = torch.tensor(
             np.zeros((2, no_edge_type_edges)), dtype=torch.long
         )
-        data[edge_type].edge_index = data[edge_type].edge_index.to(device)
 
     for edge in edges:
         (from_vertex_type, edge_name, to_vertex_type) = (
@@ -202,7 +199,7 @@ def edges_fetching(
 
 
 def masks_generating(
-    data: HeteroData, train_ratio: float, observed_attribute: str, device: str
+    data: HeteroData, train_ratio: float, observed_attribute: str
 ) -> HeteroData:
     """This procedure generates the masks for the nodes and edges.
 
@@ -230,10 +227,8 @@ def masks_generating(
     random.shuffle(masks)
 
     data[observed_attribute].train_mask = torch.tensor(masks, dtype=torch.bool)
-    data[observed_attribute].train_mask = data[observed_attribute].train_mask.to(device)
 
     data[observed_attribute].val_mask = torch.tensor(1 - masks, dtype=torch.bool)
-    data[observed_attribute].val_mask = data[observed_attribute].val_mask.to(device)
 
     data = T.ToUndirected()(data)
     data = T.AddSelfLoops()(data)
@@ -255,14 +250,14 @@ def extract_from_database(
     # NODES
     #################
     data, reindexing, inv_reindexing, observed_attribute = nodes_fetching(
-        ctx, features_name, class_name, data, device
+        ctx, features_name, class_name, data
     )
 
     #################
     # EDGES
     #################
 
-    data = edges_fetching(ctx, features_name, inv_reindexing, data, device)
+    data = edges_fetching(ctx, features_name, inv_reindexing, data)
 
     #################
     # MASKS
@@ -270,6 +265,8 @@ def extract_from_database(
 
     print(data)
     print(observed_attribute)
-    data = masks_generating(data, train_ratio, observed_attribute, device)
+    data = masks_generating(data, train_ratio, observed_attribute)
+
+    data = data.to(device, non_blocking=True)
 
     return (data, observed_attribute, reindexing, inv_reindexing)
