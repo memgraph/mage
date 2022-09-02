@@ -1,11 +1,8 @@
 import mgp  # Python API
-import json
 import torch
-import scipy
 import dgl  # geometric deep learning
 from dgl import AddReverse
 from typing import Callable, List, Tuple, Dict
-from sklearn.model_selection import ParameterSampler
 from numpy import int32
 from dataclasses import dataclass, field
 from collections import defaultdict
