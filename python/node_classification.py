@@ -118,6 +118,7 @@ DEFINED_INPUT_TYPES = {
     HeteroParams.INV_REINDEXING: dict,
     HeteroParams.NUM_NODES_SAMPLE: int,
     HeteroParams.NUM_ITERATIONS_SAMPLE: int,
+    OtherParams.DEVICE_TYPE: str,
     OtherParams.PATH_TO_MODEL: str,
     OtherParams.PATIENCE: int,
     OtherParams.MODEL_SAVING_FOLDER: str,
@@ -154,6 +155,7 @@ DEFAULT_VALUES = {
     HeteroParams.INV_REINDEXING: {},
     HeteroParams.NUM_NODES_SAMPLE: 512,
     HeteroParams.NUM_ITERATIONS_SAMPLE: 4,
+    OtherParams.DEVICE_TYPE: "cpu",
     OtherParams.PATH_TO_MODEL: "",
     OtherParams.PATIENCE: 10,
     OtherParams.MODEL_SAVING_FOLDER: "torch_models",
@@ -173,6 +175,11 @@ def declare_data(ctx: mgp.ProcCtx) -> HeteroData:
     """
     global current_values
 
+    # change device type to cuda if possible
+    current_values[OtherParams.DEVICE_TYPE] = torch.device(
+        "cuda:0" if torch.cuda.is_available() else "cpu"
+    )
+
     # extraction of data from database to torch.Tensors
     (
         data,
@@ -184,6 +191,7 @@ def declare_data(ctx: mgp.ProcCtx) -> HeteroData:
         current_values[DataParams.SPLIT_RATIO],
         current_values[HeteroParams.FEATURES_NAME],
         current_values[HeteroParams.CLASS_NAME],
+        current_values[OtherParams.DEVICE_TYPE]
     )
 
     observed_attribute_data = data[current_values[HeteroParams.OBSERVED_ATTRIBUTE]]
@@ -243,6 +251,9 @@ def declare_model(data: mgp.Any):
     # (if graph is homogeneous, we also do this conversion since all calculations are same)
     metadata = (data.node_types, data.edge_types)
     model = to_hetero(model, metadata)
+
+    # move model to device
+    model.to(current_values[OtherParams.DEVICE_TYPE])
 
     # set default optimizer
     opt = torch.optim.Adam(
@@ -686,14 +697,13 @@ def predict(ctx: mgp.ProcCtx, vertex: mgp.Vertex) -> mgp.Record(predicted_class=
     if model == None:
         raise Exception("You should load model first.")
 
-
     model.eval()
     out = model(data.x_dict, data.edge_index_dict)
     pred = out[current_values[HeteroParams.OBSERVED_ATTRIBUTE]].argmax(dim=1)
 
     inv_reindexing = HeteroParams.INV_REINDEXING
     observed_attribute = current_values[HeteroParams.OBSERVED_ATTRIBUTE]
-    
+
     position = current_values[inv_reindexing][observed_attribute][vertex.id]
 
     predicted_class = int(pred.detach().numpy()[position])

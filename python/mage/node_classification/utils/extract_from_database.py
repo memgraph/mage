@@ -11,7 +11,7 @@ from collections import defaultdict
 
 
 def nodes_fetching(
-    ctx: mgp.ProcCtx, features_name: str, class_name: str, data: HeteroData
+    ctx: mgp.ProcCtx, features_name: str, class_name: str, data: HeteroData, device: str
 ) -> typing.Tuple[HeteroData, typing.Dict, typing.Dict, str]:
     """
     This procedure fetches the nodes from the database and returns them in HeteroData object.
@@ -38,7 +38,7 @@ def nodes_fetching(
 
         # add node type to list of node types (concatenate them if there are more than 1 label)
         if len(node.labels) > 0:
-            
+
             node_type = "_".join(node.labels[i].name for i in range(len(node.labels)))
             node_types.append(node_type)
         else:
@@ -46,9 +46,7 @@ def nodes_fetching(
 
         # add embedding length to dictionary of embedding lengths
         if node_type not in embedding_lengths:
-            embedding_lengths[node_type] = len(
-                node.properties.get(features_name)
-            )
+            embedding_lengths[node_type] = len(node.properties.get(features_name))
 
         # if observed attribute is not set, set it to node type
         if observed_attribute == None and class_name in node.properties:
@@ -75,18 +73,24 @@ def nodes_fetching(
             np.zeros((no_nodes_of_type, embedding_lengths[node_type])),
             dtype=torch.float32,
         )
+        data[node_type].x = data[node_type].x.to(device)
 
         # if node type is observed attribute, create other necessary tensors
         if node_type == observed_attribute:
             data[node_type].y = torch.tensor(
                 np.zeros((no_nodes_of_type,), dtype=int), dtype=torch.long
             )
+            data[node_type].y = data[node_type].y.to(device)
+
             data[node_type].train_mask = torch.tensor(
                 np.zeros((no_nodes_of_type,), dtype=int), dtype=torch.bool
             )
+            data[node_type].train_mask = data[node_type].train_mask.to(device)
+
             data[node_type].val_mask = torch.tensor(
                 np.zeros((no_nodes_of_type,), dtype=int), dtype=torch.bool
             )
+            data[node_type].val_mask = data[node_type].val_mask.to(device)
 
     node_types = []
     # now fill the tensors with the nodes from the database
@@ -95,10 +99,12 @@ def nodes_fetching(
             continue  # if features are not available, skip the node
 
         if len(node.labels) > 0:
-            node_type = node_type = "_".join(node.labels[i].name for i in range(len(node.labels)))
+            node_type = node_type = "_".join(
+                node.labels[i].name for i in range(len(node.labels))
+            )
         else:
             raise Exception(f"Node {node.id} has no labels.")
-            
+
         # add feature vector from database to tensor
         # it is checked at the start of the loop if features are available
         data[node_type].x[append_counter[node_type]] = np.add(
@@ -123,7 +129,11 @@ def nodes_fetching(
 
 
 def edges_fetching(
-    ctx: mgp.ProcCtx, features_name: str, inv_reindexing: defaultdict, data: HeteroData
+    ctx: mgp.ProcCtx,
+    features_name: str,
+    inv_reindexing: defaultdict,
+    data: HeteroData,
+    device: str,
 ) -> HeteroData:
     """This procedure fetches the edges from the database and returns them in HeteroData object.
 
@@ -171,6 +181,7 @@ def edges_fetching(
         data[edge_type].edge_index = torch.tensor(
             np.zeros((2, no_edge_type_edges)), dtype=torch.long
         )
+        data[edge_type].edge_index = data[edge_type].edge_index.to(device)
 
     for edge in edges:
         (from_vertex_type, edge_name, to_vertex_type) = (
@@ -194,7 +205,7 @@ def edges_fetching(
 
 
 def masks_generating(
-    data: HeteroData, train_ratio: float, observed_attribute: str
+    data: HeteroData, train_ratio: float, observed_attribute: str, device: str
 ) -> HeteroData:
     """This procedure generates the masks for the nodes and edges.
 
@@ -210,14 +221,22 @@ def masks_generating(
     masks = np.add(
         masks,
         np.array(
-            list(map(lambda i: 1 if i < train_ratio * no_observed else 0, range(no_observed)))
+            list(
+                map(
+                    lambda i: 1 if i < train_ratio * no_observed else 0,
+                    range(no_observed),
+                )
+            )
         ),
     )
 
     random.shuffle(masks)
 
     data[observed_attribute].train_mask = torch.tensor(masks, dtype=torch.bool)
+    data[observed_attribute].train_mask = data[observed_attribute].train_mask.to(device)
+
     data[observed_attribute].val_mask = torch.tensor(1 - masks, dtype=torch.bool)
+    data[observed_attribute].val_mask = data[observed_attribute].val_mask.to(device)
 
     data = T.ToUndirected()(data)
     data = T.AddSelfLoops()(data)
@@ -230,6 +249,7 @@ def extract_from_database(
     train_ratio: float,
     features_name: str,
     class_name: str,
+    device: str,
 ) -> typing.Tuple[HeteroData, str, typing.Dict, typing.Dict]:
 
     data = HeteroData()
@@ -238,14 +258,14 @@ def extract_from_database(
     # NODES
     #################
     data, reindexing, inv_reindexing, observed_attribute = nodes_fetching(
-        ctx, features_name, class_name, data
+        ctx, features_name, class_name, data, device
     )
 
     #################
     # EDGES
     #################
 
-    data = edges_fetching(ctx, features_name, inv_reindexing, data)
+    data = edges_fetching(ctx, features_name, inv_reindexing, data, device)
 
     #################
     # MASKS
@@ -253,6 +273,6 @@ def extract_from_database(
 
     print(data)
     print(observed_attribute)
-    data = masks_generating(data, train_ratio, observed_attribute)
+    data = masks_generating(data, train_ratio, observed_attribute, device)
 
     return (data, observed_attribute, reindexing, inv_reindexing)
