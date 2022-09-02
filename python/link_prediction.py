@@ -118,26 +118,36 @@ class LinkPredictionParameters:
 # global parameters
 ##############################
 
-link_prediction_parameters: LinkPredictionParameters = LinkPredictionParameters()  # parameters currently saved.
+link_prediction_parameters: LinkPredictionParameters = (
+    LinkPredictionParameters()
+)  # parameters currently saved.
 training_results: List[
     Dict[str, float]
-] = list()  # List of all output training records. String is the metric's name and float represents value.
+] = (
+    list()
+)  # List of all output training records. String is the metric's name and float represents value.
 validation_results: List[
     Dict[str, float]
 ] = (
     list()
 )  # List of all output validation results. String is the metric's name and float represents value in the Dictionary inside.
-graph: dgl.graph = None  # Reference to the graph. This includes training and validation.
+graph: dgl.graph = (
+    None  # Reference to the graph. This includes training and validation.
+)
 reindex: Dict[
     str, Dict[str, Dict[int, int]]
 ] = None  # Mapping of DGL indexes to original dataset indexes for all node types and reverse.
 predictor: torch.nn.Module = None  # Predictor for calculating edge scores
 model: torch.nn.Module = None
-labels_concat = ":"  # string to separate labels if dealing with multiple labels per node
+labels_concat = (
+    ":"  # string to separate labels if dealing with multiple labels per node
+)
 device = None  # reference to the device where the model will be executed, CPU or CUDA
 
 # Lambda function to concat list of labels
-merge_labels: Callable[[List[mgp.Label]], str] = lambda labels: labels_concat.join([label.name for label in labels])
+merge_labels: Callable[[List[mgp.Label]], str] = lambda labels: labels_concat.join(
+    [label.name for label in labels]
+)
 
 ##############################
 # All read procedures
@@ -145,7 +155,9 @@ merge_labels: Callable[[List[mgp.Label]], str] = lambda labels: labels_concat.jo
 
 
 @mgp.read_proc
-def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(status=mgp.Any, message=str):
+def set_model_parameters(
+    ctx: mgp.ProcCtx, parameters: mgp.Map
+) -> mgp.Record(status=mgp.Any, message=str):
     """Saves parameters to the global parameters link_prediction_parameters. Specific parsing is needed because we want enable user to call it with a subset of parameters, no need to send them all.
     We will use some kind of reflection to most easily update parameters.
 
@@ -200,7 +212,8 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
     # Device type handling
     device = (
         torch.device(Devices.CUDA_DEVICE)
-        if link_prediction_parameters.device_type == Devices.CUDA_DEVICE and torch.cuda.is_available()
+        if link_prediction_parameters.device_type == Devices.CUDA_DEVICE
+        and torch.cuda.is_available()
         else torch.device(Devices.CPU_DEVICE)
     )
 
@@ -211,7 +224,9 @@ def set_model_parameters(ctx: mgp.ProcCtx, parameters: mgp.Map) -> mgp.Record(st
         ]
 
     if type(link_prediction_parameters.attn_num_heads) == tuple:
-        link_prediction_parameters.attn_num_heads = [*(x for x in link_prediction_parameters.attn_num_heads)]
+        link_prediction_parameters.attn_num_heads = [
+            *(x for x in link_prediction_parameters.attn_num_heads)
+        ]
 
     return mgp.Record(status=True, message="OK")
 
@@ -236,13 +251,17 @@ def train(
 
     # Get some data
     # Dealing with heterogeneous graphs
-    graph, reindex = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
+    graph, reindex = _get_dgl_graph_data(
+        ctx
+    )  # dgl representation of the graph and dict new to old index
 
     # Insert in the hidden_features_size structure if needed
     if link_prediction_parameters.in_feats is None:
         # Get feature size
         ftr_size = max(
-            graph.nodes[node_type].data[link_prediction_parameters.node_features_property].shape[1]
+            graph.nodes[node_type]
+            .data[link_prediction_parameters.node_features_property]
+            .shape[1]
             for node_type in graph.ntypes
         )
         # Load feature size in the hidden_features_size
@@ -289,7 +308,9 @@ def train(
     )
 
     # Create activation function
-    m, threshold = create_activation_function(act_func=link_prediction_parameters.last_activation_function)
+    m, threshold = create_activation_function(
+        act_func=link_prediction_parameters.last_activation_function
+    )
 
     # Call training method
     training_results, validation_results = inner_train(
@@ -317,10 +338,15 @@ def train(
     )
 
     # Return results
-    return mgp.Record(training_results=training_results, validation_results=validation_results)
+    return mgp.Record(
+        training_results=training_results, validation_results=validation_results
+    )
+
 
 @mgp.read_proc
-def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -> mgp.Record(score=mgp.Number):
+def predict(
+    ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex
+) -> mgp.Record(score=mgp.Number):
     """Predict method. It is assumed that nodes are added to the original Memgraph graph. It supports both situations, when the edge doesn't exist and when
     the edge exists.
 
@@ -337,10 +363,14 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     # If the model isn't available. Model is available if this method is called right after training or loaded from context.
     # Same goes for predictor.
     if model is None or predictor is None:
-        raise Exception("No trained model available to the system. Train or load it first. ")
+        raise Exception(
+            "No trained model available to the system. Train or load it first. "
+        )
 
     # Load graph again so you find nodes that were possibly added between train and prediction
-    graph, reindex = _get_dgl_graph_data(ctx)  # dgl representation of the graph and dict new to old index
+    graph, reindex = _get_dgl_graph_data(
+        ctx
+    )  # dgl representation of the graph and dict new to old index
 
     # Create dgl graph representation
     src_old_id, src_type = src_vertex.id, merge_labels(src_vertex.labels)
@@ -352,13 +382,17 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
             src_type != link_prediction_parameters.target_relation[0]
             or dest_type != link_prediction_parameters.target_relation[2]
         ):
-            raise Exception("Prediction can be only computed on edges on which model was trained. ")
+            raise Exception(
+                "Prediction can be only computed on edges on which model was trained. "
+            )
     else:
         for etype in graph.canonical_etypes:
             if link_prediction_parameters.target_relation == etype[1] and (
                 etype[0] != src_type or etype[2] != dest_type
             ):
-                raise Exception("Prediction can be only computed on edges on which model was trained. ")
+                raise Exception(
+                    "Prediction can be only computed on edges on which model was trained. "
+                )
 
     # Get dgl ids
     src_id = reindex[Reindex.MEMGRAPH][src_type][src_old_id]
@@ -368,17 +402,25 @@ def predict(ctx: mgp.ProcCtx, src_vertex: mgp.Vertex, dest_vertex: mgp.Vertex) -
     edge_added, edge_id = False, -1
 
     # Check if there is an edge between two nodes
-    if not graph.has_edges_between(src_id, dest_id, etype=link_prediction_parameters.target_relation):
+    if not graph.has_edges_between(
+        src_id, dest_id, etype=link_prediction_parameters.target_relation
+    ):
         edge_added = True
-        graph.add_edges(src_id, dest_id, etype=link_prediction_parameters.target_relation)
+        graph.add_edges(
+            src_id, dest_id, etype=link_prediction_parameters.target_relation
+        )
 
-    edge_id = graph.edge_ids(src_id, dest_id, etype=link_prediction_parameters.target_relation)
+    edge_id = graph.edge_ids(
+        src_id, dest_id, etype=link_prediction_parameters.target_relation
+    )
 
     # Insert in the hidden_features_size structure if needed and it is needed only if the session was lost between training and predict method call.
     if link_prediction_parameters.in_feats is None:
         # Get feature size
         ftr_size = max(
-            graph.nodes[node_type].data[link_prediction_parameters.node_features_property].shape[1]
+            graph.nodes[node_type]
+            .data[link_prediction_parameters.node_features_property]
+            .shape[1]
             for node_type in graph.ntypes
         )
         # Load feature size in the hidden_features_size
@@ -432,7 +474,9 @@ def recommended_vertex(  # noqa: C901
 
     # If the model isn't available
     if model is None:
-        raise Exception("No trained model available to the system. Train or load it first. ")
+        raise Exception(
+            "No trained model available to the system. Train or load it first. "
+        )
 
     # You called predict after session was lost
     graph, reindex = _get_dgl_graph_data(ctx)
@@ -441,7 +485,9 @@ def recommended_vertex(  # noqa: C901
     if link_prediction_parameters.in_feats is None:
         # Get feature size
         ftr_size = max(
-            graph.nodes[node_type].data[link_prediction_parameters.node_features_property].shape[1]
+            graph.nodes[node_type]
+            .data[link_prediction_parameters.node_features_property]
+            .shape[1]
             for node_type in graph.ntypes
         )
         # Load feature size in the hidden_features_size
@@ -453,11 +499,18 @@ def recommended_vertex(  # noqa: C901
     # Check if src_type is of the same target relation
     if type(link_prediction_parameters.target_relation) == tuple:
         if src_type != link_prediction_parameters.target_relation[0]:
-            raise Exception("Prediction can be only computed on edges on which model was trained. ")
+            raise Exception(
+                "Prediction can be only computed on edges on which model was trained. "
+            )
     else:
         for etype in graph.canonical_etypes:
-            if link_prediction_parameters.target_relation == etype[1] and etype[0] != src_type:
-                raise Exception("Prediction can be only computed on edges on which model was trained. ")
+            if (
+                link_prediction_parameters.target_relation == etype[1]
+                and etype[0] != src_type
+            ):
+                raise Exception(
+                    "Prediction can be only computed on edges on which model was trained. "
+                )
 
     # Get dgl ids
     src_id = reindex[Reindex.MEMGRAPH][src_type][src_old_id]
@@ -476,25 +529,38 @@ def recommended_vertex(  # noqa: C901
         # Check if dest_type is of the same target relation
         if type(link_prediction_parameters.target_relation) == tuple:
             if dest_type != link_prediction_parameters.target_relation[2]:
-                raise Exception("Prediction can be only computed on edges on which model was trained. ")
+                raise Exception(
+                    "Prediction can be only computed on edges on which model was trained. "
+                )
         else:
             for etype in graph.canonical_etypes:
-                if link_prediction_parameters.target_relation == etype[1] and etype[2] != dest_type:
-                    raise Exception("Prediction can be only computed on edges on which model was trained. ")
+                if (
+                    link_prediction_parameters.target_relation == etype[1]
+                    and etype[2] != dest_type
+                ):
+                    raise Exception(
+                        "Prediction can be only computed on edges on which model was trained. "
+                    )
 
         # Init edge properties
         edge_added, edge_id = False, -1
 
         # Check if there is an edge between two nodes
-        if not graph.has_edges_between(src_id, dest_id, etype=link_prediction_parameters.target_relation):
+        if not graph.has_edges_between(
+            src_id, dest_id, etype=link_prediction_parameters.target_relation
+        ):
             edge_added = True
             # print("Nodes {} and {} are not connected. ".format(src_old_id, dest_old_id))
-            graph.add_edges(src_id, dest_id, etype=link_prediction_parameters.target_relation)
+            graph.add_edges(
+                src_id, dest_id, etype=link_prediction_parameters.target_relation
+            )
             existing_edges[dest_old_id] = False
         else:
             existing_edges[dest_old_id] = True
 
-        edge_id = graph.edge_ids(src_id, dest_id, etype=link_prediction_parameters.target_relation)
+        edge_id = graph.edge_ids(
+            src_id, dest_id, etype=link_prediction_parameters.target_relation
+        )
 
         # Call utils module
         score = inner_predict(
@@ -510,7 +576,9 @@ def recommended_vertex(  # noqa: C901
 
         # Remove edge if necessary
         if edge_added:
-            graph.remove_edges(edge_id, etype=link_prediction_parameters.target_relation)
+            graph.remove_edges(
+                edge_id, etype=link_prediction_parameters.target_relation
+            )
 
         heappush(
             results, (-score, i, dest_vertex)
@@ -558,7 +626,9 @@ def recommended_vertex(  # noqa: C901
     # Create final return results
     return_results = []
     for i in range(len(top_scores)):
-        return_results.append(mgp.Record(score=top_scores[i], recommendation=top_recommendations[i]))
+        return_results.append(
+            mgp.Record(score=top_scores[i], recommendation=top_recommendations[i])
+        )
 
     print("*** Recommendation metrics ***")
     print(f"Precision@{new_k}: {round(precision_at_k, 3)}")
@@ -588,11 +658,15 @@ def get_training_results(
     if training_results is None or validation_results is None:
         raise Exception("Training results are outdated or train method wasn't called. ")
 
-    return mgp.Record(training_results=training_results, validation_results=validation_results)
+    return mgp.Record(
+        training_results=training_results, validation_results=validation_results
+    )
 
 
 @mgp.read_proc
-def load_model(ctx: mgp.ProcCtx, path: str = link_prediction_parameters.context_save_dir) -> mgp.Record(status=mgp.Any):
+def load_model(
+    ctx: mgp.ProcCtx, path: str = link_prediction_parameters.context_save_dir
+) -> mgp.Record(status=mgp.Any):
     """Loads torch model from given path. If the path doesn't exist, underlying exception is thrown.
     If the path argument is not given, it loads from the default path. If the user has changed path and the context was deleted
     then he/she needs to send that parameter here.
@@ -656,14 +730,18 @@ def _process_help_function(
         index_dgl_to_features (Dict[str, Dict[int, List[int]]]): DGL indexes to features for each node type.
     """
     if type_ not in reindex[Reindex.DGL].keys():  # Node type not seen before
-        reindex[Reindex.DGL][type_] = dict()  # Mapping of old to new indexes for given type_
+        reindex[Reindex.DGL][
+            type_
+        ] = dict()  # Mapping of old to new indexes for given type_
         reindex[Reindex.MEMGRAPH][type_] = dict()
 
     # Check if old_index has been seen for this label
     if old_index not in reindex[Reindex.MEMGRAPH][type_].keys():
         ind = mem_indexes[type_]  # get current counter
         reindex[Reindex.DGL][type_][ind] = old_index  # save new_to_old relationship
-        reindex[Reindex.MEMGRAPH][type_][old_index] = ind  # save old_to_new relationship
+        reindex[Reindex.MEMGRAPH][type_][
+            old_index
+        ] = ind  # save old_to_new relationship
         # Check if list is given as a string
         if type(features) == str:
             index_dgl_to_features[type_][ind] = eval(
@@ -691,7 +769,9 @@ def _get_dgl_graph_data(
     global link_prediction_parameters, device
 
     reindex = defaultdict(dict)  # map of label to new node index to old node index
-    mem_indexes = defaultdict(int)  # map of label to indexes. All indexes are by default indexed 0.
+    mem_indexes = defaultdict(
+        int
+    )  # map of label to indexes. All indexes are by default indexed 0.
 
     type_triplets = (
         []
@@ -747,7 +827,9 @@ def _get_dgl_graph_data(
             dest_id, dest_type, dest_features = (
                 dest_node.id,
                 merge_labels(dest_node.labels),
-                dest_node.properties.get(link_prediction_parameters.node_features_property),
+                dest_node.properties.get(
+                    link_prediction_parameters.node_features_property
+                ),
             )
 
             # Define type triplet
@@ -784,7 +866,9 @@ def _get_dgl_graph_data(
 
             # Define edge
             src_nodes[type_triplet].append(reindex[Reindex.MEMGRAPH][src_type][src_id])
-            dest_nodes[type_triplet].append(reindex[Reindex.MEMGRAPH][dest_type][dest_id])
+            dest_nodes[type_triplet].append(
+                reindex[Reindex.MEMGRAPH][dest_type][dest_id]
+            )
 
         # Append old id
         if src_isolated_node:
@@ -799,9 +883,9 @@ def _get_dgl_graph_data(
 
     # Create a heterograph
     for type_triplet in type_triplets:
-        data_dict[type_triplet] = torch.tensor(src_nodes[type_triplet], device=device), torch.tensor(
-            dest_nodes[type_triplet], device=device
-        )
+        data_dict[type_triplet] = torch.tensor(
+            src_nodes[type_triplet], device=device
+        ), torch.tensor(dest_nodes[type_triplet], device=device)
 
     g = dgl.heterograph(data_dict, device=device)
 
@@ -812,7 +896,9 @@ def _get_dgl_graph_data(
     # Process isolated nodes by appending them to the end
     for isolated_node_id in isolated_nodes:
         isolated_node = ctx.graph.get_vertex_by_id(isolated_node_id)
-        isolated_node_type, isolated_node_features = merge_labels(isolated_node.labels), isolated_node.properties.get(
+        isolated_node_type, isolated_node_features = merge_labels(
+            isolated_node.labels
+        ), isolated_node.properties.get(
             link_prediction_parameters.node_features_property
         )
         _process_help_function(
@@ -846,7 +932,9 @@ def _get_dgl_graph_data(
             node_features.append(index_dgl_to_features[node_type][node_id])
 
         node_features = torch.tensor(node_features, dtype=torch.float32, device=device)
-        g.nodes[node_type].data[link_prediction_parameters.node_features_property] = node_features
+        g.nodes[node_type].data[
+            link_prediction_parameters.node_features_property
+        ] = node_features
 
     # Test conversion. Note: Do a conversion before you upscale features.
     _conversion_to_dgl_test(
@@ -940,7 +1028,9 @@ def validate_user_parameters(parameters: mgp.Map) -> None:  # noqa: C901
 
     # Define lambda type checkers
     type_checker = (
-        lambda arg, mess, real_type: None if type(arg) == real_type else raise_(Exception(mess))
+        lambda arg, mess, real_type: None
+        if type(arg) == real_type
+        else raise_(Exception(mess))
     )  # noqa: E731
 
     # Hidden features size
@@ -948,7 +1038,9 @@ def validate_user_parameters(parameters: mgp.Map) -> None:  # noqa: C901
         hidden_features_size = parameters[Parameters.HIDDEN_FEATURES_SIZE]
 
         # Because list cannot be sent through mgp.
-        type_checker(hidden_features_size, "hidden_features_size not an iterable object. ", tuple)
+        type_checker(
+            hidden_features_size, "hidden_features_size not an iterable object. ", tuple
+        )
 
         for hid_size in hidden_features_size:
             type_checker(hid_size, "layer_size must be an int", int)
@@ -963,7 +1055,9 @@ def validate_user_parameters(parameters: mgp.Map) -> None:  # noqa: C901
         type_checker(layer_type, "layer_type must be string. ", str)
 
         if layer_type != Models.GRAPH_ATTN and layer_type != Models.GRAPH_SAGE:
-            raise Exception("Unknown layer type, this module supports only graph_attn and graph_sage. ")
+            raise Exception(
+                "Unknown layer type, this module supports only graph_attn and graph_sage. "
+            )
 
         if (
             layer_type == Models.GRAPH_ATTN
@@ -992,7 +1086,9 @@ def validate_user_parameters(parameters: mgp.Map) -> None:  # noqa: C901
         type_checker(optimizer, "optimizer must be a string. ", str)
 
         if optimizer != Optimizers.ADAM_OPT and optimizer != Optimizers.SGD_OPT:
-            raise Exception("Unknown optimizer, this module supports only ADAM and SGD. ")
+            raise Exception(
+                "Unknown optimizer, this module supports only ADAM and SGD. "
+            )
 
     # Learning rate check
     if Parameters.LEARNING_RATE in parameters.keys():
@@ -1019,7 +1115,9 @@ def validate_user_parameters(parameters: mgp.Map) -> None:  # noqa: C901
         node_features_property = parameters[Parameters.NODE_FEATURES_PROPERTY]
 
         # Check typing
-        type_checker(node_features_property, "node_features_property must be a string. ", str)
+        type_checker(
+            node_features_property, "node_features_property must be a string. ", str
+        )
 
         if node_features_property == "":
             raise Exception("You must specify name of nodes' features property. ")
@@ -1067,7 +1165,9 @@ def validate_user_parameters(parameters: mgp.Map) -> None:  # noqa: C901
             and aggregator != Aggregators.POOL_AGG
             and aggregator != Aggregators.GCN_AGG
         ):
-            raise Exception("Aggregator must be one of the following: mean, pool, lstm or gcn. ")
+            raise Exception(
+                "Aggregator must be one of the following: mean, pool, lstm or gcn. "
+            )
 
     # metrics check
     if Parameters.METRICS in parameters.keys():
@@ -1103,7 +1203,10 @@ def validate_user_parameters(parameters: mgp.Map) -> None:  # noqa: C901
         # Check typing
         type_checker(predictor_type, "predictor_type must be a string. ", str)
 
-        if predictor_type != Predictors.DOT_PREDICTOR and predictor_type != Predictors.MLP_PREDICTOR:
+        if (
+            predictor_type != Predictors.DOT_PREDICTOR
+            and predictor_type != Predictors.MLP_PREDICTOR
+        ):
             raise Exception("Predictor " + predictor_type + " is not supported. ")
 
     # Attention heads
@@ -1111,7 +1214,9 @@ def validate_user_parameters(parameters: mgp.Map) -> None:  # noqa: C901
         attn_num_heads = parameters[Parameters.ATTN_NUM_HEADS]
 
         # Check typing
-        type_checker(attn_num_heads, "attn_num_heads must be an iterable object. ", tuple)
+        type_checker(
+            attn_num_heads, "attn_num_heads must be an iterable object. ", tuple
+        )
         if len(attn_num_heads) != len(hidden_features_size):
             raise Exception(
                 "Specified network with {} layers but given attention heads data for {} layers. ".format(
@@ -1122,14 +1227,18 @@ def validate_user_parameters(parameters: mgp.Map) -> None:  # noqa: C901
         #      raise Exception("Last GAT layer must contain only one attention head. ")
         for num_heads in attn_num_heads:
             if num_heads <= 0:
-                raise Exception("GAT allows only positive, larger than 0 values for number of attention heads. ")
+                raise Exception(
+                    "GAT allows only positive, larger than 0 values for number of attention heads. "
+                )
 
     # Training accuracy patience
     if Parameters.TR_ACC_PATIENCE in parameters.keys():
         tr_acc_patience = parameters[Parameters.TR_ACC_PATIENCE]
 
         # Check typing
-        type_checker(tr_acc_patience, "tr_acc_patience must be an iterable object. ", int)
+        type_checker(
+            tr_acc_patience, "tr_acc_patience must be an iterable object. ", int
+        )
 
         if tr_acc_patience <= 0:
             raise Exception("Training acc patience flag must be larger than 0.")
@@ -1192,7 +1301,9 @@ def validate_user_parameters(parameters: mgp.Map) -> None:  # noqa: C901
         last_activation_function = parameters[Parameters.LAST_ACTIVATION_FUNCTION]
 
         # check typing
-        type_checker(last_activation_function, "last_activation_function should be a string", str)
+        type_checker(
+            last_activation_function, "last_activation_function should be a string", str
+        )
 
         if last_activation_function != Activations.SIGMOID:
             raise Exception(f"Only {Activations.SIGMOID} is currently supported. ")

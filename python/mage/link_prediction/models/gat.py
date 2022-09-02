@@ -34,7 +34,9 @@ class GAT(torch.nn.Module):
         self.layers = torch.nn.ModuleList()
         self.num_layers = len(hidden_features_size)
         # Define activations
-        activations = [torch.nn.functional.elu for _ in range(self.num_layers - 1)]  # All activations except last layer
+        activations = [
+            torch.nn.functional.elu for _ in range(self.num_layers - 1)
+        ]  # All activations except last layer
         activations.append(None)
         # Iterate through all layers
         for i in range(self.num_layers):
@@ -51,11 +53,15 @@ class GAT(torch.nn.Module):
             ).to(device)
 
             self.layers.append(
-                HeteroGraphConv({edge_type: gat_layer for edge_type in edge_types}, aggregate="sum").to(device)
+                HeteroGraphConv(
+                    {edge_type: gat_layer for edge_type in edge_types}, aggregate="sum"
+                ).to(device)
             )
             in_feats = hidden_features_size[i]
 
-    def forward(self, blocks: List[dgl.graph], h: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def forward(
+        self, blocks: List[dgl.graph], h: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         """Performs forward pass on batches.
 
         Args:
@@ -71,7 +77,9 @@ class GAT(torch.nn.Module):
 
         return h
 
-    def online_forward(self, graph: dgl.graph, h: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def online_forward(
+        self, graph: dgl.graph, h: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         """Performs forward pass on batches.
 
         Args:

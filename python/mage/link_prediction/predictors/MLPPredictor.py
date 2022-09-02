@@ -46,7 +46,9 @@ class MLPPredictor(torch.nn.Module):
         """
         with g.local_scope():
             for node_type in node_embeddings.keys():  # Iterate over all node_types.
-                g.nodes[node_type].data[Predictors.NODE_EMBEDDINGS] = node_embeddings[node_type]
+                g.nodes[node_type].data[Predictors.NODE_EMBEDDINGS] = node_embeddings[
+                    node_type
+                ]
 
             g.apply_edges(self.apply_edges, etype=target_relation)
             scores = g.edata[Predictors.EDGE_SCORE]
@@ -62,7 +64,9 @@ class MLPPredictor(torch.nn.Module):
                     if key[1] == target_relation:
                         return val.view(-1)
 
-    def forward_pred(self, src_embedding: torch.Tensor, dest_embedding: torch.Tensor) -> float:
+    def forward_pred(
+        self, src_embedding: torch.Tensor, dest_embedding: torch.Tensor
+    ) -> float:
         """Efficient implementation for predict method of DotPredictor.
 
         Args:
