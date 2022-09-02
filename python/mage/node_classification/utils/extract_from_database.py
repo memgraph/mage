@@ -73,26 +73,21 @@ def nodes_fetching(
             np.zeros((no_nodes_of_type, embedding_lengths[node_type])),
             dtype=torch.float32,
         )
-        data[node_type].x = data[node_type].x.to(device)
 
         # if node type is observed attribute, create other necessary tensors
         if node_type == observed_attribute:
             data[node_type].y = torch.tensor(
                 np.zeros((no_nodes_of_type,), dtype=int), dtype=torch.long
             )
-            data[node_type].y = data[node_type].y.to(device)
 
             data[node_type].train_mask = torch.tensor(
                 np.zeros((no_nodes_of_type,), dtype=int), dtype=torch.bool
             )
-            data[node_type].train_mask = data[node_type].train_mask.to(device)
 
             data[node_type].val_mask = torch.tensor(
                 np.zeros((no_nodes_of_type,), dtype=int), dtype=torch.bool
             )
-            data[node_type].val_mask = data[node_type].val_mask.to(device)
 
-    node_types = []
     # now fill the tensors with the nodes from the database
     for node in nodes:
         if features_name not in node.properties:
@@ -125,6 +120,8 @@ def nodes_fetching(
         # increase append_counter by 1
         append_counter[node_type] += 1
 
+    data = data.to(device)
+    
     return data, reindexing, inv_reindexing, observed_attribute
 
 
