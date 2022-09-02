@@ -1,3 +1,5 @@
+setup: |-
+    CALL link_prediction.set_model_parameters({split_ratio: 0.8, hidden_features_size: [3, 2], target_relation: "CITES", add_reverse_edges: False}) YIELD *;
 queries:
     - |-  
         CREATE (v1:PAPER {id: 10, features: [1, 2, 3]});

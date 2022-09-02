@@ -104,9 +104,7 @@ class LinkPredictionParameters:
     predictor_type: str = Predictors.MLP_PREDICTOR
     attn_num_heads: List[int] = field(default_factory=lambda: [4, 4])
     tr_acc_patience: int = 5
-    context_save_dir: str = (
-        "/home/andi/Memgraph/code/mage/python/mage/link_prediction/context/"  # TODO: When the development finishes
-    )
+    context_save_dir: str = "/tmp/"
     target_relation: str = None
     num_neg_per_pos_edge: int = 1
     batch_size: int = 512
