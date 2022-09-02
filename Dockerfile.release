@@ -11,7 +11,7 @@ ENV PY_VERSION ${PY_VERSION_DEFAULT}
 #essentials for production/dev
 RUN apt-get update && apt-get install -y \
     libcurl4        `memgraph` \
-    l    && python3 -m pip install dgl -f https://data.dgl.ai/wheels/repo.html \ibpython${PY_VERSION}   `memgraph` \
+    libpython${PY_VERSION}   `memgraph` \
     libssl1.1       `memgraph` \
     openssl         `memgraph` \
     build-essential `mage-memgraph` \
@@ -47,7 +47,7 @@ COPY . /mage
 #MAGE
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
     && export PATH="/root/.cargo/bin:${PATH}" \
-    && python3 -m pip install -r /mage/python/requirements.txt \
+    && python3 -m  pip install -r /mage/python/requirements.txt \
     && python3 -m pip install dgl -f https://data.dgl.ai/wheels/repo.html \
     && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/
 
