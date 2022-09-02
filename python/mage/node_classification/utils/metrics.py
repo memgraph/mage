@@ -43,17 +43,20 @@ def metrics(
     ret = {}
 
     multiclass = False
-    if len(set(data.y.detach().numpy())) > 1:
+    if len(set(data.y.detach().numpy())) > 2:
        multiclass = True
     num_classes = len(set(data.y.detach().numpy()))
     
     for metrics in METRICS.keys():
+        print(metrics)
         if metrics in options:
             func = METRICS[metrics](
                 num_classes=num_classes,
                 multiclass=multiclass,
-                average="micro",
+                average="weighted",
             )
+            print(pred[mask], data.y[mask])
             ret[metrics] = float(func(pred[mask], data.y[mask]).detach().numpy())
+            print(ret[metrics])
 
     return ret
