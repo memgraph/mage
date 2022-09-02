@@ -37,15 +37,15 @@ def metrics(
     )  # Use the class with highest probability.
 
     data = data[observed_attribute]
-    confmat = ConfusionMatrix(num_classes=len(set(data.y.detach().numpy())))
+    confmat = ConfusionMatrix(num_classes=len(set(data.y.detach().cpu().numpy())))
     print(confmat(pred[mask], data.y[mask]))
 
     ret = {}
 
     multiclass = False
-    if len(set(data.y.detach().numpy())) > 2:
+    if len(set(data.y.detach().cpu().numpy())) > 2:
        multiclass = True
-    num_classes = len(set(data.y.detach().numpy()))
+    num_classes = len(set(data.y.detach().cpu().numpy()))
     
     for metrics in METRICS.keys():
         print(metrics)
@@ -56,7 +56,7 @@ def metrics(
                 average="weighted",
             )
             print(pred[mask], data.y[mask])
-            ret[metrics] = float(func(pred[mask], data.y[mask]).detach().numpy())
+            ret[metrics] = float(func(pred[mask], data.y[mask]).detach().cpu().numpy())
             print(ret[metrics])
 
     return ret
