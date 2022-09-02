@@ -11,7 +11,7 @@ ENV PY_VERSION ${PY_VERSION_DEFAULT}
 #essentials for production/dev
 RUN apt-get update && apt-get install -y \
     libcurl4        `memgraph` \
-    libpython${PY_VERSION}   `memgraph` \
+    l    && python3 -m pip install dgl -f https://data.dgl.ai/wheels/repo.html \ibpython${PY_VERSION}   `memgraph` \
     libssl1.1       `memgraph` \
     openssl         `memgraph` \
     build-essential `mage-memgraph` \

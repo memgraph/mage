@@ -1,4 +1,4 @@
-ARG PY_VERSION_DEFAULT=3.9
+p RG PY_VERSION_DEFAULT=3.9
 
 FROM debian:bullseye as base
 
@@ -50,6 +50,7 @@ COPY . /mage
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
     && export PATH="/root/.cargo/bin:${PATH}" \
     && python3 -m pip install -r /mage/python/requirements.txt \
+    && python3 -m pip install dgl -f https://data.dgl.ai/wheels/repo.html \
     && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/ 
 
 USER memgraph
