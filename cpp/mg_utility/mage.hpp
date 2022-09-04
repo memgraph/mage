@@ -2139,12 +2139,12 @@ class ProcedureWrapper {
       if (!optional && !is_list) {
         mgp::proc_add_arg(proc, parameter_name, util::ToMGPType(parameter.type));
       } else if (!optional && is_list) {
-        mgp::proc_add_arg(proc, parameter_name, util::ToMGPType(Type::List, parameter.type));
+        mgp::proc_add_arg(proc, parameter_name, util::ToMGPType(parameter.type, parameter.list_item_type));
       } else if (optional && !is_list) {
         mgp::proc_add_opt_arg(proc, parameter_name, util::ToMGPType(parameter.type),
                               util::MakeMGPType(parameter.type, parameter.default_value));
       } else if (optional && is_list) {
-        mgp::proc_add_opt_arg(proc, parameter_name, util::ToMGPType(Type::List, parameter.type),
+        mgp::proc_add_opt_arg(proc, parameter_name, util::ToMGPType(parameter.type, parameter.list_item_type),
                               util::MakeMGPType(parameter.type, parameter.default_value));
       }
     }
