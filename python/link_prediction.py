@@ -1126,7 +1126,7 @@ def validate_user_parameters(parameters: mgp.Map) -> None:  # noqa: C901
         # Check typing
         type_checker(device_type, "device_type must be a string. ", str)
 
-        if device_type != Devices.CPU_DEVICE and torch.device != Devices.CUDA_DEVICE:
+        if device_type != Devices.CPU_DEVICE and device_type != Devices.CUDA_DEVICE:
             raise Exception("Only cpu and cuda are supported as devices. ")
 
     # console_log_freq check
