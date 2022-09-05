@@ -120,11 +120,17 @@ class Graph {
   /// @brief Returns whether the graph contains the given relationship.
   bool Contains(const Relationship &relationship) const;
 
-  // bool IsMutable() const { return mgp::graph_is_mutable(graph_); }
+  /// @brief Returns whether the graph is mutable.
+  bool IsMutable() const { return mgp::graph_is_mutable(graph_); }
+  /// @brief Creates a node and adds it to the graph.
   void CreateNode() { mgp::graph_create_vertex(graph_, memory); }
+  /// @brief Deletes a node from the graph.
   void DeleteNode(const Node &node);
+  /// @brief Deletes a node and all its incident edges from the graph.
   void DetachDeleteNode(const Node &node);
+  /// @brief Creates a relationship of type `type` between nodes `from` and `to` and adds it to the graph.
   void CreateRelationship(const Node &from, const Node &to, const std::string_view type);
+  /// @brief Deletes a relationship from the graph.
   void DeleteRelationship(const Relationship &relationship);
 
  private:
@@ -323,6 +329,7 @@ class List {
  private:
   friend class Value;
   friend class Record;
+  friend class Result;
   friend struct Parameter;
 
  public:
@@ -417,6 +424,7 @@ class Map {
  private:
   friend class Value;
   friend class Record;
+  friend class Result;
   friend struct Parameter;
 
  public:
@@ -506,6 +514,7 @@ class Node {
   friend class Path;
   friend class Value;
   friend class Record;
+  friend class Result;
   friend struct Parameter;
 
   /// @brief Creates a Node from the copy of the given @ref mgp_vertex.
@@ -557,6 +566,7 @@ class Relationship {
   friend class Path;
   friend class Value;
   friend class Record;
+  friend class Result;
   friend struct Parameter;
 
  public:
@@ -605,6 +615,7 @@ class Path {
  private:
   friend class Value;
   friend class Record;
+  friend class Result;
   friend struct Parameter;
 
  public:
@@ -656,6 +667,7 @@ class Date {
   friend class Duration;
   friend class Value;
   friend class Record;
+  friend class Result;
   friend struct Parameter;
 
  public:
@@ -709,6 +721,7 @@ class LocalTime {
   friend class Duration;
   friend class Value;
   friend class Record;
+  friend class Result;
   friend struct Parameter;
 
  public:
@@ -768,6 +781,7 @@ class LocalDateTime {
   friend class Duration;
   friend class Value;
   friend class Record;
+  friend class Result;
   friend struct Parameter;
 
  public:
@@ -835,6 +849,7 @@ class Duration {
   friend class LocalDateTime;
   friend class Value;
   friend class Record;
+  friend class Result;
   friend struct Parameter;
 
  public:
@@ -910,6 +925,7 @@ class Value {
   friend class LocalDateTime;
   friend class Duration;
   friend class Record;
+  friend class Result;
 
   explicit Value(mgp_value *ptr) : ptr_(mgp::value_copy(ptr, memory)) {}
 
@@ -1118,8 +1134,9 @@ struct MapItem {
 
 /* #endregion */
 
-/* #region Record */
+/* #region Results */
 
+/// @brief Procedure result class
 class Record {
  public:
   explicit Record(mgp_result_record *record) : record_(record) {}
@@ -1154,8 +1171,6 @@ class Record {
   void Insert(const char *field_name, const Duration &duration);
 
  private:
-  void Insert(const char *field_name, Value &value);
-
   mgp_result_record *record_;
 };
 
@@ -1172,6 +1187,48 @@ class RecordFactory {
  private:
   mgp_result *result_;
 };
+
+/// @brief Function result class
+class Result {
+ public:
+  explicit Result(mgp_func_result *result) : result_(result) {}
+  Result(Result const &) = delete;
+
+  /// @brief Sets a boolean value to be returned.
+  inline void SetValue(bool value);
+  /// @brief Sets an integer value to be returned.
+  inline void SetValue(std::int64_t value);
+  /// @brief Sets a floating-point value to be returned.
+  inline void SetValue(double value);
+  /// @brief Sets a string value to be returned.
+  inline void SetValue(std::string_view value);
+  /// @brief Sets a string value to be returned.
+  inline void SetValue(const char *value);
+  /// @brief Sets a @ref List value to be returned.
+  inline void SetValue(const List &list);
+  /// @brief Sets a @ref Map value to be returned.
+  inline void SetValue(const Map &map);
+  /// @brief Sets a @ref Node value to be returned.
+  inline void SetValue(const Node &node);
+  /// @brief Sets a @ref Relationship value to be returned.
+  inline void SetValue(const Relationship &relationship);
+  /// @brief Sets a @ref Path value to be returned.
+  inline void SetValue(const Path &path);
+  /// @brief Sets a @ref Date value to be returned.
+  inline void SetValue(const Date &date);
+  /// @brief Sets a @ref LocalTime value to be returned.
+  inline void SetValue(const LocalTime &local_time);
+  /// @brief Sets a @ref LocalDateTime value to be returned.
+  inline void SetValue(const LocalDateTime &local_date_time);
+  /// @brief Sets a @ref Duration value to be returned.
+  inline void SetValue(const Duration &duration);
+
+  void operator=(Result const &) = delete;
+
+ private:
+  mgp_func_result *result_;
+};
+
 /* #endregion */
 
 /* #region Module */
@@ -1246,14 +1303,26 @@ enum class ProdecureType : uint8_t {
   Write,
 };
 
-class ProcedureWrapper {
- public:
-  ProcedureWrapper() = default;
+/// @brief Adds a procedure to the query module.
+/// @param callback - procedure callback
+/// @param name - procedure name
+/// @param proc_type - procedure type (read/write)
+/// @param parameters - procedure parameters
+/// @param returns - procedure return values
+/// @param module - the query module that the procedure is added to
+/// @param memory - access to memory
+void AddProcedure(mgp_proc_cb callback, std::string_view name, ProdecureType proc_type,
+                  std::vector<mage::Parameter> parameters, std::vector<Return> returns, mgp_module *module,
+                  mgp_memory *memory);
 
-  void AddProcedure(void (*callback)(struct mgp_list *, struct mgp_graph *, struct mgp_result *, struct mgp_memory *),
-                    std::string_view name, ProdecureType proc_type, std::vector<mage::Parameter> parameters,
-                    std::vector<Return> returns, mgp_module *module, mgp_memory *memory);
-};
+/// @brief Adds a function to the query module.
+/// @param callback - function callback
+/// @param name - function name
+/// @param parameters - function parameters
+/// @param module - the query module that the function is added to
+/// @param memory - access to memory
+void AddFunction(mgp_func_cb callback, std::string_view name, std::vector<mage::Parameter> parameters,
+                 std::vector<Return> returns, mgp_module *module, mgp_memory *memory);
 
 /* #endregion */
 
@@ -2431,11 +2500,6 @@ inline bool Value::operator==(const Value &other) const { return util::ValuesEqu
 /* #region Record */
 // Record:
 
-inline void Record::Insert(const char *field_name, bool value) {
-  auto mgp_val = mgp::value_make_bool(value, memory);
-  { mgp::result_record_insert(record_, field_name, mgp_val); }
-  mgp::value_destroy(mgp_val);
-}
 inline void Record::Insert(const char *field_name, std::int64_t value) {
   auto mgp_val = mgp::value_make_int(value, memory);
   { mgp::result_record_insert(record_, field_name, mgp_val); }
@@ -2510,15 +2574,85 @@ inline const Record RecordFactory::NewRecord() const {
   }
   return Record(record);
 }
+
+inline void Result::SetValue(bool value) {
+  auto mgp_val = mgp::value_make_bool(value, memory);
+  { mgp::func_result_set_value(result_, mgp_val, memory); }
+  mgp::value_destroy(mgp_val);
+}
+inline void Result::SetValue(std::int64_t value) {
+  auto mgp_val = mgp::value_make_int(value, memory);
+  { mgp::func_result_set_value(result_, mgp_val, memory); }
+  mgp::value_destroy(mgp_val);
+}
+inline void Result::SetValue(double value) {
+  auto mgp_val = mgp::value_make_double(value, memory);
+  { mgp::func_result_set_value(result_, mgp_val, memory); }
+  mgp::value_destroy(mgp_val);
+}
+inline void Result::SetValue(std::string_view value) {
+  auto mgp_val = mgp::value_make_string(value.data(), memory);
+  { mgp::func_result_set_value(result_, mgp_val, memory); }
+  mgp::value_destroy(mgp_val);
+}
+inline void Result::SetValue(const char *value) {
+  auto mgp_val = mgp::value_make_string(value, memory);
+  { mgp::func_result_set_value(result_, mgp_val, memory); }
+  mgp::value_destroy(mgp_val);
+}
+inline void Result::SetValue(const List &list) {
+  auto mgp_val = mgp::value_make_list(mgp::list_copy(list.ptr_, memory));
+  { mgp::func_result_set_value(result_, mgp_val, memory); }
+  mgp::value_destroy(mgp_val);
+}
+inline void Result::SetValue(const Map &map) {
+  auto mgp_val = mgp::value_make_map(mgp::map_copy(map.ptr_, memory));
+  { mgp::func_result_set_value(result_, mgp_val, memory); }
+  mgp::value_destroy(mgp_val);
+}
+inline void Result::SetValue(const Node &node) {
+  auto mgp_val = mgp::value_make_vertex(mgp::vertex_copy(node.ptr_, memory));
+  { mgp::func_result_set_value(result_, mgp_val, memory); }
+  mgp::value_destroy(mgp_val);
+}
+inline void Result::SetValue(const Relationship &relationship) {
+  auto mgp_val = mgp::value_make_edge(mgp::edge_copy(relationship.ptr_, memory));
+  { mgp::func_result_set_value(result_, mgp_val, memory); }
+  mgp::value_destroy(mgp_val);
+}
+inline void Result::SetValue(const Path &path) {
+  auto mgp_val = mgp::value_make_path(mgp::path_copy(path.ptr_, memory));
+  { mgp::func_result_set_value(result_, mgp_val, memory); }
+  mgp::value_destroy(mgp_val);
+}
+inline void Result::SetValue(const Date &date) {
+  auto mgp_val = mgp::value_make_date(mgp::date_copy(date.ptr_, memory));
+  { mgp::func_result_set_value(result_, mgp_val, memory); }
+  mgp::value_destroy(mgp_val);
+}
+inline void Result::SetValue(const LocalTime &local_time) {
+  auto mgp_val = mgp::value_make_local_time(mgp::local_time_copy(local_time.ptr_, memory));
+  { mgp::func_result_set_value(result_, mgp_val, memory); }
+  mgp::value_destroy(mgp_val);
+}
+inline void Result::SetValue(const LocalDateTime &local_date_time) {
+  auto mgp_val = mgp::value_make_local_date_time(mgp::local_date_time_copy(local_date_time.ptr_, memory));
+  { mgp::func_result_set_value(result_, mgp_val, memory); }
+  mgp::value_destroy(mgp_val);
+}
+inline void Result::SetValue(const Duration &duration) {
+  auto mgp_val = mgp::value_make_duration(mgp::duration_copy(duration.ptr_, memory));
+  { mgp::func_result_set_value(result_, mgp_val, memory); }
+  mgp::value_destroy(mgp_val);
+}
+
 /* #endregion */
 
 /* #region module */
 
-void ProcedureWrapper::AddProcedure(void (*callback)(struct mgp_list *, struct mgp_graph *, struct mgp_result *,
-                                                     struct mgp_memory *),
-                                    std::string_view name, ProdecureType proc_type,
-                                    std::vector<mage::Parameter> parameters, std::vector<Return> returns,
-                                    mgp_module *module, mgp_memory *memory) {
+void AddProcedure(mgp_proc_cb callback, std::string_view name, ProdecureType proc_type,
+                  std::vector<mage::Parameter> parameters, std::vector<Return> returns, mgp_module *module,
+                  mgp_memory *memory) {
   auto proc = (proc_type == ProdecureType::Read) ? mgp::module_add_read_procedure(module, name.data(), callback)
                                                  : mgp::module_add_write_procedure(module, name.data(), callback);
 
@@ -2546,6 +2680,28 @@ void ProcedureWrapper::AddProcedure(void (*callback)(struct mgp_list *, struct m
       mgp::proc_add_result(proc, return_name, util::ToMGPType(return_.type));
     } else {
       mgp::proc_add_result(proc, return_name, util::ToMGPType(return_.type, return_.list_item_type));
+    }
+  }
+}
+
+void AddFunction(mgp_func_cb callback, std::string_view name, std::vector<mage::Parameter> parameters,
+                 mgp_module *module, mgp_memory *memory) {
+  auto func = mgp::module_add_function(module, name.data(), callback);
+
+  for (const auto parameter : parameters) {
+    auto parameter_name = parameter.name.data();
+
+    auto optional = parameter.optional;
+    auto is_list = parameter.is_list;
+    if (!optional && !is_list) {
+      mgp::func_add_arg(func, parameter_name, util::ToMGPType(parameter.type));
+    } else if (!optional && is_list) {
+      mgp::func_add_arg(func, parameter_name, util::ToMGPType(parameter.type, parameter.list_item_type));
+    } else if (optional && !is_list) {
+      mgp::func_add_opt_arg(func, parameter_name, util::ToMGPType(parameter.type), parameter.default_value.ptr());
+    } else if (optional && is_list) {
+      mgp::func_add_opt_arg(func, parameter_name, util::ToMGPType(parameter.type, parameter.list_item_type),
+                            parameter.default_value.ptr());
     }
   }
 }

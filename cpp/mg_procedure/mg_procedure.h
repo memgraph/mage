@@ -1411,6 +1411,45 @@ int mgp_must_abort(struct mgp_graph *graph);
 
 /// @}
 
+/// @name Function Result
+/// Stores valid result values and an error results.
+struct mgp_func_result;
+
+/// Describes a query module function.
+struct mgp_func;
+
+/// Describes a query module function context.
+struct mgp_func_context;
+
+/// Entry-point for a query module function invoked through openCypher.
+///
+/// Passed in arguments will not live longer than the callback's execution.
+/// Therefore, you must not store them globally or use the passed in mgp_memory
+/// to allocate global resources.
+typedef void (*mgp_func_cb)(mgp_list *, mgp_func_context *, mgp_func_result *, mgp_memory *);
+
+/// Register a function in the module.
+///
+/// The `name` must be a sequence of digits, underscores, lowercase and
+/// uppercase Latin letters. The name must begin with a non-digit character.
+/// Note that Unicode characters are not allowed. Additionally, names are
+/// case-sensitive.
+///
+/// Return MGP_ERROR_UNABLE_TO_ALLOCATE if unable to allocate memory for the function.
+/// Return MGP_ERROR_INVALID_ARGUMENT if `name` is not a valid function name.
+/// RETURN MGP_ERROR_LOGIC_ERROR if a function with the same name is already registered.
+mgp_error mgp_module_add_function(struct mgp_module *module, const char *name, mgp_func_cb cb,
+                                  struct mgp_func **result);
+
+mgp_error mgp_func_add_arg(struct mgp_func *func, const char *name, struct mgp_type *type);
+
+mgp_error mgp_func_add_opt_arg(struct mgp_func *func, const char *name, struct mgp_type *type,
+                               struct mgp_value *default_value);
+
+mgp_error mgp_func_result_set_error_msg(mgp_func_result *res, const char *msg, mgp_memory *memory);
+
+mgp_error mgp_func_result_set_value(mgp_func_result *res, mgp_value *value, mgp_memory *memory);
+
 /// @name Kafka message API
 /// Currently the API below is for kafka only but in the future
 /// mgp_message and mgp_messages might be generic to support

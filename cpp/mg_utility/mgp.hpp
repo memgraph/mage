@@ -778,4 +778,27 @@ void result_record_insert(struct mgp_result_record *record, const char *field_na
   MgInvokeVoid(mgp_result_record_insert, record, field_name, val);
 }
 
+// Function
+
+struct mgp_func *module_add_function(struct mgp_module *module, const char *name, mgp_func_cb cb) {
+  return MgInvoke<struct mgp_func *>(mgp_module_add_function, module, name, cb);
+}
+
+void func_add_arg(struct mgp_func *func, const char *name, struct mgp_type *type) {
+  MgInvokeVoid(mgp_func_add_arg, func, name, type);
+}
+
+void func_add_opt_arg(struct mgp_func *func, const char *name, struct mgp_type *type, struct mgp_value
+*default_value) {
+  MgInvokeVoid(mgp_func_add_opt_arg, func, name, type, default_value);
+}
+
+void func_result_set_error_msg(struct mgp_func_result *res, const char *msg, struct mgp_memory *memory) {
+  MgInvokeVoid(mgp_func_result_set_error_msg, res, msg, memory);
+}
+
+void func_result_set_value(struct mgp_func_result *res, mgp_value *value, struct mgp_memory *memory) {
+  MgInvokeVoid(mgp_func_result_set_value, res, value, memory);
+}
+
 }  // namespace mgp

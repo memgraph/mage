@@ -485,10 +485,26 @@ void WriteProc(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mg
   }
 }
 
+void SimpleFunc(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
+  mage::memory = memory;
+
+  std::vector<mage::Value> arguments;
+  for (size_t i = 0; i < mgp::list_size(args); i++) {
+    auto arg = mage::Value(mgp::list_at(args, i));
+    arguments.push_back(arg);
+  }
+
+  auto result = mage::Result(res);
+
+  auto first = arguments[0].ValueInt();
+  auto second = arguments[1].ValueInt();
+
+  result.SetValue(first * second);
+}
+
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
     mage::memory = memory;
-    auto wrapper = mage::ProcedureWrapper();
 
     const auto default_list = mage::List((size_t)0);
     const auto default_map = mage::Map();
@@ -497,7 +513,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     auto default_local_date_time = mage::LocalDateTime("2021-10-05T14:15:00");
     auto default_duration = mage::Duration("PT2M2.33S");
 
-    wrapper.AddProcedure(
+    AddProcedure(
         TestProcWrapper, "run_opt", mage::ProdecureType::Read,
         {mage::Parameter("node", mage::Type::Node), mage::Parameter("relationship", mage::Type::Relationship),
          mage::Parameter("path", mage::Type::Path), mage::Parameter("bool", mage::Type::Bool, false),
@@ -523,9 +539,8 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
 
   try {
     mage::memory = memory;
-    auto wrapper = mage::ProcedureWrapper();
 
-    wrapper.AddProcedure(
+    AddProcedure(
         TestProcWrapper, "run", mage::ProdecureType::Read,
         {mage::Parameter("node", mage::Type::Node), mage::Parameter("relationship", mage::Type::Relationship),
          mage::Parameter("path", mage::Type::Path), mage::Parameter("bool", mage::Type::Bool),
@@ -550,9 +565,19 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
 
   try {
     mage::memory = memory;
-    auto wrapper = mage::ProcedureWrapper();
 
-    wrapper.AddProcedure(WriteProc, "write_proc", mage::ProdecureType::Write, {}, {}, module, memory);
+    mage::AddProcedure(WriteProc, "write_proc", mage::ProdecureType::Write, {}, {}, module, memory);
+
+  } catch (const std::exception &e) {
+    return 1;
+  }
+
+  try {
+    mage::memory = memory;
+
+    mage::AddFunction(SimpleFunc, "multiply",
+                      {mage::Parameter("int", mage::Type::Int), mage::Parameter("int", mage::Type::Int, (int64_t)3)},
+                      module, memory);
 
   } catch (const std::exception &e) {
     return 1;
