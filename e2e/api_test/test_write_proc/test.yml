@@ -1,8 +1,19 @@
 query: >
+    MATCH (v: Node {id:0})-[e]-()
     MATCH path = ()-[*]->()
-    CALL api_test_module.path_check(path) 
-    YIELD out
-    RETURN out;
-
+    CALL api_test_module.run2(v,
+                             e,
+                             path,
+                             true,
+                             1,
+                             1.1,
+                             "text",
+                             ["a", "b", "c"],
+                             {a: "y", b: "x", c: "z"},
+                             date("1947-07-30"),
+                             localTime("09:15:00"),
+                             localDateTime("2021-10-05T14:15:00"),
+                             duration("PT2M2.33S")) 
+    YIELD * RETURN out_3;
 output:
-    - out: 0
+    - out_3: true

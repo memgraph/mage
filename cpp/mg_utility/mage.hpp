@@ -16,7 +16,7 @@ namespace mage {
 
 class IndexException : public std::exception {
  public:
-  explicit IndexException(const std::string &message) : message_(message){};
+  explicit IndexException(const std::string &message) : message_(message) {}
   const char *what() const noexcept override { return message_.c_str(); }
 
  private:
@@ -25,7 +25,7 @@ class IndexException : public std::exception {
 
 class ValueException : public std::exception {
  public:
-  explicit ValueException(const std::string &message) : message_(message){};
+  explicit ValueException(const std::string &message) : message_(message) {}
   const char *what() const noexcept override { return message_.c_str(); }
 
  private:
@@ -91,31 +91,39 @@ class Id {
   int64_t id_;
 };
 
+/// @brief Wrapper class for @ref mgp_graph.
 class Graph {
  public:
   explicit Graph(mgp_graph *graph) : graph_(graph) {}
 
-  /// \brief Returns the graph order (number of nodes).
+  /// @brief Returns the graph order (number of nodes).
   int64_t order() const;
-  /// \brief Returns the graph size (number of relationships).
+  /// @brief Returns the graph size (number of relationships).
   int64_t size() const;
 
+  /// @brief Returns an iterable structure of the graph’s nodes.
   GraphNodes nodes() const;
+  /// @brief Returns an iterable structure of the graph’s relationships.
   GraphRelationships relationships() const;
 
+  /// @brief Returns the graph node with the given ID.
   Node GetNodeById(const Id node_id) const;
 
+  /// @brief Returns whether the graph contains a node with the given ID.
   bool Contains(const Id node_id) const;
+  /// @brief Returns whether the graph contains the given node.
   bool Contains(const Node &node) const;
+  /// @brief Returns whether the graph contains the given relationship.
   bool Contains(const Relationship &relationship) const;
 
  private:
   mgp_graph *graph_;
 };
 
+/// @brief View of graph nodes; wrapper class for @ref mgp_vertices_iterator.
 class Nodes {
  public:
-  explicit Nodes(mgp_vertices_iterator *nodes_iterator) : nodes_iterator_(nodes_iterator){};
+  explicit Nodes(mgp_vertices_iterator *nodes_iterator) : nodes_iterator_(nodes_iterator) {}
 
   class Iterator {
    public:
@@ -147,9 +155,12 @@ class Nodes {
   mgp_vertices_iterator *nodes_iterator_ = nullptr;
 };
 
+/// @brief View of graph relationships.
+// NB: Necessary because of the MGP API not having a method that returns a mgp_edges_iterator over all graph
+// relationships.
 class GraphRelationships {
  public:
-  explicit GraphRelationships(mgp_graph *graph) : graph_(graph){};
+  explicit GraphRelationships(mgp_graph *graph) : graph_(graph) {}
 
   class Iterator {
    public:
@@ -181,10 +192,11 @@ class GraphRelationships {
   mgp_graph *graph_;
 };
 
+/// @brief Wrapper class for @ref mgp_edges_iterator.
 class Relationships {
  public:
   explicit Relationships(mgp_edges_iterator *relationships_iterator)
-      : relationships_iterator_(relationships_iterator){};
+      : relationships_iterator_(relationships_iterator) {}
 
   class Iterator {
    public:
@@ -216,50 +228,48 @@ class Relationships {
   mgp_edges_iterator *relationships_iterator_ = nullptr;
 };
 
-/// \brief View of node properties.
+/// @brief View of node properties.
 class Properties {
  public:
   explicit Properties(mgp_properties_iterator *properties_iterator);
 
+  /// @brief Returns the size of the properties map.
   size_t size() const { return property_map_.size(); }
+  /// @brief Returns whether the properties map is empty.
   bool empty() const { return size() == 0; }
 
-  /// \brief Returns the value associated with the given `key`.
-  /// Behaves undefined if there is no such a value.
-  /// \note
-  /// Each key-value pair has to be checked, resulting with O(n)
-  /// time complexity.
+  /// @brief Returns the value associated with the given `key`. If there’s no such value, the behavior is undefined.
+  /// @note Each key-value pair needs to be checked, ensuing O(n) time complexity.
   Value operator[](const std::string_view key) const;
 
   std::map<std::string_view, Value>::const_iterator begin() const { return property_map_.begin(); }
   std::map<std::string_view, Value>::const_iterator end() const { return property_map_.end(); }
 
-  /// \brief Returns the key-value iterator for the given `key`.
-  /// In the case there is no such pair, end iterator is returned.
-  /// \note
-  /// Each key-value pair has to be checked, resulting with O(n) time
-  /// complexity.
+  /// @brief Returns the key-value iterator for the given `key`. If there’s no such pair, returns the end of the
+  /// iterator.
+  /// @note Each key-value pair needs to be checked, ensuing O(n) time complexity.
   std::map<std::string_view, Value>::const_iterator find(const std::string_view key) const {
     return property_map_.find(key);
   }
 
-  /// \exception std::runtime_error map contains value with unknown type
+  /// @exception std::runtime_error Map contains value(s) of unknown type.
   bool operator==(const Properties &other) const;
-  /// \exception std::runtime_error map contains value with unknown type
+  /// @exception std::runtime_error Map contains value(s) of unknown type.
   bool operator!=(const Properties &other) const { return !(*this == other); }
 
  private:
   std::map<const std::string_view, Value> property_map_;
 };
 
-/// \brief View of node labels.
+/// @brief View of node labels.
 class Labels {
  public:
   explicit Labels(mgp_vertex *node_ptr) : node_ptr_(node_ptr) {}
 
+  /// @brief Returns the number of the labels, i.e. the size of their list.
   size_t size() const { return mgp::vertex_labels_count(node_ptr_); }
 
-  /// \brief Return node’s label at position `index`.
+  /// @brief Return the node’s label at position `index`.
   std::string_view operator[](size_t index) const;
 
   class Iterator {
@@ -297,25 +307,31 @@ class Labels {
 
 /* #region Containers (List, Map) */
 
-/// \brief Wrapper class for \ref mgp_list.
+/// @brief Wrapper class for @ref mgp_list.
 class List {
  private:
   friend class Value;
   friend class Record;
+  friend struct Parameter;
 
  public:
+  /// @brief Creates a List from the copy of the given @ref mgp_list.
   explicit List(mgp_list *ptr) : ptr_(mgp::list_copy(ptr, memory)) {}
+  /// @brief Creates a List from the copy of the given @ref mgp_list.
+  explicit List(const mgp_list *const_ptr) : ptr_(mgp::list_copy(const_cast<mgp_list *>(const_ptr), memory)) {}
 
-  /// \brief Create a List from a copy of the given \ref mgp_list.
-  explicit List(const mgp_list *const_ptr) : List(mgp::list_copy(const_cast<mgp_list *>(const_ptr), memory)) {}
+  /// @brief Creates an empty List.
+  explicit List() : ptr_(mgp::list_make_empty(0, memory)) {}
 
-  explicit List() : List(mgp::list_make_empty(0, memory)) {}
+  /// @brief Creates a List with the given `capacity`.
+  explicit List(size_t capacity) : ptr_(mgp::list_make_empty(capacity, memory)) {}
 
-  explicit List(size_t capacity) : List(mgp::list_make_empty(capacity, memory)) {}
-
+  /// @brief Creates a List from the given vector.
   explicit List(const std::vector<Value> &values);
+  /// @brief Creates a List from the given vector.
   explicit List(std::vector<Value> &&values);
 
+  /// @brief Creates a List from the given initializer_list.
   explicit List(const std::initializer_list<Value> list);
 
   List(const List &other) : List(other.ptr_) {}
@@ -326,10 +342,12 @@ class List {
 
   ~List();
 
+  /// @brief Returns the size of the list.
   size_t size() const { return mgp::list_size(ptr_); }
+  /// @brief Returns whether the list is empty.
   bool empty() const { return size() == 0; }
 
-  /// \brief Returns the value at the given `index`.
+  /// @brief Returns the value at the given `index`.
   const Value operator[](size_t index) const;
 
   class Iterator {
@@ -358,54 +376,53 @@ class List {
   Iterator begin() const { return Iterator(this, 0); }
   Iterator end() const { return Iterator(this, size()); }
 
-  /// \brief Appends the given `value` to the list.
-  /// The `value` is copied.
+  /// @brief Appends the given `value` to the list. The `value` is copied.
   void Append(const Value &value);
-  /// \brief Appends the given `value` to the list.
-  /// \note
-  /// It takes the ownership of the `value` by moving it.
-  /// Behaviour of accessing the `value` after performing this operation is
-  /// considered undefined.
+  /// @brief Appends the given `value` to the list.
+  /// @note Takes the ownership of `value` by moving it. The behavior of accessing `value` after performing this
+  /// operation is undefined.
   void Append(Value &&value);
 
-  /// \brief Extends the list and appends the given `value` to it.
-  /// The `value` is copied.
+  /// @brief Extends the list and appends the given `value` to it. The `value` is copied.
   void AppendExtend(const Value &value);
-  /// \brief Extends the list and appends the given `value` to it.
-  /// \note
-  /// It takes the ownership of the `value` by moving it.
-  /// Behaviour of accessing the `value` after performing this operation is
-  /// considered undefined.
+  /// @brief Extends the list and appends the given `value` to it.
+  /// @note Takes the ownership of `value` by moving it. The behavior of accessing `value` after performing this
+  /// operation is undefined.
   void AppendExtend(Value &&value);
 
-  // Value Pop(); // (requires mgp_list_pop in the MGP API):
+  // Value Pop();  // not implemented (requires mgp_list_pop in the MGP API):
 
-  /// \exception std::runtime_error list contains value with unknown type
+  /// @exception std::runtime_error List contains value of unknown type.
   bool operator==(const List &other) const;
-  /// \exception std::runtime_error list contains value with unknown type
+  /// @exception std::runtime_error List contains value of unknown type.
   bool operator!=(const List &other) const { return !(*this == other); }
 
  private:
   mgp_list *ptr_;
 };
 
-/// \brief Wrapper class for \ref mgp_map.
+/// @brief Wrapper class for @ref mgp_map.
 class Map {
  private:
   friend class Value;
   friend class Record;
+  friend struct Parameter;
 
  public:
+  /// @brief Creates a Map from the copy of the given @ref mgp_map.
   explicit Map(mgp_map *ptr) : ptr_(mgp::map_copy(ptr, memory)) {}
+  /// @brief Creates a Map from the copy of the given @ref mgp_map.
+  explicit Map(const mgp_map *const_ptr) : ptr_(mgp::map_copy(const_cast<mgp_map *>(const_ptr), memory)) {}
 
-  /// \brief Create a Map from a copy of the given \ref mgp_map.
-  explicit Map(const mgp_map *const_ptr) : Map(mgp::map_copy(const_cast<mgp_map *>(const_ptr), memory)) {}
+  /// @brief Creates an empty Map.
+  explicit Map() : ptr_(mgp::map_make_empty(memory)) {}
 
-  explicit Map() : Map(mgp::map_make_empty(memory)) {}
-
+  /// @brief Creates a Map from the given vector.
   explicit Map(const std::map<std::string_view, Value> &items);
+  /// @brief Creates a Map from the given vector.
   explicit Map(std::map<std::string_view, Value> &&items);
 
+  /// @brief Creates a Map from the given initializer_list (map items correspond to initializer list pairs).
   Map(const std::initializer_list<std::pair<std::string_view, Value>> items);
 
   Map(const Map &other) : Map(other.ptr_) {}
@@ -416,8 +433,15 @@ class Map {
 
   ~Map();
 
+  /// @brief Returns the size of the map.
   size_t size() const { return mgp::map_size(ptr_); }
+  /// @brief Returns whether the map is empty.
   bool empty() const { return size() == 0; }
+
+  /// @brief Returns the value at the given `key`.
+  Value const operator[](std::string_view key) const;
+  /// @brief Returns the value at the given `key`.
+  Value const at(std::string_view key) const;
 
   class Iterator {
    public:
@@ -443,14 +467,20 @@ class Map {
   Iterator begin();
   Iterator end();
 
+  /// @brief Inserts the given `key`-`value` pair into the map. The `value` is copied.
   void Insert(std::string_view key, const Value &value);
+  /// @brief Inserts the given `key`-`value` pair into the map.
+  /// @note Takes the ownership of `value` by moving it. The behavior of accessing `value` after performing this
+  /// operation is undefined.
   void Insert(std::string_view key, Value &&value);
 
-  // void Erase(std::string_view key); // (requires mgp_map_erase in the MGP API)
-  // void Clear(); // (requires mgp_map_clear in the MGP API)
+  // void Erase(std::string_view key);  // not implemented (requires mgp_map_erase in the MGP API)
+  // void Clear();  // not implemented (requires mgp_map_clear in the MGP API)
 
-  Value const operator[](std::string_view key) const;
-  Value const at(std::string_view key) const;
+  /// @exception std::runtime_error Map contains value of unknown type.
+  bool operator==(const Map &other) const;
+  /// @exception std::runtime_error Map contains value of unknown type.
+  bool operator!=(const Map &other) const { return !(*this == other); }
 
  private:
   mgp_map *ptr_;
@@ -458,18 +488,19 @@ class Map {
 /* #endregion */
 
 /* #region Graph elements (Node, Relationship & Path) */
-/// \brief Wrapper class for \ref mgp_vertex.
+/// @brief Wrapper class for @ref mgp_vertex.
 class Node {
  public:
   friend class Graph;
   friend class Path;
   friend class Value;
   friend class Record;
+  friend struct Parameter;
 
+  /// @brief Creates a Node from the copy of the given @ref mgp_vertex.
   explicit Node(mgp_vertex *ptr) : ptr_(mgp::vertex_copy(ptr, memory)) {}
-
-  /// \brief Create a Node from a copy of the given \ref mgp_vertex.
-  explicit Node(const mgp_vertex *const_ptr) : Node(mgp::vertex_copy(const_cast<mgp_vertex *>(const_ptr), memory)) {}
+  /// @brief Creates a Node from the copy of the given @ref mgp_vertex.
+  explicit Node(const mgp_vertex *const_ptr) : ptr_(mgp::vertex_copy(const_cast<mgp_vertex *>(const_ptr), memory)) {}
 
   Node(const Node &other) : Node(other.ptr_) {}
   Node(Node &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
@@ -479,41 +510,48 @@ class Node {
 
   ~Node();
 
+  /// @brief Returns the node’s ID.
   Id id() const { return Id::FromInt(mgp::vertex_get_id(ptr_).as_int); }
 
+  /// @brief Returns an iterable & indexable structure of the node’s labels.
   Labels labels() const { return Labels(ptr_); }
+  /// @brief Returns whether the node has the given `label`.
   bool HasLabel(std::string_view label) const;
 
+  /// @brief Returns an iterable & indexable structure of the node’s properties.
   Properties properties() const { return Properties(mgp::vertex_iter_properties(ptr_, memory)); }
+  /// @brief Returns the value of the node’s `property_name` property.
   Value operator[](const std::string_view property_name) const;
 
+  /// @brief Returns an iterable structure of the node’s inbound relationships.
   Relationships in_relationships() const;
+  /// @brief Returns an iterable structure of the node’s outbound relationships.
   Relationships out_relationships() const;
 
   bool operator<(const Node &other) const { return id() < other.id(); }
 
-  /// \exception std::runtime_error node property contains value with unknown type
+  /// @exception std::runtime_error Node properties contain value(s) of unknown type.
   bool operator==(const Node &other) const;
-  /// \exception std::runtime_error node property contains value with unknown type
+  /// @exception std::runtime_error Node properties contain value(s) of unknown type.
   bool operator!=(const Node &other) const { return !(*this == other); }
 
  private:
   mgp_vertex *ptr_;
 };
 
-/// \brief Wrapper class for \ref mgp_edge.
+/// @brief Wrapper class for @ref mgp_edge.
 class Relationship {
  private:
-  friend class Value;
   friend class Path;
+  friend class Value;
   friend class Record;
+  friend struct Parameter;
 
  public:
+  /// @brief Creates a Relationship from the copy of the given @ref mgp_edge.
   explicit Relationship(mgp_edge *ptr) : ptr_(mgp::edge_copy(ptr, memory)) {}
-
-  /// \brief Create a Relationship from a copy of the given \ref mgp_edge.
-  explicit Relationship(const mgp_edge *const_ptr)
-      : Relationship(mgp::edge_copy(const_cast<mgp_edge *>(const_ptr), memory)) {}
+  /// @brief Creates a Relationship from the copy of the given @ref mgp_edge.
+  explicit Relationship(const mgp_edge *const_ptr) : ptr_(mgp::edge_copy(const_cast<mgp_edge *>(const_ptr), memory)) {}
 
   Relationship(const Relationship &other) : Relationship(other.ptr_) {}
   Relationship(Relationship &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
@@ -523,43 +561,47 @@ class Relationship {
 
   ~Relationship();
 
+  /// @brief Returns the relationship’s ID.
   Id id() const { return Id::FromInt(mgp::edge_get_id(ptr_).as_int); }
 
-  /// \brief Return the ID of the relationship’s source node.
-  Node from() const { return Node(mgp::edge_get_from(ptr_)); }
-  /// \brief Return the ID of the relationship’s destination node.
-  Node to() const { return Node(mgp::edge_get_to(ptr_)); }
-
+  /// @brief Returns the relationship’s type.
   std::string_view type() const;
 
+  /// @brief Returns an iterable & indexable structure of the relationship’s properties.
   Properties properties() const { return Properties(mgp::edge_iter_properties(ptr_, memory)); }
+  /// @brief Returns the value of the relationship’s `property_name` property.
   Value operator[](const std::string_view property_name) const;
 
-  /// \exception std::runtime_error relationship property contains value with
-  /// unknown type
-  bool operator==(const Relationship &other) const;
-  /// \exception std::runtime_error relationship property contains value with
-  /// unknown type
-  bool operator!=(const Relationship &other) const { return !(*this == other); }
+  /// @brief Returns the relationship’s source node.
+  Node from() const { return Node(mgp::edge_get_from(ptr_)); }
+  /// @brief Returns the relationship’s destination node.
+  Node to() const { return Node(mgp::edge_get_to(ptr_)); }
 
   bool operator<(const Relationship &other) const { return id() < other.id(); }
+
+  /// @exception std::runtime_error Relationship properties contain value(s) of unknown type.
+  bool operator==(const Relationship &other) const;
+  /// @exception std::runtime_error Relationship properties contain value(s) of unknown type.
+  bool operator!=(const Relationship &other) const { return !(*this == other); }
 
  private:
   mgp_edge *ptr_;
 };
 
-/// \brief Wrapper class for \ref mgp_path.
+/// @brief Wrapper class for @ref mgp_path.
 class Path {
  private:
   friend class Value;
   friend class Record;
+  friend struct Parameter;
 
  public:
+  /// @brief Creates a Path from the copy of the given @ref mgp_path.
   explicit Path(mgp_path *ptr) : ptr_(mgp::path_copy(ptr, memory)) {}
+  /// @brief Creates a Path from the copy of the given @ref mgp_path.
+  explicit Path(const mgp_path *const_ptr) : ptr_(mgp::path_copy(const_cast<mgp_path *>(const_ptr), memory)) {}
 
-  /// \brief Create a Path from a copy of the given \ref mg_path.
-  explicit Path(const mgp_path *const_ptr) : Path(mgp::path_copy(const_cast<mgp_path *>(const_ptr), memory)) {}
-
+  /// @brief Creates a Path starting with the given `start_node`.
   explicit Path(const Node &start_node);
 
   Path(const Path &other) : Path(other.ptr_) {}
@@ -570,22 +612,23 @@ class Path {
 
   ~Path();
 
-  /// Length of the path is number of relationships.
+  /// Returns the path length (number of relationships).
   size_t length() const { return mgp::path_size(ptr_); }
 
-  /// \brief Returns the node at the given `index`.
-  /// \pre `index` should be less than or equal to length of the path.
+  /// @brief Returns the node at the given `index`.
+  /// @pre The `index` must be less than or equal to length of the path.
   Node GetNodeAt(size_t index) const;
 
-  /// \brief Returns the relationship at the given `index`.
-  /// \pre `index` should be less than length of the path.
+  /// @brief Returns the relationship at the given `index`.
+  /// @pre The `index` must be less than length of the path.
   Relationship GetRelationshipAt(size_t index) const;
 
+  /// @brief Adds a relationship continuing from the last node on the path.
   void Expand(const Relationship &relationship);
 
-  /// \exception std::runtime_error path contains elements with unknown value
+  /// @exception std::runtime_error Path contains element(s) with unknown value.
   bool operator==(const Path &other) const;
-  /// \exception std::runtime_error path contains elements with unknown value
+  /// @exception std::runtime_error Path contains element(s) with unknown value.
   bool operator!=(const Path &other) const { return !(*this == other); }
 
  private:
@@ -595,26 +638,26 @@ class Path {
 
 /* #region Temporal types (Date, LocalTime, LocalDateTime, Duration) */
 
-/// \brief Wrapper class for \ref mgp_date.
+/// @brief Wrapper class for @ref mgp_date.
 class Date {
  private:
   friend class Duration;
   friend class Value;
   friend class Record;
+  friend struct Parameter;
 
  public:
+  /// @brief Creates a Date object from the copy of the given @ref mgp_date.
   explicit Date(mgp_date *ptr) : ptr_(mgp::date_copy(ptr, memory)) {}
+  /// @brief Creates a Date object from the copy of the given @ref mgp_date.
+  explicit Date(const mgp_date *const_ptr) : ptr_(mgp::date_copy(const_cast<mgp_date *>(const_ptr), memory)) {}
 
-  /// \brief Create a Date from a copy of the given \ref mgp_date.
-  explicit Date(const mgp_date *const_ptr) : Date(mgp::date_copy(const_cast<mgp_date *>(const_ptr), memory)) {}
-
+  /// @brief Creates a Date object from the given string representing a date in the ISO 8601 format (`YYYY-MM-DD`,
+  /// `YYYYMMDD`, or `YYYY-MM`).
   explicit Date(std::string_view string) : ptr_(mgp::date_from_string(string.data(), memory)) {}
 
-  Date(int year, int month, int day) {
-    mgp_date_parameters *params;
-    *params = {.year = year, .month = month, .day = day};
-    Date(mgp::date_from_parameters(params, memory));
-  }
+  /// @brief Creates a Date object with the given `year`, `month`, and `day` properties.
+  Date(int year, int month, int day);
 
   Date(const Date &other) : Date(other.ptr_) {}
   Date(Date &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
@@ -624,12 +667,17 @@ class Date {
 
   ~Date();
 
-  static Date now() { return Date(mgp::date_now(memory)); }
+  /// @brief Returns the current Date.
+  static Date now();
 
+  /// @brief Returns the date’s year property.
   int year() const { return mgp::date_get_year(ptr_); }
+  /// @brief Returns the date’s month property.
   int month() const { return mgp::date_get_month(ptr_); }
+  /// @brief Returns the date’s day property.
   int day() const { return mgp::date_get_day(ptr_); }
 
+  /// @brief Returns the date’s timestamp (microseconds from the Unix epoch).
   int64_t timestamp() const { return mgp::date_timestamp(ptr_); }
 
   bool operator==(const Date &other) const;
@@ -643,28 +691,28 @@ class Date {
   mgp_date *ptr_;
 };
 
-/// \brief Wrapper class for \ref mgp_local_time.
+/// @brief Wrapper class for @ref mgp_local_time.
 class LocalTime {
  private:
   friend class Duration;
   friend class Value;
   friend class Record;
+  friend struct Parameter;
 
  public:
+  /// @brief Creates a LocalTime object from the copy of the given @ref mgp_local_time.
   explicit LocalTime(mgp_local_time *ptr) : ptr_(mgp::local_time_copy(ptr, memory)) {}
-
-  /// \brief Create a LocalTime from a copy of the given \ref mgp_local_time.
+  /// @brief Creates a LocalTime object from the copy of the given @ref mgp_local_time.
   explicit LocalTime(const mgp_local_time *const_ptr)
-      : LocalTime(mgp::local_time_copy(const_cast<mgp_local_time *>(const_ptr), memory)) {}
+      : ptr_(mgp::local_time_copy(const_cast<mgp_local_time *>(const_ptr), memory)) {}
 
+  /// @brief Creates a LocalTime object from the given string representing a date in the ISO 8601 format ([T]hh:mm:ss,
+  /// `[T]hh:mm`, `[T]hhmmss`, `[T]hhmm`, or `[T]hh`).
   explicit LocalTime(std::string_view string) : ptr_(mgp::local_time_from_string(string.data(), memory)) {}
 
-  LocalTime(int hour, int minute, int second, int millisecond, int microsecond) {
-    mgp_local_time_parameters *params;
-    *params = {
-        .hour = hour, .minute = minute, .second = second, .millisecond = millisecond, .microsecond = microsecond};
-    LocalTime(mgp::local_time_from_parameters(params, memory));
-  }
+  /// @brief Creates a LocalTime object with the given `hour`, `minute`, `second`, `millisecond`, and `microsecond`
+  /// properties.
+  LocalTime(int hour, int minute, int second, int millisecond, int microsecond);
 
   LocalTime(const LocalTime &other) : LocalTime(other.ptr_) {}
   LocalTime(LocalTime &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; };
@@ -674,14 +722,21 @@ class LocalTime {
 
   ~LocalTime();
 
-  static LocalTime now() { return LocalTime(mgp::local_time_now(memory)); }
+  /// @brief Returns the current LocalTime.
+  static LocalTime now();
 
+  /// @brief Returns the object’s `hour` property.
   int hour() const { return mgp::local_time_get_hour(ptr_); }
+  /// @brief Returns the object’s `minute` property.
   int minute() const { return mgp::local_time_get_minute(ptr_); }
+  /// @brief Returns the object’s `second` property.
   int second() const { return mgp::local_time_get_second(ptr_); }
+  /// @brief Returns the object’s `millisecond` property.
   int millisecond() const { return mgp::local_time_get_millisecond(ptr_); }
+  /// @brief Returns the object’s `microsecond` property.
   int microsecond() const { return mgp::local_time_get_microsecond(ptr_); }
 
+  /// @brief Returns the object’s timestamp (microseconds from the Unix epoch).
   int64_t timestamp() const { return mgp::local_time_timestamp(ptr_); }
 
   bool operator==(const LocalTime &other) const;
@@ -695,32 +750,28 @@ class LocalTime {
   mgp_local_time *ptr_;
 };
 
-/// \brief Wrapper class for \ref mgp_local_date_time.
+/// @brief Wrapper class for @ref mgp_local_date_time.
 class LocalDateTime {
  private:
   friend class Duration;
   friend class Value;
   friend class Record;
+  friend struct Parameter;
 
  public:
+  /// @brief Creates a LocalDateTime object from the copy of the given @ref mgp_local_date_time.
   explicit LocalDateTime(mgp_local_date_time *ptr) : ptr_(mgp::local_date_time_copy(ptr, memory)) {}
-
-  /// \brief Create a LocalDateTime from a copy of the given \ref mgp_local_date_time.
+  /// @brief Creates a LocalDateTime object from the copy of the given @ref mgp_local_date_time.
   explicit LocalDateTime(const mgp_local_date_time *const_ptr)
-      : LocalDateTime(mgp::local_date_time_copy(const_cast<mgp_local_date_time *>(const_ptr), memory)) {}
+      : ptr_(mgp::local_date_time_copy(const_cast<mgp_local_date_time *>(const_ptr), memory)) {}
 
+  /// @brief Creates a LocalDateTime object from the given string representing a date in the ISO 8601 format
+  /// (`YYYY-MM-DDThh:mm:ss`, `YYYY-MM-DDThh:mm`, `YYYYMMDDThhmmss`, `YYYYMMDDThhmm`, or `YYYYMMDDThh`).
   explicit LocalDateTime(std::string_view string) : ptr_(mgp::local_date_time_from_string(string.data(), memory)) {}
 
-  LocalDateTime(int year, int month, int day, int hour, int minute, int second, int millisecond, int microsecond) {
-    struct mgp_date_parameters *date_params;
-    struct mgp_local_time_parameters *local_time_params;
-    mgp_local_date_time_parameters *params;
-    *date_params = {.year = year, .month = month, .day = day};
-    *local_time_params = {
-        .hour = hour, .minute = minute, .second = second, .millisecond = millisecond, .microsecond = microsecond};
-    *params = {.date_parameters = date_params, .local_time_parameters = local_time_params};
-    LocalDateTime(mgp::local_date_time_from_parameters(params, memory));
-  }
+  /// @brief Creates a LocalDateTime object with the given `year`, `month`, `day`, `hour`, `minute`, `second`,
+  /// `millisecond`, and `microsecond` properties.
+  LocalDateTime(int year, int month, int day, int hour, int minute, int second, int millisecond, int microsecond);
 
   LocalDateTime(const LocalDateTime &other) : LocalDateTime(other.ptr_) {}
   LocalDateTime(LocalDateTime &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; };
@@ -730,17 +781,27 @@ class LocalDateTime {
 
   ~LocalDateTime();
 
-  static LocalDateTime now() { return LocalDateTime(mgp::local_date_time_now(memory)); }
+  /// @brief Returns the current LocalDateTime.
+  static LocalDateTime now();
 
+  /// @brief Returns the object’s `year` property.
   int year() const { return mgp::local_date_time_get_year(ptr_); }
+  /// @brief Returns the object’s `month` property.
   int month() const { return mgp::local_date_time_get_month(ptr_); }
+  /// @brief Returns the object’s `day` property.
   int day() const { return mgp::local_date_time_get_day(ptr_); }
+  /// @brief Returns the object’s `hour` property.
   int hour() const { return mgp::local_date_time_get_hour(ptr_); }
+  /// @brief Returns the object’s `minute` property.
   int minute() const { return mgp::local_date_time_get_minute(ptr_); }
+  /// @brief Returns the object’s `second` property.
   int second() const { return mgp::local_date_time_get_second(ptr_); }
+  /// @brief Returns the object’s `millisecond` property.
   int millisecond() const { return mgp::local_date_time_get_millisecond(ptr_); }
+  /// @brief Returns the object’s `microsecond` property.
   int microsecond() const { return mgp::local_date_time_get_microsecond(ptr_); }
 
+  /// @brief Returns the object’s timestamp (microseconds from the Unix epoch).
   int64_t timestamp() const { return mgp::local_date_time_timestamp(ptr_); }
 
   bool operator==(const LocalDateTime &other) const;
@@ -754,7 +815,7 @@ class LocalDateTime {
   mgp_local_date_time *ptr_;
 };
 
-/// \brief Wrapper class for \ref mgp_duration.
+/// @brief Wrapper class for @ref mgp_duration.
 class Duration {
  private:
   friend class Date;
@@ -762,28 +823,26 @@ class Duration {
   friend class LocalDateTime;
   friend class Value;
   friend class Record;
+  friend struct Parameter;
 
  public:
+  /// @brief Creates a Duration from the copy of the given @ref mgp_duration.
   explicit Duration(mgp_duration *ptr) : ptr_(mgp::duration_copy(ptr, memory)) {}
-
-  /// \brief Create a Duration from a copy of the given \ref mgp_duration.
+  /// @brief Creates a Duration from the copy of the given @ref mgp_duration.
   explicit Duration(const mgp_duration *const_ptr)
-      : Duration(mgp::duration_copy(const_cast<mgp_duration *>(const_ptr), memory)) {}
+      : ptr_(mgp::duration_copy(const_cast<mgp_duration *>(const_ptr), memory)) {}
 
+  /// @brief Creates a Duration object from the given string in the following format: `P[nD]T[nH][nM][nS]`, where (1)
+  /// `n` stands for a number, (2) capital letters are used as a separator, (3) each field in `[]` is optional, and (4)
+  /// only the last field may be a non-integer.
   explicit Duration(std::string_view string) : ptr_(mgp::duration_from_string(string.data(), memory)) {}
 
+  /// @brief Creates a Duration object from the given number of microseconds.
   explicit Duration(int64_t microseconds) : ptr_(mgp::duration_from_microseconds(microseconds, memory)) {}
 
-  Duration(double day, double hour, double minute, double second, double millisecond, double microsecond) {
-    mgp_duration_parameters *params;
-    *params = {.day = day,
-               .hour = hour,
-               .minute = minute,
-               .second = second,
-               .millisecond = millisecond,
-               .microsecond = microsecond};
-    Duration(mgp::duration_from_parameters(params, memory));
-  }
+  /// @brief Creates a Duration object with the given `day`, `hour`, `minute`, `second`, `millisecond`, and
+  /// `microsecond` properties.
+  Duration(double day, double hour, double minute, double second, double millisecond, double microsecond);
 
   Duration(const Duration &other) : Duration(other.ptr_) {}
   Duration(Duration &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; };
@@ -793,12 +852,13 @@ class Duration {
 
   ~Duration();
 
+  /// @brief Returns the duration as microseconds.
   int64_t microseconds() const { return mgp::duration_get_microseconds(ptr_); }
 
   bool operator==(const Duration &other) const;
-  Duration operator+(const Duration &other) const { return Duration(mgp::duration_add(ptr_, other.ptr_, memory)); }
-  Duration operator-(const Duration &other) const { return Duration(mgp::duration_sub(ptr_, other.ptr_, memory)); }
-  Duration operator-() const { return Duration(mgp::duration_neg(ptr_, memory)); }
+  Duration operator+(const Duration &other) const;
+  Duration operator-(const Duration &other) const;
+  Duration operator-() const;
 
   bool operator<(const Duration &other) const;
 
@@ -825,10 +885,10 @@ enum class Type : uint8_t {
   LocalTime,
   LocalDateTime,
   Duration,
-  UNDEF,
+  UNDEF,  // for indicating an undefined value
 };
 
-/// Wrapper class for \ref mgp_value
+/// @brief Wrapper class for @ref mgp_value.
 class Value {
  public:
   friend class List;
@@ -841,149 +901,199 @@ class Value {
 
   explicit Value(mgp_value *ptr) : ptr_(mgp::value_copy(ptr, memory)) {}
 
+  // Null constructor:
   explicit Value() : ptr_(mgp::value_make_null(memory)) {}
 
   // Primitive type constructors:
-  explicit Value(bool value) : Value(mgp::value_make_bool(value, memory)){};
-  explicit Value(int value) : Value(mgp::value_make_int(value, memory)){};
-  explicit Value(int64_t value) : Value(mgp::value_make_int(value, memory)){};
-  explicit Value(double value) : Value(mgp::value_make_double(value, memory)){};
+  explicit Value(const bool value) : ptr_(mgp::value_make_bool(value, memory)) {}
+  explicit Value(const int64_t value) : ptr_(mgp::value_make_int(value, memory)) {}
+  explicit Value(const double value) : ptr_(mgp::value_make_double(value, memory)) {}
 
   // String constructors:
-  explicit Value(const std::string_view value) : Value(mgp::value_make_string(value.data(), memory)) {}
-  explicit Value(const char *value) : Value(mgp::value_make_string(value, memory)){};
+  explicit Value(const char *value) : ptr_(mgp::value_make_string(value, memory)) {}
+  explicit Value(const std::string_view value) : ptr_(mgp::value_make_string(value.data(), memory)) {}
 
   // Container constructors:
+
+  /// @brief Constructs a List value from the copy of the given `list`.
+  explicit Value(const List &list) : ptr_(mgp::value_make_list(list.ptr_)) {}
+  /// @note The behavior of accessing `list` after performing this operation is undefined.
   explicit Value(List &&list) {
-    Value(mgp::value_make_list(list.ptr_));
+    ptr_ = mgp::value_make_list(list.ptr_);
     delete &list;
     list.ptr_ = nullptr;
   }
 
+  /// @brief Constructs a Map value from the copy of the given `map`.
+  explicit Value(const Map &map) : ptr_(mgp::value_make_map(map.ptr_)) {}
+  /// @brief Constructs a Map value and takes ownership of the given `map`.
+  /// @note The behavior of accessing `map` after performing this operation is undefined.
   explicit Value(Map &&map) {
-    Value(mgp::value_make_map(map.ptr_));
+    ptr_ = mgp::value_make_map(map.ptr_);
     delete &map;
     map.ptr_ = nullptr;
   }
 
-  /// \brief Constructs a node value and takes ownership of the given `node`.
-  /// \note The behavior of accessing the `node` after performing this operation is undefined.
+  // Graph element type constructors:
+
+  /// @brief Constructs a Node value from the copy of the given `node`.
+  explicit Value(const Node &node) : ptr_(mgp::value_make_vertex(node.ptr_)) {}
+  /// @brief Constructs a Node value and takes ownership of the given `node`.
+  /// @note The behavior of accessing `node` after performing this operation is undefined.
   explicit Value(Node &&node) {
-    Value(mgp::value_make_vertex(const_cast<mgp_vertex *>(node.ptr_)));
+    ptr_ = mgp::value_make_vertex(const_cast<mgp_vertex *>(node.ptr_));
     delete &node;
     node.ptr_ = nullptr;
-  };
+  }
 
-  /// \brief Constructs an relationship value and takes ownership of the given `relationship`.
-  /// \note The behavior of accessing the `relationship` after performing this operation is undefined.
+  /// @brief Constructs a Relationship value from the copy of the given `node`.
+  explicit Value(const Relationship &relationship) : ptr_(mgp::value_make_edge(relationship.ptr_)) {}
+  /// @brief Constructs a Relationship value and takes ownership of the given `relationship`.
+  /// @note The behavior of accessing `relationship` after performing this operation is undefined.
   explicit Value(Relationship &&relationship) {
-    Value(mgp::value_make_edge(relationship.ptr_));
+    ptr_ = mgp::value_make_edge(relationship.ptr_);
     delete &relationship;
     relationship.ptr_ = nullptr;
-  };
+  }
 
-  /// \brief Constructs a path value and takes ownership of the given `path`.
-  /// \note The behavior of accessing the `path` after performing this operation is undefined.
+  /// @brief Constructs a Path value from the copy of the given `path`.
+  explicit Value(const Path &path) : ptr_(mgp::value_make_path(path.ptr_)) {}
+  /// @brief Constructs a Path value and takes ownership of the given `path`.
+  /// @note The behavior of accessing `path` after performing this operation is undefined.
   explicit Value(Path &&path) {
-    Value(mgp::value_make_path(path.ptr_));
+    ptr_ = mgp::value_make_path(path.ptr_);
     delete &path;
     path.ptr_ = nullptr;
-  };
+  }
 
   // Temporal type constructors:
 
+  /// @brief Constructs a Date value from the copy of the given `date`.
+  explicit Value(const Date &date) : ptr_(mgp::value_make_date(date.ptr_)) {}
+  /// @brief Constructs a Date value and takes ownership of the given `path`.
+  /// @note The behavior of accessing `date` after performing this operation is undefined.
   explicit Value(Date &&date) {
-    Value(mgp::value_make_date(date.ptr_));
+    ptr_ = mgp::value_make_date(date.ptr_);
     delete &date;
     date.ptr_ = nullptr;
   }
 
+  /// @brief Constructs a LocalTime value from the copy of the given `local_time`.
+  explicit Value(const LocalTime &local_time) : ptr_(mgp::value_make_local_time(local_time.ptr_)) {}
+  /// @brief Constructs a LocalTime value and takes ownership of the given `local_time`.
+  /// @note The behavior of accessing `local_time` after performing this operation is undefined.
   explicit Value(LocalTime &&local_time) {
-    Value(mgp::value_make_local_time(local_time.ptr_));
+    ptr_ = mgp::value_make_local_time(local_time.ptr_);
     delete &local_time;
     local_time.ptr_ = nullptr;
   }
 
+  /// @brief Constructs a LocalDateTime value from the copy of the given `local_date_time`.
+  explicit Value(const LocalDateTime &local_date_time) : ptr_(mgp::value_make_local_date_time(local_date_time.ptr_)) {}
+
+  /// @brief Constructs a LocalDateTime value and takes ownership of the given `local_date_time`.
+  /// @note The behavior of accessing `local_date_time` after performing this operation is undefined.
   explicit Value(LocalDateTime &&local_date_time) {
-    Value(mgp::value_make_local_date_time(local_date_time.ptr_));
+    ptr_ = mgp::value_make_local_date_time(local_date_time.ptr_);
     delete &local_date_time;
     local_date_time.ptr_ = nullptr;
   }
 
+  /// @brief Constructs a Duration value from the copy of the given `duration`.
+  explicit Value(const Duration &duration) : ptr_(mgp::value_make_duration(duration.ptr_)) {}
+  /// @brief Constructs a Duration value and takes ownership of the given `duration`.
+  /// @note The behavior of accessing `duration` after performing this operation is undefined.
   explicit Value(Duration &&duration) {
-    Value(mgp::value_make_duration(duration.ptr_));
+    ptr_ = mgp::value_make_duration(duration.ptr_);
     delete &duration;
     duration.ptr_ = nullptr;
   }
 
   Value(const Value &other) : Value(other.ptr_) {}
-  Value(Value &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; };
+  Value(Value &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
 
   // TODO check:
   // Value &operator=(const Value &other) { return *this; }
 
   ~Value();
 
-  const mgp_value *ptr() const { return ptr_; }
+  /// @brief Returns the pointer to the stored value.
+  mgp_value *ptr() const { return ptr_; }
 
-  /// \exception std::runtime_error the value type is unknown
+  /// @brief Returns the type of the value.
+  /// @exception std::runtime_error The value type is unknown.
   Type type() const;
 
-  /// \pre value type is Type::Bool
+  /// @pre Value type needs to be Type::Bool.
   bool ValueBool() const;
-  /// \pre value type is Type::Int
+  /// @pre Value type needs to be Type::Int.
   int64_t ValueInt() const;
-  /// \pre value type is Type::Double
+  /// @pre Value type needs to be Type::Double.
   double ValueDouble() const;
-  /// \pre value type is Type::Numeric
+  /// @pre Value type needs to be Type::Numeric.
   double ValueNumeric() const;
-  /// \pre value type is Type::String
+  /// @pre Value type needs to be Type::String.
   std::string_view ValueString() const;
-  /// \pre value type is Type::List
+  /// @pre Value type needs to be Type::List.
   const List ValueList() const;
-  /// \pre value type is Type::Map
+  /// @pre Value type needs to be Type::Map.
   const Map ValueMap() const;
-  /// \pre value type is Type::Node
+  /// @pre Value type needs to be Type::Node.
   const Node ValueNode() const;
-  /// \pre value type is Type::Relationship
+  /// @pre Value type needs to be Type::Relationship.
   const Relationship ValueRelationship() const;
-  /// \pre value type is Type::Path
+  /// @pre Value type needs to be Type::Path.
   const Path ValuePath() const;
-  /// \pre value type is Type::Date
+  /// @pre Value type needs to be Type::Date.
   const Date ValueDate() const;
-  /// \pre value type is Type::LocalTime
+  /// @pre Value type needs to be Type::LocalTime.
   const LocalTime ValueLocalTime() const;
-  /// \pre value type is Type::LocalDateTime
+  /// @pre Value type needs to be Type::LocalDateTime.
   const LocalDateTime ValueLocalDateTime() const;
-  /// \pre value type is Type::Duration
+  /// @pre Value type needs to be Type::Duration.
   const Duration ValueDuration() const;
 
+  /// @brief Returns whether the value is null.
   bool IsNull() const;
+  /// @brief Returns whether the value is boolean.
   bool IsBool() const;
+  /// @brief Returns whether the value is an integer.
   bool IsInt() const;
+  /// @brief Returns whether the value is a floating-point number.
   bool IsDouble() const;
+  /// @brief Returns whether the value is numeric.
   bool IsNumeric() const;
+  /// @brief Returns whether the value is a string.
   bool IsString() const;
+  /// @brief Returns whether the value is a @ref List.
   bool IsList() const;
+  /// @brief Returns whether the value is a @ref Map.
   bool IsMap() const;
+  /// @brief Returns whether the value is a @ref Node.
   bool IsNode() const;
+  /// @brief Returns whether the value is a @ref Relationship.
   bool IsRelationship() const;
+  /// @brief Returns whether the value is a @ref Path.
   bool IsPath() const;
+  /// @brief Returns whether the value is a @ref Date object.
   bool IsDate() const;
+  /// @brief Returns whether the value is a @ref LocalTime object.
   bool IsLocalTime() const;
+  /// @brief Returns whether the value is a @ref LocalDateTime object.
   bool IsLocalDateTime() const;
+  /// @brief Returns whether the value is a @ref Duration object.
   bool IsDuration() const;
 
-  /// \exception std::runtime_error the value type is unknown
+  /// @exception std::runtime_error Unknown value type.
   bool operator==(const Value &other) const;
-  /// \exception std::runtime_error the value type is unknown
+  /// @exception std::runtime_error Unknown value type.
   bool operator!=(const Value &other) const { return !(*this == other); }
 
  private:
   mgp_value *ptr_;
 };
 
-/// Key-value pair representing Map items
+/// @brief Key-value pair representing @ref Map items.
 struct MapItem {
   const std::string_view key;
   const Value value;
@@ -1000,35 +1110,47 @@ struct MapItem {
 
 class Record {
  public:
-  explicit Record(mgp_result_record *record) : record_(record){};
+  explicit Record(mgp_result_record *record) : record_(record) {}
 
+  /// @brief Inserts a boolean value under field `field_name`.
+  void Insert(const char *field_name, bool value);
+  /// @brief Inserts an integer value under field `field_name`.
   void Insert(const char *field_name, std::int64_t value);
+  /// @brief Inserts a floating-point value under field `field_name`.
   void Insert(const char *field_name, double value);
-  void Insert(const char *field_name, const char *value);
+  /// @brief Inserts a string value under field `field_name`.
   void Insert(const char *field_name, std::string_view value);
+  /// @brief Inserts a string value under field `field_name`.
+  void Insert(const char *field_name, const char *value);
+  /// @brief Inserts a @ref List value under field `field_name`.
   void Insert(const char *field_name, const List &list);
-  // TODO (convert STL vector to MGP):
-  // void Insert(const char *field_name, const std::vector<Value> &list);
+  /// @brief Inserts a @ref Map value under field `field_name`.
   void Insert(const char *field_name, const Map &map);
-  // TODO (convert STL map to MGP):
-  // void Insert(const char *field_name, const std::map<std::to_string, Value> &map);
+  /// @brief Inserts a @ref Node value under field `field_name`.
   void Insert(const char *field_name, const Node &node);
+  /// @brief Inserts a @ref Relationship value under field `field_name`.
   void Insert(const char *field_name, const Relationship &relationship);
+  /// @brief Inserts a @ref Path value under field `field_name`.
   void Insert(const char *field_name, const Path &path);
+  /// @brief Inserts a @ref Date value under field `field_name`.
   void Insert(const char *field_name, const Date &date);
+  /// @brief Inserts a @ref LocalTime value under field `field_name`.
   void Insert(const char *field_name, const LocalTime &local_time);
+  /// @brief Inserts a @ref LocalDateTime value under field `field_name`.
   void Insert(const char *field_name, const LocalDateTime &local_date_time);
+  /// @brief Inserts a @ref Duration value under field `field_name`.
   void Insert(const char *field_name, const Duration &duration);
 
  private:
-  void Insert(const char *field_name, const Value &&value);
+  void Insert(const char *field_name, Value &value);
 
   mgp_result_record *record_;
 };
 
+/// @brief Factory class for @ref Record
 class RecordFactory {
  public:
-  explicit RecordFactory(mgp_result *result) : result_(result){};
+  explicit RecordFactory(mgp_result *result) : result_(result) {}
   RecordFactory(RecordFactory const &) = delete;
 
   const mage::Record NewRecord() const;
@@ -1041,50 +1163,10 @@ class RecordFactory {
 /* #endregion */
 
 namespace util {
+/// @brief Returns whether two MGP API values are equal.
 inline bool ValuesEqual(mgp_value *value1, mgp_value *value2);
 
-inline bool NodesEqual(mgp_vertex *node1, mgp_vertex *node2) {
-  // In query module contexts, nodes with the same ID are considered identical
-  if (node1 == node2) {
-    return true;
-  }
-  if (mgp::vertex_get_id(node1).as_int != mgp::vertex_get_id(node2).as_int) {
-    return false;
-  }
-  return true;
-}
-
-inline bool RelationshipsEqual(mgp_edge *relationship1, mgp_edge *relationship2) {
-  // In query module contexts, relationships with the same ID are considered identical
-  if (relationship1 == relationship2) {
-    return true;
-  }
-  if (mgp::edge_get_id(relationship1).as_int != mgp::edge_get_id(relationship2).as_int) {
-    return false;
-  }
-  return true;
-}
-
-inline bool PathsEqual(mgp_path *path1, mgp_path *path2) {
-  // In query module contexts, paths are considered identical if all their elements are pairwise also identical
-  if (path1 == path2) {
-    return true;
-  }
-  if (mgp::path_size(path1) != mgp::path_size(path2)) {
-    return false;
-  }
-  const auto path_size = mgp::path_size(path1);
-  for (size_t i = 0; i < path_size; ++i) {
-    if (!util::NodesEqual(mgp::path_vertex_at(path1, i), mgp::path_vertex_at(path2, i))) {
-      return false;
-    }
-    if (!util::RelationshipsEqual(mgp::path_edge_at(path1, i), mgp::path_edge_at(path2, i))) {
-      return false;
-    }
-  }
-  return util::NodesEqual(mgp::path_vertex_at(path1, path_size), mgp::path_vertex_at(path2, path_size));
-}
-
+/// @brief Returns whether two MGP API lists are equal.
 inline bool ListsEqual(mgp_list *list1, mgp_list *list2) {
   if (list1 == list2) {
     return true;
@@ -1101,6 +1183,7 @@ inline bool ListsEqual(mgp_list *list1, mgp_list *list2) {
   return true;
 }
 
+/// @brief Returns whether two MGP API maps are equal.
 inline bool MapsEqual(mgp_map *map1, mgp_map *map2) {
   if (map1 == map2) {
     return true;
@@ -1121,16 +1204,65 @@ inline bool MapsEqual(mgp_map *map1, mgp_map *map2) {
   return true;
 }
 
+/// @brief Returns whether two MGP API nodes are equal.
+inline bool NodesEqual(mgp_vertex *node1, mgp_vertex *node2) {
+  // With query modules, two nodes are identical if their IDs are equal
+  if (node1 == node2) {
+    return true;
+  }
+  if (mgp::vertex_get_id(node1).as_int != mgp::vertex_get_id(node2).as_int) {
+    return false;
+  }
+  return true;
+}
+
+/// @brief Returns whether two MGP API relationships are equal.
+inline bool RelationshipsEqual(mgp_edge *relationship1, mgp_edge *relationship2) {
+  // With query modules, two relationships are identical if their IDs are equal
+  if (relationship1 == relationship2) {
+    return true;
+  }
+  if (mgp::edge_get_id(relationship1).as_int != mgp::edge_get_id(relationship2).as_int) {
+    return false;
+  }
+  return true;
+}
+
+/// @brief Returns whether two MGP API paths are equal.
+inline bool PathsEqual(mgp_path *path1, mgp_path *path2) {
+  // With query modules, two paths are identical if their elements are pairwise identical
+  if (path1 == path2) {
+    return true;
+  }
+  if (mgp::path_size(path1) != mgp::path_size(path2)) {
+    return false;
+  }
+  const auto path_size = mgp::path_size(path1);
+  for (size_t i = 0; i < path_size; ++i) {
+    if (!util::NodesEqual(mgp::path_vertex_at(path1, i), mgp::path_vertex_at(path2, i))) {
+      return false;
+    }
+    if (!util::RelationshipsEqual(mgp::path_edge_at(path1, i), mgp::path_edge_at(path2, i))) {
+      return false;
+    }
+  }
+  return util::NodesEqual(mgp::path_vertex_at(path1, path_size), mgp::path_vertex_at(path2, path_size));
+}
+
+/// @brief Returns whether two MGP API date objects are equal.
 inline bool DatesEqual(mgp_date *date1, mgp_date *date2) { return mgp::date_equal(date1, date2); }
 
+/// @brief Returns whether two MGP API local time objects are equal.
 inline bool LocalTimesEqual(mgp_local_time *local_time1, mgp_local_time *local_time2) {
   return mgp::local_time_equal(local_time1, local_time2);
 }
 
+/// @brief Returns whether two MGP API local datetime objects are equal.
 inline bool LocalDateTimesEqual(mgp_local_date_time *local_date_time1, mgp_local_date_time *local_date_time2) {
   return mgp::local_date_time_equal(local_date_time1, local_date_time2);
 }
 
+/// @brief Returns whether two MGP API duration objects are equal.
 inline bool DurationsEqual(mgp_duration *duration1, mgp_duration *duration2) {
   return mgp::duration_equal(duration1, duration2);
 }
@@ -1175,6 +1307,7 @@ inline bool ValuesEqual(mgp_value *value1, mgp_value *value2) {
   throw ValueException("Invalid value; does not match any Memgraph type.");
 }
 
+/// @brief Converts C++ API types to their MGP API equivalents.
 inline mgp_type *ToMGPType(Type type) {
   switch (type) {
     case Type::Bool:
@@ -1207,12 +1340,14 @@ inline mgp_type *ToMGPType(Type type) {
   throw ValueException("Unknown type error!");
 }
 
-inline mgp_type *ToMGPType(Type list_type, Type list_item_type) {
+/// @brief Converts C++ API list types to their MGP API equivalents.
+/// @note In the MGP API, it is necessary to define the list items’ type.
+inline mgp_type *ToMGPType(Type list_type, Type item_type) {
   if (list_type != Type::List) {
     throw ValueException("Unknown type error!");
   }
 
-  switch (list_item_type) {
+  switch (item_type) {
     case Type::Bool:
       return mgp::type_list(mgp::type_bool());
     case Type::Int:
@@ -1243,6 +1378,7 @@ inline mgp_type *ToMGPType(Type list_type, Type list_item_type) {
   throw ValueException("Unknown type error!");
 }
 
+/// @brief Converts MGP API types to their C++ API equivalents.
 inline Type ToAPIType(mgp_value_type type) {
   switch (type) {
     case MGP_VALUE_TYPE_NULL:
@@ -1278,9 +1414,6 @@ inline Type ToAPIType(mgp_value_type type) {
   }
   throw ValueException("Unknown type error!");
 }
-
-// TODO
-inline mgp_value *MakeMGPType(Type type, Value value) { return mgp::value_make_int(0, memory); }
 }  // namespace util
 
 /* #region Graph (Id, Graph, Nodes, GraphRelationships, Relationships, Properties & Labels) */
@@ -1314,11 +1447,21 @@ inline GraphNodes Graph::nodes() const {
 inline GraphRelationships Graph::relationships() const { return GraphRelationships(graph_); }
 
 inline Node Graph::GetNodeById(const Id node_id) const {
-  auto node = mgp::graph_get_vertex_by_id(graph_, mgp_vertex_id{.as_int = node_id.AsInt()}, memory);
-  return Node(node);
+  auto mgp_node = mgp::graph_get_vertex_by_id(graph_, mgp_vertex_id{.as_int = node_id.AsInt()}, memory);
+  auto node = Node(mgp_node);
+  mgp::vertex_destroy(mgp_node);
+  return node;
 }
 
-bool Graph::Contains(const Id node_id) const { return GetNodeById(node_id).ptr_ != nullptr; }
+bool Graph::Contains(const Id node_id) const {
+  auto mgp_node = mgp::graph_get_vertex_by_id(graph_, mgp_vertex_id{.as_int = node_id.AsInt()}, memory);
+  if (mgp_node == nullptr) {
+    return false;
+  }
+
+  mgp::vertex_destroy(mgp_node);
+  return true;
+}
 bool Graph::Contains(const Node &node) const { return Contains(node.id()); }
 bool Graph::Contains(const Relationship &relationship) const {
   for (const auto &graph_relationship : relationships()) {
@@ -1391,9 +1534,11 @@ inline Nodes::Iterator Nodes::end() { return Iterator(nullptr); }
 inline GraphRelationships::Iterator::Iterator(mgp_vertices_iterator *nodes_iterator) : nodes_iterator_(nodes_iterator) {
   // Positions the iterator over the first existing relationship
 
-  if (nodes_iterator_ == nullptr) return;
+  if (nodes_iterator_ == nullptr) {
+    return;
+  }
 
-  // Go through the adjacent nodes of each graph node
+  // Go through each graph node’s adjacent nodes
   for (auto node = mgp::vertices_iterator_get(nodes_iterator_); node;
        node = mgp::vertices_iterator_next(nodes_iterator_)) {
     // Check if node exists
@@ -1427,18 +1572,21 @@ inline GraphRelationships::Iterator &GraphRelationships::Iterator::operator++() 
 
   // 1. Check if the current node has remaining relationships to iterate over
 
-  auto relationship = mgp::edges_iterator_get(out_relationships_iterator_);
-  if (relationship != nullptr) return *this;
+  if (out_relationships_iterator_ != nullptr) {
+    auto next = mgp::edges_iterator_next(out_relationships_iterator_);
 
-  mgp::edges_iterator_destroy(out_relationships_iterator_);
-  out_relationships_iterator_ = nullptr;
+    if (next == nullptr) {
+      mgp::edges_iterator_destroy(out_relationships_iterator_);
+      out_relationships_iterator_ = nullptr;
+    }
+  }
 
   // 2. Move onto the next nodes
 
   if (nodes_iterator_ != nullptr) {
-    for (auto node = mgp::vertices_iterator_get(nodes_iterator_); node;
+    for (auto node = mgp::vertices_iterator_next(nodes_iterator_); node;
          node = mgp::vertices_iterator_next(nodes_iterator_)) {
-      // Check if node exists
+      // Check if node exists - if it doesn’t, we’ve reached the end of the iterator
       if (node == nullptr) {
         mgp::vertices_iterator_destroy(nodes_iterator_);
         nodes_iterator_ = nullptr;
@@ -1448,16 +1596,22 @@ inline GraphRelationships::Iterator &GraphRelationships::Iterator::operator++() 
       // Check if node has out-relationships
       out_relationships_iterator_ = mgp::vertex_iter_out_edges(node, memory);
       auto relationship = mgp::edges_iterator_get(out_relationships_iterator_);
-      if (relationship != nullptr) return *this;
-
-      mgp::edges_iterator_destroy(out_relationships_iterator_);
-      out_relationships_iterator_ = nullptr;
+      if (relationship != nullptr) {
+        return *this;
+      } else {
+        mgp::edges_iterator_destroy(out_relationships_iterator_);
+        out_relationships_iterator_ = nullptr;
+      }
     }
 
     mgp::vertices_iterator_destroy(nodes_iterator_);
     nodes_iterator_ = nullptr;
+    return *this;
+  } else {
+    mgp::vertices_iterator_destroy(nodes_iterator_);
+    nodes_iterator_ = nullptr;
+    return *this;
   }
-  return *this;
 }
 
 inline bool GraphRelationships::Iterator::operator==(Iterator other) const {
@@ -1574,19 +1728,19 @@ inline std::string_view Labels::operator[](size_t index) const { return mgp::ver
 
 // List:
 
-inline List::List(const std::vector<Value> &values) : List(values.size()) {
+inline List::List(const std::vector<Value> &values) : ptr_(mgp::list_make_empty(values.size(), memory)) {
   for (const auto &value : values) {
     AppendExtend(value);
   }
 }
 
-inline List::List(std::vector<Value> &&values) : List(values.size()) {
+inline List::List(std::vector<Value> &&values) : ptr_(mgp::list_make_empty(values.size(), memory)) {
   for (auto &value : values) {
     Append(std::move(value));
   }
 }
 
-inline List::List(const std::initializer_list<Value> values) : List(values.size()) {
+inline List::List(const std::initializer_list<Value> values) : ptr_(mgp::list_make_empty(values.size(), memory)) {
   for (const auto &value : values) {
     AppendExtend(value);
   }
@@ -1598,20 +1752,18 @@ inline List::~List() {
   }
 }
 
-inline Value List::Iterator::operator*() const { return (*iterable_)[index_]; }
-
 inline const Value List::operator[](size_t index) const { return Value(mgp::list_at(ptr_, index)); }
 
-inline void List::Append(const Value &value) { mgp::list_append(ptr_, mgp::value_copy(value.ptr_, memory)); }
+inline Value List::Iterator::operator*() const { return (*iterable_)[index_]; }
+
+inline void List::Append(const Value &value) { mgp::list_append(ptr_, value.ptr_); }
 
 inline void List::Append(Value &&value) {
   mgp::list_append(ptr_, value.ptr_);
   value.ptr_ = nullptr;
 }
 
-inline void List::AppendExtend(const Value &value) {
-  mgp::list_append_extend(ptr_, mgp::value_copy(value.ptr_, memory));
-}
+inline void List::AppendExtend(const Value &value) { mgp::list_append_extend(ptr_, value.ptr_); }
 
 inline void List::AppendExtend(Value &&value) {
   mgp::list_append_extend(ptr_, value.ptr_);
@@ -1620,25 +1772,27 @@ inline void List::AppendExtend(Value &&value) {
 
 inline bool List::operator==(const List &other) const { return util::ListsEqual(ptr_, other.ptr_); }
 
+// MapItem:
+
 inline bool MapItem::operator==(MapItem &other) const { return key == other.key && value == other.value; }
 inline bool MapItem::operator!=(MapItem &other) const { return !(*this == other); }
 
 // Map:
 
-inline Map::Map(const std::map<std::string_view, Value> &items) : Map(mgp::map_make_empty(memory)) {
+inline Map::Map(const std::map<std::string_view, Value> &items) : ptr_(mgp::map_make_empty(memory)) {
   for (const auto &[key, value] : items) {
     Insert(key, value);
   }
 }
 
-inline Map::Map(std::map<std::string_view, Value> &&items) : Map(mgp::map_make_empty(memory)) {
+inline Map::Map(std::map<std::string_view, Value> &&items) : ptr_(mgp::map_make_empty(memory)) {
   for (auto &[key, value] : items) {
     Insert(key, value);
   }
 }
 
 inline Map::Map(const std::initializer_list<std::pair<std::string_view, Value>> items)
-    : Map(mgp::map_make_empty(memory)) {
+    : ptr_(mgp::map_make_empty(memory)) {
   for (const auto &[key, value] : items) {
     Insert(key, value);
   }
@@ -1649,6 +1803,10 @@ inline Map::~Map() {
     mgp::map_destroy(ptr_);
   }
 }
+
+inline const Value Map::operator[](std::string_view key) const { return Value(mgp::map_at(ptr_, key.data())); }
+
+inline const Value Map::at(std::string_view key) const { return Value(mgp::map_at(ptr_, key.data())); }
 
 inline Map::Iterator::Iterator(mgp_map_items_iterator *map_items_iterator) : map_items_iterator_(map_items_iterator) {
   if (map_items_iterator_ == nullptr) return;
@@ -1704,18 +1862,15 @@ inline Map::Iterator Map::begin() { return Iterator(mgp::map_iter_items(ptr_, me
 
 inline Map::Iterator Map::end() { return Iterator(nullptr); }
 
-inline void Map::Insert(std::string_view key, const Value &value) {
-  mgp::map_insert(ptr_, key.data(), mgp::value_copy(value.ptr_, memory));
-}
+inline void Map::Insert(std::string_view key, const Value &value) { mgp::map_insert(ptr_, key.data(), value.ptr_); }
 
 inline void Map::Insert(std::string_view key, Value &&value) {
   mgp::map_insert(ptr_, key.data(), value.ptr_);
   value.ptr_ = nullptr;
 }
 
-inline const Value Map::operator[](std::string_view key) const { return Value(mgp::map_at(ptr_, key.data())); }
+inline bool Map::operator==(const Map &other) const { return util::MapsEqual(ptr_, other.ptr_); }
 
-inline const Value Map::at(std::string_view key) const { return Value(mgp::map_at(ptr_, key.data())); }
 /* #endregion */
 
 /* #region Graph elements (Node, Relationship & Path) */
@@ -1810,26 +1965,66 @@ inline bool Path::operator==(const Path &other) const { return util::PathsEqual(
 
 // Date:
 
+inline Date::Date(int year, int month, int day) {
+  mgp_date_parameters params{.year = year, .month = month, .day = day};
+  ptr_ = mgp::date_from_parameters(&params, memory);
+}
+
 inline Date::~Date() {
   if (ptr_ != nullptr) {
     mgp::date_destroy(ptr_);
   }
 }
 
+inline Date Date::now() {
+  auto mgp_date = mgp::date_now(memory);
+  auto date = Date(mgp_date);
+  mgp::date_destroy(mgp_date);
+
+  return date;
+}
+
 inline bool Date::operator==(const Date &other) const { return util::DatesEqual(ptr_, other.ptr_); }
 
-inline Date Date::operator+(const Duration &dur) const { return Date(mgp::date_add_duration(ptr_, dur.ptr_, memory)); }
+inline Date Date::operator+(const Duration &dur) const {
+  auto mgp_sum = mgp::date_add_duration(ptr_, dur.ptr_, memory);
+  auto sum = Date(mgp_sum);
+  mgp::date_destroy(mgp_sum);
 
-inline Date Date::operator-(const Duration &dur) const { return Date(mgp::date_sub_duration(ptr_, dur.ptr_, memory)); }
+  return sum;
+}
 
-inline Duration Date::operator-(const Date &other) const { return Duration(mgp::date_diff(ptr_, other.ptr_, memory)); }
+inline Date Date::operator-(const Duration &dur) const {
+  auto mgp_difference = mgp::date_add_duration(ptr_, dur.ptr_, memory);
+  auto difference = Date(mgp_difference);
+  mgp::date_destroy(mgp_difference);
+
+  return difference;
+}
+
+inline Duration Date::operator-(const Date &other) const {
+  auto mgp_difference = mgp::date_diff(ptr_, other.ptr_, memory);
+  auto difference = Duration(mgp_difference);
+  mgp::duration_destroy(mgp_difference);
+
+  return difference;
+}
 
 inline bool Date::operator<(const Date &other) const {
   auto difference = mgp::date_diff(ptr_, other.ptr_, memory);
-  return (mgp::duration_get_microseconds(difference) < 0);
+  auto is_less = (mgp::duration_get_microseconds(difference) < 0);
+  mgp::duration_destroy(difference);
+
+  return is_less;
 }
 
 // LocalTime:
+
+inline LocalTime::LocalTime(int hour, int minute, int second, int millisecond, int microsecond) {
+  mgp_local_time_parameters params{
+      .hour = hour, .minute = minute, .second = second, .millisecond = millisecond, .microsecond = microsecond};
+  ptr_ = mgp::local_time_from_parameters(&params, memory);
+}
 
 inline LocalTime::~LocalTime() {
   if (ptr_ != nullptr) {
@@ -1837,26 +2032,61 @@ inline LocalTime::~LocalTime() {
   }
 }
 
+inline LocalTime LocalTime::now() {
+  auto mgp_local_time = mgp::local_time_now(memory);
+  auto local_time = LocalTime(mgp_local_time);
+  mgp::local_time_destroy(mgp_local_time);
+
+  return local_time;
+}
+
 inline bool LocalTime::operator==(const LocalTime &other) const { return util::LocalTimesEqual(ptr_, other.ptr_); }
 
 inline LocalTime LocalTime::operator+(const Duration &dur) const {
-  return LocalTime(mgp::local_time_add_duration(ptr_, dur.ptr_, memory));
+  auto mgp_sum = mgp::local_time_add_duration(ptr_, dur.ptr_, memory);
+  auto sum = LocalTime(mgp_sum);
+  mgp::local_time_destroy(mgp_sum);
+
+  return sum;
 }
 
 inline LocalTime LocalTime::operator-(const Duration &dur) const {
-  return LocalTime(mgp::local_time_sub_duration(ptr_, dur.ptr_, memory));
+  auto mgp_difference = mgp::local_time_sub_duration(ptr_, dur.ptr_, memory);
+  auto difference = LocalTime(mgp_difference);
+  mgp::local_time_destroy(mgp_difference);
+
+  return difference;
 }
 
 inline Duration LocalTime::operator-(const LocalTime &other) const {
-  return Duration(mgp::local_time_diff(ptr_, other.ptr_, memory));
+  auto mgp_difference = mgp::local_time_diff(ptr_, other.ptr_, memory);
+  auto difference = Duration(mgp_difference);
+  mgp::duration_destroy(mgp_difference);
+
+  return difference;
 }
 
 inline bool LocalTime::operator<(const LocalTime &other) const {
   auto difference = mgp::local_time_diff(ptr_, other.ptr_, memory);
-  return (mgp::duration_get_microseconds(difference) < 0);
+  auto is_less = (mgp::duration_get_microseconds(difference) < 0);
+  mgp::duration_destroy(difference);
+
+  return is_less;
 }
 
 // LocalDateTime:
+
+inline LocalDateTime::LocalDateTime(int year, int month, int day, int hour, int minute, int second, int millisecond,
+                                    int microsecond) {
+  struct mgp_date_parameters date_params {
+    .year = year, .month = month, .day = day
+  };
+  struct mgp_local_time_parameters local_time_params {
+    .hour = hour, .minute = minute, .second = second, .millisecond = millisecond, .microsecond = microsecond
+  };
+  mgp_local_date_time_parameters params{.date_parameters = &date_params, .local_time_parameters = &local_time_params};
+  ptr_ = mgp::local_date_time_from_parameters(&params, memory);
+}
 
 inline LocalDateTime::~LocalDateTime() {
   if (ptr_ != nullptr) {
@@ -1864,28 +2094,62 @@ inline LocalDateTime::~LocalDateTime() {
   }
 }
 
+inline LocalDateTime LocalDateTime::now() {
+  auto mgp_local_date_time = mgp::local_date_time_now(memory);
+  auto local_date_time = LocalDateTime(mgp_local_date_time);
+  mgp::local_date_time_destroy(mgp_local_date_time);
+
+  return local_date_time;
+}
+
 inline bool LocalDateTime::operator==(const LocalDateTime &other) const {
   return util::LocalDateTimesEqual(ptr_, other.ptr_);
 }
 
 inline LocalDateTime LocalDateTime::operator+(const Duration &dur) const {
-  return LocalDateTime(mgp::local_date_time_add_duration(ptr_, dur.ptr_, memory));
+  auto mgp_sum = mgp::local_date_time_add_duration(ptr_, dur.ptr_, memory);
+  auto sum = LocalDateTime(mgp_sum);
+  mgp::local_date_time_destroy(mgp_sum);
+
+  return sum;
 }
 
 inline LocalDateTime LocalDateTime::operator-(const Duration &dur) const {
-  return LocalDateTime(mgp::local_date_time_sub_duration(ptr_, dur.ptr_, memory));
+  auto mgp_difference = mgp::local_date_time_sub_duration(ptr_, dur.ptr_, memory);
+  auto difference = LocalDateTime(mgp_difference);
+  mgp::local_date_time_destroy(mgp_difference);
+
+  return difference;
 }
 
 inline Duration LocalDateTime::operator-(const LocalDateTime &other) const {
-  return Duration(mgp::local_date_time_diff(ptr_, other.ptr_, memory));
+  auto mgp_difference = mgp::local_date_time_diff(ptr_, other.ptr_, memory);
+  auto difference = Duration(mgp_difference);
+  mgp::duration_destroy(mgp_difference);
+
+  return difference;
 }
 
 inline bool LocalDateTime::operator<(const LocalDateTime &other) const {
   auto difference = mgp::local_date_time_diff(ptr_, other.ptr_, memory);
-  return (mgp::duration_get_microseconds(difference) < 0);
+  auto is_less = (mgp::duration_get_microseconds(difference) < 0);
+  mgp::duration_destroy(difference);
+
+  return is_less;
 }
 
 // Duration:
+
+inline Duration::Duration(double day, double hour, double minute, double second, double millisecond,
+                          double microsecond) {
+  mgp_duration_parameters params{.day = day,
+                                 .hour = hour,
+                                 .minute = minute,
+                                 .second = second,
+                                 .millisecond = millisecond,
+                                 .microsecond = microsecond};
+  ptr_ = mgp::duration_from_parameters(&params, memory);
+}
 
 inline Duration::~Duration() {
   if (ptr_ != nullptr) {
@@ -1895,10 +2159,37 @@ inline Duration::~Duration() {
 
 inline bool Duration::operator==(const Duration &other) const { return util::DurationsEqual(ptr_, other.ptr_); }
 
+inline Duration Duration::operator+(const Duration &other) const {
+  auto mgp_sum = mgp::duration_add(ptr_, other.ptr_, memory);
+  auto sum = Duration(mgp_sum);
+  mgp::duration_destroy(mgp_sum);
+
+  return sum;
+}
+
+inline Duration Duration::operator-(const Duration &other) const {
+  auto mgp_difference = mgp::duration_sub(ptr_, other.ptr_, memory);
+  auto difference = Duration(mgp_difference);
+  mgp::duration_destroy(mgp_difference);
+
+  return difference;
+}
+inline Duration Duration::operator-() const {
+  auto mgp_neg = mgp::duration_neg(ptr_, memory);
+  auto neg = Duration(mgp_neg);
+  mgp::duration_destroy(mgp_neg);
+
+  return neg;
+}
+
 inline bool Duration::operator<(const Duration &other) const {
   auto difference = mgp::duration_sub(ptr_, other.ptr_, memory);
-  return (mgp::duration_get_microseconds(difference) < 0);
+  auto is_less = (mgp::duration_get_microseconds(difference) < 0);
+  mgp::duration_destroy(difference);
+
+  return is_less;
 }
+
 /* #endregion */
 
 /* #endregion */
@@ -1993,7 +2284,7 @@ inline const Date Value::ValueDate() const {
 }
 
 inline const LocalTime Value::ValueLocalTime() const {
-  if (type() != Type::Date) {
+  if (type() != Type::LocalTime) {
     throw ValueException("Type of value is wrong: expected LocalTime.");
   }
   return LocalTime(mgp::value_get_local_time(ptr_));
@@ -2035,49 +2326,76 @@ inline bool Value::operator==(const Value &other) const { return util::ValuesEqu
 /* #region Record */
 // Record:
 
-inline void Record::Insert(const char *field_name, std::int64_t value) { Insert(field_name, Value(value)); }
-inline void Record::Insert(const char *field_name, double value) { Insert(field_name, Value(value)); }
-inline void Record::Insert(const char *field_name, const char *value) { Insert(field_name, Value(value)); }
-inline void Record::Insert(const char *field_name, std::string_view value) { Insert(field_name, Value(value)); }
+inline void Record::Insert(const char *field_name, bool value) {
+  auto mgp_val = mgp::value_make_bool(value, memory);
+  { mgp::result_record_insert(record_, field_name, mgp_val); }
+  mgp::value_destroy(mgp_val);
+}
+inline void Record::Insert(const char *field_name, std::int64_t value) {
+  auto mgp_val = mgp::value_make_int(value, memory);
+  { mgp::result_record_insert(record_, field_name, mgp_val); }
+  mgp::value_destroy(mgp_val);
+}
+inline void Record::Insert(const char *field_name, double value) {
+  auto mgp_val = mgp::value_make_double(value, memory);
+  { mgp::result_record_insert(record_, field_name, mgp_val); }
+  mgp::value_destroy(mgp_val);
+}
+inline void Record::Insert(const char *field_name, std::string_view value) {
+  auto mgp_val = mgp::value_make_string(value.data(), memory);
+  { mgp::result_record_insert(record_, field_name, mgp_val); }
+  mgp::value_destroy(mgp_val);
+}
+inline void Record::Insert(const char *field_name, const char *value) {
+  auto mgp_val = mgp::value_make_string(value, memory);
+  { mgp::result_record_insert(record_, field_name, mgp_val); }
+  mgp::value_destroy(mgp_val);
+}
 inline void Record::Insert(const char *field_name, const List &list) {
-  Insert(field_name, Value(mgp::value_make_list(mgp::list_copy(list.ptr_, memory))));
+  auto mgp_val = mgp::value_make_list(mgp::list_copy(list.ptr_, memory));
+  { mgp::result_record_insert(record_, field_name, mgp_val); }
+  mgp::value_destroy(mgp_val);
 }
-// TODO (convert STL vector to MGP):
-// inline void Record::Insert(const char *field_name, std::vector<Value> &list) {
-//   Insert(field_name, Value(mgp::value_make_list(mgp::list_copy(list.ptr_, memory))));
-// }
 inline void Record::Insert(const char *field_name, const Map &map) {
-  Insert(field_name, Value(mgp::value_make_map(mgp::map_copy(map.ptr_, memory))));
+  auto mgp_val = mgp::value_make_map(mgp::map_copy(map.ptr_, memory));
+  { mgp::result_record_insert(record_, field_name, mgp_val); }
+  mgp::value_destroy(mgp_val);
 }
-// TODO (convert STL map to MGP):
-// inline void Record::Insert(const char *field_name, std::map<std::string_view, Value> &list) {
-//   Insert(field_name, Value(mgp::value_make_map(mgp::map_copy(map.ptr_, memory))));
-// }
 inline void Record::Insert(const char *field_name, const Node &node) {
-  Insert(field_name, Value(mgp::value_make_vertex(mgp::vertex_copy(node.ptr_, memory))));
+  auto mgp_val = mgp::value_make_vertex(mgp::vertex_copy(node.ptr_, memory));
+  { mgp::result_record_insert(record_, field_name, mgp_val); }
+  mgp::value_destroy(mgp_val);
 }
 inline void Record::Insert(const char *field_name, const Relationship &relationship) {
-  Insert(field_name, Value(mgp::value_make_edge(mgp::edge_copy(relationship.ptr_, memory))));
+  auto mgp_val = mgp::value_make_edge(mgp::edge_copy(relationship.ptr_, memory));
+  { mgp::result_record_insert(record_, field_name, mgp_val); }
+  mgp::value_destroy(mgp_val);
 }
 inline void Record::Insert(const char *field_name, const Path &path) {
-  Insert(field_name, Value(mgp::value_make_path(mgp::path_copy(path.ptr_, memory))));
+  auto mgp_val = mgp::value_make_path(mgp::path_copy(path.ptr_, memory));
+  { mgp::result_record_insert(record_, field_name, mgp_val); }
+  mgp::value_destroy(mgp_val);
 }
 inline void Record::Insert(const char *field_name, const Date &date) {
-  Insert(field_name, Value(mgp::value_make_date(mgp::date_copy(date.ptr_, memory))));
+  auto mgp_val = mgp::value_make_date(mgp::date_copy(date.ptr_, memory));
+  { mgp::result_record_insert(record_, field_name, mgp_val); }
+  mgp::value_destroy(mgp_val);
 }
 inline void Record::Insert(const char *field_name, const LocalTime &local_time) {
-  Insert(field_name, Value(mgp::value_make_local_time(mgp::local_time_copy(local_time.ptr_, memory))));
+  auto mgp_val = mgp::value_make_local_time(mgp::local_time_copy(local_time.ptr_, memory));
+  { mgp::result_record_insert(record_, field_name, mgp_val); }
+  mgp::value_destroy(mgp_val);
 }
 inline void Record::Insert(const char *field_name, const LocalDateTime &local_date_time) {
-  Insert(field_name, Value(mgp::value_make_local_date_time(mgp::local_date_time_copy(local_date_time.ptr_, memory))));
+  auto mgp_val = mgp::value_make_local_date_time(mgp::local_date_time_copy(local_date_time.ptr_, memory));
+  { mgp::result_record_insert(record_, field_name, mgp_val); }
+  mgp::value_destroy(mgp_val);
 }
 inline void Record::Insert(const char *field_name, const Duration &duration) {
-  Insert(field_name, Value(mgp::value_make_duration(mgp::duration_copy(duration.ptr_, memory))));
+  auto mgp_val = mgp::value_make_duration(mgp::duration_copy(duration.ptr_, memory));
+  { mgp::result_record_insert(record_, field_name, mgp_val); }
+  mgp::value_destroy(mgp_val);
 }
-inline void Record::Insert(const char *field_name, const Value &&value) {
-  mgp::result_record_insert(record_, field_name, value.ptr_);
-}
-
 // RecordFactory:
 
 inline const Record RecordFactory::NewRecord() const {
@@ -2089,36 +2407,76 @@ inline const Record RecordFactory::NewRecord() const {
 }
 /* #endregion */
 
+/// @brief Represents a procedure’s parameter. Parameters are defined by their name, type, and (if optional) default
+/// value.
 struct Parameter {
   std::string_view name;
   mage::Type type;
   mage::Type list_item_type = Type::UNDEF;
   bool optional = false;
   bool is_list = false;
-  mage::Value default_value = Value();
+  Value default_value;
 
-  Parameter(std::string_view name, mage::Type type) : name(name), type(type) {}
+  /// @brief Creates a non-optional parameter with the given `name` and `type`.
+  Parameter(std::string_view name, Type type) : name(name), type(type) {}
 
-  Parameter(std::string_view name, mage::Type type, mage::Value default_value)
+  /// @brief Creates an optional boolean parameter with the given `name` and `default_value`.
+  Parameter(std::string_view name, Type type, bool default_value)
+      : name(name), type(type), optional(true), default_value(Value(default_value)) {}
+
+  /// @brief Creates an optional integer parameter with the given `name` and `default_value`.
+  Parameter(std::string_view name, Type type, int64_t default_value)
+      : name(name), type(type), optional(true), default_value(Value(default_value)) {}
+
+  /// @brief Creates an optional floating-point parameter with the given `name` and `default_value`.
+  Parameter(std::string_view name, Type type, double default_value)
+      : name(name), type(type), optional(true), default_value(Value(default_value)) {}
+
+  /// @brief Creates an optional string parameter with the given `name` and `default_value`.
+  Parameter(std::string_view name, Type type, std::string_view default_value)
+      : name(name), type(type), optional(true), default_value(Value(default_value)) {}
+
+  /// @brief Creates an optional string parameter with the given `name` and `default_value`.
+  Parameter(std::string_view name, Type type, const char *default_value)
+      : name(name), type(type), optional(true), default_value(Value(default_value)) {}
+
+  /// @brief Creates an optional parameter with the given `name` and `default_value`.
+  Parameter(std::string_view name, Type type, mage::Value default_value)
       : name(name), type(type), optional(true), default_value(default_value) {}
 
-  Parameter(std::string_view name, mage::Type type, mage::Type list_item_type)
-      : name(name), type(type), list_item_type(list_item_type), is_list(true) {}
+  /// @brief Creates a non-optional List parameter with the given `name`, `type` (List) and `item_type`.
+  Parameter(std::string_view name, Type type, Type item_type)
+      : name(name), type(type), list_item_type(item_type), is_list(true) {}
 
-  Parameter(std::string_view name, mage::Type type, mage::Type list_item_type, mage::Value default_value)
+  /// @brief Creates an optional List parameter with the given `name`, `type` (List), `item_type`, and `default_value`.
+  Parameter(std::string_view name, Type type, Type item_type, mage::Value default_value)
       : name(name),
         type(type),
-        list_item_type(list_item_type),
+        list_item_type(item_type),
         optional(true),
         is_list(true),
         default_value(default_value) {}
+
+  // ~Parameter() {
+  //   if (default_value != NULL) {
+  //     mgp::value_destroy(default_value);
+  //   }
+  // }
 };
 
+/// @brief Represents a procedure’s return value. The values are defined by their name and type.
 struct Return {
   std::string_view name;
   mage::Type type;
+  mage::Type list_item_type = Type::UNDEF;
+  bool is_list = false;
 
+  /// @brief Creates a return value with the given `name` and `type`.
   Return(std::string_view name, mage::Type type) : name(name), type(type) {}
+
+  /// @brief Creates a return List value with the given `name`, `type` (List) and `item_type`.
+  Return(std::string_view name, mage::Type type, Type item_type)
+      : name(name), type(type), list_item_type(item_type), is_list(true) {}
 };
 
 class ProcedureWrapper {
@@ -2141,16 +2499,21 @@ class ProcedureWrapper {
       } else if (!optional && is_list) {
         mgp::proc_add_arg(proc, parameter_name, util::ToMGPType(parameter.type, parameter.list_item_type));
       } else if (optional && !is_list) {
-        mgp::proc_add_opt_arg(proc, parameter_name, util::ToMGPType(parameter.type),
-                              util::MakeMGPType(parameter.type, parameter.default_value));
+        mgp::proc_add_opt_arg(proc, parameter_name, util::ToMGPType(parameter.type), parameter.default_value.ptr());
       } else if (optional && is_list) {
         mgp::proc_add_opt_arg(proc, parameter_name, util::ToMGPType(parameter.type, parameter.list_item_type),
-                              util::MakeMGPType(parameter.type, parameter.default_value));
+                              parameter.default_value.ptr());
       }
     }
 
     for (const auto return_ : returns) {
-      mgp::proc_add_result(proc, return_.name.data(), util::ToMGPType(return_.type));
+      auto return_name = return_.name.data();
+
+      if (!return_.is_list) {
+        mgp::proc_add_result(proc, return_name, util::ToMGPType(return_.type));
+      } else {
+        mgp::proc_add_result(proc, return_name, util::ToMGPType(return_.type, return_.list_item_type));
+      }
     }
   }
 };

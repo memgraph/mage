@@ -1,0 +1,9 @@
+query: >
+    MATCH (v: Node {id:0})-[e]-()
+    MATCH path = ()-[*]->()
+    CALL api_test_module.run_opt(v,
+                                 e,
+                                 path) 
+    YIELD * RETURN out_3;
+output:
+    - out_3: true
