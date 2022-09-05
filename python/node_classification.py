@@ -197,12 +197,12 @@ def declare_data(ctx: mgp.ProcCtx) -> HeteroData:
     observed_attribute_data = data[current_values[HeteroParams.OBSERVED_ATTRIBUTE]]
     # second parameter of shape of feature matrix is number of input channels
     current_values[ModelParams.IN_CHANNELS] = np.shape(
-        observed_attribute_data.x.detach().numpy()
+        observed_attribute_data.x.detach().cpu().numpy()
     )[1]
 
     # number of output channels is number of classes in the dataset
     current_values[ModelParams.OUT_CHANNELS] = len(
-        set(observed_attribute_data.y.detach().numpy())
+        set(observed_attribute_data.y.detach().cpu().numpy())
     )
 
     return data
@@ -536,6 +536,7 @@ def train(
                 data,
                 current_values[DataParams.METRICS],
                 current_values[HeteroParams.OBSERVED_ATTRIBUTE],
+                current_values[OtherParams.DEVICE_TYPE]
             )
             dict_val = metrics(
                 data[current_values[HeteroParams.OBSERVED_ATTRIBUTE]].val_mask,
@@ -543,6 +544,7 @@ def train(
                 data,
                 current_values[DataParams.METRICS],
                 current_values[HeteroParams.OBSERVED_ATTRIBUTE],
+                current_values[OtherParams.DEVICE_TYPE]
             )
             logged_data.append(
                 {
@@ -706,7 +708,7 @@ def predict(ctx: mgp.ProcCtx, vertex: mgp.Vertex) -> mgp.Record(predicted_class=
 
     position = current_values[inv_reindexing][observed_attribute][vertex.id]
 
-    predicted_class = int(pred.detach().numpy()[position])
+    predicted_class = int(pred.detach().cpu().numpy()[position])
 
     return mgp.Record(predicted_class=predicted_class)
 

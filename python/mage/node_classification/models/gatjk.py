@@ -30,7 +30,7 @@ class GATJK(torch.nn.Module):
 
         self.convs = torch.nn.ModuleList()
         self.convs.append(
-            GATConv(in_channels, hidden_features_size[0], heads=heads, concat=True)
+            GATConv(in_channels, hidden_features_size[0], heads=heads, concat=True, add_self_loops=False)
         )
 
         self.bns = torch.nn.ModuleList()
@@ -43,13 +43,14 @@ class GATJK(torch.nn.Module):
                     hidden_features_size[i + 1],
                     heads=heads,
                     concat=True,
+                    add_self_loops=False
                 )
             )
             self.bns.append(torch.nn.BatchNorm1d(hidden_features_size[i + 1] * heads))
 
         self.convs.append(
             GATConv(
-                hidden_features_size[-2] * heads, hidden_features_size[-1], heads=heads
+                hidden_features_size[-2] * heads, hidden_features_size[-1], heads=heads, add_self_loops=False
             )
         )
 

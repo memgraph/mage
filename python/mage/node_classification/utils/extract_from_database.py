@@ -230,8 +230,8 @@ def masks_generating(
 
     data[observed_attribute].val_mask = torch.tensor(1 - masks, dtype=torch.bool)
 
-    data = T.ToUndirected()(data)
     data = T.AddSelfLoops()(data)
+    data = T.ToUndirected()(data)
 
     return data
 

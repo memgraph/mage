@@ -17,6 +17,7 @@ def metrics(
     data: Data,
     options: mgp.List[str],
     observed_attribute: str,
+    device: str
 ) -> mgp.Map:
     """Selected metrics calculated for current model and data.
 
@@ -25,6 +26,7 @@ def metrics(
         model (mgp.Any): model variable
         data (Data): dataset variable
         options (mgp.List[str]): list of options to be calculated
+        device (str): cpu or cuda
 
     Returns:
         mgp.Map: dictionary of calculated metrics
@@ -37,26 +39,23 @@ def metrics(
     )  # Use the class with highest probability.
 
     data = data[observed_attribute]
-    confmat = ConfusionMatrix(num_classes=len(set(data.y.detach().cpu().numpy())))
+    confmat = ConfusionMatrix(num_classes=len(set(data.y.detach().cpu().numpy()))).to(device)
     print(confmat(pred[mask], data.y[mask]))
 
     ret = {}
 
-    multiclass = False
-    if len(set(data.y.detach().cpu().numpy())) > 2:
-       multiclass = True
+
+
+    multiclass = True
     num_classes = len(set(data.y.detach().cpu().numpy()))
     
     for metrics in METRICS.keys():
-        print(metrics)
         if metrics in options:
             func = METRICS[metrics](
                 num_classes=num_classes,
                 multiclass=multiclass,
                 average="weighted",
-            )
-            print(pred[mask], data.y[mask])
+            ).to(device)
             ret[metrics] = float(func(pred[mask], data.y[mask]).detach().cpu().numpy())
-            print(ret[metrics])
 
     return ret
