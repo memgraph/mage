@@ -278,13 +278,27 @@ struct mgp_type *type_nullable(struct mgp_type *type) {
 
 // mgp_graph
 
+bool graph_is_mutable(struct mgp_graph *graph) { return MgInvoke<int>(mgp_graph_is_mutable, graph); }
+
 struct mgp_vertex *graph_create_vertex(struct mgp_graph *graph, struct mgp_memory *memory) {
   return MgInvoke<struct mgp_vertex *>(mgp_graph_create_vertex, graph, memory);
+}
+
+void graph_delete_vertex(struct mgp_graph *graph, struct mgp_vertex *vertex) {
+  MgInvokeVoid(mgp_graph_delete_vertex, graph, vertex);
+}
+
+void graph_detach_delete_vertex(struct mgp_graph *graph, struct mgp_vertex *vertex) {
+  MgInvokeVoid(mgp_graph_detach_delete_vertex, graph, vertex);
 }
 
 struct mgp_edge *graph_create_edge(struct mgp_graph *graph, struct mgp_vertex *from, struct mgp_vertex *to,
                                    struct mgp_edge_type type, struct mgp_memory *memory) {
   return MgInvoke<struct mgp_edge *>(mgp_graph_create_edge, graph, from, to, type, memory);
+}
+
+void graph_delete_edge(struct mgp_graph *graph, struct mgp_edge *edge) {
+  MgInvokeVoid(mgp_graph_delete_edge, graph, edge);
 }
 
 struct mgp_vertex *graph_get_vertex_by_id(struct mgp_graph *g, struct mgp_vertex_id id, struct mgp_memory *memory) {

@@ -93,6 +93,10 @@ class Id {
 
 /// @brief Wrapper class for @ref mgp_graph.
 class Graph {
+ private:
+  friend class Node;
+  friend class Relationship;
+
  public:
   explicit Graph(mgp_graph *graph) : graph_(graph) {}
 
@@ -115,6 +119,13 @@ class Graph {
   bool Contains(const Node &node) const;
   /// @brief Returns whether the graph contains the given relationship.
   bool Contains(const Relationship &relationship) const;
+
+  // bool IsMutable() const { return mgp::graph_is_mutable(graph_); }
+  void CreateNode() { mgp::graph_create_vertex(graph_, memory); }
+  void DeleteNode(const Node &node);
+  void DetachDeleteNode(const Node &node);
+  void CreateRelationship(const Node &from, const Node &to, const std::string_view type);
+  void DeleteRelationship(const Relationship &relationship);
 
  private:
   mgp_graph *graph_;
@@ -542,6 +553,7 @@ class Node {
 /// @brief Wrapper class for @ref mgp_edge.
 class Relationship {
  private:
+  friend class Graph;
   friend class Path;
   friend class Value;
   friend class Record;
@@ -1162,6 +1174,89 @@ class RecordFactory {
 };
 /* #endregion */
 
+/* #region Module */
+/// @brief Represents a procedure’s parameter. Parameters are defined by their name, type, and (if optional) default
+/// value.
+struct Parameter {
+  std::string_view name;
+  mage::Type type;
+  mage::Type list_item_type = Type::UNDEF;
+  bool optional = false;
+  bool is_list = false;
+  Value default_value;
+
+  /// @brief Creates a non-optional parameter with the given `name` and `type`.
+  Parameter(std::string_view name, Type type) : name(name), type(type) {}
+
+  /// @brief Creates an optional boolean parameter with the given `name` and `default_value`.
+  Parameter(std::string_view name, Type type, bool default_value)
+      : name(name), type(type), optional(true), default_value(Value(default_value)) {}
+
+  /// @brief Creates an optional integer parameter with the given `name` and `default_value`.
+  Parameter(std::string_view name, Type type, int64_t default_value)
+      : name(name), type(type), optional(true), default_value(Value(default_value)) {}
+
+  /// @brief Creates an optional floating-point parameter with the given `name` and `default_value`.
+  Parameter(std::string_view name, Type type, double default_value)
+      : name(name), type(type), optional(true), default_value(Value(default_value)) {}
+
+  /// @brief Creates an optional string parameter with the given `name` and `default_value`.
+  Parameter(std::string_view name, Type type, std::string_view default_value)
+      : name(name), type(type), optional(true), default_value(Value(default_value)) {}
+
+  /// @brief Creates an optional string parameter with the given `name` and `default_value`.
+  Parameter(std::string_view name, Type type, const char *default_value)
+      : name(name), type(type), optional(true), default_value(Value(default_value)) {}
+
+  /// @brief Creates an optional parameter with the given `name` and `default_value`.
+  Parameter(std::string_view name, Type type, mage::Value default_value)
+      : name(name), type(type), optional(true), default_value(default_value) {}
+
+  /// @brief Creates a non-optional List parameter with the given `name`, `type` (List) and `item_type`.
+  Parameter(std::string_view name, Type type, Type item_type)
+      : name(name), type(type), list_item_type(item_type), is_list(true) {}
+
+  /// @brief Creates an optional List parameter with the given `name`, `type` (List), `item_type`, and `default_value`.
+  Parameter(std::string_view name, Type type, Type item_type, mage::Value default_value)
+      : name(name),
+        type(type),
+        list_item_type(item_type),
+        optional(true),
+        is_list(true),
+        default_value(default_value) {}
+};
+
+/// @brief Represents a procedure’s return value. The values are defined by their name and type.
+struct Return {
+  std::string_view name;
+  mage::Type type;
+  mage::Type list_item_type = Type::UNDEF;
+  bool is_list = false;
+
+  /// @brief Creates a return value with the given `name` and `type`.
+  Return(std::string_view name, mage::Type type) : name(name), type(type) {}
+
+  /// @brief Creates a return List value with the given `name`, `type` (List) and `item_type`.
+  Return(std::string_view name, mage::Type type, Type item_type)
+      : name(name), type(type), list_item_type(item_type), is_list(true) {}
+};
+
+enum class ProdecureType : uint8_t {
+  Read,
+  Write,
+};
+
+class ProcedureWrapper {
+ public:
+  ProcedureWrapper() = default;
+
+  void AddProcedure(void (*callback)(struct mgp_list *, struct mgp_graph *, struct mgp_result *, struct mgp_memory *),
+                    std::string_view name, ProdecureType proc_type, std::vector<mage::Parameter> parameters,
+                    std::vector<Return> returns, mgp_module *module, mgp_memory *memory);
+};
+
+/* #endregion */
+
 namespace util {
 /// @brief Returns whether two MGP API values are equal.
 inline bool ValuesEqual(mgp_value *value1, mgp_value *value2);
@@ -1469,6 +1564,16 @@ bool Graph::Contains(const Relationship &relationship) const {
   }
   return false;
 }
+
+void Graph::DeleteNode(const Node &node) { mgp::graph_delete_vertex(graph_, node.ptr_); }
+
+void Graph::DetachDeleteNode(const Node &node) { mgp::graph_detach_delete_vertex(graph_, node.ptr_); };
+
+void Graph::CreateRelationship(const Node &from, const Node &to, const std::string_view type) {
+  mgp::graph_create_edge(graph_, from.ptr_, to.ptr_, mgp_edge_type{.name = type.data()}, memory);
+}
+
+void Graph::DeleteRelationship(const Relationship &relationship) { mgp::graph_delete_edge(graph_, relationship.ptr_); }
 
 // Nodes:
 
@@ -2407,116 +2512,45 @@ inline const Record RecordFactory::NewRecord() const {
 }
 /* #endregion */
 
-/// @brief Represents a procedure’s parameter. Parameters are defined by their name, type, and (if optional) default
-/// value.
-struct Parameter {
-  std::string_view name;
-  mage::Type type;
-  mage::Type list_item_type = Type::UNDEF;
-  bool optional = false;
-  bool is_list = false;
-  Value default_value;
+/* #region module */
 
-  /// @brief Creates a non-optional parameter with the given `name` and `type`.
-  Parameter(std::string_view name, Type type) : name(name), type(type) {}
+void ProcedureWrapper::AddProcedure(void (*callback)(struct mgp_list *, struct mgp_graph *, struct mgp_result *,
+                                                     struct mgp_memory *),
+                                    std::string_view name, ProdecureType proc_type,
+                                    std::vector<mage::Parameter> parameters, std::vector<Return> returns,
+                                    mgp_module *module, mgp_memory *memory) {
+  auto proc = (proc_type == ProdecureType::Read) ? mgp::module_add_read_procedure(module, name.data(), callback)
+                                                 : mgp::module_add_write_procedure(module, name.data(), callback);
 
-  /// @brief Creates an optional boolean parameter with the given `name` and `default_value`.
-  Parameter(std::string_view name, Type type, bool default_value)
-      : name(name), type(type), optional(true), default_value(Value(default_value)) {}
+  for (const auto parameter : parameters) {
+    auto parameter_name = parameter.name.data();
 
-  /// @brief Creates an optional integer parameter with the given `name` and `default_value`.
-  Parameter(std::string_view name, Type type, int64_t default_value)
-      : name(name), type(type), optional(true), default_value(Value(default_value)) {}
-
-  /// @brief Creates an optional floating-point parameter with the given `name` and `default_value`.
-  Parameter(std::string_view name, Type type, double default_value)
-      : name(name), type(type), optional(true), default_value(Value(default_value)) {}
-
-  /// @brief Creates an optional string parameter with the given `name` and `default_value`.
-  Parameter(std::string_view name, Type type, std::string_view default_value)
-      : name(name), type(type), optional(true), default_value(Value(default_value)) {}
-
-  /// @brief Creates an optional string parameter with the given `name` and `default_value`.
-  Parameter(std::string_view name, Type type, const char *default_value)
-      : name(name), type(type), optional(true), default_value(Value(default_value)) {}
-
-  /// @brief Creates an optional parameter with the given `name` and `default_value`.
-  Parameter(std::string_view name, Type type, mage::Value default_value)
-      : name(name), type(type), optional(true), default_value(default_value) {}
-
-  /// @brief Creates a non-optional List parameter with the given `name`, `type` (List) and `item_type`.
-  Parameter(std::string_view name, Type type, Type item_type)
-      : name(name), type(type), list_item_type(item_type), is_list(true) {}
-
-  /// @brief Creates an optional List parameter with the given `name`, `type` (List), `item_type`, and `default_value`.
-  Parameter(std::string_view name, Type type, Type item_type, mage::Value default_value)
-      : name(name),
-        type(type),
-        list_item_type(item_type),
-        optional(true),
-        is_list(true),
-        default_value(default_value) {}
-
-  // ~Parameter() {
-  //   if (default_value != NULL) {
-  //     mgp::value_destroy(default_value);
-  //   }
-  // }
-};
-
-/// @brief Represents a procedure’s return value. The values are defined by their name and type.
-struct Return {
-  std::string_view name;
-  mage::Type type;
-  mage::Type list_item_type = Type::UNDEF;
-  bool is_list = false;
-
-  /// @brief Creates a return value with the given `name` and `type`.
-  Return(std::string_view name, mage::Type type) : name(name), type(type) {}
-
-  /// @brief Creates a return List value with the given `name`, `type` (List) and `item_type`.
-  Return(std::string_view name, mage::Type type, Type item_type)
-      : name(name), type(type), list_item_type(item_type), is_list(true) {}
-};
-
-class ProcedureWrapper {
- public:
-  ProcedureWrapper() = default;
-
-  void AddQueryProcedure(void (*callback)(struct mgp_list *, struct mgp_graph *, struct mgp_result *,
-                                          struct mgp_memory *),
-                         std::string_view name, std::vector<mage::Parameter> parameters, std::vector<Return> returns,
-                         mgp_module *module, mgp_memory *memory) {
-    auto proc = mgp::module_add_read_procedure(module, name.data(), callback);
-
-    for (const auto parameter : parameters) {
-      auto parameter_name = parameter.name.data();
-
-      auto optional = parameter.optional;
-      auto is_list = parameter.is_list;
-      if (!optional && !is_list) {
-        mgp::proc_add_arg(proc, parameter_name, util::ToMGPType(parameter.type));
-      } else if (!optional && is_list) {
-        mgp::proc_add_arg(proc, parameter_name, util::ToMGPType(parameter.type, parameter.list_item_type));
-      } else if (optional && !is_list) {
-        mgp::proc_add_opt_arg(proc, parameter_name, util::ToMGPType(parameter.type), parameter.default_value.ptr());
-      } else if (optional && is_list) {
-        mgp::proc_add_opt_arg(proc, parameter_name, util::ToMGPType(parameter.type, parameter.list_item_type),
-                              parameter.default_value.ptr());
-      }
-    }
-
-    for (const auto return_ : returns) {
-      auto return_name = return_.name.data();
-
-      if (!return_.is_list) {
-        mgp::proc_add_result(proc, return_name, util::ToMGPType(return_.type));
-      } else {
-        mgp::proc_add_result(proc, return_name, util::ToMGPType(return_.type, return_.list_item_type));
-      }
+    auto optional = parameter.optional;
+    auto is_list = parameter.is_list;
+    if (!optional && !is_list) {
+      mgp::proc_add_arg(proc, parameter_name, util::ToMGPType(parameter.type));
+    } else if (!optional && is_list) {
+      mgp::proc_add_arg(proc, parameter_name, util::ToMGPType(parameter.type, parameter.list_item_type));
+    } else if (optional && !is_list) {
+      mgp::proc_add_opt_arg(proc, parameter_name, util::ToMGPType(parameter.type), parameter.default_value.ptr());
+    } else if (optional && is_list) {
+      mgp::proc_add_opt_arg(proc, parameter_name, util::ToMGPType(parameter.type, parameter.list_item_type),
+                            parameter.default_value.ptr());
     }
   }
-};
+
+  for (const auto return_ : returns) {
+    auto return_name = return_.name.data();
+
+    if (!return_.is_list) {
+      mgp::proc_add_result(proc, return_name, util::ToMGPType(return_.type));
+    } else {
+      mgp::proc_add_result(proc, return_name, util::ToMGPType(return_.type, return_.list_item_type));
+    }
+  }
+}
+
+/* #endregion */
 }  // namespace mage
 
 namespace std {

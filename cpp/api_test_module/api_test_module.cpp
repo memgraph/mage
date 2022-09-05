@@ -453,6 +453,38 @@ void TestProcWrapper(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
   }
 }
 
+void WriteProc(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mage::memory = memory;
+  auto graph = mage::Graph(memgraph_graph);
+
+  for (int i = 0; i < 10; i++) {
+    graph.CreateNode();
+  }
+
+  int i = 5;
+  for (auto node : graph.nodes()) {
+    graph.DeleteNode(node);
+    i -= 1;
+    if (i == 0) break;
+  }
+
+  for (auto node_1 : graph.nodes()) {
+    for (auto node_2 : graph.nodes()) {
+      graph.CreateRelationship(node_1, node_2, "R");
+    }
+  }
+
+  for (auto node_1 : graph.nodes()) {
+    graph.DetachDeleteNode(node_1);
+    break;
+  }
+
+  for (auto rel_1 : graph.relationships()) {
+    graph.DeleteRelationship(rel_1);
+    break;
+  }
+}
+
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
     mage::memory = memory;
@@ -465,8 +497,8 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     auto default_local_date_time = mage::LocalDateTime("2021-10-05T14:15:00");
     auto default_duration = mage::Duration("PT2M2.33S");
 
-    wrapper.AddQueryProcedure(
-        TestProcWrapper, "run_opt",
+    wrapper.AddProcedure(
+        TestProcWrapper, "run_opt", mage::ProdecureType::Read,
         {mage::Parameter("node", mage::Type::Node), mage::Parameter("relationship", mage::Type::Relationship),
          mage::Parameter("path", mage::Type::Path), mage::Parameter("bool", mage::Type::Bool, false),
          mage::Parameter("int", mage::Type::Int, (int64_t)2), mage::Parameter("double", mage::Type::Double, 2.3),
@@ -493,8 +525,8 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     mage::memory = memory;
     auto wrapper = mage::ProcedureWrapper();
 
-    wrapper.AddQueryProcedure(
-        TestProcWrapper, "run",
+    wrapper.AddProcedure(
+        TestProcWrapper, "run", mage::ProdecureType::Read,
         {mage::Parameter("node", mage::Type::Node), mage::Parameter("relationship", mage::Type::Relationship),
          mage::Parameter("path", mage::Type::Path), mage::Parameter("bool", mage::Type::Bool),
          mage::Parameter("int", mage::Type::Int), mage::Parameter("double", mage::Type::Double),
@@ -511,6 +543,16 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
          mage::Return("out_10", mage::Type::LocalTime), mage::Return("out_11", mage::Type::LocalDateTime),
          mage::Return("out_12", mage::Type::Duration)},
         module, memory);
+
+  } catch (const std::exception &e) {
+    return 1;
+  }
+
+  try {
+    mage::memory = memory;
+    auto wrapper = mage::ProcedureWrapper();
+
+    wrapper.AddProcedure(WriteProc, "write_proc", mage::ProdecureType::Write, {}, {}, module, memory);
 
   } catch (const std::exception &e) {
     return 1;
