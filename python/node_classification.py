@@ -118,7 +118,6 @@ DEFINED_INPUT_TYPES = {
     HeteroParams.INV_REINDEXING: dict,
     HeteroParams.NUM_NODES_SAMPLE: int,
     HeteroParams.NUM_ITERATIONS_SAMPLE: int,
-    OtherParams.DEVICE_TYPE: str,
     OtherParams.PATH_TO_MODEL: str,
     OtherParams.PATIENCE: int,
     OtherParams.MODEL_SAVING_FOLDER: str,
@@ -155,7 +154,6 @@ DEFAULT_VALUES = {
     HeteroParams.INV_REINDEXING: {},
     HeteroParams.NUM_NODES_SAMPLE: 512,
     HeteroParams.NUM_ITERATIONS_SAMPLE: 4,
-    OtherParams.DEVICE_TYPE: "cpu",
     OtherParams.PATH_TO_MODEL: "",
     OtherParams.PATIENCE: 10,
     OtherParams.MODEL_SAVING_FOLDER: "torch_models",
@@ -180,6 +178,10 @@ def declare_data(ctx: mgp.ProcCtx) -> HeteroData:
         "cuda:0" if torch.cuda.is_available() else "cpu"
     )
 
+    nodes = list(iter(ctx.graph.vertices))  # obtain nodes from context
+    if not nodes:
+        raise Exception("Graph is empty.")
+
     # extraction of data from database to torch.Tensors
     (
         data,
@@ -187,7 +189,7 @@ def declare_data(ctx: mgp.ProcCtx) -> HeteroData:
         current_values[HeteroParams.REINDEXING],
         current_values[HeteroParams.INV_REINDEXING],
     ) = extract_from_database(
-        ctx,
+        nodes,
         current_values[DataParams.SPLIT_RATIO],
         current_values[HeteroParams.FEATURES_NAME],
         current_values[HeteroParams.CLASS_NAME],
@@ -225,7 +227,6 @@ def declare_model(data: mgp.Any):
     ]
 
     args_inductive = [
-        current_values[ModelParams.LAYER_TYPE],
         current_values[ModelParams.IN_CHANNELS],
         current_values[ModelParams.HIDDEN_FEATURES_SIZE],
         current_values[ModelParams.OUT_CHANNELS],
@@ -476,8 +477,6 @@ def train(
     """
     global model, current_values
 
-    if not ctx.graph.vertices:
-        raise Exception("Graph is empty.")
 
     # define fresh data
     data = declare_data(ctx)
@@ -529,10 +528,11 @@ def train(
 
         # log data every console_log_freq epochs
         if epoch % current_values[TrainParams.CONSOLE_LOG_FREQ] == 0:
-
+            model.eval()
+            out = model(data.x_dict, data.edge_index_dict)
             dict_train = metrics(
                 data[current_values[HeteroParams.OBSERVED_ATTRIBUTE]].train_mask,
-                model,
+                out,
                 data,
                 current_values[DataParams.METRICS],
                 current_values[HeteroParams.OBSERVED_ATTRIBUTE],
@@ -540,7 +540,7 @@ def train(
             )
             dict_val = metrics(
                 data[current_values[HeteroParams.OBSERVED_ATTRIBUTE]].val_mask,
-                model,
+                out,
                 data,
                 current_values[DataParams.METRICS],
                 current_values[HeteroParams.OBSERVED_ATTRIBUTE],
@@ -664,6 +664,14 @@ def load_model(ctx: mgp.ProcCtx, num: int = 0) -> mgp.Record(path=str, status=st
     _, _ = declare_model(data)
 
     model_saving_folder, models = fetch_saved_models()
+
+    if len(models) == 0:
+        raise Exception("There are no saved models.")
+
+    if len(models) < (len(models) + num) % len(models) + 1:
+        raise Exception(
+            f"Model with number {num} does not exist. There are {len(models)} models saved."
+        )
 
     path_to_load_model = os.path.join(model_saving_folder, models[num])
 

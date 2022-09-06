@@ -9,7 +9,7 @@ class SAGE(InductiveModel):
         out_channels: int,
         aggr: str,
     ):
-        super(InductiveModel, self).__init__(
+        super().__init__(
             layer_type="SAGE",
             in_channels=in_channels,
             hidden_features_size=hidden_features_size,

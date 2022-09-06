@@ -1,5 +1,0 @@
-query: >
-        CALL node_classification.set_model_parameters() YIELD *;
-
-exception: Graph is empty.
-

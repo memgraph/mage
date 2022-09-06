@@ -1,0 +1,5 @@
+query: >
+        CALL node_classification.train() YIELD *;
+        
+exception: Graph is empty.
+

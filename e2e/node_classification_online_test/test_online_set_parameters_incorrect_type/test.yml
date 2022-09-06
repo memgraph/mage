@@ -1,6 +1,5 @@
-# example of wrong type. hidden features should be written as tuple
-query: >
+- query: >
         CALL node_classification.set_model_parameters({hidden_features_size: 10}) YIELD *;
 
-exception: >
+  exception: >
         Input dictionary is not correctly typed.

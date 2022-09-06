@@ -9,7 +9,7 @@ class GATv2(InductiveModel):
         out_channels: int,
         aggr: str,
     ):
-        super(InductiveModel, self).__init__(
+        super().__init__(
             layer_type="GATv2",
             in_channels=in_channels,
             hidden_features_size=hidden_features_size,

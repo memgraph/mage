@@ -60,10 +60,8 @@ def train_epoch(
         """
         ret = 0.0
 
-        if gradient:
-            model.train()
-        else:
-            model.eval()
+        # Set the model to train or eval mode depending on the flag gradient.
+        model.train() if gradient else model.eval()
 
         for n, batch in enumerate(loader):
             if gradient:

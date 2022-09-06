@@ -1,23 +1,22 @@
-import torch
-from torch_geometric.data import Data, HeteroData
-import mgp
-import numpy as np
-from tqdm import tqdm
 import random
-from collections import Counter
-import torch_geometric.transforms as T
+from collections import defaultdict, Counter
 import typing
-from collections import defaultdict
+
+import numpy as np
+
+import torch
+from torch_geometric.data import HeteroData
+import torch_geometric.transforms as T
 
 
 def nodes_fetching(
-    ctx: mgp.ProcCtx, features_name: str, class_name: str, data: HeteroData
+    nodes: list, features_name: str, class_name: str, data: HeteroData
 ) -> typing.Tuple[HeteroData, typing.Dict, typing.Dict, str]:
     """
     This procedure fetches the nodes from the database and returns them in HeteroData object.
 
     Args:
-        ctx: The context of the procedure.
+        nodes: The list of nodes from the database.
         features_name: The name of the features field.
         class_name: The name of the class field.
         data: HeteroData object where nodes will be stored.
@@ -26,7 +25,6 @@ def nodes_fetching(
         Tuple of (HeteroData, reindexing, inv_reindexing, observed_attribute).
     """
 
-    nodes = list(iter(ctx.graph.vertices))  # obtain nodes from context
     node_types = []  # variable for storing node types
     embedding_lengths = defaultdict(int)  # variable for storing embedding lengths
     observed_attribute = None  # variable for storing observed attribute
@@ -37,12 +35,12 @@ def nodes_fetching(
             continue  # if features are not available, skip the node
 
         # add node type to list of node types (concatenate them if there are more than 1 label)
-        if len(node.labels) > 0:
-
-            node_type = "_".join(node.labels[i].name for i in range(len(node.labels)))
-            node_types.append(node_type)
-        else:
+        if len(node.labels) == 0:
             raise Exception(f"Node {node.id} has no labels.")
+
+        node_type = "_".join(node.labels[i].name for i in range(len(node.labels)))
+        node_types.append(node_type)
+        
 
         # add embedding length to dictionary of embedding lengths
         if node_type not in embedding_lengths:
@@ -125,7 +123,7 @@ def nodes_fetching(
 
 
 def edges_fetching(
-    ctx: mgp.ProcCtx,
+    nodes: list,
     features_name: str,
     inv_reindexing: defaultdict,
     data: HeteroData
@@ -133,7 +131,7 @@ def edges_fetching(
     """This procedure fetches the edges from the database and returns them in HeteroData object.
 
     Args:
-        ctx: The context of the procedure.
+        nodes: The list of nodes from the database.
         features_name: The name of the database features attribute.
         inv_reindexing: The inverse reindexing dictionary.
         data: HeteroData object where edges will be stored.
@@ -147,7 +145,7 @@ def edges_fetching(
     append_counter = defaultdict(int)  # variable for storing append counter
 
     # obtain edges from context
-    for vertex in ctx.graph.vertices:
+    for vertex in nodes:
         for edge in vertex.out_edges:
             # edge_type is (from_vertex type, edge name, to_vertex type)
             edge_type = tuple(
@@ -198,7 +196,7 @@ def edges_fetching(
     return data
 
 
-def masks_generating(
+def generating_masks_for_X(
     data: HeteroData, train_ratio: float, observed_attribute: str
 ) -> HeteroData:
     """This procedure generates the masks for the nodes and edges.
@@ -237,35 +235,39 @@ def masks_generating(
 
 
 def extract_from_database(
-    ctx: mgp.ProcCtx,
+    nodes: list,
     train_ratio: float,
     features_name: str,
     class_name: str,
     device: str,
 ) -> typing.Tuple[HeteroData, str, typing.Dict, typing.Dict]:
+    """This procedure extracts the data from the database and returns them in HeteroData object.
 
+    Args:
+        nodes: The list of nodes from the database.
+        train_ratio: The ratio of training data.
+        features_name: The name of the database features attribute.
+        class_name: The name of the database class attribute.
+        device: The device on which the data will be trained.
+    """
     data = HeteroData()
-
+    
     #################
     # NODES
     #################
     data, reindexing, inv_reindexing, observed_attribute = nodes_fetching(
-        ctx, features_name, class_name, data
+        nodes, features_name, class_name, data
     )
 
     #################
     # EDGES
     #################
-
-    data = edges_fetching(ctx, features_name, inv_reindexing, data)
+    data = edges_fetching(nodes, features_name, inv_reindexing, data)
 
     #################
     # MASKS
     #################
-
-    print(data)
-    print(observed_attribute)
-    data = masks_generating(data, train_ratio, observed_attribute)
+    data = generating_masks_for_X(data, train_ratio, observed_attribute)
 
     data = data.to(device, non_blocking=True)
 

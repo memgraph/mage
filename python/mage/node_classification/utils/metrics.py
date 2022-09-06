@@ -13,7 +13,7 @@ METRICS = {
 
 def metrics(
     mask: torch.tensor,
-    model: mgp.Any,
+    out: torch.tensor,
     data: Data,
     options: mgp.List[str],
     observed_attribute: str,
@@ -23,7 +23,7 @@ def metrics(
 
     Args:
         mask (torch.tensor): used to mask which embeddings should be used
-        model (mgp.Any): model variable
+        out (torch.tensor): output of the model
         data (Data): dataset variable
         options (mgp.List[str]): list of options to be calculated
         device (str): cpu or cuda
@@ -31,8 +31,6 @@ def metrics(
     Returns:
         mgp.Map: dictionary of calculated metrics
     """
-    model.eval()
-    out = model(data.x_dict, data.edge_index_dict)
 
     pred = out[observed_attribute].argmax(
         dim=1
