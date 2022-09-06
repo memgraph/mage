@@ -4,12 +4,11 @@ gekko==0.2.8
 networkx==2.6.2
 python-Levenshtein==0.12.1
 gensim==4.0.0.
-torch==1.12.0
+https://download.pytorch.org/whl/cpu/torch-1.12.0%2Bcpu-cp310-cp310-win_amd64.whl
 six==1.16.0
--f https://data.pyg.org/whl/torch-1.12.0+cpu.html
-torch-scatter 
-torch-sparse
-torch-cluster
-torch-spline-conv
+torch-scatter -f https://data.pyg.org/whl/torch-1.12.0+cpu.html
+torch-sparse -f https://data.pyg.org/whl/torch-1.12.0+cpu.html
+torch-cluster -f https://data.pyg.org/whl/torch-1.12.0+cpu.html
+torch-spline-conv -f https://data.pyg.org/whl/torch-1.12.0+cpu.html
 torch-geometric
 torchmetrics==0.9.3
