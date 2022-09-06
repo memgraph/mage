@@ -84,7 +84,7 @@ def proj_0(graph: dgl.graph, node_features_property: str) -> None:
 
 
 def preprocess(
-    graph: dgl.graph, split_ratio: float, target_relation: str
+    graph: dgl.graph, split_ratio: float, target_relation: str, device: torch.device
 ) -> Tuple[dgl.graph, dgl.graph, dgl.graph, dgl.graph, dgl.graph]:
     """Preprocess method splits dataset in training and validation set by creating necessary masks for distinguishing those two.
         This method is also used for setting numpy and torch random seed.
@@ -93,6 +93,7 @@ def preprocess(
         graph (dgl.graph): A reference to the dgl graph representation.
         split_ratio (float): Split ratio training to validation set. E.g 0.8 indicates that 80% is used as training set and 20% for validation set.
         relation (Tuple[str, str, str]): [src_type, edge_type, dest_type] identifies edges on which model will be trained for prediction
+        device (torch.device): Device where the graph is saved
 
     Returns:
         Tuple[Dict[Tuple[str, str, str], List[int]], Dict[Tuple[str, str, str], List[int]]:
@@ -113,6 +114,7 @@ def preprocess(
         graph_edges_len
     )  # get all edge ids from number of edges and create a numpy vector from it.
     eids = np.random.permutation(eids)  # randomly permute edges
+    eids = torch.from_numpy(eids).to(device=device)
 
     # val size is 1-split_ratio specified by the user
     val_size = int(graph_edges_len * (1 - split_ratio))
@@ -167,6 +169,8 @@ def evaluate(
     Returns:
         Dict[str, float]: Metrics embedded in dictionary -> name-value shape
     """
+    labels = labels.detach().cpu()
+    probs = probs.detach().cpu()
     classes = classify(probs, threshold)
     result[Metrics.EPOCH] = epoch
     result[Metrics.LOSS] = operator(result[Metrics.LOSS], loss)
@@ -235,6 +239,7 @@ def batch_forward_pass(
     neg_graph: dgl.graph,
     blocks: List[dgl.graph],
     num_neg_per_pos_edge: int,
+    device: torch.device
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.nn.Module]:
     """Performs one forward batch pass
 
@@ -249,6 +254,7 @@ def batch_forward_pass(
         neg_graph (dgl.graph): A reference to the negative graph. All edges that shouldn't be included.
         blocks (List[dgl.graph]): First DGLBlock(MFG) is equivalent to all necessary nodes that are needed to compute final representation.
             Second DGLBlock(MFG) is a mini-batch.
+        device (torch.device): Device where the graph is saved.
 
     Returns:
          Tuple[torch.Tensor, torch.Tensor, torch.nn.Module]: First tensor are calculated probabilities, second tensor are true labels and the last tensor
@@ -266,7 +272,7 @@ def batch_forward_pass(
     # probabilities
     probs = m(scores)
     labels = torch.cat(
-        [torch.ones(pos_score.shape[0]), torch.zeros(neg_score.shape[0])]
+        [torch.ones(pos_score.shape[0], device=device), torch.zeros(neg_score.shape[0], device=device)]
     )  # concatenation of labels
     # weights = torch.cat([torch.ones(pos_score.shape[0], dtype=torch.float32), torch.Tensor([1.0 / num_neg_per_pos_edge for _ in range(neg_score.shape[0])])])
     loss_output = loss(probs, labels)
@@ -432,7 +438,8 @@ def inner_train(
                 pos_graph,
                 neg_graph,
                 blocks,
-                num_neg_per_pos_edge,
+                num_neg_per_pos_edge, # TODO: remove
+                device
             )
             # Make an optimization step
             optimizer.zero_grad()
@@ -486,7 +493,8 @@ def inner_train(
                         pos_graph,
                         neg_graph,
                         blocks,
-                        num_neg_per_pos_edge,
+                        num_neg_per_pos_edge, # TODO: remove
+                        device
                     )
                     # Add to the epoch_validation_result for saving
                     evaluate(

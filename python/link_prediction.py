@@ -225,6 +225,10 @@ def set_model_parameters(
             *(x for x in link_prediction_parameters.attn_num_heads)
         ]
 
+    # TODO: change the documentation
+    if device.type == "cuda":
+        link_prediction_parameters.sampling_workers = 0
+
     return mgp.Record(status=True, message="OK")
 
 
@@ -269,6 +273,7 @@ def train(
         graph=graph,
         split_ratio=link_prediction_parameters.split_ratio,
         target_relation=link_prediction_parameters.target_relation,
+        device=device
     )
 
     # Extract number of layers
@@ -466,8 +471,6 @@ def recommended_vertex(  # noqa: C901
         score: Probability that two nodes are connected
     """
     global graph, predictor, model, reindex, link_prediction_parameters
-
-    print(f"Dest vertices: {len(dest_vertices)}")
 
     # If the model isn't available
     if model is None:
@@ -917,10 +920,6 @@ def _get_dgl_graph_data(
     if link_prediction_parameters.add_self_loops:
         g = add_self_loop(g, "self")
 
-    # print("After self loop transform")
-    # for etype in g.canonical_etypes:
-    #     print(f"Etype: {etype} Edges: {g.number_of_edges(etype=etype)} {g.edges(etype=etype)}")
-
     # Create features
     for node_type in g.ntypes:
         node_features = []
@@ -949,14 +948,13 @@ def _get_dgl_graph_data(
 
 def _reset_train_predict_parameters() -> None:
     """Reset global parameters that are returned by train method and used by predict method."""
-    global training_results, validation_results, predictor, model, graph, reindex, device
+    global training_results, validation_results, predictor, model, graph, reindex
     training_results = None  # clear training records from previous training
     validation_results = None  # clear validation record from previous training
     predictor = None  # Delete old predictor and create a new one in link_prediction_util.train method\
     model = None  # Annulate old model
     graph = None  # Set graph to None
     reindex = None  # Delete indexing stuff
-    device = None  # user needs to set the device again
 
 
 def _conversion_to_dgl_test(
