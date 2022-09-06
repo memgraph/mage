@@ -2500,6 +2500,11 @@ inline bool Value::operator==(const Value &other) const { return util::ValuesEqu
 /* #region Record */
 // Record:
 
+inline void Record::Insert(const char *field_name, bool value) {
+  auto mgp_val = mgp::value_make_bool(value, memory);
+  { mgp::result_record_insert(record_, field_name, mgp_val); }
+  mgp::value_destroy(mgp_val);
+}
 inline void Record::Insert(const char *field_name, std::int64_t value) {
   auto mgp_val = mgp::value_make_int(value, memory);
   { mgp::result_record_insert(record_, field_name, mgp_val); }
