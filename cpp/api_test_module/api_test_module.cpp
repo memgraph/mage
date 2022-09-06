@@ -31,9 +31,9 @@ constexpr char const *kFieldOut = "out";
 }  // namespace
 
 void PrintList(mage::List &list) {
-  bool first = true;
+  auto first = true;
   std::cout << "[";
-  for (const auto element : list) {
+  for (const auto &element : list) {
     if (!first) std::cout << ", ";
     std::cout << element.ValueString();
     first = false;
@@ -42,9 +42,9 @@ void PrintList(mage::List &list) {
 }
 
 void PrintMap(mage::Map &map) {
-  bool first = true;
+  auto first = true;
   std::cout << "{";
-  for (const auto item : map) {
+  for (const auto &item : map) {
     if (!first) std::cout << ", ";
     std::cout << item.key << ": " << item.value.ValueString();
     first = false;
@@ -53,26 +53,26 @@ void PrintMap(mage::Map &map) {
 }
 
 void TestProc(std::vector<mage::Value> arguments, mage::Graph graph, mage::RecordFactory record_factory) {
-  auto test_graph = false;
-  auto test_id = false;
-  auto test_list = false;
-  auto test_map = false;
+  auto test_graph = true;
+  auto test_id = true;
+  auto test_list = true;
+  auto test_map = true;
   auto test_node = true;
-  auto test_relationship = false;
-  auto test_path = false;
-  auto test_date = false;
-  auto test_local_time = false;
-  auto test_local_date_time = false;
-  auto test_duration = false;
+  auto test_relationship = true;
+  auto test_path = true;
+  auto test_date = true;
+  auto test_local_time = true;
+  auto test_local_date_time = true;
+  auto test_duration = true;
 
   if (test_graph) {
     std::cout << graph.order() << "\n";
     std::cout << graph.size() << "\n";
-    for (const auto node : graph.nodes()) {
+    for (const auto &node : graph.nodes()) {
       std::cout << node.id().AsInt() << "\t";
     }
     std::cout << "\n";
-    for (const auto rel : graph.relationships()) {
+    for (const auto &rel : graph.relationships()) {
       std::cout << rel.id().AsInt() << "\t";
     }
     std::cout << "\n";
@@ -153,11 +153,11 @@ void TestProc(std::vector<mage::Value> arguments, mage::Graph graph, mage::Recor
 
     std::map<std::string_view, mage::Value> map_1a;
     PrintMap(map_1);
-    for (const auto e : map_1) {
+    for (const auto &e : map_1) {
       map_1a.insert(std::pair<std::string_view, mage::Value>(e.key, e.value));
     }
 
-    for (const auto [k, v] : map_1a) {
+    for (const auto &[k, v] : map_1a) {
       std::cout << k << " : " << v.ValueString() << "\n";
     }
 
@@ -195,9 +195,9 @@ void TestProc(std::vector<mage::Value> arguments, mage::Graph graph, mage::Recor
     std::cout << node_1.HasLabel("Node") << "\n";
     std::cout << node_1.HasLabel("Vertex") << "\n";
 
-    bool first = true;
+    auto first = true;
     std::cout << "Labels: [";
-    for (const auto label : node_1.labels()) {
+    for (const auto &label : node_1.labels()) {
       if (!first) std::cout << ", ";
       std::cout << label;
       first = false;
@@ -206,7 +206,7 @@ void TestProc(std::vector<mage::Value> arguments, mage::Graph graph, mage::Recor
 
     first = true;
     std::cout << "Properties: {";
-    for (const auto [name, value] : node_1.properties()) {
+    for (const auto &[name, value] : node_1.properties()) {
       if (!first) std::cout << ", ";
       std::cout << name << ": " << value.ValueInt();
       first = false;
@@ -215,22 +215,22 @@ void TestProc(std::vector<mage::Value> arguments, mage::Graph graph, mage::Recor
 
     first = true;
     std::cout << "Out-neighbors: [";
-    for (const auto neighbor : node_1.out_relationships()) {
+    for (const auto &neighbor : node_1.out_relationships()) {
       if (!first) std::cout << ", ";
       std::cout << neighbor.id().AsInt();
       first = false;
     }
     std::cout << "]\n";
 
-    first = true;
-    auto node_2 = graph.GetNodeById(mage::Id::FromInt(1));
-    std::cout << "In-neighbors: [";
-    for (const auto neighbor : node_2.in_relationships()) {
-      if (!first) std::cout << ", ";
-      std::cout << neighbor.id().AsInt();
-      first = false;
-    }
-    std::cout << "]\n";
+    // first = true;
+    // auto node_2 = graph.GetNodeById(mage::Id::FromInt(1));
+    // std::cout << "In-neighbors: [";
+    // for (const auto &neighbor : node_2.in_relationships()) {
+    //   if (!first) std::cout << ", ";
+    //   std::cout << neighbor.id().AsInt();
+    //   first = false;
+    // }
+    // std::cout << "]\n";
   }
 
   if (test_relationship) {
@@ -247,7 +247,7 @@ void TestProc(std::vector<mage::Value> arguments, mage::Graph graph, mage::Recor
     std::cout << edge_1.id().AsInt() << "\n";
     std::cout << edge_1.type() << "\n";
 
-    for (const auto [name, value] : edge_1.properties()) {
+    for (const auto &[name, value] : edge_1.properties()) {
       std::cout << name << ": " << value.ValueInt() << ", ";
     }
     std::cout << "\n";
@@ -263,17 +263,17 @@ void TestProc(std::vector<mage::Value> arguments, mage::Graph graph, mage::Recor
     std::vector<mage::Path> x;
     x.push_back(path_1);
 
-    auto node_0 = graph.GetNodeById(mage::Id::FromInt(0));
-    auto path_2 = mage::Path(node_0);
+    // auto node_0 = graph.GetNodeById(mage::Id::FromInt(0));
+    // auto path_2 = mage::Path(node_0);
 
     std::cout << path_1.length() << "\n";
     std::cout << path_1.GetNodeAt(0).id().AsInt() << "\n";
     std::cout << path_1.GetRelationshipAt(0).id().AsInt() << "\n";
 
-    std::cout << !(path_1 == path_2) << "\n";
+    // std::cout << !(path_1 == path_2) << "\n";
 
-    path_2.Expand(*(node_0.out_relationships().begin()));
-    std::cout << (path_1 == path_2) << "\n";
+    // path_2.Expand(*(node_0.out_relationships().begin()));
+    // std::cout << (path_1 == path_2) << "\n";
   }
 
   if (test_date) {
@@ -435,24 +435,24 @@ void WriteProc(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mg
   }
 
   int i = 5;
-  for (auto node : graph.nodes()) {
+  for (const auto &node : graph.nodes()) {
     graph.DeleteNode(node);
     i -= 1;
     if (i == 0) break;
   }
 
-  for (auto node_1 : graph.nodes()) {
-    for (auto node_2 : graph.nodes()) {
+  for (const auto &node_1 : graph.nodes()) {
+    for (const auto &node_2 : graph.nodes()) {
       graph.CreateRelationship(node_1, node_2, "R");
     }
   }
 
-  for (auto node_1 : graph.nodes()) {
+  for (const auto &node_1 : graph.nodes()) {
     graph.DetachDeleteNode(node_1);
     break;
   }
 
-  for (auto rel_1 : graph.relationships()) {
+  for (const auto &rel_1 : graph.relationships()) {
     graph.DeleteRelationship(rel_1);
     break;
   }
@@ -492,7 +492,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
          mage::Parameter("path", mage::Type::Path), mage::Parameter("bool", mage::Type::Bool, false),
          mage::Parameter("int", mage::Type::Int, (int64_t)2), mage::Parameter("double", mage::Type::Double, 2.3),
          mage::Parameter("string", mage::Type::String, "abc"),
-         mage::Parameter("list", mage::Type::List, mage::Type::String, mage::Value(default_list)),
+         mage::Parameter("list", {mage::Type::List, mage::Type::String}, mage::Value(default_list)),
          mage::Parameter("map", mage::Type::Map, mage::Value(default_map)),
          mage::Parameter("date", mage::Type::Date, mage::Value(default_date)),
          mage::Parameter("local_time", mage::Type::LocalTime, mage::Value(default_local_time)),
@@ -501,7 +501,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
         {mage::Return("out_0", mage::Type::Node), mage::Return("out_1", mage::Type::Relationship),
          mage::Return("out_2", mage::Type::Path), mage::Return("out_3", mage::Type::Bool),
          mage::Return("out_4", mage::Type::Int), mage::Return("out_5", mage::Type::Double),
-         mage::Return("out_6", mage::Type::String), mage::Return("out_7", mage::Type::List, mage::Type::String),
+         mage::Return("out_6", mage::Type::String), mage::Return("out_7", {mage::Type::List, mage::Type::String}),
          mage::Return("out_8", mage::Type::Map), mage::Return("out_9", mage::Type::Date),
          mage::Return("out_10", mage::Type::LocalTime), mage::Return("out_11", mage::Type::LocalDateTime),
          mage::Return("out_12", mage::Type::Duration)},
@@ -518,7 +518,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
         {mage::Parameter("node", mage::Type::Node), mage::Parameter("relationship", mage::Type::Relationship),
          mage::Parameter("path", mage::Type::Path), mage::Parameter("bool", mage::Type::Bool),
          mage::Parameter("int", mage::Type::Int), mage::Parameter("double", mage::Type::Double),
-         mage::Parameter("string", mage::Type::String), mage::Parameter("list", mage::Type::List, mage::Type::String),
+         mage::Parameter("string", mage::Type::String), mage::Parameter("list", {mage::Type::List, mage::Type::String}),
          mage::Parameter("map", mage::Type::Map), mage::Parameter("date", mage::Type::Date),
          mage::Parameter("local_time", mage::Type::LocalTime),
          mage::Parameter("local_date_time", mage::Type::LocalDateTime),
@@ -526,7 +526,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
         {mage::Return("out_0", mage::Type::Node), mage::Return("out_1", mage::Type::Relationship),
          mage::Return("out_2", mage::Type::Path), mage::Return("out_3", mage::Type::Bool),
          mage::Return("out_4", mage::Type::Int), mage::Return("out_5", mage::Type::Double),
-         mage::Return("out_6", mage::Type::String), mage::Return("out_7", mage::Type::List, mage::Type::String),
+         mage::Return("out_6", mage::Type::String), mage::Return("out_7", {mage::Type::List, mage::Type::String}),
          mage::Return("out_8", mage::Type::Map), mage::Return("out_9", mage::Type::Date),
          mage::Return("out_10", mage::Type::LocalTime), mage::Return("out_11", mage::Type::LocalDateTime),
          mage::Return("out_12", mage::Type::Duration)},
