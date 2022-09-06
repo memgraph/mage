@@ -4,7 +4,7 @@ gekko==0.2.8
 networkx==2.6.2
 python-Levenshtein==0.12.1
 gensim==4.0.0.
-https://data.pyg.org/whl/torch-1.12.0+cpu.html
+-f https://data.pyg.org/whl/torch-1.12.0+cpu.html
 six==1.16.0
 torch-scatter -f https://data.pyg.org/whl/torch-1.12.0+cpu.html
 torch-sparse -f https://data.pyg.org/whl/torch-1.12.0+cpu.html
