@@ -920,8 +920,7 @@ enum class Type : uint8_t {
   Date,
   LocalTime,
   LocalDateTime,
-  Duration,
-  UNDEF,  // for indicating an undefined value
+  Duration
 };
 
 /// @brief Wrapper class for @ref mgp_value.
@@ -1241,70 +1240,74 @@ class Result {
 /* #endregion */
 
 /* #region Module */
+
 /// @brief Represents a procedure’s parameter. Parameters are defined by their name, type, and (if optional) default
 /// value.
-struct Parameter {
+class Parameter {
+ public:
   std::string_view name;
-  mage::Type type;
-  mage::Type list_item_type = Type::UNDEF;
+  Type type_;
+  Type list_item_type_;
+
   bool optional = false;
-  bool is_list = false;
   Value default_value;
 
   /// @brief Creates a non-optional parameter with the given `name` and `type`.
-  Parameter(std::string_view name, Type type) : name(name), type(type) {}
+  Parameter(std::string_view name, Type type) : name(name), type_(type) {}
 
   /// @brief Creates an optional boolean parameter with the given `name` and `default_value`.
   Parameter(std::string_view name, Type type, bool default_value)
-      : name(name), type(type), optional(true), default_value(Value(default_value)) {}
+      : name(name), type_(type), optional(true), default_value(Value(default_value)) {}
 
   /// @brief Creates an optional integer parameter with the given `name` and `default_value`.
   Parameter(std::string_view name, Type type, int64_t default_value)
-      : name(name), type(type), optional(true), default_value(Value(default_value)) {}
+      : name(name), type_(type), optional(true), default_value(Value(default_value)) {}
 
   /// @brief Creates an optional floating-point parameter with the given `name` and `default_value`.
   Parameter(std::string_view name, Type type, double default_value)
-      : name(name), type(type), optional(true), default_value(Value(default_value)) {}
+      : name(name), type_(type), optional(true), default_value(Value(default_value)) {}
 
   /// @brief Creates an optional string parameter with the given `name` and `default_value`.
   Parameter(std::string_view name, Type type, std::string_view default_value)
-      : name(name), type(type), optional(true), default_value(Value(default_value)) {}
+      : name(name), type_(type), optional(true), default_value(Value(default_value)) {}
 
   /// @brief Creates an optional string parameter with the given `name` and `default_value`.
   Parameter(std::string_view name, Type type, const char *default_value)
-      : name(name), type(type), optional(true), default_value(Value(default_value)) {}
+      : name(name), type_(type), optional(true), default_value(Value(default_value)) {}
 
   /// @brief Creates an optional parameter with the given `name` and `default_value`.
   Parameter(std::string_view name, Type type, mage::Value default_value)
-      : name(name), type(type), optional(true), default_value(default_value) {}
+      : name(name), type_(type), optional(true), default_value(default_value) {}
 
-  /// @brief Creates a non-optional List parameter with the given `name`, `type` (List) and `item_type`.
-  Parameter(std::string_view name, Type type, Type item_type)
-      : name(name), type(type), list_item_type(item_type), is_list(true) {}
+  /// @brief Creates a non-optional ListParameter with the given `name` and `item_type`.
+  Parameter(std::string_view name, std::pair<Type, Type> list_type)
+      : name(name), type_(list_type.first), list_item_type_(list_type.second) {}
 
-  /// @brief Creates an optional List parameter with the given `name`, `type` (List), `item_type`, and `default_value`.
-  Parameter(std::string_view name, Type type, Type item_type, mage::Value default_value)
+  /// @brief Creates an optional List parameter with the given `name`, `item_type`, and `default_value`.
+  Parameter(std::string_view name, std::pair<Type, Type> list_type, mage::Value default_value)
       : name(name),
-        type(type),
-        list_item_type(item_type),
+        type_(list_type.first),
+        list_item_type_(list_type.second),
         optional(true),
-        is_list(true),
         default_value(default_value) {}
+
+  mgp_type *GetMGPType() const;
 };
 
 /// @brief Represents a procedure’s return value. The values are defined by their name and type.
-struct Return {
+class Return {
+ public:
   std::string_view name;
-  mage::Type type;
-  mage::Type list_item_type = Type::UNDEF;
-  bool is_list = false;
+  Type type_;
+  Type list_item_type_;
 
   /// @brief Creates a return value with the given `name` and `type`.
-  Return(std::string_view name, mage::Type type) : name(name), type(type) {}
+  Return(std::string_view name, mage::Type type) : name(name), type_(type) {}
 
-  /// @brief Creates a return List value with the given `name`, `type` (List) and `item_type`.
-  Return(std::string_view name, mage::Type type, Type item_type)
-      : name(name), type(type), list_item_type(item_type), is_list(true) {}
+  Return(std::string_view name, std::pair<Type, Type> list_type)
+      : name(name), type_(list_type.first), list_item_type_(list_type.second) {}
+
+  mgp_type *GetMGPType() const;
 };
 
 enum class ProdecureType : uint8_t {
@@ -1440,6 +1443,7 @@ inline bool DurationsEqual(mgp_duration *duration1, mgp_duration *duration2) {
   return mgp::duration_equal(duration1, duration2);
 }
 
+/// @brief Returns whether two MGP API values are equal.
 inline bool ValuesEqual(mgp_value *value1, mgp_value *value2) {
   if (value1 == value2) {
     return true;
@@ -1491,6 +1495,8 @@ inline mgp_type *ToMGPType(Type type) {
       return mgp::type_float();
     case Type::String:
       return mgp::type_string();
+    case Type::List:
+      return mgp::type_list(mgp::type_any());
     case Type::Map:
       return mgp::type_map();
     case Type::Node:
@@ -1507,44 +1513,6 @@ inline mgp_type *ToMGPType(Type type) {
       return mgp::type_local_date_time();
     case Type::Duration:
       return mgp::type_duration();
-    default:
-      break;
-  }
-  throw ValueException("Unknown type error!");
-}
-
-/// @brief Converts C++ API list types to their MGP API equivalents.
-/// @note In the MGP API, it is necessary to define the list items’ type.
-inline mgp_type *ToMGPType(Type list_type, Type item_type) {
-  if (list_type != Type::List) {
-    throw ValueException("Unknown type error!");
-  }
-
-  switch (item_type) {
-    case Type::Bool:
-      return mgp::type_list(mgp::type_bool());
-    case Type::Int:
-      return mgp::type_list(mgp::type_int());
-    case Type::Double:
-      return mgp::type_list(mgp::type_float());
-    case Type::String:
-      return mgp::type_list(mgp::type_string());
-    case Type::Map:
-      return mgp::type_list(mgp::type_map());
-    case Type::Node:
-      return mgp::type_list(mgp::type_node());
-    case Type::Relationship:
-      return mgp::type_list(mgp::type_relationship());
-    case Type::Path:
-      return mgp::type_list(mgp::type_path());
-    case Type::Date:
-      return mgp::type_list(mgp::type_date());
-    case Type::LocalTime:
-      return mgp::type_list(mgp::type_local_time());
-    case Type::LocalDateTime:
-      return mgp::type_list(mgp::type_local_date_time());
-    case Type::Duration:
-      return mgp::type_list(mgp::type_duration());
     default:
       break;
   }
@@ -2666,7 +2634,19 @@ inline void Result::SetValue(const Duration &duration) {
 
 /* #endregion */
 
-/* #region module */
+/* #region Module */
+
+inline mgp_type *Parameter::GetMGPType() const {
+  if (type_ == Type::List) return mgp::type_list(util::ToMGPType(list_item_type_));
+
+  return util::ToMGPType(type_);
+}
+
+inline mgp_type *Return::GetMGPType() const {
+  if (type_ == Type::List) return mgp::type_list(util::ToMGPType(list_item_type_));
+
+  return util::ToMGPType(type_);
+}
 
 void AddProcedure(mgp_proc_cb callback, std::string_view name, ProdecureType proc_type,
                   std::vector<mage::Parameter> parameters, std::vector<Return> returns, mgp_module *module,
@@ -2674,31 +2654,20 @@ void AddProcedure(mgp_proc_cb callback, std::string_view name, ProdecureType pro
   auto proc = (proc_type == ProdecureType::Read) ? mgp::module_add_read_procedure(module, name.data(), callback)
                                                  : mgp::module_add_write_procedure(module, name.data(), callback);
 
-  for (const auto parameter : parameters) {
+  for (const auto &parameter : parameters) {
     auto parameter_name = parameter.name.data();
 
-    auto optional = parameter.optional;
-    auto is_list = parameter.is_list;
-    if (!optional && !is_list) {
-      mgp::proc_add_arg(proc, parameter_name, util::ToMGPType(parameter.type));
-    } else if (!optional && is_list) {
-      mgp::proc_add_arg(proc, parameter_name, util::ToMGPType(parameter.type, parameter.list_item_type));
-    } else if (optional && !is_list) {
-      mgp::proc_add_opt_arg(proc, parameter_name, util::ToMGPType(parameter.type), parameter.default_value.ptr());
-    } else if (optional && is_list) {
-      mgp::proc_add_opt_arg(proc, parameter_name, util::ToMGPType(parameter.type, parameter.list_item_type),
-                            parameter.default_value.ptr());
+    if (!parameter.optional) {
+      mgp::proc_add_arg(proc, parameter_name, parameter.GetMGPType());
+    } else {
+      mgp::proc_add_opt_arg(proc, parameter_name, parameter.GetMGPType(), parameter.default_value.ptr());
     }
   }
 
   for (const auto return_ : returns) {
     auto return_name = return_.name.data();
 
-    if (!return_.is_list) {
-      mgp::proc_add_result(proc, return_name, util::ToMGPType(return_.type));
-    } else {
-      mgp::proc_add_result(proc, return_name, util::ToMGPType(return_.type, return_.list_item_type));
-    }
+    mgp::proc_add_result(proc, return_name, return_.GetMGPType());
   }
 }
 
@@ -2709,17 +2678,10 @@ void AddFunction(mgp_func_cb callback, std::string_view name, std::vector<mage::
   for (const auto parameter : parameters) {
     auto parameter_name = parameter.name.data();
 
-    auto optional = parameter.optional;
-    auto is_list = parameter.is_list;
-    if (!optional && !is_list) {
-      mgp::func_add_arg(func, parameter_name, util::ToMGPType(parameter.type));
-    } else if (!optional && is_list) {
-      mgp::func_add_arg(func, parameter_name, util::ToMGPType(parameter.type, parameter.list_item_type));
-    } else if (optional && !is_list) {
-      mgp::func_add_opt_arg(func, parameter_name, util::ToMGPType(parameter.type), parameter.default_value.ptr());
-    } else if (optional && is_list) {
-      mgp::func_add_opt_arg(func, parameter_name, util::ToMGPType(parameter.type, parameter.list_item_type),
-                            parameter.default_value.ptr());
+    if (!parameter.optional) {
+      mgp::func_add_arg(func, parameter_name, parameter.GetMGPType());
+    } else {
+      mgp::func_add_opt_arg(func, parameter_name, parameter.GetMGPType(), parameter.default_value.ptr());
     }
   }
 }
