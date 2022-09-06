@@ -7,7 +7,6 @@ namespace mg_exception {
 struct NotEnoughMemoryException : public std::exception {
   const char *what() const throw() { return "Not enough memory!"; }
 };
-
 struct UnknownException : public std::exception {
   const char *what() const throw() { return "Unknown exception!"; }
 };
@@ -29,14 +28,12 @@ struct DeletedObjectException : public std::exception {
 struct InvalidArgumentException : public std::exception {
   const char *what() const throw() { return "Invalid argument!"; }
 };
-
 struct InvalidIDException : public std::exception {
   const char *what() const throw() { return "Invalid ID!"; }
 };
 struct KeyAlreadyExistsException : public std::exception {
   const char *what() const throw() { return "Key you are trying to set already exists!"; }
 };
-
 struct ImmutableObjectException : public std::exception {
   const char *what() const throw() { return "Object you are trying to change is immutable!"; }
 };

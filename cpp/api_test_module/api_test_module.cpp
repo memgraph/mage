@@ -30,41 +30,6 @@ constexpr char const *kProcedurePathCheck = "path_check";
 constexpr char const *kFieldOut = "out";
 }  // namespace
 
-std::string_view type_to_str(mage::Type type) {
-  switch (type) {
-    case mage::Type::Null:
-      return "Null";
-    case mage::Type::Bool:
-      return "Bool";
-    case mage::Type::Int:
-      return "Int";
-    case mage::Type::Double:
-      return "Double";
-    case mage::Type::String:
-      return "String";
-    case mage::Type::List:
-      return "List";
-    case mage::Type::Map:
-      return "Map";
-    case mage::Type::Node:
-      return "Node";
-    case mage::Type::Relationship:
-      return "Relationship";
-    case mage::Type::Path:
-      return "Path";
-    case mage::Type::Date:
-      return "Date";
-    case mage::Type::LocalTime:
-      return "LocalTime";
-    case mage::Type::LocalDateTime:
-      return "LocalDateTime";
-    case mage::Type::Duration:
-      return "Duration";
-    default:
-      return "Type unknown";
-  }
-}
-
 void PrintList(mage::List &list) {
   bool first = true;
   std::cout << "[";
@@ -88,17 +53,17 @@ void PrintMap(mage::Map &map) {
 }
 
 void TestProc(std::vector<mage::Value> arguments, mage::Graph graph, mage::RecordFactory record_factory) {
-  auto test_graph = true;
-  auto test_id = true;
-  auto test_list = true;
-  auto test_map = true;
+  auto test_graph = false;
+  auto test_id = false;
+  auto test_list = false;
+  auto test_map = false;
   auto test_node = true;
-  auto test_relationship = true;
-  auto test_path = true;
-  auto test_date = true;
-  auto test_local_time = true;
-  auto test_local_date_time = true;
-  auto test_duration = true;
+  auto test_relationship = false;
+  auto test_path = false;
+  auto test_date = false;
+  auto test_local_time = false;
+  auto test_local_date_time = false;
+  auto test_duration = false;
 
   if (test_graph) {
     std::cout << graph.order() << "\n";
@@ -229,26 +194,43 @@ void TestProc(std::vector<mage::Value> arguments, mage::Graph graph, mage::Recor
     std::cout << node_1.id().AsInt() << "\n";
     std::cout << node_1.HasLabel("Node") << "\n";
     std::cout << node_1.HasLabel("Vertex") << "\n";
+
+    bool first = true;
+    std::cout << "Labels: [";
     for (const auto label : node_1.labels()) {
-      std::cout << label << ", ";
+      if (!first) std::cout << ", ";
+      std::cout << label;
+      first = false;
     }
-    std::cout << "\n";
+    std::cout << "]\n";
 
+    first = true;
+    std::cout << "Properties: {";
     for (const auto [name, value] : node_1.properties()) {
-      std::cout << name << ": " << value.ValueInt() << ", ";
+      if (!first) std::cout << ", ";
+      std::cout << name << ": " << value.ValueInt();
+      first = false;
     }
-    std::cout << "\n";
+    std::cout << "}\n";
 
+    first = true;
+    std::cout << "Out-neighbors: [";
     for (const auto neighbor : node_1.out_relationships()) {
-      std::cout << neighbor.id().AsInt() << ", ";
+      if (!first) std::cout << ", ";
+      std::cout << neighbor.id().AsInt();
+      first = false;
     }
-    std::cout << "\n";
+    std::cout << "]\n";
 
+    first = true;
     auto node_2 = graph.GetNodeById(mage::Id::FromInt(1));
+    std::cout << "In-neighbors: [";
     for (const auto neighbor : node_2.in_relationships()) {
-      std::cout << neighbor.id().AsInt() << ", ";
+      if (!first) std::cout << ", ";
+      std::cout << neighbor.id().AsInt();
+      first = false;
     }
-    std::cout << "\n";
+    std::cout << "]\n";
   }
 
   if (test_relationship) {
@@ -409,25 +391,16 @@ void TestProc(std::vector<mage::Value> arguments, mage::Graph graph, mage::Recor
 
     std::cout << !(duration_1 == duration_3) << "\n";
     std::cout << (duration_1 == duration_2) << "\n";
-
-    // auto sum = duration_2 + duration_3;
-    // auto sum_2 = duration_2 - duration_3;
   }
 
   auto record = record_factory.NewRecord();
-  std::cout << "a\n";
   record.Insert("out_0", arguments[0].ValueNode());
   record.Insert("out_1", arguments[1].ValueRelationship());
   record.Insert("out_2", arguments[2].ValuePath());
-  std::cout << "b\n";
   record.Insert("out_3", true);
-  std::cout << "c\n";
   record.Insert("out_4", (int64_t)1);
-  std::cout << "d\n";
   record.Insert("out_5", 1.0);
-  std::cout << "e\n";
   record.Insert("out_6", arguments[6].ValueString());
-  std::cout << "f\n";
   record.Insert("out_7", arguments[7].ValueList());
   record.Insert("out_8", arguments[8].ValueMap());
   record.Insert("out_9", arguments[9].ValueDate());

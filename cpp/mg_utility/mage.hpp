@@ -32,6 +32,15 @@ class ValueException : public std::exception {
   std::string message_;
 };
 
+class NotFoundException : public std::exception {
+ public:
+  explicit NotFoundException(const std::string &message) : message_(message) {}
+  const char *what() const noexcept override { return message_.c_str(); }
+
+ private:
+  std::string message_;
+};
+
 class NotEnoughMemoryException : public std::exception {
  public:
   const char *what() const throw() { return "Not enough memory!"; }
@@ -1612,6 +1621,10 @@ inline GraphRelationships Graph::relationships() const { return GraphRelationshi
 
 inline Node Graph::GetNodeById(const Id node_id) const {
   auto mgp_node = mgp::graph_get_vertex_by_id(graph_, mgp_vertex_id{.as_int = node_id.AsInt()}, memory);
+  if (mgp_node == nullptr) {
+    mgp::vertex_destroy(mgp_node);
+    throw NotFoundException("Node with ID " + std::to_string(node_id.AsUint()) + " not found!");
+  }
   auto node = Node(mgp_node);
   mgp::vertex_destroy(mgp_node);
   return node;
