@@ -123,11 +123,13 @@ class Graph {
   Node GetNodeById(const Id node_id) const;
 
   /// @brief Returns whether the graph contains a node with the given ID.
-  bool Contains(const Id node_id) const;
+  bool ContainsNode(const Id node_id) const;
   /// @brief Returns whether the graph contains the given node.
-  bool Contains(const Node &node) const;
+  bool ContainsNode(const Node &node) const;
+  /// @brief Returns whether the graph contains a relationship with the given ID.
+  bool ContainsRelationship(const Id relationship_id) const;
   /// @brief Returns whether the graph contains the given relationship.
-  bool Contains(const Relationship &relationship) const;
+  bool ContainsRelationship(const Relationship &relationship) const;
 
   /// @brief Returns whether the graph is mutable.
   bool IsMutable() const { return mgp::graph_is_mutable(graph_); }
@@ -1598,7 +1600,7 @@ inline Node Graph::GetNodeById(const Id node_id) const {
   return node;
 }
 
-bool Graph::Contains(const Id node_id) const {
+bool Graph::ContainsNode(const Id node_id) const {
   auto mgp_node = mgp::graph_get_vertex_by_id(graph_, mgp_vertex_id{.as_int = node_id.AsInt()}, memory);
   if (mgp_node == nullptr) {
     return false;
@@ -1607,8 +1609,16 @@ bool Graph::Contains(const Id node_id) const {
   mgp::vertex_destroy(mgp_node);
   return true;
 }
-bool Graph::Contains(const Node &node) const { return Contains(node.id()); }
-bool Graph::Contains(const Relationship &relationship) const {
+bool Graph::ContainsNode(const Node &node) const { return ContainsNode(node.id()); }
+
+bool Graph::ContainsRelationship(const Id relationship_id) const {
+  for (const auto &graph_relationship : relationships()) {
+    if (graph_relationship.id() == relationship_id) return true;
+  }
+  return false;
+}
+
+bool Graph::ContainsRelationship(const Relationship &relationship) const {
   for (const auto &graph_relationship : relationships()) {
     if (relationship == graph_relationship) return true;
   }

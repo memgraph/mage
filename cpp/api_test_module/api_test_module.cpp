@@ -77,10 +77,10 @@ void TestProc(std::vector<mage::Value> arguments, mage::Graph graph, mage::Recor
     }
     std::cout << "\n";
 
-    std::cout << (graph.Contains(mage::Id::FromInt(0))) << "\n";
-    std::cout << (graph.Contains(mage::Id::FromInt(2))) << "\n";
-    std::cout << (graph.Contains(arguments[0].ValueNode())) << "\n";
-    std::cout << (graph.Contains(arguments[1].ValueRelationship())) << "\n";
+    std::cout << (graph.ContainsNode(mage::Id::FromInt(0))) << "\n";
+    std::cout << (graph.ContainsNode(mage::Id::FromInt(2))) << "\n";
+    std::cout << (graph.ContainsNode(arguments[0].ValueNode())) << "\n";
+    std::cout << (graph.ContainsRelationship(arguments[1].ValueRelationship())) << "\n";
   }
 
   if (test_id) {
