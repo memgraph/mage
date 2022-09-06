@@ -239,7 +239,7 @@ def batch_forward_pass(
     neg_graph: dgl.graph,
     blocks: List[dgl.graph],
     num_neg_per_pos_edge: int,
-    device: torch.device
+    device: torch.device,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.nn.Module]:
     """Performs one forward batch pass
 
@@ -272,7 +272,10 @@ def batch_forward_pass(
     # probabilities
     probs = m(scores)
     labels = torch.cat(
-        [torch.ones(pos_score.shape[0], device=device), torch.zeros(neg_score.shape[0], device=device)]
+        [
+            torch.ones(pos_score.shape[0], device=device),
+            torch.zeros(neg_score.shape[0], device=device),
+        ]
     )  # concatenation of labels
     # weights = torch.cat([torch.ones(pos_score.shape[0], dtype=torch.float32), torch.Tensor([1.0 / num_neg_per_pos_edge for _ in range(neg_score.shape[0])])])
     loss_output = loss(probs, labels)
@@ -438,8 +441,8 @@ def inner_train(
                 pos_graph,
                 neg_graph,
                 blocks,
-                num_neg_per_pos_edge, # TODO: remove
-                device
+                num_neg_per_pos_edge,  # TODO: remove
+                device,
             )
             # Make an optimization step
             optimizer.zero_grad()
@@ -493,8 +496,8 @@ def inner_train(
                         pos_graph,
                         neg_graph,
                         blocks,
-                        num_neg_per_pos_edge, # TODO: remove
-                        device
+                        num_neg_per_pos_edge,  # TODO: remove
+                        device,
                     )
                     # Add to the epoch_validation_result for saving
                     evaluate(

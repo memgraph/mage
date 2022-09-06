@@ -273,7 +273,7 @@ def train(
         graph=graph,
         split_ratio=link_prediction_parameters.split_ratio,
         target_relation=link_prediction_parameters.target_relation,
-        device=device
+        device=device,
     )
 
     # Extract number of layers
