@@ -4,9 +4,10 @@ gekko==0.2.8
 networkx==2.6.2
 python-Levenshtein==0.12.1
 gensim==4.0.0.
-torch==1.10.1
+torch==1.11.0
 six==1.16.0
-torch-scatter
-torch-sparse
-torch-geometric
-torchmetrics
+torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geometric -f https://data.pyg.org/whl/torch-1.11.0+cpu.html
+torch-scatter==2.0.9
+torch-sparse==0.6.14
+torch-geometric==2.0.4
+torchmetrics==0.9.3

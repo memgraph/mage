@@ -193,7 +193,7 @@ def declare_data(ctx: mgp.ProcCtx) -> HeteroData:
         current_values[DataParams.SPLIT_RATIO],
         current_values[HeteroParams.FEATURES_NAME],
         current_values[HeteroParams.CLASS_NAME],
-        current_values[OtherParams.DEVICE_TYPE]
+        current_values[OtherParams.DEVICE_TYPE],
     )
 
     observed_attribute_data = data[current_values[HeteroParams.OBSERVED_ATTRIBUTE]]
@@ -477,7 +477,6 @@ def train(
     """
     global model, current_values
 
-
     # define fresh data
     data = declare_data(ctx)
 
@@ -536,7 +535,7 @@ def train(
                 data,
                 current_values[DataParams.METRICS],
                 current_values[HeteroParams.OBSERVED_ATTRIBUTE],
-                current_values[OtherParams.DEVICE_TYPE]
+                current_values[OtherParams.DEVICE_TYPE],
             )
             dict_val = metrics(
                 data[current_values[HeteroParams.OBSERVED_ATTRIBUTE]].val_mask,
@@ -544,7 +543,7 @@ def train(
                 data,
                 current_values[DataParams.METRICS],
                 current_values[HeteroParams.OBSERVED_ATTRIBUTE],
-                current_values[OtherParams.DEVICE_TYPE]
+                current_values[OtherParams.DEVICE_TYPE],
             )
             logged_data.append(
                 {
@@ -683,7 +682,9 @@ def load_model(ctx: mgp.ProcCtx, num: int = 0) -> mgp.Record(path=str, status=st
 
 
 @mgp.read_proc
-def predict(ctx: mgp.ProcCtx, vertex: mgp.Vertex) -> mgp.Record(predicted_class=int):
+def predict(
+    ctx: mgp.ProcCtx, vertex: mgp.Vertex
+) -> mgp.Record(predicted_class=int, status=str):
     """This function predicts metrics on one node. It is suggested that user previously
     loads unseen test data to predict on it.
 
@@ -697,7 +698,10 @@ def predict(ctx: mgp.ProcCtx, vertex: mgp.Vertex) -> mgp.Record(predicted_class=
         vertex (mgp.Vertex): node to predict on
 
     Returns:
-        mgp.Record(predicted_class (int): predicted class): record to return
+        mgp.Record(
+            predicted_class (int): predicted class
+            status (str): status of prediction
+        ): record to return
     """
     global current_values
 
@@ -718,7 +722,7 @@ def predict(ctx: mgp.ProcCtx, vertex: mgp.Vertex) -> mgp.Record(predicted_class=
 
     predicted_class = int(pred.detach().cpu().numpy()[position])
 
-    return mgp.Record(predicted_class=predicted_class)
+    return mgp.Record(predicted_class=predicted_class, status="Prediction done.")
 
 
 @mgp.read_proc
