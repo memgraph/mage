@@ -1,7 +1,7 @@
 name: Build and Test
 
 env:
-  PY_VERSION: "3.8"
+  PY_VERSION: "3.9"
   CORE_COUNT: "8"
   MAGE_CONTAINER: "mage"
 

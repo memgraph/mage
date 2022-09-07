@@ -4,7 +4,7 @@ FROM debian:bullseye as base
 
 USER root
 
-ARG MG_VERSION=2.3.0
+ARG MG_VERSION=2.3.1
 ARG PY_VERSION_DEFAULT
 ENV MG_VERSION ${MG_VERSION}
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
@@ -50,6 +50,7 @@ COPY . /mage
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
     && export PATH="/root/.cargo/bin:${PATH}" \
     && python3 -m  pip install -r /mage/python/requirements.txt \
+    && pip install torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geometric -f https://data.pyg.org/whl/torch-1.12.0+cu113.html\
     && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/
 
 
