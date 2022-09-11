@@ -66,14 +66,14 @@ void TestProc(std::vector<mage::Value> arguments, mage::Graph graph, mage::Recor
   auto test_duration = true;
 
   if (test_graph) {
-    std::cout << graph.order() << "\n";
-    std::cout << graph.size() << "\n";
-    for (const auto &node : graph.nodes()) {
-      std::cout << node.id().AsInt() << "\t";
+    std::cout << graph.Order() << "\n";
+    std::cout << graph.Size() << "\n";
+    for (const auto &node : graph.Nodes()) {
+      std::cout << node.Id().AsInt() << "\t";
     }
     std::cout << "\n";
-    for (const auto &rel : graph.relationships()) {
-      std::cout << rel.id().AsInt() << "\t";
+    for (const auto &rel : graph.Relationships()) {
+      std::cout << rel.Id().AsInt() << "\t";
     }
     std::cout << "\n";
 
@@ -130,7 +130,7 @@ void TestProc(std::vector<mage::Value> arguments, mage::Graph graph, mage::Recor
 
     auto list_3 = mage::List(10);
     PrintList(list_3);
-    std::cout << list_3.size() << "\n";
+    std::cout << list_3.Size() << "\n";
 
     auto a = mage::Value("a");
     list_3.Append(a);
@@ -191,13 +191,13 @@ void TestProc(std::vector<mage::Value> arguments, mage::Graph graph, mage::Recor
     std::unordered_set<mage::Node> z;
     z.insert(node_1);
 
-    std::cout << node_1.id().AsInt() << "\n";
+    std::cout << node_1.Id().AsInt() << "\n";
     std::cout << node_1.HasLabel("Node") << "\n";
     std::cout << node_1.HasLabel("Vertex") << "\n";
 
     auto first = true;
     std::cout << "Labels: [";
-    for (const auto &label : node_1.labels()) {
+    for (const auto &label : node_1.Labels()) {
       if (!first) std::cout << ", ";
       std::cout << label;
       first = false;
@@ -206,7 +206,7 @@ void TestProc(std::vector<mage::Value> arguments, mage::Graph graph, mage::Recor
 
     first = true;
     std::cout << "Properties: {";
-    for (const auto &[name, value] : node_1.properties()) {
+    for (const auto &[name, value] : node_1.Properties()) {
       if (!first) std::cout << ", ";
       std::cout << name << ": " << value.ValueInt();
       first = false;
@@ -215,9 +215,9 @@ void TestProc(std::vector<mage::Value> arguments, mage::Graph graph, mage::Recor
 
     first = true;
     std::cout << "Out-neighbors: [";
-    for (const auto &neighbor : node_1.out_relationships()) {
+    for (const auto &neighbor : node_1.OutRelationships()) {
       if (!first) std::cout << ", ";
-      std::cout << neighbor.id().AsInt();
+      std::cout << neighbor.Id().AsInt();
       first = false;
     }
     std::cout << "]\n";
@@ -225,9 +225,9 @@ void TestProc(std::vector<mage::Value> arguments, mage::Graph graph, mage::Recor
     // first = true;
     // auto node_2 = graph.GetNodeById(mage::Id::FromInt(1));
     // std::cout << "In-neighbors: [";
-    // for (const auto &neighbor : node_2.in_relationships()) {
+    // for (const auto &neighbor : node_2.in_Relationships()) {
     //   if (!first) std::cout << ", ";
-    //   std::cout << neighbor.id().AsInt();
+    //   std::cout << neighbor.Id().AsInt();
     //   first = false;
     // }
     // std::cout << "]\n";
@@ -244,16 +244,16 @@ void TestProc(std::vector<mage::Value> arguments, mage::Graph graph, mage::Recor
     std::unordered_set<mage::Relationship> z;
     z.insert(edge_1);
 
-    std::cout << edge_1.id().AsInt() << "\n";
-    std::cout << edge_1.type() << "\n";
+    std::cout << edge_1.Id().AsInt() << "\n";
+    std::cout << edge_1.Type() << "\n";
 
-    for (const auto &[name, value] : edge_1.properties()) {
+    for (const auto &[name, value] : edge_1.Properties()) {
       std::cout << name << ": " << value.ValueInt() << ", ";
     }
     std::cout << "\n";
 
-    std::cout << edge_1.from().id().AsInt() << "\n";
-    std::cout << edge_1.to().id().AsInt() << "\n";
+    std::cout << edge_1.From().Id().AsInt() << "\n";
+    std::cout << edge_1.To().Id().AsInt() << "\n";
   }
 
   if (test_path) {
@@ -266,13 +266,13 @@ void TestProc(std::vector<mage::Value> arguments, mage::Graph graph, mage::Recor
     // auto node_0 = graph.GetNodeById(mage::Id::FromInt(0));
     // auto path_2 = mage::Path(node_0);
 
-    std::cout << path_1.length() << "\n";
-    std::cout << path_1.GetNodeAt(0).id().AsInt() << "\n";
-    std::cout << path_1.GetRelationshipAt(0).id().AsInt() << "\n";
+    std::cout << path_1.Length() << "\n";
+    std::cout << path_1.GetNodeAt(0).Id().AsInt() << "\n";
+    std::cout << path_1.GetRelationshipAt(0).Id().AsInt() << "\n";
 
     // std::cout << !(path_1 == path_2) << "\n";
 
-    // path_2.Expand(*(node_0.out_relationships().begin()));
+    // path_2.Expand(*(node_0.out_Relationships().begin()));
     // std::cout << (path_1 == path_2) << "\n";
   }
 
@@ -290,12 +290,12 @@ void TestProc(std::vector<mage::Value> arguments, mage::Graph graph, mage::Recor
     auto date_2 = mage::Date("2022-04-09");
     auto date_3 = mage::Date(2022, 4, 9);
 
-    auto date_4 = mage::Date::now();
+    auto date_4 = mage::Date::Now();
 
-    std::cout << date_1.year() << "\n";
-    std::cout << date_1.month() << "\n";
-    std::cout << date_1.day() << "\n";
-    std::cout << date_2.timestamp() << "\n";
+    std::cout << date_1.Year() << "\n";
+    std::cout << date_1.Month() << "\n";
+    std::cout << date_1.Day() << "\n";
+    std::cout << date_2.Timestamp() << "\n";
 
     std::cout << !(date_1 == date_2) << "\n";
     std::cout << (date_2 == date_3) << "\n";
@@ -320,14 +320,14 @@ void TestProc(std::vector<mage::Value> arguments, mage::Graph graph, mage::Recor
     auto lt_2 = mage::LocalTime("09:15:00");
     auto lt_3 = mage::LocalTime(9, 15, 0, 0, 0);
 
-    auto lt_4 = mage::LocalTime::now();
+    auto lt_4 = mage::LocalTime::Now();
 
-    std::cout << lt_1.hour() << "\n";
-    std::cout << lt_1.minute() << "\n";
-    std::cout << lt_1.second() << "\n";
-    std::cout << lt_1.millisecond() << "\n";
-    std::cout << lt_1.microsecond() << "\n";
-    std::cout << lt_2.timestamp() << "\n";
+    std::cout << lt_1.Hour() << "\n";
+    std::cout << lt_1.Minute() << "\n";
+    std::cout << lt_1.Second() << "\n";
+    std::cout << lt_1.Millisecond() << "\n";
+    std::cout << lt_1.Microsecond() << "\n";
+    std::cout << lt_2.Timestamp() << "\n";
 
     std::cout << !(lt_1 == lt_2) << "\n";
     std::cout << (lt_2 == lt_3) << "\n";
@@ -351,17 +351,17 @@ void TestProc(std::vector<mage::Value> arguments, mage::Graph graph, mage::Recor
     auto ldt_2 = mage::LocalDateTime("2021-10-05T14:15:00");
     auto ldt_3 = mage::LocalDateTime(2021, 10, 5, 14, 15, 0, 0, 0);
 
-    auto ldt_4 = mage::LocalTime::now();
+    auto ldt_4 = mage::LocalTime::Now();
 
-    std::cout << ldt_1.year() << "\n";
-    std::cout << ldt_1.month() << "\n";
-    std::cout << ldt_1.day() << "\n";
-    std::cout << ldt_1.hour() << "\n";
-    std::cout << ldt_1.minute() << "\n";
-    std::cout << ldt_1.second() << "\n";
-    std::cout << ldt_1.millisecond() << "\n";
-    std::cout << ldt_1.microsecond() << "\n";
-    std::cout << ldt_2.timestamp() << "\n";
+    std::cout << ldt_1.Year() << "\n";
+    std::cout << ldt_1.Month() << "\n";
+    std::cout << ldt_1.Day() << "\n";
+    std::cout << ldt_1.Hour() << "\n";
+    std::cout << ldt_1.Minute() << "\n";
+    std::cout << ldt_1.Second() << "\n";
+    std::cout << ldt_1.Millisecond() << "\n";
+    std::cout << ldt_1.Microsecond() << "\n";
+    std::cout << ldt_2.Timestamp() << "\n";
 
     std::cout << !(ldt_1 == ldt_2) << "\n";
     std::cout << (ldt_2 == ldt_3) << "\n";
@@ -387,7 +387,7 @@ void TestProc(std::vector<mage::Value> arguments, mage::Graph graph, mage::Recor
     auto duration_3 = mage::Duration(1465355);
     auto duration_4 = mage::Duration(5, 14, 15, 0, 0, 0);
 
-    std::cout << duration_2.microseconds() << "\n";
+    std::cout << duration_2.Microseconds() << "\n";
 
     std::cout << !(duration_1 == duration_3) << "\n";
     std::cout << (duration_1 == duration_2) << "\n";
@@ -435,24 +435,24 @@ void WriteProc(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mg
   }
 
   int i = 5;
-  for (const auto &node : graph.nodes()) {
+  for (const auto &node : graph.Nodes()) {
     graph.DeleteNode(node);
     i -= 1;
     if (i == 0) break;
   }
 
-  for (const auto &node_1 : graph.nodes()) {
-    for (const auto &node_2 : graph.nodes()) {
+  for (const auto &node_1 : graph.Nodes()) {
+    for (const auto &node_2 : graph.Nodes()) {
       graph.CreateRelationship(node_1, node_2, "R");
     }
   }
 
-  for (const auto &node_1 : graph.nodes()) {
+  for (const auto &node_1 : graph.Nodes()) {
     graph.DetachDeleteNode(node_1);
     break;
   }
 
-  for (const auto &rel_1 : graph.relationships()) {
+  for (const auto &rel_1 : graph.Relationships()) {
     graph.DeleteRelationship(rel_1);
     break;
   }

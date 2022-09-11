@@ -86,7 +86,7 @@ class Id {
   /// Construct Id from int64_t
   static Id FromInt(int64_t id) { return Id(id); }
 
-  int64_t AsInt() const { return id_; }
+  int64_t AsInt() const noexcept { return id_; }
   uint64_t AsUint() const { return util::MemcpyCast<uint64_t>(id_); }
 
   bool operator==(const Id &other) const { return id_ == other.id_; }
@@ -110,14 +110,14 @@ class Graph {
   explicit Graph(mgp_graph *graph) : graph_(graph) {}
 
   /// @brief Returns the graph order (number of nodes).
-  int64_t order() const;
+  int64_t Order() const;
   /// @brief Returns the graph size (number of relationships).
-  int64_t size() const;
+  int64_t Size() const;
 
   /// @brief Returns an iterable structure of the graph’s nodes.
-  GraphNodes nodes() const;
+  GraphNodes Nodes() const;
   /// @brief Returns an iterable structure of the graph’s relationships.
-  GraphRelationships relationships() const;
+  GraphRelationships Relationships() const;
 
   /// @brief Returns the graph node with the given ID.
   Node GetNodeById(const Id node_id) const;
@@ -157,27 +157,77 @@ class Nodes {
    public:
     friend class Nodes;
 
-    explicit Iterator(mgp_vertices_iterator *nodes_iterator);
-    ~Iterator();
-    Iterator &operator++();
-    Iterator operator++(int);
-    bool operator==(Iterator other) const;
-    bool operator!=(Iterator other) const { return !(*this == other); }
-    Node operator*();
-    // Traits
-    using difference_type = Node;
-    using value_type = Node;
-    using pointer = const Node *;
-    using reference = const Node &;
     using iterator_category = std::forward_iterator_tag;
+    using difference_type = std::ptrdiff_t;
+    using value_type = const Node;
+    using pointer = value_type *;
+    using reference = value_type &;
+
+    explicit Iterator(mgp_vertices_iterator *nodes_iterator) : nodes_iterator_(nodes_iterator) {
+      if (nodes_iterator_ == nullptr) {
+        return;
+      }
+
+      if (mgp::vertices_iterator_get(nodes_iterator_) == nullptr) {
+        mgp::vertices_iterator_destroy(nodes_iterator_);
+        nodes_iterator_ = nullptr;
+      }
+    }
+
+    Iterator(const Iterator &other) : Iterator(other.nodes_iterator_) {}
+
+    Iterator &operator=(const Iterator &other) = delete;
+
+    ~Iterator() {
+      if (nodes_iterator_ != nullptr) {
+        mgp::vertices_iterator_destroy(nodes_iterator_);
+      }
+    }
+
+    Iterator &operator++() {
+      if (nodes_iterator_ != nullptr) {
+        auto next = mgp::vertices_iterator_next(nodes_iterator_);
+
+        if (next == nullptr) {
+          mgp::vertices_iterator_destroy(nodes_iterator_);
+          nodes_iterator_ = nullptr;
+          return *this;
+        }
+        index_++;
+      }
+      return *this;
+    }
+    Iterator operator++(int) {
+      auto retval = *this;
+      ++*this;
+      return retval;
+    }
+
+    bool operator==(Iterator other) const {
+      if (nodes_iterator_ == nullptr && other.nodes_iterator_ == nullptr) {
+        return true;
+      }
+      if (nodes_iterator_ == nullptr || other.nodes_iterator_ == nullptr) {
+        return false;
+      }
+      return mgp::vertex_equal(mgp::vertices_iterator_get(nodes_iterator_),
+                               mgp::vertices_iterator_get(other.nodes_iterator_)) &&
+             index_ == other.index_;
+    }
+    bool operator!=(Iterator other) const { return !(*this == other); }
+
+    const Node operator*() const;
 
    private:
     mgp_vertices_iterator *nodes_iterator_ = nullptr;
     size_t index_ = 0;
   };
 
-  Iterator begin();
-  Iterator end();
+  Iterator begin() const { return Iterator(nodes_iterator_); }
+  Iterator end() const { return Iterator(nullptr); }
+
+  Iterator cbegin() const { return Iterator(nodes_iterator_); }
+  Iterator cend() const { return Iterator(nullptr); }
 
  private:
   mgp_vertices_iterator *nodes_iterator_ = nullptr;
@@ -194,18 +244,115 @@ class GraphRelationships {
    public:
     friend class GraphRelationships;
 
-    explicit Iterator(mgp_vertices_iterator *nodes_iterator);
-    ~Iterator();
-    Iterator &operator++();
-    bool operator==(Iterator other) const;
-    bool operator!=(Iterator other) const { return !(*this == other); }
-    Relationship operator*();
-    // Traits
-    using difference_type = Relationship;
-    using value_type = Relationship;
-    using pointer = const Relationship *;
-    using reference = const Relationship &;
     using iterator_category = std::forward_iterator_tag;
+    using difference_type = std::ptrdiff_t;
+    using value_type = const Relationship;
+    using pointer = value_type *;
+    using reference = value_type &;
+
+    explicit Iterator(mgp_vertices_iterator *nodes_iterator) : nodes_iterator_(nodes_iterator) {
+      // Positions the iterator over the first existing relationship
+
+      if (nodes_iterator_ == nullptr) {
+        return;
+      }
+
+      // Go through each graph node’s adjacent nodes
+      for (auto node = mgp::vertices_iterator_get(nodes_iterator_); node;
+           node = mgp::vertices_iterator_next(nodes_iterator_)) {
+        // Check if node exists
+        if (node == nullptr) {
+          mgp::vertices_iterator_destroy(nodes_iterator_);
+          nodes_iterator_ = nullptr;
+          return;
+        }
+
+        // Check if node has out-relationships
+        out_relationships_iterator_ = mgp::vertex_iter_out_edges(node, memory);
+        auto relationship = mgp::edges_iterator_get(out_relationships_iterator_);
+        if (relationship != nullptr) {
+          return;
+        }
+
+        mgp::edges_iterator_destroy(out_relationships_iterator_);
+        out_relationships_iterator_ = nullptr;
+      }
+    }
+
+    Iterator(const Iterator &other) : Iterator(other.nodes_iterator_) {}
+
+    Iterator &operator=(const Iterator &other) = delete;
+
+    ~Iterator() {
+      if (nodes_iterator_ != nullptr) {
+        mgp::vertices_iterator_destroy(nodes_iterator_);
+      }
+      if (out_relationships_iterator_ != nullptr) {
+        mgp::edges_iterator_destroy(out_relationships_iterator_);
+      }
+    }
+
+    Iterator &operator++() {
+      // Moves the iterator onto the next existing relationship
+
+      // 1. Check if the current node has remaining relationships to iterate over
+
+      if (out_relationships_iterator_ != nullptr) {
+        auto next = mgp::edges_iterator_next(out_relationships_iterator_);
+
+        if (next == nullptr) {
+          mgp::edges_iterator_destroy(out_relationships_iterator_);
+          out_relationships_iterator_ = nullptr;
+        }
+      }
+
+      // 2. Move onto the next nodes
+
+      if (nodes_iterator_ != nullptr) {
+        for (auto node = mgp::vertices_iterator_next(nodes_iterator_); node;
+             node = mgp::vertices_iterator_next(nodes_iterator_)) {
+          // Check if node exists - if it doesn’t, we’ve reached the end of the iterator
+          if (node == nullptr) {
+            mgp::vertices_iterator_destroy(nodes_iterator_);
+            nodes_iterator_ = nullptr;
+            return *this;
+          }
+
+          // Check if node has out-relationships
+          out_relationships_iterator_ = mgp::vertex_iter_out_edges(node, memory);
+          auto relationship = mgp::edges_iterator_get(out_relationships_iterator_);
+          if (relationship != nullptr) {
+            return *this;
+          }
+
+          mgp::edges_iterator_destroy(out_relationships_iterator_);
+          out_relationships_iterator_ = nullptr;
+        }
+      }
+      mgp::vertices_iterator_destroy(nodes_iterator_);
+      nodes_iterator_ = nullptr;
+      return *this;
+    }
+    Iterator operator++(int) {
+      auto retval = *this;
+      ++*this;
+      return retval;
+    }
+
+    bool operator==(Iterator other) const {
+      if (out_relationships_iterator_ == nullptr && other.out_relationships_iterator_ == nullptr) {
+        return true;
+      }
+      if (out_relationships_iterator_ == nullptr || other.out_relationships_iterator_ == nullptr) {
+        return false;
+      }
+      return mgp::edge_equal(mgp::edges_iterator_get(out_relationships_iterator_),
+                             mgp::edges_iterator_get(other.out_relationships_iterator_)) &&
+             index_ == other.index_;
+    }
+    bool operator!=(Iterator other) const { return !(*this == other); }
+
+    const Relationship operator*() const;
 
    private:
     mgp_vertices_iterator *nodes_iterator_ = nullptr;
@@ -213,8 +360,11 @@ class GraphRelationships {
     size_t index_ = 0;
   };
 
-  Iterator begin();
-  Iterator end();
+  Iterator begin() const { return Iterator(mgp::graph_iter_vertices(graph_, memory)); }
+  Iterator end() const { return Iterator(nullptr); }
+
+  Iterator cbegin() const { return Iterator(mgp::graph_iter_vertices(graph_, memory)); }
+  Iterator cend() const { return Iterator(nullptr); }
 
  private:
   mgp_graph *graph_;
@@ -230,27 +380,76 @@ class Relationships {
    public:
     friend class Relationships;
 
-    explicit Iterator(mgp_edges_iterator *relationships_iterator);
-    ~Iterator();
-    Iterator &operator++();
-    Iterator operator++(int);
-    bool operator==(Iterator other) const;
-    bool operator!=(Iterator other) const { return !(*this == other); }
-    Relationship operator*();
-    // Traits
-    using difference_type = Relationship;
-    using value_type = Relationship;
-    using pointer = const Relationship *;
-    using reference = const Relationship &;
     using iterator_category = std::forward_iterator_tag;
+    using difference_type = std::ptrdiff_t;
+    using value_type = const Relationship;
+    using pointer = value_type *;
+    using reference = value_type &;
+
+    explicit Iterator(mgp_edges_iterator *relationships_iterator) : relationships_iterator_(relationships_iterator) {
+      if (relationships_iterator_ == nullptr) {
+        return;
+      }
+      if (mgp::edges_iterator_get(relationships_iterator_) == nullptr) {
+        mgp::edges_iterator_destroy(relationships_iterator_);
+        relationships_iterator_ = nullptr;
+      }
+    }
+
+    Iterator(const Iterator &other) : Iterator(other.relationships_iterator_) {}
+
+    Iterator &operator=(const Iterator &other) = delete;
+
+    ~Iterator() {
+      if (relationships_iterator_ != nullptr) {
+        mgp::edges_iterator_destroy(relationships_iterator_);
+      }
+    }
+
+    Iterator &operator++() {
+      if (relationships_iterator_ != nullptr) {
+        auto next = mgp::edges_iterator_next(relationships_iterator_);
+
+        if (next == nullptr) {
+          mgp::edges_iterator_destroy(relationships_iterator_);
+          relationships_iterator_ = nullptr;
+          return *this;
+        }
+        index_++;
+      }
+      return *this;
+    }
+    Iterator operator++(int) {
+      auto retval = *this;
+      ++*this;
+      return retval;
+    }
+
+    bool operator==(Iterator other) const {
+      if (relationships_iterator_ == nullptr && other.relationships_iterator_ == nullptr) {
+        return true;
+      }
+      if (relationships_iterator_ == nullptr || other.relationships_iterator_ == nullptr) {
+        return false;
+      }
+      return mgp::edge_equal(mgp::edges_iterator_get(relationships_iterator_),
+                             mgp::edges_iterator_get(other.relationships_iterator_)) &&
+             index_ == other.index_;
+    }
+    bool operator!=(Iterator other) const { return !(*this == other); }
+
+    const Relationship operator*() const;
 
    private:
     mgp_edges_iterator *relationships_iterator_ = nullptr;
     size_t index_ = 0;
   };
 
-  Iterator begin();
-  Iterator end();
+  Iterator begin() const { return Iterator(relationships_iterator_); }
+  Iterator end() const { return Iterator(nullptr); }
+
+  Iterator cbegin() const { return Iterator(relationships_iterator_); }
+  Iterator cend() const { return Iterator(nullptr); }
 
  private:
   mgp_edges_iterator *relationships_iterator_ = nullptr;
@@ -262,9 +461,9 @@ class Properties {
   explicit Properties(mgp_properties_iterator *properties_iterator);
 
   /// @brief Returns the size of the properties map.
-  size_t size() const { return property_map_.size(); }
+  size_t Size() const { return property_map_.size(); }
   /// @brief Returns whether the properties map is empty.
-  bool empty() const { return size() == 0; }
+  bool Empty() const { return Size() == 0; }
 
   /// @brief Returns the value associated with the given `key`. If there’s no such value, the behavior is undefined.
   /// @note Each key-value pair needs to be checked, ensuing O(n) time complexity.
@@ -272,6 +471,9 @@ class Properties {
 
   std::map<std::string_view, Value>::const_iterator begin() const { return property_map_.begin(); }
   std::map<std::string_view, Value>::const_iterator end() const { return property_map_.end(); }
+
+  std::map<std::string_view, Value>::const_iterator cbegin() const { return property_map_.cbegin(); }
+  std::map<std::string_view, Value>::const_iterator cend() const { return property_map_.cend(); }
 
   /// @brief Returns the key-value iterator for the given `key`. If there’s no such pair, returns the end of the
   /// iterator.
@@ -295,7 +497,7 @@ class Labels {
   explicit Labels(mgp_vertex *node_ptr) : node_ptr_(node_ptr) {}
 
   /// @brief Returns the number of the labels, i.e. the size of their list.
-  size_t size() const { return mgp::vertex_labels_count(node_ptr_); }
+  size_t Size() const { return mgp::vertex_labels_count(node_ptr_); }
 
   /// @brief Return the node’s label at position `index`.
   std::string_view operator[](size_t index) const;
@@ -314,7 +516,7 @@ class Labels {
       return *this;
     }
 
-    std::string_view operator*() const;
+    const std::string_view operator*() const;
 
    private:
     Iterator(const Labels *iterable, size_t index) : iterable_(iterable), index_(index) {}
@@ -324,7 +526,10 @@ class Labels {
   };
 
   Iterator begin() { return Iterator(this, 0); }
-  Iterator end() { return Iterator(this, size()); }
+  Iterator end() { return Iterator(this, Size()); }
+
+  Iterator cbegin() { return Iterator(this, 0); }
+  Iterator cend() { return Iterator(this, Size()); }
 
  private:
   mgp_vertex *node_ptr_;
@@ -364,7 +569,7 @@ class List {
   explicit List(const std::initializer_list<Value> list);
 
   List(const List &other) : List(other.ptr_) {}
-  List(List &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
+  List(List &&other) noexcept : ptr_(other.ptr_) { other.ptr_ = nullptr; }
 
   List &operator=(const List &other) = delete;
   List &operator=(List &&other) = delete;
@@ -372,9 +577,9 @@ class List {
   ~List();
 
   /// @brief Returns the size of the list.
-  size_t size() const { return mgp::list_size(ptr_); }
+  size_t Size() const { return mgp::list_size(ptr_); }
   /// @brief Returns whether the list is empty.
-  bool empty() const { return size() == 0; }
+  bool Empty() const { return Size() == 0; }
 
   /// @brief Returns the value at the given `index`.
   const Value operator[](size_t index) const;
@@ -393,7 +598,7 @@ class List {
       return *this;
     }
 
-    Value operator*() const;
+    const Value operator*() const;
 
    private:
     Iterator(const List *iterable, size_t index) : iterable_(iterable), index_(index) {}
@@ -403,7 +608,10 @@ class List {
   };
 
   Iterator begin() const { return Iterator(this, 0); }
-  Iterator end() const { return Iterator(this, size()); }
+  Iterator end() const { return Iterator(this, Size()); }
+
+  Iterator cbegin() const { return Iterator(this, 0); }
+  Iterator cend() const { return Iterator(this, Size()); }
 
   /// @brief Appends the given `value` to the list. The `value` is copied.
   void Append(const Value &value);
@@ -456,7 +664,7 @@ class Map {
   Map(const std::initializer_list<std::pair<std::string_view, Value>> items);
 
   Map(const Map &other) : Map(other.ptr_) {}
-  Map(Map &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
+  Map(Map &&other) noexcept : ptr_(other.ptr_) { other.ptr_ = nullptr; }
 
   Map &operator=(const Map &other) = delete;
   Map &operator=(Map &&other) = delete;
@@ -464,38 +672,83 @@ class Map {
   ~Map();
 
   /// @brief Returns the size of the map.
-  size_t size() const { return mgp::map_size(ptr_); }
+  size_t Size() const { return mgp::map_size(ptr_); }
   /// @brief Returns whether the map is empty.
-  bool empty() const { return size() == 0; }
+  bool Empty() const { return Size() == 0; }
 
   /// @brief Returns the value at the given `key`.
   Value const operator[](std::string_view key) const;
   /// @brief Returns the value at the given `key`.
-  Value const at(std::string_view key) const;
+  Value const At(std::string_view key) const;
 
   class Iterator {
    public:
     friend class Map;
 
-    explicit Iterator(mgp_map_items_iterator *map_items_iterator);
-    ~Iterator();
-    Iterator &operator++();
-    bool operator==(Iterator other) const;
-    bool operator!=(Iterator other) const { return !(*this == other); }
-    MapItem operator*();
-    // Traits
-    using difference_type = MapItem;
-    using value_type = MapItem;
-    using pointer = const MapItem *;
-    using reference = const MapItem &;
     using iterator_category = std::forward_iterator_tag;
+    using difference_type = std::ptrdiff_t;
+    using value_type = const MapItem;
+    using pointer = value_type *;
+    using reference = value_type &;
+
+    explicit Iterator(mgp_map_items_iterator *map_items_iterator) : map_items_iterator_(map_items_iterator) {
+      if (map_items_iterator_ == nullptr) return;
+      if (mgp::map_items_iterator_get(map_items_iterator_) == nullptr) {
+        mgp::map_items_iterator_destroy(map_items_iterator_);
+        map_items_iterator_ = nullptr;
+      }
+    }
+
+    Iterator(const Iterator &other) : Iterator(other.map_items_iterator_) {}
+
+    Iterator &operator=(const Iterator &other) = delete;
+
+    ~Iterator() {
+      if (map_items_iterator_ != nullptr) {
+        mgp::map_items_iterator_destroy(map_items_iterator_);
+      }
+    }
+
+    Iterator &operator++() {
+      if (map_items_iterator_ != nullptr) {
+        auto next = mgp::map_items_iterator_next(map_items_iterator_);
+
+        if (next == nullptr) {
+          mgp::map_items_iterator_destroy(map_items_iterator_);
+          map_items_iterator_ = nullptr;
+          return *this;
+        }
+      }
+      return *this;
+    }
+    Iterator operator++(int) {
+      auto retval = *this;
+      ++*this;
+      return retval;
+    }
+
+    bool operator==(Iterator other) const {
+      if (map_items_iterator_ == nullptr && other.map_items_iterator_ == nullptr) {
+        return true;
+      }
+      if (map_items_iterator_ == nullptr || other.map_items_iterator_ == nullptr) {
+        return false;
+      }
+      return mgp::map_items_iterator_get(map_items_iterator_) == mgp::map_items_iterator_get(other.map_items_iterator_);
+    }
+    bool operator!=(Iterator other) const { return !(*this == other); }
+
+    const MapItem operator*() const;
 
    private:
     mgp_map_items_iterator *map_items_iterator_ = nullptr;
   };
 
-  Iterator begin();
-  Iterator end();
+  Iterator begin() const { return Iterator(mgp::map_iter_items(ptr_, memory)); }
+  Iterator end() const { return Iterator(nullptr); }
+
+  Iterator cbegin() const { return Iterator(mgp::map_iter_items(ptr_, memory)); }
+  Iterator cend() const { return Iterator(nullptr); }
 
   /// @brief Inserts the given `key`-`value` pair into the map. The `value` is copied.
   void Insert(std::string_view key, const Value &value);
@@ -534,32 +787,36 @@ class Node {
   explicit Node(const mgp_vertex *const_ptr) : ptr_(mgp::vertex_copy(const_cast<mgp_vertex *>(const_ptr), memory)) {}
 
   Node(const Node &other) : Node(other.ptr_) {}
-  Node(Node &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
+  Node(Node &&other) noexcept : ptr_(other.ptr_) { other.ptr_ = nullptr; }
 
   Node &operator=(const Node &other) = delete;
-  Node &operator=(Node &&other) = delete;
+  Node &operator=(Node &&other) { return *this; }
 
   ~Node();
 
   /// @brief Returns the node’s ID.
-  Id id() const { return Id::FromInt(mgp::vertex_get_id(ptr_).as_int); }
+  mage::Id Id() const { return Id::FromInt(mgp::vertex_get_id(ptr_).as_int); }
 
   /// @brief Returns an iterable & indexable structure of the node’s labels.
-  Labels labels() const { return Labels(ptr_); }
+  class Labels Labels() const {
+    return mage::Labels(ptr_);
+  }
   /// @brief Returns whether the node has the given `label`.
   bool HasLabel(std::string_view label) const;
 
   /// @brief Returns an iterable & indexable structure of the node’s properties.
-  Properties properties() const { return Properties(mgp::vertex_iter_properties(ptr_, memory)); }
+  class Properties Properties() const {
+    return mage::Properties(mgp::vertex_iter_properties(ptr_, memory));
+  }
   /// @brief Returns the value of the node’s `property_name` property.
   Value operator[](const std::string_view property_name) const;
 
   /// @brief Returns an iterable structure of the node’s inbound relationships.
-  Relationships in_relationships() const;
+  Relationships InRelationships() const;
   /// @brief Returns an iterable structure of the node’s outbound relationships.
-  Relationships out_relationships() const;
+  Relationships OutRelationships() const;
 
-  bool operator<(const Node &other) const { return id() < other.id(); }
+  bool operator<(const Node &other) const { return Id() < other.Id(); }
 
   /// @exception std::runtime_error Node properties contain value(s) of unknown type.
   bool operator==(const Node &other) const;
@@ -587,7 +844,7 @@ class Relationship {
   explicit Relationship(const mgp_edge *const_ptr) : ptr_(mgp::edge_copy(const_cast<mgp_edge *>(const_ptr), memory)) {}
 
   Relationship(const Relationship &other) : Relationship(other.ptr_) {}
-  Relationship(Relationship &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
+  Relationship(Relationship &&other) noexcept : ptr_(other.ptr_) { other.ptr_ = nullptr; }
 
   Relationship &operator=(const Relationship &other) = delete;
   Relationship &operator=(Relationship &&other) = delete;
@@ -595,22 +852,24 @@ class Relationship {
   ~Relationship();
 
   /// @brief Returns the relationship’s ID.
-  Id id() const { return Id::FromInt(mgp::edge_get_id(ptr_).as_int); }
+  mage::Id Id() const { return Id::FromInt(mgp::edge_get_id(ptr_).as_int); }
 
   /// @brief Returns the relationship’s type.
-  std::string_view type() const;
+  std::string_view Type() const;
 
   /// @brief Returns an iterable & indexable structure of the relationship’s properties.
-  Properties properties() const { return Properties(mgp::edge_iter_properties(ptr_, memory)); }
+  class Properties Properties() const {
+    return mage::Properties(mgp::edge_iter_properties(ptr_, memory));
+  }
   /// @brief Returns the value of the relationship’s `property_name` property.
   Value operator[](const std::string_view property_name) const;
 
   /// @brief Returns the relationship’s source node.
-  Node from() const { return Node(mgp::edge_get_from(ptr_)); }
+  Node From() const { return Node(mgp::edge_get_from(ptr_)); }
   /// @brief Returns the relationship’s destination node.
-  Node to() const { return Node(mgp::edge_get_to(ptr_)); }
+  Node To() const { return Node(mgp::edge_get_to(ptr_)); }
 
-  bool operator<(const Relationship &other) const { return id() < other.id(); }
+  bool operator<(const Relationship &other) const { return Id() < other.Id(); }
 
   /// @exception std::runtime_error Relationship properties contain value(s) of unknown type.
   bool operator==(const Relationship &other) const;
@@ -639,7 +898,7 @@ class Path {
   explicit Path(const Node &start_node);
 
   Path(const Path &other) : Path(other.ptr_) {}
-  Path(Path &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
+  Path(Path &&other) noexcept : ptr_(other.ptr_) { other.ptr_ = nullptr; }
 
   Path &operator=(const Path &other);
   Path &operator=(Path &&other);
@@ -647,7 +906,7 @@ class Path {
   ~Path();
 
   /// Returns the path length (number of relationships).
-  size_t length() const { return mgp::path_size(ptr_); }
+  size_t Length() const { return mgp::path_size(ptr_); }
 
   /// @brief Returns the node at the given `index`.
   /// @pre The `index` must be less than or equal to length of the path.
@@ -695,7 +954,7 @@ class Date {
   Date(int year, int month, int day);
 
   Date(const Date &other) : Date(other.ptr_) {}
-  Date(Date &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
+  Date(Date &&other) noexcept : ptr_(other.ptr_) { other.ptr_ = nullptr; }
 
   Date &operator=(const Date &other) = delete;
   Date &operator=(Date &&other) = delete;
@@ -703,17 +962,17 @@ class Date {
   ~Date();
 
   /// @brief Returns the current Date.
-  static Date now();
+  static Date Now();
 
   /// @brief Returns the date’s year property.
-  int year() const { return mgp::date_get_year(ptr_); }
+  int Year() const { return mgp::date_get_year(ptr_); }
   /// @brief Returns the date’s month property.
-  int month() const { return mgp::date_get_month(ptr_); }
+  int Month() const { return mgp::date_get_month(ptr_); }
   /// @brief Returns the date’s day property.
-  int day() const { return mgp::date_get_day(ptr_); }
+  int Day() const { return mgp::date_get_day(ptr_); }
 
   /// @brief Returns the date’s timestamp (microseconds from the Unix epoch).
-  int64_t timestamp() const { return mgp::date_timestamp(ptr_); }
+  int64_t Timestamp() const { return mgp::date_timestamp(ptr_); }
 
   bool operator==(const Date &other) const;
   Date operator+(const Duration &dur) const;
@@ -751,7 +1010,7 @@ class LocalTime {
   LocalTime(int hour, int minute, int second, int millisecond, int microsecond);
 
   LocalTime(const LocalTime &other) : LocalTime(other.ptr_) {}
-  LocalTime(LocalTime &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; };
+  LocalTime(LocalTime &&other) noexcept : ptr_(other.ptr_) { other.ptr_ = nullptr; };
 
   LocalTime &operator=(const LocalTime &other) = delete;
   LocalTime &operator=(LocalTime &&other) = delete;
@@ -759,21 +1018,21 @@ class LocalTime {
   ~LocalTime();
 
   /// @brief Returns the current LocalTime.
-  static LocalTime now();
+  static LocalTime Now();
 
   /// @brief Returns the object’s `hour` property.
-  int hour() const { return mgp::local_time_get_hour(ptr_); }
+  int Hour() const { return mgp::local_time_get_hour(ptr_); }
   /// @brief Returns the object’s `minute` property.
-  int minute() const { return mgp::local_time_get_minute(ptr_); }
+  int Minute() const { return mgp::local_time_get_minute(ptr_); }
   /// @brief Returns the object’s `second` property.
-  int second() const { return mgp::local_time_get_second(ptr_); }
+  int Second() const { return mgp::local_time_get_second(ptr_); }
   /// @brief Returns the object’s `millisecond` property.
-  int millisecond() const { return mgp::local_time_get_millisecond(ptr_); }
+  int Millisecond() const { return mgp::local_time_get_millisecond(ptr_); }
   /// @brief Returns the object’s `microsecond` property.
-  int microsecond() const { return mgp::local_time_get_microsecond(ptr_); }
+  int Microsecond() const { return mgp::local_time_get_microsecond(ptr_); }
 
   /// @brief Returns the object’s timestamp (microseconds from the Unix epoch).
-  int64_t timestamp() const { return mgp::local_time_timestamp(ptr_); }
+  int64_t Timestamp() const { return mgp::local_time_timestamp(ptr_); }
 
   bool operator==(const LocalTime &other) const;
   LocalTime operator+(const Duration &dur) const;
@@ -811,7 +1070,7 @@ class LocalDateTime {
   LocalDateTime(int year, int month, int day, int hour, int minute, int second, int millisecond, int microsecond);
 
   LocalDateTime(const LocalDateTime &other) : LocalDateTime(other.ptr_) {}
-  LocalDateTime(LocalDateTime &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; };
+  LocalDateTime(LocalDateTime &&other) noexcept : ptr_(other.ptr_) { other.ptr_ = nullptr; };
 
   LocalDateTime &operator=(const LocalDateTime &other) = delete;
   LocalDateTime &operator=(LocalDateTime &&other) = delete;
@@ -819,27 +1078,27 @@ class LocalDateTime {
   ~LocalDateTime();
 
   /// @brief Returns the current LocalDateTime.
-  static LocalDateTime now();
+  static LocalDateTime Now();
 
   /// @brief Returns the object’s `year` property.
-  int year() const { return mgp::local_date_time_get_year(ptr_); }
+  int Year() const { return mgp::local_date_time_get_year(ptr_); }
   /// @brief Returns the object’s `month` property.
-  int month() const { return mgp::local_date_time_get_month(ptr_); }
+  int Month() const { return mgp::local_date_time_get_month(ptr_); }
   /// @brief Returns the object’s `day` property.
-  int day() const { return mgp::local_date_time_get_day(ptr_); }
+  int Day() const { return mgp::local_date_time_get_day(ptr_); }
   /// @brief Returns the object’s `hour` property.
-  int hour() const { return mgp::local_date_time_get_hour(ptr_); }
+  int Hour() const { return mgp::local_date_time_get_hour(ptr_); }
   /// @brief Returns the object’s `minute` property.
-  int minute() const { return mgp::local_date_time_get_minute(ptr_); }
+  int Minute() const { return mgp::local_date_time_get_minute(ptr_); }
   /// @brief Returns the object’s `second` property.
-  int second() const { return mgp::local_date_time_get_second(ptr_); }
+  int Second() const { return mgp::local_date_time_get_second(ptr_); }
   /// @brief Returns the object’s `millisecond` property.
-  int millisecond() const { return mgp::local_date_time_get_millisecond(ptr_); }
+  int Millisecond() const { return mgp::local_date_time_get_millisecond(ptr_); }
   /// @brief Returns the object’s `microsecond` property.
-  int microsecond() const { return mgp::local_date_time_get_microsecond(ptr_); }
+  int Microsecond() const { return mgp::local_date_time_get_microsecond(ptr_); }
 
   /// @brief Returns the object’s timestamp (microseconds from the Unix epoch).
-  int64_t timestamp() const { return mgp::local_date_time_timestamp(ptr_); }
+  int64_t Timestamp() const { return mgp::local_date_time_timestamp(ptr_); }
 
   bool operator==(const LocalDateTime &other) const;
   LocalDateTime operator+(const Duration &dur) const;
@@ -883,7 +1142,7 @@ class Duration {
   Duration(double day, double hour, double minute, double second, double millisecond, double microsecond);
 
   Duration(const Duration &other) : Duration(other.ptr_) {}
-  Duration(Duration &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; };
+  Duration(Duration &&other) noexcept : ptr_(other.ptr_) { other.ptr_ = nullptr; };
 
   Duration &operator=(const Duration &other) = delete;
   Duration &operator=(Duration &&other) = delete;
@@ -891,7 +1150,7 @@ class Duration {
   ~Duration();
 
   /// @brief Returns the duration as microseconds.
-  int64_t microseconds() const { return mgp::duration_get_microseconds(ptr_); }
+  int64_t Microseconds() const { return mgp::duration_get_microseconds(ptr_); }
 
   bool operator==(const Duration &other) const;
   Duration operator+(const Duration &other) const;
@@ -1048,10 +1307,7 @@ class Value {
   }
 
   Value(const Value &other) : Value(other.ptr_) {}
-  Value(Value &&other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
-
-  // TODO check:
-  // Value &operator=(const Value &other) { return *this; }
+  Value(Value &&other) noexcept : ptr_(other.ptr_) { other.ptr_ = nullptr; }
 
   ~Value();
 
@@ -1060,7 +1316,7 @@ class Value {
 
   /// @brief Returns the type of the value.
   /// @exception std::runtime_error The value type is unknown.
-  Type type() const;
+  mage::Type Type() const;
 
   /// @pre Value type needs to be Type::Bool.
   bool ValueBool() const;
@@ -1563,23 +1819,23 @@ inline Type ToAPIType(mgp_value_type type) {
 
 // Graph:
 
-int64_t Graph::order() const {
+int64_t Graph::Order() const {
   int64_t i = 0;
-  for (const auto &v : nodes()) {
+  for (const auto _ : Nodes()) {
     i++;
   }
   return i;
 }
 
-int64_t Graph::size() const {
+int64_t Graph::Size() const {
   int64_t i = 0;
-  for (const auto &_ : relationships()) {
+  for (const auto _ : Relationships()) {
     i++;
   }
   return i;
 }
 
-inline GraphNodes Graph::nodes() const {
+inline GraphNodes Graph::Nodes() const {
   auto nodes_it = mgp::graph_iter_vertices(graph_, memory);
   if (nodes_it == nullptr) {
     throw mg_exception::NotEnoughMemoryException();
@@ -1587,7 +1843,7 @@ inline GraphNodes Graph::nodes() const {
   return GraphNodes(nodes_it);
 }
 
-inline GraphRelationships Graph::relationships() const { return GraphRelationships(graph_); }
+inline GraphRelationships Graph::Relationships() const { return GraphRelationships(graph_); }
 
 inline Node Graph::GetNodeById(const Id node_id) const {
   auto mgp_node = mgp::graph_get_vertex_by_id(graph_, mgp_vertex_id{.as_int = node_id.AsInt()}, memory);
@@ -1609,18 +1865,23 @@ bool Graph::ContainsNode(const Id node_id) const {
   mgp::vertex_destroy(mgp_node);
   return true;
 }
-bool Graph::ContainsNode(const Node &node) const { return ContainsNode(node.id()); }
+
+bool Graph::ContainsNode(const Node &node) const { return ContainsNode(node.Id()); }
 
 bool Graph::ContainsRelationship(const Id relationship_id) const {
-  for (const auto &graph_relationship : relationships()) {
-    if (graph_relationship.id() == relationship_id) return true;
+  for (const auto &graph_relationship : Relationships()) {
+    if (graph_relationship.Id() == relationship_id) {
+      return true;
+    }
   }
   return false;
 }
 
 bool Graph::ContainsRelationship(const Relationship &relationship) const {
-  for (const auto &graph_relationship : relationships()) {
-    if (relationship == graph_relationship) return true;
+  for (const auto &graph_relationship : Relationships()) {
+    if (relationship == graph_relationship) {
+      return true;
+    }
   }
   return false;
 }
@@ -1637,161 +1898,21 @@ void Graph::DeleteRelationship(const Relationship &relationship) { mgp::graph_de
 
 // Nodes:
 
-inline Nodes::Iterator::Iterator(mgp_vertices_iterator *nodes_iterator) : nodes_iterator_(nodes_iterator) {
-  if (nodes_iterator_ == nullptr) return;
-  if (mgp::vertices_iterator_get(nodes_iterator_) == nullptr) {
-    mgp::vertices_iterator_destroy(nodes_iterator_);
-    nodes_iterator_ = nullptr;
+inline const Node Nodes::Iterator::operator*() const {
+  if (nodes_iterator_ == nullptr) {
+    return Node((const mgp_vertex *)nullptr);
+    // current_node = Node((const mgp_vertex *)nullptr);
+    // return current_node;
   }
+
+  // auto node = Node(mgp::vertices_iterator_get(nodes_iterator_));
+  // current_node = Node(mgp::vertices_iterator_get(nodes_iterator_));
+  return Node(mgp::vertices_iterator_get(nodes_iterator_));
 }
-
-inline Nodes::Iterator::~Iterator() {
-  if (nodes_iterator_ != nullptr) {
-    mgp::vertices_iterator_destroy(nodes_iterator_);
-  }
-}
-
-inline Nodes::Iterator &Nodes::Iterator::operator++() {
-  if (nodes_iterator_ != nullptr) {
-    auto next = mgp::vertices_iterator_next(nodes_iterator_);
-
-    if (next == nullptr) {
-      mgp::vertices_iterator_destroy(nodes_iterator_);
-      nodes_iterator_ = nullptr;
-      return *this;
-    }
-    index_++;
-  }
-  return *this;
-}
-
-inline Nodes::Iterator Nodes::Iterator::operator++(int) {
-  Nodes::Iterator retval = *this;
-  ++(*this);
-  return retval;
-}
-
-inline bool Nodes::Iterator::operator==(Iterator other) const {
-  if (nodes_iterator_ == nullptr && other.nodes_iterator_ == nullptr) {
-    return true;
-  }
-  if (nodes_iterator_ == nullptr || other.nodes_iterator_ == nullptr) {
-    return false;
-  }
-  return mgp::vertex_equal(mgp::vertices_iterator_get(nodes_iterator_),
-                           mgp::vertices_iterator_get(other.nodes_iterator_)) &&
-         index_ == other.index_;
-}
-
-inline Node Nodes::Iterator::operator*() {
-  if (nodes_iterator_ == nullptr) return Node((const mgp_vertex *)nullptr);
-
-  auto node = Node(mgp::vertices_iterator_get(nodes_iterator_));
-  return node;
-}
-
-inline Nodes::Iterator Nodes::begin() { return Iterator(nodes_iterator_); }
-
-inline Nodes::Iterator Nodes::end() { return Iterator(nullptr); }
 
 // GraphRelationships:
 
-inline GraphRelationships::Iterator::Iterator(mgp_vertices_iterator *nodes_iterator) : nodes_iterator_(nodes_iterator) {
-  // Positions the iterator over the first existing relationship
-
-  if (nodes_iterator_ == nullptr) {
-    return;
-  }
-
-  // Go through each graph node’s adjacent nodes
-  for (auto node = mgp::vertices_iterator_get(nodes_iterator_); node;
-       node = mgp::vertices_iterator_next(nodes_iterator_)) {
-    // Check if node exists
-    if (node == nullptr) {
-      mgp::vertices_iterator_destroy(nodes_iterator_);
-      nodes_iterator_ = nullptr;
-      return;
-    }
-
-    // Check if node has out-relationships
-    out_relationships_iterator_ = mgp::vertex_iter_out_edges(node, memory);
-    auto relationship = mgp::edges_iterator_get(out_relationships_iterator_);
-    if (relationship != nullptr) return;
-
-    mgp::edges_iterator_destroy(out_relationships_iterator_);
-    out_relationships_iterator_ = nullptr;
-  }
-}
-
-inline GraphRelationships::Iterator::~Iterator() {
-  if (nodes_iterator_ != nullptr) {
-    mgp::vertices_iterator_destroy(nodes_iterator_);
-  }
-  if (out_relationships_iterator_ != nullptr) {
-    mgp::edges_iterator_destroy(out_relationships_iterator_);
-  }
-}
-
-inline GraphRelationships::Iterator &GraphRelationships::Iterator::operator++() {
-  // Moves the iterator onto the next existing relationship
-
-  // 1. Check if the current node has remaining relationships to iterate over
-
-  if (out_relationships_iterator_ != nullptr) {
-    auto next = mgp::edges_iterator_next(out_relationships_iterator_);
-
-    if (next == nullptr) {
-      mgp::edges_iterator_destroy(out_relationships_iterator_);
-      out_relationships_iterator_ = nullptr;
-    }
-  }
-
-  // 2. Move onto the next nodes
-
-  if (nodes_iterator_ != nullptr) {
-    for (auto node = mgp::vertices_iterator_next(nodes_iterator_); node;
-         node = mgp::vertices_iterator_next(nodes_iterator_)) {
-      // Check if node exists - if it doesn’t, we’ve reached the end of the iterator
-      if (node == nullptr) {
-        mgp::vertices_iterator_destroy(nodes_iterator_);
-        nodes_iterator_ = nullptr;
-        return *this;
-      }
-
-      // Check if node has out-relationships
-      out_relationships_iterator_ = mgp::vertex_iter_out_edges(node, memory);
-      auto relationship = mgp::edges_iterator_get(out_relationships_iterator_);
-      if (relationship != nullptr) {
-        return *this;
-      } else {
-        mgp::edges_iterator_destroy(out_relationships_iterator_);
-        out_relationships_iterator_ = nullptr;
-      }
-    }
-
-    mgp::vertices_iterator_destroy(nodes_iterator_);
-    nodes_iterator_ = nullptr;
-    return *this;
-  } else {
-    mgp::vertices_iterator_destroy(nodes_iterator_);
-    nodes_iterator_ = nullptr;
-    return *this;
-  }
-}
-
-inline bool GraphRelationships::Iterator::operator==(Iterator other) const {
-  if (out_relationships_iterator_ == nullptr && other.out_relationships_iterator_ == nullptr) {
-    return true;
-  }
-  if (out_relationships_iterator_ == nullptr || other.out_relationships_iterator_ == nullptr) {
-    return false;
-  }
-  return mgp::edge_equal(mgp::edges_iterator_get(out_relationships_iterator_),
-                         mgp::edges_iterator_get(other.out_relationships_iterator_)) &&
-         index_ == other.index_;
-}
-
-inline Relationship GraphRelationships::Iterator::operator*() {
+inline const Relationship GraphRelationships::Iterator::operator*() const {
   if (out_relationships_iterator_ != nullptr) {
     return Relationship(mgp::edges_iterator_get(out_relationships_iterator_));
   }
@@ -1799,71 +1920,16 @@ inline Relationship GraphRelationships::Iterator::operator*() {
   return Relationship((mgp_edge *)nullptr);
 }
 
-inline GraphRelationships::Iterator GraphRelationships::begin() {
-  return Iterator(mgp::graph_iter_vertices(graph_, memory));
-}
-
-inline GraphRelationships::Iterator GraphRelationships::end() { return Iterator(nullptr); }
-
 // Relationships:
 
-inline Relationships::Iterator::Iterator(mgp_edges_iterator *relationships_iterator)
-    : relationships_iterator_(relationships_iterator) {
-  if (relationships_iterator_ == nullptr) return;
-  if (mgp::edges_iterator_get(relationships_iterator_) == nullptr) {
-    mgp::edges_iterator_destroy(relationships_iterator_);
-    relationships_iterator_ = nullptr;
+inline const Relationship Relationships::Iterator::operator*() const {
+  if (relationships_iterator_ == nullptr) {
+    return Relationship((mgp_edge *)nullptr);
   }
-}
-
-inline Relationships::Iterator::~Iterator() {
-  if (relationships_iterator_ != nullptr) {
-    mgp::edges_iterator_destroy(relationships_iterator_);
-  }
-}
-
-inline Relationships::Iterator &Relationships::Iterator::operator++() {
-  if (relationships_iterator_ != nullptr) {
-    auto next = mgp::edges_iterator_next(relationships_iterator_);
-
-    if (next == nullptr) {
-      mgp::edges_iterator_destroy(relationships_iterator_);
-      relationships_iterator_ = nullptr;
-      return *this;
-    }
-    index_++;
-  }
-  return *this;
-}
-
-inline Relationships::Iterator Relationships::Iterator::operator++(int) {
-  Relationships::Iterator retval = *this;
-  ++(*this);
-  return retval;
-}
-
-inline bool Relationships::Iterator::operator==(Iterator other) const {
-  if (relationships_iterator_ == nullptr && other.relationships_iterator_ == nullptr) {
-    return true;
-  }
-  if (relationships_iterator_ == nullptr || other.relationships_iterator_ == nullptr) {
-    return false;
-  }
-  return mgp::edge_equal(mgp::edges_iterator_get(relationships_iterator_),
-                         mgp::edges_iterator_get(other.relationships_iterator_)) &&
-         index_ == other.index_;
-}
-
-inline Relationship Relationships::Iterator::operator*() {
-  if (relationships_iterator_ == nullptr) return Relationship((mgp_edge *)nullptr);
 
   auto relationship = Relationship(mgp::edges_iterator_get(relationships_iterator_));
   return relationship;
 }
-
-inline Relationships::Iterator Relationships::begin() { return Iterator(relationships_iterator_); }
-
-inline Relationships::Iterator Relationships::end() { return Iterator(nullptr); }
 
 // Properties:
 
@@ -1882,7 +1948,7 @@ inline bool Properties::operator==(const Properties &other) const { return prope
 
 // Labels:
 
-inline std::string_view Labels::Iterator::operator*() const { return (*iterable_)[index_]; }
+inline const std::string_view Labels::Iterator::operator*() const { return (*iterable_)[index_]; }
 
 inline std::string_view Labels::operator[](size_t index) const { return mgp::vertex_label_at(node_ptr_, index).name; }
 /* #endregion */
@@ -1919,7 +1985,7 @@ inline List::~List() {
 
 inline const Value List::operator[](size_t index) const { return Value(mgp::list_at(ptr_, index)); }
 
-inline Value List::Iterator::operator*() const { return (*iterable_)[index_]; }
+inline const Value List::Iterator::operator*() const { return (*iterable_)[index_]; }
 
 inline void List::Append(const Value &value) { mgp::list_append(ptr_, value.ptr_); }
 
@@ -1971,46 +2037,9 @@ inline Map::~Map() {
 
 inline const Value Map::operator[](std::string_view key) const { return Value(mgp::map_at(ptr_, key.data())); }
 
-inline const Value Map::at(std::string_view key) const { return Value(mgp::map_at(ptr_, key.data())); }
+inline const Value Map::At(std::string_view key) const { return Value(mgp::map_at(ptr_, key.data())); }
 
-inline Map::Iterator::Iterator(mgp_map_items_iterator *map_items_iterator) : map_items_iterator_(map_items_iterator) {
-  if (map_items_iterator_ == nullptr) return;
-  if (mgp::map_items_iterator_get(map_items_iterator_) == nullptr) {
-    mgp::map_items_iterator_destroy(map_items_iterator_);
-    map_items_iterator_ = nullptr;
-  }
-}
-
-inline Map::Iterator::~Iterator() {
-  if (map_items_iterator_ != nullptr) {
-    mgp::map_items_iterator_destroy(map_items_iterator_);
-  }
-}
-
-inline Map::Iterator &Map::Iterator::operator++() {
-  if (map_items_iterator_ != nullptr) {
-    auto next = mgp::map_items_iterator_next(map_items_iterator_);
-
-    if (next == nullptr) {
-      mgp::map_items_iterator_destroy(map_items_iterator_);
-      map_items_iterator_ = nullptr;
-      return *this;
-    }
-  }
-  return *this;
-}
-
-inline bool Map::Iterator::operator==(Iterator other) const {
-  if (map_items_iterator_ == nullptr && other.map_items_iterator_ == nullptr) {
-    return true;
-  }
-  if (map_items_iterator_ == nullptr || other.map_items_iterator_ == nullptr) {
-    return false;
-  }
-  return mgp::map_items_iterator_get(map_items_iterator_) == mgp::map_items_iterator_get(other.map_items_iterator_);
-}
-
-inline MapItem Map::Iterator::operator*() {
+inline const MapItem Map::Iterator::operator*() const {
   if (map_items_iterator_ == nullptr) {
     throw ValueException("Empty map item!");
   }
@@ -2022,10 +2051,6 @@ inline MapItem Map::Iterator::operator*() {
 
   return MapItem{.key = map_key, .value = map_value};
 }
-
-inline Map::Iterator Map::begin() { return Iterator(mgp::map_iter_items(ptr_, memory)); }
-
-inline Map::Iterator Map::end() { return Iterator(nullptr); }
 
 inline void Map::Insert(std::string_view key, const Value &value) { mgp::map_insert(ptr_, key.data(), value.ptr_); }
 
@@ -2049,7 +2074,7 @@ inline Node::~Node() {
 }
 
 inline bool Node::HasLabel(std::string_view label) const {
-  for (const auto node_label : labels()) {
+  for (const auto node_label : Labels()) {
     if (label == node_label) {
       return true;
     }
@@ -2057,9 +2082,9 @@ inline bool Node::HasLabel(std::string_view label) const {
   return false;
 }
 
-inline Value Node::operator[](const std::string_view property_name) const { return properties()[property_name]; }
+inline Value Node::operator[](const std::string_view property_name) const { return Properties()[property_name]; }
 
-inline Relationships Node::in_relationships() const {
+inline Relationships Node::InRelationships() const {
   auto relationship_iterator = mgp::vertex_iter_in_edges(ptr_, memory);
   if (relationship_iterator == nullptr) {
     throw NotEnoughMemoryException();
@@ -2067,7 +2092,7 @@ inline Relationships Node::in_relationships() const {
   return Relationships(relationship_iterator);
 }
 
-inline Relationships Node::out_relationships() const {
+inline Relationships Node::OutRelationships() const {
   auto relationship_iterator = mgp::vertex_iter_out_edges(ptr_, memory);
   if (relationship_iterator == nullptr) {
     throw NotEnoughMemoryException();
@@ -2085,10 +2110,10 @@ inline Relationship::~Relationship() {
   }
 }
 
-inline std::string_view Relationship::type() const { return mgp::edge_get_type(ptr_).name; }
+inline std::string_view Relationship::Type() const { return mgp::edge_get_type(ptr_).name; }
 
 inline Value Relationship::operator[](const std::string_view property_name) const {
-  return properties()[property_name];
+  return Properties()[property_name];
 }
 
 inline bool Relationship::operator==(const Relationship &other) const {
@@ -2141,7 +2166,7 @@ inline Date::~Date() {
   }
 }
 
-inline Date Date::now() {
+inline Date Date::Now() {
   auto mgp_date = mgp::date_now(memory);
   auto date = Date(mgp_date);
   mgp::date_destroy(mgp_date);
@@ -2197,7 +2222,7 @@ inline LocalTime::~LocalTime() {
   }
 }
 
-inline LocalTime LocalTime::now() {
+inline LocalTime LocalTime::Now() {
   auto mgp_local_time = mgp::local_time_now(memory);
   auto local_time = LocalTime(mgp_local_time);
   mgp::local_time_destroy(mgp_local_time);
@@ -2259,7 +2284,7 @@ inline LocalDateTime::~LocalDateTime() {
   }
 }
 
-inline LocalDateTime LocalDateTime::now() {
+inline LocalDateTime LocalDateTime::Now() {
   auto mgp_local_date_time = mgp::local_date_time_now(memory);
   auto local_date_time = LocalDateTime(mgp_local_date_time);
   mgp::local_date_time_destroy(mgp_local_date_time);
@@ -2366,104 +2391,104 @@ inline Value::~Value() {
   }
 }
 
-inline Type Value::type() const { return util::ToAPIType(mgp::value_get_type(ptr_)); }
+inline Type Value::Type() const { return util::ToAPIType(mgp::value_get_type(ptr_)); }
 
 inline bool Value::ValueBool() const {
-  if (type() != Type::Bool) {
+  if (Type() != Type::Bool) {
     throw ValueException("Type of value is wrong: expected Bool.");
   }
   return mgp::value_get_bool(ptr_);
 }
 
 inline std::int64_t Value::ValueInt() const {
-  if (type() != Type::Int) {
+  if (Type() != Type::Int) {
     throw ValueException("Type of value is wrong: expected Int.");
   }
   return mgp::value_get_int(ptr_);
 }
 
 inline double Value::ValueDouble() const {
-  if (type() != Type::Double) {
+  if (Type() != Type::Double) {
     throw ValueException("Type of value is wrong: expected Double.");
   }
   return mgp::value_get_double(ptr_);
 }
 
 inline double Value::ValueNumeric() const {
-  if (type() != Type::Int || type() != Type::Double) {
+  if (Type() != Type::Int || Type() != Type::Double) {
     throw ValueException("Type of value is wrong: expected Int or Double.");
   }
-  if (type() == Type::Int) {
+  if (Type() == Type::Int) {
     return static_cast<double>(mgp::value_get_int(ptr_));
   }
   return mgp::value_get_double(ptr_);
 }
 
 inline std::string_view Value::ValueString() const {
-  if (type() != Type::String) {
+  if (Type() != Type::String) {
     throw ValueException("Type of value is wrong: expected String.");
   }
   return mgp::value_get_string(ptr_);
 }
 
 inline const List Value::ValueList() const {
-  if (type() != Type::List) {
+  if (Type() != Type::List) {
     throw ValueException("Type of value is wrong: expected List.");
   }
   return List(mgp::value_get_list(ptr_));
 }
 
 inline const Map Value::ValueMap() const {
-  if (type() != Type::Map) {
+  if (Type() != Type::Map) {
     throw ValueException("Type of value is wrong: expected Map.");
   }
   return Map(mgp::value_get_map(ptr_));
 }
 
 inline const Node Value::ValueNode() const {
-  if (type() != Type::Node) {
+  if (Type() != Type::Node) {
     throw ValueException("Type of value is wrong: expected Node.");
   }
   return Node(mgp::value_get_vertex(ptr_));
 }
 
 inline const Relationship Value::ValueRelationship() const {
-  if (type() != Type::Relationship) {
+  if (Type() != Type::Relationship) {
     throw ValueException("Type of value is wrong: expected Relationship.");
   }
   return Relationship(mgp::value_get_edge(ptr_));
 }
 
 inline const Path Value::ValuePath() const {
-  if (type() != Type::Path) {
+  if (Type() != Type::Path) {
     throw ValueException("Type of value is wrong: expected Path.");
   }
   return Path(mgp::value_get_path(ptr_));
 }
 
 inline const Date Value::ValueDate() const {
-  if (type() != Type::Date) {
+  if (Type() != Type::Date) {
     throw ValueException("Type of value is wrong: expected Date.");
   }
   return Date(mgp::value_get_date(ptr_));
 }
 
 inline const LocalTime Value::ValueLocalTime() const {
-  if (type() != Type::LocalTime) {
+  if (Type() != Type::LocalTime) {
     throw ValueException("Type of value is wrong: expected LocalTime.");
   }
   return LocalTime(mgp::value_get_local_time(ptr_));
 }
 
 inline const LocalDateTime Value::ValueLocalDateTime() const {
-  if (type() != Type::LocalDateTime) {
+  if (Type() != Type::LocalDateTime) {
     throw ValueException("Type of value is wrong: expected LocalDateTime.");
   }
   return LocalDateTime(mgp::value_get_local_date_time(ptr_));
 }
 
 inline const Duration Value::ValueDuration() const {
-  if (type() != Type::Duration) {
+  if (Type() != Type::Duration) {
     throw ValueException("Type of value is wrong: expected Duration.");
   }
   return Duration(mgp::value_get_duration(ptr_));
@@ -2647,13 +2672,17 @@ inline void Result::SetValue(const Duration &duration) {
 /* #region Module */
 
 inline mgp_type *Parameter::GetMGPType() const {
-  if (type_ == Type::List) return mgp::type_list(util::ToMGPType(list_item_type_));
+  if (type_ == Type::List) {
+    return mgp::type_list(util::ToMGPType(list_item_type_));
+  }
 
   return util::ToMGPType(type_);
 }
 
 inline mgp_type *Return::GetMGPType() const {
-  if (type_ == Type::List) return mgp::type_list(util::ToMGPType(list_item_type_));
+  if (type_ == Type::List) {
+    return mgp::type_list(util::ToMGPType(list_item_type_));
+  }
 
   return util::ToMGPType(type_);
 }
@@ -2707,32 +2736,32 @@ struct hash<mage::Id> {
 
 template <>
 struct hash<mage::Node> {
-  size_t operator()(const mage::Node &x) const { return hash<int64_t>()(x.id().AsInt()); };
+  size_t operator()(const mage::Node &x) const { return hash<int64_t>()(x.Id().AsInt()); };
 };
 
 template <>
 struct hash<mage::Relationship> {
-  size_t operator()(const mage::Relationship &x) const { return hash<int64_t>()(x.id().AsInt()); };
+  size_t operator()(const mage::Relationship &x) const { return hash<int64_t>()(x.Id().AsInt()); };
 };
 
 template <>
 struct hash<mage::Date> {
-  size_t operator()(const mage::Date &x) const { return hash<int64_t>()(x.timestamp()); };
+  size_t operator()(const mage::Date &x) const { return hash<int64_t>()(x.Timestamp()); };
 };
 
 template <>
 struct hash<mage::LocalTime> {
-  size_t operator()(const mage::LocalTime &x) const { return hash<int64_t>()(x.timestamp()); };
+  size_t operator()(const mage::LocalTime &x) const { return hash<int64_t>()(x.Timestamp()); };
 };
 
 template <>
 struct hash<mage::LocalDateTime> {
-  size_t operator()(const mage::LocalDateTime &x) const { return hash<int64_t>()(x.timestamp()); };
+  size_t operator()(const mage::LocalDateTime &x) const { return hash<int64_t>()(x.Timestamp()); };
 };
 
 template <>
 struct hash<mage::Duration> {
-  size_t operator()(const mage::Duration &x) const { return hash<int64_t>()(x.microseconds()); };
+  size_t operator()(const mage::Duration &x) const { return hash<int64_t>()(x.Microseconds()); };
 };
 
 template <>
