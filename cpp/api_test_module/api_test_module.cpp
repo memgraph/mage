@@ -3,7 +3,6 @@
 
 #include <mage.hpp>
 #include <mg_exceptions.hpp>
-#include <mg_utils.hpp>
 
 namespace {
 
