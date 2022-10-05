@@ -4,6 +4,7 @@ import mgp
 from typing import Any, List, Dict, Tuple
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import streaming_bulk
+from datetime import datetime
 
 # Elasticsearch constants
 # TODO: Add constants
@@ -25,6 +26,7 @@ LK_TYPE = "lk_type"
 LKE_STRING = "_lke_string"
 LKE_NUMBER = "_lke_number"
 LKE_BOOLEAN = "_lke_boolean"
+LKE_DATE = "_lke_date"
 LK_CATEGORIES_HAS_RAW = "lk_categories_has_raw"
 LK_TYPE_HAS_RAW = "lk_type_has_raw"
 LK_CATEGORIES = "lk_categories"
@@ -36,7 +38,7 @@ lke_mapping[str] = LKE_STRING
 lke_mapping[int] = LKE_NUMBER
 lke_mapping[float] = LKE_NUMBER
 lke_mapping[bool] = LKE_BOOLEAN
-# TODO: Add date
+lke_mapping[datetime] = LKE_DATE
 
 # Create node index
 node_index_body: Dict[str, Any] = {
@@ -209,8 +211,12 @@ def serialize_properties(properties: Dict[str, Any]) -> Dict[str, Any]:
     """
     source: Dict[str, Any] = {}
     for prop_key, prop_value in properties:
-        # print(f"Property key: {prop_key} Property value: {prop_value} Property type: {type(prop_value)}")
-        if type(prop_value) in lke_mapping:
+        if type(prop_value) == datetime:
+            # Convert datetime to str, replace microsecond and add Z suffix(Zulu or zero offset) manually because Python doesn't support it out of the box
+            prop_value = prop_value.replace(microsecond=0).isoformat() + "Z"
+            source[prop_key + LKE_DATE] = prop_value
+            print(f"Prop value: {prop_value} {type(prop_value)}")
+        elif type(prop_value) in lke_mapping:
             source[prop_key + lke_mapping[type(prop_value)]] = prop_value
     return source
 
@@ -354,17 +360,29 @@ def index(
 
 
 @mgp.read_proc
-def scan(context: mgp.ProcCtx, index_name: str, query: str) -> mgp.Record(items=mgp.List[mgp.Map]):
+def scan(
+    context: mgp.ProcCtx,
+    elastic_url: str,
+    ca_certs: str,
+    elastic_user: str,
+    elastic_password: str,
+    index_name: str,
+    query: str,
+) -> mgp.Record(items=mgp.List[mgp.Map]):
     """
     Runs a query on a index specified by the index_name.
     Args:
         context (mgp.ProcCtx): Reference to the executing context.
+        elastic_url (str): URL for connecting to the Elasticsearch instance.
+        ca_certs (str): Path to the certificate file.
+        elastic_user (str): The user trying to connect to the Elasticsearch.
+        elastic_password (str): User's password for connecting to the Elasticsearch.
         index_name (str): A name of the index.
         query (str): Query written as JSON.
     Returns:
          mgp.Record(items=mgp.List[mgp.Map]): List of all items matched by the specific query.
     """
-    client = connect_to_elasticsearch()
+    client = connect_to_elasticsearch(elastic_url, ca_certs, elastic_user, elastic_password)
     query_obj = json.loads(query)
     response = elasticsearch.helpers.scan(
         client,
