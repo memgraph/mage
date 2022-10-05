@@ -7,7 +7,6 @@ from elasticsearch.helpers import streaming_bulk
 from datetime import datetime
 
 # Elasticsearch constants
-# TODO: Add constants
 ACTION = "action"
 INDEX = "index"
 ID = "_id"
@@ -20,6 +19,11 @@ DYNAMIC_TEMPLATES = "dynamic_templates"
 MAPPING = "mapping"
 ANALYZER = "analyzer"
 STRING = "string"
+EVENT_TYPE = "event_type"
+CREATED_VERTEX = "created_vertex"
+CREATED_EDGE = "created_edge"
+VERTEX = "vertex"
+EDGE = "edge"
 
 # Linkurious constants
 LK_TYPE = "lk_type"
@@ -287,25 +291,29 @@ def create_edge_index(
     client.indices.create(index=index_name, body=edge_index_body, ignore=400)
 
 
-def generate_documents(context: mgp.ProcCtx) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+def generate_documents(
+    context_vertices: List[mgp.Vertex], context_edges: List[mgp.Edge]
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """
     Generates nodes and edges documents for indexing and returns them as lists.
     Args:
-        context (mgp.ProcCtx): Reference to the executing context.
+        context_vertices (List[mgp.Vertex]]): Vertices in Memgraph that were created/updated.
+        context_edges (List[mgp.Edge]]): Edges in Memgraph that were created/updated.
     Returns:
         Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]
     """
     nodes, edges = [], []
-    for vertex in context.graph.vertices:
+    for vertex in context_vertices:
         nodes.append(serialize_vertex(vertex))
-        for edge in vertex.out_edges:
-            edges.append(serialize_edge(edge))
+    for edge in context_edges:
+        edges.append(serialize_edge(edge))
     return nodes, edges
 
 
 @mgp.read_proc
 def index(
     context: mgp.ProcCtx,
+    createdObjects: mgp.List[mgp.Map],
     elastic_url: str,
     ca_certs: str,
     elastic_user: str,
@@ -320,6 +328,7 @@ def index(
     The method serializes all vertices and relationships that are in Memgraph DB to an ElasticSearch schema.
     Args:
         context (mgp.ProcCtx): Reference to the executing context.
+        createdObjects (List[Dict[str, Any]]): List of all objects that were created and then sent as arguments to this method with the help of "create trigger".
         elastic_url (str): URL for connecting to the Elasticsearch instance.
         ca_certs (str): Path to the certificate file.
         elastic_user (str): The user trying to connect to the Elasticsearch.
@@ -334,23 +343,37 @@ def index(
     """
     # First establish connection with ElasticSearch service.
     client = connect_to_elasticsearch(elastic_url, ca_certs, elastic_user, elastic_password)
+
+    # TODO: decouple creating node and edge index
     # Crete indexes if they don't exist
-    create_node_index(
-        client=client,
-        index_name=node_index_name,
-        number_of_shards=number_of_shards,
-        number_of_replicas=number_of_replicas,
-    )
-    create_edge_index(
-        client=client,
-        index_name=edge_index_name,
-        number_of_shards=number_of_shards,
-        number_of_replicas=number_of_replicas,
-    )
+    # create_node_index(
+    #     client=client,
+    #     index_name=node_index_name,
+    #     number_of_shards=number_of_shards,
+    #     number_of_replicas=number_of_replicas,
+    # )
+    # create_edge_index(
+    #     client=client,
+    #     index_name=edge_index_name,
+    #     number_of_shards=number_of_shards,
+    #     number_of_replicas=number_of_replicas,
+    # )
+
+    # Created objects can be vertices and edges
+    created_vertices, created_edges = [], []
+    for createdObject in createdObjects:
+        if createdObject[EVENT_TYPE] == CREATED_VERTEX:
+            created_vertices.append(createdObject[VERTEX])
+        elif createdObject[EVENT_TYPE] == CREATED_EDGE:
+            created_edges.append(createdObject[EDGE])
+
     # Now create iterable of documents that need to be indexed
-    nodes, edges = generate_documents(context)
+    nodes, edges = generate_documents(created_vertices, created_edges)
+    print(f"Nodes: {nodes}")
+    print(f"Edges: {edges}")
+
     # Send documents on indexing
-    print("Indexing nodes...")
+    print("Indexing vertices...")
     for ok, action in streaming_bulk(client=client, index=node_index_name, actions=nodes):
         print(f"OK: {ok} Action: {action}")
     print()
