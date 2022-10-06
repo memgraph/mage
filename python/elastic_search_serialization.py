@@ -1,7 +1,7 @@
 import json
 import elasticsearch
 import mgp
-from typing import Any, Collection, List, Dict, Tuple, Union
+from typing import Any, List, Dict, Tuple
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import streaming_bulk
 from datetime import datetime
@@ -67,12 +67,20 @@ node_index_body: Dict[str, Any] = {
                         "replacement": " ",
                     },
                 },
-                "filter": {"asciifolding_original": {"type": "asciifolding", "preserve_original": True}},
+                "filter": {
+                    "asciifolding_original": {
+                        "type": "asciifolding",
+                        "preserve_original": True,
+                    }
+                },
                 "analyzer": {
                     # we define our custom analyzer
                     "lk_analyzer": {
                         "tokenizer": "standard",
-                        "char_filter": ["dot_to_whitespace", "underscore_to_whitespace"],
+                        "char_filter": [
+                            "dot_to_whitespace",
+                            "underscore_to_whitespace",
+                        ],
                         "filter": ["asciifolding_original", "lowercase", "stop"],
                     }
                 },
@@ -131,12 +139,20 @@ edge_index_body: Dict[str, Any] = {
                         "replacement": " ",
                     },
                 },
-                "filter": {"asciifolding_original": {"type": "asciifolding", "preserve_original": True}},
+                "filter": {
+                    "asciifolding_original": {
+                        "type": "asciifolding",
+                        "preserve_original": True,
+                    }
+                },
                 "analyzer": {
                     # we define our custom analyzer
                     "lk_analyzer": {
                         "tokenizer": "standard",
-                        "char_filter": ["dot_to_whitespace", "underscore_to_whitespace"],
+                        "char_filter": [
+                            "dot_to_whitespace",
+                            "underscore_to_whitespace",
+                        ],
                         "filter": ["asciifolding_original", "lowercase", "stop"],
                     }
                 },
