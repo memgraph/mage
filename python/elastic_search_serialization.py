@@ -377,20 +377,19 @@ def index(
     # First establish connection with ElasticSearch service.
     client = connect_to_elasticsearch(elastic_url, ca_certs, elastic_user, elastic_password)
 
-    # TODO: decouple creating node and edge index
     # Crete indexes if they don't exist
-    # create_node_index(
-    #     client=client,
-    #     index_name=node_index_name,
-    #     number_of_shards=number_of_shards,
-    #     number_of_replicas=number_of_replicas,
-    # )
-    # create_edge_index(
-    #     client=client,
-    #     index_name=edge_index_name,
-    #     number_of_shards=number_of_shards,
-    #     number_of_replicas=number_of_replicas,
-    # )
+    create_node_index(
+        client=client,
+        index_name=node_index,
+        number_of_shards=number_of_shards,
+        number_of_replicas=number_of_replicas,
+    )
+    create_edge_index(
+        client=client,
+        index_name=edge_index,
+        number_of_shards=number_of_shards,
+        number_of_replicas=number_of_replicas,
+    )
 
     # Created objects can be vertices and edges
     created_vertices, created_edges = get_created_updated_objects(createdObjects)
