@@ -5,6 +5,7 @@ from typing import Any, List, Dict, Tuple
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import streaming_bulk
 from datetime import datetime
+import pathlib
 
 # Elasticsearch constants
 ACTION = "action"
@@ -45,150 +46,6 @@ lke_mapping[datetime] = LKE_DATE
 
 # Create global logger object
 logger = mgp.Logger()
-
-# Create node index
-node_index_body: Dict[str, Any] = {
-    "settings": {
-        "index": {
-            "number_of_shards": 1,  # numberOfShards (default 1),
-            "number_of_replicas": 1,  # numberOfReplicas (default 1),
-            "mapping": {
-                # Add ignore_malformed at index level
-                "ignore_malformed": True
-            },
-            "analysis": {
-                "char_filter": {
-                    "dot_to_whitespace": {
-                        "type": "pattern_replace",
-                        "pattern": "(\\D)\\.(\\D)",  # split words on dots
-                        "replacement": "$1 $2",
-                    },
-                    "underscore_to_whitespace": {
-                        "type": "pattern_replace",
-                        "pattern": "_",  # split all on underscore
-                        "replacement": " ",
-                    },
-                },
-                "filter": {
-                    "asciifolding_original": {
-                        "type": "asciifolding",
-                        "preserve_original": True,
-                    }
-                },
-                "analyzer": {
-                    # we define our custom analyzer
-                    "lk_analyzer": {
-                        "tokenizer": "standard",
-                        "char_filter": [
-                            "dot_to_whitespace",
-                            "underscore_to_whitespace",
-                        ],
-                        "filter": ["asciifolding_original", "lowercase", "stop"],
-                    }
-                },
-            },
-        }
-    },
-    "mappings": {
-        "dynamic_templates": [
-            {
-                # store a copy of labels/types in a non-analyzed way for filtering
-                "lk_categories_has_raw": {  # for edges, the key is "lk_type_has_raw"
-                    "match": "lk_categories",  # for edges, use "lk_type"
-                    "mapping": {
-                        "type": "text",
-                        "analyzer": "lk_analyzer",  # (default "lk_analyzer")
-                        "fields": {"raw": {"type": "keyword"}},
-                    },
-                }
-            },
-            {
-                "string": {
-                    "match": "*_lke_string",
-                    "mapping": {
-                        "type": "text",
-                        "analyzer": "lk_analyzer",  # default: "lk_analyzer"
-                    },
-                }
-            },
-            {"date": {"match": "*_lke_date", "mapping": {"type": "date"}}},
-            {"number": {"match": "*_lke_number", "mapping": {"type": "double"}}},
-            {"boolean": {"match": "*_lke_boolean", "mapping": {"type": "keyword"}}},
-        ]
-    },
-}
-
-# Create node index
-edge_index_body: Dict[str, Any] = {
-    "settings": {
-        "index": {
-            "number_of_shards": 1,  # numberOfShards (default 1),
-            "number_of_replicas": 1,  # numberOfReplicas (default 1),
-            "mapping": {
-                # Add ignore_malformed at index level
-                "ignore_malformed": True
-            },
-            "analysis": {
-                "char_filter": {
-                    "dot_to_whitespace": {
-                        "type": "pattern_replace",
-                        "pattern": "(\\D)\\.(\\D)",  # split words on dots
-                        "replacement": "$1 $2",
-                    },
-                    "underscore_to_whitespace": {
-                        "type": "pattern_replace",
-                        "pattern": "_",  # split all on underscore
-                        "replacement": " ",
-                    },
-                },
-                "filter": {
-                    "asciifolding_original": {
-                        "type": "asciifolding",
-                        "preserve_original": True,
-                    }
-                },
-                "analyzer": {
-                    # we define our custom analyzer
-                    "lk_analyzer": {
-                        "tokenizer": "standard",
-                        "char_filter": [
-                            "dot_to_whitespace",
-                            "underscore_to_whitespace",
-                        ],
-                        "filter": ["asciifolding_original", "lowercase", "stop"],
-                    }
-                },
-            },
-        }
-    },
-    "mappings": {
-        "dynamic_templates": [
-            {
-                # store a copy of labels/types in a non-analyzed way for filtering
-                "lk_type_has_raw": {  # for edges, the key is "lk_type_has_raw"
-                    "match": "lk_type",  # for edges, use "lk_type"
-                    "mapping": {
-                        "type": "text",
-                        "analyzer": "lk_analyzer",  # (default "lk_analyzer")
-                        "fields": {"raw": {"type": "keyword"}},
-                    },
-                }
-            },
-            {
-                "string": {
-                    "match": "*_lke_string",
-                    "mapping": {
-                        "type": "text",
-                        "analyzer": "lk_analyzer",  # default: "lk_analyzer"
-                    },
-                }
-            },
-            {"date": {"match": "*_lke_date", "mapping": {"type": "date"}}},
-            {"number": {"match": "*_lke_number", "mapping": {"type": "double"}}},
-            {"boolean": {"match": "*_lke_boolean", "mapping": {"type": "keyword"}}},
-        ]
-    },
-}
 
 
 def serialize_vertex(vertex: mgp.Vertex) -> Dict[str, Any]:
@@ -236,9 +93,7 @@ def serialize_properties(properties: Dict[str, Any]) -> Dict[str, Any]:
     return source
 
 
-def connect_to_elasticsearch(
-    elastic_url: str, ca_certs: str, elastic_user: str, elastic_password
-) -> Elasticsearch:
+def connect_to_elasticsearch(elastic_url: str, ca_certs: str, elastic_user: str, elastic_password) -> Elasticsearch:
     """
     Establishes connection with the Elasticsearch. This configuration needs to be specific to the Elasticsearch deployment.
     Args:
@@ -258,96 +113,53 @@ def connect_to_elasticsearch(
     return client
 
 
-def create_node_index(
-    client: Elasticsearch,
-    index_name: str = "node_index",
-    number_of_shards: int = 1,
-    number_of_replicas: int = 1,
-    analyzer: str = "lk_analyzer",
-) -> None:
-    """
-    Creates node index if it doesn't exist before.
-    Args:
-        client (Elasticsearch): A reference to the Elasticsearch client.
-        index_name (str): Name you want to give to the node index. Default one is 'node_index'.
-        number_of_shards (int): A number of shards you want to use in your index.
-        number_of_replicas (int): A number of replicas you want to use in your index.
-    """
-    global node_index_body
-    node_index_body[SETTINGS][INDEX][NUMBER_OF_SHARDS] = number_of_shards
-    node_index_body[SETTINGS][INDEX][NUMBER_OF_REPLICAS] = number_of_replicas
-    node_index_body[MAPPINGS][DYNAMIC_TEMPLATES][0][LK_CATEGORIES_HAS_RAW][MAPPING][
-        ANALYZER
-    ] = analyzer
-    node_index_body[MAPPINGS][DYNAMIC_TEMPLATES][1][STRING][MAPPING][
-        ANALYZER
-    ] = analyzer
-    client.indices.create(index=index_name, body=node_index_body, ignore=400)
-
-
-def create_edge_index(
-    client: Elasticsearch,
-    index_name: str = "edge_index",
-    number_of_shards: int = 1,
-    number_of_replicas: int = 1,
-    analyzer: str = "lk_analyzer",
-) -> None:
-    """
-    Creates edge index if it doesn't exist before.
-    Args:
-        client (Elasticsearch): A reference to the Elasticsearch client.
-        index_name (str): Name you want to give to the edge index. Default one is 'edge_index'.
-        number_of_shards (int): A number of shards you want to use in your index.
-        number_of_replicas (int): A number of replicas you want to use in your index.
-    """
-    global edge_index_body
-    edge_index_body[SETTINGS][INDEX][NUMBER_OF_SHARDS] = number_of_shards
-    edge_index_body[SETTINGS][INDEX][NUMBER_OF_REPLICAS] = number_of_replicas
-    edge_index_body[MAPPINGS][DYNAMIC_TEMPLATES][0][LK_TYPE_HAS_RAW][MAPPING][
-        ANALYZER
-    ] = analyzer
-    edge_index_body[MAPPINGS][DYNAMIC_TEMPLATES][1][STRING][MAPPING][
-        ANALYZER
-    ] = analyzer
-    client.indices.create(index=index_name, body=edge_index_body, ignore=400)
-
-
-def generate_documents(
-    context_vertices: List[mgp.Vertex], context_edges: List[mgp.Edge]
+def generate_documents_from_context_objects(
+    context_objects: List[Dict[str, Any]]
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """
     Generates nodes and edges documents for indexing and returns them as lists.
     Args:
-        context_vertices (List[mgp.Vertex]]): Vertices in Memgraph that were created/updated.
-        context_edges (List[mgp.Edge]]): Edges in Memgraph that were created/updated.
+        context_objects (List[Dict[str, Any]]): Objects that are sent as parameters because of some trigger that was called. Trigger can be for update or for create.
     Returns:
-        Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]
+        Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]: serialized nodes and edges
     """
     nodes, edges = [], []
-    for vertex in context_vertices:
-        nodes.append(serialize_vertex(vertex))
-    for edge in context_edges:
-        edges.append(serialize_edge(edge))
+    for context_object in context_objects:
+        if context_object[EVENT_TYPE] == CREATED_VERTEX:
+            nodes.append(serialize_vertex(context_object[VERTEX]))
+        elif context_object[EVENT_TYPE] == CREATED_EDGE:
+            edges.append(serialize_edge(context_object[EDGE]))
     return nodes, edges
 
 
-def get_created_updated_objects(
-    context_objects: List[Dict[str, Any]]
-) -> Tuple[List[mgp.Vertex], List[mgp.Edge]]:
-    """
-    Extracts nodes and edges from context_objects.
+@mgp.read_proc
+def create_index(
+    context: mgp.ProcCtx,
+    index_name: str,
+    schema_path: str,
+    elastic_url: str,
+    ca_certs: str,
+    elastic_user: str,
+    elastic_password: str,
+) -> mgp.Record(response=mgp.Map):
+    """ 
+    Creates index with the given index name.
     Args:
-        context_objects (List[Dict[str, Any]]): Objects that are sent as parameters because of some trigger that was called. Trigger can be for update or for create.
+        index_name(str): Name of the index that needs to be created.
+        elastic_url (str): URL for connecting to the Elasticsearch instance.
+        ca_certs (str): Path to the certificate file.
+        elastic_user (str): The user trying to connect to the Elasticsearch.
+        elastic_password (str): User's password for connecting to the Elasticsearch.
     Returns:
-        Tuple[List[mgp.Vertex], List[mgp.Edge]]: Extracted vertices and egdes.
+       mgp.Map: response message from Elasticsearch service.  
     """
-    context_vertices, context_edges = [], []
-    for context_object in context_objects:
-        if context_object[EVENT_TYPE] == CREATED_VERTEX:
-            context_vertices.append(context_object[VERTEX])
-        elif context_object[EVENT_TYPE] == CREATED_EDGE:
-            context_edges.append(context_object[EDGE])
-    return context_vertices, context_edges
+    # First establish connection with ElasticSearch service.
+    client = connect_to_elasticsearch(elastic_url, ca_certs, elastic_user, elastic_password)
+    # Read schema from the path given
+    with open(schema_path, "r") as schema_file:
+        schema_json = json.loads(schema_file.read())
+    response = dict(client.indices.create(index=index_name, body=schema_json, ignore=400))
+    return mgp.Record(response=response)
 
 
 @mgp.read_proc
@@ -360,9 +172,14 @@ def index(
     elastic_password: str,
     node_index: str,
     edge_index: str,
-    number_of_shards: int = 1,
-    number_of_replicas: int = 1,
-    analyzer: str = "lk_analyzer",
+    chunk_size: int = 500,
+    max_chunk_bytes: int = 104857600,
+    raise_on_error: bool = True,
+    raise_on_exception: bool = True,
+    max_retries: int = 0,
+    initial_backoff: float = 2.0,
+    max_backoff: float = 600.0,
+    yield_ok: bool = True,
 ) -> mgp.Record(nodes=mgp.List[mgp.Map], edges=mgp.List[mgp.Map]):
     """
     The method serializes all vertices and relationships that are in Memgraph DB to an ElasticSearch schema.
@@ -377,41 +194,55 @@ def index(
         edge_index (str): The name of the edge index.
         number_of_shards (int): A number of shards you want to use in your index.
         number_of_replicas (int): A number of replicas you want to use in your index.
-
+        chunk_size (int): number of docs in one chunk sent to es (default: 500).
+        max_chunk_bytes (int): the maximum size of the request in bytes (default: 100MB).
+        raise_on_error (bool): raise BulkIndexError containing errors (as .errors) from the execution of the last chunk when some occur. By default we raise.
+        raise_on_exception (bool): if False then don’t propagate exceptions from call to bulk and just report the items that failed as failed.
+        max_retries (int): maximum number of times a document will be retried when 429 is received, set to 0 (default) for no retries on 429.
+        initial_backoff (float): number of seconds we should wait before the first retry. Any subsequent retries will be powers of initial_backoff * 2**retry_number
+        max_backoff (float): maximum number of seconds a retry will wait
+        yield_ok (float): if set to False will skip successful documents in the output
     Returns:
         mgp.Record(): Returns JSON of all nodes and edges.
     """
     # First establish connection with ElasticSearch service.
-    client = connect_to_elasticsearch(
-        elastic_url, ca_certs, elastic_user, elastic_password
-    )
-
-    # Crete indexes if they don't exist
-    create_node_index(
-        client=client,
-        index_name=node_index,
-        number_of_shards=number_of_shards,
-        number_of_replicas=number_of_replicas,
-    )
-    create_edge_index(
-        client=client,
-        index_name=edge_index,
-        number_of_shards=number_of_shards,
-        number_of_replicas=number_of_replicas,
-    )
-
-    # Created objects can be vertices and edges
-    created_vertices, created_edges = get_created_updated_objects(createdObjects)
+    client = connect_to_elasticsearch(elastic_url, ca_certs, elastic_user, elastic_password)
 
     # Now create iterable of documents that need to be indexed
-    nodes, edges = generate_documents(created_vertices, created_edges)
+    nodes, edges = generate_documents_from_context_objects(createdObjects)
+    logger.info(f"Nodes: {nodes}")
+    logger.info(f"Edges: {edges}")
 
     # Send documents on indexing
     logger.info("Indexing vertices...")
-    for ok, action in streaming_bulk(client=client, index=node_index, actions=nodes):
+    for ok, action in streaming_bulk(
+        client=client,
+        index=node_index,
+        actions=nodes,
+        chunk_size=chunk_size,
+        max_chunk_bytes=max_chunk_bytes,
+        initial_backoff=initial_backoff,
+        max_backoff=max_backoff,
+        yield_ok=yield_ok,
+        raise_on_error=raise_on_error,
+        raise_on_exception=raise_on_exception,
+        max_retries=max_retries,
+    ):
         logger.info(f"OK: {ok} Action: {action}")
     logger.info("Indexing edges...")
-    for ok, action in streaming_bulk(client=client, index=edge_index, actions=edges):
+    for ok, action in streaming_bulk(
+        client=client,
+        index=edge_index,
+        actions=edges,
+        chunk_size=chunk_size,
+        max_chunk_bytes=max_chunk_bytes,
+        initial_backoff=initial_backoff,
+        max_backoff=max_backoff,
+        yield_ok=yield_ok,
+        raise_on_error=raise_on_error,
+        raise_on_exception=raise_on_exception,
+        max_retries=max_retries,
+    ):
         logger.info(f"OK: {ok} Action: {action}")
     return mgp.Record(nodes=nodes, edges=edges)
 
@@ -419,7 +250,6 @@ def index(
 @mgp.read_proc
 def reindex(
     context: mgp.ProcCtx,
-    updatedObjects: mgp.List[mgp.Map],
     elastic_url: str,
     ca_certs: str,
     elastic_user: str,
@@ -449,9 +279,7 @@ def reindex(
     Returns:
         response (str): Response of the query.
     """
-    client = connect_to_elasticsearch(
-        elastic_url, ca_certs, elastic_user, elastic_password
-    )
+    client = connect_to_elasticsearch(elastic_url, ca_certs, elastic_user, elastic_password)
     query_obj = json.loads(query)
     response = elasticsearch.helpers.reindex(
         client=client,
@@ -495,9 +323,7 @@ def scan(
     Returns:
          mgp.Record(items=mgp.List[mgp.Map]): List of all items matched by the specific query.
     """
-    client = connect_to_elasticsearch(
-        elastic_url, ca_certs, elastic_user, elastic_password
-    )
+    client = connect_to_elasticsearch(elastic_url, ca_certs, elastic_user, elastic_password)
     query_obj = json.loads(query)
     response = elasticsearch.helpers.scan(
         client,
