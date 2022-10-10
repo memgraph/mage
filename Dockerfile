@@ -23,7 +23,6 @@ RUN apt-get update && apt-get install -y \
     python3-pip     `mage-memgraph` \
     python3-setuptools     `mage-memgraph` \
     python3-dev     `mage-memgraph` \
-    uuid-dev        `mage-memgraph` \
     clang           `mage-memgraph` \
     git             `mage-memgraph` \
     --no-install-recommends \
