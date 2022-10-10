@@ -3,6 +3,7 @@ from typing import Any, List, Dict, Tuple
 from datetime import datetime
 
 import elasticsearch
+from elasticsearch.helpers import streaming_bulk
 
 import mgp
 
@@ -231,12 +232,10 @@ def index(
     global client
     # Now create iterable of documents that need to be indexed
     nodes, edges = generate_documents_from_context_objects(createdObjects)
-    logger.info(f"Nodes: {nodes}")
-    logger.info(f"Edges: {edges}")
 
     # Send nodes on indexing
     logger.info("Indexing vertices...")
-    for ok, action in elasticsearch.helpers.streaming_bulk(
+    for _, _ in streaming_bulk(
         client=client,
         index=node_index,
         actions=nodes,
@@ -249,10 +248,10 @@ def index(
         raise_on_exception=raise_on_exception,
         max_retries=max_retries,
     ):
-        logger.info(f"OK: {ok} Action: {action}")
+        pass
     # Send edges on indexing
     logger.info("Indexing edges...")
-    for ok, action in elasticsearch.helpers.streaming_bulk(
+    for _, _ in streaming_bulk(
         client=client,
         index=edge_index,
         actions=edges,
@@ -265,7 +264,7 @@ def index(
         raise_on_exception=raise_on_exception,
         max_retries=max_retries,
     ):
-        logger.info(f"OK: {ok} Action: {action}")
+        pass
     return mgp.Record(nodes=nodes, edges=edges)
 
 
