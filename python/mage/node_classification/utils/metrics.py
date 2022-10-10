@@ -8,8 +8,9 @@ METRICS = {
     "auc_score": AUC,
     "precision": Precision,
     "recall": Recall,
-    "f1_score": F1Score
+    "f1_score": F1Score,
 }
+
 
 def metrics(
     mask: torch.tensor,
@@ -17,7 +18,7 @@ def metrics(
     data: Data,
     options: mgp.List[str],
     observed_attribute: str,
-    device: str
+    device: str,
 ) -> mgp.Map:
     """Selected metrics calculated for current model and data.
 
@@ -37,16 +38,16 @@ def metrics(
     )  # Use the class with highest probability.
 
     data = data[observed_attribute]
-    confmat = ConfusionMatrix(num_classes=len(set(data.y.detach().cpu().numpy()))).to(device)
+    confmat = ConfusionMatrix(num_classes=len(set(data.y.detach().cpu().numpy()))).to(
+        device
+    )
     print(confmat(pred[mask], data.y[mask]))
 
     ret = {}
 
-
-
     multiclass = True
     num_classes = len(set(data.y.detach().cpu().numpy()))
-    
+
     for metrics in METRICS.keys():
         if metrics in options:
             func = METRICS[metrics](

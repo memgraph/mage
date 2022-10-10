@@ -635,7 +635,7 @@ def save_model() -> mgp.Record(path=str, status=str):
             ): return record
     """
 
-    if model == None:
+    if model is None:
         raise Exception(
             "Saving is not enabled until model is not initialized or loaded."
         )
@@ -708,7 +708,7 @@ def predict(
     # define fresh data
     data = declare_data(ctx)
 
-    if model == None:
+    if model is None:
         raise Exception("You should load model first.")
 
     model.eval()

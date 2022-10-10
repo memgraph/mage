@@ -40,14 +40,13 @@ def nodes_fetching(
 
         node_type = "_".join(node.labels[i].name for i in range(len(node.labels)))
         node_types.append(node_type)
-        
 
         # add embedding length to dictionary of embedding lengths
         if node_type not in embedding_lengths:
             embedding_lengths[node_type] = len(node.properties.get(features_name))
 
         # if observed attribute is not set, set it to node type
-        if observed_attribute == None and class_name in node.properties:
+        if observed_attribute is None and class_name in node.properties:
             observed_attribute = node_type
 
     # if node_types is empty, raise error
@@ -118,15 +117,11 @@ def nodes_fetching(
         # increase append_counter by 1
         append_counter[node_type] += 1
 
-
     return data, reindexing, inv_reindexing, observed_attribute
 
 
 def edges_fetching(
-    nodes: list,
-    features_name: str,
-    inv_reindexing: defaultdict,
-    data: HeteroData
+    nodes: list, features_name: str, inv_reindexing: defaultdict, data: HeteroData
 ) -> HeteroData:
     """This procedure fetches the edges from the database and returns them in HeteroData object.
 
@@ -251,7 +246,7 @@ def extract_from_database(
         device: The device on which the data will be trained.
     """
     data = HeteroData()
-    
+
     #################
     # NODES
     #################

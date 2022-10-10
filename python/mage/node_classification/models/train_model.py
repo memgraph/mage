@@ -37,7 +37,7 @@ def train_epoch(
         num_samples=num_samples,
         shuffle=True,
         batch_size=batch_size,
-        input_nodes=train_input_nodes
+        input_nodes=train_input_nodes,
     )
 
     val_loader = HGTLoader(

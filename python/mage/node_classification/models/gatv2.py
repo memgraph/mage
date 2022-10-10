@@ -1,6 +1,7 @@
 import mgp
 from mage.node_classification.models.inductive_model import InductiveModel
 
+
 class GATv2(InductiveModel):
     def __init__(
         self,
