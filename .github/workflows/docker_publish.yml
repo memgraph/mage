@@ -12,7 +12,7 @@ jobs:
     env:
       DOCKER_ORGANIZATION_NAME: memgraph
       DOCKER_REPOSITORY_NAME: memgraph-mage
-      MEMGRAPH_VERSION: 2.4.0
+      MEMGRAPH_VERSION: 2.4.1
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
