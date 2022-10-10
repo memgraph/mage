@@ -7,6 +7,7 @@
 
 #include <functional>
 #include <memory>
+#include <unordered_set>
 
 #include "mg_graph.hpp"
 #include "mgp.hpp"
@@ -14,7 +15,8 @@
 namespace mg_graph {
 
 ///
-///@brief Creates vertex inside GraphView. First step is getting Memgraph’s UID for identifying vertex inside Memgraph
+///@brief Creates vertex inside GraphView. First step is getting Memgraph’s UID
+/// for identifying vertex inside Memgraph
 /// platform.
 ///
 ///@tparam TSize Parameter for storing vertex identifiers
@@ -31,44 +33,28 @@ void CreateGraphNode(mg_graph::Graph<TSize> *graph, mgp_vertex *vertex) {
 }
 
 ///
-///@brief Creates edge within the GraphView. First step is getting Memgraph’s UID for indetifying starting and ending
-/// vertex in the edge.
+///@brief Creates an edge within the graph view. Edges are defined by a trio of Memgraph IDs values: of the source
+/// and destination vertices, and of the edge itself.
 ///
-///@tparam TSize Parameter for storing vertex identifiers
-///@param graph Memgraph’s graph instance
-///@param vertex_from Memgraph’s starting vertex instance
-///@param vertex_to Memgraph’s ending vertex instance
-///@param graph_type Type of stored graph: Directed/Undirected
+///@tparam TSize -- Vertex ID type
+///@param graph -- Memgraph’s graph instance
+///@param source -- Memgraph’s source vertex
+///@param destination -- Memgraph’s destination vertex
+///@param graph_type -- Type of stored graph (directed/undirected)
+///@param weighted -- Graph weightedness
+///@param weight -- Edge weight
 ///
 template <typename TSize>
-void CreateGraphEdge(mg_graph::Graph<TSize> *graph, mgp_vertex *vertex_from, mgp_vertex *vertex_to, mgp_edge *edge,
-                     const mg_graph::GraphType graph_type) {
-  // Get Memgraph internal ID property
-  auto memgraph_id_from = mgp::vertex_get_id(vertex_from).as_int;
-  auto memgraph_id_to = mgp::vertex_get_id(vertex_to).as_int;
+void CreateGraphEdge(mg_graph::Graph<TSize> *graph, mgp_vertex *source, mgp_vertex *destination, mgp_edge *edge,
+                     const mg_graph::GraphType graph_type, bool weighted = false, double weight = 0.0) {
+  // Get Memgraph-internal endpoint node IDs
+  auto memgraph_id_from = mgp::vertex_get_id(source).as_int;
+  auto memgraph_id_to = mgp::vertex_get_id(destination).as_int;
 
-  // Get Memgraph internal edge ID
+  // Get Memgraph-internal edge ID
   auto memgraph_edge_id = mgp::edge_get_id(edge).as_int;
 
-  graph->CreateEdge(memgraph_id_from, memgraph_id_to, memgraph_edge_id, graph_type);
-}
-
-///@brief Creates a weighted edge within GraphView. Requires Memgraph’s UIDs for its endpoints.
-///
-///@tparam TSize Parameter for storing vertex identifiers
-///@param graph Memgraph’s graph instance
-///@param vertex_from Memgraph’s starting vertex instance
-///@param vertex_to Memgraph’s ending vertex instance
-///@param graph_type Type of stored graph: Directed/Undirected
-///@param weight Edge weight
-///
-template <typename TSize>
-void CreateWeightedGraphEdge(mg_graph::Graph<TSize> *graph, mgp_vertex *vertex_from, mgp_vertex *vertex_to,
-                             double weight, const mg_graph::GraphType graph_type) {
-  auto memgraph_id_from = mgp::vertex_get_id(vertex_from).as_int;
-  auto memgraph_id_to = mgp::vertex_get_id(vertex_to).as_int;
-
-  graph->CreateWeightedEdge(memgraph_id_from, memgraph_id_to, weight, graph_type);
+  graph->CreateEdge(memgraph_id_from, memgraph_id_to, graph_type, memgraph_edge_id, weighted, weight);
 }
 }  // namespace mg_graph
 
@@ -101,117 +87,157 @@ class OnScopeExit {
   std::function<void()> function_;
 };
 
-///@brief Method for mapping the Memgraph in-memory graph into user-based graph
-/// with iterative node indices. The graph object stores information about the node
-/// and edge mappings alongside connection information. Created graph is
-/// zero-indexed, i.e. indices start at index 0.
+///@brief Returns Memgraph IDs of all nodes in the graph view.
 ///
-///@param graph Memgraph graph
-///@param result Memgraph result object
-///@param memory Memgraph storage object
-///@param graph_type Graph directedness
-///@return mg_graph::Graph
+///@param graph -- graph view
+template <typename TSize>
+std::unordered_set<std::uint64_t> GraphNodeIDs(mg_graph::Graph<TSize> *graph) {
+  return graph->GetMemgraphNodeIDs();
+}
+
+///@brief Maps the Memgraph in-memory graph to a user-defined graph view.
+/// Supports building unweighted and weighted graph views.
+/// Node/relationship IDs are zero-indexed.
+/// The graph view holds connection information and the local<->Memgraph ID mapping.
 ///
+///@param graph -- Memgraph graph
+///@param result -- Memgraph result object
+///@param memory -- Memgraph storage object
+///@param graph_type -- graph directedness
+///@param weighted -- graph weightedness
+///@param weight_property -- relationship property containing weight
+///@param default_weight -- default relationship weight if property not set
+///@param subgraph -- if set, limit the graph view to subgraph
+///@param subgraph_nodes -- nodes selected for subgraph
+///@param subgraph_edges -- edges selected for subgraph
+///
+///@return mg_graph::Graph -- graph view
 template <typename TSize = std::uint64_t>
 std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory,
-                                                     const mg_graph::GraphType graph_type) {
+                                                     const mg_graph::GraphType graph_type, bool weighted = false,
+                                                     const char *weight_property = nullptr,
+                                                     double default_weight = 1.0) {
   auto graph = std::make_unique<mg_graph::Graph<TSize>>();
 
   ///
-  /// Mapping Memgraph in-memory vertices into graph view
+  /// Mapping Memgraph in-memory vertices into the graph view
   ///
 
-  // Safe vertices iterator creation
+  {
+    auto *vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);  // Safe vertex iterator creation
+    mg_utility::OnScopeExit delete_vertices_it([&vertices_it] { mgp::vertices_iterator_destroy(vertices_it); });
 
-  auto *vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);
-  mg_utility::OnScopeExit delete_vertices_it([&vertices_it] { mgp::vertices_iterator_destroy(vertices_it); });
-
-  // Iterate through Memgraph vertices and map them to GraphView
-  for (auto *vertex = mgp::vertices_iterator_get(vertices_it); vertex;
-       vertex = mgp::vertices_iterator_next(vertices_it)) {
-    mg_graph::CreateGraphNode(graph.get(), vertex);
+    // Iterate through Memgraph vertices and map them to GraphView
+    for (auto *vertex = mgp::vertices_iterator_get(vertices_it); vertex;
+         vertex = mgp::vertices_iterator_next(vertices_it)) {
+      mg_graph::CreateGraphNode(graph.get(), vertex);
+    }
   }
-  // Destroy iterator before creating a new one in order to avoid memory leakage
-  mgp::vertices_iterator_destroy(vertices_it);
 
   ///
-  /// Mapping Memgraph in-memory edges into graph view
+  /// Mapping Memgraph in-memory edges into the graph view
   ///
 
-  // Safe vertices iterator creation
-  vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);
+  {
+    auto *vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);  // Safe vertex iterator creation
+    mg_utility::OnScopeExit delete_vertices_it([&vertices_it] { mgp::vertices_iterator_destroy(vertices_it); });
 
-  for (auto *vertex_from = mgp::vertices_iterator_get(vertices_it); vertex_from;
-       vertex_from = mgp::vertices_iterator_next(vertices_it)) {
-    // Safe edges iterator creation
-    auto *edges_it = mgp::vertex_iter_out_edges(vertex_from, memory);
-    mg_utility::OnScopeExit delete_edges_it([&edges_it] { mgp::edges_iterator_destroy(edges_it); });
+    for (auto *source = mgp::vertices_iterator_get(vertices_it); source;
+         source = mgp::vertices_iterator_next(vertices_it)) {
+      auto *edges_it = mgp::vertex_iter_out_edges(source, memory);  // Safe edge iterator creation
+      mg_utility::OnScopeExit delete_edges_it([&edges_it] { mgp::edges_iterator_destroy(edges_it); });
 
-    for (auto *out_edge = mgp::edges_iterator_get(edges_it); out_edge; out_edge = mgp::edges_iterator_next(edges_it)) {
-      auto vertex_to = mgp::edge_get_to(out_edge);
-      mg_graph::CreateGraphEdge(graph.get(), vertex_from, vertex_to, out_edge, graph_type);
+      for (auto *out_edge = mgp::edges_iterator_get(edges_it); out_edge;
+           out_edge = mgp::edges_iterator_next(edges_it)) {
+        auto destination = mgp::edge_get_to(out_edge);
+
+        double weight = weighted ? mg_utility::GetNumericProperty(out_edge, weight_property, memory, default_weight)
+                                 : default_weight;
+        mg_graph::CreateGraphEdge(graph.get(), source, destination, out_edge, graph_type, weighted, weight);
+      }
     }
   }
 
   return graph;
 }
 
-///@brief Method for mapping the Memgraph in-memory graph into user-based graph
-/// with iterative node indices. The graph object stores information about node
-/// and edge mappings, connection information and the weight property. Created
-/// graph is zero-indexed, i.e. indices start at 0.
-///
-///@param graph Memgraph graph
-///@param result Memgraph result object
-///@param memory Memgraph storage object
-///@param graph_type Graph directedness
-///@param weight_property Edge property containing weight
-///@param default_weight Default weight if no value is found
-///@return mg_graph::Graph
-///
+///@brief Maps the Memgraph in-memory graph to a user-defined *weighted* graph view.
+/// Kept for backward compatibility purposes.
 template <typename TSize = std::uint64_t>
 std::unique_ptr<mg_graph::Graph<TSize>> GetWeightedGraphView(mgp_graph *memgraph_graph, mgp_result *result,
                                                              mgp_memory *memory, const mg_graph::GraphType graph_type,
                                                              const char *weight_property, double default_weight) {
+  return GetGraphView(memgraph_graph, result, memory, graph_type, true, weight_property, default_weight);
+}
+
+///@brief Maps the Memgraph in-memory graph to a user-defined subgraph view that contains the given nodes and edges.
+/// Node/relationship IDs are zero-indexed.
+/// The graph view holds connection information and the local<->Memgraph ID mapping.
+///
+///@param graph -- Memgraph graph
+///@param result -- Memgraph result object
+///@param memory -- Memgraph storage object
+///@param graph_type -- graph directedness
+///@param weighted -- graph weightedness
+///@param weight_property -- relationship property containing weight
+///@param default_weight -- default relationship weight if property not set
+///@param subgraph -- if set, limit the graph view to subgraph
+///@param subgraph_nodes -- nodes selected for subgraph
+///@param subgraph_edges -- edges selected for subgraph
+///
+///@return mg_graph::Graph -- graph view
+template <typename TSize = std::uint64_t>
+std::unique_ptr<mg_graph::Graph<TSize>> GetSubgraphView(mgp_graph *memgraph_graph, mgp_result *result,
+                                                        mgp_memory *memory, mgp_list *subgraph_nodes,
+                                                        mgp_list *subgraph_edges, const mg_graph::GraphType graph_type,
+                                                        bool weighted = false, const char *weight_property = nullptr,
+                                                        double default_weight = 1.0) {
   auto graph = std::make_unique<mg_graph::Graph<TSize>>();
 
   ///
-  /// Mapping Memgraph in-memory vertices into graph view
+  /// Mapping Memgraph in-memory vertices into the graph view
   ///
 
-  // Safe vertices iterator creation
-  auto *vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);
-  mg_utility::OnScopeExit delete_vertices_it([&vertices_it] { mgp::vertices_iterator_destroy(vertices_it); });
-
-  // Iterate through Memgraph vertices and map them to GraphView
-  for (auto *vertex = mgp::vertices_iterator_get(vertices_it); vertex;
-       vertex = mgp::vertices_iterator_next(vertices_it)) {
+  for (std::size_t i = 0; i < mgp::list_size(subgraph_nodes); i++) {
+    auto vertex = mgp::value_get_vertex(mgp::list_at(subgraph_nodes, i));
     mg_graph::CreateGraphNode(graph.get(), vertex);
   }
-  // Destroy iterator before creating a new one in order to avoid memory leakage
-  mgp::vertices_iterator_destroy(vertices_it);
 
   ///
-  /// Mapping Memgraph in-memory edges into graph view
+  /// Mapping Memgraph in-memory edges into the graph view
   ///
 
-  // Safe vertices iterator creation
-  vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);
+  auto subgraph_node_ids = GraphNodeIDs(graph.get());
+  for (std::size_t i = 0; i < mgp::list_size(subgraph_edges); i++) {
+    auto edge = mgp::value_get_edge(mgp::list_at(subgraph_edges, i));
 
-  for (auto *vertex_from = mgp::vertices_iterator_get(vertices_it); vertex_from;
-       vertex_from = mgp::vertices_iterator_next(vertices_it)) {
-    // Safe edges iterator creation
-    auto *edges_it = mgp::vertex_iter_out_edges(vertex_from, memory);
-    mg_utility::OnScopeExit delete_edges_it([&edges_it] { mgp::edges_iterator_destroy(edges_it); });
+    auto source = mgp::edge_get_from(edge);
+    auto destination = mgp::edge_get_to(edge);
 
-    for (auto *out_edge = mgp::edges_iterator_get(edges_it); out_edge; out_edge = mgp::edges_iterator_next(edges_it)) {
-      auto vertex_to = mgp::edge_get_to(out_edge);
-      auto weight = mg_utility::GetNumericProperty(out_edge, weight_property, memory, default_weight);
-      mg_graph::CreateWeightedGraphEdge(graph.get(), vertex_from, vertex_to, weight, graph_type);
+    auto source_id = mgp::vertex_get_id(source).as_int;
+    auto destination_id = mgp::vertex_get_id(destination).as_int;
+
+    if (subgraph_node_ids.find(source_id) != subgraph_node_ids.end() &&
+        subgraph_node_ids.find(destination_id) != subgraph_node_ids.end()) {
+      double weight =
+          weighted ? mg_utility::GetNumericProperty(edge, weight_property, memory, default_weight) : default_weight;
+      mg_graph::CreateGraphEdge(graph.get(), source, destination, edge, graph_type, weighted, weight);
     }
   }
 
   return graph;
+}
+
+///@brief Maps the Memgraph in-memory graph to a user-defined *weighted* subgraph view.
+/// Kept for backward compatibility purposes.
+template <typename TSize = std::uint64_t>
+std::unique_ptr<mg_graph::Graph<TSize>> GetWeightedSubgraphView(mgp_graph *memgraph_graph, mgp_result *result,
+                                                                mgp_memory *memory, mgp_list *subgraph_nodes,
+                                                                mgp_list *subgraph_edges,
+                                                                const mg_graph::GraphType graph_type,
+                                                                const char *weight_property, double default_weight) {
+  return GetSubgraphView(memgraph_graph, result, memory, subgraph_nodes, subgraph_edges, graph_type, true,
+                         weight_property, default_weight);
 }
 
 namespace {
@@ -315,9 +341,9 @@ std::vector<std::pair<std::uint64_t, std::uint64_t>> GetEdgeEndpointIDs(mgp_list
   std::vector<std::pair<std::uint64_t, std::uint64_t>> edge_endpoint_ids;
   for (std::size_t i = 0; i < mgp::list_size(edge_list); i++) {
     auto edge = mgp::value_get_edge(mgp::list_at(edge_list, i));
-    auto from_id = mgp::vertex_get_id(mgp::edge_get_from(edge));
-    auto to_id = mgp::vertex_get_id(mgp::edge_get_to(edge));
-    edge_endpoint_ids.push_back(std::make_pair(from_id.as_int, to_id.as_int));
+    auto source_id = mgp::vertex_get_id(mgp::edge_get_from(edge));
+    auto destination_id = mgp::vertex_get_id(mgp::edge_get_to(edge));
+    edge_endpoint_ids.push_back(std::make_pair(source_id.as_int, destination_id.as_int));
   }
 
   return edge_endpoint_ids;
