@@ -250,5 +250,8 @@ class OnlineBC {
   ///@return {node ID, BC score} pairs
   std::unordered_map<std::uint64_t, double> NodeUpdate(const Operation operation, const std::uint64_t updated_node,
                                                        const bool normalize = true);
+
+  ///@brief Resets the state of the algorithm (initialization and previously calculated node_bc_scores).
+  void Reset();
 };
 }  // namespace online_bc
