@@ -114,7 +114,9 @@ def generate_documents_from_triggered_objects(
     return vertices, edges
 
 
-def generate_documents_from_db(context: mgp.ProcCtx) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+def generate_documents_from_db(
+    context: mgp.ProcCtx,
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """Generates vertices and edges from the database.
     Args:
         context (mgp.ProcCtx): A reference to the context execution.
@@ -221,24 +223,38 @@ def create_index(
         schema_json = json.loads(schema_file.read())
     # Update default schema if specified
     if NUMBER_OF_SHARDS in schema_parameters:
-        schema_json[SETTINGS][INDEX][NUMBER_OF_SHARDS] = schema_parameters[NUMBER_OF_SHARDS]
-        logger.info(f"Number of shards updated to: {schema_parameters[NUMBER_OF_SHARDS]}")
+        schema_json[SETTINGS][INDEX][NUMBER_OF_SHARDS] = schema_parameters[
+            NUMBER_OF_SHARDS
+        ]
+        logger.info(
+            f"Number of shards updated to: {schema_parameters[NUMBER_OF_SHARDS]}"
+        )
     if NUMBER_OF_REPLICAS in schema_parameters:
-        schema_json[SETTINGS][INDEX][NUMBER_OF_REPLICAS] = schema_parameters[NUMBER_OF_REPLICAS]
-        logger.info(f"Number of replicas updated to: {schema_parameters[NUMBER_OF_REPLICAS]}")
+        schema_json[SETTINGS][INDEX][NUMBER_OF_REPLICAS] = schema_parameters[
+            NUMBER_OF_REPLICAS
+        ]
+        logger.info(
+            f"Number of replicas updated to: {schema_parameters[NUMBER_OF_REPLICAS]}"
+        )
     if ANALYZER in schema_parameters and INDEX_TYPE in schema_parameters:
-        schema_json[MAPPINGS][DYNAMIC_TEMPLATES][1][STRING][MAPPING][ANALYZER] = schema_parameters[ANALYZER]
+        schema_json[MAPPINGS][DYNAMIC_TEMPLATES][1][STRING][MAPPING][
+            ANALYZER
+        ] = schema_parameters[ANALYZER]
         if schema_parameters[INDEX_TYPE] == VERTEX:
-            schema_json[MAPPINGS][DYNAMIC_TEMPLATES][0][LK_CATEGORIES_HAS_RAW][MAPPING][ANALYZER] = schema_parameters[
+            schema_json[MAPPINGS][DYNAMIC_TEMPLATES][0][LK_CATEGORIES_HAS_RAW][MAPPING][
                 ANALYZER
-            ]
+            ] = schema_parameters[ANALYZER]
         else:
-            schema_json[MAPPINGS][DYNAMIC_TEMPLATES][0][LK_TYPE_HAS_RAW][MAPPING][ANALYZER] = schema_parameters[
+            schema_json[MAPPINGS][DYNAMIC_TEMPLATES][0][LK_TYPE_HAS_RAW][MAPPING][
                 ANALYZER
-            ]
+            ] = schema_parameters[ANALYZER]
         logger.info(f"Analyzer set to: {schema_parameters[ANALYZER]}")
 
-    return mgp.Record(response=dict(client.indices.create(index=index_name, body=schema_json, ignore=400)))
+    return mgp.Record(
+        response=dict(
+            client.indices.create(index=index_name, body=schema_json, ignore=400)
+        )
+    )
 
 
 @mgp.read_proc
