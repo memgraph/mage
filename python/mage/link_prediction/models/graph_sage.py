@@ -1,12 +1,19 @@
-from dgl.nn import SAGEConv, HeteroGraphConv
 import dgl
-import torch.nn.functional as F
+from dgl.nn import SAGEConv, HeteroGraphConv
 import torch
 from typing import Dict, List
 
 
 class GraphSAGE(torch.nn.Module):
-    def __init__(self, in_feats: int, hidden_features_size: List[int], aggregator: str, feat_drops: List[float], edge_types: List[str]):
+    def __init__(
+        self,
+        in_feats: int,
+        hidden_features_size: List[int],
+        aggregator: str,
+        feat_drops: List[float],
+        edge_types: List[str],
+        device: torch.device,
+    ):
         """Initializes modules with sizes.
 
         Args:
@@ -20,16 +27,29 @@ class GraphSAGE(torch.nn.Module):
         self.layers = torch.nn.ModuleList()
         self.num_layers = len(hidden_features_size)
         # Define activations
-        activations = [torch.nn.functional.relu for _ in range(self.num_layers - 1)]  # All activations except last layer
+        activations = [
+            torch.nn.functional.relu for _ in range(self.num_layers - 1)
+        ]  # All activations except last layer
         activations.append(None)
         # Create layers
         for i in range(self.num_layers):
-            sage_layer = SAGEConv(in_feats=in_feats, out_feats=hidden_features_size[i], aggregator_type=aggregator, feat_drop=feat_drops[i], activation=activations[i])
-            self.layers.append(HeteroGraphConv({edge_type: sage_layer for edge_type in edge_types}, aggregate="sum"))
+            sage_layer = SAGEConv(
+                in_feats=in_feats,
+                out_feats=hidden_features_size[i],
+                aggregator_type=aggregator,
+                feat_drop=feat_drops[i],
+                activation=activations[i],
+            ).to(device)
+            self.layers.append(
+                HeteroGraphConv(
+                    {edge_type: sage_layer for edge_type in edge_types}, aggregate="sum"
+                ).to(device)
+            )
             in_feats = hidden_features_size[i]
 
-     
-    def forward(self, blocks: List[dgl.graph], h: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def forward(
+        self, blocks: List[dgl.graph], h: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         """Performs forward pass on batches.
 
         Args:
@@ -37,13 +57,16 @@ class GraphSAGE(torch.nn.Module):
             h (Dict[str, torch.Tensor]): Input features for every node type.
 
         Returns:
-            Dict[str, torch.Tensor]: Embeddings for every node type. 
+            Dict[str, torch.Tensor]: Embeddings for every node type.
         """
         for index, layer in enumerate(self.layers):
             h = layer(blocks[index], h)
+
         return h
-    
-    def online_forward(self, graph: dgl.graph, h: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+
+    def online_forward(
+        self, graph: dgl.graph, h: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         """Performs forward pass on batches.
 
         Args:
@@ -51,8 +74,9 @@ class GraphSAGE(torch.nn.Module):
             h (Dict[str, torch.Tensor]): Input features for every node type.
 
         Returns:
-            Dict[str, torch.Tensor]: Embeddings for every node type. 
+            Dict[str, torch.Tensor]: Embeddings for every node type.
         """
         for layer in self.layers:
             h = layer(graph, h)
+
         return h

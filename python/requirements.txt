@@ -3,8 +3,8 @@ scipy==1.7.1
 gekko==0.2.8
 networkx==2.6.2
 python-Levenshtein==0.12.1
-gensim==4.0.0.
+gensim==4.0.0
 torch==1.10.1
 six==1.16.0
-dgl~=0.9
 scikit-learn==1.1.1
+dgl==0.9.0

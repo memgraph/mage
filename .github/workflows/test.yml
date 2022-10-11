@@ -11,10 +11,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      MEMGRAPH_VERSION: 2.3.0
+      MEMGRAPH_VERSION: 2.3.1
     strategy:
       matrix:
-        architecture: ["amd64", "arm64"]
+        architecture: ["amd64"]
         target: ["prod", "dev"]
     steps:
       - uses: actions/checkout@v2

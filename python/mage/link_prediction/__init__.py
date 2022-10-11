@@ -1,32 +1,30 @@
-from mage.link_prediction.link_prediction_util import (
+from mage.link_prediction.link_prediction_util import (  # noqa: F401
+    proj_0,
+    classify,
+    add_self_loop,
     inner_train,
     preprocess,
     inner_predict,
-    get_number_of_edges,
-    proj_0,
-    validate_user_parameters,
-    classify,
-    add_self_loop
 )
 
 
-from mage.link_prediction.factory import (
+from mage.link_prediction.factory import (  # noqa: F401
     create_model,
     create_optimizer,
     create_predictor,
-    create_activation_function
+    create_activation_function,
 )
 
-from mage.link_prediction.constants import (
-    Metrics,
-    Predictors,
+
+from mage.link_prediction.constants import (  # noqa: F401
     Reindex,
     Context,
     Models,
     Optimizers,
     Devices,
     Aggregators,
+    Metrics,
+    Predictors,
     Parameters,
-    Activations
+    Activations,
 )
-
