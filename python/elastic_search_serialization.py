@@ -96,22 +96,82 @@ def serialize_properties(properties: Dict[str, Any]) -> Dict[str, Any]:
     return source
 
 
-def generate_documents_from_context_objects(
+def generate_documents_from_triggered_objects(
     context_objects: List[Dict[str, Any]]
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    """Generates nodes and edges documents for indexing and returns them as lists.
+    """Generates vertices and edges documents for indexing and returns them as lists.
     Args:
         context_objects (List[Dict[str, Any]]): Objects that are sent as parameters because of some trigger that was called. Trigger can be for update or for create.
     Returns:
-        Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]: Serialized nodes and edges.
+        Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]: Serialized vertices and edges.
     """
-    nodes, edges = [], []
+    vertices, edges = [], []
     for context_object in context_objects:
         if context_object[EVENT_TYPE] == CREATED_VERTEX:
-            nodes.append(serialize_vertex(context_object[VERTEX]))
+            vertices.append(serialize_vertex(context_object[VERTEX]))
         elif context_object[EVENT_TYPE] == CREATED_EDGE:
             edges.append(serialize_edge(context_object[EDGE]))
-    return nodes, edges
+    return vertices, edges
+
+
+def generate_documents_from_db(context: mgp.ProcCtx) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """Generates vertices and edges from the database.
+    Args:
+        context (mgp.ProcCtx): A reference to the context execution.
+    Returns:
+        Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]: Serialized vertices and edges.
+    """
+    vertices, edges = [], []
+    for vertex in context.graph.vertices:
+        vertices.append(serialize_vertex(vertex))
+        for edge in vertex.out_edges:
+            edges.append(serialize_edge(edge))
+
+    return vertices, edges
+
+
+def elastic_search_streaming_bulk(
+    objects: List[Any],
+    index: str,
+    chunk_size: int = 500,
+    max_chunk_bytes: int = 104857600,
+    raise_on_error: bool = True,
+    raise_on_exception: bool = True,
+    max_retries: int = 0,
+    initial_backoff: float = 2.0,
+    max_backoff: float = 600.0,
+    yield_ok: bool = True,
+) -> None:
+    """
+    Sends streaming_bulk requests for the given objects to the provided index with the parameters specified.
+    Args:
+        objects (List[Any]): serialized nodes and edges that will be sent to the ElasticSearch.
+        index (str): The name of the index where you want to save the data.
+        number_of_shards (int): A number of shards you want to use in your index.
+        number_of_replicas (int): A number of replicas you want to use in your index.
+        chunk_size (int): The number of docs in one chunk sent to es (default: 500).
+        max_chunk_bytes (int): The maximum size of the request in bytes (default: 100MB).
+        raise_on_error (bool): Raise BulkIndexError containing errors (as .errors) from the execution of the last chunk when some occur. By default we raise.
+        raise_on_exception (bool): If False then don’t propagate exceptions from call to bulk and just report the items that failed as failed.
+        max_retries (int): Maximum number of times a document will be retried when 429 is received, set to 0 (default) for no retries on 429.
+        initial_backoff (float): The number of seconds we should wait before the first retry. Any subsequent retries will be powers of initial_backoff * 2**retry_number.
+        max_backoff (float): The maximum number of seconds a retry will wait.
+        yield_ok (float): If set to False will skip successful documents in the output.
+    """
+    for _, _ in streaming_bulk(
+        client=client,
+        index=index,
+        actions=objects,
+        chunk_size=chunk_size,
+        max_chunk_bytes=max_chunk_bytes,
+        initial_backoff=initial_backoff,
+        max_backoff=max_backoff,
+        yield_ok=yield_ok,
+        raise_on_error=raise_on_error,
+        raise_on_exception=raise_on_exception,
+        max_retries=max_retries,
+    ):
+        pass
 
 
 @mgp.read_proc
@@ -161,44 +221,29 @@ def create_index(
         schema_json = json.loads(schema_file.read())
     # Update default schema if specified
     if NUMBER_OF_SHARDS in schema_parameters:
-        schema_json[SETTINGS][INDEX][NUMBER_OF_SHARDS] = schema_parameters[
-            NUMBER_OF_SHARDS
-        ]
-        logger.info(
-            f"Number of shards updated to: {schema_parameters[NUMBER_OF_SHARDS]}"
-        )
+        schema_json[SETTINGS][INDEX][NUMBER_OF_SHARDS] = schema_parameters[NUMBER_OF_SHARDS]
+        logger.info(f"Number of shards updated to: {schema_parameters[NUMBER_OF_SHARDS]}")
     if NUMBER_OF_REPLICAS in schema_parameters:
-        schema_json[SETTINGS][INDEX][NUMBER_OF_REPLICAS] = schema_parameters[
-            NUMBER_OF_REPLICAS
-        ]
-        logger.info(
-            f"Number of replicas updated to: {schema_parameters[NUMBER_OF_REPLICAS]}"
-        )
+        schema_json[SETTINGS][INDEX][NUMBER_OF_REPLICAS] = schema_parameters[NUMBER_OF_REPLICAS]
+        logger.info(f"Number of replicas updated to: {schema_parameters[NUMBER_OF_REPLICAS]}")
     if ANALYZER in schema_parameters and INDEX_TYPE in schema_parameters:
-        schema_json[MAPPINGS][DYNAMIC_TEMPLATES][1][STRING][MAPPING][
-            ANALYZER
-        ] = schema_parameters[ANALYZER]
+        schema_json[MAPPINGS][DYNAMIC_TEMPLATES][1][STRING][MAPPING][ANALYZER] = schema_parameters[ANALYZER]
         if schema_parameters[INDEX_TYPE] == VERTEX:
-            schema_json[MAPPINGS][DYNAMIC_TEMPLATES][0][LK_CATEGORIES_HAS_RAW][MAPPING][
+            schema_json[MAPPINGS][DYNAMIC_TEMPLATES][0][LK_CATEGORIES_HAS_RAW][MAPPING][ANALYZER] = schema_parameters[
                 ANALYZER
-            ] = schema_parameters[ANALYZER]
+            ]
         else:
-            schema_json[MAPPINGS][DYNAMIC_TEMPLATES][0][LK_TYPE_HAS_RAW][MAPPING][
+            schema_json[MAPPINGS][DYNAMIC_TEMPLATES][0][LK_TYPE_HAS_RAW][MAPPING][ANALYZER] = schema_parameters[
                 ANALYZER
-            ] = schema_parameters[ANALYZER]
+            ]
         logger.info(f"Analyzer set to: {schema_parameters[ANALYZER]}")
 
-    return mgp.Record(
-        response=dict(
-            client.indices.create(index=index_name, body=schema_json, ignore=400)
-        )
-    )
+    return mgp.Record(response=dict(client.indices.create(index=index_name, body=schema_json, ignore=400)))
 
 
 @mgp.read_proc
-def index(
+def index_db(
     context: mgp.ProcCtx,
-    createdObjects: mgp.List[mgp.Map],
     node_index: str,
     edge_index: str,
     chunk_size: int = 500,
@@ -231,40 +276,105 @@ def index(
     """
     global client
     # Now create iterable of documents that need to be indexed
-    nodes, edges = generate_documents_from_context_objects(createdObjects)
+    nodes, edges = generate_documents_from_db(context)
 
     # Send nodes on indexing
     logger.info("Indexing vertices...")
-    for _, _ in streaming_bulk(
-        client=client,
-        index=node_index,
-        actions=nodes,
-        chunk_size=chunk_size,
-        max_chunk_bytes=max_chunk_bytes,
-        initial_backoff=initial_backoff,
-        max_backoff=max_backoff,
-        yield_ok=yield_ok,
-        raise_on_error=raise_on_error,
-        raise_on_exception=raise_on_exception,
-        max_retries=max_retries,
-    ):
-        pass
+    elastic_search_streaming_bulk(
+        nodes,
+        node_index,
+        chunk_size,
+        max_chunk_bytes,
+        raise_on_error,
+        raise_on_exception,
+        max_retries,
+        initial_backoff,
+        max_backoff,
+        yield_ok,
+    )
     # Send edges on indexing
     logger.info("Indexing edges...")
-    for _, _ in streaming_bulk(
-        client=client,
-        index=edge_index,
-        actions=edges,
-        chunk_size=chunk_size,
-        max_chunk_bytes=max_chunk_bytes,
-        initial_backoff=initial_backoff,
-        max_backoff=max_backoff,
-        yield_ok=yield_ok,
-        raise_on_error=raise_on_error,
-        raise_on_exception=raise_on_exception,
-        max_retries=max_retries,
-    ):
-        pass
+    elastic_search_streaming_bulk(
+        edges,
+        edge_index,
+        chunk_size,
+        max_chunk_bytes,
+        raise_on_error,
+        raise_on_exception,
+        max_retries,
+        initial_backoff,
+        max_backoff,
+        yield_ok,
+    )
+    return mgp.Record(nodes=nodes, edges=edges)
+
+
+@mgp.read_proc
+def index(
+    context: mgp.ProcCtx,
+    createdObjects: mgp.List[mgp.Map],
+    node_index: str,
+    edge_index: str,
+    chunk_size: int = 500,
+    max_chunk_bytes: int = 104857600,
+    raise_on_error: bool = True,
+    raise_on_exception: bool = True,
+    max_retries: int = 0,
+    initial_backoff: float = 2.0,
+    max_backoff: float = 600.0,
+    yield_ok: bool = True,
+) -> mgp.Record(nodes=mgp.List[mgp.Map], edges=mgp.List[mgp.Map]):
+    """The method serializes all vertices and relationships that came into the Memgraph DB to an ElasticSearch schema and sends streaming_bulk request to ElasticSearch's API.
+    Args:
+        context (mgp.ProcCtx): Reference to the executing context.
+        createdObjects (List[Dict[str, Any]]): List of all objects that were created andthen sent as arguments to this method with the help of "create trigger".
+        node_index (str): The name of the node index.
+        edge_index (str): The name of the edge index.
+        number_of_shards (int): A number of shards you want to use in your index.
+        number_of_replicas (int): A number of replicas you want to use in your index.
+        chunk_size (int): The number of docs in one chunk sent to es (default: 500).
+        max_chunk_bytes (int): The maximum size of the request in bytes (default: 100MB).
+        raise_on_error (bool): Raise BulkIndexError containing errors (as .errors) from the execution of the last chunk when some occur. By default we raise.
+        raise_on_exception (bool): If False then don’t propagate exceptions from call to bulk and just report the items that failed as failed.
+        max_retries (int): Maximum number of times a document will be retried when 429 is received, set to 0 (default) for no retries on 429.
+        initial_backoff (float): The number of seconds we should wait before the first retry. Any subsequent retries will be powers of initial_backoff * 2**retry_number.
+        max_backoff (float): The maximum number of seconds a retry will wait.
+        yield_ok (float): If set to False will skip successful documents in the output.
+    Returns:
+        mgp.Record(): Returns JSON of all nodes and edges.
+    """
+    global client
+    # Now create iterable of documents that need to be indexed
+    nodes, edges = generate_documents_from_triggered_objects(createdObjects)
+
+    # Send nodes on indexing
+    logger.info("Indexing vertices...")
+    elastic_search_streaming_bulk(
+        nodes,
+        node_index,
+        chunk_size,
+        max_chunk_bytes,
+        raise_on_error,
+        raise_on_exception,
+        max_retries,
+        initial_backoff,
+        max_backoff,
+        yield_ok,
+    )
+    # Send edges on indexing
+    logger.info("Indexing edges...")
+    elastic_search_streaming_bulk(
+        edges,
+        edge_index,
+        chunk_size,
+        max_chunk_bytes,
+        raise_on_error,
+        raise_on_exception,
+        max_retries,
+        initial_backoff,
+        max_backoff,
+        yield_ok,
+    )
     return mgp.Record(nodes=nodes, edges=edges)
 
 
