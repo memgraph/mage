@@ -1,5 +1,5 @@
 - query: >
         CALL node_classification.save_model() YIELD *;
 
-  exception: Saving is not enabled until model is not initialized or loaded.
+  exception: "Saving is not enabled until model is not initialized or loaded."
 

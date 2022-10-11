@@ -156,7 +156,7 @@ DEFAULT_VALUES = {
     HeteroParams.NUM_ITERATIONS_SAMPLE: 4,
     OtherParams.PATH_TO_MODEL: "",
     OtherParams.PATIENCE: 10,
-    OtherParams.MODEL_SAVING_FOLDER: "torch_models",
+    OtherParams.MODEL_SAVING_FOLDER: "/tmp/torch_models",
 }
 
 

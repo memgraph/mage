@@ -6,9 +6,9 @@
 - query: >-
         CALL node_classification.save_model() YIELD *;
   output:
-        - status: Model has been successfully saved.
+        - status: "Model has been successfully saved."
 
 - query: >-
         CALL node_classification.load_model() YIELD *;
   output:
-        - status: Model has been successfully loaded.
+        - status: "Model has been successfully loaded."

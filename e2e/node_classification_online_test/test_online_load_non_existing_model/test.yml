@@ -2,4 +2,4 @@
         CALL node_classification.load_model() YIELD *;
 
   exception: >
-        There are no saved models.
+        "There are no saved models. "

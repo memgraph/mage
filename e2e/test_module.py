@@ -69,11 +69,17 @@ def prepare_tests():
                         continue
 
                     tests.append(
-                        pytest.param(test_dir, id=f"{module_test_dir.stem}-{test_or_group_dir.stem}-{test_dir.stem}")
+                        pytest.param(
+                            test_dir,
+                            id=f"{module_test_dir.stem}-{test_or_group_dir.stem}-{test_dir.stem}",
+                        )
                     )
             else:
                 tests.append(
-                    pytest.param(test_or_group_dir, id=f"{module_test_dir.stem}-{test_or_group_dir.stem}")
+                    pytest.param(
+                        test_or_group_dir,
+                        id=f"{module_test_dir.stem}-{test_or_group_dir.stem}",
+                    )
                 )
     return tests
 
@@ -152,7 +158,7 @@ def _test_online(test_dir: Path, db: Memgraph):
     try:
         # Execute cypher queries and compare them with results
         for input_cyphers_raw, test_dict in zip(
-                checkpoint_input_cyphers, checkpoint_test_dicts
+            checkpoint_input_cyphers, checkpoint_test_dicts
         ):
             input_cyphers = input_cyphers_raw.splitlines()
             _execute_cyphers(input_cyphers, db)

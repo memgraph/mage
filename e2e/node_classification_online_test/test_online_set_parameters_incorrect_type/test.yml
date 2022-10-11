@@ -2,4 +2,4 @@
         CALL node_classification.set_model_parameters({hidden_features_size: 10}) YIELD *;
 
   exception: >
-        Input dictionary is not correctly typed.
+        "Input dictionary is not correctly typed."
