@@ -663,7 +663,6 @@ def get_training_results(
     )
 
 
-
 @mgp.read_proc
 def load_model(
     ctx: mgp.ProcCtx, path: str = link_prediction_parameters.context_save_dir
@@ -959,7 +958,6 @@ def _reset_train_predict_parameters() -> None:
     reindex = None  # Delete indexing stuff
 
 
-
 def _conversion_to_dgl_test(
     graph: dgl.graph,
     reindex: Dict[str, Dict[str, Dict[int, int]]],
@@ -1009,6 +1007,7 @@ def _conversion_to_dgl_test(
                 raise Exception(
                     "The conversion to DGL failed. Stored graph does not contain the same features as the converted DGL graph. "
                 )
+
 
 def validate_user_parameters(parameters: mgp.Map) -> None:  # noqa: C901
     """Validates parameters user sent through method set_model_parameters
