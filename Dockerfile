@@ -52,9 +52,9 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
     && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/ 
 
 #DGL build from source
-RUN git clone --recurse-submodules https://github.com/dmlc/dgl.git \
-    && cd dgl && mkdir build && cd build && cmake -DUSE_CUDA=ON .. \
-    && make -j4 && cd ../python python3 setup.py install
+RUN git clone --recurse-submodules https://github.com/dmlc/dgl.git  \
+    && cd dgl && mkdir build && cd build && cmake .. \
+    && make -j4 && cd ../python && python3 setup.py install
 
 USER memgraph
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
