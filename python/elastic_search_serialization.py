@@ -46,11 +46,38 @@ lke_mapping[float] = LKE_NUMBER
 lke_mapping[bool] = LKE_BOOLEAN
 lke_mapping[datetime] = LKE_DATE
 
+
+class SingletonMeta(type):
+    """
+    A metaclass approach to create a singleton design pattern. It is a class of class, or in other words a class is an instance of its metaclass. It gives us more control in the case we would need to customize the singleton class definitions in other ways. In this way, we avoid having a multiple inheritance.
+    """
+
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(SingletonMeta, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
+
+
+class ElasticSearchClient(elasticsearch.Elasticsearch, metaclass=SingletonMeta):
+    """Singleton wrapper around elastic search client. Uses inheritance for implementing delegation."""
+
+    def __init__(
+        self, elastic_url: str, ca_certs: str, elastic_user: str, elastic_password: str
+    ) -> None:
+        super().__init__(
+            hosts=elastic_url,
+            ca_certs=ca_certs,
+            basic_auth=(elastic_user, elastic_password),
+        )
+
+
 # Create global logger object
 logger: mgp.Logger = mgp.Logger()
 
-# Global client object
-client: elasticsearch.Elasticsearch
+# Singleton client object
+client: ElasticSearchClient
 
 
 # Helper method
@@ -190,10 +217,11 @@ def connect(
         mgp.Record(connection_status=mgp.Map): Connection info.
     """
     global client
-    client = elasticsearch.Elasticsearch(
-        hosts=elastic_url,
-        ca_certs=ca_certs,
-        basic_auth=(elastic_user, elastic_password),
+    client = ElasticSearchClient(
+        elastic_url,
+        ca_certs,
+        elastic_user,
+        elastic_password,
     )
     logger.info(f"Client info: {client.info()}")
     return mgp.Record(connection_status=dict(client.info()))
@@ -290,7 +318,6 @@ def index_db(
     Returns:
         mgp.Record(): Returns JSON of all nodes and edges.
     """
-    global client
     # Now create iterable of documents that need to be indexed
     nodes, edges = generate_documents_from_db(context)
 
@@ -359,7 +386,6 @@ def index(
     Returns:
         mgp.Record(): Returns JSON of all nodes and edges.
     """
-    global client
     # Now create iterable of documents that need to be indexed
     nodes, edges = generate_documents_from_triggered_objects(createdObjects)
 
