@@ -3,7 +3,7 @@ from typing import Any, List, Dict, Tuple
 from datetime import datetime
 
 import elasticsearch
-from elasticsearch.helpers import streaming_bulk
+from elasticsearch.helpers import streaming_bulk, parallel_bulk
 
 import mgp
 
@@ -47,37 +47,11 @@ lke_mapping[bool] = LKE_BOOLEAN
 lke_mapping[datetime] = LKE_DATE
 
 
-class SingletonMeta(type):
-    """
-    A metaclass approach to create a singleton design pattern. It is a class of class, or in other words a class is an instance of its metaclass. It gives us more control in the case we would need to customize the singleton class definitions in other ways. In this way, we avoid having a multiple inheritance.
-    """
-
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(SingletonMeta, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
-
-
-class ElasticSearchClient(elasticsearch.Elasticsearch, metaclass=SingletonMeta):
-    """Singleton wrapper around elastic search client. Uses inheritance for implementing delegation."""
-
-    def __init__(
-        self, elastic_url: str, ca_certs: str, elastic_user: str, elastic_password: str
-    ) -> None:
-        super().__init__(
-            hosts=elastic_url,
-            ca_certs=ca_certs,
-            basic_auth=(elastic_user, elastic_password),
-        )
-
-
 # Create global logger object
 logger: mgp.Logger = mgp.Logger()
 
 # Singleton client object
-client: ElasticSearchClient
+client: elasticsearch.Elasticsearch
 
 
 # Helper method
@@ -121,6 +95,13 @@ def serialize_properties(properties: Dict[str, Any]) -> Dict[str, Any]:
         elif type(prop_value) in lke_mapping:
             source[f"{prop_key}{lke_mapping[type(prop_value)]}"] = prop_value
     return source
+
+
+def generate_document(context_object):
+    if context_object[EVENT_TYPE] == CREATED_VERTEX:
+        return serialize_vertex(context_object[VERTEX]), VERTEX
+    elif context_object[EVENT_TYPE] == CREATED_EDGE:
+        return serialize_edge(context_object[EDGE]), EDGE
 
 
 def generate_documents_from_triggered_objects(
@@ -176,8 +157,6 @@ def elastic_search_streaming_bulk(
     Args:
         objects (List[Any]): serialized nodes and edges that will be sent to the ElasticSearch.
         index (str): The name of the index where you want to save the data.
-        number_of_shards (int): A number of shards you want to use in your index.
-        number_of_replicas (int): A number of replicas you want to use in your index.
         chunk_size (int): The number of docs in one chunk sent to es (default: 500).
         max_chunk_bytes (int): The maximum size of the request in bytes (default: 100MB).
         raise_on_error (bool): Raise BulkIndexError containing errors (as .errors) from the execution of the last chunk when some occur. By default we raise.
@@ -203,6 +182,42 @@ def elastic_search_streaming_bulk(
         pass
 
 
+def elastic_search_parallel_bulk(
+    objects: List[Any],
+    index: str,
+    thread_count: int = 8,
+    chunk_size: int = 500,
+    max_chunk_bytes: int = 104857600,
+    raise_on_error: bool = True,
+    raise_on_exception: bool = True,
+    queue_size: int = 4,
+) -> None:
+    """
+    Sends parallel_bulk requests for the given objects to the provided index with the parameters specified.
+    Args:
+        objects (List[Any]): Serialized nodes and edges that will be sent to the ElasticSearch.
+        index (str): The name of the index where you want to save the data.
+        thread_count (int): Size of the threadpool to use for the bulk requests.
+        chunk_size (int): The number of docs in one chunk sent to es (default: 500).
+        max_chunk_bytes (int): The maximum size of the request in bytes (default: 100MB).
+        raise_on_error (bool): Raise BulkIndexError containing errors (as .errors) from the execution of the last chunk when some occur. By default we raise.
+        raise_on_exception (bool): If False then don’t propagate exceptions from call to bulk and just report the items that failed as failed.
+        queue_size (int): Size of the task queue between the main thread (producing chunks to send) and the processing threads.
+    """
+    for _, _ in parallel_bulk(
+        client=client,
+        index=index,
+        actions=objects,
+        thread_count=thread_count,
+        chunk_size=chunk_size,
+        max_chunk_bytes=max_chunk_bytes,
+        raise_on_error=raise_on_error,
+        raise_on_exception=raise_on_exception,
+        queue_size=queue_size,
+    ):
+        pass
+
+
 @mgp.read_proc
 def connect(
     elastic_url: str, ca_certs: str, elastic_user: str, elastic_password
@@ -217,11 +232,10 @@ def connect(
         mgp.Record(connection_status=mgp.Map): Connection info.
     """
     global client
-    client = ElasticSearchClient(
-        elastic_url,
-        ca_certs,
-        elastic_user,
-        elastic_password,
+    client = elasticsearch.Elasticsearch(
+        hosts=elastic_url,
+        ca_certs=ca_certs,
+        basic_auth=(elastic_user, elastic_password),
     )
     logger.info(f"Client info: {client.info()}")
     return mgp.Record(connection_status=dict(client.info()))
@@ -277,7 +291,7 @@ def create_index(
                 ANALYZER
             ] = schema_parameters[ANALYZER]
         logger.info(f"Analyzer set to: {schema_parameters[ANALYZER]}")
-
+    logger.info(f"Schema dict: {schema_json}")
     return mgp.Record(
         response=dict(
             client.indices.create(index=index_name, body=schema_json, ignore=400)
@@ -290,6 +304,7 @@ def index_db(
     context: mgp.ProcCtx,
     node_index: str,
     edge_index: str,
+    thread_count: int = 1,
     chunk_size: int = 500,
     max_chunk_bytes: int = 104857600,
     raise_on_error: bool = True,
@@ -298,15 +313,13 @@ def index_db(
     initial_backoff: float = 2.0,
     max_backoff: float = 600.0,
     yield_ok: bool = True,
+    queue_size: int = 4,
 ) -> mgp.Record(nodes=mgp.List[mgp.Map], edges=mgp.List[mgp.Map]):
     """The method serializes all vertices and relationships that are in Memgraph DB to an ElasticSearch schema.
     Args:
         context (mgp.ProcCtx): Reference to the executing context.
-        createdObjects (List[Dict[str, Any]]): List of all objects that were created andthen sent as arguments to this method with the help of "create trigger".
-        node_index (str): The name of the node index.
-        edge_index (str): The name of the edge index.
-        number_of_shards (int): A number of shards you want to use in your index.
-        number_of_replicas (int): A number of replicas you want to use in your index.
+        node_index (str): The name of the node index. Can be used for both streaming and parallel bulk.
+        edge_index (str): The name of the edge index. Can be used for both streaming and parallel bulk.
         chunk_size (int): The number of docs in one chunk sent to es (default: 500).
         max_chunk_bytes (int): The maximum size of the request in bytes (default: 100MB).
         raise_on_error (bool): Raise BulkIndexError containing errors (as .errors) from the execution of the last chunk when some occur. By default we raise.
@@ -315,40 +328,67 @@ def index_db(
         initial_backoff (float): The number of seconds we should wait before the first retry. Any subsequent retries will be powers of initial_backoff * 2**retry_number.
         max_backoff (float): The maximum number of seconds a retry will wait.
         yield_ok (float): If set to False will skip successful documents in the output.
+        thread_count (int): Size of the threadpool to use for the bulk requests.
+        queue_size (int): Size of the task queue between the main thread (producing chunks to send) and the processing threads.
     Returns:
         mgp.Record(): Returns JSON of all nodes and edges.
     """
     # Now create iterable of documents that need to be indexed
     nodes, edges = generate_documents_from_db(context)
 
-    # Send nodes on indexing
-    logger.info("Indexing vertices...")
-    elastic_search_streaming_bulk(
-        nodes,
-        node_index,
-        chunk_size,
-        max_chunk_bytes,
-        raise_on_error,
-        raise_on_exception,
-        max_retries,
-        initial_backoff,
-        max_backoff,
-        yield_ok,
-    )
-    # Send edges on indexing
-    logger.info("Indexing edges...")
-    elastic_search_streaming_bulk(
-        edges,
-        edge_index,
-        chunk_size,
-        max_chunk_bytes,
-        raise_on_error,
-        raise_on_exception,
-        max_retries,
-        initial_backoff,
-        max_backoff,
-        yield_ok,
-    )
+    if thread_count < 1:
+        raise ValueError("Number of threads must be positive number. ")
+    elif thread_count == 1:
+        # Use streaming bulk
+        # Send nodes on indexing
+        elastic_search_streaming_bulk(
+            nodes,
+            node_index,
+            chunk_size,
+            max_chunk_bytes,
+            raise_on_error,
+            raise_on_exception,
+            max_retries,
+            initial_backoff,
+            max_backoff,
+            yield_ok,
+        )
+        # Send edges on indexing
+        elastic_search_streaming_bulk(
+            edges,
+            edge_index,
+            chunk_size,
+            max_chunk_bytes,
+            raise_on_error,
+            raise_on_exception,
+            max_retries,
+            initial_backoff,
+            max_backoff,
+            yield_ok,
+        )
+    else:
+        # Send nodes on indexing
+        elastic_search_parallel_bulk(
+            nodes,
+            node_index,
+            thread_count,
+            chunk_size,
+            max_chunk_bytes,
+            raise_on_error,
+            raise_on_exception,
+            queue_size,
+        )
+        elastic_search_parallel_bulk(
+            edges,
+            edge_index,
+            thread_count,
+            chunk_size,
+            max_chunk_bytes,
+            raise_on_error,
+            raise_on_exception,
+            queue_size,
+        )
+
     return mgp.Record(nodes=nodes, edges=edges)
 
 
@@ -358,6 +398,7 @@ def index(
     createdObjects: mgp.List[mgp.Map],
     node_index: str,
     edge_index: str,
+    thread_count: int = 1,
     chunk_size: int = 500,
     max_chunk_bytes: int = 104857600,
     raise_on_error: bool = True,
@@ -366,6 +407,7 @@ def index(
     initial_backoff: float = 2.0,
     max_backoff: float = 600.0,
     yield_ok: bool = True,
+    queue_size: int = 4,
 ) -> mgp.Record(nodes=mgp.List[mgp.Map], edges=mgp.List[mgp.Map]):
     """The method serializes all vertices and relationships that came into the Memgraph DB to an ElasticSearch schema and sends streaming_bulk request to ElasticSearch's API.
     Args:
@@ -373,8 +415,6 @@ def index(
         createdObjects (List[Dict[str, Any]]): List of all objects that were created andthen sent as arguments to this method with the help of "create trigger".
         node_index (str): The name of the node index.
         edge_index (str): The name of the edge index.
-        number_of_shards (int): A number of shards you want to use in your index.
-        number_of_replicas (int): A number of replicas you want to use in your index.
         chunk_size (int): The number of docs in one chunk sent to es (default: 500).
         max_chunk_bytes (int): The maximum size of the request in bytes (default: 100MB).
         raise_on_error (bool): Raise BulkIndexError containing errors (as .errors) from the execution of the last chunk when some occur. By default we raise.
@@ -383,40 +423,65 @@ def index(
         initial_backoff (float): The number of seconds we should wait before the first retry. Any subsequent retries will be powers of initial_backoff * 2**retry_number.
         max_backoff (float): The maximum number of seconds a retry will wait.
         yield_ok (float): If set to False will skip successful documents in the output.
+        thread_count (int): Size of the threadpool to use for the bulk requests.
+        queue_size (int): Size of the task queue between the main thread (producing chunks to send) and the processing threads.
     Returns:
-        mgp.Record(): Returns JSON of all nodes and edges.
+        mgp.Record(): Returns JSON representation of all nodes and edges.
     """
     # Now create iterable of documents that need to be indexed
     nodes, edges = generate_documents_from_triggered_objects(createdObjects)
 
-    # Send nodes on indexing
-    logger.info("Indexing vertices...")
-    elastic_search_streaming_bulk(
-        nodes,
-        node_index,
-        chunk_size,
-        max_chunk_bytes,
-        raise_on_error,
-        raise_on_exception,
-        max_retries,
-        initial_backoff,
-        max_backoff,
-        yield_ok,
-    )
-    # Send edges on indexing
-    logger.info("Indexing edges...")
-    elastic_search_streaming_bulk(
-        edges,
-        edge_index,
-        chunk_size,
-        max_chunk_bytes,
-        raise_on_error,
-        raise_on_exception,
-        max_retries,
-        initial_backoff,
-        max_backoff,
-        yield_ok,
-    )
+    if thread_count < 1:
+        raise ValueError("Number of threads must be positive number. ")
+    elif thread_count == 1:
+        # Send nodes on indexing
+        elastic_search_streaming_bulk(
+            nodes,
+            node_index,
+            chunk_size,
+            max_chunk_bytes,
+            raise_on_error,
+            raise_on_exception,
+            max_retries,
+            initial_backoff,
+            max_backoff,
+            yield_ok,
+        )
+        # Send edges on indexing
+        elastic_search_streaming_bulk(
+            edges,
+            edge_index,
+            chunk_size,
+            max_chunk_bytes,
+            raise_on_error,
+            raise_on_exception,
+            max_retries,
+            initial_backoff,
+            max_backoff,
+            yield_ok,
+        )
+    else:
+        # Send nodes on indexing
+        elastic_search_parallel_bulk(
+            nodes,
+            node_index,
+            thread_count,
+            chunk_size,
+            max_chunk_bytes,
+            raise_on_error,
+            raise_on_exception,
+            queue_size,
+        )
+        elastic_search_parallel_bulk(
+            edges,
+            edge_index,
+            thread_count,
+            chunk_size,
+            max_chunk_bytes,
+            raise_on_error,
+            raise_on_exception,
+            queue_size,
+        )
     return mgp.Record(nodes=nodes, edges=edges)
 
 
