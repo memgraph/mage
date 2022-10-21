@@ -10,6 +10,7 @@
 #include <unordered_set>
 
 #include "mg_graph.hpp"
+#include "_mgp.hpp"
 #include "mgp.hpp"
 
 namespace mg_graph {
