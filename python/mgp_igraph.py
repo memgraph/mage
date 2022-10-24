@@ -27,17 +27,13 @@ class MemgraphIgraph(igraph.Graph):
         self,
         weights: str,
         directed: bool,
-        niter: int,
         damping: float,
-        eps: float,
         implementation: str,
     ) -> List[Tuple[mgp.Vertex, float]]:
         pagerank_values = super().pagerank(
             weights=weights,
             directed=directed,
-            niter=niter,
             damping=damping,
-            eps=eps,
             implementation=implementation,
         )
 
@@ -60,7 +56,6 @@ class MemgraphIgraph(igraph.Graph):
 
     def topological_sort(self, mode: str) -> List[mgp.Vertex]:
         sorted_vertex_ids = super().topological_sorting(mode=mode)
-
         return self._convert_vertex_ids_to_mgp_vertices(sorted_vertex_ids)
 
     def community_leiden(
@@ -122,14 +117,19 @@ class MemgraphIgraph(igraph.Graph):
     def shortest_path_length(
         self, source: mgp.Vertex, target: mgp.Vertex, weights: str
     ) -> float:
-        return super().shortest_paths(
+        length = super().distances(
             source=self.id_mappings[source.id],
             target=self.id_mappings[target.id],
             weights=weights,
         )[0][0]
 
+        if str(length) == "inf":
+            return -1.0
+        else:
+            return float(length)
+
     def all_shortest_path_lengths(self, weights: str) -> List[List[float]]:
-        return super().shortest_paths(
+        return super().distances(
             weights=weights,
         )
 
@@ -231,7 +231,6 @@ class MemgraphIgraph(igraph.Graph):
 class PageRankImplementationOptions(enum.Enum):
     PRPACK = "prpack"
     ARPACK = "arpack"
-    POWER = "power"
 
 
 class InvalidPageRankImplementationOption(Exception):
@@ -244,4 +243,17 @@ class TopologicalSortingModes(enum.Enum):
 
 
 class InvalidTopologicalSortingModeException(Exception):
+    pass
+
+
+class CommunityDetectionObjectiveFunctionOptions(enum.Enum):
+    CPM = "CPM"
+    MODULARITY = "modularity"
+
+
+class InvalidCommunityDetectionObjectiveFunctionException(Exception):
+    pass
+
+
+class TopologicalSortException(Exception):
     pass

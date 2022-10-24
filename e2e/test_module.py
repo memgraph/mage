@@ -69,11 +69,17 @@ def prepare_tests():
                         continue
 
                     tests.append(
-                        pytest.param(test_dir, id=f"{module_test_dir.stem}-{test_or_group_dir.stem}-{test_dir.stem}")
+                        pytest.param(
+                            test_dir,
+                            id=f"{module_test_dir.stem}-{test_or_group_dir.stem}-{test_dir.stem}",
+                        )
                     )
             else:
                 tests.append(
-                    pytest.param(test_or_group_dir, id=f"{module_test_dir.stem}-{test_or_group_dir.stem}")
+                    pytest.param(
+                        test_or_group_dir,
+                        id=f"{module_test_dir.stem}-{test_or_group_dir.stem}",
+                    )
                 )
     return tests
 

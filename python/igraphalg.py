@@ -1,3 +1,4 @@
+from warnings import catch_warnings
 from typing import List
 
 import mgp
@@ -8,6 +9,8 @@ from mgp_igraph import (
     MemgraphIgraph,
     PageRankImplementationOptions,
     TopologicalSortingModes,
+    CommunityDetectionObjectiveFunctionOptions,
+    InvalidCommunityDetectionObjectiveFunctionException,
 )
 
 
@@ -29,8 +32,6 @@ def maxflow(
 def pagerank(
     ctx: mgp.ProcCtx,
     damping: mgp.Number = 0.85,
-    niter: int = 100,
-    eps: mgp.Number = 1e-06,
     weights: mgp.Nullable[str] = None,
     directed: bool = True,
     implementation: str = "prpack",
@@ -38,18 +39,15 @@ def pagerank(
     if implementation not in [
         PageRankImplementationOptions.PRPACK.value,
         PageRankImplementationOptions.ARPACK.value,
-        PageRankImplementationOptions.POWER.value,
     ]:
         raise InvalidPageRankImplementationOption(
-            'Implementation argument value can be "prpack", "arpack" or "power".'
+            'Implementation argument value can be "prpack" or "arpack"'
         )
     graph = MemgraphIgraph(ctx=ctx, directed=directed)
     pagerank_values = graph.pagerank(
         weights=weights,
         directed=directed,
-        niter=niter,
         damping=damping,
-        eps=eps,
         implementation=implementation,
     )
 
@@ -77,10 +75,11 @@ def mincut(
     source: mgp.Vertex,
     target: mgp.Vertex,
     capacity: mgp.Nullable[str] = None,
+    directed: bool = True,
 ) -> mgp.Record(node=mgp.Vertex, partition_id=int):
-    graph = MemgraphIgraph(ctx=ctx, directed=True)
+    graph = MemgraphIgraph(ctx=ctx, directed=directed)
 
-    partition_vertices, value = graph.mincut(
+    partition_vertices, _ = graph.mincut(
         source=source, target=target, capacity=capacity
     )
 
@@ -92,7 +91,7 @@ def mincut(
 
 
 @mgp.read_proc
-def topological_sorting(
+def topological_sort(
     ctx: mgp.ProcCtx, mode: str = "out"
 ) -> mgp.Record(nodes=mgp.List[mgp.Vertex]):
 
@@ -119,14 +118,19 @@ def community_leiden(
     weights: mgp.Nullable[str] = None,
     resolution_parameter: float = 1.0,
     beta: float = 0.01,
-    initial_membership: mgp.Nullable[
-        List[mgp.Nullable[List[mgp.Nullable[float]]]]
-    ] = None,
+    initial_membership: mgp.Nullable[mgp.Nullable[List[mgp.Nullable[int]]]] = None,
     n_iterations: int = 2,
     node_weights: mgp.Nullable[List[mgp.Nullable[float]]] = None,
-    directed: bool = False,
 ) -> mgp.Record(node=mgp.Vertex, community_id=int):
-    graph = MemgraphIgraph(ctx=ctx, directed=directed)
+    if objective_function not in [
+        CommunityDetectionObjectiveFunctionOptions.CPM.value,
+        CommunityDetectionObjectiveFunctionOptions.MODULARITY.value,
+    ]:
+        raise InvalidCommunityDetectionObjectiveFunctionException(
+            'Objective function can only be "CPM" or "modularity"'
+        )
+
+    graph = MemgraphIgraph(ctx=ctx, directed=False)
 
     communities = graph.community_leiden(
         resolution_parameter=resolution_parameter,
@@ -149,10 +153,9 @@ def community_leiden(
 
 @mgp.read_proc
 def spanning_tree(
-    ctx: mgp.ProcCtx,
-    weights: mgp.Nullable[str] = None,
+    ctx: mgp.ProcCtx, weights: mgp.Nullable[str] = None, directed: bool = False
 ) -> mgp.Record(tree=List[List[mgp.Vertex]]):
-    graph = MemgraphIgraph(ctx=ctx, directed=False)
+    graph = MemgraphIgraph(ctx=ctx, directed=directed)
 
     return mgp.Record(tree=graph.spanning_tree(weights=weights))
 
@@ -166,7 +169,6 @@ def shortest_path_length(
     directed: bool = True,
 ) -> mgp.Record(length=float):
     graph = MemgraphIgraph(ctx, directed=directed)
-
     return mgp.Record(
         length=graph.shortest_path_length(
             source=source,
@@ -189,10 +191,10 @@ def all_shortest_path_lengths(
         mgp.Record(
             src_node=graph.get_vertex_by_id(i),
             dest_node=graph.get_vertex_by_id(j),
-            length=lengths[i][j],
+            length=float(lengths[i][j]) if str(lengths[i][j]) != "inf" else -1.0,
         )
-        for j in range(len(lengths[0]))
         for i in range(len(lengths))
+        for j in range(len(lengths[i]))
     ]
 
 
