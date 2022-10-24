@@ -140,10 +140,10 @@ def community_leiden(
 
     return [
         mgp.Record(
-            node=member[0],
-            community_id=member[1],
+            node=node,
+            community_id=community_id,
         )
-        for member in communities
+        for node, community_id in communities
     ]
 
 
