@@ -117,16 +117,14 @@ class MemgraphIgraph(igraph.Graph):
     def shortest_path_length(
         self, source: mgp.Vertex, target: mgp.Vertex, weights: str
     ) -> float:
+
         length = super().distances(
             source=self.id_mappings[source.id],
             target=self.id_mappings[target.id],
             weights=weights,
         )[0][0]
 
-        if str(length) == "inf":
-            return -1.0
-        else:
-            return float(length)
+        return float(length) if str(length) != "inf" else -1.0
 
     def all_shortest_path_lengths(self, weights: str) -> List[List[float]]:
         return super().distances(
@@ -136,6 +134,7 @@ class MemgraphIgraph(igraph.Graph):
     def get_shortest_path(
         self, source: mgp.Vertex, target: mgp.Vertex, weights: str
     ) -> List[mgp.Vertex]:
+
         path = super().get_shortest_paths(
             v=self.id_mappings[source.id],
             to=self.id_mappings[target.id],

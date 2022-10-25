@@ -1,5 +1,5 @@
-from warnings import catch_warnings
-from typing import List
+from collections import defaultdict
+from typing import Dict, List
 
 import mgp
 
@@ -8,6 +8,7 @@ from mgp_igraph import (
     InvalidPageRankImplementationOption,
     MemgraphIgraph,
     PageRankImplementationOptions,
+    TopologicalSortException,
     TopologicalSortingModes,
     CommunityDetectionObjectiveFunctionOptions,
     InvalidCommunityDetectionObjectiveFunctionException,
@@ -101,6 +102,10 @@ def topological_sort(
     ]:
         raise InvalidTopologicalSortingModeException(
             'Mode can only be either "out" or "in"'
+        )
+    if contains_cycle(ctx):
+        raise TopologicalSortException(
+            "Topological sort can't be performed on graph that contains cycle!"
         )
 
     graph = MemgraphIgraph(ctx=ctx, directed=True)
@@ -211,3 +216,48 @@ def get_shortest_path(
     return mgp.Record(
         path=graph.get_shortest_path(source=source, target=target, weights=weights)
     )
+
+
+def dfs(node: mgp.Vertex, visited: Dict[int, bool], stack: Dict[int, bool]) -> bool:
+    """Depth-first-search algorithm with modification.
+
+    Args:
+        node (mgp.Vertex): Current node.
+        visited (Dict[int,bool]): Dictionary with all nodes id that we visited.
+        stack (Dict[int,bool]): Dictionary with nodes id that we encountered while traversing a node.
+
+    Returns:
+        bool: True if there is cycle else False.
+    """
+
+    visited[node.id] = True
+    stack[node.id] = True
+
+    for edge in node.out_edges:
+        neighbour = edge.to_vertex
+        if not visited[neighbour.id]:
+            if dfs(neighbour, visited, stack):
+                return True
+        elif stack[neighbour.id]:
+            return True
+
+    stack[node.id] = False
+    return False
+
+
+def contains_cycle(ctx: mgp.ProcCtx) -> bool:
+    """Method for checking if graph contains a cycle.
+
+    Args:
+        ctx (mgp.ProcCtx): Graph
+
+    Returns:
+        bool: True if there is cycle else False
+    """
+
+    visited, stack = defaultdict(bool), defaultdict(bool)
+    for node in ctx.graph.vertices:
+        if not visited[node.id]:
+            if dfs(node, visited, stack):
+                return True
+    return False
