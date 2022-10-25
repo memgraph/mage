@@ -12,10 +12,10 @@ output:
     length: 11.0  
     src_node_id: 0 
   - dest_node_id: 4 
-    length: -1.0 
+    length: inf 
     src_node_id: 0
   - dest_node_id: 5 
-    length: -1.0  
+    length: inf  
     src_node_id: 0
   - dest_node_id: 0 
     length: 0.0  
@@ -30,19 +30,19 @@ output:
     length: 5.0  
     src_node_id: 1
   - dest_node_id: 4 
-    length: -1.0  
+    length: inf  
     src_node_id: 1
   - dest_node_id: 5 
-    length: -1.0  
+    length: inf  
     src_node_id: 1
   - dest_node_id: 3 
     length: 0.0  
     src_node_id: 3
   - dest_node_id: 5 
-    length: -1.0  
+    length: inf  
     src_node_id: 3
   - dest_node_id: 4 
-    length: -1.0  
+    length: inf  
     src_node_id: 3
   - dest_node_id: 1 
     length: 5.0  
@@ -51,13 +51,13 @@ output:
     length: 11.0  
     src_node_id: 3
   - dest_node_id: 0 
-    length: -1.0  
+    length: inf  
     src_node_id: 4
   - dest_node_id: 1 
-    length: -1.0  
+    length: inf  
     src_node_id: 4
   - dest_node_id: 3 
-    length: -1.0  
+    length: inf  
     src_node_id: 4
   - dest_node_id: 4 
     length: 0.0  
@@ -66,13 +66,13 @@ output:
     length: 7.0  
     src_node_id: 4 
   - dest_node_id: 0 
-    length: -1.0  
+    length: inf  
     src_node_id: 5
   - dest_node_id: 1 
-    length: -1.0  
+    length: inf 
     src_node_id: 5
   - dest_node_id: 3 
-    length: -1.0  
+    length: inf
     src_node_id: 5
   - dest_node_id: 4 
     length: 7.0  

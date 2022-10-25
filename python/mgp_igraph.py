@@ -124,7 +124,7 @@ class MemgraphIgraph(igraph.Graph):
             weights=weights,
         )[0][0]
 
-        return float(length) if str(length) != "inf" else -1.0
+        return float(length)
 
     def all_shortest_path_lengths(self, weights: str) -> List[List[float]]:
         return super().distances(
