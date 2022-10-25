@@ -196,7 +196,7 @@ def all_shortest_path_lengths(
         mgp.Record(
             src_node=graph.get_vertex_by_id(i),
             dest_node=graph.get_vertex_by_id(j),
-            length=float(lengths[i][j])
+            length=float(lengths[i][j]),
         )
         for i in range(len(lengths))
         for j in range(len(lengths[i]))
