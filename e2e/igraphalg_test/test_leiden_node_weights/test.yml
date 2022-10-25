@@ -1,5 +1,5 @@
 query: >
-    CALL igraphalg.community_leiden("CPM",NULL,0.6,0.1,NULL,2,[0.1,0.1,1.0,1.0]) 
+    CALL igraphalg.community_leiden("CPM",NULL,0.5,0.1,NULL,2,[0.1,0.1,1.0,1.0]) 
     YIELD node, community_id
     RETURN node.id as node_id, community_id
     ORDER BY community_id ASC
