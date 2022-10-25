@@ -8,6 +8,7 @@ from elasticsearch.helpers import streaming_bulk, parallel_bulk
 import mgp
 
 
+
 # Elasticsearch constants
 ACTION = "action"
 INDEX = "index"
@@ -64,7 +65,7 @@ def serialize_vertex(vertex: mgp.Vertex) -> Dict[str, Any]:
     """
     source = serialize_properties(vertex.properties.items())
     source[LK_CATEGORIES] = [label.name for label in vertex.labels]
-    return {ACTION: {INDEX: {ID: str(vertex.id)}}, SOURCE: source}
+    return {ACTION: {INDEX: {ID: f"{vertex.id}"}}, SOURCE: source}
 
 
 def serialize_edge(edge: mgp.Edge) -> Dict[str, Any]:
@@ -76,7 +77,7 @@ def serialize_edge(edge: mgp.Edge) -> Dict[str, Any]:
     """
     source = serialize_properties(edge.properties.items())
     source[LK_TYPE] = edge.type.name
-    return {ACTION: {INDEX: {ID: str(edge.id)}}, SOURCE: source}
+    return {ACTION: {INDEX: {ID: f"{edge.id}"}}, SOURCE: source}
 
 
 def serialize_properties(properties: Dict[str, Any]) -> Dict[str, Any]:
@@ -97,7 +98,7 @@ def serialize_properties(properties: Dict[str, Any]) -> Dict[str, Any]:
     return source
 
 
-def generate_document(context_object):
+def generate_document(context_object: Any) -> Tuple[Dict[str, Any], str]:
     if context_object[EVENT_TYPE] == CREATED_VERTEX:
         return serialize_vertex(context_object[VERTEX]), VERTEX
     elif context_object[EVENT_TYPE] == CREATED_EDGE:
