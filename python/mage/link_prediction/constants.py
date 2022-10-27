@@ -1,8 +1,20 @@
-from dataclasses import dataclass
+from enum import Enum, EnumMeta
 
 
-@dataclass
-class Metrics:
+class MetaEnum(EnumMeta):
+    def __contains__(cls, item):
+        try:
+            cls(item)
+        except ValueError:
+            return False
+        return True
+
+
+class BaseEnum(str, Enum, metaclass=MetaEnum):
+    pass
+
+
+class Metrics(BaseEnum):
     LOSS = "loss"
     ACCURACY = "accuracy"
     AUC_SCORE = "auc_score"
@@ -20,59 +32,50 @@ class Metrics:
     FALSE_NEGATIVES = "false_negatives"
 
 
-@dataclass
-class Predictors:
+class Predictors(BaseEnum):
     NODE_EMBEDDINGS = "node_embeddings"
     EDGE_SCORE = "edge_score"
     DOT_PREDICTOR = "dot"
     MLP_PREDICTOR = "mlp"
 
 
-@dataclass
-class Reindex:
+class Reindex(BaseEnum):
     DGL = "dgl"  # DGL to Memgraph indexes
     MEMGRAPH = "memgraph"  # Memgraph to DGL indexes
 
 
-@dataclass
-class Context:
+class Context(BaseEnum):
     MODEL_NAME = "model.pt"
     PREDICTOR_NAME = "predictor.pt"
 
 
-@dataclass
-class Models:
+class Models(BaseEnum):
     GRAPH_SAGE = "graph_sage"
     GRAPH_ATTN = "graph_attn"
 
 
-@dataclass
-class Optimizers:
+class Optimizers(BaseEnum):
     ADAM_OPT = "ADAM"
     SGD_OPT = "SGD"
 
 
-@dataclass
-class Devices:
+class Devices(BaseEnum):
     CUDA_DEVICE = "cuda"
     CPU_DEVICE = "cpu"
 
 
-@dataclass
-class Aggregators:
+class Aggregators(BaseEnum):
     MEAN_AGG = "mean"
     LSTM_AGG = "lstm"
     POOL_AGG = "pool"
     GCN_AGG = "gcn"
 
 
-@dataclass
-class Activations:
+class Activations(BaseEnum):
     SIGMOID = "sigmoid"
 
 
-@dataclass
-class Parameters:
+class Parameters(BaseEnum):
     HIDDEN_FEATURES_SIZE = "hidden_features_size"
     LAYER_TYPE = "layer_type"
     NUM_EPOCHS = "num_epochs"

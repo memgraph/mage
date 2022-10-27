@@ -141,6 +141,11 @@ labels_concat = (
 )
 device = None  # reference to the device where the model will be executed, CPU or CUDA
 
+feat_drop_rate = 0.09164
+attn_drop_rate = 0.09164
+alpha_rate = 0.512857
+res_def = True
+
 # Lambda function to concat list of labels
 merge_labels: Callable[[List[mgp.Label]], str] = lambda labels: labels_concat.join(
     [label.name for label in labels]
@@ -154,7 +159,7 @@ merge_labels: Callable[[List[mgp.Label]], str] = lambda labels: labels_concat.jo
 @mgp.read_proc
 def set_model_parameters(
     ctx: mgp.ProcCtx, parameters: mgp.Map
-) -> mgp.Record(status=mgp.Any, message=str):
+) -> mgp.Record(status=bool, message=str):
     """Saves parameters to the global parameters link_prediction_parameters. Specific parsing is needed because we want enable user to call it with a subset of parameters, no need to send them all.
     We will use some kind of reflection to most easily update parameters.
 
@@ -225,7 +230,6 @@ def set_model_parameters(
             *(x for x in link_prediction_parameters.attn_num_heads)
         ]
 
-    # TODO: change the documentation
     if device.type == "cuda":
         link_prediction_parameters.sampling_workers = 0
 
@@ -286,10 +290,10 @@ def train(
         hidden_features_size=link_prediction_parameters.hidden_features_size,
         aggregator=link_prediction_parameters.aggregator,
         attn_num_heads=link_prediction_parameters.attn_num_heads,
-        feat_drops=[0.09164 for _ in range(num_layers)],
-        attn_drops=[0.09164 for _ in range(num_layers)],
-        alphas=[0.512857 for _ in range(num_layers)],
-        residuals=[True for _ in range(num_layers)],
+        feat_drops=[feat_drop_rate for _ in range(num_layers)],
+        attn_drops=[attn_drop_rate for _ in range(num_layers)],
+        alphas=[alpha_rate for _ in range(num_layers)],
+        residuals=[res_def for _ in range(num_layers)],
         edge_types=graph.etypes,
         device=device,
     )
@@ -446,8 +450,6 @@ def predict(
     if edge_added:
         graph.remove_edges(edge_id, etype=link_prediction_parameters.target_relation)
 
-    # print("Number of edges after: ", graph.number_of_edges())
-
     return result
 
 
@@ -550,7 +552,6 @@ def recommended_vertex(  # noqa: C901
             src_id, dest_id, etype=link_prediction_parameters.target_relation
         ):
             edge_added = True
-            # print("Nodes {} and {} are not connected. ".format(src_old_id, dest_old_id))
             graph.add_edges(
                 src_id, dest_id, etype=link_prediction_parameters.target_relation
             )
@@ -746,7 +747,7 @@ def _process_help_function(
         if type(features) == str:
             index_dgl_to_features[type_][ind] = eval(
                 features
-            )  # Save new to features relationship. TODO: Remove that when we done with Cypher converting from String to List
+            )  # Save new to features relationship.
         else:
             index_dgl_to_features[type_][ind] = features
 
@@ -796,15 +797,9 @@ def _get_dgl_graph_data(
         )
 
         # Find if the node is disconnected from the rest of the graph
-        src_isolated_node = True
-        for _ in vertex.in_edges:  # Check incoming edges first
-            src_isolated_node = False
-            break
-
-        if src_isolated_node:
-            for _ in vertex.out_edges:  # Then check outgoing edges
-                src_isolated_node = False
-                break
+        src_isolated_node = not (
+            any(True for _ in vertex.in_edges) or any(True for _ in vertex.out_edges)
+        )
 
         # If it isn't isolated node than map all indexes. Must be done before iterating over outgoing edges.
         if not src_isolated_node:
@@ -993,9 +988,7 @@ def _conversion_to_dgl_test(
 
             # Get features, check if they are given as string
             if type(vertex.properties.get(node_features_property)) == str:
-                old_features = eval(
-                    vertex.properties.get(node_features_property)
-                )  # TODO: After dealing with Cypher modules
+                old_features = eval(vertex.properties.get(node_features_property))
             else:
                 old_features = vertex.properties.get(node_features_property)
 
@@ -1125,7 +1118,7 @@ def validate_user_parameters(parameters: mgp.Map) -> None:  # noqa: C901
         # Check typing
         type_checker(device_type, "device_type must be a string. ", str)
 
-        if device_type != Devices.CPU_DEVICE and device_type != Devices.CUDA_DEVICE:
+        if device_type not in Devices:
             raise Exception("Only cpu and cuda are supported as devices. ")
 
     # console_log_freq check
@@ -1155,12 +1148,7 @@ def validate_user_parameters(parameters: mgp.Map) -> None:  # noqa: C901
         # Check typing
         type_checker(aggregator, "aggregator must be a string. ", str)
 
-        if (
-            aggregator != Aggregators.MEAN_AGG
-            and aggregator != Aggregators.LSTM_AGG
-            and aggregator != Aggregators.POOL_AGG
-            and aggregator != Aggregators.GCN_AGG
-        ):
+        if aggregator not in Aggregators:
             raise Exception(
                 "Aggregator must be one of the following: mean, pool, lstm or gcn. "
             )
@@ -1173,24 +1161,8 @@ def validate_user_parameters(parameters: mgp.Map) -> None:  # noqa: C901
         type_checker(metrics, "metrics must be an iterable object. ", tuple)
 
         for metric in metrics:
-            _metric = metric.lower()
-            if (
-                _metric != Metrics.LOSS
-                and _metric != Metrics.ACCURACY
-                and _metric != Metrics.F1
-                and _metric != Metrics.AUC_SCORE
-                and _metric != Metrics.PRECISION
-                and _metric != Metrics.RECALL
-                and _metric != Metrics.POS_EXAMPLES
-                and _metric != Metrics.NEG_EXAMPLES
-                and _metric != Metrics.POS_PRED_EXAMPLES
-                and _metric != Metrics.NEG_PRED_EXAMPLES
-                and _metric != Metrics.TRUE_POSITIVES
-                and _metric != Metrics.FALSE_POSITIVES
-                and _metric != Metrics.TRUE_NEGATIVES
-                and _metric != Metrics.FALSE_NEGATIVES
-            ):
-                raise Exception("Metric name " + _metric + " is not supported!")
+            if metric.lower() not in Metrics:
+                raise Exception("Metric name " + metric + " is not supported!")
 
     # Predictor type
     if Parameters.PREDICTOR_TYPE in parameters.keys():
@@ -1199,10 +1171,7 @@ def validate_user_parameters(parameters: mgp.Map) -> None:  # noqa: C901
         # Check typing
         type_checker(predictor_type, "predictor_type must be a string. ", str)
 
-        if (
-            predictor_type != Predictors.DOT_PREDICTOR
-            and predictor_type != Predictors.MLP_PREDICTOR
-        ):
+        if predictor_type not in Predictors:
             raise Exception("Predictor " + predictor_type + " is not supported. ")
 
     # Attention heads

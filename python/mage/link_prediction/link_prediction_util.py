@@ -44,7 +44,6 @@ def add_self_loop(g: dgl.heterograph, self_loop_edge_type: str) -> dgl.heterogra
 
     # Add self etypes
     device = g.device
-    print(f"Device when copying the heterograph instance: {device}")
     idtype = g.idtype
     for ntype in g.ntypes:
         nids = torch.arange(
@@ -164,8 +163,6 @@ def evaluate(
         labels (torch.tensor): Predefined labels.
         probs (torch.tensor): Probabilities of src_nodes = blocks[0].srcdata[dgl.NID]
     dst_nodes = blocks[0].dstdata[dgl.NID]
-    print(f"Src nodes: {src_nodes}")
-    print(f"Dest nodes: {dst_nodes}")hreshold. 0.5 for sigmoid etc.
     Returns:
         Dict[str, float]: Metrics embedded in dictionary -> name-value shape
     """
@@ -260,8 +257,6 @@ def batch_forward_pass(
          Tuple[torch.Tensor, torch.Tensor, torch.nn.Module]: First tensor are calculated probabilities, second tensor are true labels and the last tensor
             is a reference to the loss.
     """
-    # print(f"Pos graph: {pos_graph}")
-    # print(f"Neg graph: {neg_graph}")
     outputs = model.forward(blocks, input_features)
     # Deal with edge scores
     pos_score = predictor.forward(pos_graph, outputs, target_relation=target_relation)
@@ -352,13 +347,10 @@ def inner_train(
         and reverse_target_relation not in graph.canonical_etypes
     ):
         # same source and destination node
-        print(f"Self batch handling")
-
         sampler = dgl.dataloading.as_edge_prediction_sampler(
             sampler, negative_sampler=negative_sampler, exclude="self"
         )
     else:
-        print(f"Reverse batch handling: {reverse_target_relation}")
         reverse_etypes = {
             target_relation: reverse_target_relation,
             reverse_target_relation: target_relation,
@@ -400,12 +392,7 @@ def inner_train(
         num_workers=sampling_workers,  # Number of sampler processes
     )
 
-    print(f"Canonical etypes: {graph.canonical_etypes}")
-
-    # Initialize loss
-    # weights = torch.
     loss = torch.nn.BCELoss()
-    # loss = F.binary_cross_entropy
 
     # Define lambda functions for operating on dictionaries
     add_: Callable[[float, float], float] = lambda prior, later: prior + later
@@ -421,7 +408,6 @@ def inner_train(
     for epoch in range(1, num_epochs + 1):
         # Evaluation epoch
         if epoch % console_log_freq == 0:
-            print("Epoch: ", epoch)
             epoch_training_result = defaultdict(float)
             epoch_validation_result = defaultdict(float)
         # Training batch
@@ -477,7 +463,6 @@ def inner_train(
                 and epoch_training_result[Metrics.ACCURACY] == 1.0
                 and epoch > 1
             ):
-                print("Model reached accuracy of 1.0, exiting...")
                 tr_finished = True
             # Evaluate on the validation set
             model.eval()
@@ -533,7 +518,6 @@ def inner_train(
                         num_val_acc_drop = 0
                     # Stop the training if necessary
                     if num_val_acc_drop == tr_acc_patience:
-                        print("Stopped because of validation criteria. ")
                         break
 
         # Save the model if necessary
@@ -588,7 +572,6 @@ def inner_predict(
     Returns:
         float: Edge score.
     """
-    # TODO: Change so it is incoming parameter(more efficient for recommend)
     graph_features = {
         node_type: graph.nodes[node_type].data[node_features_property]
         for node_type in graph.ntypes
@@ -597,7 +580,5 @@ def inner_predict(
         h = model.online_forward(graph, graph_features)
         src_embedding, dest_embedding = h[src_type][src_node], h[dest_type][dest_node]
         score = predictor.forward_pred(src_embedding, dest_embedding)
-        # print("Scores: ", torch.sum(scores < 0.5).item())
         prob = torch.sigmoid(score)
-        # print("Probability: ", prob.item())
         return prob.item()
