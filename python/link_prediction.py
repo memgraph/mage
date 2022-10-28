@@ -656,7 +656,7 @@ def get_training_results(
     """
     global training_results, validation_results
 
-    if training_results is None or validation_results is None:
+    if not training_results or not validation_results:
         raise Exception("Training results are outdated or train method wasn't called. ")
 
     return mgp.Record(
@@ -945,8 +945,8 @@ def _get_dgl_graph_data(
 def _reset_train_predict_parameters() -> None:
     """Reset global parameters that are returned by train method and used by predict method."""
     global training_results, validation_results, predictor, model, graph, reindex
-    training_results = None  # clear training records from previous training
-    validation_results = None  # clear validation record from previous training
+    training_results = []  # clear training records from previous training
+    validation_results = []  # clear validation record from previous training
     predictor = None  # Delete old predictor and create a new one in link_prediction_util.train method\
     model = None  # Annulate old model
     graph = None  # Set graph to None
