@@ -4,7 +4,7 @@ FROM debian:bullseye as base
 
 USER root
 
-ARG MG_VERSION=2.3.0
+ARG MG_VERSION=2.3.1
 ARG PY_VERSION_DEFAULT
 ENV MG_VERSION ${MG_VERSION}
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     libssl1.1       `memgraph` \
     openssl         `memgraph` \
     build-essential `mage-memgraph` \
+    make            `mage-memgraph` \
     cmake           `mage-memgraph` \
     curl            `mage-memgraph` \
     g++             `mage-memgraph` \
@@ -43,14 +44,16 @@ FROM base as dev
 WORKDIR /mage
 COPY . /mage
 
-
-
 #MAGE
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
     && export PATH="/root/.cargo/bin:${PATH}" \
-    && python3 -m  pip install -r /mage/python/requirements.txt \
-    && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/
+    && python3 -m pip install -r /mage/python/requirements.txt \
+    && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/ 
 
+#DGL build from source
+RUN git clone --recurse-submodules https://github.com/dmlc/dgl.git  \
+    && cd dgl && mkdir build && cd build && cmake .. \
+    && make -j4 && cd ../python && python3 setup.py install
 
 USER memgraph
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
