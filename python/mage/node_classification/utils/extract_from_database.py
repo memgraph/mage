@@ -13,7 +13,8 @@ def nodes_fetching(
     nodes: list, features_name: str, class_name: str, data: HeteroData
 ) -> typing.Tuple[HeteroData, typing.Dict, typing.Dict, str]:
     """
-    This procedure fetches the nodes from the database and returns them in HeteroData object.
+    This procedure fetches the nodes from the database and returns
+    them in HeteroData object.
 
     Args:
         nodes: The list of nodes from the database.
@@ -25,16 +26,20 @@ def nodes_fetching(
         Tuple of (HeteroData, reindexing, inv_reindexing, observed_attribute).
     """
 
-    node_types = []  # variable for storing node types
-    embedding_lengths = defaultdict(int)  # variable for storing embedding lengths
-    observed_attribute = None  # variable for storing observed attribute
+    # variable for storing node types
+    node_types = []
+    # variable for storing embedding lengths
+    embedding_lengths = defaultdict(int)
+    # variable for storing observed attribute
+    observed_attribute = None
 
     for node in nodes:
 
         if features_name not in node.properties:
             continue  # if features are not available, skip the node
 
-        # add node type to list of node types (concatenate them if there are more than 1 label)
+        # add node type to list of node types
+        # (concatenate them if there are more than 1 label)
         if len(node.labels) == 0:
             raise Exception(f"Node {node.id} has no labels.")
 
@@ -92,11 +97,11 @@ def nodes_fetching(
 
         if len(node.labels) == 0:
             raise Exception(f"Node {node.id} has no labels.")
-    
+
         node_type = node_type = "_".join(
             node.labels[i].name for i in range(len(node.labels))
         )
-       
+
         # add feature vector from database to tensor
         # it is checked at the start of the loop if features are available
         data[node_type].x[append_counter[node_type]] = np.add(

@@ -1,6 +1,6 @@
 import torch
 import mgp
-from torchmetrics import ConfusionMatrix, Accuracy, AUC, Precision, Recall, F1Score
+from torchmetrics import Accuracy, AUC, Precision, Recall, F1Score
 from torch_geometric.data import Data
 
 METRICS = {
@@ -46,12 +46,13 @@ def metrics(
 
     for metrics in METRICS.keys():
         if metrics not in options:
-           continue
+            continue
         func = METRICS[metrics](
             num_classes=num_classes,
             multiclass=multiclass,
             average="weighted",
         ).to(device)
-        ret[metrics] = float(func(pred[mask], data.y[mask]).detach().cpu().numpy())
+        data = func(pred[mask], data.y[mask]).detach().cpu().numpy()
+        ret[metrics] = float(data)
 
     return ret
