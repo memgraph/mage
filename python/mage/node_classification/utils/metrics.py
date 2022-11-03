@@ -52,7 +52,6 @@ def metrics(
             multiclass=multiclass,
             average="weighted",
         ).to(device)
-        data = func(pred[mask], data.y[mask]).detach().cpu().numpy()
-        ret[metrics] = float(data)
+        ret[metrics] = float(func(pred[mask], data.y[mask]).detach().cpu().numpy())
 
     return ret
