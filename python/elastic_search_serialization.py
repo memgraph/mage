@@ -8,7 +8,6 @@ from elasticsearch.helpers import streaming_bulk, parallel_bulk
 import mgp
 
 
-
 # Elasticsearch constants
 ACTION = "action"
 INDEX = "index"
@@ -63,9 +62,10 @@ def serialize_vertex(vertex: mgp.Vertex) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: ElasticSearch object representation.
     """
-    source = serialize_properties(vertex.properties.items())
-    source[LK_CATEGORIES] = [label.name for label in vertex.labels]
-    return {ACTION: {INDEX: {ID: f"{vertex.id}"}}, SOURCE: source}
+    doc = serialize_properties(vertex.properties.items())
+    doc[LK_CATEGORIES] = [label.name for label in vertex.labels]
+    doc[INDEX] = {ID: f"{vertex.id}"}
+    return doc
 
 
 def serialize_edge(edge: mgp.Edge) -> Dict[str, Any]:
@@ -75,9 +75,10 @@ def serialize_edge(edge: mgp.Edge) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: ElasticSearch object representation.
     """
-    source = serialize_properties(edge.properties.items())
-    source[LK_TYPE] = edge.type.name
-    return {ACTION: {INDEX: {ID: f"{edge.id}"}}, SOURCE: source}
+    doc = serialize_properties(edge.properties.items())
+    doc[LK_TYPE] = edge.type.name
+    doc[INDEX] = {ID: f"{edge.from_vertex.id}-{edge.id}"}
+    return doc
 
 
 def serialize_properties(properties: Dict[str, Any]) -> Dict[str, Any]:
@@ -521,7 +522,6 @@ def reindex(
             op_type=op_type,
         )
     )
-    logger.info("Reindexing finished")
     return mgp.Record(response=response)
 
 
@@ -563,4 +563,10 @@ def scan(
         request_timeout=request_timeout,
         clear_scroll=clear_scroll,
     )
-    return mgp.Record(items=[item for item in response])
+    items = []
+    for item in response:
+        item[ID] = item["_source"][INDEX][ID]
+        item["_source"].pop(INDEX, None)
+        items.append(item)
+
+    return mgp.Record(items=items)
