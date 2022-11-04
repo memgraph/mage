@@ -241,10 +241,7 @@ def declare_model(data: mgp.Any):
             "You didn't choose one of currently available models (GAT, GATv2, GATJK and SAGE). Please choose one of them."
         )
 
-    if layer_type == GAT_WITH_JK:
-        args = args_gatjk
-    else:
-        args = args_inductive
+    args = args_gatjk if layer_type == GAT_WITH_JK else args_inductive
 
     model = MODELS[layer_type](*args)
 
@@ -453,7 +450,7 @@ def save_model_to_folder() -> str:
 
 @mgp.read_proc
 def train(
-    ctx: mgp.ProcCtx, no_epochs: int = 100
+    ctx: mgp.ProcCtx, num_epochs: int = 100
 ) -> mgp.Record(
     epoch=int, loss=float, val_loss=float, train_log=mgp.Any, val_log=mgp.Any
 ):
@@ -462,7 +459,7 @@ def train(
 
     Args:
         ctx (mgp.ProcCtx): context of process
-        no_epochs (int, optional): number of epochs. Defaults to 100.
+        num_epochs (int, optional): number of epochs. Defaults to 100.
 
     Raises:
         Exception: raised if graph is empty
@@ -475,7 +472,7 @@ def train(
         train_log (list): list of metrics on training data
         val_log (list): list of metrics on validation data
     """
-    global model, current_values
+    global model, current_values, logged_data
 
     # define fresh data
     data = declare_data(ctx)
@@ -483,7 +480,7 @@ def train(
     # define model
     opt, criterion = declare_model(data)
 
-    current_values[TrainParams.NUM_EPOCHS] = no_epochs
+    current_values[TrainParams.NUM_EPOCHS] = num_epochs
     num_nodes_sample = current_values[HeteroParams.NUM_NODES_SAMPLE]
     num_iterations_sample = current_values[HeteroParams.NUM_ITERATIONS_SAMPLE]
 
@@ -492,7 +489,7 @@ def train(
     trigger_times = 0
     last_time = time()
     # training
-    for epoch in tqdm(range(1, no_epochs + 1)):
+    for epoch in tqdm(range(1, num_epochs + 1)):
         # one epoch of training, both training and validation loss are returned
         loss, val_loss = train_epoch(
             model,
@@ -510,9 +507,22 @@ def train(
         # early stopping
         if val_loss > last_loss:
             trigger_times += 1
-            print(
-                f"Loss has dropped for {trigger_times} time(s). Stopping after {current_values[OtherParams.PATIENCE] - trigger_times} more drops."
+
+            drop_epochs = (
+                str(trigger_times)
+                + " "
+                + ("consecutive epochs" if trigger_times > 1 else "consecutive epoch")
             )
+
+            times_until_stopping = current_values[OtherParams.PATIENCE] - trigger_times
+
+            stop_after = (
+                str(times_until_stopping)
+                + " "
+                + ("more drops" if times_until_stopping > 1 else "more drop")
+            )
+
+            print(f"Loss has dropped for {drop_epochs}. Stopping after {stop_after}.")
 
             if trigger_times >= current_values[OtherParams.PATIENCE]:
                 print("Early stopping!")
@@ -522,8 +532,6 @@ def train(
             trigger_times = 0
 
         last_loss = val_loss
-
-        global logged_data
 
         # log data every console_log_freq epochs
         if epoch % current_values[TrainParams.CONSOLE_LOG_FREQ] == 0:
@@ -556,7 +564,8 @@ def train(
             )
 
             print(
-                f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Val Loss: {val_loss:.4f}, Accuracy: {logged_data[-1]["train"]["accuracy"]:.4f}, Accuracy: {logged_data[-1]["val"]["accuracy"]:.4f}'
+                f"Epoch: {epoch:03d}, Loss: {loss:.4f}, Val Loss: {val_loss:.4f},"
+                + f'Accuracy: {logged_data[-1]["train"]["accuracy"]:.4f}, Accuracy: {logged_data[-1]["val"]["accuracy"]:.4f}'
             )
 
         # save model every checkpoint_freq epochs
@@ -606,13 +615,13 @@ def get_training_data() -> mgp.Record(
 
     return [
         mgp.Record(
-            epoch=logged_data[k]["epoch"],
-            loss=logged_data[k]["loss"],
-            val_loss=logged_data[k]["val_loss"],
-            train_log=logged_data[k]["train"],
-            val_log=logged_data[k]["val"],
+            epoch=data["epoch"],
+            loss=data["loss"],
+            val_loss=data["val_loss"],
+            train_log=data["train"],
+            val_log=data["val"],
         )
-        for k in range(len(logged_data))
+        for data in logged_data
     ]
 
 
@@ -637,7 +646,7 @@ def save_model() -> mgp.Record(path=str, status=str):
 
     if model is None:
         raise Exception(
-            "Saving is not enabled until model is not initialized or loaded."
+            "There are no initialized or loaded models. First load or initialize a model to be able save it."
         )
 
     path_to_saved_model = save_model_to_folder()
@@ -660,7 +669,7 @@ def load_model(ctx: mgp.ProcCtx, num: int = 0) -> mgp.Record(path=str, status=st
     global model
 
     data = declare_data(ctx)
-    _, _ = declare_model(data)
+    declare_model(data)
 
     model_saving_folder, models = fetch_saved_models()
 
@@ -709,7 +718,7 @@ def predict(
     data = declare_data(ctx)
 
     if model is None:
-        raise Exception("You should load model first.")
+        raise Exception("Load a model before predicting.")
 
     model.eval()
     out = model(data.x_dict, data.edge_index_dict)
@@ -741,4 +750,4 @@ def reset() -> mgp.Record(status=str):
     # reinitialize current_values
     current_values = DEFAULT_VALUES
 
-    return mgp.Record(status="Global parameters and logged data have been reseted.")
+    return mgp.Record(status="Global parameters and logged data have been reset")

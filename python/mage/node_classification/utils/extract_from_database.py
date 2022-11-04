@@ -68,26 +68,26 @@ def nodes_fetching(
     reindexing, inv_reindexing = defaultdict(dict), defaultdict(dict)
 
     # since node_types is Counter, key is the node type and value is the number of nodes of that type
-    for node_type, no_nodes_of_type in node_types.items():
+    for node_type, num_types_node in node_types.items():
 
-        # for each node type, create a tensor of size no_nodes_of_type x embedding_lengths[node_type]
+        # for each node type, create a tensor of size num_types_node x embedding_lengths[node_type]
         data[node_type].x = torch.tensor(
-            np.zeros((no_nodes_of_type, embedding_lengths[node_type])),
+            np.zeros((num_types_node, embedding_lengths[node_type])),
             dtype=torch.float32,
         )
 
         # if node type is observed attribute, create other necessary tensors
         if node_type == observed_attribute:
             data[node_type].y = torch.tensor(
-                np.zeros((no_nodes_of_type,), dtype=int), dtype=torch.long
+                np.zeros((num_types_node,), dtype=int), dtype=torch.long
             )
 
             data[node_type].train_mask = torch.tensor(
-                np.zeros((no_nodes_of_type,), dtype=int), dtype=torch.bool
+                np.zeros((num_types_node,), dtype=int), dtype=torch.bool
             )
 
             data[node_type].val_mask = torch.tensor(
-                np.zeros((no_nodes_of_type,), dtype=int), dtype=torch.bool
+                np.zeros((num_types_node,), dtype=int), dtype=torch.bool
             )
 
     # now fill the tensors with the nodes from the database
@@ -102,22 +102,22 @@ def nodes_fetching(
             node.labels[i].name for i in range(len(node.labels))
         )
 
+        node_type_counter = append_counter[node_type]
+
         # add feature vector from database to tensor
         # it is checked at the start of the loop if features are available
-        data[node_type].x[append_counter[node_type]] = np.add(
-            data[node_type].x[append_counter[node_type]],
+        data[node_type].x[node_type_counter] = np.add(
+            data[node_type].x[node_type_counter],
             np.array(node.properties.get(features_name)),
         )
 
         # store reindexing and inverse reindexing
-        reindexing[node_type][append_counter[node_type]] = node.id
-        inv_reindexing[node_type][node.id] = append_counter[node_type]
+        reindexing[node_type][node_type_counter] = node.id
+        inv_reindexing[node_type][node.id] = node_type_counter
 
         # if node type is observed attribute, add classification label to tensor
         if node_type == observed_attribute:
-            data[node_type].y[append_counter[node_type]] = int(
-                node.properties.get(class_name)
-            )
+            data[node_type].y[node_type_counter] = int(node.properties.get(class_name))
 
         # increase append_counter by 1
         append_counter[node_type] += 1
@@ -271,4 +271,4 @@ def extract_from_database(
 
     data = data.to(device, non_blocking=True)
 
-    return (data, observed_attribute, reindexing, inv_reindexing)
+    return data, observed_attribute, reindexing, inv_reindexing

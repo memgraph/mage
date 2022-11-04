@@ -1,7 +1,7 @@
 import torch
-import mgp
 from torchmetrics import Accuracy, AUC, Precision, Recall, F1Score
 from torch_geometric.data import Data
+from typing import List, Dict
 
 METRICS = {
     "accuracy": Accuracy,
@@ -16,21 +16,21 @@ def metrics(
     mask: torch.tensor,
     out: torch.tensor,
     data: Data,
-    options: mgp.List[str],
+    options: List[str],
     observed_attribute: str,
     device: str,
-) -> mgp.Map:
+) -> Dict[str, float]:
     """Selected metrics calculated for current model and data.
 
     Args:
         mask (torch.tensor): used to mask which embeddings should be used
         out (torch.tensor): output of the model
         data (Data): dataset variable
-        options (mgp.List[str]): list of options to be calculated
+        options (List[str]): list of options to be calculated
         device (str): cpu or cuda
 
     Returns:
-        mgp.Map: dictionary of calculated metrics
+        Dict: dictionary of calculated metrics
     """
 
     pred = out[observed_attribute].argmax(
