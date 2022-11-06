@@ -30,7 +30,7 @@ RUN rm /etc/apt/sources.list.d/cuda.list
 RUN apt-get update && apt-get install -y \
     libcurl4        `memgraph` \
     libpython${PY_VERSION}   `memgraph` \
-    libssl1.1       `memgraph` \
+    libssl-dev       `memgraph` \
     libssl-dev       `memgraph` \
     openssl         `memgraph` \
     build-essential `mage-memgraph` \
@@ -66,6 +66,7 @@ COPY . /mage
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
     export PATH="/root/.cargo/bin:${PATH}" && \ 
     python3 -m pip install -r /mage/python/requirements.txt && \ 
+    python3 -m  pip install -r /mage/python/tests/requirements.txt && \
     python3 -m pip install dgl -f https://data.dgl.ai/wheels/repo.html && \ 
     python3 /mage/setup build \ 
     --gpu \

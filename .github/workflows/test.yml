@@ -77,7 +77,6 @@ jobs:
         env:
           PYTHONPATH: "$PWD/python"
         run: |
-     
           docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/python/ && python3 -m pytest ."
 
       - name: Rust library tests

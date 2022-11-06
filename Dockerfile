@@ -13,7 +13,7 @@ ENV PY_VERSION ${PY_VERSION_DEFAULT}
 RUN apt-get update && apt-get install -y \
     libcurl4        `memgraph` \
     libpython${PY_VERSION}   `memgraph` \
-    libssl1.1       `memgraph` \
+    libssl-dev       `memgraph` \
     openssl         `memgraph` \
     build-essential `mage-memgraph` \
     make            `mage-memgraph` \
@@ -47,8 +47,10 @@ COPY . /mage
 #MAGE
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
     && export PATH="/root/.cargo/bin:${PATH}" \
-    && python3 -m pip install -r /mage/python/requirements.txt \
-    && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/ 
+    && python3 -m  pip install -r /mage/python/requirements.txt \
+    && python3 -m  pip install -r /mage/python/tests/requirements.txt \
+    && python3 -m  pip install torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-1.12.0+cu102.html \
+    && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/
 
 #DGL build from source
 RUN git clone --recurse-submodules https://github.com/dmlc/dgl.git  \
