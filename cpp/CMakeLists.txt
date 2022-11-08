@@ -81,10 +81,6 @@ target_include_directories(mage_uuid INTERFACE ${UUID_INCLUDE_DIR}/gsl)
 target_include_directories(mage_uuid INTERFACE ${UUID_INCLUDE_DIR})
 add_dependencies(mage_uuid uuid-proj)
 
-# mg_procedure library
-# add_library(mg_procedure INTERFACE)
-# target_include_directories(mg_procedure INTERFACE ${CMAKE_SOURCE_DIR}/mg_procedure)
-
 # mg_utility library
 add_subdirectory(mg_utility)
 
