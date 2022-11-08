@@ -745,7 +745,7 @@ def reset() -> mgp.Record(status=str):
     # set model and logged_data to None
     global model, current_values, logged_data
     model = None
-    logged_data = None
+    logged_data = []
 
     # reinitialize current_values
     current_values = DEFAULT_VALUES
