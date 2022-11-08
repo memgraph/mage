@@ -11,6 +11,7 @@
 
 #include "mg_graph.hpp"
 #include "mgp.hpp"
+#include "_mgp.hpp"
 
 namespace mg_graph {
 

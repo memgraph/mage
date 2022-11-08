@@ -82,8 +82,8 @@ target_include_directories(mage_uuid INTERFACE ${UUID_INCLUDE_DIR})
 add_dependencies(mage_uuid uuid-proj)
 
 # mg_procedure library
-add_library(mg_procedure INTERFACE)
-target_include_directories(mg_procedure INTERFACE ${CMAKE_SOURCE_DIR}/mg_procedure)
+# add_library(mg_procedure INTERFACE)
+# target_include_directories(mg_procedure INTERFACE ${CMAKE_SOURCE_DIR}/mg_procedure)
 
 # mg_utility library
 add_subdirectory(mg_utility)
@@ -91,7 +91,7 @@ add_subdirectory(mg_utility)
 function(add_query_module target_name version src)
   add_library(${target_name} SHARED ${src})
   set_target_properties(${target_name} PROPERTIES SOVERSION ${version})
-  target_link_libraries(${target_name} PRIVATE mg_procedure)
+  target_link_libraries(${target_name} PRIVATE mg_utility)
 endfunction()
 
 # Available query modules.
