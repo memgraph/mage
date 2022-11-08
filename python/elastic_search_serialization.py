@@ -316,7 +316,7 @@ def index_db(
     max_backoff: float = 600.0,
     yield_ok: bool = True,
     queue_size: int = 4,
-) -> mgp.Record(nodes=mgp.List[mgp.Map], edges=mgp.List[mgp.Map]):
+) -> mgp.Record(nodes=int, edges=int):
     """The method serializes all vertices and relationships that are in Memgraph DB to an ElasticSearch schema.
     Args:
         context (mgp.ProcCtx): Reference to the executing context.
@@ -333,7 +333,7 @@ def index_db(
         thread_count (int): Size of the threadpool to use for the bulk requests.
         queue_size (int): Size of the task queue between the main thread (producing chunks to send) and the processing threads.
     Returns:
-        mgp.Record(): Returns JSON of all nodes and edges.
+        mgp.Record(): Returns number of nodes and edges.
     """
     # Now create iterable of documents that need to be indexed
     nodes, edges = generate_documents_from_db(context)
@@ -391,7 +391,7 @@ def index_db(
             queue_size,
         )
 
-    return mgp.Record(nodes=nodes, edges=edges)
+    return mgp.Record(nodes=len(nodes), edges=len(edges))
 
 
 @mgp.read_proc
@@ -410,11 +410,11 @@ def index(
     max_backoff: float = 600.0,
     yield_ok: bool = True,
     queue_size: int = 4,
-) -> mgp.Record(nodes=mgp.List[mgp.Map], edges=mgp.List[mgp.Map]):
+) -> mgp.Record(nodes=int, edges=int):
     """The method serializes all vertices and relationships that came into the Memgraph DB to an ElasticSearch schema and sends streaming_bulk request to ElasticSearch's API.
     Args:
         context (mgp.ProcCtx): Reference to the executing context.
-        createdObjects (List[Dict[str, Any]]): List of all objects that were created andthen sent as arguments to this method with the help of "create trigger".
+        createdObjects (List[Dict[str, Any]]): List of all objects that were created and then sent as arguments to this method with the help of "create trigger".
         node_index (str): The name of the node index.
         edge_index (str): The name of the edge index.
         chunk_size (int): The number of docs in one chunk sent to es (default: 500).
@@ -428,7 +428,7 @@ def index(
         thread_count (int): Size of the threadpool to use for the bulk requests.
         queue_size (int): Size of the task queue between the main thread (producing chunks to send) and the processing threads.
     Returns:
-        mgp.Record(): Returns JSON representation of all nodes and edges.
+        mgp.Record(): Returns number of nodes and edges.
     """
     # Now create iterable of documents that need to be indexed
     nodes, edges = generate_documents_from_triggered_objects(createdObjects)
@@ -484,7 +484,7 @@ def index(
             raise_on_exception,
             queue_size,
         )
-    return mgp.Record(nodes=nodes, edges=edges)
+    return mgp.Record(nodes=len(nodes), edges=len(edges))
 
 
 @mgp.read_proc
@@ -565,8 +565,8 @@ def scan(
     )
     items = []
     for item in response:
-        item[ID] = item["_source"][INDEX][ID]
-        item["_source"].pop(INDEX, None)
+        # item[ID] = item["_source"][INDEX][ID]
+        # item["_source"].pop(INDEX, None)
         items.append(item)
 
     return mgp.Record(items=items)
