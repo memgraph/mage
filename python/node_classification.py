@@ -179,7 +179,7 @@ def declare_data(ctx: mgp.ProcCtx) -> HeteroData:
     current_values[OtherParams.DEVICE_TYPE] = torch.device(
         "cuda:0" if torch.cuda.is_available() else "cpu"
     )
-    
+
     nodes = list(iter(ctx.graph.vertices))  # obtain nodes from context
     if not nodes:
         raise Exception("Graph is empty.")
@@ -191,7 +191,7 @@ def declare_data(ctx: mgp.ProcCtx) -> HeteroData:
         current_values[HeteroParams.REINDEXING],
         current_values[HeteroParams.INV_REINDEXING],
         current_values[HeteroParams.LABEL_REINDEXING],
-        current_values[HeteroParams.INV_LABEL_REINDEXING]
+        current_values[HeteroParams.INV_LABEL_REINDEXING],
     ) = extract_from_database(
         nodes,
         current_values[DataParams.SPLIT_RATIO],
@@ -204,7 +204,7 @@ def declare_data(ctx: mgp.ProcCtx) -> HeteroData:
 
     # second parameter of shape of feature matrix is number of input channels
     current_values[ModelParams.IN_CHANNELS] = observed_attribute_data.x.size(dim=1)
-    
+
     # number of output channels is number of classes in the dataset
     current_values[ModelParams.OUT_CHANNELS] = len(
         set(observed_attribute_data.y.detach().cpu().numpy())
@@ -488,7 +488,7 @@ def train(
     num_iterations_sample = current_values[HeteroParams.NUM_ITERATIONS_SAMPLE]
 
     # variables for early stopping
-    last_loss = float('inf')
+    last_loss = float("inf")
     trigger_times = 0
     last_time = time()
     # training
@@ -734,7 +734,12 @@ def predict(
 
     predicted_class = int(pred.detach().cpu().numpy()[position])
 
-    return mgp.Record(predicted_class=current_values[HeteroParams.INV_LABEL_REINDEXING][predicted_class], status="Prediction done.")
+    return mgp.Record(
+        predicted_class=current_values[HeteroParams.INV_LABEL_REINDEXING][
+            predicted_class
+        ],
+        status="Prediction done.",
+    )
 
 
 @mgp.read_proc

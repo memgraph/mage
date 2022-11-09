@@ -62,7 +62,7 @@ def nodes_fetching(
         if current_label not in label_reindexing:
             label_reindexing[current_label] = label_cnt
             inv_label_reindexing[label_cnt] = current_label
-            label_cnt+=1
+            label_cnt += 1
 
     # if node_types is empty, raise error
     if not node_types:
@@ -127,11 +127,20 @@ def nodes_fetching(
 
         # if node type is observed attribute, add classification label to tensor
         if node_type == observed_attribute:
-            data[node_type].y[node_type_counter] = label_reindexing[int(node.properties.get(class_name))]
+            data[node_type].y[node_type_counter] = label_reindexing[
+                int(node.properties.get(class_name))
+            ]
 
         # increase append_counter by 1
         append_counter[node_type] += 1
-    return data, reindexing, inv_reindexing, observed_attribute, label_reindexing, inv_label_reindexing
+    return (
+        data,
+        reindexing,
+        inv_reindexing,
+        observed_attribute,
+        label_reindexing,
+        inv_label_reindexing,
+    )
 
 
 def edges_fetching(
@@ -264,9 +273,14 @@ def extract_from_database(
     #################
     # NODES
     #################
-    data, reindexing, inv_reindexing, observed_attribute, label_reindexing, inv_label_reindexing = nodes_fetching(
-        nodes, features_name, class_name, data
-    )
+    (
+        data,
+        reindexing,
+        inv_reindexing,
+        observed_attribute,
+        label_reindexing,
+        inv_label_reindexing,
+    ) = nodes_fetching(nodes, features_name, class_name, data)
 
     #################
     # EDGES
@@ -280,4 +294,11 @@ def extract_from_database(
 
     data = data.to(device, non_blocking=True)
 
-    return data, observed_attribute, reindexing, inv_reindexing, label_reindexing, inv_label_reindexing
+    return (
+        data,
+        observed_attribute,
+        reindexing,
+        inv_reindexing,
+        label_reindexing,
+        inv_label_reindexing,
+    )
