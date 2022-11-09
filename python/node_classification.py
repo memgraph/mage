@@ -68,6 +68,8 @@ class HeteroParams:
     INV_REINDEXING = "inv_reindexing"
     NUM_NODES_SAMPLE = "num_nodes_sample"
     NUM_ITERATIONS_SAMPLE = "num_iterations_sample"
+    LABEL_REINDEXING = "label_reindexing"
+    INV_LABEL_REINDEXING = "inv_label_reindexing"
 
 
 # other necessary parameters
@@ -177,7 +179,7 @@ def declare_data(ctx: mgp.ProcCtx) -> HeteroData:
     current_values[OtherParams.DEVICE_TYPE] = torch.device(
         "cuda:0" if torch.cuda.is_available() else "cpu"
     )
-
+    
     nodes = list(iter(ctx.graph.vertices))  # obtain nodes from context
     if not nodes:
         raise Exception("Graph is empty.")
@@ -188,6 +190,8 @@ def declare_data(ctx: mgp.ProcCtx) -> HeteroData:
         current_values[HeteroParams.OBSERVED_ATTRIBUTE],
         current_values[HeteroParams.REINDEXING],
         current_values[HeteroParams.INV_REINDEXING],
+        current_values[HeteroParams.LABEL_REINDEXING],
+        current_values[HeteroParams.INV_LABEL_REINDEXING]
     ) = extract_from_database(
         nodes,
         current_values[DataParams.SPLIT_RATIO],
@@ -197,11 +201,10 @@ def declare_data(ctx: mgp.ProcCtx) -> HeteroData:
     )
 
     observed_attribute_data = data[current_values[HeteroParams.OBSERVED_ATTRIBUTE]]
-    # second parameter of shape of feature matrix is number of input channels
-    current_values[ModelParams.IN_CHANNELS] = np.shape(
-        observed_attribute_data.x.detach().cpu().numpy()
-    )[1]
 
+    # second parameter of shape of feature matrix is number of input channels
+    current_values[ModelParams.IN_CHANNELS] = observed_attribute_data.x.size(dim=1)
+    
     # number of output channels is number of classes in the dataset
     current_values[ModelParams.OUT_CHANNELS] = len(
         set(observed_attribute_data.y.detach().cpu().numpy())
@@ -485,7 +488,7 @@ def train(
     num_iterations_sample = current_values[HeteroParams.NUM_ITERATIONS_SAMPLE]
 
     # variables for early stopping
-    last_loss = 100
+    last_loss = float('inf')
     trigger_times = 0
     last_time = time()
     # training
@@ -698,7 +701,7 @@ def predict(
     loads unseen test data to predict on it.
 
     Example of usage:
-        MATCH (n {id: 1}) CALL node_classification.predict(n) YIELD * RETURN predicted_value;
+        MATCH (n {id: 1}) CALL node_classification.predict(n) YIELD * RETURN predicted_class;
 
         # note: if node with property id = 1 doesn't exist, query module won't be called
 
@@ -731,7 +734,7 @@ def predict(
 
     predicted_class = int(pred.detach().cpu().numpy()[position])
 
-    return mgp.Record(predicted_class=predicted_class, status="Prediction done.")
+    return mgp.Record(predicted_class=current_values[HeteroParams.INV_LABEL_REINDEXING][predicted_class], status="Prediction done.")
 
 
 @mgp.read_proc
