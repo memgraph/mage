@@ -17,8 +17,6 @@ jobs:
         architecture: ["amd64", "arm64"]
         target: ["prod", "dev"]
     steps:
-      - uses: actions/checkout@v2
-
       - name: Checkout repository and submodules
         uses: actions/checkout@v3
         with:

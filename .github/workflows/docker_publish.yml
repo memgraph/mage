@@ -13,10 +13,7 @@ jobs:
       DOCKER_ORGANIZATION_NAME: memgraph
       DOCKER_REPOSITORY_NAME: memgraph-mage
       MEMGRAPH_VERSION: 2.4.1
-    steps:
-      - name: Check out the repo
-        uses: actions/checkout@v3
-            
+    steps:            
       - name: Checkout repository and submodules
         uses: actions/checkout@v3
         with:
