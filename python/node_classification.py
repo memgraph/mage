@@ -6,7 +6,6 @@ from time import time
 
 import mgp
 import torch
-import numpy as np
 from torch_geometric.nn import to_hetero
 from torch_geometric.data import HeteroData
 
