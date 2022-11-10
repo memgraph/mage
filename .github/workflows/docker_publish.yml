@@ -12,10 +12,14 @@ jobs:
     env:
       DOCKER_ORGANIZATION_NAME: memgraph
       DOCKER_REPOSITORY_NAME: memgraph-mage
-      MEMGRAPH_VERSION: 2.4.1
-    steps:
-      - name: Check out the repo
+      MEMGRAPH_VERSION: 2.4.2
+    steps:            
+      - name: Checkout repository and submodules
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -33,7 +37,7 @@ jobs:
           prefix: "v"
 
       - run: echo "MAGE is at version ${{ steps.get-latest-tag.outputs.tag }}"
-
+      
       - name: Get commit tag
         id: get-commit-tag
         run: |
