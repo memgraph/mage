@@ -737,7 +737,7 @@ def predict(
         predicted_class=current_values[HeteroParams.INV_LABEL_REINDEXING][
             predicted_class
         ],
-        status="Prediction done.",
+        status="Prediction complete.",
     )
 
 
