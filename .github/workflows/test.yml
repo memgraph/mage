@@ -27,15 +27,6 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       
-      - name: Get Memgraph release version
-        run: |
-          cd cpp/memgraph
-          git fetch --all --tags
-          MEMGRAPH_DB=$(git rev-parse --verify HEAD | git tag --contains)
-          echo $MEMGRAPH_DB
-          echo "MEMGRAPH_DB=${MEMGRAPH_DB:1}" >> $GITHUB_ENV
-
-
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v1
