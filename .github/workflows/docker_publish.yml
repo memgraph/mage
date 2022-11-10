@@ -37,15 +37,7 @@ jobs:
           prefix: "v"
 
       - run: echo "MAGE is at version ${{ steps.get-latest-tag.outputs.tag }}"
-
-      - name: Get Memgraph release version
-        run: |
-          cd cpp/memgraph
-          git fetch --all --tags
-          MEMGRAPH_DB=$(git rev-parse --verify HEAD | git tag --contains)
-          echo $MEMGRAPH_DB
-          echo "MEMGRAPH_DB=${MEMGRAPH_DB:1}" >> $GITHUB_ENV
-
+      
       - name: Get commit tag
         id: get-commit-tag
         run: |
