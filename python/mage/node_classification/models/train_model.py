@@ -70,7 +70,6 @@ def train_epoch(
             out = model(batch.x_dict, batch.edge_index_dict)[
                 observed_attribute
             ]  # Perform a single forward pass.
-
             loss = criterion(
                 out, batch[observed_attribute].y
             )  # Compute the loss solely based on the training nodes.

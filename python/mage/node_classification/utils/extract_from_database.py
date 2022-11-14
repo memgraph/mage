@@ -33,6 +33,10 @@ def nodes_fetching(
     # variable for storing observed attribute
     observed_attribute = None
 
+    label_cnt = 0
+    label_reindexing = defaultdict()
+    inv_label_reindexing = defaultdict()
+
     for node in nodes:
 
         if features_name not in node.properties:
@@ -53,6 +57,12 @@ def nodes_fetching(
         # if observed attribute is not set, set it to node type
         if observed_attribute is None and class_name in node.properties:
             observed_attribute = node_type
+
+        current_label = int(node.properties.get(class_name))
+        if current_label not in label_reindexing:
+            label_reindexing[current_label] = label_cnt
+            inv_label_reindexing[label_cnt] = current_label
+            label_cnt += 1
 
     # if node_types is empty, raise error
     if not node_types:
@@ -117,12 +127,20 @@ def nodes_fetching(
 
         # if node type is observed attribute, add classification label to tensor
         if node_type == observed_attribute:
-            data[node_type].y[node_type_counter] = int(node.properties.get(class_name))
+            data[node_type].y[node_type_counter] = label_reindexing[
+                int(node.properties.get(class_name))
+            ]
 
         # increase append_counter by 1
         append_counter[node_type] += 1
-
-    return data, reindexing, inv_reindexing, observed_attribute
+    return (
+        data,
+        reindexing,
+        inv_reindexing,
+        observed_attribute,
+        label_reindexing,
+        inv_label_reindexing,
+    )
 
 
 def edges_fetching(
@@ -255,9 +273,14 @@ def extract_from_database(
     #################
     # NODES
     #################
-    data, reindexing, inv_reindexing, observed_attribute = nodes_fetching(
-        nodes, features_name, class_name, data
-    )
+    (
+        data,
+        reindexing,
+        inv_reindexing,
+        observed_attribute,
+        label_reindexing,
+        inv_label_reindexing,
+    ) = nodes_fetching(nodes, features_name, class_name, data)
 
     #################
     # EDGES
@@ -271,4 +294,11 @@ def extract_from_database(
 
     data = data.to(device, non_blocking=True)
 
-    return data, observed_attribute, reindexing, inv_reindexing
+    return (
+        data,
+        observed_attribute,
+        reindexing,
+        inv_reindexing,
+        label_reindexing,
+        inv_label_reindexing,
+    )
