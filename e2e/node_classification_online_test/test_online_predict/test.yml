@@ -7,4 +7,4 @@
         MATCH (n {id: 33})
         CALL node_classification.predict(n) YIELD * RETURN status;
   output:
-        - status: "Prediction done."
+        - status: "Prediction complete."
