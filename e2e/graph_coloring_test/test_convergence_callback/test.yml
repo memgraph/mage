@@ -7,8 +7,7 @@ query: >
         convergence_callback_actions: ["SimpleTunneling"]
         })
         YIELD node, color
-    MATCH (a:Cell) WHERE toString(id(a)) = node 
-    RETURN COUNT(a.id) AS id_count, COUNT(color) AS color_count;
+    RETURN COUNT(node.id) AS id_count, COUNT(color) AS color_count;
 
 output:
     - id_count: 5

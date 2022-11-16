@@ -21,7 +21,6 @@ def color_graph(
     solution = algorithm.run(graph, parameters)
     return [
         mgp.Record(node=context.graph.get_vertex_by_id(node), color=color)
-        # mgp.Record(node=str(graph.label(node)), color=str(color))
         for node, color in enumerate(solution.chromosome)
     ]
 
