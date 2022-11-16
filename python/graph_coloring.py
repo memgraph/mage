@@ -20,7 +20,7 @@ def color_graph(
     algorithm = parameters[Parameter.ALGORITHM]
     solution = algorithm.run(graph, parameters)
     return [
-        mgp.Record(node=context.graph.get_vertex_by_id(node), color=color)
+        mgp.Record(node=context.graph.get_vertex_by_id(graph.label(node)), color=color)
         for node, color in enumerate(solution.chromosome)
     ]
 
@@ -46,7 +46,7 @@ def color_subgraph(
     algorithm = parameters[Parameter.ALGORITHM]
     solution = algorithm.run(graph, parameters)
     return [
-        mgp.Record(node=context.graph.get_vertex_by_id(node), color=color)
+        mgp.Record(node=context.graph.get_vertex_by_id(graph.label(node)), color=color)
         for node, color in enumerate(solution.chromosome)
     ]
 
