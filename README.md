@@ -139,7 +139,7 @@ docker run -p 7687:7687 memgraph/memgraph-mage
 yourself inside the repo in your terminal:
 
 ```bash
-git clone https://github.com/memgraph/mage.git && cd mage
+git clone --recurse-submodules https://github.com/memgraph/mage.git && cd mage
 ```
 
 **1.** To build the **MAGE** image run the following command:
