@@ -10,7 +10,7 @@ from mage.graph_coloring_module import IncorrectParametersException
 @mgp.read_proc
 def color_graph(
     context: mgp.ProcCtx, parameters: mgp.Map = {}, edge_property: str = "weight"
-) -> mgp.Record(node=str, color=str):
+) -> mgp.Record(node=mgp.Vertex, color=int):
     """
     Example:
     CALL graph_coloring.color_graph() YIELD *;
@@ -20,7 +20,8 @@ def color_graph(
     algorithm = parameters[Parameter.ALGORITHM]
     solution = algorithm.run(graph, parameters)
     return [
-        mgp.Record(node=str(graph.label(node)), color=str(color))
+        mgp.Record(node=context.graph.get_vertex_by_id(node), color=color)
+        # mgp.Record(node=str(graph.label(node)), color=str(color))
         for node, color in enumerate(solution.chromosome)
     ]
 
@@ -32,7 +33,7 @@ def color_subgraph(
     edges: mgp.List[mgp.Edge],
     parameters: mgp.Map = {},
     edge_property: str = "weight",
-) -> mgp.Record(node=str, color=str):
+) -> mgp.Record(node=mgp.Vertex, color=int):
     """
     Example:
     MATCH (a:Cell)-[e:CLOSE_TO]->(b:Cell)
@@ -46,7 +47,7 @@ def color_subgraph(
     algorithm = parameters[Parameter.ALGORITHM]
     solution = algorithm.run(graph, parameters)
     return [
-        mgp.Record(node=str(graph.label(node)), color=str(color))
+        mgp.Record(node=context.graph.get_vertex_by_id(node), color=color)
         for node, color in enumerate(solution.chromosome)
     ]
 
