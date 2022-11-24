@@ -13,6 +13,7 @@ ACTION = "action"
 INDEX = "index"
 ID = "_id"
 SOURCE = "source"
+_SOURCE = "_source"
 SETTINGS = "settings"
 NUMBER_OF_SHARDS = "number_of_shards"
 NUMBER_OF_REPLICAS = "number_of_replicas"
@@ -27,6 +28,9 @@ CREATED_EDGE = "created_edge"
 VERTEX = "vertex"
 EDGE = "edge"
 INDEX_TYPE = "index_type"
+AGGREGATIONS = "aggregations"
+HITS = "hits"
+TOTAL = "total"
 
 # Linkurious constants
 LK_TYPE = "lk_type"
@@ -534,8 +538,9 @@ def scan(
     raise_on_error: bool = True,
     preserve_order: bool = False,
     size: int = 1000,
+    from_: int = 0,
     request_timeout: mgp.Nullable[float] = None,
-    clear_scroll: bool = True,
+    clear_scroll: bool = False,
 ) -> mgp.Record(items=mgp.List[mgp.Map]):
     """Runs a query on a index specified by the index_name.
     Args:
@@ -562,11 +567,57 @@ def scan(
         size=size,
         request_timeout=request_timeout,
         clear_scroll=clear_scroll,
+        from_=from_,
     )
     items = []
     for item in response:
-        # item[ID] = item["_source"][INDEX][ID]
-        # item["_source"].pop(INDEX, None)
+        item[ID] = item[_SOURCE][INDEX][ID]
+        item[_SOURCE].pop(INDEX, None)
         items.append(item)
 
     return mgp.Record(items=items)
+
+
+@mgp.read_proc
+def search(
+    context: mgp.ProcCtx,
+    index_name: str,
+    query: str,
+    size: int = 1000,
+    from_: int = 0,
+    aggregations: mgp.Nullable[mgp.Map] = None,
+    aggs: mgp.Nullable[mgp.Map] = None,
+) -> mgp.Record(result=mgp.Map):
+    """Searches for all documents by specifying query and index.
+    Args:
+        context (mgp.ProcCtx): Reference to the executing context.
+        index_name (str): A name of the index.
+        query (str): Query written as JSON.
+        aggregations (Optional[Mapping[str, Mapping[str, Any]]]): -
+        aggs (Optional[Mapping[str, Mapping[str, Any]]]): -
+    Returns:
+         mgp.Record(items=mgp.List[mgp.Map]): List of all items matched by the specific query.
+    """
+    global client
+    response = client.search(
+        index=index_name,
+        query=json.loads(query),
+        aggregations=aggregations,
+        aggs=aggs,
+        size=size,
+        from_=from_,
+    )
+    hits = []
+    for hit in response[HITS][HITS]:
+        hit[ID] = hit[_SOURCE][INDEX][ID]
+        hit[_SOURCE].pop(INDEX, None)
+        hits.append(hit)
+
+    result = {}
+    result[HITS] = {HITS: hits, TOTAL: response[HITS][TOTAL]}
+    if AGGREGATIONS in response:
+        result[AGGREGATIONS] = response[AGGREGATIONS]
+    else:
+        result[AGGREGATIONS] = dict()
+
+    return mgp.Record(result=result)
