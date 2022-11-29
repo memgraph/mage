@@ -4,4 +4,4 @@ query: >
     RETURN node.id AS id;
 
 exception:
-    - Graph has a cycle! No topological ordering exists.
+    - The graph is cyclic and therefore no topological ordering exists.

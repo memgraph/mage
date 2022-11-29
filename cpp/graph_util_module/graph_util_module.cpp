@@ -5,6 +5,20 @@
 #include "algorithms/descendants.hpp"
 #include "algorithms/topological_sort.hpp"
 
+const char *kProcedureAncestors = "ancestors";
+const char *kProcedureConnectNodes = "connect_nodes";
+const char *kProcedureDescendants = "descendants";
+const char *kProcedureTopologicalSort = "topological_sort";
+
+const char *kReturnAncestors = "ancestors";
+const char *kReturnConnections = "connections";
+const char *kReturnDescendants = "descendants";
+const char *kReturnSortedNodes = "sorted_nodes";
+
+const char *kArgumentNode = "node";
+const char *kArgumentNodes = "nodes";
+
+
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
     mgp::memory = memory;
@@ -12,28 +26,28 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     // Register ancestors procedure
     const auto ancestors_return = std::make_pair(mgp::Type::List, mgp::Type::Node);
 
-    AddProcedure(Ancestors, "ancestors", mgp::ProdecureType::Read, {mgp::Parameter("node", mgp::Type::Node)},
-                 {mgp::Return("ancestors", ancestors_return)}, module, memory);
+    AddProcedure(Ancestors, kProcedureAncestors, mgp::ProdecureType::Read, {mgp::Parameter(kArgumentNode, mgp::Type::Node)},
+                 {mgp::Return(kReturnAncestors, ancestors_return)}, module, memory);
 
     // Register connect nodes procedure
     const auto connect_nodes_input = std::make_pair(mgp::Type::List, mgp::Type::Node);
     const auto connect_nodes_return = std::make_pair(mgp::Type::List, mgp::Type::Relationship);
 
-    AddProcedure(ConnectNodes, "connect_nodes", mgp::ProdecureType::Read,
-                 {mgp::Parameter("nodes", connect_nodes_input)}, {mgp::Return("connections", connect_nodes_return)},
+    AddProcedure(ConnectNodes, kProcedureConnectNodes, mgp::ProdecureType::Read,
+                 {mgp::Parameter(kArgumentNodes, connect_nodes_input)}, {mgp::Return(kReturnConnections, connect_nodes_return)},
                  module, memory);
 
     // Register descendants procedure
     const auto descendants_return = std::make_pair(mgp::Type::List, mgp::Type::Node);
 
-    AddProcedure(Descendants, "descendants", mgp::ProdecureType::Read, {mgp::Parameter("node", mgp::Type::Node)},
-                 {mgp::Return("descendants", descendants_return)}, module, memory);
+    AddProcedure(Descendants, kProcedureDescendants, mgp::ProdecureType::Read, {mgp::Parameter(kArgumentNode, mgp::Type::Node)},
+                 {mgp::Return(kReturnDescendants, descendants_return)}, module, memory);
 
     // Register topological sort procedure
     const auto topological_sort_return = std::make_pair(mgp::Type::List, mgp::Type::Node);
 
-    AddProcedure(TopologicalSort, "topological_sort", mgp::ProdecureType::Read, {},
-                 {mgp::Return("sorted_nodes", topological_sort_return)}, module, memory);
+    AddProcedure(TopologicalSort, kProcedureTopologicalSort, mgp::ProdecureType::Read, {},
+                 {mgp::Return(kReturnSortedNodes, topological_sort_return)}, module, memory);
 
   } catch (const std::exception &e) {
     return 1;
