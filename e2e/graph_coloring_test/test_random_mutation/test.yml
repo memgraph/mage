@@ -4,8 +4,7 @@ query: >
         mutation: "RandomMutation",
         random_mutation_probability: 0.5})
         YIELD node, color
-    MATCH (a:Cell) WHERE toString(id(a)) = node 
-    RETURN COUNT(a.id) AS id_count, COUNT(color) AS color_count;
+    RETURN COUNT(node.id) AS id_count, COUNT(color) AS color_count;
 
 output:
     - id_count: 5
