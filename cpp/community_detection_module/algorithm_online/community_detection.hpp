@@ -160,7 +160,7 @@ class LabelRankT {
     if (!is_weighted) return DEFAULT_WEIGHT;
 
     try {
-      const auto &maybe_weight = relationship[weight_property];
+      const auto maybe_weight = relationship[weight_property];
       return maybe_weight.IsNumeric() ? maybe_weight.ValueNumeric() : DEFAULT_WEIGHT;
     } catch (const std::exception &e) {  // default if no such property exists
       return DEFAULT_WEIGHT;
