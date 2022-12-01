@@ -177,8 +177,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
 
     const auto node_list = std::make_pair(mgp::Type::List, mgp::Type::Node);
     const auto relationship_list = std::make_pair(mgp::Type::List, mgp::Type::Relationship);
-    const auto list = mgp::List();
-    const auto empty_list = mgp::Value(list);
+    const auto empty_list = mgp::Value(mgp::List());
 
     mgp::AddProcedure(
         Set, "set", mgp::ProdecureType::Read,
@@ -207,7 +206,6 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
 
     mgp::AddProcedure(Reset, "reset", mgp::ProdecureType::Read, {}, {mgp::Return("message", mgp::Type::String)}, module,
                       memory);
-
   } catch (const std::exception &e) {
     return 1;
   }

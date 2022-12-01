@@ -220,8 +220,6 @@ class LabelRankT {
       labels.insert({node, lookup[NodeLabel(node)]});
     }
 
-    // graph.reset();
-
     return labels;
   }
 
@@ -407,7 +405,7 @@ class LabelRankT {
       label_Ps.clear();
       sum_w.clear();
       times_updated.clear();
-      for (const auto &node : graph.Nodes()) {
+      for (const auto node : graph.Nodes()) {
         InitializeStructures(graph, node.Id().AsUint());
       }
     }
