@@ -180,7 +180,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     const auto empty_list = mgp::Value(mgp::List());
 
     mgp::AddProcedure(
-        Set, "set", mgp::ProdecureType::Read,
+        Set, "set", mgp::ProcedureType::Read,
         {mgp::Parameter("directed", mgp::Type::Bool, false), mgp::Parameter("weighted", mgp::Type::Bool, false),
          mgp::Parameter("similarity_threshold", mgp::Type::Double, 0.7),
          mgp::Parameter("exponent", mgp::Type::Double, 4.0), mgp::Parameter("min_value", mgp::Type::Double, 0.1),
@@ -190,11 +190,11 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
          mgp::Parameter("max_updates", mgp::Type::Int, (int64_t)5)},
         {mgp::Return("node", mgp::Type::Node), mgp::Return("community_id", mgp::Type::Int)}, module, memory);
 
-    mgp::AddProcedure(Get, "get", mgp::ProdecureType::Read, {},
+    mgp::AddProcedure(Get, "get", mgp::ProcedureType::Read, {},
                       {mgp::Return("node", mgp::Type::Node), mgp::Return("community_id", mgp::Type::Int)}, module,
                       memory);
 
-    mgp::AddProcedure(Update, "update", mgp::ProdecureType::Read,
+    mgp::AddProcedure(Update, "update", mgp::ProcedureType::Read,
                       {mgp::Parameter("createdVertices", node_list, empty_list),
                        mgp::Parameter("createdEdges", relationship_list, empty_list),
                        mgp::Parameter("updatedVertices", node_list, empty_list),
@@ -204,7 +204,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
                       {mgp::Return("node", mgp::Type::Node), mgp::Return("community_id", mgp::Type::Int)}, module,
                       memory);
 
-    mgp::AddProcedure(Reset, "reset", mgp::ProdecureType::Read, {}, {mgp::Return("message", mgp::Type::String)}, module,
+    mgp::AddProcedure(Reset, "reset", mgp::ProcedureType::Read, {}, {mgp::Return("message", mgp::Type::String)}, module,
                       memory);
   } catch (const std::exception &e) {
     return 1;
