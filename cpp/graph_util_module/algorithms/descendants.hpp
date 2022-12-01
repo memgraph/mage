@@ -2,6 +2,8 @@
 
 #include <mgp.hpp>
 
+const char *kResultDescendants = "descendants";
+
 void Descendants(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
     mgp::memory = memory;
@@ -39,7 +41,7 @@ void Descendants(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, 
     }
 
     auto record = record_factory.NewRecord();
-    record.Insert("descendants", result);
+    record.Insert(kResultDescendants, result);
 
   } catch (const std::exception &e) {
     mgp::result_set_error_msg(result, e.what());

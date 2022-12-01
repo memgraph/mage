@@ -1,5 +1,7 @@
 #include <mgp.hpp>
 
+const char *kResultConnections = "connections";
+
 void ConnectNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
     mgp::memory = memory;
@@ -28,7 +30,7 @@ void ConnectNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
     }
 
     auto record = record_factory.NewRecord();
-    record.Insert("connections", result);
+    record.Insert(kResultConnections, result);
 
   } catch (const std::exception &e) {
     mgp::result_set_error_msg(result, e.what());

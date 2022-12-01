@@ -2,6 +2,8 @@
 
 #include <mgp.hpp>
 
+const char *kResultSortedNodes = "sorted_nodes";
+
 void TopologicalSort(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
   const auto record_factory = mgp::RecordFactory(result);
@@ -43,7 +45,7 @@ void TopologicalSort(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
 
   if (topological_ordering.Size() == graph.Order()) {
     auto record = record_factory.NewRecord();
-    record.Insert("sorted_nodes", topological_ordering);
+    record.Insert(kResultSortedNodes, topological_ordering);
     return;
   }
 
