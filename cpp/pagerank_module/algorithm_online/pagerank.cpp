@@ -102,7 +102,7 @@ void CreateRoute(const mg_graph::GraphView<> &graph, std::uint64_t start_id, std
     auto neighbors = graph.Neighbours(current_id);
     if (neighbors.empty()) break;
 
-    // Pick and add the random outer edge
+    // Pick and add the random outer relationship
     auto number_of_neighbors = neighbors.size();
     auto next_id = neighbors[GetRandInt(0, number_of_neighbors)].node_id;
     next_id = graph.GetMemgraphNodeId(next_id);
@@ -122,14 +122,56 @@ void CreateRoute(const mg_graph::GraphView<> &graph, std::uint64_t start_id, std
 }
 
 ///
-///@brief Updates the context based on new edge addition. Reverts previous walks made from starting node and updates
+///@brief Creates a route starting from start_id, stores it in walk and updates the walk_index. Route is created via
+/// random walk depending on random number genrator.
+///
+///@param graph Graph for route creation
+///@param start_id Starting node in graph creation
+///@param walk Walk vector that stores a route
+///@param walk_index Index of a walk for context storing
+///@param epsilon Probability of stopping the route creation
+///
+void CreateRoute(const mgp::Graph &graph, std::uint64_t start_id, std::vector<std::uint64_t> &walk,
+                 std::uint64_t walk_index, double epsilon) {
+  std::uint64_t current_id = start_id;
+  while (true) {
+    std::vector<std::uint64_t> neighbor_ids;
+    for (const auto out_relationship : graph.GetNodeById(mgp::Id::FromUint(current_id)).OutRelationships()) {
+      neighbor_ids.push_back(out_relationship.To().Id().AsUint());
+    }
+    // auto neighbors = graph.Neighbours(current_id);
+
+    if (neighbor_ids.empty()) break;
+
+    // Pick and add a random outer relationship
+    auto next_id = neighbor_ids[GetRandInt(0, neighbor_ids.size())];
+    // auto next_id = neighbors[GetRandInt(0, number_of_neighbors)].node_id;
+    // next_id = graph.GetMemgraphNodeId(next_id);
+
+    walk.emplace_back(next_id);
+    pagerank_online_alg::context.walks_table[next_id].insert(walk_index);
+    pagerank_online_alg::context.walks_counter[next_id]++;
+
+    // Finish walk when random number is smaller than epsilon
+    // Average length of walk is 1/epsilon
+    if (GetRandFloat() < epsilon) {
+      break;
+    }
+
+    // current_id = graph.GetInnerNodeId(next_id);
+  }
+}
+
+///
+///@brief Updates the context based on new relationship addition. Reverts previous walks made from starting node and
+/// updates
 /// them.
 ///
 ///@param graph Graph for updating
-///@param new_edge New edge
+///@param new_relationship New relationship
 ///
-void UpdateCreate(const mg_graph::GraphView<> &graph, const std::pair<std::uint64_t, std::uint64_t> &new_edge) {
-  auto [from, to] = new_edge;
+void UpdateCreate(const mgp::Graph &graph, const std::pair<std::uint64_t, std::uint64_t> &new_relationship) {
+  auto [from, to] = new_relationship;
 
   std::unordered_set<std::uint64_t> walk_table_copy(pagerank_online_alg::context.walks_table[from]);
   for (auto walk_index : walk_table_copy) {
@@ -146,29 +188,29 @@ void UpdateCreate(const mg_graph::GraphView<> &graph, const std::pair<std::uint6
 
     auto current_id = from;
     auto half_eps = pagerank_online_alg::global_epsilon / 2.0;
-    CreateRoute(graph, graph.GetInnerNodeId(current_id), walk, walk_index, half_eps);
+    CreateRoute(graph, current_id, walk, walk_index, half_eps);
   }
 }
 
 ///
-///@brief Updates the context based on adding the new vertex. This means adding it to a context tables and creating
+///@brief Updates the context based on adding the new node. This means adding it to a context tables and creating
 /// walks from it.
 ///
 ///@param graph Graph for updating
-///@param new_vertex New vertex
+///@param new_node New node
 ///
-void UpdateCreate(const mg_graph::GraphView<> &graph, std::uint64_t new_vertex) {
+void UpdateCreate(const mgp::Graph &graph, std::uint64_t new_node) {
   auto R = pagerank_online_alg::global_R;
   auto eps = pagerank_online_alg::global_epsilon;
 
   auto walk_index = pagerank_online_alg::context.walks.size();
   for (std::uint64_t i = 0; i < R; ++i) {
-    std::vector<std::uint64_t> walk{new_vertex};
+    std::vector<std::uint64_t> walk{new_node};
 
-    pagerank_online_alg::context.walks_table[new_vertex].insert(walk_index);
-    pagerank_online_alg::context.walks_counter[new_vertex]++;
+    pagerank_online_alg::context.walks_table[new_node].insert(walk_index);
+    pagerank_online_alg::context.walks_counter[new_node]++;
 
-    CreateRoute(graph, graph.GetInnerNodeId(new_vertex), walk, walk_index, eps);
+    CreateRoute(graph, new_node, walk, walk_index, eps);
 
     pagerank_online_alg::context.walks.emplace_back(std::move(walk));
     walk_index++;
@@ -176,14 +218,15 @@ void UpdateCreate(const mg_graph::GraphView<> &graph, std::uint64_t new_vertex) 
 }
 
 ///
-///@brief Removes the edge from the context and updates walks. This method works by updating walks that contain starting
+///@brief Removes the relationship from the context and updates walks. This method works by updating walks that contain
+/// starting
 /// node because they no longer exist.
 ///
 ///@param graph Graph for updating
-///@param removed_edge Deleted edge
+///@param removed_relationship Deleted relationship
 ///
-void UpdateDelete(const mg_graph::GraphView<> &graph, const std::pair<std::uint64_t, std::uint64_t> &removed_edge) {
-  auto [from, to] = removed_edge;
+void UpdateDelete(const mgp::Graph &graph, const std::pair<std::uint64_t, std::uint64_t> &removed_relationship) {
+  auto [from, to] = removed_relationship;
 
   std::unordered_set<std::uint64_t> walk_table_copy(pagerank_online_alg::context.walks_table[from]);
   for (auto walk_index : walk_table_copy) {
@@ -206,27 +249,27 @@ void UpdateDelete(const mg_graph::GraphView<> &graph, const std::pair<std::uint6
     auto current_id = from;
 
     // Skip creating routes if node does not exist anymore
-    if (!graph.NodeExists(current_id)) {
+    if (!graph.ContainsNode(mgp::Id::FromUint(current_id))) {
       continue;
     }
 
     auto half_eps = pagerank_online_alg::global_epsilon / 2.0;
-    CreateRoute(graph, graph.GetInnerNodeId(current_id), walk, walk_index, half_eps);
+    CreateRoute(graph, current_id, walk, walk_index, half_eps);
   }
 }
 
 ///
-///@brief Deletes vertex from context. This is trivial because we are sure that no edge exists around that node.
+///@brief Deletes node from context. This is trivial because we are sure that no relationship exists around that node.
 ///
 ///@param graph Graph for updating
-///@param removed_vertex Removed vertex
+///@param removed_node Removed node
 ///
-void UpdateDelete(const mg_graph::GraphView<> &graph, std::uint64_t removed_vertex) {
-  pagerank_online_alg::context.walks_table.erase(removed_vertex);
-  pagerank_online_alg::context.walks_counter.erase(removed_vertex);
+void UpdateDelete(std::uint64_t removed_node) {
+  pagerank_online_alg::context.walks_table.erase(removed_node);
+  pagerank_online_alg::context.walks_counter.erase(removed_node);
 }
 
-bool IsIncosistent(const mg_graph::GraphView<> &graph) {
+bool IsInconsistent(const mg_graph::GraphView<> &graph) {
   for (auto const [node_id] : graph.Nodes()) {
     auto external_id = graph.GetMemgraphNodeId(node_id);
     if (pagerank_online_alg::context.walks_counter.find(external_id) ==
@@ -238,7 +281,7 @@ bool IsIncosistent(const mg_graph::GraphView<> &graph) {
 }
 }  // namespace
 
-std::vector<std::pair<std::uint64_t, double>> SetPagerank(const mg_graph::GraphView<> &graph, std::uint64_t R,
+std::vector<std::pair<std::uint64_t, double>> SetPageRank(const mg_graph::GraphView<> &graph, std::uint64_t R,
                                                           double epsilon) {
   pagerank_online_alg::global_R = R;
   pagerank_online_alg::global_epsilon = epsilon;
@@ -265,42 +308,40 @@ std::vector<std::pair<std::uint64_t, double>> SetPagerank(const mg_graph::GraphV
   return CalculatePageRank();
 }
 
-std::vector<std::pair<std::uint64_t, double>> GetPagerank(const mg_graph::GraphView<> &graph) {
+std::vector<std::pair<std::uint64_t, double>> GetPageRank(const mg_graph::GraphView<> &graph) {
   if (pagerank_online_alg::context.IsEmpty()) {
-    return SetPagerank(graph);
+    return SetPageRank(graph);
   }
-  if (IsIncosistent(graph)) {
+  if (IsInconsistent(graph)) {
     throw std::runtime_error(
-        "Graph has been modified, therefore is incosistent with cached results, please update the Pagerank by calling "
+        "Graph has been modified and is thus inconsistent with cached PageRank scores. To update them, please call "
         "set/reset!");
   }
   return CalculatePageRank();
 }
 
-std::vector<std::pair<std::uint64_t, double>> UpdatePagerank(
-    const mg_graph::GraphView<> &graph, const std::vector<std::uint64_t> &new_vertices,
-    const std::vector<std::pair<std::uint64_t, uint64_t>> &new_edges,
-    const std::vector<std::uint64_t> &deleted_vertices,
-    const std::vector<std::pair<std::uint64_t, uint64_t>> &deleted_edges) {
-  if (pagerank_online_alg::context.IsEmpty()) {
-    return SetPagerank(graph);
+std::vector<std::pair<std::uint64_t, double>> UpdatePageRank(
+    const mgp::Graph &graph, const std::vector<std::uint64_t> &new_nodes,
+    const std::vector<std::pair<std::uint64_t, uint64_t>> &new_relationships,
+    const std::vector<std::uint64_t> &deleted_nodes,
+    const std::vector<std::pair<std::uint64_t, uint64_t>> &deleted_relationships) {
+  for (const auto &relationship : deleted_relationships) {
+    UpdateDelete(graph, relationship);
   }
-
-  for (const auto &edge : deleted_edges) {
-    UpdateDelete(graph, edge);
+  for (const auto node : deleted_nodes) {
+    UpdateDelete(node);
   }
-  for (const auto vertex : deleted_vertices) {
-    UpdateDelete(graph, vertex);
+  for (const auto node : new_nodes) {
+    UpdateCreate(graph, node);
   }
-  for (const auto vertex : new_vertices) {
-    UpdateCreate(graph, vertex);
-  }
-  for (const auto &edge : new_edges) {
-    UpdateCreate(graph, edge);
+  for (const auto &relationship : new_relationships) {
+    UpdateCreate(graph, relationship);
   }
 
   return CalculatePageRank();
 }
+
+bool ContextEmpty() { return pagerank_online_alg::context.IsEmpty(); }
 
 void Reset() { pagerank_online_alg::context.Init(); }
 }  // namespace pagerank_online_alg
