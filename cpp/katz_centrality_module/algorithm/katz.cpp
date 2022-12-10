@@ -1,14 +1,12 @@
-#include <queue>
 #include "katz.hpp"
+#include <queue>
 
 namespace katz_alg {
 namespace {
 
 class KatzCentralityData {
  public:
-  ///
-  ///@brief Clearing the resulting storages in algorithm context
-  ///
+  ///@brief Clear the algorithm context (the data structures used by it)
   void Clear() {
     centralities.clear();
     omegas.clear();
@@ -16,12 +14,10 @@ class KatzCentralityData {
     iteration = 0;
   }
 
-  ///
-  ///@brief Initialize resulting structures
-  ///
-  ///@param graph Graph for calculation
-  ///
-  void Init(const mg_graph::GraphView<> &graph) {
+  ///@brief Initialize the context
+  ///@param graph Current graph
+  template <typename T>
+  void Init(const T &graph) {
     Clear();
 
     // Initialize the centrality vector
@@ -34,18 +30,17 @@ class KatzCentralityData {
     InitVertexMap(omega, 1.0, graph);
     omegas.emplace_back(std::move(omega));
 
-    // Initialize the lr vector
+    // Initialize the lower bound vector
     InitVertexMap(lr, 0.0, graph);
-    // Initialize the ur vector
+
+    // Initialize the upper bound vector
     InitVertexMap(ur, 0.0, graph);
   }
 
-  ///
-  ///@brief Adds one iteration and initialize the result storage
-  ///
-  ///@param graph Graph for calculation
-  ///
-  void AddIteration(const mg_graph::GraphView<> &graph) {
+  ///@brief Initialize next iteration’s context and increment iteration count
+  ///@param graph Current graph
+  template <typename T>
+  void AddIteration(const T &graph) {
     iteration++;
 
     // Initialize the centrality vector
@@ -61,81 +56,117 @@ class KatzCentralityData {
 
   bool IsInitialized() { return !centralities.empty() && iteration > 0; }
 
-  // Vector for storing centralities for historical iterations
+  // Each node’s centrality in each iteration
   std::vector<std::unordered_map<std::uint64_t, double>> centralities;
-  // Degree of outcomming edges in certain level
+  // Each node’s out-degree in each iteration
   std::vector<std::unordered_map<std::uint64_t, double>> omegas;
 
-  // Vector for storing the lower bound of centrality
+  // Each node’s centrality lower bound
   std::unordered_map<std::uint64_t, double> lr;
-  // Vector for storing the lower bound of centrality
+  // Each node’s centrality upper bound
   std::unordered_map<std::uint64_t, double> ur;
 
-  // Set of nodes used for convergence calculation
+  // Nodes used to determine convergence
   std::set<std::uint64_t> active_nodes;
 
-  // Current algorithm iteration step
+  // Current iteration
   std::uint64_t iteration = 0;
 
  private:
-  ///
-  ///@brief Initialize result maps with default values and memgraph IDs
-  ///
-  ///@param map Map used for storing values
-  ///@param default_value  Default value
-  ///@param graph Graph used for fetching ID
-  ///
-  void InitVertexMap(std::unordered_map<std::uint64_t, double> &map, double default_value,
+  ///@brief Initialize per-node maps with default values (using Memgraph IDs)
+  ///@param map Target data structure
+  ///@param default_value Default value
+  ///@param graph Current graph
+  void InitVertexMap(std::unordered_map<std::uint64_t, double> &map, const double default_value,
                      const mg_graph::GraphView<> &graph) {
-    for (auto &[_v] : graph.Nodes()) {
-      // Transform inner ID to Memgraph
-      auto v = graph.GetMemgraphNodeId(_v);
+    for (const auto &[_v] : graph.Nodes()) {
+      const auto v = graph.GetMemgraphNodeId(_v);  // Convert a node’s inner ID to Memgraph ID
       map[v] = default_value;
+    }
+  }
+
+  /// @brief Above function’s C++ API equivalent
+  void InitVertexMap(std::unordered_map<std::uint64_t, double> &map, const double default_value,
+                     const mgp::Graph &graph) {
+    for (const auto &node : graph.Nodes()) {
+      map[node.Id().AsUint()] = default_value;
     }
   }
 };
 
-/// Storage for dynamic algorithm intermediate results
+/// Algorithm context
 KatzCentralityData context;
+
 /// Attenuation factor
 double alpha;
-/// Top-k for convergence calculation
+
+/// Active nodes cutoff (for determining convergence)
 std::uint64_t k;
-/// Tolerance factor for separation calculation
+
+/// Separation tolerance factor
 double epsilon;
 
+std::vector<std::pair<std::uint64_t, double>> WrapResults() {
+  return std::vector<std::pair<std::uint64_t, double>>(
+      katz_alg::context.centralities[katz_alg::context.iteration].begin(),
+      katz_alg::context.centralities[katz_alg::context.iteration].end());
+}
+
+/// @brief Returns the highest degree node’s degree
+/// @param graph Current graph
+/// @return Node degree
 std::uint64_t MaxDegree(const mg_graph::GraphView<> &graph) {
   std::vector<std::size_t> deg_vector;
-  // Calculate the vector of graph degrees
+
+  // Calculate the graph degree vector
   std::transform(graph.Nodes().begin(), graph.Nodes().end(), std::back_inserter(deg_vector),
-                 [&graph](mg_graph::Node<> vertex) -> std::size_t { return graph.Neighbours(vertex.id).size(); });
-  auto deg_max = *std::max_element(deg_vector.begin(), deg_vector.end());
+                 [&graph](mg_graph::Node<> node) -> std::size_t { return graph.Neighbours(node.id).size(); });
+  const auto deg_max = *std::max_element(deg_vector.begin(), deg_vector.end());
+
   return deg_max;
 }
 
-bool Converged(std::set<std::uint64_t> &active_nodes, std::uint64_t k, double epsilon) {
-  // Fetch the information about current iteration
-  auto centrality = katz_alg::context.centralities[context.iteration];
-  auto lr = katz_alg::context.lr;
-  auto ur = katz_alg::context.ur;
+/// @brief Above function’s C++ API equivalent
+std::uint64_t MaxDegree(const mgp::Graph &graph) {
+  std::uint64_t max_degree = 0;
+  for (const auto &node : graph.Nodes()) {
+    std::uint64_t degree = 0;
+    for (const auto &relationship : node.OutRelationships()) {
+      degree++;
+    }
+    if (degree > max_degree) max_degree = degree;
+  }
+  return max_degree;
+}
 
-  // TODO: this is controversial decision
+/// @brief Determines convergence by testing whether the upper and lower bounds of active nodes are ϵ-separated.
+/// @param active_nodes Active nodes
+/// @param k Active nodes cutoff
+/// @param epsilon Separation tolerance factor
+/// @return Whether the algorithm converged
+bool Converged(std::set<std::uint64_t> &active_nodes, std::uint64_t k, const double epsilon) {
+  // Fetch current iteration data
+  const auto centrality = katz_alg::context.centralities[context.iteration];
+  const auto lr = katz_alg::context.lr;
+  const auto ur = katz_alg::context.ur;
+
+  // TODO: this is a controversial decision
   k = centrality.size();
 
-  // Create a vector of active centralities and their values
+  // Create the active centrality vector
   std::vector<std::pair<std::uint64_t, double>> active_centrality;
-  for (auto m : active_nodes) {
+  for (const auto m : active_nodes) {
     active_centrality.emplace_back(m, centrality.at(m));
   }
 
-  // Partially sort the centralities. Keep only the first `k` sorted
+  // Sort the first `k` centralities in descending order
   std::partial_sort(active_centrality.begin(), active_centrality.begin() + std::min(k, active_centrality.size()),
                     active_centrality.end(),
                     [](std::pair<std::uint64_t, double> a, std::pair<std::uint64_t, double> b) -> bool {
                       return a.second > b.second;
                     });
 
-  // Erase from set of active nodes if centralities are separated
+  // Deactivate nodes which are ϵ-separated from the top `k` highest lower bound nodes
   for (std::size_t i = k; i < centrality.size(); i++) {
     if (ur.at(active_centrality[i].first - epsilon) < lr.at(active_centrality[k - 1].first)) {
       active_centrality.erase(active_centrality.begin() + i);
@@ -143,16 +174,16 @@ bool Converged(std::set<std::uint64_t> &active_nodes, std::uint64_t k, double ep
     }
   }
 
-  // If the size of active nodes is higher than `k`, algorithm hasn't converged
+  // If there are more than `k` active nodes, the algorithm hasn’t converged
   if (active_centrality.size() > k) {
     return false;
   }
 
-  // Next step is checking whether the top of the partial list has converged too
-  auto size = std::min(active_centrality.size(), k);
+  // Check if the top of the partial list has converged
+  const auto size = std::min(active_centrality.size(), k);
   for (std::size_t i = 1; i < size; i++) {
-    double u = ur.at(active_centrality[i].first);
-    double l = lr.at(active_centrality[i - 1].first);
+    const double u = ur.at(active_centrality[i].first);
+    const double l = lr.at(active_centrality[i - 1].first);
 
     if (u - epsilon >= l) {
       return false;
@@ -161,89 +192,135 @@ bool Converged(std::set<std::uint64_t> &active_nodes, std::uint64_t k, double ep
   return true;
 }
 
+/// @brief Iteratively tightens the upper and lower bounds of Katz centrality values until convergence. Records updates
+/// in the algorithm context.
+/// @param active_nodes Active nodes
+/// @param graph Current graph
+/// @param alpha Attenuation factor
+/// @param k Active nodes cutoff
+/// @param epsilon Separation tolerance factor
+/// @param gamma Convergence factor
+/// @return Results
 std::vector<std::pair<std::uint64_t, double>> KatzCentralityLoop(std::set<std::uint64_t> &active_nodes,
-                                                                 const mg_graph::GraphView<> &graph, double alpha,
-                                                                 std::uint64_t k, double epsilon, double gamma) {
+                                                                 const mg_graph::GraphView<> &graph, const double alpha,
+                                                                 const std::uint64_t k, const double epsilon,
+                                                                 const double gamma) {
   do {
     katz_alg::context.AddIteration(graph);
-    auto &iteration = katz_alg::context.iteration;
+    const auto &iteration = katz_alg::context.iteration;
 
-    for (auto &[_v] : graph.Nodes()) {
-      // Transform inner ID to Memgraph
-      auto v = graph.GetMemgraphNodeId(_v);
+    for (const auto &[_v] : graph.Nodes()) {
+      const auto v = graph.GetMemgraphNodeId(_v);  // Convert a node’s inner ID to Memgraph ID
 
       // Fetch the number of descendants
-      for (auto &[_u, _] : graph.InNeighbours(_v)) {
-        // Transform inner ID to Memgraph
-        auto u = graph.GetMemgraphNodeId(_u);
+      for (const auto &[_u, _] : graph.InNeighbours(_v)) {
+        const auto u = graph.GetMemgraphNodeId(_u);  // Convert a node’s inner ID to Memgraph ID
         katz_alg::context.omegas[iteration][v] += katz_alg::context.omegas[iteration - 1][u];
       }
       katz_alg::context.centralities[iteration][v] = katz_alg::context.centralities[iteration - 1][v] +
                                                      pow(alpha, iteration) * katz_alg::context.omegas[iteration][v];
 
-      // Update the lower and upper bound
+      // Update the lower and upper bounds
       katz_alg::context.lr[v] = katz_alg::context.centralities[iteration][v];
       katz_alg::context.ur[v] = katz_alg::context.centralities[iteration][v] +
                                 pow(alpha, iteration + 1) * katz_alg::context.omegas[iteration][v] * gamma;
     }
   } while (!Converged(active_nodes, k, epsilon));
 
-  // Transform the resulting global values
   return WrapResults();
 }
 
-void UpdateLevel(KatzCentralityData &context_new, std::set<std::uint64_t> &updated_nodes,
-                 const std::vector<std::pair<std::uint64_t, uint64_t>> &new_edges,
-                 const std::vector<std::pair<std::uint64_t, uint64_t>> &deleted_edges,
-                 const std::set<std::uint64_t> &new_edge_ids, const mg_graph::GraphView<> &graph) {
-  auto i = context_new.iteration;
+/// @brief Above function’s C++ API equivalent
+std::vector<std::pair<std::uint64_t, double>> KatzCentralityLoop(std::set<std::uint64_t> &active_nodes,
+                                                                 const mgp::Graph &graph, const double alpha,
+                                                                 const std::uint64_t k, const double epsilon,
+                                                                 const double gamma) {
+  do {
+    katz_alg::context.AddIteration(graph);
+    const auto &iteration = katz_alg::context.iteration;
 
-  // Create a queue of nodes for update
+    for (const auto &node : graph.Nodes()) {
+      const auto v = node.Id().AsUint();
+
+      // Fetch the number of descendants
+      for (const auto &in_relationship : node.InRelationships()) {
+        const auto u = in_relationship.From().Id().AsUint();
+        katz_alg::context.omegas[iteration][v] += katz_alg::context.omegas[iteration - 1][u];
+      }
+      katz_alg::context.centralities[iteration][v] = katz_alg::context.centralities[iteration - 1][v] +
+                                                     pow(alpha, iteration) * katz_alg::context.omegas[iteration][v];
+
+      // Update the lower and upper bounds
+      katz_alg::context.lr[v] = katz_alg::context.centralities[iteration][v];
+      katz_alg::context.ur[v] = katz_alg::context.centralities[iteration][v] +
+                                pow(alpha, iteration + 1) * katz_alg::context.omegas[iteration][v] * gamma;
+    }
+  } while (!Converged(active_nodes, k, epsilon));
+
+  return WrapResults();
+}
+
+/// @brief Recomputes the first `context.iterations` iterations from the static algorithm and updates the data
+/// structures with the newly created and deleted edges.
+/// @param context_new Local algorithm context
+/// @param affected_nodes Affected nodes (adjacent relationships changed)
+/// @param created_relationships Newly-created relationships
+/// @param deleted_relationships Newly-deleted relationships
+/// @param created_relationship_ids Newly-created relationships’ IDs
+/// @param graph Current graph
+void UpdateLevel(KatzCentralityData &context_new, std::set<std::uint64_t> &affected_nodes, const mgp::Graph &graph,
+                 const std::vector<std::pair<std::uint64_t, uint64_t>> &created_relationships,
+                 const std::vector<std::pair<std::uint64_t, uint64_t>> &deleted_relationships,
+                 const std::set<std::uint64_t> &created_relationship_ids) {
+  const auto i = context_new.iteration;
+
+  // Create an update node queue
   std::queue<std::uint64_t> queue;
-  for (auto v : updated_nodes) {
+  for (const auto v : affected_nodes) {
     queue.push(v);
   }
 
   // Update new context with old values
-  for (auto [id, value] : katz_alg::context.omegas[i]) {
+  for (const auto [id, value] : katz_alg::context.omegas[i]) {
     context_new.omegas[i][id] = value;
   }
 
-  // Till queue is empty, update degrees in paths of length `iteration`
+  // Update degrees in paths of length `iteration` until the queue is empty
   while (!queue.empty()) {
-    auto v = queue.front();
+    const auto v = queue.front();
     queue.pop();
 
-    // Node is deleted in last iteration
-    if (!graph.NodeExists(v)) continue;
-    for (auto [w_, edge_id] : graph.OutNeighbours(graph.GetInnerNodeId(v))) {
-      auto w = graph.GetMemgraphNodeId(w_);
+    if (!graph.ContainsNode(mgp::Id::FromUint(v))) continue;  // Node is deleted in the final iteration
+
+    for (const auto &r : graph.GetNodeById(mgp::Id::FromUint(v)).OutRelationships()) {
+      const auto relationship_id = r.Id().AsUint();
+      const auto w = r.To().Id().AsUint();
 
       // If `w` is not updated, add to queue
-      if (updated_nodes.find(w) == updated_nodes.end()) {
+      if (affected_nodes.find(w) == affected_nodes.end()) {
         queue.push(w);
       }
-      updated_nodes.emplace(w);
+      affected_nodes.emplace(w);
 
-      // If edge is recently created, skip it
-      if (new_edge_ids.find(edge_id) != new_edge_ids.end()) continue;
+      if (created_relationship_ids.find(relationship_id) != created_relationship_ids.end())
+        continue;  // Skip new relationships
 
       context_new.omegas[i][w] += context_new.omegas[i - 1][v] - katz_alg::context.omegas[i - 1][v];
     }
   }
 
-  // Update new degrees with new edges
-  for (auto [w, v] : new_edges) {
-    context_new.omegas[i][v] += context_new.omegas[i - 1][w];
+  // Add the new relationships to this iteration’s degrees
+  for (const auto [v, w] : created_relationships) {
+    context_new.omegas[i][w] += context_new.omegas[i - 1][v];
   }
 
-  // Update new degrees by deling values from deleted edges
-  for (auto [w, v] : deleted_edges) {
-    context_new.omegas[i][v] -= katz_alg::context.omegas[i - 1][w];
+  // Subtract the deleted relationships from this iteration’s degrees
+  for (const auto [v, w] : deleted_relationships) {
+    context_new.omegas[i][w] -= katz_alg::context.omegas[i - 1][v];
   }
 
-  // Update centralities as last step
-  for (auto w : updated_nodes) {
+  // Update centralities
+  for (const auto w : affected_nodes) {
     if (i != 1) {
       katz_alg::context.centralities[i][w] =
           katz_alg::context.centralities[i - 1][w] + pow(katz_alg::alpha, i) * context_new.omegas[i][w];
@@ -254,14 +331,12 @@ void UpdateLevel(KatzCentralityData &context_new, std::set<std::uint64_t> &updat
   }
 }
 
-std::vector<std::pair<std::uint64_t, double>> WrapResults() {
-  return std::vector<std::pair<std::uint64_t, double>>(
-      katz_alg::context.centralities[katz_alg::context.iteration].begin(),
-      katz_alg::context.centralities[katz_alg::context.iteration].end());
-}
-
+/// @brief Returns whether the Katz centrality results to be retrieved are applicable to the current state of the graph,
+/// i.e. whether there have been any modifications.
+/// @param graph Current graph
+/// @return result inconsistence
 bool IsInconsistent(const mg_graph::GraphView<> &graph) {
-  for (auto const [node_id] : graph.Nodes()) {
+  for (const auto [node_id] : graph.Nodes()) {
     auto external_id = graph.GetMemgraphNodeId(node_id);
     if (katz_alg::context.centralities[katz_alg::context.iteration].find(external_id) ==
         katz_alg::context.centralities[katz_alg::context.iteration].end()) {
@@ -269,7 +344,7 @@ bool IsInconsistent(const mg_graph::GraphView<> &graph) {
     }
   }
 
-  for (auto [node_id, _] : katz_alg::context.centralities[katz_alg::context.iteration]) {
+  for (const auto [node_id, _] : katz_alg::context.centralities[katz_alg::context.iteration]) {
     if (!graph.NodeExists(node_id)) {
       return true;
     }
@@ -279,8 +354,10 @@ bool IsInconsistent(const mg_graph::GraphView<> &graph) {
 }
 }  // namespace
 
+bool NoPreviousData() { return !katz_alg::context.IsInitialized(); }
+
 std::vector<std::pair<std::uint64_t, double>> GetKatz(const mg_graph::GraphView<> &graph) {
-  // Create context and calculate values if not initialized
+  // If there’s no context, initialize it and compute centrality with default parameters
   if (!katz_alg::context.IsInitialized()) {
     return SetKatz(graph);
   }
@@ -294,8 +371,8 @@ std::vector<std::pair<std::uint64_t, double>> GetKatz(const mg_graph::GraphView<
   return WrapResults();
 }
 
-std::vector<std::pair<std::uint64_t, double>> SetKatz(const mg_graph::GraphView<> &graph, double alpha,
-                                                      double epsilon) {
+std::vector<std::pair<std::uint64_t, double>> SetKatz(const mg_graph::GraphView<> &graph, const double alpha,
+                                                      const double epsilon) {
   katz_alg::alpha = alpha;
   katz_alg::k = k;
   katz_alg::epsilon = epsilon;
@@ -305,97 +382,100 @@ std::vector<std::pair<std::uint64_t, double>> SetKatz(const mg_graph::GraphView<
     return WrapResults();
   }
 
-  auto deg_max = MaxDegree(graph);
-  double gamma = deg_max / (1. - (alpha * alpha * deg_max));
+  const auto deg_max = MaxDegree(graph);
+  const double gamma = deg_max / (1. - (alpha * alpha * deg_max));
 
   // Initialize the active vector
   std::transform(graph.Nodes().begin(), graph.Nodes().end(),
                  std::inserter(katz_alg::context.active_nodes, katz_alg::context.active_nodes.end()),
-                 [&graph](mg_graph::Node<> vertex) -> std::uint64_t { return graph.GetMemgraphNodeId(vertex.id); });
+                 [&graph](mg_graph::Node<> node) -> std::uint64_t { return graph.GetMemgraphNodeId(node.id); });
 
   return KatzCentralityLoop(katz_alg::context.active_nodes, graph, katz_alg::alpha, katz_alg::k, katz_alg::epsilon,
                             gamma);
 }
 
 std::vector<std::pair<std::uint64_t, double>> UpdateKatz(
-    const mg_graph::GraphView<> &graph, const std::vector<std::uint64_t> &new_vertices,
-    const std::vector<std::pair<std::uint64_t, uint64_t>> &new_edges, const std::vector<std::uint64_t> &new_edge_ids,
-    const std::vector<std::uint64_t> &deleted_vertices,
-    const std::vector<std::pair<std::uint64_t, uint64_t>> &deleted_edges) {
-  // Create context and calculate values if not initialized
-  if (!katz_alg::context.IsInitialized()) {
-    return SetKatz(graph);
+    const mgp::Graph &graph, const std::vector<std::uint64_t> &created_nodes,
+    const std::vector<std::pair<std::uint64_t, uint64_t>> &created_relationships,
+    const std::vector<std::uint64_t> &created_relationship_ids, const std::vector<std::uint64_t> &deleted_nodes,
+    const std::vector<std::pair<std::uint64_t, uint64_t>> &deleted_relationships) {
+  std::uint64_t n_relationships = 0;
+  for (const auto &node : graph.Nodes()) {
+    for (const auto &_ : node.OutRelationships()) {
+      n_relationships++;
+    }
   }
-
-  if (graph.Edges().empty()) {
+  if (n_relationships == 0) {
     katz_alg::context.Init(graph);
     return WrapResults();
   }
 
-  auto deg_max = MaxDegree(graph);
-  double gamma = deg_max / (1. - (alpha * deg_max));
+  const auto deg_max = MaxDegree(graph);
+  const double gamma = deg_max / (1. - (alpha * deg_max));
 
-  // Update context for new vertices for each iteration
-  for (auto v : new_vertices) {
+  // Update context for new nodes for each iteration
+  for (const auto v : created_nodes) {
     katz_alg::context.omegas[0][v] = 1;
     for (std::uint64_t i = 0; i <= katz_alg::context.iteration; i++) {
       katz_alg::context.centralities[i][v] = 0;
     }
   }
 
-  // Updated nodes
-  std::set<std::uint64_t> updated_nodes;
-  for (auto [w, v] : new_edges) {
-    updated_nodes.emplace(w);
-    updated_nodes.emplace(v);
+  // Determine updated nodes
+  std::set<std::uint64_t> affected_nodes;
+  for (const auto [v, w] : created_relationships) {
+    affected_nodes.emplace(v);
+    affected_nodes.emplace(w);
   }
-  for (auto [w, v] : deleted_edges) {
-    updated_nodes.emplace(w);
-    updated_nodes.emplace(v);
+  for (const auto [v, w] : deleted_relationships) {
+    affected_nodes.emplace(v);
+    affected_nodes.emplace(w);
   }
 
-  // Create new context for updating the dynamic graph
+  // Recompute iterations in a local context
   KatzCentralityData context_new;
   context_new.Init(graph);
-  std::set<std::uint64_t> new_edge_ids_set(new_edge_ids.begin(), new_edge_ids.end());
+  std::set<std::uint64_t> created_relationship_ids_set(created_relationship_ids.begin(),
+                                                       created_relationship_ids.end());
   for (std::uint64_t i = 0; i < katz_alg::context.iteration; i++) {
     context_new.AddIteration(graph);
-    UpdateLevel(context_new, updated_nodes, new_edges, deleted_edges, new_edge_ids_set, graph);
+    UpdateLevel(context_new, affected_nodes, graph, created_relationships, deleted_relationships,
+                created_relationship_ids_set);
   }
 
-  // After updating iteration results, store them in global value
+  // Update global context
   for (std::uint64_t i = 1; i < context_new.iteration + 1; i++) {
-    for (auto [id, value] : context_new.omegas[i]) {
+    for (const auto [id, value] : context_new.omegas[i]) {
       katz_alg::context.omegas[i][id] = value;
     }
   }
 
-  // Update the lower and upper bound
-  for (auto w : updated_nodes) {
-    auto iteration = katz_alg::context.iteration;
+  // Update the lower and upper bounds
+  for (const auto w : affected_nodes) {
+    const auto iteration = katz_alg::context.iteration;
 
     katz_alg::context.lr[w] = katz_alg::context.centralities[iteration][w];
     katz_alg::context.ur[w] = katz_alg::context.centralities[iteration][w] +
                               pow(katz_alg::alpha, iteration + 1) * katz_alg::context.omegas[iteration][w];
   }
 
-  // Check whether node should be active again
+  // Check whether to keep nodes active
   std::vector<double> min_lr_vector;
-  for (auto active_node : katz_alg::context.active_nodes) {
+  for (const auto active_node : katz_alg::context.active_nodes) {
     min_lr_vector.emplace_back(katz_alg::context.lr[active_node]);
   }
 
   auto min_lr = *std::min_element(min_lr_vector.begin(), min_lr_vector.end());
-  for (auto [w_] : graph.Nodes()) {
-    auto w = graph.GetMemgraphNodeId(w_);
+  for (const auto &node : graph.Nodes()) {
+    const auto w = node.Id().AsUint();
 
     if (katz_alg::context.ur[w] >= (min_lr - katz_alg::epsilon)) {
       katz_alg::context.active_nodes.emplace(w);
     }
   }
 
-  // Erase values for deleted vertices, since all edges are certainly detached
-  for (auto v : deleted_vertices) {
+  // Erase deleted node values since all relationships are certainly detached
+  for (const auto v : deleted_nodes) {
     for (std::uint64_t i = 0; i <= katz_alg::context.iteration; i++) {
       katz_alg::context.omegas[i].erase(katz_alg::context.omegas[i].find(v));
       katz_alg::context.centralities[i].erase(katz_alg::context.centralities[i].find(v));

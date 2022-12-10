@@ -40,11 +40,9 @@ void GetKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *re
     auto katz_centralities = katz_alg::GetKatz(*graph);
 
     for (auto &[vertex_id, centrality] : katz_centralities) {
-      // Insert the Katz centrality record
       InsertKatzRecord(memgraph_graph, result, memory, centrality, vertex_id);
     }
   } catch (const std::exception &e) {
-    // We must not let any exceptions out of our module.
     mgp::result_set_error_msg(result, e.what());
     return;
   }
@@ -59,11 +57,9 @@ void SetKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *re
     auto katz_centralities = katz_alg::SetKatz(*graph, alpha, epsilon);
 
     for (auto &[vertex_id, centrality] : katz_centralities) {
-      // Insert the Katz centrality record
       InsertKatzRecord(memgraph_graph, result, memory, centrality, vertex_id);
     }
   } catch (const std::exception &e) {
-    // We must not let any exceptions out of our module.
     mgp::result_set_error_msg(result, e.what());
     return;
   }
@@ -71,47 +67,82 @@ void SetKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *re
 
 void UpdateKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    // Created vertices
-    auto created_vertices = mg_utility::GetNodeIDs(mgp::value_get_list(mgp::list_at(args, 0)));
-    auto created_edges = mg_utility::GetEdgeEndpointIDs(mgp::value_get_list(mgp::list_at(args, 1)));
-    auto created_edge_ids = mg_utility::GetEdgeIDs(mgp::value_get_list(mgp::list_at(args, 1)));
+    mgp::memory = memory;
 
-    // Deleted entities
-    auto deleted_vertices = mg_utility::GetNodeIDs(mgp::value_get_list(mgp::list_at(args, 2)));
-    auto deleted_edges = mg_utility::GetEdgeEndpointIDs(mgp::value_get_list(mgp::list_at(args, 3)));
+    const auto record_factory = mgp::RecordFactory(result);
+    const auto graph = mgp::Graph(memgraph_graph);
+    const auto arguments = mgp::List(args);
 
-    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
-    std::transform(created_edge_ids.begin(), created_edge_ids.end(), created_edge_ids.begin(),
-                   [&graph](std::uint64_t id) -> std::uint64_t { return graph.get()->GetInnerEdgeId(id); });
+    std::vector<std::pair<uint64_t, double>> katz_centralities;
 
-    auto katz_centralities = katz_alg::UpdateKatz(*graph, created_vertices, created_edges, created_edge_ids,
-                                                  deleted_vertices, deleted_edges);
+    if (katz_alg::NoPreviousData()) {
+      auto legacy_graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
+      katz_centralities = katz_alg::SetKatz(*legacy_graph);
 
-    for (auto &[vertex_id, centrality] : katz_centralities) {
-      // Insert the Katz centrality record
-      InsertKatzRecord(memgraph_graph, result, memory, centrality, vertex_id);
+      for (auto &[node_id, centrality] : katz_centralities) {
+        auto record = record_factory.NewRecord();
+        record.Insert(kFieldNode, graph.GetNodeById(mgp::Id::FromUint(node_id)));
+        record.Insert(kFieldRank, centrality);
+      }
+    } else {
+      const auto created_nodes_ = arguments[0].ValueList();
+      const auto created_relationships_ = arguments[1].ValueList();
+
+      const auto deleted_nodes_ = arguments[2].ValueList();
+      const auto deleted_relationships_ = arguments[3].ValueList();
+
+      std::vector<std::uint64_t> created_nodes;
+      std::vector<std::pair<std::uint64_t, std::uint64_t>> created_relationships;
+      std::vector<std::uint64_t> created_relationship_ids;
+
+      std::vector<std::uint64_t> deleted_nodes;
+      std::vector<std::pair<std::uint64_t, std::uint64_t>> deleted_relationships;
+
+      for (const auto &node : created_nodes_) {
+        created_nodes.push_back(node.ValueNode().Id().AsUint());
+      }
+      for (const auto &relationship : created_relationships_) {
+        created_relationships.push_back({relationship.ValueRelationship().From().Id().AsUint(),
+                                         relationship.ValueRelationship().To().Id().AsUint()});
+      }
+      for (const auto &relationship : created_relationships_) {
+        created_relationship_ids.push_back(relationship.ValueRelationship().Id().AsUint());
+      }
+
+      for (const auto &node : deleted_nodes_) {
+        deleted_nodes.push_back(node.ValueNode().Id().AsUint());
+      }
+      for (const auto &relationship : deleted_relationships_) {
+        deleted_relationships.push_back({relationship.ValueRelationship().From().Id().AsUint(),
+                                         relationship.ValueRelationship().To().Id().AsUint()});
+      }
+
+      katz_centralities = katz_alg::UpdateKatz(graph, created_nodes, created_relationships, created_relationship_ids,
+                                               deleted_nodes, deleted_relationships);
+
+      for (auto &[node_id, centrality] : katz_centralities) {
+        auto record = record_factory.NewRecord();
+        record.Insert(kFieldNode, graph.GetNodeById(mgp::Id::FromUint(node_id)));
+        record.Insert(kFieldRank, centrality);
+      }
     }
   } catch (const std::exception &e) {
-    // We must not let any exceptions out of our module.
     mgp::result_set_error_msg(result, e.what());
     return;
   }
 }
+
 void KatzCentralityReset(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
     katz_alg::Reset();
-    InsertMessageRecord(result, memory,
-                        "Katz centrality context is reset! Before running again it will run initialization.");
+    InsertMessageRecord(result, memory, "The Katz centrality algorithm context has been reset!");
   } catch (const std::exception &e) {
-    // We must not let any exceptions out of our module.
     InsertMessageRecord(result, memory,
                         "Reset failed: An exception occurred, please check your `katz_centrality_online` module!");
   }
 }
 }  // namespace
 
-// Each module needs to define mgp_init_module function.
-// Here you can register multiple procedures your module supports.
 extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
   try {
     // Dynamic Katz centrality
@@ -176,10 +207,4 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
   return 0;
 }
 
-// This is an optional function if you need to release any resources before the
-// module is unloaded. You will probably need this if you acquired some
-// resources in mgp_init_module.
-extern "C" int mgp_shutdown_module() {
-  // Return 0 to indicate success.
-  return 0;
-}
+extern "C" int mgp_shutdown_module() { return 0; }
