@@ -135,10 +135,9 @@ void UpdateKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
 void KatzCentralityReset(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
     katz_alg::Reset();
-    InsertMessageRecord(result, memory, "The Katz centrality algorithm context has been reset!");
+    InsertMessageRecord(result, memory, "The algorithm has been successfully reset!");
   } catch (const std::exception &e) {
-    InsertMessageRecord(result, memory,
-                        "Reset failed: An exception occurred, please check your `katz_centrality_online` module!");
+    InsertMessageRecord(result, memory, "Reset failed: An exception occurred, please check the module!");
   }
 }
 }  // namespace
