@@ -1,11 +1,55 @@
 #include "algorithm_online/community_detection.hpp"
 
+// Procedures
+constexpr std::string_view kProcSet{"set"};
+constexpr std::string_view kProcGet{"get"};
+constexpr std::string_view kProcUpdate{"update"};
+constexpr std::string_view kProcReset{"reset"};
+
+// Arguments
+constexpr std::string_view kDirected{"directed"};
+constexpr std::string_view kWeighted{"weighted"};
+constexpr std::string_view kSimilarityThreshold{"similarity_threshold"};
+constexpr std::string_view kExponent{"exponent"};
+constexpr std::string_view kMinValue{"min_value"};
+constexpr std::string_view kWeightProperty{"weight_property"};
+constexpr std::string_view kWSelfloop{"w_selfloop"};
+constexpr std::string_view kMaxIterations{"max_iterations"};
+constexpr std::string_view kMaxUpdates{"max_updates"};
+
+// The following are predefined variables
+// (https://memgraph.com/docs/memgraph/reference-guide/triggers#predefined-variables) and thus not renamed to
+// nodes/relationships
+constexpr std::string_view kCreatedVertices{"createdVertices"};
+constexpr std::string_view kCreatedEdges{"createdEdges"};
+constexpr std::string_view kUpdatedVertices{"updatedVertices"};
+constexpr std::string_view kUpdatedEdges{"updatedEdges"};
+constexpr std::string_view kDeletedVertices{"deletedVertices"};
+constexpr std::string_view kDeletedEdges{"deletedEdges"};
+
+// Default values
+constexpr bool kDefaultDirected = false;
+constexpr bool kDefaultWeighted = false;
+constexpr double kDefaultSimilarityThreshold = 0.7;
+constexpr double kDefaultExponent = 4.0;
+constexpr double kDefaultMinValue = 0.1;
+constexpr std::string_view kDefaultWeightProperty{"weight"};
+constexpr double kDefaultWSelfloop = 1.0;
+constexpr int64_t kDefaultMaxIterations = 5;
+constexpr int64_t kDefaultMaxUpdates = 100;
+
+// Returns
+constexpr std::string_view kFieldNode{"node"};
+constexpr std::string_view kFieldCommunityId{"community_id"};
+
+constexpr std::string_view kFieldMessage{"message"};
+
 LabelRankT::LabelRankT algorithm = LabelRankT::LabelRankT();
 bool initialized = false;
 
-auto saved_directedness = false;
-auto saved_weightedness = false;
-std::string saved_weight_property = "weight";
+auto saved_directedness = kDefaultDirected;
+auto saved_weightedness = kDefaultWeighted;
+std::string saved_weight_property = kDefaultWeightProperty.data();
 
 void Set(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
@@ -35,8 +79,8 @@ void Set(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memo
 
     for (const auto [node_id, label] : labels) {
       auto record = record_factory.NewRecord();
-      record.Insert("node", graph.GetNodeById(mgp::Id::FromUint(node_id)));
-      record.Insert("community_id", label);
+      record.Insert(kFieldNode.data(), graph.GetNodeById(mgp::Id::FromUint(node_id)));
+      record.Insert(kFieldCommunityId.data(), label);
     }
   } catch (const std::exception &e) {
     return;
@@ -61,8 +105,8 @@ void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memo
 
         // Otherwise:
         auto record = record_factory.NewRecord();
-        record.Insert("node", graph.GetNodeById(mgp::Id::FromUint(node_id)));
-        record.Insert("community_id", label);
+        record.Insert(kFieldNode.data(), graph.GetNodeById(mgp::Id::FromUint(node_id)));
+        record.Insert(kFieldCommunityId.data(), label);
       } catch (const std::exception &e) {
         continue;
       }
@@ -89,8 +133,7 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
     const auto deleted_relationships_ = arguments[5].ValueList();
 
     if (initialized) {
-      // compute modified_nodes & modified_relationships
-
+      // Compute modified_nodes & modified_relationships
       std::unordered_set<std::uint64_t> modified_nodes;
       std::vector<std::pair<std::uint64_t, std::uint64_t>> modified_relationships;
       std::unordered_set<std::uint64_t> deleted_nodes;
@@ -125,16 +168,16 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
 
       for (const auto [node_id, label] : labels) {
         auto record = record_factory.NewRecord();
-        record.Insert("node", graph.GetNodeById(mgp::Id::FromUint(node_id)));
-        record.Insert("community_id", label);
+        record.Insert(kFieldNode.data(), graph.GetNodeById(mgp::Id::FromUint(node_id)));
+        record.Insert(kFieldCommunityId.data(), label);
       }
     } else {
       const auto labels = algorithm.SetLabels(graph);
 
       for (const auto [node_id, label] : labels) {
         auto record = record_factory.NewRecord();
-        record.Insert("node", graph.GetNodeById(mgp::Id::FromUint(node_id)));
-        record.Insert("community_id", label);
+        record.Insert(kFieldNode.data(), graph.GetNodeById(mgp::Id::FromUint(node_id)));
+        record.Insert(kFieldCommunityId.data(), label);
       }
     }
 
@@ -153,18 +196,18 @@ void Reset(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_me
     ::algorithm = LabelRankT::LabelRankT();
     ::initialized = false;
 
-    ::saved_directedness = false;
-    ::saved_weightedness = false;
-    ::saved_weight_property = "weight";
+    ::saved_directedness = kDefaultDirected;
+    ::saved_weightedness = kDefaultWeighted;
+    ::saved_weight_property = kDefaultWeightProperty.data();
 
     auto record = record_factory.NewRecord();
-    record.Insert("message", "The algorithm has been successfully reset!");
+    record.Insert(kFieldMessage.data(), "The algorithm has been successfully reset!");
   } catch (const std::exception &e) {
     mgp::memory = memory;
 
     const auto record_factory = mgp::RecordFactory(result);
     auto record = record_factory.NewRecord();
-    record.Insert("message", "Reset failed: An exception occurred, please check your module!");
+    record.Insert(kFieldMessage.data(), "Reset failed: An exception occurred, please check the module!");
 
     return;
   }
@@ -180,32 +223,37 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     const auto empty_list = mgp::Value(mgp::List());
 
     mgp::AddProcedure(
-        Set, "set", mgp::ProcedureType::Read,
-        {mgp::Parameter("directed", mgp::Type::Bool, false), mgp::Parameter("weighted", mgp::Type::Bool, false),
-         mgp::Parameter("similarity_threshold", mgp::Type::Double, 0.7),
-         mgp::Parameter("exponent", mgp::Type::Double, 4.0), mgp::Parameter("min_value", mgp::Type::Double, 0.1),
-         mgp::Parameter("weight_property", mgp::Type::String, "weight"),
-         mgp::Parameter("w_selfloop", mgp::Type::Double, 1.0),
-         mgp::Parameter("max_iterations", mgp::Type::Int, (int64_t)100),
-         mgp::Parameter("max_updates", mgp::Type::Int, (int64_t)5)},
-        {mgp::Return("node", mgp::Type::Node), mgp::Return("community_id", mgp::Type::Int)}, module, memory);
+        Set, kProcSet.data(), mgp::ProcedureType::Read,
+        {mgp::Parameter(kDirected.data(), mgp::Type::Bool, kDefaultDirected),
+         mgp::Parameter(kWeighted.data(), mgp::Type::Bool, kDefaultWeighted),
+         mgp::Parameter(kSimilarityThreshold.data(), mgp::Type::Double, kDefaultSimilarityThreshold),
+         mgp::Parameter(kExponent.data(), mgp::Type::Double, kDefaultExponent),
+         mgp::Parameter(kMinValue.data(), mgp::Type::Double, kDefaultMinValue),
+         mgp::Parameter(kWeightProperty.data(), mgp::Type::String, kDefaultWeightProperty.data()),
+         mgp::Parameter(kWSelfloop.data(), mgp::Type::Double, kDefaultWSelfloop),
+         mgp::Parameter(kMaxIterations.data(), mgp::Type::Int, (int64_t)kDefaultMaxIterations),
+         mgp::Parameter(kMaxUpdates.data(), mgp::Type::Int, (int64_t)kDefaultMaxUpdates)},
+        {mgp::Return(kFieldNode.data(), mgp::Type::Node), mgp::Return(kFieldCommunityId.data(), mgp::Type::Int)},
+        module, memory);
 
-    mgp::AddProcedure(Get, "get", mgp::ProcedureType::Read, {},
-                      {mgp::Return("node", mgp::Type::Node), mgp::Return("community_id", mgp::Type::Int)}, module,
-                      memory);
+    mgp::AddProcedure(
+        Get, kProcGet.data(), mgp::ProcedureType::Read, {},
+        {mgp::Return(kFieldNode.data(), mgp::Type::Node), mgp::Return(kFieldCommunityId.data(), mgp::Type::Int)},
+        module, memory);
 
-    mgp::AddProcedure(Update, "update", mgp::ProcedureType::Read,
-                      {mgp::Parameter("createdVertices", node_list, empty_list),
-                       mgp::Parameter("createdEdges", relationship_list, empty_list),
-                       mgp::Parameter("updatedVertices", node_list, empty_list),
-                       mgp::Parameter("updatedEdges", relationship_list, empty_list),
-                       mgp::Parameter("deletedVertices", node_list, empty_list),
-                       mgp::Parameter("deletedEdges", relationship_list, empty_list)},
-                      {mgp::Return("node", mgp::Type::Node), mgp::Return("community_id", mgp::Type::Int)}, module,
-                      memory);
+    mgp::AddProcedure(
+        Update, kProcUpdate.data(), mgp::ProcedureType::Read,
+        {mgp::Parameter(kCreatedVertices.data(), node_list, empty_list),
+         mgp::Parameter(kCreatedEdges.data(), relationship_list, empty_list),
+         mgp::Parameter(kUpdatedVertices.data(), node_list, empty_list),
+         mgp::Parameter(kUpdatedEdges.data(), relationship_list, empty_list),
+         mgp::Parameter(kDeletedVertices.data(), node_list, empty_list),
+         mgp::Parameter(kDeletedEdges.data(), relationship_list, empty_list)},
+        {mgp::Return(kFieldNode.data(), mgp::Type::Node), mgp::Return(kFieldCommunityId.data(), mgp::Type::Int)},
+        module, memory);
 
-    mgp::AddProcedure(Reset, "reset", mgp::ProcedureType::Read, {}, {mgp::Return("message", mgp::Type::String)}, module,
-                      memory);
+    mgp::AddProcedure(Reset, kProcReset.data(), mgp::ProcedureType::Read, {},
+                      {mgp::Return(kFieldMessage, mgp::Type::String)}, module, memory);
   } catch (const std::exception &e) {
     return 1;
   }
