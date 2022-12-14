@@ -2,34 +2,28 @@
 #include <queue>
 #include <stack>
 #include <vector>
+#include <chrono>
+using namespace std::chrono;
 
 #include "betweenness_centrality.hpp"
 
 namespace betweenness_centrality_util {
 
-void BFS(const std::uint64_t source_node, const mg_graph::GraphView<> &graph, std::stack<std::uint64_t> &visited,
-         std::vector<std::vector<std::uint64_t>> &predecessors, std::vector<std::uint64_t> &shortest_paths_counter) {
-  auto number_of_nodes = graph.Nodes().size();
-
+void BFS(const std::uint64_t source_node,std::unordered_map<std::uint64_t,std::vector<std::uint64_t>>& adj_matrix, std::stack<std::uint64_t> &visited,
+         std::unordered_map<std::uint64_t,std::vector<std::uint64_t>> &predecessors, std::unordered_map<std::uint64_t,std::uint64_t> &shortest_paths_counter) {
   // -1 to indicate that node is not visited
-  std::vector<int> distance(number_of_nodes, -1);
+  std::unordered_map<std::int64_t,int> distance;
 
   shortest_paths_counter[source_node] = 1;
-  distance[source_node] = 0;
-
   std::queue<std::uint64_t> BFS_queue;
   BFS_queue.push(source_node);
-
   while (!BFS_queue.empty()) {
     auto current_node_id = BFS_queue.front();
     BFS_queue.pop();
     visited.push(current_node_id);
-
-    for (auto neighbor : graph.Neighbours(current_node_id)) {
-      auto neighbor_id = neighbor.node_id;
-
+    for (auto& neighbor_id : adj_matrix[current_node_id]) {
       // node found for the first time
-      if (distance[neighbor_id] < 0) {
+      if (distance.find(neighbor_id) == distance.end()) {
         BFS_queue.push(neighbor_id);
         distance[neighbor_id] = distance[current_node_id] + 1;
       }
@@ -42,6 +36,7 @@ void BFS(const std::uint64_t source_node, const mg_graph::GraphView<> &graph, st
     }
   }
 }
+
 }  // namespace betweenness_centrality_util
 
 namespace {
@@ -58,23 +53,29 @@ void Normalize(std::vector<double> &vec, double constant) {
 
 namespace betweenness_centrality_alg {
 
-std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bool directed, bool normalize,
+std::map<std::uint64_t,double> BetweennessCentrality(std::unordered_map<std::uint64_t,std::vector<std::uint64_t>>& adj_matrix, bool directed, bool normalize,
                                           int threads) {
-  auto number_of_nodes = graph.Nodes().size();
-  std::vector<double> betweenness_centrality(number_of_nodes, 0);
+  std::map<std::uint64_t,double> betweenness_centrality{};
+  std::vector<std::uint64_t>keys;
+  for(const auto &entries:adj_matrix){
+    keys.push_back(entries.first);
+  }
 
   // perform bfs for every node in the graph
   omp_set_dynamic(0);
-  omp_set_num_threads(threads);
-#pragma omp parallel for
-  for (std::uint64_t node_id = 0; node_id < number_of_nodes; node_id++) {
+  omp_set_num_threads(threads);  
+#pragma omp parallel for shared(betweenness_centrality)
+    for(auto i = 0; i < keys.size(); i++) {
+    auto node_id = keys[i];
     // data structures used in BFS
     std::stack<std::uint64_t> visited;
-    std::vector<std::vector<std::uint64_t>> predecessors(number_of_nodes, std::vector<std::uint64_t>());
-    std::vector<std::uint64_t> shortest_paths_counter(number_of_nodes, 0);
-    betweenness_centrality_util::BFS(node_id, graph, visited, predecessors, shortest_paths_counter);
+    std::unordered_map<std::uint64_t,std::vector<std::uint64_t>> predecessors;
+    std::unordered_map<std::uint64_t,std::uint64_t> shortest_paths_counter;
+    auto start = steady_clock::now();
+    betweenness_centrality_util::BFS(node_id, adj_matrix, visited, predecessors, shortest_paths_counter);
+    auto end = duration_cast<milliseconds>(steady_clock::now() - start).count();
 
-    std::vector<double> dependency(number_of_nodes, 0);
+    std::map<std::uint64_t,double> dependency;
 
     while (!visited.empty()) {
       auto current_node = visited.top();
@@ -99,14 +100,14 @@ std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bo
     }
   }
 
-  if (normalize) {
-    // normalized by dividing the value by the number of pairs of nodes
-    // not including the node whose value we normalize
-    auto number_of_pairs = (number_of_nodes - 1) * (number_of_nodes - 2);
-    const auto numerator = directed ? 1.0 : 2.0;
-    double constant = number_of_nodes > 2 ? numerator / number_of_pairs : 1.0;
-    Normalize(betweenness_centrality, constant);
-  }
+  // if (normalize) {
+  //   // normalized by dividing the value by the number of pairs of nodes
+  //   // not including the node whose value we normalize
+  //   auto number_of_pairs = (number_of_nodes - 1) * (number_of_nodes - 2);
+  //   const auto numerator = directed ? 1.0 : 2.0;
+  //   double constant = number_of_nodes > 2 ? numerator / number_of_pairs : 1.0;
+  //   Normalize(betweenness_centrality, constant);
+  // }
 
   return betweenness_centrality;
 }

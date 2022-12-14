@@ -12,6 +12,9 @@
 #include "mg_graph.hpp"
 #include "mgp.hpp"
 #include "_mgp.hpp"
+#include <chrono>
+using namespace std::chrono;
+ 
 
 namespace mg_graph {
 
@@ -123,7 +126,6 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(mgp_graph *memgraph_graph, 
   ///
   /// Mapping Memgraph in-memory vertices into the graph view
   ///
-
   {
     auto *vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);  // Safe vertex iterator creation
     mg_utility::OnScopeExit delete_vertices_it([&vertices_it] { mgp::vertices_iterator_destroy(vertices_it); });
@@ -134,19 +136,20 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(mgp_graph *memgraph_graph, 
       mg_graph::CreateGraphNode(graph.get(), vertex);
     }
   }
-
   ///
   /// Mapping Memgraph in-memory edges into the graph view
   ///
-
   {
+
+
+
     auto *vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);  // Safe vertex iterator creation
     mg_utility::OnScopeExit delete_vertices_it([&vertices_it] { mgp::vertices_iterator_destroy(vertices_it); });
-
     for (auto *source = mgp::vertices_iterator_get(vertices_it); source;
          source = mgp::vertices_iterator_next(vertices_it)) {
       auto *edges_it = mgp::vertex_iter_out_edges(source, memory);  // Safe edge iterator creation
       mg_utility::OnScopeExit delete_edges_it([&edges_it] { mgp::edges_iterator_destroy(edges_it); });
+
 
       for (auto *out_edge = mgp::edges_iterator_get(edges_it); out_edge;
            out_edge = mgp::edges_iterator_next(edges_it)) {
@@ -159,7 +162,40 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(mgp_graph *memgraph_graph, 
     }
   }
 
+
   return graph;
+}
+
+
+std::unordered_map<std::uint64_t,std::vector<std::uint64_t>> GetAdjacencyMatrix(mgp_graph *memgraph_graph,  mgp_memory *memory, bool weighted = false,
+                                                     const char *weight_property = nullptr,
+                                                     double default_weight = 1.0, bool directed = true){
+
+
+    std::unordered_map<std::uint64_t,std::vector<std::uint64_t>> adj_matrix{};
+    {
+     auto *vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);  // Safe vertex iterator creation
+    mg_utility::OnScopeExit delete_vertices_it([&vertices_it] { mgp::vertices_iterator_destroy(vertices_it); });
+    for (auto *source = mgp::vertices_iterator_get(vertices_it); source;
+         source = mgp::vertices_iterator_next(vertices_it)) {
+      auto memgraph_id_from = mgp::vertex_get_id(source).as_int;
+      auto *edges_it = mgp::vertex_iter_out_edges(source, memory);  // Safe edge iterator creation
+      mg_utility::OnScopeExit delete_edges_it([&edges_it] { mgp::edges_iterator_destroy(edges_it); });
+
+      for (auto *out_edge = mgp::edges_iterator_get(edges_it); out_edge;
+           out_edge = mgp::edges_iterator_next(edges_it)) {
+        auto destination = mgp::edge_get_to(out_edge);
+        auto memgraph_id_to = mgp::vertex_get_id(destination).as_int;
+
+        adj_matrix[memgraph_id_from].push_back(memgraph_id_to);
+        if(!directed) adj_matrix[memgraph_id_to].push_back(memgraph_id_from);
+        // double weight = weighted ? mg_utility::GetNumericProperty(out_edge, weight_property, memory, default_weight)
+        //                          : default_weight;
+      }
+      
+  }
+    }
+  return adj_matrix;
 }
 
 ///@brief Maps the Memgraph in-memory graph to a user-defined *weighted* graph view.

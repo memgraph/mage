@@ -1,9 +1,10 @@
 #include <thread>
 
 #include <mg_utils.hpp>
-
+#include <chrono>
 #include "algorithm/betweenness_centrality.hpp"
-
+using namespace std::chrono;
+ 
 namespace {
 
 constexpr char const *kProcedureGet = "get";
@@ -31,14 +32,18 @@ void GetBetweennessCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
 
     if (threads <= 0) threads = std::thread::hardware_concurrency();
 
-    auto graph_type = directed ? mg_graph::GraphType::kDirectedGraph : mg_graph::GraphType::kUndirectedGraph;
+    // auto graph_type = directed ? mg_graph::GraphType::kDirectedGraph : mg_graph::GraphType::kUndirectedGraph;
+    auto start =steady_clock::now();
 
-    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, graph_type);
-    auto BC = betweenness_centrality_alg::BetweennessCentrality(*graph, directed, normalize, threads);
+    auto adj_matrix = mg_utility::GetAdjacencyMatrix(memgraph_graph,memory,false,nullptr,1.0,directed);
+    auto end = duration_cast<milliseconds>(steady_clock::now() - start).count();
 
-    auto number_of_nodes = graph->Nodes().size();
-    for (std::uint64_t node_id = 0; node_id < number_of_nodes; ++node_id)
-      InsertBCRecord(memgraph_graph, result, memory, BC[node_id], graph->GetMemgraphNodeId(node_id));
+    auto BC = betweenness_centrality_alg::BetweennessCentrality(adj_matrix, directed, normalize, threads);
+
+    auto number_of_nodes = adj_matrix.size();
+    for(auto& entries : BC){
+      InsertBCRecord(memgraph_graph, result, memory, entries.first, entries.second);
+    }
 
   } catch (const std::exception &e) {
     // We must not let any exceptions out of our module.

@@ -52,10 +52,10 @@ std::unordered_map<std::uint64_t, double> OnlineBC::NormalizeBC(
 void OnlineBC::CallBrandesAlgorithm(const mg_graph::GraphView<> &graph, const std::uint64_t threads) {
   this->node_bc_scores.clear();
 
-  const auto bc_scores = betweenness_centrality_alg::BetweennessCentrality(graph, false, false, threads);
-  for (std::uint64_t node_id = 0; node_id < graph.Nodes().size(); ++node_id) {
-    this->node_bc_scores[graph.GetMemgraphNodeId(node_id)] = bc_scores[node_id];
-  }
+  // const auto bc_scores = betweenness_centrality_alg::BetweennessCentrality(graph, false, false, threads);
+  // for (std::uint64_t node_id = 0; node_id < graph.Nodes().size(); ++node_id) {
+  //   this->node_bc_scores[graph.GetMemgraphNodeId(node_id)] = bc_scores[node_id];
+  // }
 }
 
 bool OnlineBC::Connected(const mg_graph::GraphView<> &graph) {

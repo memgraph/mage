@@ -19,8 +19,8 @@ namespace betweenness_centrality_util {
 ///@param shortest_paths_counter The container for storing the number of shortest paths from the source node to
 /// all nodes in the given graph
 ///
-void BFS(const std::uint64_t source_node, const mg_graph::GraphView<> &graph, std::stack<std::uint64_t> &visited,
-         std::vector<std::vector<std::uint64_t>> &predecessors, std::vector<std::uint64_t> &shortest_paths_counter);
+void BFS(const std::uint64_t source_node, std::unordered_map<std::uint64_t,std::vector<std::uint64_t>>& adj_matrix, std::stack<std::uint64_t> &visited,
+         std::unordered_map<std::uint64_t,std::vector<std::uint64_t>> &predecessors, std::unordered_map<std::uint64_t,std::vector<std::uint64_t>> &shortest_paths_counter);
 
 }  // namespace betweenness_centrality_util
 
@@ -40,7 +40,7 @@ namespace betweenness_centrality_alg {
 ///@return A vector that contains betweenness centrality scores placed on indices that correspond
 /// to the identifiers of the nodes.
 ///
-std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bool directed, bool normalize,
+std::map<std::uint64_t,double> BetweennessCentrality(std::unordered_map<std::uint64_t,std::vector<std::uint64_t>>& adj_matrix, bool directed, bool normalize,
                                           int threads);
 
 }  // namespace betweenness_centrality_alg
