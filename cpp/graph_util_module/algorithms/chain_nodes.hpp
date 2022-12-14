@@ -16,8 +16,8 @@ void ChainNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, m
 
     const auto list_size = list_of_nodes.Size();
     for (auto i = 0; i < list_size - 1; i++) {
-      const auto begin_node = list_of_nodes[0].ValueNode();
-      const auto end_node = list_of_nodes[1].ValueNode();
+      const auto begin_node = list_of_nodes[i].ValueNode();
+      const auto end_node = list_of_nodes[i+1].ValueNode();
 
       const auto relationship = graph.CreateRelationship(begin_node, end_node, edge_type);
       connections.AppendExtend(mgp::Value(relationship));
