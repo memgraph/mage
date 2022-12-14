@@ -12,7 +12,7 @@
 #include "data_structures/graph_data.hpp"
 #include "data_structures/graph_view.hpp"
 #include "mg_exceptions.hpp"
-
+#include <optional>
 namespace mg_graph {
 
 enum class GraphType : std::uint8_t { kDirectedGraph, kUndirectedGraph };
