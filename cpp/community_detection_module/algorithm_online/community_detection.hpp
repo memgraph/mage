@@ -83,13 +83,14 @@ class LabelRankT {
       const auto neighbor_id = in_relationship.From().Id().AsUint();
       neighbors.insert(neighbor_id);
     }
-    if (!is_directed) {
-      for (const auto &out_relationship : graph.GetNodeById(mgp::Id::FromUint(node_id)).OutRelationships()) {
-        const auto neighbor_id = out_relationship.To().Id().AsUint();
-        neighbors.insert(neighbor_id);
-      }
+    if (is_directed) {
+      return neighbors;
     }
 
+    for (const auto &out_relationship : graph.GetNodeById(mgp::Id::FromUint(node_id)).OutRelationships()) {
+      const auto neighbor_id = out_relationship.To().Id().AsUint();
+      neighbors.insert(neighbor_id);
+    }
     return neighbors;
   }
 
@@ -144,11 +145,13 @@ class LabelRankT {
         total_weight += GetWeight(graph, out_relationship);
       }
     }
-    if (!is_directed) {
-      for (const auto &in_relationship : graph.GetNodeById(mgp::Id::FromUint(from_node_id)).InRelationships()) {
-        if (in_relationship.From().Id().AsUint() == to_node_id) {
-          total_weight += GetWeight(graph, in_relationship);
-        }
+    if (is_directed) {
+      return total_weight;
+    }
+
+    for (const auto &in_relationship : graph.GetNodeById(mgp::Id::FromUint(from_node_id)).InRelationships()) {
+      if (in_relationship.From().Id().AsUint() == to_node_id) {
+        total_weight += GetWeight(graph, in_relationship);
       }
     }
 

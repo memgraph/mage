@@ -84,47 +84,49 @@ void UpdateKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
         record.Insert(kFieldNode, graph.GetNodeById(mgp::Id::FromUint(node_id)));
         record.Insert(kFieldRank, centrality);
       }
-    } else {
-      const auto created_nodes_ = arguments[0].ValueList();
-      const auto created_relationships_ = arguments[1].ValueList();
 
-      const auto deleted_nodes_ = arguments[2].ValueList();
-      const auto deleted_relationships_ = arguments[3].ValueList();
+      return;
+    }
 
-      std::vector<std::uint64_t> created_nodes;
-      std::vector<std::pair<std::uint64_t, std::uint64_t>> created_relationships;
-      std::vector<std::uint64_t> created_relationship_ids;
+    const auto created_nodes_ = arguments[0].ValueList();
+    const auto created_relationships_ = arguments[1].ValueList();
 
-      std::vector<std::uint64_t> deleted_nodes;
-      std::vector<std::pair<std::uint64_t, std::uint64_t>> deleted_relationships;
+    const auto deleted_nodes_ = arguments[2].ValueList();
+    const auto deleted_relationships_ = arguments[3].ValueList();
 
-      for (const auto &node : created_nodes_) {
-        created_nodes.push_back(node.ValueNode().Id().AsUint());
-      }
-      for (const auto &relationship : created_relationships_) {
-        created_relationships.push_back({relationship.ValueRelationship().From().Id().AsUint(),
-                                         relationship.ValueRelationship().To().Id().AsUint()});
-      }
-      for (const auto &relationship : created_relationships_) {
-        created_relationship_ids.push_back(relationship.ValueRelationship().Id().AsUint());
-      }
+    std::vector<std::uint64_t> created_nodes;
+    std::vector<std::pair<std::uint64_t, std::uint64_t>> created_relationships;
+    std::vector<std::uint64_t> created_relationship_ids;
 
-      for (const auto &node : deleted_nodes_) {
-        deleted_nodes.push_back(node.ValueNode().Id().AsUint());
-      }
-      for (const auto &relationship : deleted_relationships_) {
-        deleted_relationships.push_back({relationship.ValueRelationship().From().Id().AsUint(),
-                                         relationship.ValueRelationship().To().Id().AsUint()});
-      }
+    std::vector<std::uint64_t> deleted_nodes;
+    std::vector<std::pair<std::uint64_t, std::uint64_t>> deleted_relationships;
 
-      katz_centralities = katz_alg::UpdateKatz(graph, created_nodes, created_relationships, created_relationship_ids,
-                                               deleted_nodes, deleted_relationships);
+    for (const auto &node : created_nodes_) {
+      created_nodes.push_back(node.ValueNode().Id().AsUint());
+    }
+    for (const auto &relationship : created_relationships_) {
+      created_relationships.push_back(
+          {relationship.ValueRelationship().From().Id().AsUint(), relationship.ValueRelationship().To().Id().AsUint()});
+    }
+    for (const auto &relationship : created_relationships_) {
+      created_relationship_ids.push_back(relationship.ValueRelationship().Id().AsUint());
+    }
 
-      for (auto &[node_id, centrality] : katz_centralities) {
-        auto record = record_factory.NewRecord();
-        record.Insert(kFieldNode, graph.GetNodeById(mgp::Id::FromUint(node_id)));
-        record.Insert(kFieldRank, centrality);
-      }
+    for (const auto &node : deleted_nodes_) {
+      deleted_nodes.push_back(node.ValueNode().Id().AsUint());
+    }
+    for (const auto &relationship : deleted_relationships_) {
+      deleted_relationships.push_back(
+          {relationship.ValueRelationship().From().Id().AsUint(), relationship.ValueRelationship().To().Id().AsUint()});
+    }
+
+    katz_centralities = katz_alg::UpdateKatz(graph, created_nodes, created_relationships, created_relationship_ids,
+                                             deleted_nodes, deleted_relationships);
+
+    for (auto &[node_id, centrality] : katz_centralities) {
+      auto record = record_factory.NewRecord();
+      record.Insert(kFieldNode, graph.GetNodeById(mgp::Id::FromUint(node_id)));
+      record.Insert(kFieldRank, centrality);
     }
   } catch (const std::exception &e) {
     mgp::result_set_error_msg(result, e.what());
