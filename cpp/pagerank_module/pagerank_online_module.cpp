@@ -110,7 +110,7 @@ void OnlinePageRankUpdate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
                                                       deleted_relationships);
     }
 
-    for (auto const [node_id, rank] : pageranks) {
+    for (auto const &[node_id, rank] : pageranks) {
       auto record = record_factory.NewRecord();
       record.Insert(kFieldNode, graph.GetNodeById(mgp::Id::FromUint(node_id)));
       record.Insert(kFieldRank, rank);

@@ -145,8 +145,6 @@ void CreateRoute(const mgp::Graph &graph, std::uint64_t start_id, std::vector<st
 
     // Pick and add a random outer relationship
     auto next_id = neighbor_ids[GetRandInt(0, neighbor_ids.size())];
-    // auto next_id = neighbors[GetRandInt(0, number_of_neighbors)].node_id;
-    // next_id = graph.GetMemgraphNodeId(next_id);
 
     walk.emplace_back(next_id);
     pagerank_online_alg::context.walks_table[next_id].insert(walk_index);
@@ -171,7 +169,7 @@ void CreateRoute(const mgp::Graph &graph, std::uint64_t start_id, std::vector<st
 ///@param new_relationship New relationship
 ///
 void UpdateCreate(const mgp::Graph &graph, const std::pair<std::uint64_t, std::uint64_t> &new_relationship) {
-  auto [from, to] = new_relationship;
+  auto &[from, to] = new_relationship;
 
   std::unordered_set<std::uint64_t> walk_table_copy(pagerank_online_alg::context.walks_table[from]);
   for (auto walk_index : walk_table_copy) {
@@ -226,7 +224,7 @@ void UpdateCreate(const mgp::Graph &graph, std::uint64_t new_node) {
 ///@param removed_relationship Deleted relationship
 ///
 void UpdateDelete(const mgp::Graph &graph, const std::pair<std::uint64_t, std::uint64_t> &removed_relationship) {
-  auto [from, to] = removed_relationship;
+  auto &[from, to] = removed_relationship;
 
   std::unordered_set<std::uint64_t> walk_table_copy(pagerank_online_alg::context.walks_table[from]);
   for (auto walk_index : walk_table_copy) {
