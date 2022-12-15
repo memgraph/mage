@@ -11,7 +11,7 @@ jobs:
   build:
     runs-on:  [self-hosted, Linux, X64, Diff]
     env:
-      MEMGRAPH_VERSION: 2.4.2
+      MEMGRAPH_VERSION: 2.5.0
     strategy:
       matrix:
         architecture: ["amd64", "arm64"]
