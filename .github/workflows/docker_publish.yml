@@ -8,7 +8,7 @@ on:
 jobs:
   build_and_release_docker:
     name: Build & release Docker image with tag
-    runs-on:  [self-hosted, Linux, X64, Diff]
+    runs-on:  ubuntu-latest
     env:
       DOCKER_ORGANIZATION_NAME: memgraph
       DOCKER_REPOSITORY_NAME: memgraph-mage
