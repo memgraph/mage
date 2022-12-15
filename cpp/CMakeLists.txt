@@ -71,7 +71,7 @@ ExternalProject_Add(uuid-proj
   PREFIX            ${UUID_ROOT}
   INSTALL_DIR       ${UUID_ROOT}
   GIT_REPOSITORY    https://github.com/mariusbancila/stduuid.git
-  GIT_TAG           v1.1
+  GIT_TAG           v1.2.2
   CMAKE_ARGS        "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
                     "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
                     "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
