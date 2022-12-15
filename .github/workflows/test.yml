@@ -9,7 +9,7 @@ on: [pull_request, workflow_dispatch]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     env:
       MEMGRAPH_VERSION: 2.4.2
     strategy:
