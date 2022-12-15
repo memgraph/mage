@@ -62,6 +62,7 @@ def get_arguments():
         nargs="+",
         help="CMake flags for the cpp part (without -D)",
         required=False,
+        default="CMAKE_BUILD_TYPE=Release"
     )
     build_parser = subparsers.add_parser(
         "build", help="Build memgraph-mage", parents=[build_args_parser]
