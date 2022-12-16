@@ -1,5 +1,5 @@
 setup: |-
-    CALL mg.load("node_classification");
+    CALL node_classification.reset() YIELD *;
     CALL node_classification.set_model_parameters({layer_type: 'GAT', hidden_features_size: [16, 16]}) YIELD *;
 
 queries: 
