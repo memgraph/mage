@@ -70,7 +70,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
     python3 -m pip install dgl -f https://data.dgl.ai/wheels/repo.html && \ 
     python3 /mage/setup build \ 
     --gpu \
-    --cpp-build-flags MAGE_CUGRAPH_ROOT=/opt/conda/envs/rapids/ \
+    --cpp-build-flags MAGE_CUGRAPH_ROOT=/opt/conda/envs/rapids/ CMAKE_BUILD_TYPE=Release \
     -p /usr/lib/memgraph/query_modules/ 
 
 #DGL build from source
