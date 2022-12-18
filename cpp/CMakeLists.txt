@@ -51,9 +51,9 @@ set(GTEST_LIBRARY_PATH ${GTEST_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
 set(GTEST_DEBUG_LIBRARY_PATH ${GTEST_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtestd.a)
 add_library(mage_gtest STATIC IMPORTED)
 set_target_properties(mage_gtest PROPERTIES
-  IMPORTED_LOCATION ${GTEST_LIBRARY_PATH}
-  IMPORTED_LOCATION_DEBUG ${GTEST_DEBUG_LIBRARY_PATH}
-  INTERFACE_LINK_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
+  IMPORTED_LOCATION "${GTEST_LIBRARY_PATH}"
+  IMPORTED_LOCATION_DEBUG "${GTEST_DEBUG_LIBRARY_PATH}"
+  INTERFACE_LINK_LIBRARIES "${CMAKE_THREAD_LIBS_INIT}")
 include_directories("${GTEST_INCLUDE_DIR}")
 add_dependencies(mage_gtest gtest-proj)
 
@@ -71,7 +71,7 @@ ExternalProject_Add(uuid-proj
   PREFIX            ${UUID_ROOT}
   INSTALL_DIR       ${UUID_ROOT}
   GIT_REPOSITORY    https://github.com/mariusbancila/stduuid.git
-  GIT_TAG           v1.1
+  GIT_TAG           v1.2.2
   CMAKE_ARGS        "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
                     "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
                     "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
@@ -86,7 +86,7 @@ add_subdirectory(mg_utility)
 
 function(add_query_module target_name version src)
   add_library(${target_name} SHARED ${src})
-  set_target_properties(${target_name} PROPERTIES SOVERSION ${version})
+  set_target_properties(${target_name} PROPERTIES SOVERSION "${version}")
   target_link_libraries(${target_name} PRIVATE mg_utility)
 endfunction()
 

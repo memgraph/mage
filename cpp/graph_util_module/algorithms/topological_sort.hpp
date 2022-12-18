@@ -49,5 +49,5 @@ void TopologicalSort(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
     return;
   }
 
-  mgp::result_set_error_msg(result, "The graph is cyclic and therefore no topological ordering exists.");
+  record_factory.SetErrorMessage("The graph is cyclic and therefore no topological ordering exists.");
 }
