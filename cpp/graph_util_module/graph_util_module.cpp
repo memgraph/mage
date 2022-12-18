@@ -28,7 +28,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     // Register ancestors procedure
     const auto ancestors_return = std::make_pair(mgp::Type::List, mgp::Type::Node);
 
-    AddProcedure(Ancestors, kProcedureAncestors, mgp::ProdecureType::Read,
+    AddProcedure(Ancestors, kProcedureAncestors, mgp::ProcedureType::Read,
                  {mgp::Parameter(kArgumentNode, mgp::Type::Node)}, {mgp::Return(kReturnAncestors, ancestors_return)},
                  module, memory);
 
@@ -37,7 +37,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     const auto chain_nodes_output_connections = std::make_pair(mgp::Type::List, mgp::Type::Relationship);
 
     AddProcedure(
-        ChainNodes, kProcedureChainNodes, mgp::ProdecureType::Write,
+        ChainNodes, kProcedureChainNodes, mgp::ProcedureType::Write,
         {mgp::Parameter(kArgumentNodes, chain_nodes_input_nodes), mgp::Parameter(kArgumentEdgeType, mgp::Type::String)},
         {mgp::Return(kResultConnections, chain_nodes_output_connections)}, module, memory);
 
@@ -45,14 +45,14 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     const auto connect_nodes_input = std::make_pair(mgp::Type::List, mgp::Type::Node);
     const auto connect_nodes_return = std::make_pair(mgp::Type::List, mgp::Type::Relationship);
 
-    AddProcedure(ConnectNodes, kProcedureConnectNodes, mgp::ProdecureType::Read,
+    AddProcedure(ConnectNodes, kProcedureConnectNodes, mgp::ProcedureType::Read,
                  {mgp::Parameter(kArgumentNodes, connect_nodes_input)},
                  {mgp::Return(kReturnConnections, connect_nodes_return)}, module, memory);
 
     // Register descendants procedure
     const auto descendants_return = std::make_pair(mgp::Type::List, mgp::Type::Node);
 
-    AddProcedure(Descendants, kProcedureDescendants, mgp::ProdecureType::Read,
+    AddProcedure(Descendants, kProcedureDescendants, mgp::ProcedureType::Read,
                  {mgp::Parameter(kArgumentNode, mgp::Type::Node)},
                  {mgp::Return(kReturnDescendants, descendants_return)}, module, memory);
 
