@@ -59,7 +59,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     // Register topological sort procedure
     const auto topological_sort_return = std::make_pair(mgp::Type::List, mgp::Type::Node);
 
-    AddProcedure(TopologicalSort, kProcedureTopologicalSort, mgp::ProdecureType::Read, {},
+    AddProcedure(TopologicalSort, kProcedureTopologicalSort, mgp::ProcedureType::Read, {},
                  {mgp::Return(kReturnSortedNodes, topological_sort_return)}, module, memory);
 
   } catch (const std::exception &e) {

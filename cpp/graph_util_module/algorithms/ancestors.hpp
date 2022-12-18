@@ -5,10 +5,10 @@
 const char *kResultAncestors = "ancestors";
 
 void Ancestors(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::memory = memory;
+  const auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
   try {
-    mgp::memory = memory;
-    const auto arguments = mgp::List(args);
-    const auto record_factory = mgp::RecordFactory(result);
     const auto given_node = arguments[0].ValueNode();
 
     mgp::List result = mgp::List();
@@ -44,7 +44,7 @@ void Ancestors(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mg
     record.Insert(kResultAncestors, result);
 
   } catch (const std::exception &e) {
-    mgp::result_set_error_msg(result, e.what());
+    record_factory.SetErrorMessage(e.what());
     return;
   }
 }
