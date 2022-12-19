@@ -43,8 +43,8 @@ def get_schema(
             _update_counts(edge_count_by_labels, key=key, obj=edge, include_properties=include_properties)
 
     node_index_by_labels = {key: i for i, key in enumerate(node_count_by_labels.keys())}
-    nodes = list(_iter_node_as_map(node_count_by_labels, node_index_by_labels))
-    edges = list(_iter_edge_as_map(edge_count_by_labels, node_index_by_labels))
+    nodes = list(_iter_nodes_as_map(node_count_by_labels, node_index_by_labels))
+    edges = list(_iter_edges_as_map(edge_count_by_labels, node_index_by_labels))
 
     return mgp.Record(nodes=nodes, edges=edges)
 
@@ -64,7 +64,7 @@ def _update_counts(
         for property_name in obj.properties.keys():
             obj_counter.count_property(property_name)
 
-def _iter_node_as_map(
+def _iter_nodes_as_map(
     node_count_by_labels: Dict[NodeKeyType, Counter],
     node_index_by_labels: Dict[NodeKeyType, int]
 ) -> Iterator[mgp.Map]:
@@ -76,7 +76,7 @@ def _iter_node_as_map(
             'type': NODE_TYPE
         }
 
-def _iter_edge_as_map(
+def _iter_edges_as_map(
     edge_count_by_labels: Dict[EdgeKeyType, Counter],
     node_index_by_labels: Dict[NodeKeyType, int]
 ) -> Iterator[mgp.Map]:
