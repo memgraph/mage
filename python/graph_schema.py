@@ -35,7 +35,7 @@ def get_schema(
     edge_count_by_labels: Dict[EdgeKeyType, Counter] = {}
 
     for node in context.graph.vertices:
-        labels = tuple(sorted(l.name for l in node.labels))
+        labels = tuple(sorted(label.name for label in node.labels))
         _update_counts(
             node_count_by_labels,
             key=labels,
@@ -44,7 +44,7 @@ def get_schema(
         )
 
         for edge in node.out_edges:
-            target_labels = tuple(sorted(l.name for l in edge.to_vertex.labels))
+            target_labels = tuple(sorted(label.name for label in edge.to_vertex.labels))
             key = (labels, edge.type.name, target_labels)
             _update_counts(
                 edge_count_by_labels,
@@ -86,7 +86,7 @@ def _iter_nodes_as_map(
             "id": node_index_by_labels.get(labels),
             "labels": labels,
             "properties": counter.to_dict(),
-            "type": NODE_TYPE
+            "type": NODE_TYPE,
         }
 
 
@@ -107,5 +107,5 @@ def _iter_edges_as_map(
                 "end": target_node_id,
                 "label": edge_label,
                 "properties": counter.to_dict(),
-                "type": EDGE_TYPE
+                "type": EDGE_TYPE,
             }
