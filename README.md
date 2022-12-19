@@ -8,7 +8,7 @@
 
 <p align="center">
     <a href="https://github.com/memgraph/mage/actions" alt="Actions">
-        <img src="https://img.shields.io/github/workflow/status/memgraph/mage/workflows/test.yml?branch=main&label=build%20and%20test&logo=github"/>
+        <img src="https://img.shields.io/github/actions/workflow/status/memgraph/mage/test.yml?branch=main&label=build%20and%20test&logo=github"/>
     </a>
     <a href="https://github.com/memgraph/mage/blob/main/LICENSE" alt="Licence">
         <img src="https://img.shields.io/github/license/memgraph/mage" />
