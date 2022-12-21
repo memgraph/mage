@@ -5,7 +5,7 @@ from typing import Dict, Tuple, Union, Iterator
 
 
 NodeKeyType = Tuple[str, ...]
-EdgeKeyType = Tuple[NodeKeyType, str, NodeKeyType]
+RelationshipKeyType = Tuple[NodeKeyType, str, NodeKeyType]
 
 
 class Counter:
@@ -21,15 +21,15 @@ class Counter:
 
     def to_dict(self):
         return {
-            Parameter.COUNT: self.total_count,
-            Parameter.PROPERTIES_COUNT: self.count_by_property_name,
+            Parameter.COUNT.value: self.total_count,
+            Parameter.PROPERTIES_COUNT.value: self.count_by_property_name,
         }
 
 
 @mgp.read_proc
 def schema(
     context: mgp.ProcCtx, include_properties: bool = False
-) -> mgp.Record(nodes=mgp.List[mgp.Map], edges=mgp.List[mgp.Map]):
+) -> mgp.Record(nodes=mgp.List[mgp.Map], relationships=mgp.List[mgp.Map]):
     """
     Procedure to generate the graph database schema.
 
@@ -39,7 +39,7 @@ def schema(
         If set to True, the graph schema will include properties count information.
     """
     node_count_by_labels: Dict[NodeKeyType, Counter] = {}
-    edge_count_by_labels: Dict[EdgeKeyType, Counter] = {}
+    relationship_count_by_labels: Dict[RelationshipKeyType, Counter] = {}
 
     for node in context.graph.vertices:
         labels = tuple(sorted(label.name for label in node.labels))
@@ -50,26 +50,30 @@ def schema(
             include_properties=include_properties,
         )
 
-        for edge in node.out_edges:
-            target_labels = tuple(sorted(label.name for label in edge.to_vertex.labels))
-            key = (labels, edge.type.name, target_labels)
+        for relationship in node.out_edges:
+            target_labels = tuple(
+                sorted(label.name for label in relationship.to_vertex.labels)
+            )
+            key = (labels, relationship.type.name, target_labels)
             _update_counts(
-                edge_count_by_labels,
+                relationship_count_by_labels,
                 key=key,
-                obj=edge,
+                obj=relationship,
                 include_properties=include_properties,
             )
 
     node_index_by_labels = {key: i for i, key in enumerate(node_count_by_labels.keys())}
     nodes = list(_iter_nodes_as_map(node_count_by_labels, node_index_by_labels))
-    edges = list(_iter_edges_as_map(edge_count_by_labels, node_index_by_labels))
+    relationships = list(
+        _iter_relationships_as_map(relationship_count_by_labels, node_index_by_labels)
+    )
 
-    return mgp.Record(nodes=nodes, edges=edges)
+    return mgp.Record(nodes=nodes, relationships=relationships)
 
 
 def _update_counts(
-    obj_count_by_key: Dict[Union[NodeKeyType, EdgeKeyType], Counter],
-    key: Union[NodeKeyType, EdgeKeyType],
+    obj_count_by_key: Dict[Union[NodeKeyType, RelationshipKeyType], Counter],
+    key: Union[NodeKeyType, RelationshipKeyType],
     obj: Union[mgp.Vertex, mgp.Edge],
     include_properties: bool = False,
 ) -> None:
@@ -90,29 +94,29 @@ def _iter_nodes_as_map(
 ) -> Iterator[mgp.Map]:
     for labels, counter in node_count_by_labels.items():
         yield {
-            Parameter.ID: node_index_by_labels.get(labels),
-            Parameter.LABELS: labels,
-            Parameter.PROPERTIES: counter.to_dict(),
-            Parameter.TYPE: Parameter.NODE,
+            Parameter.ID.value: node_index_by_labels.get(labels),
+            Parameter.LABELS.value: labels,
+            Parameter.PROPERTIES.value: counter.to_dict(),
+            Parameter.TYPE.value: Parameter.NODE.value,
         }
 
 
-def _iter_edges_as_map(
-    edge_count_by_labels: Dict[EdgeKeyType, Counter],
+def _iter_relationships_as_map(
+    relationship_count_by_labels: Dict[RelationshipKeyType, Counter],
     node_index_by_labels: Dict[NodeKeyType, int],
 ) -> Iterator[mgp.Map]:
-    for i, ((source_label, edge_label, target_label), counter) in enumerate(
-        edge_count_by_labels.items()
+    for i, ((source_label, relationship_label, target_label), counter) in enumerate(
+        relationship_count_by_labels.items()
     ):
         source_node_id = node_index_by_labels.get(source_label)
         target_node_id = node_index_by_labels.get(target_label)
 
         if source_node_id is not None and target_node_id is not None:
             yield {
-                Parameter.ID: i,
-                Parameter.START: source_node_id,
-                Parameter.END: target_node_id,
-                Parameter.LABEL: edge_label,
-                Parameter.PROPERTIES: counter.to_dict(),
-                Parameter.TYPE: Parameter.RELATIONSHIP,
+                Parameter.ID.value: i,
+                Parameter.START.value: source_node_id,
+                Parameter.END.value: target_node_id,
+                Parameter.LABEL.value: relationship_label,
+                Parameter.PROPERTIES.value: counter.to_dict(),
+                Parameter.TYPE.value: Parameter.RELATIONSHIP.value,
             }
