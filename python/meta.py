@@ -1,12 +1,11 @@
 import mgp
+from mage.meta.parameters import Parameter
 from collections import defaultdict
 from typing import Dict, Tuple, Union, Iterator
 
+
 NodeKeyType = Tuple[str, ...]
 EdgeKeyType = Tuple[NodeKeyType, str, NodeKeyType]
-
-NODE_TYPE = "node"
-EDGE_TYPE = "relationship"
 
 
 class Counter:
@@ -22,15 +21,23 @@ class Counter:
 
     def to_dict(self):
         return {
-            "count": self.total_count,
-            "properties_count": self.count_by_property_name,
+            Parameter.COUNT: self.total_count,
+            Parameter.PROPERTIES_COUNT: self.count_by_property_name,
         }
 
 
 @mgp.read_proc
-def get_schema(
+def schema(
     context: mgp.ProcCtx, include_properties: bool = False
 ) -> mgp.Record(nodes=mgp.List[mgp.Map], edges=mgp.List[mgp.Map]):
+    """
+    Procedure to generate the graph database schema.
+
+    Parameters
+    ----------
+    include_properties : bool
+        If set to True, the graph schema will include properties count information.
+    """
     node_count_by_labels: Dict[NodeKeyType, Counter] = {}
     edge_count_by_labels: Dict[EdgeKeyType, Counter] = {}
 
@@ -83,10 +90,10 @@ def _iter_nodes_as_map(
 ) -> Iterator[mgp.Map]:
     for labels, counter in node_count_by_labels.items():
         yield {
-            "id": node_index_by_labels.get(labels),
-            "labels": labels,
-            "properties": counter.to_dict(),
-            "type": NODE_TYPE,
+            Parameter.ID: node_index_by_labels.get(labels),
+            Parameter.LABELS: labels,
+            Parameter.PROPERTIES: counter.to_dict(),
+            Parameter.TYPE: Parameter.NODE,
         }
 
 
@@ -102,10 +109,10 @@ def _iter_edges_as_map(
 
         if source_node_id is not None and target_node_id is not None:
             yield {
-                "id": i,
-                "start": source_node_id,
-                "end": target_node_id,
-                "label": edge_label,
-                "properties": counter.to_dict(),
-                "type": EDGE_TYPE,
+                Parameter.ID: i,
+                Parameter.START: source_node_id,
+                Parameter.END: target_node_id,
+                Parameter.LABEL: edge_label,
+                Parameter.PROPERTIES: counter.to_dict(),
+                Parameter.TYPE: Parameter.RELATIONSHIP,
             }
