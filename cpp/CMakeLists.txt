@@ -51,9 +51,9 @@ set(GTEST_LIBRARY_PATH ${GTEST_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
 set(GTEST_DEBUG_LIBRARY_PATH ${GTEST_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtestd.a)
 add_library(mage_gtest STATIC IMPORTED)
 set_target_properties(mage_gtest PROPERTIES
-  IMPORTED_LOCATION ${GTEST_LIBRARY_PATH}
-  IMPORTED_LOCATION_DEBUG ${GTEST_DEBUG_LIBRARY_PATH}
-  INTERFACE_LINK_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
+  IMPORTED_LOCATION "${GTEST_LIBRARY_PATH}"
+  IMPORTED_LOCATION_DEBUG "${GTEST_DEBUG_LIBRARY_PATH}"
+  INTERFACE_LINK_LIBRARIES "${CMAKE_THREAD_LIBS_INIT}")
 include_directories("${GTEST_INCLUDE_DIR}")
 add_dependencies(mage_gtest gtest-proj)
 
@@ -65,17 +65,29 @@ if (OPENMP_FOUND)
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 
-# mg_procedure library
-add_library(mg_procedure INTERFACE)
-target_include_directories(mg_procedure INTERFACE ${CMAKE_SOURCE_DIR}/mg_procedure)
+# Add stduuid - cross-platform UUID implementation
+set(UUID_ROOT ${PROJECT_BINARY_DIR}/uuid)
+ExternalProject_Add(uuid-proj
+  PREFIX            ${UUID_ROOT}
+  INSTALL_DIR       ${UUID_ROOT}
+  GIT_REPOSITORY    https://github.com/mariusbancila/stduuid.git
+  GIT_TAG           v1.2.2
+  CMAKE_ARGS        "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
+                    "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+                    "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
+set(UUID_INCLUDE_DIR ${UUID_ROOT}/include)
+add_library(mage_uuid INTERFACE)
+target_include_directories(mage_uuid INTERFACE ${UUID_INCLUDE_DIR}/gsl)
+target_include_directories(mage_uuid INTERFACE ${UUID_INCLUDE_DIR})
+add_dependencies(mage_uuid uuid-proj)
 
 # mg_utility library
 add_subdirectory(mg_utility)
 
 function(add_query_module target_name version src)
   add_library(${target_name} SHARED ${src})
-  set_target_properties(${target_name} PROPERTIES SOVERSION ${version})
-  target_link_libraries(${target_name} PRIVATE mg_procedure)
+  set_target_properties(${target_name} PROPERTIES SOVERSION "${version}")
+  target_link_libraries(${target_name} PRIVATE mg_utility)
 endfunction()
 
 # Available query modules.
@@ -91,4 +103,6 @@ add_subdirectory(community_detection_module)
 add_subdirectory(pagerank_module)
 add_subdirectory(uuid_module)
 add_subdirectory(katz_centrality_module)
+add_subdirectory(degree_centrality_module)
+add_subdirectory(graph_util_module)
 add_cugraph_subdirectory(cugraph_module)

@@ -1,7 +1,6 @@
 query: >
     CALL graph_coloring.color_graph() YIELD node, color
-    MATCH (a:BaseStation) WHERE toString(id(a)) = node 
-    RETURN COUNT(a.id) AS id_count, COUNT(color) AS color_count;
+    RETURN COUNT(node.id) AS id_count, COUNT(color) AS color_count;
 
 output:
     - id_count: 200
