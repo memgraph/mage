@@ -289,9 +289,9 @@ def create_index(
             ANALYZER
         ] = schema_parameters[ANALYZER]
         if schema_parameters[INDEX_TYPE] == VERTEX:
-            schema_json[MAPPINGS][DYNAMIC_TEMPLATES][0][MEM_CATEGORIES_HAS_RAW][MAPPING][
-                ANALYZER
-            ] = schema_parameters[ANALYZER]
+            schema_json[MAPPINGS][DYNAMIC_TEMPLATES][0][MEM_CATEGORIES_HAS_RAW][
+                MAPPING
+            ][ANALYZER] = schema_parameters[ANALYZER]
         else:
             schema_json[MAPPINGS][DYNAMIC_TEMPLATES][0][MEM_TYPE_HAS_RAW][MAPPING][
                 ANALYZER
@@ -516,14 +516,14 @@ def reindex(
     """
     global client
     response = elasticsearch.helpers.reindex(
-            client=client,
-            source_index=source_index,
-            target_index=target_index,
-            query=json.loads(query),
-            chunk_size=chunk_size,
-            scroll=scroll,
-            op_type=op_type,
-        )
+        client=client,
+        source_index=source_index,
+        target_index=target_index,
+        query=json.loads(query),
+        chunk_size=chunk_size,
+        scroll=scroll,
+        op_type=op_type,
+    )
     return mgp.Record(response=str(response[0]))
 
 
