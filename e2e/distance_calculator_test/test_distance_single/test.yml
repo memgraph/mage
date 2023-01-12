@@ -1,6 +1,6 @@
 query: >
     MATCH (a)-[]->(b)
-    CALL distance_calc.single(a, b) YIELD distance
+    CALL distance_calculator.single(a, b) YIELD distance
     RETURN distance;
 
 output:

@@ -1,7 +1,7 @@
 query: >
     MATCH (a)-[]->(b)
     WITH collect(a) as start_points, collect(b) as end_points
-    CALL distance_calc.multiple(start_points, end_points, "km", 4) YIELD distances
+    CALL distance_calculator.multiple(start_points, end_points, "km", 4) YIELD distances
     UNWIND distances as distance
     RETURN distance;
 
