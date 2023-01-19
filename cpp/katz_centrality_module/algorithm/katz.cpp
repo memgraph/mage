@@ -400,11 +400,10 @@ std::vector<std::pair<std::uint64_t, double>> UpdateKatz(
     const std::vector<std::uint64_t> &created_relationship_ids, const std::vector<std::uint64_t> &deleted_nodes,
     const std::vector<std::pair<std::uint64_t, uint64_t>> &deleted_relationships) {
   std::uint64_t n_relationships = 0;
-  for (const auto &node : graph.Nodes()) {
-    for (const auto &_ : node.OutRelationships()) {
-      n_relationships++;
-    }
+  for (const auto &z : graph.Relationships()) {
+    n_relationships++;
   }
+
   if (n_relationships == 0) {
     katz_alg::context.Init(graph);
     return WrapResults();
