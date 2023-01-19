@@ -83,14 +83,19 @@ streaming graph algorithms! Drop us a message on the channels below:
 
 ## Overview
 
+- [Memgraph Advanced Graph Extensions :crystal\_ball:](#memgraph-advanced-graph-extensions-crystal_ball)
+  - [Introduction to query modules with MAGE](#introduction-to-query-modules-with-mage)
+  - [Further reading](#further-reading)
+  - [Algorithm proposition](#algorithm-proposition)
+  - [Community](#community)
+- [Overview](#overview)
 - [Memgraph compatibility](#memgraph-compatibility)
 - [How to install MAGE?](#how-to-install-mage)
-  - [1. Installing MAGE with Docker](#1-installing-mage-with-docker)
-    - [a) Install MAGE from Docker Hub](#a-install-mage-from-docker-hub)
-    - [b) Install MAGE with Docker build of the
-      repository](#b-install-mage-with-docker-build-of-the-repository)
-  - [2. Installing MAGE on Linux distro from
-    source](#2-installing-mage-on-linux-distro-from-source)
+  - [1. Use MAGE with Docker](#1-use-mage-with-docker)
+    - [a) Get MAGE from Docker Hub](#a-get-mage-from-docker-hub)
+    - [2 Install MAGE with Docker build of the repository](#2-install-mage-with-docker-build-of-the-repository)
+  - [2. Installing MAGE on Linux distro from source](#2-installing-mage-on-linux-distro-from-source)
+    - [Prerequisites](#prerequisites)
 - [Running MAGE](#running-mage)
 - [MAGE Spells](#mage-spells)
 - [Advanced configuration](#advanced-configuration)
@@ -111,29 +116,46 @@ below lists the compatibility of MAGE with Memgraph versions.
 
 ## How to install MAGE?
 
-There are two options to install MAGE. For the [Docker
+There are two options to install MAGE. 
+
+1) For the [Docker
 installation](#1-installing-mage-with-docker), you only need Docker installed.
-[To build from
+
+2) [To build from
 source](#2-installing-mage-locally-with-linux-package-of-memgraph), you will
-need **Python3**, **Make**, **CMake**, **Clang**, **UUID** and **Rust**.
+need to install following on your machine:
+- libcurl4
+- libpython3.9
+- libssl-dev
+- openssl 
+- build-essential
+- make     
+- cmake          
+- curl           
+- g++          
+- python3      
+- python3-pip 
+- python3-setuptools    
+- python3-dev     
+- clang        
 
 After the installation, you will be ready to query Memgraph and use MAGE
 modules. Make sure to have one of [the querying
 platforms](https://memgraph.com/docs/memgraph/connect-to-memgraph/) installed as
 well.
 
-### 1. Installing MAGE with Docker
+### 1. Use MAGE with Docker
 
-#### a) Install MAGE from Docker Hub
+#### a) Get MAGE from Docker Hub
 
 **1.** This command downloads the image from Docker Hub and runs Memgraph
 preloaded with **MAGE** modules:
 
 ```
-docker run -p 7687:7687 memgraph/memgraph-mage
+docker run -p 7687:7687 -p 7444:7444 memgraph/memgraph-mage
 ```
 
-#### b) Install MAGE with Docker build of the repository
+#### 2 Install MAGE with Docker build of the repository
 
 **0.** Make sure that you have cloned the MAGE Github repository and positioned
 yourself inside the repo in your terminal:
@@ -154,7 +176,7 @@ This will build any new algorithm added to MAGE, and load it inside Memgraph.
 **MAGE**:
 
 ```
-docker run --rm -p 7687:7687 --name mage memgraph-mage
+docker run --rm -p 7687:7687 -p 7444:7444 --name mage memgraph-mage
 ```
 
 **NOTE**: if you made any changes while the **MAGE** Docker container was
@@ -173,8 +195,21 @@ To learn more about development with MAGE and Docker, visit the
   [here](https://memgraph.com/download). We offer Ubuntu, Debian and CentOS
   based Memgraph packages. To install, proceed to the following
   [site](https://memgraph.com/docs/memgraph/installation).
-- To build and install MAGE query modules you will need: **Python3**, **Make**,
-  **CMake**, **Clang**, **UUID** and **Rust**.
+- To build and install MAGE query modules you will need:
+  - libcurl4
+  - libpython3.9
+  - libssl-dev
+  - openssl 
+  - build-essential
+  - make     
+  - cmake          
+  - curl           
+  - g++          
+  - python3      
+  - python3-pip 
+  - python3-setuptools    
+  - python3-dev     
+  - clang  
 
 Since Memgraph needs to load MAGE's modules, there is the `setup` script to help
 you.
