@@ -110,6 +110,8 @@ With changes in Memgraph API, MAGE started to track version numbers. The table
 below lists the compatibility of MAGE with Memgraph versions.
 | MAGE version | Memgraph version |
 | ------------ | ----------------- |
+| >= 1.5.1 | >= 2.5.1 |
+| >= 1.5 | >= 2.5.0 |
 | >= 1.4 | >= 2.4.0 |
 | >= 1.0 | >= 2.0.0 |
 | ^0 | >= 1.4.0 <= 1.6.1 |
@@ -211,19 +213,24 @@ To learn more about development with MAGE and Docker, visit the
   - python3-dev     
   - clang  
 
-Since Memgraph needs to load MAGE's modules, there is the `setup` script to help
-you.
+Since Memgraph needs to load MAGE's modules, there is the `setup` script to help you.
 
-Run the `build` command of the `setup` script. It will generate a `mage/dist`
-directory with all the `*.so` and `*.py` files. Flag `-p (--path)` represents
-where will contents of `mage/dist` directory be copied. You need to copy it to
-`/usr/lib/memgraph/query_modules` directory, because that's where Memgraph is
-looking for query modules by
-[default](https://docs.memgraph.com/memgraph/reference-guide/configuration/).
+Before you even start, don't forget to clone MAGE with `--recurse-submodules` flag:
+
+```bash
+git clone --recurse-submodules https://github.com/memgraph/mage.git && cd mage
+
+```
+
+After you clone MAGE, run the following command:
 
 ```
 python3 setup build -p /usr/lib/memgraph/query_modules
 ```
+
+It will generate a `mage/dist` directory and copy modules to
+`/usr/lib/memgraph/query_modules` directory.
+
 
 > Note that query modules are loaded into Memgraph on startup so if your
 > instance was already running you will need to execute the following query
