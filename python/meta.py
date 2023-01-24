@@ -88,7 +88,9 @@ def schema(
     )
     relationships = list(
         _iter_relationships_as_map(
-            relationship_count_by_labels, node_index_by_labels, include_properties,
+            relationship_count_by_labels,
+            node_index_by_labels,
+            include_properties,
         )
     )
 
@@ -131,9 +133,10 @@ def _iter_relationships_as_map(
     node_index_by_labels: Dict[NodeKeyType, int],
     include_properties: bool,
 ) -> Iterator[mgp.Map]:
-    for i, ((source_label, relationship_label, target_label), counter,) in enumerate(
-        relationship_count_by_labels.items()
-    ):
+    for i, (
+        (source_label, relationship_label, target_label),
+        counter,
+    ) in enumerate(relationship_count_by_labels.items()):
         source_node_id = node_index_by_labels.get(source_label)
         target_node_id = node_index_by_labels.get(target_label)
 
