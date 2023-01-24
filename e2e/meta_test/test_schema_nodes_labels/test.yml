@@ -1,0 +1,8 @@
+query: >
+    CALL meta.schema() YIELD nodes, relationships UNWIND nodes AS node UNWIND node.labels AS label RETURN label;
+output:
+  - label: "Person"
+  - label: "Person"
+  - label: "Student"
+  - label: "University"
+  - label: "City"

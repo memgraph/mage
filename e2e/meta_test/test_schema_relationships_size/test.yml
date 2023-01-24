@@ -1,0 +1,4 @@
+query: >
+    CALL meta.schema() YIELD nodes, relationships RETURN size(relationships) AS size;
+output:
+  - size: 4
