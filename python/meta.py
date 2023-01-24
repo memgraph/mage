@@ -26,7 +26,7 @@ class Counter:
                 Parameter.PROPERTIES_COUNT.value: self.count_by_property_name,
             }
             if include_properties
-            else {Parameter.COUNT.value: self.total_count,}
+            else {Parameter.COUNT.value: self.total_count}
         )
 
 
