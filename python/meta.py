@@ -26,9 +26,7 @@ class Counter:
                 Parameter.PROPERTIES_COUNT.value: self.count_by_property_name,
             }
             if include_properties
-            else {
-                Parameter.COUNT.value: self.total_count,
-            }
+            else {Parameter.COUNT.value: self.total_count,}
         )
 
 
@@ -82,9 +80,7 @@ def schema(
                 include_properties=include_properties,
             )
 
-    node_index_by_labels = {
-        key: i for i, key in enumerate(node_count_by_labels.keys())
-    }
+    node_index_by_labels = {key: i for i, key in enumerate(node_count_by_labels.keys())}
     nodes = list(
         _iter_nodes_as_map(
             node_count_by_labels, node_index_by_labels, include_properties
@@ -92,9 +88,7 @@ def schema(
     )
     relationships = list(
         _iter_relationships_as_map(
-            relationship_count_by_labels,
-            node_index_by_labels,
-            include_properties,
+            relationship_count_by_labels, node_index_by_labels, include_properties,
         )
     )
 
@@ -137,10 +131,9 @@ def _iter_relationships_as_map(
     node_index_by_labels: Dict[NodeKeyType, int],
     include_properties: bool,
 ) -> Iterator[mgp.Map]:
-    for i, (
-        (source_label, relationship_label, target_label),
-        counter,
-    ) in enumerate(relationship_count_by_labels.items()):
+    for i, ((source_label, relationship_label, target_label), counter,) in enumerate(
+        relationship_count_by_labels.items()
+    ):
         source_node_id = node_index_by_labels.get(source_label)
         target_node_id = node_index_by_labels.get(target_label)
 
@@ -150,8 +143,6 @@ def _iter_relationships_as_map(
                 Parameter.START.value: source_node_id,
                 Parameter.END.value: target_node_id,
                 Parameter.LABEL.value: relationship_label,
-                Parameter.PROPERTIES.value: counter.to_dict(
-                    include_properties
-                ),
+                Parameter.PROPERTIES.value: counter.to_dict(include_properties),
                 Parameter.TYPE.value: Parameter.RELATIONSHIP.value,
             }
