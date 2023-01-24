@@ -39,11 +39,25 @@ def schema(
     """
     Procedure to generate the graph database schema.
 
-    Parameters
-    ----------
-    include_properties : bool
-        If set to True, the graph schema will include properties count information.
+    Args:
+        context (mgp.ProcCtx): Reference to the context execution.
+        include_properties (bool): If set to True, the graph schema will include properties count information.
+
+    Returns:
+        mgp.Record including mgp.List of mgp.Map representing nodes and mgp.List of mgp.Map representing relationships in the graph schema.
+
+    Example:
+        Get graph schema without properties count:
+            `CALL meta.schema() YIELD nodes, relationships RETURN nodes, relationships;`
+        Get graph schema with properties count:
+            `CALL meta.schema(true) YIELD nodes, relationships RETURN nodes, relationships;`
     """
+
+    if len(context.graph.vertices) == 0:
+        raise Exception(
+            "Can't generate a graph schema since there is no data in the database."
+        )
+
     node_count_by_labels: Dict[NodeKeyType, Counter] = {}
     relationship_count_by_labels: Dict[RelationshipKeyType, Counter] = {}
 
