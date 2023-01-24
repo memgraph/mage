@@ -19,11 +19,17 @@ class Counter:
     def count_property(self, property_name: str) -> None:
         self.count_by_property_name[property_name] += 1
 
-    def to_dict(self):
-        return {
-            Parameter.COUNT.value: self.total_count,
-            Parameter.PROPERTIES_COUNT.value: self.count_by_property_name,
-        }
+    def to_dict(self, include_properties):
+        return (
+            {
+                Parameter.COUNT.value: self.total_count,
+                Parameter.PROPERTIES_COUNT.value: self.count_by_property_name,
+            }
+            if include_properties
+            else {
+                Parameter.COUNT.value: self.total_count,
+            }
+        )
 
 
 @mgp.read_proc
@@ -62,10 +68,20 @@ def schema(
                 include_properties=include_properties,
             )
 
-    node_index_by_labels = {key: i for i, key in enumerate(node_count_by_labels.keys())}
-    nodes = list(_iter_nodes_as_map(node_count_by_labels, node_index_by_labels))
+    node_index_by_labels = {
+        key: i for i, key in enumerate(node_count_by_labels.keys())
+    }
+    nodes = list(
+        _iter_nodes_as_map(
+            node_count_by_labels, node_index_by_labels, include_properties
+        )
+    )
     relationships = list(
-        _iter_relationships_as_map(relationship_count_by_labels, node_index_by_labels)
+        _iter_relationships_as_map(
+            relationship_count_by_labels,
+            node_index_by_labels,
+            include_properties,
+        )
     )
 
     return mgp.Record(nodes=nodes, relationships=relationships)
@@ -91,12 +107,13 @@ def _update_counts(
 def _iter_nodes_as_map(
     node_count_by_labels: Dict[NodeKeyType, Counter],
     node_index_by_labels: Dict[NodeKeyType, int],
+    include_properties: bool,
 ) -> Iterator[mgp.Map]:
     for labels, counter in node_count_by_labels.items():
         yield {
             Parameter.ID.value: node_index_by_labels.get(labels),
             Parameter.LABELS.value: labels,
-            Parameter.PROPERTIES.value: counter.to_dict(),
+            Parameter.PROPERTIES.value: counter.to_dict(include_properties),
             Parameter.TYPE.value: Parameter.NODE.value,
         }
 
@@ -104,10 +121,12 @@ def _iter_nodes_as_map(
 def _iter_relationships_as_map(
     relationship_count_by_labels: Dict[RelationshipKeyType, Counter],
     node_index_by_labels: Dict[NodeKeyType, int],
+    include_properties: bool,
 ) -> Iterator[mgp.Map]:
-    for i, ((source_label, relationship_label, target_label), counter) in enumerate(
-        relationship_count_by_labels.items()
-    ):
+    for i, (
+        (source_label, relationship_label, target_label),
+        counter,
+    ) in enumerate(relationship_count_by_labels.items()):
         source_node_id = node_index_by_labels.get(source_label)
         target_node_id = node_index_by_labels.get(target_label)
 
@@ -117,6 +136,8 @@ def _iter_relationships_as_map(
                 Parameter.START.value: source_node_id,
                 Parameter.END.value: target_node_id,
                 Parameter.LABEL.value: relationship_label,
-                Parameter.PROPERTIES.value: counter.to_dict(),
+                Parameter.PROPERTIES.value: counter.to_dict(
+                    include_properties
+                ),
                 Parameter.TYPE.value: Parameter.RELATIONSHIP.value,
             }
