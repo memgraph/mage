@@ -10,7 +10,8 @@ import multiprocessing as mp
 import argparse
 import logging
 from enum import Enum
-from typing import List, Optional, Iterator, Dict, Any
+from typing import List, Dict, Any
+
 
 WORK_DIRECTORY = os.getcwd()
 MAGE_BUILD_DIRECTORY = f"{WORK_DIRECTORY}/dist"
@@ -23,26 +24,26 @@ MG_CONF_DEFAULT_PATH = f"/etc/memgraph/memgraph.conf"
 MG_CONF_QUERY_MODULES_FLAG = "--query-modules-directory"
 MAGE_GPU_BUILD = "MAGE_CUGRAPH_ENABLE=ON"
 
-
-
 logging.basicConfig(format='%(asctime)-15s [%(levelname)s]: %(message)s')
 logger = logging.getLogger('setup')
 logger.setLevel(logging.DEBUG)
 
-
 HELP_MESSAGE = """\
     For usage info run: python3 setup -h
     """
-
-
 
 class BuildType(Enum):
     DEBUG = "Debug"
     RELEASE = "Release"
 
     def __str__(self):
-        return self.value
+        return str(self.value)
 
+class Parameter(Enum):
+    GPU = "gpu"
+    CPP_BUILD_FLAGS = "cpp_build_flags"
+    PATH = "path"
+    TYPE = "type"
 
 def get_arguments():
     parser = argparse.ArgumentParser(
@@ -148,12 +149,13 @@ def build_and_copy_cpp_modules(args:Dict[str,Any])->bool:
     # Prepare CMake flags
     os.chdir(CPP_BUILD_DIRECTORY)
     cmake_args = [".."]
-    if args["gpu"]:
+    print(args)
+    if args[Parameter.GPU.value]:
         cmake_args.append(f"-D{MAGE_GPU_BUILD}")
-    if args["cpp_build_flags"] is not None:
-        cmake_args += [f"-D{flag}" for flag in args["cpp_build_flags"]]
+    if args[Parameter.CPP_BUILD_FLAGS.value] is not None:
+        cmake_args += [f"-D{flag}" for flag in args[Parameter.CPP_BUILD_FLAGS.value]]
     else:
-        cmake_args += [f"-DCMAKE_BUILD_TYPE=Release"]
+        cmake_args += [f"-DCMAKE_BUILD_TYPE={BuildType.RELEASE}"]
     
     cmake_command = ["cmake"] + cmake_args
    
@@ -214,7 +216,7 @@ def copy_python_modules()->bool:
 
     return True
 
-def build_copy_rust_modules(args:Dict[str,Any])->bool:
+def build_and_copy_rust_modules(args:Dict[str,Any])->bool:
     """
     Function builds and copies Rust modules.
     """
@@ -228,13 +230,14 @@ def build_copy_rust_modules(args:Dict[str,Any])->bool:
         project_dir = os.path.join(RS_DIRECTORY, project)
         os.chdir(project_dir)
         rs_build_mode = "release"
-        if args["type"] is not None:
-            if args["type"] == BuildType.DEBUG:
-                rs_build_mode = "debug"
-            if args["type"] == BuildType.RELEASE:
-                rs_build_mode = "release"
+        if args[Parameter.TYPE.value] is not None:
+            if args[Parameter.TYPE.value] == BuildType.DEBUG:
+                rs_build_mode = BuildType.DEBUG
+            if args[Parameter.TYPE.value] == BuildType.RELEASE:
+                rs_build_mode = BuildType.RELEASE
+            rs_build_mode = rs_build_mode.lower()
         rs_build_flags = ["--release"]
-        if args["type"] is not None and args["type"] == BuildType.DEBUG:
+        if args[Parameter.TYPE.value] is not None and args[Parameter.TYPE.value] == BuildType.DEBUG:
             rs_build_flags = []
 
         # Build Rust query modules    
@@ -272,7 +275,7 @@ def build(args:Dict[str, Any])->bool:
     if not python_status:
         return False
     
-    rust_status = build_copy_rust_modules(args)
+    rust_status = build_and_copy_rust_modules(args)
     if not rust_status:
         return False
     
@@ -288,12 +291,12 @@ def run_build_action(args:Dict[str,Any])->bool:
 
     logger.info("[Terminal] Building done successfully.")
 
-    if args["path"] is None:
+    if args[Parameter.PATH.value] is None:
         return True
 
-    logger.info(f"[Terminal] Copying build files from folder {MAGE_BUILD_DIRECTORY} to {args['path']} folder.")
+    logger.info(f"[Terminal] Copying build files from folder {MAGE_BUILD_DIRECTORY} to {args[Parameter.PATH.value]} folder.")
 
-    copytree(MAGE_BUILD_DIRECTORY, args["path"])
+    copytree(MAGE_BUILD_DIRECTORY, args[Parameter.PATH.value])
     logger.info("[Terminal] Copying done!")
     return True
 
