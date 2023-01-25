@@ -13,10 +13,10 @@ class Counter:
         self.total_count = initial_value
         self.count_by_property_name = defaultdict(int)
 
-    def count(self) -> None:
+    def increment(self) -> None:
         self.total_count += 1
 
-    def count_property(self, property_name: str) -> None:
+    def increment_property(self, property_name: str) -> None:
         self.count_by_property_name[property_name] += 1
 
     def to_dict(self, include_properties):
@@ -42,7 +42,7 @@ def schema(
         include_properties (bool): If set to True, the graph schema will include properties count information.
 
     Returns:
-        mgp.Record including mgp.List of mgp.Map representing nodes and mgp.List of mgp.Map representing relationships in the graph schema.
+        mgp.Record containing a mgp.List of mgp.Map objects representing nodes in the graph schema and a mgp.List of mgp.Map objects representing relationships.
 
     Example:
         Get graph schema without properties count:
@@ -107,11 +107,11 @@ def _update_counts(
         obj_count_by_key[key] = Counter()
 
     obj_counter = obj_count_by_key[key]
-    obj_counter.count()
+    obj_counter.increment()
 
     if include_properties:
         for property_name in obj.properties.keys():
-            obj_counter.count_property(property_name)
+            obj_counter.increment_property(property_name)
 
 
 def _iter_nodes_as_map(
