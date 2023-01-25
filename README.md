@@ -93,7 +93,7 @@ streaming graph algorithms! Drop us a message on the channels below:
 - [How to install MAGE?](#how-to-install-mage)
   - [1. Use MAGE with Docker](#1-use-mage-with-docker)
     - [a) Get MAGE from Docker Hub](#a-get-mage-from-docker-hub)
-    - [2 Install MAGE with Docker build of the repository](#2-install-mage-with-docker-build-of-the-repository)
+    - [b) Install MAGE with Docker build of the repository](#2-install-mage-with-docker-build-of-the-repository)
   - [2. Installing MAGE on Linux distro from source](#2-installing-mage-on-linux-distro-from-source)
     - [Prerequisites](#prerequisites)
 - [Running MAGE](#running-mage)
@@ -125,7 +125,7 @@ installation](#1-installing-mage-with-docker), you only need Docker installed.
 
 2) [To build from
 source](#2-installing-mage-locally-with-linux-package-of-memgraph), you will
-need to install following on your machine:
+need to install the following on your machine:
 - libcurl4
 - libpython3.9
 - libssl-dev
@@ -215,7 +215,7 @@ To learn more about development with MAGE and Docker, visit the
 
 Since Memgraph needs to load MAGE's modules, there is the `setup` script to help you.
 
-Before you even start, don't forget to clone MAGE with `--recurse-submodules` flag:
+Before you start, don't forget to clone MAGE with `--recurse-submodules` flag:
 
 ```bash
 git clone --recurse-submodules https://github.com/memgraph/mage.git && cd mage
