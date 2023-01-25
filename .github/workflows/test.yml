@@ -9,9 +9,9 @@ on: [pull_request, workflow_dispatch]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on:  ubuntu-latest
     env:
-      MEMGRAPH_VERSION: 2.4.2
+      MEMGRAPH_VERSION: 2.5.1
     strategy:
       matrix:
         architecture: ["amd64", "arm64"]
