@@ -93,7 +93,7 @@ streaming graph algorithms! Drop us a message on the channels below:
 - [How to install MAGE?](#how-to-install-mage)
   - [1. Use MAGE with Docker](#1-use-mage-with-docker)
     - [a) Get MAGE from Docker Hub](#a-get-mage-from-docker-hub)
-    - [b) Install MAGE with Docker build of the repository](#2-install-mage-with-docker-build-of-the-repository)
+    - [2 Install MAGE with Docker build of the repository](#2-install-mage-with-docker-build-of-the-repository)
   - [2. Installing MAGE on Linux distro from source](#2-installing-mage-on-linux-distro-from-source)
     - [Prerequisites](#prerequisites)
 - [Running MAGE](#running-mage)
@@ -213,7 +213,8 @@ To learn more about development with MAGE and Docker, visit the
   - python3-dev     
   - clang  
 
-Since Memgraph needs to load MAGE's modules, there is the `setup` script to help you.
+Since Memgraph needs to load MAGE's modules, there is the `setup` script to help you. With `setup` script you can build modules, so Memgraph
+can load them on start up.
 
 Before you start, don't forget to clone MAGE with `--recurse-submodules` flag:
 
