@@ -283,7 +283,7 @@ def run_build_action(args:Dict[str,Any])->bool:
     logger.info("[Terminal] Starting building any copying of source code...")
     status = build(args)
     if not status:
-        logging.error( "[Terminal] Build raised error. Check output message for more info")
+        logging.error( "[Terminal] An error occurred while building. Check the output message for more information.")
         return False
 
     logger.info("[Terminal] Building done successfully.")
@@ -312,7 +312,7 @@ def run_modules_storage_setup_action(
     modules_storage_path=MAGE_BUILD_DIRECTORY, mg_conf_path=MG_CONF_DEFAULT_PATH
 ):
     if not os.path.isfile(mg_conf_path):
-        logger.info(f"[Terminal] Configuration path does not exists: {mg_conf_path}. Check out whether you have installed Memgraph!")
+        logger.info(f"[Terminal] Configuration path does not exist: {mg_conf_path}. Check that Memgraph is installed.")
         return
 
     logger.info(f"[Terminal] --query-modules-dir flag in {modules_storage_path} will be set to {mg_conf_path}")
