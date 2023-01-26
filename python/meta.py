@@ -51,15 +51,13 @@ def schema(
             `CALL meta.schema(true) YIELD nodes, relationships RETURN nodes, relationships;`
     """
 
-    if len(context.graph.vertices) == 0:
-        raise Exception(
-            "Can't generate a graph schema since there is no data in the database."
-        )
-
     node_count_by_labels: Dict[NodeKeyType, Counter] = {}
     relationship_count_by_labels: Dict[RelationshipKeyType, Counter] = {}
 
+    node_counter = 0
+
     for node in context.graph.vertices:
+        node_counter += 1
         labels = tuple(sorted(label.name for label in node.labels))
         _update_counts(
             node_count_by_labels,
@@ -79,6 +77,11 @@ def schema(
                 obj=relationship,
                 include_properties=include_properties,
             )
+
+    if node_counter == 0:
+        raise Exception(
+            "Can't generate a graph schema since there is no data in the database."
+        )
 
     node_index_by_labels = {key: i for i, key in enumerate(node_count_by_labels.keys())}
     nodes = list(
