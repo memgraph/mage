@@ -1,5 +1,5 @@
 import mgp
-from mage.meta.parameters import Parameter
+from mage.meta_util.parameters import Parameter
 from collections import defaultdict
 from typing import Dict, Tuple, Union, Iterator
 
@@ -46,9 +46,9 @@ def schema(
 
     Example:
         Get graph schema without properties count:
-            `CALL meta.schema() YIELD nodes, relationships RETURN nodes, relationships;`
+            `CALL meta_util.schema() YIELD nodes, relationships RETURN nodes, relationships;`
         Get graph schema with properties count:
-            `CALL meta.schema(true) YIELD nodes, relationships RETURN nodes, relationships;`
+            `CALL meta_util.schema(true) YIELD nodes, relationships RETURN nodes, relationships;`
     """
 
     node_count_by_labels: Dict[NodeKeyType, Counter] = {}
