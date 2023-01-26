@@ -149,7 +149,6 @@ def build_and_copy_cpp_modules(args:Dict[str,Any])->bool:
     # Prepare CMake flags
     os.chdir(CPP_BUILD_DIRECTORY)
     cmake_args = [".."]
-    print(args)
     if args[Parameter.GPU.value]:
         cmake_args.append(f"-D{MAGE_GPU_BUILD}")
     if args[Parameter.CPP_BUILD_FLAGS.value] is not None:

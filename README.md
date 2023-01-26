@@ -124,22 +124,8 @@ There are two options to install MAGE.
 installation](#1-installing-mage-with-docker), you only need Docker installed.
 
 2) [To build from
-source](#2-installing-mage-locally-with-linux-package-of-memgraph), you will
-need to install the following on your machine:
-- libcurl4
-- libpython3.9
-- libssl-dev
-- openssl 
-- build-essential
-- make     
-- cmake          
-- curl           
-- g++          
-- python3      
-- python3-pip 
-- python3-setuptools    
-- python3-dev     
-- clang        
+source](#2-installing-MAGE-on-linux-distro-from-source), you will
+need to install few things first. Jump to section #2 to check for installation details.   
 
 After the installation, you will be ready to query Memgraph and use MAGE
 modules. Make sure to have one of [the querying
