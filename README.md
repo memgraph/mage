@@ -213,7 +213,7 @@ To learn more about development with MAGE and Docker, visit the
   - python3-dev     
   - clang  
 
-Since Memgraph needs to load MAGE's modules, there is the `setup` script to help you. With `setup` script you can build modules, so Memgraph
+Since Memgraph needs to load MAGE's modules, there is the `setup` script to help you. With it, you can build the modules so that Memgraph
 can load them on start up.
 
 Before you start, don't forget to clone MAGE with `--recurse-submodules` flag:
@@ -229,7 +229,7 @@ After you clone MAGE, run the following command:
 python3 setup build -p /usr/lib/memgraph/query_modules
 ```
 
-It will generate a `mage/dist` directory and copy modules to
+It will generate a `mage/dist` directory and copy the modules to
 `/usr/lib/memgraph/query_modules` directory.
 
 

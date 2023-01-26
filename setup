@@ -138,7 +138,7 @@ def run_command(command:List[str])->bool:
 
 def build_and_copy_cpp_modules(args:Dict[str,Any])->bool:
     """
-    This function builds and copies C++ modules. Returns true if successfull, false otherwise.
+    This function builds and copies C++ modules. Returns true if successful, false otherwise.
     """
 
     logger.info("[Terminal] (1/7) Building C++ modules started.")
@@ -193,7 +193,7 @@ def build_and_copy_cpp_modules(args:Dict[str,Any])->bool:
 
 def copy_python_modules()->bool:
     """
-    Function copies python modules to MAGE_BUILD_DIRECTORY. Returns true if successfull, otherwise false.
+    Function copies Python modules to MAGE_BUILD_DIRECTORY. Returns true if successful, otherwise false.
     """
 
     logger.info(f"[Terminal] (5/8) Copying Python modules to {MAGE_BUILD_DIRECTORY} started.")
@@ -283,7 +283,7 @@ def build(args:Dict[str, Any])->bool:
 
 
 def run_build_action(args:Dict[str,Any])->bool:
-    logger.info("[Terminal] Starting building any copying of source code...")
+    logger.info("[Terminal] Starting building and copying source code...")
     status = build(args)
     if not status:
         logging.error( "[Terminal] An error occurred while building. Check the output message for more information.")
