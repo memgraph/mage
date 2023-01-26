@@ -32,7 +32,7 @@ AGGREGATIONS = "aggregations"
 HITS = "hits"
 TOTAL = "total"
 
-# Linkurious constants
+# Constants
 MEM_TYPE = "mem_type"
 MEM_STRING = "_meme_string"
 MEM_NUMBER = "_meme_number"
