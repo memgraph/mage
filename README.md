@@ -93,7 +93,7 @@ streaming graph algorithms! Drop us a message on the channels below:
 - [How to install MAGE?](#how-to-install-mage)
   - [1. Use MAGE with Docker](#1-use-mage-with-docker)
     - [a) Get MAGE from Docker Hub](#a-get-mage-from-docker-hub)
-    - [2 Install MAGE with Docker build of the repository](#2-install-mage-with-docker-build-of-the-repository)
+    - [b) Install MAGE with a Docker build of the repository](#2-install-mage-with-docker-build-of-the-repository)
   - [2. Installing MAGE on Linux distro from source](#2-installing-mage-on-linux-distro-from-source)
     - [Prerequisites](#prerequisites)
 - [Running MAGE](#running-mage)
@@ -125,7 +125,7 @@ installation](#1-installing-mage-with-docker), you only need Docker installed.
 
 2) [To build from
 source](#2-installing-MAGE-on-linux-distro-from-source), you will
-need to install few things first. Jump to section #2 to check for installation details.   
+need to install a few things first. Jump to section #2 to check for installation details.   
 
 After the installation, you will be ready to query Memgraph and use MAGE
 modules. Make sure to have one of [the querying
@@ -216,7 +216,7 @@ python3 setup build -p /usr/lib/memgraph/query_modules
 ```
 
 It will generate a `mage/dist` directory and copy the modules to
-`/usr/lib/memgraph/query_modules` directory.
+the `/usr/lib/memgraph/query_modules` directory.
 
 
 > Note that query modules are loaded into Memgraph on startup so if your
