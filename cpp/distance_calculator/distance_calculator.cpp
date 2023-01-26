@@ -1,14 +1,12 @@
-#include <mgp.hpp>
 #include <math.h>
-# define M_PI 3.14159265358979323846  /* pi */
-# define KM_MUL 0.001
+#include <mgp.hpp>
+#define KM_MUL 0.001
 
 const char *kProcedureSingle = "single";
 const char *kProcedureMultiple = "multiple";
 
 const char *kReturnDistance = "distance";
 const char *kReturnDistances = "distances";
-
 
 const char *kArgumentStartPoint = "start_point";
 const char *kArgumentEndPoint = "end_point";
@@ -18,16 +16,18 @@ const char *kArgumentEnd = "end";
 const char *kArgumentDecimals = "decimals";
 const char *kArgumentMetrics = "metrics";
 
-double distance_calc(const mgp::Node &node1, const mgp::Node &node2, bool use_km, int decimals){
+const char *kDefaultArgumentMetrics = "m";
+const int64_t kDefaultArgumentDecimals = 2;
 
+const double pi_rad = M_PI / 180.0;
+const double R = 6371000.0;
+
+double distance_calc(const mgp::Node &node1, const mgp::Node &node2, bool use_km, int decimals) {
   double lat1 = node1.GetProperty("lat").ValueDouble();
   double lng1 = node1.GetProperty("lng").ValueDouble();
-  
+
   double lat2 = node2.GetProperty("lat").ValueDouble();
   double lng2 = node2.GetProperty("lng").ValueDouble();
-
-  double pi_rad = M_PI / 180.0;
-  double R = 6371000.0;
 
   double phi_1 = lat1 * pi_rad;
   double phi_2 = lat2 * pi_rad;
@@ -36,59 +36,59 @@ double distance_calc(const mgp::Node &node1, const mgp::Node &node2, bool use_km
   double delta_lambda = (lng2 - lng1) * pi_rad;
 
   double sin_delta_phi = sin(delta_phi / 2);
-  double sin_delta_lambda = sin(delta_lambda /2);
+  double sin_delta_lambda = sin(delta_lambda / 2);
 
-  double a = sin_delta_phi*sin_delta_phi + cos(phi_1)*cos(phi_2)* (sin_delta_lambda*sin_delta_lambda);
-  double c = 2 * atan2(sqrt(a),sqrt(1-a));
-  double distance = R*c;
-  if (use_km){
-    distance*=KM_MUL;
+  double a = sin_delta_phi * sin_delta_phi + cos(phi_1) * cos(phi_2) * (sin_delta_lambda * sin_delta_lambda);
+  double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+  double distance = R * c;
+  if (use_km) {
+    distance *= KM_MUL;
   }
   int rounding = pow(10, decimals);
-  return round(distance*rounding)/rounding;
+  return round(distance * rounding) / rounding;
 }
 
 void Single(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
   const auto record_factory = mgp::RecordFactory(result);
 
-  try{
+  try {
     const mgp::List arguments = mgp::List(args);
-    const mgp::Node& node1 = arguments[0].ValueNode();
-    const mgp::Node& node2 = arguments[1].ValueNode();
+    const mgp::Node &node1 = arguments[0].ValueNode();
+    const mgp::Node &node2 = arguments[1].ValueNode();
     const std::string_view metrics = arguments[2].ValueString();
     int64_t decimals = arguments[3].ValueInt();
 
     mgp::Record record = record_factory.NewRecord();
 
-    record.Insert(kReturnDistance, distance_calc(node1, node2, metrics=="km", decimals));
+    record.Insert(kReturnDistance, distance_calc(node1, node2, metrics == "km", decimals));
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
     return;
   }
-
 }
 
 void Multiple(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
   const auto record_factory = mgp::RecordFactory(result);
 
-  try{
+  try {
     const auto arguments = mgp::List(args);
-    mgp::List distances= mgp::List();
+    mgp::List distances = mgp::List();
 
     const mgp::List start_points = arguments[0].ValueList();
     const mgp::List end_points = arguments[1].ValueList();
     const std::string_view metrics = arguments[2].ValueString();
     int64_t decimals = arguments[3].ValueInt();
 
-    if (start_points.Size() != end_points.Size()){
-      throw mgp::ValueException("Length of both arrays must be of equal size.");
+    if (start_points.Size() != end_points.Size()) {
+      throw mgp::ValueException("Both arrays must be of equal length.");
     }
-    bool use_km =  metrics=="km";
-    for(int i=0; i< start_points.Size(); i++){
-      const mgp::Node& node1 = start_points[i].ValueNode();
-      const mgp::Node& node2 = end_points[i].ValueNode();
+    
+    bool use_km = metrics == "km";
+    for (decltype(start_points.Size()) i = 0; i < start_points.Size(); i++) {
+      const mgp::Node &node1 = start_points[i].ValueNode();
+      const mgp::Node &node2 = end_points[i].ValueNode();
       distances.AppendExtend(mgp::Value(distance_calc(node1, node2, use_km, decimals)));
     }
 
@@ -98,33 +98,26 @@ void Multiple(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp
     record_factory.SetErrorMessage(e.what());
     return;
   }
-  
 }
-
-
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
     mgp::memory = memory;
 
-    const char* metrics = "m";
-
-    AddProcedure(Single, kProcedureSingle, mgp::ProcedureType::Read,
-                 {mgp::Parameter(kArgumentStartPoint, mgp::Type::Node), 
-                 mgp::Parameter(kArgumentEndPoint, mgp::Type::Node),
-                 mgp::Parameter(kArgumentMetrics, mgp::Type::String, metrics),
-                 mgp::Parameter(kArgumentDecimals, mgp::Type::Int, static_cast<int64_t>(2))}, 
-                 {mgp::Return(kReturnDistance, mgp::Type::Double)},
-                 module, memory);
+    AddProcedure(
+        Single, kProcedureSingle, mgp::ProcedureType::Read,
+        {mgp::Parameter(kArgumentStartPoint, mgp::Type::Node), mgp::Parameter(kArgumentEndPoint, mgp::Type::Node),
+         mgp::Parameter(kArgumentMetrics, mgp::Type::String, kDefaultArgumentMetrics),
+         mgp::Parameter(kArgumentDecimals, mgp::Type::Int, kDefaultArgumentDecimals)},
+        {mgp::Return(kReturnDistance, mgp::Type::Double)}, module, memory);
 
     const auto multiple_input = std::make_pair(mgp::Type::List, mgp::Type::Node);
     const auto multiple_return = std::make_pair(mgp::Type::List, mgp::Type::Double);
     AddProcedure(Multiple, kProcedureMultiple, mgp::ProcedureType::Read,
-                 {mgp::Parameter(kArgumentStart, multiple_input), mgp::Parameter(kArgumentEnd, multiple_input), 
-                  mgp::Parameter(kArgumentMetrics, mgp::Type::String, metrics),
-                  mgp::Parameter(kArgumentDecimals, mgp::Type::Int, static_cast<int64_t>(2))}, 
-                 {mgp::Return(kReturnDistances, multiple_return)},
-                 module, memory);
+                 {mgp::Parameter(kArgumentStart, multiple_input), mgp::Parameter(kArgumentEnd, multiple_input),
+                  mgp::Parameter(kArgumentMetrics, mgp::Type::String, kDefaultArgumentMetrics),
+                  mgp::Parameter(kArgumentDecimals, mgp::Type::Int, kDefaultArgumentDecimals)},
+                 {mgp::Return(kReturnDistances, multiple_return)}, module, memory);
 
   } catch (const std::exception &e) {
     return 1;
