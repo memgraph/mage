@@ -3,6 +3,7 @@ scipy==1.7.1
 gekko==0.2.8
 networkx==2.6.2
 python-Levenshtein==0.12.1
+elasticsearch==8.4.3
 gensim==4.0.0
 torch==1.12.0
 six==1.16.0
