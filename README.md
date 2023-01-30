@@ -83,14 +83,19 @@ streaming graph algorithms! Drop us a message on the channels below:
 
 ## Overview
 
+- [Memgraph Advanced Graph Extensions :crystal\_ball:](#memgraph-advanced-graph-extensions-crystal_ball)
+  - [Introduction to query modules with MAGE](#introduction-to-query-modules-with-mage)
+  - [Further reading](#further-reading)
+  - [Algorithm proposition](#algorithm-proposition)
+  - [Community](#community)
+- [Overview](#overview)
 - [Memgraph compatibility](#memgraph-compatibility)
 - [How to install MAGE?](#how-to-install-mage)
-  - [1. Installing MAGE with Docker](#1-installing-mage-with-docker)
-    - [a) Install MAGE from Docker Hub](#a-install-mage-from-docker-hub)
-    - [b) Install MAGE with Docker build of the
-      repository](#b-install-mage-with-docker-build-of-the-repository)
-  - [2. Installing MAGE on Linux distro from
-    source](#2-installing-mage-on-linux-distro-from-source)
+  - [1. Use MAGE with Docker](#1-use-mage-with-docker)
+    - [a) Get MAGE from Docker Hub](#a-get-mage-from-docker-hub)
+    - [b) Install MAGE with a Docker build of the repository](#2-install-mage-with-docker-build-of-the-repository)
+  - [2. Installing MAGE on Linux distro from source](#2-installing-mage-on-linux-distro-from-source)
+    - [Prerequisites](#prerequisites)
 - [Running MAGE](#running-mage)
 - [MAGE Spells](#mage-spells)
 - [Advanced configuration](#advanced-configuration)
@@ -105,35 +110,40 @@ With changes in Memgraph API, MAGE started to track version numbers. The table
 below lists the compatibility of MAGE with Memgraph versions.
 | MAGE version | Memgraph version |
 | ------------ | ----------------- |
+| >= 1.5.1 | >= 2.5.1 |
+| >= 1.5 | >= 2.5.0 |
 | >= 1.4 | >= 2.4.0 |
 | >= 1.0 | >= 2.0.0 |
 | ^0 | >= 1.4.0 <= 1.6.1 |
 
 ## How to install MAGE?
 
-There are two options to install MAGE. For the [Docker
+There are two options to install MAGE. 
+
+1) For the [Docker
 installation](#1-installing-mage-with-docker), you only need Docker installed.
-[To build from
-source](#2-installing-mage-locally-with-linux-package-of-memgraph), you will
-need **Python3**, **Make**, **CMake**, **Clang**, **UUID** and **Rust**.
+
+2) [To build from
+source](#2-installing-MAGE-on-linux-distro-from-source), you will
+need to install a few things first. Jump to section #2 to check for installation details.   
 
 After the installation, you will be ready to query Memgraph and use MAGE
 modules. Make sure to have one of [the querying
 platforms](https://memgraph.com/docs/memgraph/connect-to-memgraph/) installed as
 well.
 
-### 1. Installing MAGE with Docker
+### 1. Use MAGE with Docker
 
-#### a) Install MAGE from Docker Hub
+#### a) Get MAGE from Docker Hub
 
 **1.** This command downloads the image from Docker Hub and runs Memgraph
 preloaded with **MAGE** modules:
 
 ```
-docker run -p 7687:7687 memgraph/memgraph-mage
+docker run -p 7687:7687 -p 7444:7444 memgraph/memgraph-mage
 ```
 
-#### b) Install MAGE with Docker build of the repository
+#### 2 Install MAGE with Docker build of the repository
 
 **0.** Make sure that you have cloned the MAGE Github repository and positioned
 yourself inside the repo in your terminal:
@@ -154,7 +164,7 @@ This will build any new algorithm added to MAGE, and load it inside Memgraph.
 **MAGE**:
 
 ```
-docker run --rm -p 7687:7687 --name mage memgraph-mage
+docker run --rm -p 7687:7687 -p 7444:7444 --name mage memgraph-mage
 ```
 
 **NOTE**: if you made any changes while the **MAGE** Docker container was
@@ -173,22 +183,41 @@ To learn more about development with MAGE and Docker, visit the
   [here](https://memgraph.com/download). We offer Ubuntu, Debian and CentOS
   based Memgraph packages. To install, proceed to the following
   [site](https://memgraph.com/docs/memgraph/installation).
-- To build and install MAGE query modules you will need: **Python3**, **Make**,
-  **CMake**, **Clang**, **UUID** and **Rust**.
+- To build and install MAGE query modules you will need:
+  - libcurl4
+  - libpython3.9
+  - libssl-dev
+  - openssl 
+  - build-essential
+  - make     
+  - cmake          
+  - curl           
+  - g++          
+  - python3      
+  - python3-pip 
+  - python3-setuptools    
+  - python3-dev     
+  - clang  
 
-Since Memgraph needs to load MAGE's modules, there is the `setup` script to help
-you.
+Since Memgraph needs to load MAGE's modules, there is the `setup` script to help you. With it, you can build the modules so that Memgraph
+can load them on start up.
 
-Run the `build` command of the `setup` script. It will generate a `mage/dist`
-directory with all the `*.so` and `*.py` files. Flag `-p (--path)` represents
-where will contents of `mage/dist` directory be copied. You need to copy it to
-`/usr/lib/memgraph/query_modules` directory, because that's where Memgraph is
-looking for query modules by
-[default](https://docs.memgraph.com/memgraph/reference-guide/configuration/).
+Before you start, don't forget to clone MAGE with `--recurse-submodules` flag:
+
+```bash
+git clone --recurse-submodules https://github.com/memgraph/mage.git && cd mage
+
+```
+
+After you clone MAGE, run the following command:
 
 ```
 python3 setup build -p /usr/lib/memgraph/query_modules
 ```
+
+It will generate a `mage/dist` directory and copy the modules to
+the `/usr/lib/memgraph/query_modules` directory.
+
 
 > Note that query modules are loaded into Memgraph on startup so if your
 > instance was already running you will need to execute the following query
