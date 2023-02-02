@@ -2,8 +2,9 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <mgp.hpp>
+#include <omp.h>
 #include "algorithms/node_similarity.hpp"
-// #include <spdlog>
+
 
 namespace {
 
@@ -65,6 +66,10 @@ void Jaccard(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_
             // }
         }
     }
+    // auto record = record_factory.NewRecord();
+    // record.Insert(node1_name, 2.0);
+    // record.Insert(node2_name, 2.0);
+    // record.Insert(similarity, 2.0);
 }
 
 } // namespace
