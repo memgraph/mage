@@ -54,7 +54,6 @@ double JaccardFunc(std::set<uint64_t> ns1, std::set<uint64_t> ns2) {
         return 0.0;
     } else {
         return elem_intersection.size() / (double) elem_union.size();
-        // return std::ceil((elem_intersection.size() / (double) elem_union.size()) * 10000.0) / 10000.0;
     }
 }
 
@@ -78,33 +77,22 @@ double OverlapFunc(std::set<uint64_t> ns1, std::set<uint64_t> ns2) {
 Calculates cosine similarity function between two nodes for a given property.
 */
 double CosineFunc(const mgp::Node &node1, const mgp::Node &node2, const std::string &property) {
-    std::cout << "Property: " << property << std::endl;
     auto prop1_it = node1.GetProperty(property);
     auto prop2_it = node2.GetProperty(property);
-    for (const auto &[key, val]: node1.Properties()) {
-        std::cout << key << " "; 
-    }
-    std::cout << std::endl;
-    std::cout << "After checking whether the property exists" << std::endl;
     const auto &prop1 = prop1_it.ValueList();
     const auto &prop2 = prop2_it.ValueList();
     double similarity = 0.0, node1_sum = 0.0, node2_sum = 0.0;
     int size1 = prop1.Size(), size2 = prop2.Size();
-    // std::co
     if (size1 != size2) {
-        std::cout << "Sizes are different" << std::endl;
         throw mg_exception::InvalidArgumentException();
     }
     for (int i = 0; i < size1; ++i) {
         double val1 = prop1[i].ValueDouble(), val2 = prop2[i].ValueDouble();
-        std::cout << "Val1: " << val1 << " " << val2 << std::endl;
         similarity += val1 * val2;
         node1_sum += val1 * val1;
         node2_sum += val2 * val2;
     }
-    std::cout << "Before computation" << std::endl;
     double denominator = sqrt(node1_sum) * sqrt(node2_sum);
-    std::cout << "After computation" << std::endl;
     if (denominator < 1e-9) {
         return 0.0;
     } else {
@@ -138,11 +126,8 @@ Calculates similiraty between pairs of nodes given by src_nodes and dst_nodes.
 */
 std::vector<std::tuple<mgp::Node, mgp::Node, double>> CalculateSimilarityPairwise(const mgp::List &src_nodes, const mgp::List &dst_nodes, node_similarity_util::Similarity similarity_mode, std::string property = "") {
     if (src_nodes.Size() != dst_nodes.Size()) {
-        std::cout << "In runtime error" << std::endl;
-        throw std::exception();
-        // throw mgp::ValueException("Arguments are of different size.");
+        throw mgp::ValueException("Arguments are of different size.");
     }
-    std::cout << "after error" << std::endl;
     int num_nodes = src_nodes.Size();
     std::vector<std::tuple<mgp::Node, mgp::Node, double>> results;
     std::unordered_map<uint64_t, std::set<uint64_t>> neighbors;
