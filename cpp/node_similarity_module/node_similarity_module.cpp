@@ -1,98 +1,108 @@
 #include <cstdint>
 #include <unordered_map>
 #include <unordered_set>
+#include <algorithm>
 #include <mgp.hpp>
-#include <omp.h>
+#include <mg_exceptions.hpp>
 #include "algorithms/node_similarity.hpp"
 
-
-namespace {
-
-// Methods
-constexpr char const *jaccardAll = "jaccard";
-// Return parameters
-constexpr char const *node1_name = "node1";
-constexpr char const *node2_name = "node2";
-constexpr char const *similarity = "similarity";
-
-void Jaccard(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-    mgp::memory = memory;
-    const auto record_factory = mgp::RecordFactory(result);
-    const auto graph = mgp::Graph(memgraph_graph);
-    std::unordered_set<std::pair<uint64_t, uint64_t>, node_similarity_util::pair_hash> visited_node_pairs;
-    // Cache neighbors
-    std::unordered_map<uint64_t, std::unordered_set<uint64_t>> neighbors;
-    for (const auto &node1: graph.Nodes()) {
-        // uint64_t node1_id = node1.Id().AsUint();
-        // Process neighboura
-        // std::unordered_set<uint64_t> ns1;
-        // if (neighbors.count(node1_id)) {
-        //     ns1 = neighbors[node1_id];
-        // } else {
-        //     for (const auto n1: node1.OutRelationships()) {
-        //         ns1.insert(n1.To().Id().AsUint());
-        //     }
-        //     neighbors[node1_id] = ns1;
-        // }
-        for (const auto &node2: graph.Nodes()) {
-            // uint64_t node2_id = node2.Id().AsUint();
-            // if (node1 == node2 || visited_node_pairs.count(std::make_pair<>(node2_id, node1_id))) {
-            //     continue;
-            // }
-            // visited_node_pairs.insert(std::make_pair<>(node1_id, node2_id));
-            // // Process neighbours
-            // std::unordered_set<uint64_t> ns2;
-            // if (neighbors.count(node2_id)) {
-            //     ns2 = neighbors[node2_id];
-            // } else {
-            //     for (const auto n2: node2.OutRelationships()) {
-            //         ns2.insert(n2.To().Id().AsUint());
-            //     }
-            //     neighbors[node2_id] = ns2;
-            // }
-            // calculate intersection and union
-            // std::unordered_set<uint64_t> elem_union, elem_intersection;
-            // std::set_union(ns1.begin(), ns1.end(), ns2.begin(), ns2.end(), std::inserter(elem_union, elem_union.begin()));
-            // std::set_intersection(ns1.begin(), ns1.end(), ns2.begin(), ns2.end(), std::inserter(elem_intersection, elem_intersection.begin()));
-            // Construct a record
-            auto record = record_factory.NewRecord();
-            record.Insert(node1_name, node1);
-            record.Insert(node2_name, node2);
-            // if (elem_union.size() == 0) {
-            record.Insert(similarity, 0.0);
-            // } else {
-            //     double sim = elem_intersection.size() / (double) elem_union.size();
-            //     record.Insert(similarity, sim);
-            // }
-        }
+void insert_results(const std::vector<std::tuple<mgp::Node, mgp::Node, double>> &results, const mgp::RecordFactory &record_factory) {
+    for (const auto &[node1, node2, similarity]: results) {
+        auto new_record = record_factory.NewRecord();
+        new_record.Insert(node_similarity_util::node1_name, node1);
+        new_record.Insert(node_similarity_util::node2_name, node2);
+        new_record.Insert(node_similarity_util::similarity, similarity);
     }
-    // auto record = record_factory.NewRecord();
-    // record.Insert(node1_name, 2.0);
-    // record.Insert(node2_name, 2.0);
-    // record.Insert(similarity, 2.0);
 }
 
-} // namespace
-
-extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
+/*
+Calculates Jaccard similarity between given pairs of nodes.
+*/
+void JaccardPairwise(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
     mgp::memory = memory;
+    const auto &arguments = mgp::List(args);
+    insert_results(node_similarity_algs::CalculateSimilarityPairwise(arguments[0].ValueList(), arguments[1].ValueList(), node_similarity_util::Similarity::jaccard), mgp::RecordFactory(result));
+}
 
+/*
+Calculates overlap similarity between given pairs of nodes.
+*/
+void OverlapPairwise(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+    mgp::memory = memory;
+    const auto &arguments = mgp::List(args);
+    insert_results(node_similarity_algs::CalculateSimilarityPairwise(arguments[0].ValueList(), arguments[1].ValueList(), node_similarity_util::Similarity::overlap), mgp::RecordFactory(result));
+}
+
+/*
+Calculates Jaccard similarity between all pairs of nodes.
+Jacc. similarity of two nodes can be calculated as len(intersection(neighbours(node1), neighbours(node2))) / len(union(neighbours(node1), neighbours(node2))) 
+*/
+void Jaccard(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+    mgp::memory = memory;
+    insert_results(node_similarity_algs::CalculateSimilarityCartesian(mgp::Graph(memgraph_graph), node_similarity_util::Similarity::jaccard), mgp::RecordFactory(result));
+}
+
+/*
+Calculates overlap similarity between all pairs of nodes.
+Overlap similarity of two nodes can be calculated as len(intersection(neighbours(node1), neighbours(node2))) / min(len(neighbours(node1), len(node2))) 
+*/
+void Overlap(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+    mgp::memory = memory;
+    insert_results(node_similarity_algs::CalculateSimilarityCartesian(mgp::Graph(memgraph_graph), node_similarity_util::Similarity::overlap), mgp::RecordFactory(result));
+
+}
+
+// /*
+// Calculates cosine similarity between all pairs of nodes.
+// */
+void Cosine(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+    mgp::memory = memory;
+    const auto& arguments = mgp::List(args);
+    insert_results(node_similarity_algs::CalculateSimilarityCartesian(mgp::Graph(memgraph_graph), node_similarity_util::Similarity::cosine, std::string(arguments[0].ValueString())), mgp::RecordFactory(result));
+}
+
+/*
+Calculates overlap similarity between given pairs of nodes.
+*/
+void CosinePairwise(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+    mgp::memory = memory;
+    const auto &arguments = mgp::List(args);
+    insert_results(node_similarity_algs::CalculateSimilarityPairwise(arguments[1].ValueList(), arguments[2].ValueList(), node_similarity_util::Similarity::cosine, std::string(arguments[0].ValueString())), mgp::RecordFactory(result));
+}
+
+extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
     try {
-        mgp::AddProcedure(Jaccard,
-        jaccardAll,
-        mgp::ProcedureType::Read,
-        {}, // no input parameters
-        {
-            mgp::Return(node1_name, mgp::Type::Node),
-            mgp::Return(node2_name, mgp::Type::Node),
-            mgp::Return(similarity, mgp::Type::Double)
-        },
-        module,
-        memory
-        );
-    } catch (const std::exception &e) {
+        mgp::memory = memory;
+        // method objects
+        std::vector<mgp::Return> returns = {
+            mgp::Return(node_similarity_util::node1_name, mgp::Type::Node),
+            mgp::Return(node_similarity_util::node2_name, mgp::Type::Node),
+            mgp::Return(node_similarity_util::similarity, mgp::Type::Double)
+        };
+        // Normal params
+        std::vector<mgp::Parameter> params {mgp::Parameter(node_similarity_util::src_nodes, {mgp::Type::List, mgp::Type::Node}), mgp::Parameter(node_similarity_util::dst_nodes, {mgp::Type::List, mgp::Type::Node})};
+        // Cosine params
+        std::vector<mgp::Parameter> cosine_params_pairwise {mgp::Parameter(node_similarity_util::prop_vector, mgp::Type::String), mgp::Parameter(node_similarity_util::src_nodes, {mgp::Type::List, mgp::Type::Node}), mgp::Parameter(node_similarity_util::dst_nodes, {mgp::Type::List, mgp::Type::Node})};
+        // Add Jaccard algorithm
+        mgp::AddProcedure(Jaccard, node_similarity_util::jaccardAll, mgp::ProcedureType::Read, {}, returns, module, memory);
+        mgp::AddProcedure(JaccardPairwise, node_similarity_util::jaccardPairwise, mgp::ProcedureType::Read, params, returns, module, memory);
+        // Add Overlap algorithm
+        mgp::AddProcedure(Overlap, node_similarity_util::overlapAll, mgp::ProcedureType::Read, {}, returns, module, memory);
+        mgp::AddProcedure(OverlapPairwise, node_similarity_util::overlapPairwise, mgp::ProcedureType::Read, params, returns, module, memory);
+        // // Add Cosine algorithm
+        mgp::AddProcedure(Cosine, node_similarity_util::cosineAll, mgp::ProcedureType::Read, {mgp::Parameter(node_similarity_util::prop_vector, mgp::Type::String)}, 
+                returns, module, memory);
+        mgp::AddProcedure(CosinePairwise, node_similarity_util::cosinePairwise, mgp::ProcedureType::Read, cosine_params_pairwise, returns, module, memory);
+    } catch(const mgp::ValueException &e) {
+        std::cout << "catched 1" << std::endl;
         return 1;
     }
+    catch(const std::exception &e) {
+        std::cout << "catched 2" << std::endl;
+        return 1;
+    } catch(...){
+        std::cout << "Catched somewhere" << std::endl;
+    } 
     return 0;
 }
 

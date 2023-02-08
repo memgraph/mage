@@ -7,26 +7,21 @@ query: >
         WHERE n.id < 2
         WITH collect(n) as nodes2, nodes1
         
-        CALL node_similarity.cosine(nodes1, nodes2) YIELD *
+        CALL node_similarity.cosine("score") YIELD *
           
         RETURN node1.id as node1, node2.id as node2, similarity
         
         ORDER BY node1, node2
         
 output: 
-    - node1: 3
-      node2: 0
-      similarity: 0.3162
+    - node1: 0
+      node2: 1
+      similarity: 0.8165
      
-    - node1: 3
-      node2: 1
-      similarity: 0.3536
+    - node1: 0
+      node2: 2
+      similarity: 0.8165
    
-    - node1: 4
-      node2: 0
-      similarity: 0.5164
-      
-      
-    - node1: 4
-      node2: 1
-      similarity: 0.8660
+    - node1: 1
+      node2: 2
+      similarity: 0.5
