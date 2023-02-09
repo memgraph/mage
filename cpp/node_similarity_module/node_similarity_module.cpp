@@ -72,13 +72,13 @@ void Overlap(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_
 
 }
 
-// /*
-// Calculates cosine similarity between all pairs of nodes.
-// */
+/*
+Calculates cosine similarity between all pairs of nodes.
+*/
 void Cosine(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
     mgp::memory = memory;
-    const auto& arguments = mgp::List(args);
     const auto record_factory = mgp::RecordFactory(result);
+    const auto &arguments = mgp::List(args);
     try {
         insert_results(node_similarity_algs::CalculateSimilarityCartesian(mgp::Graph(memgraph_graph), node_similarity_util::Similarity::cosine, std::string(arguments[0].ValueString())), record_factory);
     } catch (const mgp::ValueException &e) {
