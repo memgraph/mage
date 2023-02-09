@@ -2,7 +2,7 @@ ARG CUGRAPH_VERSION=22.02
 ARG CUDA_VERSION=11.5
 ARG CUDA_VERSION_MINOR=11.5.2
 ARG PY_VERSION=3.8
-ARG MG_VERSION=2.5.1
+ARG MG_VERSION=2.5.2
 
 FROM rapidsai/rapidsai:${CUGRAPH_VERSION}-cuda${CUDA_VERSION}-runtime-ubuntu20.04-py${PY_VERSION} as cugraph-dev
 
@@ -74,7 +74,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
     -p /usr/lib/memgraph/query_modules/ 
 
 #DGL build from source
-RUN git clone --recurse-submodules -b 0.9.x https://github.com/dmlc/dgl.git \
+RUN git clone --recurse-submodules -b 0.9.x https://github.com/dmlc/dgl.git   \
     && cd dgl && mkdir build && cd build && cmake -DUSE_CUDA=ON .. \
     && make -j4 && cd ../python && python3 setup.py install
 
