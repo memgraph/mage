@@ -6,12 +6,30 @@
 #include <mg_exceptions.hpp>
 #include "algorithms/node_similarity.hpp"
 
+
+// Methods
+constexpr char const *jaccardAll = "jaccard";
+constexpr char const *jaccardPairwise = "jaccard_pairwise";
+constexpr char const *overlapAll = "overlap";
+constexpr char const *overlapPairwise = "overlap_pairwise";
+constexpr char const *cosineAll = "cosine";
+constexpr char const *cosinePairwise = "cosine_pairwise";
+// Parameter object names
+constexpr char const *src_nodes = "src_nodes";
+constexpr char const *dst_nodes = "dst_nodes";
+constexpr char const *prop_vector = "property";
+// Return object names
+char const *node1_name = "node1";
+char const *node2_name = "node2";
+char const *similarity_name = "similarity";
+
+
 void insert_results(const std::vector<std::tuple<mgp::Node, mgp::Node, double>> &results, const mgp::RecordFactory &record_factory) {
     for (const auto &[node1, node2, similarity]: results) {
         auto new_record = record_factory.NewRecord();
-        new_record.Insert(node_similarity_util::node1_name, node1);
-        new_record.Insert(node_similarity_util::node2_name, node2);
-        new_record.Insert(node_similarity_util::similarity, similarity);
+        new_record.Insert(node1_name, node1);
+        new_record.Insert(node2_name, node2);
+        new_record.Insert(similarity_name, similarity);
     }
 }
 
@@ -80,7 +98,7 @@ void Cosine(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
     const auto record_factory = mgp::RecordFactory(result);
     const auto &arguments = mgp::List(args);
     try {
-        insert_results(node_similarity_algs::CalculateSimilarityCartesian(mgp::Graph(memgraph_graph), node_similarity_util::Similarity::cosine, std::string(arguments[0].ValueString())), record_factory);
+        insert_results(node_similarity_algs::CalculateSimilarityCartesian(mgp::Graph(memgraph_graph), node_similarity_util::Similarity::cosine, arguments[0].ValueString().data()), record_factory);
     } catch (const mgp::ValueException &e) {
         record_factory.SetErrorMessage(e.what());
     }
@@ -94,7 +112,7 @@ void CosinePairwise(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resul
     const auto record_factory = mgp::RecordFactory(result);
     const auto &arguments = mgp::List(args);
     try {
-        insert_results(node_similarity_algs::CalculateSimilarityPairwise(arguments[1].ValueList(), arguments[2].ValueList(), node_similarity_util::Similarity::cosine, std::string(arguments[0].ValueString())), record_factory);
+        insert_results(node_similarity_algs::CalculateSimilarityPairwise(arguments[1].ValueList(), arguments[2].ValueList(), node_similarity_util::Similarity::cosine, arguments[0].ValueString().data()), record_factory);
     } catch (const mgp::ValueException &e) {
         record_factory.SetErrorMessage(e.what());
     }
@@ -105,24 +123,24 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
         mgp::memory = memory;
         // method objects
         std::vector<mgp::Return> returns = {
-            mgp::Return(node_similarity_util::node1_name, mgp::Type::Node),
-            mgp::Return(node_similarity_util::node2_name, mgp::Type::Node),
-            mgp::Return(node_similarity_util::similarity, mgp::Type::Double)
+            mgp::Return(node1_name, mgp::Type::Node),
+            mgp::Return(node2_name, mgp::Type::Node),
+            mgp::Return(similarity_name, mgp::Type::Double)
         };
         // Normal params
-        std::vector<mgp::Parameter> params {mgp::Parameter(node_similarity_util::src_nodes, {mgp::Type::List, mgp::Type::Node}), mgp::Parameter(node_similarity_util::dst_nodes, {mgp::Type::List, mgp::Type::Node})};
+        std::vector<mgp::Parameter> params {mgp::Parameter(src_nodes, {mgp::Type::List, mgp::Type::Node}), mgp::Parameter(dst_nodes, {mgp::Type::List, mgp::Type::Node})};
         // Cosine params
-        std::vector<mgp::Parameter> cosine_params_pairwise {mgp::Parameter(node_similarity_util::prop_vector, mgp::Type::String), mgp::Parameter(node_similarity_util::src_nodes, {mgp::Type::List, mgp::Type::Node}), mgp::Parameter(node_similarity_util::dst_nodes, {mgp::Type::List, mgp::Type::Node})};
+        std::vector<mgp::Parameter> cosine_params_pairwise {mgp::Parameter(prop_vector, mgp::Type::String), mgp::Parameter(src_nodes, {mgp::Type::List, mgp::Type::Node}), mgp::Parameter(dst_nodes, {mgp::Type::List, mgp::Type::Node})};
         // Add Jaccard algorithm
-        mgp::AddProcedure(Jaccard, node_similarity_util::jaccardAll, mgp::ProcedureType::Read, {}, returns, module, memory);
-        mgp::AddProcedure(JaccardPairwise, node_similarity_util::jaccardPairwise, mgp::ProcedureType::Read, params, returns, module, memory);
+        mgp::AddProcedure(Jaccard, jaccardAll, mgp::ProcedureType::Read, {}, returns, module, memory);
+        mgp::AddProcedure(JaccardPairwise, jaccardPairwise, mgp::ProcedureType::Read, params, returns, module, memory);
         // Add Overlap algorithm
-        mgp::AddProcedure(Overlap, node_similarity_util::overlapAll, mgp::ProcedureType::Read, {}, returns, module, memory);
-        mgp::AddProcedure(OverlapPairwise, node_similarity_util::overlapPairwise, mgp::ProcedureType::Read, params, returns, module, memory);
+        mgp::AddProcedure(Overlap, overlapAll, mgp::ProcedureType::Read, {}, returns, module, memory);
+        mgp::AddProcedure(OverlapPairwise, overlapPairwise, mgp::ProcedureType::Read, params, returns, module, memory);
         // // Add Cosine algorithm
-        mgp::AddProcedure(Cosine, node_similarity_util::cosineAll, mgp::ProcedureType::Read, {mgp::Parameter(node_similarity_util::prop_vector, mgp::Type::String)}, 
+        mgp::AddProcedure(Cosine, cosineAll, mgp::ProcedureType::Read, {mgp::Parameter(prop_vector, mgp::Type::String)}, 
                 returns, module, memory);
-        mgp::AddProcedure(CosinePairwise, node_similarity_util::cosinePairwise, mgp::ProcedureType::Read, cosine_params_pairwise, returns, module, memory);
+        mgp::AddProcedure(CosinePairwise, cosinePairwise, mgp::ProcedureType::Read, cosine_params_pairwise, returns, module, memory);
     } catch(const std::exception &e) {
         return 1;
     } 

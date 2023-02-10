@@ -17,21 +17,6 @@ struct pair_hash {
 
 enum Similarity { jaccard, overlap, cosine };
 
-// Methods
-constexpr char const *jaccardAll = "jaccard";
-constexpr char const *jaccardPairwise = "jaccard_pairwise";
-constexpr char const *overlapAll = "overlap";
-constexpr char const *overlapPairwise = "overlap_pairwise";
-constexpr char const *cosineAll = "cosine";
-constexpr char const *cosinePairwise = "cosine_pairwise";
-// Parameter object names
-constexpr char const *src_nodes = "src_nodes";
-constexpr char const *dst_nodes = "dst_nodes";
-constexpr char const *prop_vector = "property";
-// Return object names
-char const *node1_name = "node1";
-char const *node2_name = "node2";
-char const *similarity = "similarity";
 
 }  // namespace node_similarity_util
 
@@ -65,33 +50,18 @@ ns2 are neighbours of the second node.
 double OverlapFunc(const std::set<uint64_t> &ns1, const std::set<uint64_t> &ns2) {
     std::set<uint64_t> elem_intersection;
     std::set_intersection(ns1.begin(), ns1.end(), ns2.begin(), ns2.end(), std::inserter(elem_intersection, elem_intersection.begin()));
-    int denonominator = std::min(ns1.size(), ns2.size());
-    if (denonominator == 0) {
+    int denominator = std::min(ns1.size(), ns2.size());
+    if (denominator == 0) {
         return 0.0;
-    } else {
-        return elem_intersection.size() / (double) denonominator;
     }
+    return elem_intersection.size() / (double) denominator;
 }
 
 
-
-/*
-Calculates cosine similarity function between two nodes for a given property.
-*/
-double CosineFunc(const mgp::Node &node1, const mgp::Node &node2, const std::string &property) {
-    const auto &prop1_it = node1.GetProperty(property);
-    const auto &prop2_it = node2.GetProperty(property);
-    if (prop1_it.IsNull() || prop2_it.IsNull()) {
-        throw mgp::ValueException("All nodes should have property " + property);
-    }
-    const auto &prop1 = prop1_it.ValueList();
-    const auto &prop2 = prop2_it.ValueList();
+double CosineFunc(const mgp::List &prop1, const mgp::List &prop2) {
+    int size = prop1.Size();
     double similarity = 0.0, node1_sum = 0.0, node2_sum = 0.0;
-    int size1 = prop1.Size(), size2 = prop2.Size();
-    if (size1 != size2) {
-        throw mgp::ValueException("Vectors should be of the same size.");
-    }
-    for (int i = 0; i < size1; ++i) {
+    for (int i = 0; i < size; ++i) {
         double val1 = prop1[i].ValueDouble(), val2 = prop2[i].ValueDouble();
         similarity += val1 * val2;
         node1_sum += val1 * val1;
@@ -100,9 +70,29 @@ double CosineFunc(const mgp::Node &node1, const mgp::Node &node2, const std::str
     double denominator = sqrt(node1_sum) * sqrt(node2_sum);
     if (denominator < 1e-9) {
         return 0.0;
-    } else {
-        return similarity / denominator;
+    } 
+    return similarity / denominator;
+
+}
+
+
+
+/*
+Calculates cosine similarity function between two nodes for a given property.
+*/
+double CosineFuncWrapper(const mgp::Node &node1, const mgp::Node &node2, const std::string &property) {
+    const auto &prop1_it = node1.GetProperty(property);
+    const auto &prop2_it = node2.GetProperty(property);
+    if (prop1_it.IsNull() || prop2_it.IsNull()) {
+        throw mgp::ValueException("All nodes should have property " + property);
     }
+    const auto &prop1 = prop1_it.ValueList();
+    const auto &prop2 = prop2_it.ValueList();
+    int size1 = prop1.Size(), size2 = prop2.Size();
+    if (size1 != size2) {
+        throw mgp::ValueException("Vectors should be of the same size.");
+    }
+    return CosineFunc(prop1, prop2);
 }
 
 
@@ -110,52 +100,52 @@ double CosineFunc(const mgp::Node &node1, const mgp::Node &node2, const std::str
 /*
 Extract node neighbours.
 */
-std::set<uint64_t> GetNeighbors(std::unordered_map<uint64_t, std::set<uint64_t>> &neighbors, const mgp::Node &node) {
+std::set<uint64_t> GetNeighbors(std::unordered_map<uint64_t, std::set<uint64_t>> &all_node_neighbors, const mgp::Node &node) {
     uint64_t node_id = node.Id().AsUint();
-    const auto &result_it = neighbors.find(node_id);
-    if (result_it == neighbors.end()) {
-        std::set<uint64_t> ns;
-        const auto &rels = node.OutRelationships();
-        for (const auto &rel: rels) {
-            ns.insert(rel.To().Id().AsUint());
-        }
-        neighbors[node_id] = ns;
-        return ns;
-    } else {
+    const auto &result_it = all_node_neighbors.find(node_id);
+    if (result_it != all_node_neighbors.end()) {
         return result_it->second;
     }
+    std::set<uint64_t> ns;
+    const auto &rels = node.OutRelationships();
+    for (const auto &rel: rels) {
+        ns.insert(rel.To().Id().AsUint());
+    }
+    all_node_neighbors[node_id] = ns;
+    return ns;
 }
 
 
 /*
 Calculates similiraty between pairs of nodes given by src_nodes and dst_nodes.
 */
-std::vector<std::tuple<mgp::Node, mgp::Node, double>> CalculateSimilarityPairwise(const mgp::List &src_nodes, const mgp::List &dst_nodes, node_similarity_util::Similarity similarity_mode, std::string property = "") {
+std::vector<std::tuple<mgp::Node, mgp::Node, double>> CalculateSimilarityPairwise(const mgp::List &src_nodes, const mgp::List &dst_nodes, node_similarity_util::Similarity similarity_mode, const std::string &property = "") {
     if (src_nodes.Size() != dst_nodes.Size()) {
         throw mgp::ValueException("Arguments are of different size.");
     }
     int num_nodes = src_nodes.Size();
     std::vector<std::tuple<mgp::Node, mgp::Node, double>> results;
-    std::unordered_map<uint64_t, std::set<uint64_t>> neighbors;
+    std::unordered_map<uint64_t, std::set<uint64_t>> all_node_neighbors;
     for (int i = 0; i < num_nodes; ++i) {
         const mgp::Node &src_node = src_nodes[i].ValueNode(), &dst_node = dst_nodes[i].ValueNode();
         double similarity = 0.0;
         if (similarity_mode == node_similarity_util::Similarity::cosine) {
-            similarity = node_similarity_algs::CosineFunc(src_node, dst_node, property);
-        } else {
-            const auto &ns1 = GetNeighbors(neighbors, src_node);
-            const auto &ns2 = GetNeighbors(neighbors, dst_node);
-                switch (similarity_mode) {
-                    case node_similarity_util::Similarity::jaccard:
-                        similarity = node_similarity_algs::JaccardFunc(ns1, ns2);
-                        break;
-                    case node_similarity_util::Similarity::overlap:
-                        similarity = node_similarity_algs::OverlapFunc(ns1, ns2);
-                        break;
-                    default:
-                        break; 
-                }
-        }
+            similarity = node_similarity_algs::CosineFuncWrapper(src_node, dst_node, property);
+            results.emplace_back(src_node, dst_node, similarity);   
+            continue;
+        } 
+        const auto &ns1 = GetNeighbors(all_node_neighbors, src_node);
+        const auto &ns2 = GetNeighbors(all_node_neighbors, dst_node);
+            switch (similarity_mode) {
+                case node_similarity_util::Similarity::jaccard:
+                    similarity = node_similarity_algs::JaccardFunc(ns1, ns2);
+                    break;
+                case node_similarity_util::Similarity::overlap:
+                    similarity = node_similarity_algs::OverlapFunc(ns1, ns2);
+                    break;
+                default:
+                    break; 
+            }
         results.emplace_back(src_node, dst_node, similarity);   
     }
     return results;
@@ -165,15 +155,13 @@ std::vector<std::tuple<mgp::Node, mgp::Node, double>> CalculateSimilarityPairwis
 /*
 Calculates similarity between all pairs of nodes, in a cartesian mode.
 */
-std::vector<std::tuple<mgp::Node, mgp::Node, double>> CalculateSimilarityCartesian(const mgp::Graph &graph, node_similarity_util::Similarity similarity_mode, std::string property = "") {
+std::vector<std::tuple<mgp::Node, mgp::Node, double>> CalculateSimilarityCartesian(const mgp::Graph &graph, node_similarity_util::Similarity similarity_mode, const std::string &property = "") {
     std::unordered_set<std::pair<uint64_t, uint64_t>, node_similarity_util::pair_hash> visited_node_pairs;
-    // Cache neighbors
-    std::unordered_map<uint64_t, std::set<uint64_t>> neighbors;
+    std::unordered_map<uint64_t, std::set<uint64_t>> all_node_neighbors;
     std::vector<std::tuple<mgp::Node, mgp::Node, double>> results;
     for (const auto &node1: graph.Nodes()) {
         uint64_t node1_id = node1.Id().AsUint();
-        const std::set<uint64_t> &ns1 = (similarity_mode != node_similarity_util::Similarity::cosine) ? GetNeighbors(neighbors, node1) : std::set<uint64_t>();
-        // const std::set<uint64_t> ns1 = std::set<uint64_t>();
+        const std::set<uint64_t> &ns1 = (similarity_mode != node_similarity_util::Similarity::cosine) ? GetNeighbors(all_node_neighbors, node1) : std::set<uint64_t>();
         for (const auto &node2: graph.Nodes()) {
             uint64_t node2_id = node2.Id().AsUint();
             if (node1 == node2 || visited_node_pairs.count(std::make_pair<>(node2_id, node1_id))) {
@@ -182,20 +170,20 @@ std::vector<std::tuple<mgp::Node, mgp::Node, double>> CalculateSimilarityCartesi
             visited_node_pairs.emplace(node1_id, node2_id);
             double similarity = 0.0;
             if (similarity_mode == node_similarity_util::Similarity::cosine) {
-                similarity = node_similarity_algs::CosineFunc(node1, node2, property);
-            } else {
-                const auto& ns2 = GetNeighbors(neighbors, node2);
-                // const std::set<uint64_t> ns2 = std::set<uint64_t>();
-                switch (similarity_mode) {
-                    case node_similarity_util::Similarity::jaccard:                    
-                        similarity = node_similarity_algs::JaccardFunc(ns1, ns2);
-                        break;
-                    case node_similarity_util::Similarity::overlap:
-                        similarity = node_similarity_algs::OverlapFunc(ns1, ns2);
-                        break;
-                    default:
-                        break;
-                }
+                similarity = node_similarity_algs::CosineFuncWrapper(node1, node2, property);
+                results.emplace_back(node1, node2, similarity);
+                continue;
+            } 
+            const auto& ns2 = GetNeighbors(all_node_neighbors, node2);
+            switch (similarity_mode) {
+                case node_similarity_util::Similarity::jaccard:                    
+                    similarity = node_similarity_algs::JaccardFunc(ns1, ns2);
+                    break;
+                case node_similarity_util::Similarity::overlap:
+                    similarity = node_similarity_algs::OverlapFunc(ns1, ns2);
+                    break;
+                default:
+                    break;
             }
             results.emplace_back(node1, node2, similarity);
         }
