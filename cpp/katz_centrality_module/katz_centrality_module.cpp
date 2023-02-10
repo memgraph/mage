@@ -26,14 +26,12 @@ void GetKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *re
     auto epsilon = mgp::value_get_double(mgp::list_at(args, 1));
 
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
-    auto katz_centralities = katz_alg::SetKatz(*graph);
+    auto katz_centralities = katz_alg::SetKatz(*graph, alpha, epsilon);
 
     for (auto &[vertex_id, centrality] : katz_centralities) {
-      // Insert the Katz centrality record
       InsertKatzRecord(memgraph_graph, result, memory, centrality, vertex_id);
     }
   } catch (const std::exception &e) {
-    // We must not let any exceptions out of our module.
     mgp::result_set_error_msg(result, e.what());
     return;
   }
@@ -41,15 +39,13 @@ void GetKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *re
 
 }  // namespace
 
-// Each module needs to define mgp_init_module function.
-// Here you can register multiple procedures your module supports.
 extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
   try {
     // Static Katz centrality
     {
       auto default_alpha = mgp::value_make_double(0.2, memory);
       auto default_epsilon = mgp::value_make_double(1e-2, memory);
-      
+
       auto *proc = mgp::module_add_read_procedure(module, kProcedureGet, GetKatzCentrality);
 
       mgp::proc_add_opt_arg(proc, kArgumentAlpha, mgp::type_float(), default_alpha);
@@ -60,7 +56,7 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
 
       mgp::value_destroy(default_alpha);
       mgp::value_destroy(default_alpha);
-    }      
+    }
   } catch (const std::exception &e) {
     return 1;
   }
@@ -68,10 +64,4 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
   return 0;
 }
 
-// This is an optional function if you need to release any resources before the
-// module is unloaded. You will probably need this if you acquired some
-// resources in mgp_init_module.
-extern "C" int mgp_shutdown_module() {
-  // Return 0 to indicate success.
-  return 0;
-}
+extern "C" int mgp_shutdown_module() { return 0; }

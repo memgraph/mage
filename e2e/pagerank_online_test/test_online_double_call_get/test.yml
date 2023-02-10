@@ -9,4 +9,4 @@
 - query: >-
     CALL pagerank_online.get() YIELD *;
   exception: >-
-    Graph should be inconsistent at this point!
+    Query failed: pagerank_online.get: Graph has been modified and is thus inconsistent with cached PageRank scores. To update them, please call set/reset!
