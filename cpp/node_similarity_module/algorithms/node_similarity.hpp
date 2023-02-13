@@ -106,12 +106,12 @@ std::set<uint64_t> GetNeighbors(std::unordered_map<uint64_t, std::set<uint64_t>>
     if (result_it != all_node_neighbors.end()) {
         return result_it->second;
     }
-    std::set<uint64_t> ns;
+    all_node_neighbors[node_id] = std::set<uint64_t>();
+    auto &ns = all_node_neighbors[node_id];
     const auto &rels = node.OutRelationships();
     for (const auto &rel: rels) {
         ns.insert(rel.To().Id().AsUint());
     }
-    all_node_neighbors[node_id] = ns;
     return ns;
 }
 
