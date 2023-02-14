@@ -25,3 +25,4 @@ output:
     - node1: 1
       node2: 2
       similarity: 0.5
+      

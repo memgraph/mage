@@ -37,9 +37,8 @@ double JaccardFunc(const std::set<uint64_t> &ns1, const std::set<uint64_t> &ns2)
     std::set_union(ns1.begin(), ns1.end(), ns2.begin(), ns2.end(), std::inserter(elem_union, elem_union.begin()));
     if (elem_union.size() == 0) {
         return 0.0;
-    } else {
-        return elem_intersection.size() / (double) elem_union.size();
     }
+    return elem_intersection.size() / (double) elem_union.size();
 }
 
 /*

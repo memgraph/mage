@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <mgp.hpp>
 #include <mg_exceptions.hpp>
+
 #include "algorithms/node_similarity.hpp"
 
 
