@@ -49,11 +49,11 @@ ns2 are neighbours of the second node.
 double OverlapFunc(const std::set<uint64_t> &ns1, const std::set<uint64_t> &ns2) {
     std::set<uint64_t> elem_intersection;
     std::set_intersection(ns1.begin(), ns1.end(), ns2.begin(), ns2.end(), std::inserter(elem_intersection, elem_intersection.begin()));
-    int denominator = std::min(ns1.size(), ns2.size());
-    if (denominator == 0) {
+    double denominator = std::min(ns1.size(), ns2.size());
+    if (denominator < 1e-9) {
         return 0.0;
     }
-    return elem_intersection.size() / (double) denominator;
+    return elem_intersection.size() / denominator;
 }
 
 
@@ -89,7 +89,7 @@ double CosineFuncWrapper(const mgp::Node &node1, const mgp::Node &node2, const s
     const auto &prop2 = prop2_it.ValueList();
     int size1 = prop1.Size(), size2 = prop2.Size();
     if (size1 != size2) {
-        throw mgp::ValueException("Vectors should be of the same size.");
+        throw mgp::ValueException("The vectors should be of the same size.");
     }
     return CosineFunc(prop1, prop2);
 }
@@ -120,7 +120,7 @@ Calculates similiraty between pairs of nodes given by src_nodes and dst_nodes.
 */
 std::vector<std::tuple<mgp::Node, mgp::Node, double>> CalculateSimilarityPairwise(const mgp::List &src_nodes, const mgp::List &dst_nodes, node_similarity_util::Similarity similarity_mode, const std::string &property = "") {
     if (src_nodes.Size() != dst_nodes.Size()) {
-        throw mgp::ValueException("Arguments are of different size.");
+        throw mgp::ValueException("The node lists must be the same length.");
     }
     int num_nodes = src_nodes.Size();
     std::vector<std::tuple<mgp::Node, mgp::Node, double>> results;
