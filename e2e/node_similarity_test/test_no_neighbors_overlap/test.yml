@@ -1,46 +1,14 @@
 query: >
-        MATCH (m {id: 6}), (n {id: 7})
+        MATCH (m {id: 6})
+        WITH collect(m) as src_nodes
+        MATCH (n {id: 7})
+        WITH collect(n) as dst_nodes, src_nodes
         
-        CALL node_similarity.overlap(m, n) YIELD 
-        node1 AS node1_overlap_default, 
-        node2 AS node2_overlap_default, 
-        similarity AS overlap_similarity_default
-        
-        CALL node_similarity.overlap(m, n, "cartesian") YIELD 
-        node1 AS node1_overlap_cartesian, 
-        node2 AS node2_overlap_cartesian, 
-        similarity AS overlap_similarity_cartesian
-        
-        CALL node_similarity.overlap(m, n, "pairwise") YIELD 
-        node1 AS node1_overlap_pairwise, 
-        node2 AS node2_overlap_pairwise, 
-        similarity AS overlap_similarity_pairwise
-        
-        
-        RETURN  
-        node1_overlap_default.id as node1_overlap_default, 
-        node2_overlap_default.id as node2_overlap_default, 
-        overlap_similarity_default,
-        
-        node1_overlap_cartesian.id as node1_overlap_cartesian, 
-        node2_overlap_cartesian.id as node2_overlap_cartesian, 
-        overlap_similarity_cartesian,
-        
-        node1_overlap_pairwise.id as node1_overlap_pairwise, 
-        node2_overlap_pairwise.id as node2_overlap_pairwise, 
-        overlap_similarity_pairwise
-        
+        CALL node_similarity.overlap_pairwise(src_nodes, dst_nodes) YIELD *
 
+        RETURN node1.id as node1, node2.id as node2, similarity
 output: 
-    - node1_overlap_default: 6
-      node2_overlap_default: 7
-      overlap_similarity_default: 0.0 
-      
-      node1_overlap_cartesian: 6
-      node2_overlap_cartesian: 7
-      overlap_similarity_cartesian: 0.0 
-      
-      node1_overlap_pairwise: 6
-      node2_overlap_pairwise: 7
-      overlap_similarity_pairwise: 0.0
+    - node1: 6
+      node2: 7
+      similarity: 0.0 
       
