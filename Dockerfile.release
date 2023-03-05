@@ -27,20 +27,12 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-COPY memgraph-${TARGETARCH}.deb .
 
-RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb
-
-ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
-
-# Memgraph listens for Bolt Protocol on this port by default.
-EXPOSE 7687
 
 FROM base as dev
 
 WORKDIR /mage
 COPY . /mage
-
 
 #MAGE
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
@@ -61,16 +53,23 @@ RUN git clone --recurse-submodules -b 0.9.x https://github.com/dmlc/dgl.git  \
     && cd dgl && mkdir build && cd build && cmake .. \
     && make -j4 && cd ../python && python3 setup.py install
 
+COPY memgraph-${TARGETARCH}.deb .
+RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb
+
+ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
+
+# Memgraph listens for Bolt Protocol on this port by default.
+EXPOSE 7687
 
 USER memgraph
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
 CMD [""]
 
 
+
 FROM base as prod
 
 USER root
-ENTRYPOINT []
 ARG PY_VERSION_DEFAULT
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
 
@@ -80,11 +79,18 @@ COPY --from=dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules
 #copy python build
 COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
 
+COPY memgraph-${TARGETARCH}.deb .
+RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb
+
+ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
 
 RUN rm -rf /mage \
     && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
     && apt-get -y --purge autoremove clang git curl python3-pip python3-dev cmake build-essential \
     && apt-get clean
+
+# Memgraph listens for Bolt Protocol on this port by default.
+EXPOSE 7687
 
 USER memgraph
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
