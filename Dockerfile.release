@@ -37,7 +37,7 @@ COPY . /mage
 #MAGE
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 
-RUN export PATH="/root/.cargo/bin:${PATH}"
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 RUN python3 -m pip install --upgrade pip \
     && python3 -m  pip install -r /mage/python/requirements.txt \
