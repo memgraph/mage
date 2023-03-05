@@ -33,7 +33,8 @@ jobs:
 
       - name: Download memgraph binaries
         run: |
-          curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11/memgraph_${MEMGRAPH_VERSION}-1_${{ matrix.architecture }}.deb > memgraph-${{ matrix.architecture }}.deb
+          curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11/memgraph_${MEMGRAPH_VERSION}-1_amd64.deb > memgraph-amd64.deb
+          curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb > memgraph-arm64.deb
 
       - name: Build Memgraph MAGE:${{ matrix.target }}
         run: |
