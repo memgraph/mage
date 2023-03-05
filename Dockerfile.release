@@ -47,7 +47,8 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 
 RUN export PATH="/root/.cargo/bin:${PATH}"
 
-RUN python3 -m  pip install -r /mage/python/requirements.txt \
+RUN python3 -m pip install --upgrade pip \
+    && python3 -m  pip install -r /mage/python/requirements.txt \
     && python3 -m  pip install -r /mage/python/tests/requirements.txt
 
 RUN python3 -m pip --default-timeout=1000 --no-cache-dir install torch-sparse torch-cluster torch-spline-conv \
