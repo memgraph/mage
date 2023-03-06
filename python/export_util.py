@@ -132,29 +132,41 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
 
 
 def save_file(file_path: str, data_list: list):
-    with open(
-        file_path,
-        "w",
-        newline="",
-        encoding="utf8",
-    ) as f:
-        writer2 = csv.writer(f)
-        writer2.writerows(data_list)
+    try:
+        with open(file_path, "w", newline="", encoding="utf8",) as f:
+            writer = csv.writer(f)
+            writer.writerows(data_list)
+    except PermissionError:
+        raise PermissionError(
+            "You don't have permissions to write into that file. Make sure to give the necessary permissions to user memgraph."
+        )
+    except csv.Error as e:
+        raise csv.Error(
+            "Could not write to the file {}, stopped at line {}: {}".format(
+                file_path, writer.line_num, e
+            )
+        )
+    except Exception:
+        raise OSError("Could not open or write to the file.")
 
 
-def stream(data_list: list) -> str:
+def csv_to_stream(data_list: list) -> str:
     output = io.StringIO()
-    writer = csv.writer(output, quoting=csv.QUOTE_NONNUMERIC)
-    writer.writerows(data_list)
+    try:
+        writer = csv.writer(output, quoting=csv.QUOTE_NONNUMERIC)
+        writer.writerows(data_list)
+    except csv.Error as e:
+        raise csv.Error(
+            "Could not write a stream, stopped at line {}: {}".format(
+                writer.line_num, e
+            )
+        )
     return output.getvalue()
 
 
 @mgp.read_proc
 def csv_query(
-    context: mgp.ProcCtx,
-    query: str,
-    file: str = "",
-    config: mgp.Map = {},
+    context: mgp.ProcCtx, query: str, file_path: str = "", stream: bool = False,
 ) -> mgp.Record(file_path=str, data=str):
     """
     Procedure to export query results to a CSV file.
@@ -170,18 +182,19 @@ def csv_query(
         )
     Raises:
         Exception: If neither file nor config are provided, or if only config is provided with stream set to False. Also if query yields no results or if the database is empty.
-
-    Examples:
+        PermissionError: If you provided file path that you have no permissions to write at.
+        csv.Error: If an error occurred while writing into stream or CSV file.
+        OSError: If the file can't be opened or written to.
     """
 
     # file or config have to be provided
-    if not file and not config:
+    if not file_path and not stream:
         raise Exception("Please provide file name and/or config.")
 
     # only config provided with stream set to false
-    if not file and config and not config.get("stream"):
+    if not file_path and not stream:
         raise Exception(
-            "If you provided only stream config, it has to be true to get any results."
+            "If you provided only stream value, it has to be set to True to get any results."
         )
 
     memgraph = Memgraph()
@@ -196,13 +209,11 @@ def csv_query(
     result_keys = list(results[0])
     data_list = [result_keys] + [list(result.values()) for result in results]
     data = ""
-    file_path = ""
 
-    if file:
-        file_path = "/var/lib/memgraph/internal_modules/" + file
+    if file_path:
         save_file(file_path, data_list)
 
-    if config and config.get("stream"):
-        data = stream(data_list)
+    if stream:
+        data = csv_to_stream(data_list)
 
     return mgp.Record(file_path=file_path, data=data)
