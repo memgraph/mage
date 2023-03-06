@@ -185,7 +185,7 @@ def csv_query(
         stream (bool, optional): A value which determines whether a stream of query results in a CSV format will be returned.
     Returns:
         mgp.Record(
-            file_path (str): A path to the CSV file where the query results are exported. If file_path is not provided, it will be an empty string.
+            file_path (str): A path to the CSV file where the query results are exported. If file_path is not provided, the output will be an empty string.
             data (str): A stream of query results in a CSV format.
         )
     Raises:
