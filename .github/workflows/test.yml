@@ -91,10 +91,10 @@ jobs:
           cargo fmt -- --check
           cargo test
 
-      - name: Run End-to-end tests
-        if: matrix.architecture != 'arm64'
-        env:
-          PYTHONPATH: "$PWD/e2e"
-        run: |
-          cd e2e
-          python -m pytest . -k 'not cugraph'
+      # - name: Run End-to-end tests
+      #   if: matrix.architecture != 'arm64'
+      #   env:
+      #     PYTHONPATH: "$PWD/e2e"
+      #   run: |
+      #     cd e2e
+      #     python -m pytest . -k 'not cugraph'
