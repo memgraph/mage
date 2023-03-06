@@ -181,11 +181,11 @@ def csv_query(
     Args:
         context (mgp.ProcCtx): Reference to the context execution.
         query (str): A query from which the results will be saved to a CSV file.
-        file (str, optional): Name of the CSV file where the query results will be exported. Defaults to an empty string.
-        confing (mgp.Map, optional): Additional configuration. Currently only 'stream' key can be set to either True or False values. Defaults to an empty dictionary.
+        file_path (str, optional): A path to the CSV file where the query results will be exported. Defaults to an empty string.
+        stream (bool, optional): A value which determines whether a stream of query results in a CSV format will be returned.
     Returns:
         mgp.Record(
-            file_path (str): If the file name was provided, this is the path to the saved CSV file. Otherwise, it is an empty string.
+            file_path (str): A path to the CSV file where the query results are exported. If file_path is not provided, it will be an empty string.
             data (str): A stream of query results in a CSV format.
         )
     Raises:
