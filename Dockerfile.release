@@ -43,8 +43,8 @@ RUN python3 -m pip install --upgrade pip \
     && python3 -m  pip install -r /mage/python/requirements.txt \
     && python3 -m  pip install -r /mage/python/tests/requirements.txt
 
-RUN python3 -m pip --default-timeout=1000 --no-cache-dir install torch-sparse torch-cluster torch-spline-conv \
-    torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-1.13.1+cu117.html
+# RUN python3 -m pip --default-timeout=1000 --no-cache-dir install torch-sparse torch-cluster torch-spline-conv \
+#     torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-1.13.1+cu117.html
 
 RUN python3 /mage/setup build -p /usr/lib/memgraph/query_modules/
 
