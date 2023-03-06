@@ -133,7 +133,12 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
 
 def save_file(file_path: str, data_list: list):
     try:
-        with open(file_path, "w", newline="", encoding="utf8",) as f:
+        with open(
+            file_path,
+            "w",
+            newline="",
+            encoding="utf8",
+        ) as f:
             writer = csv.writer(f)
             writer.writerows(data_list)
     except PermissionError:
@@ -166,7 +171,10 @@ def csv_to_stream(data_list: list) -> str:
 
 @mgp.read_proc
 def csv_query(
-    context: mgp.ProcCtx, query: str, file_path: str = "", stream: bool = False,
+    context: mgp.ProcCtx,
+    query: str,
+    file_path: str = "",
+    stream: bool = False,
 ) -> mgp.Record(file_path=str, data=str):
     """
     Procedure to export query results to a CSV file.
