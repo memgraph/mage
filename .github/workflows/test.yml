@@ -15,7 +15,7 @@ jobs:
     strategy:
       matrix:
         architecture: ["amd64"]
-        target: ["prod"]
+        target: ["prod", "dev"]
     steps:
       - name: Checkout repository and submodules
         uses: actions/checkout@v3
