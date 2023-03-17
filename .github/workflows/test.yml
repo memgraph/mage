@@ -14,8 +14,8 @@ jobs:
       MEMGRAPH_VERSION: 2.5.2
     strategy:
       matrix:
-        architecture: ["amd64", "arm64"]
-        target: ["prod", "dev"]
+        architecture: ["amd64"]
+        target: ["prod"]
     steps:
       - name: Checkout repository and submodules
         uses: actions/checkout@v3
