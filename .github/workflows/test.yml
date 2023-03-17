@@ -43,7 +43,7 @@ jobs:
           --target ${{ matrix.target }} \
           --platform linux/${{ matrix.architecture }} \
           --file Dockerfile.release \
-          .
+          --load .
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v1
