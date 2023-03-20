@@ -38,9 +38,9 @@ jobs:
 
       - name: Build Memgraph MAGE:${{ matrix.target }}
         run: |
-          docker buildx build \
-          --tag memgraph-mage:prod \
-          --target prod \
+          DOCKER_BUILDKIT=1 docker buildx build \
+          --tag memgraph-mage:${{ matrix.target }} \
+          --target ${{ matrix.target }} \
           --platform linux/${{ matrix.architecture }} \
           --file Dockerfile.release \
           --load .
@@ -57,7 +57,7 @@ jobs:
 
       - name: Run Memgraph MAGE:prod image
         run: |
-          docker run -d -p 7687:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:prod --telemetry-enabled=False
+          docker run -d -p 7687:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:${{ matrix.target }} --telemetry-enabled=False
 
       - name: Set up C++
         run: |
