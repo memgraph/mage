@@ -25,11 +25,11 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v2
       
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       - name: Download memgraph binaries
         run: |
@@ -45,7 +45,17 @@ jobs:
           --file Dockerfile.release \
           --load .
 
-      - name: Run Memgraph MAGE:${{ matrix.target }} image
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Get all current images
+        run: |
+          docker images
+
+      - name: Run Memgraph MAGE:prod image
         run: |
           docker run -d -p 7687:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:${{ matrix.target }} --telemetry-enabled=False
 
