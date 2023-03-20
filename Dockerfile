@@ -49,7 +49,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
     && export PATH="/root/.cargo/bin:${PATH}" \
     && python3 -m  pip install -r /mage/python/requirements.txt \
     && python3 -m  pip install -r /mage/python/tests/requirements.txt \
-    && python3 -m  pip install torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-1.13.1+cu117.html \
+    && python3 -m  pip install torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-1.12.0+cu102.html\
     && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/
 
 #DGL build from source
