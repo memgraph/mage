@@ -1,0 +1,6 @@
+query: >
+    CALL do.case([TRUE, 2])
+    YIELD *;
+
+exception: >
+    The `do_case` argument named `conditionals` must be structured as follows: [BOOLEAN, STRING, BOOLEAN, STRING, …​].
