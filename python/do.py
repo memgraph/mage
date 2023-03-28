@@ -184,9 +184,6 @@ def when(
 
     memgraph = gqlalchemy.Memgraph()
 
-    # results = memgraph.execute_and_fetch(
-    #     if_query if condition else else_query, parameters=params
-    # )
     results = execute_and_fetch_parametrized(
         memgraph, if_query if condition else else_query, parameters=params
     )
