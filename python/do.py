@@ -1,10 +1,12 @@
 import datetime
-from typing import Any
+from typing import Any, Dict, Iterator
 
 import mgp
 import gqlalchemy
+from gqlalchemy.connection import _convert_memgraph_value
 
 WRONG_STRUCTURE_MSG = "The `do_case` argument named `conditionals` must be structured as follows: [BOOLEAN, STRING, BOOLEAN, STRING, …​]."
+
 
 def get_edge_by_id(
     graph: mgp.Graph, edge_id: mgp.EdgeId, from_id: mgp.VertexId
@@ -69,6 +71,29 @@ def gqlalchemy_type_to_mgp(graph: mgp.Graph, variable: Any) -> mgp.Any:
         return path
 
 
+# Conditional queries are run via gqlalchemy. The module supports parameterized
+# queries, which are only supported from gqlalchemy 1.4.0. Since that version’s
+# dgl requirement causes arm64 checks for MAGE to fail, this function serves to
+# support running parameterized queries with older gqlalchemy versions.
+#
+# Relevant code:
+# https://github.com/memgraph/gqlalchemy/blob/main/gqlalchemy/vendors/database_client.py#L54-L59
+# https://github.com/memgraph/gqlalchemy/blob/main/gqlalchemy/connection.py#L87-L100
+def execute_and_fetch_parametrized(
+    memgraph_client, query: str, parameters: Dict[str, Any] = {}
+) -> Iterator[Dict[str, Any]]:
+    cursor = memgraph_client._get_cached_connection()._connection.cursor()
+    cursor.execute(query, parameters)
+    while True:
+        row = cursor.fetchone()
+        if row is None:
+            break
+        yield {
+            dsc.name: _convert_memgraph_value(row[index])
+            for index, dsc in enumerate(cursor.description)
+        }
+
+
 @mgp.read_proc
 def case(
     ctx: mgp.ProcCtx,
@@ -107,7 +132,9 @@ def case(
 
     for condition, if_query in zip(conditions, if_queries):
         if condition:
-            results = memgraph.execute_and_fetch(if_query, parameters=params)
+            results = execute_and_fetch_parametrized(
+                memgraph, if_query, parameters=params
+            )
 
             return [
                 mgp.Record(
@@ -119,7 +146,7 @@ def case(
                 for result in results
             ]
 
-    results = memgraph.execute_and_fetch(else_query, parameters=params)
+    results = execute_and_fetch_parametrized(memgraph, else_query, parameters=params)
 
     return [
         mgp.Record(
@@ -157,8 +184,11 @@ def when(
 
     memgraph = gqlalchemy.Memgraph()
 
-    results = memgraph.execute_and_fetch(
-        if_query if condition else else_query, parameters=params
+    # results = memgraph.execute_and_fetch(
+    #     if_query if condition else else_query, parameters=params
+    # )
+    results = execute_and_fetch_parametrized(
+        memgraph, if_query if condition else else_query, parameters=params
     )
 
     return [
