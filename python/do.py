@@ -5,7 +5,10 @@ import mgp
 import gqlalchemy
 from gqlalchemy.connection import _convert_memgraph_value
 
-WRONG_STRUCTURE_MSG = "The `do_case` argument named `conditionals` must be structured as follows: [BOOLEAN, STRING, BOOLEAN, STRING, …​]."
+import utils.subquery
+
+WRONG_STRUCTURE_MSG = "The `conditionals` parameter of `do.case` must be structured as follows: [BOOLEAN, STRING, BOOLEAN, STRING, …​]."
+DISALLOWED_QUERY_MSG = 'The query "{query}" isn’t supported by `{procedure}` because it would execute a global operation.'
 
 
 @mgp.read_proc
@@ -42,11 +45,17 @@ def case(
     ):
         raise ValueError(WRONG_STRUCTURE_MSG)
 
+    for query in if_queries + (else_query,):
+        if utils.subquery.is_global_operation(query):
+            raise ValueError(
+                DISALLOWED_QUERY_MSG.format(query=query, procedure="do.case")
+            )
+
     memgraph = gqlalchemy.Memgraph()
 
     for condition, if_query in zip(conditions, if_queries):
         if condition:
-            results = _execute_and_fetch_parametrized(
+            results = _execute_and_fetch_parameterized(
                 memgraph, if_query, parameters=params
             )
 
@@ -60,7 +69,7 @@ def case(
                 for result in results
             ]
 
-    results = _execute_and_fetch_parametrized(memgraph, else_query, parameters=params)
+    results = _execute_and_fetch_parameterized(memgraph, else_query, parameters=params)
 
     return _convert_results(ctx, results)
 
@@ -85,12 +94,18 @@ def when(
         value: {field_name: field_value} map containing the result records of the evaluated query.
     """
 
+    for query in (if_query, else_query):
+        if utils.subquery.is_global_operation(query):
+            raise ValueError(
+                DISALLOWED_QUERY_MSG.format(query=query, procedure="do.when")
+            )
+
     if params is None:
         params = {}
 
     memgraph = gqlalchemy.Memgraph()
 
-    results = _execute_and_fetch_parametrized(
+    results = _execute_and_fetch_parameterized(
         memgraph, if_query if condition else else_query, parameters=params
     )
 
@@ -172,7 +187,7 @@ def _gqlalchemy_type_to_mgp(graph: mgp.Graph, variable: Any) -> mgp.Any:
 # Relevant code:
 # https://github.com/memgraph/gqlalchemy/blob/main/gqlalchemy/vendors/database_client.py#L54-L59
 # https://github.com/memgraph/gqlalchemy/blob/main/gqlalchemy/connection.py#L87-L100
-def _execute_and_fetch_parametrized(
+def _execute_and_fetch_parameterized(
     memgraph_client, query: str, parameters: Dict[str, Any] = {}
 ) -> Iterator[Dict[str, Any]]:
     cursor = memgraph_client._get_cached_connection()._connection.cursor()

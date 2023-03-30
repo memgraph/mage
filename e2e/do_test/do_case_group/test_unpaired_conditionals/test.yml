@@ -3,4 +3,4 @@ query: >
     YIELD *;
 
 exception: >
-    The `do_case` argument named `conditionals` must be structured as follows: [BOOLEAN, STRING, BOOLEAN, STRING, …​].
+    The `conditionals` parameter of `do.case` must be structured as follows: [BOOLEAN, STRING, BOOLEAN, STRING, …​].
