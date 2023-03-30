@@ -1,5 +1,5 @@
 import datetime
-from typing import Any, Dict, Iterator
+from typing import Any, Dict, List, Iterator
 
 import mgp
 import gqlalchemy
@@ -62,15 +62,7 @@ def case(
 
     results = _execute_and_fetch_parametrized(memgraph, else_query, parameters=params)
 
-    return [
-        mgp.Record(
-            value={
-                field_name: _gqlalchemy_type_to_mgp(ctx.graph, field_value)
-                for field_name, field_value in result.items()
-            }
-        )
-        for result in results
-    ]
+    return _convert_results(ctx, results)
 
 
 @mgp.read_proc
@@ -102,19 +94,13 @@ def when(
         memgraph, if_query if condition else else_query, parameters=params
     )
 
-    return [
-        mgp.Record(
-            value={
-                field_name: _gqlalchemy_type_to_mgp(ctx.graph, field_value)
-                for field_name, field_value in result.items()
-            }
-        )
-        for result in results
-    ]
+    return _convert_results(ctx, results)
 
 
-def _get_edge_by_id(
-    graph: mgp.Graph, edge_id: mgp.EdgeId, from_id: mgp.VertexId
+def _get_edge_with_endpoint(
+    graph: mgp.Graph,
+    edge_id: mgp.EdgeId,
+    from_id: mgp.VertexId,
 ) -> mgp.Nullable[mgp.Edge]:
     return next(
         (
@@ -148,7 +134,7 @@ def _gqlalchemy_type_to_mgp(graph: mgp.Graph, variable: Any) -> mgp.Any:
         return graph.get_vertex_by_id(int(variable._id))
 
     elif isinstance(variable, gqlalchemy.models.Relationship):
-        return _get_edge_by_id(
+        return _get_edge_with_endpoint(
             graph, edge_id=int(variable._id), from_id=int(variable._start_node_id)
         )
 
@@ -160,12 +146,14 @@ def _gqlalchemy_type_to_mgp(graph: mgp.Graph, variable: Any) -> mgp.Any:
             next_edge_id = int(relationship._id)
             next_node_id = int(node._id)
 
-            edge_to_add = _get_edge_by_id(graph, edge_id=next_edge_id, from_id=start_id)
+            edge_to_add = _get_edge_with_endpoint(
+                graph, edge_id=next_edge_id, from_id=start_id
+            )
             if edge_to_add is None:
                 # This should happen if and only if the query that returned the path treated graph edges as undirected.
                 # For example, such a query might return an (a)-[b]->(c) path from a graph that only contains (c)->[b].
                 # In that case, flipping the path direction to retrieve the linking edge is valid.
-                edge_to_add = _get_edge_by_id(
+                edge_to_add = _get_edge_with_endpoint(
                     graph, edge_id=next_edge_id, from_id=next_node_id
                 )
 
@@ -197,3 +185,17 @@ def _execute_and_fetch_parametrized(
             dsc.name: _convert_memgraph_value(row[index])
             for index, dsc in enumerate(cursor.description)
         }
+
+
+def _convert_results(
+    ctx: mgp.ProcCtx, gqlalchemy_results: Iterator[Dict[str, Any]]
+) -> List[mgp.Record]:
+    return [
+        mgp.Record(
+            value={
+                field_name: _gqlalchemy_type_to_mgp(ctx.graph, field_value)
+                for field_name, field_value in result.items()
+            }
+        )
+        for result in gqlalchemy_results
+    ]
