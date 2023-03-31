@@ -59,15 +59,7 @@ def case(
                 memgraph, if_query, parameters=params
             )
 
-            return [
-                mgp.Record(
-                    value={
-                        field_name: _gqlalchemy_type_to_mgp(ctx.graph, field_value)
-                        for field_name, field_value in result.items()
-                    }
-                )
-                for result in results
-            ]
+            return _convert_results(ctx, results)
 
     results = _execute_and_fetch_parameterized(memgraph, else_query, parameters=params)
 

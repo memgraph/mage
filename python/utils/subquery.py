@@ -10,4 +10,4 @@ QUERY_PATTERNS = [
 
 
 def is_global_operation(subquery: str) -> bool:
-    return any(subquery.startswith(pattern) for pattern in QUERY_PATTERNS)
+    return any(subquery.upper().startswith(pattern) for pattern in QUERY_PATTERNS)
