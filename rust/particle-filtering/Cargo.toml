@@ -1,5 +1,5 @@
 [package]
-name = "rsmgp-example"
+name = "particle-filtering"
 version = "0.1.0"
 authors = ["Marko Budiselic <marko.budiselic@memgraph.com>"]
 edition = "2018"
@@ -9,5 +9,5 @@ c_str_macro = "1.0.2"
 rsmgp-sys = { path = "../rsmgp-sys" }
 
 [lib]
-name = "rust_example"
+name = "particle_filtering"
 crate-type = ["cdylib"]
