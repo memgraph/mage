@@ -46,11 +46,9 @@ fn write_ppr_nodes_to_records(memgraph: &Memgraph, ppr_nodes: HashMap<i64, f32>)
 }
 
 define_procedure!(particle_filtering, |memgraph: &Memgraph| -> Result<()> {
-    // let node_list: Vec<i64> = vec![
-    //     103279, 86332, 87994, 100369, 98594, 100185, 101807, 96778, 107598, 88536,
-    // ];
-    // let node_list = vec![memgraph.vertex_by_id(49422)?];
-    // let node_list = vec![49422];
+    let min_threshold = 0.1;
+    let num_particles = 1000.;
+
     let args = memgraph.args()?;
     let node_list: Value = args.value_at(0)?;
 
@@ -62,12 +60,10 @@ define_procedure!(particle_filtering, |memgraph: &Memgraph| -> Result<()> {
 
     let vector: Vec<i64> = node_list.iter().unwrap().map(|value| match value {
         Value::Int(i) => i as i64,
-        _ => panic!("The color is not green"),
+        _ => panic!("Failed converting node_list to vector"),
     }).collect();
 
     let graph = MemgraphGraph::from_graph(memgraph);
-    let min_threshold = 0.1;
-    let num_particles = 1000.;
 
     let result = algorithm_particle_filtering(graph, &vector, min_threshold, num_particles);
     write_ppr_nodes_to_records(memgraph, result);

@@ -1,8 +1,10 @@
 use petgraph::prelude::*;
 use petgraph::Graph as PetgraphGraph;
 use rsmgp_sys::memgraph::*;
+use rsmgp_sys::value::*;
 use rsmgp_sys::result::Error as MgpError;
 use std::io;
+use c_str_macro::c_str;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Vertex {
@@ -28,6 +30,7 @@ pub trait Graph {
     fn add_edge(&mut self, source: Vertex, target: Vertex, weight: f32) -> Result<(), GraphError>;
     fn num_vertices(&self) -> usize;
     fn get_vertex_by_id(&self, id: i64) -> Option<Vertex>;
+    fn outgoing_edges(&self, vertex: Vertex) -> Result<Vec<(Vertex, f64)>, GraphError>;
 }
 
 pub struct PetgraphGraphWrapper<'a> {
@@ -50,6 +53,22 @@ impl<'a> Graph for PetgraphGraphWrapper<'a> {
             })
             .collect();
         Ok(vertices)
+    }
+
+    fn outgoing_edges(&self, vertex: Vertex) -> Result<Vec<(Vertex, f64)>, GraphError> {
+        let node_index = NodeIndex::new(vertex.id as usize);
+        let edges: Vec<_> = self.graph.edges(node_index)
+            .map(|edge| {
+                let weight = *edge.weight() as f64;
+                let source_index = edge.source().index() as i64;
+                let target_index = edge.target().index() as i64;
+                (
+                    Vertex { id: target_index },
+                    weight,
+                )
+            })
+            .collect();
+        Ok(edges)
     }
 
     fn neighbors(&self, vertex: Vertex) -> Result<Vec<Vertex>, GraphError> {
@@ -109,6 +128,29 @@ impl<'a> Graph for MemgraphGraph<'a> {
         let vertices_iter = self.graph.vertices_iter()?;
         let vertices: Vec<_> = vertices_iter.map(|v| Vertex { id: v.id() }).collect();
         Ok(vertices)
+    }
+
+    fn outgoing_edges(&self, vertex: Vertex) -> Result<Vec<(Vertex, f64)>, GraphError> {
+        let vertex_mgp = self.graph.vertex_by_id(vertex.id)?;
+        let outgoing_edges_iter = vertex_mgp.out_edges()?.map(|e| {
+            let target_vertex = e.to_vertex().unwrap();
+            // if the vertex doesn't have a weight, we assume it's 1.0
+            let weight = e
+                .property(&c_str!("weight"))
+                .ok()
+                .and_then(|p| {
+                    if let Value::Float(f) = p.value {
+                        Some(f)
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or(1.0);
+
+            Ok::<(Vertex, f64), GraphError>((Vertex { id: target_vertex.id() }, weight)).unwrap()
+        });
+        let outgoing_edges: Vec<_> = outgoing_edges_iter.collect();
+        Ok(outgoing_edges)
     }
 
     fn neighbors(&self, vertex: Vertex) -> Result<Vec<Vertex>, GraphError> {

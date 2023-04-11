@@ -42,27 +42,14 @@ fn initialize_p(node_list: &[i64], num_particles: f32) -> HashMap<i64, f32> {
 
 fn compute_node_neighbors<G: Graph>(graph: &G, starting_node: &Vertex) -> Vec<Node> {
 
-    // let total_weight = graph.out_edges(starting_node).unwrap().len() as f32;
-    // todo: correctly calculate total weight of outgoing edges for starting_node, but that will
-    // require impolementing an out_edges method for the Vertex struct
-    let total_weight = 8.0;
-    // graph
-    //     .out_edges(starting_node)
-    //     .unwrap()
-    //     .iter()
-    //     .map(|edge| Node {
-    //         id: edge.target.id(),
-    //         score: 1.0 / total_weight,
-    //     })
-    //     .collect()
-
+    let total_weight: f64 = graph.outgoing_edges(*starting_node).unwrap().iter().map(|(v, w)| w).sum();
     graph
         .neighbors(*starting_node)
         .unwrap()
         .iter()
         .map(|node| Node {
             id: node.id,
-            score: 1.0 / total_weight,
+            score: (1.0 / total_weight) as f32,
         })
         .collect()
 }
