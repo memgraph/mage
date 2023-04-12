@@ -1,10 +1,10 @@
+use c_str_macro::c_str;
 use petgraph::prelude::*;
 use petgraph::Graph as PetgraphGraph;
 use rsmgp_sys::memgraph::*;
-use rsmgp_sys::value::*;
 use rsmgp_sys::result::Error as MgpError;
+use rsmgp_sys::value::*;
 use std::io;
-use c_str_macro::c_str;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Vertex {
@@ -57,15 +57,14 @@ impl<'a> Graph for PetgraphGraphWrapper<'a> {
 
     fn outgoing_edges(&self, vertex: Vertex) -> Result<Vec<(Vertex, f64)>, GraphError> {
         let node_index = NodeIndex::new(vertex.id as usize);
-        let edges: Vec<_> = self.graph.edges(node_index)
+        let edges: Vec<_> = self
+            .graph
+            .edges(node_index)
             .map(|edge| {
                 let weight = *edge.weight() as f64;
                 let source_index = edge.source().index() as i64;
                 let target_index = edge.target().index() as i64;
-                (
-                    Vertex { id: target_index },
-                    weight,
-                )
+                (Vertex { id: target_index }, weight)
             })
             .collect();
         Ok(edges)
@@ -103,7 +102,7 @@ impl<'a> Graph for PetgraphGraphWrapper<'a> {
         self.graph
             .node_indices()
             .find(|i| i.index() as i64 == id)
-            .map(|i| Vertex { id })
+            .map(|_| Vertex { id })
     }
 }
 
@@ -147,7 +146,13 @@ impl<'a> Graph for MemgraphGraph<'a> {
                 })
                 .unwrap_or(1.0);
 
-            Ok::<(Vertex, f64), GraphError>((Vertex { id: target_vertex.id() }, weight)).unwrap()
+            Ok::<(Vertex, f64), GraphError>((
+                Vertex {
+                    id: target_vertex.id(),
+                },
+                weight,
+            ))
+            .unwrap()
         });
         let outgoing_edges: Vec<_> = outgoing_edges_iter.collect();
         Ok(outgoing_edges)
@@ -162,14 +167,20 @@ impl<'a> Graph for MemgraphGraph<'a> {
                 id: neighbor_mgp?.id(),
             });
         }
+        let neighbors_in = vertex_mgp.in_edges()?.map(|e| e.from_vertex());
+        for neighbor_mgp in neighbors_in {
+            neighbors.push(Vertex {
+                id: neighbor_mgp?.id(),
+            });
+        }
         Ok(neighbors)
     }
 
-    fn add_vertex(&mut self, vertex: Vertex) -> Result<(), GraphError> {
+    fn add_vertex(&mut self, _vertex: Vertex) -> Result<(), GraphError> {
         !unimplemented!()
     }
 
-    fn add_edge(&mut self, source: Vertex, target: Vertex, weight: f32) -> Result<(), GraphError> {
+    fn add_edge(&mut self, _source: Vertex, _target: Vertex, _weight: f32) -> Result<(), GraphError> {
         // let source_mgp = self.graph.vertex_by_id(source.id)?;
         // let target_mgp = self.graph.vertex_by_id(target.id)?;
         // self.graph.create_edge(source_mgp, target_mgp, weight)?;
@@ -183,7 +194,7 @@ impl<'a> Graph for MemgraphGraph<'a> {
 
     fn get_vertex_by_id(&self, id: i64) -> Option<Vertex> {
         match self.graph.vertex_by_id(id) {
-            Ok(vertex_mgp) => Some(Vertex { id }),
+            Ok(_) => Some(Vertex { id }),
             Err(_) => None,
         }
     }

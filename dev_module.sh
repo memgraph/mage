@@ -6,8 +6,6 @@
 
 # run mage dev container, mapping current directory to /mage/ in container
 docker run -d --rm -v $(pwd):/mage/ --name mage memgraph/memgraph-mage:1.7.0-dev
-# run memgraph-platfom container
-docker run -d -it --rm -p 7687:7687 -p 7444:7444 -p 3000:3000 --name memgraph memgraph/memgraph-platform
 
 # function to run cargo check in mage dev container
 function check() {
@@ -22,5 +20,7 @@ function update() {
     docker exec -it memgraph bash -c 'echo "CALL mg.load_all();" | mgconsole';
 }
 
+# run memgraph-platfom container
+#docker run -it --rm -p 7687:7687 -p 7444:7444 -p 3000:3000 --name memgraph memgraph/memgraph-platform
 update
 
