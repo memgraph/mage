@@ -8,7 +8,7 @@ import mysql.connector as mysql_connector
 import oracledb
 import pyodbc
 
-CHUNK_SIZE = 100_000
+CHUNK_SIZE = 10_000
 I_COLUMN_NAME = 0
 
 
