@@ -100,6 +100,10 @@ pub fn particle_filtering<G: Graph>(
 
             // c is the probability of teleporting to a random node, so 1-c of the particles continue
             let mut n_particles = n_particles * (1.0 - c);
+            // if there are no more particles to pass (less than tao threshold), break the loop
+            if n_particles <= tao {
+                break;
+            }
 
             // retrieve the vertex object for starting_node, so we can get its neighbors
             let starting_node = graph.get_vertex_by_id(*starting_node_id).unwrap();
@@ -127,10 +131,6 @@ pub fn particle_filtering<G: Graph>(
                     aux.insert(node.id, passing);
                 }
 
-                // if there are no more particles to pass (less than tao threshold), break the loop
-                if n_particles <= tao {
-                    break;
-                }
             }
         }
 
