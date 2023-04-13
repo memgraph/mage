@@ -27,14 +27,7 @@ init_module!(|memgraph: &Memgraph| -> Result<()> {
         particle_filtering,
         c_str!("particle_filtering"),
         &[define_type!("node_list", Type::List, Type::Int)],
-        &[
-            define_optional_type!(
-                "num_particles",
-                &MgpValue::make_int(1000, &memgraph)?,
-                Type::Int
-            ),
-            define_optional_type!("tau", &MgpValue::make_double(0.1, &memgraph)?, Type::Double),
-        ],
+        &[],
         &[
             define_type!("node_id", Type::Int),
             define_type!("score", Type::Double),
@@ -55,15 +48,10 @@ fn write_ppr_nodes_to_records(memgraph: &Memgraph, ppr_nodes: HashMap<i64, f32>)
 
 define_procedure!(particle_filtering, |memgraph: &Memgraph| -> Result<()> {
     let min_threshold = 0.1;
+    let num_particles = 1000.0;
 
     let args = memgraph.args()?;
     let node_list: Value = args.value_at(0)?;
-    let Value::Int(num_particles) = args.value_at(1)? else {
-        panic!("Failed to read num_particles")
-    };
-    let Value::Float(tau) = args.value_at(2)? else{
-        panic!("Failed to read tau")
-    };
 
     let node_list = if let Value::List(node_list) = node_list {
         node_list
@@ -86,7 +74,6 @@ define_procedure!(particle_filtering, |memgraph: &Memgraph| -> Result<()> {
         &vector,
         min_threshold,
         num_particles,
-        Some(tau as f32),
     );
     write_ppr_nodes_to_records(memgraph, result)?;
     Ok(())
