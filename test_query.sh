@@ -1,0 +1,2 @@
+docker exec -it memgraph /bin/bash -c 'echo "CALL particle_filtering.particle_filtering([0, 1]) YIELD node_id, score
+                                            return node_id,score order by score desc;" | mgconsole'
