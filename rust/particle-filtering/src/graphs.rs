@@ -120,6 +120,12 @@ impl<'a> Graph for MemgraphGraph<'a> {
                 id: neighbor_mgp?.id(),
             });
         }
+        let neighbors_in = vertex_mgp.in_edges()?.map(|e| e.from_vertex());
+        for neighbor_mgp in neighbors_in {
+            neighbors.push(Vertex {
+                id: neighbor_mgp?.id(),
+            });
+        }
         Ok(neighbors)
     }
 
