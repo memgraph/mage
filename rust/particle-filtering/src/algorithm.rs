@@ -6,31 +6,6 @@ use std::collections::{BinaryHeap, HashMap};
 use std::os::raw::c_int;
 use std::panic;
 
-pub struct Node {
-    pub id: i64,
-    pub score: f32,
-}
-
-impl Ord for Node {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.score.partial_cmp(&other.score).unwrap().reverse()
-    }
-}
-
-impl PartialOrd for Node {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl PartialEq for Node {
-    fn eq(&self, other: &Self) -> bool {
-        self.score == other.score
-    }
-}
-
-impl Eq for Node {}
-
 fn initialize_p(node_list: &[i64], num_particles: f32) -> HashMap<i64, f32> {
     // initialize map of node_id -> num_nodes by distributing particles equally
     // among all source nodes.
@@ -40,7 +15,7 @@ fn initialize_p(node_list: &[i64], num_particles: f32) -> HashMap<i64, f32> {
         .collect()
 }
 
-fn compute_node_neighbors<G: Graph>(graph: &G, starting_node: &Vertex) -> Vec<Node> {
+fn compute_node_neighbors<G: Graph>(graph: &G, starting_node: &Vertex) -> BinaryHeap<Neighbour> {
 
     // let total_weight = graph.out_edges(starting_node).unwrap().len() as f32;
     // todo: correctly calculate total weight of outgoing edges for starting_node, but that will
@@ -56,13 +31,14 @@ fn compute_node_neighbors<G: Graph>(graph: &G, starting_node: &Vertex) -> Vec<No
     //     })
     //     .collect()
 
-    graph
-        .neighbors(*starting_node)
-        .unwrap()
+    //
+    let neighbors = graph.neighbors(*starting_node).unwrap();
+    let total_weight = neighbors.len() as f32;
+    neighbors
         .iter()
-        .map(|node| Node {
+        .map(|node| Neighbour {
             id: node.id,
-            score: 1.0 / total_weight,
+            score: (1.0 / total_weight as f32),
         })
         .collect()
 }
