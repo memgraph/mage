@@ -1,7 +1,8 @@
 # Memgraph Mage C++ Query Modules CMake configuration.
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.14) 
 set(MEMGRAPH_MAGE_PROJECT_NAME "memgraph-mage")
 project("${MEMGRAPH_MAGE_PROJECT_NAME}" LANGUAGES C CXX)
+include(FetchContent)
 
 # setup CMake module path, defines path for include() and find_package()
 # https://cmake.org/cmake/help/latest/variable/CMAKE_MODULE_PATH.html
@@ -17,10 +18,11 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Compile flags.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall \
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -std=c++20 -Wall \
     -Werror=switch -Werror=switch-bool")
 # Don't omit frame pointer in RelWithDebInfo, for additional callchain debug.
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
@@ -84,6 +86,12 @@ add_dependencies(mage_uuid uuid-proj)
 # mg_utility library
 add_subdirectory(mg_utility)
 
+FetchContent_Declare(fmt
+  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+  GIT_TAG master
+)
+FetchContent_MakeAvailable(fmt)
+
 function(add_query_module target_name version src)
   add_library(${target_name} SHARED ${src})
   set_target_properties(${target_name} PROPERTIES SOVERSION "${version}")
@@ -93,18 +101,19 @@ endfunction()
 # Available query modules.
 include(CTest)
 enable_testing()
-add_subdirectory(betweenness_centrality_module)
-add_subdirectory(biconnected_components_module)
-add_subdirectory(bipartite_matching_module)
-add_subdirectory(bridges_module)
-add_subdirectory(connectivity_module)
-add_subdirectory(cycles_module)
-add_subdirectory(community_detection_module)
-add_subdirectory(pagerank_module)
-add_subdirectory(uuid_module)
-add_subdirectory(katz_centrality_module)
-add_subdirectory(degree_centrality_module)
-add_subdirectory(graph_util_module)
-add_subdirectory(node_similarity_module)
-add_subdirectory(distance_calculator)
+# add_subdirectory(betweenness_centrality_module)
+# add_subdirectory(biconnected_components_module)
+# add_subdirectory(bipartite_matching_module)
+# add_subdirectory(bridges_module)
+# add_subdirectory(connectivity_module)
+# add_subdirectory(cycles_module)
+# add_subdirectory(community_detection_module)
+# add_subdirectory(pagerank_module)
+# add_subdirectory(uuid_module)
+# add_subdirectory(katz_centrality_module)
+# add_subdirectory(degree_centrality_module)
+# add_subdirectory(graph_util_module)
+# add_subdirectory(node_similarity_module)
+# add_subdirectory(distance_calculator)
+add_subdirectory(hacky_migration_module)
 add_cugraph_subdirectory(cugraph_module)

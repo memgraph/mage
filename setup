@@ -191,6 +191,7 @@ def build_and_copy_cpp_modules(args:Dict[str,Any])->bool:
     return True
 
 def copy_python_modules()->bool:
+    return True
     """
     Function copies Python modules to MAGE_BUILD_DIRECTORY. Returns true if successful, otherwise false.
     """
@@ -216,6 +217,7 @@ def copy_python_modules()->bool:
     return True
 
 def build_and_copy_rust_modules(args:Dict[str,Any])->bool:
+    return True
     """
     Function builds and copies Rust modules.
     """
