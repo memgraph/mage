@@ -1,10 +1,10 @@
 include(GNUInstallDirs)
 
 # Add all module files related to graph util module
-set(hacky_migration_src
-    hacky_migration_cpp.cpp)
+set(periodic_migration_src
+    periodic_migration.cpp)
 
-add_query_module(hacky_migration_cpp 1 "${hacky_migration_src}")
+add_query_module(periodic_migration 1 "${periodic_migration_src}")
 
 
 if(WIN32)
@@ -51,5 +51,5 @@ set_target_properties(${MGCLIENT_LIBRARY} PROPERTIES
 add_dependencies(${MGCLIENT_LIBRARY} mgclient-proj)
 
 
-target_compile_definitions(hacky_migration_cpp PRIVATE MGCLIENT_STATIC_DEFINE)
-target_link_libraries(hacky_migration_cpp PRIVATE mgclient fmt::fmt)
+target_compile_definitions(periodic_migration PRIVATE MGCLIENT_STATIC_DEFINE)
+target_link_libraries(periodic_migration PRIVATE mgclient fmt::fmt)
