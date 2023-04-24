@@ -124,6 +124,15 @@ def migrate_oracle_db(
 def _name_row_cells(row_cells, column_names) -> Dict[str, Any]:
     return dict(map(lambda column, value: (column, value), column_names, row_cells))
 
+@mgp.read_proc
+def clear_cache(ctx:mgp.ProcCtx)->mgp.Record(status=bool):
+    del Results.records
+    del Results.column_names
+    Results.records=None
+    Results.start=0
+    Results.end=0
+    Results.column_names=None
+    Results.offset=0
 
 @mgp.read_proc
 def yield_records(
