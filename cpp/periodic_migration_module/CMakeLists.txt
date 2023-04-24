@@ -50,6 +50,6 @@ set_target_properties(${MGCLIENT_LIBRARY} PROPERTIES
   INTERFACE_LINK_LIBRARIES Threads::Threads)
 add_dependencies(${MGCLIENT_LIBRARY} mgclient-proj)
 
-
 target_compile_definitions(periodic_migration PRIVATE MGCLIENT_STATIC_DEFINE)
-target_link_libraries(periodic_migration PRIVATE mgclient fmt::fmt)
+target_include_directories(community_detection PRIVATE ${MGCLIENT_INCLUDE_DIRS})
+target_link_libraries(periodic_migration PRIVATE ${MGCLIENT_LIBRARY} fmt::fmt)
