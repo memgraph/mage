@@ -1,5 +1,3 @@
-numpy==1.22.2
-scipy==1.7.1
 gekko==0.2.8
 networkx==2.6.2
 python-Levenshtein==0.12.1
