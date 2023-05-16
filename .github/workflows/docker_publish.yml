@@ -8,11 +8,11 @@ on:
 jobs:
   build_and_release_docker:
     name: Build & release Docker image with tag
-    runs-on:  ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     env:
       DOCKER_ORGANIZATION_NAME: memgraph
       DOCKER_REPOSITORY_NAME: memgraph-mage
-      MEMGRAPH_VERSION: 2.7.0
+      MEMGRAPH_VERSION: 2.8.0
     steps:            
       - name: Checkout repository and submodules
         uses: actions/checkout@v3
