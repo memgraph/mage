@@ -2,8 +2,8 @@ name: Publish Docker image
 on:
   push:
     tags:
-      - v*.*.*
-      - v*.*
+      - v*.*-memgraph-*.*
+      - v*.*.*-memgraph-*.*
 
 jobs:
   build_and_release_docker:
