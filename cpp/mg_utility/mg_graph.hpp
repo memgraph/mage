@@ -73,6 +73,7 @@ class Graph : public GraphView<TSize> {
   ///
   /// @return all incident edges
   const std::vector<TSize> &IncidentEdges(TSize node_id) const override {
+    // TODO(gitbuda): This doesn't work in the ANALYTICAL mode because new nodes come in.
     if (node_id >= nodes_.size()) {
       throw mg_exception::InvalidIDException();
     }
