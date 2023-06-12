@@ -1,7 +1,8 @@
 # Memgraph Mage C++ Query Modules CMake configuration.
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.14)
 set(MEMGRAPH_MAGE_PROJECT_NAME "memgraph-mage")
 project("${MEMGRAPH_MAGE_PROJECT_NAME}" LANGUAGES C CXX)
+include(FetchContent)
 
 # setup CMake module path, defines path for include() and find_package()
 # https://cmake.org/cmake/help/latest/variable/CMAKE_MODULE_PATH.html
@@ -81,8 +82,38 @@ target_include_directories(mage_uuid INTERFACE ${UUID_INCLUDE_DIR}/gsl)
 target_include_directories(mage_uuid INTERFACE ${UUID_INCLUDE_DIR})
 add_dependencies(mage_uuid uuid-proj)
 
+# Add mgclient
+set(MGCLIENT_ROOT ${PROJECT_BINARY_DIR}/mgclient)
+ExternalProject_Add(mgclient-proj
+  PREFIX ${MGCLIENT_ROOT}
+  INSTALL_DIR ${MGCLIENT_ROOT}
+  GIT_REPOSITORY https://github.com/memgraph/mgclient.git
+  GIT_TAG T634-FL-add-column-names-to-cpp-client
+  CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
+  "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+  "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
+  "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}"
+  "-DCMAKE_POSITION_INDEPENDENT_CODE=ON"
+  "-DBUILD_CPP_BINDINGS=ON"
+  ${MACOSX_OPENSSL_ROOTDIR_FLAG})
+
+set(MGCLIENT_INCLUDE_DIRS ${MGCLIENT_ROOT}/include ${MGCLIENT_ROOT}/mgclient_cpp/include)
+set(MGCLIENT_LIBRARY_PATH ${MGCLIENT_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}mgclient.a)
+
+add_library(mgclient STATIC IMPORTED)
+set_target_properties(mgclient PROPERTIES
+  IMPORTED_LOCATION "${MGCLIENT_LIBRARY_PATH}"
+  INTERFACE_LINK_LIBRARIES "${CMAKE_THREAD_LIBS_INIT}")
+add_dependencies(mgclient mgclient-proj)
+
 # mg_utility library
 add_subdirectory(mg_utility)
+
+FetchContent_Declare(fmt
+  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+  GIT_TAG 9.1.0
+)
+FetchContent_MakeAvailable(fmt)
 
 function(add_query_module target_name version src)
   add_library(${target_name} SHARED ${src})
@@ -107,4 +138,5 @@ add_subdirectory(degree_centrality_module)
 add_subdirectory(graph_util_module)
 add_subdirectory(node_similarity_module)
 add_subdirectory(distance_calculator)
+add_subdirectory(periodic_module)
 add_cugraph_subdirectory(cugraph_module)
