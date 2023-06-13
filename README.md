@@ -74,7 +74,7 @@ streaming graph algorithms! Drop us a message on the channels below:
     <img src="https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"/>
 </a>
 <a href="https://github.com/memgraph">
-    <img src="https://img.shields.io/badge/Memgraph_GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="Memgraph Github"/>
+    <img src="https://img.shields.io/badge/Memgraph_GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="Memgraph GitHub"/>
 </a>
 <a href="https://www.youtube.com/channel/UCZ3HOJvHGxtQ_JHxOselBYg">
     <img src="https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Memgraph YouTube"/>
@@ -146,7 +146,7 @@ docker run -p 7687:7687 -p 7444:7444 memgraph/memgraph-mage
 
 #### 2 Install MAGE with Docker build of the repository
 
-**0. a** Make sure that you have cloned the MAGE Github repository and positioned
+**0. a** Make sure that you have cloned the MAGE GitHub repository and positioned
 yourself inside the repo in your terminal:
 
 ```bash
