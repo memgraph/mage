@@ -39,7 +39,7 @@ class PageRankGraph {
   /// @return -- number of edges in graph
   std::uint64_t GetEdgeCount() const;
 
-  /// @return -- a reference to ordered ordered vector of edges
+  /// @return -- a reference to ordered vector of edges
   const std::vector<EdgePair> &GetOrderedEdges() const;
 
   /// Returns out degree of node node_id
