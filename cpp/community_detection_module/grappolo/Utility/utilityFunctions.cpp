@@ -181,7 +181,7 @@ void displayGraphCharacteristics(graph *G) {
     long    *vtxPtr   = G->edgeListPtrs;
     long    tNV       = NV; //Number of vertices
     
-    if ( (NS == 0)||(NS == NV) ) {  //Nonbiparite graph
+    if ( (NS == 0)||(NS == NV) ) {  //Nonbipartite graph
         for (long i = 0; i < NV; i++) {
             long degree = vtxPtr[i+1] - vtxPtr[i];
             sum_sq += degree*degree;
