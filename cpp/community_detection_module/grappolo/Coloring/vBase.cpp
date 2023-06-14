@@ -2,7 +2,7 @@
 #include "defs.h"
 #include "coloring.h"
 
-/* The redistritbuted coloring step, no balance */
+/* The redistributed coloring step, no balance */
 int vBaseRedistribution(graph* G, int* vtxColor, int ncolors, int type)
 {
 #ifdef PRINT_DETAILED_STATS_
