@@ -9,13 +9,13 @@
 
 class DegreeCentralityTest
     : public testing::TestWithParam<
-          std::tuple<mg_graph::Graph<>, std::vector<double>, degree_cenntrality_alg::AlgorithmType>> {};
+          std::tuple<mg_graph::Graph<>, std::vector<double>, degree_centrality_alg::AlgorithmType>> {};
 
 TEST_P(DegreeCentralityTest, ParametrizedTest) {
   auto graph = std::get<0>(GetParam());
   auto expected = std::get<1>(GetParam());
   auto algorithm_type = std::get<2>(GetParam());
-  auto results = degree_cenntrality_alg::GetDegreeCentrality(graph, algorithm_type);
+  auto results = degree_centrality_alg::GetDegreeCentrality(graph, algorithm_type);
   ASSERT_TRUE(mg_test_utility::TestEqualVectors(results, expected));
 }
 
@@ -23,16 +23,16 @@ INSTANTIATE_TEST_SUITE_P(
     DegreeCentrality, DegreeCentralityTest,
     testing::Values(
         std::make_tuple(*mg_generate::BuildGraph(0, {}, mg_graph::GraphType::kDirectedGraph), std::vector<double>{},
-                        degree_cenntrality_alg::AlgorithmType::kUndirected),
+                        degree_centrality_alg::AlgorithmType::kUndirected),
         std::make_tuple(*mg_generate::BuildGraph(5, {{0, 4}, {2, 3}}, mg_graph::GraphType::kDirectedGraph),
                         std::vector<double>{0.2500, 0.0000, 0.2500, 0.2500, 0.2500},
-                        degree_cenntrality_alg::AlgorithmType::kUndirected),
+                        degree_centrality_alg::AlgorithmType::kUndirected),
         std::make_tuple(
             *mg_generate::BuildGraph(
                 10, {{0, 4}, {0, 8}, {1, 5}, {1, 8}, {2, 6}, {3, 5}, {4, 7}, {5, 6}, {5, 8}, {6, 8}, {7, 9}, {8, 9}},
                 mg_graph::GraphType::kDirectedGraph),
             std::vector<double>{0.2222, 0.2222, 0.1111, 0.1111, 0.2222, 0.4444, 0.3333, 0.2222, 0.5556, 0.2222},
-            degree_cenntrality_alg::AlgorithmType::kUndirected),
+            degree_centrality_alg::AlgorithmType::kUndirected),
         std::make_tuple(*mg_generate::BuildGraph(15, {{0, 4},  {0, 8},  {0, 13}, {1, 3},   {1, 8},   {1, 13}, {2, 8},
                                                       {2, 11}, {2, 13}, {3, 5},  {3, 8},   {3, 9},   {3, 11}, {3, 13},
                                                       {4, 7},  {4, 8},  {4, 11}, {5, 13},  {6, 7},   {6, 8},  {6, 9},
@@ -40,23 +40,23 @@ INSTANTIATE_TEST_SUITE_P(
                                                  mg_graph::GraphType::kDirectedGraph),
                         std::vector<double>{0.2143, 0.2143, 0.2143, 0.4286, 0.2857, 0.1429, 0.2857, 0.2143, 0.5000,
                                             0.1429, 0.1429, 0.2143, 0.0714, 0.6429, 0.1429},
-                        degree_cenntrality_alg::AlgorithmType::kUndirected)));
+                        degree_centrality_alg::AlgorithmType::kUndirected)));
 
 INSTANTIATE_TEST_SUITE_P(
     InDegreeCentrality, DegreeCentralityTest,
     testing::Values(
         std::make_tuple(*mg_generate::BuildGraph(0, {}, mg_graph::GraphType::kDirectedGraph), std::vector<double>{},
-                        degree_cenntrality_alg::AlgorithmType::kIn),
+                        degree_centrality_alg::AlgorithmType::kIn),
         std::make_tuple(
             *mg_generate::BuildGraph(5, {{0, 4}, {1, 4}, {3, 0}, {3, 4}}, mg_graph::GraphType::kDirectedGraph),
-            std::vector<double>{0.2500, 0.0000, 0.0000, 0.0000, 0.7500}, degree_cenntrality_alg::AlgorithmType::kIn),
+            std::vector<double>{0.2500, 0.0000, 0.0000, 0.0000, 0.7500}, degree_centrality_alg::AlgorithmType::kIn),
         std::make_tuple(*mg_generate::BuildGraph(10, {{0, 4}, {0, 8}, {1, 4}, {1, 7}, {2, 3}, {2, 8}, {3, 6}, {3, 9},
                                                       {4, 1}, {4, 5}, {4, 8}, {4, 9}, {5, 1}, {5, 3}, {5, 8}, {5, 9},
                                                       {6, 2}, {7, 4}, {7, 6}, {7, 8}, {7, 9}, {8, 3}, {9, 2}, {9, 4}},
                                                  mg_graph::GraphType::kDirectedGraph),
                         std::vector<double>{0.0000, 0.2222, 0.2222, 0.3333, 0.4444, 0.1111, 0.2222, 0.1111, 0.5556,
                                             0.4444},
-                        degree_cenntrality_alg::AlgorithmType::kIn),
+                        degree_centrality_alg::AlgorithmType::kIn),
 
         std::make_tuple(*mg_generate::BuildGraph(
                             15, {{0, 4},  {0, 8},   {0, 13},  {1, 2},   {1, 7},  {1, 12}, {2, 5},   {2, 8},  {2, 10},
@@ -71,24 +71,24 @@ INSTANTIATE_TEST_SUITE_P(
                             mg_graph::GraphType::kDirectedGraph),
                         std::vector<double>{0.2143, 0.5714, 0.3571, 0.2143, 0.3571, 0.5714, 0.4286, 0.2143, 0.3571,
                                             0.2143, 0.4286, 0.2143, 0.3571, 0.5000, 0.4286},
-                        degree_cenntrality_alg::AlgorithmType::kIn)));
+                        degree_centrality_alg::AlgorithmType::kIn)));
 
 INSTANTIATE_TEST_SUITE_P(
     OutDegreeCentrality, DegreeCentralityTest,
     testing::Values(
         std::make_tuple(*mg_generate::BuildGraph(0, {}, mg_graph::GraphType::kDirectedGraph), std::vector<double>{},
-                        degree_cenntrality_alg::AlgorithmType::kOut),
+                        degree_centrality_alg::AlgorithmType::kOut),
         std::make_tuple(*mg_generate::BuildGraph(5, {{0, 1}, {0, 4}, {2, 0}, {2, 1}, {3, 1}, {4, 0}, {4, 3}},
                                                  mg_graph::GraphType::kDirectedGraph),
                         std::vector<double>{0.5000, 0.0000, 0.5000, 0.2500, 0.5000},
-                        degree_cenntrality_alg::AlgorithmType::kOut),
+                        degree_centrality_alg::AlgorithmType::kOut),
         std::make_tuple(
             *mg_generate::BuildGraph(10, {{0, 1}, {0, 4}, {0, 9}, {1, 0}, {1, 5}, {1, 8}, {2, 1}, {2, 3}, {2, 7},
                                           {2, 9}, {3, 0}, {3, 4}, {3, 5}, {3, 6}, {3, 8}, {3, 9}, {4, 3}, {4, 7},
                                           {6, 2}, {6, 3}, {6, 7}, {7, 9}, {8, 0}, {8, 5}, {9, 2}, {9, 7}},
                                      mg_graph::GraphType::kDirectedGraph),
             std::vector<double>{0.3333, 0.3333, 0.4444, 0.6667, 0.2222, 0.0000, 0.3333, 0.1111, 0.2222, 0.2222},
-            degree_cenntrality_alg::AlgorithmType::kOut),
+            degree_centrality_alg::AlgorithmType::kOut),
         std::make_tuple(*mg_generate::BuildGraph(
                             15, {{0, 1},   {0, 4},   {0, 9},   {0, 10},  {0, 14},  {1, 3},   {1, 6},  {1, 7},  {1, 11},
                                  {1, 13},  {1, 14},  {2, 3},   {2, 4},   {2, 5},   {2, 7},   {2, 8},  {2, 12}, {3, 0},
@@ -101,7 +101,7 @@ INSTANTIATE_TEST_SUITE_P(
                             mg_graph::GraphType::kDirectedGraph),
                         std::vector<double>{0.3571, 0.4286, 0.4286, 0.0714, 0.2143, 0.2857, 0.1429, 0.1429, 0.5000,
                                             0.4286, 0.5000, 0.2143, 0.3571, 0.2143, 0.3571},
-                        degree_cenntrality_alg::AlgorithmType::kOut)
+                        degree_centrality_alg::AlgorithmType::kOut)
 
             ));
 

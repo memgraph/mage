@@ -31,16 +31,16 @@ void InsertDegreeCentralityRecord(mgp_graph *graph, mgp_result *result, mgp_memo
   mg_utility::InsertDoubleValueResult(record, kFieldDegree, degree, memory);
 }
 
-degree_cenntrality_alg::AlgorithmType ParseType(mgp_value *algorithm_type) {
-  if (mgp::value_is_null(algorithm_type)) return degree_cenntrality_alg::AlgorithmType::kUndirected;
+degree_centrality_alg::AlgorithmType ParseType(mgp_value *algorithm_type) {
+  if (mgp::value_is_null(algorithm_type)) return degree_centrality_alg::AlgorithmType::kUndirected;
 
   auto algorithm_type_str = std::string(mgp::value_get_string(algorithm_type));
   std::transform(algorithm_type_str.begin(), algorithm_type_str.end(), algorithm_type_str.begin(),
                  [](unsigned char c) { return std::tolower(c); });
 
-  if (algorithm_type_str == kAlgorithmUndirected) return degree_cenntrality_alg::AlgorithmType::kUndirected;
-  if (algorithm_type_str == kAlgorithmOut) return degree_cenntrality_alg::AlgorithmType::kOut;
-  if (algorithm_type_str == kAlgorithmIn) return degree_cenntrality_alg::AlgorithmType::kIn;
+  if (algorithm_type_str == kAlgorithmUndirected) return degree_centrality_alg::AlgorithmType::kUndirected;
+  if (algorithm_type_str == kAlgorithmOut) return degree_centrality_alg::AlgorithmType::kOut;
+  if (algorithm_type_str == kAlgorithmIn) return degree_centrality_alg::AlgorithmType::kIn;
 
   throw std::runtime_error("Unsupported algorithm type. Pick between out/in or undirected");
 }
@@ -62,7 +62,7 @@ void GetDegreeCentralityWrapper(mgp_list *args, mgp_graph *memgraph_graph, mgp_r
                      : mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
 
     auto algorithm_type = ParseType(algorithm_type_value);
-    auto degree_centralities = degree_cenntrality_alg::GetDegreeCentrality(*graph, algorithm_type);
+    auto degree_centralities = degree_centrality_alg::GetDegreeCentrality(*graph, algorithm_type);
 
     for (const auto [node_id] : graph->Nodes()) {
       auto centrality = degree_centralities[node_id];
