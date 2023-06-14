@@ -432,7 +432,7 @@ long buildCommunityBasedOnVoltages(graph *G, long *Volts, long *C, long *Cvolts)
 //Recursive call for finding neighbors
 inline void Visit(long v, long myCommunity, short *Visited, long *Volts,
                   long* vtxPtr, edge* vtxInd, long *C) {
-    long adj1 = vtxPtr[v];   //Begining
+    long adj1 = vtxPtr[v];   //Beginning
     long adj2 = vtxPtr[v+1]; //End
     for(long i=adj1; i<adj2; i++) {
         long w = vtxInd[i].tail;
