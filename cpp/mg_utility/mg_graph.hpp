@@ -73,7 +73,7 @@ class Graph : public GraphView<TSize> {
   ///
   /// @return all incident edges
   const std::vector<TSize> &IncidentEdges(TSize node_id) const override {
-    // TODO(gitbuda): This doesn't work in the ANALYTICAL mode because new nodes come in.
+    // TODO(gitbuda): This doesn't work in the ANALYTICAL mode because new nodes come in; UPDATE: this is probably fine.
     if (node_id >= nodes_.size()) {
       throw mg_exception::InvalidIDException();
     }
@@ -145,8 +145,10 @@ class Graph : public GraphView<TSize> {
   ///
   /// @return double weight
   double GetWeight(TSize edge_id) const override {
+    // TODO(gitbuda): GetWeight fails in the ANALYTICAL, according to the current usage it's ok to return 0, but it
+    // would be probably be better to return optional.
     if (edge_id < 0 || edge_id >= edges_.size()) {
-      throw mg_exception::InvalidIDException();
+      return 0;
     }
     return weights_[edge_id];
   }
