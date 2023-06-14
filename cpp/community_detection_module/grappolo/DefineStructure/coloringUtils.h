@@ -43,7 +43,7 @@ void distanceOneConfResolution(graph* G, long v, int* vtxColor, double* randValu
 void distanceOneChecked(graph* G, long nv ,int* colors);
 void buildColorsIndex(int* colors, const int numColors, const long nv, ColorVector& colorPtr,  ColorVector& colorIndex, ColorVector& binSizes);
 
-/******* UtiliyFunctions *****
+/******* UtilityFunctions *****
 void computeBinSizes(ColorVector &binSizes, const ColorVector &colors, const GraphElem nv, const ColorElem numColors);
 ColorElem getDegree(const GraphElem ci, const Graph &g);
 void computeBinSizesWeighted(ColorVector &binSizes, const ColorVector &colors, const GraphElem nv, const ColorElem numColors, const Graph &g);

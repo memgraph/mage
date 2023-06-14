@@ -1,5 +1,5 @@
-#ifndef __UTILITLY__
-#define __UTILITLY__
+#ifndef __UTILITY__
+#define __UTILITY__
 
 // Define in buildNextPhase.cpp
 long renumberClustersContiguously(long *C, long size);
