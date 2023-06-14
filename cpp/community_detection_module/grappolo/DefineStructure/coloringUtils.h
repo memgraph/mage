@@ -67,7 +67,7 @@ void generateRandomNumbers(std::vector<double> &randVec);
 
 /* Basic coloring (unbalanced) in initialColoring.cpp
 ColorElem initColoring(const Graph &g, ColorVector &colors, std::string input);
-/* Basic coloiring (ab-inital) in initialColoringLU.cpp
+/* Basic coloring (ab-inital) in initialColoringLU.cpp
 ColorElem initColoringLU(const Graph &g, ColorVector &colors, std::string input);
 
 /* Vertex base redistribution in vBase.cpp
