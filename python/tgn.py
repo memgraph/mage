@@ -1057,7 +1057,7 @@ def get(ctx: mgp.ProcCtx) -> mgp.Record(node=mgp.Vertex, embedding=mgp.List[floa
     t1 and current timestamp can be tn, where t1<tn
 
     We can't update embedding of node if it doesn't have any interactions, but we can update node's memory, so next
-    time it appears in some interaction event, it won't suffer from memory staleness problem as mentioned in orginal
+    time it appears in some interaction event, it won't suffer from memory staleness problem as mentioned in original
     paper
 
     :param edges: list of edges to preprocess, and if current batch size is big enough use for training or evaluation
