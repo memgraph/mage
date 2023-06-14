@@ -52,7 +52,7 @@ void FindNonSpanningTreeEdges(uint64_t node_id, const mg_graph::GraphView<> &gra
 ///@param state Current cycle detection algorithm state
 ///@return std::vector<std::uint64_t> Container with fundamental cycle
 ///
-std::vector<std::uint64_t> FindFundametalCycle(std::uint64_t node_a, std::uint64_t node_b, const NodeState &state);
+std::vector<std::uint64_t> FindFundamentalCycle(std::uint64_t node_a, std::uint64_t node_b, const NodeState &state);
 
 ///
 ///@brief Function for finding all fundamental cycles from the edges not included on the spanning tree. Result is stored
@@ -79,7 +79,7 @@ void CombineCycles(std::uint32_t mask, const std::vector<std::vector<std::uint64
                    const mg_graph::GraphView<> &graph, std::vector<std::vector<mg_graph::Node<>>> *cycles);
 
 ///
-///@brief Method for getting cycles from the found fundamental ones. This method explores 2^funtamental_cycles_size
+///@brief Method for getting cycles from the found fundamental ones. This method explores 2^fundamental_cycles_size
 /// different options of combining cycles (because combination of cycle can also be a cycle)
 ///
 ///@param fundamental_cycles Fundamental cycles found by exploring spanning tree

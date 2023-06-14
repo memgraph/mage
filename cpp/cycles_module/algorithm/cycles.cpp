@@ -56,11 +56,11 @@ void FindNonSpanningTreeEdges(std::uint64_t node_id, const mg_graph::GraphView<>
 void FindFundamentalCycles(const std::set<std::pair<std::uint64_t, std::uint64_t>> &non_st_edges,
                            const NodeState &state, std::vector<std::vector<std::uint64_t>> *fundamental_cycles) {
   for (const auto &[from, to] : non_st_edges) {
-    fundamental_cycles->emplace_back(FindFundametalCycle(from, to, state));
+    fundamental_cycles->emplace_back(FindFundamentalCycle(from, to, state));
   }
 }
 
-std::vector<std::uint64_t> FindFundametalCycle(std::uint64_t node_a, std::uint64_t node_b, const NodeState &state) {
+std::vector<std::uint64_t> FindFundamentalCycle(std::uint64_t node_a, std::uint64_t node_b, const NodeState &state) {
   std::vector<std::uint64_t> cycle;
   if (state.depth[node_a] < state.depth[node_b]) {
     std::swap(node_a, node_b);
