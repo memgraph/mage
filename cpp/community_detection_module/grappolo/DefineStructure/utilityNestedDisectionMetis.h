@@ -39,8 +39,8 @@
 //
 // ************************************************************************
 
-#ifndef _graph_NestDisect_
-#define _graph_NestDisect_
+#ifndef _graph_NestDissect_
+#define _graph_NestDissect_
 
 /*
  int METIS NodeND(idx t *nvtxs, idx t *xadj, idx t *adjncy, idx t *vwgt, idx t *options,
