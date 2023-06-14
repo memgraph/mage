@@ -202,7 +202,7 @@ double* computeEdgeSimilarityMetrics(graph *G) {
             }//End of while(c1,c2)
             //Now compute the similarity score:
             double similarity = 0;
-            if (setUnion > 0) //Avoind division by zero
+            if (setUnion > 0) //Avoid division by zero
                 similarity = setIntersect / setUnion;
             simWeights[i] = similarity;
             //Find the position for edge (w --> v)
