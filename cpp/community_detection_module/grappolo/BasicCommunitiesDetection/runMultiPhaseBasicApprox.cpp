@@ -56,7 +56,7 @@ void runMultiPhaseBasicApprox(graph *G, mgp_graph *mg_graph, long *C_orig, int b
     int tmpItr=0, totItr = 0;
     long NV = G->numVertices;
 
-    long percentange = 80;
+    long percentage = 80;
     /* Step 1: Find communities */
     double prevMod = -1;
     double currMod = -1;
