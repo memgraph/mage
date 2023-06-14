@@ -111,7 +111,7 @@ void runMultiPhaseSyncType(graph *G, mgp_graph *mg_graph, long *C_orig, int sync
         totTimeClustering += tmpTime;
         totItr += tmpItr;
 
-        //Renumber the clusters contiguiously
+        //Renumber the clusters contiguously
         numClusters = renumberClustersContiguously(C, G->numVertices);
 
         //Keep track of clusters in C_orig
