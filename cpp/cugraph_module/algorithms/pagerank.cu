@@ -73,7 +73,7 @@ void PagerankProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memo
     // IMPORTANT: store_transposed has to be true because cugraph::pagerank
     // only accepts true. It's hard to detect/debug problem because nvcc error
     // messages contain only the top call details + graph_view has many
-    // template paremeters.
+    // template parameters.
     cugraph::pagerank<vertex_t, edge_t, weight_t, result_t, false>(handle, cu_graph_view, std::nullopt, std::nullopt,
                                                                    std::nullopt, std::nullopt, pagerank_results.data(),
                                                                    damping_factor, stop_epsilon, max_iterations);
