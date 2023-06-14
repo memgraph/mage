@@ -387,7 +387,7 @@ class TGN(nn.Module):
                 timestamp for which we will need to calculate embedding. We return all of this info as list of lists.
                 At node_layers[0] there are all the nodes at fixed timestamp needed to calculate embeddings.
             mappings: List[Dict[Tuple[int, int], int]] - we build this list of dictionaries  from node_layers. Every
-                (node,timestamp) tupple is mapped to index so we can reference it later in embedding calculation
+                (node,timestamp) tuple is mapped to index so we can reference it later in embedding calculation
                 when building temporal neighborhood concatenated embeddings for graph_attn or for doing summation for
                 graph_sum
             global_edge_indexes: List[List[int]] - node_layers[0] contains all nodes at fixed timestamp
