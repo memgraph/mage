@@ -165,7 +165,7 @@ void MetisNDReorder( graph *G, long *old2NewMap ) {
         old2NewMap[i] = (long) perm[i]; //Do explicit typecasts
     }
     
-    //Cleaup:
+    //Cleanup:
     free(xadj); free(adjncy); free(adjwgt);
     free(perm); free(iperm);
 }
