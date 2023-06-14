@@ -1,6 +1,6 @@
 """
 This module represents entry point to temporal graph networks Python implementation of Temporal graph networks for
-deep learning on dynamic graps paper https://arxiv.org/pdf/2006.10637.pdf introduced by E.Rossi [erossi@twitter.com]
+deep learning on dynamic graphs paper https://arxiv.org/pdf/2006.10637.pdf introduced by E.Rossi [erossi@twitter.com]
 during his work in Twitter.
 
 Temporal graph networks(TGNs) is a graph neural network method on dynamic graphs. In the recent years,
