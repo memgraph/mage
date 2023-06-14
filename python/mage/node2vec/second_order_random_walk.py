@@ -30,7 +30,7 @@ class SecondOrderRandomWalk:
     def sample_node_walks(self, graph: Graph) -> List[List[int]]:
         """
         For each node we sample node walks for total of num_walks times
-        Total lenght of list would be approximately: num_walks * walk_length * num_nodes
+        Total length of list would be approximately: num_walks * walk_length * num_nodes
 
         Args:
             graph (Graph): Graph for which we want to sample walks
