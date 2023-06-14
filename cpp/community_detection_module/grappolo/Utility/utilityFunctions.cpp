@@ -202,7 +202,7 @@ void displayGraphCharacteristics(graph *G) {
     }//End of nonbipartite graph
     else { //Bipartite graph
         
-        //Compute characterisitcs from S side:
+        //Compute characteristics from S side:
         for (long i = 0; i < NS; i++) {
             long degree = vtxPtr[i+1] - vtxPtr[i];
             sum_sq += degree*degree;
@@ -224,7 +224,7 @@ void displayGraphCharacteristics(graph *G) {
         sum_sq = 0;
         maxDegree = 0;
         isolated  = 0;
-        //Compute characterisitcs from T side:
+        //Compute characteristics from T side:
         for (long i = NS; i < NV; i++) {
             long degree = vtxPtr[i+1] - vtxPtr[i];
             sum_sq += degree*degree;
