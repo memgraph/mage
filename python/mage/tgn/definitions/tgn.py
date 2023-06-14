@@ -100,7 +100,7 @@ class TGN(nn.Module):
         MessageFunctionEdge = get_message_function_type(edge_message_function_type)
 
         # if edge function is identity, when identity function is applied, it will result with
-        # vector of greater dimension then when identity is applied to node raw messsage, so node function must be MLP
+        # vector of greater dimension then when identity is applied to node raw message, so node function must be MLP
         # if edge is MLP, node also will be MLP
         MessageFunctionNode = MessageFunctionMLP
 
