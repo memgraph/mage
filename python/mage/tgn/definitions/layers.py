@@ -255,7 +255,7 @@ class TGNLayerGraphAttentionEmbedding(TGNLayer):
             )
 
             # add third dimension,
-            # shape = (1, N, NUM_NEIGBORS * KEY_DIM)
+            # shape = (1, N, NUM_NEIGHBORS * KEY_DIM)
             aggregate_unsqueeze = torch.unsqueeze(aggregate, dim=0)
 
             curr_mapped_nodes = np.array([mapping[(v, t)] for (v, t) in nodes])
