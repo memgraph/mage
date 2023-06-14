@@ -64,7 +64,7 @@ class TGNEdgesSelfSupervised(TGN):
             == len(edge_idxs)
             == len(edge_features)
         ), (
-            f"Sources, destinations, negative sources, negative destinations, timestamps, edge_indxs and edge_features must be of same dimension, but got "
+            f"Sources, destinations, negative sources, negative destinations, timestamps, edge_indexes and edge_features must be of same dimension, but got "
             f"{sources.shape[0]}, {destinations.shape[0]}, {timestamps.shape[0]}, {len(edge_idxs)}, {len(edge_features)}"
         )
 
@@ -140,7 +140,7 @@ class TGNSupervised(TGN):
             == len(edge_idxs)
             == len(edge_features)
         ), (
-            f"Sources, destinations, timestamps, edge_indxs and edge_features must be of same dimension, but got "
+            f"Sources, destinations, timestamps, edge_indexes and edge_features must be of same dimension, but got "
             f"{sources.shape[0]}, {destinations.shape[0]}, {timestamps.shape[0]}, {len(edge_idxs)}, {len(edge_features)}"
         )
 
