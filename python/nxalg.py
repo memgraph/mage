@@ -384,7 +384,7 @@ def dominance_frontiers(
     ]
 
 
-# networkx.algorithms.dominance.immediate_dominatorss
+# networkx.algorithms.dominance.immediate_dominators
 @mgp.read_proc
 def immediate_dominators(
     ctx: mgp.ProcCtx,
