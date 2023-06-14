@@ -939,7 +939,7 @@ def train_and_eval(
     :train_eval_percent_split: dataset split ratio on train and eval
 
 
-    :return: mgp.Record(): emtpy record if everything was fine
+    :return: mgp.Record(): empty record if everything was fine
     """
 
     global query_module_tgn
@@ -1004,7 +1004,7 @@ def set_eval(ctx: mgp.ProcCtx) -> mgp.Record(message=str):
     At that point, we will save current edge count, and this information will later be used in function
     `train_and_eval` to split edges from Memgraph in train and eval set
 
-    :return: mgp.Record(): emtpy record if everything was fine
+    :return: mgp.Record(): empty record if everything was fine
     """
     global query_module_tgn
 
@@ -1062,7 +1062,7 @@ def get(ctx: mgp.ProcCtx) -> mgp.Record(node=mgp.Vertex, embedding=mgp.List[floa
 
     :param edges: list of edges to preprocess, and if current batch size is big enough use for training or evaluation
 
-    :return: mgp.Record(): emtpy record if everything was fine
+    :return: mgp.Record(): empty record if everything was fine
     """
     global query_module_tgn
 
@@ -1118,7 +1118,7 @@ def update(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]) -> mgp.Record():
 
     :param edges: list of edges to preprocess, and if current batch size is big enough use for training or evaluation
 
-    :return: mgp.Record(): emtpy record if everything was fine
+    :return: mgp.Record(): empty record if everything was fine
     """
     global query_module_tgn_batch, query_module_tgn
 
@@ -1195,7 +1195,7 @@ def set_params(
         [optional] edge_features_property: name of features property on edges from which we read features
         [optional] node_label_property: name of label property on nodes from which we read features
 
-    :return: mgp.Record(): emtpy record if everything was fine
+    :return: mgp.Record(): empty record if everything was fine
     """
     global query_module_tgn_batch, DEFINED_INPUT_TYPES, DEFAULT_VALUES
 
