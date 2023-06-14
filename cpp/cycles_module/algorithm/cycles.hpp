@@ -49,7 +49,7 @@ void FindNonSpanningTreeEdges(uint64_t node_id, const mg_graph::GraphView<> &gra
 ///
 ///@param node_a First edge node
 ///@param node_b Second edge node
-///@param state Current cylce detection algorithm state
+///@param state Current cycle detection algorithm state
 ///@return std::vector<std::uint64_t> Container with fundamental cycle
 ///
 std::vector<std::uint64_t> FindFundametalCycle(std::uint64_t node_a, std::uint64_t node_b, const NodeState &state);
@@ -59,7 +59,7 @@ std::vector<std::uint64_t> FindFundametalCycle(std::uint64_t node_a, std::uint64
 /// in \a fundamental_cycles  container
 ///
 ///@param non_st_edges Non spanning tree edges container
-///@param state Current cylce detection algorithm state
+///@param state Current cycle detection algorithm state
 ///@param fundamental_cycles Container containing all fundamental cycles
 ///
 void FindFundamentalCycles(const std::set<std::pair<std::uint64_t, std::uint64_t>> &non_st_edges,
