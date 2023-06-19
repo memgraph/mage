@@ -4,5 +4,8 @@ query: >
     YIELD value
     RETURN DISTINCT size(nodes(value.path)) as path_size;
 
-output:
-    - path_size: 3
+exception: >
+    Returning paths in do procedures not yet supported.
+
+# output:
+#     - path_size: 3

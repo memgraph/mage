@@ -1,7 +1,10 @@
 query: >
-    CALL do.case([TRUE, "MATCH p = ()-[*2]-() RETURN p LIMIT 1;"])
+    CALL do.case([TRUE, "MATCH p = ()-[*2]-() RETURN p LIMIT 1;"], "RETURN 1")
     YIELD value
     RETURN size(value.p) AS path_size;
 
-output:
-    - path_size: 2
+exception: >
+    Returning paths in do procedures not yet supported.
+
+# output:
+#     - path_size: 2

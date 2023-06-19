@@ -1,5 +1,6 @@
 #include <fmt/core.h>
 #include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <mgp.hpp>
 
 #include "mgclient.hpp"
@@ -13,12 +14,25 @@ const char *kProcedureWhen = "when";
 const char *kArgumentCondition = "condition";
 const char *kArgumentIfQuery = "if_query";
 
-const char *kReturnSuccess = "success";
+const char *kReturnValue = "value";
+
+const std::vector<std::string> kGlobalOperations = {"CREATE INDEX ON",
+                                                    "DROP INDEX ON",
+                                                    "CREATE CONSTRAINT ON",
+                                                    "DROP CONSTRAINT ON",
+                                                    "SET GLOBAL TRANSACTION ISOLATION LEVEL",
+                                                    "STORAGE MODE IN_MEMORY_TRANSACTIONAL",
+                                                    "STORAGE MODE IN_MEMORY_ANALYTICAL"};
 
 struct ParamNames {
   std::vector<std::string> node_names;
   std::vector<std::string> relationship_names;
   std::vector<std::string> primitive_names;
+};
+
+struct QueryResults {
+  std::vector<std::string> columns;
+  std::vector<std::vector<mg::Value>> results;
 };
 
 ParamNames ExtractParamNames(const mgp::Map &parameters) {
@@ -109,7 +123,7 @@ mg::Map ConstructParams(const ParamNames &param_names, const mgp::Map &parameter
   return new_params;
 }
 
-void ExecuteQuery(const std::string &query, const mgp::Map &query_parameters) {
+QueryResults ExecuteQuery(const std::string &query, const mgp::Map &query_parameters) {
   mg::Client::Init();
   mg::Client::Params params{.host = "localhost", .port = 7687};
 
@@ -129,9 +143,66 @@ void ExecuteQuery(const std::string &query, const mgp::Map &query_parameters) {
     throw std::runtime_error("Error while executing do module!");
   }
 
+  auto columns = client->GetColumns();
+
+  std::vector<std::vector<mg::Value>> results;
+  while (const auto maybe_result = client->FetchOne()) {
+    if ((*maybe_result).size() == 0) {
+      break;
+    }
+
+    auto result = *maybe_result;
+    results.push_back(std::move(result));
+  }
+
   client->DiscardAll();
 
   mg::Client::Finalize();
+
+  return QueryResults{.columns = columns, .results = results};
+}
+
+void InsertConditionalResults(const mgp::RecordFactory &record_factory, const QueryResults &query_results) {
+  for (const auto row : query_results.results) {
+    auto result_map = mgp::Map();
+
+    for (size_t i = 0; i < query_results.columns.size(); i++) {
+      const auto &result = row[i];
+      const auto &column = query_results.columns[i];
+
+      if (result.type() == mg::Value::Type::Bool) {
+        result_map.Insert(column, mgp::Value(result.ValueBool()));
+      } else if (result.type() == mg::Value::Type::String) {
+        auto string_value = mgp::Value(std::string(result.ValueString()));
+        result_map.Insert(column, string_value);
+      } else if (result.type() == mg::Value::Type::Int) {
+        result_map.Insert(column, mgp::Value(result.ValueInt()));
+      } else if (result.type() == mg::Value::Type::Double) {
+        result_map.Insert(column, mgp::Value(result.ValueDouble()));
+      } else if (result.type() == mg::Value::Type::Node) {
+        throw std::runtime_error("Returning nodes in do procedures not yet supported.");
+      } else if (result.type() == mg::Value::Type::Relationship) {
+        throw std::runtime_error("Returning relationships in do procedures not yet supported.");
+      } else if (result.type() == mg::Value::Type::Path) {
+        throw std::runtime_error("Returning paths in do procedures not yet supported.");
+      } else {
+        throw std::runtime_error(
+            fmt::format("Returning type in column {} in do procedures not yet supported!", column));
+      }
+    }
+
+    auto record = record_factory.NewRecord();
+    record.Insert(kReturnValue, result_map);
+  }
+}
+
+bool IsGlobalOperation(const std::string &query) {
+  for (const auto &global_op : kGlobalOperations) {
+    if (boost::algorithm::starts_with(query, global_op)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void When(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
@@ -145,18 +216,20 @@ void When(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_mem
   const auto params = arguments[3].ValueMap();
 
   const auto record_factory = mgp::RecordFactory(result);
-  auto record = record_factory.NewRecord();
 
   try {
-    ExecuteQuery(query_to_execute, params);
+    if (IsGlobalOperation(query_to_execute)) {
+      throw std::runtime_error(fmt::format(
+          "The query {} isn’t supported by `do.when` because it would execute a global operation.", query_to_execute));
+    }
+
+    const auto query_results = ExecuteQuery(query_to_execute, params);
+    InsertConditionalResults(record_factory, query_results);
+    return;
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
-    record.Insert(kReturnSuccess, false);
     return;
   }
-
-  record.Insert(kReturnSuccess, true);
-  return;
 }
 
 void Case(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
@@ -198,35 +271,38 @@ void Case(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_mem
       found_true_conditional != -1 ? std::string(conditionals[found_true_conditional + 1].ValueString()) : else_query;
 
   const auto record_factory = mgp::RecordFactory(result);
-  auto record = record_factory.NewRecord();
 
   try {
-    ExecuteQuery(query_to_execute, params);
+    if (IsGlobalOperation(query_to_execute)) {
+      throw std::runtime_error(fmt::format(
+          "The query {} isn’t supported by `do.case` because it would execute a global operation.", query_to_execute));
+    }
+
+    const auto query_results = ExecuteQuery(query_to_execute, params);
+    InsertConditionalResults(record_factory, query_results);
+    return;
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
-    record.Insert(kReturnSuccess, false);
     return;
   }
-
-  record.Insert(kReturnSuccess, true);
-  return;
 }
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
     mgp::memory = memory;
 
-    mgp::AddProcedure(
-        Case, kProcedureCase, mgp::ProcedureType::Read,
-        {mgp::Parameter(kArgumentConditionals, {mgp::Type::List, mgp::Type::Any}),
-         mgp::Parameter(kArgumentElseQuery, mgp::Type::String), mgp::Parameter(kArgumentParams, mgp::Type::Map)},
-        {mgp::Return(kReturnSuccess, mgp::Type::Bool)}, module, memory);
+    mgp::AddProcedure(Case, kProcedureCase, mgp::ProcedureType::Read,
+                      {mgp::Parameter(kArgumentConditionals, {mgp::Type::List, mgp::Type::Any}),
+                       mgp::Parameter(kArgumentElseQuery, mgp::Type::String),
+                       mgp::Parameter(kArgumentParams, mgp::Type::Map, mgp::Value(mgp::Map()))},
+                      {mgp::Return(kReturnValue, mgp::Type::Map)}, module, memory);
 
     mgp::AddProcedure(
         When, kProcedureWhen, mgp::ProcedureType::Read,
         {mgp::Parameter(kArgumentCondition, mgp::Type::Bool), mgp::Parameter(kArgumentIfQuery, mgp::Type::String),
-         mgp::Parameter(kArgumentElseQuery, mgp::Type::String), mgp::Parameter(kArgumentParams, mgp::Type::Map)},
-        {mgp::Return(kReturnSuccess, mgp::Type::Bool)}, module, memory);
+         mgp::Parameter(kArgumentElseQuery, mgp::Type::String),
+         mgp::Parameter(kArgumentParams, mgp::Type::Map, mgp::Value(mgp::Map()))},
+        {mgp::Return(kReturnValue, mgp::Type::Map)}, module, memory);
 
   } catch (const std::exception &e) {
     return 1;
