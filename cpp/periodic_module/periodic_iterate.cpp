@@ -153,28 +153,29 @@ void ExecuteRunningQuery(std::string running_query, std::vector<std::string> col
 void PeriodicIterate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+  auto record = record_factory.NewRecord();
 
   const auto input_query = std::string(arguments[0].ValueString());
   const auto running_query = std::string(arguments[1].ValueString());
   const auto config = arguments[2].ValueMap();
 
   const auto batch_size_value = config.At(kConfigKeyBatchSize);
-  if (batch_size_value.IsNull()) {
-    throw std::runtime_error(fmt::format("Configuration parameter {} is not set.", kConfigKeyBatchSize));
-  }
-  if (!batch_size_value.IsInt()) {
-    throw std::runtime_error("Batch size not provided as an integer in the periodic iterate configuration!");
-  }
 
-  const auto batch_size = batch_size_value.ValueInt();
-
-  if (batch_size <= 0) {
-    throw std::runtime_error("Batch size must be a non-negative number!");
-  }
-
-  const auto record_factory = mgp::RecordFactory(result);
-  auto record = record_factory.NewRecord();
   try {
+    if (batch_size_value.IsNull()) {
+      throw std::runtime_error(fmt::format("Configuration parameter {} is not set.", kConfigKeyBatchSize));
+    }
+    if (!batch_size_value.IsInt()) {
+      throw std::runtime_error("Batch size not provided as an integer in the periodic iterate configuration!");
+    }
+
+    const auto batch_size = batch_size_value.ValueInt();
+
+    if (batch_size <= 0) {
+      throw std::runtime_error("Batch size must be a non-negative number!");
+    }
+
     mg::Client::Init();
 
     mg::Client::Params params{.host = "localhost", .port = 7687};
