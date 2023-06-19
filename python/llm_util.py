@@ -19,27 +19,35 @@ class OutputType(Enum):
 
 class SchemaGenerator(object):
     def __init__(self, context, output_type):
-        self.type = output_type
-        self.node_counter = 0
+        self._type = output_type.lower()
+        self._node_counter = 0
         self._all_node_properties_dict = {}
         self._all_relationship_properties_dict = {}
         self._all_relationships_list = []
 
         self._generate_schema(context)
 
+    @property
+    def type(self):
+        return self._type
+
+    @property
+    def node_counter(self):
+        return self._node_counter
+
     def get_schema(self):
-        if self.type == OutputType.RAW.value:
+        if self._type == OutputType.RAW.value:
             return self._get_raw_schema()
-        elif self.type == OutputType.PROMPT_READY.value:
+        elif self._type == OutputType.PROMPT_READY.value:
             return self._get_prompt_ready_schema()
         else:
             raise Exception(
-                "Can't generate a graph schema since the provided output_type is not correct. Please choose 'raw' or 'prompt_ready'."
+                f"Can't generate a graph schema since the provided output_type is not correct. Please choose {OutputType.RAW.value} or {OutputType.PROMPT_READY.value}."
             )
 
     def _generate_schema(self, context):
         for node in context.graph.vertices:
-            self.node_counter += 1
+            self._node_counter += 1
             labels = ":".join(tuple(sorted(label.name for label in node.labels)))
 
             self._update_properties_dict(node, self._all_node_properties_dict, labels)
