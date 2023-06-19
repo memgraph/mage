@@ -54,7 +54,7 @@ ParamNames ExtractParamNames(const mgp::Map &parameters) {
       .node_names = node_names, .relationship_names = relationship_names, .primitive_names = primitive_names};
 }
 
-std::string ConstructQueryPreffix(ParamNames names) {
+std::string ConstructQueryPreffix(const ParamNames &names) {
   if (!names.node_names.size() && !names.relationship_names.size() && !names.primitive_names.size()) {
     return "";
   }

@@ -274,9 +274,9 @@ def build(args:Dict[str, Any])->bool:
     if not python_status:
         return False
     
-    # rust_status = build_and_copy_rust_modules(args)
-    # if not rust_status:
-    #     return False
+    rust_status = build_and_copy_rust_modules(args)
+    if not rust_status:
+        return False
     
     return True
 
