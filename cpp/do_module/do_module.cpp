@@ -101,7 +101,8 @@ mg::Map ConstructParams(const ParamNames &param_names, const mgp::Map &parameter
     } else if (map_item.value.IsDouble()) {
       new_params.Insert(map_item.key, mg::Value(map_item.value.ValueDouble()));
     } else {
-      throw std::runtime_error("Can't pase some of the arguments!");
+      // Temporal types and paths not yet supported
+      throw std::runtime_error("Can't parse some of the arguments!");
     }
   }
 
