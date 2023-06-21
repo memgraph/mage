@@ -1,5 +1,6 @@
 import mgp
 from enum import Enum
+from typing import Dict, Union
 
 
 class Parameter(Enum):
@@ -35,7 +36,7 @@ class SchemaGenerator(object):
     def node_counter(self):
         return self._node_counter
 
-    def get_schema(self):
+    def get_schema(self) -> Union[mgp.Map, str]:
         if self._type == OutputType.RAW.value:
             return self._get_raw_schema()
         elif self._type == OutputType.PROMPT_READY.value:
@@ -45,7 +46,7 @@ class SchemaGenerator(object):
                 f"Can't generate a graph schema since the provided output_type is not correct. Please choose {OutputType.RAW.value} or {OutputType.PROMPT_READY.value}."
             )
 
-    def _generate_schema(self, context):
+    def _generate_schema(self, context: mgp.ProcCtx):
         for node in context.graph.vertices:
             self._node_counter += 1
             labels = ":".join(tuple(sorted(label.name for label in node.labels)))
@@ -71,14 +72,14 @@ class SchemaGenerator(object):
                     relationship.type.name,
                 )
 
-    def _get_raw_schema(self):
+    def _get_raw_schema(self) -> mgp.Map:
         return {
             Parameter.NODE_PROPS.value: self._all_node_properties_dict,
             Parameter.REL_PROPS.value: self._all_relationship_properties_dict,
             Parameter.RELATIONSHIPS.value: self._all_relationships_list,
         }
 
-    def _get_prompt_ready_schema(self):
+    def _get_prompt_ready_schema(self) -> str:
         prompt_ready_schema = "Node properties are the following:\n"
         for label in self._all_node_properties_dict.keys():
             prompt_ready_schema += f"Node name: '{label}', Node properties: {self._all_node_properties_dict.get(label)}\n"
@@ -94,7 +95,12 @@ class SchemaGenerator(object):
 
         return prompt_ready_schema
 
-    def _update_properties_dict(self, graph_object, all_properties_dict, key):
+    def _update_properties_dict(
+        self,
+        graph_object: Union[mgp.Vertex, mgp.Edge],
+        all_properties_dict: Dict[str, str],
+        key: str,
+    ):
         for property_name in graph_object.properties.keys():
             if not all_properties_dict.get(key):
                 all_properties_dict[key] = [
@@ -105,18 +111,21 @@ class SchemaGenerator(object):
                         ).__name__,
                     }
                 ]
-            else:
-                if property_name not in [
-                    d[Parameter.PROPERTY.value] for d in all_properties_dict[key]
-                ]:
-                    all_properties_dict[key].append(
-                        {
-                            Parameter.PROPERTY.value: property_name,
-                            Parameter.TYPE.value: type(
-                                graph_object.properties.get(property_name)
-                            ).__name__,
-                        }
-                    )
+                continue
+
+            if property_name in [
+                d[Parameter.PROPERTY.value] for d in all_properties_dict[key]
+            ]:
+                continue
+
+            all_properties_dict[key].append(
+                {
+                    Parameter.PROPERTY.value: property_name,
+                    Parameter.TYPE.value: type(
+                        graph_object.properties.get(property_name)
+                    ).__name__,
+                }
+            )
 
 
 @mgp.read_proc
