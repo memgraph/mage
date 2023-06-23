@@ -48,6 +48,7 @@ jobs:
       - name: Get version
         run: echo "Version is ${{ steps.get-commit-tag.outputs.VERSION }}"
 
+      # TODO(gitbuda): Mage version has changed -> DockerHub tag broken -> FIX
       - name: Set production tag
         id: get-prod-tags
         run: |
