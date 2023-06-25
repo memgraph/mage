@@ -1,8 +1,8 @@
 #include <fmt/core.h>
-#include <boost/algorithm/string/join.hpp>
 #include <mgp.hpp>
 
 #include "mgclient.hpp"
+#include "utils/string.hpp"
 
 const char *kProcedurePeriodic = "iterate";
 const char *kArgumentInputQuery = "input_query";
@@ -23,42 +23,24 @@ struct ParamNames {
   std::vector<std::string> primitive_names;
 };
 
-ParamNames ExtractParamNames(std::vector<std::string> columns, std::vector<mg::Value> &batch_row) {
-  std::vector<std::string> node_names;
-  std::vector<std::string> relationship_names;
-  std::vector<std::string> primitive_names;
-
+auto ExtractParamNames(const std::vector<std::string> &columns, const std::vector<mg::Value> &batch_row) {
+  ParamNames res;
   for (size_t i = 0; i < columns.size(); i++) {
     if (batch_row[i].type() == mg::Value::Type::Node) {
-      node_names.push_back(columns[i]);
+      res.node_names.push_back(columns[i]);
     } else if (batch_row[i].type() == mg::Value::Type::Relationship) {
-      relationship_names.push_back(columns[i]);
+      res.relationship_names.push_back(columns[i]);
     } else {
-      primitive_names.push_back(columns[i]);
+      res.primitive_names.push_back(columns[i]);
     }
   }
 
-  return ParamNames{
-      .node_names = node_names, .relationship_names = relationship_names, .primitive_names = primitive_names};
+  return res;
 }
 
-std::vector<std::string> ConstructColumns(std::vector<std::string> columns, std::vector<mg::Value> &batch_row) {
-  std::vector<std::string> new_columns;
-
-  for (size_t i = 0; i < columns.size(); i++) {
-    if (batch_row[i].type() == mg::Value::Type::Node || batch_row[i].type() == mg::Value::Type::Relationship) {
-      new_columns.push_back(fmt::format("__{}_id", columns[i]));
-    } else {
-      new_columns.push_back(columns[i]);
-    }
-  }
-
-  return new_columns;
-}
-
-std::string ConstructQueryPreffix(ParamNames names) {
+auto ConstructQueryPrefix(const ParamNames &names) {
   if (!names.node_names.size() && !names.relationship_names.size() && !names.primitive_names.size()) {
-    return "";
+    return std::string();
   }
 
   auto unwind_batch = fmt::format("UNWIND ${} AS {}", kBatchInternalName, kBatchRowInternalName);
@@ -74,7 +56,7 @@ std::string ConstructQueryPreffix(ParamNames names) {
     with_entity_vector.push_back(fmt::format("{}.{} AS {}", kBatchRowInternalName, prim_name, prim_name));
   }
 
-  auto with_variables = fmt::format("WITH {}", boost::algorithm::join(with_entity_vector, ", "));
+  auto with_variables = fmt::format("WITH {}", Join(with_entity_vector, ", "));
 
   std::string match_string = "";
   std::vector<std::string> match_by_id_vector;
@@ -86,15 +68,15 @@ std::string ConstructQueryPreffix(ParamNames names) {
   }
 
   if (match_by_id_vector.size()) {
-    match_string = boost::algorithm::join(match_by_id_vector, " ");
+    match_string = Join(match_by_id_vector, " ");
   }
 
   return fmt::format("{} {} {}", unwind_batch, with_variables, match_string);
 }
 
-mg::Map ConstructParams(std::vector<std::string> columns, std::vector<std::vector<mg::Value>> &batch) {
-  auto params = mg::Map(1);
-  auto list_value = mg::List(batch.size());
+auto ConstructParams(const std::vector<std::string> &columns, const std::vector<std::vector<mg::Value>> &batch) {
+  mg::Map params(1);
+  mg::List list_value(batch.size());
 
   auto param_row_size = columns.size();
 
@@ -120,21 +102,19 @@ mg::Map ConstructParams(std::vector<std::string> columns, std::vector<std::vecto
   return params;
 }
 
-std::string ConstructFinalQuery(std::string running_query, std::string preffix_query) {
-  return fmt::format("{} {}", preffix_query, running_query);
+auto ConstructFinalQuery(const std::string &running_query, const std::string &prefix_query) {
+  return fmt::format("{} {}", prefix_query, running_query);
 }
 
-void ExecuteRunningQuery(std::string running_query, std::vector<std::string> columns,
-                         std::vector<std::vector<mg::Value>> &batch) {
+void ExecuteRunningQuery(const std::string running_query, const std::vector<std::string> &columns,
+                         const std::vector<std::vector<mg::Value>> &batch) {
   if (!batch.size()) {
     return;
   }
 
   auto param_names = ExtractParamNames(columns, batch[0]);
-  auto query_columns = ConstructColumns(columns, batch[0]);
-
-  auto preffix_query = ConstructQueryPreffix(param_names);
-  auto final_query = ConstructFinalQuery(running_query, preffix_query);
+  auto prefix_query = ConstructQueryPrefix(param_names);
+  auto final_query = ConstructFinalQuery(running_query, prefix_query);
 
   auto query_params = ConstructParams(columns, batch);
 
@@ -150,6 +130,20 @@ void ExecuteRunningQuery(std::string running_query, std::vector<std::string> col
   client->DiscardAll();
 }
 
+void ValidateBatchSize(const mgp::Value &batch_size_value) {
+  if (batch_size_value.IsNull()) {
+    throw std::runtime_error(fmt::format("Configuration parameter {} is not set.", kConfigKeyBatchSize));
+  }
+  if (!batch_size_value.IsInt()) {
+    throw std::runtime_error("Batch size not provided as an integer in the periodic iterate configuration!");
+  }
+
+  const auto batch_size = batch_size_value.ValueInt();
+  if (batch_size <= 0) {
+    throw std::runtime_error("Batch size must be a non-negative number!");
+  }
+}
+
 void PeriodicIterate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
@@ -163,18 +157,9 @@ void PeriodicIterate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
   const auto batch_size_value = config.At(kConfigKeyBatchSize);
 
   try {
-    if (batch_size_value.IsNull()) {
-      throw std::runtime_error(fmt::format("Configuration parameter {} is not set.", kConfigKeyBatchSize));
-    }
-    if (!batch_size_value.IsInt()) {
-      throw std::runtime_error("Batch size not provided as an integer in the periodic iterate configuration!");
-    }
+    ValidateBatchSize(batch_size_value);
 
     const auto batch_size = batch_size_value.ValueInt();
-
-    if (batch_size <= 0) {
-      throw std::runtime_error("Batch size must be a non-negative number!");
-    }
 
     mg::Client::Init();
 
@@ -200,7 +185,6 @@ void PeriodicIterate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
         break;
       }
 
-      auto result = *maybe_result;
 
       if (rows == batch_size) {
         ExecuteRunningQuery(running_query, columns, batch);
@@ -208,7 +192,7 @@ void PeriodicIterate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
         batch.clear();
       }
 
-      batch.push_back(std::move(result));
+      batch.push_back(std::move(*maybe_result));
     }
 
     ExecuteRunningQuery(running_query, columns, batch);
