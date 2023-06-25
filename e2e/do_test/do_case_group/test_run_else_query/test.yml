@@ -8,6 +8,3 @@ query: >
 
 exception: >
     Returning nodes in do procedures not yet supported.
-
-# output:
-#     - n_nodes: 2

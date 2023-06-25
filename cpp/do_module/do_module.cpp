@@ -1,6 +1,4 @@
 #include <fmt/core.h>
-#include <boost/algorithm/string/join.hpp>
-#include <boost/algorithm/string/predicate.hpp>
 #include <mgp.hpp>
 
 #include "mgclient.hpp"
@@ -16,13 +14,13 @@ const char *kArgumentIfQuery = "if_query";
 
 const char *kReturnValue = "value";
 
-const std::vector<std::string> kGlobalOperations = {"CREATE INDEX ON",
-                                                    "DROP INDEX ON",
-                                                    "CREATE CONSTRAINT ON",
-                                                    "DROP CONSTRAINT ON",
-                                                    "SET GLOBAL TRANSACTION ISOLATION LEVEL",
-                                                    "STORAGE MODE IN_MEMORY_TRANSACTIONAL",
-                                                    "STORAGE MODE IN_MEMORY_ANALYTICAL"};
+const std::vector<std::string_view> kGlobalOperations = {"CREATE INDEX ON",
+                                                         "DROP INDEX ON",
+                                                         "CREATE CONSTRAINT ON",
+                                                         "DROP CONSTRAINT ON",
+                                                         "SET GLOBAL TRANSACTION ISOLATION LEVEL",
+                                                         "STORAGE MODE IN_MEMORY_TRANSACTIONAL",
+                                                         "STORAGE MODE IN_MEMORY_ANALYTICAL"};
 
 struct ParamNames {
   std::vector<std::string> node_names;
@@ -50,13 +48,30 @@ ParamNames ExtractParamNames(const mgp::Map &parameters) {
     }
   }
 
-  return ParamNames{
-      .node_names = node_names, .relationship_names = relationship_names, .primitive_names = primitive_names};
+  return ParamNames{.node_names = std::move(node_names),
+                    .relationship_names = std::move(relationship_names),
+                    .primitive_names = std::move(primitive_names)};
 }
 
-std::string ConstructQueryPreffix(const ParamNames &names) {
+auto Join(std::vector<std::string> &strings, const std::string &delimiter) {
+  std::string s;
+
+  if (!strings.size()) {
+    return s;
+  }
+
+  s += strings[0];
+
+  for (size_t i = 1; i < strings.size(); i++) {
+    s += delimiter + strings[i];
+  }
+
+  return s;
+}
+
+auto ConstructQueryPreffix(const ParamNames &names) {
   if (!names.node_names.size() && !names.relationship_names.size() && !names.primitive_names.size()) {
-    return "";
+    return std::string();
   }
 
   std::vector<std::string> with_entity_vector;
@@ -70,7 +85,7 @@ std::string ConstructQueryPreffix(const ParamNames &names) {
     with_entity_vector.push_back(fmt::format("${} AS {}", prim_name, prim_name));
   }
 
-  auto with_variables = fmt::format("WITH {}", boost::algorithm::join(with_entity_vector, ", "));
+  auto with_variables = fmt::format("WITH {}", Join(with_entity_vector, ", "));
 
   std::string match_string = "";
   std::vector<std::string> match_by_id_vector;
@@ -82,24 +97,24 @@ std::string ConstructQueryPreffix(const ParamNames &names) {
   }
 
   if (match_by_id_vector.size()) {
-    match_string = boost::algorithm::join(match_by_id_vector, " ");
+    match_string = Join(match_by_id_vector, " ");
   }
 
   return fmt::format("{} {}", with_variables, match_string);
 }
 
-std::string ConstructPreffixQuery(const mgp::Map &parameters) {
+auto ConstructPreffixQuery(const mgp::Map &parameters) {
   const auto param_names = ExtractParamNames(parameters);
 
   return ConstructQueryPreffix(param_names);
 }
 
-std::string ConstructFinalQuery(const std::string &running_query, const std::string &preffix_query) {
+auto ConstructFinalQuery(const std::string &running_query, const std::string &preffix_query) {
   return fmt::format("{} {}", preffix_query, running_query);
 }
 
-mg::Map ConstructParams(const ParamNames &param_names, const mgp::Map &parameters) {
-  auto new_params = mg::Map(parameters.Size());
+auto ConstructParams(const ParamNames &param_names, const mgp::Map &parameters) {
+  mg::Map new_params{parameters.Size()};
 
   for (const auto &map_item : parameters) {
     if (map_item.value.IsNode()) {
@@ -123,7 +138,7 @@ mg::Map ConstructParams(const ParamNames &param_names, const mgp::Map &parameter
   return new_params;
 }
 
-QueryResults ExecuteQuery(const std::string &query, const mgp::Map &query_parameters) {
+auto ExecuteQuery(const std::string &query, const mgp::Map &query_parameters) {
   mg::Client::Init();
   mg::Client::Params params{.host = "localhost", .port = 7687};
 
@@ -159,11 +174,11 @@ QueryResults ExecuteQuery(const std::string &query, const mgp::Map &query_parame
 
   mg::Client::Finalize();
 
-  return QueryResults{.columns = columns, .results = results};
+  return QueryResults{.columns = std::move(columns), .results = std::move(results)};
 }
 
 void InsertConditionalResults(const mgp::RecordFactory &record_factory, const QueryResults &query_results) {
-  for (const auto row : query_results.results) {
+  for (const auto &row : query_results.results) {
     auto result_map = mgp::Map();
 
     for (size_t i = 0; i < query_results.columns.size(); i++) {
@@ -196,9 +211,9 @@ void InsertConditionalResults(const mgp::RecordFactory &record_factory, const Qu
   }
 }
 
-bool IsGlobalOperation(const std::string &query) {
+bool IsGlobalOperation(const std::string_view &query) {
   for (const auto &global_op : kGlobalOperations) {
-    if (boost::algorithm::starts_with(query, global_op)) {
+    if (query.starts_with(global_op)) {
       return true;
     }
   }

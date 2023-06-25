@@ -7,15 +7,3 @@ query: >
 
 exception: >
     Returning nodes in do procedures not yet supported.
-
-# output:
-#     - node:
-#           labels:
-#               - Node
-#           properties:
-#               id: 0
-#     - node:
-#           labels:
-#               - Node
-#           properties:
-#               id: 1

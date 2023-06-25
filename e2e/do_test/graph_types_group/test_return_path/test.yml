@@ -6,6 +6,3 @@ query: >
 
 exception: >
     Returning paths in do procedures not yet supported.
-
-# output:
-#     - path_size: 3

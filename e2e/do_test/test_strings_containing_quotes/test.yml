@@ -6,6 +6,3 @@ query: >
 
 exception: >
     Returning nodes in do procedures not yet supported.
-
-# output:
-#     - nice_id: 0

@@ -6,6 +6,3 @@ query: >
 
 exception:
     Returning relationships in do procedures not yet supported.
-
-# output:
-#     - relationship: "RELATIONSHIP"
