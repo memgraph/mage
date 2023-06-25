@@ -11,10 +11,7 @@ const char *kConfigKeyBatchSize = "batch_size";
 const char *kBatchInternalName = "__batch";
 const char *kBatchRowInternalName = "__batch_row";
 const char *kReturnSuccess = "success";
-
-const char *kProcedureFormatQuery = "format_query";
-const char *kArgumentQuery = "query";
-const char *kReturnQuery = "query";
+const char *kReturnNumBatches = "number_of_executed_batches";
 
 const char *kMgHost = "MG_HOST";
 const char *kMgPort = "MG_PORT";
@@ -166,29 +163,29 @@ void ValidateBatchSize(const mgp::Value &batch_size_value) {
 }
 
 mg::Client::Params GetClientParams() {
-  auto host = kDefaultHost;
+  auto *host = kDefaultHost;
   auto port = kDefaultPort;
-  auto username = "";
-  auto password = "";
+  auto *username = "";
+  auto *password = "";
 
   auto *maybe_host = std::getenv(kMgHost);
   if (maybe_host) {
-    host = reinterpret_cast<const char *>(std::move(*maybe_host));
+    host = std::move(maybe_host);
   }
 
-  auto *maybe_port = std::getenv(kMgPort);
+  const auto *maybe_port = std::getenv(kMgPort);
   if (maybe_port) {
     port = static_cast<uint16_t>(std::move(*maybe_port));
   }
 
-  auto *maybe_username = std::getenv(kMgUsername);
+  const auto *maybe_username = std::getenv(kMgUsername);
   if (maybe_username) {
-    username = reinterpret_cast<const char *>(std::move(*maybe_username));
+    username = std::move(maybe_username);
   }
 
-  auto *maybe_password = std::getenv(kMgPassword);
+  const auto *maybe_password = std::getenv(kMgPassword);
   if (maybe_password) {
-    password = reinterpret_cast<const char *>(std::move(*maybe_password));
+    password = std::move(maybe_password);
   }
 
   return mg::Client::Params{.host = std::move(host),
@@ -200,6 +197,8 @@ mg::Client::Params GetClientParams() {
 void PeriodicIterate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
+
+  auto num_of_executed_batches = 0;
   const auto record_factory = mgp::RecordFactory(result);
   auto record = record_factory.NewRecord();
 
@@ -238,25 +237,30 @@ void PeriodicIterate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
         break;
       }
 
+      batch.push_back(std::move(*maybe_result));
+      rows++;
+
       if (rows == batch_size) {
         ExecuteRunningQuery(running_query, columns, batch);
+        num_of_executed_batches++;
         rows = 0;
         batch.clear();
       }
-
-      batch.push_back(std::move(*maybe_result));
     }
 
-    ExecuteRunningQuery(running_query, columns, batch);
+    if (batch.size()) {
+      ExecuteRunningQuery(running_query, columns, batch);
+      num_of_executed_batches++;
+    }
 
     mg::Client::Finalize();
 
     record.Insert(kReturnSuccess, true);
-    return;
+    record.Insert(kReturnNumBatches, static_cast<int64_t>(num_of_executed_batches));
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
     record.Insert(kReturnSuccess, false);
-    return;
+    record.Insert(kReturnNumBatches, static_cast<int64_t>(num_of_executed_batches));
   }
 }
 
@@ -267,7 +271,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
         PeriodicIterate, kProcedurePeriodic, mgp::ProcedureType::Read,
         {mgp::Parameter(kArgumentInputQuery, mgp::Type::String),
          mgp::Parameter(kArgumentRunningQuery, mgp::Type::String), mgp::Parameter(kArgumentConfig, mgp::Type::Map)},
-        {mgp::Return(kReturnSuccess, mgp::Type::Bool)}, module, memory);
+        {mgp::Return(kReturnSuccess, mgp::Type::Bool), mgp::Return(kReturnNumBatches, mgp::Type::Int)}, module, memory);
   } catch (const std::exception &e) {
     return 1;
   }
