@@ -16,6 +16,14 @@ const char *kProcedureFormatQuery = "format_query";
 const char *kArgumentQuery = "query";
 const char *kReturnQuery = "query";
 
+const char *kMgHost = "MG_HOST";
+const char *kMgPort = "MG_PORT";
+const char *kMgUsername = "MG_USERNAME";
+const char *kMgPassword = "MG_PASSWORD";
+
+const char *kDefaultHost = "localhost";
+const uint16_t kDefaultPort = 7687;
+
 struct ParamNames {
   std::vector<std::string> node_names;
   std::vector<std::string> relationship_names;
@@ -157,6 +165,38 @@ void ValidateBatchSize(const mgp::Value &batch_size_value) {
   }
 }
 
+mg::Client::Params GetClientParams() {
+  auto host = kDefaultHost;
+  auto port = kDefaultPort;
+  auto username = "";
+  auto password = "";
+
+  auto *maybe_host = std::getenv(kMgHost);
+  if (*maybe_host) {
+    host = reinterpret_cast<const char *>(std::move(*maybe_host));
+  }
+
+  auto *maybe_port = std::getenv(kMgPort);
+  if (*maybe_port) {
+    port = static_cast<uint16_t>(std::move(*maybe_port));
+  }
+
+  auto *maybe_username = std::getenv(kMgUsername);
+  if (*maybe_username) {
+    username = reinterpret_cast<const char *>(std::move(*maybe_username));
+  }
+
+  auto *maybe_password = std::getenv(kMgPassword);
+  if (*maybe_password) {
+    password = reinterpret_cast<const char *>(std::move(*maybe_password));
+  }
+
+  return mg::Client::Params{.host = std::move(host),
+                            .port = std::move(port),
+                            .username = std::move(username),
+                            .password = std::move(password)};
+}
+
 void PeriodicIterate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
@@ -176,7 +216,7 @@ void PeriodicIterate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
 
     mg::Client::Init();
 
-    mg::Client::Params params{.host = "localhost", .port = 7687};
+    auto params = GetClientParams();
     auto client = mg::Client::Connect(params);
 
     if (!client) {
