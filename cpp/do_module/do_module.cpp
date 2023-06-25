@@ -14,6 +14,14 @@ const char *kArgumentIfQuery = "if_query";
 
 const char *kReturnValue = "value";
 
+const char *kMgHost = "MG_HOST";
+const char *kMgPort = "MG_PORT";
+const char *kMgUsername = "MG_USERNAME";
+const char *kMgPassword = "MG_PASSWORD";
+
+const char *kDefaultHost = "localhost";
+const uint16_t kDefaultPort = 7687;
+
 const std::vector<std::string_view> kGlobalOperations = {"CREATE INDEX ON",
                                                          "DROP INDEX ON",
                                                          "CREATE CONSTRAINT ON",
@@ -34,23 +42,18 @@ struct QueryResults {
 };
 
 ParamNames ExtractParamNames(const mgp::Map &parameters) {
-  std::vector<std::string> node_names;
-  std::vector<std::string> relationship_names;
-  std::vector<std::string> primitive_names;
-
+  ParamNames res;
   for (const auto &map_item : parameters) {
     if (map_item.value.IsNode()) {
-      node_names.push_back(std::string(map_item.key));
+      res.node_names.push_back(std::string(map_item.key));
     } else if (map_item.value.IsRelationship()) {
-      relationship_names.push_back(std::string(map_item.key));
+      res.relationship_names.push_back(std::string(map_item.key));
     } else {
-      primitive_names.push_back(std::string(map_item.key));
+      res.primitive_names.push_back(std::string(map_item.key));
     }
   }
 
-  return ParamNames{.node_names = std::move(node_names),
-                    .relationship_names = std::move(relationship_names),
-                    .primitive_names = std::move(primitive_names)};
+  return res;
 }
 
 auto Join(std::vector<std::string> &strings, const std::string &delimiter) {
@@ -69,36 +72,61 @@ auto Join(std::vector<std::string> &strings, const std::string &delimiter) {
   return s;
 }
 
-auto ConstructQueryPreffix(const ParamNames &names) {
-  if (!names.node_names.size() && !names.relationship_names.size() && !names.primitive_names.size()) {
-    return std::string();
-  }
+auto GetGraphFirstClassEntityAlias(const std::string &entity_name) {
+  return fmt::format("${} AS __{}_id", entity_name, entity_name);
+}
 
+auto GetPrimitiveEntityAlias(const std::string &primitive_name) {
+  return fmt::format("${} AS {}", primitive_name, primitive_name);
+}
+
+auto ConstructWithStatement(const ParamNames &names) {
   std::vector<std::string> with_entity_vector;
   for (const auto &node_name : names.node_names) {
-    with_entity_vector.push_back(fmt::format("${} AS __{}_id", node_name, node_name));
+    with_entity_vector.push_back(GetGraphFirstClassEntityAlias(node_name));
   }
   for (const auto &rel_name : names.relationship_names) {
-    with_entity_vector.push_back(fmt::format("${} AS __{}_id", rel_name, rel_name));
+    with_entity_vector.push_back(GetGraphFirstClassEntityAlias(rel_name));
   }
   for (const auto &prim_name : names.primitive_names) {
-    with_entity_vector.push_back(fmt::format("${} AS {}", prim_name, prim_name));
+    with_entity_vector.push_back(GetPrimitiveEntityAlias(prim_name));
   }
 
-  auto with_variables = fmt::format("WITH {}", Join(with_entity_vector, ", "));
+  return fmt::format("WITH {}", Join(with_entity_vector, ", "));
+}
 
+auto ConstructMatchingNodeById(const std::string &node_name) {
+  return fmt::format("MATCH ({}) WHERE ID({}) = __{}_id", node_name, node_name, node_name);
+}
+
+auto ConstructMatchingRelationshipById(const std::string &rel_name) {
+  return fmt::format("MATCH ()-[{}]->() WHERE ID({}) = __{}_id", rel_name, rel_name, rel_name);
+}
+
+auto ConstructMatchGraphEntitiesById(const ParamNames &names) {
   std::string match_string = "";
   std::vector<std::string> match_by_id_vector;
   for (const auto &node_name : names.node_names) {
-    match_by_id_vector.push_back(fmt::format("MATCH ({}) WHERE ID({}) = __{}_id", node_name, node_name, node_name));
+    match_by_id_vector.push_back(ConstructMatchingNodeById(node_name));
   }
   for (const auto &rel_name : names.relationship_names) {
-    match_by_id_vector.push_back(fmt::format("MATCH ()-[{}]->() WHERE ID({}) = __{}_id", rel_name, rel_name, rel_name));
+    match_by_id_vector.push_back(ConstructMatchingRelationshipById(rel_name));
   }
 
   if (match_by_id_vector.size()) {
     match_string = Join(match_by_id_vector, " ");
   }
+
+  return match_string;
+}
+
+auto ConstructQueryPreffix(const ParamNames &names) {
+  if (!names.node_names.size() && !names.relationship_names.size() && !names.primitive_names.size()) {
+    return std::string();
+  }
+
+  auto with_variables = ConstructWithStatement(names);
+  auto match_string = ConstructMatchGraphEntitiesById(names);
 
   return fmt::format("{} {}", with_variables, match_string);
 }
@@ -138,11 +166,42 @@ auto ConstructParams(const ParamNames &param_names, const mgp::Map &parameters) 
   return new_params;
 }
 
+mg::Client::Params GetClientParams() {
+  auto *host = kDefaultHost;
+  auto port = kDefaultPort;
+  auto *username = "";
+  auto *password = "";
+
+  auto *maybe_host = std::getenv(kMgHost);
+  if (maybe_host) {
+    host = std::move(maybe_host);
+  }
+
+  const auto *maybe_port = std::getenv(kMgPort);
+  if (maybe_port) {
+    port = static_cast<uint16_t>(std::move(*maybe_port));
+  }
+
+  const auto *maybe_username = std::getenv(kMgUsername);
+  if (maybe_username) {
+    username = std::move(maybe_username);
+  }
+
+  const auto *maybe_password = std::getenv(kMgPassword);
+  if (maybe_password) {
+    password = std::move(maybe_password);
+  }
+
+  return mg::Client::Params{.host = std::move(host),
+                            .port = std::move(port),
+                            .username = std::move(username),
+                            .password = std::move(password)};
+}
+
 auto ExecuteQuery(const std::string &query, const mgp::Map &query_parameters) {
   mg::Client::Init();
-  mg::Client::Params params{.host = "localhost", .port = 7687};
 
-  auto client = mg::Client::Connect(params);
+  auto client = mg::Client::Connect(GetClientParams());
 
   if (!client) {
     throw std::runtime_error("Unable to connect to client!");
