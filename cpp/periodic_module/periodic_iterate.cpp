@@ -172,22 +172,22 @@ mg::Client::Params GetClientParams() {
   auto password = "";
 
   auto *maybe_host = std::getenv(kMgHost);
-  if (*maybe_host) {
+  if (maybe_host) {
     host = reinterpret_cast<const char *>(std::move(*maybe_host));
   }
 
   auto *maybe_port = std::getenv(kMgPort);
-  if (*maybe_port) {
+  if (maybe_port) {
     port = static_cast<uint16_t>(std::move(*maybe_port));
   }
 
   auto *maybe_username = std::getenv(kMgUsername);
-  if (*maybe_username) {
+  if (maybe_username) {
     username = reinterpret_cast<const char *>(std::move(*maybe_username));
   }
 
   auto *maybe_password = std::getenv(kMgPassword);
-  if (*maybe_password) {
+  if (maybe_password) {
     password = reinterpret_cast<const char *>(std::move(*maybe_password));
   }
 
