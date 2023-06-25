@@ -2,7 +2,6 @@
 #include <mgp.hpp>
 
 #include "mgclient.hpp"
-#include "utils/string.hpp"
 
 const char *kProcedurePeriodic = "iterate";
 const char *kArgumentInputQuery = "input_query";
@@ -36,6 +35,20 @@ auto ExtractParamNames(const std::vector<std::string> &columns, const std::vecto
   }
 
   return res;
+}
+
+auto Join(const std::vector<std::string> &strings, const std::string &delimiter) {
+  if (!strings.size()) {
+    return std::string();
+  }
+
+  auto result = strings[0];
+
+  for (size_t i = 1; i < strings.size(); i++) {
+    result += delimiter + strings[i];
+  }
+
+  return result;
 }
 
 auto ConstructQueryPrefix(const ParamNames &names) {
@@ -74,7 +87,7 @@ auto ConstructQueryPrefix(const ParamNames &names) {
   return fmt::format("{} {} {}", unwind_batch, with_variables, match_string);
 }
 
-auto ConstructParams(const std::vector<std::string> &columns, const std::vector<std::vector<mg::Value>> &batch) {
+auto ConstructQueryParams(const std::vector<std::string> &columns, const std::vector<std::vector<mg::Value>> &batch) {
   mg::Map params(1);
   mg::List list_value(batch.size());
 
@@ -116,7 +129,7 @@ void ExecuteRunningQuery(const std::string running_query, const std::vector<std:
   auto prefix_query = ConstructQueryPrefix(param_names);
   auto final_query = ConstructFinalQuery(running_query, prefix_query);
 
-  auto query_params = ConstructParams(columns, batch);
+  auto query_params = ConstructQueryParams(columns, batch);
 
   mg::Client::Params session_params{.host = "localhost", .port = 7687};
   auto client = mg::Client::Connect(session_params);
@@ -184,7 +197,6 @@ void PeriodicIterate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
       if ((*maybe_result).size() == 0) {
         break;
       }
-
 
       if (rows == batch_size) {
         ExecuteRunningQuery(running_query, columns, batch);
