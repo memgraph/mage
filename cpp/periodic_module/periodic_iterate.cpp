@@ -241,8 +241,7 @@ void PeriodicIterate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
 
     mg::Client::Init();
 
-    auto params = GetClientParams();
-    auto client = mg::Client::Connect(params);
+    auto client = mg::Client::Connect(GetClientParams());
 
     if (!client) {
       throw std::runtime_error("Unable to connect to client!");
