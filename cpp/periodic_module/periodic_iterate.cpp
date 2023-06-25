@@ -56,38 +56,64 @@ auto Join(const std::vector<std::string> &strings, const std::string &delimiter)
   return result;
 }
 
+auto GetGraphFirstClassEntityAlias(const std::string &internal_name, const std::string &entity_name) {
+  return fmt::format("{}.{} AS __{}_id", internal_name, entity_name, entity_name);
+}
+
+auto GetPrimitiveEntityAlias(const std::string &internal_name, const std::string &primitive_name) {
+  return fmt::format("{}.{} AS {}", internal_name, primitive_name, primitive_name);
+}
+
+auto ConstructWithStatement(const ParamNames &names) {
+  std::vector<std::string> with_entity_vector;
+  for (const auto &node_name : names.node_names) {
+    with_entity_vector.push_back(GetGraphFirstClassEntityAlias(kBatchRowInternalName, node_name));
+  }
+  for (const auto &rel_name : names.relationship_names) {
+    with_entity_vector.push_back(GetGraphFirstClassEntityAlias(kBatchRowInternalName, rel_name));
+  }
+  for (const auto &prim_name : names.primitive_names) {
+    with_entity_vector.push_back(GetPrimitiveEntityAlias(kBatchRowInternalName, prim_name));
+  }
+
+  auto with_variables = fmt::format("WITH {}", Join(with_entity_vector, ", "));
+
+  return with_variables;
+}
+
+auto ConstructMatchingNodeById(const std::string &node_name) {
+  return fmt::format("MATCH ({}) WHERE ID({}) = __{}_id", node_name, node_name, node_name);
+}
+
+auto ConstructMatchingRelationshipById(const std::string &rel_name) {
+  return fmt::format("MATCH ()-[{}]->() WHERE ID({}) = __{}_id", rel_name, rel_name, rel_name);
+}
+
+auto ConstructMatchGraphEntitiesById(const ParamNames &names) {
+  std::string match_string = "";
+  std::vector<std::string> match_by_id_vector;
+  for (const auto &node_name : names.node_names) {
+    match_by_id_vector.push_back(ConstructMatchingNodeById(node_name));
+  }
+  for (const auto &rel_name : names.relationship_names) {
+    match_by_id_vector.push_back(ConstructMatchingRelationshipById(rel_name));
+  }
+
+  if (match_by_id_vector.size()) {
+    match_string = Join(match_by_id_vector, " ");
+  }
+
+  return match_string;
+}
+
 auto ConstructQueryPrefix(const ParamNames &names) {
   if (!names.node_names.size() && !names.relationship_names.size() && !names.primitive_names.size()) {
     return std::string();
   }
 
   auto unwind_batch = fmt::format("UNWIND ${} AS {}", kBatchInternalName, kBatchRowInternalName);
-
-  std::vector<std::string> with_entity_vector;
-  for (const auto &node_name : names.node_names) {
-    with_entity_vector.push_back(fmt::format("{}.{} AS __{}_id", kBatchRowInternalName, node_name, node_name));
-  }
-  for (const auto &rel_name : names.relationship_names) {
-    with_entity_vector.push_back(fmt::format("{}.{} AS __{}_id", kBatchRowInternalName, rel_name, rel_name));
-  }
-  for (const auto &prim_name : names.primitive_names) {
-    with_entity_vector.push_back(fmt::format("{}.{} AS {}", kBatchRowInternalName, prim_name, prim_name));
-  }
-
-  auto with_variables = fmt::format("WITH {}", Join(with_entity_vector, ", "));
-
-  std::string match_string = "";
-  std::vector<std::string> match_by_id_vector;
-  for (const auto &node_name : names.node_names) {
-    match_by_id_vector.push_back(fmt::format("MATCH ({}) WHERE ID({}) = __{}_id", node_name, node_name, node_name));
-  }
-  for (const auto &rel_name : names.relationship_names) {
-    match_by_id_vector.push_back(fmt::format("MATCH ()-[{}]->() WHERE ID({}) = __{}_id", rel_name, rel_name, rel_name));
-  }
-
-  if (match_by_id_vector.size()) {
-    match_string = Join(match_by_id_vector, " ");
-  }
+  auto with_variables = ConstructWithStatement(names);
+  auto match_string = ConstructMatchGraphEntitiesById(names);
 
   return fmt::format("{} {} {}", unwind_batch, with_variables, match_string);
 }
