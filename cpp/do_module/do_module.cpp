@@ -56,61 +56,65 @@ ParamNames ExtractParamNames(const mgp::Map &parameters) {
   return res;
 }
 
-auto Join(std::vector<std::string> &strings, const std::string &delimiter) {
-  std::string s;
-
+std::string Join(std::vector<std::string> &strings, const std::string &delimiter) {
   if (!strings.size()) {
-    return s;
+    return "";
   }
 
-  s += strings[0];
+  auto joined_strings_size = strings[0].size();
+  for (size_t i = 1; i < strings.size(); i++) {
+    joined_strings_size += strings[i].size();
+  }
+
+  std::string joined_strings;
+  joined_strings.reserve(joined_strings_size + delimiter.size() * (strings.size() - 1));
 
   for (size_t i = 1; i < strings.size(); i++) {
-    s += delimiter + strings[i];
+    joined_strings += delimiter + strings[i];
   }
 
-  return s;
+  return joined_strings;
 }
 
-auto GetGraphFirstClassEntityAlias(const std::string &entity_name) {
+std::string GetGraphFirstClassEntityAlias(const std::string &entity_name) {
   return fmt::format("${} AS __{}_id", entity_name, entity_name);
 }
 
-auto GetPrimitiveEntityAlias(const std::string &primitive_name) {
+std::string GetPrimitiveEntityAlias(const std::string &primitive_name) {
   return fmt::format("${} AS {}", primitive_name, primitive_name);
 }
 
-auto ConstructWithStatement(const ParamNames &names) {
+std::string ConstructWithStatement(const ParamNames &names) {
   std::vector<std::string> with_entity_vector;
   for (const auto &node_name : names.node_names) {
-    with_entity_vector.push_back(GetGraphFirstClassEntityAlias(node_name));
+    with_entity_vector.emplace_back(GetGraphFirstClassEntityAlias(node_name));
   }
   for (const auto &rel_name : names.relationship_names) {
-    with_entity_vector.push_back(GetGraphFirstClassEntityAlias(rel_name));
+    with_entity_vector.emplace_back(GetGraphFirstClassEntityAlias(rel_name));
   }
   for (const auto &prim_name : names.primitive_names) {
-    with_entity_vector.push_back(GetPrimitiveEntityAlias(prim_name));
+    with_entity_vector.emplace_back(GetPrimitiveEntityAlias(prim_name));
   }
 
   return fmt::format("WITH {}", Join(with_entity_vector, ", "));
 }
 
-auto ConstructMatchingNodeById(const std::string &node_name) {
+std::string ConstructMatchingNodeById(const std::string &node_name) {
   return fmt::format("MATCH ({}) WHERE ID({}) = __{}_id", node_name, node_name, node_name);
 }
 
-auto ConstructMatchingRelationshipById(const std::string &rel_name) {
+std::string ConstructMatchingRelationshipById(const std::string &rel_name) {
   return fmt::format("MATCH ()-[{}]->() WHERE ID({}) = __{}_id", rel_name, rel_name, rel_name);
 }
 
-auto ConstructMatchGraphEntitiesById(const ParamNames &names) {
+std::string ConstructMatchGraphEntitiesById(const ParamNames &names) {
   std::string match_string = "";
   std::vector<std::string> match_by_id_vector;
   for (const auto &node_name : names.node_names) {
-    match_by_id_vector.push_back(ConstructMatchingNodeById(node_name));
+    match_by_id_vector.emplace_back(ConstructMatchingNodeById(node_name));
   }
   for (const auto &rel_name : names.relationship_names) {
-    match_by_id_vector.push_back(ConstructMatchingRelationshipById(rel_name));
+    match_by_id_vector.emplace_back(ConstructMatchingRelationshipById(rel_name));
   }
 
   if (match_by_id_vector.size()) {
@@ -120,7 +124,7 @@ auto ConstructMatchGraphEntitiesById(const ParamNames &names) {
   return match_string;
 }
 
-auto ConstructQueryPreffix(const ParamNames &names) {
+std::string ConstructQueryPreffix(const ParamNames &names) {
   if (!names.node_names.size() && !names.relationship_names.size() && !names.primitive_names.size()) {
     return std::string();
   }
@@ -131,17 +135,17 @@ auto ConstructQueryPreffix(const ParamNames &names) {
   return fmt::format("{} {}", with_variables, match_string);
 }
 
-auto ConstructPreffixQuery(const mgp::Map &parameters) {
+std::string ConstructPreffixQuery(const mgp::Map &parameters) {
   const auto param_names = ExtractParamNames(parameters);
 
   return ConstructQueryPreffix(param_names);
 }
 
-auto ConstructFinalQuery(const std::string &running_query, const std::string &preffix_query) {
+std::string ConstructFinalQuery(const std::string &running_query, const std::string &preffix_query) {
   return fmt::format("{} {}", preffix_query, running_query);
 }
 
-auto ConstructParams(const ParamNames &param_names, const mgp::Map &parameters) {
+mg::Map ConstructParams(const ParamNames &param_names, const mgp::Map &parameters) {
   mg::Map new_params{parameters.Size()};
 
   for (const auto &map_item : parameters) {
@@ -198,7 +202,7 @@ mg::Client::Params GetClientParams() {
                             .password = std::move(password)};
 }
 
-auto ExecuteQuery(const std::string &query, const mgp::Map &query_parameters) {
+QueryResults ExecuteQuery(const std::string &query, const mgp::Map &query_parameters) {
   mg::Client::Init();
 
   auto client = mg::Client::Connect(GetClientParams());
