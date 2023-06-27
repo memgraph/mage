@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, Union
+from typing import Any, Dict, List
 
 import mgp
 import mysql.connector as mysql_connector
@@ -19,24 +19,34 @@ def mysql(
     With migrate.mysql you can access MySQL and execute queries. The result table is converted into a stream,
     and returned rows can be used to create or create graph structures.
 
-    :param config: Connection configuration parameters, or a JSON file with them (as in mysql.connector.connect)
+    :param config: Connection configuration parameters (as in mysql.connector.connect), path to the JSON file
+        containing them, or a [path, config_extension] list. If a list is passed, values in config_extension
+        override those loaded from the config file.
     :param table_or_sql: Table name or an SQL query
     :param params: Optionally, queries may be parameterized. In that case, `params` provides parameter values
     :return: The result table as a stream of rows
     """
 
-    if not isinstance(config, dict) and not isinstance(config, str):
-        pass  # TODO
+    if not isinstance(config, (dict, list, str, tuple)):
+        raise TypeError(
+            """MySQL connection configuration must be given as one of the following:
+                a) Map value
+                b) String value with the path to the configuration file
+                c) List whose first element is as in b), the second element being a Map of configuration extensions
+            """
+        )
 
     if isinstance(config, str):
         config = _load_config(path=config)
+    elif isinstance(config, (list, tuple)):
+        config = _combine_config(data=config)
 
     if _query_is_table(table_or_sql):
         table_or_sql = f"SELECT * FROM {table_or_sql};"
 
     if params and not isinstance(params, (dict, list, tuple)):
         raise TypeError(
-            f"MySQL query parameter values must be passed in a container of type List[Any] or Map."
+            "MySQL query parameter values must be passed in a container of type List[Any] or Map."
         )
 
     with mysql_connector.connect(**config) as connection:
@@ -58,24 +68,34 @@ def oracle_db(
     With migrate.oracle_db you can access Oracle DB and execute queries. The result table is converted into a stream,
     and returned rows can be used to create or create graph structures.
 
-    :param config: Connection configuration parameters, or a JSON file with them (as in oracledb.connect)
+    :param config: Connection configuration parameters (as in oracledb.connect), path to the JSON file containing them,
+        or a [path, config_extension] list. If a list is passed, values in config_extension override those loaded from
+        the config file.
     :param table_or_sql: Table name or an SQL query (Oracle Database doesn’t allow trailing semicolons for SQL code)
     :param params: Optionally, queries may be parameterized. In that case, `params` provides parameter values
     :return: The result table as a stream of rows
     """
 
-    if not isinstance(config, dict) and not isinstance(config, str):
-        pass  # TODO
+    if not isinstance(config, (dict, list, str, tuple)):
+        raise TypeError(
+            """MySQL connection configuration must be given as one of the following:
+                a) Map value
+                b) String value with the path to the configuration file
+                c) List whose first element is as in b), the second element being a Map of configuration extensions
+            """
+        )
 
     if isinstance(config, str):
         config = _load_config(path=config)
+    elif isinstance(config, (list, tuple)):
+        config = _combine_config(data=config)
 
     if _query_is_table(table_or_sql):
         table_or_sql = f"SELECT * FROM {table_or_sql}"
 
     if params and not isinstance(params, (dict, list, tuple)):
         raise TypeError(
-            f"Oracle Database query parameter values must be passed in a container of type List[Any] or Map."
+            "Oracle Database query parameter values must be passed in a container of type List[Any] or Map."
         )
 
     if not config:
@@ -111,17 +131,27 @@ def sql_server(
     With migrate.sql_server you can access SQL Server and execute queries. The result table is converted into a stream,
     and returned rows can be used to create or create graph structures.
 
-    :param config: Connection configuration parameters, or a JSON file with them (as in pyodbc.connect)
-    :param table_or_sql: Table name or an SQL query
+    :param config: Connection configuration parameters (as in pyodbc.connect), path to the JSON file containing them,
+        or a [path, config_extension] list. If a list is passed, values in config_extension override those loaded from
+        the config file.
     :param params: Optionally, queries may be parameterized. In that case, `params` provides parameter values
     :return: The result table as a stream of rows
     """
 
-    if not isinstance(config, dict) and not isinstance(config, str):
-        pass  # TODO
+    print(type(config))
+    if not isinstance(config, (dict, list, str, tuple)):
+        raise TypeError(
+            """MySQL connection configuration must be given as one of the following:
+                a) Map value
+                b) String value with the path to the configuration file
+                c) List whose first element is as in b), the second element being a Map of configuration extensions
+            """
+        )
 
     if isinstance(config, str):
         config = _load_config(path=config)
+    elif isinstance(config, (list, tuple)):
+        config = _combine_config(data=config)
 
     if _query_is_table(table_or_sql):
         table_or_sql = f"SELECT * FROM {table_or_sql};"
@@ -150,6 +180,14 @@ def _load_config(path: str) -> Dict[str, Any]:
             return json.load(config)
     except Exception:
         raise OSError("Could not open/read file.")
+
+
+def _combine_config(data: List) -> Dict[str, Any]:
+    config_items = _load_config(path=data[0])
+    for key, value in data[1].items():
+        config_items[key] = value
+
+    return config_items
 
 
 def _name_row_cells(row_cells, cursor) -> Dict[str, Any]:
