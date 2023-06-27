@@ -138,7 +138,6 @@ def sql_server(
     :return: The result table as a stream of rows
     """
 
-    print(type(config))
     if not isinstance(config, (dict, list, str, tuple)):
         raise TypeError(
             """MySQL connection configuration must be given as one of the following:
