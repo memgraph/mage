@@ -1,21 +1,6 @@
 import mgp
-from enum import Enum
+from mage.llm_util.parameters import Parameter, OutputType
 from typing import Dict, Union
-
-
-class Parameter(Enum):
-    END = "end"
-    NODE_PROPS = "node_props"
-    PROPERTY = "property"
-    RELATIONSHIPS = "relationships"
-    REL_PROPS = "rel_props"
-    START = "start"
-    TYPE = "type"
-
-
-class OutputType(Enum):
-    RAW = "raw"
-    PROMPT_READY = "prompt_ready"
 
 
 class SchemaGenerator(object):
@@ -49,28 +34,42 @@ class SchemaGenerator(object):
     def _generate_schema(self, context: mgp.ProcCtx):
         for node in context.graph.vertices:
             self._node_counter += 1
-            labels = ":".join(tuple(sorted(label.name for label in node.labels)))
 
-            self._update_properties_dict(node, self._all_node_properties_dict, labels)
+            labels = tuple(sorted(label.name for label in node.labels))
+
+            for label in labels:
+                self._update_properties_dict(
+                    node, self._all_node_properties_dict, label
+                )
 
             for relationship in node.out_edges:
                 target_labels = tuple(
                     sorted(label.name for label in relationship.to_vertex.labels)
                 )
 
-                full_relationship = {
-                    Parameter.START.value: labels,
-                    Parameter.TYPE.value: relationship.type.name,
-                    Parameter.END.value: ":".join(target_labels),
-                }
-                if full_relationship not in self._all_relationships_list:
-                    self._all_relationships_list.append(full_relationship)
+                self._update_all_relationships_list(labels, relationship, target_labels)
 
                 self._update_properties_dict(
                     relationship,
                     self._all_relationship_properties_dict,
                     relationship.type.name,
                 )
+
+    def _update_all_relationships_list(
+        self,
+        start_labels: tuple[str],
+        relationship: mgp.Edge,
+        target_labels: tuple[str],
+    ):
+        for start_label in start_labels:
+            for target_label in target_labels:
+                full_relationship = {
+                    Parameter.START.value: start_label,
+                    Parameter.TYPE.value: relationship.type.name,
+                    Parameter.END.value: target_label,
+                }
+                if full_relationship not in self._all_relationships_list:
+                    self._all_relationships_list.append(full_relationship)
 
     def _get_raw_schema(self) -> mgp.Map:
         return {
@@ -134,22 +133,22 @@ def schema(
     output_type: str = OutputType.PROMPT_READY.value,
 ) -> mgp.Record(schema=mgp.Any):
     """
-    Procedure to generate the graph database schema in raw or prompt-ready format.
+    Procedure to generate the graph database schema in a prompt-ready or raw format.
 
     Args:
         context (mgp.ProcCtx): Reference to the context execution.
-        output_type (str): By default (set to 'prompt_ready'), the graph schema will include additional context and it will be prompt-ready. If set to 'raw', it will produce a simple version which can be adjusted for prompt.
+        output_type (str): By default (set to 'prompt_ready'), the graph schema will include additional context and it will be prompt-ready. If set to 'raw', it will produce a simpler version that can be adjusted for the prompt.
 
     Returns:
-        mgp.Record containing a mgp.Map of node properties, relationship properties and all relationships in the database and a string representing prompt-ready schema.
+        schema (mgp.Any): `str` containing prompt-ready graph schema description in a format suitable for large language models (LLMs), or `mgp.List` containing information on graph schema in raw format which can customized for LLMs.
 
     Example:
-        Get raw graph schema:
-            `CALL llm_util.schema('raw') YIELD schema RETURN schema;`
         Get prompt-ready graph schema:
             `CALL llm_util.schema() YIELD schema RETURN schema;`
             or
             `CALL llm_util.schema('prompt_ready') YIELD schema RETURN schema;`
+        Get raw graph schema:
+            `CALL llm_util.schema('raw') YIELD schema RETURN schema;`
     """
 
     schema_generator = SchemaGenerator(context, output_type)

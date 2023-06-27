@@ -5,3 +5,5 @@ output:
     type: "int"
   - prop: "name"
     type: "str"
+  - prop: "year"
+    type: "str"
