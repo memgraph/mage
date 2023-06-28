@@ -290,5 +290,5 @@ def _name_row_cells(row_cells, column_names) -> Dict[str, Any]:
 def _check_params_type(params: Any, types=(dict, list, tuple)) -> None:
     if not isinstance(params, types):
         raise TypeError(
-            "Database query parameter values must be passed in a container of type List[Any] or Map if supported."
+            "Database query parameter values must be passed in a container of type List[Any] (or Map, if migrating from MySQL or Oracle DB)"
         )
