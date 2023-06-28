@@ -197,7 +197,8 @@ To learn more about development with MAGE and Docker, visit the
   - python3-pip 
   - python3-setuptools    
   - python3-dev     
-  - clang  
+  - clang
+  - unixodbc  
 
 Since Memgraph needs to load MAGE's modules, there is the `setup` script to help you. With it, you can build the modules so that Memgraph
 can load them on start up.

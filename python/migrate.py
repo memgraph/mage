@@ -16,7 +16,6 @@ class Constants:
     BATCH_SIZE = 1000
 
 
-
 ##### MYSQL
 
 mysql_dict = {}
@@ -76,9 +75,9 @@ def mysql(
     global mysql_dict
     cursor = mysql_dict[threading.get_native_id][Constants.CURSOR]
     column_names = mysql_dict[threading.get_native_id][Constants.COLUMN_NAMES]
-    
+
     rows = cursor.fetchmany(Constants.BATCH_SIZE)
-    
+
     return [mgp.Record(row=_name_row_cells(row, column_names)) for row in rows]
 
 
@@ -157,7 +156,7 @@ def sql_server(
     cursor = sql_server_dict[threading.get_native_id][Constants.CURSOR]
     column_names = sql_server_dict[threading.get_native_id][Constants.COLUMN_NAMES]
     rows = cursor.fetchmany(Constants.BATCH_SIZE)
-    
+
     return [mgp.Record(row=_name_row_cells(row, column_names)) for row in rows]
 
 
@@ -289,7 +288,7 @@ def _name_row_cells(row_cells, column_names) -> Dict[str, Any]:
 
 
 def _check_params_type(params: Any) -> None:
-    if not not isinstance(params, (dict, list, tuple)):
+    if not isinstance(params, (dict, list, tuple)):
         raise TypeError(
-            "MySQL query parameter values must be passed in a container of type List[Any] or Map."
+            "Database query parameter values must be passed in a container of type List[Any] or Map if supported."
         )
