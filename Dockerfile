@@ -26,6 +26,7 @@ RUN apt-get update && apt-get install -y \
     python3-dev     `mage-memgraph` \
     clang           `mage-memgraph` \
     git             `mage-memgraph` \
+    unixodbc        `mage-memgraph` \
     --no-install-recommends \
     # Download and install Memgraph
     && curl https://download.memgraph.com/memgraph/v${MG_VERSION}/debian-11/memgraph_${MG_VERSION}-1_amd64.deb --output memgraph.deb \
