@@ -31,19 +31,6 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Install unixodbc on AMD
-        if: matrix.architecture == 'amd64'
-        run: |
-          sudo apt install unixodbc
-
-      - name: Install unixodbc on ARM
-        if: matrix.architecture == 'arm64'
-        run: |
-          brew install unixodbc
-          unixodbc_version="$(odbcinst --version | grep -Eo '[0-9].*')"
-          export LDFLAGS="-L/opt/homebrew/Cellar/unixodbc/$unixodbc_version/lib"
-          export CPPFLAGS="-I/opt/homebrew/Cellar/unixodbc/$unixodbc_version/include"
-
       - name: Download memgraph binaries
         run: |
           curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11/memgraph_${MEMGRAPH_VERSION}-1_amd64.deb > memgraph-amd64.deb
