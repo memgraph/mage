@@ -1,4 +1,4 @@
 [submodule "cpp/memgraph"]
 	path = cpp/memgraph
 	url = https://github.com/memgraph/memgraph.git
-	branch = mgp-add-any-type
+	branch = master

@@ -91,7 +91,7 @@ ExternalProject_Add(mgclient-proj
   PREFIX ${MGCLIENT_ROOT}
   INSTALL_DIR ${MGCLIENT_ROOT}
   GIT_REPOSITORY https://github.com/memgraph/mgclient.git
-  GIT_TAG T634-FL-add-column-names-to-cpp-client
+  GIT_TAG v1.4.2
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
   "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
   "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
@@ -142,4 +142,5 @@ add_subdirectory(graph_util_module)
 add_subdirectory(node_similarity_module)
 add_subdirectory(distance_calculator)
 add_subdirectory(do_module)
+add_subdirectory(periodic_module)
 add_cugraph_subdirectory(cugraph_module)
