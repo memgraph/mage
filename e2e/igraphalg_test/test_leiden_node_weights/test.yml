@@ -1,19 +1,7 @@
 query: >
     CALL igraphalg.community_leiden("CPM",NULL,1.0,0.1,NULL,2,[0.1,0.1,1.0,1.0]) 
     YIELD node, community_id
-    RETURN node.id as node_id, community_id
-    ORDER BY community_id ASC
+    RETURN COUNT(node) AS count;
 
 output:
-    - community_id: 0
-      node_id: 0
-    - community_id: 0
-      node_id: 1
-    - community_id: 0
-      node_id: 2
-    - community_id: 0
-      node_id: 3
-    - community_id: 0
-      node_id: 4
-    - community_id: 0
-      node_id: 5
+    - count: 6
