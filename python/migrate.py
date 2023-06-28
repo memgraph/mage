@@ -106,7 +106,7 @@ def init_migrate_sql_server(
     global sql_server_dict
 
     if params:
-        _check_params_type(params)
+        _check_params_type(params, (list, tuple))
     else:
         params = []
 
@@ -287,8 +287,8 @@ def _name_row_cells(row_cells, column_names) -> Dict[str, Any]:
     return dict(map(lambda column, value: (column, value), column_names, row_cells))
 
 
-def _check_params_type(params: Any) -> None:
-    if not isinstance(params, (dict, list, tuple)):
+def _check_params_type(params: Any, types=(dict, list, tuple)) -> None:
+    if not isinstance(params, types):
         raise TypeError(
             "Database query parameter values must be passed in a container of type List[Any] or Map if supported."
         )
