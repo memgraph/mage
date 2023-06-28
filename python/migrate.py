@@ -5,7 +5,7 @@ import oracledb
 import pyodbc
 import threading
 
-from typing import Dict, Any, List
+from typing import Any, Dict
 
 
 class Constants:
@@ -15,39 +15,6 @@ class Constants:
     CONNECTION = "connection"
     BATCH_SIZE = 1000
 
-
-def _query_is_table(table_or_sql: str) -> bool:
-    return len(table_or_sql.split()) == 1
-
-
-def _load_config(path: str) -> Dict[str, Any]:
-    try:
-        with open(path, mode="r") as config:
-            return json.load(config)
-    except Exception:
-        raise OSError("Could not open/read file.")
-
-
-def _combine_config(config: mgp.Map, config_path: str) -> Dict[str, Any]:
-    assert len(config_path), "Path must not be empty"
-    config_items = _load_config(path=config_path)
-    print(config, config_items)
-
-    for key, value in config_items.items():
-        config[key] = value
-    print(config, config_items)
-    return config
-
-
-def _name_row_cells(row_cells, column_names) -> Dict[str, Any]:
-    return dict(map(lambda column, value: (column, value), column_names, row_cells))
-
-
-def _check_params_type(params: Any) -> None:
-    if not not isinstance(params, (dict, list, tuple)):
-        raise TypeError(
-            "MySQL query parameter values must be passed in a container of type List[Any] or Map."
-        )
 
 
 ##### MYSQL
@@ -65,7 +32,6 @@ def init_migrate_mysql(
 
     if params:
         _check_params_type(params)
-    print(config, config_path)
     if len(config_path) > 0:
         config = _combine_config(config=config, config_path=config_path)
 
@@ -110,11 +76,10 @@ def mysql(
     global mysql_dict
     cursor = mysql_dict[threading.get_native_id][Constants.CURSOR]
     column_names = mysql_dict[threading.get_native_id][Constants.COLUMN_NAMES]
-    results = []
+    
     rows = cursor.fetchmany(Constants.BATCH_SIZE)
-    for row in rows:
-        results.append(mgp.Record(row=_name_row_cells(row, column_names)))
-    return results
+    
+    return [mgp.Record(row=_name_row_cells(row, column_names)) for row in rows]
 
 
 def cleanup_migrate_mysql():
@@ -191,11 +156,9 @@ def sql_server(
 
     cursor = sql_server_dict[threading.get_native_id][Constants.CURSOR]
     column_names = sql_server_dict[threading.get_native_id][Constants.COLUMN_NAMES]
-    results = []
     rows = cursor.fetchmany(Constants.BATCH_SIZE)
-    for row in rows:
-        results.append(mgp.Record(row=_name_row_cells(row, column_names)))
-    return results
+    
+    return [mgp.Record(row=_name_row_cells(row, column_names)) for row in rows]
 
 
 def cleanup_migrate_sql_server():
@@ -283,11 +246,9 @@ def oracle_db(
     global oracle_db_dict
     cursor = oracle_db_dict[threading.get_native_id][Constants.CURSOR]
     column_names = oracle_db_dict[threading.get_native_id][Constants.COLUMN_NAMES]
-    results = []
     rows = cursor.fetchmany(Constants.BATCH_SIZE)
-    for row in rows:
-        results.append(mgp.Record(row=_name_row_cells(row, column_names)))
-    return results
+
+    return [mgp.Record(row=_name_row_cells(row, column_names)) for row in rows]
 
 
 def cleanup_migrate_oracle_db():
@@ -300,3 +261,35 @@ def cleanup_migrate_oracle_db():
 
 
 mgp.add_batch_read_proc(oracle_db, init_migrate_oracle_db, cleanup_migrate_oracle_db)
+
+
+def _query_is_table(table_or_sql: str) -> bool:
+    return len(table_or_sql.split()) == 1
+
+
+def _load_config(path: str) -> Dict[str, Any]:
+    try:
+        with open(path, mode="r") as config:
+            return json.load(config)
+    except Exception:
+        raise OSError("Could not open/read file.")
+
+
+def _combine_config(config: mgp.Map, config_path: str) -> Dict[str, Any]:
+    assert len(config_path), "Path must not be empty"
+    config_items = _load_config(path=config_path)
+
+    for key, value in config_items.items():
+        config[key] = value
+    return config
+
+
+def _name_row_cells(row_cells, column_names) -> Dict[str, Any]:
+    return dict(map(lambda column, value: (column, value), column_names, row_cells))
+
+
+def _check_params_type(params: Any) -> None:
+    if not not isinstance(params, (dict, list, tuple)):
+        raise TypeError(
+            "MySQL query parameter values must be passed in a container of type List[Any] or Map."
+        )
