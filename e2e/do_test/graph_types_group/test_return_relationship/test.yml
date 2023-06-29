@@ -4,5 +4,5 @@ query: >
     YIELD value
     RETURN type(value.e) as relationship;
 
-output:
-    - relationship: "RELATIONSHIP"
+exception:
+    Returning relationships in do procedures not yet supported.
