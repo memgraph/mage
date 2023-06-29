@@ -1,26 +1,28 @@
+#include <string_view>
+
 #include <fmt/core.h>
 #include <mgp.hpp>
 
 #include "mgclient.hpp"
 
-const char *kProcedureCase = "case";
-const char *kArgumentConditionals = "conditionals";
-const char *kArgumentElseQuery = "else_query";
-const char *kArgumentParams = "params";
+constexpr std::string_view kProcedureCase = "case";
+constexpr std::string_view kArgumentConditionals = "conditionals";
+constexpr std::string_view kArgumentElseQuery = "else_query";
+constexpr std::string_view kArgumentParams = "params";
 
-const char *kProcedureWhen = "when";
-const char *kArgumentCondition = "condition";
-const char *kArgumentIfQuery = "if_query";
+constexpr std::string_view kProcedureWhen = "when";
+constexpr std::string_view kArgumentCondition = "condition";
+constexpr std::string_view kArgumentIfQuery = "if_query";
 
-const char *kReturnValue = "value";
+constexpr std::string_view kReturnValue = "value";
 
-const char *kMgHost = "MG_HOST";
-const char *kMgPort = "MG_PORT";
-const char *kMgUsername = "MG_USERNAME";
-const char *kMgPassword = "MG_PASSWORD";
+constexpr std::string_view kMgHost = "MG_HOST";
+constexpr std::string_view kMgPort = "MG_PORT";
+constexpr std::string_view kMgUsername = "MG_USERNAME";
+constexpr std::string_view kMgPassword = "MG_PASSWORD";
 
-const char *kDefaultHost = "localhost";
-const uint16_t kDefaultPort = 7687;
+constexpr std::string_view kDefaultHost = "localhost";
+constexpr uint16_t kDefaultPort = 7687;
 
 const std::vector<std::string_view> kGlobalOperations = {"CREATE INDEX ON",
                                                          "DROP INDEX ON",
@@ -44,19 +46,22 @@ struct QueryResults {
 ParamNames ExtractParamNames(const mgp::Map &parameters) {
   ParamNames res;
   for (const auto &map_item : parameters) {
-    if (map_item.value.IsNode()) {
-      res.node_names.push_back(std::string(map_item.key));
-    } else if (map_item.value.IsRelationship()) {
-      res.relationship_names.push_back(std::string(map_item.key));
-    } else {
-      res.primitive_names.push_back(std::string(map_item.key));
+    switch (map_item.value.Type()) {
+      case mgp::Type::Node:
+        res.node_names.emplace_back(map_item.key);
+        break;
+      case mgp::Type::Relationship:
+        res.relationship_names.emplace_back(map_item.key);
+        break;
+      default:
+        res.primitive_names.emplace_back(map_item.key);
     }
   }
 
   return res;
 }
 
-std::string Join(std::vector<std::string> &strings, const std::string &delimiter) {
+std::string Join(std::vector<std::string> const &strings, std::string_view delimiter) {
   if (!strings.size()) {
     return "";
   }
@@ -69,19 +74,21 @@ std::string Join(std::vector<std::string> &strings, const std::string &delimiter
   std::string joined_strings;
   joined_strings.reserve(joined_strings_size + delimiter.size() * (strings.size() - 1));
 
+  joined_strings += std::move(strings[0]);
   for (size_t i = 1; i < strings.size(); i++) {
-    joined_strings += delimiter + strings[i];
+    joined_strings += delimiter;
+    joined_strings += std::move(strings[i]);
   }
 
   return joined_strings;
 }
 
 std::string GetGraphFirstClassEntityAlias(const std::string &entity_name) {
-  return fmt::format("${} AS __{}_id", entity_name, entity_name);
+  return fmt::format("${0} AS __{0}_id", entity_name);
 }
 
 std::string GetPrimitiveEntityAlias(const std::string &primitive_name) {
-  return fmt::format("${} AS {}", primitive_name, primitive_name);
+  return fmt::format("${0} AS {0}", primitive_name);
 }
 
 std::string ConstructWithStatement(const ParamNames &names) {
@@ -96,19 +103,19 @@ std::string ConstructWithStatement(const ParamNames &names) {
     with_entity_vector.emplace_back(GetPrimitiveEntityAlias(prim_name));
   }
 
-  return fmt::format("WITH {}", Join(with_entity_vector, ", "));
+  return fmt::format("WITH {}", Join(std::move(with_entity_vector), ", "));
 }
 
 std::string ConstructMatchingNodeById(const std::string &node_name) {
-  return fmt::format("MATCH ({}) WHERE ID({}) = __{}_id", node_name, node_name, node_name);
+  return fmt::format("MATCH ({0}) WHERE ID({0}) = __{0}_id", node_name);
 }
 
 std::string ConstructMatchingRelationshipById(const std::string &rel_name) {
-  return fmt::format("MATCH ()-[{}]->() WHERE ID({}) = __{}_id", rel_name, rel_name, rel_name);
+  return fmt::format("MATCH ()-[{0}]->() WHERE ID({0}) = __{0}_id", rel_name);
 }
 
 std::string ConstructMatchGraphEntitiesById(const ParamNames &names) {
-  std::string match_string = "";
+  std::string match_string{""};
   std::vector<std::string> match_by_id_vector;
   for (const auto &node_name : names.node_names) {
     match_by_id_vector.emplace_back(ConstructMatchingNodeById(node_name));
@@ -149,21 +156,30 @@ mg::Map ConstructParams(const ParamNames &param_names, const mgp::Map &parameter
   mg::Map new_params{parameters.Size()};
 
   for (const auto &map_item : parameters) {
-    if (map_item.value.IsNode()) {
-      new_params.Insert(map_item.key, mg::Value(static_cast<int64_t>(map_item.value.ValueNode().Id().AsInt())));
-    } else if (map_item.value.IsRelationship()) {
-      new_params.Insert(map_item.key, mg::Value(static_cast<int64_t>(map_item.value.ValueRelationship().Id().AsInt())));
-    } else if (map_item.value.IsBool()) {
-      new_params.Insert(map_item.key, mg::Value(map_item.value.ValueBool()));
-    } else if (map_item.value.IsString()) {
-      new_params.Insert(map_item.key, mg::Value(map_item.value.ValueString()));
-    } else if (map_item.value.IsInt()) {
-      new_params.Insert(map_item.key, mg::Value(map_item.value.ValueInt()));
-    } else if (map_item.value.IsDouble()) {
-      new_params.Insert(map_item.key, mg::Value(map_item.value.ValueDouble()));
-    } else {
-      // Temporal types and paths not yet supported
-      throw std::runtime_error("Can't parse some of the arguments!");
+    switch (map_item.value.Type()) {
+      case mgp::Type::Node:
+        new_params.Insert(map_item.key, mg::Value(static_cast<int64_t>(map_item.value.ValueNode().Id().AsInt())));
+        break;
+      case mgp::Type::Relationship:
+        new_params.Insert(map_item.key,
+                          mg::Value(static_cast<int64_t>(map_item.value.ValueRelationship().Id().AsInt())));
+        break;
+      case mgp::Type::Bool:
+        new_params.Insert(map_item.key, mg::Value(map_item.value.ValueBool()));
+        break;
+      case mgp::Type::String:
+        new_params.Insert(map_item.key, mg::Value(map_item.value.ValueString()));
+        break;
+      case mgp::Type::Int:
+        new_params.Insert(map_item.key, mg::Value(map_item.value.ValueInt()));
+        break;
+      case mgp::Type::Double:
+        new_params.Insert(map_item.key, mg::Value(map_item.value.ValueDouble()));
+        break;
+      default:
+        // Temporal types and paths not yet supported
+        throw std::runtime_error("Can't parse some of the arguments!");
+        break;
     }
   }
 
@@ -171,27 +187,27 @@ mg::Map ConstructParams(const ParamNames &param_names, const mgp::Map &parameter
 }
 
 mg::Client::Params GetClientParams() {
-  auto *host = kDefaultHost;
+  auto host = std::string(kDefaultHost);
   auto port = kDefaultPort;
   auto *username = "";
   auto *password = "";
 
-  auto *maybe_host = std::getenv(kMgHost);
+  auto *maybe_host = std::getenv(std::string(kMgHost).c_str());
   if (maybe_host) {
     host = std::move(maybe_host);
   }
 
-  const auto *maybe_port = std::getenv(kMgPort);
+  const auto *maybe_port = std::getenv(std::string(kMgPort).c_str());
   if (maybe_port) {
     port = static_cast<uint16_t>(std::move(*maybe_port));
   }
 
-  const auto *maybe_username = std::getenv(kMgUsername);
+  const auto *maybe_username = std::getenv(std::string(kMgUsername).c_str());
   if (maybe_username) {
     username = std::move(maybe_username);
   }
 
-  const auto *maybe_password = std::getenv(kMgPassword);
+  const auto *maybe_password = std::getenv(std::string(kMgPassword).c_str());
   if (maybe_password) {
     password = std::move(maybe_password);
   }
@@ -248,33 +264,42 @@ void InsertConditionalResults(const mgp::RecordFactory &record_factory, const Qu
       const auto &result = row[i];
       const auto &column = query_results.columns[i];
 
-      if (result.type() == mg::Value::Type::Bool) {
-        result_map.Insert(column, mgp::Value(result.ValueBool()));
-      } else if (result.type() == mg::Value::Type::String) {
-        auto string_value = mgp::Value(std::string(result.ValueString()));
-        result_map.Insert(column, string_value);
-      } else if (result.type() == mg::Value::Type::Int) {
-        result_map.Insert(column, mgp::Value(result.ValueInt()));
-      } else if (result.type() == mg::Value::Type::Double) {
-        result_map.Insert(column, mgp::Value(result.ValueDouble()));
-      } else if (result.type() == mg::Value::Type::Node) {
-        throw std::runtime_error("Returning nodes in do procedures not yet supported.");
-      } else if (result.type() == mg::Value::Type::Relationship) {
-        throw std::runtime_error("Returning relationships in do procedures not yet supported.");
-      } else if (result.type() == mg::Value::Type::Path) {
-        throw std::runtime_error("Returning paths in do procedures not yet supported.");
-      } else {
-        throw std::runtime_error(
-            fmt::format("Returning type in column {} in do procedures not yet supported!", column));
+      switch (result.type()) {
+        case mg::Value::Type::Bool:
+          result_map.Insert(column, mgp::Value(result.ValueBool()));
+          break;
+        case mg::Value::Type::String: {
+          auto string_value = mgp::Value(std::string(result.ValueString()));
+          result_map.Insert(column, string_value);
+          break;
+        }
+        case mg::Value::Type::Int:
+          result_map.Insert(column, mgp::Value(result.ValueInt()));
+          break;
+        case mg::Value::Type::Double:
+          result_map.Insert(column, mgp::Value(result.ValueDouble()));
+          break;
+        case mg::Value::Type::Node:
+          throw std::runtime_error("Returning nodes in do procedures not yet supported.");
+          break;
+        case mg::Value::Type::Relationship:
+          throw std::runtime_error("Returning relationships in do procedures not yet supported.");
+          break;
+        case mg::Value::Type::Path:
+          throw std::runtime_error("Returning paths in do procedures not yet supported.");
+          break;
+        default:
+          throw std::runtime_error(
+              fmt::format("Returning type in column {} in do procedures not yet supported!", column));
       }
     }
 
     auto record = record_factory.NewRecord();
-    record.Insert(kReturnValue, result_map);
+    record.Insert(std::string(kReturnValue).c_str(), result_map);
   }
 }
 
-bool IsGlobalOperation(const std::string_view &query) {
+bool IsGlobalOperation(std::string_view query) {
   for (const auto &global_op : kGlobalOperations) {
     if (query.starts_with(global_op)) {
       return true;
@@ -289,8 +314,7 @@ void When(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_mem
   const auto arguments = mgp::List(args);
   const auto condition = arguments[0].ValueBool();
 
-  const auto query_to_execute =
-      condition ? std::string(arguments[1].ValueString()) : std::string(arguments[2].ValueString());
+  const auto &query_to_execute = std::string(arguments[condition ? 1 : 2].ValueString());
   const auto params = arguments[3].ValueMap();
 
   const auto record_factory = mgp::RecordFactory(result);
