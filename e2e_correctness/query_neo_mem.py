@@ -1,8 +1,27 @@
+"""
+This module queries Memgraph and Neo4j and creates Graph from JSON exported from Memgraph and 
+JSON from APOC from Neo4j
+
+As of 17.7.2023. when importing data via Cypherl, new ids is given to each node in Memgraph and Neo4j.
+
+When exporting data Memgraph export_util uses internal Memgraph ids to export data. 
+
+To overcome issue of different ids between Neo4j and Memgraph, we use ids on properties.
+
+Workaround would be to add API to create nodes by ids on Memgraph when importing via import_util.
+"""
+
+import gqlalchemy
+import json
+import logging
 import neo4j
 import re
-import json
-import gqlalchemy
+
 from typing import Any, Dict, List
+
+logging.basicConfig(format='%(asctime)-15s [%(levelname)s]: %(message)s')
+logger = logging.getLogger('query_neo_mem')
+logger.setLevel(logging.DEBUG)
 
 class Vertex:
     def __init__(self, id:int, labels:List[str], properties: Dict[str, Any]):
@@ -14,24 +33,25 @@ class Vertex:
     @property
     def id(self)->int:
         return self._id
+    
     def __str__(self) -> str:
         return f"Vertex: {self._id}, {self._labels}, {self._properties}"
+    
     def __eq__(self, other):
-        assert isinstance(other, Vertex)
-        print(f'comparing Vertex with {self._id} to {other._id}')
-        # Return True if self and other have the same length
+        assert isinstance(other, Vertex), f"Comparing vertex with object of type {type(other)}"
+        logger.debug(f'comparing Vertex with {self._id} to {other._id}')
         if self._id != other._id:
-            print("_id different")
+            logger.debug(f"_id different: {self._id} vs {other._id}")
             return False
         if self._labels != other._labels:
-            print("_labels different")
+            logger.debug(f"_labels different between {self._id} and {other._id}: {self._labels} vs {other._labels}")
             return False
         for k,v in self._properties.items():
             if k not in other._properties:
-                print(f"{k} not in {other._properties.keys()}")
+                logger.debug(f"Property with key {k} not in {other._properties.keys()}")
                 return False
-            if v!= other._properties[k]:
-                print(f"{v} not equal to {other._properties[k]}")
+            if v != other._properties[k]:
+                logger.debug(f"Value {v} not equal to {other._properties[k]}")
                 return False
         return True
 
@@ -51,20 +71,25 @@ class Edge:
         return self._to_vertex
     
     def __eq__(self, other):
-        assert isinstance(other, Edge)
-        print(f'comparing Edge ({self._from_vertex}, {self._to_vertex}) to\
+        assert isinstance(other, Edge), f"Comparing Edge with object of type: {type(other)}"
+        logger.debug(f'comparing Edge ({self._from_vertex}, {self._to_vertex}) to\
               ({other._from_vertex, other._to_vertex})')
         # Return True if self and other have the same length
         if self._from_vertex != other._from_vertex:
+            logger.debug(f"From vertex is different {self._from_vertex} <> {other._from_vertex}")
             return False
         if self._to_vertex != other._to_vertex:
+            logger.debug(f"From vertex is different {self._to_vertex} <> {other._to_vertex}")
             return False
         if self._label != other._label:
+            logger.debug(f"Label is different {self._label} <> {other._label}")
             return False
         for k,v in self._properties.items():
             if k not in other._properties:
+                logger.debug(f"Property with key {k} not in {other._properties.keys()}")
                 return False
             if v!= other._properties[k]:
+                logger.debug(f"Value {v} not equal to {other._properties[k]}")
                 return False
         return True
 
@@ -91,10 +116,8 @@ def get_neo4j_data_json(driver) -> str:
         query = neo4j.Query("CALL apoc.export.json.all(null,{useTypes:true, stream:true}) YIELD data RETURN data;")
         result = session.run(query).values()
         
-    
         res_str = re.sub(r"\\n", ",\n", str(result[0]))
         res_str = re.sub(r"'", "", res_str)
-            
 
         return  json.loads(res_str)
 
@@ -109,41 +132,51 @@ def get_memgraph_data_json_format(memgraph: gqlalchemy.Memgraph):
     )[0]["stream"]
     return json.loads(result)
 
+def extract_vertex_from_json(item) -> Vertex:
+    assert item["properties"]["id"] is not None, "Vertex in JSON doesn't have ID property"
+    return Vertex(item["properties"]["id"], item["labels"], item["properties"])
    
+def create_edge_from_data(from_vertex_id:int, to_vertex_id:int, item) -> Edge:
+    return Edge(from_vertex_id, to_vertex_id, item["label"], item["properties"])
+
 def create_graph_memgraph_json(json_memgraph_data)->Graph:
-    print(json_memgraph_data)
+    
+    logger.debug(f"Memgraph json data {json_memgraph_data}")
     graph = Graph()
-    vertices_mapings = {}
+    vertices_id_mapings = {}
     for item in json_memgraph_data:
         if item["type"] == "node":
-            print(item)
-            assert item["properties"]["id"] is not None, "Vertex doesn't have ID property"
-            graph.add_vertex(Vertex(item["properties"]["id"], item["labels"], item["properties"]))
-            vertices_mapings[item["id"]] = item["properties"]["id"]
+            graph.add_vertex(extract_vertex_from_json(item))
+            vertices_id_mapings[item["id"]] = item["properties"]["id"]
         else:
-            from_vertex_id = vertices_mapings[item["start"]]
-            to_vertex_id = vertices_mapings[item["end"]]
-            graph.add_edge(Edge(from_vertex_id, to_vertex_id, item["label"], item["properties"]))
+            graph.add_edge(
+                create_edge_from_data(
+                    vertices_id_mapings[item["start"]],
+                    vertices_id_mapings[item["end"]],
+                    item
+                )
+            )
 
     graph.vertices.sort(key=lambda vertex: vertex.id)
     graph.edges.sort(key = lambda edge: (edge.from_vertex, edge.to_vertex))
     return graph
 
 def create_graph_neo4j_json(json_neo4j_data) -> Graph:
-    print(json_neo4j_data)
+    logger.debug(f"Memgraph json data {json_neo4j_data}")
     graph = Graph()
-    vertices_mapings = {}
-
+    vertices_id_mapings = {}
     for item in json_neo4j_data:
         if item["type"] == "node":
-            print(item)
-            assert item["properties"]["id"] is not None, "Vertex doesn't have ID property"
-            vertices_mapings[item["id"]] = item["properties"]["id"]
-            graph.add_vertex(Vertex(item["properties"]["id"],item["labels"], item["properties"]))
+            graph.add_vertex(extract_vertex_from_json(item))
+            vertices_id_mapings[item["id"]] = item["properties"]["id"]
         else:
-            from_vertex_id = vertices_mapings[item["start"]["id"]]
-            to_vertex_id = vertices_mapings[item["end"]["id"]]
-            graph.add_edge(Edge(from_vertex_id, to_vertex_id, item["label"], item["properties"]))
+            graph.add_edge(
+                create_edge_from_data(
+                    vertices_id_mapings[item["start"]["id"]],
+                    vertices_id_mapings[item["end"]["id"]],
+                           item
+                    )
+                )
     graph.vertices.sort(key=lambda vertex: vertex.id)
     graph.edges.sort(key = lambda edge: (edge.from_vertex, edge.to_vertex))
     return graph
@@ -159,14 +192,14 @@ def create_memgraph_db(port:int) -> gqlalchemy.Memgraph:
 
 def mg_execute_cyphers(input_cyphers: List[str], db: gqlalchemy.Memgraph):
     """
-    Execute commands against Memgraph
+    Execute multiple cypher queries against Memgraph
     """
     for query in input_cyphers:
         db.execute(query)
 
 def neo4j_execute_cyphers(input_cyphers: List[str], neo4j_driver: neo4j.BoltDriver):
     """
-    Execute commands against Neo4j
+    Execute multiple cypher queries against Neo4j
     """
     with neo4j_driver.session() as session:
         for text_query in input_cyphers:
@@ -175,13 +208,13 @@ def neo4j_execute_cyphers(input_cyphers: List[str], neo4j_driver: neo4j.BoltDriv
 
 def run_memgraph_query(query: str, db: gqlalchemy.Memgraph):
     """
-    Execute command against Memgraph
+    Execute query against Memgraph
     """
     db.execute(query)
 
 def run_neo4j_query(query: str, neo4j_driver: neo4j.BoltDriver):
     """
-    Execute command against Neo4j
+    Execute query against Neo4j
     """
     with neo4j_driver.session() as session:
         query = neo4j.Query(query)
@@ -196,12 +229,14 @@ def clean_neo4j_db(neo4j_db: neo4j.BoltDriver):
         session.run(query).values()
 
 def mg_get_graph(memgraph_db: gqlalchemy.Memgraph) -> Graph:
-    print("getting data from memgraph")
+    logger.debug("Getting data from Memgraph")
     json_data = get_memgraph_data_json_format(memgraph_db)
-    print("memgraph json data", json_data)
+    logger.debug("Creating graph from Memgraph JSON data")
     return create_graph_memgraph_json(json_data)
 
 def neo4j_get_graph(neo4j_driver: neo4j.BoltDriver) -> Graph:
+    logger.debug("Getting data from Neo4j")
     json_data = get_neo4j_data_json(neo4j_driver)
-    print("neo4j json data", json_data)
+    logger.debug("Creating graph from Neo4j JSON data")
+
     return create_graph_neo4j_json(json_data)

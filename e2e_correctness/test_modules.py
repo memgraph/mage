@@ -11,11 +11,11 @@ from gqlalchemy import Memgraph, Node
 
 import logging
 import neo4j
-from docker_handler import remove_container, start_memgraph_mage_container, start_neo4j_apoc_container, stop_container
+from docker_handler import start_memgraph_mage_container, start_neo4j_apoc_container, stop_container
 from query_neo_mem import Graph, clean_memgraph_db, clean_neo4j_db, create_memgraph_db, create_neo4j_driver, mg_execute_cyphers, mg_get_graph, neo4j_execute_cyphers, neo4j_get_graph, run_memgraph_query, run_neo4j_query
 
 logging.basicConfig(format='%(asctime)-15s [%(levelname)s]: %(message)s')
-logger = logging.getLogger('play_handler')
+logger = logging.getLogger('e2e_correctness')
 logger.setLevel(logging.INFO)
 
 
@@ -38,6 +38,18 @@ class TestConstants:
     MEMGRAPH_QUERY = "memgraph_query"
     NEO4J_QUERY = "neo4j_query"
 
+class ConfigConstants:
+    NEO4J_PORT = 7688
+    MEMGRAPH_PORT = 7687
+    NEO4J_CONTAINER_NAME = "test_neo4j_apoc"
+    MEMGRAPH_CONTAINER_NAME = "test_memgraph_mage"
+
+    NEO4J_IMAGE_NAME = "neo4j:latest"
+    MEMGRAPH_IMAGE_NAME = "memgraph-mage:test"
+
+    NEO4J_CONTAINER_ID = None
+    MEMGRAPH_CONTAINER_ID = None
+
 def _node_to_dict(data):
     labels = data.labels if hasattr(data, "labels") else data._labels
     properties = data.properties if hasattr(data, "properties") else data._properties
@@ -55,7 +67,7 @@ def _replace(data, match_classes):
         return _node_to_dict(data) if isinstance(data, match_classes) else data
 
 
-def prepare_tests():
+def get_all_tests():
     """
     Fetch all the tests in the testing folders, and prepare them for execution
     """
@@ -96,7 +108,7 @@ def prepare_tests():
     return tests
 
 
-tests = prepare_tests()
+tests = get_all_tests()
 
 
 def _load_yaml(path: Path) -> Dict:
@@ -183,30 +195,23 @@ def cleanup_container(container_name:str, container_id:str) -> None:
 #@pytest.mark.parametrize("test_dir", tests)
 #def test(tests):
 def main():
-    neo4j_port = 7688
-    memgraph_port = 7687
-    neo4j_container_name = "test_neo4j_apoc"
-    memgraph_mage_container_name = "test_memgraph_mage"
-
-    neo4j_image_name = "neo4j:latest"
-    memgraph_mage_image_name = "memgraph-mage:test"
-
-    neo4j_container_id = None
-    memgraph_container_id = None
+    
     try:
         
-        neo4j_container_id = start_neo4j_apoc_container(image_name=neo4j_image_name, 
-                                                    port=neo4j_port, 
-                                                    container_name=neo4j_container_name)
+        neo4j_container_id = start_neo4j_apoc_container(
+                                                    image_name=ConfigConstants.NEO4J_IMAGE_NAME, 
+                                                    port=ConfigConstants.NEO4J_PORT, 
+                                                    container_name=ConfigConstants.NEO4J_CONTAINER_NAME)
     except Exception as e:
         print(e)
         if neo4j_container_id is not None:
             cleanup_container(neo4j_container_id)
 
     try:
-        memgraph_container_id = start_memgraph_mage_container(image_name=memgraph_mage_image_name,
-                                                          container_name=memgraph_mage_container_name,
-                                                          port=memgraph_port)
+        memgraph_container_id = start_memgraph_mage_container(
+                                                        image_name=ConfigConstants.MEMGRAPH_IMAGE_NAME,
+                                                        container_name=ConfigConstants.MEMGRAPH_CONTAINER_NAME,
+                                                        port=ConfigConstants.MEMGRAPH_PORT)
     except Exception as e:
         print(e)
         if memgraph_container_id is not None:
@@ -217,22 +222,17 @@ def main():
     logger.info(f"Memgraph container id: {memgraph_container_id}")
 
     
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
-        if sock.connect_ex(("localhost", 7687)) == 0:
-            print("Port is open")
-        else:
-            print("Port is not open")
+    logger.info("Waiting for Memgraph to boot up")
+    # TODO(antoniofilipovic) find better workaround than waiting 10 sec to be sure 
+    # Memgraph container is up and running
     sleep(10)
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
-        if sock.connect_ex(("localhost", 7687)) == 0:
-            print("Port is open")
-        else:
-            print("Port is not open")
+
+
     try: 
 
-        neo4j_driver = create_neo4j_driver(neo4j_port)
+        neo4j_driver = create_neo4j_driver(ConfigConstants.NEO4J_PORT)
         logger.info("Created neo4j driver")
-        memgraph_db = create_memgraph_db(memgraph_port)
+        memgraph_db = create_memgraph_db(ConfigConstants.MEMGRAPH_PORT)
         logger.info("Created Memgraph connection")
 
         for test in tests:
@@ -243,8 +243,8 @@ def main():
     except Exception as e:
         print(e)
     finally:
-        cleanup_container(neo4j_container_name, neo4j_container_id)
-        cleanup_container(memgraph_mage_container_name, memgraph_container_id)
+        cleanup_container(ConfigConstants.NEO4J_CONTAINER_NAME, neo4j_container_id)
+        cleanup_container(ConfigConstants.MEMGRAPH_CONTAINER_NAME, memgraph_container_id)
  
 
 if __name__ == "__main__":
