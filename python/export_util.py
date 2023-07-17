@@ -131,6 +131,47 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
     return mgp.Record()
 
 
+@mgp.read_proc
+def json_stream(ctx: mgp.ProcCtx) -> mgp.Record(stream=str):
+    """
+    Procedure to export the whole database to a stream.
+    """
+    nodes = list()
+    relationships = list()
+    graph = list()
+
+    for vertex in ctx.graph.vertices:
+        labels = [label.name for label in vertex.labels]
+        properties = {
+            key: convert_to_isoformat(vertex.properties.get(key))
+            for key in vertex.properties.keys()
+        }
+
+        nodes.append(Node(vertex.id, labels, properties).get_dict())
+
+        for edge in vertex.out_edges:
+            properties = {
+                key: convert_to_isoformat(edge.properties.get(key))
+                for key in edge.properties.keys()
+            }
+
+            relationships.append(
+                Relationship(
+                    edge.to_vertex.id,
+                    edge.id,
+                    edge.type.name,
+                    properties,
+                    edge.from_vertex.id,
+                ).get_dict()
+            )
+
+        graph = nodes + relationships
+
+    res_str = js.dumps(graph)
+
+    return mgp.Record(stream=res_str)
+
+
 def save_file(file_path: str, data_list: list):
     try:
         with open(
