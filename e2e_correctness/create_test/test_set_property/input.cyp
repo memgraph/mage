@@ -1,0 +1,11 @@
+CREATE (:Label {id:0});
+CREATE (:Label {id:1});
+CREATE (:Label {id:2,prop:"property"});
+CREATE (:Label {id:3,prop:"property"});
+CREATE (:Label {id:4,prop:"property"});
+CREATE (:Label {id:5,prop:"property"});
+CREATE (:Label {id:6,prop:"property"});
+CREATE (:Label {id:7,prop:"property"});
+CREATE (:Label {id:8,prop:"property"});
+CREATE (:Label {id:9,prop:"property"});
+CREATE (:Label {id:10,prop:"property"});
