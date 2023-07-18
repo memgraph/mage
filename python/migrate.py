@@ -45,7 +45,7 @@ def init_migrate_mysql(
 
     if mysql_dict[threading.get_native_id][Constants.CURSOR] is None:
         connection = mysql_connector.connect(**config)
-        cursor = connection.cursor(buffered=True)
+        cursor = connection.cursor()
         cursor.execute(table_or_sql, params=params)
 
         mysql_dict[threading.get_native_id][Constants.CONNECTION] = connection
@@ -125,7 +125,7 @@ def init_migrate_sql_server(
     if sql_server_dict[threading.get_native_id][Constants.CURSOR] is None:
         connection = pyodbc.connect(**config)
         cursor = connection.cursor()
-        cursor.execute(table_or_sql, params=params)
+        cursor.execute(table_or_sql, *params)
 
         sql_server_dict[threading.get_native_id][Constants.CONNECTION] = connection
         sql_server_dict[threading.get_native_id][Constants.CURSOR] = cursor
@@ -199,7 +199,9 @@ def init_migrate_oracle_db(
     # To prevent query execution from hanging
     if "disable_oob" not in config:
         config["disable_oob"] = True
-
+    else:
+        config["disable_oob"] = True #overwrite
+    
     if threading.get_native_id not in oracle_db_dict:
         oracle_db_dict[threading.get_native_id] = {}
 
@@ -208,8 +210,8 @@ def init_migrate_oracle_db(
 
     if oracle_db_dict[threading.get_native_id][Constants.CURSOR] is None:
         connection = oracledb.connect(**config)
-        cursor = connection.cursor(buffered=True)
-
+        cursor = connection.cursor()
+       
         if not params:
             cursor.execute(table_or_sql)
         elif isinstance(params, (list, tuple)):
