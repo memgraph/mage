@@ -1,4 +1,4 @@
 [submodule "cpp/memgraph"]
 	path = cpp/memgraph
 	url = https://github.com/memgraph/memgraph.git
-	branch = MG-fix-py-init-error-handling
+	branch = master
