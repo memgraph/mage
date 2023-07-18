@@ -191,7 +191,7 @@ def init_migrate_oracle_db(
         config = _combine_config(config=config, config_path=config_path)
 
     if _query_is_table(table_or_sql):
-        table_or_sql = f"SELECT * FROM {table_or_sql};"
+        table_or_sql = f"SELECT * FROM {table_or_sql}"
 
     if not config:
         config = {}
