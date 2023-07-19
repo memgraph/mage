@@ -2,7 +2,7 @@ from contextlib import closing
 import itertools
 import socket
 from time import sleep
-from typing import Dict, List
+from typing import Dict, List, Union
 import pytest
 import yaml
 
@@ -18,6 +18,8 @@ logging.basicConfig(format='%(asctime)-15s [%(levelname)s]: %(message)s')
 logger = logging.getLogger('e2e_correctness')
 logger.setLevel(logging.INFO)
 
+neo4j_container_id = None
+memgraph_container_id = None
 
 
 class TestConstants:
@@ -49,6 +51,44 @@ class ConfigConstants:
 
     NEO4J_CONTAINER_ID = None
     MEMGRAPH_CONTAINER_ID = None
+
+
+def optional_start_containers():
+    global neo4j_container_id, memgraph_container_id
+    if neo4j_container_id is not None and memgraph_container_id is not None:
+        return
+    
+    try:
+        
+        neo4j_container_id = start_neo4j_apoc_container(
+                                                    image_name=ConfigConstants.NEO4J_IMAGE_NAME, 
+                                                    port=ConfigConstants.NEO4J_PORT, 
+                                                    container_name=ConfigConstants.NEO4J_CONTAINER_NAME)
+    except Exception as e:
+        logger.error(e)
+        if neo4j_container_id is not None:
+            cleanup_container(neo4j_container_id)
+        neo4j_container_id = None
+        return
+
+    try:
+        memgraph_container_id = start_memgraph_mage_container(
+                                                        image_name=ConfigConstants.MEMGRAPH_IMAGE_NAME,
+                                                        container_name=ConfigConstants.MEMGRAPH_CONTAINER_NAME,
+                                                        port=ConfigConstants.MEMGRAPH_PORT)
+        #TODO(antoniofilipovic) figure out better way to check if memgraph started
+        sleep(10)
+    except Exception as e:
+        logger.error(e)
+        if memgraph_container_id is not None:
+            cleanup_container(memgraph_container_id)
+        memgraph_container_id = None
+        return
+
+    logger.info(f"Neo4j container id: {neo4j_container_id}")
+
+    logger.info(f"Memgraph container id: {memgraph_container_id}")
+
 
 def _node_to_dict(data):
     labels = data.labels if hasattr(data, "labels") else data._labels
@@ -91,20 +131,16 @@ def get_all_tests():
                         continue
 
                     tests.append(
-                    #    pytest.param
-                        
-                            test_dir, 
-                            #f"{module_test_dir.stem}-{test_or_group_dir.stem}-{test_dir.stem}",
-                        
+                        pytest.param(test_dir, 
+                            id=f"{module_test_dir.stem}-{test_or_group_dir.stem}-{test_dir.stem}",)
                     )
             else:
                 tests.append(
-                #    pytest.param(
-                    
+                    pytest.param(
                         test_or_group_dir,
-                        #f"{module_test_dir.stem}-{test_or_group_dir.stem}",
+                        id=f"{module_test_dir.stem}-{test_or_group_dir.stem}",
                     
-                )
+                    ))
     return tests
 
 
@@ -128,14 +164,19 @@ def _graphs_equal(memgraph_graph:Graph, neo4j_graph: Graph) -> bool:
 
     for i, mem_vertex in enumerate(memgraph_graph.vertices):
         neo_vertex = neo4j_graph.vertices[i]
-        assert mem_vertex == neo_vertex, f"Vertices are different.\
+        if mem_vertex != neo_vertex:
+            logger.debug(f"Vertices are different.\
             Neo4j vertex: {neo_vertex}\
-            Memgraph vertex: {mem_vertex}"
+            Memgraph vertex: {mem_vertex}")
+            return False
     for i, mem_edge in enumerate(memgraph_graph.edges):
         neo_edge = neo4j_graph.edges[i]
-        assert neo_edge == mem_edge, f"Edges are different.\
-            Neo4j edge: {neo_edge}\
-            Memgraph edge: {mem_edge}"  
+        if neo_edge != mem_edge:
+            logger.debug(f"Edges are different.\
+                Neo4j edge: {neo_edge}\
+                Memgraph edge: {mem_edge}") 
+            return False 
+    return True
     
 def _run_test(test_dir:str, memgraph_db: Memgraph, neo4j_driver: neo4j.BoltDriver):
     """
@@ -167,15 +208,40 @@ def _run_test(test_dir:str, memgraph_db: Memgraph, neo4j_driver: neo4j.BoltDrive
     
 
     assert _graphs_equal(mg_graph, neo4j_graph)
-       
+
+
+@pytest.fixture(scope='session', autouse=True)
+def memgraph_db():
+    memgraph_db = create_memgraph_db(ConfigConstants.MEMGRAPH_PORT)
+    logger.info("Created Memgraph connection")
+    
+    yield memgraph_db
+
+    cleanup_container(ConfigConstants.MEMGRAPH_CONTAINER_NAME, memgraph_container_id)
 
 
 
+@pytest.fixture(scope='session', autouse=True)
+def neo4j_driver():
+    neo4j_driver = create_neo4j_driver(ConfigConstants.NEO4J_PORT)
+    logger.info("Created neo4j driver")
+    yield neo4j_driver
 
+    cleanup_container(ConfigConstants.NEO4J_CONTAINER_NAME, neo4j_container_id)
+
+
+@pytest.mark.parametrize("test_dir", tests)
 def test_end2end(test_dir: Path, memgraph_db: Memgraph, neo4j_driver: neo4j.BoltDriver):
+    global neo4j_container_id, memgraph_container_id
+
+    optional_start_containers()
+
+    assert neo4j_container_id is not None and memgraph_container_id is not None, "Containers for Memgraph and Neo4j did not start"
+
+    logger.debug("Cleaning databases of Memgraph and Neo4j")
+
     clean_memgraph_db(memgraph_db)
     clean_neo4j_db(neo4j_driver)
-
 
     if test_dir.name.startswith(TestConstants.TEST_SUBDIR_PREFIX):
         _run_test(test_dir, memgraph_db, neo4j_driver)
@@ -186,66 +252,17 @@ def test_end2end(test_dir: Path, memgraph_db: Memgraph, neo4j_driver: neo4j.Bolt
     clean_memgraph_db(memgraph_db)
     clean_neo4j_db(neo4j_driver)
 
+
+def cleanup_containers() -> None:
+    global neo4j_container_id, memgraph_container_id
+
+    if neo4j_container_id:
+        cleanup_container(ConfigConstants.NEO4J_CONTAINER_NAME, neo4j_container_id)
+    if memgraph_container_id:
+        cleanup_container(ConfigConstants.MEMGRAPH_CONTAINER_NAME, memgraph_container_id)
+
+
 def cleanup_container(container_name:str, container_id:str) -> None:
     logger.info(f"Stopping {container_name} container with id: {container_id}")
     stop_container(container_id)
     logger.info(f"Stopped {container_name} container with id: {container_id}")
-
-
-#@pytest.mark.parametrize("test_dir", tests)
-#def test(tests):
-def main():
-    
-    try:
-        
-        neo4j_container_id = start_neo4j_apoc_container(
-                                                    image_name=ConfigConstants.NEO4J_IMAGE_NAME, 
-                                                    port=ConfigConstants.NEO4J_PORT, 
-                                                    container_name=ConfigConstants.NEO4J_CONTAINER_NAME)
-    except Exception as e:
-        print(e)
-        if neo4j_container_id is not None:
-            cleanup_container(neo4j_container_id)
-
-    try:
-        memgraph_container_id = start_memgraph_mage_container(
-                                                        image_name=ConfigConstants.MEMGRAPH_IMAGE_NAME,
-                                                        container_name=ConfigConstants.MEMGRAPH_CONTAINER_NAME,
-                                                        port=ConfigConstants.MEMGRAPH_PORT)
-    except Exception as e:
-        print(e)
-        if memgraph_container_id is not None:
-            cleanup_container(memgraph_container_id)
-
-    logger.info(f"Neo4j container id: {neo4j_container_id}")
-
-    logger.info(f"Memgraph container id: {memgraph_container_id}")
-
-    
-    logger.info("Waiting for Memgraph to boot up")
-    # TODO(antoniofilipovic) find better workaround than waiting 10 sec to be sure 
-    # Memgraph container is up and running
-    sleep(10)
-
-
-    try: 
-
-        neo4j_driver = create_neo4j_driver(ConfigConstants.NEO4J_PORT)
-        logger.info("Created neo4j driver")
-        memgraph_db = create_memgraph_db(ConfigConstants.MEMGRAPH_PORT)
-        logger.info("Created Memgraph connection")
-
-        for test in tests:
-            print(test)
-            logger.info(f"Testing {test}")
-            test_end2end(test, memgraph_db, neo4j_driver)
-            logger.info(f"Done testing {test}")
-    except Exception as e:
-        print(e)
-    finally:
-        cleanup_container(ConfigConstants.NEO4J_CONTAINER_NAME, neo4j_container_id)
-        cleanup_container(ConfigConstants.MEMGRAPH_CONTAINER_NAME, memgraph_container_id)
- 
-
-if __name__ == "__main__":
-    main()
