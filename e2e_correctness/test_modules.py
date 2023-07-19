@@ -18,8 +18,6 @@ logging.basicConfig(format='%(asctime)-15s [%(levelname)s]: %(message)s')
 logger = logging.getLogger('e2e_correctness')
 logger.setLevel(logging.INFO)
 
-neo4j_container_id = None
-memgraph_container_id = None
 
 
 class TestConstants:
@@ -49,15 +47,29 @@ class ConfigConstants:
     NEO4J_IMAGE_NAME = "neo4j:latest"
     MEMGRAPH_IMAGE_NAME = "memgraph-mage:test"
 
-    NEO4J_CONTAINER_ID = None
-    MEMGRAPH_CONTAINER_ID = None
 
 
-def optional_start_containers():
-    global neo4j_container_id, memgraph_container_id
-    if neo4j_container_id is not None and memgraph_container_id is not None:
-        return
-    
+def start_memgraph_container() -> Union[str, None]:
+    try:
+        memgraph_container_id = start_memgraph_mage_container(
+                                                        image_name=ConfigConstants.MEMGRAPH_IMAGE_NAME,
+                                                        container_name=ConfigConstants.MEMGRAPH_CONTAINER_NAME,
+                                                        port=ConfigConstants.MEMGRAPH_PORT)
+        #TODO(antoniofilipovic) figure out better way to check if memgraph started
+        #sleep(5)
+
+    except Exception as e:
+        logger.error(e)
+        if memgraph_container_id is not None:
+            cleanup_container(memgraph_container_id)
+        memgraph_container_id = None
+        return None
+
+    logger.info(f"Memgraph container id: {memgraph_container_id}")
+    return memgraph_container_id
+
+
+def start_neo4j_container() -> Union[str, None]:
     try:
         
         neo4j_container_id = start_neo4j_apoc_container(
@@ -71,23 +83,10 @@ def optional_start_containers():
         neo4j_container_id = None
         return
 
-    try:
-        memgraph_container_id = start_memgraph_mage_container(
-                                                        image_name=ConfigConstants.MEMGRAPH_IMAGE_NAME,
-                                                        container_name=ConfigConstants.MEMGRAPH_CONTAINER_NAME,
-                                                        port=ConfigConstants.MEMGRAPH_PORT)
-        #TODO(antoniofilipovic) figure out better way to check if memgraph started
-        sleep(10)
-    except Exception as e:
-        logger.error(e)
-        if memgraph_container_id is not None:
-            cleanup_container(memgraph_container_id)
-        memgraph_container_id = None
-        return
-
+    
     logger.info(f"Neo4j container id: {neo4j_container_id}")
 
-    logger.info(f"Memgraph container id: {memgraph_container_id}")
+    return neo4j_container_id
 
 
 def _node_to_dict(data):
@@ -187,7 +186,7 @@ def _run_test(test_dir:str, memgraph_db: Memgraph, neo4j_driver: neo4j.BoltDrive
     logger.info(f"Imported data into Memgraph from {input_cyphers}")
     neo4j_execute_cyphers(input_cyphers, neo4j_driver)
     logger.info(f"Imported data into Neo4j from {input_cyphers}")
-    sleep(2)
+    #sleep(2)
     
 
     test_dict = _load_yaml(test_dir.joinpath(TestConstants.TEST_FILE))
@@ -204,14 +203,22 @@ def _run_test(test_dir:str, memgraph_db: Memgraph, neo4j_driver: neo4j.BoltDrive
     mg_graph = mg_get_graph(memgraph_db)
     neo4j_graph = neo4j_get_graph(neo4j_driver)
 
+    assert _graphs_equal(mg_graph, neo4j_graph), "Graphs are not equal, check logs for more details"
 
-    
 
-    assert _graphs_equal(mg_graph, neo4j_graph)
+def get_memgraph_container()->str:
+    logger.info("Starting memgraph container")
+    memgraph_container_id = start_memgraph_container()
+    assert memgraph_container_id is not None, "Memgraph container failed to start"
 
+    return memgraph_container_id
+
+   
 
 @pytest.fixture(scope='session', autouse=True)
 def memgraph_db():
+    memgraph_container_id = get_memgraph_container()
+    assert memgraph_container_id, "Mem Container not started"
     memgraph_db = create_memgraph_db(ConfigConstants.MEMGRAPH_PORT)
     logger.info("Created Memgraph connection")
     
@@ -220,23 +227,35 @@ def memgraph_db():
     cleanup_container(ConfigConstants.MEMGRAPH_CONTAINER_NAME, memgraph_container_id)
 
 
+def get_neo4j_container()->str:
+    neo4j_container_id = start_neo4j_container()
+    logger.info("Starting neo4j container")
+
+    assert neo4j_container_id is not None, "Neo4j container failed to start"
+
+    return neo4j_container_id
+
+    
 
 @pytest.fixture(scope='session', autouse=True)
 def neo4j_driver():
+    neo4j_container_id = get_neo4j_container()
+    assert neo4j_container_id, "Neo4j container not started"
     neo4j_driver = create_neo4j_driver(ConfigConstants.NEO4J_PORT)
     logger.info("Created neo4j driver")
+
     yield neo4j_driver
 
     cleanup_container(ConfigConstants.NEO4J_CONTAINER_NAME, neo4j_container_id)
 
+@pytest.fixture(scope="session", autouse="True")
+def sleep_time():
+    sleep(10)
+    return True
 
 @pytest.mark.parametrize("test_dir", tests)
-def test_end2end(test_dir: Path, memgraph_db: Memgraph, neo4j_driver: neo4j.BoltDriver):
-    global neo4j_container_id, memgraph_container_id
-
-    optional_start_containers()
-
-    assert neo4j_container_id is not None and memgraph_container_id is not None, "Containers for Memgraph and Neo4j did not start"
+def test_end2end(test_dir: Path, memgraph_db: Memgraph, neo4j_driver: neo4j.BoltDriver, sleep_time):
+    
 
     logger.debug("Cleaning databases of Memgraph and Neo4j")
 
@@ -251,15 +270,6 @@ def test_end2end(test_dir: Path, memgraph_db: Memgraph, neo4j_driver: neo4j.Bolt
     # Clean database once testing module is finished
     clean_memgraph_db(memgraph_db)
     clean_neo4j_db(neo4j_driver)
-
-
-def cleanup_containers() -> None:
-    global neo4j_container_id, memgraph_container_id
-
-    if neo4j_container_id:
-        cleanup_container(ConfigConstants.NEO4J_CONTAINER_NAME, neo4j_container_id)
-    if memgraph_container_id:
-        cleanup_container(ConfigConstants.MEMGRAPH_CONTAINER_NAME, memgraph_container_id)
 
 
 def cleanup_container(container_name:str, container_id:str) -> None:
