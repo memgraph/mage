@@ -4,4 +4,4 @@ query: >
     RETURN sum
 
 output:
-    - sumResult: 3.3
+    - sum: 3.3
