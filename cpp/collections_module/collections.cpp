@@ -12,11 +12,10 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   try {
     mgp::memory = memory;
 
-    const auto avg_return = mgp::Type::Double;
-    const auto avg_parameter_type = mgp::Parameter(kNumbersList, std::make_pair(mgp::Type::List, mgp::Type::Any));
+    const auto parameter_list_of_any = mgp::Parameter(kNumbersList, std::make_pair(mgp::Type::List, mgp::Type::Any));
 
     AddProcedure(Collections::Avg, kProcedureAvg, mgp::ProcedureType::Read,
-                 {avg_parameter_type}, {mgp::Return(kReturnAvg, avg_return)},
+                 {parameter_list_of_any}, {mgp::Return(kReturnAvg, mgp::Type::Double)},
                  module, memory);
 
   } catch (const std::exception &e) {

@@ -11,6 +11,7 @@ void Collections::Avg(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
 
     for (const auto list_item : list){
       if(!list_item.IsNumeric())
+        // TODO: got element of type x expected number
         throw std::invalid_argument("One of the list elements is not a number");
       average += list_item.ValueNumeric();
     }
