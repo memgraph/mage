@@ -1,0 +1,47 @@
+query: >
+  MATCH (b:B)
+  CALL collections.pairs([3, "s", b, [1, 2]]) YIELD pairs
+  RETURN pairs
+output:
+    - pairs: [
+   [
+      3,
+      "s"
+   ],
+   [
+      "s",
+      {
+         "id": 7,
+         "labels": [
+            "B"
+         ],
+         "properties": {
+            "id": 2
+         },
+         "type": "node"
+      }
+   ],
+   [
+      {
+         "id": 7,
+         "labels": [
+            "B"
+         ],
+         "properties": {
+            "id": 2
+         },
+         "type": "node"
+      },
+      [
+         1,
+         2
+      ]
+   ],
+   [
+      [
+         1,
+         2
+      ],
+      null
+   ]
+]
