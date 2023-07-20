@@ -1,0 +1,6 @@
+query: >
+    CALL collections.contains([1,2,3,4,5], [3,4])  YIELD output RETURN output;
+
+output:
+  - output: false
+

@@ -2,26 +2,17 @@
 
 #include "algorithms/collections.hpp"
 
-const char *kProcedureContains= "contains";
-
-
-const char *kReturnContains="output";
-
-
-const char *kArgumentList="list";
-const char *kArgumentValue="value";
-
 
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
-    mgp::memory= memory;
+    mgp::memory = memory;
     
 
 
-    AddProcedure(contains,kProcedureContains, mgp::ProcedureType::Read,
-    {mgp::Parameter(kArgumentList, {mgp::Type::List, mgp::Type::Any}), mgp::Parameter(kArgumentValue, mgp::Type::Any)},
-    {mgp::Return(kReturnContains,mgp::Type::Bool)},module,memory);
+    AddProcedure(contains, std::string(kProcedureContains).c_str(), mgp::ProcedureType::Read,
+    {mgp::Parameter(std::string(kArgumentListContains).c_str(), {mgp::Type::List, mgp::Type::Any}), mgp::Parameter(std::string(kArgumentValueContains).c_str(), mgp::Type::Any)},
+    {mgp::Return(std::string(kReturnValueContains).c_str(), mgp::Type::Bool)}, module, memory);
 
 
   } catch (const std::exception &e) {
