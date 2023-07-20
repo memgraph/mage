@@ -27,7 +27,7 @@ void Pairs(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_me
     }
 
     auto record = record_factory.NewRecord();
-    record.Insert(kResultPairs, pairsList);
+    record.Insert(std::string(kResultPairs).c_str(), pairsList);
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
