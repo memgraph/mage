@@ -200,8 +200,8 @@ def init_migrate_oracle_db(
     if "disable_oob" not in config:
         config["disable_oob"] = True
     else:
-        config["disable_oob"] = True #overwrite
-    
+        config["disable_oob"] = True  # overwrite
+
     if threading.get_native_id not in oracle_db_dict:
         oracle_db_dict[threading.get_native_id] = {}
 
@@ -211,7 +211,7 @@ def init_migrate_oracle_db(
     if oracle_db_dict[threading.get_native_id][Constants.CURSOR] is None:
         connection = oracledb.connect(**config)
         cursor = connection.cursor()
-       
+
         if not params:
             cursor.execute(table_or_sql)
         elif isinstance(params, (list, tuple)):
