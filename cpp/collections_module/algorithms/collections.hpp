@@ -1,9 +1,9 @@
 #include <mgp.hpp>
 
-constexpr std::string_view kReturnValue = "return_list";
+constexpr std::string_view kReturnValueUnionAll = "return_list";
 constexpr std::string_view kProcedureUnionAll = "unionAll";
-constexpr std::string_view kArgumentList1 = "list1";
-constexpr std::string_view kArgumentList2 = "list2";
+constexpr std::string_view kArgumentList1UnionAll = "list1";
+constexpr std::string_view kArgumentList2UnionAll = "list2";
 
 
 
@@ -19,7 +19,7 @@ void unionAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp
         list1.AppendExtend(std::move(list2[i]));
     }
     auto record = record_factory.NewRecord();
-    record.Insert(std::string(kReturnValue).c_str(), list1);
+    record.Insert(std::string(kReturnValueUnionAll).c_str(), list1);
 
   }catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
