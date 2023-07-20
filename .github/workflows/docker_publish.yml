@@ -37,7 +37,7 @@ jobs:
           prefix: "v"
 
       - run: echo "MAGE is at version ${{ steps.get-latest-tag.outputs.tag }}"
-      
+
       - name: Get commit tag
         id: get-commit-tag
         run: |
@@ -58,7 +58,6 @@ jobs:
             echo "::set-output name=LATEST::fix"
           fi
       - run: echo "Additional tag for production image - ${{ steps.get-prod-tags.outputs.LATEST }}"
-
       - name: Log in to Docker Hub
         uses: docker/login-action@v1
         with:
