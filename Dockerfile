@@ -26,6 +26,7 @@ RUN apt-get update && apt-get install -y \
     python3-dev     `mage-memgraph` \
     clang           `mage-memgraph` \
     git             `mage-memgraph` \
+    unixodbc        `mage-memgraph` \
     libboost-all-dev `mage-memgraph` \
     --no-install-recommends \
     # Download and install Memgraph
