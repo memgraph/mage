@@ -242,16 +242,20 @@ def get_memgraph_container() -> str:
     return memgraph_container_id
 
 
+@pytest.fixture(scope="session")
+def memgraph_port(pytestconfig):
+    return pytestconfig.getoption("--memgraph-port")
+
 @pytest.fixture(scope="session", autouse=True)
-def memgraph_db():
-    memgraph_container_id = get_memgraph_container()
-    assert memgraph_container_id, "Mem Container not started"
-    memgraph_db = create_memgraph_db(ConfigConstants.MEMGRAPH_PORT)
+def memgraph_db(memgraph_port):
+    #memgraph_container_id = get_memgraph_container()
+    #assert memgraph_container_id, "Mem Container not started"
+    memgraph_db = create_memgraph_db(memgraph_port)
     logger.info("Created Memgraph connection")
 
     yield memgraph_db
 
-    cleanup_container(ConfigConstants.MEMGRAPH_CONTAINER_NAME, memgraph_container_id)
+    #cleanup_container(ConfigConstants.MEMGRAPH_CONTAINER_NAME, memgraph_container_id)
 
 
 def get_neo4j_container() -> str:
@@ -263,27 +267,26 @@ def get_neo4j_container() -> str:
     return neo4j_container_id
 
 
+@pytest.fixture(scope="session")
+def neo4j_port(pytestconfig):
+    return pytestconfig.getoption("--neo4j-port")
+
 @pytest.fixture(scope="session", autouse=True)
-def neo4j_driver():
-    neo4j_container_id = get_neo4j_container()
-    assert neo4j_container_id, "Neo4j container not started"
-    neo4j_driver = create_neo4j_driver(ConfigConstants.NEO4J_PORT)
+def neo4j_driver(neo4j_port):
+    #neo4j_container_id = get_neo4j_container()
+   # assert neo4j_container_id, "Neo4j container not started"
+    neo4j_driver = create_neo4j_driver(neo4j_port)
     logger.info("Created neo4j driver")
 
     yield neo4j_driver
 
-    cleanup_container(ConfigConstants.NEO4J_CONTAINER_NAME, neo4j_container_id)
+    #cleanup_container(ConfigConstants.NEO4J_CONTAINER_NAME, neo4j_container_id)
 
-
-@pytest.fixture(scope="session", autouse="True")
-def sleep_time():
-    sleep(10)
-    return True
 
 
 @pytest.mark.parametrize("test_dir", tests)
 def test_end2end(
-    test_dir: Path, memgraph_db: Memgraph, neo4j_driver: neo4j.BoltDriver, sleep_time
+    test_dir: Path, memgraph_db: Memgraph, neo4j_driver: neo4j.BoltDriver
 ):
     logger.debug("Cleaning databases of Memgraph and Neo4j")
 
