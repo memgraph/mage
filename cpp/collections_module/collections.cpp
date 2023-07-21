@@ -2,21 +2,15 @@
 
 #include "algorithm/algorithm.hpp"
 
-constexpr const char *kProcedureAvg = "avg";
-
-constexpr const char *kReturnAvg = "average";
-
-constexpr const char *kNumbersList = "list_of_numbers";
-
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
     mgp::memory = memory;
 
-    const auto parameter_list_of_any = mgp::Parameter(kNumbersList, std::make_pair(mgp::Type::List, mgp::Type::Any));
+    const auto parameter_list_of_any =
+        mgp::Parameter(Collections::kNumbersList, std::make_pair(mgp::Type::List, mgp::Type::Any));
 
-    AddProcedure(Collections::Avg, kProcedureAvg, mgp::ProcedureType::Read,
-                 {parameter_list_of_any}, {mgp::Return(kReturnAvg, mgp::Type::Double)},
-                 module, memory);
+    AddProcedure(Collections::Avg, Collections::kProcedureAvg, mgp::ProcedureType::Read, {parameter_list_of_any},
+                 {mgp::Return(Collections::kReturnAvg, mgp::Type::Double)}, module, memory);
 
   } catch (const std::exception &e) {
     return 1;
