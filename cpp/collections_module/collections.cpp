@@ -13,7 +13,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   try {
     AddProcedure(Max, kProcedureMax, mgp::ProcedureType::Read,
                  {mgp::Parameter(kArgumentsInputList, {mgp::Type::List, mgp::Type::Any})},
-                 {mgp::Return(kReturnMax, mgp::Type::Double)}, module, memory);
+                 {mgp::Return(kReturnMax, mgp::Type::Any)}, module, memory);
 
   } catch (const std::exception &e) {
     return 1;

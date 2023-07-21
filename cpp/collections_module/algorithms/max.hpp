@@ -10,8 +10,12 @@ void Max(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memo
   const auto record_factory = mgp::RecordFactory(result);
   try {
     const auto &list = arguments[0].ValueList();
+
+    if (list.Size() == 0) {
+      throw mgp::ValueException("Empty input list.");
+    }
+
     mgp::Value max = mgp::Value(list[0]);
-    mgp::Type type = max.Type();
 
     for (const auto value : list) {
       if (max < value) {
