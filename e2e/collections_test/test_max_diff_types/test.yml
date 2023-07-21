@@ -1,8 +1,6 @@
 query: >
-    MATCH (n)
-    WITH collect(n) as nodes
-    CALL graph_util.chain_nodes(nodes, "CONNECTED_TO") YIELD connections
-    RETURN size(connections) as size
+    CALL collections.max([-1, -2, -3, "s"]) YIELD max
+    RETURN max
 
-output:
-    - size: 3
+exception: >
+    Values have to be of the same type

@@ -1,6 +1,6 @@
 query: >
-    CALL collections.max([1, 2, 3]) YIELD max
+    CALL collections.max([-1, -2, -3]) YIELD max
     RETURN max
 
 output:
-    - max: 3
+    - max: -1
