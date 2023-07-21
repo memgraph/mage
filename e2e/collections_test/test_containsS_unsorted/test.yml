@@ -1,0 +1,6 @@
+query: >
+    CALL collections.containsSorted(['a', 'b', 'c', 'd', 'e', 'g', 'f'], 'f') YIELD contains
+    RETURN contains
+
+output:
+    - contains: false
