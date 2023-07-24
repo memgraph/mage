@@ -1,7 +1,5 @@
 #include "algorithm.hpp"
 
-
-
 void Collections::Min(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
@@ -40,4 +38,3 @@ void Collections::Min(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
     return;
   }
 }
-
