@@ -2,7 +2,7 @@
 
 #include "algorithm.hpp"
 
-void Collections::unionAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Collections::UnionAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
   auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
