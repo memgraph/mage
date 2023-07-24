@@ -1,13 +1,10 @@
 #include <mgp.hpp>
 
-constexpr std::string_view kReturnValueUnionAll = "return_list";
-constexpr std::string_view kProcedureUnionAll = "unionAll";
-constexpr std::string_view kArgumentList1UnionAll = "list1";
-constexpr std::string_view kArgumentList2UnionAll = "list2";
+#include "algorithm.hpp"
 
-void unionAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Collections::unionAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
-  const auto arguments = mgp::List(args);
+  auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
     mgp::List list1 = arguments[0].ValueList();
