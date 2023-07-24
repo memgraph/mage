@@ -1,10 +1,8 @@
 #include <list>
 
-#include <mgp.hpp>
+#include "algorithms.hpp"
 
-constexpr std::string_view kResultSplit = "splitted";
-
-void Split(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Collections::Split(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
 
   const auto arguments = mgp::List(args);
@@ -15,26 +13,28 @@ void Split(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_me
 
     if (inputList.Empty()) {
       auto record = record_factory.NewRecord();
-      record.Insert(std::string(kResultSplit).c_str(), inputList);
+      record.Insert(std::string(Collections::kResultSplit).c_str(), inputList);
       return;
     }
 
     mgp::List part = mgp::List();
     for (const auto value : inputList) {
-      if (value == delimiter) {
-        if (!part.Empty()) {
-          auto record = record_factory.NewRecord();
-          record.Insert(std::string(kResultSplit).c_str(), part);
-          part = mgp::List();
-        }
-      } else {
+      if (value != delimiter) {
         part.AppendExtend(value);
+        continue;
       }
-    }
-    if (!part.Empty()) {
+      if (part.Empty()) {
+        continue;
+      }
       auto record = record_factory.NewRecord();
-      record.Insert(std::string(kResultSplit).c_str(), std::move(part));
+      record.Insert(std::string(Collections::kResultSplit).c_str(), part);
+      part = mgp::List();
     }
+    if (part.Empty()) {
+      return;
+    }
+    auto record = record_factory.NewRecord();
+    record.Insert(std::string(Collections::kResultSplit).c_str(), std::move(part));
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
