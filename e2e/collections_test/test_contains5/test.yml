@@ -6,4 +6,3 @@ query: >
     CALL collections.contains(paths, q) YIELD output RETURN output;
 output:
   - output: true
-  
