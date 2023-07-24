@@ -17,7 +17,7 @@ void Collections::SumLongs(mgp_list *args, mgp_graph *memgraph_graph, mgp_result
       sum += static_cast<int64_t>(list_item.ValueNumeric());
     }
     auto record = record_factory.NewRecord();
-    record.Insert(kResultSumLongs, sum);
+    record.Insert(std::string(kResultSumLongs).c_str(), sum);
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
