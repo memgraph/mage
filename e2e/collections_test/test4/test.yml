@@ -6,4 +6,3 @@ query: >
 
 output:
   - labels(min): ["Dog"]
-  

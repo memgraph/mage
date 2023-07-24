@@ -1,12 +1,8 @@
-#include <mgp.hpp>
-#include <sstream>
-#include <string>
+#include "algorithm.hpp"
 
-constexpr std::string_view kReturnValueMin = "min";
-constexpr std::string_view kProcedureMin = "min";
-constexpr std::string_view kArgumentListMin = "list";
 
-void min(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+
+void Collections::Min(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
@@ -25,9 +21,10 @@ void min(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memo
       throw mgp::ValueException("Unsuppported type for this operation, receieved type: " + s);
     }
 
-    mgp::Value min = list[0];
+    bool isListNumeric = list[0].IsNumeric();
+    mgp::Value min{std::move(list[0])};
     for (size_t i = 0; i < list.Size(); i++) {
-      if (list[i].Type() != type && !(list[0].IsNumeric() && list[i].IsNumeric())) {
+      if (list[i].Type() != type && !(isListNumeric && list[i].IsNumeric())) {
         throw mgp::ValueException("All elements must be of the same type!");
       }
 
@@ -43,3 +40,4 @@ void min(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memo
     return;
   }
 }
+
