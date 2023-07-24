@@ -13,6 +13,12 @@ void Split(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_me
     const auto &inputList = arguments[0].ValueList();
     const auto &delimiter = arguments[1];
 
+    if (inputList.Empty()) {
+      auto record = record_factory.NewRecord();
+      record.Insert(std::string(kResultSplit).c_str(), inputList);
+      return;
+    }
+
     mgp::List part = mgp::List();
     for (const auto value : inputList) {
       if (value == delimiter) {

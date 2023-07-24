@@ -3,4 +3,4 @@ query: >
     RETURN splitted
 
 output:
-    -
+    - splitted: []
