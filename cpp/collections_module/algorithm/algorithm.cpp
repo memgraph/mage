@@ -1,12 +1,6 @@
-#include <mgp.hpp>
-#include <string>
+#include "algorithm.hpp"
 
-constexpr std::string_view kReturnValueContains = "output";
-constexpr std::string_view kProcedureContains = "contains";
-constexpr std::string_view kArgumentListContains = "list";
-constexpr std::string_view kArgumentValueContains = "value";
-
-void contains(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Collections::Contains(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
