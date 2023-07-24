@@ -1,0 +1,8 @@
+query: > 
+  MATCH (d:Dog)
+  MATCH (h:Human)
+  CALL collections.min([h,d]) YIELD min 
+  RETURN labels(min);
+
+output:
+  - labels(min): ["Dog"]
