@@ -5,5 +5,4 @@ query: >
     CALL collections.contains(collectedR, k) YIELD output RETURN output;
 output:
   - output: false
-
   
