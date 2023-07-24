@@ -1,10 +1,8 @@
 #include <list>
 
-#include <mgp.hpp>
+#include "algorithms.hpp"
 
-constexpr std::string_view kResultCS = "contains";
-
-void ContainsSorted(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Collections::ContainsSorted(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);

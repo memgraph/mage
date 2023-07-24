@@ -1,5 +1,5 @@
 query: >
-    CALL collections.containsSorted([1, 2, 3, 4, 5, 6], 7) YIELD contains
+    CALL collections.contains_sorted([1, 2, 3, 4, 5, 6], 7) YIELD contains
     RETURN contains
 
 output:
