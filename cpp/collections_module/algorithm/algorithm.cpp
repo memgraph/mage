@@ -19,7 +19,7 @@ void Collections::Avg(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
     average /= list.Size();
 
     auto record = record_factory.NewRecord();
-    record.Insert(kResultAverage, average);
+    record.Insert(std::string(kResultAverage).c_str(), average);
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
