@@ -5,6 +5,11 @@
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   mgp::memory = memory;
   try {
+    AddProcedure(Collections::ContainsSorted, Collections::kProcedureCS, mgp::ProcedureType::Read,
+                 {mgp::Parameter(Collections::kArgumentInputList, {mgp::Type::List, mgp::Type::Any}),
+                  mgp::Parameter(Collections::kArgumentElement, mgp::Type::Any)},
+                 {mgp::Return(Collections::kReturnCS, mgp::Type::Bool)}, module, memory);
+
     AddProcedure(Collections::Max, Collections::kProcedureMax, mgp::ProcedureType::Read,
                  {mgp::Parameter(Collections::kArgumentsInputList, {mgp::Type::List, mgp::Type::Any})},
                  {mgp::Return(Collections::kReturnMax, mgp::Type::Any)}, module, memory);
