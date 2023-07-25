@@ -89,8 +89,7 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
     {
       auto *proc = mgp::module_add_read_procedure(module, kProcedureGet, GetDegreeCentrality);
 
-      mgp::proc_add_opt_arg(proc, kArgumentType, mgp::type_nullable(mgp::type_string()), default_type);
-      mgp::proc_add_result(proc, kFieldNode, mgp::type_node());
+      mgp::proc_add_opt_arg(proc, kArgumentType, mgp::type_nullable(mgp::type_string()), default_type);      mgp::proc_add_result(proc, kFieldNode, mgp::type_node());
       mgp::proc_add_result(proc, kFieldDegree, mgp::type_float());
     }
 
