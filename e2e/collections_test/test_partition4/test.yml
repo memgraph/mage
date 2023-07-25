@@ -1,5 +1,4 @@
 query: >
   CALL collections.partition([],3) YIELD result RETURN result;
 
-output:
-  - result: []
+output: []
