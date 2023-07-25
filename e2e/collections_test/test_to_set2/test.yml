@@ -1,0 +1,6 @@
+query: >
+  CALL collections.toSet([]) YIELD result RETURN result;
+
+
+output: 
+  - result: []

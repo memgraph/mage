@@ -1,0 +1,7 @@
+query: >
+  CALL collections.toSet(["aa","aa","matija","matija",[1,2,3],[1,2,3],1,2]) YIELD result RETURN result;
+
+
+output: 
+  - result: ["aa", "matija", [1, 2, 3], 1, 2]
+
