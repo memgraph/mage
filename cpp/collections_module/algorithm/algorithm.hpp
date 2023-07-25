@@ -2,6 +2,7 @@
 
 #include <mgp.hpp>
 #include <string>
+#include <sstream>
 
 namespace Collections {
 
@@ -18,4 +19,10 @@ constexpr std::string_view kArgumentList2UnionAll = "list2";
 
 void UnionAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
+constexpr std::string_view kReturnValueMin = "min";
+constexpr std::string_view kProcedureMin = "min";
+constexpr std::string_view kArgumentListMin = "list";
+void Min(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+
 }  // namespace Collections
+
