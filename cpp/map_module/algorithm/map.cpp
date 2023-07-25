@@ -10,10 +10,12 @@ void Map::FromPairs(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resul
   try {
     const auto &list = arguments[0].ValueList();
 
-    std::map<mgp::Value, mgp::Value> pairsMap;
+    std::map<std::string_view, mgp::Value> pairsMap;
+    mgp::Value key;
 
     for (const auto inside_list : list) {
-      pairsMap.insert({inside_list.ValueList()[0], inside_list.ValueList()[1]});
+      key = inside_list.ValueList()[0] if (key.IsNumeric)
+                pairsMap.insert({inside_list.ValueList()[0], inside_list.ValueList()[1]});
     }
 
     auto record = record_factory.NewRecord();
