@@ -1,0 +1,5 @@
+query: >
+  CALL collections.containsAll([1, 2, 3, "pero"], [1, 1, 1, 1, 2, 3])
+  YIELD contained;
+output:
+  - contained: true
