@@ -10,16 +10,20 @@ void Map::FromPairs(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resul
   try {
     const auto &list = arguments[0].ValueList();
 
-    std::map<std::string_view, mgp::Value> pairsMap;
-    mgp::Value key;
+    mgp::Map pairsMap;
 
     for (const auto inside_list : list) {
-      key = inside_list.ValueList()[0] if (key.IsNumeric)
-                pairsMap.insert({inside_list.ValueList()[0], inside_list.ValueList()[1]});
+      if (inside_list.ValueList().Size() != 2) {
+        throw mgp::ValueException("Pairs must consist of 2 elements exactly.");
+      }
+      if (!inside_list.ValueList()[0].IsString()) {
+        throw mgp::ValueException("All keys have to be type string.");
+      }
+      pairsMap.Insert(inside_list.ValueList()[0].ValueString(), std::move(inside_list.ValueList()[1]));
     }
 
     auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultFromPairs).c_str(), mgp::Map(std::move(pairsMap)));
+    record.Insert(std::string(kResultFromPairs).c_str(), std::move(pairsMap));
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
