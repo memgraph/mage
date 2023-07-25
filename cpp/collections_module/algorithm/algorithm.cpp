@@ -6,7 +6,7 @@ void Collections::Partition(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
   const auto record_factory = mgp::RecordFactory(result);
   try {
     mgp::List input_list = arguments[0].ValueList();
-    const int64_t &partition_size = arguments[1].ValueInt();
+    const int64_t partition_size = arguments[1].ValueInt();
 
     int64_t current_size = 0;
     mgp::List temp;
