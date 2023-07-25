@@ -1,0 +1,5 @@
+query: >
+  CALL collections.intersection([1, 2, 3, 4, 5], [1, 3, 5, 7, 9])
+  YIELD intersection
+output:
+  - intersection: [3, 5, 1]

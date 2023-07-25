@@ -7,8 +7,6 @@ namespace Collections {
 
 constexpr const std::string_view kProcedureIntersection = "intersection";
 
-constexpr const std::string_view kReturnIntersection = "list_of_any";
-
 constexpr const std::string_view kAnyList = "list_of_any";
 
 constexpr const std::string_view kResultIntersection = "intersection";

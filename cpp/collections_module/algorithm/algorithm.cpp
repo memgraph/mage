@@ -9,9 +9,9 @@ void Collections::Intersection(mgp_list *args, mgp_graph *memgraph_graph, mgp_re
   const auto record_factory = mgp::RecordFactory(result);
 
   try {
-    const auto &list1 = arguments[0].ValueList();
+    const auto &list1{arguments[0].ValueList()};
     std::unordered_set<mgp::Value> set1{list1.begin(), list1.end()};
-    const auto &list2 = arguments[1].ValueList();
+    const auto &list2{arguments[1].ValueList()};
     std::unordered_set<mgp::Value> set2{list2.begin(), list2.end()};
 
     if (set1.size() > set2.size()) {
