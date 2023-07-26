@@ -1,0 +1,9 @@
+query: >
+  CALL map.setKey(
+    {name:"Zdravko",country:"Croatia"},
+    "name",
+    "Zoran"
+  ) YIELD map;
+
+output:
+  - map: {"country": "Croatia","name": "Zoran"}
