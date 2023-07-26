@@ -6,29 +6,33 @@ void Collections::RemoveAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
   const auto record_factory = mgp::RecordFactory(result);
 
   try {
-    const auto &input_list = arguments[0].ValueList();
-    const auto &to_remove_list = arguments[1].ValueList();
-    std::vector<mgp::Value> searchable;
+    const auto input_list = arguments[0].ValueList();
+    const auto to_remove_list = arguments[1].ValueList();
+    std::set<mgp::Value> searchable;
 
     for (const auto value : input_list) {
-      searchable.push_back(std::move(value));
+      searchable.insert(std::move(value));
     }
 
-    std::vector<mgp::Value>::iterator itr;
+    std::set<mgp::Value>::iterator itr;
 
     for (const auto key : to_remove_list) {
       while (true) {
-        itr = std::find(searchable.begin(), searchable.end(), key);
-        if (itr != searchable.cend()) {
-          searchable.erase(itr);
-        } else {
+        itr = searchable.find(key);
+        if (itr == searchable.end()) {
           break;
         }
+        searchable.erase(itr);
       }
     }
 
+    mgp::List final_list = mgp::List();
+    for (const auto element : searchable) {
+      final_list.AppendExtend(std::move(element));
+    }
+
     auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultRemoveAll).c_str(), mgp::List(std::move(searchable)));
+    record.Insert(std::string(kResultRemoveAll).c_str(), final_list);
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
