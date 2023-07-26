@@ -7,7 +7,7 @@ void Map::flattenRecursion(mgp::Map &result, const mgp::Map &input, const std::s
     if (element.value.IsMap()) {
       flattenRecursion(result, element.value.ValueMap(), key + el_key + delimiter, delimiter);
     } else {
-      result.Insert(std::move(key + el_key), std::move(element.value));
+      result.Insert(key + el_key, element.value);
     }
   }
 }
