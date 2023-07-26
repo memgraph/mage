@@ -3,11 +3,11 @@
 void Map::flattenRecursion(mgp::Map &result, const mgp::Map &input, const std::string &key,
                            const std::string &delimiter) {
   for (auto element : input) {
-    const std::string el_key(element.key);
+    std::string el_key(element.key);
     if (element.value.IsMap()) {
       flattenRecursion(result, element.value.ValueMap(), key + el_key + delimiter, delimiter);
     } else {
-      result.Insert(key + el_key, element.value);
+      result.Insert(std::move(key + el_key), std::move(element.value));
     }
   }
 }
