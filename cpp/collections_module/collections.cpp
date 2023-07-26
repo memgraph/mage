@@ -5,6 +5,10 @@
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   mgp::memory = memory;
   try {
+    AddProcedure(Collections::Sum, Collections::kProcedureSum, mgp::ProcedureType::Read,
+                 {mgp::Parameter(Collections::kInputList, {mgp::Type::List, mgp::Type::Any})},
+                 {mgp::Return(Collections::kReturnSum, mgp::Type::Double)}, module, memory);
+
     AddProcedure(Collections::Union, Collections::kProcedureUnion, mgp::ProcedureType::Read,
                  {mgp::Parameter(Collections::kArgumentsInputList1, {mgp::Type::List, mgp::Type::Any}),
                   mgp::Parameter(Collections::kArgumentsInputList2, {mgp::Type::List, mgp::Type::Any})},

@@ -4,6 +4,17 @@
 
 namespace Collections {
 
+constexpr std::string_view kReturnSum = "sum";
+
+constexpr std::string_view kProcedureSum = "sum";
+
+constexpr std::string_view kInputList = "input_list";
+
+constexpr std::string_view kResultSum = "sum";
+
+void Sum(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+
+  
 constexpr std::string_view kReturnUnion = "union";
 
 constexpr std::string_view kProcedureUnion = "union";

@@ -5,13 +5,37 @@
 
 #include "algorithms.hpp"
 
+void Collections::Sum(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::memory = memory;
+  const auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+  try {
+    double sum{0};
+    const auto list = arguments[0].ValueList();
+
+    for (const auto value : list) {
+      if (!value.IsNumeric()) {
+        throw std::invalid_argument("One of the list elements is not a number.");
+      }
+      sum += value.ValueNumeric();
+    }
+
+    auto record = record_factory.NewRecord();
+    record.Insert(std::string(kResultSum).c_str(), sum);
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
+
 void Collections::Union(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
-    const auto &list1 = arguments[0].ValueList();
-    const auto &list2 = arguments[1].ValueList();
+    const auto list1 = arguments[0].ValueList();
+    const auto list2 = arguments[1].ValueList();
 
     std::unordered_map<int64_t, std::vector<mgp::Value>> unionMap;
 
@@ -56,7 +80,7 @@ void Collections::Sort(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *re
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
-    const auto &list = arguments[0].ValueList();
+    const auto list = arguments[0].ValueList();
     std::vector<mgp::Value> sorted;
 
     for (const auto value : list) {
@@ -80,8 +104,8 @@ void Collections::ContainsSorted(mgp_list *args, mgp_graph *memgraph_graph, mgp_
   const auto record_factory = mgp::RecordFactory(result);
   try {
     bool contains{false};
-    const auto &list = arguments[0].ValueList();
-    const auto &element = arguments[1];
+    const auto list = arguments[0].ValueList();
+    const auto element = arguments[1];
 
     int left{0};
     int right{list.Size() - 1};
@@ -113,7 +137,7 @@ void Collections::Max(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
-    const auto &list = arguments[0].ValueList();
+    const auto list = arguments[0].ValueList();
 
     if (list.Empty()) {
       throw mgp::ValueException("Empty input list.");
@@ -141,8 +165,8 @@ void Collections::Split(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *r
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
-    const auto &inputList = arguments[0].ValueList();
-    const auto &delimiter = arguments[1];
+    const auto inputList = arguments[0].ValueList();
+    const auto delimiter = arguments[1];
 
     if (inputList.Empty()) {
       auto record = record_factory.NewRecord();
@@ -182,7 +206,7 @@ void Collections::Pairs(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *r
   try {
     mgp::List pairsList = mgp::List();
 
-    const auto &inputList = arguments[0].ValueList();
+    const auto inputList = arguments[0].ValueList();
 
     if (inputList.Size() == 0) {
       record.Insert(std::string(kResultPairs).c_str(), pairsList);
