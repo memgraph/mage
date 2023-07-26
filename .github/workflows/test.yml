@@ -60,7 +60,7 @@ jobs:
 
       - name: Run Memgraph MAGE:prod image
         run: |
-          docker run -d -p {{env.MEMGRAPH_PORT}}:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:${{ matrix.target }} --telemetry-enabled=False
+          docker run -d -p ${{ env.MAGE_CONTAINER }}:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:${{ matrix.target }} --telemetry-enabled=False
 
       - name: Set up C++
         run: |
