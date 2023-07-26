@@ -5,19 +5,19 @@ void Map::Merge(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, m
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
-    const auto &map1 = arguments[0].ValueMap();
-    const auto &map2 = arguments[1].ValueMap();
+    const auto map1 = arguments[0].ValueMap();
+    const auto map2 = arguments[1].ValueMap();
 
-    mgp::Map merged = mgp::Map(std::move(map2));
+    mgp::Map merged_map = mgp::Map(std::move(map2));
 
     for (const auto element : map1) {
-      if (merged.At(element.key).IsNull()) {
-        merged.Insert(element.key, element.value);
+      if (merged_map.At(element.key).IsNull()) {
+        merged_map.Insert(element.key, element.value);
       }
     }
 
     auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultMerge).c_str(), std::move(merged));
+    record.Insert(std::string(kResultMerge).c_str(), std::move(merged_map));
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
