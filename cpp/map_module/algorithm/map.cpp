@@ -14,7 +14,7 @@ void Map::flattenRecursion(mgp::Map &result, const mgp::Map &input, const std::s
 
 void Map::Flatten(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
-  auto arguments = mgp::List(args);
+  const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
     const mgp::Map &map = arguments[0].ValueMap();
