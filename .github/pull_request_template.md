@@ -28,5 +28,6 @@ Delete if this PR doesn't resolve any issues. Link the issue if it does.
 - [ ] Code documentation
 - [ ] README short description
 - [ ] Documentation on [memgraph/docs](https://github.com/memgraph/docs)
+- [ ] Update GQLALchemy signatures in [query builder](https://github.com/memgraph/gqlalchemy/blob/main/gqlalchemy/graph_algorithms/query_builder.py  ) using [query module signature generator](https://github.com/memgraph/gqlalchemy/blob/main/scripts/query_module_signature_generator.py)
 
 ######################################
