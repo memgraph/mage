@@ -14,12 +14,12 @@ void Map::FromPairs(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resul
 
     for (const auto inside_list : list) {
       if (inside_list.ValueList().Size() != 2) {
-        throw mgp::ValueException("Pairs must consist of 2 elements exactly.");
+        throw mgp::IndexException("Pairs must consist of 2 elements exactly.");
       }
       if (!inside_list.ValueList()[0].IsString()) {
         throw mgp::ValueException("All keys have to be type string.");
       }
-      pairsMap.Insert(inside_list.ValueList()[0].ValueString(), std::move(inside_list.ValueList()[1]));
+      pairsMap.Update(inside_list.ValueList()[0].ValueString(), std::move(inside_list.ValueList()[1]));
     }
 
     auto record = record_factory.NewRecord();

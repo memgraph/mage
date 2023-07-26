@@ -2,5 +2,8 @@ query: >
   CALL map.from_pairs([["b", 2], ["b", 3], ["c", "c"]]) YIELD map
   RETURN map
 
-exception: >
-  Key you are trying to set already exists!
+output:
+  - map: {
+   "b": 3,
+   "c": "c"
+}
