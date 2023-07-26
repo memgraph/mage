@@ -1,7 +1,10 @@
 query: >
-  CALL map.remove_key({c: "b", d: {e: "ba", c: "h"}}, "c", {recursive: true}) YIELD removed
+  CALL map.remove_key({c: "b", d: {e: "ba", c: "h", a: {c: "z"}}}, "c", {recursive: true}) YIELD removed
   RETURN removed
 
-output: {
-   "d": "ba"
+output:
+  - removed: {
+   "d": {
+      "e": "ba"
+   }
 }
