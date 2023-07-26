@@ -1,0 +1,7 @@
+query: >
+  CALL map.remove_key({c: "b", d: "ba"}, "c") YIELD removed
+  RETURN removed
+
+output: {
+   "d": "ba"
+}
