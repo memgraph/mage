@@ -22,7 +22,7 @@ void Map::Flatten(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
     mgp::Map result_map = mgp::Map();
     flattenRecursion(result_map, map, "", delimiter);
     auto record = record_factory.NewRecord();
-    record.Insert(std::string(Map::kReturnValueFlatten).c_str(), result_map);
+    record.Insert(std::string(Map::kReturnValueFlatten).c_str(), std::move(result_map));
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
