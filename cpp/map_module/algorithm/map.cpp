@@ -17,7 +17,7 @@ void Map::Flatten(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
-    const mgp::Map &map = arguments[0].ValueMap();
+    const mgp::Map map = arguments[0].ValueMap();
     const std::string delimiter(arguments[1].ValueString());
     mgp::Map result_map = mgp::Map();
     flattenRecursion(result_map, map, "", delimiter);
