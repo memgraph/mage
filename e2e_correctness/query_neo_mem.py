@@ -89,12 +89,12 @@ class Edge:
         # Return True if self and other have the same length
         if self._from_vertex != other._from_vertex:
             logger.debug(
-                f"From vertex is different {self._from_vertex} <> {other._from_vertex}"
+                f"Source vertex is different {self._from_vertex} <> {other._from_vertex}"
             )
             return False
         if self._to_vertex != other._to_vertex:
             logger.debug(
-                f"From vertex is different {self._to_vertex} <> {other._to_vertex}"
+                f"Destination vertex is different {self._to_vertex} <> {other._to_vertex}"
             )
             return False
         if self._label != other._label:
@@ -166,7 +166,7 @@ def create_edge_from_data(from_vertex_id: int, to_vertex_id: int, item) -> Edge:
 
 
 def create_graph_memgraph_json(json_memgraph_data) -> Graph:
-    logger.debug(f"Memgraph json data {json_memgraph_data}")
+    logger.debug(f"Memgraph JSON data {json_memgraph_data}")
     graph = Graph()
     vertices_id_mapings = {}
     for item in json_memgraph_data:
@@ -188,7 +188,7 @@ def create_graph_memgraph_json(json_memgraph_data) -> Graph:
 
 
 def create_graph_neo4j_json(json_neo4j_data) -> Graph:
-    logger.debug(f"Memgraph json data {json_neo4j_data}")
+    logger.debug(f"Neo4j JSON data {json_neo4j_data}")
     graph = Graph()
     vertices_id_mapings = {}
     for item in json_neo4j_data:
@@ -263,13 +263,13 @@ def clean_neo4j_db(neo4j_db: neo4j.BoltDriver):
 def mg_get_graph(memgraph_db: gqlalchemy.Memgraph) -> Graph:
     logger.debug("Getting data from Memgraph")
     json_data = get_memgraph_data_json_format(memgraph_db)
-    logger.debug("Creating graph from Memgraph JSON data")
+    logger.debug("Building the graph from Memgraph JSON data")
     return create_graph_memgraph_json(json_data)
 
 
 def neo4j_get_graph(neo4j_driver: neo4j.BoltDriver) -> Graph:
     logger.debug("Getting data from Neo4j")
     json_data = get_neo4j_data_json(neo4j_driver)
-    logger.debug("Creating graph from Neo4j JSON data")
+    logger.debug("Building the graph from Neo4j JSON data")
 
     return create_graph_neo4j_json(json_data)
