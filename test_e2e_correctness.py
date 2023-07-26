@@ -51,7 +51,6 @@ def main(test_filter: str = None,
 
 if __name__ == "__main__":
     args = parse_arguments()
-    print(args)
     test_filter = args.k
     memgraph_port = args.memgraph_port
     neo4j_port = args.neo4j_port
