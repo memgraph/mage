@@ -17,13 +17,13 @@ def parse_arguments():
         description="Test MAGE E2E correctness."
     )
     parser.add_argument(
-        "-k", help="Add filter to tests you want to run", type=str, required=False
+        "-k", help="Filter what tests you want to run", type=str, required=False
     )
     parser.add_argument(
-        "--memgraph-port", help="Set port on which Memgraph is listening", type=int, required=False
+        "--memgraph-port", help="Set the port that Memgraph is listening on", type=int, required=False
     )
     parser.add_argument(
-        "--neo4j-port", help="Set port on which Neo4j is listening", type=int, required=False
+        "--neo4j-port", help="Set the port that Neo4j is listening on", type=int, required=False
     )
     args = parser.parse_args()
     return args
@@ -55,9 +55,9 @@ if __name__ == "__main__":
     memgraph_port = args.memgraph_port
     neo4j_port = args.neo4j_port
 
-    if memgraph_port is not None:
+    if memgraph_port:
         memgraph_port = str(memgraph_port)
-    if neo4j_port is not None:
+    if neo4j_port:
         neo4j_port = str(neo4j_port)
     
     main(test_filter=test_filter,

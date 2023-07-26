@@ -114,19 +114,19 @@ def _load_yaml(path: Path) -> Dict:
 def _graphs_equal(memgraph_graph: Graph, neo4j_graph: Graph) -> bool:
     assert len(memgraph_graph.vertices) == len(
         neo4j_graph.vertices
-    ), f"Num of vertices is not same. \
+    ), f"The number of vertices is not equal: \
         Memgraph contains {memgraph_graph.vertices} and Neo4j contains {neo4j_graph.vertices}"
 
     assert len(memgraph_graph.edges) == len(
         neo4j_graph.edges
-    ), f"Num of edges is not same. \
+    ), f"The number of edges is not equal: \
         Memgraph contains {memgraph_graph.edges} and Neo4j contains {neo4j_graph.edges}"
 
     for i, mem_vertex in enumerate(memgraph_graph.vertices):
         neo_vertex = neo4j_graph.vertices[i]
         if mem_vertex != neo_vertex:
             logger.debug(
-                f"Vertices are different.\
+                f"The vertices are different: \
             Neo4j vertex: {neo_vertex}\
             Memgraph vertex: {mem_vertex}"
             )
@@ -135,7 +135,7 @@ def _graphs_equal(memgraph_graph: Graph, neo4j_graph: Graph) -> bool:
         neo_edge = neo4j_graph.edges[i]
         if neo_edge != mem_edge:
             logger.debug(
-                f"Edges are different.\
+                f"The edges are different: \
                 Neo4j edge: {neo_edge}\
                 Memgraph edge: {mem_edge}"
             )
@@ -171,7 +171,7 @@ def _run_test(test_dir: str, memgraph_db: Memgraph, neo4j_driver: neo4j.BoltDriv
 
     assert _graphs_equal(
         mg_graph, neo4j_graph
-    ), "Graphs are not equal, check logs for more details"
+    ), "The graphs are not equal, check the logs for more details"
 
 
 
@@ -203,7 +203,7 @@ def neo4j_driver(neo4j_port):
 def test_end2end(
     test_dir: Path, memgraph_db: Memgraph, neo4j_driver: neo4j.BoltDriver
 ):
-    logger.debug("Cleaning databases of Memgraph and Neo4j")
+    logger.debug("Dropping the Memgraph and Neo4j databases.")
 
     clean_memgraph_db(memgraph_db)
     clean_neo4j_db(neo4j_driver)
@@ -211,7 +211,7 @@ def test_end2end(
     if test_dir.name.startswith(TestConstants.TEST_SUBDIR_PREFIX):
         _run_test(test_dir, memgraph_db, neo4j_driver)
     else:
-        logger.info(f"Skipping following dir: {test_dir.name}")
+        logger.info(f"Skipping directory: {test_dir.name}")
 
     # Clean database once testing module is finished
     clean_memgraph_db(memgraph_db)
