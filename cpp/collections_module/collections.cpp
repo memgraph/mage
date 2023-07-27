@@ -20,6 +20,11 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
                   mgp::Parameter(Collections::kAnyList, {mgp::Type::List, mgp::Type::Any})},
                  {mgp::Return(Collections::kReturnContainsAll, mgp::Type::Bool)}, module, memory);
 
+    AddProcedure(Collections::Intersection, Collections::kProcedureIntersection, mgp::ProcedureType::Read,
+                  {mgp::Parameter(Collections::kAnyList, {mgp::Type::List, mgp::Type::Any}),
+                    mgp::Parameter(Collections::kAnyList, {mgp::Type::List, mgp::Type::Any})},
+                  {mgp::Return(Collections::kResultIntersection, {mgp::Type::List, mgp::Type::Any})}, module, memory);
+
   } catch (const std::exception &e) {
     return 1;
   }
