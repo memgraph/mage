@@ -60,7 +60,6 @@ def convert_to_isoformat(
         date,
     ]
 ):
-
     if isinstance(property, timedelta):
         return Parameter.DURATION.value + str(property) + ")"
 
@@ -76,7 +75,8 @@ def convert_to_isoformat(
     else:
         return property
 
-def get_graph(ctx:mgp.ProcCtx) -> List[Union[Node, Relationship]]:
+
+def get_graph(ctx: mgp.ProcCtx) -> List[Union[Node, Relationship]]:
     nodes = list()
     relationships = list()
 
@@ -107,6 +107,7 @@ def get_graph(ctx:mgp.ProcCtx) -> List[Union[Node, Relationship]]:
 
     return nodes + relationships
 
+
 @mgp.read_proc
 def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
     """
@@ -117,7 +118,7 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
     path : str
         Path to the JSON file containing the exported graph database.
     """
-   
+
     graph = get_graph(ctx)
     try:
         with open(path, "w") as outfile:
