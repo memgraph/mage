@@ -28,7 +28,7 @@ void Map::RemoveKeys(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
   const auto record_factory = mgp::RecordFactory(result);
   try {
     mgp::Map map = arguments[0].ValueMap();
-    const mgp::List &list = arguments[1].ValueList();
+    const mgp::List list = arguments[1].ValueList();
     bool recursive = arguments[2].ValueBool();
     std::unordered_set<std::string_view> set;
     for (auto elem : list) {
