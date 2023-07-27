@@ -5,6 +5,11 @@
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
     mgp::memory = memory;
+    AddProcedure(Create::SetRelProperty, Create::kProcedureSetRelProp, mgp::ProcedureType::Write,
+                 {mgp::Parameter(Create::kArgumentsRelationship, mgp::Type::Any),
+                  mgp::Parameter(Create::kArgumentsKey, mgp::Type::String),
+                  mgp::Parameter(Create::kArgumentsValue, mgp::Type::Any)},
+                 {mgp::Return(Create::kReturnRelProp, mgp::Type::Relationship)}, module, memory);
 
   } catch (const std::exception &e) {
     return 1;
