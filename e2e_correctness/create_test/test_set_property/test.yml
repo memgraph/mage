@@ -1,6 +1,0 @@
-memgraph_query: >
-    MATCH (n)
-    WHERE n.id=3
-    CALL graph_updates.set_property(n, "new_prop", "2") YIELD * RETURN *;
-
-neo4j_query: MATCH (n) WHERE n.id=3    CALL apoc.create.setProperty(n, "new_prop", "2") YIELD node RETURN node;
