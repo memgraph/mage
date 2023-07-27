@@ -6,7 +6,7 @@ As of 17.7.2023. when importing data via Cypherl, new ids is given to each node 
 
 When exporting data Memgraph export_util uses internal Memgraph ids to export data. 
 
-To overcome issue of different ids between Neo4j and Memgraph, we use ids on properties.
+To overcome the issue of different internal IDs in Neo4j and Memgraph, we use the `id` node property as identifier.
 
 Workaround would be to add API to create nodes by ids on Memgraph when importing via import_util.
 """
