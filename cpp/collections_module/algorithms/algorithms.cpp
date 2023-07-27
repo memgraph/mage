@@ -8,17 +8,16 @@ void Collections::RemoveAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
   try {
     const auto input_list = arguments[0].ValueList();
     const auto to_remove_list = arguments[1].ValueList();
-    std::set<mgp::Value> searchable;
+
+    std::multiset<mgp::Value> searchable;
 
     for (const auto value : input_list) {
       searchable.insert(std::move(value));
     }
 
-    std::set<mgp::Value>::iterator itr;
-
     for (const auto key : to_remove_list) {
       while (true) {
-        itr = searchable.find(key);
+        auto itr = searchable.find(key);
         if (itr == searchable.end()) {
           break;
         }
