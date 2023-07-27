@@ -1,6 +1,6 @@
 #include "map.hpp"
 
-void Map::removeRecursion(mgp::Map &result, bool recursive, std::string_view key) {
+void Map::RemoveRecursion(mgp::Map &result, bool recursive, std::string_view key) {
   for (auto element : result) {
     if (element.key == key) {
       result.Erase(element.key);
@@ -8,7 +8,7 @@ void Map::removeRecursion(mgp::Map &result, bool recursive, std::string_view key
     }
     if (element.value.IsMap() && recursive) {
       mgp::Map non_const_value_map = mgp::Map(std::move(element.value.ValueMap()));
-      removeRecursion(non_const_value_map, recursive, key);
+      RemoveRecursion(non_const_value_map, recursive, key);
       if (non_const_value_map.Empty()) {
         result.Erase(element.key);
         continue;
@@ -25,21 +25,11 @@ void Map::RemoveKey(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resul
   try {
     const auto map = arguments[0].ValueMap();
     const auto key = arguments[1].ValueString();
-    const auto recursive_map = arguments[2].ValueMap();
+    const auto recursive = arguments[2].ValueBool();
 
     mgp::Map map_removed = mgp::Map(std::move(map));
-    bool recursive = false;
 
-    if (!recursive_map.Empty() && !recursive_map.At("recursive").IsBool()) {
-      throw mgp::ValueException(
-          "Third argument must be a map with key recursive and value true or false.");  // neo4j ne baci exception samo
-                                                                                        // nastavi kao da je dobio false
-    }
-    if (!recursive_map.Empty() && recursive_map.At("recursive").ValueBool() == true) {
-      recursive = true;
-    }
-
-    removeRecursion(map_removed, recursive, key);
+    RemoveRecursion(map_removed, recursive, key);
 
     auto record = record_factory.NewRecord();
     record.Insert(std::string(kResultRemoveKey).c_str(), std::move(map_removed));
