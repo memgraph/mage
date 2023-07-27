@@ -12,6 +12,9 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     AddProcedure(Collections::SumLongs, Collections::kProcedureSumLongs, mgp::ProcedureType::Read,
                  {parameter_list_of_any}, {mgp::Return(Collections::kReturnSumLongs, mgp::Type::Int)}, module, memory);
 
+    AddProcedure(Collections::Avg, Collections::kProcedureAvg, mgp::ProcedureType::Read, {parameter_list_of_any},
+                 {mgp::Return(Collections::kReturnAvg, mgp::Type::Double)}, module, memory);
+
   } catch (const std::exception &e) {
     return 1;
   }
