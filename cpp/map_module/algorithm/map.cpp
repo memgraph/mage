@@ -7,8 +7,8 @@ void Map::SetKey(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, 
 
   try {
     auto map = arguments[0].ValueMap();
-    const auto &key{arguments[1].ValueString()};
-    const auto &value = arguments[2];
+    const auto key{arguments[1].ValueString()};
+    const auto value{arguments[2]};
     map.Update(key, std::move(value));
 
     auto record = record_factory.NewRecord();
