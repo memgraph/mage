@@ -1,6 +1,6 @@
 #include <mgp.hpp>
 
-#include "algorithm/algorithm.hpp"
+#include "algorithm/collections.hpp"
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {

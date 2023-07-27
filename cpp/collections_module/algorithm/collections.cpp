@@ -1,4 +1,5 @@
-#include "algorithm.hpp"
+#include "collections.hpp"
+
 #include <sstream>
 #include <unordered_set>
 #include "mgp.hpp"
