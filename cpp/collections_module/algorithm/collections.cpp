@@ -1,5 +1,5 @@
 #include <mgp.hpp>
-#include "algorithm.hpp"
+#include "collections.hpp"
 #include <unordered_set>
 
 void Collections::Contains(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
