@@ -1,0 +1,5 @@
+query: >
+  CALL collections.containsAll([false, true], [0, 1])
+  YIELD contained return contained;
+output:
+  - contained: false
