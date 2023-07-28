@@ -1,10 +1,11 @@
 #include <mgp.hpp>
 
-#include "algorithms/algorithms.hpp"
+#include "algorithm/collections.hpp"
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
-  mgp::memory = memory;
   try {
+    mgp::memory = memory;
+
     AddProcedure(Collections::Sum, Collections::kProcedureSum, mgp::ProcedureType::Read,
                  {mgp::Parameter(Collections::kInputList, {mgp::Type::List, mgp::Type::Any})},
                  {mgp::Return(Collections::kReturnSum, mgp::Type::Double)}, module, memory);

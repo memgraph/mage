@@ -1,9 +1,9 @@
-#include <list>
-#include <vector>
 #include <algorithm>
+#include <list>
 #include <unordered_set>
+#include <vector>
 
-#include "algorithms.hpp"
+#include "collections.hpp"
 
 void Collections::Sum(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
