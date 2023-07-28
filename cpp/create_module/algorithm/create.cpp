@@ -1,4 +1,5 @@
 #include "create.hpp"
+#include <unordered_set>
 
 void Create::RemoveLabels(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
@@ -29,7 +30,7 @@ void Create::RemoveLabels(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
     // done so I'm not sure if it is worth it?
 
     const auto labels = arguments[1].ValueList();
-    std::set<std::string_view> labels_set;
+    std::unordered_set<std::string_view> labels_set;
 
     for (auto label : labels) {
       labels_set.insert(label.ValueString());
