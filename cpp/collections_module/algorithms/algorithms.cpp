@@ -1,4 +1,5 @@
 #include "algorithms.hpp"
+#include <unordered_set>
 
 void Collections::RemoveAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
@@ -9,7 +10,7 @@ void Collections::RemoveAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
     const auto input_list = arguments[0].ValueList();
     const auto to_remove_list = arguments[1].ValueList();
 
-    std::multiset<mgp::Value> searchable;
+    std::unordered_multiset<mgp::Value> searchable;
 
     for (const auto value : input_list) {
       searchable.insert(std::move(value));

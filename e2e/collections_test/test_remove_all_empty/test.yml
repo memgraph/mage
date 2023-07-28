@@ -3,4 +3,4 @@ query: >
     RETURN removed
 
 output:
-    - removed: [1, 2, 3, 4, 5]
+    - removed: [4, 3, 5, 2, 1]
