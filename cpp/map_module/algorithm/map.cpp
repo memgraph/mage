@@ -1,3 +1,4 @@
+#include <fmt/format.h>
 #include <list>
 #include <sstream>
 
@@ -16,7 +17,8 @@ void Map::FromPairs(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resul
 
     for (const auto inside_list : list) {
       if (inside_list.ValueList().Size() != number_of_elements_in_pair) {
-        throw mgp::IndexException("Number of elements in a pair is not right.");
+        throw mgp::IndexException(
+            fmt::format("Pairs must consist of {} elements exactly.", number_of_elements_in_pair));
       }
       if (!inside_list.ValueList()[0].IsString()) {
         throw mgp::ValueException("All keys have to be type string.");
