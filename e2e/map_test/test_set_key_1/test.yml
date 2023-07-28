@@ -1,5 +1,5 @@
 query: >
-  CALL map.setKey(
+  CALL map.set_key(
     {name:"Zdravko",country:"Croatia"},
     "name",
     1

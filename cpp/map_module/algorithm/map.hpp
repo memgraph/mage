@@ -5,7 +5,7 @@
 
 namespace Map {
 
-constexpr const std::string_view kProcedureSetKey = "setKey";
+constexpr const std::string_view kProcedureSetKey = "set_key";
 
 constexpr const std::string_view kSetKeyArg1 = "map";
 constexpr const std::string_view kSetKeyArg2 = "key";
