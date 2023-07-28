@@ -1,4 +1,5 @@
-#include "algorithms.hpp"
+#include "collections.hpp"
+
 #include <unordered_set>
 
 void Collections::RemoveAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
