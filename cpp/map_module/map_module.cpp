@@ -6,6 +6,10 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   try {
     mgp::memory = memory;
 
+    AddProcedure(Map::FromValues, Map::kProcedureFromValues, mgp::ProcedureType::Read,
+                 {mgp::Parameter(Map::kFromNodesArg1, {mgp::Type::List, mgp::Type::Any})},
+                 {mgp::Return(Map::kResultFromValues, mgp::Type::Map)}, module, memory);
+
   } catch (const std::exception &e) {
     return 1;
   }
