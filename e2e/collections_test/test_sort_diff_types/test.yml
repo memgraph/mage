@@ -1,0 +1,6 @@
+query: >
+    CALL collections.sort(["abd", "aba", "abc", 5]) YIELD sorted
+    RETURN sorted
+
+exception: >
+    Values have to be of the same type

@@ -4,6 +4,7 @@ import yaml
 
 from pathlib import Path
 from gqlalchemy import Memgraph, Node
+from mgclient import Node as node_mgclient
 
 
 @pytest.fixture
@@ -41,6 +42,8 @@ def _replace(data, match_classes):
         return [_replace(i, match_classes) for i in data]
     elif isinstance(data, float):
         return pytest.approx(data, abs=TestConstants.ABSOLUTE_TOLERANCE)
+    elif isinstance(data, node_mgclient):
+        return _node_to_dict(data)
     else:
         return _node_to_dict(data) if isinstance(data, match_classes) else data
 
