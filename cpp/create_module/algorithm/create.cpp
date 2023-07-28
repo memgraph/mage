@@ -23,3 +23,4 @@ void Create::SetProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *
     return;
   }
 }
+
