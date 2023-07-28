@@ -18,26 +18,22 @@ void Map::FromNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resul
           continue;
 
       mgp::Map map{};
-      const mgp::Value id_value{node.Id().AsInt()};
-      map.Update("identity", id_value);
+      map.Update("identity", mgp::Value(node.Id().AsInt()));
 
       mgp::List labels{};
       for(const auto &label : node.Labels()){
           labels.AppendExtend(mgp::Value(label));
       }
-      const mgp::Value labels_value{std::move(labels)};
-      map.Update("labels", labels_value);
+      map.Update("labels", mgp::Value(std::move(labels)));
 
       const auto property_map = node.Properties();
       mgp::Map properties{};
       for (const auto &[key, value] : property_map) {
         properties.Insert(key, value);
       }
-      const mgp::Value properties_value{std::move(properties)};
-      map.Update("properties", properties_value);
+      map.Update("properties", mgp::Value(std::move(properties)));
 
-      const mgp::Value map_value{std::move(map)};
-      map_result.Update(node.GetProperty(std::string(property)).ValueString(), map_value);
+      map_result.Update(node.GetProperty(std::string(property)).ValueString(), mgp::Value(std::move(map)));
     }
 
     auto record = record_factory.NewRecord();

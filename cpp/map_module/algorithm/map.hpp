@@ -5,7 +5,7 @@
 
 namespace Map {
 
-constexpr const std::string_view kProcedureFromNodes = "fromNodes";
+constexpr const std::string_view kProcedureFromNodes = "from_nodes";
 
 constexpr const std::string_view kFromNodesArg1 = "label";
 constexpr const std::string_view kFromNodesArg2 = "property";
