@@ -6,6 +6,11 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   try {
     mgp::memory = memory;
 
+    AddProcedure(Collections::RemoveAll, Collections::kProcedureRemoveAll, mgp::ProcedureType::Read,
+                 {mgp::Parameter(Collections::kArgumentsInputList, {mgp::Type::List, mgp::Type::Any}),
+                  mgp::Parameter(Collections::kArgumentsRemoveList, {mgp::Type::List, mgp::Type::Any})},
+                 {mgp::Return(Collections::kReturnRemoveAll, {mgp::Type::List, mgp::Type::Any})}, module, memory);
+
     AddProcedure(Collections::Sum, Collections::kProcedureSum, mgp::ProcedureType::Read,
                  {mgp::Parameter(Collections::kInputList, {mgp::Type::List, mgp::Type::Any})},
                  {mgp::Return(Collections::kReturnSum, mgp::Type::Double)}, module, memory);
