@@ -1,0 +1,9 @@
+memgraph_query: >
+  MATCH (:Station)-[journey:JOURNEY]->(:Station)
+  CALL create.set_rel_property(journey, "arrival", null) YIELD relationship
+  RETURN relationship;
+
+neo4j_query: >
+  MATCH (:Station)-[journey:JOURNEY]->(:Station)
+  CALL apoc.create.setRelProperty(journey, "arrival", new) YIELD rel
+  RETURN rel;
