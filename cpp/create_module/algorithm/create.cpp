@@ -30,16 +30,11 @@ void Create::RemoveLabels(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
     // done so I'm not sure if it is worth it?
 
     const auto labels = arguments[1].ValueList();
-    std::unordered_set<std::string_view> labels_set;
-
-    for (auto label : labels) {
-      labels_set.insert(label.ValueString());
-    }
 
     for (auto nodeId : nodeIds) {
-      auto existing_labels = graph.GetNodeById(nodeId).Labels();
-      for (auto label : existing_labels) {
-        // do something
+      auto node = graph.GetNodeById(nodeId);
+      for (auto label : labels) {
+        node.RemoveLabel(label.ValueString());
         auto record = record_factory.NewRecord();
         record.Insert(std::string(kResultRemoveLabels).c_str(), std::move(node));
       }
