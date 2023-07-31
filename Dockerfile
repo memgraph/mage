@@ -4,7 +4,7 @@ FROM debian:bullseye as base
 
 USER root
 
-ARG MG_VERSION=2.8.0
+ARG MG_VERSION=2.9.0
 ARG PY_VERSION_DEFAULT
 ENV MG_VERSION ${MG_VERSION}
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
@@ -26,6 +26,7 @@ RUN apt-get update && apt-get install -y \
     python3-dev     `mage-memgraph` \
     clang           `mage-memgraph` \
     git             `mage-memgraph` \
+    unixodbc        `mage-memgraph` \
     libboost-all-dev `mage-memgraph` \
     --no-install-recommends \
     # Download and install Memgraph
