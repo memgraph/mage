@@ -1,4 +1,5 @@
 set(collections_src
-    collections.cpp)
+    collections_module.cpp
+    algorithm/collections.cpp)
 
 add_query_module(collections 1 "${collections_src}")
