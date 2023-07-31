@@ -39,14 +39,13 @@ void Create::SetRelProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
     const auto keys{arguments[1].ValueList()};
     const auto values{arguments[2].ValueList()};
 
-    auto all_relationships = graph.Relationships();
     const auto ids = get_relationship_ids(arguments[0]);
 
     if (keys.Size() != values.Size()) {
       throw mgp::IndexException("Keys and values are not the same size");
     }
 
-    for (auto relationship : all_relationships) {
+    for (auto relationship : graph.Relationships()) {
       if (ids.contains(relationship.Id().AsInt())) {
         auto it1 = keys.begin();
         auto it2 = values.begin();
@@ -56,11 +55,10 @@ void Create::SetRelProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
           ++it1;
           ++it2;
         }
+        auto record = record_factory.NewRecord();
+        record.Insert(std::string(kResultSetRelProperties).c_str(), relationship);
       }
     }
-
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultSetRelProperties).c_str(), false);
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());

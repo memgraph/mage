@@ -5,7 +5,7 @@
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
     mgp::memory = memory;
-    
+
     AddProcedure(Create::SetRelProperties, Create::kProcedureSetRelProperties, mgp::ProcedureType::Write,
                  {mgp::Parameter(Create::kSetRelPropertiesArg1, mgp::Type::Any),
                   mgp::Parameter(Create::kSetRelPropertiesArg2, {mgp::Type::List, mgp::Type::String}),
