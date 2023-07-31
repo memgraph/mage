@@ -58,6 +58,14 @@ class Vertex:
             if v != other._properties[k]:
                 logger.debug(f"Value {v} not equal to {other._properties[k]}")
                 return False
+            
+        for k, v in other._properties.items():
+            if k not in self._properties:
+                logger.debug(f"Property with key {k} not in {self._properties.keys()}")
+                return False
+            if v != self._properties[k]: #this if might be uselles, comment in review if you agree, this was checked in for loop above
+                logger.debug(f"Value {v} not equal to {self._properties[k]}")
+                return False
         return True
 
 
@@ -106,6 +114,13 @@ class Edge:
                 return False
             if v != other._properties[k]:
                 logger.debug(f"Value {v} not equal to {other._properties[k]}")
+                return False
+        for k, v in other._properties.items():
+            if k not in self._properties:
+                logger.debug(f"Property with key {k} not in {self._properties.keys()}")
+                return False
+            if v != self._properties[k]: #this if might be uselles, comment in review if you agree, this was checked in for loop above
+                logger.debug(f"Value {v} not equal to {self._properties[k]}")
                 return False
         return True
 
