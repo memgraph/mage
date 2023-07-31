@@ -35,13 +35,12 @@ void Create::SetProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_result
       throw mgp::IndexException("Key and value lists must be the same size.");
     }
 
-    for (auto node : graph.Nodes()) {
-      if (nodeIds.contains(node.Id())) {
-        for (size_t i = 0; i < prop_key_list.Size(); i++) {
-          node.SetProperty((std::string)prop_key_list[i].ValueString(), prop_value_list[i]);
-          auto record = record_factory.NewRecord();
-          record.Insert(std::string(kResultProperties).c_str(), std::move(node));
-        }
+    for (auto nodeId : nodeIds) {
+      auto node = graph.GetNodeById(nodeId);
+      for (size_t i = 0; i < prop_key_list.Size(); i++) {
+        node.SetProperty((std::string)prop_key_list[i].ValueString(), prop_value_list[i]);
+        auto record = record_factory.NewRecord();
+        record.Insert(std::string(kResultProperties).c_str(), std::move(node));
       }
     }
   } catch (const std::exception &e) {
