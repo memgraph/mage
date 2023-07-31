@@ -91,7 +91,7 @@ void Collections::Min(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
   }
 }
 
-void Collections::toSet(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Collections::ToSet(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
   auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);

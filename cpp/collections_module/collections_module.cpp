@@ -22,7 +22,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
         {mgp::Return(std::string(Collections::kReturnValueUnionAll).c_str(), {mgp::Type::List, mgp::Type::Any})},
         module, memory);
       
-    AddProcedure(Collections::toSet, Collections::kProcedureToSet, mgp::ProcedureType::Read,
+    AddProcedure(Collections::ToSet, Collections::kProcedureToSet, mgp::ProcedureType::Read,
         {mgp::Parameter(Collections::kArgumentListToSet, {mgp::Type::List, mgp::Type::Any})},
         {mgp::Return(Collections::kReturnToSet, {mgp::Type::List, mgp::Type::Any})}, module, memory);
 
