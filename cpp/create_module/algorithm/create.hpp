@@ -1,6 +1,7 @@
 #pragma once
 
 #include <mgp.hpp>
+
 #include <string>
 namespace Create {
 constexpr std::string_view kProcedureSetProperty = "set_property";
