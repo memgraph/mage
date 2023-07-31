@@ -1,5 +1,5 @@
 query: >
-  CALL collections.sumLongs([10000000000000000, 1])
+  CALL collections.sum_longs([10000000000000000, 1])
   YIELD sum;
 output:
   - sum: 10000000000000001

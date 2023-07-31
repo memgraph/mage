@@ -1,5 +1,0 @@
-query: >
-  CALL collections.containsAll(["Pero", 1, 2, 3], ["Pero", 3])
-  YIELD contained;
-output:
-  - contained: true

@@ -1,5 +1,0 @@
-query: >
-  CALL collections.sumLongs([123456789123, -213546879213, 987654321987])
-  YIELD sum;
-output:
-  - sum: 897564231897
