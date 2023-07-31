@@ -9,15 +9,12 @@ void Create::SetProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *
     const mgp::Node node_input = arguments[0].ValueNode();
     const std::string string(arguments[1].ValueString());
     mgp::Value value = arguments[2];
-    const int64_t id = node_input.Id().AsInt();
-    for (auto node : graph.Nodes()) {
-      if (node.Id().AsInt() == id) {
-        node.SetProperty(string, std::move(value));
-        auto record = record_factory.NewRecord();
-        record.Insert(std::string(Create::kReturntSetProperty).c_str(), node);
-      }
-    }
-
+    const mgp::Id id = node_input.Id();
+    mgp::Node node = graph.GetNodeById(id);
+    node.SetProperty(string, std::move(value));
+    auto record = record_factory.NewRecord();
+    record.Insert(std::string(Create::kReturntSetProperty).c_str(), node);
+     
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
     return;
