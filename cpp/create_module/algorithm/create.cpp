@@ -36,14 +36,12 @@ void Create::RemoveLabels(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
       labels_set.insert(label.ValueString());
     }
 
-    for (auto node : graph.Nodes()) {
-      if (nodeIds.contains(node.Id())) {
-        auto existing_labels = node.Labels();
-        for (auto label : existing_labels) {
-          // do something
-          auto record = record_factory.NewRecord();
-          record.Insert(std::string(kResultRemoveLabels).c_str(), std::move(node));
-        }
+    for (auto nodeId : nodeIds) {
+      auto existing_labels = graph.GetNodeById(nodeId).Labels();
+      for (auto label : existing_labels) {
+        // do something
+        auto record = record_factory.NewRecord();
+        record.Insert(std::string(kResultRemoveLabels).c_str(), std::move(node));
       }
     }
   } catch (const std::exception &e) {
