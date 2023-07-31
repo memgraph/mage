@@ -13,16 +13,15 @@ void Map::FromNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resul
     mgp::Map map_result{};
 
     const auto &all_nodes = mgp::Graph(memgraph_graph).Nodes();
-    for(const auto &node : all_nodes){
-      if(!node.HasLabel(label))
-          continue;
+    for (const auto &node : all_nodes) {
+      if (!node.HasLabel(label) || !node.Properties().contains(std::string(property))) continue;
 
       mgp::Map map{};
       map.Update("identity", mgp::Value(node.Id().AsInt()));
 
       mgp::List labels{};
-      for(const auto &label : node.Labels()){
-          labels.AppendExtend(mgp::Value(label));
+      for (const auto &label : node.Labels()) {
+        labels.AppendExtend(mgp::Value(label));
       }
       map.Update("labels", mgp::Value(std::move(labels)));
 

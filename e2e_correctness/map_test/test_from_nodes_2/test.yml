@@ -1,0 +1,4 @@
+memgraph_query: >
+  CALL map.from_nodes("Series", "ended") YIELD map;
+neo4j_query: >
+  RETURN apoc.map.fromNodes("Series", "ended");
