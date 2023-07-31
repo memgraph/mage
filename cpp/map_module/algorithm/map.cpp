@@ -47,9 +47,9 @@ std::string value_to_string(const mgp::Value &value) {
     }
     case mgp::Type::Duration:
       return std::to_string(value.ValueDuration().Microseconds()) + "ms";
+    default:
       throw mgp::ValueException("Unknown value type");
   }
-  return "";
 }
 }  // namespace
 
