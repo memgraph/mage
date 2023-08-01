@@ -13,7 +13,7 @@ void Create::RemoveProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
     mgp::Node graph_node = graph.GetNodeById(node_id);
     for (auto key : list_keys) {
       std::string key_str(key.ValueString());
-      graph_node.SetProperty(std::move(key_str), mgp::Value());
+      graph_node.RemoveProperty(key_str);
     }
     auto record = record_factory.NewRecord();
     record.Insert(std::string(Create::kReturntRemoveProperties).c_str(), graph_node);
