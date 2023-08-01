@@ -1,5 +1,26 @@
 #include "create.hpp"
-#include <unordered_set>
+
+const std::unordered_set<mgp::Id> Create::GetIds(const mgp::Value &argument) {
+  std::unordered_set<mgp::Id> result_set;
+  if (argument.IsList()) {
+    for (const auto element : argument.ValueList()) {
+      if (element.IsNode()) {
+        result_set.insert(std::move(element.ValueNode().Id()));
+      } else if (element.IsInt()) {
+        result_set.insert(std::move(mgp::Id::FromInt(element.ValueInt())));
+      } else {
+        throw mgp::ValueException("First argument must be a node, node's id or a list of those.");
+      }
+    }
+  } else if (argument.IsNode()) {
+    result_set.insert(std::move(argument.ValueNode().Id()));
+  } else if (argument.IsInt()) {
+    result_set.insert(std::move(mgp::Id::FromInt(argument.ValueInt())));
+  } else {
+    throw mgp::ValueException("First argument must be a node, node's id or a list of those.");
+  }
+  return result_set;
+}
 
 void Create::RemoveLabels(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
@@ -7,27 +28,7 @@ void Create::RemoveLabels(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
   const auto graph = mgp::Graph(memgraph_graph);
   const auto record_factory = mgp::RecordFactory(result);
   try {
-    std::set<mgp::Id> nodeIds;
-
-    if (arguments[0].IsList()) {
-      for (const auto element : arguments[0].ValueList()) {
-        if (element.IsNode()) {
-          nodeIds.insert(std::move(element.ValueNode().Id()));
-        } else if (element.IsInt()) {
-          nodeIds.insert(std::move(mgp::Id::FromInt(element.ValueInt())));
-        } else {
-          throw mgp::ValueException("First argument must be a node, node's id or a list of those.");
-        }
-      }
-    } else if (arguments[0].IsNode()) {
-      nodeIds.insert(std::move(arguments[0].ValueNode().Id()));
-    } else if (arguments[0].IsInt()) {
-      nodeIds.insert(std::move(mgp::Id::FromInt(arguments[0].ValueInt())));
-    } else {
-      throw mgp::ValueException("First argument must be a node, node's id or a list of those.");
-    }
-    // this part of code is very similar so I could extract it in a function but then lots of type casting has to be
-    // done so I'm not sure if it is worth it?
+    const auto nodeIds = GetIds(arguments[0]);
 
     const auto labels = arguments[1].ValueList();
 
