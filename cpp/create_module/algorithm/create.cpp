@@ -16,8 +16,7 @@ void Create::Nodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result
       }
       const mgp::Map node_properties = properties[i].ValueMap();
       for (auto item : node_properties) {
-        std::string key(item.key);
-        node.SetProperty(std::move(key), std::move(item.value));
+        node.SetProperty(std::string(item.key), std::move(item.value));
       }
       auto record = record_factory.NewRecord();
       record.Insert(std::string(Create::kReturnNodes).c_str(), node);
