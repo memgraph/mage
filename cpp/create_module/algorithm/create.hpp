@@ -1,6 +1,7 @@
 #pragma once
 
 #include <mgp.hpp>
+#include <unordered_set>
 
 namespace Create {
 
@@ -14,6 +15,7 @@ constexpr std::string_view kArgumentsValues = "input_values";
 
 constexpr std::string_view kResultProperties = "nodes";
 
+const std::unordered_set<mgp::Id> GetIds(const mgp::Value &argument);
 void SetProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 }  // namespace Create
