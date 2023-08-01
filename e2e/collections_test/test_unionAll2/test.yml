@@ -1,0 +1,6 @@
+query: >
+    CALL collections.unionAll([1,2,3,4,5], [3,4,5,6,7]) YIELD return_list RETURN return_list;
+
+output:
+  - return_list: [1, 2, 3, 4, 5, 3, 4, 5, 6, 7]
+

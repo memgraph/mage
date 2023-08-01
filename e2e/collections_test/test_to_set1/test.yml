@@ -1,0 +1,6 @@
+query: >
+  CALL collections.to_set([1,1,2,1,3,4,1]) YIELD result RETURN result;
+
+
+output: 
+  - result: [4, 3, 2, 1]
