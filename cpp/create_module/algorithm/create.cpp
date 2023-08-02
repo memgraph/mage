@@ -1,24 +1,26 @@
 #include "create.hpp"
 
+void Create::ProcessElement(std::unordered_set<mgp::Id> &result_set, const mgp::Value &element) {
+  if (element.IsNode()) {
+    result_set.insert(std::move(element.ValueNode().Id()));
+  } else if (element.IsRelationship()) {
+    result_set.insert(std::move(element.ValueRelationship().Id()));
+  } else if (element.IsInt()) {
+    result_set.insert(std::move(mgp::Id::FromInt(element.ValueInt())));
+  } else {
+    throw mgp::ValueException("First argument must be node, relationship, id or a list of those.");
+  }
+}
+
 const std::unordered_set<mgp::Id> Create::GetIds(const mgp::Value &argument) {
   std::unordered_set<mgp::Id> result_set;
   if (argument.IsList()) {
     for (const auto element : argument.ValueList()) {
-      if (element.IsNode()) {
-        result_set.insert(std::move(element.ValueNode().Id()));
-      } else if (element.IsInt()) {
-        result_set.insert(std::move(mgp::Id::FromInt(element.ValueInt())));
-      } else {
-        throw mgp::ValueException("First argument must be a node, node's id or a list of those.");
-      }
+      ProcessElement(result_set, element);
     }
-  } else if (argument.IsNode()) {
-    result_set.insert(std::move(argument.ValueNode().Id()));
-  } else if (argument.IsInt()) {
-    result_set.insert(std::move(mgp::Id::FromInt(argument.ValueInt())));
-  } else {
-    throw mgp::ValueException("First argument must be a node, node's id or a list of those.");
+    return result_set;
   }
+  ProcessElement(result_set, argument);
   return result_set;
 }
 
