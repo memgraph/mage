@@ -6,6 +6,10 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   try {
     mgp::memory = memory;
 
+    AddProcedure(Map::FromValues, Map::kProcedureFromValues, mgp::ProcedureType::Read,
+                 {mgp::Parameter(Map::kFromValuesArg1, {mgp::Type::List, mgp::Type::Any})},
+                 {mgp::Return(Map::kResultFromValues, mgp::Type::Map)}, module, memory);
+
     AddProcedure(Map::SetKey, Map::kProcedureSetKey, mgp::ProcedureType::Read,
                  {mgp::Parameter(Map::kSetKeyArg1, mgp::Type::Map), mgp::Parameter(Map::kSetKeyArg2, mgp::Type::String),
                   mgp::Parameter(Map::kSetKeyArg3, mgp::Type::Any)},
