@@ -7,6 +7,7 @@ env:
   MEMGRAPH_PORT: 7687
   NEO4J_PORT: 7688
   NEO4J_CONTAINER: "neo4j_test"
+  OFFICIAL: "false"
 
 on: [pull_request, workflow_dispatch]
 
@@ -36,9 +37,12 @@ jobs:
 
       - name: Download memgraph binaries
         run: |
-          curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11/memgraph_${MEMGRAPH_VERSION}-1_amd64.deb > memgraph-amd64.deb
-          curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb > memgraph-arm64.deb
-
+          if [ "${{ env.OFFICIAL }}" = "true" ]; then
+            curl -L "https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11/memgraph_${MEMGRAPH_VERSION}-1_amd64.deb" > memgraph-amd64.deb
+            curl -L "https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb" > memgraph-arm64.deb
+          else
+            curl -L "https://drive.google.com/uc?export=download&id=1kH25tyGlBR5aUU-bZBLT_lAhYDgicwgL" > memgraph-amd64.deb
+          fi
       - name: Build Memgraph MAGE:${{ matrix.target }}
         run: |
           DOCKER_BUILDKIT=1 docker buildx build \
