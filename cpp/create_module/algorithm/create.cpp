@@ -1,5 +1,6 @@
 #include "create.hpp"
 
+
 void Create::Nodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
@@ -73,3 +74,4 @@ void Create::RemoveProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
     return;
   }
 }
+
