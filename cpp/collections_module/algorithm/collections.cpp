@@ -11,7 +11,7 @@ void Collections::SumLongs(mgp_list *args, mgp_graph *memgraph_graph, mgp_result
 
   try {
     int64_t sum{0};
-    const auto &list = arguments[0].ValueList();
+    const auto list{arguments[0].ValueList()};
 
     for (const auto list_item : list) {
       if (!list_item.IsNumeric()) {
@@ -37,7 +37,7 @@ void Collections::Avg(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
 
   try {
     double average{0};
-    const auto &list = arguments[0].ValueList();
+    const auto list{arguments[0].ValueList()};
 
     for (const auto list_item : list) {
       if (!list_item.IsNumeric()) {
