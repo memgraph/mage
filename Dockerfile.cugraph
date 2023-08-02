@@ -2,7 +2,7 @@ ARG CUGRAPH_VERSION=22.02
 ARG CUDA_VERSION=11.5
 ARG CUDA_VERSION_MINOR=11.5.2
 ARG PY_VERSION=3.8
-ARG MG_VERSION=2.9.0
+ARG MG_VERSION=2.10.0
 
 FROM rapidsai/rapidsai:${CUGRAPH_VERSION}-cuda${CUDA_VERSION}-runtime-ubuntu20.04-py${PY_VERSION} as cugraph-dev
 
@@ -53,6 +53,12 @@ RUN apt-get update && apt-get install -y \
     apt-get install -y \
     cmake           `mage-memgraph` \
     --no-install-recommends
+
+# Install required packages from Debian Sid
+RUN echo 'deb http://deb.debian.org/debian sid main' > /etc/apt/sources.list.d/debian-sid.list
+RUN apt update && apt install -y g++-11 -t sid
+
+RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 50
 
 ENV PATH=/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/bin/cmake:/usr/lib/cmake
 
