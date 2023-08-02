@@ -15,7 +15,8 @@ constexpr std::string_view kArgumentsValue = "input_value";
 
 constexpr std::string_view kResultRelProp = "relationship";
 
-const std::unordered_set<mgp::Id> GetRelIds(const mgp::Value &argument);
+void ProcessElement(std::unordered_set<mgp::Id> &result_set, const mgp::Value &element);
+const std::unordered_set<mgp::Id> GetIds(const mgp::Value &argument);
 void SetRelProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 }  // namespace Create
