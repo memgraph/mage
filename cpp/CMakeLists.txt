@@ -4,6 +4,7 @@ set(MEMGRAPH_MAGE_PROJECT_NAME "memgraph-mage")
 project("${MEMGRAPH_MAGE_PROJECT_NAME}" LANGUAGES C CXX)
 include(FetchContent)
 
+
 # setup CMake module path, defines path for include() and find_package()
 # https://cmake.org/cmake/help/latest/variable/CMAKE_MODULE_PATH.html
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cugraph_cmake)

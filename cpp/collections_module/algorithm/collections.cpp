@@ -66,10 +66,17 @@ void Collections::ContainsAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
 
   try {
     const auto list1{arguments[0].ValueList()};
-    std::unordered_set<mgp::Value> set{list1.begin(), list1.end()};
-    const auto list2{arguments[1].ValueList()};
-    std::unordered_set<mgp::Value> values{list2.begin(), list2.end()};
+    std::unordered_set<mgp::Value> set;
 
+    for (const auto &elem: list1){
+      set.insert(elem);
+    }
+    const auto list2{arguments[1].ValueList()};
+    std::unordered_set<mgp::Value> values;
+
+    for (const auto &elem: list2){
+      values.insert(elem);
+    }
     auto record = record_factory.NewRecord();
     record.Insert(std::string(kResultContainsAll).c_str(),
                   std::all_of(values.begin(), values.end(), [&](const auto &x) { return set.contains(x); }));
@@ -87,9 +94,17 @@ void Collections::Intersection(mgp_list *args, mgp_graph *memgraph_graph, mgp_re
 
   try {
     const auto list1{arguments[0].ValueList()};
-    std::unordered_set<mgp::Value> set1{list1.begin(), list1.end()};
+    std::unordered_set<mgp::Value> set1;
+    for (const auto &elem: list1){
+      set1.insert(elem);
+    }
+
     const auto list2{arguments[1].ValueList()};
-    std::unordered_set<mgp::Value> set2{list2.begin(), list2.end()};
+    std::unordered_set<mgp::Value> set2;
+
+    for (const auto &elem: list2){
+      set2.insert(elem);
+    }
 
     if (set1.size() > set2.size()) {
       std::swap(set1, set2);
@@ -469,7 +484,11 @@ void Collections::ToSet(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *r
   const auto record_factory = mgp::RecordFactory(result);
   try {
     mgp::List list = arguments[0].ValueList();
-    std::unordered_set<mgp::Value> set(list.begin(), list.end());
+    std::unordered_set<mgp::Value> set;
+
+    for(const auto &elem: list){
+      set.insert(elem);
+    }
     mgp::List return_list;
     for (auto elem : set) {
       return_list.AppendExtend(std::move(elem));
