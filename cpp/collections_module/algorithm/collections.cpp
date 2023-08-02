@@ -137,7 +137,7 @@ void Collections::RemoveAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
     }
 
     mgp::List final_list = mgp::List();
-    for (const auto element : searchable) {
+    for (const auto &element : searchable) {
       final_list.AppendExtend(std::move(element));
     }
 
@@ -253,7 +253,7 @@ void Collections::ContainsSorted(mgp_list *args, mgp_graph *memgraph_graph, mgp_
     const auto element = arguments[1];
 
     int left{0};
-    int right{list.Size() - 1};
+    int right{static_cast<int>(list.Size() - 1)};
     int check;
 
     while (left <= right) {
@@ -413,7 +413,7 @@ void Collections::UnionAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_result
     mgp::List list2 = arguments[1].ValueList();
 
     for (size_t i = 0; i < list2.Size(); i++) {
-      list1.AppendExtend(std::move(list2[i]));
+      list1.AppendExtend(list2[i]);
     }
     auto record = record_factory.NewRecord();
     record.Insert(std::string(kReturnValueUnionAll).c_str(), list1);
@@ -444,14 +444,14 @@ void Collections::Min(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
     }
 
     bool isListNumeric = list[0].IsNumeric();
-    mgp::Value min{std::move(list[0])};
+    mgp::Value min{list[0]};
     for (size_t i = 0; i < list.Size(); i++) {
       if (list[i].Type() != type && !(isListNumeric && list[i].IsNumeric())) {
         throw mgp::ValueException("All elements must be of the same type!");
       }
 
       if (list[i] < min) {
-        min = std::move(list[i]);
+        min = list[i];
       }
     }
 
