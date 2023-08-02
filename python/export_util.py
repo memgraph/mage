@@ -60,7 +60,6 @@ def convert_to_isoformat(
         date,
     ]
 ):
-
     if isinstance(property, timedelta):
         return Parameter.DURATION.value + str(property) + ")"
 
@@ -77,19 +76,9 @@ def convert_to_isoformat(
         return property
 
 
-@mgp.read_proc
-def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
-    """
-    Procedure to export the whole database to a JSON file.
-
-    Parameters
-    ----------
-    path : str
-        Path to the JSON file containing the exported graph database.
-    """
+def get_graph(ctx: mgp.ProcCtx) -> List[Union[Node, Relationship]]:
     nodes = list()
     relationships = list()
-    graph = list()
 
     for vertex in ctx.graph.vertices:
         labels = [label.name for label in vertex.labels]
@@ -116,8 +105,21 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
                 ).get_dict()
             )
 
-        graph = nodes + relationships
+    return nodes + relationships
 
+
+@mgp.read_proc
+def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
+    """
+    Procedure to export the whole database to a JSON file.
+
+    Parameters
+    ----------
+    path : str
+        Path to the JSON file containing the exported graph database.
+    """
+
+    graph = get_graph(ctx)
     try:
         with open(path, "w") as outfile:
             js.dump(graph, outfile, indent=Parameter.STANDARD_INDENT.value, default=str)
@@ -129,6 +131,14 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
         raise OSError("Could not open or write to the file.")
 
     return mgp.Record()
+
+
+@mgp.read_proc
+def json_stream(ctx: mgp.ProcCtx) -> mgp.Record(stream=str):
+    """
+    Procedure to export the whole database to a stream.
+    """
+    return mgp.Record(stream=js.dumps(get_graph(ctx)))
 
 
 def save_file(file_path: str, data_list: list):

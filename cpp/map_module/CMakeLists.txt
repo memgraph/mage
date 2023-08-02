@@ -3,3 +3,5 @@ set(map_module_src
     algorithm/map.cpp)
 
 add_query_module(map 1 "${map_module_src}")
+
+target_link_libraries(map PRIVATE fmt::fmt)
