@@ -45,3 +45,37 @@ def parse(
         raise Exception("Unit doesn't exist. Check documentation to see available units.")
 
     return mgp.Record(parsed=parsed)
+
+
+@mgp.read_proc
+def format(
+    time: int,
+    unit: str = "ms",
+    format: str = "%Y/%m/%d %H:%M:%S %Z",
+    timezone: str = "UTC",
+) -> mgp.Record(formatted=str):
+    first_date = datetime.datetime(1970, 1, 1, 0, 0, 0)
+
+    if (unit == "ms"):
+        new_date = first_date + datetime.timedelta(milliseconds=time)
+    elif (unit == "s"):
+        new_date = first_date + datetime.timedelta(seconds=time)
+    elif (unit == "m"):
+        new_date = first_date + datetime.timedelta(minutes=time)
+    elif (unit == "h"):
+        new_date = first_date + datetime.timedelta(hours=time)
+    elif (unit == "d"):
+        new_date = first_date + datetime.timedelta(days=time)
+    else:
+        raise Exception("Unit doesn't exist. Check documentation to see available units.")
+
+    if (timezone in pytz.all_timezones):
+        offset, subtract = getOffset(timezone, new_date)
+        if (subtract):
+            tz_new = new_date - offset
+        else:
+            tz_new = new_date + offset
+    else:
+        raise Exception("Timezone doesn't exist. Check documentation to see available timezones.")
+
+    return mgp.Record(formatted=tz_new.strftime(format))
