@@ -1,5 +1,5 @@
 query: >
-    CALL dates_module.parse("21 June, 2018", "d", "%d %B, %Y", "US/Samoa") YIELD parsed
+    CALL date_module.parse("21 June, 2018", "d", "%d %B, %Y", "US/Samoa") YIELD parsed
     RETURN parsed
 
 output:
