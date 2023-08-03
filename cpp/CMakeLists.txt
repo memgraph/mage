@@ -4,6 +4,7 @@ set(MEMGRAPH_MAGE_PROJECT_NAME "memgraph-mage")
 project("${MEMGRAPH_MAGE_PROJECT_NAME}" LANGUAGES C CXX)
 include(FetchContent)
 
+
 # setup CMake module path, defines path for include() and find_package()
 # https://cmake.org/cmake/help/latest/variable/CMAKE_MODULE_PATH.html
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cugraph_cmake)
@@ -17,6 +18,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -143,5 +145,6 @@ add_subdirectory(node_similarity_module)
 add_subdirectory(distance_calculator)
 add_subdirectory(do_module)
 add_subdirectory(periodic_module)
+add_subdirectory(collections_module)
 add_subdirectory(text_module)
 add_cugraph_subdirectory(cugraph_module)
