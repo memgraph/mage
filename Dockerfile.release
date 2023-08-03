@@ -28,12 +28,6 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Install required packages from Debian Sid
-RUN echo 'deb http://deb.debian.org/debian sid main' > /etc/apt/sources.list.d/debian-sid.list
-RUN apt update && apt install -y g++-11 -t sid
-
-RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 50
-
 COPY memgraph-${TARGETARCH}.deb .
 
 RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb
