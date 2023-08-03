@@ -4,7 +4,7 @@ FROM debian:bullseye as base
 
 USER root
 
-ARG MG_VERSION=2.9.0
+ARG MG_VERSION=2.10.0
 ARG PY_VERSION_DEFAULT
 ENV MG_VERSION ${MG_VERSION}
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
@@ -35,6 +35,11 @@ RUN apt-get update && apt-get install -y \
     && rm memgraph.deb \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+# Install required packages from Debian Sid
+RUN echo 'deb http://deb.debian.org/debian sid main' > /etc/apt/sources.list.d/debian-sid.list
+RUN apt update && apt install -y g++-11 -t sid
+
+RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 50
 
 ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
 
