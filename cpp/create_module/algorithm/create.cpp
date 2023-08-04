@@ -67,3 +67,4 @@ void Create::RemoveProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
     return;
   }
 }
+
