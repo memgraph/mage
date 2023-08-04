@@ -1,0 +1,5 @@
+memgraph_query: >
+  MATCH (d:Dog), (h:Human), (c:Cat), (m:Mouse)
+  CALL nodes.link([d,h,c,m],"loves")
+neo4j_query: >
+  MATCH (d:Dog), (h:Human), (c:Cat), (m:Mouse) CALL apoc.nodes.link([d,h,c,m],"hates")
