@@ -14,8 +14,9 @@ constexpr std::string_view kArgumentsLabels = "labels";
 
 constexpr std::string_view kResultRemoveLabels = "nodes";
 
-void ProcessElement(std::unordered_set<mgp::Id> &result_set, const mgp::Value &element);
-const std::unordered_set<mgp::Id> GetIds(const mgp::Value &argument);
+void RemoveElementLabels(mgp::Node &element, const mgp::List &labels, const mgp::RecordFactory &record_factory);
+void ProcessElement(const mgp::Value &element, const mgp::Graph graph, const mgp::List &labels,
+                    const mgp::RecordFactory &record_factory);
 void RemoveLabels(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 }  // namespace Create
