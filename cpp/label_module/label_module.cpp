@@ -5,11 +5,10 @@
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
     mgp::memory = memory;
-    AddProcedure(
-        Map::RemoveKey, Map::kProcedureRemoveKey, mgp::ProcedureType::Read,
-        {mgp::Parameter(Map::kArgumentsInputMap, mgp::Type::Map), mgp::Parameter(Map::kArgumentsKey, mgp::Type::String),
-         mgp::Parameter(Map::kArgumentsIsRecursive, mgp::Type::Bool, false)},
-        {mgp::Return(Map::kReturnRemoveKey, mgp::Type::Map)}, module, memory);
+    AddProcedure(Label::Exists, Label::kProcedureExists, mgp::ProcedureType::Read,
+                 {mgp::Parameter(Label::kArgumentsNode, mgp::Type::Any),
+                  mgp::Parameter(Label::kArgumentsLabel, mgp::Type::String)},
+                 {mgp::Return(Label::kReturnExists, mgp::Type::Bool)}, module, memory);
 
   } catch (const std::exception &e) {
     return 1;
