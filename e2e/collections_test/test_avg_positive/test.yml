@@ -1,0 +1,5 @@
+query: >
+  CALL collections.avg([1, 2, 3])
+  YIELD average;
+output:
+  - average: 2.0
