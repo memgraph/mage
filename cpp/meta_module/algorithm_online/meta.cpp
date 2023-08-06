@@ -1,4 +1,6 @@
 #include "meta.hpp"
+#include <cstdint>
+#include <string>
 #include <string_view>
 #include "mgp.hpp"
 
@@ -19,6 +21,7 @@ class Metadata {
   int64_t get_relationship_type_count() const { return static_cast<int64_t>(relationship_types.size()); }
   int64_t get_property_key_count() const { return static_cast<int64_t>(property_key_cnt.size()); }
 
+  void reset();
   void update_labels(const mgp::Node &node, int add);
   void update_property_key_cnt(const mgp::Node &node, int add);
   void update_property_key_cnt(const mgp::Relationship &relationship, int add);
@@ -41,6 +44,14 @@ void insert(std::unordered_map<std::string_view, int64_t> &map, std::string_view
   } else {
     map[key] = 1;
   }
+}
+
+void Metadata::reset() {
+  node_cnt = relationship_cnt = 0;
+  labels.clear();
+  property_key_cnt.clear();
+  relationship_types.clear();
+  relationship_types_cnt.clear();
 }
 
 void Metadata::update_labels(const mgp::Node &node, int add) {
@@ -150,7 +161,7 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
 
     for (const auto &object : removed_vertex_labels) {
       const auto event{object.ValueMap()};
-      insert(Meta::metadata.labels, event["label"].ValueString(), event["vertices"].ValueList().Size());
+      insert(Meta::metadata.labels, event["label"].ValueString(), -event["vertices"].ValueList().Size());
     }
 
   } catch (const std::exception &e) {
@@ -165,11 +176,25 @@ void Stats(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_me
   const auto record_factory = mgp::RecordFactory(result);
 
   try {
+    auto record = record_factory.NewRecord();
     mgp::Map stats{};
-    stats.Insert("labelCount", mgp::Value(metadata.get_label_count()));
-    stats.Insert("relTypeCount", mgp::Value(metadata.get_relationship_type_count()));
-    stats.Insert("propertyKeyCount", mgp::Value(metadata.get_property_key_count()));
+
+    int64_t label_count = metadata.get_label_count();
+    record.Insert(std::string(kReturnStats1).c_str(), label_count);
+    stats.Insert("labelCount", mgp::Value(label_count));
+
+    int64_t relationship_type_count = metadata.get_relationship_type_count();
+    record.Insert(std::string(kReturnStats2).c_str(), relationship_type_count);
+    stats.Insert("relTypeCount", mgp::Value(relationship_type_count));
+
+    int64_t property_key_count = metadata.get_property_key_count();
+    record.Insert(std::string(kReturnStats3).c_str(), property_key_count);
+    stats.Insert("propertyKeyCount", mgp::Value(property_key_count));
+
+    record.Insert(std::string(kReturnStats4).c_str(), metadata.node_cnt);
     stats.Insert("nodeCount", mgp::Value(metadata.node_cnt));
+
+    record.Insert(std::string(kReturnStats5).c_str(), metadata.relationship_cnt);
     stats.Insert("relCount", mgp::Value(metadata.relationship_cnt));
 
     auto create_map = [](const auto &map) {
@@ -180,12 +205,32 @@ void Stats(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_me
       return result;
     };
 
-    stats.Insert("labels", mgp::Value(create_map(metadata.labels)));
-    stats.Insert("relTypes", mgp::Value(create_map(metadata.relationship_types)));
-    stats.Insert("relTypesCount", mgp::Value(create_map(metadata.relationship_types_cnt)));
+    auto labels_map = create_map(metadata.labels);
+    record.Insert(std::string(kReturnStats6).c_str(), labels_map);
+    stats.Insert("labels", mgp::Value(std::move(labels_map)));
 
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(kReturnStats).c_str(), stats);
+    auto relationship_types_map = create_map(metadata.relationship_types);
+    record.Insert(std::string(kReturnStats7).c_str(), relationship_types_map);
+    stats.Insert("relTypes", mgp::Value(std::move(relationship_types_map)));
+
+    auto relationship_types_count_map = create_map(metadata.relationship_types_cnt);
+    record.Insert(std::string(kReturnStats8).c_str(), relationship_types_count_map);
+    stats.Insert("relTypesCount", mgp::Value(std::move(relationship_types_count_map)));
+
+    record.Insert(std::string(kReturnStats9).c_str(), stats);
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
+
+void Reset(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::memory = memory;
+  const auto record_factory = mgp::RecordFactory(result);
+
+  try {
+    metadata.reset();
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
