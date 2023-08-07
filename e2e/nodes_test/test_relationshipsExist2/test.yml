@@ -1,0 +1,7 @@
+query: >
+    MATCH (d:Dog), (h:Human)
+    CALL nodes.relationships_exist([d,h], ["Loves>","Loves"]) YIELD result RETURN result["Relationships_exist_status"];
+output:
+  - result["Relationships_exist_status"]: {"Loves": true,"Loves>": true}
+  - result["Relationships_exist_status"]: {"Loves": true,"Loves>": false}
+
