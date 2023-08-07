@@ -21,7 +21,7 @@ void Create::ProcessElement(const mgp::Value &element, const mgp::Graph graph, c
     relIds.insert(mgp::Id::FromInt(element.ValueInt()));
     return;
   }
-  throw mgp::ValueException("First argument must be node, relationship, id or a list of those.");
+  throw mgp::ValueException("First argument must be a relationship, id or a list of those.");
 }
 
 void Create::SetRelProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
@@ -43,6 +43,9 @@ void Create::SetRelProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
       }
     } else {
       ProcessElement(arguments[0], graph, prop_key_list, prop_value_list, record_factory, relIds);
+    }
+    if (relIds.empty()) {
+      return;
     }
     for (auto rel : graph.Relationships()) {
       if (relIds.contains(rel.Id())) {
