@@ -36,8 +36,7 @@ class Metadata {
 // implementation
 Metadata metadata;
 
-void insert(std::unordered_map<std::string, int64_t> &map, std::string_view key_view, int64_t add) {
-  auto key = std::string(key_view);
+void insert(std::unordered_map<std::string, int64_t> &map, std::string &key, int64_t add) {
   auto iterator = map.find(key);
   if (iterator != map.end()) {
     (*iterator).second += add;
@@ -49,16 +48,9 @@ void insert(std::unordered_map<std::string, int64_t> &map, std::string_view key_
   }
 }
 
-void insert(std::unordered_map<std::string, int64_t> &map, std::string &key, int64_t add) {
-  auto iterator = map.find(key);
-  if (iterator != map.end()) {
-    (*iterator).second += add;
-    if ((*iterator).second == 0) {
-      map.erase(iterator);
-    }
-  } else {
-    map[key] = add;
-  }
+void insert(std::unordered_map<std::string, int64_t> &map, std::string_view key_view, int64_t add) {
+  auto key = std::string(key_view);
+  insert(map, key, add);
 }
 
 void Metadata::reset() {
