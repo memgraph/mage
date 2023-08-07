@@ -7,12 +7,12 @@ bool Nodes::RelationshipExist(const mgp::Node &node, std::string &rel_type) {
     rel_type.pop_back();
   }
   for (auto rel : node.OutRelationships()) {
-    if (std::string(rel.Type()) == rel_type && (direction == '>' || direction != '<')) {
+    if (std::string(rel.Type()) == rel_type && direction != '<') {
       return true;
     }
   }
   for (auto rel : node.InRelationships()) {
-    if (std::string(rel.Type()) == rel_type && (direction == '<' || direction != '>')) {
+    if (std::string(rel.Type()) == rel_type && direction != '>') {
       return true;
     }
   }
