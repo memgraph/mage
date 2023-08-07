@@ -37,13 +37,13 @@ void Create::SetProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_result
       throw mgp::IndexException("Key and value lists must be the same size.");
     }
 
-    if (arguments[0].IsList()) {
-      for (const auto element : arguments[0].ValueList()) {
-        ProcessElement(element, graph, prop_key_list, prop_value_list, record_factory);
-      }
+    if (!arguments[0].IsList()) {
+      ProcessElement(arguments[0], graph, prop_key_list, prop_value_list, record_factory);
       return;
     }
-    ProcessElement(arguments[0], graph, prop_key_list, prop_value_list, record_factory);
+    for (const auto element : arguments[0].ValueList()) {
+      ProcessElement(element, graph, prop_key_list, prop_value_list, record_factory);
+    }
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
