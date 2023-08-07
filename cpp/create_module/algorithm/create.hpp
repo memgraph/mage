@@ -2,8 +2,8 @@
 
 #include <mgp.hpp>
 
-
 #include <string>
+
 namespace Create {
 /*nodes constants*/
 constexpr std::string_view kProcedureNodes = "nodes";
@@ -28,4 +28,3 @@ void SetProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, 
 void RemoveProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 void Nodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 }  // namespace Create
-
