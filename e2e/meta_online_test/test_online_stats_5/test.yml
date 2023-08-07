@@ -1,0 +1,45 @@
+- query: >-
+    CALL meta.stats() YIELD stats RETURN stats;
+  output:
+    - stats: {
+    labelCount: 2,
+      labels: {
+          Node: 3,
+          node: 3
+      },
+      nodeCount: 6,
+      propertyKeyCount: 4,
+      relationshipCount: 3,
+      relationshipTypeCount: 1,
+      relationshipTypes: {
+        "(:node)-[:RELATION]->()": 3,
+        "()-[:RELATION]->()": 3,
+        "()-[:RELATION]->(:node)": 3
+      },
+      relationshipTypesCount: {
+        RELATION: 3
+      }
+    }
+
+- query: >-
+    CALL meta.stats() YIELD stats RETURN stats;
+  output:
+    - stats: {
+    labelCount: 2,
+      labels: {
+          Node: 2,
+          node: 3
+      },
+      nodeCount: 5,
+      propertyKeyCount: 4,
+      relationshipCount: 3,
+      relationshipTypeCount: 1,
+      relationshipTypes: {
+        "(:node)-[:RELATION]->()": 3,
+        "()-[:RELATION]->()": 3,
+        "()-[:RELATION]->(:node)": 3
+      },
+      relationshipTypesCount: {
+        RELATION: 3
+      }
+    }

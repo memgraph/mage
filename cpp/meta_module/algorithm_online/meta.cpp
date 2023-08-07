@@ -12,13 +12,13 @@ class Metadata {
  public:
   int64_t node_cnt;
   int64_t relationship_cnt;
-  std::unordered_map<std::string_view, int64_t> labels;
-  std::unordered_map<std::string_view, int64_t> property_key_cnt;
-  std::unordered_map<std::string_view, int64_t> relationship_types;
-  std::unordered_map<std::string_view, int64_t> relationship_types_cnt;
+  std::unordered_map<std::string, int64_t> labels;
+  std::unordered_map<std::string, int64_t> property_key_cnt;
+  std::unordered_map<std::string, int64_t> relationship_types;
+  std::unordered_map<std::string, int64_t> relationship_types_cnt;
 
   int64_t get_label_count() const { return static_cast<int64_t>(labels.size()); }
-  int64_t get_relationship_type_count() const { return static_cast<int64_t>(relationship_types.size()); }
+  int64_t get_relationship_type_count() const { return static_cast<int64_t>(relationship_types_cnt.size()); }
   int64_t get_property_key_count() const { return static_cast<int64_t>(property_key_cnt.size()); }
 
   void reset();
@@ -34,7 +34,8 @@ class Metadata {
 // implementation
 Metadata metadata;
 
-void insert(std::unordered_map<std::string_view, int64_t> &map, std::string_view key, int64_t add) {
+void insert(std::unordered_map<std::string, int64_t> &map, std::string_view key_view, int64_t add) {
+  auto key = std::string(key_view);
   auto iterator = map.find(key);
   if (iterator != map.end()) {
     (*iterator).second += add;
@@ -42,7 +43,19 @@ void insert(std::unordered_map<std::string_view, int64_t> &map, std::string_view
       map.erase(iterator);
     }
   } else {
-    map[key] = 1;
+    map[key] = add;
+  }
+}
+
+void insert(std::unordered_map<std::string, int64_t> &map, std::string &key, int64_t add) {
+  auto iterator = map.find(key);
+  if (iterator != map.end()) {
+    (*iterator).second += add;
+    if ((*iterator).second == 0) {
+      map.erase(iterator);
+    }
+  } else {
+    map[key] = add;
   }
 }
 
@@ -83,6 +96,8 @@ void Metadata::update_relationship_types(const mgp::Relationship &relationship, 
     auto key = "()-[:" + std::string(type) + "]->(:" + std::string(label) + ")";
     insert(relationship_types, key, add);
   }
+
+  insert(relationship_types, "()-[:" + std::string(type) + "]->()", add);
 }
 
 void Metadata::update_relationship_types_cnt(const mgp::Relationship &relationship, int add) {
@@ -185,7 +200,7 @@ void Stats(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_me
 
     int64_t relationship_type_count = metadata.get_relationship_type_count();
     record.Insert(std::string(kReturnStats2).c_str(), relationship_type_count);
-    stats.Insert("relTypeCount", mgp::Value(relationship_type_count));
+    stats.Insert("relationshipTypeCount", mgp::Value(relationship_type_count));
 
     int64_t property_key_count = metadata.get_property_key_count();
     record.Insert(std::string(kReturnStats3).c_str(), property_key_count);
@@ -195,7 +210,7 @@ void Stats(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_me
     stats.Insert("nodeCount", mgp::Value(metadata.node_cnt));
 
     record.Insert(std::string(kReturnStats5).c_str(), metadata.relationship_cnt);
-    stats.Insert("relCount", mgp::Value(metadata.relationship_cnt));
+    stats.Insert("relationshipCount", mgp::Value(metadata.relationship_cnt));
 
     auto create_map = [](const auto &map) {
       mgp::Map result;
@@ -211,11 +226,11 @@ void Stats(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_me
 
     auto relationship_types_map = create_map(metadata.relationship_types);
     record.Insert(std::string(kReturnStats7).c_str(), relationship_types_map);
-    stats.Insert("relTypes", mgp::Value(std::move(relationship_types_map)));
+    stats.Insert("relationshipTypes", mgp::Value(std::move(relationship_types_map)));
 
     auto relationship_types_count_map = create_map(metadata.relationship_types_cnt);
     record.Insert(std::string(kReturnStats8).c_str(), relationship_types_count_map);
-    stats.Insert("relTypesCount", mgp::Value(std::move(relationship_types_count_map)));
+    stats.Insert("relationshipTypesCount", mgp::Value(std::move(relationship_types_count_map)));
 
     record.Insert(std::string(kReturnStats9).c_str(), stats);
 
