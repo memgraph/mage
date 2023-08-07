@@ -11,17 +11,16 @@ void Create::RemoveElementLabels(mgp::Node &element, const mgp::List &labels,
 
 void Create::ProcessElement(const mgp::Value &element, const mgp::Graph graph, const mgp::List &labels,
                             const mgp::RecordFactory &record_factory) {
+  if (!(element.IsNode() || element.IsInt())) {
+    throw mgp::ValueException("First argument must be type node, id or a list of those.");
+  }
   if (element.IsNode()) {
     auto node = element.ValueNode();
     RemoveElementLabels(node, labels, record_factory);
     return;
   }
-  if (element.IsInt()) {
-    auto node = graph.GetNodeById(mgp::Id::FromInt(element.ValueInt()));
-    RemoveElementLabels(node, labels, record_factory);
-    return;
-  }
-  throw mgp::ValueException("First argument must be type node, relationship, id or a list of those.");
+  auto node = graph.GetNodeById(mgp::Id::FromInt(element.ValueInt()));
+  RemoveElementLabels(node, labels, record_factory);
 }
 
 void Create::RemoveLabels(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
