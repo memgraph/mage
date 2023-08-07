@@ -12,16 +12,15 @@ void Create::SetElementProp(mgp::Relationship &element, const mgp::List &prop_ke
 void Create::ProcessElement(const mgp::Value &element, const mgp::Graph graph, const mgp::List &prop_key_list,
                             const mgp::List &prop_value_list, const mgp::RecordFactory &record_factory,
                             std::unordered_set<mgp::Id> &relIds) {
+  if (!(element.IsRelationship() || element.IsInt())) {
+    throw mgp::ValueException("First argument must be a relationship, id or a list of those.");
+  }
   if (element.IsRelationship()) {
     auto rel = element.ValueRelationship();
     SetElementProp(rel, prop_key_list, prop_value_list, record_factory);
     return;
   }
-  if (element.IsInt()) {
-    relIds.insert(mgp::Id::FromInt(element.ValueInt()));
-    return;
-  }
-  throw mgp::ValueException("First argument must be a relationship, id or a list of those.");
+  relIds.insert(mgp::Id::FromInt(element.ValueInt()));
 }
 
 void Create::SetRelProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
