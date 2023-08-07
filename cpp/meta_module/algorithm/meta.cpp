@@ -179,45 +179,30 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
     const auto set_vertex_labels{arguments[4].ValueList()};
     const auto removed_vertex_labels{arguments[5].ValueList()};
 
-    for (const auto &object : created_objects) {
-      const auto event{object.ValueMap()};
+    auto update_object = [](const auto &objects, std::string_view vertex_event, std::string_view edge_event, int add) {
+      for (const auto &object : objects) {
+        const auto event{object.ValueMap()};
 
-      const auto event_type = event["event_type"].ValueString();
-      if (event_type == "created_vertex") {
-        Meta::metadata.node_cnt++;
-        const auto vertex = event["vertex"].ValueNode();
-        Meta::metadata.update_labels(vertex, 1);
-        Meta::metadata.update_property_key_cnt(vertex, 1);
-      } else if (event_type == "created_edge") {
-        Meta::metadata.relationship_cnt++;
-        const auto edge = event["edge"].ValueRelationship();
-        Meta::metadata.update_relationship_types(edge, 1);
-        Meta::metadata.update_relationship_types_cnt(edge, 1);
-        Meta::metadata.update_property_key_cnt(edge, 1);
-      } else {
-        throw mgp::ValueException("Unexpected event type");
+        const auto event_type = event["event_type"].ValueString();
+        if (event_type == vertex_event) {
+          Meta::metadata.node_cnt += add;
+          const auto vertex = event["vertex"].ValueNode();
+          Meta::metadata.update_labels(vertex, add);
+          Meta::metadata.update_property_key_cnt(vertex, add);
+        } else if (event_type == edge_event) {
+          Meta::metadata.relationship_cnt += add;
+          const auto edge = event["edge"].ValueRelationship();
+          Meta::metadata.update_relationship_types(edge, add);
+          Meta::metadata.update_relationship_types_cnt(edge, add);
+          Meta::metadata.update_property_key_cnt(edge, add);
+        } else {
+          throw mgp::ValueException("Unexpected event type");
+        }
       }
-    }
+    };
 
-    for (const auto &object : deleted_objects) {
-      const auto event{object.ValueMap()};
-
-      const auto event_type = event["event_type"].ValueString();
-      if (event_type == "deleted_vertex") {
-        Meta::metadata.node_cnt--;
-        const auto vertex = event["vertex"].ValueNode();
-        Meta::metadata.update_labels(vertex, -1);
-        Meta::metadata.update_property_key_cnt(vertex, -1);
-      } else if (event_type == "deleted_edge") {
-        Meta::metadata.relationship_cnt--;
-        const auto edge = event["edge"].ValueRelationship();
-        Meta::metadata.update_relationship_types(edge, -1);
-        Meta::metadata.update_relationship_types_cnt(edge, -1);
-        Meta::metadata.update_property_key_cnt(edge, -1);
-      } else {
-        throw mgp::ValueException("Unexpected event type");
-      }
-    }
+    update_object(created_objects, "created_vertex", "created_edge", 1);
+    update_object(deleted_objects, "deleted_vertex", "deleted_edge", -1);
 
     for (const auto &object : removed_vertex_properties) {
       const auto event{object.ValueMap()};
