@@ -2,19 +2,18 @@ import mgp
 import pytz
 import datetime
 
-MINUTES_IN_HOUR = 60
-SECONDS_IN_MINUTE = 60
-MILLISECONDS_IN_SECOND = 1000
-HOURS_IN_DAY = 24
-UNIX_EPOCH = datetime.datetime(1970, 1, 1, 0, 0, 0)
+from mage.date.constants import (
+    Conversion,
+    Epoch
+)
 
 def getOffset(timezone, date):
     offset = pytz.timezone(timezone).utcoffset(date)
     if (offset.days == 1):
-        return datetime.timedelta(minutes=offset.seconds // SECONDS_IN_MINUTE + HOURS_IN_DAY*MINUTES_IN_HOUR), False
+        return datetime.timedelta(minutes=offset.seconds // Conversion.SECONDS_IN_MINUTE + Conversion.HOURS_IN_DAY * Conversion.MINUTES_IN_HOUR), False
     elif (offset.days == -1):
-        return datetime.timedelta(minutes=HOURS_IN_DAY*MINUTES_IN_HOUR - offset.seconds // SECONDS_IN_MINUTE), True
-    return datetime.timedelta(minutes=offset.seconds // SECONDS_IN_MINUTE), False
+        return datetime.timedelta(minutes=Conversion.HOURS_IN_DAY * Conversion.MINUTES_IN_HOUR - offset.seconds // Conversion.SECONDS_IN_MINUTE), True
+    return datetime.timedelta(minutes=offset.seconds // Conversion.SECONDS_IN_MINUTE), False
 
 @mgp.read_proc
 def parse(
@@ -23,28 +22,25 @@ def parse(
     format: str = "%Y-%m-%d %H:%M:%S",
     timezone: str = "UTC",
 ) -> mgp.Record(parsed=int):
-    first_date = UNIX_EPOCH
+    first_date = Epoch.UNIX_EPOCH
     input_date = datetime.datetime.strptime(time, format)
 
-    if (timezone in pytz.all_timezones):
-        offset, add = getOffset(timezone, input_date)
-        if (add):
-            tz_input = input_date + offset
-        else:
-            tz_input = input_date - offset
-    else:
+    if (timezone not in pytz.all_timezones):
         raise Exception("Timezone doesn't exist. Check documentation to see available timezones.")
+
+    offset, add = getOffset(timezone, input_date)
+    tz_input = input_date + offset if add else input_date - offset
 
     time_since = tz_input - first_date
 
     if (unit == "ms"):
-        parsed = time_since.days * HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE * MILLISECONDS_IN_SECOND + time_since.seconds * MILLISECONDS_IN_SECOND
+        parsed = time_since.days * Conversion.HOURS_IN_DAY * Conversion.MINUTES_IN_HOUR * Conversion.SECONDS_IN_MINUTE * Conversion.MILLISECONDS_IN_SECOND + time_since.seconds * Conversion.MILLISECONDS_IN_SECOND
     elif (unit == "s"):
-        parsed = time_since.days * HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE + time_since.seconds
+        parsed = time_since.days * Conversion.HOURS_IN_DAY * Conversion.MINUTES_IN_HOUR * Conversion.SECONDS_IN_MINUTE + time_since.seconds
     elif (unit == "m"):
-        parsed = time_since.days * HOURS_IN_DAY * MINUTES_IN_HOUR + time_since.seconds // SECONDS_IN_MINUTE
+        parsed = time_since.days * Conversion.HOURS_IN_DAY * Conversion.MINUTES_IN_HOUR + time_since.seconds // Conversion.SECONDS_IN_MINUTE
     elif (unit == "h"):
-        parsed = time_since.days * HOURS_IN_DAY + time_since.seconds // SECONDS_IN_MINUTE // MINUTES_IN_HOUR
+        parsed = time_since.days * Conversion.HOURS_IN_DAY + time_since.seconds // Conversion.SECONDS_IN_MINUTE // Conversion.MINUTES_IN_HOUR
     elif (unit == "d"):
         parsed = time_since.days
     else:
@@ -60,7 +56,7 @@ def format(
     format: str = "%Y-%m-%d %H:%M:%S %Z",
     timezone: str = "UTC",
 ) -> mgp.Record(formatted=str):
-    first_date = UNIX_EPOCH
+    first_date = Epoch.UNIX_EPOCH
 
     if (unit == "ms"):
         new_date = first_date + datetime.timedelta(milliseconds=time)
@@ -75,13 +71,9 @@ def format(
     else:
         raise Exception("Unit doesn't exist. Check documentation to see available units.")
 
-    if (timezone in pytz.all_timezones):
-        offset, subtract = getOffset(timezone, new_date)
-        if (subtract):
-            tz_new = new_date - offset
-        else:
-            tz_new = new_date + offset
-    else:
+    if (timezone not in pytz.all_timezones):
         raise Exception("Timezone doesn't exist. Check documentation to see available timezones.")
+    offset, subtract = getOffset(timezone, new_date)
+    tz_new = new_date - offset if subtract else new_date + offset
 
     return mgp.Record(formatted=pytz.timezone(timezone).localize(tz_new).strftime(format))
