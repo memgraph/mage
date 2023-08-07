@@ -1,0 +1,5 @@
+query: > 
+  CALL map.remove_keys({a:{b:{c:{d:"pas"}}}},["d"],true) YIELD result RETURN result;
+
+output:
+  - result: {}
