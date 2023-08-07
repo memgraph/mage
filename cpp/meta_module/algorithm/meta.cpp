@@ -10,6 +10,8 @@ namespace {
 
 class Metadata {
  public:
+  Metadata() { node_cnt = relationship_cnt = 0; }
+
   int64_t node_cnt;
   int64_t relationship_cnt;
   std::unordered_map<std::string, int64_t> labels;
@@ -104,6 +106,72 @@ void Metadata::update_relationship_types_cnt(const mgp::Relationship &relationsh
   insert(relationship_types_cnt, relationship.Type(), add);
 }
 
+Metadata get_all_metadata(mgp_graph *memgraph_graph) {
+  Metadata data;
+
+  const mgp::Graph graph{memgraph_graph};
+
+  for (const auto node : graph.Nodes()) {
+    data.node_cnt++;
+    data.update_labels(node, 1);
+    data.update_property_key_cnt(node, 1);
+  }
+
+  for (const auto relationship : graph.Relationships()) {
+    data.relationship_cnt++;
+    data.update_relationship_types(relationship, 1);
+    data.update_relationship_types_cnt(relationship, 1);
+    data.update_property_key_cnt(relationship, 1);
+  }
+
+  return data;
+}
+
+void output_from_metadata(const Metadata &data, const mgp::RecordFactory &record_factory) {
+  auto record = record_factory.NewRecord();
+  mgp::Map stats{};
+
+  int64_t label_count = data.get_label_count();
+  record.Insert(std::string(kReturnStats1).c_str(), label_count);
+  stats.Insert("labelCount", mgp::Value(label_count));
+
+  int64_t relationship_type_count = data.get_relationship_type_count();
+  record.Insert(std::string(kReturnStats2).c_str(), relationship_type_count);
+  stats.Insert("relationshipTypeCount", mgp::Value(relationship_type_count));
+
+  int64_t property_key_count = data.get_property_key_count();
+  record.Insert(std::string(kReturnStats3).c_str(), property_key_count);
+  stats.Insert("propertyKeyCount", mgp::Value(property_key_count));
+
+  record.Insert(std::string(kReturnStats4).c_str(), data.node_cnt);
+  stats.Insert("nodeCount", mgp::Value(data.node_cnt));
+
+  record.Insert(std::string(kReturnStats5).c_str(), data.relationship_cnt);
+  stats.Insert("relationshipCount", mgp::Value(data.relationship_cnt));
+
+  auto create_map = [](const auto &map) {
+    mgp::Map result;
+    for (const auto &[key, value] : map) {
+      result.Insert(key, mgp::Value(value));
+    }
+    return result;
+  };
+
+  auto labels_map = create_map(data.labels);
+  record.Insert(std::string(kReturnStats6).c_str(), labels_map);
+  stats.Insert("labels", mgp::Value(std::move(labels_map)));
+
+  auto relationship_types_map = create_map(data.relationship_types);
+  record.Insert(std::string(kReturnStats7).c_str(), relationship_types_map);
+  stats.Insert("relationshipTypes", mgp::Value(std::move(relationship_types_map)));
+
+  auto relationship_types_count_map = create_map(data.relationship_types_cnt);
+  record.Insert(std::string(kReturnStats8).c_str(), relationship_types_count_map);
+  stats.Insert("relationshipTypesCount", mgp::Value(std::move(relationship_types_count_map)));
+
+  record.Insert(std::string(kReturnStats9).c_str(), stats);
+}
+
 }  // namespace
 
 void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
@@ -171,12 +239,14 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
 
     for (const auto &object : set_vertex_labels) {
       const auto event{object.ValueMap()};
-      insert(Meta::metadata.labels, event["label"].ValueString(), event["vertices"].ValueList().Size());
+      insert(Meta::metadata.labels, event["label"].ValueString(),
+             static_cast<int64_t>(event["vertices"].ValueList().Size()));
     }
 
     for (const auto &object : removed_vertex_labels) {
       const auto event{object.ValueMap()};
-      insert(Meta::metadata.labels, event["label"].ValueString(), -event["vertices"].ValueList().Size());
+      insert(Meta::metadata.labels, event["label"].ValueString(),
+             static_cast<int64_t>(-event["vertices"].ValueList().Size()));
     }
 
   } catch (const std::exception &e) {
@@ -185,54 +255,35 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
   }
 }
 
-void Stats(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void StatsOnline(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
 
   try {
-    auto record = record_factory.NewRecord();
-    mgp::Map stats{};
+    bool update_stats = arguments[0].ValueBool();
 
-    int64_t label_count = metadata.get_label_count();
-    record.Insert(std::string(kReturnStats1).c_str(), label_count);
-    stats.Insert("labelCount", mgp::Value(label_count));
+    if (update_stats) {
+      metadata = get_all_metadata(memgraph_graph);
+      output_from_metadata(metadata, record_factory);
+    } else {
+      output_from_metadata(metadata, record_factory);
+    }
 
-    int64_t relationship_type_count = metadata.get_relationship_type_count();
-    record.Insert(std::string(kReturnStats2).c_str(), relationship_type_count);
-    stats.Insert("relationshipTypeCount", mgp::Value(relationship_type_count));
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
 
-    int64_t property_key_count = metadata.get_property_key_count();
-    record.Insert(std::string(kReturnStats3).c_str(), property_key_count);
-    stats.Insert("propertyKeyCount", mgp::Value(property_key_count));
+void StatsOffline(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::memory = memory;
+  const auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
 
-    record.Insert(std::string(kReturnStats4).c_str(), metadata.node_cnt);
-    stats.Insert("nodeCount", mgp::Value(metadata.node_cnt));
-
-    record.Insert(std::string(kReturnStats5).c_str(), metadata.relationship_cnt);
-    stats.Insert("relationshipCount", mgp::Value(metadata.relationship_cnt));
-
-    auto create_map = [](const auto &map) {
-      mgp::Map result;
-      for (const auto &[key, value] : map) {
-        result.Insert(key, mgp::Value(value));
-      }
-      return result;
-    };
-
-    auto labels_map = create_map(metadata.labels);
-    record.Insert(std::string(kReturnStats6).c_str(), labels_map);
-    stats.Insert("labels", mgp::Value(std::move(labels_map)));
-
-    auto relationship_types_map = create_map(metadata.relationship_types);
-    record.Insert(std::string(kReturnStats7).c_str(), relationship_types_map);
-    stats.Insert("relationshipTypes", mgp::Value(std::move(relationship_types_map)));
-
-    auto relationship_types_count_map = create_map(metadata.relationship_types_cnt);
-    record.Insert(std::string(kReturnStats8).c_str(), relationship_types_count_map);
-    stats.Insert("relationshipTypesCount", mgp::Value(std::move(relationship_types_count_map)));
-
-    record.Insert(std::string(kReturnStats9).c_str(), stats);
+  try {
+    const auto data = get_all_metadata(memgraph_graph);
+    output_from_metadata(data, record_factory);
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());

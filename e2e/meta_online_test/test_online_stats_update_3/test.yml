@@ -1,4 +1,9 @@
 - query: >-
+    CALL meta.stats_online(true) YIELD * RETURN null;
+  output:
+    - 'null': null
+
+- query: >-
     CALL meta.stats_online(false) YIELD stats RETURN stats;
   output:
     - stats: {

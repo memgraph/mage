@@ -1,4 +1,9 @@
 - query: >-
+    CALL meta.stats_online(true) YIELD * RETURN null;
+  output:
+    - 'null': null
+
+- query: >-
     CALL meta.stats_online(false) YIELD stats RETURN stats;
   output:
     - stats: {
@@ -8,14 +13,14 @@
       },
       nodeCount: 6,
       propertyKeyCount: 1,
-      relationshipCount: 6,
+      relationshipCount: 3,
       relationshipTypeCount: 1,
       relationshipTypes: {
-        "(:Node)-[:RELATION]->()": 6,
-        "()-[:RELATION]->()": 6,
-        "()-[:RELATION]->(:Node)": 6
+        "(:Node)-[:RELACIJA]->()": 3,
+        "()-[:RELACIJA]->()": 3,
+        "()-[:RELACIJA]->(:Node)": 3
       },
       relationshipTypesCount: {
-        RELATION: 6
+        RELACIJA: 3
       }
     }

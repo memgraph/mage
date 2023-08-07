@@ -1,5 +1,5 @@
 - query: >-
-    CALL meta.stats() YIELD stats RETURN stats;
+    CALL meta.stats_online(false) YIELD stats RETURN stats;
   output:
     - stats: {
     labelCount: 1,
