@@ -6,6 +6,7 @@
 namespace Nodes {
 
 /*link constants*/
+constexpr size_t minimumNodeListSize = 2;
 constexpr std::string_view kProcedureLink = "link";
 constexpr std::string_view kArgumentNodesLink = "nodes";
 constexpr std::string_view kArgumentTypeLink = "type";
