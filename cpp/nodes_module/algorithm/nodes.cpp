@@ -42,7 +42,8 @@ mgp::Value insert_node_relationship_types(const auto &node,
 
   mgp::List types_list{types.size()};
   for (const auto &type : types) {
-    types_list.Append(mgp::Value(type));
+    auto value = mgp::Value(type);
+    types_list.Append(value);
   }
   result.Insert("types", mgp::Value(std::move(types_list)));
 
