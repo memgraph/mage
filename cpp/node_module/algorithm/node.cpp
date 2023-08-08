@@ -22,9 +22,9 @@ void Node::RelExists(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
     bool exists = false;
 
     if (pattern[0] == '<' && pattern[pattern.size() - 1] == '>') {
-      exists = (FindRelationship(pattern.substr(1, pattern.size() - 2), node.InRelationships()) &&
-                FindRelationship(pattern.substr(1, pattern.size() - 2), node.OutRelationships()));
-    } else if (pattern[0] == '<') {
+      throw mgp::ValueException("Invalid relationship specification!");
+    }
+    if (pattern[0] == '<') {
       exists = FindRelationship(pattern.substr(1, pattern.size()), node.InRelationships());
     } else if (pattern[pattern.size() - 1] == '>') {
       exists = FindRelationship(pattern.substr(0, pattern.size() - 1), node.OutRelationships());
