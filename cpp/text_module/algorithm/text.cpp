@@ -10,15 +10,20 @@ void Text::Join(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, m
     const auto delimiter{arguments[1].ValueString()};
 
     std::string result;
-    if (!list.Empty()) {
-      auto iterator = list.begin();
-      result += (*iterator).ValueString();
-
-      for (++iterator; iterator != list.end(); ++iterator) {
-        result += delimiter;
-        result += (*iterator).ValueString();
-      }
+    if (list.Empty()) {
+      auto record = record_factory.NewRecord();
+      record.Insert(std::string(kResultJoin).c_str(), result);
+      return;
     }
+
+    auto iterator = list.begin();
+    result += (*iterator).ValueString();
+
+    for (++iterator; iterator != list.end(); ++iterator) {
+      result += delimiter;
+      result += (*iterator).ValueString();
+    }
+
     auto record = record_factory.NewRecord();
     record.Insert(std::string(kResultJoin).c_str(), result);
 
