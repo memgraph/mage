@@ -2,6 +2,9 @@ import mgp
 import pytz
 import datetime
 
+from mage.date.constants import (
+    Epoch
+)
 
 @mgp.read_proc
 def format(
@@ -19,6 +22,6 @@ def format(
         return mgp.Record(formatted=temporal.isoformat())
 
     if (isinstance(temporal, datetime.timedelta)):
-        temporal = datetime.datetime(1900,1,1) + temporal
+        temporal = Epoch.UNIX_EPOCH + temporal
 
     return mgp.Record(formatted=temporal.strftime(format))
