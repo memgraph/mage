@@ -4,4 +4,4 @@ query: >
   RETURN rel_exists
 
 output:
-  - rel_exists: True
+  - rel_exists: False

@@ -19,16 +19,15 @@ void Node::RelExists(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
   try {
     const auto node = arguments[0].ValueNode();
     const auto pattern = arguments[1].ValueString();
-
     bool exists = false;
 
     if (pattern[0] == '<' && pattern[pattern.size() - 1] == '>') {
       exists = (FindRelationship(pattern.substr(1, pattern.size() - 2), node.InRelationships()) &&
                 FindRelationship(pattern.substr(1, pattern.size() - 2), node.OutRelationships()));
     } else if (pattern[0] == '<') {
-      exists = FindRelationship(pattern.substr(1, pattern.size() - 1), node.InRelationships());
+      exists = FindRelationship(pattern.substr(1, pattern.size()), node.InRelationships());
     } else if (pattern[pattern.size() - 1] == '>') {
-      exists = FindRelationship(pattern.substr(0, pattern.size() - 2), node.OutRelationships());
+      exists = FindRelationship(pattern.substr(0, pattern.size() - 1), node.OutRelationships());
     } else {
       exists =
           (FindRelationship(pattern, node.InRelationships()) || FindRelationship(pattern, node.OutRelationships()));

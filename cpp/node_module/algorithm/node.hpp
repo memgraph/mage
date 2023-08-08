@@ -6,7 +6,7 @@ namespace Node {
 
 /* relationship.exists constants */
 constexpr std::string_view kReturnRelExists = "rel_exists";
-constexpr std::string_view kProcedureRelExists = "relationship.exists";
+constexpr std::string_view kProcedureRelExists = "relationship_exists";
 constexpr std::string_view kArgumentsNode = "node";
 constexpr std::string_view kArgumentsPattern = "pattern";
 constexpr std::string_view kResultRelExists = "rel_exists";
