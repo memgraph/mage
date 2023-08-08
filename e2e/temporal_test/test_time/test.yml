@@ -1,6 +1,6 @@
 query: >
-     CALL temporal.format(datetime(), "%Y/%m/%d %H:%M:%S") YIELD formatted
-     RETURN formatted
+    CALL temporal.format(localTime({hour: 5, second: 32}), "%H:%M:%S.%f") YIELD formatted
+    RETURN formatted
 
- output:
-     - formatted: ""
+output:
+    - formatted: "05:00:32.000000"

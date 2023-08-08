@@ -6,17 +6,17 @@ import datetime
 @mgp.read_proc
 def format(
     temporal: mgp.Any,
-    format: str = "ISO_DATE",
+    format: str = "ISO",
 ) -> mgp.Record(formatted=str):
 
     if (not (isinstance(temporal, datetime.datetime) or isinstance(temporal, datetime.date) or isinstance(temporal, datetime.time) or isinstance(temporal, datetime.timedelta))):
         return mgp.Record(formatted=str(temporal))
 
-    if (format == "ISO_DATE" and (isinstance(temporal, datetime.datetime) or isinstance(temporal, datetime.date))):
-        return mgp.Record(formatted=temporal.isoformat())
-
     if ("%z" in format or "%Z" in format):
-        raise Exception("We are working with UTC zone only.")
+        raise Exception("We are working with UTC zone only so '%Z' in format is not supported.")
+
+    if (format == "ISO" and (isinstance(temporal, datetime.datetime) or isinstance(temporal, datetime.date) or isinstance(temporal, datetime.time))):
+        return mgp.Record(formatted=temporal.isoformat())
 
     if (isinstance(temporal, datetime.timedelta)):
         temporal = datetime.datetime(1900,1,1) + temporal
