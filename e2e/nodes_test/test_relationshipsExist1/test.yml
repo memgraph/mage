@@ -2,8 +2,8 @@ query: >
     MATCH (p1:Person)
     WHERE p1.name IN ["Michael", "Person30", "Person60"]
     WITH collect(p1) AS people
-    CALL nodes.relationships_exist(people, ["KNOWS>","FOLLOWS"]) YIELD result RETURN result["Relationships_exist_status"];
+    CALL nodes.relationships_exist(people, ["KNOWS>","FOLLOWS","<KNOWS"]) YIELD result RETURN result["Relationships_exist_status"];
 output:
-  - result["Relationships_exist_status"]: {"FOLLOWS": true,"KNOWS>": true}
-  - result["Relationships_exist_status"]: {"FOLLOWS": true,"KNOWS>": false}
-  - result["Relationships_exist_status"]: {"FOLLOWS": false,"KNOWS>": false}
+  - result["Relationships_exist_status"]: {"<KNOWS": false, "FOLLOWS": true,"KNOWS>": true}
+  - result["Relationships_exist_status"]: {"<KNOWS": true, "FOLLOWS": true,"KNOWS>": false}
+  - result["Relationships_exist_status"]: {"<KNOWS": true, "FOLLOWS": false,"KNOWS>": false}
