@@ -54,12 +54,6 @@ RUN apt-get update && apt-get install -y \
     cmake           `mage-memgraph` \
     --no-install-recommends
 
-# Install required packages from Debian Sid
-RUN echo 'deb http://deb.debian.org/debian sid main' > /etc/apt/sources.list.d/debian-sid.list
-RUN apt update && apt install -y g++-11 -t sid
-
-RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 50
-
 ENV PATH=/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/bin/cmake:/usr/lib/cmake
 
 # Memgraph listens for Bolt Protocol on this port by default.
