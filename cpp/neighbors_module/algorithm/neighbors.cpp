@@ -47,14 +47,14 @@ void Neighbors::AtHop(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
       for (auto node : list.back()) {
         if (in) {
           for (auto relationship : node.InRelationships()) {
-            if (relationship.Type() == rel_type && !Known(relationship.From(), list)) {
+            if ((rel_type == "" || relationship.Type() == rel_type) && !Known(relationship.From(), list)) {
               set.insert(relationship.From());
             }
           }
         }
         if (out) {
           for (auto relationship : node.OutRelationships()) {
-            if (relationship.Type() == rel_type && !Known(relationship.To(), list)) {
+            if ((rel_type == "" || relationship.Type() == rel_type) && !Known(relationship.To(), list)) {
               set.insert(relationship.To());
             }
           }
@@ -76,9 +76,3 @@ void Neighbors::AtHop(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
     return;
   }
 }
-
-// MERGE (a:Rachel) MERGE (b:Monica) CREATE (a)-[f:FRIENDS]->(b);
-// MERGE (a:Monica) MERGE (b:Ross) CREATE (a)-[f:FRIENDS]->(b);
-// MERGE (a:Monica) MERGE (b:Chandler) CREATE (a)-[f:FRIENDS]->(b);
-// MERGE (a:Chandler) MERGE (b:Joey) CREATE (a)-[f:FRIENDS]->(b);
-// MERGE (a:Monica) MERGE (b:Phoebe) CREATE (a)-[f:FRIENDS]->(b);
