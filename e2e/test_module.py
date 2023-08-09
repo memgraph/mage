@@ -3,7 +3,7 @@ import pytest
 import yaml
 
 from pathlib import Path
-from gqlalchemy import Memgraph, Node, Path as path_mgclient
+from gqlalchemy import Memgraph, Node, Path as path_gql
 from mgclient import Node as node_mgclient
 from mgclient import Relationship as relationship_mgclient
 
@@ -66,7 +66,7 @@ def _replace(data, match_classes):
         return _node_to_dict(data)
     elif isinstance(data, relationship_mgclient):
         return _relationship_to_dict(data)
-    elif isinstance(data, path_mgclient):
+    elif isinstance(data, path_gql):
         return _path_to_dict(data)
     else:
         return _node_to_dict(data) if isinstance(data, match_classes) else data
