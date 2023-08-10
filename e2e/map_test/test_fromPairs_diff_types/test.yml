@@ -1,0 +1,10 @@
+query: >
+  CALL map.from_pairs([["a", 2], ["b", 3], ["c", "c"]]) YIELD map
+  RETURN map
+
+output:
+  - map: {
+   "a": 2,
+   "b": 3,
+   "c": "c"
+}

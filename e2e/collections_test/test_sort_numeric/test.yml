@@ -1,0 +1,11 @@
+query: >
+    CALL collections.sort([1, 4, 2.3, -5]) YIELD sorted
+    RETURN sorted
+
+output:
+    - sorted: [
+   -5,
+   1,
+   2.3,
+   4
+]
