@@ -2,31 +2,31 @@
 #include <iterator>
 #include <sstream>
 #include <unordered_set>
+#include <vector>
 #include "mgp.hpp"
 
 namespace {
-const std::unordered_set<int64_t> get_relationship_ids(const mgp::Value &relationships) {
-  std::unordered_set<int64_t> ids;
-  if (relationships.IsRelationship()) {
-    ids.insert(relationships.ValueRelationship().Id().AsInt());
-  } else if (relationships.IsInt()) {
-    ids.insert(relationships.ValueInt());
-  } else if (relationships.IsList()) {
-    const auto list{relationships.ValueList()};
-    for (const auto &list_item : list) {
-      if (list_item.IsRelationship()) {
-        ids.insert(list_item.ValueRelationship().Id().AsInt());
-      } else if (list_item.IsInt()) {
-        ids.insert(list_item.ValueInt());
-      } else {
-        std::ostringstream oss;
-        oss << list_item.Type();
-        throw mgp::ValueException("Unsupported type for this operation, received type: " + oss.str());
-      }
-    }
-  }
-  return ids;
+void ThrowException(const mgp::Value &value) {
+  std::ostringstream oss;
+  oss << value.Type();
+  throw mgp::ValueException("Unsupported type for this operation, received type: " + oss.str());
 }
+
+void ModifyAndOutput(mgp::Relationship &relationship, const mgp::List &keys, const mgp::List &values,
+                     const mgp::RecordFactory &record_factory) {
+  auto it1 = keys.begin();
+  auto it2 = values.begin();
+
+  while (it1 != keys.end() && it2 != values.end()) {
+    relationship.SetProperty(std::string((*it1).ValueString()), *it2);
+    ++it1;
+    ++it2;
+  }
+
+  auto record = record_factory.NewRecord();
+  record.Insert(std::string(Create::kResultSetRelProperties).c_str(), relationship);
+}
+
 }  // namespace
 
 void Create::SetRelProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
@@ -39,24 +39,39 @@ void Create::SetRelProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
     const auto keys{arguments[1].ValueList()};
     const auto values{arguments[2].ValueList()};
 
-    const auto ids = get_relationship_ids(arguments[0]);
-
     if (keys.Size() != values.Size()) {
       throw mgp::IndexException("Keys and values are not the same size");
     }
 
-    for (auto relationship : graph.Relationships()) {
-      if (ids.contains(relationship.Id().AsInt())) {
-        auto it1 = keys.begin();
-        auto it2 = values.begin();
+    std::unordered_set<int64_t> ids;
 
-        while (it1 != keys.end() && it2 != values.end()) {
-          relationship.SetProperty(std::string((*it1).ValueString()), *it2);
-          ++it1;
-          ++it2;
-        }
-        auto record = record_factory.NewRecord();
-        record.Insert(std::string(kResultSetRelProperties).c_str(), relationship);
+    auto ParseValue = [&](const mgp::Value &value) {
+      if (value.IsRelationship()) {
+        auto relationship_copy = value.ValueRelationship();
+        ModifyAndOutput(relationship_copy, keys, values, record_factory);
+      } else if (value.IsInt()) {
+        ids.insert(value.ValueInt());
+      } else {
+        ThrowException(value);
+      }
+    };
+
+    if (!arguments[0].IsList()) {
+      ParseValue(arguments[0]);
+    } else {
+      for (const auto &list_item : arguments[0].ValueList()) {
+        ParseValue(list_item);
+      }
+    }
+
+    if (ids.empty()) {
+      return;
+    }
+
+    for (const auto relationship : graph.Relationships()) {
+      if (ids.contains(relationship.Id().AsInt())) {
+        auto relationship_copy = relationship;
+        ModifyAndOutput(relationship_copy, keys, values, record_factory);
       }
     }
 
