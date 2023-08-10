@@ -55,6 +55,9 @@ std::unordered_map<std::string_view, uint8_t> get_type_direction(const mgp::Valu
   for (const auto &type_value : types.ValueList()) {
     auto type = type_value.ValueString();
     if (type.starts_with('<')) {
+      if (type.ends_with('>')) {
+        throw mgp::ValueException("<type> format not allowed. Use type instead.");
+      }
       result[type.substr(1, type.size() - 1)] |= 1;
     } else if (type.ends_with('>')) {
       result[type.substr(0, type.size() - 1)] |= 2;
