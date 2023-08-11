@@ -8,7 +8,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     AddProcedure(Nodes::RelationshipsExist, std::string(Nodes::kProcedureRelationshipsExist).c_str(),
                  mgp::ProcedureType::Read,
                  {mgp::Parameter(std::string(Nodes::kArgumentNodesRelationshipsExist).c_str(),
-                                 {mgp::Type::List, mgp::Type::Node}),
+                                 {mgp::Type::List, mgp::Type::Any}),
                   mgp::Parameter(std::string(Nodes::kArgumentRelationshipsRelationshipsExist).c_str(),
                                  {mgp::Type::List, mgp::Type::String})},
                  {mgp::Return(std::string(Nodes::kReturnRelationshipsExist).c_str(), {mgp::Type::Map, mgp::Type::Any})},
