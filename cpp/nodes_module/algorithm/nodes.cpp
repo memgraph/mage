@@ -8,14 +8,14 @@
 #include "mgp.hpp"
 
 namespace {
-void throw_exception(const mgp::Value &value) {
+void ThrowException(const mgp::Value &value) {
   std::ostringstream oss;
   oss << value.Type();
   throw mgp::ValueException("Unsuppported type for this operation, received type: " + oss.str());
 };
 
-mgp::Value insert_node_relationship_types(const auto &node,
-                                          std::unordered_map<std::string_view, uint8_t> &type_direction) {
+mgp::Value InsertNodeRelationshipTypes(const mgp::Node &node,
+                                       std::unordered_map<std::string_view, uint8_t> &type_direction) {
   mgp::Map result{};
   result.Insert("node", mgp::Value(node));
 
@@ -50,7 +50,7 @@ mgp::Value insert_node_relationship_types(const auto &node,
   return mgp::Value(std::move(result));
 }
 
-std::unordered_map<std::string_view, uint8_t> get_type_direction(const mgp::Value &types) {
+std::unordered_map<std::string_view, uint8_t> GetTypeDirection(const mgp::Value &types) {
   std::unordered_map<std::string_view, uint8_t> result;
   for (const auto &type_value : types.ValueList()) {
     auto type = type_value.ValueString();
@@ -68,32 +68,44 @@ std::unordered_map<std::string_view, uint8_t> get_type_direction(const mgp::Valu
   return result;
 }
 
-mgp::List get_relationship_types(mgp_graph *memgraph_graph, const mgp::Value &argument, const mgp::Value &types) {
+mgp::List GetRelationshipTypes(mgp_graph *memgraph_graph, const mgp::Value &argument, const mgp::Value &types) {
   mgp::List result{};
   mgp::Graph graph{memgraph_graph};
-  auto type_direction = get_type_direction(types);
+  auto type_direction = GetTypeDirection(types);
 
-  if (argument.IsNode()) {
-    result.AppendExtend(insert_node_relationship_types(argument.ValueNode(), type_direction));
-  } else if (argument.IsInt()) {
-    result.AppendExtend(
-        insert_node_relationship_types(graph.GetNodeById(mgp::Id::FromInt(argument.ValueInt())), type_direction));
-  } else if (argument.IsList()) {
-    for (const auto &list_item : argument.ValueList()) {
-      if (list_item.IsNode()) {
-        result.AppendExtend(insert_node_relationship_types(list_item.ValueNode(), type_direction));
-      } else if (list_item.IsInt()) {
-        result.AppendExtend(
-            insert_node_relationship_types(graph.GetNodeById(mgp::Id::FromInt(list_item.ValueInt())), type_direction));
-      } else {
-        throw_exception(list_item);
-      }
+  auto ParseNode = [&](const mgp::Value &value) {
+    if (value.IsNode()) {
+      result.AppendExtend(InsertNodeRelationshipTypes(value.ValueNode(), type_direction));
+    } else if (value.IsInt()) {
+      result.AppendExtend(
+          InsertNodeRelationshipTypes(graph.GetNodeById(mgp::Id::FromInt(value.ValueInt())), type_direction));
+    } else {
+      ThrowException(value);
     }
-  } else {
-    throw_exception(argument);
+  };
+
+  if (!argument.IsList()) {
+    ParseNode(argument);
+    return result;
   }
+
+  for (const auto &list_item : argument.ValueList()) {
+    ParseNode(list_item);
+  }
+
   return result;
 }
+
+void DetachDeleteNode(const mgp::Value &node, mgp::Graph &graph) {
+  if (node.IsInt()) {
+    graph.DetachDeleteNode(graph.GetNodeById(mgp::Id::FromInt(node.ValueInt())));
+  } else if (node.IsNode()) {
+    graph.DetachDeleteNode(node.ValueNode());
+  } else {
+    ThrowException(node);
+  }
+}
+
 }  // namespace
 
 void Nodes::RelationshipTypes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
@@ -103,7 +115,30 @@ void Nodes::RelationshipTypes(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
   try {
     auto record = record_factory.NewRecord();
     record.Insert(std::string(kResultRelationshipTypes).c_str(),
-                  get_relationship_types(memgraph_graph, arguments[0], arguments[1]));
+                  GetRelationshipTypes(memgraph_graph, arguments[0], arguments[1]));
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
+
+void Nodes::Delete(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::memory = memory;
+  const auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+  try {
+    mgp::Graph graph{memgraph_graph};
+    auto nodes{arguments[0]};
+
+    if (!nodes.IsList()) {
+      DetachDeleteNode(nodes, graph);
+      return;
+    }
+
+    for (const auto &list_item : nodes.ValueList()) {
+      DetachDeleteNode(list_item, graph);
+    }
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
