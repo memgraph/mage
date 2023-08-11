@@ -6,6 +6,9 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   try {
     mgp::memory = memory;
 
+    AddProcedure(Nodes::Delete, Nodes::kProcedureDelete, mgp::ProcedureType::Write,
+                 {mgp::Parameter(Nodes::kDeleteArg1, mgp::Type::Any)}, {}, module, memory);
+
   } catch (const std::exception &e) {
     return 1;
   }
