@@ -1,6 +1,6 @@
 query: >
   MATCH (a:Joey)
-  CALL neighbors.at_hop(a, "<FRIENDS", 3) YIELD nodes
+  CALL neighbors.at_hop(a, ["<FRIENDS"], 3) YIELD nodes
   RETURN nodes;
 
 output:

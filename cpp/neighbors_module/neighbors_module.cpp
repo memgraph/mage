@@ -7,7 +7,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     mgp::memory = memory;
     AddProcedure(Neighbors::AtHop, Neighbors::kProcedureAtHop, mgp::ProcedureType::Read,
                  {mgp::Parameter(Neighbors::kArgumentsNode, mgp::Type::Node),
-                  mgp::Parameter(Neighbors::kArgumentsRelType, mgp::Type::String),
+                  mgp::Parameter(Neighbors::kArgumentsRelType, {mgp::Type::List, mgp::Type::String}),
                   mgp::Parameter(Neighbors::kArgumentsDistance, mgp::Type::Int)},
                  {mgp::Return(Neighbors::kReturnAtHop, mgp::Type::Node)}, module, memory);
 

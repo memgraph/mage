@@ -1,6 +1,6 @@
 query: >
   MATCH (a:Rachel)
-  CALL neighbors.at_hop(a, "", 1) YIELD nodes
+  CALL neighbors.at_hop(a, [""], 1) YIELD nodes
   RETURN nodes;
 
 output:
