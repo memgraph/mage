@@ -1,0 +1,9 @@
+memgraph_query: >
+    MATCH (p:Person)
+    CALL create.set_properties(p, [], []) YIELD nodes
+    RETURN nodes;
+
+neo4j_query: >
+    MATCH (p:Person)
+    CALL apoc.create.setProperties(p, [], []) YIELD node
+    RETURN node;
