@@ -18,22 +18,17 @@ void Node::RelExists(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
   const auto record_factory = mgp::RecordFactory(result);
   try {
     const auto node = arguments[0].ValueNode();
-    const auto input_pattern = arguments[1].ValueString();
+    auto patterns = arguments[1].ValueList();
 
-    std::unordered_set<std::string_view> patterns;
-    auto i{0};
-    auto j{input_pattern.find("|")};
-    while (j < input_pattern.size()) {
-      patterns.insert(input_pattern.substr(i, j - i));
-      i = j + 1;
-      j = input_pattern.find("|", i);
+    if (patterns.Empty()) {
+      patterns.AppendExtend(mgp::Value(""));
     }
-    patterns.insert(input_pattern.substr(i));
 
     std::unordered_set<std::string_view> in_rels;
     std::unordered_set<std::string_view> out_rels;
 
-    for (auto pattern : patterns) {
+    for (auto pattern_value : patterns) {
+      auto pattern = pattern_value.ValueString();
       if (pattern[0] == '<' && pattern[pattern.size() - 1] == '>') {
         throw mgp::ValueException("Invalid relationship specification!");
       }

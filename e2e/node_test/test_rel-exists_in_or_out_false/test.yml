@@ -1,6 +1,6 @@
 query: >
   MATCH (a:Person {name: 'Phoebe'})
-  CALL node.relationship_exists(a, "FRIENDS") YIELD exists
+  CALL node.relationship_exists(a, ["FRIENDS"]) YIELD exists
   RETURN exists
 
 output:
