@@ -3,7 +3,7 @@ import pytest
 import yaml
 
 from pathlib import Path
-from gqlalchemy import Memgraph, Node, Path
+from gqlalchemy import Memgraph, Node
 from mgclient import Node as node_mgclient
 
 
