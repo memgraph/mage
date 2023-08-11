@@ -113,7 +113,7 @@ class Edge:
                 return False
             if v != other._properties[k]:
                 logger.debug(f"Value {v} not equal to {other._properties[k]}")
-                return False
+                return False  
         return True
 
 
@@ -203,6 +203,8 @@ def create_graph_neo4j_json(json_neo4j_data) -> Graph:
             graph.add_vertex(extract_vertex_from_json(item))
             vertices_id_mapings[item["id"]] = item["properties"]["id"]
         else:
+            if "properties" not in item:
+                item["properties"] = {}
             graph.add_edge(
                 create_edge_from_data(
                     vertices_id_mapings[item["start"]["id"]],
