@@ -45,8 +45,8 @@ void Node::RelExists(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
         out_rels.insert(pattern.substr(0, pattern.size() - 1));
         continue;
       }
-      in_rels.insert(pattern);
-      out_rels.insert(pattern);
+      in_rels.insert(std::move(pattern));
+      out_rels.insert(std::move(pattern));
     }
 
     auto record = record_factory.NewRecord();
