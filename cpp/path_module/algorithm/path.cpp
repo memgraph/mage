@@ -10,7 +10,7 @@ void Path::Create(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
     auto relationships{arguments[1].ValueMap()};
 
     mgp::Path path{start_node};
-    for (const auto &relationship : relationships["key"].ValueList()) {
+    for (const auto &relationship : relationships["rel"].ValueList()) {
       if (relationship.IsNull()) {
         break;
       }
