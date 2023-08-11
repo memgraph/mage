@@ -19,22 +19,36 @@ void Neighbors::AtHop(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
   const auto record_factory = mgp::RecordFactory(result);
   try {
     const auto node = arguments[0].ValueNode();
-    auto rel_type = arguments[1].ValueString();
+    auto input_rel_type = arguments[1].ValueString();
     const auto distance = arguments[2].ValueInt();
 
-    if (rel_type[0] == '<' && rel_type[rel_type.size() - 1] == '>') {
-      throw mgp::ValueException("Invalid relationship specification!");
+    std::unordered_set<std::string_view> rel_types;
+    auto i{0};
+    auto j{input_rel_type.find("|")};
+    while (j < input_rel_type.size()) {
+      rel_types.insert(input_rel_type.substr(i, j - i));
+      i = j + 1;
+      j = input_rel_type.find("|", i);
     }
-    bool in = (rel_type[0] == '<');
-    bool out = (rel_type[rel_type.size() - 1] == '>');
-    if (in) {
-      rel_type = rel_type.substr(1, rel_type.size());
-    }
-    if (out) {
-      rel_type = rel_type.substr(0, rel_type.size() - 1);
-    }
-    if (!in && !out) {
-      in = out = 1;
+    rel_types.insert(input_rel_type.substr(i));
+
+    std::unordered_set<std::string_view> in_rels;
+    std::unordered_set<std::string_view> out_rels;
+
+    for (auto rel_type : rel_types) {
+      if (rel_type[0] == '<' && rel_type[rel_type.size() - 1] == '>') {
+        throw mgp::ValueException("Invalid relationship specification!");
+      }
+      if (rel_type[0] == '<') {
+        in_rels.insert(rel_type.substr(1, rel_type.size()));
+        continue;
+      }
+      if (rel_type[rel_type.size() - 1] == '>') {
+        out_rels.insert(rel_type.substr(0, rel_type.size() - 1));
+        continue;
+      }
+      in_rels.insert(std::move(rel_type));
+      out_rels.insert(std::move(rel_type));
     }
 
     std::list<std::unordered_set<mgp::Node>> list;
@@ -45,16 +59,16 @@ void Neighbors::AtHop(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
     while (list.size() <= distance) {
       std::unordered_set<mgp::Node> set;
       for (auto node : list.back()) {
-        if (in) {
+        if (!in_rels.empty()) {
           for (auto relationship : node.InRelationships()) {
-            if ((rel_type == "" || relationship.Type() == rel_type) && !Known(relationship.From(), list)) {
+            if ((in_rels.contains("") || in_rels.contains(relationship.Type())) && !Known(relationship.From(), list)) {
               set.insert(relationship.From());
             }
           }
         }
-        if (out) {
+        if (!out_rels.empty()) {
           for (auto relationship : node.OutRelationships()) {
-            if ((rel_type == "" || relationship.Type() == rel_type) && !Known(relationship.To(), list)) {
+            if ((out_rels.contains("") || out_rels.contains(relationship.Type())) && !Known(relationship.To(), list)) {
               set.insert(relationship.To());
             }
           }
