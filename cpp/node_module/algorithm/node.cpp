@@ -4,12 +4,12 @@ bool Node::RelationshipExist(const mgp::Node &node, std::string &rel_type) {
   char direction{' '};
   if (rel_type[0] == '<' && rel_type[rel_type.size() - 1] == '>') {
     throw mgp::ValueException("Invalid relationship specification!");
-  }else if (rel_type[rel_type.size() - 1] == '>') {
+  } else if (rel_type[rel_type.size() - 1] == '>') {
     direction = rel_type[rel_type.size() - 1];
     rel_type.pop_back();
-  }else if (rel_type[0] == '<') {
+  } else if (rel_type[0] == '<') {
     direction = rel_type[0];
-    rel_type.erase(0,1);
+    rel_type.erase(0, 1);
   }
   for (auto rel : node.OutRelationships()) {
     if (std::string(rel.Type()) == rel_type && direction != '<') {
