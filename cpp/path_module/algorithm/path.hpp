@@ -11,26 +11,56 @@ constexpr std::string_view kArgumentMinHopsExpand = "min_hops";
 constexpr std::string_view kArgumentMaxHopsExpand = "max_hops";
 constexpr std::string_view kResultExpand = "result";
 
+struct LabelSets {
+  std::unordered_set<std::string> termination_list;
+  std::unordered_set<std::string> blacklist;
+  std::unordered_set<std::string> whitelist;
+  std::unordered_set<std::string> end_list;
+};
+
+struct LabelBools {
+  bool blacklisted = false;
+  bool terminated = false;
+  bool end_node = false;
+  bool whitelisted = false;
+};
+
+struct LabelBoolsStatus {
+  bool end_node_activated = false;
+  bool whitelist_empty = false;
+  bool termination_activated = false;
+};
+
+struct RelationshipSets {
+  std::unordered_set<std::string> outgoing_rel;
+  std::unordered_set<std::string> incoming_rel;
+  std::unordered_set<std::string> any_rel;
+};
+
+void FilterLabelBoolStatus(const LabelSets &labelSets, LabelBoolsStatus &labelStatus);
+
 void Expand(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
-void FilterLabel(const std::string_view label, const std::unordered_set<std::string> &termination_list,
-                 const std::unordered_set<std::string> &blacklist, const std::unordered_set<std::string> &whitelist,
-                 const std::unordered_set<std::string> &end_list, bool &blacklisted, bool &terminated, bool &end_node,
-                 bool &whitelisted);
+void FilterLabel(const std::string_view label, const LabelSets &labelFilters, LabelBools &labelBools);
 
-void ParseLabels(const mgp::List &list_of_labels, std::unordered_set<std::string> &termination_list,
-                 std::unordered_set<std::string> &blacklist, std::unordered_set<std::string> &whitelist,
-                 std::unordered_set<std::string> &end_list);
+void ParseLabels(const mgp::List &list_of_labels, LabelSets &labelFilters);
 
-void Parse_Relationships(const mgp::List &list_of_relationships, std::unordered_set<std::string> &outgoing_rel,
-                         std::unordered_set<std::string> &incoming_rel, std::unordered_set<std::string> &any_rel,
-                         bool &any_outgoing, bool &any_incoming);
+void Parse_Relationships(const mgp::List &list_of_relationships, RelationshipSets &relationshipSets, bool &any_outgoing,
+                         bool &any_incoming);
+bool PathSizeOk(const int64_t path_size, const int64_t &max_hops, const int64_t &min_hops);
+
+bool RelationshipAllowed(const std::string &rel_type, const RelationshipSets &relationshipSets, bool &any_outgoing,
+                         bool &any_incoming, bool outgoing);
+
+bool Whitelisted(const bool &whitelisted, const bool &whitelist_empty);
 
 void Path_DFS(mgp::Path path, std::unordered_set<mgp::Relationship> relationships_set,
-              std::vector<mgp::Path> &path_list, size_t path_size, const int64_t min_hops, const int64_t max_hops,
-              const std::unordered_set<std::string> &termination_list, const std::unordered_set<std::string> &blacklist,
-              const std::unordered_set<std::string> &whitelist, const std::unordered_set<std::string> &end_list,
-              const bool &end_node_activated, const bool &whitelist_empty, const bool &termination_activated,
-              std::unordered_set<std::string> &outgoing_rel, std::unordered_set<std::string> &incoming_rel,
-              std::unordered_set<std::string> &any_rel, bool &any_outgoing, bool &any_incoming);
+              const mgp::RecordFactory &record_factory, int64_t path_size, const int64_t min_hops,
+              const int64_t max_hops, const LabelSets &labelFilters, const LabelBoolsStatus &labelStatus,
+              const RelationshipSets &relationshipSets, bool &any_outgoing, bool &any_incoming);
+
+void DfsByDirection(mgp::Path &path, std::unordered_set<mgp::Relationship> &relationships_set,
+                    const mgp::RecordFactory &record_factory, int64_t path_size, const int64_t min_hops,
+                    const int64_t max_hops, const LabelSets &labelFilters, const LabelBoolsStatus &labelStatus,
+                    const RelationshipSets &relationshipSets, bool &any_outgoing, bool &any_incoming, bool outgoing);
 }  // namespace Path

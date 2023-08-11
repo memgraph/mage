@@ -7,7 +7,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     mgp::memory = memory;
     AddProcedure(
         Path::Expand, std::string(Path::kProcedureExpand).c_str(), mgp::ProcedureType::Read,
-        {mgp::Parameter(std::string(Path::kArgumentStartExpand).c_str(), mgp::Type::Node),
+        {mgp::Parameter(std::string(Path::kArgumentStartExpand).c_str(), mgp::Type::Any),
          mgp::Parameter(std::string(Path::kArgumentRelationshipsExpand).c_str(), {mgp::Type::List, mgp::Type::String}),
          mgp::Parameter(std::string(Path::kArgumentLabelsExpand).c_str(), {mgp::Type::List, mgp::Type::String}),
          mgp::Parameter(std::string(Path::kArgumentMinHopsExpand).c_str(), mgp::Type::Int),
