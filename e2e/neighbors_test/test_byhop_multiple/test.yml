@@ -1,6 +1,6 @@
 query: >
   MATCH (p:Phoebe)
-  CALL neighbors.by_hop(p, "FRIENDS|LOVERS>", 3) YIELD nodes
+  CALL neighbors.by_hop(p, ["FRIENDS", "LOVERS>"], 3) YIELD nodes
   RETURN nodes
 
 output:
