@@ -19,17 +19,21 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
                  {mgp::Parameter(Meta::kStatsOnlineArg1, mgp::Type::Bool)},
                  {mgp::Return(Meta::kReturnStats1, mgp::Type::Int), mgp::Return(Meta::kReturnStats2, mgp::Type::Int),
                   mgp::Return(Meta::kReturnStats3, mgp::Type::Int), mgp::Return(Meta::kReturnStats4, mgp::Type::Int),
-                  mgp::Return(Meta::kReturnStats5, mgp::Type::Int), mgp::Return(Meta::kReturnStats6, mgp::Type::Map),
-                  mgp::Return(Meta::kReturnStats7, mgp::Type::Map), mgp::Return(Meta::kReturnStats8, mgp::Type::Map),
-                  mgp::Return(Meta::kReturnStats9, mgp::Type::Map)},
+                  mgp::Return(Meta::kReturnStats5, mgp::Type::Int),
+                  mgp::Return(Meta::kReturnStats6, {mgp::Type::Map, mgp::Type::Int}),
+                  mgp::Return(Meta::kReturnStats7, {mgp::Type::Map, mgp::Type::Int}),
+                  mgp::Return(Meta::kReturnStats8, {mgp::Type::Map, mgp::Type::Int}),
+                  mgp::Return(Meta::kReturnStats9, {mgp::Type::Map, mgp::Type::Int})},
                  module, memory);
 
     AddProcedure(Meta::StatsOffline, Meta::kProcedureStatsOffline, mgp::ProcedureType::Read, {},
                  {mgp::Return(Meta::kReturnStats1, mgp::Type::Int), mgp::Return(Meta::kReturnStats2, mgp::Type::Int),
                   mgp::Return(Meta::kReturnStats3, mgp::Type::Int), mgp::Return(Meta::kReturnStats4, mgp::Type::Int),
-                  mgp::Return(Meta::kReturnStats5, mgp::Type::Int), mgp::Return(Meta::kReturnStats6, mgp::Type::Map),
-                  mgp::Return(Meta::kReturnStats7, mgp::Type::Map), mgp::Return(Meta::kReturnStats8, mgp::Type::Map),
-                  mgp::Return(Meta::kReturnStats9, mgp::Type::Map)},
+                  mgp::Return(Meta::kReturnStats5, mgp::Type::Int),
+                  mgp::Return(Meta::kReturnStats6, {mgp::Type::Map, mgp::Type::Int}),
+                  mgp::Return(Meta::kReturnStats7, {mgp::Type::Map, mgp::Type::Int}),
+                  mgp::Return(Meta::kReturnStats8, {mgp::Type::Map, mgp::Type::Int}),
+                  mgp::Return(Meta::kReturnStats9, {mgp::Type::Map, mgp::Type::Int})},
                  module, memory);
 
     AddProcedure(Meta::Reset, Meta::kProcedureReset, mgp::ProcedureType::Read, {}, {}, module, memory);

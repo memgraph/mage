@@ -1,7 +1,8 @@
 #include "meta.hpp"
-#include <cstdint>
-#include <string>
-#include <string_view>
+
+#include <atomic>
+#include <mutex>
+
 #include "mgp.hpp"
 
 namespace Meta {
@@ -10,33 +11,79 @@ namespace {
 
 class Metadata {
  public:
-  Metadata() { node_cnt = relationship_cnt = 0; }
+  Metadata() : node_cnt{0}, relationship_cnt{0} {}
 
-  int64_t node_cnt;
-  int64_t relationship_cnt;
+  int64_t GetNodeCnt() const { return node_cnt; }
+  int64_t GetRelationshipCnt() const { return relationship_cnt; }
+  int64_t GetLabelCnt() const { return static_cast<int64_t>(labels.size()); }
+  int64_t GetRelationshipTypeCnt() const { return static_cast<int64_t>(relationship_types_cnt.size()); }
+  int64_t GetPropertyKeyCnt() const { return static_cast<int64_t>(property_key_cnt.size()); }
+
+  std::unordered_map<std::string, int64_t> GetLabels() const { return labels; }
+
+  void LockAndExecute(std::mutex &mutex, bool online, auto Function);
+  auto LockAndExecuteReturn(std::mutex &mutex, bool online, auto Function);
+
+  void UpdateNodeCnt(int add) { node_cnt += add; }
+  void UpdateRelationshipCnt(int add) { relationship_cnt += add; }
+
+  void Reset();
+  void UpdateLabels(const mgp::Node &node, int add, bool online);
+  void UpdatePropertyKeyCnt(const auto &node, int add, bool online);
+  void UpdateRelationshipTypes(const mgp::Relationship &relationship, int add, bool online);
+  void UpdateRelationshipTypesCnt(const mgp::Relationship &relationship, int add, bool online);
+
+ private:
+  std::atomic<int64_t> node_cnt;
+  std::atomic<int64_t> relationship_cnt;
+
   std::unordered_map<std::string, int64_t> labels;
   std::unordered_map<std::string, int64_t> property_key_cnt;
   std::unordered_map<std::string, int64_t> relationship_types;
   std::unordered_map<std::string, int64_t> relationship_types_cnt;
+};
 
-  int64_t get_label_count() const { return static_cast<int64_t>(labels.size()); }
-  int64_t get_relationship_type_count() const { return static_cast<int64_t>(relationship_types_cnt.size()); }
-  int64_t get_property_key_count() const { return static_cast<int64_t>(property_key_cnt.size()); }
-
-  void reset();
-  void update_labels(const mgp::Node &node, int add);
-  void update_property_key_cnt(const mgp::Node &node, int add);
-  void update_property_key_cnt(const mgp::Relationship &relationship, int add);
-  void update_relationship_types(const mgp::Relationship &relationship, int add);
-  void update_relationship_types_cnt(const mgp::Relationship &relationship, int add);
+struct MetadataMutex {
+  std::mutex labels_mutex;
+  std::mutex property_key_cnt_mutex;
+  std::mutex relationship_types_mutex;
+  std::mutex relationship_types_cnt_mutex;
 };
 
 // Global variable
-// This is unsafe in the multithreaded environment, the workaround would be building a thread-safe dynamic storage
-// implementation
 Metadata metadata;
+MetadataMutex metadata_mutex;
 
-void insert(std::unordered_map<std::string, int64_t> &map, std::string &key, int64_t add) {
+void Metadata::LockAndExecute(std::mutex &mutex, bool online, auto Function) {
+  if (online) {
+    const std::lock_guard<std::mutex> lock(mutex);
+    Function();
+  } else {
+    Function();
+  }
+}
+
+auto Metadata::LockAndExecuteReturn(std::mutex &mutex, bool online, auto Function) {
+  if (online) {
+    const std::lock_guard<std::mutex> lock(mutex);
+    return Function();
+  }
+  return Function();
+}
+
+void Metadata::Reset() {
+  node_cnt = 0;
+  relationship_cnt = 0;
+
+  auto ClearMap = [&](std::mutex &mutex, auto &map) { LockAndExecute(mutex, true, [&]() { map.clear(); }); };
+
+  ClearMap(metadata_mutex.labels_mutex, labels);
+  ClearMap(metadata_mutex.property_key_cnt_mutex, property_key_cnt);
+  ClearMap(metadata_mutex.relationship_types_mutex, relationship_types);
+  ClearMap(metadata_mutex.relationship_types_cnt_mutex, relationship_types_cnt);
+}
+
+void Insert(std::unordered_map<std::string, int64_t> &map, std::string &key, int64_t add) {
   auto iterator = map.find(key);
   if (iterator != map.end()) {
     (*iterator).second += add;
@@ -48,90 +95,89 @@ void insert(std::unordered_map<std::string, int64_t> &map, std::string &key, int
   }
 }
 
-void insert(std::unordered_map<std::string, int64_t> &map, std::string_view key_view, int64_t add) {
-  auto key = std::string(key_view);
-  insert(map, key, add);
+void Metadata::UpdateLabels(const mgp::Node &node, int add, bool online) {
+  auto IterateAndInsert = [&]() {
+    for (const auto &label : node.Labels()) {
+      auto key = std::string(label);
+      Insert(labels, key, add);
+    }
+  };
+
+  LockAndExecute(metadata_mutex.labels_mutex, online, IterateAndInsert);
 }
 
-void Metadata::reset() {
-  node_cnt = relationship_cnt = 0;
-  labels.clear();
-  property_key_cnt.clear();
-  relationship_types.clear();
-  relationship_types_cnt.clear();
+void Metadata::UpdatePropertyKeyCnt(const auto &node_or_relationship, int add, bool online) {
+  auto IterateAndInsert = [&]() {
+    for (const auto &[property, _] : node_or_relationship.Properties()) {
+      auto key = std::string(property);
+      Insert(property_key_cnt, key, add);
+    }
+  };
+
+  LockAndExecute(metadata_mutex.property_key_cnt_mutex, online, IterateAndInsert);
 }
 
-void Metadata::update_labels(const mgp::Node &node, int add) {
-  for (const auto &label : node.Labels()) {
-    insert(labels, label, add);
-  }
+void Metadata::UpdateRelationshipTypes(const mgp::Relationship &relationship, int add, bool online) {
+  auto IterateAndInsert = [&]() {
+    const auto type = relationship.Type();
+
+    for (const auto &label : relationship.From().Labels()) {
+      auto key = "(:" + std::string(label) + ")-[:" + std::string(type) + "]->()";
+      Insert(relationship_types, key, add);
+    }
+    for (const auto &label : relationship.To().Labels()) {
+      auto key = "()-[:" + std::string(type) + "]->(:" + std::string(label) + ")";
+      Insert(relationship_types, key, add);
+    }
+
+    auto key = "()-[:" + std::string(type) + "]->()";
+    Insert(relationship_types, key, add);
+  };
+
+  LockAndExecute(metadata_mutex.relationship_types_mutex, online, IterateAndInsert);
 }
 
-void Metadata::update_property_key_cnt(const mgp::Node &node, int add) {
-  for (const auto &[property, _] : node.Properties()) {
-    insert(property_key_cnt, property, add);
-  }
+void Metadata::UpdateRelationshipTypesCnt(const mgp::Relationship &relationship, int add, bool online) {
+  auto IterateAndInsert = [&]() {
+    auto key = std::string(relationship.Type());
+    Insert(relationship_types_cnt, key, add);
+  };
+  LockAndExecute(metadata_mutex.relationship_types_cnt_mutex, online, IterateAndInsert);
 }
 
-void Metadata::update_property_key_cnt(const mgp::Relationship &relationship, int add) {
-  for (const auto &[property, _] : relationship.Properties()) {
-    insert(property_key_cnt, property, add);
-  }
-}
-
-void Metadata::update_relationship_types(const mgp::Relationship &relationship, int add) {
-  const auto type = relationship.Type();
-
-  for (const auto &label : relationship.From().Labels()) {
-    auto key = "(:" + std::string(label) + ")-[:" + std::string(type) + "]->()";
-    insert(relationship_types, key, add);
-  }
-  for (const auto &label : relationship.To().Labels()) {
-    auto key = "()-[:" + std::string(type) + "]->(:" + std::string(label) + ")";
-    insert(relationship_types, key, add);
-  }
-
-  insert(relationship_types, "()-[:" + std::string(type) + "]->()", add);
-}
-
-void Metadata::update_relationship_types_cnt(const mgp::Relationship &relationship, int add) {
-  insert(relationship_types_cnt, relationship.Type(), add);
-}
-
-Metadata get_all_metadata(mgp_graph *memgraph_graph) {
-  Metadata data;
-
+void UpdateAllMetadata(mgp_graph *memgraph_graph, Metadata &data, bool online) {
   const mgp::Graph graph{memgraph_graph};
 
   for (const auto node : graph.Nodes()) {
-    data.node_cnt++;
-    data.update_labels(node, 1);
-    data.update_property_key_cnt(node, 1);
+    data.UpdateNodeCnt(1);
+    data.UpdateLabels(node, 1, online);
+    data.UpdatePropertyKeyCnt(node, 1, online);
   }
 
   for (const auto relationship : graph.Relationships()) {
-    data.relationship_cnt++;
-    data.update_relationship_types(relationship, 1);
-    data.update_relationship_types_cnt(relationship, 1);
-    data.update_property_key_cnt(relationship, 1);
+    data.UpdateRelationshipCnt(1);
+    data.UpdateRelationshipTypes(relationship, 1, online);
+    data.UpdateRelationshipTypesCnt(relationship, 1, online);
+    data.UpdatePropertyKeyCnt(relationship, 1, online);
   }
-
-  return data;
 }
 
-void output_from_metadata(const Metadata &data, const mgp::RecordFactory &record_factory) {
+void OutputFromMetadata(Metadata &data, const mgp::RecordFactory &record_factory, bool online) {
   auto record = record_factory.NewRecord();
   mgp::Map stats{};
 
-  int64_t label_count = data.get_label_count();
+  int64_t label_count =
+      data.LockAndExecuteReturn(metadata_mutex.labels_mutex, online, [&]() { return data.get_label_count(); });
   record.Insert(std::string(kReturnStats1).c_str(), label_count);
   stats.Insert("labelCount", mgp::Value(label_count));
 
-  int64_t relationship_type_count = data.get_relationship_type_count();
+  int64_t relationship_type_count = data.LockAndExecuteReturn(metadata_mutex.relationship_types_cnt_mutex, online,
+                                                              [&]() { return data.get_relationship_type_count(); });
   record.Insert(std::string(kReturnStats2).c_str(), relationship_type_count);
   stats.Insert("relationshipTypeCount", mgp::Value(relationship_type_count));
 
-  int64_t property_key_count = data.get_property_key_count();
+  int64_t property_key_count = data.LockAndExecuteReturn(metadata_mutex.property_key_cnt_mutex, online,
+                                                         [&]() { return data.get_property_key_count(); });
   record.Insert(std::string(kReturnStats3).c_str(), property_key_count);
   stats.Insert("propertyKeyCount", mgp::Value(property_key_count));
 
@@ -141,7 +187,7 @@ void output_from_metadata(const Metadata &data, const mgp::RecordFactory &record
   record.Insert(std::string(kReturnStats5).c_str(), data.relationship_cnt);
   stats.Insert("relationshipCount", mgp::Value(data.relationship_cnt));
 
-  auto create_map = [](const auto &map) {
+  auto CreateMap = [](const auto &map) {
     mgp::Map result;
     for (const auto &[key, value] : map) {
       result.Insert(key, mgp::Value(value));
@@ -149,15 +195,18 @@ void output_from_metadata(const Metadata &data, const mgp::RecordFactory &record
     return result;
   };
 
-  auto labels_map = create_map(data.labels);
+  auto labels_map =
+      data.LockAndExecuteReturn(metadata_mutex.labels_mutex, online, [&]() { return CreateMap(data.labels); });
   record.Insert(std::string(kReturnStats6).c_str(), labels_map);
   stats.Insert("labels", mgp::Value(std::move(labels_map)));
 
-  auto relationship_types_map = create_map(data.relationship_types);
+  auto relationship_types_map = data.LockAndExecuteReturn(metadata_mutex.relationship_types_mutex, online,
+                                                          [&]() { return CreateMap(data.relationship_types); });
   record.Insert(std::string(kReturnStats7).c_str(), relationship_types_map);
   stats.Insert("relationshipTypes", mgp::Value(std::move(relationship_types_map)));
 
-  auto relationship_types_count_map = create_map(data.relationship_types_cnt);
+  auto relationship_types_count_map = data.LockAndExecuteReturn(
+      metadata_mutex.relationship_types_cnt_mutex, online, [&]() { return CreateMap(data.relationship_types_cnt); });
   record.Insert(std::string(kReturnStats8).c_str(), relationship_types_count_map);
   stats.Insert("relationshipTypesCount", mgp::Value(std::move(relationship_types_count_map)));
 
@@ -179,7 +228,7 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
     const auto set_vertex_labels{arguments[4].ValueList()};
     const auto removed_vertex_labels{arguments[5].ValueList()};
 
-    auto update_object = [](const auto &objects, std::string_view vertex_event, std::string_view edge_event, int add) {
+    auto UpdateObject = [](const auto &objects, std::string_view vertex_event, std::string_view edge_event, int add) {
       for (const auto &object : objects) {
         const auto event{object.ValueMap()};
 
@@ -187,43 +236,53 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
         if (event_type == vertex_event) {
           Meta::metadata.node_cnt += add;
           const auto vertex = event["vertex"].ValueNode();
-          Meta::metadata.update_labels(vertex, add);
-          Meta::metadata.update_property_key_cnt(vertex, add);
+          Meta::metadata.UpdateLabels(vertex, add);
+          Meta::metadata.UpdatePropertyKeyCnt(vertex, add);
         } else if (event_type == edge_event) {
           Meta::metadata.relationship_cnt += add;
           const auto edge = event["edge"].ValueRelationship();
-          Meta::metadata.update_relationship_types(edge, add);
-          Meta::metadata.update_relationship_types_cnt(edge, add);
-          Meta::metadata.update_property_key_cnt(edge, add);
+          Meta::metadata.UpdateRelationshipTypes(edge, add);
+          Meta::metadata.UpdateRelationshipTypesCnt(edge, add);
+          Meta::metadata.UpdatePropertyKeyCnt(edge, add);
         } else {
           throw mgp::ValueException("Unexpected event type");
         }
       }
     };
 
-    update_object(created_objects, "created_vertex", "created_edge", 1);
-    update_object(deleted_objects, "deleted_vertex", "deleted_edge", -1);
+    UpdateObject(created_objects, "created_vertex", "created_edge", 1);
+    UpdateObject(deleted_objects, "deleted_vertex", "deleted_edge", -1);
 
     for (const auto &object : removed_vertex_properties) {
       const auto event{object.ValueMap()};
-      insert(Meta::metadata.property_key_cnt, event["key"].ValueString(), -1);
+      Meta::metadata.LockAndExecute(metadata_mutex.property_key_cnt_mutex, true, [&]() {
+        auto key = std::string(event["key"].ValueString());
+        Insert(Meta::metadata.property_key_cnt, key, -1);
+      });
     }
 
     for (const auto &object : removed_edge_properties) {
       const auto event{object.ValueMap()};
-      insert(Meta::metadata.property_key_cnt, event["key"].ValueString(), -1);
+      Meta::metadata.LockAndExecute(metadata_mutex.property_key_cnt_mutex, true, [&]() {
+        auto key = std::string(event["key"].ValueString());
+        Insert(Meta::metadata.property_key_cnt, key, -1);
+      });
     }
 
     for (const auto &object : set_vertex_labels) {
       const auto event{object.ValueMap()};
-      insert(Meta::metadata.labels, event["label"].ValueString(),
-             static_cast<int64_t>(event["vertices"].ValueList().Size()));
+      Meta::metadata.LockAndExecute(metadata_mutex.property_key_cnt_mutex, true, [&]() {
+        auto key = std::string(event["label"].ValueString());
+        Insert(Meta::metadata.labels, key, static_cast<int64_t>(event["vertices"].ValueList().Size()));
+      });
     }
 
     for (const auto &object : removed_vertex_labels) {
       const auto event{object.ValueMap()};
-      insert(Meta::metadata.labels, event["label"].ValueString(),
-             static_cast<int64_t>(-event["vertices"].ValueList().Size()));
+      Meta::metadata.LockAndExecute(metadata_mutex.property_key_cnt_mutex, true, [&]() {
+        auto key = std::string(event["label"].ValueString());
+        Insert(Meta::metadata.labels, key, static_cast<int64_t>(-event["vertices"].ValueList().Size()));
+      });
     }
 
   } catch (const std::exception &e) {
@@ -241,10 +300,11 @@ void StatsOnline(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, 
     bool update_stats = arguments[0].ValueBool();
 
     if (update_stats) {
-      metadata = get_all_metadata(memgraph_graph);
-      output_from_metadata(metadata, record_factory);
+      metadata.Reset();
+      UpdateAllMetadata(memgraph_graph, metadata, true);
+      OutputFromMetadata(metadata, record_factory, true);
     } else {
-      output_from_metadata(metadata, record_factory);
+      OutputFromMetadata(metadata, record_factory, true);
     }
 
   } catch (const std::exception &e) {
@@ -259,8 +319,9 @@ void StatsOffline(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
   const auto record_factory = mgp::RecordFactory(result);
 
   try {
-    const auto data = get_all_metadata(memgraph_graph);
-    output_from_metadata(data, record_factory);
+    Metadata data;
+    UpdateAllMetadata(memgraph_graph, data, false);
+    OutputFromMetadata(data, record_factory, false);
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
@@ -273,7 +334,7 @@ void Reset(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_me
   const auto record_factory = mgp::RecordFactory(result);
 
   try {
-    metadata.reset();
+    metadata.Reset();
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
