@@ -1,22 +1,17 @@
-query: >
+query: |
   CALL meta.stats_offline() YIELD stats RETURN stats;
-
 output:
-  - stats: {
-  labelCount: 1,
-    labels: {
-        Node: 6,
-    },
-    nodeCount: 6,
-    propertyKeyCount: 1,
-    relationshipCount: 3,
-    relationshipTypeCount: 1,
-    relationshipTypes: {
-      "(:Node)-[:RELACIJA]->()": 3,
-      "()-[:RELACIJA]->()": 3,
-      "()-[:RELACIJA]->(:Node)": 3
-    },
-    relationshipTypesCount: {
-      RELACIJA: 3
-    }
-  }
+  - stats:
+      labelCount: 1
+      labels:
+        Node: 6
+      nodeCount: 6
+      propertyKeyCount: 1
+      relationshipCount: 3
+      relationshipTypeCount: 1
+      relationshipTypes:
+        '(:Node)-[:Relation2]->()': 3
+        '()-[:Relation2]->()': 3
+        '()-[:Relation2]->(:Node)': 3
+      relationshipTypesCount:
+        Relation2: 3
