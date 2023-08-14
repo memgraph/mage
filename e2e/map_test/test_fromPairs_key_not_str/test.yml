@@ -1,0 +1,6 @@
+query: >
+  CALL map.from_pairs([[1, 2], ["b", 3], ["c", "c"]]) YIELD map
+  RETURN map
+
+exception: >
+  All keys have to be type string.
