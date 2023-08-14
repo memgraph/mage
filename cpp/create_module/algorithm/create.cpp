@@ -66,10 +66,9 @@ void Create::SetRelProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
       return;
     }
 
-    for (const auto relationship : graph.Relationships()) {
+    for (auto relationship : graph.Relationships()) {
       if (ids.contains(relationship.Id().AsInt())) {
-        auto relationship_copy = relationship;
-        ModifyAndOutput(relationship_copy, keys, values, record_factory);
+        ModifyAndOutput(relationship, keys, values, record_factory);
       }
     }
 
