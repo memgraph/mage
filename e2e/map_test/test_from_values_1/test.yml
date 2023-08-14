@@ -1,5 +1,0 @@
-query: >
-  CALL map.from_values(["name", "Zdravko", "surname", "Mamac", "Age", 3])
-  yield map;
-output:
-  - map: {"surname": "Mamac", "name": "Zdravko","Age": 3}

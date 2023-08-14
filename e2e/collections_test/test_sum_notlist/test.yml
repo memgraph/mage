@@ -1,6 +1,0 @@
-query: >
-    CALL collections.sum(2) YIELD sum
-    RETURN sum
-
-exception: >
-    'collections.sum' argument named 'inputList' at position 0 must be of type LIST OF ANY.

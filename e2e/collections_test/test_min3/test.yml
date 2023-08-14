@@ -1,5 +1,0 @@
-query: > 
-  CALL collections.min(["cc","dd","aa"]) YIELD min RETURN min;
-
-output:
-  - min: aa

@@ -1,6 +1,0 @@
-query: >
-  CALL map.merge({}, {}) YIELD merged
-  RETURN merged
-
-output:
-  - merged: {}

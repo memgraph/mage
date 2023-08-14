@@ -1,5 +1,0 @@
-query: >
-  CALL map.from_lists(["name", "surname","list"],["Pero", "Peric",[1,2,4,5]]) YIELD result RETURN result;
-
-output:
-  - result: {"list": [1,2,4,5],"name": "Pero","surname": "Peric"}

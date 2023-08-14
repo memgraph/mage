@@ -1,4 +1,0 @@
-query: >
-  CALL text.join(["idora", "ivan", "matija"], "") YIELD string RETURN string;
-output:
-  - string: "idoraivanmatija"

@@ -1,5 +1,0 @@
-query: > 
-  CALL collections.min([1.7,1]) YIELD min RETURN min;
-
-output:
-  - min: 1

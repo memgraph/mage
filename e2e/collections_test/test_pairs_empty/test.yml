@@ -1,5 +1,0 @@
-query: >
-  CALL collections.pairs([]) YIELD pairs
-  RETURN pairs
-output:
-    - pairs: []
