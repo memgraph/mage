@@ -55,10 +55,9 @@ void Create::RemoveRelProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_
       return;
     }
 
-    for (const auto relationship : graph.Relationships()) {
+    for (auto relationship : graph.Relationships()) {
       if (ids.contains(relationship.Id().AsInt())) {
-        auto relationship_copy = relationship;
-        DeleteAndOutput(relationship_copy, keys, record_factory);
+        DeleteAndOutput(relationship, keys, record_factory);
       }
     }
 
