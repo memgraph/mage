@@ -71,7 +71,7 @@ void Metadata::Reset() {
   node_cnt = 0;
   relationship_cnt = 0;
 
-  auto ClearMap = [&](std::mutex &mutex, auto &map) { LockAndExecute(mutex, true, [&]() { map.clear(); }); };
+  auto ClearMap = [](std::mutex &mutex, auto &map) { LockAndExecute(mutex, true, [&]() { map.clear(); }); };
 
   ClearMap(metadata_mutex.labels_mutex, labels);
   ClearMap(metadata_mutex.property_key_cnt_mutex, property_key_cnt);
