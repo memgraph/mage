@@ -13,14 +13,14 @@ constexpr std::string_view kReturnNodes = "node";
 
 /*set_property constants*/
 constexpr std::string_view kProcedureSetProperty = "set_property";
-constexpr std::string_view kArgumentNodeSetProperty = "node";
+constexpr std::string_view kArgumentNodeSetProperty = "nodes";
 constexpr std::string_view kArgumentKeySetProperty = "key";
 constexpr std::string_view kArgumentValueSetProperty = "value";
 constexpr std::string_view kReturntSetProperty = "node";
 
 /*remove_properties constants*/
 constexpr std::string_view kProcedureRemoveProperties = "remove_properties";
-constexpr std::string_view kArgumentNodeRemoveProperties = "node";
+constexpr std::string_view kArgumentNodeRemoveProperties = "nodes";
 constexpr std::string_view kArgumentKeysRemoveProperties = "list_keys";
 constexpr std::string_view kReturntRemoveProperties = "node";
 
