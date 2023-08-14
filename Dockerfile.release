@@ -43,7 +43,6 @@ WORKDIR /mage
 COPY . /mage
 
 
-
 #MAGE
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
     && export PATH="/root/.cargo/bin:${PATH}" \

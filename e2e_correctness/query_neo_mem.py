@@ -51,6 +51,9 @@ class Vertex:
                 f"_labels different between {self._id} and {other._id}: {self._labels} vs {other._labels}"
             )
             return False
+        
+        if len(self._properties) != len(other._properties):
+            return False
         for k, v in self._properties.items():
             if k not in other._properties:
                 logger.debug(f"Property with key {k} not in {other._properties.keys()}")
@@ -58,6 +61,7 @@ class Vertex:
             if v != other._properties[k]:
                 logger.debug(f"Value {v} not equal to {other._properties[k]}")
                 return False
+            
         return True
 
 
@@ -100,13 +104,16 @@ class Edge:
         if self._label != other._label:
             logger.debug(f"Label is different {self._label} <> {other._label}")
             return False
+        
+        if len(self._properties) != len(other._properties):
+            return False
         for k, v in self._properties.items():
             if k not in other._properties:
                 logger.debug(f"Property with key {k} not in {other._properties.keys()}")
                 return False
             if v != other._properties[k]:
                 logger.debug(f"Value {v} not equal to {other._properties[k]}")
-                return False
+                return False  
         return True
 
 
@@ -196,6 +203,8 @@ def create_graph_neo4j_json(json_neo4j_data) -> Graph:
             graph.add_vertex(extract_vertex_from_json(item))
             vertices_id_mapings[item["id"]] = item["properties"]["id"]
         else:
+            if "properties" not in item:
+                item["properties"] = {}
             graph.add_edge(
                 create_edge_from_data(
                     vertices_id_mapings[item["start"]["id"]],

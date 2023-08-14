@@ -1,0 +1,10 @@
+query: >
+    CALL collections.sort(["abd", "aba", "abc"]) YIELD sorted
+    RETURN sorted
+
+output:
+    - sorted: [
+   "aba",
+   "abc",
+   "abd"
+]
