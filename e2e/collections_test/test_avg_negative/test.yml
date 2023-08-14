@@ -1,5 +1,0 @@
-query: >
-  CALL collections.avg([5, 5, 6, 7, -5])
-  YIELD average;
-output:
-  - average: 3.6

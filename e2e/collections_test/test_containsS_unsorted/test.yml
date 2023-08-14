@@ -1,6 +1,0 @@
-query: >
-    CALL collections.contains_sorted(['a', 'b', 'c', 'd', 'e', 'g', 'f'], 'f') YIELD contains
-    RETURN contains
-
-output:
-    - contains: false

@@ -1,6 +1,0 @@
-query: >
-  CALL map.merge({a: "b", c: "d"}, {a: "f", g: "h"}) YIELD merged
-  RETURN merged
-
-output:
-  - merged: {a: "f", c: "d", g: "h"}

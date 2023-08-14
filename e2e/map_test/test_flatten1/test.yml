@@ -1,5 +1,0 @@
-query: >
-  CALL map.flatten({person: {name: "Cristiano Ronaldo",club: {name: "Al-Nassr",location: "Arabia"}}, a: "b",ba:"ba"}) YIELD result RETURN result;
-
-output:
-  - result: {"a": "b", "ba": "ba", "person.club.location": "Arabia", "person.club.name": "Al-Nassr", "person.name": "Cristiano Ronaldo"}

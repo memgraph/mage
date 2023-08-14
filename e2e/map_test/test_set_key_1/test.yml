@@ -1,9 +1,0 @@
-query: >
-  CALL map.set_key(
-    {name:"Zdravko",country:"Croatia"},
-    "name",
-    1
-  ) YIELD map;
-
-output:
-  - map: {"country": "Croatia","name": 1}

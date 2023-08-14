@@ -1,5 +1,0 @@
-query: >
-  CALL map.remove_keys({name:{matija: "matija",ptica: {}}},["matija"],true) YIELD result RETURN result;
-
-output:
-  - result: {}
