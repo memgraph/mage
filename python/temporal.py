@@ -19,8 +19,8 @@ def format(
 
     if "%z" in format or "%Z" in format:
         raise Exception(
-            "We are working with UTC zone only so '%Z'\
-            in format is not supported."
+            "Memgraph works with UTC zone only so\
+            '%Z' in format is not supported."
         )
 
     if format == "ISO" and (
