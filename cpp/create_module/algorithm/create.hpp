@@ -25,6 +25,12 @@ constexpr std::string_view kArgumentKeysRemoveProperties = "list_keys";
 constexpr std::string_view kReturntRemoveProperties = "node";
 
 void SetProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void StartSetProperty(mgp::Node &node, const std::string &string, mgp::Value &value,
+                      const mgp::RecordFactory &record_factory);
+
 void RemoveProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void StartRemoveProperties(mgp::Node &graph_node, const mgp::List &list_keys, const mgp::RecordFactory &record_factory);
+
 void Nodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+
 }  // namespace Create
