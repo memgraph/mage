@@ -38,7 +38,7 @@ void Nodes::RelationshipsExist(mgp_list *args, mgp_graph *memgraph_graph, mgp_re
 
     for (auto element: nodes) {
       if(!element.IsNode() && !element.IsInt()){
-        throw mgp::ValueException("Input arguments must be nodes or id's");
+        throw mgp::ValueException("Input arguments must be nodes or their ID's");
       }
       mgp::Node node = element.IsNode() ? element.ValueNode() : graph.GetNodeById(mgp::Id::FromInt(element.ValueInt()));
       mgp::Map return_map = mgp::Map();
@@ -51,8 +51,8 @@ void Nodes::RelationshipsExist(mgp_list *args, mgp_graph *memgraph_graph, mgp_re
           relationship_map.Insert(rel.ValueString(), mgp::Value(false));
         }
       }
-      return_map.Insert("Node", mgp::Value(node));
-      return_map.Insert("Relationships_exist_status", mgp::Value(std::move(relationship_map)));
+      return_map.Insert(std::string(kNodeRelationshipsExist).c_str(), mgp::Value(node));
+      return_map.Insert(std::string(kRelationshipsExistStatus).c_str(), mgp::Value(std::move(relationship_map)));
       auto record = record_factory.NewRecord();
       record.Insert(std::string(kReturnRelationshipsExist).c_str(), std::move(return_map));
     }
