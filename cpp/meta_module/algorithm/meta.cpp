@@ -42,9 +42,9 @@ void LockAndExecute(std::mutex &mutex, bool online, auto Function) {
   if (online) {
     const std::lock_guard<std::mutex> lock(mutex);
     Function();
-  } else {
-    Function();
+    return;
   }
+  Function();
 }
 
 auto LockAndExecuteReturn(std::mutex &mutex, bool online, auto Function) {
