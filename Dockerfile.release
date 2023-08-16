@@ -24,6 +24,7 @@ RUN apt-get update && apt-get install -y \
     python3-dev     `mage-memgraph` \
     clang           `mage-memgraph` \
     git             `mage-memgraph` \
+    unixodbc-dev        `mage-memgraph` \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -40,7 +41,6 @@ FROM base as dev
 
 WORKDIR /mage
 COPY . /mage
-
 
 
 #MAGE
