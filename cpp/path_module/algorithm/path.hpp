@@ -39,14 +39,16 @@ struct RelationshipSets {
 
 void FilterLabelBoolStatus(const LabelSets &labelSets, LabelBoolsStatus &labelStatus);
 
+bool ShouldExpand(const LabelBools &labelBools, const LabelBoolsStatus &labelStatus);
+
 void Expand(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 void FilterLabel(const std::string_view label, const LabelSets &labelFilters, LabelBools &labelBools);
 
 void ParseLabels(const mgp::List &list_of_labels, LabelSets &labelFilters);
 
-void Parse_Relationships(const mgp::List &list_of_relationships, RelationshipSets &relationshipSets, bool &any_outgoing,
-                         bool &any_incoming);
+void ParseRelationships(const mgp::List &list_of_relationships, RelationshipSets &relationshipSets, bool &any_outgoing,
+                        bool &any_incoming);
 bool PathSizeOk(const int64_t path_size, const int64_t &max_hops, const int64_t &min_hops);
 
 bool RelationshipAllowed(const std::string &rel_type, const RelationshipSets &relationshipSets, bool &any_outgoing,
@@ -54,13 +56,18 @@ bool RelationshipAllowed(const std::string &rel_type, const RelationshipSets &re
 
 bool Whitelisted(const bool &whitelisted, const bool &whitelist_empty);
 
-void Path_DFS(mgp::Path path, std::unordered_set<mgp::Relationship> relationships_set,
-              const mgp::RecordFactory &record_factory, int64_t path_size, const int64_t min_hops,
-              const int64_t max_hops, const LabelSets &labelFilters, const LabelBoolsStatus &labelStatus,
-              const RelationshipSets &relationshipSets, bool &any_outgoing, bool &any_incoming);
+void PathDFS(mgp::Path path, std::unordered_set<mgp::Relationship> &relationships_set,
+             const mgp::RecordFactory &record_factory, int64_t path_size, const int64_t min_hops,
+             const int64_t max_hops, const LabelSets &labelFilters, const LabelBoolsStatus &labelStatus,
+             const RelationshipSets &relationshipSets, bool &any_outgoing, bool &any_incoming);
 
 void DfsByDirection(mgp::Path &path, std::unordered_set<mgp::Relationship> &relationships_set,
                     const mgp::RecordFactory &record_factory, int64_t path_size, const int64_t min_hops,
                     const int64_t max_hops, const LabelSets &labelFilters, const LabelBoolsStatus &labelStatus,
                     const RelationshipSets &relationshipSets, bool &any_outgoing, bool &any_incoming, bool outgoing);
+
+void StartFunction(const mgp::Node &node, const mgp::RecordFactory &record_factory, int64_t path_size,
+                   const int64_t min_hops, const int64_t max_hops, const LabelSets &labelSets,
+                   const LabelBoolsStatus &labelStatus, const RelationshipSets &relationshipSets, bool &any_outgoing,
+                   bool &any_incoming);
 }  // namespace Path

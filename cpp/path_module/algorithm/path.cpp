@@ -7,13 +7,17 @@ bool Path::PathSizeOk(const int64_t path_size, const int64_t &max_hops, const in
 bool Path::Whitelisted(const bool &whitelisted, const bool &whitelist_empty) {
   return (whitelisted || whitelist_empty);
 }
-
+bool Path::ShouldExpand(const LabelBools &labelBools, const LabelBoolsStatus &labelStatus) {
+  return !labelBools.blacklisted && ((labelBools.end_node && labelStatus.end_node_activated) || labelBools.terminated ||
+                                     (!labelStatus.termination_activated && !labelStatus.end_node_activated &&
+                                      Whitelisted(labelBools.whitelisted, labelStatus.whitelist_empty)));
+}
 void Path::FilterLabelBoolStatus(const LabelSets &labelSets, LabelBoolsStatus &labelStatus) {
   if (labelSets.end_list.size() != 0) {  // end node is activated, which means only paths ending with it can be saved as
                                          // result, but they can be expanded further
     labelStatus.end_node_activated = true;
   }
-  if (labelSets.whitelist.size() == 0) {  // whitelist is emptym which means, everything is a whitelisted node
+  if (labelSets.whitelist.size() == 0) {  // whitelist is empty, which means all nodes are whitelisted
     labelStatus.whitelist_empty = true;
   }
 
@@ -88,8 +92,8 @@ void Path::ParseLabels(const mgp::List &list_of_labels, LabelSets &labelSets) {
 
 /*function that takes input list of relationships, and sorts them into appropriate categories
 sets were also used to reduce complexity*/
-void Path::Parse_Relationships(const mgp::List &list_of_relationships, RelationshipSets &relationshipSets,
-                               bool &any_outgoing, bool &any_incoming) {
+void Path::ParseRelationships(const mgp::List &list_of_relationships, RelationshipSets &relationshipSets,
+                              bool &any_outgoing, bool &any_incoming) {
   if (list_of_relationships.Size() ==
       0) {  // if no relationships were passed as arguments, all relationships are allowed
     any_outgoing = true;
@@ -152,30 +156,37 @@ void Path::DfsByDirection(mgp::Path &path, std::unordered_set<mgp::Relationship>
       FilterLabel(label, labelSets, labelBools);
     }
 
-    if (PathSizeOk(path_size, max_hops, min_hops) && !labelBools.blacklisted &&
-        ((labelBools.end_node && labelStatus.end_node_activated) || labelBools.terminated ||
-         (!labelStatus.termination_activated && !labelStatus.end_node_activated &&
-          Whitelisted(labelBools.whitelisted, labelStatus.whitelist_empty)))) {
+    if (PathSizeOk(path_size, max_hops, min_hops) && ShouldExpand(labelBools, labelStatus)) {
       auto record = record_factory.NewRecord();
       record.Insert(std::string(std::string(kResultExpand).c_str()).c_str(), cpy);
     }
     if (path_size + 1 < max_hops && !labelBools.blacklisted && !labelBools.terminated &&
         (labelBools.end_node || Whitelisted(labelBools.whitelisted, labelStatus.whitelist_empty))) {
-      Path_DFS(cpy, relationships_set_cpy, record_factory, path_size + 1, min_hops, max_hops, labelSets, labelStatus,
-               relationshipSets, any_outgoing, any_incoming);
+      PathDFS(cpy, relationships_set_cpy, record_factory, path_size + 1, min_hops, max_hops, labelSets, labelStatus,
+              relationshipSets, any_outgoing, any_incoming);
     }
   }
 }
 
 /*function used for traversal and filtering*/
-void Path::Path_DFS(mgp::Path path, std::unordered_set<mgp::Relationship> relationships_set,
-                    const mgp::RecordFactory &record_factory, int64_t path_size, const int64_t min_hops,
-                    const int64_t max_hops, const LabelSets &labelSets, const LabelBoolsStatus &labelStatus,
-                    const RelationshipSets &relationshipSets, bool &any_outgoing, bool &any_incoming) {
+void Path::PathDFS(mgp::Path path, std::unordered_set<mgp::Relationship> &relationships_set,
+                   const mgp::RecordFactory &record_factory, int64_t path_size, const int64_t min_hops,
+                   const int64_t max_hops, const LabelSets &labelSets, const LabelBoolsStatus &labelStatus,
+                   const RelationshipSets &relationshipSets, bool &any_outgoing, bool &any_incoming) {
   DfsByDirection(path, relationships_set, record_factory, path_size, min_hops, max_hops, labelSets, labelStatus,
                  relationshipSets, any_outgoing, any_incoming, true);
   DfsByDirection(path, relationships_set, record_factory, path_size, min_hops, max_hops, labelSets, labelStatus,
                  relationshipSets, any_outgoing, any_incoming, false);
+}
+
+void Path::StartFunction(const mgp::Node &node, const mgp::RecordFactory &record_factory, int64_t path_size,
+                         const int64_t min_hops, const int64_t max_hops, const LabelSets &labelSets,
+                         const LabelBoolsStatus &labelStatus, const RelationshipSets &relationshipSets,
+                         bool &any_outgoing, bool &any_incoming) {
+  mgp::Path path = mgp::Path(node);
+  std::unordered_set<mgp::Relationship> relationships_set;
+  PathDFS(path, relationships_set, record_factory, 0, min_hops, max_hops, labelSets, labelStatus, relationshipSets,
+          any_outgoing, any_incoming);
 }
 
 void Path::Expand(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
@@ -201,38 +212,30 @@ void Path::Expand(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
     RelationshipSets relationshipSets;
     bool any_outgoing = false;
     bool any_incoming = false;
-    Parse_Relationships(relationships, relationshipSets, any_outgoing, any_incoming);
+    ParseRelationships(relationships, relationshipSets, any_outgoing, any_incoming);
     /*end filter relationships part*/
 
     if (start_value.IsNode()) {
-      mgp::Path path = mgp::Path(start_value.ValueNode());
-      std::unordered_set<mgp::Relationship> relationships_set;
-      Path_DFS(path, relationships_set, record_factory, 0, min_hops, max_hops, labelSets, labelStatus, relationshipSets,
-               any_outgoing, any_incoming);
+      StartFunction(start_value.ValueNode(), record_factory, 0, min_hops, max_hops, labelSets, labelStatus,
+                    relationshipSets, any_outgoing, any_incoming);
     } else if (start_value.IsInt()) {
-      mgp::Path path = mgp::Path(graph.GetNodeById(mgp::Id::FromInt(start_value.ValueInt())));
-      std::unordered_set<mgp::Relationship> relationships_set;
-      Path_DFS(path, relationships_set, record_factory, 0, min_hops, max_hops, labelSets, labelStatus, relationshipSets,
-               any_outgoing, any_incoming);
+      StartFunction(graph.GetNodeById(mgp::Id::FromInt(start_value.ValueInt())), record_factory, 0, min_hops, max_hops,
+                    labelSets, labelStatus, relationshipSets, any_outgoing, any_incoming);
     } else if (start_value.IsList()) {
       for (const auto value : start_value.ValueList()) {
         if (value.IsNode()) {
-          mgp::Path path = mgp::Path(value.ValueNode());
-          std::unordered_set<mgp::Relationship> relationships_set;
-          Path_DFS(path, relationships_set, record_factory, 0, min_hops, max_hops, labelSets, labelStatus,
-                   relationshipSets, any_outgoing, any_incoming);
+          StartFunction(value.ValueNode(), record_factory, 0, min_hops, max_hops, labelSets, labelStatus,
+                        relationshipSets, any_outgoing, any_incoming);
 
         } else if (value.IsInt()) {
-          mgp::Path path = mgp::Path(graph.GetNodeById(mgp::Id::FromInt(value.ValueInt())));
-          std::unordered_set<mgp::Relationship> relationships_set;
-          Path_DFS(path, relationships_set, record_factory, 0, min_hops, max_hops, labelSets, labelStatus,
-                   relationshipSets, any_outgoing, any_incoming);
+          StartFunction(graph.GetNodeById(mgp::Id::FromInt(value.ValueInt())), record_factory, 0, min_hops, max_hops,
+                        labelSets, labelStatus, relationshipSets, any_outgoing, any_incoming);
         } else {
-          throw mgp::ValueException("Invalid start type, expected Node, Int,or List of Node or Int");
+          throw mgp::ValueException("Invalid start type. Expected Node, Int, List[Node, Int]");
         }
       }
     } else {
-      throw mgp::ValueException("Invalid start type, expected Node, Int,or List of Node or Int");
+      throw mgp::ValueException("Invalid start type. Expected Node, Int, List[Node, Int]");
     }
 
   } catch (const std::exception &e) {
