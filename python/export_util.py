@@ -122,10 +122,16 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
     graph = get_graph(ctx)
     try:
         with open(path, "w") as outfile:
-            js.dump(graph, outfile, indent=Parameter.STANDARD_INDENT.value, default=str)
+            js.dump(
+                graph,
+                outfile,
+                indent=Parameter.STANDARD_INDENT.value,
+                default=str,
+            )
     except PermissionError:
         raise PermissionError(
-            "You don't have permissions to write into that file. Make sure to give the necessary permissions to user memgraph."
+            "You don't have permissions to write into that file. Make sure \
+             to give the necessary permissions to user memgraph."
         )
     except Exception:
         raise OSError("Could not open or write to the file.")
@@ -153,7 +159,8 @@ def save_file(file_path: str, data_list: list):
             writer.writerows(data_list)
     except PermissionError:
         raise PermissionError(
-            "You don't have permissions to write into that file. Make sure to give the necessary permissions to user memgraph."
+            "You don't have permissions to write into that file. \
+             Make sure to give the necessary permissions to user memgraph."
         )
     except csv.Error as e:
         raise csv.Error(
@@ -203,7 +210,7 @@ def csv_query(
         PermissionError: If you provided file path that you have no permissions to write at.
         csv.Error: If an error occurred while writing into stream or CSV file.
         OSError: If the file can't be opened or written to.
-    """
+    """  # noqa: E501
 
     # file or config have to be provided
     if not file_path and not stream:
@@ -212,7 +219,8 @@ def csv_query(
     # only config provided with stream set to false
     if not file_path and not stream:
         raise Exception(
-            "If you provided only stream value, it has to be set to True to get any results."
+            "If you provided only stream value, \
+             it has to be set to True to get any results."
         )
 
     memgraph = Memgraph()
@@ -221,7 +229,8 @@ def csv_query(
     # if query yields no result
     if not len(results):
         raise Exception(
-            "Your query yields no results. Check if the database is empty or rewrite the provided query."
+            "Your query yields no results. Check if the database \
+             is empty or rewrite the provided query."
         )
 
     result_keys = list(results[0])
@@ -235,3 +244,105 @@ def csv_query(
         data = csv_to_stream(data_list)
 
     return mgp.Record(file_path=file_path, data=data)
+
+
+def write_graphml(graph, outfile):
+    node_props = set()
+    rel_props = set()
+    for element in graph:
+        if element.get("type") == "node":
+            for key in element.get("properties"):
+                node_props.add(key)
+        elif element.get("type") == "relationship":
+            for key in element.get("properties"):
+                rel_props.add(key)
+    node_props.add("labels")
+    rel_props.add("label")
+
+    for prop in sorted(node_props):
+        outfile.write(
+            '<key id="' + prop + '" for="node" attr.name="' + prop + '"/>\n'
+        )
+    for prop in sorted(rel_props):
+        outfile.write(
+            '<key id="' + prop + '" for="edge" attr.name="' + prop + '"/>\n'
+        )
+
+    outfile.write('<graph id="G" edgedefault="directed">\n')
+
+    for element in graph:
+        if element.get("type") == "node":
+            outfile.write(
+                '<node id="n' + str(element.get("id")) + '" labels="'
+            )
+            for label in element.get("labels"):
+                outfile.write(":" + label)
+            outfile.write('">')
+            outfile.write('<data key="labels">')
+            for label in element.get("labels"):
+                outfile.write(":" + label)
+            outfile.write("</data>")
+            for key, value in element.get("properties").items():
+                outfile.write(
+                    '<data key="' + key + '">' + str(value) + "</data>"
+                )
+            outfile.write("</node>\n")
+        elif element.get("type") == "relationship":
+            outfile.write(
+                '<edge id="e'
+                + str(element.get("id"))
+                + '" source="n'
+                + str(element.get("start"))
+                + '" target="n'
+                + str(element.get("end"))
+                + '" label="'
+                + element.get("label")
+                + '">'
+            )
+            outfile.write(
+                '<data key="label">' + element.get("label") + "</data>"
+            )
+            for key, value in element.get("properties").items():
+                outfile.write(
+                    '<data key="' + key + '">' + str(value) + "</data>"
+                )
+            outfile.write("</edge>\n")
+
+    outfile.write("</graph>\n")
+    outfile.write("</graphml>")
+
+
+@mgp.read_proc
+def graphml(
+    ctx: mgp.ProcCtx,
+    path: str,
+    config: mgp.Map = {},
+) -> mgp.Record(status=str):
+    """
+    Procedure to export the whole database to a graphML file.
+
+    Parameters
+    ----------
+    path : str
+        Path to the graphML file containing the exported graph database.
+    """
+
+    graph = get_graph(ctx)
+    try:
+        if config.get("stream"):
+            return mgp.Record(status="stream")
+        with open(path, "w") as outfile:
+            outfile.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+            outfile.write(
+                '<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">\n'  # noqa: E501
+            )
+            write_graphml(graph, outfile)
+    except PermissionError:
+        raise PermissionError(
+            "You don't have permissions to write into that file. Make sure \
+             to give the necessary permissions to user memgraph."
+        )
+    except Exception:
+        raise OSError("Could not open or write to the file.")
+
+    return mgp.Record(status="success")
