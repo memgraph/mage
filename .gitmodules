@@ -1,4 +1,4 @@
 [submodule "cpp/memgraph"]
 	path = cpp/memgraph
 	url = https://github.com/memgraph/memgraph.git
-	branch = add-ToString-for-Value-cpp-api
+	branch = release/2.10
