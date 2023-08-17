@@ -27,12 +27,7 @@ void Create::Nodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result
     return;
   }
 }
-void Create::StartSetProperty(mgp::Node &node, const std::string &string, mgp::Value &value,
-                              const mgp::RecordFactory &record_factory) {
-  node.SetProperty(string, value);
-  auto record = record_factory.NewRecord();
-  record.Insert(std::string(Create::kReturntSetProperty).c_str(), node);
-}
+
 void Create::SetProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
@@ -42,45 +37,49 @@ void Create::SetProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *
     mgp::Value start_value = arguments[0];
     const std::string string(arguments[1].ValueString());
     mgp::Value value = arguments[2];
-    if (start_value.IsNode()) {
+    if(start_value.IsNode()){
+
       mgp::Node node = start_value.ValueNode();
-      StartSetProperty(node, string, value, record_factory);
+      node.SetProperty(string, std::move(value));
+      auto record = record_factory.NewRecord();
+      record.Insert(std::string(Create::kReturntSetProperty).c_str(), node);
 
-    } else if (start_value.IsInt()) {
+    } else if(start_value.IsInt()){
+
       mgp::Node node = graph.GetNodeById(mgp::Id::FromInt(start_value.ValueInt()));
-      StartSetProperty(node, string, value, record_factory);
+      node.SetProperty(string, std::move(value));
+      auto record = record_factory.NewRecord();
+      record.Insert(std::string(Create::kReturntSetProperty).c_str(), node);
 
-    } else if (start_value.IsList()) {
-      for (auto val : start_value.ValueList()) {
-        if (val.IsNode()) {
+    } else if(start_value.IsList()){
+      for(auto val : start_value.ValueList()){
+        if(val.IsNode()){
           mgp::Node node = val.ValueNode();
-          StartSetProperty(node, string, value, record_factory);
+          node.SetProperty(string, value);
+          auto record = record_factory.NewRecord();
+          record.Insert(std::string(Create::kReturntSetProperty).c_str(), node);
 
-        } else if (val.IsInt()) {
+        }else if(val.IsInt()){
           mgp::Node node = graph.GetNodeById(mgp::Id::FromInt(val.ValueInt()));
-          StartSetProperty(node, string, value, record_factory);
-        } else {
+          node.SetProperty(string, value);
+          auto record = record_factory.NewRecord();
+          record.Insert(std::string(Create::kReturntSetProperty).c_str(), node);
+        }else{
           throw mgp::ValueException("All elements of the list must be nodes or ID's");
         }
+
       }
-    } else {
+    }else{
       throw mgp::ValueException("Input argument must be either node, ID or list of nodes and ID's");
     }
-
+    
+     
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
     return;
   }
 }
-void Create::StartRemoveProperties(mgp::Node &graph_node, const mgp::List &list_keys,
-                                   const mgp::RecordFactory &record_factory) {
-  for (auto key : list_keys) {
-    std::string key_str(key.ValueString());
-    graph_node.RemoveProperty(key_str);
-  }
-  auto record = record_factory.NewRecord();
-  record.Insert(std::string(Create::kReturntRemoveProperties).c_str(), graph_node);
-}
+
 
 void Create::RemoveProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
@@ -91,34 +90,59 @@ void Create::RemoveProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
     mgp::Value start_value = arguments[0];
     const mgp::List list_keys = arguments[1].ValueList();
 
-    if (start_value.IsNode()) {
+    if(start_value.IsNode()){
       mgp::Node graph_node = start_value.ValueNode();
-      StartRemoveProperties(graph_node, list_keys, record_factory);
+      for (auto key : list_keys) {
+        std::string key_str(key.ValueString());
+        graph_node.RemoveProperty(key_str);
+      }
+      auto record = record_factory.NewRecord();
+      record.Insert(std::string(Create::kReturntRemoveProperties).c_str(), graph_node);
 
-    } else if (start_value.IsInt()) {
+    } else if(start_value.IsInt()){
+
       mgp::Node graph_node = graph.GetNodeById(mgp::Id::FromInt(start_value.ValueInt()));
-      StartRemoveProperties(graph_node, list_keys, record_factory);
+      for (auto key : list_keys) {
+        std::string key_str(key.ValueString());
+        graph_node.RemoveProperty(key_str);
+      }
+      auto record = record_factory.NewRecord();
+      record.Insert(std::string(Create::kReturntRemoveProperties).c_str(), graph_node);
 
-    } else if (start_value.IsList()) {
-      for (auto val : start_value.ValueList()) {
-        if (val.IsNode()) {
+    } else if(start_value.IsList()){
+      for(auto val : start_value.ValueList()){
+        if(val.IsNode()){
           mgp::Node graph_node = val.ValueNode();
-          StartRemoveProperties(graph_node, list_keys, record_factory);
+          for (auto key : list_keys) {
+            std::string key_str(key.ValueString());
+            graph_node.RemoveProperty(key_str);
+          }
+          auto record = record_factory.NewRecord();
+          record.Insert(std::string(Create::kReturntRemoveProperties).c_str(), graph_node);
 
-        } else if (val.IsInt()) {
+        } else if(val.IsInt()){
           mgp::Node graph_node = graph.GetNodeById(mgp::Id::FromInt(val.ValueInt()));
-          StartRemoveProperties(graph_node, list_keys, record_factory);
+          for (auto key : list_keys) {
+            std::string key_str(key.ValueString());
+            graph_node.RemoveProperty(key_str);
+          }
+          auto record = record_factory.NewRecord();
+          record.Insert(std::string(Create::kReturntRemoveProperties).c_str(), graph_node);
 
-        } else {
+        } else{
           throw mgp::ValueException("All elements of the list must be nodes or ID's");
         }
+
       }
-    } else {
+    } else{
       throw mgp::ValueException("Input argument must be either node, ID or list of nodes and ID's");
     }
+
+    
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
     return;
   }
 }
+
