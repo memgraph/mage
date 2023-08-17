@@ -1,0 +1,7 @@
+query: >
+  MATCH (:Student)-[k:KNOWS]->(:Student)
+  CALL label.exists(k, "Knows") YIELD exists
+  RETURN exists
+
+output:
+  - exists: False
