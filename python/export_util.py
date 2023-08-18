@@ -246,47 +246,112 @@ def csv_query(
     return mgp.Record(file_path=file_path, data=data)
 
 
-def write_graphml(graph, outfile):
-    node_props = set()
-    rel_props = set()
+def write_header(output):
+    output.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+    output.write(
+        '<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">\n'  # noqa: E501
+    )
+
+
+def get_type_string(variable):
+    return type(variable).__name__
+
+
+def write_keys(graph, output, config):
+    node_keys = dict()
+    rel_keys = dict()
     for element in graph:
         if element.get("type") == "node":
-            for key in element.get("properties"):
-                node_props.add(key)
+
+            if element.get("labels"):
+                if (config.get("format").upper() == "TINKERPOP"):
+                    node_keys.update({"labelV": get_type_string("labelV")})
+                else:
+                    node_keys.update({"labels": get_type_string("labels")})     #what if two nodes have same property name but different value type?
+
+            for key, value in element.get("properties").items():
+                node_keys.update({key: get_type_string(value)})
+
         elif element.get("type") == "relationship":
-            for key in element.get("properties"):
-                rel_props.add(key)
-    node_props.add("labels")
-    rel_props.add("label")
 
-    for prop in sorted(node_props):
-        outfile.write(
-            '<key id="' + prop + '" for="node" attr.name="' + prop + '"/>\n'
+            if (config.get("format").upper() == "TINKERPOP"):
+                rel_keys.update({"labelE": get_type_string("labelE")})
+            else:
+                rel_keys.update({"label": get_type_string("label")})
+
+            for key, value in element.get("properties").items():
+                rel_keys.update({key: get_type_string(value)})
+
+    if (config.get("format").upper() == "GEPHI"):
+        node_keys.update({"TYPE": get_type_string("TYPE")})
+        rel_keys.update({"TYPE": get_type_string("TYPE")})
+
+    for key, value in node_keys.items():
+        output.write(
+            '<key id="' + key + '" for="node" attr.name="' + key + '"'
         )
-    for prop in sorted(rel_props):
-        outfile.write(
-            '<key id="' + prop + '" for="edge" attr.name="' + prop + '"/>\n'
+        if (config.get("useTypes")):
+            output.write(' attr.type="' + value + '"')
+        output.write('/>\n')
+    for key, value in rel_keys.items():
+        output.write(
+            '<key id="' + key + '" for="edge" attr.name="' + key + '"'
         )
+        if (config.get("useTypes")):
+            output.write(' attr.type="' + value + '"')
+        output.write('/>\n')
 
-    outfile.write('<graph id="G" edgedefault="directed">\n')
 
+def write_graph(output):
+    output.write('<graph id="G" edgedefault="directed">\n')
+
+
+def write_labels_as_data(element, outfile, config):
+    if (not element.get("labels")):
+        return
+    if (config.get("format").upper() == "TINKERPOP"):
+        outfile.write('<data key="labelV">')
+        for i in range(0, len(element.get("labels"))):
+            if i == 0:
+                outfile.write(element.get("labels")[i])
+            else:
+                outfile.write(":" + element.get("labels")[i])
+        outfile.write("</data>")
+    if (config.get("format").upper() == "GEPHI"):
+        outfile.write('<data key="TYPE">')
+        for label in element.get("labels"):
+            outfile.write(":" + label)
+        outfile.write("</data>")
+        # outfile.write('<data key="label">')
+        #   // DO SOMETHING with captions
+        # outfile.write("</data>")
+    else:
+        outfile.write('<data key="labels">')
+        for label in element.get("labels"):
+            outfile.write(":" + label)
+        outfile.write("</data>")
+
+
+def write_nodes_and_rels(graph, outfile, config):
     for element in graph:
         if element.get("type") == "node":
             outfile.write(
-                '<node id="n' + str(element.get("id")) + '" labels="'
+                '<node id="n' + str(element.get("id"))
             )
-            for label in element.get("labels"):
-                outfile.write(":" + label)
+            if (element.get("labels") and config.get("format").upper() != "TINKERPOP"):
+                outfile.write('" labels="')
+                for label in element.get("labels"):
+                    outfile.write(":" + label)
             outfile.write('">')
-            outfile.write('<data key="labels">')
-            for label in element.get("labels"):
-                outfile.write(":" + label)
-            outfile.write("</data>")
+
+            write_labels_as_data(element, outfile, config)
+
             for key, value in element.get("properties").items():
                 outfile.write(
                     '<data key="' + key + '">' + str(value) + "</data>"
                 )
             outfile.write("</node>\n")
+
         elif element.get("type") == "relationship":
             outfile.write(
                 '<edge id="e'
@@ -299,23 +364,36 @@ def write_graphml(graph, outfile):
                 + element.get("label")
                 + '">'
             )
-            outfile.write(
-                '<data key="label">' + element.get("label") + "</data>"
-            )
+
+            if (config.get("format").upper() == "TINKERPOP"):
+                outfile.write(
+                    '<data key="labelE">' + element.get("label") + "</data>"
+                )
+            else:
+                outfile.write(
+                    '<data key="label">' + element.get("label") + "</data>"
+                )
+            if (config.get("format").upper() == "GEPHI"):
+                outfile.write(
+                    '<data key="TYPE">' + element.get("label") + "</data>"
+                )
+
             for key, value in element.get("properties").items():
                 outfile.write(
                     '<data key="' + key + '">' + str(value) + "</data>"
                 )
             outfile.write("</edge>\n")
 
-    outfile.write("</graph>\n")
-    outfile.write("</graphml>")
+
+def write_footer(output):
+    output.write("</graph>\n")
+    output.write("</graphml>")
 
 
 @mgp.read_proc
 def graphml(
     ctx: mgp.ProcCtx,
-    path: str,
+    path: str = "",
     config: mgp.Map = {},
 ) -> mgp.Record(status=str):
     """
@@ -325,18 +403,28 @@ def graphml(
     ----------
     path : str
         Path to the graphML file containing the exported graph database.
-    """
+    config : Map
+        stream: bool
 
+    """
     graph = get_graph(ctx)
     try:
+        output = io.StringIO()
+
+        if not path and not config.get("stream"):
+            raise Exception("Please provide file name or set stream to True in config.")
+
+        write_header(output)
+        write_keys(graph, output, config)
+        write_graph(output)
+        write_nodes_and_rels(graph, output, config)
+        write_footer(output)
+
+        if path:
+            with open(path, "w") as outfile:
+                outfile.write(output.getvalue())
         if config.get("stream"):
-            return mgp.Record(status="stream")
-        with open(path, "w") as outfile:
-            outfile.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-            outfile.write(
-                '<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">\n'  # noqa: E501
-            )
-            write_graphml(graph, outfile)
+            return mgp.Record(status=output.getvalue())
     except PermissionError:
         raise PermissionError(
             "You don't have permissions to write into that file. Make sure \
