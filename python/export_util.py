@@ -253,8 +253,24 @@ def write_header(output):
     )
 
 
+def translate_types(variable):
+    if (type(variable).__name__ == "str"):
+        return "string"
+    if (type(variable).__name__ == "bool"):
+        return "boolean"
+    if (type(variable).__name__ == "float"):
+        return "float"
+    if (type(variable).__name__ == "int"):
+        return "int"
+    raise Exception("Property values can only be primitive types or arrays of primitive types.")
+
+
 def get_type_string(variable):
-    return type(variable).__name__
+    if (type(variable).__name__ == "tuple"):                #TODO I need to diferentiate maps and lists
+        if (len(variable) == 0):
+            return ["string", "string"]
+        return ["string", translate_types(variable[0])]     #what if they are not all same type? neo4j throws an error
+    return translate_types(variable)
 
 
 def write_keys(graph, output, config):
@@ -291,14 +307,20 @@ def write_keys(graph, output, config):
             '<key id="' + key + '" for="node" attr.name="' + key + '"'
         )
         if (config.get("useTypes")):
-            output.write(' attr.type="' + value + '"')
+            if isinstance(value, str):
+                output.write(' attr.type="' + value + '"')
+            else:
+                output.write(' attr.type="' + value[0] + '" attr.list="' + value[1] + '"')
         output.write('/>\n')
     for key, value in rel_keys.items():
         output.write(
             '<key id="' + key + '" for="edge" attr.name="' + key + '"'
         )
         if (config.get("useTypes")):
-            output.write(' attr.type="' + value + '"')
+            if isinstance(value, str):
+                output.write(' attr.type="' + value + '"')
+            else:
+                output.write(' attr.type="' + value[0] + '" attr.list="' + value[1] + '"')
         output.write('/>\n')
 
 
@@ -344,12 +366,9 @@ def write_labels_as_data(element, output, config):
 
 
 def get_value_string(value):
-    print(value)
-    print(type(value))
     if isinstance(value, (set, list, tuple, map)):
         return js.dumps(value, ensure_ascii=False)
     if isinstance(value, (timedelta, time, date, datetime)):        #not good, I receive date as string
-        print(value.isoformat())
         return value.isoformat()
     return str(value)
 
@@ -426,7 +445,7 @@ def set_default_config(config):
     if not config.get("leaveOutProperties"):
         config.update({"leaveOutProperties": False})
     if not config.get("defaultRelationshipType"):
-        config.update({"defaultRelationshipType": "RELATED"})       #it it impossible to create a relationship with no type?
+        config.update({"defaultRelationshipType": "RELATED"})       #it it impossible to create a relationship with no type, useful for inport maybe?
 
 
 @mgp.read_proc
