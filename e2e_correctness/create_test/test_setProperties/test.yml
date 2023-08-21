@@ -1,7 +1,7 @@
 memgraph_query: >
     MATCH (p:Person)
-    CALL create.set_properties(p, ["celebrity"], ["yes"]) YIELD nodes
-    RETURN nodes;
+    CALL create.set_properties(p, ["celebrity"], ["yes"]) YIELD node
+    RETURN node;
 
 neo4j_query: >
     MATCH (p:Person)
