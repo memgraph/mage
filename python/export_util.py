@@ -2,10 +2,11 @@ import csv
 import io
 import json as js
 import mgp
+import ast
 
 from dataclasses import dataclass
 from datetime import datetime, date, time, timedelta
-from gqlalchemy import Memgraph
+
 from typing import Any, Dict, List, Union
 
 from mage.export_import_util.parameters import Parameter
@@ -108,6 +109,168 @@ def get_graph(ctx: mgp.ProcCtx) -> List[Union[Node, Relationship]]:
     return nodes + relationships
 
 
+def get_graph_from_lists(node_list: list, relationship_list: list, write_properties: bool):
+
+    graph = list()
+    node_properties = list()
+    node_prop_set = set()
+    relationship_properties = list()
+    relationship_prop_set = set()
+
+
+    for node in node_list:
+        for prop in node.properties:
+            if not prop in node_prop_set:
+                node_properties.append(prop)
+                node_prop_set.add(prop)
+        node_properties.sort()
+        graph.append(
+
+            Node(node.id, node.labels, node.properties if write_properties else {})
+
+        )
+
+    for relationship in relationship_list:
+        for prop in relationship.properties:
+            if not prop in relationship_prop_set:
+                relationship_properties.append(prop)
+                relationship_prop_set.add(prop)
+        relationship_properties.sort()
+
+        graph.append(
+
+            Relationship(
+
+                relationship.to_vertex.id,
+
+                relationship.id,
+
+                relationship.type.name,
+
+                relationship.properties if write_properties else {},
+
+                relationship.from_vertex.id,
+
+            )
+
+        )
+
+    return graph, node_properties, relationship_properties
+
+def csv_header(node_properties: list, relationship_properties: list) -> list:
+    """
+    This function creates the header for csv file 
+    """
+    header = ["_id","_labels"]
+
+    for prop in node_properties:
+        header.append(prop)
+
+    header.extend(["_start", "_end", "_type"])
+
+    for prop in relationship_properties:
+        header.append(prop)
+
+    return header
+
+def csv_data_list(graph: list, node_properties: list, relationship_properties: list) -> list:
+
+    """
+    Function that parses graph into a data_list appropriate for csv writing
+    """
+    data_list = []
+    header = csv_header(node_properties, relationship_properties)
+    data_list.append(header)
+    for element in graph:
+        write_list = []
+        IsNode = isinstance(element, Node)
+        
+        #id
+        if(IsNode):
+            write_list.extend([element.id, "".join(":" + label.name for label in element.labels)])
+        else:
+            write_list.extend(["", ""])
+
+        #node_properties
+        for prop in node_properties:
+            if prop in element.properties and IsNode:
+                if isinstance(element.properties[prop], (set, list, tuple, map)):
+                    write_list.append(js.dumps(element.properties[prop]))
+                else:   
+                    write_list.append(element.properties[prop])
+            else:
+                write_list.append("")
+        #relationship
+        if(IsNode):
+            #start, end, type
+            write_list.extend(["", "", ""])
+        else:
+            #start, end, type
+            write_list.extend([element.start, element.end, element.label])
+
+        #relationship properties
+        for prop in relationship_properties:
+            if prop in element.properties and not IsNode:
+                if isinstance(element.properties[prop], (set, list, tuple, map)):
+                    write_list.append(js.dumps(element.properties[prop]))
+                else:   
+                    write_list.append(element.properties[prop])
+            else:
+                write_list.append("")
+        
+        data_list.append(write_list)
+
+    return data_list
+
+
+@mgp.read_proc
+def csv_graph(
+    nodes_list: mgp.List[mgp.Vertex], relationships_list: mgp.List[mgp.Edge], path: str = "", config: mgp.Map = {}
+
+) -> mgp.Record(path=str, data=str):
+
+    """
+    Procedure to export the given graph to a csv file. The graph is given with two lists, one for nodes, and one for relationships.
+
+
+    Parameters
+
+    ----------
+
+    nodes_list : List
+
+        A list containing nodes of the graph
+    
+    relationships_list : List
+
+        A list containing relationships of the graph
+
+    path : str
+
+        Path to the JSON file containing the exported graph database.
+
+    config : mgp.Map
+
+        stream (bool) = False: Flag to export the graph data to a stream.
+
+        write_properties (bool) = False: Flag to keep node and relationship properties. By default set to true.
+
+    """
+
+    graph, node_properties, relationship_properties = get_graph_from_lists(nodes_list, relationships_list, True)
+    data_list = csv_data_list(graph, node_properties, relationship_properties)
+    f = open("/home/matija/Documents/file.csv","w")
+    writer = csv.writer(f, quoting=csv.QUOTE_ALL)
+    writer.writerows(data_list)    
+    f.close()
+    data = csv_to_stream(data_list)
+
+    return mgp.Record(
+        path=path,
+        data=data,
+    )
+
+
 @mgp.read_proc
 def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
     """
@@ -179,59 +342,3 @@ def csv_to_stream(data_list: list) -> str:
     return output.getvalue()
 
 
-@mgp.read_proc
-def csv_query(
-    context: mgp.ProcCtx,
-    query: str,
-    file_path: str = "",
-    stream: bool = False,
-) -> mgp.Record(file_path=str, data=str):
-    """
-    Procedure to export query results to a CSV file.
-    Args:
-        context (mgp.ProcCtx): Reference to the context execution.
-        query (str): A query from which the results will be saved to a CSV file.
-        file_path (str, optional): A path to the CSV file where the query results will be exported. Defaults to an empty string.
-        stream (bool, optional): A value which determines whether a stream of query results in a CSV format will be returned.
-    Returns:
-        mgp.Record(
-            file_path (str): A path to the CSV file where the query results are exported. If file_path is not provided, the output will be an empty string.
-            data (str): A stream of query results in a CSV format.
-        )
-    Raises:
-        Exception: If neither file nor config are provided, or if only config is provided with stream set to False. Also if query yields no results or if the database is empty.
-        PermissionError: If you provided file path that you have no permissions to write at.
-        csv.Error: If an error occurred while writing into stream or CSV file.
-        OSError: If the file can't be opened or written to.
-    """
-
-    # file or config have to be provided
-    if not file_path and not stream:
-        raise Exception("Please provide file name and/or config.")
-
-    # only config provided with stream set to false
-    if not file_path and not stream:
-        raise Exception(
-            "If you provided only stream value, it has to be set to True to get any results."
-        )
-
-    memgraph = Memgraph()
-    results = list(memgraph.execute_and_fetch(query))
-
-    # if query yields no result
-    if not len(results):
-        raise Exception(
-            "Your query yields no results. Check if the database is empty or rewrite the provided query."
-        )
-
-    result_keys = list(results[0])
-    data_list = [result_keys] + [list(result.values()) for result in results]
-    data = ""
-
-    if file_path:
-        save_file(file_path, data_list)
-
-    if stream:
-        data = csv_to_stream(data_list)
-
-    return mgp.Record(file_path=file_path, data=data)
