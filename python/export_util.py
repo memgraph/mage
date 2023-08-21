@@ -254,22 +254,29 @@ def write_header(output):
 
 
 def translate_types(variable):
-    if (type(variable).__name__ == "str"):
+    if type(variable).__name__ == "str":
         return "string"
-    if (type(variable).__name__ == "bool"):
+    if type(variable).__name__ == "bool":
         return "boolean"
-    if (type(variable).__name__ == "float"):
+    if type(variable).__name__ == "float":
         return "float"
-    if (type(variable).__name__ == "int"):
+    if type(variable).__name__ == "int":
         return "int"
-    raise Exception("Property values can only be primitive types or arrays of primitive types.")
+    raise Exception(
+        "Property values can only be primitive types or arrays of primitive types."  # noqa: E501
+    )
 
 
 def get_type_string(variable):
-    if (type(variable).__name__ == "tuple"):                #TODO I need to diferentiate maps and lists
-        if (len(variable) == 0):
+    if (
+        type(variable).__name__ == "tuple"
+    ):  # TODO I need to diferentiate maps and lists
+        if len(variable) == 0:
             return ["string", "string"]
-        return ["string", translate_types(variable[0])]     #what if they are not all same type? neo4j throws an error
+        return [
+            "string",
+            translate_types(variable[0]),
+        ]  # what if they are not all same type? neo4j throws an error
     return translate_types(variable)
 
 
@@ -278,19 +285,21 @@ def write_keys(graph, output, config):
     rel_keys = dict()
     for element in graph:
         if element.get("type") == "node":
-
             if element.get("labels"):
-                if (config.get("format").upper() == "TINKERPOP"):
-                    node_keys.update({"labelV": get_type_string("labelV")})     #TODO string != str
+                if config.get("format").upper() == "TINKERPOP":
+                    node_keys.update(
+                        {"labelV": get_type_string("labelV")}
+                    )  # TODO string != str
                 else:
-                    node_keys.update({"labels": get_type_string("labels")})     #what if two nodes have same property name but different value type? or node's property name is "labels"?
+                    node_keys.update(
+                        {"labels": get_type_string("labels")}
+                    )  # what if two nodes have same property name but different value type? or node's property name is "labels"?  # noqa: E501
 
             for key, value in element.get("properties").items():
                 node_keys.update({key: get_type_string(value)})
 
         elif element.get("type") == "relationship":
-
-            if (config.get("format").upper() == "TINKERPOP"):
+            if config.get("format").upper() == "TINKERPOP":
                 rel_keys.update({"labelE": get_type_string("labelE")})
             else:
                 rel_keys.update({"label": get_type_string("label")})
@@ -298,7 +307,7 @@ def write_keys(graph, output, config):
             for key, value in element.get("properties").items():
                 rel_keys.update({key: get_type_string(value)})
 
-    if (config.get("format").upper() == "GEPHI"):
+    if config.get("format").upper() == "GEPHI":
         node_keys.update({"TYPE": get_type_string("TYPE")})
         rel_keys.update({"TYPE": get_type_string("TYPE")})
 
@@ -306,22 +315,34 @@ def write_keys(graph, output, config):
         output.write(
             '<key id="' + key + '" for="node" attr.name="' + key + '"'
         )
-        if (config.get("useTypes")):
+        if config.get("useTypes"):
             if isinstance(value, str):
                 output.write(' attr.type="' + value + '"')
             else:
-                output.write(' attr.type="' + value[0] + '" attr.list="' + value[1] + '"')
-        output.write('/>\n')
+                output.write(
+                    ' attr.type="'
+                    + value[0]
+                    + '" attr.list="'
+                    + value[1]
+                    + '"'
+                )
+        output.write("/>\n")
     for key, value in rel_keys.items():
         output.write(
             '<key id="' + key + '" for="edge" attr.name="' + key + '"'
         )
-        if (config.get("useTypes")):
+        if config.get("useTypes"):
             if isinstance(value, str):
                 output.write(' attr.type="' + value + '"')
             else:
-                output.write(' attr.type="' + value[0] + '" attr.list="' + value[1] + '"')
-        output.write('/>\n')
+                output.write(
+                    ' attr.type="'
+                    + value[0]
+                    + '" attr.list="'
+                    + value[1]
+                    + '"'
+                )
+        output.write("/>\n")
 
 
 def write_graph(output):
@@ -340,9 +361,9 @@ def get_gephi_label_value(element, config):
 
 
 def write_labels_as_data(element, output, config):
-    if (not element.get("labels")):
+    if not element.get("labels"):
         return
-    if (config.get("format").upper() == "TINKERPOP"):
+    if config.get("format").upper() == "TINKERPOP":
         output.write('<data key="labelV">')
         for i in range(0, len(element.get("labels"))):
             if i == 0:
@@ -350,7 +371,7 @@ def write_labels_as_data(element, output, config):
             else:
                 output.write(":" + element.get("labels")[i])
         output.write("</data>")
-    if (config.get("format").upper() == "GEPHI"):
+    if config.get("format").upper() == "GEPHI":
         output.write('<data key="TYPE">')
         for label in element.get("labels"):
             output.write(":" + label)
@@ -368,7 +389,9 @@ def write_labels_as_data(element, output, config):
 def get_value_string(value):
     if isinstance(value, (set, list, tuple, map)):
         return js.dumps(value, ensure_ascii=False)
-    if isinstance(value, (timedelta, time, date, datetime)):        #not good, I receive date as string
+    if isinstance(
+        value, (timedelta, time, date, datetime)
+    ):  # not good, I receive date as string
         return value.isoformat()
     return str(value)
 
@@ -376,10 +399,11 @@ def get_value_string(value):
 def write_nodes_and_rels(graph, output, config):
     for element in graph:
         if element.get("type") == "node":
-            output.write(
-                '<node id="n' + str(element.get("id"))
-            )
-            if (element.get("labels") and config.get("format").upper() != "TINKERPOP"):
+            output.write('<node id="n' + str(element.get("id")))
+            if (
+                element.get("labels")
+                and config.get("format").upper() != "TINKERPOP"
+            ):
                 output.write('" labels="')
                 for label in element.get("labels"):
                     output.write(":" + label)
@@ -389,7 +413,11 @@ def write_nodes_and_rels(graph, output, config):
 
             for key, value in element.get("properties").items():
                 output.write(
-                    '<data key="' + key + '">' + get_value_string(value) + "</data>"
+                    '<data key="'
+                    + key
+                    + '">'
+                    + get_value_string(value)
+                    + "</data>"
                 )
             output.write("</node>\n")
 
@@ -406,7 +434,7 @@ def write_nodes_and_rels(graph, output, config):
                 + '">'
             )
 
-            if (config.get("format").upper() == "TINKERPOP"):
+            if config.get("format").upper() == "TINKERPOP":
                 output.write(
                     '<data key="labelE">' + element.get("label") + "</data>"
                 )
@@ -414,14 +442,18 @@ def write_nodes_and_rels(graph, output, config):
                 output.write(
                     '<data key="label">' + element.get("label") + "</data>"
                 )
-            if (config.get("format").upper() == "GEPHI"):
+            if config.get("format").upper() == "GEPHI":
                 output.write(
                     '<data key="TYPE">' + element.get("label") + "</data>"
                 )
 
             for key, value in element.get("properties").items():
                 output.write(
-                    '<data key="' + key + '">' + get_value_string(value) + "</data>"
+                    '<data key="'
+                    + key
+                    + '">'
+                    + get_value_string(value)
+                    + "</data>"
                 )
             output.write("</edge>\n")
 
@@ -435,7 +467,7 @@ def set_default_config(config):
     if not config.get("stream"):
         config.update({"stream": False})
     if not config.get("format"):
-        config.update({"format": ""})       #should it be Gephi?
+        config.update({"format": ""})  # should it be Gephi?
     if not config.get("caption"):
         config.update({"caption": []})
     if not config.get("useTypes"):
@@ -445,7 +477,9 @@ def set_default_config(config):
     if not config.get("leaveOutProperties"):
         config.update({"leaveOutProperties": False})
     if not config.get("defaultRelationshipType"):
-        config.update({"defaultRelationshipType": "RELATED"})       #it it impossible to create a relationship with no type, useful for inport maybe?
+        config.update(
+            {"defaultRelationshipType": "RELATED"}
+        )  # it it impossible to create a relationship with no type, useful for import maybe?  # noqa: E501
 
 
 @mgp.read_proc
@@ -480,7 +514,9 @@ def graphml(
         output = io.StringIO()
 
         if not path and not config.get("stream"):
-            raise Exception("Please provide file name or set stream to True in config.")
+            raise Exception(
+                "Please provide file name or set stream to True in config."
+            )
 
         write_header(output)
         write_keys(graph, output, config)
