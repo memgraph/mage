@@ -265,9 +265,9 @@ def write_keys(graph, output, config):
 
             if element.get("labels"):
                 if (config.get("format").upper() == "TINKERPOP"):
-                    node_keys.update({"labelV": get_type_string("labelV")})
+                    node_keys.update({"labelV": get_type_string("labelV")})     #TODO string != str
                 else:
-                    node_keys.update({"labels": get_type_string("labels")})     #what if two nodes have same property name but different value type?
+                    node_keys.update({"labels": get_type_string("labels")})     #what if two nodes have same property name but different value type? or node's property name is "labels"?
 
             for key, value in element.get("properties").items():
                 node_keys.update({key: get_type_string(value)})
@@ -306,54 +306,76 @@ def write_graph(output):
     output.write('<graph id="G" edgedefault="directed">\n')
 
 
-def write_labels_as_data(element, outfile, config):
+def get_gephi_label_value(element, config):
+    for caption in config.get("caption"):
+        if caption in element.get("properties").keys():
+            return str(element.get("properties").get(caption))
+
+    if element.get("properties").values():
+        return str(list(element.get("properties").values())[0])
+
+    return str(element.get("id"))
+
+
+def write_labels_as_data(element, output, config):
     if (not element.get("labels")):
         return
     if (config.get("format").upper() == "TINKERPOP"):
-        outfile.write('<data key="labelV">')
+        output.write('<data key="labelV">')
         for i in range(0, len(element.get("labels"))):
             if i == 0:
-                outfile.write(element.get("labels")[i])
+                output.write(element.get("labels")[i])
             else:
-                outfile.write(":" + element.get("labels")[i])
-        outfile.write("</data>")
+                output.write(":" + element.get("labels")[i])
+        output.write("</data>")
     if (config.get("format").upper() == "GEPHI"):
-        outfile.write('<data key="TYPE">')
+        output.write('<data key="TYPE">')
         for label in element.get("labels"):
-            outfile.write(":" + label)
-        outfile.write("</data>")
-        # outfile.write('<data key="label">')
-        #   // DO SOMETHING with captions
-        # outfile.write("</data>")
+            output.write(":" + label)
+        output.write("</data>")
+        output.write('<data key="label">')
+        output.write(get_gephi_label_value(element, config))
+        output.write("</data>")
     else:
-        outfile.write('<data key="labels">')
+        output.write('<data key="labels">')
         for label in element.get("labels"):
-            outfile.write(":" + label)
-        outfile.write("</data>")
+            output.write(":" + label)
+        output.write("</data>")
 
 
-def write_nodes_and_rels(graph, outfile, config):
+def get_value_string(value):
+    print(value)
+    print(type(value))
+    if isinstance(value, (set, list, tuple, map)):
+        return js.dumps(value, ensure_ascii=False)
+    if isinstance(value, (timedelta, time, date, datetime)):        #not good, I receive date as string
+        print(value.isoformat())
+        return value.isoformat()
+    return str(value)
+
+
+def write_nodes_and_rels(graph, output, config):
     for element in graph:
         if element.get("type") == "node":
-            outfile.write(
+            output.write(
                 '<node id="n' + str(element.get("id"))
             )
             if (element.get("labels") and config.get("format").upper() != "TINKERPOP"):
-                outfile.write('" labels="')
+                output.write('" labels="')
                 for label in element.get("labels"):
-                    outfile.write(":" + label)
-            outfile.write('">')
+                    output.write(":" + label)
+            output.write('">')
 
-            write_labels_as_data(element, outfile, config)
+            write_labels_as_data(element, output, config)
 
             for key, value in element.get("properties").items():
-                outfile.write(
-                    '<data key="' + key + '">' + str(value) + "</data>"
+                output.write(
+                    '<data key="' + key + '">' + get_value_string(value) + "</data>"
                 )
-            outfile.write("</node>\n")
+            output.write("</node>\n")
 
         elif element.get("type") == "relationship":
-            outfile.write(
+            output.write(
                 '<edge id="e'
                 + str(element.get("id"))
                 + '" source="n'
@@ -366,28 +388,45 @@ def write_nodes_and_rels(graph, outfile, config):
             )
 
             if (config.get("format").upper() == "TINKERPOP"):
-                outfile.write(
+                output.write(
                     '<data key="labelE">' + element.get("label") + "</data>"
                 )
             else:
-                outfile.write(
+                output.write(
                     '<data key="label">' + element.get("label") + "</data>"
                 )
             if (config.get("format").upper() == "GEPHI"):
-                outfile.write(
+                output.write(
                     '<data key="TYPE">' + element.get("label") + "</data>"
                 )
 
             for key, value in element.get("properties").items():
-                outfile.write(
-                    '<data key="' + key + '">' + str(value) + "</data>"
+                output.write(
+                    '<data key="' + key + '">' + get_value_string(value) + "</data>"
                 )
-            outfile.write("</edge>\n")
+            output.write("</edge>\n")
 
 
 def write_footer(output):
     output.write("</graph>\n")
     output.write("</graphml>")
+
+
+def set_default_config(config):
+    if not config.get("stream"):
+        config.update({"stream": False})
+    if not config.get("format"):
+        config.update({"format": ""})       #should it be Gephi?
+    if not config.get("caption"):
+        config.update({"caption": []})
+    if not config.get("useTypes"):
+        config.update({"useTypes": False})
+    if not config.get("leaveOutLabels"):
+        config.update({"leaveOutLabels": False})
+    if not config.get("leaveOutProperties"):
+        config.update({"leaveOutProperties": False})
+    if not config.get("defaultRelationshipType"):
+        config.update({"defaultRelationshipType": "RELATED"})       #it it impossible to create a relationship with no type?
 
 
 @mgp.read_proc
@@ -407,8 +446,18 @@ def graphml(
         stream: bool
 
     """
-    graph = get_graph(ctx)
+
     try:
+        graph = get_graph(ctx)
+        set_default_config(config)
+
+        if config.get("leaveOutLabels") or config.get("leaveOutProperties"):
+            for element in graph:
+                if config.get("leaveOutLabels"):
+                    element.update({"labels": []})
+                if config.get("leaveOutProperties"):
+                    element.update({"properties": {}})
+
         output = io.StringIO()
 
         if not path and not config.get("stream"):
