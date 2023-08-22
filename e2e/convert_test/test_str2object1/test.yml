@@ -1,5 +1,5 @@
 query: >
-    LOAD CSV FROM "/home/matija/mage/e2e/convert_test/test_str2object1/file.csv" WITH header AS row
+    LOAD CSV FROM "/_file1" WITH header AS row
     RETURN convert.str2object(row.b) AS list;
 
 output: 
