@@ -1,0 +1,8 @@
+query: >
+    LOAD CSV FROM "/home/matija/mage/e2e/convert_test/test_str2object1/file.csv" WITH header AS row
+    RETURN convert.str2object(row.b) AS list;
+
+output: 
+  - list: [ "1","2", 3]
+  - list: [["1",{"key": 5}]]
+  - list: {"prop": {"prop2": {"key": 10}}}

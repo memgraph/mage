@@ -1,7 +1,7 @@
 import mgp
-from ast import literal_eval
+from json import loads
 
 @mgp.function
-def str2object(ctx: mgp.FuncCtx, string: str) -> mgp.Any:
-    string = str(string)
-    return literal_eval(string)
+def str2object(string: str) -> mgp.Any:
+    if string:
+        return loads(string)
