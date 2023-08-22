@@ -72,6 +72,10 @@ def _replace(data, match_classes):
         return _node_to_dict(data) if isinstance(data, match_classes) else data
 
 
+def _replace_filename(query: str, dir: Path):
+    return query.replace("_input", "/".join([str(dir), "input"]))
+
+
 def prepare_tests():
     """
     Fetch all the tests in the testing folders, and prepare them for execution
@@ -135,6 +139,7 @@ def _run_test(test_dict: Dict, db: Memgraph):
     Run queries on Memgraph and compare them to expected results stored in test_dict
     """
     test_query = test_dict[TestConstants.QUERY]
+    print(test_query)
     output_test = TestConstants.OUTPUT in test_dict
     exception_test = TestConstants.EXCEPTION in test_dict
 
@@ -158,10 +163,16 @@ def _test_static(test_dir: Path, db: Memgraph):
     """
     Testing static modules.
     """
-    input_cyphers = test_dir.joinpath(TestConstants.INPUT_FILE).open("r").readlines()
+    input_cyphers = [
+        _replace_filename(query, test_dir)
+        for query in test_dir.joinpath(TestConstants.INPUT_FILE).open("r").readlines()
+    ]
     _execute_cyphers(input_cyphers, db)
 
     test_dict = _load_yaml(test_dir.joinpath(TestConstants.TEST_FILE))
+    test_dict[TestConstants.QUERY] = _replace_filename(
+        test_dict[TestConstants.QUERY], test_dir
+    )
     _run_test(test_dict, db)
 
 
