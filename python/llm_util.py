@@ -93,7 +93,7 @@ class SchemaGenerator(object):
 
         prompt_ready_schema += "\nRelationship properties are the following:\n"
         for rel in self._all_relationship_properties_dict.keys():
-            prompt_ready_schema += "Relationship Name: '{name}', Relationship properties: {properties}\n".format(
+            prompt_ready_schema += "Relationship name: '{name}', Relationship properties: {properties}\n".format(
                 name=rel,
                 properties=sorted(
                     self._all_relationship_properties_dict.get(rel),
