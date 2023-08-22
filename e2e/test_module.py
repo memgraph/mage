@@ -35,8 +35,8 @@ class TestConstants:
     EXPORT_TEST_E2E_INPUT_QUERIES = "queries"
     EXPORT_TEST_E2E_EXPORT_QUERY = "export"
     EXPORT_TEST_E2E_IMPORT_QUERY = "import"
-    EXPORT_TEST_E2E_PLACEHOLDER_FILENAME = "filename"
-    EXPORT_TEST_E2E_FILENAME = "/".join([os.getcwd(), "_exported_data"])
+    EXPORT_TEST_E2E_PLACEHOLDER_FILENAME = "_filename"
+    EXPORT_TEST_E2E_OUTPUT_FILE = "/".join([os.getcwd(), "_exported_data"])
     EXPORT_TEST_SUBDIR_PREFIX = "test_export"
 
 
@@ -197,11 +197,11 @@ def _test_export(test_dir: Path, db: Memgraph):
     test_dict = _load_yaml(test_dir.joinpath(TestConstants.TEST_FILE))
     export_query = test_dict[TestConstants.EXPORT_TEST_E2E_EXPORT_QUERY].replace(
         TestConstants.EXPORT_TEST_E2E_PLACEHOLDER_FILENAME,
-        "".join(["'", TestConstants.EXPORT_TEST_E2E_FILENAME, "'"]),
+        "".join(["'", TestConstants.EXPORT_TEST_E2E_OUTPUT_FILE, "'"]),
     )
     import_query = test_dict[TestConstants.EXPORT_TEST_E2E_IMPORT_QUERY].replace(
         TestConstants.EXPORT_TEST_E2E_PLACEHOLDER_FILENAME,
-        "".join(["'", TestConstants.EXPORT_TEST_E2E_FILENAME, "'"]),
+        "".join(["'", TestConstants.EXPORT_TEST_E2E_OUTPUT_FILE, "'"]),
     )
 
     db.execute(export_query)
@@ -209,7 +209,7 @@ def _test_export(test_dir: Path, db: Memgraph):
     db.execute(import_query)
 
     try:
-        os.remove(TestConstants.EXPORT_TEST_E2E_FILENAME)
+        os.remove(TestConstants.EXPORT_TEST_E2E_OUTPUT_FILE)
     except Exception:
         raise OSError("Could not delete file.")
 
