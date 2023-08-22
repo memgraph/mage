@@ -3,6 +3,7 @@ import io
 import json as js
 import mgp
 
+from math import floor
 from dataclasses import dataclass
 from datetime import datetime, date, time, timedelta
 from gqlalchemy import Memgraph
@@ -76,20 +77,80 @@ def convert_to_isoformat(
         return property
 
 
-def get_graph(ctx: mgp.ProcCtx, format_iso: bool) -> List[Union[Node, Relationship]]:
+def to_duration_iso_format(value: timedelta) -> str:
+    """Converts timedelta to ISO-8601 duration: P<date>T<time>"""
+    date_parts: List[str] = []
+    time_parts: List[str] = []
+
+    if value.days != 0:
+        date_parts.append(f"{abs(value.days)}D")
+
+    if value.seconds != 0 or value.microseconds != 0:
+        abs_seconds = abs(value.seconds)
+        hours = floor(abs_seconds / 3600)
+        minutes = floor((abs_seconds - hours * 3600) / 60)
+        seconds = abs_seconds - hours * 3600 - minutes * 60
+        microseconds = value.microseconds
+
+        if hours > 0:
+            time_parts.append(f"{hours}H")
+        if minutes > 0:
+            time_parts.append(f"{minutes}M")
+        if seconds > 0 or microseconds > 0:
+            microseconds_part = (
+                f".{abs(value.microseconds)}"
+                if value.microseconds != 0
+                else ""
+            )
+            time_parts.append(f"{seconds}{microseconds_part}S")
+
+    date_duration_str = "".join(date_parts)
+    time_duration_str = f'T{"".join(time_parts)}' if time_parts else ""
+
+    return f"P{date_duration_str}{time_duration_str}"
+
+
+def convert_to_isoformat_graphML(
+    property: Union[
+        None,
+        str,
+        bool,
+        int,
+        float,
+        List[Any],
+        Dict[str, Any],
+        timedelta,
+        time,
+        datetime,
+        date,
+    ]
+):
+    if isinstance(property, timedelta):
+        return to_duration_iso_format(property)
+
+    if isinstance(property, (time, date, datetime)):
+        return property.isoformat()
+
+    else:
+        return property
+
+
+def get_graph(
+    ctx: mgp.ProcCtx, graphML: bool
+) -> List[Union[Node, Relationship]]:
     nodes = list()
     relationships = list()
 
     for vertex in ctx.graph.vertices:
         labels = [label.name for label in vertex.labels]
-        if (format_iso):
+        if graphML:
             properties = {
-                key: convert_to_isoformat(vertex.properties.get(key))
+                key: convert_to_isoformat_graphML(vertex.properties.get(key))
                 for key in vertex.properties.keys()
             }
         else:
             properties = {
-                key: vertex.properties.get(key)
+                key: convert_to_isoformat(vertex.properties.get(key))
                 for key in vertex.properties.keys()
             }
 
@@ -125,7 +186,7 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
         Path to the JSON file containing the exported graph database.
     """
 
-    graph = get_graph(ctx, 1)
+    graph = get_graph(ctx, 0)
     try:
         with open(path, "w") as outfile:
             js.dump(
@@ -150,7 +211,7 @@ def json_stream(ctx: mgp.ProcCtx) -> mgp.Record(stream=str):
     """
     Procedure to export the whole database to a stream.
     """
-    return mgp.Record(stream=js.dumps(get_graph(ctx, 1)))
+    return mgp.Record(stream=js.dumps(get_graph(ctx, 0)))
 
 
 def save_file(file_path: str, data_list: list):
@@ -273,16 +334,26 @@ def translate_types(variable):
     )
 
 
+def check_if_elements_same_type(variable):
+    element_type = type(variable[0]).__name__
+    for element in variable:
+        if type(element).__name__ != element_type:
+            raise Exception(
+                "If property value is a list it must consist of same typed elements."  # noqa: E501
+            )
+
+
 def get_type_string(variable):
     if (
         type(variable).__name__ == "tuple"
     ):  # TODO I need to diferentiate maps and lists
         if len(variable) == 0:
             return ["string", "string"]
+        check_if_elements_same_type(variable)
         return [
             "string",
             translate_types(variable[0]),
-        ]  # what if they are not all same type? neo4j throws an error
+        ]
     return translate_types(variable)
 
 
@@ -293,9 +364,7 @@ def write_keys(graph, output, config):
         if element.get("type") == "node":
             if element.get("labels"):
                 if config.get("format").upper() == "TINKERPOP":
-                    node_keys.update(
-                        {"labelV": get_type_string("labelV")}
-                    )
+                    node_keys.update({"labelV": get_type_string("labelV")})
                 else:
                     node_keys.update(
                         {"labels": get_type_string("labels")}
@@ -395,10 +464,6 @@ def write_labels_as_data(element, output, config):
 def get_value_string(value):
     if isinstance(value, (set, list, tuple, map)):
         return js.dumps(value, ensure_ascii=False)
-    if isinstance(
-        value, (timedelta, time, date, datetime)
-    ):
-        return value.isoformat()
     return str(value)
 
 
@@ -502,7 +567,7 @@ def graphml(
     """
 
     try:
-        graph = get_graph(ctx, 0)
+        graph = get_graph(ctx, 1)
         set_default_config(config)
 
         if config.get("leaveOutLabels") or config.get("leaveOutProperties"):
