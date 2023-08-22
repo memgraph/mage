@@ -21,6 +21,7 @@ class TestConstants:
     OUTPUT = "output"
     QUERY = "query"
     TEST_FILE = "test.yml"
+    FILENAME_PLACEHOLDER = "_file"
     TEST_MODULE_DIR_SUFFIX = "_test"
     TEST_GROUP_DIR_SUFFIX = "_group"
 
@@ -73,7 +74,9 @@ def _replace(data, match_classes):
 
 
 def _replace_filename(query: str, dir: Path):
-    return query.replace("_input", "/".join([str(dir), "input"]))
+    return query.replace(
+        TestConstants.FILENAME_PLACEHOLDER, "/".join([str(dir), "file"])
+    )
 
 
 def prepare_tests():
