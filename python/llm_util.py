@@ -79,8 +79,6 @@ class SchemaGenerator(object):
         }
 
     def _get_prompt_ready_schema(self) -> str:
-        print(self._all_node_properties_dict)
-
         prompt_ready_schema = "Node properties are the following:\n"
         for label in self._all_node_properties_dict.keys():
             prompt_ready_schema += (
