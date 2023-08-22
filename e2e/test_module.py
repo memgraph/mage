@@ -139,7 +139,6 @@ def _run_test(test_dict: Dict, db: Memgraph):
     Run queries on Memgraph and compare them to expected results stored in test_dict
     """
     test_query = test_dict[TestConstants.QUERY]
-    print(test_query)
     output_test = TestConstants.OUTPUT in test_dict
     exception_test = TestConstants.EXCEPTION in test_dict
 
