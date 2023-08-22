@@ -532,35 +532,33 @@ def graphml(
 
     """
 
+    graph = get_graph(ctx, 1)
+    set_default_config(config)
+
+    if config.get("leaveOutLabels") or config.get("leaveOutProperties"):
+        for element in graph:
+            if config.get("leaveOutLabels"):
+                element.update({"labels": []})
+            if config.get("leaveOutProperties"):
+                element.update({"properties": {}})
+
+    output = io.StringIO()
+
+    if not path and not config.get("stream"):
+        raise Exception(
+            "Please provide file name or set stream to True in config."
+        )
+
+    write_header(output)
+    write_keys(graph, output, config)
+    write_graph(output)
+    write_nodes_and_rels(graph, output, config)
+    write_footer(output)
+
     try:
-        graph = get_graph(ctx, 1)
-        set_default_config(config)
-
-        if config.get("leaveOutLabels") or config.get("leaveOutProperties"):
-            for element in graph:
-                if config.get("leaveOutLabels"):
-                    element.update({"labels": []})
-                if config.get("leaveOutProperties"):
-                    element.update({"properties": {}})
-
-        output = io.StringIO()
-
-        if not path and not config.get("stream"):
-            raise Exception(
-                "Please provide file name or set stream to True in config."
-            )
-
-        write_header(output)
-        write_keys(graph, output, config)
-        write_graph(output)
-        write_nodes_and_rels(graph, output, config)
-        write_footer(output)
-
         if path:
             with open(path, "w") as outfile:
                 outfile.write(output.getvalue())
-        if config.get("stream"):
-            return mgp.Record(status=output.getvalue())
     except PermissionError:
         raise PermissionError(
             "You don't have permissions to write into that file. Make sure \
@@ -568,5 +566,8 @@ def graphml(
         )
     except Exception:
         raise OSError("Could not open or write to the file.")
+
+    if config.get("stream"):
+        return mgp.Record(status=output.getvalue())
 
     return mgp.Record(status="success")
