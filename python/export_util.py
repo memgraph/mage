@@ -76,16 +76,22 @@ def convert_to_isoformat(
         return property
 
 
-def get_graph(ctx: mgp.ProcCtx) -> List[Union[Node, Relationship]]:
+def get_graph(ctx: mgp.ProcCtx, format_iso: bool) -> List[Union[Node, Relationship]]:
     nodes = list()
     relationships = list()
 
     for vertex in ctx.graph.vertices:
         labels = [label.name for label in vertex.labels]
-        properties = {
-            key: convert_to_isoformat(vertex.properties.get(key))
-            for key in vertex.properties.keys()
-        }
+        if (format_iso):
+            properties = {
+                key: convert_to_isoformat(vertex.properties.get(key))
+                for key in vertex.properties.keys()
+            }
+        else:
+            properties = {
+                key: vertex.properties.get(key)
+                for key in vertex.properties.keys()
+            }
 
         nodes.append(Node(vertex.id, labels, properties).get_dict())
 
@@ -119,7 +125,7 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
         Path to the JSON file containing the exported graph database.
     """
 
-    graph = get_graph(ctx)
+    graph = get_graph(ctx, 1)
     try:
         with open(path, "w") as outfile:
             js.dump(
@@ -144,7 +150,7 @@ def json_stream(ctx: mgp.ProcCtx) -> mgp.Record(stream=str):
     """
     Procedure to export the whole database to a stream.
     """
-    return mgp.Record(stream=js.dumps(get_graph(ctx)))
+    return mgp.Record(stream=js.dumps(get_graph(ctx, 1)))
 
 
 def save_file(file_path: str, data_list: list):
@@ -289,7 +295,7 @@ def write_keys(graph, output, config):
                 if config.get("format").upper() == "TINKERPOP":
                     node_keys.update(
                         {"labelV": get_type_string("labelV")}
-                    )  # TODO string != str
+                    )
                 else:
                     node_keys.update(
                         {"labels": get_type_string("labels")}
@@ -391,7 +397,7 @@ def get_value_string(value):
         return js.dumps(value, ensure_ascii=False)
     if isinstance(
         value, (timedelta, time, date, datetime)
-    ):  # not good, I receive date as string
+    ):
         return value.isoformat()
     return str(value)
 
@@ -476,10 +482,6 @@ def set_default_config(config):
         config.update({"leaveOutLabels": False})
     if not config.get("leaveOutProperties"):
         config.update({"leaveOutProperties": False})
-    if not config.get("defaultRelationshipType"):
-        config.update(
-            {"defaultRelationshipType": "RELATED"}
-        )  # it it impossible to create a relationship with no type, useful for import maybe?  # noqa: E501
 
 
 @mgp.read_proc
@@ -496,12 +498,11 @@ def graphml(
     path : str
         Path to the graphML file containing the exported graph database.
     config : Map
-        stream: bool
 
     """
 
     try:
-        graph = get_graph(ctx)
+        graph = get_graph(ctx, 0)
         set_default_config(config)
 
         if config.get("leaveOutLabels") or config.get("leaveOutProperties"):
