@@ -387,36 +387,20 @@ def write_keys(graph, output, config):
         rel_keys.update({"TYPE": get_type_string("TYPE")})
 
     for key, value in node_keys.items():
-        output.write(
-            '<key id="' + key + '" for="node" attr.name="' + key + '"'
-        )
+        output.write(f'<key id="{key}" for="node" attr.name="{key}"')
         if config.get("useTypes"):
             if isinstance(value, str):
-                output.write(' attr.type="' + value + '"')
+                output.write(f' attr.type="{value}"')
             else:
-                output.write(
-                    ' attr.type="'
-                    + value[0]
-                    + '" attr.list="'
-                    + value[1]
-                    + '"'
-                )
+                output.write(f' attr.type="{value[0]}" attr.list="{value[1]}"')
         output.write("/>\n")
     for key, value in rel_keys.items():
-        output.write(
-            '<key id="' + key + '" for="edge" attr.name="' + key + '"'
-        )
+        output.write(f'<key id="{key}" for="edge" attr.name="{key}"')
         if config.get("useTypes"):
             if isinstance(value, str):
-                output.write(' attr.type="' + value + '"')
+                output.write(f' attr.type="{value}"')
             else:
-                output.write(
-                    ' attr.type="'
-                    + value[0]
-                    + '" attr.list="'
-                    + value[1]
-                    + '"'
-                )
+                output.write(f' attr.type="{value[0]}" attr.list="{value[1]}"')
         output.write("/>\n")
 
 
@@ -444,20 +428,20 @@ def write_labels_as_data(element, output, config):
             if i == 0:
                 output.write(element.get("labels")[i])
             else:
-                output.write(":" + element.get("labels")[i])
+                output.write(f':{element.get("labels")[i]}')
         output.write("</data>")
     if config.get("format").upper() == "GEPHI":
         output.write('<data key="TYPE">')
         for label in element.get("labels"):
-            output.write(":" + label)
+            output.write(f":{label}")
         output.write("</data>")
-        output.write('<data key="label">')
-        output.write(get_gephi_label_value(element, config))
-        output.write("</data>")
+        output.write(
+            f'<data key="label">{get_gephi_label_value(element, config)}</data>'        # noqa: E501
+        )
     else:
         output.write('<data key="labels">')
         for label in element.get("labels"):
-            output.write(":" + label)
+            output.write(f":{label}")
         output.write("</data>")
 
 
@@ -470,61 +454,43 @@ def get_value_string(value):
 def write_nodes_and_rels(graph, output, config):
     for element in graph:
         if element.get("type") == "node":
-            output.write('<node id="n' + str(element.get("id")))
+            output.write(f'<node id="n{str(element.get("id"))}')
             if (
                 element.get("labels")
                 and config.get("format").upper() != "TINKERPOP"
             ):
                 output.write('" labels="')
                 for label in element.get("labels"):
-                    output.write(":" + label)
+                    output.write(f":{label}")
             output.write('">')
 
             write_labels_as_data(element, output, config)
 
             for key, value in element.get("properties").items():
                 output.write(
-                    '<data key="'
-                    + key
-                    + '">'
-                    + get_value_string(value)
-                    + "</data>"
+                    f'<data key="{key}">{get_value_string(value)}</data>'
                 )
             output.write("</node>\n")
 
         elif element.get("type") == "relationship":
             output.write(
-                '<edge id="e'
-                + str(element.get("id"))
-                + '" source="n'
-                + str(element.get("start"))
-                + '" target="n'
-                + str(element.get("end"))
-                + '" label="'
-                + element.get("label")
-                + '">'
+                f'<edge id="e{str(element.get("id"))}" source="n{str(element.get("start"))}" target="n{str(element.get("end"))}" label="{element.get("label")}">'       # noqa: E501
             )
 
             if config.get("format").upper() == "TINKERPOP":
                 output.write(
-                    '<data key="labelE">' + element.get("label") + "</data>"
+                    f'<data key="labelE">{element.get("label")}</data>'
                 )
             else:
                 output.write(
-                    '<data key="label">' + element.get("label") + "</data>"
+                    f'<data key="label">{element.get("label")}</data>'
                 )
             if config.get("format").upper() == "GEPHI":
-                output.write(
-                    '<data key="TYPE">' + element.get("label") + "</data>"
-                )
+                output.write(f'<data key="TYPE">{element.get("label")}</data>')
 
             for key, value in element.get("properties").items():
                 output.write(
-                    '<data key="'
-                    + key
-                    + '">'
-                    + get_value_string(value)
-                    + "</data>"
+                    f'<data key="{key}">{get_value_string(value)}</data>'
                 )
             output.write("</edge>\n")
 
