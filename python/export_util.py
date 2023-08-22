@@ -559,6 +559,7 @@ def graphml(
         if path:
             with open(path, "w") as outfile:
                 outfile.write(output.getvalue())
+            outfile.close()
     except PermissionError:
         raise PermissionError(
             "You don't have permissions to write into that file. Make sure \
