@@ -3,7 +3,8 @@ import json as js
 from mage.export_import_util.parameters import Parameter
 import mgp
 from typing import Union, List, Dict, Any
-import re
+import defusedxml.ElementTree as ET
+from export_util import get_graph
 
 
 def convert_from_isoformat(
@@ -159,10 +160,18 @@ def set_default_config(config):
         config.update({"target": {}})
 
 
-def get_attribute(line, attribute_name):
-    match = re.search(fr'{attribute_name}="(\w+)"', line)
-    if match:
-        return match.group(1)
+def set_default_keys(key_dict, properties):
+    for key, value in key_dict.items():
+        if value[3] is not None:
+            properties.update({value[0]: value[3]})          #TODO add casting to type
+
+
+def find_node(ctx, label, prop_key, prop_value):
+    graph = get_graph(ctx, 0)
+    for element in graph:
+        if element.get("type") == "node":
+            if label in element.get("labels") and prop_key in element.get("properties").keys() and element.get("properties")[label] == prop_value:
+                return element.get("id")
     return None
 
 
@@ -186,33 +195,94 @@ def graphml(
     set_default_config(config)
 
     try:
-        with open(path, "r") as file:
-            file_content = file.read()
-            file_content = file_content.replace('\t', '')
-            file_content = file_content.replace('><', '>\n<')
-            file_content = file_content.replace('\n<data', '<data')
-            # file_content = file_content.replace('\n</node', '</node')
-            # file_content = file_content.replace('\n</edge', '</edge')
+        tree = ET.parse(path)
     except Exception:
         raise OSError("Could not open/read file.")
+
+    root = tree.getroot()
+    graphml_ns = root.tag.split('}')[0].strip('{')
+    namespace = {'graphml': graphml_ns}
 
     node_keys = dict()
     rel_keys = dict()
 
-    for line in file_content:
+    for key in root.findall('.//graphml:key', namespace):
+        value = [key.attrib['attr.name']]
+        if ("attr.type" in key.attrib.keys()):
+            value.append(key.attrib['attr.type'])
+        else:
+            value.append(None)
+        if ("attr.list" in key.attrib.keys()):
+            value.append(key.attrib['attr.list'])
+        else:
+            value.append(None)
+        child = key.findall('.//default')
+        if (child):
+            value.append(child[0].text)
+        else:
+            value.append(None)
+        if (key.attrib['for'].lower() == "node"):
+            node_keys.update({key.attrib['id']: value})
+        elif (key.attrib['for'].lower() == "edge"):
+            rel_keys.update({key.attrib['id']: value})
 
-        if (line.startswith("<?xml") or line.startswith("<graph") or line.startswith("<graphml")):
-            continue
-        if (line.startswith("</")):
-            continue
-        if (line.startswith("<key")):
-            if (get_attribute(line, "for") == "node"):
-                node_keys.update({get_attribute(line, "id"): [get_attribute(line, "name"), get_attribute(line, "type"), get_attribute(line, "list")]})
-            if (get_attribute(line, "for") == "relationship"):
-                rel_keys.update({get_attribute(line, "id"): [get_attribute(line, "name"), get_attribute(line, "type"), get_attribute(line, "list")]})
+    print(node_keys)
+    print(rel_keys)
+    real_ids = dict()
 
-    print(file_content)
+    for node in root.findall('.//graphml:node', namespace):
+        labels = []
+        properties = dict()
+        if config.get("readLabels"):
+            labels = node.attrib['labels'].split(":")
+            labels.pop(0)
+        if config.get("storeNodeIds"):
+            properties.update({"id": node.attrib['id']})
 
-    file.close()
+        set_default_keys(node_keys, properties)
+
+        for data in node.findall('graphml:data', namespace):
+            key = node_keys.get(data.attrib['key'])
+            if key is None:
+                key = [data.attrib['key'], "string", None, None]
+            #TODO what if data.text "", either by accident or purposely
+            if (data.text):
+                if (config.get("readLabels") and data.attrib['key'] == "labels"):
+                    labels.append("")   #TODO append labels
+                else:
+                    properties.update({key[0]: data.text})      #TODO check data.text type
+
+        real_ids.update({node.attrib['id']: create_vertex(ctx, properties, labels)})
+
+    for rel in root.findall('.//graphml:edge', namespace):
+        if 'label' in rel.attrib.keys():
+            rel_type = rel.attrib['label']
+        else:
+            rel_type = config.get("defaultRelationshipType")
+
+        properties = dict()
+        set_default_keys(rel_keys, properties)
+
+        for data in rel.findall('graphml:data', namespace):
+            key = rel_keys.get(data.attrib['key'])
+            if key is None:
+                key = [data.attrib['key'], "string", None, None]
+            # TODO what if data.text "", either by accident or purposely
+            if (data.text):
+                if not data.attrib['key'] == "label":           # Tinkerpop???
+                    properties.update({key[0]: data.text})      # TODO check data.text type
+
+        if rel.attrib['source'] not in real_ids.keys():
+            if not config.get("source"):
+                # without source/target config, we look for the internal id
+                real_ids.update({rel.attrib['source']: rel.attrib['source']})       # TODO:should it be casted to int?
+            else:
+                source_config = config.get("source")
+                if "id" not in source_config.keys():
+                    source_config.update({'id': 'id'})
+                node_id = find_node(ctx, source_config['label'], source_config['id'], rel.attrib['source'])    # TODO: check that source has 'label' key
+                real_ids.update({rel.attrib['source']: node_id})
+
+        create_edge(ctx, properties, rel.attrib['source'], rel.attrib['target'], rel_type, real_ids)
 
     return mgp.Record(status="success")
