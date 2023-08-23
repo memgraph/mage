@@ -6,4 +6,3 @@ output:
   - list: [ "1","2", 3]
   - list: [["1",{"key": 5}]]
   - list: {"prop": {"prop2": {"key": 10}}}
-  
