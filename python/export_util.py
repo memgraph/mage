@@ -2,10 +2,12 @@ import csv
 import io
 import json as js
 import mgp
-import ast
+import os
 
 from dataclasses import dataclass
 from datetime import datetime, date, time, timedelta
+from gqlalchemy import Memgraph
+from math import floor
 
 from typing import Any, Dict, List, Union
 
@@ -109,7 +111,7 @@ def get_graph(ctx: mgp.ProcCtx) -> List[Union[Node, Relationship]]:
     return nodes + relationships
 
 
-def get_graph_from_lists(node_list: list, relationship_list: list, write_properties: bool):
+def get_graph_from_lists(node_list: list, relationship_list: list):
 
     graph = list()
     node_properties = list()
@@ -126,7 +128,7 @@ def get_graph_from_lists(node_list: list, relationship_list: list, write_propert
         node_properties.sort()
         graph.append(
 
-            Node(node.id, node.labels, node.properties if write_properties else {})
+            Node(node.id, node.labels, node.properties)
 
         )
 
@@ -147,7 +149,7 @@ def get_graph_from_lists(node_list: list, relationship_list: list, write_propert
 
                 relationship.type.name,
 
-                relationship.properties if write_properties else {},
+                relationship.properties,
 
                 relationship.from_vertex.id,
 
@@ -179,13 +181,11 @@ def csv_data_list(graph: list, node_properties: list, relationship_properties: l
     Function that parses graph into a data_list appropriate for csv writing
     """
     data_list = []
-    header = csv_header(node_properties, relationship_properties)
-    data_list.append(header)
     for element in graph:
         write_list = []
         IsNode = isinstance(element, Node)
         
-        #id
+        #id and labels
         if(IsNode):
             write_list.extend([element.id, "".join(":" + label.name for label in element.labels)])
         else:
@@ -197,7 +197,10 @@ def csv_data_list(graph: list, node_properties: list, relationship_properties: l
                 if isinstance(element.properties[prop], (set, list, tuple, map)):
                     write_list.append(js.dumps(element.properties[prop]))
                 else:   
-                    write_list.append(element.properties[prop])
+                    if isinstance(element.properties[prop],timedelta):
+                        write_list.append(convert_to_isoformat(element.properties[prop]))
+                    else:
+                        write_list.append(element.properties[prop])
             else:
                 write_list.append("")
         #relationship
@@ -214,7 +217,10 @@ def csv_data_list(graph: list, node_properties: list, relationship_properties: l
                 if isinstance(element.properties[prop], (set, list, tuple, map)):
                     write_list.append(js.dumps(element.properties[prop]))
                 else:   
-                    write_list.append(element.properties[prop])
+                    if isinstance(element.properties[prop],timedelta):
+                        write_list.append(convert_to_isoformat(element.properties[prop]))
+                    else:
+                        write_list.append(element.properties[prop])
             else:
                 write_list.append("")
         
@@ -222,6 +228,73 @@ def csv_data_list(graph: list, node_properties: list, relationship_properties: l
 
     return data_list
 
+def csv_process_config(config: mgp.Map):
+
+    delimiter = ","
+    if "delimiter" in config:
+        if not isinstance(config["delimiter"],str): raise TypeError("Config attribute delimiter must be of type string")
+
+        delimiter = config["delimiter"]
+
+    quoting_type = csv.QUOTE_ALL
+    if "quotes" in config:
+        if not isinstance(config["quotes"],str): raise TypeError("Config attribute quotes must be of type string")
+
+        if config["quotes"] == "none":
+            quoting_type = csv.QUOTE_NONE
+        elif config["quotes"] == "ifNeeded":
+            quoting_type = csv.QUOTE_MINIMAL
+    separateHeader = False
+
+    if "separateHeader" in config:
+        if not isinstance(config["separateHeader"],bool): raise TypeError("Config attribute separateHeader must be of type bool")
+        separateHeader = config["separateHeader"]
+
+    stream = False
+    if "stream" in config:
+        if not isinstance(config["stream"],bool): raise TypeError("Config attribute stream must be of type bool")
+        stream = config["stream"]
+
+    return delimiter, quoting_type, separateHeader, stream
+
+def header_path(path):
+    directory, filename = os.path.split(path)
+    new_filename = "header.csv"
+    return os.path.join(directory, new_filename)
+
+
+#this will probably be removed, since it is written somewhere else?
+def to_duration_iso_format(value: timedelta) -> str:
+    """Converts timedelta to ISO-8601 duration: P<date>T<time>"""
+    date_parts: List[str] = []
+    time_parts: List[str] = []
+
+    if value.days != 0:
+        date_parts.append(f"{abs(value.days)}D")
+
+    if value.seconds != 0 or value.microseconds != 0:
+        abs_seconds = abs(value.seconds)
+        hours = floor(abs_seconds / 3600)
+        minutes = floor((abs_seconds - hours * 3600) / 60)
+        seconds = abs_seconds - hours * 3600 - minutes * 60
+        microseconds = value.microseconds
+
+        if hours > 0:
+            time_parts.append(f"{hours}H")
+        if minutes > 0:
+            time_parts.append(f"{minutes}M")
+        if seconds > 0 or microseconds > 0:
+            microseconds_part = (
+                f".{abs(value.microseconds)}"
+                if value.microseconds != 0
+                else ""
+            )
+            time_parts.append(f"{seconds}{microseconds_part}S")
+
+    date_duration_str = "".join(date_parts)
+    time_duration_str = f'T{"".join(time_parts)}' if time_parts else ""
+
+    return f"P{date_duration_str}{time_duration_str}"
 
 @mgp.read_proc
 def csv_graph(
@@ -253,18 +326,41 @@ def csv_graph(
 
         stream (bool) = False: Flag to export the graph data to a stream.
 
-        write_properties (bool) = False: Flag to keep node and relationship properties. By default set to true.
+        delimiter (string) = ,: Delimiter for csv file.
+
+        quotes (string) = always : Option which quoting type to use
+
+        separateHeader (bool) = False: Flag to separate header into another csv file
 
     """
-
-    graph, node_properties, relationship_properties = get_graph_from_lists(nodes_list, relationships_list, True)
+    if path == "": path = "exported_file.csv"
+    delimiter, quoting_type, separateHeader, stream = csv_process_config(config)
+    graph, node_properties, relationship_properties = get_graph_from_lists(nodes_list, relationships_list)
     data_list = csv_data_list(graph, node_properties, relationship_properties)
-    f = open("/home/matija/Documents/file.csv","w")
-    writer = csv.writer(f, quoting=csv.QUOTE_ALL)
-    writer.writerows(data_list)    
-    f.close()
-    data = csv_to_stream(data_list)
+    header = csv_header(node_properties, relationship_properties)
 
+    data = ""
+    try:
+        if(separateHeader):
+            with open(header_path(path), 'w') as file:
+                header_writer = csv.writer(file, delimiter = delimiter, quoting = quoting_type, escapechar= '\\')
+                header_writer.writerows([header])
+        else:
+            data_list = [header] + data_list
+
+        with open(path, 'w') as file:
+            writer = csv.writer(file, delimiter = delimiter, quoting = quoting_type, escapechar= '\\')
+            writer.writerows(data_list)
+
+        data = ""
+        if(stream):
+            data = csv_to_stream(data_list, delimiter, quoting_type)
+    except PermissionError:
+        raise PermissionError(
+            "You don't have permissions to write into that file. Make sure to give the necessary permissions to user memgraph."
+        )
+    except Exception:
+        raise OSError("Could not open or write to the file.")
     return mgp.Record(
         path=path,
         data=data,
@@ -328,10 +424,10 @@ def save_file(file_path: str, data_list: list):
         raise OSError("Could not open or write to the file.")
 
 
-def csv_to_stream(data_list: list) -> str:
+def csv_to_stream(data_list: list, delimiter: str = ",", quoting_type = csv.QUOTE_NONNUMERIC) -> str:
     output = io.StringIO()
     try:
-        writer = csv.writer(output, quoting=csv.QUOTE_NONNUMERIC)
+        writer = csv.writer(output, delimiter=delimiter, quoting=quoting_type, escapechar= '\\')
         writer.writerows(data_list)
     except csv.Error as e:
         raise csv.Error(
@@ -342,3 +438,59 @@ def csv_to_stream(data_list: list) -> str:
     return output.getvalue()
 
 
+@mgp.read_proc
+def csv_query(
+    context: mgp.ProcCtx,
+    query: str,
+    file_path: str = "",
+    stream: bool = False,
+) -> mgp.Record(file_path=str, data=str):
+    """
+    Procedure to export query results to a CSV file.
+    Args:
+        context (mgp.ProcCtx): Reference to the context execution.
+        query (str): A query from which the results will be saved to a CSV file.
+        file_path (str, optional): A path to the CSV file where the query results will be exported. Defaults to an empty string.
+        stream (bool, optional): A value which determines whether a stream of query results in a CSV format will be returned.
+    Returns:
+        mgp.Record(
+            file_path (str): A path to the CSV file where the query results are exported. If file_path is not provided, the output will be an empty string.
+            data (str): A stream of query results in a CSV format.
+        )
+    Raises:
+        Exception: If neither file nor config are provided, or if only config is provided with stream set to False. Also if query yields no results or if the database is empty.
+        PermissionError: If you provided file path that you have no permissions to write at.
+        csv.Error: If an error occurred while writing into stream or CSV file.
+        OSError: If the file can't be opened or written to.
+    """
+
+    # file or config have to be provided
+    if not file_path and not stream:
+        raise Exception("Please provide file name and/or config.")
+
+    # only config provided with stream set to false
+    if not file_path and not stream:
+        raise Exception(
+            "If you provided only stream value, it has to be set to True to get any results."
+        )
+
+    memgraph = Memgraph()
+    results = list(memgraph.execute_and_fetch(query))
+
+    # if query yields no result
+    if not len(results):
+        raise Exception(
+            "Your query yields no results. Check if the database is empty or rewrite the provided query."
+        )
+
+    result_keys = list(results[0])
+    data_list = [result_keys] + [list(result.values()) for result in results]
+    data = ""
+
+    if file_path:
+        save_file(file_path, data_list)
+
+    if stream:
+        data = csv_to_stream(data_list)
+
+    return mgp.Record(file_path=file_path, data=data)
