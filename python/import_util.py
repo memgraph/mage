@@ -4,7 +4,8 @@ from mage.export_import_util.parameters import Parameter
 import mgp
 from typing import Union, List, Dict, Any
 import defusedxml.ElementTree as ET
-from export_util import get_graph
+from export_util import convert_to_isoformat_graphML
+import ast
 
 
 def convert_from_isoformat(
@@ -147,6 +148,47 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
     return mgp.Record()
 
 
+def find_node(ctx, label, prop_key, prop_value):
+    for vertex in ctx.graph.vertices:
+        if (
+            label in [label.name for label in vertex.labels]
+            and prop_key in vertex.properties.keys()
+            and convert_to_isoformat_graphML(vertex.properties.get(prop_key)) == prop_value
+        ):
+            return vertex.id
+    return None
+
+
+def cast_element(text, type):
+    if (text is None):
+        return ""
+    if (type == "string"):
+        return str(text)
+    if (type == "int"):
+        return int(text)
+    if (type == "boolean"):
+        return bool(text)
+    if (type == "float"):
+        return float(text)
+    if (type is None):
+        return text
+
+
+def cast(text, type, is_list):
+    if is_list is not None:
+        casted_list = list()
+        for element in ast.literal_eval(text):
+            casted_list.append(cast_element(element, is_list))
+        return casted_list
+    return cast_element(text, type)
+
+
+def set_default_keys(key_dict, properties):
+    for key, value in key_dict.items():
+        if value[3] is not None:
+            properties.update({value[0]: cast(value[3], value[1], value[2])})
+
+
 def set_default_config(config):
     if not config.get("readLabels"):
         config.update({"readLabels": False})
@@ -158,25 +200,16 @@ def set_default_config(config):
         config.update({"source": {}})
     if not config.get("target"):
         config.update({"target": {}})
-
-
-def set_default_keys(key_dict, properties):
-    for key, value in key_dict.items():
-        if value[3] is not None:
-            properties.update({value[0]: value[3]})  # TODO add casting to type
-
-
-def find_node(ctx, label, prop_key, prop_value):
-    graph = get_graph(ctx, 0)
-    for element in graph:
-        if element.get("type") == "node":
-            if (
-                label in element.get("labels")
-                and prop_key in element.get("properties").keys()
-                and element.get("properties")[label] == prop_value
-            ):
-                return element.get("id")
-    return None
+    if (not isinstance(config.get("readLabels"), bool) or
+        not isinstance(config.get("defaultRelationshipType"), str) or
+        not isinstance(config.get("storeNodeIds"), bool) or
+        not isinstance(config.get("source"), dict) or
+        not isinstance(config.get("target"), dict) or
+        (config.get("source") and "label" not in config.get("source").keys()) or
+        (config.get("target") and "label" not in config.get("target").keys())):
+        raise TypeError(
+                "Config parameter must be a map with specific keys and values described in documentation."
+            )
 
 
 @mgp.write_proc
@@ -211,6 +244,10 @@ def graphml(
     rel_keys = dict()
 
     for key in root.findall(".//graphml:key", namespace):
+        # key value legend: value[0] = attr.name
+        #                   value[1] = attr.type
+        #                   value[2] = attr.list
+        #                   value[3] = default         -> should I make a class out of it?
         value = [key.attrib["attr.name"]]
         if "attr.type" in key.attrib.keys():
             value.append(key.attrib["attr.type"])
@@ -230,8 +267,6 @@ def graphml(
         elif key.attrib["for"].lower() == "edge":
             rel_keys.update({key.attrib["id"]: value})
 
-    print(node_keys)
-    print(rel_keys)
     real_ids = dict()
 
     for node in root.findall(".//graphml:node", namespace):
@@ -249,14 +284,14 @@ def graphml(
             key = node_keys.get(data.attrib["key"])
             if key is None:
                 key = [data.attrib["key"], "string", None, None]
-            # TODO what if data.text "", either by accident or purposely
-            if data.text:
-                if config.get("readLabels") and data.attrib["key"] == "labels":
-                    labels.append("")  # TODO append labels
-                else:
-                    properties.update(
-                        {key[0]: data.text}
-                    )  # TODO check data.text type
+            if config.get("readLabels") and data.attrib["key"] == "labels":
+                new_labels = node.attrib["labels"].split(":")
+                new_labels.pop(0)
+                labels = labels + new_labels
+            else:
+                properties.update(
+                    {key[0]: cast(data.text, key[1], key[2])}
+                )
 
         real_ids.update(
             {node.attrib["id"]: create_vertex(ctx, properties, labels)}
@@ -275,19 +310,17 @@ def graphml(
             key = rel_keys.get(data.attrib["key"])
             if key is None:
                 key = [data.attrib["key"], "string", None, None]
-            # TODO what if data.text "", either by accident or purposely
-            if data.text:
-                if not data.attrib["key"] == "label":  # Tinkerpop???
-                    properties.update(
-                        {key[0]: data.text}
-                    )  # TODO check data.text type
+            if not data.attrib["key"] == "label":  # Tinkerpop???
+                properties.update(
+                    {key[0]: cast(data.text, key[1], key[2])}
+                )
 
         if rel.attrib["source"] not in real_ids.keys():
             if not config.get("source"):
                 # without source/target config, we look for the internal id
                 real_ids.update(
                     {rel.attrib["source"]: rel.attrib["source"]}
-                )  # TODO:should it be casted to int?
+                )
             else:
                 source_config = config.get("source")
                 if "id" not in source_config.keys():
@@ -297,8 +330,26 @@ def graphml(
                     source_config["label"],
                     source_config["id"],
                     rel.attrib["source"],
-                )  # TODO: check that source has 'label' key
+                )
                 real_ids.update({rel.attrib["source"]: node_id})
+
+        if rel.attrib["target"] not in real_ids.keys():
+            if not config.get("target"):
+                # without source/target config, we look for the internal id
+                real_ids.update(
+                    {rel.attrib["target"]: rel.attrib["target"]}
+                )
+            else:
+                target_config = config.get("target")
+                if "id" not in target_config.keys():
+                    target_config.update({"id": "id"})
+                node_id = find_node(
+                    ctx,
+                    target_config["label"],
+                    target_config["id"],
+                    rel.attrib["target"],
+                )
+                real_ids.update({rel.attrib["target"]: node_id})
 
         create_edge(
             ctx,
