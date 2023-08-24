@@ -343,8 +343,6 @@ def check_if_elements_same_type(variable: Any):
 
 
 def get_type_string(variable: Any) -> Union[str, List[Any]]:
-    print(type(variable))
-    print(variable)
     if (
         isinstance(variable, tuple)
     ):
