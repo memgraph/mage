@@ -313,37 +313,36 @@ def csv_query(
     return mgp.Record(file_path=file_path, data=data)
 
 
-def write_header(output):
+def write_header(output: io.StringIO):
     output.write('<?xml version="1.0" encoding="UTF-8"?>\n')
     output.write(
         '<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">\n'  # noqa: E501
     )
 
 
-def translate_types(variable):
-    if type(variable).__name__ == "str":
+def translate_types(variable: Any):
+    if isinstance(variable, str):
         return "string"
-    if type(variable).__name__ == "bool":
+    if isinstance(variable, bool):
         return "boolean"
-    if type(variable).__name__ == "float":
+    if isinstance(variable, float):
         return "float"
-    if type(variable).__name__ == "int":
+    if isinstance(variable, int):
         return "int"
     raise Exception(
         "Property values can only be primitive types or arrays of primitive types."  # noqa: E501
     )
 
 
-def check_if_elements_same_type(variable):
-    element_type = type(variable[0]).__name__
+def check_if_elements_same_type(variable: Any):
     for element in variable:
-        if type(element).__name__ != element_type:
+        if not isinstance(element, type(variable[0])):
             raise Exception(
                 "If property value is a list it must consist of same typed elements."  # noqa: E501
             )
 
 
-def get_type_string(variable):
+def get_type_string(variable: Any) -> Union[str, List[Any]]:
     if (
         type(variable).__name__ == "tuple"
     ):  # TODO I need to diferentiate maps and lists
@@ -357,7 +356,11 @@ def get_type_string(variable):
     return translate_types(variable)
 
 
-def write_keys(graph, output, config):
+def write_keys(
+    graph: List[Union[Node, Relationship]],
+    output: io.StringIO,
+    config: mgp.Map,
+):
     node_keys = dict()
     rel_keys = dict()
     for element in graph:
@@ -404,11 +407,13 @@ def write_keys(graph, output, config):
         output.write("/>\n")
 
 
-def write_graph(output):
+def write_graph(output: io.StringIO):
     output.write('<graph id="G" edgedefault="directed">\n')
 
 
-def get_gephi_label_value(element, config):
+def get_gephi_label_value(
+    element: Union[Node, Relationship], config: mgp.Map
+) -> str:
     for caption in config.get("caption"):
         if caption in element.get("properties").keys():
             return str(element.get("properties").get(caption))
@@ -419,7 +424,9 @@ def get_gephi_label_value(element, config):
     return str(element.get("id"))
 
 
-def write_labels_as_data(element, output, config):
+def write_labels_as_data(
+    element: Union[Node, Relationship], output: io.StringIO, config: mgp.Map
+):
     if not element.get("labels"):
         return
     if config.get("format").upper() == "TINKERPOP":
@@ -436,7 +443,7 @@ def write_labels_as_data(element, output, config):
             output.write(f":{label}")
         output.write("</data>")
         output.write(
-            f'<data key="label">{get_gephi_label_value(element, config)}</data>'        # noqa: E501
+            f'<data key="label">{get_gephi_label_value(element, config)}</data>'  # noqa: E501
         )
     else:
         output.write('<data key="labels">')
@@ -445,13 +452,17 @@ def write_labels_as_data(element, output, config):
         output.write("</data>")
 
 
-def get_value_string(value):
+def get_value_string(value: Any) -> str:
     if isinstance(value, (set, list, tuple, map)):
         return js.dumps(value, ensure_ascii=False)
     return str(value)
 
 
-def write_nodes_and_rels(graph, output, config):
+def write_nodes_and_rels(
+    graph: List[Union[Node, Relationship]],
+    output: io.StringIO,
+    config: mgp.Map,
+):
     for element in graph:
         if element.get("type") == "node":
             output.write(f'<node id="n{str(element.get("id"))}')
@@ -474,7 +485,7 @@ def write_nodes_and_rels(graph, output, config):
 
         elif element.get("type") == "relationship":
             output.write(
-                f'<edge id="e{str(element.get("id"))}" source="n{str(element.get("start"))}" target="n{str(element.get("end"))}" label="{element.get("label")}">'       # noqa: E501
+                f'<edge id="e{str(element.get("id"))}" source="n{str(element.get("start"))}" target="n{str(element.get("end"))}" label="{element.get("label")}">'  # noqa: E501
             )
 
             if config.get("format").upper() == "TINKERPOP":
@@ -495,12 +506,12 @@ def write_nodes_and_rels(graph, output, config):
             output.write("</edge>\n")
 
 
-def write_footer(output):
+def write_footer(output: io.StringIO):
     output.write("</graph>\n")
     output.write("</graphml>")
 
 
-def set_default_config(config):
+def set_default_config(config: mgp.Map):
     if not config.get("stream"):
         config.update({"stream": False})
     if not config.get("format"):
@@ -513,6 +524,18 @@ def set_default_config(config):
         config.update({"leaveOutLabels": False})
     if not config.get("leaveOutProperties"):
         config.update({"leaveOutProperties": False})
+    if (
+        not isinstance(config.get("stream"), bool)
+        or not isinstance(config.get("format"), str)
+        or not isinstance(config.get("caption"), list)
+        or not isinstance(config.get("useTypes"), bool)
+        or not isinstance(config.get("leaveOutLabels"), bool)
+        or not isinstance(config.get("leaveOutProperties"), bool)
+    ):
+        raise TypeError(
+            "Config parameter must be a map with specific \
+             keys and values described in documentation."
+        )
 
 
 @mgp.read_proc

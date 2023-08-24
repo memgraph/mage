@@ -148,33 +148,40 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
     return mgp.Record()
 
 
-def find_node(ctx, label, prop_key, prop_value):
+def find_node(
+    ctx: mgp.ProcCtx, label: str, prop_key: str, prop_value: str
+) -> Any:  # TODO prop value cast??
     for vertex in ctx.graph.vertices:
         if (
             label in [label.name for label in vertex.labels]
             and prop_key in vertex.properties.keys()
-            and convert_to_isoformat_graphML(vertex.properties.get(prop_key)) == prop_value
+            and convert_to_isoformat_graphML(vertex.properties.get(prop_key))
+            == prop_value
         ):
             return vertex.id
     return None
 
 
-def cast_element(text, type):
-    if (text is None):
+def cast_element(
+    text: str, type: str
+) -> Union[List[Any], str, int, bool, float]:
+    if text is None:
         return ""
-    if (type == "string"):
+    if type == "string":
         return str(text)
-    if (type == "int"):
+    if type == "int":
         return int(text)
-    if (type == "boolean"):
+    if type == "boolean":
         return bool(text)
-    if (type == "float"):
+    if type == "float":
         return float(text)
-    if (type is None):
+    if type is None:
         return text
 
 
-def cast(text, type, is_list):
+def cast(
+    text: str, type: str, is_list: str
+) -> Union[List[Any], str, int, bool, float]:
     if is_list is not None:
         casted_list = list()
         for element in ast.literal_eval(text):
@@ -183,13 +190,13 @@ def cast(text, type, is_list):
     return cast_element(text, type)
 
 
-def set_default_keys(key_dict, properties):
+def set_default_keys(key_dict: Dict[str, Any], properties: Dict[str, Any]):
     for key, value in key_dict.items():
         if value[3] is not None:
             properties.update({value[0]: cast(value[3], value[1], value[2])})
 
 
-def set_default_config(config):
+def set_default_config(config: mgp.Map):
     if not config.get("readLabels"):
         config.update({"readLabels": False})
     if not config.get("defaultRelationshipType"):
@@ -200,16 +207,23 @@ def set_default_config(config):
         config.update({"source": {}})
     if not config.get("target"):
         config.update({"target": {}})
-    if (not isinstance(config.get("readLabels"), bool) or
-        not isinstance(config.get("defaultRelationshipType"), str) or
-        not isinstance(config.get("storeNodeIds"), bool) or
-        not isinstance(config.get("source"), dict) or
-        not isinstance(config.get("target"), dict) or
-        (config.get("source") and "label" not in config.get("source").keys()) or
-        (config.get("target") and "label" not in config.get("target").keys())):
+    if (
+        not isinstance(config.get("readLabels"), bool)
+        or not isinstance(config.get("defaultRelationshipType"), str)
+        or not isinstance(config.get("storeNodeIds"), bool)
+        or not isinstance(config.get("source"), dict)
+        or not isinstance(config.get("target"), dict)
+        or (
+            config.get("source") and "label" not in config.get("source").keys()
+        )
+        or (
+            config.get("target") and "label" not in config.get("target").keys()
+        )
+    ):
         raise TypeError(
-                "Config parameter must be a map with specific keys and values described in documentation."
-            )
+            "Config parameter must be a map with specific \
+             keys and values described in documentation."
+        )
 
 
 @mgp.write_proc
@@ -247,7 +261,8 @@ def graphml(
         # key value legend: value[0] = attr.name
         #                   value[1] = attr.type
         #                   value[2] = attr.list
-        #                   value[3] = default         -> should I make a class out of it?
+        #                   value[3] = default
+        # -> should I make a class out of it?
         value = [key.attrib["attr.name"]]
         if "attr.type" in key.attrib.keys():
             value.append(key.attrib["attr.type"])
@@ -289,9 +304,7 @@ def graphml(
                 new_labels.pop(0)
                 labels = labels + new_labels
             else:
-                properties.update(
-                    {key[0]: cast(data.text, key[1], key[2])}
-                )
+                properties.update({key[0]: cast(data.text, key[1], key[2])})
 
         real_ids.update(
             {node.attrib["id"]: create_vertex(ctx, properties, labels)}
@@ -311,16 +324,12 @@ def graphml(
             if key is None:
                 key = [data.attrib["key"], "string", None, None]
             if not data.attrib["key"] == "label":  # Tinkerpop???
-                properties.update(
-                    {key[0]: cast(data.text, key[1], key[2])}
-                )
+                properties.update({key[0]: cast(data.text, key[1], key[2])})
 
         if rel.attrib["source"] not in real_ids.keys():
             if not config.get("source"):
                 # without source/target config, we look for the internal id
-                real_ids.update(
-                    {rel.attrib["source"]: rel.attrib["source"]}
-                )
+                real_ids.update({rel.attrib["source"]: rel.attrib["source"]})
             else:
                 source_config = config.get("source")
                 if "id" not in source_config.keys():
@@ -336,9 +345,7 @@ def graphml(
         if rel.attrib["target"] not in real_ids.keys():
             if not config.get("target"):
                 # without source/target config, we look for the internal id
-                real_ids.update(
-                    {rel.attrib["target"]: rel.attrib["target"]}
-                )
+                real_ids.update({rel.attrib["target"]: rel.attrib["target"]})
             else:
                 target_config = config.get("target")
                 if "id" not in target_config.keys():
