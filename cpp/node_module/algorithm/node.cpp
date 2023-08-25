@@ -4,6 +4,60 @@
 
 #include "mgp.hpp"
 
+namespace {
+
+std::unordered_map<std::string_view, uint8_t> get_type_direction(const mgp::Value &types) {
+  std::unordered_map<std::string_view, uint8_t> result;
+  for (const auto &type_value : types.ValueList()) {
+    auto type = type_value.ValueString();
+    if (type.starts_with('<')) {
+      if (type.ends_with('>')) {
+        throw mgp::ValueException("<type> format not allowed. Use type instead.");
+      }
+      result[type.substr(1, type.size() - 1)] |= 1;
+    } else if (type.ends_with('>')) {
+      result[type.substr(0, type.size() - 1)] |= 2;
+    } else {
+      result[type] |= 3;
+    }
+  }
+  return result;
+}
+
+mgp::List get_relationship_types(const mgp::Value &node_value, const mgp::Value &types_value) {
+  auto type_direction = get_type_direction(types_value);
+
+  std::unordered_set<std::string_view> types;
+  const auto node = node_value.ValueNode();
+  if (type_direction.empty()) {
+    for (const auto relationship : node.InRelationships()) {
+      types.insert(relationship.Type());
+    }
+    for (const auto relationship : node.OutRelationships()) {
+      types.insert(relationship.Type());
+    }
+  } else {
+    for (const auto relationship : node.InRelationships()) {
+      if (type_direction[relationship.Type()] & 1) {
+        types.insert(relationship.Type());
+      }
+    }
+    for (const auto relationship : node.OutRelationships()) {
+      if (type_direction[relationship.Type()] & 2) {
+        types.insert(relationship.Type());
+      }
+    }
+  }
+
+  mgp::List result{types.size()};
+  for (const auto &type : types) {
+    auto value = mgp::Value(type);
+    result.Append(value);
+  }
+  return result;
+}
+}  // namespace
+
 bool Node::RelationshipExist(const mgp::Node &node, std::string &rel_type) {
   char direction{' '};
   if (rel_type[0] == '<' && rel_type[rel_type.size() - 1] == '>') {
@@ -68,7 +122,7 @@ bool Node::FindRelationship(std::unordered_set<std::string_view> types, mgp::Rel
   return false;
 }
 
-void Node::RelExists(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Node::RelationshipExists(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
@@ -101,67 +155,14 @@ void Node::RelExists(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
     }
 
     auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultRelExists).c_str(), FindRelationship(in_rels, node.InRelationships()) ||
-                                                             FindRelationship(out_rels, node.OutRelationships()));
+    record.Insert(
+        std::string(kResultRelationshipExists).c_str(),
+        FindRelationship(in_rels, node.InRelationships()) || FindRelationship(out_rels, node.OutRelationships()));
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
     return;
   }
 }
-
-namespace {
-
-std::unordered_map<std::string_view, uint8_t> get_type_direction(const mgp::Value &types) {
-  std::unordered_map<std::string_view, uint8_t> result;
-  for (const auto &type_value : types.ValueList()) {
-    auto type = type_value.ValueString();
-    if (type.starts_with('<')) {
-      if (type.ends_with('>')) {
-        throw mgp::ValueException("<type> format not allowed. Use type instead.");
-      }
-      result[type.substr(1, type.size() - 1)] |= 1;
-    } else if (type.ends_with('>')) {
-      result[type.substr(0, type.size() - 1)] |= 2;
-    } else {
-      result[type] |= 3;
-    }
-  }
-  return result;
-}
-
-mgp::List get_relationship_types(const mgp::Value &node_value, const mgp::Value &types_value) {
-  auto type_direction = get_type_direction(types_value);
-
-  std::unordered_set<std::string_view> types;
-  const auto node = node_value.ValueNode();
-  if (type_direction.empty()) {
-    for (const auto relationship : node.InRelationships()) {
-      types.insert(relationship.Type());
-    }
-    for (const auto relationship : node.OutRelationships()) {
-      types.insert(relationship.Type());
-    }
-  } else {
-    for (const auto relationship : node.InRelationships()) {
-      if (type_direction[relationship.Type()] & 1) {
-        types.insert(relationship.Type());
-      }
-    }
-    for (const auto relationship : node.OutRelationships()) {
-      if (type_direction[relationship.Type()] & 2) {
-        types.insert(relationship.Type());
-      }
-    }
-  }
-
-  mgp::List result{types.size()};
-  for (const auto &type : types) {
-    auto value = mgp::Value(type);
-    result.Append(value);
-  }
-  return result;
-}
-}  // namespace
 
 void Node::RelationshipTypes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
