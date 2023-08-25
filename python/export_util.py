@@ -2,11 +2,13 @@ import csv
 import io
 import json as js
 import mgp
+import gqlalchemy
 
 from dataclasses import dataclass
 from datetime import datetime, date, time, timedelta
 from gqlalchemy import Memgraph
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, Iterator, Optional
+from math import floor
 
 from mage.export_import_util.parameters import Parameter
 
@@ -76,113 +78,115 @@ def convert_to_isoformat(
         return property
 
 
-import gqlalchemy
-from gqlalchemy.connection import _convert_memgraph_value
+def to_duration_iso_format(value: timedelta) -> str:
+    """Converts timedelta to ISO-8601 duration: P<date>T<time>"""
+    date_parts: List[str] = []
+    time_parts: List[str] = []
 
-WRONG_STRUCTURE_MSG = "The `conditionals` parameter of `do.case` must be structured as follows: [BOOLEAN, STRING, BOOLEAN, STRING, …​]."
+    if value.days != 0:
+        date_parts.append(f"{abs(value.days)}D")
 
-def _get_edge_with_endpoint(
-    graph: mgp.Graph,
-    edge_id: mgp.EdgeId,
-    from_id: mgp.VertexId,
-) -> mgp.Nullable[mgp.Edge]:
-    return next(
-        (
-            edge
-            for edge in graph.get_vertex_by_id(from_id).out_edges
-            if edge.id == edge_id
-        ),
+    if value.seconds != 0 or value.microseconds != 0:
+        abs_seconds = abs(value.seconds)
+        hours = floor(abs_seconds / 3600)
+        minutes = floor((abs_seconds - hours * 3600) / 60)
+        seconds = abs_seconds - hours * 3600 - minutes * 60
+        microseconds = value.microseconds
+
+        if hours > 0:
+            time_parts.append(f"{hours}H")
+        if minutes > 0:
+            time_parts.append(f"{minutes}M")
+        if seconds > 0 or microseconds > 0:
+            microseconds_part = (
+                f".{abs(value.microseconds)}" if value.microseconds != 0 else ""
+            )
+            time_parts.append(f"{seconds}{microseconds_part}S")
+
+    date_duration_str = "".join(date_parts)
+    time_duration_str = f'T{"".join(time_parts)}' if time_parts else ""
+
+    return f"P{date_duration_str}{time_duration_str}"
+
+
+def convert_to_cypher_format(
+    property: Union[
         None,
-    )
+        str,
+        bool,
+        int,
+        float,
+        List[Any],
+        Dict[str, Any],
+        timedelta,
+        time,
+        datetime,
+        date,
+    ]
+) -> str:
+    print("PROPERTY: ", property, type(property))
+    if isinstance(property, timedelta):
+        return f"duration('{to_duration_iso_format(property)}')"
 
+    elif isinstance(property, time):
+        return f"localTime('{property.isoformat()}')"
 
-def _gqlalchemy_type_to_mgp(graph: mgp.Graph, variable: Any) -> mgp.Any:
-    if isinstance(
-        variable,
-        (
-            bool,
-            int,
-            float,
-            str,
-            list,
-            dict,
-            datetime.date,
-            datetime.time,
-            datetime.datetime,
-            datetime.timedelta,
-        ),
-    ):
-        return variable
+    elif isinstance(property, datetime):
+        return f"localDateTime('{property.isoformat()}')"
 
-    elif isinstance(variable, gqlalchemy.models.Node):
-        return graph.get_vertex_by_id(int(variable._id))
+    elif isinstance(property, date):
+        return f"date('{property.isoformat()}')"
 
-    elif isinstance(variable, gqlalchemy.models.Relationship):
-        return _get_edge_with_endpoint(
-            graph, edge_id=int(variable._id), from_id=int(variable._start_node_id)
+    elif isinstance(property, str):
+        return f"'{property}'"
+
+    elif isinstance(property, tuple):  # list
+        return (
+            "[" + ", ".join([convert_to_cypher_format(item) for item in property]) + "]"
         )
 
-    elif isinstance(variable, gqlalchemy.models.Path):
-        start_id = int(variable._nodes[0]._id)
-        path = mgp.Path(graph.get_vertex_by_id(start_id))
-
-        for relationship, node in zip(variable._relationships, variable._nodes[1:]):
-            next_edge_id = int(relationship._id)
-            next_node_id = int(node._id)
-
-            edge_to_add = _get_edge_with_endpoint(
-                graph, edge_id=next_edge_id, from_id=start_id
+    elif isinstance(property, dict):
+        return (
+            "{"
+            + ", ".join(
+                [f"{k}: {convert_to_cypher_format(v)}" for k, v in property.items()]
             )
-            if edge_to_add is None:
-                # This should happen if and only if the query that returned the path treated graph edges as undirected.
-                # For example, such a query might return an (a)-[b]->(c) path from a graph that only contains (c)->[b].
-                # In that case, flipping the path direction to retrieve the linking edge is valid.
-                edge_to_add = _get_edge_with_endpoint(
-                    graph, edge_id=next_edge_id, from_id=next_node_id
-                )
+            + "}"
+        )
 
-            path.expand(edge_to_add)
-
-            start_id = next_node_id
-
-        return path
+    return str(property)
 
 
-# Conditional queries are run via gqlalchemy. The module supports parameterized
-# queries, which are only supported from gqlalchemy 1.4.0. Since that version’s
-# dgl requirement causes arm64 checks for MAGE to fail, this function serves to
-# support running parameterized queries with older gqlalchemy versions.
-#
-# Relevant code:
-# https://github.com/memgraph/gqlalchemy/blob/main/gqlalchemy/vendors/database_client.py#L54-L59
-# https://github.com/memgraph/gqlalchemy/blob/main/gqlalchemy/connection.py#L87-L100
-def _execute_and_fetch_parameterized(
-    memgraph_client, query: str, parameters: Dict[str, Any] = {}
-) -> Iterator[Dict[str, Any]]:
-    cursor = memgraph_client._get_cached_connection()._connection.cursor()
-    cursor.execute(query, parameters)
-    while True:
-        row = cursor.fetchone()
-        if row is None:
-            break
-        yield {
-            dsc.name: _convert_memgraph_value(row[index])
-            for index, dsc in enumerate(cursor.description)
+def get_graph_for_cypher(ctx: mgp.ProcCtx) -> List[Union[Node, Relationship]]:
+    nodes = list()
+    relationships = list()
+
+    for vertex in ctx.graph.vertices:
+        labels = [label.name for label in vertex.labels]
+        properties = {
+            key: convert_to_cypher_format(vertex.properties.get(key))
+            for key in vertex.properties.keys()
         }
 
+        nodes.append(Node(vertex.id, labels, properties))
 
-def _convert_results(
-    ctx: mgp.ProcCtx, gqlalchemy_results: Iterator[Dict[str, Any]]
-) -> List[mgp.Record]:
-    return [
-        mgp.Record(
-            value={
-                field_name: _gqlalchemy_type_to_mgp(ctx.graph, field_value)
-                for field_name, field_value in result.items()
+        for edge in vertex.out_edges:
+            properties = {
+                key: convert_to_cypher_format(edge.properties.get(key))
+                for key in edge.properties.keys()
             }
-        )
-        for result in gqlalchemy_results
-    ]
+
+            relationships.append(
+                Relationship(
+                    edge.to_vertex.id,
+                    edge.id,
+                    edge.type.name,
+                    properties,
+                    edge.from_vertex.id,
+                )
+            )
+
+    return nodes + relationships
 
 
 @mgp.read_proc
@@ -190,7 +194,7 @@ def cypher_all(
     ctx: mgp.ProcCtx,
     file: str,
     config: mgp.Map = {},
-) -> mgp.Record(file_path=str, data=str):
+) -> mgp.Record(file=str, data=str):
     """Exports the graph in cypher with all the constraints, indexes and triggers.
 
     Args:
@@ -202,13 +206,79 @@ def cypher_all(
     Returns:
         value: {field_name: field_value} map containing the result records of the evaluated query.
     """
-    
-    #memgraph = gqlalchemy.Memgraph()
-    #results = memgraph.execute_and_fetch("SHOW TRIGGERS;")
-    #print(results)
-    #print(_convert_results(results))
+    if_not_exists = config.get()
 
-    return mgp.Record(file_path=file_path, data=data)
+    cypher = []
+
+    memgraph = gqlalchemy.Memgraph()
+
+    triggers = memgraph.execute_and_fetch("SHOW TRIGGERS;")
+    for trigger in triggers:
+        cypher.append(
+            f"CREATE TRIGGER {trigger['trigger name']} ON {trigger['event type']} {trigger['phase']} EXECUTE {trigger['statement']};"
+        )
+    cypher.append("")
+
+    constraints = memgraph.execute_and_fetch("SHOW CONSTRAINT INFO;")
+    for constraint in constraints:
+        _type = constraint["constraint type"]
+
+        if _type == "exists":
+            cypher.append(
+                f"CREATE CONSTRAINT ON (n:{constraint['label']}) ASSERT EXISTS (n.{constraint['properties']});"
+            )
+        elif _type == "unique":
+            properties = (
+                [constraint["properties"]]
+                if isinstance(constraint["properties"], str)
+                else list(constraint["properties"])
+            )
+            cypher.append(
+                f"CREATE CONSTRAINT ON (n:{constraint['label']}) ASSERT {'n.' + ', n.'.join(properties)} IS UNIQUE;"
+            )
+        else:
+            raise ValueError("Unknown constraint type.")
+    cypher.append("")
+
+    indexes = memgraph.execute_and_fetch("SHOW INDEX INFO;")
+    for index in indexes:
+        _type = index["index type"]
+        if _type == "label":
+            cypher.append(f"CREATE INDEX ON :{index['label']};")
+        elif _type == "label+property":
+            cypher.append(f"CREATE INDEX ON :{index['label']}({index['property']});")
+        else:
+            raise ValueError("Unknown index type.")
+    cypher.append("")
+
+    graph = get_graph_for_cypher(ctx)
+
+    for object in graph:
+        if isinstance(object, Node):
+            object.labels.append("_IMPORT_ID")
+            object.properties["_IMPORT_ID"] = object.id
+            properties_str = (
+                "{"
+                + ", ".join([f"{k}: {v}" for k, v in object.properties.items()])
+                + "}"
+            )
+            cypher.append(f"CREATE (n:{':'.join(object.labels)} {properties_str});")
+        elif isinstance(object, Relationship):
+            properties_str = (
+                "{"
+                + ", ".join([f"{k}: {v}" for k, v in object.properties.items()])
+                + "}"
+            )
+            cypher.append(
+                f"MATCH (n:_IMPORT_ID {{_IMPORT_ID: {object.start}}}) MATCH (m:_IMPORT_ID {{_IMPORT_ID: {object.end}}}) CREATE (s)-[:{object.label} {properties_str}]->(t);"
+            )
+
+    cypher.append("MATCH (n:_IMPORT_ID) REMOVE n:`_IMPORT_ID` REMOVE n._IMPORT_ID;")
+
+    with open(file, "w") as f:
+        f.write("\n".join(cypher))
+
+    return mgp.Record(file=file, data="")
 
 
 def get_graph(ctx: mgp.ProcCtx) -> List[Union[Node, Relationship]]:
