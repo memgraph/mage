@@ -560,7 +560,7 @@ def graphml(
 
     if config.get("leaveOutLabels") or config.get("leaveOutProperties"):
         for element in graph:
-            if config.get("leaveOutLabels"):
+            if config.get("leaveOutLabels") and element.get("type") == "node":
                 element.update({"labels": []})
             if config.get("leaveOutProperties"):
                 element.update({"properties": {}})
