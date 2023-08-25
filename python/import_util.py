@@ -169,11 +169,11 @@ def cast_element(
         return ""
     if type == "string":
         return str(text)
-    if type == "int":
+    if type == "int" or type == "long":
         return int(text)
     if type == "boolean":
         return bool(text)
-    if type == "float":
+    if type == "float" or type == "double":
         return float(text)
     if type is None:
         return text
