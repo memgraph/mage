@@ -54,11 +54,12 @@ def create_vertex(
 def create_edge(
     ctx: mgp.ProcCtx,
     properties: Dict[str, Any],
-    start_node_id: int,
-    end_node_id: int,
+    start_node_id: Union[int, str],
+    end_node_id: Union[int, str],
     type: str,
-    vertex_ids: Dict[int, int],
+    vertex_ids: Dict[Union[int, str], int],
 ):
+    print(vertex_ids)
     vertex_from = ctx.graph.get_vertex_by_id(vertex_ids[start_node_id])
     vertex_to = ctx.graph.get_vertex_by_id(vertex_ids[end_node_id])
     edge = ctx.graph.create_edge(vertex_from, vertex_to, mgp.EdgeType(type))
@@ -150,12 +151,12 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
 
 def find_node(
     ctx: mgp.ProcCtx, label: str, prop_key: str, prop_value: str
-) -> Any:  # TODO prop value cast??
+) -> int:  # TODO prop value cast??
     for vertex in ctx.graph.vertices:
         if (
             label in [label.name for label in vertex.labels]
             and prop_key in vertex.properties.keys()
-            and convert_to_isoformat_graphML(vertex.properties.get(prop_key))
+            and str(convert_to_isoformat_graphML(vertex.properties.get(prop_key)))
             == prop_value
         ):
             return vertex.id
@@ -300,9 +301,10 @@ def graphml(
             if key is None:
                 key = [data.attrib["key"], "string", None, None]
             if config.get("readLabels") and data.attrib["key"] == "labels":
-                new_labels = node.attrib["labels"].split(":")
+                new_labels = data.text.split(":")
                 new_labels.pop(0)
-                labels = labels + new_labels
+                if (new_labels != labels):
+                    labels = labels + new_labels
             else:
                 properties.update({key[0]: cast(data.text, key[1], key[2])})
 
@@ -329,7 +331,7 @@ def graphml(
         if rel.attrib["source"] not in real_ids.keys():
             if not config.get("source"):
                 # without source/target config, we look for the internal id
-                real_ids.update({rel.attrib["source"]: rel.attrib["source"]})
+                real_ids.update({rel.attrib["source"]: int(rel.attrib["source"])})
             else:
                 source_config = config.get("source")
                 if "id" not in source_config.keys():
@@ -345,7 +347,7 @@ def graphml(
         if rel.attrib["target"] not in real_ids.keys():
             if not config.get("target"):
                 # without source/target config, we look for the internal id
-                real_ids.update({rel.attrib["target"]: rel.attrib["target"]})
+                real_ids.update({rel.attrib["target"]: int(rel.attrib["target"])})
             else:
                 target_config = config.get("target")
                 if "id" not in target_config.keys():
