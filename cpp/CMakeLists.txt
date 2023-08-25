@@ -148,7 +148,6 @@ add_subdirectory(periodic_module)
 add_subdirectory(create_module)
 add_subdirectory(map_module)
 add_subdirectory(collections_module)
-add_subdirectory(label_module)
 add_subdirectory(text_module)
-
+add_subdirectory(label_module)
 add_cugraph_subdirectory(cugraph_module)
