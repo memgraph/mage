@@ -15,8 +15,8 @@ constexpr std::string_view kUpdateArg5 = "setVertexLabels";
 constexpr std::string_view kUpdateArg6 = "removedVertexLabels";
 
 /* stats constants */
-constexpr std::string_view kProcedureStatsOnline = "stats_online";
-constexpr std::string_view kProcedureStatsOffline = "stats_offline";
+constexpr std::string_view kProcedureStatsOnline = "stats_set";
+constexpr std::string_view kProcedureStatsOffline = "stats_get";
 constexpr std::string_view kStatsOnlineArg1 = "update_stats";
 constexpr std::string_view kReturnStats1 = "labelCount";
 constexpr std::string_view kReturnStats2 = "relationshipTypeCount";

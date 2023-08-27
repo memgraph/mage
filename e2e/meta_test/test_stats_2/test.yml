@@ -1,4 +1,4 @@
-query: CALL meta.stats_offline() YIELD stats RETURN stats;
+query: CALL meta.stats_get() YIELD stats RETURN stats;
 output:
   - stats:
       labelCount: 1
