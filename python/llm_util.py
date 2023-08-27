@@ -81,11 +81,25 @@ class SchemaGenerator(object):
     def _get_prompt_ready_schema(self) -> str:
         prompt_ready_schema = "Node properties are the following:\n"
         for label in self._all_node_properties_dict.keys():
-            prompt_ready_schema += f"Node name: '{label}', Node properties: {self._all_node_properties_dict.get(label)}\n"
+            prompt_ready_schema += (
+                "Node name: '{label}', Node properties: {properties}\n".format(
+                    label=label,
+                    properties=sorted(
+                        self._all_node_properties_dict.get(label),
+                        key=lambda prop: prop[Parameter.PROPERTY.value],
+                    ),
+                )
+            )
 
         prompt_ready_schema += "\nRelationship properties are the following:\n"
         for rel in self._all_relationship_properties_dict.keys():
-            prompt_ready_schema += f"Relationship Name: '{rel}', Relationship Properties: {self._all_relationship_properties_dict.get(rel)}\n"
+            prompt_ready_schema += "Relationship name: '{name}', Relationship properties: {properties}\n".format(
+                name=rel,
+                properties=sorted(
+                    self._all_relationship_properties_dict.get(rel),
+                    key=lambda prop: prop[Parameter.PROPERTY.value],
+                ),
+            )
 
         prompt_ready_schema += "\nThe relationships are the following:\n"
 
