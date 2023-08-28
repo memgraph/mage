@@ -1,0 +1,7 @@
+query: >
+  MATCH (s1:Student {name: 'Ana'})
+  CALL label.exists(s1, "Teacher") YIELD exists
+  RETURN exists
+
+output:
+  - exists: False
