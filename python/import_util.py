@@ -59,7 +59,6 @@ def create_edge(
     type: str,
     vertex_ids: Dict[Union[int, str], int],
 ):
-    print(vertex_ids)
     vertex_from = ctx.graph.get_vertex_by_id(vertex_ids[start_node_id])
     vertex_to = ctx.graph.get_vertex_by_id(vertex_ids[end_node_id])
     edge = ctx.graph.create_edge(vertex_from, vertex_to, mgp.EdgeType(type))
