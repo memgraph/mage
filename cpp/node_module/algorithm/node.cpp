@@ -6,7 +6,7 @@
 
 namespace {
 
-std::unordered_map<std::string_view, uint8_t> get_type_direction(const mgp::Value &types) {
+std::unordered_map<std::string_view, uint8_t> GetTypeDirection(const mgp::Value &types) {
   std::unordered_map<std::string_view, uint8_t> result;
   for (const auto &type_value : types.ValueList()) {
     auto type = type_value.ValueString();
@@ -24,8 +24,8 @@ std::unordered_map<std::string_view, uint8_t> get_type_direction(const mgp::Valu
   return result;
 }
 
-mgp::List get_relationship_types(const mgp::Value &node_value, const mgp::Value &types_value) {
-  auto type_direction = get_type_direction(types_value);
+mgp::List GetRelationshipTypes(const mgp::Value &node_value, const mgp::Value &types_value) {
+  auto type_direction = GetTypeDirection(types_value);
 
   std::unordered_set<std::string_view> types;
   const auto node = node_value.ValueNode();
@@ -150,8 +150,8 @@ void Node::RelationshipExists(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
         out_rels.insert(pattern.substr(0, pattern.size() - 1));
         continue;
       }
-      in_rels.insert(std::move(pattern));
-      out_rels.insert(std::move(pattern));
+      in_rels.insert(pattern);
+      out_rels.insert(pattern);
     }
 
     auto record = record_factory.NewRecord();
@@ -170,7 +170,7 @@ void Node::RelationshipTypes(mgp_list *args, mgp_graph *memgraph_graph, mgp_resu
   const auto record_factory = mgp::RecordFactory(result);
   try {
     auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultRelationshipTypes).c_str(), get_relationship_types(arguments[0], arguments[1]));
+    record.Insert(std::string(kResultRelationshipTypes).c_str(), GetRelationshipTypes(arguments[0], arguments[1]));
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
