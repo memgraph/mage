@@ -1,10 +1,10 @@
 #include "neighbors.hpp"
 
-#include <unordered_set>
 #include <fmt/format.h>
+#include <list>
+#include <unordered_set>
 
-
-bool Known(const mgp::Node &node, std::vector<std::unordered_set<mgp::Node>> &list) {
+bool Known(const mgp::Node &node, std::list<std::unordered_set<mgp::Node>> &list) {
   for (auto element : list) {
     if (element.contains(node)) {
       return true;
@@ -51,7 +51,7 @@ void Neighbors::AtHop(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
 
     DetermineDirection(rel_types, in_rels, out_rels);
 
-    std::vector<std::unordered_set<mgp::Node>> list;
+    std::list<std::unordered_set<mgp::Node>> list;
     std::unordered_set<mgp::Node> set;
     set.insert(node);
     list.push_back(set);
@@ -105,7 +105,7 @@ void Neighbors::ByHop(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
 
     DetermineDirection(rel_types, in_rels, out_rels);
 
-    std::vector<std::unordered_set<mgp::Node>> list;
+    std::list<std::unordered_set<mgp::Node>> list;
     std::unordered_set<mgp::Node> set;
     set.insert(node);
     list.push_back(set);
