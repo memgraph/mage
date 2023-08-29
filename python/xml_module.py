@@ -6,6 +6,7 @@ TYPE = "_type"
 TEXT = "_text"
 CHILDREN = "_children"
 
+
 def parse_element(element, simple):
     result = {TYPE: element.tag}
 
@@ -22,15 +23,18 @@ def parse_element(element, simple):
         children_name = CHILDREN
         if simple:
             children_name = "_" + str(element.tag)
-        result[children_name] = [parse_element(child, simple) for child in children]
+        result[children_name] = [
+            parse_element(child, simple) for child in children
+        ]
 
     return result
+
 
 def xml_file_to_string(xml_file):
     xml_string = ""
     try:
-        with open(xml_file, 'r') as xml_file:
-            xml_string = xml_file.read().replace('\n', '').replace('  ', '')
+        with open(xml_file, "r") as xml_file:
+            xml_string = xml_file.read().replace("\n", "").replace("  ", "")
     except PermissionError:
         raise PermissionError(
             "You don't have permissions to write into that file. Make sure to give the necessary permissions to user memgraph."
@@ -39,9 +43,9 @@ def xml_file_to_string(xml_file):
         raise OSError("Could not open or write to file.")
     return xml_string
 
-@mgp.function
-def parse(xml_input: str, simple: bool = False, path: str = "")-> mgp.Map:
 
+@mgp.function
+def parse(xml_input: str, simple: bool = False, path: str = "") -> mgp.Map:
     """
     Function to parse xml string (or file) into a map.
 
@@ -72,13 +76,15 @@ def parse(xml_input: str, simple: bool = False, path: str = "")-> mgp.Map:
 def check_url(url):
     if not url.endswith(".xml"):
         raise ValueError("File must be xml!")
-    
+
+
 def xpath_search(root, xpath_expression):
     try:
         result = root.findall(xpath_expression)
         return result
     except Exception as e:
         raise ValueError(f"XPath search error: {e}")
+
 
 """
 Note: our implementation of xpath is different from neo4j, because python offers different support for xpath than java
@@ -90,7 +96,13 @@ https://docs.python.org/3/library/xml.etree.elementtree.html#xpath-support here 
 
 
 @mgp.read_proc
-def load(xml_url: str, simple: bool = False, path: str = "", xpath: str = "", headers: mgp.Map = {}) -> mgp.Record(output_map=mgp.Map):
+def load(
+    xml_url: str,
+    simple: bool = False,
+    path: str = "",
+    xpath: str = "",
+    headers: mgp.Map = {},
+) -> mgp.Record(output_map=mgp.Map):
     """
     Procedure to load XML from url or from file to a map.
 
@@ -104,13 +116,13 @@ def load(xml_url: str, simple: bool = False, path: str = "", xpath: str = "", he
     path: str = ""
         Path to XML file which is to be parsed, if it is not "", XML url is ignored and only file is parsed. If it is left as default, file path is ignored.
     xpath: str = ""
-        Xpath expression which specifies which elements shall be returned. If left as "", it will be ignored, otherwise, only elements in XML file which satisfy 
+        Xpath expression which specifies which elements shall be returned. If left as "", it will be ignored, otherwise, only elements in XML file which satisfy
         expression are returned.
     headers: mgp.Map ={}
         Additional HTTP headers used in url request.
 
     Returns:
-        mgp.Map -> XML file or URL parsed as map. In case XPATH is active, a map of for each element will be returned. 
+        mgp.Map -> XML file or URL parsed as map. In case XPATH is active, a map of for each element will be returned.
     """
     root = None
     parser = ET.DefusedXMLParser()
@@ -129,8 +141,9 @@ def load(xml_url: str, simple: bool = False, path: str = "", xpath: str = "", he
         record_list = list()
         xpath_list = xpath_search(root, xpath)
         for element in xpath_list:
-            record_list.append(mgp.Record(output_map = parse_element(element, simple)))
+            record_list.append(
+                mgp.Record(output_map=parse_element(element, simple))
+            )
         return record_list
     output_map = parse_element(root, simple)
-    return mgp.Record(output_map = output_map)
-
+    return mgp.Record(output_map=output_map)
