@@ -113,27 +113,26 @@ def get_graph(ctx: mgp.ProcCtx) -> List[Union[Node, Relationship]]:
     return nodes + relationships
 
 
-def get_graph_from_lists(node_list: list, relationship_list: list):
+def get_graph_info_from_lists(node_list: list, relationship_list: list):
     graph = list()
     all_node_properties = list()
     all_node_prop_set = set()
-    relationship_properties = list()
-    relationship_prop_set = set()
+    all_relationship_properties = list()
+    all_relationship_prop_set = set()
 
     for node in node_list:
         for prop in node.properties:
             if not prop in all_node_prop_set:
                 all_node_properties.append(prop)
                 all_node_prop_set.add(prop)
-        all_node_properties.sort()
         graph.append(Node(node.id, node.labels, node.properties))
+    all_node_properties.sort()
 
     for relationship in relationship_list:
         for prop in relationship.properties:
-            if not prop in relationship_prop_set:
-                relationship_properties.append(prop)
-                relationship_prop_set.add(prop)
-        relationship_properties.sort()
+            if not prop in all_relationship_prop_set:
+                all_relationship_properties.append(prop)
+                all_relationship_prop_set.add(prop)
 
         graph.append(
             Relationship(
@@ -144,11 +143,14 @@ def get_graph_from_lists(node_list: list, relationship_list: list):
                 relationship.from_vertex.id,
             )
         )
+    all_relationship_properties.sort()
 
-    return graph, all_node_properties, relationship_properties
+    return graph, all_node_properties, all_relationship_properties
 
 
-def csv_header(node_properties: list, relationship_properties: list) -> list:
+def csv_header(
+    node_properties: List[str], relationship_properties: List[str]
+) -> List[str]:
     """
     This function creates the header for csv file
     """
@@ -166,7 +168,9 @@ def csv_header(node_properties: list, relationship_properties: list) -> list:
 
 
 def csv_data_list(
-    graph: list, node_properties: list, relationship_properties: list
+    graph: List[Union[Node, Relationship]],
+    node_properties: List[str],
+    relationship_properties: List[str],
 ) -> list:
     """
     Function that parses graph into a data_list appropriate for csv writing
@@ -174,10 +178,10 @@ def csv_data_list(
     data_list = []
     for element in graph:
         write_list = []
-        IsNode = isinstance(element, Node)
+        is_node = isinstance(element, Node)
 
-        # id and labels
-        if IsNode:
+        # processing id and labels part
+        if is_node:
             write_list.extend(
                 [
                     element.id,
@@ -189,7 +193,7 @@ def csv_data_list(
 
         # node_properties
         for prop in node_properties:
-            if prop in element.properties and IsNode:
+            if prop in element.properties and is_node:
                 if isinstance(
                     element.properties[prop], (set, list, tuple, map)
                 ):
@@ -204,7 +208,7 @@ def csv_data_list(
             else:
                 write_list.append("")
         # relationship
-        if IsNode:
+        if is_node:
             # start, end, type
             write_list.extend(["", "", ""])
         else:
@@ -213,7 +217,7 @@ def csv_data_list(
 
         # relationship properties
         for prop in relationship_properties:
-            if prop in element.properties and not IsNode:
+            if prop in element.properties and not is_node:
                 if isinstance(
                     element.properties[prop], (set, list, tuple, map)
                 ):
@@ -233,38 +237,37 @@ def csv_data_list(
     return data_list
 
 
+def CheckConfigValid(config, type, name):
+    if not isinstance(config, type):
+        raise TypeError(
+            "Config attribute {0} must be of type {1}".format(name, type)
+        )
+
+
 def csv_process_config(config: mgp.Map):
     delimiter = ","
     if "delimiter" in config:
-        if not isinstance(config["delimiter"], str):
-            raise TypeError(
-                "Config attribute delimiter must be of type string"
-            )
+        CheckConfigValid(config["delimiter"], str, "delimiter")
 
         delimiter = config["delimiter"]
 
     quoting_type = csv.QUOTE_ALL
     if "quotes" in config:
-        if not isinstance(config["quotes"], str):
-            raise TypeError("Config attribute quotes must be of type string")
+        CheckConfigValid(config["quotes"], str, "quotes")
 
         if config["quotes"] == "none":
             quoting_type = csv.QUOTE_NONE
         elif config["quotes"] == "ifNeeded":
             quoting_type = csv.QUOTE_MINIMAL
-    separateHeader = False
 
+    separateHeader = False
     if "separateHeader" in config:
-        if not isinstance(config["separateHeader"], bool):
-            raise TypeError(
-                "Config attribute separateHeader must be of type bool"
-            )
+        CheckConfigValid(config["separateHeader"], bool, "separateHeader")
         separateHeader = config["separateHeader"]
 
     stream = False
     if "stream" in config:
-        if not isinstance(config["stream"], bool):
-            raise TypeError("Config attribute stream must be of type bool")
+        CheckConfigValid(config["stream"], bool, "stream")
         stream = config["stream"]
 
     return delimiter, quoting_type, separateHeader, stream
@@ -361,9 +364,11 @@ def csv_graph(
     delimiter, quoting_type, separateHeader, stream = csv_process_config(
         config
     )
-    graph, node_properties, relationship_properties = get_graph_from_lists(
-        nodes_list, relationships_list
-    )
+    (
+        graph,
+        node_properties,
+        relationship_properties,
+    ) = get_graph_info_from_lists(nodes_list, relationships_list)
     data_list = csv_data_list(graph, node_properties, relationship_properties)
     header = csv_header(node_properties, relationship_properties)
 
