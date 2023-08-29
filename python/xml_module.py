@@ -2,8 +2,12 @@ import mgp
 import defusedxml.ElementTree as ET
 import urllib.request
 
+TYPE = "_type"
+TEXT = "_text"
+CHILDREN = "_children"
+
 def parse_element(element, simple):
-    result = {"_type": element.tag}
+    result = {TYPE: element.tag}
 
     attributes = element.attrib
     if attributes:
@@ -11,12 +15,13 @@ def parse_element(element, simple):
 
     text_content = element.text
     if text_content and text_content.strip():
-        result["_text"] = text_content
+        result[TEXT] = text_content
 
     children = list(element)
     if children:
-        children_name = "_children"
-        if(simple): children_name = "_" + str(element.tag)
+        children_name = CHILDREN
+        if simple:
+            children_name = "_" + str(element.tag)
         result[children_name] = [parse_element(child, simple) for child in children]
 
     return result
@@ -31,7 +36,7 @@ def xml_file_to_string(xml_file):
             "You don't have permissions to write into that file. Make sure to give the necessary permissions to user memgraph."
         )
     except Exception:
-        raise OSError("Could not open or write to the file.")
+        raise OSError("Could not open or write to file.")
     return xml_string
 
 @mgp.function
@@ -56,7 +61,7 @@ def parse(xml_input: str, simple: bool = False, path: str = "")-> mgp.Map:
 
     root = None
     parser = ET.DefusedXMLParser()
-    if path != "":
+    if path:
         root = ET.fromstring(xml_file_to_string(path), parser)
     else:
         root = ET.fromstring(xml_input, parser)
@@ -65,7 +70,7 @@ def parse(xml_input: str, simple: bool = False, path: str = "")-> mgp.Map:
 
 
 def check_url(url):
-    if(not url.endswith(".xml")):
+    if not url.endswith(".xml"):
         raise ValueError("File must be xml!")
     
 def xpath_search(root, xpath_expression):
@@ -109,7 +114,7 @@ def load(xml_url: str, simple: bool = False, path: str = "", xpath: str = "", he
     """
     root = None
     parser = ET.DefusedXMLParser()
-    if path != "":
+    if path:
         root = ET.fromstring(xml_file_to_string(path), parser)
     else:
         check_url(xml_url)
