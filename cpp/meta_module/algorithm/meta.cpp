@@ -197,7 +197,7 @@ void OutputFromMetadata(Metadata &data, const mgp::RecordFactory &record_factory
 }  // namespace
 
 void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard(memory);
+  mgp::memory = memory;
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
 
@@ -273,7 +273,7 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
 }
 
 void StatsOnline(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard(memory);
+  mgp::memory = memory;
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
 
@@ -295,7 +295,7 @@ void StatsOnline(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, 
 }
 
 void StatsOffline(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard(memory);
+  mgp::memory = memory;
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
 
@@ -311,7 +311,7 @@ void StatsOffline(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
 }
 
 void Reset(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard(memory);
+  mgp::memory = memory;
   const auto record_factory = mgp::RecordFactory(result);
 
   try {
