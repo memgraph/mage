@@ -1,8 +1,9 @@
 #include "path.hpp"
+#include <algorithm>
 #include "mgp.hpp"
 
 void Path::Create(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard(memory);
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
@@ -30,12 +31,8 @@ void Path::Create(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
       }
 
       auto contains = [](mgp::Relationships relationships, const mgp::Id id) {
-        for (const auto relationship : relationships) {
-          if (relationship.To().Id() == id) {
-            return true;
-          }
-        }
-        return false;
+        return std::any_of(relationships.begin(), relationships.end(),
+                           [id](const auto relationship) { return relationship.To().Id() == id; });
       };
 
       if ((endpoint_is_from && !contains(rel.From().OutRelationships(), rel.To().Id())) ||
