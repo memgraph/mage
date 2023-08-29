@@ -1,11 +1,14 @@
-from datetime import datetime, date, time, timedelta
 import json as js
-from mage.export_import_util.parameters import Parameter
-import mgp
-from typing import Union, List, Dict, Any
-import defusedxml.ElementTree as ET
-from export_util import convert_to_isoformat_graphML
 import ast
+
+import defusedxml.ElementTree as ET
+
+from datetime import datetime, date, time, timedelta
+from typing import Union, List, Dict, Any
+
+import mgp
+from export_util import convert_to_isoformat_graphML
+from mage.export_import_util.parameters import Parameter
 
 
 def convert_from_isoformat(
@@ -155,7 +158,9 @@ def find_node(
         if (
             label in [label.name for label in vertex.labels]
             and prop_key in vertex.properties.keys()
-            and str(convert_to_isoformat_graphML(vertex.properties.get(prop_key)))
+            and str(
+                convert_to_isoformat_graphML(vertex.properties.get(prop_key))
+            )
             == prop_value
         ):
             return vertex.id
@@ -197,6 +202,8 @@ def set_default_keys(key_dict: Dict[str, Any], properties: Dict[str, Any]):
 
 
 def set_default_config(config: mgp.Map):
+    if config is None:
+        config = dict()
     if not config.get("readLabels"):
         config.update({"readLabels": False})
     if not config.get("defaultRelationshipType"):
@@ -230,7 +237,7 @@ def set_default_config(config: mgp.Map):
 def graphml(
     ctx: mgp.ProcCtx,
     path: str = "",
-    config: mgp.Map = {},
+    config: Union[mgp.Map, None] = None,
 ) -> mgp.Record(status=str):
     """
     Procedure to export the whole database to a graphML file.
@@ -302,7 +309,7 @@ def graphml(
             if config.get("readLabels") and data.attrib["key"] == "labels":
                 new_labels = data.text.split(":")
                 new_labels.pop(0)
-                if (new_labels != labels):
+                if new_labels != labels:
                     labels = labels + new_labels
             else:
                 properties.update({key[0]: cast(data.text, key[1], key[2])})
@@ -330,7 +337,9 @@ def graphml(
         if rel.attrib["source"] not in real_ids.keys():
             if not config.get("source"):
                 # without source/target config, we look for the internal id
-                real_ids.update({rel.attrib["source"]: int(rel.attrib["source"])})
+                real_ids.update(
+                    {rel.attrib["source"]: int(rel.attrib["source"])}
+                )
             else:
                 source_config = config.get("source")
                 if "id" not in source_config.keys():
@@ -346,7 +355,9 @@ def graphml(
         if rel.attrib["target"] not in real_ids.keys():
             if not config.get("target"):
                 # without source/target config, we look for the internal id
-                real_ids.update({rel.attrib["target"]: int(rel.attrib["target"])})
+                real_ids.update(
+                    {rel.attrib["target"]: int(rel.attrib["target"])}
+                )
             else:
                 target_config = config.get("target")
                 if "id" not in target_config.keys():

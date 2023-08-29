@@ -3,7 +3,6 @@ import io
 import json as js
 import mgp
 
-from math import floor
 from dataclasses import dataclass
 from datetime import datetime, date, time, timedelta
 from gqlalchemy import Memgraph
@@ -77,7 +76,7 @@ def convert_to_isoformat(
         return property
 
 
-def to_duration_iso_format(value: timedelta) -> str:
+def to_duration_isoformat(value: timedelta) -> str:
     """Converts timedelta to ISO-8601 duration: P<date>T<time>"""
     date_parts: List[str] = []
     time_parts: List[str] = []
@@ -87,9 +86,8 @@ def to_duration_iso_format(value: timedelta) -> str:
 
     if value.seconds != 0 or value.microseconds != 0:
         abs_seconds = abs(value.seconds)
-        hours = floor(abs_seconds / 3600)
-        minutes = floor((abs_seconds - hours * 3600) / 60)
-        seconds = abs_seconds - hours * 3600 - minutes * 60
+        minutes, seconds = divmod(abs_seconds, 60)
+        hours, minutes = divmod(minutes, 60)
         microseconds = value.microseconds
 
         if hours > 0:
@@ -126,7 +124,7 @@ def convert_to_isoformat_graphML(
     ]
 ):
     if isinstance(property, timedelta):
-        return to_duration_iso_format(property)
+        return to_duration_isoformat(property)
 
     if isinstance(property, (time, date, datetime)):
         return property.isoformat()
@@ -186,7 +184,7 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
         Path to the JSON file containing the exported graph database.
     """
 
-    graph = get_graph(ctx, 0)
+    graph = get_graph(ctx, False)
     try:
         with open(path, "w") as outfile:
             js.dump(
@@ -211,7 +209,7 @@ def json_stream(ctx: mgp.ProcCtx) -> mgp.Record(stream=str):
     """
     Procedure to export the whole database to a stream.
     """
-    return mgp.Record(stream=js.dumps(get_graph(ctx, 0)))
+    return mgp.Record(stream=js.dumps(get_graph(ctx, False)))
 
 
 def save_file(file_path: str, data_list: list):
@@ -313,7 +311,7 @@ def csv_query(
     return mgp.Record(file_path=file_path, data=data)
 
 
-def write_header(output: io.StringIO):
+def write_graphml_header(output: io.StringIO):
     output.write('<?xml version="1.0" encoding="UTF-8"?>\n')
     output.write(
         '<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">\n'  # noqa: E501
@@ -334,29 +332,28 @@ def translate_types(variable: Any):
     )
 
 
-def check_if_elements_same_type(variable: Any):
+def check_if_elements_same_type(variable: List[Any]):
+    list_type = type(variable[0])
     for element in variable:
-        if not isinstance(element, type(variable[0])):
+        if not isinstance(element, list_type):
             raise Exception(
                 "If property value is a list it must consist of same typed elements."  # noqa: E501
             )
 
 
 def get_type_string(variable: Any) -> Union[str, List[Any]]:
-    if (
-        isinstance(variable, tuple)
-    ):
-        if len(variable) == 0:
-            return ["string", "string"]
-        check_if_elements_same_type(variable)
-        return [
-            "string",
-            translate_types(variable[0]),
-        ]
-    return translate_types(variable)
+    if not isinstance(variable, tuple):
+        return translate_types(variable)
+    if len(variable) == 0:
+        return ["string", "string"]
+    check_if_elements_same_type(variable)
+    return [
+        "string",
+        translate_types(variable[0]),
+    ]
 
 
-def write_keys(
+def write_graphml_keys(
     graph: List[Union[Node, Relationship]],
     output: io.StringIO,
     config: mgp.Map,
@@ -407,7 +404,7 @@ def write_keys(
         output.write("/>\n")
 
 
-def write_graph(output: io.StringIO):
+def write_graphml_graph_id(output: io.StringIO):
     output.write('<graph id="G" edgedefault="directed">\n')
 
 
@@ -429,14 +426,7 @@ def write_labels_as_data(
 ):
     if not element.get("labels"):
         return
-    if config.get("format").upper() == "TINKERPOP":
-        output.write('<data key="labelV">')
-        for i in range(0, len(element.get("labels"))):
-            if i == 0:
-                output.write(element.get("labels")[i])
-            else:
-                output.write(f':{element.get("labels")[i]}')
-        output.write("</data>")
+
     if config.get("format").upper() == "GEPHI":
         output.write('<data key="TYPE">')
         for label in element.get("labels"):
@@ -445,11 +435,21 @@ def write_labels_as_data(
         output.write(
             f'<data key="label">{get_gephi_label_value(element, config)}</data>'  # noqa: E501
         )
-    else:
-        output.write('<data key="labels">')
-        for label in element.get("labels"):
-            output.write(f":{label}")
+        return
+
+    if config.get("format").upper() == "TINKERPOP":
+        output.write('<data key="labelV">')
+        for index, value in enumerate(element.get("labels")):
+            if index == 0:
+                output.write(value)
+            else:
+                output.write(f":{value}")
         output.write("</data>")
+
+    output.write('<data key="labels">')
+    for label in element.get("labels"):
+        output.write(f":{label}")
+    output.write("</data>")
 
 
 def get_value_string(value: Any) -> str:
@@ -458,60 +458,63 @@ def get_value_string(value: Any) -> str:
     return str(value)
 
 
-def write_nodes_and_rels(
+def process_graph_ml_node_object(
+    output: io.StringIO, element: Union[Node, Relationship], config: mgp.Map
+):
+    output.write(f'<node id="n{str(element.get("id"))}')
+    if element.get("labels") and config.get("format").upper() != "TINKERPOP":
+        output.write('" labels="')
+        for label in element.get("labels"):
+            output.write(f":{label}")
+    output.write('">')
+
+    write_labels_as_data(element, output, config)
+
+    for key, value in element.get("properties").items():
+        output.write(f'<data key="{key}">{get_value_string(value)}</data>')
+    output.write("</node>\n")
+
+
+def process_graph_ml_relationship_object(
+    output: io.StringIO, element: Union[Node, Relationship], config: mgp.Map
+):
+    output.write(
+        f'<edge id="e{str(element.get("id"))}" source="n{str(element.get("start"))}" target="n{str(element.get("end"))}" label="{element.get("label")}">'  # noqa: E501
+    )
+
+    if config.get("format").upper() == "TINKERPOP":
+        output.write(f'<data key="labelE">{element.get("label")}</data>')
+    else:
+        output.write(f'<data key="label">{element.get("label")}</data>')
+    if config.get("format").upper() == "GEPHI":
+        output.write(f'<data key="TYPE">{element.get("label")}</data>')
+
+    for key, value in element.get("properties").items():
+        output.write(f'<data key="{key}">{get_value_string(value)}</data>')
+    output.write("</edge>\n")
+
+
+def write_graphml_nodes_and_rels(
     graph: List[Union[Node, Relationship]],
     output: io.StringIO,
     config: mgp.Map,
 ):
     for element in graph:
         if element.get("type") == "node":
-            output.write(f'<node id="n{str(element.get("id"))}')
-            if (
-                element.get("labels")
-                and config.get("format").upper() != "TINKERPOP"
-            ):
-                output.write('" labels="')
-                for label in element.get("labels"):
-                    output.write(f":{label}")
-            output.write('">')
-
-            write_labels_as_data(element, output, config)
-
-            for key, value in element.get("properties").items():
-                output.write(
-                    f'<data key="{key}">{get_value_string(value)}</data>'
-                )
-            output.write("</node>\n")
+            process_graph_ml_node_object(output, element, config)
 
         elif element.get("type") == "relationship":
-            output.write(
-                f'<edge id="e{str(element.get("id"))}" source="n{str(element.get("start"))}" target="n{str(element.get("end"))}" label="{element.get("label")}">'  # noqa: E501
-            )
-
-            if config.get("format").upper() == "TINKERPOP":
-                output.write(
-                    f'<data key="labelE">{element.get("label")}</data>'
-                )
-            else:
-                output.write(
-                    f'<data key="label">{element.get("label")}</data>'
-                )
-            if config.get("format").upper() == "GEPHI":
-                output.write(f'<data key="TYPE">{element.get("label")}</data>')
-
-            for key, value in element.get("properties").items():
-                output.write(
-                    f'<data key="{key}">{get_value_string(value)}</data>'
-                )
-            output.write("</edge>\n")
+            process_graph_ml_relationship_object
 
 
-def write_footer(output: io.StringIO):
+def write_graphml_footer(output: io.StringIO):
     output.write("</graph>\n")
     output.write("</graphml>")
 
 
 def set_default_config(config: mgp.Map):
+    if config is None:
+        config = dict()
     if not config.get("stream"):
         config.update({"stream": False})
     if not config.get("format"):
@@ -542,7 +545,7 @@ def set_default_config(config: mgp.Map):
 def graphml(
     ctx: mgp.ProcCtx,
     path: str = "",
-    config: mgp.Map = {},
+    config: Union[mgp.Map, None] = None,
 ) -> mgp.Record(status=str):
     """
     Procedure to export the whole database to a graphML file.
@@ -555,7 +558,7 @@ def graphml(
 
     """
 
-    graph = get_graph(ctx, 1)
+    graph = get_graph(ctx, True)
     set_default_config(config)
 
     if config.get("leaveOutLabels") or config.get("leaveOutProperties"):
@@ -572,11 +575,11 @@ def graphml(
             "Please provide file name or set stream to True in config."
         )
 
-    write_header(output)
-    write_keys(graph, output, config)
-    write_graph(output)
-    write_nodes_and_rels(graph, output, config)
-    write_footer(output)
+    write_graphml_header(output)
+    write_graphml_keys(graph, output, config)
+    write_graphml_graph_id(output)
+    write_graphml_nodes_and_rels(graph, output, config)
+    write_graphml_footer(output)
 
     try:
         if path:
