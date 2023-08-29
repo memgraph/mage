@@ -120,7 +120,7 @@ def load(xml_url: str, simple: bool = False, path: str = "", xpath: str = "", he
         except Exception as e:
             raise ValueError(f"Error while fetching or parsing XML: {e}")
 
-    if(xpath):
+    if xpath:
         record_list = list()
         xpath_list = xpath_search(root, xpath)
         for element in xpath_list:
