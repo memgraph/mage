@@ -1,0 +1,6 @@
+memgraph_query: >
+  CALL refactor.categorize('genre', 'GENRE', false, "Genre", "name") YIELD status RETURN status;
+
+
+neo4j_query: >
+  CALL apoc.refactor.categorize('genre', 'GENRE', false, "Genre", "name", [], 100);
