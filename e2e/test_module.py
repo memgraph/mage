@@ -3,8 +3,9 @@ import pytest
 import yaml
 
 from pathlib import Path
-from gqlalchemy import Memgraph, Node
+from gqlalchemy import Memgraph, Node, Path as path_gql
 from mgclient import Node as node_mgclient
+from mgclient import Relationship as relationship_mgclient
 
 
 @pytest.fixture
@@ -35,6 +36,25 @@ def _node_to_dict(data):
     return {"labels": list(labels), "properties": properties}
 
 
+def _relationship_to_dict(data):
+    label = data.type if hasattr(data, "label") else data._type
+    properties = data.properties if hasattr(data, "properties") else data._properties
+    return {"label": label, "properties": properties}
+
+
+def _path_to_dict(data):
+    nodes = data.nodes if hasattr(data, "nodes") else data._nodes
+    relationships = (
+        data.relationships if hasattr(data, "relationships") else data._relationships
+    )
+    return {
+        "nodes": [_node_to_dict(node) for node in nodes],
+        "relationships": [
+            _relationship_to_dict(relationship) for relationship in relationships
+        ],
+    }
+
+
 def _replace(data, match_classes):
     if isinstance(data, dict):
         return {k: _replace(v, match_classes) for k, v in data.items()}
@@ -44,6 +64,10 @@ def _replace(data, match_classes):
         return pytest.approx(data, abs=TestConstants.ABSOLUTE_TOLERANCE)
     elif isinstance(data, node_mgclient):
         return _node_to_dict(data)
+    elif isinstance(data, relationship_mgclient):
+        return _relationship_to_dict(data)
+    elif isinstance(data, path_gql):
+        return _path_to_dict(data)
     else:
         return _node_to_dict(data) if isinstance(data, match_classes) else data
 
