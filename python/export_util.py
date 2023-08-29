@@ -122,7 +122,7 @@ def get_graph_info_from_lists(node_list: list, relationship_list: list):
 
     for node in node_list:
         for prop in node.properties:
-            if not prop in all_node_prop_set:
+            if prop not in all_node_prop_set:
                 all_node_properties.append(prop)
                 all_node_prop_set.add(prop)
         graph.append(Node(node.id, node.labels, node.properties))
@@ -130,7 +130,7 @@ def get_graph_info_from_lists(node_list: list, relationship_list: list):
 
     for relationship in relationship_list:
         for prop in relationship.properties:
-            if not prop in all_relationship_prop_set:
+            if prop not in all_relationship_prop_set:
                 all_relationship_properties.append(prop)
                 all_relationship_prop_set.add(prop)
 
