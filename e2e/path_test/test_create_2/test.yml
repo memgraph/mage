@@ -13,13 +13,7 @@ output:
   - path:
       nodes:
         - labels:
-            - Country
+          - Country
           properties:
             name: Spain
-        - labels:
-            - City
-          properties:
-            name: Madrid
-      relationships:
-        - label: IN_COUNTRY
-          properties: {}
+      relationships: []

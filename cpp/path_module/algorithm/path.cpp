@@ -20,7 +20,30 @@ void Path::Create(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
         throw mgp::ValueException("Expected relationship or null type, got " + oss.str());
       }
 
-      path.Expand(relationship.ValueRelationship());
+      const auto rel = relationship.ValueRelationship();
+      auto last_node = path.GetNodeAt(path.Length());
+
+      bool endpoint_is_from = false;
+
+      if (last_node.Id() == rel.From().Id()) {
+        endpoint_is_from = true;
+      }
+
+      auto contains = [](mgp::Relationships relationships, const mgp::Id id) {
+        for (const auto relationship : relationships) {
+          if (relationship.To().Id() == id) {
+            return true;
+          }
+        }
+        return false;
+      };
+
+      if ((endpoint_is_from && !contains(rel.From().OutRelationships(), rel.To().Id())) ||
+          (!endpoint_is_from && !contains(rel.To().OutRelationships(), rel.From().Id()))) {
+        break;
+      }
+
+      path.Expand(rel);
     }
 
     auto record = record_factory.NewRecord();
