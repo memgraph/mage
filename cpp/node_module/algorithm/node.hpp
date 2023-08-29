@@ -20,10 +20,10 @@ constexpr std::string_view kArgumentsPattern = "pattern";
 constexpr std::string_view kResultRelationshipExists = "exists";
 
 /* relationship_types constants */
-constexpr const std::string_view kProcedureRelationshipTypes = "relationship_types";
-constexpr const std::string_view kRelationshipTypesArg1 = "node";
-constexpr const std::string_view kRelationshipTypesArg2 = "types";
-constexpr const std::string_view kResultRelationshipTypes = "relationship_types";
+constexpr std::string_view kProcedureRelationshipTypes = "relationship_types";
+constexpr std::string_view kRelationshipTypesArg1 = "node";
+constexpr std::string_view kRelationshipTypesArg2 = "types";
+constexpr std::string_view kResultRelationshipTypes = "relationship_types";
 
 void RelationshipsExist(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
