@@ -44,7 +44,7 @@ void Create::RemoveRelProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_
 
     std::unordered_set<int64_t> ids;
 
-    auto ParseValue = [&](const mgp::Value &value) {
+    auto ProcessValue = [&](const mgp::Value &value) {
       if (value.IsRelationship()) {
         auto relationship_copy = value.ValueRelationship();
         DeleteAndOutput(relationship_copy, keys, record_factory);
@@ -56,10 +56,10 @@ void Create::RemoveRelProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_
     };
 
     if (!arguments[0].IsList()) {
-      ParseValue(arguments[0]);
+      ProcessValue(arguments[0]);
     } else {
       for (const auto &list_item : arguments[0].ValueList()) {
-        ParseValue(list_item);
+        ProcessValue(list_item);
       }
     }
 
@@ -95,7 +95,7 @@ void Create::SetRelProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
 
     std::unordered_set<int64_t> ids;
 
-    auto ParseValue = [&](const mgp::Value &value) {
+    auto ProcessValue = [&](const mgp::Value &value) {
       if (value.IsRelationship()) {
         auto relationship_copy = value.ValueRelationship();
         ModifyAndOutput(relationship_copy, keys, values, record_factory);
@@ -107,10 +107,10 @@ void Create::SetRelProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
     };
 
     if (!arguments[0].IsList()) {
-      ParseValue(arguments[0]);
+      ProcessValue(arguments[0]);
     } else {
       for (const auto &list_item : arguments[0].ValueList()) {
-        ParseValue(list_item);
+        ProcessValue(list_item);
       }
     }
 
