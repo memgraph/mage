@@ -1,5 +1,7 @@
 #include "path.hpp"
+
 #include <algorithm>
+
 #include "mgp.hpp"
 
 void Path::Create(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
