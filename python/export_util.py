@@ -13,6 +13,8 @@ from typing import Any, Dict, List, Union
 
 from mage.export_import_util.parameters import Parameter
 
+HEADER_PATH = "header.csv"
+
 
 @dataclass
 class Node:
@@ -112,25 +114,19 @@ def get_graph(ctx: mgp.ProcCtx) -> List[Union[Node, Relationship]]:
 
 
 def get_graph_from_lists(node_list: list, relationship_list: list):
-
     graph = list()
-    node_properties = list()
-    node_prop_set = set()
+    all_node_properties = list()
+    all_node_prop_set = set()
     relationship_properties = list()
     relationship_prop_set = set()
 
-
     for node in node_list:
         for prop in node.properties:
-            if not prop in node_prop_set:
-                node_properties.append(prop)
-                node_prop_set.add(prop)
-        node_properties.sort()
-        graph.append(
-
-            Node(node.id, node.labels, node.properties)
-
-        )
+            if not prop in all_node_prop_set:
+                all_node_properties.append(prop)
+                all_node_prop_set.add(prop)
+        all_node_properties.sort()
+        graph.append(Node(node.id, node.labels, node.properties))
 
     for relationship in relationship_list:
         for prop in relationship.properties:
@@ -140,30 +136,23 @@ def get_graph_from_lists(node_list: list, relationship_list: list):
         relationship_properties.sort()
 
         graph.append(
-
             Relationship(
-
                 relationship.to_vertex.id,
-
                 relationship.id,
-
                 relationship.type.name,
-
                 relationship.properties,
-
                 relationship.from_vertex.id,
-
             )
-
         )
 
-    return graph, node_properties, relationship_properties
+    return graph, all_node_properties, relationship_properties
+
 
 def csv_header(node_properties: list, relationship_properties: list) -> list:
     """
-    This function creates the header for csv file 
+    This function creates the header for csv file
     """
-    header = ["_id","_labels"]
+    header = ["_id", "_labels"]
 
     for prop in node_properties:
         header.append(prop)
@@ -175,8 +164,10 @@ def csv_header(node_properties: list, relationship_properties: list) -> list:
 
     return header
 
-def csv_data_list(graph: list, node_properties: list, relationship_properties: list) -> list:
 
+def csv_data_list(
+    graph: list, node_properties: list, relationship_properties: list
+) -> list:
     """
     Function that parses graph into a data_list appropriate for csv writing
     """
@@ -184,61 +175,78 @@ def csv_data_list(graph: list, node_properties: list, relationship_properties: l
     for element in graph:
         write_list = []
         IsNode = isinstance(element, Node)
-        
-        #id and labels
-        if(IsNode):
-            write_list.extend([element.id, "".join(":" + label.name for label in element.labels)])
+
+        # id and labels
+        if IsNode:
+            write_list.extend(
+                [
+                    element.id,
+                    "".join(":" + label.name for label in element.labels),
+                ]
+            )
         else:
             write_list.extend(["", ""])
 
-        #node_properties
+        # node_properties
         for prop in node_properties:
             if prop in element.properties and IsNode:
-                if isinstance(element.properties[prop], (set, list, tuple, map)):
+                if isinstance(
+                    element.properties[prop], (set, list, tuple, map)
+                ):
                     write_list.append(js.dumps(element.properties[prop]))
-                else:   
-                    if isinstance(element.properties[prop],timedelta):
-                        write_list.append(convert_to_isoformat(element.properties[prop]))
+                else:
+                    if isinstance(element.properties[prop], timedelta):
+                        write_list.append(
+                            convert_to_isoformat(element.properties[prop])
+                        )
                     else:
                         write_list.append(element.properties[prop])
             else:
                 write_list.append("")
-        #relationship
-        if(IsNode):
-            #start, end, type
+        # relationship
+        if IsNode:
+            # start, end, type
             write_list.extend(["", "", ""])
         else:
-            #start, end, type
+            # start, end, type
             write_list.extend([element.start, element.end, element.label])
 
-        #relationship properties
+        # relationship properties
         for prop in relationship_properties:
             if prop in element.properties and not IsNode:
-                if isinstance(element.properties[prop], (set, list, tuple, map)):
+                if isinstance(
+                    element.properties[prop], (set, list, tuple, map)
+                ):
                     write_list.append(js.dumps(element.properties[prop]))
-                else:   
-                    if isinstance(element.properties[prop],timedelta):
-                        write_list.append(convert_to_isoformat(element.properties[prop]))
+                else:
+                    if isinstance(element.properties[prop], timedelta):
+                        write_list.append(
+                            convert_to_isoformat(element.properties[prop])
+                        )
                     else:
                         write_list.append(element.properties[prop])
             else:
                 write_list.append("")
-        
+
         data_list.append(write_list)
 
     return data_list
 
-def csv_process_config(config: mgp.Map):
 
+def csv_process_config(config: mgp.Map):
     delimiter = ","
     if "delimiter" in config:
-        if not isinstance(config["delimiter"],str): raise TypeError("Config attribute delimiter must be of type string")
+        if not isinstance(config["delimiter"], str):
+            raise TypeError(
+                "Config attribute delimiter must be of type string"
+            )
 
         delimiter = config["delimiter"]
 
     quoting_type = csv.QUOTE_ALL
     if "quotes" in config:
-        if not isinstance(config["quotes"],str): raise TypeError("Config attribute quotes must be of type string")
+        if not isinstance(config["quotes"], str):
+            raise TypeError("Config attribute quotes must be of type string")
 
         if config["quotes"] == "none":
             quoting_type = csv.QUOTE_NONE
@@ -247,23 +255,28 @@ def csv_process_config(config: mgp.Map):
     separateHeader = False
 
     if "separateHeader" in config:
-        if not isinstance(config["separateHeader"],bool): raise TypeError("Config attribute separateHeader must be of type bool")
+        if not isinstance(config["separateHeader"], bool):
+            raise TypeError(
+                "Config attribute separateHeader must be of type bool"
+            )
         separateHeader = config["separateHeader"]
 
     stream = False
     if "stream" in config:
-        if not isinstance(config["stream"],bool): raise TypeError("Config attribute stream must be of type bool")
+        if not isinstance(config["stream"], bool):
+            raise TypeError("Config attribute stream must be of type bool")
         stream = config["stream"]
 
     return delimiter, quoting_type, separateHeader, stream
 
+
 def header_path(path):
     directory, filename = os.path.split(path)
-    new_filename = "header.csv"
+    new_filename = HEADER_PATH
     return os.path.join(directory, new_filename)
 
 
-#this will probably be removed, since it is written somewhere else?
+# this will probably be removed, since it is written somewhere else?
 def to_duration_iso_format(value: timedelta) -> str:
     """Converts timedelta to ISO-8601 duration: P<date>T<time>"""
     date_parts: List[str] = []
@@ -296,12 +309,22 @@ def to_duration_iso_format(value: timedelta) -> str:
 
     return f"P{date_duration_str}{time_duration_str}"
 
+
+def write_file(path, delimiter, quoting_type, data):
+    with open(path, "w") as file:
+        writer = csv.writer(
+            file, delimiter=delimiter, quoting=quoting_type, escapechar="\\"
+        )
+        writer.writerows(data)
+
+
 @mgp.read_proc
 def csv_graph(
-    nodes_list: mgp.List[mgp.Vertex], relationships_list: mgp.List[mgp.Edge], path: str = "", config: mgp.Map = {}
-
+    nodes_list: mgp.List[mgp.Vertex],
+    relationships_list: mgp.List[mgp.Edge],
+    path: str = "",
+    config: mgp.Map = {},
 ) -> mgp.Record(path=str, data=str):
-
     """
     Procedure to export the given graph to a csv file. The graph is given with two lists, one for nodes, and one for relationships.
 
@@ -313,7 +336,7 @@ def csv_graph(
     nodes_list : List
 
         A list containing nodes of the graph
-    
+
     relationships_list : List
 
         A list containing relationships of the graph
@@ -333,28 +356,32 @@ def csv_graph(
         separateHeader (bool) = False: Flag to separate header into another csv file
 
     """
-    if path == "": path = "exported_file.csv"
-    delimiter, quoting_type, separateHeader, stream = csv_process_config(config)
-    graph, node_properties, relationship_properties = get_graph_from_lists(nodes_list, relationships_list)
+    if path == "":
+        path = "exported_file.csv"
+    delimiter, quoting_type, separateHeader, stream = csv_process_config(
+        config
+    )
+    graph, node_properties, relationship_properties = get_graph_from_lists(
+        nodes_list, relationships_list
+    )
     data_list = csv_data_list(graph, node_properties, relationship_properties)
     header = csv_header(node_properties, relationship_properties)
 
-    data = ""
     try:
-        if(separateHeader):
-            with open(header_path(path), 'w') as file:
-                header_writer = csv.writer(file, delimiter = delimiter, quoting = quoting_type, escapechar= '\\')
-                header_writer.writerows([header])
+        if separateHeader:
+            if not stream:
+                write_file(
+                    header_path(path), delimiter, quoting_type, [header]
+                )
         else:
             data_list = [header] + data_list
 
-        with open(path, 'w') as file:
-            writer = csv.writer(file, delimiter = delimiter, quoting = quoting_type, escapechar= '\\')
-            writer.writerows(data_list)
-
-        data = ""
-        if(stream):
+        if stream:
             data = csv_to_stream(data_list, delimiter, quoting_type)
+            return mgp.Record(path=path, data=data)
+
+        write_file(path, delimiter, quoting_type, data_list)
+
     except PermissionError:
         raise PermissionError(
             "You don't have permissions to write into that file. Make sure to give the necessary permissions to user memgraph."
@@ -363,7 +390,7 @@ def csv_graph(
         raise OSError("Could not open or write to the file.")
     return mgp.Record(
         path=path,
-        data=data,
+        data="",
     )
 
 
@@ -381,7 +408,12 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
     graph = get_graph(ctx)
     try:
         with open(path, "w") as outfile:
-            js.dump(graph, outfile, indent=Parameter.STANDARD_INDENT.value, default=str)
+            js.dump(
+                graph,
+                outfile,
+                indent=Parameter.STANDARD_INDENT.value,
+                default=str,
+            )
     except PermissionError:
         raise PermissionError(
             "You don't have permissions to write into that file. Make sure to give the necessary permissions to user memgraph."
@@ -424,10 +456,14 @@ def save_file(file_path: str, data_list: list):
         raise OSError("Could not open or write to the file.")
 
 
-def csv_to_stream(data_list: list, delimiter: str = ",", quoting_type = csv.QUOTE_NONNUMERIC) -> str:
+def csv_to_stream(
+    data_list: list, delimiter: str = ",", quoting_type=csv.QUOTE_NONNUMERIC
+) -> str:
     output = io.StringIO()
     try:
-        writer = csv.writer(output, delimiter=delimiter, quoting=quoting_type, escapechar= '\\')
+        writer = csv.writer(
+            output, delimiter=delimiter, quoting=quoting_type, escapechar="\\"
+        )
         writer.writerows(data_list)
     except csv.Error as e:
         raise csv.Error(
