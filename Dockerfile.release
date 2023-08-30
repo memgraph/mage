@@ -77,8 +77,8 @@ COPY --from=dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules
 COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
 
 RUN mv /mage/e2e /e2e/ \
-    && rm -rf /mage \
-    && mv /e2e/ /mage/e2e/ \
+    && rm -rf /mage/* \
+    && mv /e2e/ /mage/ \
     && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
     && apt-get -y --purge autoremove clang git curl python3-pip python3-dev cmake build-essential \
     && apt-get clean
