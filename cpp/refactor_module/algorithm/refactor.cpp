@@ -19,10 +19,7 @@ void Refactor::CloneNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
     const auto nodes = arguments[0].ValueList();
     const auto clone_rels = arguments[1].ValueBool();
     const auto skip_props = arguments[2].ValueList();
-    std::unordered_set<std::string_view> skip_props_searchable;
-    for (auto element : skip_props) {
-      skip_props_searchable.insert(element.ValueString());
-    }
+    std::unordered_set<mgp::Value> skip_props_searchable{skip_props.begin(), skip_props.end()};
 
     for (auto node : nodes) {
       mgp::Node old_node = node.ValueNode();
@@ -33,7 +30,7 @@ void Refactor::CloneNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
       }
 
       for (auto prop : old_node.Properties()) {
-        if (skip_props.Empty() || !skip_props_searchable.contains(prop.first)) {
+        if (skip_props.Empty() || !skip_props_searchable.contains(mgp::Value(prop.first))) {
           new_node.SetProperty(prop.first, prop.second);
         }
       }
