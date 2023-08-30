@@ -110,7 +110,7 @@ jobs:
           PYTHONPATH: "$PWD/e2e"
         run: |
           cd e2e
-          docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/python/ && python3 -m pytest . -k 'not cugraph'"
+          docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/e2e/ && python3 -m pytest . -k 'not cugraph'"
       
       - name: Run End-to-end correctness tests
         if: matrix.architecture != 'arm64'
