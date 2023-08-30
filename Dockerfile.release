@@ -78,9 +78,9 @@ COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VE
 
 #copy e2e tests and python modules
 COPY --from=dev /mage/e2e/ /mage/e2e/
-COPY --from=dev /mage/python/ /mage/python/
 
-RUN export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
+RUN chown -R memgraph: /mage/e2e \
+    && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
     && apt-get -y --purge autoremove clang git curl python3-pip python3-dev cmake build-essential \
     && apt-get clean
 
