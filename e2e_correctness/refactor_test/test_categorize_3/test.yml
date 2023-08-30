@@ -1,6 +1,0 @@
-memgraph_query: >
-  CALL refactor.categorize('genre', 'GENRE', false, "Genre", "name", ["propertyToCopy", "name"]) YIELD status RETURN status;
-
-
-neo4j_query: >
-  CALL apoc.refactor.categorize('genre', 'GENRE', false, "Genre", "name", ["propertyToCopy", "name", "id"], 100);
