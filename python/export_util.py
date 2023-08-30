@@ -134,19 +134,30 @@ def convert_to_isoformat_graphML(
 
 
 def get_graph(
-    ctx: mgp.ProcCtx, graphML: bool
+    ctx: mgp.ProcCtx,
+    config: Union[mgp.Map, None] = None,
 ) -> List[Union[Node, Relationship]]:
+    """
+    config : Map
+        - graphML: bool
+        - leaveOutLabels: bool
+        - leaveOutProperties: bool
+
+    """
     nodes = list()
     relationships = list()
 
     for vertex in ctx.graph.vertices:
-        labels = [label.name for label in vertex.labels]
-        if graphML:
+        labels = []
+        properties = dict()
+        if not config.get("leaveOutLabels"):
+            labels = [label.name for label in vertex.labels]
+        if config.get("graphML") and not config.get("leaveOutProperties"):
             properties = {
                 key: convert_to_isoformat_graphML(vertex.properties.get(key))
                 for key in vertex.properties.keys()
             }
-        else:
+        elif not config.get("leaveOutProperties"):
             properties = {
                 key: convert_to_isoformat(vertex.properties.get(key))
                 for key in vertex.properties.keys()
@@ -184,7 +195,7 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
         Path to the JSON file containing the exported graph database.
     """
 
-    graph = get_graph(ctx, False)
+    graph = get_graph(ctx)
     try:
         with open(path, "w") as outfile:
             js.dump(
@@ -209,7 +220,7 @@ def json_stream(ctx: mgp.ProcCtx) -> mgp.Record(stream=str):
     """
     Procedure to export the whole database to a stream.
     """
-    return mgp.Record(stream=js.dumps(get_graph(ctx, False)))
+    return mgp.Record(stream=js.dumps(get_graph(ctx)))
 
 
 def save_file(file_path: str, data_list: list):
@@ -504,7 +515,7 @@ def write_graphml_nodes_and_rels(
             process_graph_ml_node_object(output, element, config)
 
         elif element.get("type") == "relationship":
-            process_graph_ml_relationship_object
+            process_graph_ml_relationship_object(output, element, config)
 
 
 def write_graphml_footer(output: io.StringIO):
@@ -512,7 +523,7 @@ def write_graphml_footer(output: io.StringIO):
     output.write("</graphml>")
 
 
-def set_default_config(config: mgp.Map):
+def set_default_config(config: mgp.Map) -> mgp.Map:
     if config is None:
         config = dict()
     if not config.get("stream"):
@@ -539,6 +550,7 @@ def set_default_config(config: mgp.Map):
             "Config parameter must be a map with specific \
              keys and values described in documentation."
         )
+    return config
 
 
 @mgp.read_proc
@@ -558,15 +570,14 @@ def graphml(
 
     """
 
-    graph = get_graph(ctx, True)
-    set_default_config(config)
+    config = set_default_config(config)
+    graph_config = {"graphML": True}
+    graph_config.update({"leaveOutLabels": config.get("leaveOutLabels")})
+    graph_config.update(
+        {"leaveOutProperties": config.get("leaveOutProperties")}
+    )
 
-    if config.get("leaveOutLabels") or config.get("leaveOutProperties"):
-        for element in graph:
-            if config.get("leaveOutLabels") and element.get("type") == "node":
-                element.update({"labels": []})
-            if config.get("leaveOutProperties"):
-                element.update({"properties": {}})
+    graph = get_graph(ctx, graph_config)
 
     output = io.StringIO()
 

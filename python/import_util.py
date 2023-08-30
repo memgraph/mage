@@ -153,7 +153,7 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
 
 def find_node(
     ctx: mgp.ProcCtx, label: str, prop_key: str, prop_value: str
-) -> int:  # TODO prop value cast??
+) -> Union[int, None]:
     for vertex in ctx.graph.vertices:
         if (
             label in [label.name for label in vertex.labels]
@@ -201,7 +201,7 @@ def set_default_keys(key_dict: Dict[str, Any], properties: Dict[str, Any]):
             properties.update({value[0]: cast(value[3], value[1], value[2])})
 
 
-def set_default_config(config: mgp.Map):
+def set_default_config(config: mgp.Map) -> mgp.Map:
     if config is None:
         config = dict()
     if not config.get("readLabels"):
@@ -231,6 +231,7 @@ def set_default_config(config: mgp.Map):
             "Config parameter must be a map with specific \
              keys and values described in documentation."
         )
+    return config
 
 
 @mgp.write_proc
@@ -250,7 +251,7 @@ def graphml(
 
     """
 
-    set_default_config(config)
+    config = set_default_config(config)
 
     try:
         tree = ET.parse(path)
