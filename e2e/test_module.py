@@ -3,8 +3,9 @@ import pytest
 import yaml
 
 from pathlib import Path
-from gqlalchemy import Memgraph, Node
+from gqlalchemy import Memgraph, Node, Path as path_gql
 from mgclient import Node as node_mgclient
+from mgclient import Relationship as relationship_mgclient
 
 
 @pytest.fixture
@@ -20,6 +21,7 @@ class TestConstants:
     OUTPUT = "output"
     QUERY = "query"
     TEST_FILE = "test.yml"
+    FILENAME_PLACEHOLDER = "_file"
     TEST_MODULE_DIR_SUFFIX = "_test"
     TEST_GROUP_DIR_SUFFIX = "_group"
 
@@ -35,6 +37,25 @@ def _node_to_dict(data):
     return {"labels": list(labels), "properties": properties}
 
 
+def _relationship_to_dict(data):
+    label = data.type if hasattr(data, "label") else data._type
+    properties = data.properties if hasattr(data, "properties") else data._properties
+    return {"label": label, "properties": properties}
+
+
+def _path_to_dict(data):
+    nodes = data.nodes if hasattr(data, "nodes") else data._nodes
+    relationships = (
+        data.relationships if hasattr(data, "relationships") else data._relationships
+    )
+    return {
+        "nodes": [_node_to_dict(node) for node in nodes],
+        "relationships": [
+            _relationship_to_dict(relationship) for relationship in relationships
+        ],
+    }
+
+
 def _replace(data, match_classes):
     if isinstance(data, dict):
         return {k: _replace(v, match_classes) for k, v in data.items()}
@@ -44,8 +65,18 @@ def _replace(data, match_classes):
         return pytest.approx(data, abs=TestConstants.ABSOLUTE_TOLERANCE)
     elif isinstance(data, node_mgclient):
         return _node_to_dict(data)
+    elif isinstance(data, relationship_mgclient):
+        return _relationship_to_dict(data)
+    elif isinstance(data, path_gql):
+        return _path_to_dict(data)
     else:
         return _node_to_dict(data) if isinstance(data, match_classes) else data
+
+
+def _replace_filename(query: str, dir: Path):
+    return query.replace(
+        TestConstants.FILENAME_PLACEHOLDER, "/".join([str(dir), "file"])
+    )
 
 
 def prepare_tests():
@@ -134,10 +165,16 @@ def _test_static(test_dir: Path, db: Memgraph):
     """
     Testing static modules.
     """
-    input_cyphers = test_dir.joinpath(TestConstants.INPUT_FILE).open("r").readlines()
+    input_cyphers = [
+        _replace_filename(query, test_dir)
+        for query in test_dir.joinpath(TestConstants.INPUT_FILE).open("r").readlines()
+    ]
     _execute_cyphers(input_cyphers, db)
 
     test_dict = _load_yaml(test_dir.joinpath(TestConstants.TEST_FILE))
+    test_dict[TestConstants.QUERY] = _replace_filename(
+        test_dict[TestConstants.QUERY], test_dir
+    )
     _run_test(test_dict, db)
 
 
