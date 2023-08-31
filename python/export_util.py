@@ -56,7 +56,12 @@ class KeyObjectGraphML:
     id: str = ""
 
     def __init__(
-        self, name, is_for, type, type_is_list=False, default_value="",
+        self,
+        name,
+        is_for,
+        type="",
+        type_is_list=False,
+        default_value="",
     ):
         self.name = name
         self.is_for = is_for
@@ -208,10 +213,11 @@ def get_graph(
         nodes.append(Node(vertex.id, labels, properties).get_dict())
 
         for edge in vertex.out_edges:
-            properties = {
-                key: convert_to_isoformat(edge.properties.get(key))
-                for key in edge.properties.keys()
-            }
+            if not config.get("leaveOutProperties"):
+                properties = {
+                    key: convert_to_isoformat(edge.properties.get(key))
+                    for key in edge.properties.keys()
+                }
 
             relationships.append(
                 Relationship(
@@ -248,8 +254,7 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
             )
     except PermissionError:
         raise PermissionError(
-            "You don't have permissions to write into that file. Make sure \
-             to give the necessary permissions to user memgraph."
+            "You don't have permissions to write into that file. Make sure to give the necessary permissions to user memgraph."  # noqa: E501
         )
     except Exception:
         raise OSError("Could not open or write to the file.")
@@ -277,8 +282,7 @@ def save_file(file_path: str, data_list: list):
             writer.writerows(data_list)
     except PermissionError:
         raise PermissionError(
-            "You don't have permissions to write into that file. \
-             Make sure to give the necessary permissions to user memgraph."
+            "You don't have permissions to write into that file. Make sure to give the necessary permissions to user memgraph."  # noqa: E501
         )
     except csv.Error as e:
         raise csv.Error(
@@ -337,8 +341,7 @@ def csv_query(
     # only config provided with stream set to false
     if not file_path and not stream:
         raise Exception(
-            "If you provided only stream value, \
-             it has to be set to True to get any results."
+            "If you provided only stream value, it has to be set to True to get any results."  # noqa: E501
         )
 
     memgraph = Memgraph()
@@ -347,8 +350,7 @@ def csv_query(
     # if query yields no result
     if not len(results):
         raise Exception(
-            "Your query yields no results. Check if the database \
-             is empty or rewrite the provided query."
+            "Your query yields no results. Check if the database is empty or rewrite the provided query."  # noqa: E501
         )
 
     result_keys = list(results[0])
@@ -405,9 +407,14 @@ def get_type_string(variable: Any) -> Union[str, List[Any]]:
     return translate_types(variable[0]), True
 
 
-def write_key(output, working_key, key_id_counter, config):
+def write_key(
+    output: io.StringIO,
+    working_key: KeyObjectGraphML,
+    key_id_counter: int,
+    config: mgp.Map,
+):
     output.write(
-        f'<key id="d{key_id_counter}" for="{working_key.is_for}" attr.name="{working_key.name}"'
+        f'<key id="d{key_id_counter}" for="{working_key.is_for}" attr.name="{working_key.name}"'      # noqa: E501
     )
     if config.get("useTypes"):
         if working_key.type_is_list:
@@ -416,88 +423,6 @@ def write_key(output, working_key, key_id_counter, config):
             output.write(f' attr.type="{working_key.type}"')
     output.write("/>\n")
     working_key.id = "d" + str(key_id_counter)
-
-
-def write_graphml_keys(
-    graph: List[Union[Node, Relationship]],
-    keys_output: io.StringIO,
-    nodes_and_rels_output: io.StringIO,
-    config: mgp.Map,
-) -> set:
-    keys = set()
-    key_id_counter = 0
-
-    for element in graph:
-        working_key = None
-        if element.get("type") == "node":
-            nodes_and_rels_output.write(f'<node id="n{str(element.get("id"))}')
-            if element.get("labels") and config.get("format").upper() != "TINKERPOP":
-                nodes_and_rels_output.write('" labels="')
-                for label in element.get("labels"):
-                    nodes_and_rels_output.write(f":{label}")
-            nodes_and_rels_output.write('">')
-
-            if config.get("format").upper() == "GEPHI":
-                working_key = KeyObjectGraphML("TYPE", "node", translate_types("TYPE"))
-                keys.add(working_key)
-                if (len(keys) == key_id_counter + 1):   #something was added
-                    write_key(keys_output, working_key, key_id_counter, config)
-                    key_id_counter = key_id_counter + 1
-
-            if element.get("labels"):
-                if config.get("format").upper() == "TINKERPOP":
-                    working_key = KeyObjectGraphML(
-                            "labelV", "node", translate_types("labelV")
-                        )
-                else:
-                    working_key = KeyObjectGraphML(
-                            "labels", "node", translate_types("labels")
-                        )
-                keys.add(working_key)
-                if (len(keys) == key_id_counter + 1):   #something was added
-                    write_key(keys_output, working_key, key_id_counter, config)
-                    key_id_counter = key_id_counter + 1
-
-            for key, value in element.get("properties").items():
-                type_string, isList = get_type_string(value)
-                working_key = KeyObjectGraphML(key, "node", type_string, isList)
-                keys.add(working_key)
-                if (len(keys) == key_id_counter + 1):   #something was added
-                    write_key(keys_output, working_key, key_id_counter, config)
-                    key_id_counter = key_id_counter + 1
-
-        elif element.get("type") == "relationship":
-            if config.get("format").upper() == "GEPHI":
-                working_key = KeyObjectGraphML("TYPE", "node", translate_types("TYPE"))
-                keys.add(working_key)
-                if (len(keys) == key_id_counter + 1):   #something was added
-                    write_key(keys_output, working_key, key_id_counter, config)
-                    key_id_counter = key_id_counter + 1
-            if config.get("format").upper() == "TINKERPOP":
-                working_key = KeyObjectGraphML(
-                        "labelE", "edge", translate_types("labelE")
-                    )
-            else:
-                working_key = KeyObjectGraphML("label", "edge", translate_types("label"))
-            keys.add(working_key)
-            if (len(keys) == key_id_counter + 1):   #something was added
-                write_key(keys_output, working_key, key_id_counter, config)
-                key_id_counter = key_id_counter + 1
-
-            for key, value in element.get("properties").items():
-                type_string, isList = get_type_string(value)
-                working_key = KeyObjectGraphML(key, "edge", type_string, isList)
-                keys.add(working_key)
-                if (len(keys) == key_id_counter + 1):   #something was added
-                    write_key(keys_output, working_key, key_id_counter, config)
-                    key_id_counter = key_id_counter + 1
-
-    print(keys)
-    return keys
-
-
-def write_graphml_graph_id(output: io.StringIO):
-    output.write('<graph id="G" edgedefault="directed">\n')
 
 
 def get_gephi_label_value(
@@ -513,7 +438,9 @@ def get_gephi_label_value(
     return str(element.get("id"))
 
 
-def get_data_key(keys, name, is_for, type, is_list=False):
+def get_data_key(
+    keys: set, name: str, is_for: str, type: str, is_list: bool = False
+):
     for key in keys:
         if (
             key.name == name
@@ -523,7 +450,7 @@ def get_data_key(keys, name, is_for, type, is_list=False):
         ):
             return key.id
     raise Exception(
-        "This property doesn't have a key."  # noqa: E501 THIS SHOULD NOT HAPPEN
+        "This property doesn't have a key."  # noqa: E501 THIS SHOULD NOT HAPPEN ONCE I FIX GEPHI
     )
 
 
@@ -538,19 +465,19 @@ def write_labels_as_data(
 
     if config.get("format").upper() == "GEPHI":
         output.write(
-            f'<data key="{get_data_key(keys, "TYPE", "node", translate_types("TYPE"))}">'   # noqa: E501
+            f'<data key="{get_data_key(keys, "TYPE", "node", translate_types("TYPE"))}">'  # noqa: E501
         )
         for label in element.get("labels"):
             output.write(f":{label}")
         output.write("</data>")
         output.write(
-            f'<data key="{get_data_key(keys, "label", "node", translate_types("label"))}">{get_gephi_label_value(element, config)}</data>'  # noqa: E501
+            f'<data key="{get_data_key(keys, "labels", "node", translate_types("labels"))}">{get_gephi_label_value(element, config)}</data>'  # noqa: E501 SHOULD IT BE LABEL?
         )
         return
 
     if config.get("format").upper() == "TINKERPOP":
         output.write(
-            f'<data key="{get_data_key(keys, "labelV", "node", translate_types("labelV"))}">'   # noqa: E501
+            f'<data key="{get_data_key(keys, "labelV", "node", translate_types("labelV"))}">'  # noqa: E501
         )
         for index, value in enumerate(element.get("labels")):
             if index == 0:
@@ -558,9 +485,10 @@ def write_labels_as_data(
             else:
                 output.write(f":{value}")
         output.write("</data>")
+        return
 
     output.write(
-        f'<data key="{get_data_key(keys, "labels", "node", translate_types("labels"))}">'   # noqa: E501
+        f'<data key="{get_data_key(keys, "labels", "node", translate_types("labels"))}">'  # noqa: E501
     )
     for label in element.get("labels"):
         output.write(f":{label}")
@@ -573,72 +501,126 @@ def get_value_string(value: Any) -> str:
     return str(value)
 
 
-def process_graph_ml_node_object(
-    output: io.StringIO,
-    element: Union[Node, Relationship],
-    config: mgp.Map,
-    keys: set,
-):
-    output.write(f'<node id="n{str(element.get("id"))}')
-    if element.get("labels") and config.get("format").upper() != "TINKERPOP":
-        output.write('" labels="')
-        for label in element.get("labels"):
-            output.write(f":{label}")
-    output.write('">')
-
-    write_labels_as_data(element, output, config, keys)
-
-    for name, value in element.get("properties").items():
-        type_string, is_list = get_type_string(value)
-        output.write(
-            f'<data key="{get_data_key(keys, name, "node", type_string, is_list)}">{get_value_string(value)}</data>'        # noqa: E501
-        )
-    output.write("</node>\n")
-
-
-def process_graph_ml_relationship_object(
-    output: io.StringIO,
-    element: Union[Node, Relationship],
-    config: mgp.Map,
-    keys: set,
-):
-    output.write(
-        f'<edge id="e{str(element.get("id"))}" source="n{str(element.get("start"))}" target="n{str(element.get("end"))}" label="{element.get("label")}">'  # noqa: E501
-    )
-
-    if config.get("format").upper() == "TINKERPOP":
-        output.write(
-            f'<data key="{get_data_key(keys, "labelE", "edge", translate_types("labelE"))}">{element.get("label")}</data>'  # noqa: E501
-        )
-    else:
-        output.write(
-            f'<data key="{get_data_key(keys, "label", "edge", translate_types("label"))}">{element.get("label")}</data>'    # noqa: E501
-        )
-    if config.get("format").upper() == "GEPHI":
-        output.write(
-            f'<data key="{get_data_key(keys, "TYPE", "edge", translate_types("TYPE"))}">{element.get("label")}</data>'  # noqa: E501
-        )
-
-    for name, value in element.get("properties").items():
-        type_string, is_list = get_type_string(value)
-        output.write(
-            f'<data key="{get_data_key(keys, name, "edge", type_string, is_list)}">{get_value_string(value)}</data>'    # noqa: E501
-        )
-    output.write("</edge>\n")
-
-
-def write_graphml_nodes_and_rels(
+def write_graphml_keys_nodes_rels(
     graph: List[Union[Node, Relationship]],
-    output: io.StringIO,
+    keys_output: io.StringIO,
+    nodes_and_rels_output: io.StringIO,
     config: mgp.Map,
-    keys: set,
-):
+) -> set:
+    keys = set()
+    key_id_counter = 0
+
     for element in graph:
+        working_key = None
         if element.get("type") == "node":
-            process_graph_ml_node_object(output, element, config, keys)
+            nodes_and_rels_output.write(f'<node id="n{str(element.get("id"))}')
+            if (
+                element.get("labels")
+                and config.get("format").upper() != "TINKERPOP"
+            ):
+                nodes_and_rels_output.write('" labels="')
+                for label in element.get("labels"):
+                    nodes_and_rels_output.write(f":{label}")
+            nodes_and_rels_output.write('">')
+
+            if config.get("format").upper() == "GEPHI":
+                working_key = KeyObjectGraphML(
+                    "TYPE", "node", translate_types("TYPE")
+                )
+                keys.add(working_key)
+                if len(keys) == key_id_counter + 1:  # something was added
+                    write_key(keys_output, working_key, key_id_counter, config)
+                    key_id_counter = key_id_counter + 1
+
+            if element.get("labels"):
+                if config.get("format").upper() == "TINKERPOP":
+                    working_key = KeyObjectGraphML(
+                        "labelV", "node", translate_types("labelV")
+                    )
+                else:  # SHOULD IT BE LABEL OR LABELS FOR GEPHI?
+                    working_key = KeyObjectGraphML(
+                        "labels", "node", translate_types("labels")
+                    )
+                keys.add(working_key)
+                if len(keys) == key_id_counter + 1:  # something was added
+                    write_key(keys_output, working_key, key_id_counter, config)
+                    key_id_counter = key_id_counter + 1
+
+            write_labels_as_data(element, nodes_and_rels_output, config, keys)
+
+            for name, value in element.get("properties").items():
+                type_string, is_list = get_type_string(value)
+                working_key = KeyObjectGraphML(
+                    name, "node", type_string, is_list
+                )
+                keys.add(working_key)
+                if len(keys) == key_id_counter + 1:  # something was added
+                    write_key(keys_output, working_key, key_id_counter, config)
+                    key_id_counter = key_id_counter + 1
+                else:
+                    working_key.id = get_data_key(
+                        keys, name, "node", type_string, is_list
+                    )
+
+                nodes_and_rels_output.write(
+                    f'<data key="{working_key.id}">{get_value_string(value)}</data>'  # noqa: E501
+                )
+            nodes_and_rels_output.write("</node>\n")
 
         elif element.get("type") == "relationship":
-            process_graph_ml_relationship_object(output, element, config, keys)
+            nodes_and_rels_output.write(
+                f'<edge id="e{str(element.get("id"))}" source="n{str(element.get("start"))}" target="n{str(element.get("end"))}" label="{element.get("label")}">'  # noqa: E501
+            )
+
+            if config.get("format").upper() == "GEPHI":
+                working_key = KeyObjectGraphML(
+                    "TYPE", "edge", translate_types("TYPE")
+                )
+                keys.add(working_key)
+                if len(keys) == key_id_counter + 1:  # something was added
+                    write_key(keys_output, working_key, key_id_counter, config)
+                    key_id_counter = key_id_counter + 1
+                nodes_and_rels_output.write(
+                    f'<data key="{get_data_key(keys, "TYPE", "edge", translate_types("TYPE"))}">{element.get("label")}</data>'  # noqa: E501
+                )
+            if config.get("format").upper() == "TINKERPOP":
+                working_key = KeyObjectGraphML(
+                    "labelE", "edge", translate_types("labelE")
+                )
+            else:
+                working_key = KeyObjectGraphML(
+                    "label", "edge", translate_types("label")
+                )
+            keys.add(working_key)
+            if len(keys) == key_id_counter + 1:  # something was added
+                write_key(keys_output, working_key, key_id_counter, config)
+                key_id_counter = key_id_counter + 1
+            nodes_and_rels_output.write(
+                f'<data key="{get_data_key(keys, working_key.name, "edge", working_key.type)}">{element.get("label")}</data>'  # noqa: E501
+            )
+
+            for name, value in element.get("properties").items():
+                type_string, is_list = get_type_string(value)
+                working_key = KeyObjectGraphML(
+                    name, "edge", type_string, is_list
+                )
+                keys.add(working_key)
+                if len(keys) == key_id_counter + 1:  # something was added
+                    write_key(keys_output, working_key, key_id_counter, config)
+                    key_id_counter = key_id_counter + 1
+                else:
+                    working_key.id = get_data_key(
+                        keys, name, "edge", type_string, is_list
+                    )
+
+                nodes_and_rels_output.write(
+                    f'<data key="{working_key.id}">{get_value_string(value)}</data>'  # noqa: E501
+                )
+            nodes_and_rels_output.write("</edge>\n")
+
+
+def write_graphml_graph_id(output: io.StringIO):
+    output.write('<graph id="G" edgedefault="directed">\n')
 
 
 def write_graphml_footer(output: io.StringIO):
@@ -664,14 +646,13 @@ def set_default_config(config: mgp.Map) -> mgp.Map:
     if (
         not isinstance(config.get("stream"), bool)
         or not isinstance(config.get("format"), str)
-        or not isinstance(config.get("caption"), list)
+        or not isinstance(config.get("caption"), tuple)
         or not isinstance(config.get("useTypes"), bool)
         or not isinstance(config.get("leaveOutLabels"), bool)
         or not isinstance(config.get("leaveOutProperties"), bool)
     ):
         raise TypeError(
-            "Config parameter must be a map with specific \
-             keys and values described in documentation."
+            "Config parameter must be a map with specific keys and values described in documentation."  # noqa: E501
         )
     return config
 
@@ -702,18 +683,22 @@ def graphml(
 
     graph = get_graph(ctx, graph_config)
 
-    output = io.StringIO()
-
     if not path and not config.get("stream"):
         raise Exception(
             "Please provide file name or set stream to True in config."
         )
 
+    output = io.StringIO()
+    keys_output = io.StringIO()
+    nodes_and_rels_output = io.StringIO()
+
     write_graphml_header(output)
-    keys = write_graphml_keys(graph, output, config)
-    #print(keys)
+    write_graphml_keys_nodes_rels(
+        graph, keys_output, nodes_and_rels_output, config
+    )
+    output.write(keys_output.getvalue())
     write_graphml_graph_id(output)
-    write_graphml_nodes_and_rels(graph, output, config, keys)
+    output.write(nodes_and_rels_output.getvalue())
     write_graphml_footer(output)
 
     try:
@@ -723,8 +708,7 @@ def graphml(
             outfile.close()
     except PermissionError:
         raise PermissionError(
-            "You don't have permissions to write into that file. Make sure \
-             to give the necessary permissions to user memgraph."
+            "You don't have permissions to write into that file. Make sure to give the necessary permissions to user memgraph."  # noqa: E501
         )
     except Exception:
         raise OSError("Could not open or write to the file.")

@@ -8,6 +8,7 @@ from typing import Union, List, Dict, Any
 
 import mgp
 from export_util import convert_to_isoformat_graphML
+from export_util import KeyObjectGraphML
 from mage.export_import_util.parameters import Parameter
 
 
@@ -170,7 +171,7 @@ def find_node(
 def cast_element(
     text: str, type: str
 ) -> Union[List[Any], str, int, bool, float]:
-    if text is None:
+    if text == "":
         return ""
     if type == "string":
         return str(text)
@@ -185,20 +186,20 @@ def cast_element(
 
 
 def cast(
-    text: str, type: str, is_list: str
+    text: str, type: str, is_list: bool
 ) -> Union[List[Any], str, int, bool, float]:
-    if is_list is not None:
+    if is_list:
         casted_list = list()
         for element in ast.literal_eval(text):
-            casted_list.append(cast_element(element, is_list))
+            casted_list.append(cast_element(element, type))
         return casted_list
     return cast_element(text, type)
 
 
-def set_default_keys(key_dict: Dict[str, Any], properties: Dict[str, Any]):
-    for key, value in key_dict.items():
-        if value[3] is not None:
-            properties.update({value[0]: cast(value[3], value[1], value[2])})
+def set_default_keys(key_dict: Dict[str, Any], properties: Dict[str, Any], is_for: str):
+    for id, key_object in key_dict.items():
+        if key_object.default_value != "" and key_object.is_for == is_for:
+            properties.update({key_object.name: cast(key_object.default_value, key_object.type, key_object.type_is_list)})
 
 
 def set_default_config(config: mgp.Map) -> mgp.Map:
@@ -262,8 +263,7 @@ def graphml(
     graphml_ns = root.tag.split("}")[0].strip("{")
     namespace = {"graphml": graphml_ns}
 
-    node_keys = dict()
-    rel_keys = dict()
+    keys = dict()
 
     for key in root.findall(".//graphml:key", namespace):
         # key value legend: value[0] = attr.name
@@ -271,24 +271,17 @@ def graphml(
         #                   value[2] = attr.list
         #                   value[3] = default
         # -> should I make a class out of it?
-        value = [key.attrib["attr.name"]]
-        if "attr.type" in key.attrib.keys():
-            value.append(key.attrib["attr.type"])
-        else:
-            value.append(None)
+        working_key = KeyObjectGraphML(key.attrib["attr.name"], key.attrib["for"])
         if "attr.list" in key.attrib.keys():
-            value.append(key.attrib["attr.list"])
-        else:
-            value.append(None)
+            working_key.type_is_list = True
+            working_key.type = key.attrib["attr.list"]
+        elif "attr.type" in key.attrib.keys():
+            working_key.type = key.attrib["attr.type"]
         child = key.findall(".//default")
         if child:
-            value.append(child[0].text)
-        else:
-            value.append(None)
-        if key.attrib["for"].lower() == "node":
-            node_keys.update({key.attrib["id"]: value})
-        elif key.attrib["for"].lower() == "edge":
-            rel_keys.update({key.attrib["id"]: value})
+            working_key.default_value = child[0].text
+        working_key.id = key.attrib["id"]
+        keys.update({key.attrib["id"]: working_key})
 
     real_ids = dict()
 
@@ -301,19 +294,19 @@ def graphml(
         if config.get("storeNodeIds"):
             properties.update({"id": node.attrib["id"]})
 
-        set_default_keys(node_keys, properties)
+        set_default_keys(keys, properties, "node")
 
         for data in node.findall("graphml:data", namespace):
-            key = node_keys.get(data.attrib["key"])
+            working_key = keys.get(data.attrib["key"])
             if key is None:
-                key = [data.attrib["key"], "string", None, None]
-            if config.get("readLabels") and data.attrib["key"] == "labels":
+                working_key = KeyObjectGraphML(data.attrib["key"], "node", "string")
+            if config.get("readLabels") and working_key.name == "labels":
                 new_labels = data.text.split(":")
                 new_labels.pop(0)
                 if new_labels != labels:
                     labels = labels + new_labels
             else:
-                properties.update({key[0]: cast(data.text, key[1], key[2])})
+                properties.update({working_key.name: cast(data.text, working_key.type, working_key.type_is_list)})
 
         real_ids.update(
             {node.attrib["id"]: create_vertex(ctx, properties, labels)}
@@ -326,18 +319,18 @@ def graphml(
             rel_type = config.get("defaultRelationshipType")
 
         properties = dict()
-        set_default_keys(rel_keys, properties)
+        set_default_keys(keys, properties, "edge")
 
         for data in rel.findall("graphml:data", namespace):
-            key = rel_keys.get(data.attrib["key"])
-            if key is None:
-                key = [data.attrib["key"], "string", None, None]
-            if not data.attrib["key"] == "label":  # Tinkerpop???
-                properties.update({key[0]: cast(data.text, key[1], key[2])})
+            working_key = keys.get(data.attrib["key"])
+            if working_key is None:
+                working_key = KeyObjectGraphML(data.attrib["key"], "edge", "string")
+            if not working_key.name == "label":  # Tinkerpop???
+                properties.update({working_key.name: cast(data.text, working_key.type, working_key.type_is_list)})
 
         if rel.attrib["source"] not in real_ids.keys():
             if not config.get("source"):
-                # without source/target config, we look for the internal id
+                # without source/target config, we try with the internal id
                 real_ids.update(
                     {rel.attrib["source"]: int(rel.attrib["source"])}
                 )
