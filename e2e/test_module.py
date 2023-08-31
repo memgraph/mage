@@ -22,6 +22,7 @@ class TestConstants:
     OUTPUT = "output"
     QUERY = "query"
     TEST_FILE = "test.yml"
+    FILENAME_PLACEHOLDER = "_file"
     TEST_MODULE_DIR_SUFFIX = "_test"
     TEST_GROUP_DIR_SUFFIX = "_group"
 
@@ -80,6 +81,12 @@ def _replace(data, match_classes):
         return _path_to_dict(data)
     else:
         return _node_to_dict(data) if isinstance(data, match_classes) else data
+
+
+def _replace_filename(query: str, dir: Path):
+    return query.replace(
+        TestConstants.FILENAME_PLACEHOLDER, "/".join([str(dir), "file"])
+    )
 
 
 def prepare_tests():
@@ -227,10 +234,16 @@ def _test_static(test_dir: Path, db: Memgraph):
     """
     Testing static modules.
     """
-    input_cyphers = test_dir.joinpath(TestConstants.INPUT_FILE).open("r").readlines()
+    input_cyphers = [
+        _replace_filename(query, test_dir)
+        for query in test_dir.joinpath(TestConstants.INPUT_FILE).open("r").readlines()
+    ]
     _execute_cyphers(input_cyphers, db)
 
     test_dict = _load_yaml(test_dir.joinpath(TestConstants.TEST_FILE))
+    test_dict[TestConstants.QUERY] = _replace_filename(
+        test_dict[TestConstants.QUERY], test_dir
+    )
     _run_test(test_dict, db)
 
 
