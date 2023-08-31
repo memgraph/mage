@@ -1,6 +1,6 @@
 setup: |-
   CALL meta.reset();
-  CREATE TRIGGER meta_stats BEFORE COMMIT EXECUTE CALL meta.update(createdObjects, deletedObjects, removedVertexProperties, removedEdgeProperties, setVertexLabels, removedVertexLabels) YIELD *;
+  CREATE TRIGGER meta_stats BEFORE COMMIT EXECUTE CALL meta.update(createdObjects, deletedObjects, removedVertexProperties, removedEdgeProperties, setVertexLabels, removedVertexLabels);
 
 queries:
   - |-

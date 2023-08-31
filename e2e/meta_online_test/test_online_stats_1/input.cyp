@@ -3,7 +3,7 @@ setup: >-
 
   CREATE TRIGGER meta_stats BEFORE COMMIT EXECUTE CALL
   meta.update(createdObjects, deletedObjects, removedVertexProperties,
-  removedEdgeProperties, setVertexLabels, removedVertexLabels) YIELD *;
+  removedEdgeProperties, setVertexLabels, removedVertexLabels);
 queries:
   - |-
     CREATE (:Movie {one:1, two:2, three:3});

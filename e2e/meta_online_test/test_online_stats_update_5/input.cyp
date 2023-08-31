@@ -11,7 +11,7 @@ queries:
     MERGE (a:Node {id: 3}) MERGE (b:Node {id: 5}) CREATE (a)-[:Relation]->(b);
 
   - |-
-    CREATE TRIGGER meta_stats BEFORE COMMIT EXECUTE CALL meta.update(createdObjects, deletedObjects, removedVertexProperties, removedEdgeProperties, setVertexLabels, removedVertexLabels) YIELD *;
+    CREATE TRIGGER meta_stats BEFORE COMMIT EXECUTE CALL meta.update(createdObjects, deletedObjects, removedVertexProperties, removedEdgeProperties, setVertexLabels, removedVertexLabels);
     MATCH (:Node)-[r:Relation]-(:Node) DELETE r;
   - |-
     MATCH (n:Node {id: 3}) DETACH DELETE n;

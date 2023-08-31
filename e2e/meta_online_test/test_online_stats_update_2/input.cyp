@@ -8,7 +8,7 @@ queries:
   - >-
     CREATE TRIGGER meta_stats BEFORE COMMIT EXECUTE CALL
     meta.update(createdObjects, deletedObjects, removedVertexProperties,
-    removedEdgeProperties, setVertexLabels, removedVertexLabels) YIELD *;
+    removedEdgeProperties, setVertexLabels, removedVertexLabels);
 
     MERGE (a:Node {id: 3}) MERGE (b:Node {id: 4}) CREATE (a)-[:Relation]->(b);
 

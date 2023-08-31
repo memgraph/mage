@@ -10,7 +10,7 @@ queries:
   - >-
     CREATE TRIGGER meta_stats BEFORE COMMIT EXECUTE CALL
     meta.update(createdObjects, deletedObjects, removedVertexProperties,
-    removedEdgeProperties, setVertexLabels, removedVertexLabels) YIELD *;
+    removedEdgeProperties, setVertexLabels, removedVertexLabels);
 
     MATCH (:Node)-[r:Relation1]-(:Node) DELETE r;
 cleanup: |-

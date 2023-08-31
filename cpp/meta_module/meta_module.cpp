@@ -16,7 +16,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
                  {}, module, memory);
 
     AddProcedure(Meta::StatsOnline, Meta::kProcedureStatsOnline, mgp::ProcedureType::Read,
-                 {mgp::Parameter(Meta::kStatsOnlineArg1, mgp::Type::Bool)},
+                 {mgp::Parameter(Meta::kStatsOnlineArg1, mgp::Type::Bool, false)},
                  {mgp::Return(Meta::kReturnStats1, mgp::Type::Int), mgp::Return(Meta::kReturnStats2, mgp::Type::Int),
                   mgp::Return(Meta::kReturnStats3, mgp::Type::Int), mgp::Return(Meta::kReturnStats4, mgp::Type::Int),
                   mgp::Return(Meta::kReturnStats5, mgp::Type::Int),
