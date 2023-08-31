@@ -1,4 +1,4 @@
 export: >
-  CALL export_util.json(_filename);
+  CALL export_util.json(_exportfile);
 import: >
-  CALL import_util.json(_filename);
+  CALL import_util.json(_exportfile);
