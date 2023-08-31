@@ -4,7 +4,6 @@
 
 #include <unordered_set>
 
-
 namespace Path {
 
 /* create constants */
