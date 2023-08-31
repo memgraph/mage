@@ -33,6 +33,7 @@ class Relationship:
     label: str
     properties: dict
     start: int
+    id: int
 
     def get_dict(self) -> dict:
         return {
@@ -43,6 +44,47 @@ class Relationship:
             Parameter.START.value: self.start,
             Parameter.TYPE.value: Parameter.RELATIONSHIP.value,
         }
+
+
+@dataclass
+class KeyObjectGraphML:
+    name: str
+    is_for: str
+    type: str
+    type_is_list: bool
+    default_value: str
+    id: int
+
+    def __init__(
+        self, name, is_for, type, type_is_list=False, default_value=""
+    ):
+        self.name = name
+        self.is_for = is_for
+        self.type = type
+        self.type_is_list = type_is_list
+        self.default_value = default_value
+
+    def __hash__(self):
+        return hash(
+            (
+                self.name,
+                self.is_for,
+                self.type,
+                self.type_is_list,
+                self.default_value,
+            )
+        )
+
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        return (
+            self.name == other.name
+            and self.is_for == other.is_for
+            and self.type == other.type
+            and self.type_is_list == other.type_is_list
+            and self.default_value == other.default_value
+        )
 
 
 def convert_to_isoformat(
@@ -344,6 +386,8 @@ def translate_types(variable: Any):
 
 
 def check_if_elements_same_type(variable: List[Any]):
+    if not isinstance(variable, (tuple, list)):
+        return
     list_type = type(variable[0])
     for element in variable:
         if not isinstance(element, list_type):
@@ -354,65 +398,72 @@ def check_if_elements_same_type(variable: List[Any]):
 
 def get_type_string(variable: Any) -> Union[str, List[Any]]:
     if not isinstance(variable, tuple):
-        return translate_types(variable)
+        return translate_types(variable), False
     if len(variable) == 0:
-        return ["string", "string"]
+        return "string", True
     check_if_elements_same_type(variable)
-    return [
-        "string",
-        translate_types(variable[0]),
-    ]
+    return translate_types(variable[0]), True
 
 
 def write_graphml_keys(
     graph: List[Union[Node, Relationship]],
     output: io.StringIO,
     config: mgp.Map,
-):
-    node_keys = dict()
-    rel_keys = dict()
+) -> set:
+    keys = set()
     for element in graph:
         if element.get("type") == "node":
             if element.get("labels"):
                 if config.get("format").upper() == "TINKERPOP":
-                    node_keys.update({"labelV": get_type_string("labelV")})
+                    keys.add(
+                        KeyObjectGraphML(
+                            "labelV", "node", translate_types("labelV")
+                        )
+                    )
                 else:
-                    node_keys.update(
-                        {"labels": get_type_string("labels")}
-                    )  # what if two nodes have same property name but different value type? or node's property name is "labels"?  # noqa: E501
+                    keys.add(
+                        KeyObjectGraphML(
+                            "labels", "node", translate_types("labels")
+                        )
+                    )
 
             for key, value in element.get("properties").items():
-                node_keys.update({key: get_type_string(value)})
+                type_string, isList = get_type_string(value)
+                keys.add(KeyObjectGraphML(key, "node", type_string, isList))
 
         elif element.get("type") == "relationship":
             if config.get("format").upper() == "TINKERPOP":
-                rel_keys.update({"labelE": get_type_string("labelE")})
+                keys.add(
+                    KeyObjectGraphML(
+                        "labelE", "edge", translate_types("labelE")
+                    )
+                )
             else:
-                rel_keys.update({"label": get_type_string("label")})
+                keys.add(
+                    KeyObjectGraphML("label", "edge", translate_types("label"))
+                )
 
             for key, value in element.get("properties").items():
-                rel_keys.update({key: get_type_string(value)})
+                type_string, isList = get_type_string(value)
+                keys.add(KeyObjectGraphML(key, "edge", type_string, isList))
 
     if config.get("format").upper() == "GEPHI":
-        node_keys.update({"TYPE": get_type_string("TYPE")})
-        rel_keys.update({"TYPE": get_type_string("TYPE")})
+        keys.add(KeyObjectGraphML("TYPE", "node", translate_types("TYPE")))
+        keys.add(KeyObjectGraphML("TYPE", "edge", translate_types("TYPE")))
 
-    for key, value in node_keys.items():
-        output.write(f'<key id="{key}" for="node" attr.name="{key}"')
+    for counter, key in enumerate(keys):
+        output.write(
+            f'<key id="d{counter}" for="{key.is_for}" attr.name="{key.name}"'
+        )
         if config.get("useTypes"):
-            if isinstance(value, str):
-                output.write(f' attr.type="{value}"')
+            if key.type_is_list:
+                output.write(f' attr.type="string" attr.list="{key.type}"')
             else:
-                output.write(f' attr.type="{value[0]}" attr.list="{value[1]}"')
+                output.write(f' attr.type="{key.type}"')
         output.write("/>\n")
-    for key, value in rel_keys.items():
-        output.write(f'<key id="{key}" for="edge" attr.name="{key}"')
-        if config.get("useTypes"):
-            if isinstance(value, str):
-                output.write(f' attr.type="{value}"')
-            else:
-                output.write(f' attr.type="{value[0]}" attr.list="{value[1]}"')
-        output.write("/>\n")
+        key.id = "d" + str(counter)
+
+    return keys
 
 
 def write_graphml_graph_id(output: io.StringIO):
@@ -432,24 +483,45 @@ def get_gephi_label_value(
     return str(element.get("id"))
 
 
+def get_data_key(keys, name, is_for, type, is_list=False):
+    for key in keys:
+        if (
+            key.name == name
+            and key.is_for == is_for
+            and key.type == type
+            and key.type_is_list == is_list
+        ):
+            return key.id
+    raise Exception(
+        "This property doesn't have a key."  # noqa: E501 THIS SHOULD NOT HAPPEN
+    )
+
+
 def write_labels_as_data(
-    element: Union[Node, Relationship], output: io.StringIO, config: mgp.Map
+    element: Union[Node, Relationship],
+    output: io.StringIO,
+    config: mgp.Map,
+    keys: set,
 ):
     if not element.get("labels"):
         return
 
     if config.get("format").upper() == "GEPHI":
-        output.write('<data key="TYPE">')
+        output.write(
+            f'<data key="{get_data_key(keys, "TYPE", "node", translate_types("TYPE"))}">'   # noqa: E501
+        )
         for label in element.get("labels"):
             output.write(f":{label}")
         output.write("</data>")
         output.write(
-            f'<data key="label">{get_gephi_label_value(element, config)}</data>'  # noqa: E501
+            f'<data key="{get_data_key(keys, "label", "node", translate_types("label"))}">{get_gephi_label_value(element, config)}</data>'  # noqa: E501
         )
         return
 
     if config.get("format").upper() == "TINKERPOP":
-        output.write('<data key="labelV">')
+        output.write(
+            f'<data key="{get_data_key(keys, "labelV", "node", translate_types("labelV"))}">'   # noqa: E501
+        )
         for index, value in enumerate(element.get("labels")):
             if index == 0:
                 output.write(value)
@@ -457,7 +529,9 @@ def write_labels_as_data(
                 output.write(f":{value}")
         output.write("</data>")
 
-    output.write('<data key="labels">')
+    output.write(
+        f'<data key="{get_data_key(keys, "labels", "node", translate_types("labels"))}">'   # noqa: E501
+    )
     for label in element.get("labels"):
         output.write(f":{label}")
     output.write("</data>")
@@ -470,7 +544,10 @@ def get_value_string(value: Any) -> str:
 
 
 def process_graph_ml_node_object(
-    output: io.StringIO, element: Union[Node, Relationship], config: mgp.Map
+    output: io.StringIO,
+    element: Union[Node, Relationship],
+    config: mgp.Map,
+    keys: set,
 ):
     output.write(f'<node id="n{str(element.get("id"))}')
     if element.get("labels") and config.get("format").upper() != "TINKERPOP":
@@ -479,29 +556,44 @@ def process_graph_ml_node_object(
             output.write(f":{label}")
     output.write('">')
 
-    write_labels_as_data(element, output, config)
+    write_labels_as_data(element, output, config, keys)
 
-    for key, value in element.get("properties").items():
-        output.write(f'<data key="{key}">{get_value_string(value)}</data>')
+    for name, value in element.get("properties").items():
+        type_string, is_list = get_type_string(value)
+        output.write(
+            f'<data key="{get_data_key(keys, name, "node", type_string, is_list)}">{get_value_string(value)}</data>'        # noqa: E501
+        )
     output.write("</node>\n")
 
 
 def process_graph_ml_relationship_object(
-    output: io.StringIO, element: Union[Node, Relationship], config: mgp.Map
+    output: io.StringIO,
+    element: Union[Node, Relationship],
+    config: mgp.Map,
+    keys: set,
 ):
     output.write(
         f'<edge id="e{str(element.get("id"))}" source="n{str(element.get("start"))}" target="n{str(element.get("end"))}" label="{element.get("label")}">'  # noqa: E501
     )
 
     if config.get("format").upper() == "TINKERPOP":
-        output.write(f'<data key="labelE">{element.get("label")}</data>')
+        output.write(
+            f'<data key="{get_data_key(keys, "labelE", "edge", translate_types("labelE"))}">{element.get("label")}</data>'  # noqa: E501
+        )
     else:
-        output.write(f'<data key="label">{element.get("label")}</data>')
+        output.write(
+            f'<data key="{get_data_key(keys, "label", "edge", translate_types("label"))}">{element.get("label")}</data>'    # noqa: E501
+        )
     if config.get("format").upper() == "GEPHI":
-        output.write(f'<data key="TYPE">{element.get("label")}</data>')
+        output.write(
+            f'<data key="{get_data_key(keys, "TYPE", "edge", translate_types("TYPE"))}">{element.get("label")}</data>'  # noqa: E501
+        )
 
-    for key, value in element.get("properties").items():
-        output.write(f'<data key="{key}">{get_value_string(value)}</data>')
+    for name, value in element.get("properties").items():
+        type_string, is_list = get_type_string(value)
+        output.write(
+            f'<data key="{get_data_key(keys, name, "edge", type_string, is_list)}">{get_value_string(value)}</data>'    # noqa: E501
+        )
     output.write("</edge>\n")
 
 
@@ -509,13 +601,14 @@ def write_graphml_nodes_and_rels(
     graph: List[Union[Node, Relationship]],
     output: io.StringIO,
     config: mgp.Map,
+    keys: set,
 ):
     for element in graph:
         if element.get("type") == "node":
-            process_graph_ml_node_object(output, element, config)
+            process_graph_ml_node_object(output, element, config, keys)
 
         elif element.get("type") == "relationship":
-            process_graph_ml_relationship_object(output, element, config)
+            process_graph_ml_relationship_object(output, element, config, keys)
 
 
 def write_graphml_footer(output: io.StringIO):
@@ -529,7 +622,7 @@ def set_default_config(config: mgp.Map) -> mgp.Map:
     if not config.get("stream"):
         config.update({"stream": False})
     if not config.get("format"):
-        config.update({"format": ""})  # should it be Gephi?
+        config.update({"format": ""})
     if not config.get("caption"):
         config.update({"caption": []})
     if not config.get("useTypes"):
@@ -587,9 +680,10 @@ def graphml(
         )
 
     write_graphml_header(output)
-    write_graphml_keys(graph, output, config)
+    keys = write_graphml_keys(graph, output, config)
+    print(keys)
     write_graphml_graph_id(output)
-    write_graphml_nodes_and_rels(graph, output, config)
+    write_graphml_nodes_and_rels(graph, output, config, keys)
     write_graphml_footer(output)
 
     try:
