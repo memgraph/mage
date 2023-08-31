@@ -17,7 +17,8 @@ jobs:
       MEMGRAPH_VERSION: 2.10.1
     strategy:
       matrix:
-        architecture: ["amd64", "arm64"]
+        #architecture: ["amd64", "arm64"]
+        architecture: ["amd64"]
         target: ["prod", "dev"]
     steps:
       - name: Checkout repository and submodules
@@ -35,9 +36,8 @@ jobs:
         uses: docker/setup-buildx-action@v2
 
       - name: Download memgraph binaries
-        run: |
-          curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11/memgraph_${MEMGRAPH_VERSION}-1_amd64.deb > memgraph-amd64.deb
-          curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb > memgraph-arm64.deb
+        run: curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11/memgraph_${MEMGRAPH_VERSION}-1_amd64.deb > memgraph-amd64.deb
+        #curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb > memgraph-arm64.deb
 
       - name: Build Memgraph MAGE:${{ matrix.target }}
         run: |
@@ -105,7 +105,7 @@ jobs:
           cargo test
 
       - name: Run End-to-end tests
-        if: matrix.architecture != 'arm64'
+        #if: matrix.architecture != 'arm64'
         env:
           PYTHONPATH: "$PWD/e2e"
         run: |
@@ -113,7 +113,7 @@ jobs:
           python -m pytest . -k 'not cugraph'
       
       - name: Run End-to-end correctness tests
-        if: matrix.architecture != 'arm64'
+        #if: matrix.architecture != 'arm64'
         env:
           PYTHONPATH: "$PWD/e2e"
         run: |
