@@ -53,10 +53,10 @@ class KeyObjectGraphML:
     type: str
     type_is_list: bool
     default_value: str
-    id: int
+    id: str = ""
 
     def __init__(
-        self, name, is_for, type, type_is_list=False, default_value=""
+        self, name, is_for, type, type_is_list=False, default_value="",
     ):
         self.name = name
         self.is_for = is_for
@@ -405,64 +405,94 @@ def get_type_string(variable: Any) -> Union[str, List[Any]]:
     return translate_types(variable[0]), True
 
 
+def write_key(output, working_key, key_id_counter, config):
+    output.write(
+        f'<key id="d{key_id_counter}" for="{working_key.is_for}" attr.name="{working_key.name}"'
+    )
+    if config.get("useTypes"):
+        if working_key.type_is_list:
+            output.write(f' attr.type="string" attr.list="{working_key.type}"')
+        else:
+            output.write(f' attr.type="{working_key.type}"')
+    output.write("/>\n")
+    working_key.id = "d" + str(key_id_counter)
+
+
 def write_graphml_keys(
     graph: List[Union[Node, Relationship]],
-    output: io.StringIO,
+    keys_output: io.StringIO,
+    nodes_and_rels_output: io.StringIO,
     config: mgp.Map,
 ) -> set:
     keys = set()
+    key_id_counter = 0
+
     for element in graph:
+        working_key = None
         if element.get("type") == "node":
+            nodes_and_rels_output.write(f'<node id="n{str(element.get("id"))}')
+            if element.get("labels") and config.get("format").upper() != "TINKERPOP":
+                nodes_and_rels_output.write('" labels="')
+                for label in element.get("labels"):
+                    nodes_and_rels_output.write(f":{label}")
+            nodes_and_rels_output.write('">')
+
+            if config.get("format").upper() == "GEPHI":
+                working_key = KeyObjectGraphML("TYPE", "node", translate_types("TYPE"))
+                keys.add(working_key)
+                if (len(keys) == key_id_counter + 1):   #something was added
+                    write_key(keys_output, working_key, key_id_counter, config)
+                    key_id_counter = key_id_counter + 1
+
             if element.get("labels"):
                 if config.get("format").upper() == "TINKERPOP":
-                    keys.add(
-                        KeyObjectGraphML(
+                    working_key = KeyObjectGraphML(
                             "labelV", "node", translate_types("labelV")
                         )
-                    )
                 else:
-                    keys.add(
-                        KeyObjectGraphML(
+                    working_key = KeyObjectGraphML(
                             "labels", "node", translate_types("labels")
                         )
-                    )
+                keys.add(working_key)
+                if (len(keys) == key_id_counter + 1):   #something was added
+                    write_key(keys_output, working_key, key_id_counter, config)
+                    key_id_counter = key_id_counter + 1
 
             for key, value in element.get("properties").items():
                 type_string, isList = get_type_string(value)
-                keys.add(KeyObjectGraphML(key, "node", type_string, isList))
+                working_key = KeyObjectGraphML(key, "node", type_string, isList)
+                keys.add(working_key)
+                if (len(keys) == key_id_counter + 1):   #something was added
+                    write_key(keys_output, working_key, key_id_counter, config)
+                    key_id_counter = key_id_counter + 1
 
         elif element.get("type") == "relationship":
+            if config.get("format").upper() == "GEPHI":
+                working_key = KeyObjectGraphML("TYPE", "node", translate_types("TYPE"))
+                keys.add(working_key)
+                if (len(keys) == key_id_counter + 1):   #something was added
+                    write_key(keys_output, working_key, key_id_counter, config)
+                    key_id_counter = key_id_counter + 1
             if config.get("format").upper() == "TINKERPOP":
-                keys.add(
-                    KeyObjectGraphML(
+                working_key = KeyObjectGraphML(
                         "labelE", "edge", translate_types("labelE")
                     )
-                )
             else:
-                keys.add(
-                    KeyObjectGraphML("label", "edge", translate_types("label"))
-                )
+                working_key = KeyObjectGraphML("label", "edge", translate_types("label"))
+            keys.add(working_key)
+            if (len(keys) == key_id_counter + 1):   #something was added
+                write_key(keys_output, working_key, key_id_counter, config)
+                key_id_counter = key_id_counter + 1
 
             for key, value in element.get("properties").items():
                 type_string, isList = get_type_string(value)
-                keys.add(KeyObjectGraphML(key, "edge", type_string, isList))
+                working_key = KeyObjectGraphML(key, "edge", type_string, isList)
+                keys.add(working_key)
+                if (len(keys) == key_id_counter + 1):   #something was added
+                    write_key(keys_output, working_key, key_id_counter, config)
+                    key_id_counter = key_id_counter + 1
 
-    if config.get("format").upper() == "GEPHI":
-        keys.add(KeyObjectGraphML("TYPE", "node", translate_types("TYPE")))
-        keys.add(KeyObjectGraphML("TYPE", "edge", translate_types("TYPE")))
-
-    for counter, key in enumerate(keys):
-        output.write(
-            f'<key id="d{counter}" for="{key.is_for}" attr.name="{key.name}"'
-        )
-        if config.get("useTypes"):
-            if key.type_is_list:
-                output.write(f' attr.type="string" attr.list="{key.type}"')
-            else:
-                output.write(f' attr.type="{key.type}"')
-        output.write("/>\n")
-        key.id = "d" + str(counter)
-
+    print(keys)
     return keys
 
 
@@ -681,7 +711,7 @@ def graphml(
 
     write_graphml_header(output)
     keys = write_graphml_keys(graph, output, config)
-    print(keys)
+    #print(keys)
     write_graphml_graph_id(output)
     write_graphml_nodes_and_rels(graph, output, config, keys)
     write_graphml_footer(output)
