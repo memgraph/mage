@@ -1,8 +1,18 @@
 #pragma once
 
 #include <mgp.hpp>
+
 #include <unordered_set>
+
 namespace Path {
+
+/* create constants */
+constexpr const std::string_view kProcedureCreate = "create";
+constexpr const std::string_view kCreateArg1 = "start_node";
+constexpr const std::string_view kCreateArg2 = "relationships";
+constexpr const std::string_view kResultCreate = "path";
+
+/* expand constants */
 constexpr std::string_view kProcedureExpand = "expand";
 constexpr std::string_view kArgumentStartExpand = "start";
 constexpr std::string_view kArgumentRelationshipsExpand = "relationships";
@@ -36,6 +46,8 @@ struct RelationshipSets {
   std::unordered_set<std::string> incoming_rel;
   std::unordered_set<std::string> any_rel;
 };
+
+void Create(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 void FilterLabelBoolStatus(const LabelSets &labelSets, LabelBoolsStatus &labelStatus);
 
