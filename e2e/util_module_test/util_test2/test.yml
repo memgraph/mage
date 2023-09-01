@@ -2,4 +2,4 @@ query: >
     CALL util_module.md5([{key: "value"},[1,2,3]]) YIELD result RETURN result; 
 
 output:
-  - result: e84b9249eb263dff67f207fa83ce4bb9
+  - result: 102ea56fa922bd2f80c16f5d2c39e7c2
