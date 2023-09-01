@@ -1,0 +1,26 @@
+memgraph_query: >
+  MATCH (ana:Ana),
+        (marija:Marija),
+        (p2:Person{id: 2}),
+        (p3:Person{id: 3}),
+        (p4:Person{id: 4}),
+        (p5:Person{id: 5}),
+        (p6:Person{id: 6}),
+        (ana)-[r1:KNOWS]->(p2),
+        (p2)-[r2:KNOWS]->(p3)
+  CALL refactor.clone_subgraph([ana, marija, p2, p3, p4, p5, p6], [r2, r1])
+  YIELD cloned_node_id, new_node
+  RETURN cloned_node_id, new_node;
+
+neo4j_query: >
+  MATCH (ana:Ana),
+        (marija:Marija),
+        (p2:Person{id: 2}),
+        (p3:Person{id: 3}),
+        (p4:Person{id: 4}),
+        (p5:Person{id: 5}),
+        (p6:Person{id: 6}),
+        (ana)-[r1:KNOWS]->(p2),
+        (p2)-[r2:KNOWS]->(p3)
+  CALL apoc.refactor.cloneSubgraph([ana, marija, p2, p3, p4, p5, p6], [r1, r2])
+  YIELD input, output, error RETURN input, output, error;
