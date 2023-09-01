@@ -118,23 +118,46 @@ def get_graph(
     return nodes + relationships
 
 
-def get_graph_from_map(graph_map: map, write_properties: bool):
-    graph = list()
-    for node in graph_map.get("nodes"):
-        graph.append(
-            Node(node.id, node.labels, node.properties if write_properties else {})
+def get_graph_from_list(
+    graph_vertices: list, graph_edges: list, write_properties: bool
+) -> List[Union[Node, Relationship]]:
+    nodes = list()
+    relationships = list()
+
+    for vertex in graph_vertices:
+        labels = [label.name for label in vertex.labels]
+        properties = (
+            {
+                key: convert_to_isoformat(vertex.properties.get(key))
+                for key in vertex.properties.keys()
+            }
+            if write_properties
+            else {}
         )
-    for relationship in graph_map.get("relationships"):
-        graph.append(
+
+        nodes.append(Node(vertex.id, labels, properties).get_dict())
+
+    for edge in graph_edges:
+        properties = (
+            {
+                key: convert_to_isoformat(edge.properties.get(key))
+                for key in edge.properties.keys()
+            }
+            if write_properties
+            else {}
+        )
+
+        relationships.append(
             Relationship(
-                relationship.to_vertex,
-                relationship.id,
-                relationship.type,
-                relationship.properties if write_properties else {},
-                relationship.from_vertex,
-            )
+                edge.to_vertex.id,
+                edge.id,
+                edge.type.name,
+                properties,
+                edge.from_vertex.id,
+            ).get_dict()
         )
-    return graph
+
+    return nodes + relationships
 
 
 def json_dump_to_file(graph: List[Union[Node, Relationship]], path: str):
@@ -160,47 +183,55 @@ def json(
     ----------
     context : mgp.ProcCtx
         Reference to the context execution.
-    path : str
+    path : str = ""
         Path to the JSON file containing the exported graph database.
     config : mgp.Map
         stream (bool) = False: Flag to export the graph data to a stream.
-        write_properties (bool) = False: Flag to keep node and relationship properties. By default set to true.
+        write_properties (bool) = True: Flag to keep node and relationship properties. By default set to true.
     """
 
-    graph = get_graph(ctx, config.get("write_properties"))
+    graph = get_graph(ctx, config.get("write_properties", True))
     if path:
         json_dump_to_file(graph, path)
 
     return mgp.Record(
         path=path,
-        data=js.dumps(graph) if config.get("stream") else "",
+        data=js.dumps(graph) if config.get("stream", False) else "",
     )
 
 
 @mgp.read_proc
 def json_graph(
-    ctx: mgp.ProcCtx, graph: mgp.Map, path: str = "", config: mgp.Map = {}
+    ctx: mgp.ProcCtx,
+    nodes: list,
+    relationships: list,
+    path: str = "",
+    config: mgp.Map = {},
 ) -> mgp.Record(path=str, data=str):
     """
     Procedure to export the given graph to a JSON file. The graph is given with a map that contains keys "nodes" and "relationships".
 
     Parameters
     ----------
-    graph : Map
-        A map that contains a list of nodes at the key "nodes" and a list of relationships at the key "relationships"
+    nodes : List[Node]
+        A list thats contains all nodes in the given graph.
+    relationships : List[Relationship]
+        A list that containts all the relationships in the given graph.
     path : str
         Path to the JSON file containing the exported graph database.
     config : mgp.Map
         stream (bool) = False: Flag to export the graph data to a stream.
-        write_properties (bool) = False: Flag to keep node and relationship properties. By default set to true.
+        write_properties (bool) = True: Flag to keep node and relationship properties. By default set to true.
     """
-    graph = get_graph_from_map(graph, config.get("write_properties"))
+    graph = get_graph_from_list(
+        nodes, relationships, config.get("write_properties", True)
+    )
     if path:
         json_dump_to_file(graph, path)
 
     return mgp.Record(
         path=path,
-        data=js.dumps(graph) if config.get("stream") else "",
+        data=js.dumps(graph) if config.get("stream", False) else "",
     )
 
 
