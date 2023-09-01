@@ -1,0 +1,6 @@
+query: >
+    MATCH (p1:Person)
+    WHERE p1.name IN ["Michael"]
+    CALL node.relationships_exist(p1, ["KNOWS>","FOLLOWS","<KNOWS"]) YIELD result RETURN result;
+output:
+  - result: {"<KNOWS": false, "FOLLOWS": true,"KNOWS>": true}
