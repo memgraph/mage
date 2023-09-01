@@ -53,15 +53,15 @@ class KeyObjectGraphML:
     type: str
     type_is_list: bool
     default_value: str
-    id: str = ""
+    id: str = None
 
     def __init__(
         self,
-        name,
-        is_for,
-        type="",
-        type_is_list=False,
-        default_value="",
+        name: str,
+        is_for: str,
+        type: str = "",
+        type_is_list: str = False,
+        default_value: str = "",
     ):
         self.name = name
         self.is_for = is_for
@@ -374,6 +374,8 @@ def write_graphml_header(output: io.StringIO):
 
 
 def translate_types(variable: Any):
+    if isinstance(variable, tuple):
+        return get_value_string(variable)
     if isinstance(variable, str):
         return "string"
     if isinstance(variable, bool):
@@ -407,7 +409,7 @@ def get_type_string(variable: Any) -> Union[str, List[Any]]:
     return translate_types(variable[0]), True
 
 
-def write_key(
+def write_key_graphml(
     output: io.StringIO,
     working_key: KeyObjectGraphML,
     key_id_counter: int,
@@ -439,8 +441,8 @@ def get_gephi_label_value(
 
 
 def get_data_key(
-    keys: set, name: str, is_for: str, type: str, is_list: bool = False
-):
+    keys: set, name: str, is_for: str, type: str = "", is_list: bool = False
+) -> str:
     for key in keys:
         if (
             key.name == name
@@ -501,7 +503,7 @@ def get_value_string(value: Any) -> str:
     return str(value)
 
 
-def write_graphml_keys_nodes_rels(
+def process_graph_element_graphml(
     graph: List[Union[Node, Relationship]],
     keys_output: io.StringIO,
     nodes_and_rels_output: io.StringIO,
@@ -529,7 +531,7 @@ def write_graphml_keys_nodes_rels(
                 )
                 keys.add(working_key)
                 if len(keys) == key_id_counter + 1:  # something was added
-                    write_key(keys_output, working_key, key_id_counter, config)
+                    write_key_graphml(keys_output, working_key, key_id_counter, config)
                     key_id_counter = key_id_counter + 1
 
             if element.get("labels"):
@@ -543,7 +545,7 @@ def write_graphml_keys_nodes_rels(
                     )
                 keys.add(working_key)
                 if len(keys) == key_id_counter + 1:  # something was added
-                    write_key(keys_output, working_key, key_id_counter, config)
+                    write_key_graphml(keys_output, working_key, key_id_counter, config)
                     key_id_counter = key_id_counter + 1
 
             write_labels_as_data(element, nodes_and_rels_output, config, keys)
@@ -555,7 +557,7 @@ def write_graphml_keys_nodes_rels(
                 )
                 keys.add(working_key)
                 if len(keys) == key_id_counter + 1:  # something was added
-                    write_key(keys_output, working_key, key_id_counter, config)
+                    write_key_graphml(keys_output, working_key, key_id_counter, config)
                     key_id_counter = key_id_counter + 1
                 else:
                     working_key.id = get_data_key(
@@ -578,7 +580,7 @@ def write_graphml_keys_nodes_rels(
                 )
                 keys.add(working_key)
                 if len(keys) == key_id_counter + 1:  # something was added
-                    write_key(keys_output, working_key, key_id_counter, config)
+                    write_key_graphml(keys_output, working_key, key_id_counter, config)
                     key_id_counter = key_id_counter + 1
                 nodes_and_rels_output.write(
                     f'<data key="{get_data_key(keys, "TYPE", "edge", translate_types("TYPE"))}">{element.get("label")}</data>'  # noqa: E501
@@ -593,7 +595,7 @@ def write_graphml_keys_nodes_rels(
                 )
             keys.add(working_key)
             if len(keys) == key_id_counter + 1:  # something was added
-                write_key(keys_output, working_key, key_id_counter, config)
+                write_key_graphml(keys_output, working_key, key_id_counter, config)
                 key_id_counter = key_id_counter + 1
             nodes_and_rels_output.write(
                 f'<data key="{get_data_key(keys, working_key.name, "edge", working_key.type)}">{element.get("label")}</data>'  # noqa: E501
@@ -606,7 +608,7 @@ def write_graphml_keys_nodes_rels(
                 )
                 keys.add(working_key)
                 if len(keys) == key_id_counter + 1:  # something was added
-                    write_key(keys_output, working_key, key_id_counter, config)
+                    write_key_graphml(keys_output, working_key, key_id_counter, config)
                     key_id_counter = key_id_counter + 1
                 else:
                     working_key.id = get_data_key(
@@ -636,7 +638,7 @@ def set_default_config(config: mgp.Map) -> mgp.Map:
     if not config.get("format"):
         config.update({"format": ""})
     if not config.get("caption"):
-        config.update({"caption": []})
+        config.update({"caption": tuple()})
     if not config.get("useTypes"):
         config.update({"useTypes": False})
     if not config.get("leaveOutLabels"):
@@ -693,7 +695,7 @@ def graphml(
     nodes_and_rels_output = io.StringIO()
 
     write_graphml_header(output)
-    write_graphml_keys_nodes_rels(
+    process_graph_element_graphml(
         graph, keys_output, nodes_and_rels_output, config
     )
     output.write(keys_output.getvalue())

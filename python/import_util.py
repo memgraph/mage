@@ -181,7 +181,7 @@ def cast_element(
         return bool(text)
     if type == "float" or type == "double":
         return float(text)
-    if type is None:
+    if type == "":
         return text
 
 
@@ -197,7 +197,7 @@ def cast(
 
 
 def set_default_keys(key_dict: Dict[str, Any], properties: Dict[str, Any], is_for: str):
-    for id, key_object in key_dict.items():
+    for key_object in key_dict.values():
         if key_object.default_value != "" and key_object.is_for == is_for:
             properties.update({key_object.name: cast(key_object.default_value, key_object.type, key_object.type_is_list)})
 
@@ -266,18 +266,13 @@ def graphml(
     keys = dict()
 
     for key in root.findall(".//graphml:key", namespace):
-        # key value legend: value[0] = attr.name
-        #                   value[1] = attr.type
-        #                   value[2] = attr.list
-        #                   value[3] = default
-        # -> should I make a class out of it?
         working_key = KeyObjectGraphML(key.attrib["attr.name"], key.attrib["for"])
         if "attr.list" in key.attrib.keys():
             working_key.type_is_list = True
             working_key.type = key.attrib["attr.list"]
         elif "attr.type" in key.attrib.keys():
             working_key.type = key.attrib["attr.type"]
-        child = key.findall(".//default")
+        child = key.findall(".//graphml:default", namespace)
         if child:
             working_key.default_value = child[0].text
         working_key.id = key.attrib["id"]
