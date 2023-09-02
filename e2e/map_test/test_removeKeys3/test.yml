@@ -1,0 +1,5 @@
+query: >
+  CALL map.remove_keys({name:{}},[],true) YIELD result RETURN result;
+
+output:
+  - result: {}

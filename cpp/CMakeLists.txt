@@ -4,6 +4,7 @@ set(MEMGRAPH_MAGE_PROJECT_NAME "memgraph-mage")
 project("${MEMGRAPH_MAGE_PROJECT_NAME}" LANGUAGES C CXX)
 include(FetchContent)
 
+
 # setup CMake module path, defines path for include() and find_package()
 # https://cmake.org/cmake/help/latest/variable/CMAKE_MODULE_PATH.html
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cugraph_cmake)
@@ -15,17 +16,20 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Required C++ standard.
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Compile flags.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall \
     -Werror=switch -Werror=switch-bool")
+
 # Don't omit frame pointer in RelWithDebInfo, for additional callchain debug.
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
-    "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer")
+  "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer")
+
 # Release flags.
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
@@ -39,14 +43,14 @@ include(cugraph)
 # Install testing dependencies (gtest)
 set(GTEST_ROOT ${PROJECT_BINARY_DIR}/gtest)
 ExternalProject_Add(gtest-proj
-  PREFIX            ${GTEST_ROOT}
-  INSTALL_DIR       ${GTEST_ROOT}
-  GIT_REPOSITORY    https://github.com/google/googletest.git
-  GIT_TAG           release-1.11.0
-  CMAKE_ARGS        "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
-                    "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
-                    "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
-                    "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
+  PREFIX ${GTEST_ROOT}
+  INSTALL_DIR ${GTEST_ROOT}
+  GIT_REPOSITORY https://github.com/google/googletest.git
+  GIT_TAG release-1.11.0
+  CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
+  "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
+  "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+  "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
 set(GTEST_INCLUDE_DIR ${GTEST_ROOT}/include)
 set(GTEST_LIBRARY_PATH ${GTEST_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
 set(GTEST_DEBUG_LIBRARY_PATH ${GTEST_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtestd.a)
@@ -60,22 +64,23 @@ add_dependencies(mage_gtest gtest-proj)
 
 # Add OpenMP compiling option
 find_package(OpenMP)
-if (OPENMP_FOUND)
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+
+if(OPENMP_FOUND)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 
 # Add stduuid - cross-platform UUID implementation
 set(UUID_ROOT ${PROJECT_BINARY_DIR}/uuid)
 ExternalProject_Add(uuid-proj
-  PREFIX            ${UUID_ROOT}
-  INSTALL_DIR       ${UUID_ROOT}
-  GIT_REPOSITORY    https://github.com/mariusbancila/stduuid.git
-  GIT_TAG           v1.2.2
-  CMAKE_ARGS        "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
-                    "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
-                    "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
+  PREFIX ${UUID_ROOT}
+  INSTALL_DIR ${UUID_ROOT}
+  GIT_REPOSITORY https://github.com/mariusbancila/stduuid.git
+  GIT_TAG v1.2.2
+  CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
+  "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+  "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
 set(UUID_INCLUDE_DIR ${UUID_ROOT}/include)
 add_library(mage_uuid INTERFACE)
 target_include_directories(mage_uuid INTERFACE ${UUID_INCLUDE_DIR}/gsl)
@@ -88,7 +93,7 @@ ExternalProject_Add(mgclient-proj
   PREFIX ${MGCLIENT_ROOT}
   INSTALL_DIR ${MGCLIENT_ROOT}
   GIT_REPOSITORY https://github.com/memgraph/mgclient.git
-  GIT_TAG T634-FL-add-column-names-to-cpp-client
+  GIT_TAG v1.4.2
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
   "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
   "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
@@ -138,5 +143,13 @@ add_subdirectory(degree_centrality_module)
 add_subdirectory(graph_util_module)
 add_subdirectory(node_similarity_module)
 add_subdirectory(distance_calculator)
+add_subdirectory(do_module)
 add_subdirectory(periodic_module)
+add_subdirectory(map_module)
+add_subdirectory(collections_module)
+add_subdirectory(meta_module)
+add_subdirectory(node_module)
+add_subdirectory(text_module)
+add_subdirectory(label_module)
+add_subdirectory(neighbors_module)
 add_cugraph_subdirectory(cugraph_module)

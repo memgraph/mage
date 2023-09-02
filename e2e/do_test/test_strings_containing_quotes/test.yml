@@ -4,5 +4,5 @@ query: >
     YIELD value
     RETURN value.n.id AS nice_id;
 
-output:
-    - nice_id: 0
+exception: >
+    Returning nodes in do procedures not yet supported.

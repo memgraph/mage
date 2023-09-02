@@ -5,14 +5,5 @@ query: >
     RETURN value.node AS node
     ORDER BY node.id ASC;
 
-output:
-    - node:
-          labels:
-              - Node
-          properties:
-              id: 0
-    - node:
-          labels:
-              - Node
-          properties:
-              id: 1
+exception: >
+    Returning nodes in do procedures not yet supported.
