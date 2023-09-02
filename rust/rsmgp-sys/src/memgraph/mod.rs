@@ -261,6 +261,10 @@ pub struct Memgraph {
     module: *mut mgp_module,
 }
 
+// TODO(gitbuda): Make Memgraph safe.
+unsafe impl Send for Memgraph {}
+unsafe impl Sync for Memgraph {}
+
 impl Memgraph {
     /// Create a new Memgraph object.
     ///

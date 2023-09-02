@@ -171,7 +171,7 @@ impl<'a> Graph for MemgraphGraph<'a> {
     }
 }
 
-pub fn example<G: Graph>(graph: G, node_list: &[i64]) -> Vec<i64> {
+pub fn example<G: Graph + std::marker::Sync>(graph: G, node_list: &[i64]) -> Vec<i64> {
     node_list
         .par_iter()
         .filter_map(|&node_id| graph.get_vertex_by_id(node_id))
