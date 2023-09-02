@@ -32,6 +32,25 @@ HELP_MESSAGE = """\
     For usage info run: python3 setup -h
     """
 
+class Lang(Enum):
+    PYTHON = "Python"
+    CPP = "Cpp"
+    RUST = "Rust"
+
+    @staticmethod
+    def from_str(lang_str):
+        if lang_str.lower() == "python":
+            return Lang.PYTHON
+        elif lang_str.lower() == "cpp":
+            return Lang.CPP
+        elif lang_str.lower() == "rust":
+            return Lang.RUST
+        else:
+            raise BaseException("Wrong value for the lang parameter.")
+
+    def __str__(self):
+        return str(self.value)
+
 class BuildType(Enum):
     DEBUG = "Debug"
     RELEASE = "Release"
@@ -42,6 +61,7 @@ class BuildType(Enum):
 class Parameter(Enum):
     GPU = "gpu"
     CPP_BUILD_FLAGS = "cpp_build_flags"
+    LANG = "lang"
     PATH = "path"
     TYPE = "type"
 
@@ -56,6 +76,14 @@ def get_arguments():
     )
     build_args_parser.add_argument(
         "-p", "--path", help="Path to query modules directory", required=False
+    )
+    build_args_parser.add_argument(
+        "--lang",
+        help="Programming languages to build",
+        nargs='*',
+        type=Lang.from_str,
+        choices=Lang,
+        default=list(Lang),
     )
     build_args_parser.add_argument(
         "--type",
@@ -265,18 +293,20 @@ def build(args:Dict[str, Any])->bool:
     os.makedirs(MAGE_BUILD_DIRECTORY, exist_ok=True)
     copytree(LICENCE_DIRECTORY, MAGE_BUILD_DIRECTORY)
 
-    
-    cpp_status = build_and_copy_cpp_modules(args)
-    if not cpp_status:
-        return False
+    if Lang.CPP in args[Parameter.LANG.value]:
+        cpp_status = build_and_copy_cpp_modules(args)
+        if not cpp_status:
+            return False
 
-    python_status = copy_python_modules()
-    if not python_status:
-        return False
+    if Lang.PYTHON in args[Parameter.LANG.value]:
+        python_status = copy_python_modules()
+        if not python_status:
+            return False
     
-    rust_status = build_and_copy_rust_modules(args)
-    if not rust_status:
-        return False
+    if Lang.RUST in args[Parameter.LANG.value]:
+        rust_status = build_and_copy_rust_modules(args)
+        if not rust_status:
+            return False
     
     return True
 
