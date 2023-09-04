@@ -6,11 +6,9 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   try {
     mgp::memory = memory;
     AddProcedure(
-        Path::SubgraphAll, Path::kProcedureSubgraphAll, mgp::ProcedureType::Read,
+        Path::SubgraphNodes, Path::kProcedureSubgraphNodes, mgp::ProcedureType::Read,
         {mgp::Parameter(Path::kArgumentsStart, mgp::Type::Any), mgp::Parameter(Path::kArgumentsConfig, mgp::Type::Map)},
-        {mgp::Return(Path::kReturnSubgraphAll, {mgp::Type::List, mgp::Type::Node}),
-         mgp::Return(Path::kReturnSubgraphAll, {mgp::Type::List, mgp::Type::Relationship})},
-        module, memory);
+        {mgp::Return(Path::kReturnSubgraphNodes, mgp::Type::Node)}, module, memory);
 
   } catch (const std::exception &e) {
     return 1;
