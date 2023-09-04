@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Union
 
 from mage.export_import_util.parameters import Parameter
 
-HEADER_PATH = "header.csv"
+HEADER_FILENAME = "header.csv"
 
 
 @dataclass
@@ -164,7 +164,17 @@ def csv_header(
     for prop in relationship_properties:
         header.append(prop)
 
-    return header
+    return [header]
+
+
+def process_properties(properties, prop, write_list):
+    if isinstance(properties[prop], (set, list, tuple, map)):
+        write_list.append(js.dumps(properties[prop]))
+    else:
+        if isinstance(properties[prop], timedelta):
+            write_list.append(convert_to_isoformat(properties[prop]))
+        else:
+            write_list.append(properties[prop])
 
 
 def csv_data_list(
@@ -194,17 +204,7 @@ def csv_data_list(
         # node_properties
         for prop in node_properties:
             if prop in element.properties and is_node:
-                if isinstance(
-                    element.properties[prop], (set, list, tuple, map)
-                ):
-                    write_list.append(js.dumps(element.properties[prop]))
-                else:
-                    if isinstance(element.properties[prop], timedelta):
-                        write_list.append(
-                            convert_to_isoformat(element.properties[prop])
-                        )
-                    else:
-                        write_list.append(element.properties[prop])
+                process_properties(element.properties, prop, write_list)
             else:
                 write_list.append("")
         # relationship
@@ -218,17 +218,7 @@ def csv_data_list(
         # relationship properties
         for prop in relationship_properties:
             if prop in element.properties and not is_node:
-                if isinstance(
-                    element.properties[prop], (set, list, tuple, map)
-                ):
-                    write_list.append(js.dumps(element.properties[prop]))
-                else:
-                    if isinstance(element.properties[prop], timedelta):
-                        write_list.append(
-                            convert_to_isoformat(element.properties[prop])
-                        )
-                    else:
-                        write_list.append(element.properties[prop])
+                process_properties(element.properties, prop, write_list)
             else:
                 write_list.append("")
 
@@ -239,9 +229,7 @@ def csv_data_list(
 
 def CheckConfigValid(config, type, name):
     if not isinstance(config, type):
-        raise TypeError(
-            "Config attribute {0} must be of type {1}".format(name, type)
-        )
+        raise TypeError("Config attribute {0} must be of type {1}".format(name, type))
 
 
 def csv_process_config(config: mgp.Map):
@@ -275,11 +263,11 @@ def csv_process_config(config: mgp.Map):
 
 def header_path(path):
     directory, filename = os.path.split(path)
-    new_filename = HEADER_PATH
+    new_filename = HEADER_FILENAME
     return os.path.join(directory, new_filename)
 
 
-# this will probably be removed, since it is written somewhere else?
+# todo: remove later when we figure what to do with it
 def to_duration_iso_format(value: timedelta) -> str:
     """Converts timedelta to ISO-8601 duration: P<date>T<time>"""
     date_parts: List[str] = []
@@ -301,9 +289,7 @@ def to_duration_iso_format(value: timedelta) -> str:
             time_parts.append(f"{minutes}M")
         if seconds > 0 or microseconds > 0:
             microseconds_part = (
-                f".{abs(value.microseconds)}"
-                if value.microseconds != 0
-                else ""
+                f".{abs(value.microseconds)}" if value.microseconds != 0 else ""
             )
             time_parts.append(f"{seconds}{microseconds_part}S")
 
@@ -361,9 +347,7 @@ def csv_graph(
     """
     if path == "":
         path = "exported_file.csv"
-    delimiter, quoting_type, separateHeader, stream = csv_process_config(
-        config
-    )
+    delimiter, quoting_type, separateHeader, stream = csv_process_config(config)
     (
         graph,
         node_properties,
@@ -375,11 +359,9 @@ def csv_graph(
     try:
         if separateHeader:
             if not stream:
-                write_file(
-                    header_path(path), delimiter, quoting_type, [header]
-                )
+                write_file(header_path(path), delimiter, quoting_type, header)
         else:
-            data_list = [header] + data_list
+            data_list = header + data_list
 
         if stream:
             data = csv_to_stream(data_list, delimiter, quoting_type)
