@@ -5,7 +5,7 @@
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
     mgp::memory = memory;
-    
+
     AddProcedure(Create::SetRelProperty, Create::kProcedureSetRelProp, mgp::ProcedureType::Write,
                  {mgp::Parameter(Create::kArgumentsRelationship, mgp::Type::Any),
                   mgp::Parameter(Create::kArgumentsKey, mgp::Type::String),
@@ -46,6 +46,24 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
                   mgp::Parameter(std::string(Create::kArgumentKeySetProperty).c_str(), mgp::Type::String),
                   mgp::Parameter(std::string(Create::kArgumentValueSetProperty).c_str(), mgp::Type::Any)},
                  {mgp::Return(std::string(Create::kReturntSetProperty).c_str(), mgp::Type::Node)}, module, memory);
+
+    AddProcedure(Create::RemoveRelProperties, Create::kProcedureRemoveRelProperties, mgp::ProcedureType::Write,
+                 {mgp::Parameter(Create::kRemoveRelPropertiesArg1, mgp::Type::Any),
+                  mgp::Parameter(Create::kRemoveRelPropertiesArg2, {mgp::Type::List, mgp::Type::String})},
+                 {mgp::Return(Create::kResultRemoveRelProperties, mgp::Type::Relationship)}, module, memory);
+
+    AddProcedure(Create::SetRelProperties, Create::kProcedureSetRelProperties, mgp::ProcedureType::Write,
+                 {mgp::Parameter(Create::kSetRelPropertiesArg1, mgp::Type::Any),
+                  mgp::Parameter(Create::kSetRelPropertiesArg2, {mgp::Type::List, mgp::Type::String}),
+                  mgp::Parameter(Create::kSetRelPropertiesArg3, {mgp::Type::List, mgp::Type::Any})},
+                 {mgp::Return(Create::kResultSetRelProperties, mgp::Type::Relationship)}, module, memory);
+
+    AddProcedure(Create::Relationship, Create::kProcedureRelationship, mgp::ProcedureType::Write,
+                 {mgp::Parameter(Create::kRelationshipArg1, mgp::Type::Node),
+                  mgp::Parameter(Create::kRelationshipArg2, mgp::Type::String),
+                  mgp::Parameter(Create::kRelationshipArg3, mgp::Type::Map),
+                  mgp::Parameter(Create::kRelationshipArg4, mgp::Type::Node)},
+                 {mgp::Return(Create::kResultRelationship, mgp::Type::Relationship)}, module, memory);
 
   } catch (const std::exception &e) {
     return 1;
