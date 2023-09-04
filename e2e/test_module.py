@@ -42,13 +42,21 @@ class TestConstants:
 
 
 def _node_to_dict(data):
-    labels = data.labels if hasattr(data, "labels") else (data._labels if isinstance(data, Node) else [])
+    labels = (
+        data.labels
+        if hasattr(data, "labels")
+        else (data._labels if isinstance(data, Node) else [])
+    )
     properties = data.properties if hasattr(data, "properties") else data._properties
     return {"labels": list(labels), "properties": properties}
 
 
 def _relationship_to_dict(data):
-    label = data.type if hasattr(data, "label") else (data._type if isinstance(data, Relationship) else "")
+    label = (
+        data.type
+        if hasattr(data, "label")
+        else (data._type if isinstance(data, Relationship) else "")
+    )
     properties = data.properties if hasattr(data, "properties") else data._properties
     return {"label": label, "properties": properties}
 
