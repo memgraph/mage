@@ -416,7 +416,7 @@ def write_key_graphml(
     config: mgp.Map,
 ):
     output.write(
-        f'<key id="d{key_id_counter}" for="{working_key.is_for}" attr.name="{working_key.name}"'      # noqa: E501
+        f'<key id="d{key_id_counter}" for="{working_key.is_for}" attr.name="{working_key.name}"'  # noqa: E501
     )
     if config.get("useTypes"):
         if working_key.type_is_list:
@@ -531,7 +531,9 @@ def process_graph_element_graphml(
                 )
                 keys.add(working_key)
                 if len(keys) == key_id_counter + 1:  # something was added
-                    write_key_graphml(keys_output, working_key, key_id_counter, config)
+                    write_key_graphml(
+                        keys_output, working_key, key_id_counter, config
+                    )
                     key_id_counter = key_id_counter + 1
 
             if element.get("labels"):
@@ -545,7 +547,9 @@ def process_graph_element_graphml(
                     )
                 keys.add(working_key)
                 if len(keys) == key_id_counter + 1:  # something was added
-                    write_key_graphml(keys_output, working_key, key_id_counter, config)
+                    write_key_graphml(
+                        keys_output, working_key, key_id_counter, config
+                    )
                     key_id_counter = key_id_counter + 1
 
             write_labels_as_data(element, nodes_and_rels_output, config, keys)
@@ -557,7 +561,9 @@ def process_graph_element_graphml(
                 )
                 keys.add(working_key)
                 if len(keys) == key_id_counter + 1:  # something was added
-                    write_key_graphml(keys_output, working_key, key_id_counter, config)
+                    write_key_graphml(
+                        keys_output, working_key, key_id_counter, config
+                    )
                     key_id_counter = key_id_counter + 1
                 else:
                     working_key.id = get_data_key(
@@ -580,7 +586,9 @@ def process_graph_element_graphml(
                 )
                 keys.add(working_key)
                 if len(keys) == key_id_counter + 1:  # something was added
-                    write_key_graphml(keys_output, working_key, key_id_counter, config)
+                    write_key_graphml(
+                        keys_output, working_key, key_id_counter, config
+                    )
                     key_id_counter = key_id_counter + 1
                 nodes_and_rels_output.write(
                     f'<data key="{get_data_key(keys, "TYPE", "edge", translate_types("TYPE"))}">{element.get("label")}</data>'  # noqa: E501
@@ -595,7 +603,9 @@ def process_graph_element_graphml(
                 )
             keys.add(working_key)
             if len(keys) == key_id_counter + 1:  # something was added
-                write_key_graphml(keys_output, working_key, key_id_counter, config)
+                write_key_graphml(
+                    keys_output, working_key, key_id_counter, config
+                )
                 key_id_counter = key_id_counter + 1
             nodes_and_rels_output.write(
                 f'<data key="{get_data_key(keys, working_key.name, "edge", working_key.type)}">{element.get("label")}</data>'  # noqa: E501
@@ -608,7 +618,9 @@ def process_graph_element_graphml(
                 )
                 keys.add(working_key)
                 if len(keys) == key_id_counter + 1:  # something was added
-                    write_key_graphml(keys_output, working_key, key_id_counter, config)
+                    write_key_graphml(
+                        keys_output, working_key, key_id_counter, config
+                    )
                     key_id_counter = key_id_counter + 1
                 else:
                     working_key.id = get_data_key(

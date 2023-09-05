@@ -196,10 +196,20 @@ def cast(
     return cast_element(text, type)
 
 
-def set_default_keys(key_dict: Dict[str, Any], properties: Dict[str, Any], is_for: str):
+def set_default_keys(
+    key_dict: Dict[str, Any], properties: Dict[str, Any], is_for: str
+):
     for key_object in key_dict.values():
         if key_object.default_value != "" and key_object.is_for == is_for:
-            properties.update({key_object.name: cast(key_object.default_value, key_object.type, key_object.type_is_list)})
+            properties.update(
+                {
+                    key_object.name: cast(
+                        key_object.default_value,
+                        key_object.type,
+                        key_object.type_is_list,
+                    )
+                }
+            )
 
 
 def set_default_config(config: mgp.Map) -> mgp.Map:
@@ -266,7 +276,9 @@ def graphml(
     keys = dict()
 
     for key in root.findall(".//graphml:key", namespace):
-        working_key = KeyObjectGraphML(key.attrib["attr.name"], key.attrib["for"])
+        working_key = KeyObjectGraphML(
+            key.attrib["attr.name"], key.attrib["for"]
+        )
         if "attr.list" in key.attrib.keys():
             working_key.type_is_list = True
             working_key.type = key.attrib["attr.list"]
@@ -294,14 +306,24 @@ def graphml(
         for data in node.findall("graphml:data", namespace):
             working_key = keys.get(data.attrib["key"])
             if key is None:
-                working_key = KeyObjectGraphML(data.attrib["key"], "node", "string")
+                working_key = KeyObjectGraphML(
+                    data.attrib["key"], "node", "string"
+                )
             if config.get("readLabels") and working_key.name == "labels":
                 new_labels = data.text.split(":")
                 new_labels.pop(0)
                 if new_labels != labels:
                     labels = labels + new_labels
             else:
-                properties.update({working_key.name: cast(data.text, working_key.type, working_key.type_is_list)})
+                properties.update(
+                    {
+                        working_key.name: cast(
+                            data.text,
+                            working_key.type,
+                            working_key.type_is_list,
+                        )
+                    }
+                )
 
         real_ids.update(
             {node.attrib["id"]: create_vertex(ctx, properties, labels)}
@@ -319,9 +341,19 @@ def graphml(
         for data in rel.findall("graphml:data", namespace):
             working_key = keys.get(data.attrib["key"])
             if working_key is None:
-                working_key = KeyObjectGraphML(data.attrib["key"], "edge", "string")
+                working_key = KeyObjectGraphML(
+                    data.attrib["key"], "edge", "string"
+                )
             if not working_key.name == "label":  # Tinkerpop???
-                properties.update({working_key.name: cast(data.text, working_key.type, working_key.type_is_list)})
+                properties.update(
+                    {
+                        working_key.name: cast(
+                            data.text,
+                            working_key.type,
+                            working_key.type_is_list,
+                        )
+                    }
+                )
 
         if rel.attrib["source"] not in real_ids.keys():
             if not config.get("source"):
