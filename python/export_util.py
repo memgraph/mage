@@ -143,9 +143,7 @@ def to_duration_isoformat(value: timedelta) -> str:
             time_parts.append(f"{minutes}M")
         if seconds > 0 or microseconds > 0:
             microseconds_part = (
-                f".{abs(value.microseconds)}"
-                if value.microseconds != 0
-                else ""
+                f".{abs(value.microseconds)}" if value.microseconds != 0 else ""
             )
             time_parts.append(f"{seconds}{microseconds_part}S")
 
@@ -427,9 +425,7 @@ def write_key_graphml(
     working_key.id = "d" + str(key_id_counter)
 
 
-def get_gephi_label_value(
-    element: Union[Node, Relationship], config: mgp.Map
-) -> str:
+def get_gephi_label_value(element: Union[Node, Relationship], config: mgp.Map) -> str:
     for caption in config.get("caption"):
         if caption in element.get("properties").keys():
             return str(element.get("properties").get(caption))
@@ -516,24 +512,17 @@ def process_graph_element_graphml(
         working_key = None
         if element.get("type") == "node":
             nodes_and_rels_output.write(f'<node id="n{str(element.get("id"))}')
-            if (
-                element.get("labels")
-                and config.get("format").upper() != "TINKERPOP"
-            ):
+            if element.get("labels") and config.get("format").upper() != "TINKERPOP":
                 nodes_and_rels_output.write('" labels="')
                 for label in element.get("labels"):
                     nodes_and_rels_output.write(f":{label}")
             nodes_and_rels_output.write('">')
 
             if config.get("format").upper() == "GEPHI":
-                working_key = KeyObjectGraphML(
-                    "TYPE", "node", translate_types("TYPE")
-                )
+                working_key = KeyObjectGraphML("TYPE", "node", translate_types("TYPE"))
                 keys.add(working_key)
                 if len(keys) == key_id_counter + 1:  # something was added
-                    write_key_graphml(
-                        keys_output, working_key, key_id_counter, config
-                    )
+                    write_key_graphml(keys_output, working_key, key_id_counter, config)
                     key_id_counter = key_id_counter + 1
 
             if element.get("labels"):
@@ -547,23 +536,17 @@ def process_graph_element_graphml(
                     )
                 keys.add(working_key)
                 if len(keys) == key_id_counter + 1:  # something was added
-                    write_key_graphml(
-                        keys_output, working_key, key_id_counter, config
-                    )
+                    write_key_graphml(keys_output, working_key, key_id_counter, config)
                     key_id_counter = key_id_counter + 1
 
             write_labels_as_data(element, nodes_and_rels_output, config, keys)
 
             for name, value in element.get("properties").items():
                 type_string, is_list = get_type_string(value)
-                working_key = KeyObjectGraphML(
-                    name, "node", type_string, is_list
-                )
+                working_key = KeyObjectGraphML(name, "node", type_string, is_list)
                 keys.add(working_key)
                 if len(keys) == key_id_counter + 1:  # something was added
-                    write_key_graphml(
-                        keys_output, working_key, key_id_counter, config
-                    )
+                    write_key_graphml(keys_output, working_key, key_id_counter, config)
                     key_id_counter = key_id_counter + 1
                 else:
                     working_key.id = get_data_key(
@@ -581,14 +564,10 @@ def process_graph_element_graphml(
             )
 
             if config.get("format").upper() == "GEPHI":
-                working_key = KeyObjectGraphML(
-                    "TYPE", "edge", translate_types("TYPE")
-                )
+                working_key = KeyObjectGraphML("TYPE", "edge", translate_types("TYPE"))
                 keys.add(working_key)
                 if len(keys) == key_id_counter + 1:  # something was added
-                    write_key_graphml(
-                        keys_output, working_key, key_id_counter, config
-                    )
+                    write_key_graphml(keys_output, working_key, key_id_counter, config)
                     key_id_counter = key_id_counter + 1
                 nodes_and_rels_output.write(
                     f'<data key="{get_data_key(keys, "TYPE", "edge", translate_types("TYPE"))}">{element.get("label")}</data>'  # noqa: E501
@@ -603,9 +582,7 @@ def process_graph_element_graphml(
                 )
             keys.add(working_key)
             if len(keys) == key_id_counter + 1:  # something was added
-                write_key_graphml(
-                    keys_output, working_key, key_id_counter, config
-                )
+                write_key_graphml(keys_output, working_key, key_id_counter, config)
                 key_id_counter = key_id_counter + 1
             nodes_and_rels_output.write(
                 f'<data key="{get_data_key(keys, working_key.name, "edge", working_key.type)}">{element.get("label")}</data>'  # noqa: E501
@@ -613,14 +590,10 @@ def process_graph_element_graphml(
 
             for name, value in element.get("properties").items():
                 type_string, is_list = get_type_string(value)
-                working_key = KeyObjectGraphML(
-                    name, "edge", type_string, is_list
-                )
+                working_key = KeyObjectGraphML(name, "edge", type_string, is_list)
                 keys.add(working_key)
                 if len(keys) == key_id_counter + 1:  # something was added
-                    write_key_graphml(
-                        keys_output, working_key, key_id_counter, config
-                    )
+                    write_key_graphml(keys_output, working_key, key_id_counter, config)
                     key_id_counter = key_id_counter + 1
                 else:
                     working_key.id = get_data_key(
@@ -691,25 +664,19 @@ def graphml(
     config = set_default_config(config)
     graph_config = {"graphML": True}
     graph_config.update({"leaveOutLabels": config.get("leaveOutLabels")})
-    graph_config.update(
-        {"leaveOutProperties": config.get("leaveOutProperties")}
-    )
+    graph_config.update({"leaveOutProperties": config.get("leaveOutProperties")})
 
     graph = get_graph(ctx, graph_config)
 
     if not path and not config.get("stream"):
-        raise Exception(
-            "Please provide file name or set stream to True in config."
-        )
+        raise Exception("Please provide file name or set stream to True in config.")
 
     output = io.StringIO()
     keys_output = io.StringIO()
     nodes_and_rels_output = io.StringIO()
 
     write_graphml_header(output)
-    process_graph_element_graphml(
-        graph, keys_output, nodes_and_rels_output, config
-    )
+    process_graph_element_graphml(graph, keys_output, nodes_and_rels_output, config)
     output.write(keys_output.getvalue())
     write_graphml_graph_id(output)
     output.write(nodes_and_rels_output.getvalue())

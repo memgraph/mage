@@ -40,9 +40,7 @@ def convert_from_isoformat(
         return property
 
 
-def create_vertex(
-    ctx: mgp.ProcCtx, properties: Dict[str, Any], labels: List[str]
-):
+def create_vertex(ctx: mgp.ProcCtx, properties: Dict[str, Any], labels: List[str]):
     vertex = ctx.graph.create_vertex()
     vertex_properties = vertex.properties
 
@@ -114,9 +112,7 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
             else:
                 raise KeyError("Each node object needs to have 'labels' key.")
 
-            vertex_ids[id_value] = create_vertex(
-                ctx, properties_value, labels_value
-            )
+            vertex_ids[id_value] = create_vertex(ctx, properties_value, labels_value)
 
         elif type_value == Parameter.RELATIONSHIP.value:
             if all(
@@ -145,9 +141,7 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
                 vertex_ids,
             )
         else:
-            raise KeyError(
-                "The provided file does not match the correct JSON format."
-            )
+            raise KeyError("The provided file does not match the correct JSON format.")
 
     return mgp.Record()
 
@@ -159,18 +153,14 @@ def find_node(
         if (
             label in [label.name for label in vertex.labels]
             and prop_key in vertex.properties.keys()
-            and str(
-                convert_to_isoformat_graphML(vertex.properties.get(prop_key))
-            )
+            and str(convert_to_isoformat_graphML(vertex.properties.get(prop_key)))
             == prop_value
         ):
             return vertex.id
     return None
 
 
-def cast_element(
-    text: str, type: str
-) -> Union[List[Any], str, int, bool, float]:
+def cast_element(text: str, type: str) -> Union[List[Any], str, int, bool, float]:
     if text == "":
         return ""
     if type == "string":
@@ -196,9 +186,7 @@ def cast(
     return cast_element(text, type)
 
 
-def set_default_keys(
-    key_dict: Dict[str, Any], properties: Dict[str, Any], is_for: str
-):
+def set_default_keys(key_dict: Dict[str, Any], properties: Dict[str, Any], is_for: str):
     for key_object in key_dict.values():
         if key_object.default_value != "" and key_object.is_for == is_for:
             properties.update(
@@ -231,12 +219,8 @@ def set_default_config(config: mgp.Map) -> mgp.Map:
         or not isinstance(config.get("storeNodeIds"), bool)
         or not isinstance(config.get("source"), dict)
         or not isinstance(config.get("target"), dict)
-        or (
-            config.get("source") and "label" not in config.get("source").keys()
-        )
-        or (
-            config.get("target") and "label" not in config.get("target").keys()
-        )
+        or (config.get("source") and "label" not in config.get("source").keys())
+        or (config.get("target") and "label" not in config.get("target").keys())
     ):
         raise TypeError(
             "Config parameter must be a map with specific \
@@ -276,9 +260,7 @@ def graphml(
     keys = dict()
 
     for key in root.findall(".//graphml:key", namespace):
-        working_key = KeyObjectGraphML(
-            key.attrib["attr.name"], key.attrib["for"]
-        )
+        working_key = KeyObjectGraphML(key.attrib["attr.name"], key.attrib["for"])
         if "attr.list" in key.attrib.keys():
             working_key.type_is_list = True
             working_key.type = key.attrib["attr.list"]
@@ -306,9 +288,7 @@ def graphml(
         for data in node.findall("graphml:data", namespace):
             working_key = keys.get(data.attrib["key"])
             if key is None:
-                working_key = KeyObjectGraphML(
-                    data.attrib["key"], "node", "string"
-                )
+                working_key = KeyObjectGraphML(data.attrib["key"], "node", "string")
             if config.get("readLabels") and working_key.name == "labels":
                 new_labels = data.text.split(":")
                 new_labels.pop(0)
@@ -325,9 +305,7 @@ def graphml(
                     }
                 )
 
-        real_ids.update(
-            {node.attrib["id"]: create_vertex(ctx, properties, labels)}
-        )
+        real_ids.update({node.attrib["id"]: create_vertex(ctx, properties, labels)})
 
     for rel in root.findall(".//graphml:edge", namespace):
         if "label" in rel.attrib.keys():
@@ -341,9 +319,7 @@ def graphml(
         for data in rel.findall("graphml:data", namespace):
             working_key = keys.get(data.attrib["key"])
             if working_key is None:
-                working_key = KeyObjectGraphML(
-                    data.attrib["key"], "edge", "string"
-                )
+                working_key = KeyObjectGraphML(data.attrib["key"], "edge", "string")
             if not working_key.name == "label":  # Tinkerpop???
                 properties.update(
                     {
@@ -358,9 +334,7 @@ def graphml(
         if rel.attrib["source"] not in real_ids.keys():
             if not config.get("source"):
                 # without source/target config, we try with the internal id
-                real_ids.update(
-                    {rel.attrib["source"]: int(rel.attrib["source"])}
-                )
+                real_ids.update({rel.attrib["source"]: int(rel.attrib["source"])})
             else:
                 source_config = config.get("source")
                 if "id" not in source_config.keys():
@@ -376,9 +350,7 @@ def graphml(
         if rel.attrib["target"] not in real_ids.keys():
             if not config.get("target"):
                 # without source/target config, we look for the internal id
-                real_ids.update(
-                    {rel.attrib["target"]: int(rel.attrib["target"])}
-                )
+                real_ids.update({rel.attrib["target"]: int(rel.attrib["target"])})
             else:
                 target_config = config.get("target")
                 if "id" not in target_config.keys():
