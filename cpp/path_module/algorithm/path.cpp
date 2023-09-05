@@ -59,7 +59,7 @@ void Path::VisitNode(const mgp::Node node, std::unordered_map<mgp::Node, std::in
     }
   } catch (const std::out_of_range &e) {
     // it's okay, the node is not in visited nodes map
-    if (!is_start || config.At("minLevel").ValueInt() != 1) {  // what if they send me not int or nothing at all
+    if (!is_start || config.At("minLevel").ValueInt() != 1) {
       if ((labelFilterSets.end_list.empty() && labelFilterSets.termination_list.empty()) ||
           IsLabelListed(node, labelFilterSets.end_list) || IsLabelListed(node, labelFilterSets.termination_list)) {
         auto record = record_factory.NewRecord();
