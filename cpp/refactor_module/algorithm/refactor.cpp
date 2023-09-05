@@ -11,8 +11,8 @@ void Refactor::InsertCloneNodesRecord(mgp_graph *graph, mgp_result *result, mgp_
   mg_utility::InsertNodeValueResult(graph, record, std::string(kResultNewNode).c_str(), node_id, memory);
 }
 
-mgp::Node GetStandinOrCopy(mgp::List &standin_nodes, mgp::Node node,
-                           std::map<mgp::Node, mgp::Node> &old_new_node_mirror) {
+mgp::Node GetStandinOrCopy(const mgp::List &standin_nodes, const mgp::Node node,
+                           const std::map<mgp::Node, mgp::Node> &old_new_node_mirror) {
   for (auto pair : standin_nodes) {
     if (!pair.IsList() || !pair.ValueList()[0].IsNode() || !pair.ValueList()[1].IsNode()) {
       throw mgp::ValueException(
@@ -29,7 +29,7 @@ mgp::Node GetStandinOrCopy(mgp::List &standin_nodes, mgp::Node node,
   }
 }
 
-bool CheckIfStandin(mgp::Node node, mgp::List standin_nodes) {
+bool CheckIfStandin(const mgp::Node &node, const mgp::List &standin_nodes) {
   for (auto pair : standin_nodes) {
     if (!pair.IsList() || !pair.ValueList()[0].IsNode()) {
       throw mgp::ValueException(
@@ -40,6 +40,46 @@ bool CheckIfStandin(mgp::Node node, mgp::List standin_nodes) {
     }
   }
   return false;
+}
+
+void CloneNodes(const std::vector<mgp::Node> &nodes, const mgp::List &standin_nodes, mgp::Graph &graph,
+                const std::unordered_set<mgp::Value> &skip_props_searchable,
+                std::map<mgp::Node, mgp::Node> &old_new_node_mirror, mgp_graph *memgraph_graph, mgp_result *result,
+                mgp_memory *memory) {
+  for (auto node : nodes) {
+    if (CheckIfStandin(node, standin_nodes)) {
+      continue;
+    }
+    mgp::Node new_node = graph.CreateNode();
+
+    for (auto label : node.Labels()) {
+      new_node.AddLabel(label);
+    }
+
+    for (auto prop : node.Properties()) {
+      if (skip_props_searchable.empty() || !skip_props_searchable.contains(mgp::Value(prop.first))) {
+        new_node.SetProperty(prop.first, prop.second);
+      }
+    }
+    old_new_node_mirror.insert({node, new_node});
+    Refactor::InsertCloneNodesRecord(memgraph_graph, result, memory, node.Id().AsInt(), new_node.Id().AsInt());
+  }
+}
+
+void CloneRels(const std::vector<mgp::Relationship> &rels, const mgp::List &standin_nodes, mgp::Graph &graph,
+               const std::unordered_set<mgp::Value> &skip_props_searchable,
+               std::map<mgp::Node, mgp::Node> &old_new_node_mirror, mgp_graph *memgraph_graph, mgp_result *result,
+               mgp_memory *memory) {
+  for (auto rel : rels) {
+    mgp::Relationship new_relationship =
+        graph.CreateRelationship(GetStandinOrCopy(standin_nodes, rel.From(), old_new_node_mirror),
+                                 GetStandinOrCopy(standin_nodes, rel.To(), old_new_node_mirror), rel.Type());
+    for (auto prop : rel.Properties()) {
+      if (skip_props_searchable.empty() || !skip_props_searchable.contains(mgp::Value(prop.first))) {
+        new_relationship.SetProperty(prop.first, prop.second);
+      }
+    }
+  }
 }
 
 void Refactor::CloneNodesAndRels(mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory,
@@ -62,35 +102,8 @@ void Refactor::CloneNodesAndRels(mgp_graph *memgraph_graph, mgp_result *result, 
   auto graph = mgp::Graph(memgraph_graph);
 
   std::map<mgp::Node, mgp::Node> old_new_node_mirror;
-  for (auto node : nodes) {
-    if (CheckIfStandin(node, standin_nodes)) {
-      continue;
-    }
-    mgp::Node new_node = graph.CreateNode();
-
-    for (auto label : node.Labels()) {
-      new_node.AddLabel(label);
-    }
-
-    for (auto prop : node.Properties()) {
-      if (skip_props.Empty() || !skip_props_searchable.contains(mgp::Value(prop.first))) {
-        new_node.SetProperty(prop.first, prop.second);
-      }
-    }
-    old_new_node_mirror.insert({node, new_node});
-    InsertCloneNodesRecord(memgraph_graph, result, memory, node.Id().AsInt(), new_node.Id().AsInt());
-  }
-
-  for (auto rel : rels) {
-    mgp::Relationship new_relationship =
-        graph.CreateRelationship(GetStandinOrCopy(standin_nodes, rel.From(), old_new_node_mirror),
-                                 GetStandinOrCopy(standin_nodes, rel.To(), old_new_node_mirror), rel.Type());
-    for (auto prop : rel.Properties()) {
-      if (skip_props.Empty() || !skip_props_searchable.contains(mgp::Value(prop.first))) {
-        new_relationship.SetProperty(prop.first, prop.second);
-      }
-    }
-  }
+  CloneNodes(nodes, standin_nodes, graph, skip_props_searchable, old_new_node_mirror, memgraph_graph, result, memory);
+  CloneRels(rels, standin_nodes, graph, skip_props_searchable, old_new_node_mirror, memgraph_graph, result, memory);
 }
 
 void Refactor::CloneSubgraphFromPaths(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
@@ -133,17 +146,13 @@ void Refactor::CloneSubgraph(mgp_list *args, mgp_graph *memgraph_graph, mgp_resu
     std::unordered_set<mgp::Relationship> distinct_rels;
 
     for (auto node : nodes) {
-      if (node.IsNode()) {
-        distinct_nodes.insert(node.ValueNode());
-      }
+      distinct_nodes.insert(node.ValueNode());
     }
     for (auto rel : rels) {
-      if (rel.IsRelationship()) {
-        distinct_rels.insert(rel.ValueRelationship());
-      }
+      distinct_rels.insert(rel.ValueRelationship());
     }
 
-    if (distinct_rels.size() == 0 && distinct_nodes.size() > 1) {
+    if (distinct_rels.size() == 0 && distinct_nodes.size() > 0) {
       for (auto node : distinct_nodes) {
         for (auto rel : node.OutRelationships()) {
           if (distinct_nodes.contains(rel.To())) {
