@@ -23,7 +23,7 @@ mgp::Node GetStandinOrCopy(const mgp::List &standin_nodes, const mgp::Node node,
     }
   }
   try {
-    return old_new_node_mirror.at(node);  // what if they send me wrong path
+    return old_new_node_mirror.at(node);
   } catch (const std::out_of_range &e) {
     throw mgp::ValueException("Can't clone relationship without cloning relationship's source and/or target nodes.");
   }
