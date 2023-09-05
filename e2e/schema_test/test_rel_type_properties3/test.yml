@@ -1,0 +1,24 @@
+query: >
+  CALL schema.rel_type_properties() YIELD mandatory, property_name, property_type, rel_type RETURN rel_type, property_name, property_type, mandatory;
+
+output:
+  - rel_type: CATCHES
+    property_name: property
+    property_type: List[Any]
+    mandatory: true
+
+  - rel_type: CATCHES
+    property_name: property2
+    property_type: Map[Any]
+    mandatory: true
+
+  - rel_type: FALLS_FROM
+    property_name: speed_in_km
+    property_type: Int
+    mandatory: true
+
+  - rel_type: FLIES
+    property_name: ""
+    property_type: ""
+    mandatory: false
+

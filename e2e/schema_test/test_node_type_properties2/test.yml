@@ -1,0 +1,13 @@
+query: >
+  CALL schema.node_type_properties() YIELD labels, mandatory, property_name, property_type RETURN labels, mandatory, property_name, property_type
+
+output:
+  - labels: ["NonMandatory"]
+    mandatory: false
+    property_name: ''
+    property_type: ''
+
+  - labels: ["Mandatory"]
+    mandatory: true
+    property_name: property
+    property_type: List[Any]
