@@ -8,7 +8,7 @@ void Refactor::TransferProperties(const mgp::Node &node, mgp::Relationship &rel)
 
 void Refactor::Collapse(mgp::Graph &graph, const mgp::Node &node, const std::string &type,
                         const mgp::RecordFactory &record_factory) {
-  if (node.InDegree() != 1 && node.OutDegree() != 1) {
+  if (node.InDegree() != 1 || node.OutDegree() != 1) {
     throw mgp::ValueException("Out and in degree of the nodes both must be 1!");
   }
 
@@ -35,6 +35,11 @@ void Refactor::CollapseNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
     const mgp::Value input = arguments[0];
     const std::string type{arguments[1].ValueString()};
 
+    if(!input.IsNode() && !input.IsInt() && !input.IsList()){
+      record_factory.SetErrorMessage("Input can only be node, node ID, or list of nodes/IDs");
+      return;
+    }
+
     if (input.IsNode()) {
       const mgp::Node node = input.ValueNode();
       Collapse(graph, node, type, record_factory);
@@ -50,12 +55,13 @@ void Refactor::CollapseNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
           const mgp::Node node = graph.GetNodeById(mgp::Id::FromInt(elem.ValueInt()));
           Collapse(graph, node, type, record_factory);
         } else {
-          throw mgp::ValueException("Elements in the list can only be Node or ID");
+          record_factory.SetErrorMessage("Elements in the list can only be Node or ID");
+          return;
         }
       }
-    } else {
-      throw mgp::ValueException("Input can only be node, node ID, or list of nodes/IDs");
-    }
+    } 
+      
+    
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
