@@ -49,7 +49,8 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
     && python3 -m  pip install -r /mage/python/requirements.txt \
     && python3 -m  pip install -r /mage/python/tests/requirements.txt \
     && python3 -m  pip install torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-1.12.0+cu102.html \
-    && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/
+    && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/ \
+    && chown -R memgraph: /mage/e2e
 
 #DGL build from source
 RUN git clone --recurse-submodules -b 0.9.x https://github.com/dmlc/dgl.git  \
@@ -76,8 +77,13 @@ COPY --from=dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules
 #copy python build
 COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
 
+#copy e2e tests
+COPY --from=dev /mage/e2e/ /mage/e2e/
 
-RUN rm -rf /mage \
+RUN mv /mage/e2e /e2e/ \
+    && rm -rf /mage/* \
+    && mv /e2e/ /mage/ \
+    && chown -R memgraph: /mage/e2e \
     && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
     && apt-get -y --purge autoremove clang git curl python3-pip python3-dev cmake build-essential \
     && apt-get clean
