@@ -37,7 +37,8 @@ def xml_file_to_string(xml_file):
             xml_string = xml_file.read().replace("\n", "").replace("  ", "")
     except PermissionError:
         raise PermissionError(
-            "You don't have permissions to write into that file. Make sure to give the necessary permissions to user memgraph."
+            "You don't have permissions to write into that file."
+            "Make sure to give the necessary permissions to user memgraph."
         )
     except Exception:
         raise OSError("Could not open or write to file.")
@@ -54,10 +55,13 @@ def parse(xml_input: str, simple: bool = False, path: str = "") -> mgp.Map:
     xml_input : str
         XML string which is to be parsed.
     simple: bool = false
-        Boolean which specifies how should the children list be named, when it is false, all children lists are named _children
+        Boolean which specifies how should the children list be named,
+        when it is false, all children lists are named _children
         if true, all children lists are named based on their parent.
     path: str = ""
-        Path to XML file which is to be parsed, if it is not "", XML string is ignored and only file is parsed, if it is left as default, it is ignored.
+        Path to XML file which is to be parsed, if it is not "",
+        XML string is ignored and only file is parsed, if it is left as
+        default, it is ignored.
 
     Returns:
         mgp.Map -> XML file parsed as map
@@ -87,11 +91,15 @@ def xpath_search(root, xpath_expression):
 
 
 """
-Note: our implementation of xpath is different from neo4j, because python offers different support for xpath than java
+Note: our implementation of xpath is different from neo4j,
+because python offers different support for xpath than java
 We cant have absolute paths
-And our xpath search starts from the root node, so ./something is equivalent to /root/something
-For example, python input : .//ZONE is equivalent to java input //ZONE 
-https://docs.python.org/3/library/xml.etree.elementtree.html#xpath-support here are our avaliable xpath options
+And our xpath search starts from the root node,
+so ./something is equivalent to /root/something
+For example,
+python input : .//ZONE is equivalent to java input //ZONE
+https://docs.python.org/3/library/xml.etree.elementtree.html#xpath-support
+here are our avaliable xpath options
 """
 
 
@@ -111,18 +119,24 @@ def load(
     xml_url : str
         Url of the xml file to be parsed.
     simple: bool = false
-        Boolean which specifies how should the children list be named, when it is false, all children lists are named _children
+        Boolean which specifies how should the children list be named,
+        when it is false, all children lists are named _children
         if true, all children lists are named based on their parent.
     path: str = ""
-        Path to XML file which is to be parsed, if it is not "", XML url is ignored and only file is parsed. If it is left as default, file path is ignored.
+        Path to XML file which is to be parsed, if it is not "",
+        XML url is ignored and only file is parsed. If it is left as default,
+        file path is ignored.
     xpath: str = ""
-        Xpath expression which specifies which elements shall be returned. If left as "", it will be ignored, otherwise, only elements in XML file which satisfy
+        Xpath expression which specifies which elements shall be returned.
+        If left as "", it will be ignored, otherwise,
+        only elements in XML file which satisfy
         expression are returned.
     headers: mgp.Map ={}
         Additional HTTP headers used in url request.
 
     Returns:
-        mgp.Map -> XML file or URL parsed as map. In case XPATH is active, a map of for each element will be returned.
+        mgp.Map -> XML file or URL parsed as map.
+        In case XPATH is active, a map of for each element will be returned.
     """
     root = None
     parser = ET.DefusedXMLParser()
