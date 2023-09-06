@@ -235,9 +235,7 @@ def csv_data_list(
 
 def check_config_valid(config: mgp.Any, type: mgp.Any, name: str):
     if not isinstance(config, type):
-        raise TypeError(
-            "Config attribute {0} must be of type {1}".format(name, type)
-        )
+        raise TypeError("Config attribute {0} must be of type {1}".format(name, type))
 
 
 def csv_process_config(config: mgp.Map):
@@ -297,9 +295,7 @@ def to_duration_iso_format(value: timedelta) -> str:
             time_parts.append(f"{minutes}M")
         if seconds > 0 or microseconds > 0:
             microseconds_part = (
-                f".{abs(value.microseconds)}"
-                if value.microseconds != 0
-                else ""
+                f".{abs(value.microseconds)}" if value.microseconds != 0 else ""
             )
             time_parts.append(f"{seconds}{microseconds_part}S")
 
@@ -309,9 +305,7 @@ def to_duration_iso_format(value: timedelta) -> str:
     return f"P{date_duration_str}{time_duration_str}"
 
 
-def write_file(
-    path: str, delimiter: str, quoting_type: str, data: mgp.Any
-) -> None:
+def write_file(path: str, delimiter: str, quoting_type: str, data: mgp.Any) -> None:
     with open(path, "w") as file:
         writer = csv.writer(
             file, delimiter=delimiter, quoting=quoting_type, escapechar="\\"
@@ -362,9 +356,7 @@ def csv_graph(
     """
     if path == "":
         path = "exported_file.csv"
-    delimiter, quoting_type, separate_header, stream = csv_process_config(
-        config
-    )
+    delimiter, quoting_type, separate_header, stream = csv_process_config(config)
     (
         graph,
         node_properties,
