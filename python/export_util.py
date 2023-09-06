@@ -256,17 +256,17 @@ def csv_process_config(config: mgp.Map):
         elif config["quotes"] == "ifNeeded":
             quoting_type = csv.QUOTE_MINIMAL
 
-    separateHeader = False
+    separate_header = False
     if "separateHeader" in config:
         check_config_valid(config["separateHeader"], bool, "separateHeader")
-        separateHeader = config["separateHeader"]
+        separate_header = config["separateHeader"]
 
     stream = False
     if "stream" in config:
         check_config_valid(config["stream"], bool, "stream")
         stream = config["stream"]
 
-    return delimiter, quoting_type, separateHeader, stream
+    return delimiter, quoting_type, separate_header, stream
 
 
 def header_path(path: str):
@@ -362,7 +362,7 @@ def csv_graph(
     """
     if path == "":
         path = "exported_file.csv"
-    delimiter, quoting_type, separateHeader, stream = csv_process_config(
+    delimiter, quoting_type, separate_header, stream = csv_process_config(
         config
     )
     (
@@ -374,7 +374,7 @@ def csv_graph(
     header = csv_header(node_properties, relationship_properties)
 
     try:
-        if separateHeader:
+        if separate_header:
             if not stream:
                 write_file(header_path(path), delimiter, quoting_type, header)
         else:
