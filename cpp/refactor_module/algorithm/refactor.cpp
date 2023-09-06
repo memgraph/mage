@@ -3,7 +3,7 @@
 #include "mgp.hpp"
 
 void Refactor::RenameLabel(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};
+  mgp::memory = memory;
   auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
@@ -37,7 +37,7 @@ void Refactor::RenameLabel(mgp_list *args, mgp_graph *memgraph_graph, mgp_result
 }
 
 void Refactor::RenameNodeProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};
+  mgp::memory = memory;
   auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {

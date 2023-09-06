@@ -1,0 +1,4 @@
+memgraph_query: >
+  CALL refactor.rename_node_property("title", "description");
+neo4j_query: >
+  CALL apoc.refactor.rename.nodeProperty("title", "description");
