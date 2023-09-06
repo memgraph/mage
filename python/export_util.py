@@ -113,7 +113,9 @@ def get_graph(ctx: mgp.ProcCtx) -> List[Union[Node, Relationship]]:
     return nodes + relationships
 
 
-def get_graph_info_from_lists(node_list: list, relationship_list: list):
+def get_graph_info_from_lists(
+    node_list: List[mgp.Vertex], relationship_list: List[mgp.Edge]
+):
     graph = list()
     all_node_properties = list()
     all_node_prop_set = set()
@@ -167,21 +169,25 @@ def csv_header(
     return [header]
 
 
-def process_properties(properties, prop, write_list):
+def process_properties(
+    properties: Dict[str, mgp.Any], prop: str, write_list: List[mgp.Any]
+) -> None:
     if isinstance(properties[prop], (set, list, tuple, map)):
         write_list.append(js.dumps(properties[prop]))
-    else:
-        if isinstance(properties[prop], timedelta):
-            write_list.append(convert_to_isoformat(properties[prop]))
-        else:
-            write_list.append(properties[prop])
+        return
+
+    if isinstance(properties[prop], timedelta):
+        write_list.append(convert_to_isoformat(properties[prop]))
+        return
+
+    write_list.append(properties[prop])
 
 
 def csv_data_list(
     graph: List[Union[Node, Relationship]],
     node_properties: List[str],
     relationship_properties: List[str],
-) -> list:
+) -> List[mgp.Any]:
     """
     Function that parses graph into a data_list appropriate for csv writing
     """
@@ -229,7 +235,9 @@ def csv_data_list(
 
 def CheckConfigValid(config, type, name):
     if not isinstance(config, type):
-        raise TypeError("Config attribute {0} must be of type {1}".format(name, type))
+        raise TypeError(
+            "Config attribute {0} must be of type {1}".format(name, type)
+        )
 
 
 def csv_process_config(config: mgp.Map):
@@ -289,7 +297,9 @@ def to_duration_iso_format(value: timedelta) -> str:
             time_parts.append(f"{minutes}M")
         if seconds > 0 or microseconds > 0:
             microseconds_part = (
-                f".{abs(value.microseconds)}" if value.microseconds != 0 else ""
+                f".{abs(value.microseconds)}"
+                if value.microseconds != 0
+                else ""
             )
             time_parts.append(f"{seconds}{microseconds_part}S")
 
@@ -315,7 +325,9 @@ def csv_graph(
     config: mgp.Map = {},
 ) -> mgp.Record(path=str, data=str):
     """
-    Procedure to export the given graph to a csv file. The graph is given with two lists, one for nodes, and one for relationships.
+    Procedure to export the given graph to a csv file.
+    The graph is given with two lists, one for nodes,
+    and one for relationships.
 
 
     Parameters
@@ -342,12 +354,15 @@ def csv_graph(
 
         quotes (string) = always : Option which quoting type to use
 
-        separateHeader (bool) = False: Flag to separate header into another csv file
+        separateHeader (bool) = False: Flag to separate header into another
+        csv file
 
     """
     if path == "":
         path = "exported_file.csv"
-    delimiter, quoting_type, separateHeader, stream = csv_process_config(config)
+    delimiter, quoting_type, separateHeader, stream = csv_process_config(
+        config
+    )
     (
         graph,
         node_properties,
@@ -371,7 +386,8 @@ def csv_graph(
 
     except PermissionError:
         raise PermissionError(
-            "You don't have permissions to write into that file. Make sure to give the necessary permissions to user memgraph."
+            "You don't have permissions to write into that file."
+            "Make sure to give the necessary permissions to user memgraph."
         )
     except Exception:
         raise OSError("Could not open or write to the file.")
@@ -403,7 +419,8 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
             )
     except PermissionError:
         raise PermissionError(
-            "You don't have permissions to write into that file. Make sure to give the necessary permissions to user memgraph."
+            "You don't have permissions to write into that file."
+            "Make sure to give the necessary permissions to user memgraph."
         )
     except Exception:
         raise OSError("Could not open or write to the file.")
@@ -431,7 +448,8 @@ def save_file(file_path: str, data_list: list):
             writer.writerows(data_list)
     except PermissionError:
         raise PermissionError(
-            "You don't have permissions to write into that file. Make sure to give the necessary permissions to user memgraph."
+            "You don't have permissions to write into that file."
+            "Make sure to give the necessary permissions to user memgraph."
         )
     except csv.Error as e:
         raise csv.Error(
@@ -472,17 +490,27 @@ def csv_query(
     Procedure to export query results to a CSV file.
     Args:
         context (mgp.ProcCtx): Reference to the context execution.
-        query (str): A query from which the results will be saved to a CSV file.
-        file_path (str, optional): A path to the CSV file where the query results will be exported. Defaults to an empty string.
-        stream (bool, optional): A value which determines whether a stream of query results in a CSV format will be returned.
+        query (str): A query from which the results will be
+        saved to a CSV file.
+
+        file_path (str, optional): A path to the CSV file where the query
+        results will be exported. Defaults to an empty string.
+
+        stream (bool, optional): A value which determines whether a
+        stream of query results in a CSV format will be returned.
     Returns:
         mgp.Record(
-            file_path (str): A path to the CSV file where the query results are exported. If file_path is not provided, the output will be an empty string.
+            file_path (str): A path to the CSV file where the query results are
+            exported. If file_path is not provided, the output will be an
+            empty string.
             data (str): A stream of query results in a CSV format.
         )
     Raises:
-        Exception: If neither file nor config are provided, or if only config is provided with stream set to False. Also if query yields no results or if the database is empty.
-        PermissionError: If you provided file path that you have no permissions to write at.
+        Exception: If neither file nor config are provided,
+        or if only config is provided with stream set to False.
+        Also if query yields no results or if the database is empty.
+        PermissionError: If you provided file path that you have
+        no permissions to write at.
         csv.Error: If an error occurred while writing into stream or CSV file.
         OSError: If the file can't be opened or written to.
     """
@@ -494,7 +522,8 @@ def csv_query(
     # only config provided with stream set to false
     if not file_path and not stream:
         raise Exception(
-            "If you provided only stream value, it has to be set to True to get any results."
+            "If you provided only stream value, it has to be set to"
+            "True to get any results."
         )
 
     memgraph = Memgraph()
@@ -503,7 +532,8 @@ def csv_query(
     # if query yields no result
     if not len(results):
         raise Exception(
-            "Your query yields no results. Check if the database is empty or rewrite the provided query."
+            "Your query yields no results."
+            "Check if the database is empty or rewrite the provided query."
         )
 
     result_keys = list(results[0])
