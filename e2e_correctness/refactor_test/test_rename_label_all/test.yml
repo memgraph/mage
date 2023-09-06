@@ -1,4 +1,4 @@
 memgraph_query: >
-  CALL refactor.rename_label("Node1", "Node3");
+  CALL refactor.rename_label("Node1", "Node3") YIELD nodes_changed RETURN nodes_changed;
 neo4j_query: >
   CALL apoc.refactor.rename.label("Node1", "Node3");
