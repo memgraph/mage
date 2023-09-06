@@ -230,7 +230,7 @@ def set_default_config(config: mgp.Map) -> mgp.Map:
 
 
 @mgp.write_proc
-def graphml(
+def graphml(  # noqa: C901
     ctx: mgp.ProcCtx,
     path: str = "",
     config: Union[mgp.Map, None] = None,

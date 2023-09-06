@@ -447,9 +447,6 @@ def get_data_key(
             and key.type_is_list == is_list
         ):
             return key.id
-    raise Exception(
-        "This property doesn't have a key."  # noqa: E501 THIS SHOULD NOT HAPPEN ONCE I FIX GEPHI
-    )
 
 
 def write_labels_as_data(
@@ -499,7 +496,7 @@ def get_value_string(value: Any) -> str:
     return str(value)
 
 
-def process_graph_element_graphml(
+def process_graph_element_graphml(  # noqa: C901
     graph: List[Union[Node, Relationship]],
     keys_output: io.StringIO,
     nodes_and_rels_output: io.StringIO,
@@ -521,7 +518,7 @@ def process_graph_element_graphml(
             if config.get("format").upper() == "GEPHI":
                 working_key = KeyObjectGraphML("TYPE", "node", translate_types("TYPE"))
                 keys.add(working_key)
-                if len(keys) == key_id_counter + 1:  # something was added
+                if len(keys) == key_id_counter + 1:
                     write_key_graphml(keys_output, working_key, key_id_counter, config)
                     key_id_counter = key_id_counter + 1
 
@@ -535,7 +532,7 @@ def process_graph_element_graphml(
                         "labels", "node", translate_types("labels")
                     )
                 keys.add(working_key)
-                if len(keys) == key_id_counter + 1:  # something was added
+                if len(keys) == key_id_counter + 1:
                     write_key_graphml(keys_output, working_key, key_id_counter, config)
                     key_id_counter = key_id_counter + 1
 
@@ -545,7 +542,7 @@ def process_graph_element_graphml(
                 type_string, is_list = get_type_string(value)
                 working_key = KeyObjectGraphML(name, "node", type_string, is_list)
                 keys.add(working_key)
-                if len(keys) == key_id_counter + 1:  # something was added
+                if len(keys) == key_id_counter + 1:
                     write_key_graphml(keys_output, working_key, key_id_counter, config)
                     key_id_counter = key_id_counter + 1
                 else:
@@ -566,7 +563,7 @@ def process_graph_element_graphml(
             if config.get("format").upper() == "GEPHI":
                 working_key = KeyObjectGraphML("TYPE", "edge", translate_types("TYPE"))
                 keys.add(working_key)
-                if len(keys) == key_id_counter + 1:  # something was added
+                if len(keys) == key_id_counter + 1:
                     write_key_graphml(keys_output, working_key, key_id_counter, config)
                     key_id_counter = key_id_counter + 1
                 nodes_and_rels_output.write(
@@ -581,7 +578,7 @@ def process_graph_element_graphml(
                     "label", "edge", translate_types("label")
                 )
             keys.add(working_key)
-            if len(keys) == key_id_counter + 1:  # something was added
+            if len(keys) == key_id_counter + 1:
                 write_key_graphml(keys_output, working_key, key_id_counter, config)
                 key_id_counter = key_id_counter + 1
             nodes_and_rels_output.write(
@@ -592,7 +589,7 @@ def process_graph_element_graphml(
                 type_string, is_list = get_type_string(value)
                 working_key = KeyObjectGraphML(name, "edge", type_string, is_list)
                 keys.add(working_key)
-                if len(keys) == key_id_counter + 1:  # something was added
+                if len(keys) == key_id_counter + 1:
                     write_key_graphml(keys_output, working_key, key_id_counter, config)
                     key_id_counter = key_id_counter + 1
                 else:
