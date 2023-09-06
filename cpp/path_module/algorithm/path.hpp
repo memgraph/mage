@@ -72,7 +72,7 @@ void Expand(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
 
 void FilterLabel(const std::string_view label, const LabelSets &labelFilters, LabelBools &labelBools);
 
-void ParseLabels(const mgp::List &list_of_labels, LabelSets &labelFilters);
+void ParseLabels(const mgp::List &list_of_labels, LabelSets &labelSets);
 
 void ParseRelationships(const mgp::List &list_of_relationships, RelationshipSets &relationshipSets, bool &any_outgoing,
                         bool &any_incoming);

@@ -103,21 +103,19 @@ bool Path::RelationshipAllowed(const std::string &rel_type, const RelationshipSe
 }
 /*function to set appropriate parameters for filtering*/
 void Path::FilterLabel(const std::string_view label, const LabelSets &labelSets, LabelBools &labelBools) {
-  const std::string label_string = std::string(label);
-  if (labelSets.blacklist.find(label_string) != labelSets.blacklist.end()) {  // if label is blacklisted
+  if (labelSets.blacklist.find(label) != labelSets.blacklist.end()) {  // if label is blacklisted
     labelBools.blacklisted = true;
   }
 
-  if (labelSets.termination_list.find(label_string) !=
-      labelSets.termination_list.end()) {  // if label is termination label
+  if (labelSets.termination_list.find(label) != labelSets.termination_list.end()) {  // if label is termination label
     labelBools.terminated = true;
   }
 
-  if (labelSets.end_list.find(label_string) != labelSets.end_list.end()) {  // if label is end label
+  if (labelSets.end_list.find(label) != labelSets.end_list.end()) {  // if label is end label
     labelBools.end_node = true;
   }
 
-  if (labelSets.whitelist.find(label_string) != labelSets.whitelist.end()) {  // if label is whitelisted
+  if (labelSets.whitelist.find(label) != labelSets.whitelist.end()) {  // if label is whitelisted
     labelBools.whitelisted = true;
   }
 }
@@ -126,22 +124,26 @@ void Path::FilterLabel(const std::string_view label, const LabelSets &labelSets,
 sets were used so when filtering is done, its done in O(1)*/
 void Path::ParseLabels(const mgp::List &list_of_labels, LabelSets &labelSets) {
   for (const auto label : list_of_labels) {
-    std::string label_string = std::string(label.ValueString());
-    const char first_elem = label_string[0];
+    std::string_view label_string = label.ValueString();
+    const char first_elem = label_string.front();
     switch (first_elem) {
       case '-':
-        labelSets.blacklist.insert(label_string.erase(0, 1));
+        label_string.remove_prefix(1);
+        labelSets.blacklist.insert(label_string);
         break;
       case '>':
-        labelSets.end_list.insert(label_string.erase(0, 1));
+        label_string.remove_prefix(1);
+        labelSets.end_list.insert(label_string);
         break;
       case '+':
-        labelSets.whitelist.insert(label_string.erase(0, 1));
+        label_string.remove_prefix(1);
+        labelSets.whitelist.insert(label_string);
         break;
       case '/':
-        labelSets.termination_list.insert(label_string.erase(0, 1));
+        label_string.remove_prefix(1);
+        labelSets.termination_list.insert(label_string);
         break;
-      default:  // default is that everything goes to whitelist, unless specified as above
+      default:
         labelSets.whitelist.insert(label_string);
         break;
     }
@@ -380,34 +382,6 @@ void Path::VisitNode(const mgp::Node node, std::map<mgp::Node, std::int64_t> &vi
   for (const auto out_rel : node.OutRelationships()) {
     if (RelFilterAllows(config, out_rel.Type(), false)) {
       VisitNode(out_rel.To(), visited_nodes, false, config, hop_count + 1, labelFilterSets, to_be_returned_nodes);
-    }
-  }
-}
-
-void Path::ParseLabels(const mgp::List &list_of_labels, LabelSets &labelSets) {
-  for (const auto label : list_of_labels) {
-    std::string_view label_string = label.ValueString();
-    const char first_elem = label_string.front();
-    switch (first_elem) {
-      case '-':
-        label_string.remove_prefix(1);
-        labelSets.blacklist.insert(label_string);
-        break;
-      case '>':
-        label_string.remove_prefix(1);
-        labelSets.end_list.insert(label_string);
-        break;
-      case '+':
-        label_string.remove_prefix(1);
-        labelSets.whitelist.insert(label_string);
-        break;
-      case '/':
-        label_string.remove_prefix(1);
-        labelSets.termination_list.insert(label_string);
-        break;
-      default:
-        labelSets.whitelist.insert(label_string);
-        break;
     }
   }
 }
