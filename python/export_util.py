@@ -233,7 +233,7 @@ def csv_data_list(
     return data_list
 
 
-def CheckConfigValid(config, type, name):
+def check_config_valid(config: mgp.Any, type: mgp.Any, name: str):
     if not isinstance(config, type):
         raise TypeError(
             "Config attribute {0} must be of type {1}".format(name, type)
@@ -243,13 +243,13 @@ def CheckConfigValid(config, type, name):
 def csv_process_config(config: mgp.Map):
     delimiter = ","
     if "delimiter" in config:
-        CheckConfigValid(config["delimiter"], str, "delimiter")
+        check_config_valid(config["delimiter"], str, "delimiter")
 
         delimiter = config["delimiter"]
 
     quoting_type = csv.QUOTE_ALL
     if "quotes" in config:
-        CheckConfigValid(config["quotes"], str, "quotes")
+        check_config_valid(config["quotes"], str, "quotes")
 
         if config["quotes"] == "none":
             quoting_type = csv.QUOTE_NONE
@@ -258,18 +258,18 @@ def csv_process_config(config: mgp.Map):
 
     separateHeader = False
     if "separateHeader" in config:
-        CheckConfigValid(config["separateHeader"], bool, "separateHeader")
+        check_config_valid(config["separateHeader"], bool, "separateHeader")
         separateHeader = config["separateHeader"]
 
     stream = False
     if "stream" in config:
-        CheckConfigValid(config["stream"], bool, "stream")
+        check_config_valid(config["stream"], bool, "stream")
         stream = config["stream"]
 
     return delimiter, quoting_type, separateHeader, stream
 
 
-def header_path(path):
+def header_path(path: str):
     directory, filename = os.path.split(path)
     new_filename = HEADER_FILENAME
     return os.path.join(directory, new_filename)
@@ -309,7 +309,9 @@ def to_duration_iso_format(value: timedelta) -> str:
     return f"P{date_duration_str}{time_duration_str}"
 
 
-def write_file(path, delimiter, quoting_type, data):
+def write_file(
+    path: str, delimiter: str, quoting_type: str, data: mgp.Any
+) -> None:
     with open(path, "w") as file:
         writer = csv.writer(
             file, delimiter=delimiter, quoting=quoting_type, escapechar="\\"
