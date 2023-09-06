@@ -2,4 +2,13 @@
 
 #include <mgp.hpp>
 
-namespace Refactor {}  // namespace Refactor
+namespace Refactor {
+
+/*invert constants*/
+constexpr std::string_view kProcedureInvert = "invert";
+constexpr std::string_view kArgumentRelationship = "relationship";
+constexpr std::string_view kReturnRelationshipInvert = "relationship";
+constexpr std::string_view kReturnIdInvert = "id_inverted";
+
+void Invert(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+}  // namespace Refactor
