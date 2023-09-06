@@ -180,7 +180,11 @@ def convert_to_isoformat_graphML(
 
 def get_graph(
     ctx: mgp.ProcCtx,
-    config: Union[mgp.Map, None] = None,
+    config: Union[mgp.Map, None] = {
+        "graphML": False,
+        "leaveOutLabels": False,
+        "leaveOutProperties": False,
+    },
 ) -> List[Union[Node, Relationship]]:
     """
     config : Map
