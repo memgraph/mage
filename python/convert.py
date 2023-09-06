@@ -6,5 +6,4 @@ from json import loads
 def str2object(string: str) -> mgp.Any:
     if string:
         return loads(string)
-    else:
-        return None
+    return None
