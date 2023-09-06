@@ -17,7 +17,6 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
                                     mgp::Value(mgp::List{})),
                  },
                  {mgp::Return(Refactor::kReturnCategorize, mgp::Type::String)}, module, memory);
-
   } catch (const std::exception &e) {
     return 1;
   }
