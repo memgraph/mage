@@ -2,7 +2,7 @@
 
 void GetStartNodes(const mgp::Value element, const mgp::Graph &graph, std::unordered_set<mgp::Node> &start_nodes) {
   if (!(element.IsNode() || element.IsInt())) {
-    throw mgp::ValueException("First argument must be type node, id or a list of those.");
+    throw mgp::ValueException("The first argument needs to be a node, an integer ID, or a list thereof.");
   }
   if (element.IsNode()) {
     start_nodes.insert(element.ValueNode());
@@ -40,9 +40,9 @@ bool IsLabelListed(const mgp::Node node, std::unordered_set<std::string_view> &s
   return false;
 }
 
-void Path::VisitNode(const mgp::Node node, std::unordered_map<mgp::Node, std::int64_t> &visited_nodes, bool is_start,
+void Path::VisitNode(const mgp::Node node, std::map<mgp::Node, std::int64_t> &visited_nodes, bool is_start,
                      const mgp::Map &config, int64_t hop_count, Path::LabelSets &labelFilterSets,
-                     const mgp::RecordFactory &record_factory) {
+                     mgp::List &to_be_returned_nodes) {
   if (config.At("maxLevel").ValueInt() != -1 && hop_count > config.At("maxLevel").ValueInt()) {
     return;
   }
@@ -62,8 +62,7 @@ void Path::VisitNode(const mgp::Node node, std::unordered_map<mgp::Node, std::in
     if (!is_start || config.At("minLevel").ValueInt() != 1) {
       if ((labelFilterSets.end_list.empty() && labelFilterSets.termination_list.empty()) ||
           IsLabelListed(node, labelFilterSets.end_list) || IsLabelListed(node, labelFilterSets.termination_list)) {
-        auto record = record_factory.NewRecord();
-        record.Insert(std::string(kResultSubgraphNodes).c_str(), node);
+        to_be_returned_nodes.AppendExtend(mgp::Value(node));
       }
     }
   }
@@ -73,12 +72,12 @@ void Path::VisitNode(const mgp::Node node, std::unordered_map<mgp::Node, std::in
   }
   for (const auto in_rel : node.InRelationships()) {
     if (RelFilterAllows(config, in_rel.Type(), true)) {
-      VisitNode(in_rel.From(), visited_nodes, false, config, hop_count + 1, labelFilterSets, record_factory);
+      VisitNode(in_rel.From(), visited_nodes, false, config, hop_count + 1, labelFilterSets, to_be_returned_nodes);
     }
   }
   for (const auto out_rel : node.OutRelationships()) {
     if (RelFilterAllows(config, out_rel.Type(), false)) {
-      VisitNode(out_rel.To(), visited_nodes, false, config, hop_count + 1, labelFilterSets, record_factory);
+      VisitNode(out_rel.To(), visited_nodes, false, config, hop_count + 1, labelFilterSets, to_be_returned_nodes);
     }
   }
 }
@@ -111,7 +110,7 @@ void Path::ParseLabels(const mgp::List &list_of_labels, LabelSets &labelSets) {
   }
 }
 
-void SetDefaultConfig(mgp::Map &config) {
+void SetConfig(mgp::Map &config) {
   auto value = config.At("maxLevel");
   if (value.IsNull()) {
     config.Insert("maxLevel", mgp::Value(int64_t(-1)));
@@ -136,7 +135,7 @@ void SetDefaultConfig(mgp::Map &config) {
         config.At("labelFilter").IsList() && config.At("filterStartNode").IsBool()) ||
       (config.At("minLevel").ValueInt() != 0 && config.At("minLevel").ValueInt() != 1)) {
     throw mgp::ValueException(
-        "Config parameter must be a map with specific keys and values described in documentation.");
+        "The config parameter needs to be a map with keys and values in line with the documentation.");
   }
 }
 
@@ -147,7 +146,7 @@ void Path::SubgraphNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *
   const auto record_factory = mgp::RecordFactory(result);
   try {
     auto config = arguments[1].ValueMap();
-    SetDefaultConfig(config);
+    SetConfig(config);
 
     std::unordered_set<mgp::Node> start_nodes;
     if (arguments[0].IsList()) {
@@ -161,10 +160,67 @@ void Path::SubgraphNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *
     LabelSets labelFilterSets;
     ParseLabels(config.At("labelFilter").ValueList(), labelFilterSets);
 
-    std::unordered_map<mgp::Node, std::int64_t> visited_nodes;
+    std::map<mgp::Node, std::int64_t> visited_nodes;
+    mgp::List to_be_returned_nodes;
     for (const auto node : start_nodes) {
-      VisitNode(node, visited_nodes, true, config, 0, labelFilterSets, record_factory);
+      VisitNode(node, visited_nodes, true, config, 0, labelFilterSets, to_be_returned_nodes);
     }
+
+    for (auto node : to_be_returned_nodes) {
+      auto record = record_factory.NewRecord();
+      record.Insert(std::string(kResultSubgraphNodes).c_str(), node);
+    }
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
+
+void Path::SubgraphAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::memory = memory;
+  const auto arguments = mgp::List(args);
+  const auto graph = mgp::Graph(memgraph_graph);
+  const auto record_factory = mgp::RecordFactory(result);
+  try {
+    auto config = arguments[1].ValueMap();
+    SetConfig(config);
+
+    std::unordered_set<mgp::Node> start_nodes;
+    if (arguments[0].IsList()) {
+      for (const auto element : arguments[0].ValueList()) {
+        GetStartNodes(element, graph, start_nodes);
+      }
+    } else {
+      GetStartNodes(arguments[0], graph, start_nodes);
+    }
+
+    LabelSets labelFilterSets;
+    ParseLabels(config.At("labelFilter").ValueList(), labelFilterSets);
+
+    std::map<mgp::Node, std::int64_t> visited_nodes;
+    mgp::List to_be_returned_nodes;
+    for (const auto node : start_nodes) {
+      VisitNode(node, visited_nodes, true, config, 0, labelFilterSets, to_be_returned_nodes);
+    }
+
+    std::unordered_set<mgp::Node> to_be_returned_nodes_searchable;
+    for (auto node : to_be_returned_nodes) {
+      to_be_returned_nodes_searchable.insert(node.ValueNode());
+    }
+
+    mgp::List to_be_returned_rels;
+    for (auto node : to_be_returned_nodes) {
+      for (auto rel : node.ValueNode().OutRelationships()) {
+        if (to_be_returned_nodes_searchable.contains(rel.To())) {
+          to_be_returned_rels.AppendExtend(mgp::Value(rel));
+        }
+      }
+    }
+
+    auto record = record_factory.NewRecord();
+    record.Insert(std::string(kResultNodesSubgraphAll).c_str(), to_be_returned_nodes);
+    record.Insert(std::string(kResultRelsSubgraphAll).c_str(), to_be_returned_rels);
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
