@@ -156,5 +156,4 @@ add_subdirectory(text_module)
 add_subdirectory(path_module)
 add_subdirectory(node_module)
 add_subdirectory(neighbors_module)
-
 add_cugraph_subdirectory(cugraph_module)
