@@ -1,7 +1,8 @@
 #pragma once
 
-#include <mgp.hpp>
 #include <string_view>
+
+#include <mgp.hpp>
 
 namespace Refactor {
 

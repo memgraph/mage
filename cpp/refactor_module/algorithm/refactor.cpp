@@ -1,5 +1,4 @@
 #include "refactor.hpp"
-#include <cstdint>
 
 #include "mgp.hpp"
 
