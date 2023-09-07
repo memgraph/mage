@@ -23,9 +23,7 @@ def parse_element(element, simple):
         children_name = CHILDREN
         if simple:
             children_name = "_" + str(element.tag)
-        result[children_name] = [
-            parse_element(child, simple) for child in children
-        ]
+        result[children_name] = [parse_element(child, simple) for child in children]
 
     return result
 
@@ -155,9 +153,7 @@ def load(
         record_list = list()
         xpath_list = xpath_search(root, xpath)
         for element in xpath_list:
-            record_list.append(
-                mgp.Record(output_map=parse_element(element, simple))
-            )
+            record_list.append(mgp.Record(output_map=parse_element(element, simple)))
         return record_list
     output_map = parse_element(root, simple)
     return mgp.Record(output_map=output_map)
