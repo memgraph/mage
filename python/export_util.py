@@ -76,6 +76,17 @@ def convert_to_isoformat(
         return property
 
 
+def get_properties_json(object, write_properties: bool):
+    return (
+        {
+            key: convert_to_isoformat(object.properties.get(key))
+            for key in object.properties.keys()
+        }
+        if write_properties
+        else {}
+    )
+
+
 def get_graph(
     ctx: mgp.ProcCtx, write_properties: bool
 ) -> List[Union[Node, Relationship]]:
@@ -84,26 +95,12 @@ def get_graph(
 
     for vertex in ctx.graph.vertices:
         labels = [label.name for label in vertex.labels]
-        properties = (
-            {
-                key: convert_to_isoformat(vertex.properties.get(key))
-                for key in vertex.properties.keys()
-            }
-            if write_properties
-            else {}
-        )
+        properties = get_properties_json(vertex, write_properties)
 
         nodes.append(Node(vertex.id, labels, properties).get_dict())
 
         for edge in vertex.out_edges:
-            properties = (
-                {
-                    key: convert_to_isoformat(edge.properties.get(key))
-                    for key in edge.properties.keys()
-                }
-                if write_properties
-                else {}
-            )
+            properties = get_properties_json(edge, write_properties)
 
             relationships.append(
                 Relationship(
@@ -126,26 +123,12 @@ def get_graph_from_list(
 
     for vertex in graph_vertices:
         labels = [label.name for label in vertex.labels]
-        properties = (
-            {
-                key: convert_to_isoformat(vertex.properties.get(key))
-                for key in vertex.properties.keys()
-            }
-            if write_properties
-            else {}
-        )
+        properties = get_properties_json(vertex, write_properties)
 
         nodes.append(Node(vertex.id, labels, properties).get_dict())
 
     for edge in graph_edges:
-        properties = (
-            {
-                key: convert_to_isoformat(edge.properties.get(key))
-                for key in edge.properties.keys()
-            }
-            if write_properties
-            else {}
-        )
+        properties = get_properties_json(edge, write_properties)
 
         relationships.append(
             Relationship(
@@ -179,17 +162,23 @@ def json(
     """
     Procedure to export the whole database to a JSON file.
 
-    Parameters
-    ----------
-    context : mgp.ProcCtx
-        Reference to the context execution.
-    path : str = ""
-        Path to the JSON file containing the exported graph database.
-    config : mgp.Map
-        stream (bool) = False: Flag to export the graph data to a stream.
-        write_properties (bool) = True: Flag to keep node and relationship properties. By default set to true.
-    """
+    Parameters:
+        context : mgp.ProcCtx
+            Reference to the context execution.
+        path : str = ""
+            Path to the JSON file containing the exported graph database.
+        config : mgp.Map
+            stream (bool) = False: Flag to export the graph data to a stream.
+            write_properties (bool) = True: Flag to keep node and relationship properties. By default set to true.
 
+    Returns:
+        path (str): A path to the file where the query results are exported. If path is not provided, the output will be an empty string.
+        data (str): A stream of query results in JSON format.
+
+    Raises:
+        PermissionError: If you provided file path that you have no permissions to write at.
+        OSError: If the file can't be opened or written to.
+    """
     graph = get_graph(ctx, config.get("write_properties", True))
     if path:
         json_dump_to_file(graph, path)
@@ -211,17 +200,24 @@ def json_graph(
     """
     Procedure to export the given graph to a JSON file. The graph is given with a map that contains keys "nodes" and "relationships".
 
-    Parameters
-    ----------
-    nodes : List[Node]
-        A list thats contains all nodes in the given graph.
-    relationships : List[Relationship]
-        A list that containts all the relationships in the given graph.
-    path : str
-        Path to the JSON file containing the exported graph database.
-    config : mgp.Map
-        stream (bool) = False: Flag to export the graph data to a stream.
-        write_properties (bool) = True: Flag to keep node and relationship properties. By default set to true.
+    Parameters:
+        nodes : List[Node]
+            A list thats contains all nodes in the given graph.
+        relationships : List[Relationship]
+            A list that containts all the relationships in the given graph.
+        path : str
+            Path to the JSON file containing the exported graph database.
+        config : mgp.Map
+            stream (bool) = False: Flag to export the graph data to a stream.
+            write_properties (bool) = True: Flag to keep node and relationship properties. By default set to true.
+
+    Returns:
+        path (str): A path to the file where the query results are exported. If path is not provided, the output will be an empty string.
+        data (str): A stream of query results in JSON format.
+
+    Raises:
+        PermissionError: If you provided file path that you have no permissions to write at.
+        OSError: If the file can't be opened or written to.
     """
     graph = get_graph_from_list(
         nodes, relationships, config.get("write_properties", True)
