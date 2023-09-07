@@ -124,7 +124,6 @@ def convert_to_cypher_format(
         date,
     ]
 ) -> str:
-    print("PROPERTY: ", property, type(property))
     if isinstance(property, timedelta):
         return f"duration('{to_duration_iso_format(property)}')"
 
@@ -157,24 +156,34 @@ def convert_to_cypher_format(
     return str(property)
 
 
-def get_graph_for_cypher(ctx: mgp.ProcCtx) -> List[Union[Node, Relationship]]:
+def get_graph_for_cypher(
+    ctx: mgp.ProcCtx, write_properties: bool
+) -> List[Union[Node, Relationship]]:
     nodes = list()
     relationships = list()
 
     for vertex in ctx.graph.vertices:
         labels = [label.name for label in vertex.labels]
-        properties = {
-            key: convert_to_cypher_format(vertex.properties.get(key))
-            for key in vertex.properties.keys()
-        }
+        properties = (
+            {
+                key: convert_to_cypher_format(vertex.properties.get(key))
+                for key in vertex.properties.keys()
+            }
+            if write_properties
+            else {}
+        )
 
         nodes.append(Node(vertex.id, labels, properties))
 
         for edge in vertex.out_edges:
-            properties = {
-                key: convert_to_cypher_format(edge.properties.get(key))
-                for key in edge.properties.keys()
-            }
+            properties = (
+                {
+                    key: convert_to_cypher_format(edge.properties.get(key))
+                    for key in edge.properties.keys()
+                }
+                if write_properties
+                else {}
+            )
 
             relationships.append(
                 Relationship(
@@ -192,66 +201,76 @@ def get_graph_for_cypher(ctx: mgp.ProcCtx) -> List[Union[Node, Relationship]]:
 @mgp.read_proc
 def cypher_all(
     ctx: mgp.ProcCtx,
-    file: str,
+    path: str = "",
     config: mgp.Map = {},
-) -> mgp.Record(file=str, data=str):
+) -> mgp.Record(path=str, data=str):
     """Exports the graph in cypher with all the constraints, indexes and triggers.
-
     Args:
-        conditionals: List of condition & read-only query pairs structured as [condition, query, condition, query, …​].
-                      Conditions are boolean values and queries are strings.
-        else_query: The read-only query to be executed if no condition evaluates to true.
-        params: If the above queries are parameterized, provide a {key: value} map of parameters applied to the given queries.
-
+        context (mgp.ProcCtx): Reference to the context execution.
+        path (str): A path to the file where the query results will be exported. Defaults to an empty string.
+        config : mgp.Map
+            stream (bool) = False: Flag to export the graph data to a stream.
+            write_properties (bool) = True: Flag to keep node and relationship properties. By default set to true.
+            write_triggers (bool) = True: Flag to export graph triggers.
+            write_indexes (bool) = True: Flag to export indexes.
+            write_constraints (bool) = True: Flag to export constraints.
     Returns:
-        value: {field_name: field_value} map containing the result records of the evaluated query.
+        path (str): A path to the file where the query results are exported. If path is not provided, the output will be an empty string.
+        data (str): A stream of query results in a cypher format.
+    Raises:
+        PermissionError: If you provided file path that you have no permissions to write at.
+        OSError: If the file can't be opened or written to.
     """
-    if_not_exists = config.get()
 
     cypher = []
 
     memgraph = gqlalchemy.Memgraph()
 
-    triggers = memgraph.execute_and_fetch("SHOW TRIGGERS;")
-    for trigger in triggers:
-        cypher.append(
-            f"CREATE TRIGGER {trigger['trigger name']} ON {trigger['event type']} {trigger['phase']} EXECUTE {trigger['statement']};"
-        )
-    cypher.append("")
-
-    constraints = memgraph.execute_and_fetch("SHOW CONSTRAINT INFO;")
-    for constraint in constraints:
-        _type = constraint["constraint type"]
-
-        if _type == "exists":
+    if config.get("write_triggers", True):
+        triggers = memgraph.execute_and_fetch("SHOW TRIGGERS;")
+        for trigger in triggers:
             cypher.append(
-                f"CREATE CONSTRAINT ON (n:{constraint['label']}) ASSERT EXISTS (n.{constraint['properties']});"
+                f"CREATE TRIGGER {trigger['trigger name']} ON {trigger['event type']} {trigger['phase']} EXECUTE {trigger['statement']};"
             )
-        elif _type == "unique":
-            properties = (
-                [constraint["properties"]]
-                if isinstance(constraint["properties"], str)
-                else list(constraint["properties"])
-            )
-            cypher.append(
-                f"CREATE CONSTRAINT ON (n:{constraint['label']}) ASSERT {'n.' + ', n.'.join(properties)} IS UNIQUE;"
-            )
-        else:
-            raise ValueError("Unknown constraint type.")
-    cypher.append("")
+        cypher.append("")
 
-    indexes = memgraph.execute_and_fetch("SHOW INDEX INFO;")
-    for index in indexes:
-        _type = index["index type"]
-        if _type == "label":
-            cypher.append(f"CREATE INDEX ON :{index['label']};")
-        elif _type == "label+property":
-            cypher.append(f"CREATE INDEX ON :{index['label']}({index['property']});")
-        else:
-            raise ValueError("Unknown index type.")
-    cypher.append("")
+    if config.get("write_indexes", True):
+        constraints = memgraph.execute_and_fetch("SHOW CONSTRAINT INFO;")
+        for constraint in constraints:
+            constraint_type = constraint["constraint type"]
 
-    graph = get_graph_for_cypher(ctx)
+            if constraint_type == "exists":
+                cypher.append(
+                    f"CREATE CONSTRAINT ON (n:{constraint['label']}) ASSERT EXISTS (n.{constraint['properties']});"
+                )
+            elif constraint_type == "unique":
+                properties = (
+                    [constraint["properties"]]
+                    if isinstance(constraint["properties"], str)
+                    else list(constraint["properties"])
+                )
+                cypher.append(
+                    f"CREATE CONSTRAINT ON (n:{constraint['label']}) ASSERT {'n.' + ', n.'.join(properties)} IS UNIQUE;"
+                )
+            else:
+                raise ValueError("Unknown constraint type.")
+        cypher.append("")
+
+    if config.get("write_constraints", True):
+        indexes = memgraph.execute_and_fetch("SHOW INDEX INFO;")
+        for index in indexes:
+            index_type = index["index type"]
+            if index_type == "label":
+                cypher.append(f"CREATE INDEX ON :{index['label']};")
+            elif index_type == "label+property":
+                cypher.append(
+                    f"CREATE INDEX ON :{index['label']}({index['property']});"
+                )
+            else:
+                raise ValueError("Unknown index type.")
+        cypher.append("")
+
+    graph = get_graph_for_cypher(ctx, config.get("write_properties", True))
 
     for object in graph:
         if isinstance(object, Node):
@@ -275,10 +294,20 @@ def cypher_all(
 
     cypher.append("MATCH (n:_IMPORT_ID) REMOVE n:`_IMPORT_ID` REMOVE n._IMPORT_ID;")
 
-    with open(file, "w") as f:
-        f.write("\n".join(cypher))
+    if path:
+        try:
+            with open(path, "w") as f:
+                f.write("\n".join(cypher))
+        except PermissionError:
+            raise PermissionError(
+                "You don't have permissions to write into that file. Make sure to give the necessary permissions to user memgraph."
+            )
+        except Exception:
+            raise OSError("Could not open or write to the file.")
 
-    return mgp.Record(file=file, data="")
+    return mgp.Record(
+        path=path, data="\n".join(cypher) if config.get("stream", False) else ""
+    )
 
 
 def get_graph(ctx: mgp.ProcCtx) -> List[Union[Node, Relationship]]:
