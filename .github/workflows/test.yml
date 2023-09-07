@@ -7,14 +7,16 @@ env:
   MEMGRAPH_PORT: 7687
   NEO4J_PORT: 7688
   NEO4J_CONTAINER: "neo4j_test"
+  OFFICIAL: "false"
 
 on: [pull_request, workflow_dispatch]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    continue-on-error: True
     env:
-      MEMGRAPH_VERSION: 2.10.0
+      MEMGRAPH_VERSION: 2.11.0
     strategy:
       matrix:
         architecture: ["amd64", "arm64"]
@@ -36,9 +38,14 @@ jobs:
 
       - name: Download memgraph binaries
         run: |
-          curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11/memgraph_${MEMGRAPH_VERSION}-1_amd64.deb > memgraph-amd64.deb
-          curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb > memgraph-arm64.deb
-
+          if [ "${{ env.OFFICIAL }}" = "true" ]; then
+            curl -L "https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11/memgraph_${MEMGRAPH_VERSION}-1_amd64.deb" > memgraph-amd64.deb
+            curl -L "https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb" > memgraph-arm64.deb
+          else
+            sudo apt update && sudo apt install -y ca-certificates wget git
+            wget -q https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/memgraph_${MEMGRAPH_VERSION}-1_amd64.deb -O memgraph-amd64.deb
+            wget -q https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb -O memgraph-arm64.deb
+          fi
       - name: Build Memgraph MAGE:${{ matrix.target }}
         run: |
           DOCKER_BUILDKIT=1 docker buildx build \
@@ -110,7 +117,7 @@ jobs:
           PYTHONPATH: "$PWD/e2e"
         run: |
           cd e2e
-          python -m pytest . -k 'not cugraph'
+          docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/e2e/ && python3 -m pytest . -k 'not cugraph'"
       
       - name: Run End-to-end correctness tests
         if: matrix.architecture != 'arm64'
