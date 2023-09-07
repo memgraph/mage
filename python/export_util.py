@@ -81,24 +81,31 @@ def convert_to_isoformat(
         return property
 
 
-def get_graph(ctx: mgp.ProcCtx) -> List[Union[Node, Relationship]]:
+def get_properties_json(object, write_properties: bool):
+    return (
+        {
+            key: convert_to_isoformat(object.properties.get(key))
+            for key in object.properties.keys()
+        }
+        if write_properties
+        else {}
+    )
+
+
+def get_graph(
+    ctx: mgp.ProcCtx, write_properties: bool
+) -> List[Union[Node, Relationship]]:
     nodes = list()
     relationships = list()
 
     for vertex in ctx.graph.vertices:
         labels = [label.name for label in vertex.labels]
-        properties = {
-            key: convert_to_isoformat(vertex.properties.get(key))
-            for key in vertex.properties.keys()
-        }
+        properties = get_properties_json(vertex, write_properties)
 
         nodes.append(Node(vertex.id, labels, properties).get_dict())
 
         for edge in vertex.out_edges:
-            properties = {
-                key: convert_to_isoformat(edge.properties.get(key))
-                for key in edge.properties.keys()
-            }
+            properties = get_properties_json(edge, write_properties)
 
             relationships.append(
                 Relationship(
@@ -109,6 +116,34 @@ def get_graph(ctx: mgp.ProcCtx) -> List[Union[Node, Relationship]]:
                     edge.from_vertex.id,
                 ).get_dict()
             )
+
+    return nodes + relationships
+
+
+def get_graph_from_list(
+    graph_vertices: list, graph_edges: list, write_properties: bool
+) -> List[Union[Node, Relationship]]:
+    nodes = list()
+    relationships = list()
+
+    for vertex in graph_vertices:
+        labels = [label.name for label in vertex.labels]
+        properties = get_properties_json(vertex, write_properties)
+
+        nodes.append(Node(vertex.id, labels, properties).get_dict())
+
+    for edge in graph_edges:
+        properties = get_properties_json(edge, write_properties)
+
+        relationships.append(
+            Relationship(
+                edge.to_vertex.id,
+                edge.id,
+                edge.type.name,
+                properties,
+                edge.from_vertex.id,
+            ).get_dict()
+        )
 
     return nodes + relationships
 
@@ -148,6 +183,143 @@ def get_graph_info_from_lists(
     all_relationship_properties.sort()
 
     return graph, all_node_properties, all_relationship_properties
+
+
+def json_dump_to_file(graph: List[Union[Node, Relationship]], path: str):
+    try:
+        with open(path, "w") as outfile:
+            js.dump(
+                graph,
+                outfile,
+                indent=Parameter.STANDARD_INDENT.value,
+                default=str,
+            )
+    except PermissionError:
+        raise PermissionError(
+            "You don't have permissions to write into that file."
+            "Make sure to give the necessary permissions to user memgraph."
+        )
+    except Exception:
+        raise OSError("Could not open or write to the file.")
+
+
+@mgp.read_proc
+def json(
+    ctx: mgp.ProcCtx, path: str = "", config: mgp.Map = {}
+) -> mgp.Record(path=str, data=str):
+    """
+    Procedure to export the whole database to a JSON file.
+
+    Parameters:
+        context : mgp.ProcCtx
+            Reference to the context execution.
+        path : str = ""
+            Path to the JSON file containing the exported graph database.
+        config : mgp.Map
+            stream (bool) = False: Flag to export the graph data to a stream.
+            write_properties (bool) = True: Flag to keep node and relationship properties. By default set to true.
+
+    Returns:
+        path (str): A path to the file where the query results are exported. If path is not provided, the output will be an empty string.
+        data (str): A stream of query results in JSON format.
+
+    Raises:
+        PermissionError: If you provided file path that you have no permissions to write at.
+        OSError: If the file can't be opened or written to.
+    """
+    graph = get_graph(ctx, config.get("write_properties", True))
+    if path:
+        json_dump_to_file(graph, path)
+
+    return mgp.Record(
+        path=path,
+        data=js.dumps(graph) if config.get("stream", False) else "",
+    )
+
+
+@mgp.read_proc
+def json_graph(
+    ctx: mgp.ProcCtx,
+    nodes: list,
+    relationships: list,
+    path: str = "",
+    config: mgp.Map = {},
+) -> mgp.Record(path=str, data=str):
+    """
+    Procedure to export the given graph to a JSON file. The graph is given with a map that contains keys "nodes" and "relationships".
+
+    Parameters:
+        nodes : List[Node]
+            A list thats contains all nodes in the given graph.
+        relationships : List[Relationship]
+            A list that containts all the relationships in the given graph.
+        path : str
+            Path to the JSON file containing the exported graph database.
+        config : mgp.Map
+            stream (bool) = False: Flag to export the graph data to a stream.
+            write_properties (bool) = True: Flag to keep node and relationship properties. By default set to true.
+
+    Returns:
+        path (str): A path to the file where the query results are exported. If path is not provided, the output will be an empty string.
+        data (str): A stream of query results in JSON format.
+
+    Raises:
+        PermissionError: If you provided file path that you have no permissions to write at.
+        OSError: If the file can't be opened or written to.
+    """
+    graph = get_graph_from_list(
+        nodes, relationships, config.get("write_properties", True)
+    )
+    if path:
+        json_dump_to_file(graph, path)
+
+    return mgp.Record(
+        path=path,
+        data=js.dumps(graph) if config.get("stream", False) else "",
+    )
+
+
+def save_file(file_path: str, data_list: list):
+    try:
+        with open(
+            file_path,
+            "w",
+            newline="",
+            encoding="utf8",
+        ) as f:
+            writer = csv.writer(f)
+            writer.writerows(data_list)
+    except PermissionError:
+        raise PermissionError(
+            "You don't have permissions to write into that file."
+            "Make sure to give the necessary permissions to user memgraph."
+        )
+    except csv.Error as e:
+        raise csv.Error(
+            "Could not write to the file {}, stopped at line {}: {}".format(
+                file_path, writer.line_num, e
+            )
+        )
+    except Exception:
+        raise OSError("Could not open or write to the file.")
+
+
+def csv_to_stream(
+    data_list: list, delimiter: str = ",", quoting_type=csv.QUOTE_NONNUMERIC
+) -> str:
+    output = io.StringIO()
+    try:
+        writer = csv.writer(
+            output, delimiter=delimiter, quoting=quoting_type, escapechar="\\"
+        )
+        writer.writerows(data_list)
+    except csv.Error as e:
+        raise csv.Error(
+            "Could not write a stream, stopped at line {}: {}".format(
+                writer.line_num, e
+            )
+        )
+    return output.getvalue()
 
 
 def csv_header(
@@ -389,88 +561,6 @@ def csv_graph(
         path=path,
         data="",
     )
-
-
-@mgp.read_proc
-def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
-    """
-    Procedure to export the whole database to a JSON file.
-
-    Parameters
-    ----------
-    path : str
-        Path to the JSON file containing the exported graph database.
-    """
-
-    graph = get_graph(ctx)
-    try:
-        with open(path, "w") as outfile:
-            js.dump(
-                graph,
-                outfile,
-                indent=Parameter.STANDARD_INDENT.value,
-                default=str,
-            )
-    except PermissionError:
-        raise PermissionError(
-            "You don't have permissions to write into that file."
-            "Make sure to give the necessary permissions to user memgraph."
-        )
-    except Exception:
-        raise OSError("Could not open or write to the file.")
-
-    return mgp.Record()
-
-
-@mgp.read_proc
-def json_stream(ctx: mgp.ProcCtx) -> mgp.Record(stream=str):
-    """
-    Procedure to export the whole database to a stream.
-    """
-    return mgp.Record(stream=js.dumps(get_graph(ctx)))
-
-
-def save_file(file_path: str, data_list: list):
-    try:
-        with open(
-            file_path,
-            "w",
-            newline="",
-            encoding="utf8",
-        ) as f:
-            writer = csv.writer(f)
-            writer.writerows(data_list)
-    except PermissionError:
-        raise PermissionError(
-            "You don't have permissions to write into that file."
-            "Make sure to give the necessary permissions to user memgraph."
-        )
-    except csv.Error as e:
-        raise csv.Error(
-            "Could not write to the file {}, stopped at line {}: {}".format(
-                file_path, writer.line_num, e
-            )
-        )
-    except Exception:
-        raise OSError("Could not open or write to the file.")
-
-
-def csv_to_stream(
-    data_list: list, delimiter: str = ",", quoting_type=csv.QUOTE_NONNUMERIC
-) -> str:
-    output = io.StringIO()
-    try:
-        writer = csv.writer(
-            output, delimiter=delimiter, quoting=quoting_type, escapechar="\\"
-        )
-        writer.writerows(data_list)
-    except csv.Error as e:
-        raise csv.Error(
-            "Could not write a stream, stopped at line {}: {}".format(
-                writer.line_num, e
-            )
-        )
-    return output.getvalue()
 
 
 @mgp.read_proc
