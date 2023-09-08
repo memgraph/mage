@@ -7,7 +7,7 @@ import gqlalchemy
 from dataclasses import dataclass
 from datetime import datetime, date, time, timedelta
 from gqlalchemy import Memgraph
-from typing import Any, Dict, List, Union, Iterator, Optional
+from typing import Any, Dict, List, Union
 from math import floor
 
 from mage.export_import_util.parameters import Parameter
