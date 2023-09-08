@@ -22,4 +22,3 @@ output:
     mandatory: true
     property_name: owner
     property_type: String
-  
