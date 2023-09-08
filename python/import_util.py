@@ -1,5 +1,8 @@
 from datetime import datetime, date, time, timedelta
 import json as js
+
+import gqlalchemy
+
 from mage.export_import_util.parameters import Parameter
 import mgp
 from typing import Union, List, Dict, Any
@@ -64,6 +67,34 @@ def create_edge(
 
 
 @mgp.write_proc
+def cypher(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
+    """
+    Procedure to import the Cypher created by the export_util.json procedure.
+    The lab import feature should be prefered.
+
+    Parameters
+    ----------
+    path : str
+        Path to the JSON file that is being imported.
+    """
+
+    memgraph = gqlalchemy.Memgraph()
+    try:
+        with open(path, "r") as file:
+            for query in file.readlines():
+                stripped_query = query.strip()
+                if stripped_query:
+                    print("QUERY", stripped_query, len(stripped_query))
+                    memgraph.execute(stripped_query)
+    except OSError:
+        raise OSError("Could not open/read file.")
+    except Exception:
+        raise Exception("Unable to execute the given queries")
+
+    return mgp.Record()
+
+
+@mgp.write_proc
 def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
     """
     Procedure to import the JSON created by the export_util.json procedure.
@@ -82,7 +113,6 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
     vertex_ids = dict()
 
     for object in graph_objects:
-
         if all(
             key in object
             for key in (
@@ -100,7 +130,6 @@ def json(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
             )
 
         if type_value == Parameter.NODE.value:
-
             if Parameter.LABELS.value in object:
                 labels_value = object[Parameter.LABELS.value]
             else:

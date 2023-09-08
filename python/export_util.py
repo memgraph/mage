@@ -289,7 +289,7 @@ def cypher_all(
                 + "}"
             )
             cypher.append(
-                f"MATCH (n:_IMPORT_ID {{_IMPORT_ID: {object.start}}}) MATCH (m:_IMPORT_ID {{_IMPORT_ID: {object.end}}}) CREATE (s)-[:{object.label} {properties_str}]->(t);"
+                f"MATCH (n:_IMPORT_ID {{_IMPORT_ID: {object.start}}}) MATCH (m:_IMPORT_ID {{_IMPORT_ID: {object.end}}}) CREATE (n)-[:{object.label} {properties_str}]->(m);"
             )
 
     cypher.append("MATCH (n:_IMPORT_ID) REMOVE n:`_IMPORT_ID` REMOVE n._IMPORT_ID;")
