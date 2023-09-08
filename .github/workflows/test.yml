@@ -51,9 +51,19 @@ jobs:
         run: |
           df -h
           docker buildx du
+
+      - name : Docker system prune
+        run : |
+          docker buildx prune --all -f
+
+      - name: Disk 2
+        run: |
+          df -h
+          docker buildx du
+
       - name: Build and run Memgraph MAGE:${{ matrix.target }}
         run: |
-          docker buildx prune --all -f
+          
           DOCKER_BUILDKIT=1 docker buildx build \
           --tag memgraph-mage:${{ matrix.target }} \
           --target ${{ matrix.target }} \
