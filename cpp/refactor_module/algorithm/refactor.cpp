@@ -3,8 +3,8 @@
 void InvertRel(mgp::Graph &graph, mgp::Relationship &rel) {
   const auto old_from = rel.From();
   const auto old_to = rel.To();
-  graph.ChangeRelationshipFrom(rel, old_to);
-  graph.ChangeRelationshipTo(rel, old_from);
+  graph.SetFrom(rel, old_to);
+  graph.SetTo(rel, old_from);
 }
 
 void Refactor::Invert(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
