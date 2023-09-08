@@ -49,7 +49,7 @@ jobs:
           fi
       - name: Build and run Memgraph MAGE:${{ matrix.target }}
         run: |
-          docker buildx prune --al
+          docker buildx prune --all
           DOCKER_BUILDKIT=1 docker buildx build \
           --tag memgraph-mage:${{ matrix.target }} \
           --target ${{ matrix.target }} \
