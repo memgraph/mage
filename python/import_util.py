@@ -3,13 +3,235 @@ import ast
 
 import defusedxml.ElementTree as ET
 
+from dataclasses import dataclass
 from datetime import datetime, date, time, timedelta
 from typing import Union, List, Dict, Any
 
 import mgp
-from export_util import convert_to_isoformat_graphML
-from export_util import KeyObjectGraphML
 from mage.export_import_util.parameters import Parameter
+
+
+@dataclass
+class Node:
+    id: int
+    labels: list
+    properties: dict
+
+    def get_dict(self) -> dict:
+        return {
+            Parameter.ID.value: self.id,
+            Parameter.LABELS.value: self.labels,
+            Parameter.PROPERTIES.value: self.properties,
+            Parameter.TYPE.value: Parameter.NODE.value,
+        }
+
+
+@dataclass
+class Relationship:
+    end: int
+    id: int
+    label: str
+    properties: dict
+    start: int
+    id: int
+
+    def get_dict(self) -> dict:
+        return {
+            Parameter.END.value: self.end,
+            Parameter.ID.value: self.id,
+            Parameter.LABEL.value: self.label,
+            Parameter.PROPERTIES.value: self.properties,
+            Parameter.START.value: self.start,
+            Parameter.TYPE.value: Parameter.RELATIONSHIP.value,
+        }
+
+
+@dataclass
+class KeyObjectGraphML:
+    name: str
+    is_for: str
+    type: str
+    type_is_list: bool
+    default_value: str
+    id: str = None
+
+    def __init__(
+        self,
+        name: str,
+        is_for: str,
+        type: str = "",
+        type_is_list: str = False,
+        default_value: str = "",
+    ):
+        self.name = name
+        self.is_for = is_for
+        self.type = type
+        self.type_is_list = type_is_list
+        self.default_value = default_value
+
+    def __hash__(self):
+        return hash(
+            (
+                self.name,
+                self.is_for,
+                self.type,
+                self.type_is_list,
+                self.default_value,
+            )
+        )
+
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        return (
+            self.name == other.name
+            and self.is_for == other.is_for
+            and self.type == other.type
+            and self.type_is_list == other.type_is_list
+            and self.default_value == other.default_value
+        )
+
+
+def convert_to_isoformat(
+    property: Union[
+        None,
+        str,
+        bool,
+        int,
+        float,
+        List[Any],
+        Dict[str, Any],
+        timedelta,
+        time,
+        datetime,
+        date,
+    ]
+):
+    if isinstance(property, timedelta):
+        return Parameter.DURATION.value + str(property) + ")"
+
+    elif isinstance(property, time):
+        return Parameter.LOCALTIME.value + property.isoformat() + ")"
+
+    elif isinstance(property, datetime):
+        return Parameter.LOCALDATETIME.value + property.isoformat() + ")"
+
+    elif isinstance(property, date):
+        return Parameter.DATE.value + property.isoformat() + ")"
+
+    else:
+        return property
+
+
+def to_duration_isoformat(value: timedelta) -> str:
+    """Converts timedelta to ISO-8601 duration: P<date>T<time>"""
+    date_parts: List[str] = []
+    time_parts: List[str] = []
+
+    if value.days != 0:
+        date_parts.append(f"{abs(value.days)}D")
+
+    if value.seconds != 0 or value.microseconds != 0:
+        abs_seconds = abs(value.seconds)
+        minutes, seconds = divmod(abs_seconds, 60)
+        hours, minutes = divmod(minutes, 60)
+        microseconds = value.microseconds
+
+        if hours > 0:
+            time_parts.append(f"{hours}H")
+        if minutes > 0:
+            time_parts.append(f"{minutes}M")
+        if seconds > 0 or microseconds > 0:
+            microseconds_part = (
+                f".{abs(value.microseconds)}" if value.microseconds != 0 else ""
+            )
+            time_parts.append(f"{seconds}{microseconds_part}S")
+
+    date_duration_str = "".join(date_parts)
+    time_duration_str = f'T{"".join(time_parts)}' if time_parts else ""
+
+    return f"P{date_duration_str}{time_duration_str}"
+
+
+def convert_to_isoformat_graphML(
+    property: Union[
+        None,
+        str,
+        bool,
+        int,
+        float,
+        List[Any],
+        Dict[str, Any],
+        timedelta,
+        time,
+        datetime,
+        date,
+    ]
+):
+    if isinstance(property, timedelta):
+        return to_duration_isoformat(property)
+
+    if isinstance(property, (time, date, datetime)):
+        return property.isoformat()
+
+    else:
+        return property
+
+
+def get_graph(
+    ctx: mgp.ProcCtx,
+    config: Union[mgp.Map, None] = {
+        "graphML": False,
+        "leaveOutLabels": False,
+        "leaveOutProperties": False,
+    },
+) -> List[Union[Node, Relationship]]:
+    """
+    config : Map
+        - graphML: bool
+        - leaveOutLabels: bool
+        - leaveOutProperties: bool
+
+    """
+    nodes = list()
+    relationships = list()
+
+    for vertex in ctx.graph.vertices:
+        labels = []
+        properties = dict()
+        if not config.get("leaveOutLabels"):
+            labels = [label.name for label in vertex.labels]
+        if config.get("graphML") and not config.get("leaveOutProperties"):
+            properties = {
+                key: convert_to_isoformat_graphML(vertex.properties.get(key))
+                for key in vertex.properties.keys()
+            }
+        elif not config.get("leaveOutProperties"):
+            properties = {
+                key: convert_to_isoformat(vertex.properties.get(key))
+                for key in vertex.properties.keys()
+            }
+
+        nodes.append(Node(vertex.id, labels, properties).get_dict())
+
+        for edge in vertex.out_edges:
+            if not config.get("leaveOutProperties"):
+                properties = {
+                    key: convert_to_isoformat(edge.properties.get(key))
+                    for key in edge.properties.keys()
+                }
+
+            relationships.append(
+                Relationship(
+                    edge.to_vertex.id,
+                    edge.id,
+                    edge.type.name,
+                    properties,
+                    edge.from_vertex.id,
+                ).get_dict()
+            )
+
+    return nodes + relationships
 
 
 def convert_from_isoformat(
