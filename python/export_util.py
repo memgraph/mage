@@ -11,7 +11,6 @@ from gqlalchemy import Memgraph
 from math import floor
 
 from typing import Any, Dict, List, Union
-from math import floor
 
 from mage.export_import_util.parameters import Parameter
 
