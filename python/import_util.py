@@ -84,7 +84,6 @@ def cypher(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
             for query in file.readlines():
                 stripped_query = query.strip()
                 if stripped_query:
-                    print("QUERY", stripped_query, len(stripped_query))
                     memgraph.execute(stripped_query)
     except OSError:
         raise OSError("Could not open/read file.")
