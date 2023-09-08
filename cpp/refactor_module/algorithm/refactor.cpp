@@ -11,7 +11,7 @@ void Refactor::From(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resul
     const mgp::Node new_from{arguments[1].ValueNode()};
     mgp::Graph graph{memgraph_graph};
 
-    graph.ChangeRelationshipFrom(relationship, new_from);
+    graph.SetFrom(relationship, new_from);
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
@@ -28,7 +28,7 @@ void Refactor::To(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
     const mgp::Node new_to{arguments[1].ValueNode()};
     mgp::Graph graph{memgraph_graph};
 
-    graph.ChangeRelationshipTo(relationship, new_to);
+    graph.SetTo(relationship, new_to);
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
