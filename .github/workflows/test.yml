@@ -47,9 +47,13 @@ jobs:
             wget -q https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb -O memgraph-arm64.deb
 
           fi
+      - name: Disk
+        run: |
+          df -h
+          docker buildx du
       - name: Build and run Memgraph MAGE:${{ matrix.target }}
         run: |
-          docker buildx prune --all
+          docker buildx prune --all -f
           DOCKER_BUILDKIT=1 docker buildx build \
           --tag memgraph-mage:${{ matrix.target }} \
           --target ${{ matrix.target }} \
