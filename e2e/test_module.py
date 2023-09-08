@@ -54,7 +54,7 @@ def _node_to_dict(data):
 def _relationship_to_dict(data):
     label = (
         data.type
-        if hasattr(data, "label")
+        if hasattr(data, "type")
         else (data._type if isinstance(data, Relationship) else "")
     )
     properties = data.properties if hasattr(data, "properties") else data._properties
