@@ -1,7 +1,14 @@
 query: >
-  CALL schema.rel_type_properties() YIELD mandatory, property_name, property_type, rel_type RETURN rel_type, property_name, property_type, mandatory;
+  CALL schema.rel_type_properties() YIELD mandatory, property_name, property_type, rel_type RETURN rel_type, property_name, property_type, mandatory
+  ORDER BY property_name, rel_type;
 
 output:
+
+  - rel_type: FLIES
+    property_name: ""
+    property_type: ""
+    mandatory: false
+
   - rel_type: CATCHES
     property_name: property
     property_type: List[Any]
@@ -16,9 +23,3 @@ output:
     property_name: speed_in_km
     property_type: Int
     mandatory: true
-
-  - rel_type: FLIES
-    property_name: ""
-    property_type: ""
-    mandatory: false
-

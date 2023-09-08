@@ -1,5 +1,6 @@
 query: >
   CALL schema.node_type_properties() YIELD labels, mandatory, property_name, property_type RETURN labels, mandatory, property_name, property_type
+  ORDER BY property_name, labels[0];
 
 output:
   - labels: ["NonMandatory"]

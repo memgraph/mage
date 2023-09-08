@@ -37,6 +37,22 @@ std::string Schema::TypeOf(const mgp::Type &type) {
   }
 }
 
+void Schema::ProcessPropertiesNode(mgp::Record &record, const mgp::List &labels, const std::string &propertyName,
+                                   const std::string &propertyType, const bool &mandatory) {
+  record.Insert(std::string(kReturnLabels).c_str(), labels);
+  record.Insert(std::string(kReturnPropertyName).c_str(), propertyName);
+  record.Insert(std::string(kReturnPropertyType).c_str(), propertyType);
+  record.Insert(std::string(kReturnMandatory).c_str(), mandatory);
+}
+
+void Schema::ProcessPropertiesRel(mgp::Record &record, const std::string_view &type, const std::string &propertyName,
+                                  const std::string &propertyType, const bool &mandatory) {
+  record.Insert(std::string(kReturnRelType).c_str(), type);
+  record.Insert(std::string(kReturnPropertyName).c_str(), propertyName);
+  record.Insert(std::string(kReturnPropertyType).c_str(), propertyType);
+  record.Insert(std::string(kReturnMandatory).c_str(), mandatory);
+}
+
 void Schema::NodeTypeProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
   const auto record_factory = mgp::RecordFactory(result);
@@ -51,19 +67,13 @@ void Schema::NodeTypeProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_r
 
       if (node.Properties().size() == 0) {
         auto record = record_factory.NewRecord();
-        record.Insert(std::string(kReturnLabels).c_str(), labels);
-        record.Insert(std::string(kReturnPropertyName).c_str(), "");
-        record.Insert(std::string(kReturnPropertyType).c_str(), "");
-        record.Insert(std::string(kReturnMandatory).c_str(), false);
+        ProcessPropertiesNode(record, labels, "", "", false);
         continue;
       }
 
       for (auto &[key, prop] : node.Properties()) {
         auto record = record_factory.NewRecord();
-        record.Insert(std::string(kReturnLabels).c_str(), labels);
-        record.Insert(std::string(kReturnPropertyName).c_str(), key);
-        record.Insert(std::string(kReturnPropertyType).c_str(), TypeOf(prop.Type()));
-        record.Insert(std::string(kReturnMandatory).c_str(), true);
+        ProcessPropertiesNode(record, labels, key, TypeOf(prop.Type()), true);
       }
     }
 
@@ -82,19 +92,13 @@ void Schema::RelTypeProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_re
     for (auto rel : graph.Relationships()) {
       if (rel.Properties().size() == 0) {
         auto record = record_factory.NewRecord();
-        record.Insert(std::string(kReturnRelType).c_str(), rel.Type());
-        record.Insert(std::string(kReturnPropertyName).c_str(), "");
-        record.Insert(std::string(kReturnPropertyType).c_str(), "");
-        record.Insert(std::string(kReturnMandatory).c_str(), false);
+        ProcessPropertiesRel(record, rel.Type(), "", "", false);
         continue;
       }
 
       for (auto &[key, prop] : rel.Properties()) {
         auto record = record_factory.NewRecord();
-        record.Insert(std::string(kReturnRelType).c_str(), rel.Type());
-        record.Insert(std::string(kReturnPropertyName).c_str(), key);
-        record.Insert(std::string(kReturnPropertyType).c_str(), TypeOf(prop.Type()));
-        record.Insert(std::string(kReturnMandatory).c_str(), true);
+        ProcessPropertiesRel(record, rel.Type(), key, TypeOf(prop.Type()), true);
       }
     }
 
