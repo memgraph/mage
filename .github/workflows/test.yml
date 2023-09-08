@@ -45,7 +45,7 @@ jobs:
             sudo apt update && sudo apt install -y ca-certificates wget git
             wget -q https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/memgraph_${MEMGRAPH_VERSION}-1_amd64.deb -O memgraph-amd64.deb
             wget -q https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb -O memgraph-arm64.deb
-            sudo apt-get -y --purge autoremove ca-certificates wget git
+            
           fi
       - name: Build and run Memgraph MAGE:${{ matrix.target }}
         run: |
