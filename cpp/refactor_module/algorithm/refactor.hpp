@@ -40,16 +40,6 @@ constexpr const std::string_view kProcedureCloneSubgraph = "clone_subgraph";
 constexpr const std::string_view kArgumentsNodes = "nodes";
 constexpr const std::string_view kArgumentsRels = "rels";
 
-void Categorize(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
-void InsertCloneNodesRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const int cycle_id,
-                            const int node_id);
-void CloneNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
-void CloneNodesAndRels(mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory,
-                       const std::vector<mgp::Node> &nodes, const std::vector<mgp::Relationship> &rels,
-                       const mgp::Map &config_map);
-void CloneSubgraphFromPaths(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
-void CloneSubgraph(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
-
 /* rename_label constants */
 constexpr std::string_view kProcedureRenameLabel = "rename_label";
 constexpr std::string_view kRenameLabelArg1 = "old_label";
@@ -63,6 +53,17 @@ constexpr std::string_view kRenameNodePropertyArg1 = "old_property";
 constexpr std::string_view kRenameNodePropertyArg2 = "new_property";
 constexpr std::string_view kRenameNodePropertyArg3 = "nodes";
 constexpr std::string_view kRenameNodePropertyResult = "nodes_changed";
+
+void Categorize(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+
+void InsertCloneNodesRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const int cycle_id,
+                            const int node_id);
+void CloneNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void CloneNodesAndRels(mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory,
+                       const std::vector<mgp::Node> &nodes, const std::vector<mgp::Relationship> &rels,
+                       const mgp::Map &config_map);
+void CloneSubgraphFromPaths(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void CloneSubgraph(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 void RenameLabel(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
