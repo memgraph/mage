@@ -17,6 +17,14 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
                                     mgp::Value(mgp::List{})),
                  },
                  {mgp::Return(Refactor::kReturnCategorize, mgp::Type::String)}, module, memory);
+    AddProcedure(Refactor::CloneNodes, Refactor::kProcedureCloneNodes, mgp::ProcedureType::Write,
+                 {mgp::Parameter(Refactor::kArgumentsNodesToClone, {mgp::Type::List, mgp::Type::Node}),
+                  mgp::Parameter(Refactor::kArgumentsCloneRels, mgp::Type::Bool, false),
+                  mgp::Parameter(Refactor::kArgumentsSkipPropClone, {mgp::Type::List, mgp::Type::String},
+                                 mgp::Value(mgp::List{}))},
+                 {mgp::Return(Refactor::kReturnClonedNodeId, mgp::Type::Int),
+                  mgp::Return(Refactor::kReturnNewNode, mgp::Type::Node)},
+                 module, memory);
 
     AddProcedure(
         Refactor::CloneSubgraphFromPaths, Refactor::kProcedureCSFP, mgp::ProcedureType::Write,
