@@ -1,6 +1,6 @@
 #include "refactor.hpp"
 
-void InvertRel(mgp::Graph &graph, mgp::Relationship &rel) {
+void Refactor::InvertRel(mgp::Graph &graph, mgp::Relationship &rel) {
   const auto old_from = rel.From();
   const auto old_to = rel.To();
   graph.SetFrom(rel, old_to);

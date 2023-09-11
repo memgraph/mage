@@ -11,4 +11,5 @@ constexpr std::string_view kReturnRelationshipInvert = "relationship";
 constexpr std::string_view kReturnIdInvert = "id_inverted";
 
 void Invert(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void InvertRel(mgp::Graph &graph, mgp::Relationship &rel);
 }  // namespace Refactor
