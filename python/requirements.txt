@@ -12,3 +12,4 @@ gqlalchemy==1.4.1
 mysql-connector-python==8.0.32
 oracledb==1.2.2
 pyodbc==4.0.35
+defusedxml==0.7.1
