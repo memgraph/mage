@@ -4,6 +4,100 @@
 #include <unordered_set>
 #include "mgp.hpp"
 
+void Refactor::From(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+  try {
+    mgp::Relationship relationship{arguments[0].ValueRelationship()};
+    const mgp::Node new_from{arguments[1].ValueNode()};
+    mgp::Graph graph{memgraph_graph};
+
+    graph.SetFrom(relationship, new_from);
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
+
+void Refactor::To(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+  try {
+    mgp::Relationship relationship{arguments[0].ValueRelationship()};
+    const mgp::Node new_to{arguments[1].ValueNode()};
+    mgp::Graph graph{memgraph_graph};
+
+    graph.SetTo(relationship, new_to);
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
+
+void Refactor::RenameLabel(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+  try {
+    const auto old_label{arguments[0].ValueString()};
+    const auto new_label{arguments[1].ValueString()};
+    const auto nodes{arguments[2].ValueList()};
+
+    int64_t nodes_changed{0};
+    for (const auto &node_value : nodes) {
+      auto node = node_value.ValueNode();
+      if (!node.HasLabel(old_label)) {
+        continue;
+      }
+
+      node.RemoveLabel(old_label);
+      node.AddLabel(new_label);
+      nodes_changed++;
+    }
+    auto record = record_factory.NewRecord();
+    record.Insert(std::string(kRenameLabelResult).c_str(), nodes_changed);
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
+
+void Refactor::RenameNodeProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+  try {
+    const auto old_property_name{std::string(arguments[0].ValueString())};
+    const auto new_property_name{std::string(arguments[1].ValueString())};
+    const auto nodes{arguments[2].ValueList()};
+
+    int64_t nodes_changed{0};
+    for (const auto &node_value : nodes) {
+      auto node = node_value.ValueNode();
+      auto old_property = node.GetProperty(old_property_name);
+      if (old_property.IsNull()) {
+        continue;
+      }
+
+      node.RemoveProperty(old_property_name);
+      node.SetProperty(new_property_name, old_property);
+      nodes_changed++;
+    }
+
+    auto record = record_factory.NewRecord();
+    record.Insert(std::string(kRenameLabelResult).c_str(), nodes_changed);
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
+
 void Refactor::InsertCloneNodesRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const int cycle_id,
                                       const int node_id) {
   auto *record = mgp::result_new_record(result);
@@ -109,7 +203,7 @@ void Refactor::CloneNodesAndRels(mgp_graph *memgraph_graph, mgp_result *result, 
 
 void Refactor::CloneSubgraphFromPaths(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
                                       mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   try {
     const auto paths = arguments[0].ValueList();
@@ -136,7 +230,7 @@ void Refactor::CloneSubgraphFromPaths(mgp_list *args, mgp_graph *memgraph_graph,
 }
 
 void Refactor::CloneSubgraph(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   try {
     const auto nodes = arguments[0].ValueList();
@@ -189,7 +283,7 @@ mgp::Node getCategoryNode(mgp::Graph &graph, std::unordered_set<mgp::Node> &crea
 }
 
 void Refactor::Categorize(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto graph = mgp::Graph(memgraph_graph);
   const auto record_factory = mgp::RecordFactory(result);
@@ -238,7 +332,7 @@ void Refactor::Categorize(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
 }
 
 void Refactor::CloneNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto graph = mgp::Graph(memgraph_graph);
   try {
@@ -273,66 +367,6 @@ void Refactor::CloneNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
     }
   } catch (const std::exception &e) {
     mgp::result_set_error_msg(result, e.what());
-    return;
-  }
-}
-
-void Refactor::RenameLabel(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
-  auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
-  try {
-    const auto old_label{arguments[0].ValueString()};
-    const auto new_label{arguments[1].ValueString()};
-    const auto nodes{arguments[2].ValueList()};
-
-    int64_t nodes_changed{0};
-    for (const auto &node_value : nodes) {
-      auto node = node_value.ValueNode();
-      if (!node.HasLabel(old_label)) {
-        continue;
-      }
-
-      node.RemoveLabel(old_label);
-      node.AddLabel(new_label);
-      nodes_changed++;
-    }
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(kRenameLabelResult).c_str(), nodes_changed);
-
-  } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
-    return;
-  }
-}
-
-void Refactor::RenameNodeProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
-  auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
-  try {
-    const auto old_property_name{std::string(arguments[0].ValueString())};
-    const auto new_property_name{std::string(arguments[1].ValueString())};
-    const auto nodes{arguments[2].ValueList()};
-
-    int64_t nodes_changed{0};
-    for (const auto &node_value : nodes) {
-      auto node = node_value.ValueNode();
-      auto old_property = node.GetProperty(old_property_name);
-      if (old_property.IsNull()) {
-        continue;
-      }
-
-      node.RemoveProperty(old_property_name);
-      node.SetProperty(new_property_name, old_property);
-      nodes_changed++;
-    }
-
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(kRenameLabelResult).c_str(), nodes_changed);
-
-  } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
     return;
   }
 }
