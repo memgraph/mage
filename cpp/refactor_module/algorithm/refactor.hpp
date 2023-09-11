@@ -1,7 +1,6 @@
 #pragma once
 
 #include <mgp.hpp>
-
 namespace Refactor {
 
 /* categorize constants */
@@ -41,11 +40,13 @@ constexpr const std::string_view kArgumentsRels = "rels";
 constexpr const std::string_view kProcedureFrom = "from";
 constexpr const std::string_view kFromArg1 = "relationship";
 constexpr const std::string_view kFromArg2 = "new_from";
+constexpr const std::string_view kFromResult = "relationship";
 
 /* to constants */
 constexpr const std::string_view kProcedureTo = "to";
 constexpr const std::string_view kToArg1 = "relationship";
 constexpr const std::string_view kToArg2 = "new_to";
+constexpr const std::string_view kToResult = "relationship";
 
 /* rename_label constants */
 constexpr std::string_view kProcedureRenameLabel = "rename_label";

@@ -14,6 +14,8 @@ void Refactor::From(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resul
     mgp::Graph graph{memgraph_graph};
 
     graph.SetFrom(relationship, new_from);
+    auto record = record_factory.NewRecord();
+    record.Insert(std::string(kFromResult).c_str(), relationship);
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
@@ -31,6 +33,8 @@ void Refactor::To(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
     mgp::Graph graph{memgraph_graph};
 
     graph.SetTo(relationship, new_to);
+    auto record = record_factory.NewRecord();
+    record.Insert(std::string(kToResult).c_str(), relationship);
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());

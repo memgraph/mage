@@ -9,12 +9,12 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     mgp::AddProcedure(Refactor::From, Refactor::kProcedureFrom, mgp::ProcedureType::Write,
                       {mgp::Parameter(Refactor::kFromArg1, mgp::Type::Relationship),
                        mgp::Parameter(Refactor::kFromArg2, mgp::Type::Node)},
-                      {}, module, memory);
+                      {mgp::Return(Refactor::kFromResult, mgp::Type::Relationship)}, module, memory);
 
     mgp::AddProcedure(Refactor::To, Refactor::kProcedureTo, mgp::ProcedureType::Write,
                       {mgp::Parameter(Refactor::kToArg1, mgp::Type::Relationship),
                        mgp::Parameter(Refactor::kToArg2, mgp::Type::Node)},
-                      {}, module, memory);
+                      {mgp::Return(Refactor::kToResult, mgp::Type::Relationship)}, module, memory);
 
     AddProcedure(Refactor::Categorize, Refactor::kProcedureCategorize, mgp::ProcedureType::Write,
                  {
