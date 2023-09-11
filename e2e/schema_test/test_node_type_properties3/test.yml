@@ -1,0 +1,11 @@
+query: >
+  CALL schema.node_type_properties() YIELD labels, mandatory, property_name, property_type
+  WITH labels, mandatory, property_name, property_type
+  WHERE property_name = ""
+  RETURN labels, mandatory, property_name, property_type;
+
+output:
+  - labels: ["NonMandatory", "SecondLabel"]
+    mandatory: false
+    property_name: ''
+    property_type: ''
