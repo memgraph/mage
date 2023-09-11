@@ -45,15 +45,35 @@ jobs:
             sudo apt update && sudo apt install -y ca-certificates wget git
             wget -q https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/memgraph_${MEMGRAPH_VERSION}-1_amd64.deb -O memgraph-amd64.deb
             wget -q https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb -O memgraph-arm64.deb
+
           fi
-      - name: Build Memgraph MAGE:${{ matrix.target }}
+      - name: Disk
         run: |
+          df -h
+          docker buildx du
+
+      - name : Docker system prune
+        run : |
+          docker buildx prune --all -f
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /opt/hostedtoolcache/go
+          sudo rm -rf /opt/hostedtoolcache
+
+      - name: Disk 2
+        run: |
+          df -h
+          docker buildx du
+
+      - name: Build and run Memgraph MAGE:${{ matrix.target }}
+        run: |
+          
           DOCKER_BUILDKIT=1 docker buildx build \
           --tag memgraph-mage:${{ matrix.target }} \
           --target ${{ matrix.target }} \
           --platform linux/${{ matrix.architecture }} \
           --file Dockerfile.release \
           --load .
+          docker run -d -p ${{ env.MEMGRAPH_PORT }}:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:${{ matrix.target }} --telemetry-enabled=False
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v1
@@ -65,9 +85,6 @@ jobs:
         run: |
           docker images
 
-      - name: Run Memgraph MAGE:prod image
-        run: |
-          docker run -d -p ${{ env.MEMGRAPH_PORT }}:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:${{ matrix.target }} --telemetry-enabled=False
 
       - name: Set up C++
         run: |
