@@ -207,6 +207,17 @@ def convert_to_cypher_format(
     return str(property)
 
 
+def get_properties_cypher(object, write_properties: bool) -> dict:
+    return (
+        {
+            key: convert_to_cypher_format(object.properties.get(key))
+            for key in object.properties.keys()
+        }
+        if write_properties
+        else {}
+    )
+
+
 def get_graph_for_cypher(
     ctx: mgp.ProcCtx, write_properties: bool
 ) -> List[Union[Node, Relationship]]:
@@ -215,27 +226,11 @@ def get_graph_for_cypher(
 
     for vertex in ctx.graph.vertices:
         labels = [label.name for label in vertex.labels]
-        properties = (
-            {
-                key: convert_to_cypher_format(vertex.properties.get(key))
-                for key in vertex.properties.keys()
-            }
-            if write_properties
-            else {}
-        )
-
+        properties = get_properties_cypher(vertex, write_properties)
         nodes.append(Node(vertex.id, labels, properties))
 
         for edge in vertex.out_edges:
-            properties = (
-                {
-                    key: convert_to_cypher_format(edge.properties.get(key))
-                    for key in edge.properties.keys()
-                }
-                if write_properties
-                else {}
-            )
-
+            properties = get_properties_cypher(edge, write_properties)
             relationships.append(
                 Relationship(
                     edge.to_vertex.id,
@@ -247,6 +242,10 @@ def get_graph_for_cypher(
             )
 
     return nodes + relationships
+
+
+def format_properties_cypher(properties) -> str:
+    return "{" + ", ".join([f"{k}: {v}" for k, v in properties.items()]) + "}"
 
 
 @mgp.read_proc
@@ -327,18 +326,10 @@ def cypher_all(
         if isinstance(object, Node):
             object.labels.append("_IMPORT_ID")
             object.properties["_IMPORT_ID"] = object.id
-            properties_str = (
-                "{"
-                + ", ".join([f"{k}: {v}" for k, v in object.properties.items()])
-                + "}"
-            )
+            properties_str = format_properties_cypher(object.properties)
             cypher.append(f"CREATE (n:{':'.join(object.labels)} {properties_str});")
         elif isinstance(object, Relationship):
-            properties_str = (
-                "{"
-                + ", ".join([f"{k}: {v}" for k, v in object.properties.items()])
-                + "}"
-            )
+            properties_str = format_properties_cypher(object.properties)
             cypher.append(
                 f"MATCH (n:_IMPORT_ID {{_IMPORT_ID: {object.start}}}) MATCH (m:_IMPORT_ID {{_IMPORT_ID: {object.end}}}) CREATE (n)-[:{object.label} {properties_str}]->(m);"
             )
@@ -372,36 +363,6 @@ def get_properties_json(object, write_properties: bool):
     )
 
 
-def to_duration_isoformat(value: timedelta) -> str:
-    """Converts timedelta to ISO-8601 duration: P<date>T<time>"""
-    date_parts: List[str] = []
-    time_parts: List[str] = []
-
-    if value.days != 0:
-        date_parts.append(f"{abs(value.days)}D")
-
-    if value.seconds != 0 or value.microseconds != 0:
-        abs_seconds = abs(value.seconds)
-        minutes, seconds = divmod(abs_seconds, 60)
-        hours, minutes = divmod(minutes, 60)
-        microseconds = value.microseconds
-
-        if hours > 0:
-            time_parts.append(f"{hours}H")
-        if minutes > 0:
-            time_parts.append(f"{minutes}M")
-        if seconds > 0 or microseconds > 0:
-            microseconds_part = (
-                f".{abs(value.microseconds)}" if value.microseconds != 0 else ""
-            )
-            time_parts.append(f"{seconds}{microseconds_part}S")
-
-    date_duration_str = "".join(date_parts)
-    time_duration_str = f'T{"".join(time_parts)}' if time_parts else ""
-
-    return f"P{date_duration_str}{time_duration_str}"
-
-
 def convert_to_isoformat_graphML(
     property: Union[
         None,
@@ -418,7 +379,7 @@ def convert_to_isoformat_graphML(
     ]
 ):
     if isinstance(property, timedelta):
-        return to_duration_isoformat(property)
+        return to_duration_iso_format(property)
 
     if isinstance(property, (time, date, datetime)):
         return property.isoformat()
@@ -832,38 +793,6 @@ def header_path(path: str):
     directory, filename = os.path.split(path)
     new_filename = HEADER_FILENAME
     return os.path.join(directory, new_filename)
-
-
-# todo: remove later when we figure what to do with it
-def to_duration_iso_format(value: timedelta) -> str:
-    """Converts timedelta to ISO-8601 duration: P<date>T<time>"""
-    date_parts: List[str] = []
-    time_parts: List[str] = []
-
-    if value.days != 0:
-        date_parts.append(f"{abs(value.days)}D")
-
-    if value.seconds != 0 or value.microseconds != 0:
-        abs_seconds = abs(value.seconds)
-        hours = floor(abs_seconds / 3600)
-        minutes = floor((abs_seconds - hours * 3600) / 60)
-        seconds = abs_seconds - hours * 3600 - minutes * 60
-        microseconds = value.microseconds
-
-        if hours > 0:
-            time_parts.append(f"{hours}H")
-        if minutes > 0:
-            time_parts.append(f"{minutes}M")
-        if seconds > 0 or microseconds > 0:
-            microseconds_part = (
-                f".{abs(value.microseconds)}" if value.microseconds != 0 else ""
-            )
-            time_parts.append(f"{seconds}{microseconds_part}S")
-
-    date_duration_str = "".join(date_parts)
-    time_duration_str = f'T{"".join(time_parts)}' if time_parts else ""
-
-    return f"P{date_duration_str}{time_duration_str}"
 
 
 def write_file(path: str, delimiter: str, quoting_type: str, data: mgp.Any) -> None:
