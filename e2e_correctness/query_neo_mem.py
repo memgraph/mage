@@ -170,10 +170,10 @@ def get_memgraph_data_json_format(memgraph: gqlalchemy.Memgraph):
     result = list(
         memgraph.execute_and_fetch(
             f"""
-            CALL export_util.json_stream() YIELD stream RETURN stream;
+            CALL export_util.json("", {{stream:true}}) YIELD data RETURN data;
             """
         )
-    )[0]["stream"]
+    )[0]["data"]
     return json.loads(result)
 
 
