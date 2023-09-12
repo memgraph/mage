@@ -1,4 +1,4 @@
 export: >
-  CALL export_util.json(_exportfile);
+  CALL export_util.json(_exportfile) YIELD path RETURN path;
 import: >
   CALL import_util.json(_exportfile);

@@ -1,10 +1,10 @@
 """
-This module queries Memgraph and Neo4j and creates Graph from JSON exported from Memgraph and 
+This module queries Memgraph and Neo4j and creates Graph from JSON exported from Memgraph and
 JSON from APOC from Neo4j
 
 As of 17.7.2023. when importing data via Cypherl, new ids is given to each node in Memgraph and Neo4j.
 
-When exporting data Memgraph export_util uses internal Memgraph ids to export data. 
+When exporting data Memgraph export_util uses internal Memgraph ids to export data.
 
 To overcome the issue of different internal IDs in Neo4j and Memgraph, we use the `id` node property as identifier.
 
@@ -51,7 +51,7 @@ class Vertex:
                 f"_labels different between {self._id} and {other._id}: {self._labels} vs {other._labels}"
             )
             return False
-        
+
         if len(self._properties) != len(other._properties):
             return False
         for k, v in self._properties.items():
@@ -61,7 +61,7 @@ class Vertex:
             if v != other._properties[k]:
                 logger.debug(f"Value {v} not equal to {other._properties[k]}")
                 return False
-            
+
         return True
 
 
@@ -104,7 +104,7 @@ class Edge:
         if self._label != other._label:
             logger.debug(f"Label is different {self._label} <> {other._label}")
             return False
-        
+
         if len(self._properties) != len(other._properties):
             return False
         for k, v in self._properties.items():
@@ -113,7 +113,7 @@ class Edge:
                 return False
             if v != other._properties[k]:
                 logger.debug(f"Value {v} not equal to {other._properties[k]}")
-                return False  
+                return False
         return True
 
 
@@ -154,10 +154,10 @@ def get_memgraph_data_json_format(memgraph: gqlalchemy.Memgraph):
     result = list(
         memgraph.execute_and_fetch(
             f"""
-            CALL export_util.json_stream() YIELD stream RETURN stream;
+            CALL export_util.json("", {{stream:true}}) YIELD data RETURN data;
             """
         )
-    )[0]["stream"]
+    )[0]["data"]
     return json.loads(result)
 
 
