@@ -70,6 +70,12 @@ constexpr std::string_view kArgumentTypeCollapseNode = "type";
 constexpr std::string_view kReturnIdCollapseNode = "id_collapsed";
 constexpr std::string_view kReturnRelationshipCollapseNode = "new_relationship";
 
+/*invert constants*/
+constexpr std::string_view kProcedureInvert = "invert";
+constexpr std::string_view kArgumentRelationship = "relationship";
+constexpr std::string_view kReturnRelationshipInvert = "relationship";
+constexpr std::string_view kReturnIdInvert = "id_inverted";
+
 void From(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 void To(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
@@ -96,7 +102,14 @@ void CloneSubgraph(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result
 
 
 void TransferProperties(const mgp::Node &node, mgp::Relationship &rel);
+
 void Collapse(mgp::Graph &graph, const mgp::Node &node, const std::string &type,
               const mgp::RecordFactory &record_factory);
+
 void CollapseNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+
+void Invert(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+
+void InvertRel(mgp::Graph &graph, mgp::Relationship &rel);
+
 }  // namespace Refactor
