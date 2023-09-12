@@ -42,7 +42,7 @@ class Vertex:
         if self.id != other.id:
             return self.id < other.id
         if self._labels != other._labels:
-            return self._labels != other._labels
+            return self._labels < other._labels
         return sorted(self._properties.keys()) < sorted(other._properties.keys())
 
     def __eq__(self, other):
@@ -95,7 +95,7 @@ class Edge:
         if self._to_vertex != other._to_vertex:
             return self._to_vertex < other._to_vertex
         if self._label != other._label:
-            return self._label != other._label
+            return self._label < other._label
         return sorted(self._properties.keys()) < sorted(other._properties.keys())
 
     def __eq__(self, other):
