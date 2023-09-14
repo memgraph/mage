@@ -25,6 +25,11 @@ from query_neo_mem import (
     neo4j_get_graph,
     run_memgraph_query,
     run_neo4j_query,
+    execute_query_neo4j,
+    path_to_string_neo4j,
+    parse_neo4j,
+    path_to_string_mem,
+    parse_mem
 )
 
 logging.basicConfig(format="%(asctime)-15s [%(levelname)s]: %(message)s")
@@ -173,7 +178,32 @@ def _run_test(test_dir: str, memgraph_db: Memgraph, neo4j_driver: neo4j.BoltDriv
         mg_graph, neo4j_graph
     ), "The graphs are not equal, check the logs for more details"
 
+def _run_path_test(test_dir: str, memgraph_db: Memgraph, neo4j_driver: neo4j.BoltDriver):
+    """
+    Run input queries on Memgraph and Neo4j and compare path results after running test query
+    """
+    input_cyphers = test_dir.joinpath(TestConstants.INPUT_FILE).open("r").readlines()
+    mg_execute_cyphers(input_cyphers, memgraph_db)
+    logger.info(f"Imported data into Memgraph from {input_cyphers}")
+    neo4j_execute_cyphers(input_cyphers, neo4j_driver)
+    logger.info(f"Imported data into Neo4j from {input_cyphers}")
 
+    test_dict = _load_yaml(test_dir.joinpath(TestConstants.TEST_FILE))
+    logger.info(f"Test dict {test_dict}")
+
+    logger.info(
+        f"Running query against Memgraph: {test_dict[TestConstants.MEMGRAPH_QUERY]}"
+    )
+    memgraph_results = memgraph_db.execute_and_fetch(test_dict[TestConstants.MEMGRAPH_QUERY])
+    memgraph_paths = parse_mem(memgraph_results)
+    logger.info("Done")
+
+    logger.info(f"Running query against Neo4j: {test_dict[TestConstants.NEO4J_QUERY]}")
+    neo4j_results = execute_query_neo4j(neo4j_driver,test_dict[TestConstants.NEO4J_QUERY])
+    neo4j_paths = parse_neo4j(neo4j_results)
+    logger.info("Done")
+
+    assert memgraph_paths == neo4j_paths
 
 @pytest.fixture(scope="session")
 def memgraph_port(pytestconfig):
@@ -198,18 +228,25 @@ def neo4j_driver(neo4j_port):
 
     yield neo4j_driver
 
+@pytest.fixture(scope="session")
+def path_start(pytestconfig):
+    return pytestconfig.getoption("--path-option")
+
 
 @pytest.mark.parametrize("test_dir", tests)
 def test_end2end(
-    test_dir: Path, memgraph_db: Memgraph, neo4j_driver: neo4j.BoltDriver
+    test_dir: Path, memgraph_db: Memgraph, neo4j_driver: neo4j.BoltDriver, path_start: bool
 ):
     logger.debug("Dropping the Memgraph and Neo4j databases.")
-
+    
     clean_memgraph_db(memgraph_db)
     clean_neo4j_db(neo4j_driver)
 
     if test_dir.name.startswith(TestConstants.TEST_SUBDIR_PREFIX):
-        _run_test(test_dir, memgraph_db, neo4j_driver)
+        if(path_start):
+            _run_path_test(test_dir, memgraph_db, neo4j_driver)
+        else:
+            _run_test(test_dir, memgraph_db, neo4j_driver)
     else:
         logger.info(f"Skipping directory: {test_dir.name}")
 

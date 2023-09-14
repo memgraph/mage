@@ -282,3 +282,63 @@ def neo4j_get_graph(neo4j_driver: neo4j.BoltDriver) -> Graph:
     logger.debug("Building the graph from Neo4j JSON data")
 
     return create_graph_neo4j_json(json_data)
+
+
+#additions for path testing
+
+def execute_query_neo4j(driver, query):
+    with driver.session() as session:
+        query = neo4j.Query(
+            query
+        )
+        results = session.run(query).value()
+    return results
+
+def path_to_string_neo4j(path):
+    path_string = "NODES:"
+
+    for node in path.nodes:
+        path_string += "(" + str(node.get("id")) + ")-"
+    path_string = path_string[:len(path_string)-1]
+
+    path_string += " RELATIONSHIPS: "
+    for relationship in path.relationships:
+        path_string += "[" + str(relationship.get("id")) + "]-" 
+    path_string = path_string[:len(path_string)-1]
+
+
+    return path_string
+
+def parse_neo4j(results):
+
+    paths = []
+    
+    for res in results:
+        paths.append(path_to_string_neo4j(res))
+        
+    paths.sort()
+    return paths
+
+def path_to_string_mem(path):
+    path_string = "NODES:"
+
+    for node in path._nodes:
+        path_string += "(" + str(node._properties.get("id")) + ")-"
+    path_string = path_string[:len(path_string)-1]
+
+    path_string += " RELATIONSHIPS: "
+    for relationship in path._relationships:
+        path_string += "[" + str(relationship._properties.get("id")) + "]-" 
+    path_string = path_string[:len(path_string)-1]
+
+    
+    return path_string
+
+def parse_mem(results):
+    
+    paths = []
+    for result in results:
+        paths.append(path_to_string_mem(result["result"]))
+
+    paths.sort()
+    return paths
