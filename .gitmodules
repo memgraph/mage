@@ -1,4 +1,4 @@
 [submodule "cpp/memgraph"]
 	path = cpp/memgraph
 	url = https://github.com/memgraph/memgraph.git
-	branch = master
+	branch = release/2.11
