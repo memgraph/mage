@@ -38,6 +38,13 @@ class Vertex:
     def __str__(self) -> str:
         return f"Vertex: {self._id}, {self._labels}, {self._properties}"
 
+    def __lt__(self, other):
+        if self.id != other.id:
+            return self.id < other.id
+        if self._labels != other._labels:
+            return self._labels < other._labels
+        return sorted(self._properties.keys()) < sorted(other._properties.keys())
+
     def __eq__(self, other):
         assert isinstance(
             other, Vertex
@@ -81,6 +88,15 @@ class Edge:
     @property
     def to_vertex(self) -> int:
         return self._to_vertex
+
+    def __lt__(self, other):
+        if self._from_vertex != other._from_vertex:
+            return self._from_vertex < other._from_vertex
+        if self._to_vertex != other._to_vertex:
+            return self._to_vertex < other._to_vertex
+        if self._label != other._label:
+            return self._label < other._label
+        return sorted(self._properties.keys()) < sorted(other._properties.keys())
 
     def __eq__(self, other):
         assert isinstance(
@@ -130,11 +146,11 @@ class Graph:
 
     @property
     def vertices(self):
-        return self._vertices
+        return sorted(self._vertices)
 
     @property
     def edges(self):
-        return self._edges
+        return sorted(self._edges)
 
 
 def get_neo4j_data_json(driver) -> str:
@@ -280,5 +296,4 @@ def neo4j_get_graph(neo4j_driver: neo4j.BoltDriver) -> Graph:
     logger.debug("Getting data from Neo4j")
     json_data = get_neo4j_data_json(neo4j_driver)
     logger.debug("Building the graph from Neo4j JSON data")
-
     return create_graph_neo4j_json(json_data)
