@@ -1,7 +1,7 @@
 memgraph_query: >
      MATCH (p:Person)
-     CALL create.remove_labels(p, ["US", "Programmer"]) YIELD nodes
-     RETURN nodes;
+     CALL create.remove_labels(p, ["US", "Programmer"]) YIELD node
+     RETURN node;
 
 neo4j_query: >
      MATCH (p:Person)
