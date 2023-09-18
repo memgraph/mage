@@ -93,8 +93,8 @@ void Map::SetKey(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mg
 
   try {
     auto map = arguments[0].ValueMap();
-    auto key{std::string(arguments[1].ValueString())};
-    auto value{arguments[2]};
+    const auto key{std::string(arguments[1].ValueString())};
+    const auto value{arguments[2]};
     map.Update(key, std::move(value));
     result.SetValue(std::move(map));
 
