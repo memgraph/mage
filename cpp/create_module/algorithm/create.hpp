@@ -1,9 +1,8 @@
 #pragma once
 
-#include <mgp.hpp>
-#include <string>
-#include <string_view>
 #include <unordered_set>
+
+#include <mgp.hpp>
 
 namespace Create {
 
