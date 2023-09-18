@@ -1,8 +1,18 @@
 #include "refactor.hpp"
 
 #include <mg_utils.hpp>
+#include <string>
 #include <unordered_set>
+
 #include "mgp.hpp"
+
+namespace {
+void ThrowInvalidTypeException(const mgp::Value &value) {
+  std::ostringstream oss;
+  oss << value.Type();
+  throw mgp::ValueException("Unsuppported type for this operation, received type: " + oss.str());
+}
+}  // namespace
 
 void Refactor::From(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::MemoryDispatcherGuard guard{memory};
@@ -436,7 +446,7 @@ void Refactor::CollapseNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
     const mgp::Value input = arguments[0];
     const std::string type{arguments[1].ValueString()};
 
-    if(!input.IsNode() && !input.IsInt() && !input.IsList()){
+    if (!input.IsNode() && !input.IsInt() && !input.IsList()) {
       record_factory.SetErrorMessage("Input can only be node, node ID, or list of nodes/IDs");
       return;
     }
@@ -460,9 +470,69 @@ void Refactor::CollapseNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
           return;
         }
       }
-    } 
-      
-    
+    }
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
+
+void Refactor::ExtractNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::memory = memory;
+  const auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+  try {
+    mgp::Graph graph{memgraph_graph};
+    mgp::Value rel_or_id{arguments[0]};
+    auto labels{arguments[1].ValueList()};
+    auto out_type{arguments[2].ValueString()};
+    auto in_type{arguments[3].ValueString()};
+
+    auto extract = [&](mgp::Relationship relationship) {
+      auto new_node = graph.CreateNode();
+      for (const auto &label : labels) {
+        new_node.AddLabel(label.ValueString());
+      }
+      graph.CreateRelationship(relationship.From(), new_node, in_type);
+      graph.CreateRelationship(new_node, relationship.To(), out_type);
+      graph.DeleteRelationship(relationship);
+
+      auto record = record_factory.NewRecord();
+      record.Insert(std::string(kResultExtractNode1).c_str(), new_node.Id().AsInt());
+      record.Insert(std::string(kResultExtractNode2).c_str(), new_node);
+      record.Insert(std::string(kResultExtractNode3).c_str(), "");
+    };
+
+    std::unordered_set<int64_t> ids;
+    auto parse = [&ids, &extract](const mgp::Value &rel_or_id) {
+      if (rel_or_id.IsInt()) {
+        ids.insert(rel_or_id.ValueInt());
+      } else if (rel_or_id.IsRelationship()) {
+        extract(rel_or_id.ValueRelationship());
+      } else {
+        ThrowInvalidTypeException(rel_or_id);
+      }
+    };
+
+    if (!rel_or_id.IsList()) {
+      parse(rel_or_id);
+      return;
+    }
+
+    for (const auto &list_element : rel_or_id.ValueList()) {
+      parse(list_element);
+    }
+
+    if (ids.empty()) {
+      return;
+    }
+
+    for (auto relationship : graph.Relationships()) {
+      if (ids.contains(relationship.Id().AsInt())) {
+        extract(relationship);
+      }
+    }
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
