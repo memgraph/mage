@@ -1,6 +1,7 @@
 #pragma once
 
 #include <mgp.hpp>
+#include <string>
 #include <string_view>
 #include <unordered_set>
 
@@ -64,6 +65,7 @@ constexpr std::string_view kResultProperties = "node";
 /*remove_labels constants*/
 constexpr std::string_view kReturnRemoveLabels = "node";
 constexpr std::string_view kProcedureRemoveLabels = "remove_labels";
+constexpr std::string_view kArgumentNodesRemoveLabels = "nodes";
 constexpr std::string_view kArgumentsLabels = "label";
 constexpr std::string_view kResultRemoveLabels = "node";
 
