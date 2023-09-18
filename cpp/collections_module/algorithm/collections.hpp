@@ -10,61 +10,47 @@ namespace Collections {
 /* sum_longs constants */
 constexpr const std::string_view kProcedureSumLongs = "sum_longs";
 constexpr const std::string_view kSumLongsArg1 = "numbers";
-constexpr const std::string_view kResultSumLongs = "sum";
 
 /* avg constants */
 constexpr const std::string_view kProcedureAvg = "avg";
 constexpr const std::string_view kAvgArg1 = "numbers";
-constexpr const std::string_view kResultAvg = "average";
 
 /* contains_all constants */
 constexpr const std::string_view kProcedureContainsAll = "contains_all";
-constexpr const std::string_view kContainsAllArg1 = "collection";
+constexpr const std::string_view kContainsAllArg1 = "coll";
 constexpr const std::string_view kContainsAllArg2 = "values";
-constexpr const std::string_view kResultContainsAll = "contained";
 
 /* intersection constants */
 constexpr const std::string_view kProcedureIntersection = "intersection";
 constexpr const std::string_view kIntersectionArg1 = "first";
 constexpr const std::string_view kIntersectionArg2 = "second";
-constexpr const std::string_view kResultIntersection = "intersection";
 
 /* remove_all constants */
 constexpr std::string_view kProcedureRemoveAll = "remove_all";
-constexpr std::string_view kReturnRemoveAll = "removed";
-constexpr std::string_view kArgumentsInputList = "input_list";
-constexpr std::string_view kArgumentsRemoveList = "to_remove_list";
-constexpr std::string_view kResultRemoveAll = "removed";
+constexpr std::string_view kArgumentsInputList = "first";
+constexpr std::string_view kArgumentsRemoveList = "second";
 
 /* sum constants */
-constexpr std::string_view kReturnSum = "sum";
 constexpr std::string_view kProcedureSum = "sum";
-constexpr std::string_view kInputList = "input_list";
-constexpr std::string_view kResultSum = "sum";
+constexpr std::string_view kInputList = "numbers";
 
 /* union constants */
-constexpr std::string_view kReturnUnion = "union";
 constexpr std::string_view kProcedureUnion = "union";
-constexpr std::string_view kArgumentsInputList1 = "input_list1";
-constexpr std::string_view kArgumentsInputList2 = "input_list2";
-constexpr std::string_view kResultUnion = "union";
+constexpr std::string_view kArgumentsInputList1 = "first";
+constexpr std::string_view kArgumentsInputList2 = "second";
 
-/* sorted constants */
-constexpr std::string_view kReturnSort = "sorted";
+/* sort constants */
 constexpr std::string_view kProcedureSort = "sort";
-constexpr std::string_view kResultSort = "sorted";
+constexpr std::string_view kArgumentSort = "coll";
 
 /* contains constants */
-constexpr std::string_view kReturnCS = "contains";
 constexpr std::string_view kProcedureCS = "contains_sorted";
-constexpr std::string_view kArgumentInputList = "input_list";
-constexpr std::string_view kArgumentElement = "element";
-constexpr std::string_view kResultCS = "contains";
+constexpr std::string_view kArgumentInputList = "coll";
+constexpr std::string_view kArgumentElement = "value";
 
 /* max constants */
-constexpr std::string_view kReturnMax = "max";
 constexpr std::string_view kProcedureMax = "max";
-constexpr std::string_view kResultMax = "max";
+constexpr std::string_view kArgumentMax = "values";
 
 /* split constants */
 constexpr std::string_view kProcedureSplit = "split";
@@ -73,37 +59,34 @@ constexpr std::string_view kArgumentDelimiter = "delimiter";
 constexpr std::string_view kResultSplit = "splitted";
 
 /* pairs constants */
-constexpr std::string_view kReturnPairs = "pairs";
 constexpr std::string_view kProcedurePairs = "pairs";
-constexpr std::string_view kResultPairs = "pairs";
+constexpr std::string_view kArgumentPairs = "list";
 
 /* contains constants */
-constexpr std::string_view kReturnValueContains = "output";
 constexpr std::string_view kProcedureContains = "contains";
-constexpr std::string_view kArgumentListContains = "list";
+constexpr std::string_view kArgumentListContains = "coll";
 constexpr std::string_view kArgumentValueContains = "value";
 
 /* union_all constants */
-constexpr std::string_view kReturnValueUnionAll = "return_list";
 constexpr std::string_view kProcedureUnionAll = "union_all";
-constexpr std::string_view kArgumentList1UnionAll = "list1";
-constexpr std::string_view kArgumentList2UnionAll = "list2";
+constexpr std::string_view kArgumentList1UnionAll = "first";
+constexpr std::string_view kArgumentList2UnionAll = "second";
 
 /* min constants */
-constexpr std::string_view kReturnValueMin = "min";
 constexpr std::string_view kProcedureMin = "min";
-constexpr std::string_view kArgumentListMin = "list";
+constexpr std::string_view kArgumentListMin = "values";
 
 /* to_set constants */
-constexpr std::string_view kReturnToSet = "result";
 constexpr std::string_view kProcedureToSet = "to_set";
-constexpr std::string_view kArgumentListToSet = "list";
+constexpr std::string_view kArgumentListToSet = "values";
 
 /* partition constants */
 constexpr std::string_view kReturnValuePartition = "result";
 constexpr std::string_view kProcedurePartition = "partition";
 constexpr std::string_view kArgumentListPartition = "list";
 constexpr std::string_view kArgumentSizePartition = "partition_size";
+
+void SetResult(mgp::Result &result, const mgp::Value &value);
 
 void SumLongs(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
 
@@ -136,7 +119,6 @@ void UnionAll(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_m
 void Min(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
 
 void ToSet(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
-
 
 void Partition(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 

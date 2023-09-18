@@ -5,8 +5,7 @@
 #include <unordered_set>
 #include <vector>
 
-void SetResult(mgp::Result &result, const mgp::Value &value){
-
+void Collections::SetResult(mgp::Result &result, const mgp::Value &value) {
   switch (value.Type()) {
     case mgp::Type::Bool:
       return result.SetValue(value.ValueBool());
@@ -36,7 +35,7 @@ void SetResult(mgp::Result &result, const mgp::Value &value){
       return result.SetValue(value.ValueDuration());
 
     default:
-      throw mgp::ValueException("No Record.Insert for this datatype");
+      throw mgp::ValueException("No Result.SetValue for this datatype");
   }
 }
 
@@ -101,13 +100,13 @@ void Collections::ContainsAll(mgp_list *args, mgp_func_context *ctx, mgp_func_re
     const auto list1{arguments[0].ValueList()};
     std::unordered_set<mgp::Value> set;
 
-    for (const auto &elem: list1){
+    for (const auto &elem : list1) {
       set.insert(elem);
     }
     const auto list2{arguments[1].ValueList()};
     std::unordered_set<mgp::Value> values;
 
-    for (const auto &elem: list2){
+    for (const auto &elem : list2) {
       values.insert(elem);
     }
     result.SetValue(std::all_of(values.begin(), values.end(), [&](const auto &x) { return set.contains(x); }));
@@ -126,14 +125,14 @@ void Collections::Intersection(mgp_list *args, mgp_func_context *ctx, mgp_func_r
   try {
     const auto list1{arguments[0].ValueList()};
     std::unordered_set<mgp::Value> set1;
-    for (const auto &elem: list1){
+    for (const auto &elem : list1) {
       set1.insert(elem);
     }
 
     const auto list2{arguments[1].ValueList()};
     std::unordered_set<mgp::Value> set2;
 
-    for (const auto &elem: list2){
+    for (const auto &elem : list2) {
       set2.insert(elem);
     }
 
@@ -209,7 +208,7 @@ void Collections::Sum(mgp_list *args, mgp_func_context *ctx, mgp_func_result *re
       sum += value.ValueNumeric();
     }
 
-   result.SetValue(sum);
+    result.SetValue(sum);
 
   } catch (const std::exception &e) {
     result.SetErrorMessage(e.what());
@@ -277,7 +276,6 @@ void Collections::Sort(mgp_list *args, mgp_func_context *ctx, mgp_func_result *r
     std::sort(sorted.begin(), sorted.end());
 
     result.SetValue(mgp::List(std::move(sorted)));
-
 
   } catch (const std::exception &e) {
     result.SetErrorMessage(e.what());
@@ -508,7 +506,7 @@ void Collections::ToSet(mgp_list *args, mgp_func_context *ctx, mgp_func_result *
     mgp::List list = arguments[0].ValueList();
     std::unordered_set<mgp::Value> set;
 
-    for(const auto &elem: list){
+    for (const auto &elem : list) {
       set.insert(elem);
     }
     mgp::List return_list;
