@@ -1,7 +1,7 @@
 query: > 
   MATCH (d:Dog)
   MATCH (h:Human)
-  CALL collections.min([h,d]) YIELD min 
+  WITH collections.min([h,d]) AS min 
   RETURN labels(min);
 
 output:

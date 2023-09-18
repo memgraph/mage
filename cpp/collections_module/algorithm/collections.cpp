@@ -5,10 +5,45 @@
 #include <unordered_set>
 #include <vector>
 
-void Collections::SumLongs(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void SetResult(mgp::Result &result, const mgp::Value &value){
+
+  switch (value.Type()) {
+    case mgp::Type::Bool:
+      return result.SetValue(value.ValueBool());
+    case mgp::Type::Int:
+      return result.SetValue(value.ValueInt());
+    case mgp::Type::Double:
+      return result.SetValue(value.ValueDouble());
+    case mgp::Type::String:
+      return result.SetValue(value.ValueString());
+    case mgp::Type::List:
+      return result.SetValue(value.ValueList());
+    case mgp::Type::Map:
+      return result.SetValue(value.ValueMap());
+    case mgp::Type::Node:
+      return result.SetValue(value.ValueNode());
+    case mgp::Type::Relationship:
+      return result.SetValue(value.ValueRelationship());
+    case mgp::Type::Path:
+      return result.SetValue(value.ValuePath());
+    case mgp::Type::Date:
+      return result.SetValue(value.ValueDate());
+    case mgp::Type::LocalTime:
+      return result.SetValue(value.ValueLocalTime());
+    case mgp::Type::LocalDateTime:
+      return result.SetValue(value.ValueLocalDateTime());
+    case mgp::Type::Duration:
+      return result.SetValue(value.ValueDuration());
+
+    default:
+      throw mgp::ValueException("No Record.Insert for this datatype");
+  }
+}
+
+void Collections::SumLongs(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  auto result = mgp::Result(res);
 
   try {
     int64_t sum{0};
@@ -22,19 +57,18 @@ void Collections::SumLongs(mgp_list *args, mgp_graph *memgraph_graph, mgp_result
       }
       sum += static_cast<int64_t>(list_item.ValueNumeric());
     }
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultSumLongs).c_str(), sum);
+    result.SetValue(sum);
 
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result.SetErrorMessage(e.what());
     return;
   }
 }
 
-void Collections::Avg(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Collections::Avg(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  auto result = mgp::Result(res);
 
   try {
     double average{0};
@@ -50,19 +84,18 @@ void Collections::Avg(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
     }
     average /= list.Size();
 
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultAvg).c_str(), average);
+    result.SetValue(average);
 
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result.SetErrorMessage(e.what());
     return;
   }
 }
 
-void Collections::ContainsAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Collections::ContainsAll(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  auto result = mgp::Result(res);
 
   try {
     const auto list1{arguments[0].ValueList()};
@@ -77,20 +110,18 @@ void Collections::ContainsAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
     for (const auto &elem: list2){
       values.insert(elem);
     }
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultContainsAll).c_str(),
-                  std::all_of(values.begin(), values.end(), [&](const auto &x) { return set.contains(x); }));
+    result.SetValue(std::all_of(values.begin(), values.end(), [&](const auto &x) { return set.contains(x); }));
 
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result.SetErrorMessage(e.what());
     return;
   }
 }
 
-void Collections::Intersection(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Collections::Intersection(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  auto result = mgp::Result(res);
 
   try {
     const auto list1{arguments[0].ValueList()};
@@ -117,19 +148,18 @@ void Collections::Intersection(mgp_list *args, mgp_graph *memgraph_graph, mgp_re
       }
     }
 
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultIntersection).c_str(), intersection);
+    result.SetValue(intersection);
 
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result.SetErrorMessage(e.what());
     return;
   }
 }
 
-void Collections::RemoveAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Collections::RemoveAll(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  auto result = mgp::Result(res);
 
   try {
     const auto input_list = arguments[0].ValueList();
@@ -156,19 +186,18 @@ void Collections::RemoveAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
       final_list.AppendExtend(std::move(element));
     }
 
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultRemoveAll).c_str(), final_list);
+    result.SetValue(final_list);
 
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result.SetErrorMessage(e.what());
     return;
   }
 }
 
-void Collections::Sum(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Collections::Sum(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  auto result = mgp::Result(res);
   try {
     double sum{0};
     const auto list = arguments[0].ValueList();
@@ -180,19 +209,18 @@ void Collections::Sum(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
       sum += value.ValueNumeric();
     }
 
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultSum).c_str(), sum);
+   result.SetValue(sum);
 
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result.SetErrorMessage(e.what());
     return;
   }
 }
 
-void Collections::Union(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Collections::Union(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  auto result = mgp::Result(res);
   try {
     const auto list1 = arguments[0].ValueList();
     const auto list2 = arguments[1].ValueList();
@@ -226,19 +254,18 @@ void Collections::Union(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *r
       }
     }
 
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultUnion).c_str(), unionList);
+    result.SetValue(unionList);
 
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result.SetErrorMessage(e.what());
     return;
   }
 }
 
-void Collections::Sort(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Collections::Sort(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  auto result = mgp::Result(res);
   try {
     const auto list = arguments[0].ValueList();
     std::vector<mgp::Value> sorted;
@@ -249,19 +276,19 @@ void Collections::Sort(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *re
 
     std::sort(sorted.begin(), sorted.end());
 
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultSort).c_str(), mgp::List(std::move(sorted)));
+    result.SetValue(mgp::List(std::move(sorted)));
+
 
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result.SetErrorMessage(e.what());
     return;
   }
 }
 
-void Collections::ContainsSorted(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Collections::ContainsSorted(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  auto result = mgp::Result(res);
   try {
     bool contains{false};
     const auto list = arguments[0].ValueList();
@@ -283,19 +310,18 @@ void Collections::ContainsSorted(mgp_list *args, mgp_graph *memgraph_graph, mgp_
       }
     }
 
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultCS).c_str(), contains);
+    result.SetValue(contains);
 
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result.SetErrorMessage(e.what());
     return;
   }
 }
 
-void Collections::Max(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Collections::Max(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  auto result = mgp::Result(res);
   try {
     const auto list = arguments[0].ValueList();
 
@@ -311,10 +337,10 @@ void Collections::Max(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
       }
     }
 
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultMax).c_str(), max);
+    SetResult(result, max);
+
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result.SetErrorMessage(e.what());
     return;
   }
 }
@@ -358,18 +384,17 @@ void Collections::Split(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *r
   }
 }
 
-void Collections::Pairs(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Collections::Pairs(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
-  auto record = record_factory.NewRecord();
+  auto result = mgp::Result(res);
   try {
     mgp::List pairsList = mgp::List();
 
     const auto inputList = arguments[0].ValueList();
 
     if (inputList.Size() == 0) {
-      record.Insert(std::string(kResultPairs).c_str(), pairsList);
+      result.SetValue(pairsList);
       return;
     }
     for (size_t i = 0; i < inputList.Size() - 1; i++) {
@@ -383,26 +408,25 @@ void Collections::Pairs(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *r
     helper.AppendExtend(mgp::Value());
     pairsList.AppendExtend(mgp::Value(std::move(helper)));
 
-    record.Insert(std::string(kResultPairs).c_str(), pairsList);
+    result.SetValue(pairsList);
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result.SetErrorMessage(e.what());
     return;
   }
 }
 
-void Collections::Contains(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Collections::Contains(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  auto result = mgp::Result(res);
   try {
     const mgp::List &list = arguments[0].ValueList();
     const mgp::Value &value = arguments[1];
 
     bool contains_value{false};
-    auto record = record_factory.NewRecord();
 
     if (list.Empty()) {
-      record.Insert(std::string(kReturnValueContains).c_str(), contains_value);
+      result.SetValue(contains_value);
       return;
     }
     for (size_t i = 0; i < list.Size(); i++) {
@@ -411,18 +435,18 @@ void Collections::Contains(mgp_list *args, mgp_graph *memgraph_graph, mgp_result
         break;
       }
     }
-    record.Insert(std::string(kReturnValueContains).c_str(), contains_value);
+    result.SetValue(contains_value);
 
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result.SetErrorMessage(e.what());
     return;
   }
 }
 
-void Collections::UnionAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Collections::UnionAll(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  auto result = mgp::Result(res);
   try {
     mgp::List list1 = arguments[0].ValueList();
     mgp::List list2 = arguments[1].ValueList();
@@ -430,26 +454,24 @@ void Collections::UnionAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_result
     for (size_t i = 0; i < list2.Size(); i++) {
       list1.AppendExtend(list2[i]);
     }
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(kReturnValueUnionAll).c_str(), list1);
+    result.SetValue(list1);
 
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result.SetErrorMessage(e.what());
     return;
   }
 }
 
-void Collections::Min(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Collections::Min(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  auto result = mgp::Result(res);
   try {
     const mgp::List &list = arguments[0].ValueList();
     if (list.Empty()) {
       throw mgp::ValueException("Empty input list");
     }
     const mgp::Type &type = list[0].Type();
-    auto record = record_factory.NewRecord();
 
     if (type == mgp::Type::Map || type == mgp::Type::Path || type == mgp::Type::List) {
       std::ostringstream oss;
@@ -470,18 +492,18 @@ void Collections::Min(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
       }
     }
 
-    record.Insert(std::string(kReturnValueMin).c_str(), min);
+    SetResult(result, min);
 
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result.SetErrorMessage(e.what());
     return;
   }
 }
 
-void Collections::ToSet(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Collections::ToSet(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  auto result = mgp::Result(res);
   try {
     mgp::List list = arguments[0].ValueList();
     std::unordered_set<mgp::Value> set;
@@ -493,11 +515,10 @@ void Collections::ToSet(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *r
     for (auto elem : set) {
       return_list.AppendExtend(std::move(elem));
     }
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(kReturnToSet).c_str(), std::move(return_list));
+    result.SetValue(std::move(return_list));
 
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result.SetErrorMessage(e.what());
     return;
   }
 }

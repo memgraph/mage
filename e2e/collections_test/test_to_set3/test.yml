@@ -1,5 +1,5 @@
 query: >
-  CALL collections.to_set(["aa","aa","matija","matija",[1,2,3],[1,2,3],1,2]) YIELD result RETURN result;
+  RETURN collections.to_set(["aa","aa","matija","matija",[1,2,3],[1,2,3],1,2]) AS result;
 
 
 output: 

@@ -1,6 +1,5 @@
 query: >
-    CALL collections.contains_sorted([1, 2, 'z', 's', 5, 6], 2) YIELD contains
-    RETURN contains
+    RETURN collections.contains_sorted([1, 2, 'z', 's', 5, 6], 2) AS contains;
 
 exception: >
     Values have to be of the same type

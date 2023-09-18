@@ -105,37 +105,38 @@ constexpr std::string_view kProcedurePartition = "partition";
 constexpr std::string_view kArgumentListPartition = "list";
 constexpr std::string_view kArgumentSizePartition = "partition_size";
 
-void SumLongs(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void SumLongs(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
 
-void Avg(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void Avg(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
 
-void ContainsAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void ContainsAll(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
 
-void Intersection(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void Intersection(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
 
-void RemoveAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void RemoveAll(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
 
-void Sum(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void Sum(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
 
-void Union(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void Union(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
 
-void Sort(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void Sort(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
 
-void ContainsSorted(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void ContainsSorted(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
 
-void Max(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void Max(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
 
 void Split(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
-void Pairs(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void Pairs(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
 
-void Contains(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void Contains(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
 
-void UnionAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void UnionAll(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
 
-void Min(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void Min(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
 
-void ToSet(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void ToSet(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
+
 
 void Partition(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 

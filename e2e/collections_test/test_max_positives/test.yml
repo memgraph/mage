@@ -1,6 +1,5 @@
 query: >
-    CALL collections.max([1, 2, 3]) YIELD max
-    RETURN max
+    RETURN collections.max([1, 2, 3]) AS max;
 
 output:
     - max: 3
