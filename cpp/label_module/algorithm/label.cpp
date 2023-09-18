@@ -1,6 +1,4 @@
 #include "label.hpp"
-#include "mg_procedure.h"
-#include "mgp.hpp"
 
 void Label::Exists(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;

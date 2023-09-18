@@ -5,6 +5,7 @@
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
     mgp::memory = memory;
+
     mgp::AddFunction(Label::Exists, Label::kFunctionExists,
                      {mgp::Parameter(Label::kArgumentsNode, mgp::Type::Any),
                       mgp::Parameter(Label::kArgumentsLabel, mgp::Type::String)},

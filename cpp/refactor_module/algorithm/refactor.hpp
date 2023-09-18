@@ -1,8 +1,7 @@
 #pragma once
 
 #include <mgp.hpp>
-#include <string>
-#include <string_view>
+
 namespace Refactor {
 
 /* categorize constants */
