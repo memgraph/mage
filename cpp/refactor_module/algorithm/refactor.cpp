@@ -478,7 +478,7 @@ void Refactor::CollapseNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
 }
 
 void Refactor::ExtractNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
@@ -488,7 +488,7 @@ void Refactor::ExtractNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_result
     auto out_type{arguments[2].ValueString()};
     auto in_type{arguments[3].ValueString()};
 
-    auto extract = [&](mgp::Relationship relationship) {
+    auto extract = [&graph, &labels, &record_factory, out_type, in_type](mgp::Relationship relationship) {
       auto new_node = graph.CreateNode();
       for (const auto &label : labels) {
         new_node.AddLabel(label.ValueString());
