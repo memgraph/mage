@@ -6,7 +6,7 @@
 
 const auto number_of_elements_in_pair = 2;
 
-/*NOTE: FromNodes isnt 1:1 for graphQL, because first we need to extend C and Cpp api to iterate vertices using ctx
+/*NOTE: FromNodes isn't 1:1 for graphQL, because first, we need to extend C and CPP API to iterate vertices using ctx
 object, since for this procedure(function if we want 1:1) we need to iterate all graph nodes*/
 void Map::FromNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
