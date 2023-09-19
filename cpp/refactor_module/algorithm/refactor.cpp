@@ -1,8 +1,17 @@
 #include "refactor.hpp"
 
-#include <mg_utils.hpp>
 #include <unordered_set>
+
+#include <mg_utils.hpp>
 #include "mgp.hpp"
+
+namespace {
+void ThrowInvalidTypeException(const mgp::Value &value) {
+  std::ostringstream oss;
+  oss << value.Type();
+  throw mgp::ValueException("Unsupported type for this operation, received type: " + oss.str());
+}
+}  // namespace
 
 void Refactor::From(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::MemoryDispatcherGuard guard{memory};
@@ -436,7 +445,7 @@ void Refactor::CollapseNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
     const mgp::Value input = arguments[0];
     const std::string type{arguments[1].ValueString()};
 
-    if(!input.IsNode() && !input.IsInt() && !input.IsList()){
+    if (!input.IsNode() && !input.IsInt() && !input.IsList()) {
       record_factory.SetErrorMessage("Input can only be node, node ID, or list of nodes/IDs");
       return;
     }
@@ -460,9 +469,66 @@ void Refactor::CollapseNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
           return;
         }
       }
-    } 
-      
-    
+    }
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
+
+namespace {
+
+template <typename node_or_rel>
+void NormalizeToBoolean(node_or_rel object, std::string &property_key, std::unordered_set<mgp::Value> &true_values,
+                        std::unordered_set<mgp::Value> &false_values) {
+  auto old_value = object.GetProperty(property_key);
+  if (old_value.IsNull()) {
+    return;
+  }
+
+  bool in_true = true_values.contains(old_value);
+  bool in_false = false_values.contains(old_value);
+
+  if (in_true && !in_false) {
+    object.SetProperty(property_key, mgp::Value(true));
+  } else if (!in_true && in_false) {
+    object.SetProperty(property_key, mgp::Value(false));
+  } else if (!in_true && !in_false) {
+    object.RemoveProperty(property_key);
+  }
+}
+
+}  // namespace
+
+void Refactor::NormalizeAsBoolean(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+  try {
+    auto object{arguments[0]};
+    auto property_key{std::string(arguments[1].ValueString())};
+    const auto true_values_list{arguments[2].ValueList()};
+    const auto false_values_list{arguments[3].ValueList()};
+
+    auto convert_to_set = [](const mgp::List &list) {
+      std::unordered_set<mgp::Value> set;
+      for (const auto &list_item : list) {
+        set.insert(list_item);
+      }
+      return set;
+    };
+
+    std::unordered_set<mgp::Value> true_values = convert_to_set(true_values_list);
+    std::unordered_set<mgp::Value> false_values = convert_to_set(false_values_list);
+
+    if (object.IsNode()) {
+      NormalizeToBoolean(object.ValueNode(), property_key, true_values, false_values);
+    } else if (object.IsRelationship()) {
+      NormalizeToBoolean(object.ValueRelationship(), property_key, true_values, false_values);
+    } else {
+      ThrowInvalidTypeException(object);
+    }
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());

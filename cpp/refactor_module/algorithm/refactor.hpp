@@ -76,6 +76,13 @@ constexpr std::string_view kArgumentRelationship = "relationship";
 constexpr std::string_view kReturnRelationshipInvert = "relationship";
 constexpr std::string_view kReturnIdInvert = "id_inverted";
 
+/* normalize_as_boolean constants */
+constexpr std::string_view kProcedureNormalizeAsBoolean = "normalize_as_boolean";
+constexpr std::string_view kNormalizeAsBooleanArg1 = "entity";
+constexpr std::string_view kNormalizeAsBooleanArg2 = "property_key";
+constexpr std::string_view kNormalizeAsBooleanArg3 = "true_values";
+constexpr std::string_view kNormalizeAsBooleanArg4 = "false_values";
+
 void From(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 void To(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
@@ -99,8 +106,6 @@ void CloneSubgraphFromPaths(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
 
 void CloneSubgraph(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
-
-
 void TransferProperties(const mgp::Node &node, mgp::Relationship &rel);
 
 void Collapse(mgp::Graph &graph, const mgp::Node &node, const std::string &type,
@@ -111,5 +116,7 @@ void CollapseNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
 void Invert(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 void InvertRel(mgp::Graph &graph, mgp::Relationship &rel);
+
+void NormalizeAsBoolean(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 }  // namespace Refactor
