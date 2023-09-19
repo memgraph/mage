@@ -1,9 +1,8 @@
 #include "refactor.hpp"
 
-#include <mg_utils.hpp>
-#include <string>
 #include <unordered_set>
 
+#include <mg_utils.hpp>
 #include "mgp.hpp"
 
 namespace {
