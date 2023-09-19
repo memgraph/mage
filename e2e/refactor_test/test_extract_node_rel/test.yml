@@ -1,0 +1,20 @@
+query: >
+  MATCH ()-[rel]->() CALL refactor.extract_node(rel,
+  ["NewLabel"],"OutRelationship", "InRelationship") YIELD output;
+output:
+  - output:
+      labels:
+        - NewLabel
+      properties: {}
+  - output:
+      labels:
+        - NewLabel
+      properties: {}
+  - output:
+      labels:
+        - NewLabel
+      properties: {}
+  - output:
+      labels:
+        - NewLabel
+      properties: {}

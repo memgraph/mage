@@ -496,10 +496,11 @@ void Refactor::ExtractNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_result
       }
       graph.CreateRelationship(relationship.From(), new_node, in_type);
       graph.CreateRelationship(new_node, relationship.To(), out_type);
-      graph.DeleteRelationship(relationship);
 
       auto record = record_factory.NewRecord();
-      record.Insert(std::string(kResultExtractNode1).c_str(), new_node.Id().AsInt());
+      record.Insert(std::string(kResultExtractNode1).c_str(), relationship.Id().AsInt());
+      graph.DeleteRelationship(relationship);
+
       record.Insert(std::string(kResultExtractNode2).c_str(), new_node);
       record.Insert(std::string(kResultExtractNode3).c_str(), "");
     };
@@ -517,11 +518,10 @@ void Refactor::ExtractNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_result
 
     if (!rel_or_id.IsList()) {
       parse(rel_or_id);
-      return;
-    }
-
-    for (const auto &list_element : rel_or_id.ValueList()) {
-      parse(list_element);
+    } else {
+      for (const auto &list_element : rel_or_id.ValueList()) {
+        parse(list_element);
+      }
     }
 
     if (ids.empty()) {
