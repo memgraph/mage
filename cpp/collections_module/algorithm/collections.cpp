@@ -35,7 +35,9 @@ void Collections::SetResult(mgp::Result &result, const mgp::Value &value) {
       return result.SetValue(value.ValueDuration());
 
     default:
-      throw mgp::ValueException("No Result.SetValue for this datatype");
+        std::ostringstream oss;
+        oss << value.Type();
+        throw mgp::ValueException("No Result.SetValue for: " + oss.str());
   }
 }
 
@@ -98,18 +100,13 @@ void Collections::ContainsAll(mgp_list *args, mgp_func_context *ctx, mgp_func_re
 
   try {
     const auto list1{arguments[0].ValueList()};
-    std::unordered_set<mgp::Value> set;
+    std::unordered_set<mgp::Value> set(list1.begin(), list1.end());
 
-    for (const auto &elem : list1) {
-      set.insert(elem);
-    }
     const auto list2{arguments[1].ValueList()};
-    std::unordered_set<mgp::Value> values;
 
-    for (const auto &elem : list2) {
-      values.insert(elem);
-    }
-    result.SetValue(std::all_of(values.begin(), values.end(), [&](const auto &x) { return set.contains(x); }));
+    std::unordered_set<mgp::Value> values(list2.begin(), list2.end());;
+
+    result.SetValue(std::all_of(values.begin(), values.end(), [&set](const auto &x) { return set.contains(x); }));
 
   } catch (const std::exception &e) {
     result.SetErrorMessage(e.what());
@@ -124,17 +121,11 @@ void Collections::Intersection(mgp_list *args, mgp_func_context *ctx, mgp_func_r
 
   try {
     const auto list1{arguments[0].ValueList()};
-    std::unordered_set<mgp::Value> set1;
-    for (const auto &elem : list1) {
-      set1.insert(elem);
-    }
+    std::unordered_set<mgp::Value> set1(list1.begin(),list1.end());
 
     const auto list2{arguments[1].ValueList()};
-    std::unordered_set<mgp::Value> set2;
+    std::unordered_set<mgp::Value> set2(list2.begin(),list2.end());
 
-    for (const auto &elem : list2) {
-      set2.insert(elem);
-    }
 
     if (set1.size() > set2.size()) {
       std::swap(set1, set2);
@@ -164,11 +155,7 @@ void Collections::RemoveAll(mgp_list *args, mgp_func_context *ctx, mgp_func_resu
     const auto input_list = arguments[0].ValueList();
     const auto to_remove_list = arguments[1].ValueList();
 
-    std::unordered_multiset<mgp::Value> searchable;
-
-    for (const auto value : input_list) {
-      searchable.insert(std::move(value));
-    }
+    std::unordered_multiset<mgp::Value> searchable(input_list.begin(),input_list.end());
 
     for (const auto key : to_remove_list) {
       while (true) {
@@ -504,11 +491,8 @@ void Collections::ToSet(mgp_list *args, mgp_func_context *ctx, mgp_func_result *
   auto result = mgp::Result(res);
   try {
     mgp::List list = arguments[0].ValueList();
-    std::unordered_set<mgp::Value> set;
+    std::unordered_set<mgp::Value> set(list.begin(),list.end());
 
-    for (const auto &elem : list) {
-      set.insert(elem);
-    }
     mgp::List return_list;
     for (auto elem : set) {
       return_list.AppendExtend(std::move(elem));
