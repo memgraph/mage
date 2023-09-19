@@ -9,7 +9,7 @@ namespace {
 void ThrowInvalidTypeException(const mgp::Value &value) {
   std::ostringstream oss;
   oss << value.Type();
-  throw mgp::ValueException("Unsuppported type for this operation, received type: " + oss.str());
+  throw mgp::ValueException("Unsupported type for this operation, received type: " + oss.str());
 }
 }  // namespace
 
@@ -493,6 +493,10 @@ void Refactor::ExtractNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_result
       for (const auto &label : labels) {
         new_node.AddLabel(label.ValueString());
       }
+      for (auto &[key, property] : relationship.Properties()) {
+        new_node.SetProperty(key, std::move(property));
+      }
+
       graph.CreateRelationship(relationship.From(), new_node, in_type);
       graph.CreateRelationship(new_node, relationship.To(), out_type);
 
