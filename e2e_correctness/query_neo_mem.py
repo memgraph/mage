@@ -56,9 +56,7 @@ class Vertex:
             return False
         for k, v in self._properties.items():
             if k not in other._properties:
-                logger.debug(
-                    f"Property with key {k} not in {other._properties.keys()}"
-                )
+                logger.debug(f"Property with key {k} not in {other._properties.keys()}")
                 return False
             if v != other._properties[k]:
                 logger.debug(f"Value {v} not equal to {other._properties[k]}")
@@ -115,9 +113,7 @@ class Edge:
             return False
         for k, v in self._properties.items():
             if k not in other._properties:
-                logger.debug(
-                    f"Property with key {k} not in {other._properties.keys()}"
-                )
+                logger.debug(f"Property with key {k} not in {other._properties.keys()}")
                 return False
             if v != other._properties[k]:
                 logger.debug(f"Value {v} not equal to {other._properties[k]}")
@@ -176,12 +172,8 @@ def extract_vertex_from_json(item) -> Vertex:
     return Vertex(item["properties"]["id"], item["labels"], item["properties"])
 
 
-def create_edge_from_data(
-    from_vertex_id: int, to_vertex_id: int, item
-) -> Edge:
-    return Edge(
-        from_vertex_id, to_vertex_id, item["label"], item["properties"]
-    )
+def create_edge_from_data(from_vertex_id: int, to_vertex_id: int, item) -> Edge:
+    return Edge(from_vertex_id, to_vertex_id, item["label"], item["properties"])
 
 
 def create_graph_memgraph_json(json_memgraph_data) -> Graph:
@@ -230,9 +222,7 @@ def create_graph_neo4j_json(json_neo4j_data) -> Graph:
 
 
 def create_neo4j_driver(port: int) -> neo4j.BoltDriver:
-    return neo4j.GraphDatabase.driver(
-        f"bolt://localhost:{port}", encrypted=False
-    )
+    return neo4j.GraphDatabase.driver(f"bolt://localhost:{port}", encrypted=False)
 
 
 def create_memgraph_db(port: int) -> gqlalchemy.Memgraph:
@@ -247,9 +237,7 @@ def mg_execute_cyphers(input_cyphers: List[str], db: gqlalchemy.Memgraph):
         db.execute(query)
 
 
-def neo4j_execute_cyphers(
-    input_cyphers: List[str], neo4j_driver: neo4j.BoltDriver
-):
+def neo4j_execute_cyphers(input_cyphers: List[str], neo4j_driver: neo4j.BoltDriver):
     """
     Execute multiple cypher queries against Neo4j
     """
@@ -305,7 +293,7 @@ def sort_dict(dict):
     keys = list(dict.keys())
     keys.sort()
     sorted_dict = {i: dict[i] for i in keys}
-    if "id" in sorted_dict: 
+    if "id" in sorted_dict:
         sorted_dict.pop("id")
     return sorted_dict
 
@@ -318,27 +306,46 @@ def execute_query_neo4j(driver, query):
 
 
 def path_to_string_neo4j(path):
-
     path_string = "PATH: "
 
     n = len(path.nodes)
 
     for i in range(0, n):
-        
         node = path.nodes[i]
         node_labels = list(node.labels)
         node_labels.sort()
         node_props = str(sort_dict(node._properties))
-        path_string += "(id:" + (str(node.get("id")) + " labels: " + str(node_labels) + " " + str(node_props)) + ")-"
+        path_string += (
+            "(id:"
+            + (
+                str(node.get("id"))
+                + " labels: "
+                + str(node_labels)
+                + " "
+                + str(node_props)
+            )
+            + ")-"
+        )
 
-        if(i == n - 1):
+        if i == n - 1:
             path_string = path_string[:-1]
             continue
 
         relationship = path.relationships[i]
         rel_props = str(sort_dict(relationship._properties))
-        path_string += "[" + ("id:" + str(relationship.get("id")) + " type: " + relationship.type + " " + rel_props) + "]-" 
-    
+        path_string += (
+            "["
+            + (
+                "id:"
+                + str(relationship.get("id"))
+                + " type: "
+                + relationship.type
+                + " "
+                + rel_props
+            )
+            + "]-"
+        )
+
     return path_string
 
 
@@ -350,32 +357,50 @@ def parse_neo4j(results):
 
 
 def path_to_string_mem(path):
-
     path_string = "PATH: "
 
     n = len(path._nodes)
 
     for i in range(0, n):
-        
         node = path._nodes[i]
         node_labels = list(node._labels)
         node_labels.sort()
         node_props = str(sort_dict(node._properties))
-        path_string += "(id:" + (str(node._properties.get("id")) + " labels: " + str(node_labels) + " " + str(node_props)) + ")-"
+        path_string += (
+            "(id:"
+            + (
+                str(node._properties.get("id"))
+                + " labels: "
+                + str(node_labels)
+                + " "
+                + str(node_props)
+            )
+            + ")-"
+        )
 
-        if(i == n - 1):
+        if i == n - 1:
             path_string = path_string[:-1]
             continue
 
         relationship = path._relationships[i]
         rel_props = str(sort_dict(relationship._properties))
-        path_string += "[" + ("id:" + str(relationship._properties.get("id")) + " type: " + relationship._type + " " + rel_props) + "]-" 
-    
+        path_string += (
+            "["
+            + (
+                "id:"
+                + str(relationship._properties.get("id"))
+                + " type: "
+                + relationship._type
+                + " "
+                + rel_props
+            )
+            + "]-"
+        )
+
     return path_string
 
 
 def parse_mem(results):
-
     paths = [path_to_string_mem(result["result"]) for result in results]
     paths.sort()
     return paths
