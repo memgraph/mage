@@ -2,8 +2,8 @@
 
 #include "mgp.hpp"
 
-Algo::PathFinder::PathFinder(const mgp::Node &start_node, const mgp::Node &end_node, int64_t max_nodes)
-    : _start_node(start_node), _end_node_id(end_node.Id()), _max_nodes(max_nodes) {}
+Algo::PathFinder::PathFinder(const mgp::Node &start_node, const mgp::Node &end_node, int64_t max_length)
+    : _start_node(start_node), _end_node_id(end_node.Id()), _max_length(max_length) {}
 
 void Algo::PathFinder::UpdateRelationshipDirection(const mgp::List &relationship_types) {
   _rel_direction.clear();
@@ -17,12 +17,12 @@ void Algo::PathFinder::UpdateRelationshipDirection(const mgp::List &relationship
 }
 
 void Algo::PathFinder::DFS(const mgp::Node &curr_node, mgp::Path &curr_path, std::unordered_set<int64_t> &visited) {
-  if (static_cast<int64_t>(curr_path.Length()) == _max_nodes - 1) {
+  if (curr_node.Id() == _end_node_id) {
+    _paths.emplace_back(curr_path);
     return;
   }
 
-  if (curr_node.Id() == _end_node_id) {
-    _paths.emplace_back(curr_path);
+  if (static_cast<int64_t>(curr_path.Length()) == _max_length) {
     return;
   }
 
@@ -38,24 +38,29 @@ void Algo::PathFinder::DFS(const mgp::Node &curr_node, mgp::Path &curr_path, std
       if (visited.contains(next_node_id)) {
         continue;
       }
-      auto label = std::string(relationship.Type());
-      auto it = _rel_direction.find(label);
 
-      if (it == _rel_direction.end()) {
-        continue;
+      auto label = std::string(relationship.Type());
+      int label_bitmask = 0;
+
+      if (!_rel_direction.empty()) {
+        auto it = _rel_direction.find(label);
+        if (it == _rel_direction.end()) {
+          continue;
+        }
+        label_bitmask = it->second;
       }
 
-      if (it->second == 0 || it->second == bitmask) {
+      if (label_bitmask == 0 || label_bitmask == bitmask) {
         curr_path.Expand(relationship);
         DFS(outgoing ? relationship.To() : relationship.From(), curr_path, visited);
         curr_path.Pop();
-      } else if (it->second == 3) {
+      } else if (label_bitmask == 3) {
         if (outgoing && seen.contains(relationship.To().Id().AsInt())) {
           curr_path.Expand(relationship);
           DFS(relationship.To(), curr_path, visited);
           curr_path.Pop();
         } else if (!outgoing) {
-          seen.insert(relationship.Id().AsInt());
+          seen.insert(relationship.From().Id().AsInt());
         }
       }
     }
