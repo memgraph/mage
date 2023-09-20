@@ -496,6 +496,8 @@ void NormalizeToBoolean(node_or_rel object, std::string &property_key, std::unor
     object.SetProperty(property_key, mgp::Value(false));
   } else if (!in_true && !in_false) {
     object.RemoveProperty(property_key);
+  } else {
+    throw mgp::ValueException("Property is contained in both true_values and false_values.");
   }
 }
 
@@ -519,15 +521,26 @@ void Refactor::NormalizeAsBoolean(mgp_list *args, mgp_graph *memgraph_graph, mgp
       return set;
     };
 
-    std::unordered_set<mgp::Value> true_values = convert_to_set(true_values_list);
-    std::unordered_set<mgp::Value> false_values = convert_to_set(false_values_list);
+    std::unordered_set<mgp::Value> true_values{convert_to_set(true_values_list)};
+    std::unordered_set<mgp::Value> false_values{convert_to_set(false_values_list)};
 
-    if (object.IsNode()) {
-      NormalizeToBoolean(object.ValueNode(), property_key, true_values, false_values);
-    } else if (object.IsRelationship()) {
-      NormalizeToBoolean(object.ValueRelationship(), property_key, true_values, false_values);
-    } else {
-      ThrowInvalidTypeException(object);
+    auto parse = [&property_key, &true_values, &false_values](const mgp::Value &object) {
+      if (object.IsNode()) {
+        NormalizeToBoolean(object.ValueNode(), property_key, true_values, false_values);
+      } else if (object.IsRelationship()) {
+        NormalizeToBoolean(object.ValueRelationship(), property_key, true_values, false_values);
+      } else {
+        ThrowInvalidTypeException(object);
+      }
+    };
+
+    if (!object.IsList()) {
+      parse(object);
+      return;
+    }
+
+    for (const auto &list_item : object.ValueList()) {
+      parse(list_item);
     }
 
   } catch (const std::exception &e) {
