@@ -1,14 +1,15 @@
 import json as js
-import ast
 
-import defusedxml.ElementTree as ET
+import gqlalchemy
+import mgp
+import ast
 
 from dataclasses import dataclass
 from datetime import datetime, date, time, timedelta
 from typing import Union, List, Dict, Any
 
-import mgp
 from mage.export_import_util.parameters import Parameter
+import defusedxml.ElementTree as ET
 
 
 @dataclass
@@ -290,6 +291,33 @@ def create_edge(
 
     for key, value in properties.items():
         edge_properties[key] = convert_from_isoformat(value)
+
+
+@mgp.write_proc
+def cypher(ctx: mgp.ProcCtx, path: str) -> mgp.Record():
+    """
+    Procedure to import the Cypher created by the export_util.json procedure.
+    The lab import feature should be prefered.
+
+    Parameters
+    ----------
+    path : str
+        Path to the JSON file that is being imported.
+    """
+
+    memgraph = gqlalchemy.Memgraph()
+    try:
+        with open(path, "r") as file:
+            for query in file.readlines():
+                stripped_query = query.strip()
+                if stripped_query:
+                    memgraph.execute(stripped_query)
+    except OSError:
+        raise OSError("Could not open/read file.")
+    except Exception:
+        raise Exception("Unable to execute the given queries")
+
+    return mgp.Record()
 
 
 @mgp.write_proc
