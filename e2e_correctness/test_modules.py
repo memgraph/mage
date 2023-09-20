@@ -196,10 +196,11 @@ def _run_path_test(
     input_cyphers = (
         test_dir.joinpath(TestConstants.INPUT_FILE).open("r").readlines()
     )
+    logger.info(f"Importing data from {input_cyphers}")
     mg_execute_cyphers(input_cyphers, memgraph_db)
-    logger.info(f"Imported data into Memgraph from {input_cyphers}")
+    logger.info("Imported data into Memgraph")
     neo4j_execute_cyphers(input_cyphers, neo4j_driver)
-    logger.info(f"Imported data into Neo4j from {input_cyphers}")
+    logger.info("Imported data into Neo4j")
 
     test_dict = _load_yaml(test_dir.joinpath(TestConstants.TEST_FILE))
     logger.info(f"Test dict {test_dict}")
