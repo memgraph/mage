@@ -306,7 +306,7 @@ def execute_query_neo4j(driver, query):
 
 
 def path_to_string_neo4j(path):
-    path_string = "PATH: "
+    path_string_list = ["PATH: "]
 
     n = len(path.nodes)
 
@@ -315,49 +315,32 @@ def path_to_string_neo4j(path):
         node_labels = list(node.labels)
         node_labels.sort()
         node_props = str(sort_dict(node._properties))
-        path_string += (
-            "(id:"
-            + (
-                str(node.get("id"))
-                + " labels: "
-                + str(node_labels)
-                + " "
-                + str(node_props)
-            )
-            + ")-"
-        )
+        path_string_list.append("(id:")
+        path_string_list.append(str(node.get("id")) + " labels: ")
+        path_string_list.append(str(node_labels) + " ")
+        path_string_list.append(str(node_props) + ")-")
 
         if i == n - 1:
-            path_string = path_string[:-1]
-            continue
+            path_string = "".join(path_string_list)
+            return path_string[:-1]
 
         relationship = path.relationships[i]
         rel_props = str(sort_dict(relationship._properties))
-        path_string += (
-            "["
-            + (
-                "id:"
-                + str(relationship.get("id"))
-                + " type: "
-                + relationship.type
-                + " "
-                + rel_props
-            )
-            + "]-"
-        )
-
-    return path_string
+        path_string_list.append("[")
+        path_string_list.append("id:" + str(relationship.get("id")))
+        path_string_list.append(" type: " + relationship.type)
+        path_string_list.append(" " + rel_props)
+        path_string_list.append("]-")
 
 
 def parse_neo4j(results):
-    paths = []
     paths = [path_to_string_neo4j(res) for res in results]
     paths.sort()
     return paths
 
 
 def path_to_string_mem(path):
-    path_string = "PATH: "
+    path_string_list = ["PATH: "]
 
     n = len(path._nodes)
 
@@ -366,38 +349,22 @@ def path_to_string_mem(path):
         node_labels = list(node._labels)
         node_labels.sort()
         node_props = str(sort_dict(node._properties))
-        path_string += (
-            "(id:"
-            + (
-                str(node._properties.get("id"))
-                + " labels: "
-                + str(node_labels)
-                + " "
-                + str(node_props)
-            )
-            + ")-"
-        )
+        path_string_list.append("(id:")
+        path_string_list.append(str(node._properties.get("id")) + " labels: ")
+        path_string_list.append(str(node_labels) + " ")
+        path_string_list.append(str(node_props) + ")-")
 
         if i == n - 1:
-            path_string = path_string[:-1]
-            continue
+            path_string = "".join(path_string_list)
+            return path_string[:-1]
 
         relationship = path._relationships[i]
         rel_props = str(sort_dict(relationship._properties))
-        path_string += (
-            "["
-            + (
-                "id:"
-                + str(relationship._properties.get("id"))
-                + " type: "
-                + relationship._type
-                + " "
-                + rel_props
-            )
-            + "]-"
-        )
-
-    return path_string
+        path_string_list.append("[")
+        path_string_list.append("id:" + str(relationship._properties.get("id")))
+        path_string_list.append(" type: " + relationship._type)
+        path_string_list.append(" " + rel_props)
+        path_string_list.append("]-")
 
 
 def parse_mem(results):
