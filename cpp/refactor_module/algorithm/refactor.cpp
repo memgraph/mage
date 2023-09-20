@@ -497,7 +497,8 @@ void NormalizeToBoolean(node_or_rel object, std::string &property_key, std::unor
   } else if (!in_true && !in_false) {
     object.RemoveProperty(property_key);
   } else {
-    throw mgp::ValueException("Property is contained in both true_values and false_values.");
+    throw mgp::ValueException("The value {" + old_value.ToString() +
+                              "} is contained in both true_values and false_values.");
   }
 }
 
