@@ -6,6 +6,7 @@ import logging
 import neo4j
 import pytest
 import yaml
+import os
 
 
 from gqlalchemy import Memgraph
@@ -54,6 +55,8 @@ class TestConstants:
     TEST_FILE = "test.yml"
     MEMGRAPH_QUERY = "memgraph_query"
     NEO4J_QUERY = "neo4j_query"
+    CONFIG_FILE = "config.yml"
+    
 
 
 class ConfigConstants:
@@ -225,7 +228,13 @@ def _run_path_test(
 
     assert memgraph_paths == neo4j_paths
 
-
+def check_path_option(test_dir):
+    config_path = test_dir.joinpath(TestConstants.CONFIG_FILE)
+    if(os.path.exists(config_path)):
+        config_dict = _load_yaml(config_path)
+        if "path_option" in config_dict:
+            return (config_dict["path_option"] == "True")
+    return False
 @pytest.fixture(scope="session")
 def memgraph_port(pytestconfig):
     return pytestconfig.getoption("--memgraph-port")
@@ -252,17 +261,11 @@ def neo4j_driver(neo4j_port):
     yield neo4j_driver
 
 
-@pytest.fixture(scope="session")
-def path_start(pytestconfig):
-    return pytestconfig.getoption("--path-option")
-
-
 @pytest.mark.parametrize("test_dir", tests)
 def test_end2end(
     test_dir: Path,
     memgraph_db: Memgraph,
     neo4j_driver: neo4j.BoltDriver,
-    path_start: bool,
 ):
     logger.debug("Dropping the Memgraph and Neo4j databases.")
 
@@ -270,7 +273,8 @@ def test_end2end(
     clean_neo4j_db(neo4j_driver)
 
     if test_dir.name.startswith(TestConstants.TEST_SUBDIR_PREFIX):
-        if path_start:
+    
+        if check_path_option(test_dir):
             _run_path_test(test_dir, memgraph_db, neo4j_driver)
         else:
             _run_test(test_dir, memgraph_db, neo4j_driver)

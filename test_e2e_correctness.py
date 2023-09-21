@@ -33,12 +33,6 @@ def parse_arguments():
         type=int,
         required=False,
     )
-    parser.add_argument(
-        "--path-option",
-        help="E2E correctnes path option",
-        type=bool,
-        required=False,
-    )
     args = parser.parse_args()
     return args
 
@@ -52,7 +46,6 @@ def main(
     test_filter: str = None,
     memgraph_port: str = str(ConfigConstants.MEMGRAPH_PORT),
     neo4j_port: str = str(ConfigConstants.NEO4J_PORT),
-    path_option: str = None,
 ):
     os.environ["PYTHONPATH"] = E2E_CORRECTNESS_DIRECTORY
     os.chdir(E2E_CORRECTNESS_DIRECTORY)
@@ -62,8 +55,7 @@ def main(
 
     command.extend(["--memgraph-port", memgraph_port])
     command.extend(["--neo4j-port", neo4j_port])
-    if path_option:
-        command.extend(["--path-option", path_option])
+
 
     subprocess.run(command)
 
@@ -73,18 +65,14 @@ if __name__ == "__main__":
     test_filter = args.k
     memgraph_port = args.memgraph_port
     neo4j_port = args.neo4j_port
-    path_option = args.path_option
 
     if memgraph_port:
         memgraph_port = str(memgraph_port)
     if neo4j_port:
         neo4j_port = str(neo4j_port)
-    if path_option:
-        path_option = str(path_option)
 
     main(
         test_filter=test_filter,
         memgraph_port=memgraph_port,
         neo4j_port=neo4j_port,
-        path_option=path_option,
     )
