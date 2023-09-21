@@ -233,7 +233,8 @@ def check_path_option(test_dir):
     if(os.path.exists(config_path)):
         config_dict = _load_yaml(config_path)
         if "path_option" in config_dict:
-            return (config_dict["path_option"] == "True")
+            option = config_dict["path_option"].strip()
+            return ( option == "True")
     return False
 @pytest.fixture(scope="session")
 def memgraph_port(pytestconfig):
