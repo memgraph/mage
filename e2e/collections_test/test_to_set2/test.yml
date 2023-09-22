@@ -1,5 +1,5 @@
 query: >
-  CALL collections.to_set([]) YIELD result RETURN result;
+  RETURN collections.to_set([]) AS result;
 
 
 output: 

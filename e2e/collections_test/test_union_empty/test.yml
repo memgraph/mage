@@ -1,6 +1,6 @@
 query: >
-    CALL collections.union([], []) YIELD union
-    RETURN union
+    RETURN collections.union([], []) AS union
+
 
 output:
     - union: []
