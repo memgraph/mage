@@ -172,7 +172,7 @@ fn test_from_naive_time() {
     test_time(NaiveTime::from_hms_micro(23, 59, 59, 999_999), 999, 999);
     test_time(NaiveTime::from_hms_micro(1, 2, 3, 444_555), 444, 555);
     // Leaps seconds handling
-    test_time(NaiveTime::from_hms_micro_opt(23, 59, 59, 1_999_999), 999, 999);
+    test_time(NaiveTime::from_hms_micro(23, 59, 59, 1_999_999), 999, 999);
 }
 
 #[test]
