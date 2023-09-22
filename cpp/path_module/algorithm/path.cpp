@@ -4,6 +4,70 @@
 
 #include "mgp.hpp"
 
+void Path::Elements(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard(memory);
+  const auto arguments = mgp::List(args);
+  auto result = mgp::Result(res);
+
+  try {
+    const auto path{arguments[0].ValuePath()};
+    mgp::List split_path(path.Length() * 2 + 1);
+    for (int i = 0; i < path.Length(); ++i) {
+      split_path.Append(mgp::Value(path.GetNodeAt(i)));
+      split_path.Append(mgp::Value(path.GetRelationshipAt(i)));
+    }
+    split_path.Append(mgp::Value(path.GetNodeAt(path.Length())));
+    // TODO: enable move with setValue
+    result.SetValue(split_path);
+
+  } catch (const std::exception &e) {
+    result.SetErrorMessage(e.what());
+  }
+}
+
+void Path::Combine(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard(memory);
+  const auto arguments = mgp::List(args);
+  auto result = mgp::Result(res);
+
+  try {
+    auto path1{arguments[0].ValuePath()};
+    const auto path2{arguments[1].ValuePath()};
+
+    for (int i = 0; i < path2.Length(); ++i) {
+      path1.Expand(path2.GetRelationshipAt(i));
+    }
+
+    result.SetValue(path1);
+
+  } catch (const std::exception &e) {
+    result.SetErrorMessage(e.what());
+  }
+}
+
+void Path::Slice(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard(memory);
+  const auto arguments = mgp::List(args);
+  auto result = mgp::Result(res);
+
+  try {
+    const auto path{arguments[0].ValuePath()};
+    const auto offset{arguments[1].ValueInt()};
+    const auto length{arguments[2].ValueInt()};
+
+    mgp::Path new_path{path.GetNodeAt(offset)};
+    size_t max_iteration = std::min((length == -1 ? path.Length() : offset + length), path.Length());
+    for (int i = static_cast<int>(offset); i < max_iteration; ++i) {
+      new_path.Expand(path.GetRelationshipAt(i));
+    }
+
+    result.SetValue(new_path);
+
+  } catch (const std::exception &e) {
+    result.SetErrorMessage(e.what());
+  }
+}
+
 void Path::Create(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
