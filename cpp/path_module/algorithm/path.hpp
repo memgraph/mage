@@ -56,47 +56,44 @@ struct LabelBoolsStatus {
   bool termination_activated = false;
 };
 
-struct RelationshipSets {
-  std::unordered_set<std::string> outgoing_rel;
-  std::unordered_set<std::string> incoming_rel;
-  std::unordered_set<std::string> any_rel;
+enum RelDirection { kNone = -1, kAny = 0, kIncoming = 1, kOutgoing = 2, kBoth = 3 };
+
+struct Config {
+  LabelBoolsStatus label_bools_status;
+  std::unordered_map<std::string, RelDirection> relationship_sets;
+  LabelSets label_sets;
+  int64_t min_hops, max_hops;
+  bool any_incoming, any_outgoing;
+};
+
+class PathHelper {
+ public:
+  PathHelper(const mgp::List &labels, const mgp::List &relationships, int64_t min_hops, int64_t max_hops);
+  RelDirection GetDirection(std::string &rel_type);
+
+  bool AnyDirected(bool outgoing) const { return outgoing ? config_.any_outgoing : config_.any_incoming; }
+  bool PathSizeOk(int64_t path_size) const;
+  bool Whitelisted(bool whitelisted) const;
+  bool ShouldExpand(const LabelBools &label_bools) const;
+  void FilterLabelBoolStatus();
+  void FilterLabel(std::string_view label, LabelBools &labelBools);
+  void ParseLabels(const mgp::List &list_of_labels);
+  void ParseRelationships(const mgp::List &list_of_relationships);
+
+ private:
+  Config config_;
 };
 
 void Create(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
-void FilterLabelBoolStatus(const LabelSets &labelSets, LabelBoolsStatus &labelStatus);
-
-bool ShouldExpand(const LabelBools &labelBools, const LabelBoolsStatus &labelStatus);
-
 void Expand(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
-
-void FilterLabel(const std::string_view label, const LabelSets &labelFilters, LabelBools &labelBools);
 
 void ParseLabels(const mgp::List &list_of_labels, LabelSets &labelSets);
 
-void ParseRelationships(const mgp::List &list_of_relationships, RelationshipSets &relationshipSets, bool &any_outgoing,
-                        bool &any_incoming);
-bool PathSizeOk(const int64_t path_size, const int64_t &max_hops, const int64_t &min_hops);
+void PathDFS(mgp::Path &path, const mgp::RecordFactory &record_factory, int64_t path_size, PathHelper &path_helper,
+             std::unordered_set<int64_t> &visited);
 
-bool RelationshipAllowed(const std::string &rel_type, const RelationshipSets &relationshipSets, bool &any_outgoing,
-                         bool &any_incoming, bool outgoing);
-
-bool Whitelisted(const bool &whitelisted, const bool &whitelist_empty);
-
-void PathDFS(mgp::Path path, std::unordered_set<mgp::Relationship> &relationships_set,
-             const mgp::RecordFactory &record_factory, int64_t path_size, const int64_t min_hops,
-             const int64_t max_hops, const LabelSets &labelFilters, const LabelBoolsStatus &labelStatus,
-             const RelationshipSets &relationshipSets, bool &any_outgoing, bool &any_incoming);
-
-void DfsByDirection(mgp::Path &path, std::unordered_set<mgp::Relationship> &relationships_set,
-                    const mgp::RecordFactory &record_factory, int64_t path_size, const int64_t min_hops,
-                    const int64_t max_hops, const LabelSets &labelFilters, const LabelBoolsStatus &labelStatus,
-                    const RelationshipSets &relationshipSets, bool &any_outgoing, bool &any_incoming, bool outgoing);
-
-void StartFunction(const mgp::Node &node, const mgp::RecordFactory &record_factory, int64_t path_size,
-                   const int64_t min_hops, const int64_t max_hops, const LabelSets &labelSets,
-                   const LabelBoolsStatus &labelStatus, const RelationshipSets &relationshipSets, bool &any_outgoing,
-                   bool &any_incoming);
+void StartFunction(const mgp::Node &node, const mgp::RecordFactory &record_factory, PathHelper &path_helper);
 
 void SubgraphNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 void SubgraphAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
