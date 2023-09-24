@@ -1,6 +1,0 @@
-memgraph_query: >
-  MATCH path = (:Node {id: 1})-[:CONNECTED*4]->(:Node {id: 5})
-  RETURN path.elements(path) AS result;
-neo4j_query: >
-  MATCH path = (:Node {id: 1})-[:CONNECTED*4]->(:Node {id: 5})
-  RETURN apoc.path.elements(path) AS result;
