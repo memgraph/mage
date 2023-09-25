@@ -62,8 +62,10 @@ struct Config {
   LabelBoolsStatus label_bools_status;
   std::unordered_map<std::string, RelDirection> relationship_sets;
   LabelSets label_sets;
-  int64_t min_hops, max_hops;
-  bool any_incoming, any_outgoing;
+  int64_t min_hops = -1;
+  int64_t max_hops = -1;
+  bool any_incoming = false;
+  bool any_outgoing = false;
 };
 
 class PathHelper {

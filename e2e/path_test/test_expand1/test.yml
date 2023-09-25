@@ -1,5 +1,5 @@
 query: >
-  MATCH (d:Dog) CALL path.expand(d,["HUNTS>"],[],0,3) YIELD result RETURN
+  MATCH (d:Dog) CALL path.expand(d,["HUNTS>"],[],1,3) YIELD result RETURN
   result;
 output:
   - result:
