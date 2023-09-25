@@ -23,8 +23,10 @@ Path::RelDirection Path::PathHelper::GetDirection(std::string &rel_type) {
 }
 
 bool Path::PathHelper::PathSizeOk(const int64_t path_size) const {
-  return (path_size + 1 <= config_.max_hops) && (path_size + 1 >= config_.min_hops);
+  return (path_size <= config_.max_hops) && (path_size >= config_.min_hops);
 }
+
+bool Path::PathHelper::PathTooBig(const int64_t path_size) const { return path_size > config_.max_hops; }
 
 bool Path::PathHelper::Whitelisted(const bool whitelisted) const {
   return (config_.label_bools_status.whitelist_empty || whitelisted);
@@ -109,24 +111,21 @@ void Path::PathHelper::ParseRelationships(const mgp::List &list_of_relationships
     return;
   }
 
-  if (list_of_relationships.Size() == 1) {
-    std::string rel_type{(*list_of_relationships.begin()).ValueString()};
-    if (rel_type.size() == 1) {
-      if (rel_type == "<") {
-        config_.any_incoming = true;
-      } else if (rel_type == ">") {
-        config_.any_outgoing = true;
-      } else {
-        config_.relationship_sets[rel_type] = RelDirection::kAny;
-      }
-      return;
-    }
-  }
-
   for (const auto rel : list_of_relationships) {
     std::string rel_type = std::string(rel.ValueString());
     bool starts_with = rel_type.starts_with('<');
     bool ends_with = rel_type.ends_with('>');
+
+    if (rel_type.size() == 1) {
+      if (starts_with) {
+        config_.any_incoming = true;
+      } else if (ends_with) {
+        config_.any_outgoing = true;
+      } else {
+        config_.relationship_sets[rel_type] = RelDirection::kAny;
+      }
+      continue;
+    }
 
     if (starts_with && ends_with) {
       config_.relationship_sets[rel_type.substr(1, rel_type.size() - 2)] = RelDirection::kBoth;
@@ -226,7 +225,7 @@ void Path::Create(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
 void Path::PathDFS(mgp::Path &path, const mgp::RecordFactory &record_factory, int64_t path_size,
                    PathHelper &path_helper, std::unordered_set<int64_t> &visited) {
   const mgp::Node node{path.GetNodeAt(path.Length())};
-
+  std::cout << node.Id().AsInt() << " ID\n";
   LabelBools label_bools;
   for (auto label : node.Labels()) {
     path_helper.FilterLabel(label, label_bools);
@@ -237,7 +236,7 @@ void Path::PathDFS(mgp::Path &path, const mgp::RecordFactory &record_factory, in
     record.Insert(std::string(std::string(kResultExpand)).c_str(), path);
   }
 
-  if (path_helper.PathSizeOk(path_size + 1) || label_bools.terminated || label_bools.blacklisted ||
+  if (path_helper.PathTooBig(path_size + 1) || label_bools.terminated || label_bools.blacklisted ||
       !(label_bools.end_node || path_helper.Whitelisted(label_bools.whitelisted))) {
     return;
   }
@@ -248,28 +247,28 @@ void Path::PathDFS(mgp::Path &path, const mgp::RecordFactory &record_factory, in
   auto iterate = [&](mgp::Relationships relationships, bool outgoing) {
     for (const auto relationship : relationships) {
       auto type = std::string(relationship.Type());
-      auto rel_direction = path_helper.GetDirection(type);
+      auto wanted_direction = path_helper.GetDirection(type);
       auto next_node_id = outgoing ? relationship.To().Id().AsInt() : relationship.From().Id().AsInt();
 
-      if (visited.contains(next_node_id) || rel_direction == RelDirection::kNone) {
+      if ((wanted_direction == RelDirection::kNone && !path_helper.AnyDirected(outgoing)) ||
+          visited.contains(next_node_id)) {
         continue;
       }
 
       RelDirection curr_direction = outgoing ? RelDirection::kOutgoing : RelDirection::kIncoming;
 
-      if (curr_direction == RelDirection::kAny || curr_direction == rel_direction ||
+      if (wanted_direction == RelDirection::kAny || curr_direction == wanted_direction ||
           path_helper.AnyDirected(outgoing)) {
         path.Expand(relationship);
         PathDFS(path, record_factory, path_size + 1, path_helper, visited);
         path.Pop();
-      } else if (curr_direction == RelDirection::kBoth) {
+      } else if (wanted_direction == RelDirection::kBoth) {
         if (outgoing && seen.contains({type, relationship.To().Id().AsInt()})) {
           path.Expand(relationship);
           PathDFS(path, record_factory, path_size + 1, path_helper, visited);
           path.Pop();
-        } else if (!outgoing) {
-          seen.insert({type, relationship.From().Id().AsInt()});
         }
+        { seen.insert({type, relationship.From().Id().AsInt()}); }
       }
     }
   };
@@ -298,7 +297,7 @@ void Path::Expand(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
     int64_t min_hops = arguments[3].ValueInt();
     int64_t max_hops = arguments[4].ValueInt();
 
-    PathHelper path_helper = PathHelper(relationships, labels, min_hops, max_hops);
+    PathHelper path_helper = PathHelper(labels, relationships, min_hops, max_hops);
 
     auto parse = [&](const mgp::Value &value) {
       if (value.IsNode()) {

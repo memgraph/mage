@@ -73,10 +73,11 @@ class PathHelper {
 
   bool AnyDirected(bool outgoing) const { return outgoing ? config_.any_outgoing : config_.any_incoming; }
   bool PathSizeOk(int64_t path_size) const;
+  bool PathTooBig(int64_t path_size) const;
   bool Whitelisted(bool whitelisted) const;
   bool ShouldExpand(const LabelBools &label_bools) const;
   void FilterLabelBoolStatus();
-  void FilterLabel(std::string_view label, LabelBools &labelBools);
+  void FilterLabel(std::string_view label, LabelBools &label_bools);
   void ParseLabels(const mgp::List &list_of_labels);
   void ParseRelationships(const mgp::List &list_of_relationships);
 
