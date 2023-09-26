@@ -30,24 +30,29 @@ namespace Algo {
 
             }
 
+            const std::string ToString() const{
+                return std::to_string(node.Id().AsInt()) + " " + std::to_string(total_distance) + " " + std::to_string(heuristic_distance);
+            }
+
             struct Hash {
                 size_t operator()(const NodeObject& nodeObj) const {
                     return std::hash<int64_t>()(nodeObj.node.Id().AsInt());
                 }
             };
+
     };
 
     class Open{
         public:
             std::priority_queue<NodeObject> pq;
-            std::unordered_set<mgp::Id> set;
+            std::unordered_map<mgp::Id, double> set;
 
             bool Empty(){
                 return set.empty();
             }
 
-            const NodeObject& Top(){
-                while(set.find(pq.top().node.Id()) == set.end()){
+            const NodeObject& Top(){  //should this be just object without reference
+                while(set.find(pq.top().node.Id()) == set.end()){ //this is to make sure duplicates are ignored
                     pq.pop();
                 }
                 return pq.top();
@@ -59,8 +64,16 @@ namespace Algo {
             }
 
             void Insert(const NodeObject &elem){
+                auto it = set.find(elem.node.Id());
+                if(it != set.end()){
+                    if(elem.total_distance < it->second){
+                        it->second = elem.total_distance;
+                        pq.push(elem);
+                    }
+                    return;
+                }
                 pq.push(elem);
-                set.insert(elem.node.Id());
+                set.insert({elem.node.Id(), elem.total_distance});
             }
 
             Open() = default;
@@ -81,7 +94,7 @@ namespace Algo {
             bool FindAndCompare(const NodeObject &obj){
                 auto it = closed.find(obj.node.Id());
                 if(it != closed.end()){
-                    bool erase = it->second < obj.total_distance + obj.heuristic_distance;
+                    bool erase = it->second > obj.total_distance;
                     if(erase){
                         closed.erase(it);
                     }
@@ -91,7 +104,7 @@ namespace Algo {
             }
 
             void Insert(const NodeObject &obj){
-                closed.insert({obj.node.Id(), obj.heuristic_distance + obj.total_distance});
+                closed.insert({obj.node.Id(), obj.total_distance});
             }
 
             Closed() = default;
@@ -102,8 +115,9 @@ namespace Algo {
     double toRadians(double degrees);
     void AStar(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory); 
     mgp::Path BuildResult(const std::vector<mgp::Relationship> &rels, const mgp::Node &startNode);
-    void HelperAstar(mgp::Node &start, const mgp::Node &target);
+    mgp::Path HelperAstar(mgp::Node &start, const mgp::Node &target);
     void FindPath(NodeObject &final, std::vector<mgp::Relationship> &rels);
     void ParseRelationships(const mgp::Relationships &rels, Open &open, bool in, const mgp::Node &target, NodeObject* prev, Closed &closed);
+    NodeObject InitializeStart(mgp::Node &startNode);
 
 }  // namespace Algo

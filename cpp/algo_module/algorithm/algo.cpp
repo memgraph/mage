@@ -27,7 +27,7 @@ double Algo::haversineDistance(double lat1, double lon1, double lat2, double lon
 mgp::Path Algo::BuildResult(const std::vector<mgp::Relationship> &rels, const mgp::Node &startNode){
 
     auto resultPath = mgp::Path(startNode);
-    for (auto it = rels.rbegin(); it != rels.rend(); ++it){
+    for (auto it = rels.rbegin(); it != rels.rend() - 1; ++it){ // to evade the first node
         resultPath.Expand((*it));
     }
     return resultPath;
@@ -62,33 +62,49 @@ void Algo::ParseRelationships(const mgp::Relationships &rels, Open &open, bool i
         if(!LabelOk){
             continue;
         }
-        //STEP 1: if successor is target, stop search
-        if(node == target){ 
-            std::cout << "sol found" << std::endl;
-            return;
-        }
-        NodeObject nb = NodeObject(prev, node.GetProperty("heur").ValueNumeric(), rel.GetProperty("distance").ValueNumeric(), rel, node);
+        NodeObject nb = NodeObject(prev, node.GetProperty("heur").ValueNumeric(), rel.GetProperty("distance").ValueNumeric() + prev->total_distance, rel, node);
         if(!closed.FindAndCompare(nb)){
             continue;
         }
         open.Insert(nb);
-
-
+        
     }
 
 }
-void Algo::HelperAstar(mgp::Node &start, const mgp::Node &target){
+
+Algo::NodeObject Algo::InitializeStart(mgp::Node &startNode){
+    if(startNode.InDegree() == 0 && startNode.OutDegree() == 0){
+        throw mgp::ValueException("Start node doesnt have any ingoing or outgoing relationships");
+    }
+
+    if(startNode.InDegree() != 0){
+        NodeObject nb = NodeObject(nullptr, 0.0, 0.0, *startNode.InRelationships().begin(), startNode);
+        return nb;
+    }
+    NodeObject nb = NodeObject(nullptr, 0.0, 0.0, *startNode.OutRelationships().begin(), startNode);
+    return nb;
+}
+
+mgp::Path Algo::HelperAstar(mgp::Node &start, const mgp::Node &target){
     Open open = Open();
     Closed closed = Closed();
-    ParseRelationships(start.OutRelationships(), open, false, target, nullptr, closed);
+    auto start_nb = InitializeStart(start);
+    open.Insert(start_nb);
     while(!open.Empty()){
-        std::cout << open.Top().heuristic_distance << std::endl;
+        auto nb = open.Top();
         open.Pop();
+        std::cout << nb.ToString() << std::endl;
+        std::cout << &nb << std::endl;
+        if(nb.node == target){
+            std::vector<mgp::Relationship> rels;
+            FindPath(nb, rels);
+            return BuildResult(rels, start);
+        }
+        closed.Insert(nb);
+        ParseRelationships(nb.node.OutRelationships(), open, false, target, &nb, closed);
+
     }
-    for(auto &[key, value]: closed.closed){
-        std::cout<< key.AsInt() << " " << value << std::endl;
-    }
-    
+    return mgp::Path(start);
 }
  
 
@@ -99,7 +115,8 @@ void Algo::AStar(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, 
 
   try {
     auto start = arguments[0].ValueNode();
-    HelperAstar(start,start);
+    auto target = arguments[1].ValueNode();
+    std::cout << HelperAstar(start,target).ToString() << std::endl;
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());

@@ -7,7 +7,8 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     mgp::MemoryDispatcherGuard guard{memory};
 
     AddProcedure(Algo::AStar, "astar", mgp::ProcedureType::Read,
-                 {mgp::Parameter("Node", mgp::Type::Node)},
+                 {mgp::Parameter("start", mgp::Type::Node),
+                 mgp::Parameter("target", mgp::Type::Node)},
                  {mgp::Return("res", mgp::Type::Path)}, module, memory);
 
   } catch (const std::exception &e) {
