@@ -1,5 +1,6 @@
 #pragma once
 
+#include <limits>
 #include <mgp.hpp>
 
 #include <unordered_map>
@@ -62,12 +63,12 @@ struct Config {
   LabelBoolsStatus label_bools_status;
   std::unordered_map<std::string, RelDirection> relationship_sets;
   LabelSets label_sets;
-  int64_t min_hops = -1;
-  int64_t max_hops = -1;
+  int64_t min_hops = 0;
+  int64_t max_hops = std::numeric_limits<int64_t>::max();
   bool any_incoming = false;
   bool any_outgoing = false;
-  bool filter_start_node = false;
-  bool begin_sequence_at_start = false;
+  bool filter_start_node = true;
+  bool begin_sequence_at_start = true;
   bool bfs = false;
 };
 
@@ -75,16 +76,22 @@ class PathHelper {
  public:
   explicit PathHelper(const mgp::List &labels, const mgp::List &relationships, int64_t min_hops, int64_t max_hops);
   explicit PathHelper(const mgp::Map &config);
+
   RelDirection GetDirection(std::string &rel_type);
+  LabelBools GetLabelBools(const mgp::Node &node);
 
   bool AnyDirected(bool outgoing) const { return outgoing ? config_.any_outgoing : config_.any_incoming; }
   bool FilterNodes(bool is_start) const { return (config_.filter_start_node || !is_start); }
   bool FilterRelationships(bool is_start) const { return (config_.begin_sequence_at_start || !is_start); }
-  LabelBools GetLabelBools(const mgp::Node &node);
+
+  bool AreLabelsValid(const LabelBools &label_bools) const;
+  bool ContinueExpanding(const LabelBools &label_bools, size_t path_size) const;
+
   bool PathSizeOk(int64_t path_size) const;
   bool PathTooBig(int64_t path_size) const;
   bool Whitelisted(bool whitelisted) const;
-  bool ShouldExpand(const LabelBools &label_bools) const;
+
+  // methods for parsing config
   void FilterLabelBoolStatus();
   void FilterLabel(std::string_view label, LabelBools &label_bools);
   void ParseLabels(const mgp::List &list_of_labels);
@@ -109,6 +116,6 @@ void RunBFS(std::unordered_set<mgp::Node> &start_nodes, mgp::List &to_be_returne
 void SubgraphNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 void SubgraphAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 void VisitNode(const mgp::Node &node, std::map<mgp::Node, std::int64_t> &visited_nodes, bool is_start,
-              int64_t hop_count, mgp::List &to_be_returned_nodes, PathHelper &path_helper);
+               int64_t hop_count, mgp::List &to_be_returned_nodes, PathHelper &path_helper);
 
 }  // namespace Path
