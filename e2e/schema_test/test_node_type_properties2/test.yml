@@ -1,14 +1,18 @@
 query: >
-  CALL schema.node_type_properties() YIELD labels, mandatory, property_name, property_type RETURN labels, mandatory, property_name, property_type
-  ORDER BY property_name, labels[0];
+  CALL schema.node_type_properties() YIELD nodeType, nodeLabels, propertyName, propertyTypes , mandatory
+  RETURN nodeType, nodeLabels, propertyName, propertyTypes , mandatory
+  ORDER BY propertyName, nodeLabels[0];
 
 output:
-  - labels: ["NonMandatory"]
-    mandatory: false
-    property_name: ''
-    property_type: ''
 
-  - labels: ["Mandatory"]
+  - nodeType: ":`NonMandatory`"
+    nodeLabels: ["NonMandatory"]
+    propertyName: ''
+    propertyTypes: ''
+    mandatory: false
+
+  - nodeType: ":`Mandatory`"
+    nodeLabels: ["Mandatory"]
+    propertyName: property
+    propertyTypes: ["List[Any]"]
     mandatory: true
-    property_name: property
-    property_type: List[Any]
