@@ -11,8 +11,9 @@ void Path::Elements(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res,
 
   try {
     const auto path{arguments[0].ValuePath()};
-    mgp::List split_path(path.Length() * 2 + 1);
-    for (int i = 0; i < path.Length(); ++i) {
+    size_t path_length = path.Length();
+    mgp::List split_path(path_length * 2 + 1);
+    for (int i = 0; i < path_length; ++i) {
       split_path.Append(mgp::Value(path.GetNodeAt(i)));
       split_path.Append(mgp::Value(path.GetRelationshipAt(i)));
     }
@@ -55,7 +56,8 @@ void Path::Slice(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mg
     const auto length{arguments[2].ValueInt()};
 
     mgp::Path new_path{path.GetNodeAt(offset)};
-    size_t max_iteration = std::min((length == -1 ? path.Length() : offset + length), path.Length());
+    size_t old_path_length = path.Length();
+    size_t max_iteration = std::min((length == -1 ? old_path_length : offset + length), old_path_length);
     for (int i = static_cast<int>(offset); i < max_iteration; ++i) {
       new_path.Expand(path.GetRelationshipAt(i));
     }
