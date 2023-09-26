@@ -35,6 +35,7 @@ void Path::Combine(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, 
     const auto path2{arguments[1].ValuePath()};
 
     for (int i = 0; i < path2.Length(); ++i) {
+      // Expand will throw an exception if it can't connect
       path1.Expand(path2.GetRelationshipAt(i));
     }
 
