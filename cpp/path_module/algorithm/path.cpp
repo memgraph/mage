@@ -17,8 +17,7 @@ void Path::Elements(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res,
       split_path.Append(mgp::Value(path.GetRelationshipAt(i)));
     }
     split_path.Append(mgp::Value(path.GetNodeAt(path.Length())));
-    // TODO: enable move with setValue
-    result.SetValue(split_path);
+    result.SetValue(std::move(split_path));
 
   } catch (const std::exception &e) {
     result.SetErrorMessage(e.what());
@@ -38,7 +37,7 @@ void Path::Combine(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, 
       path1.Expand(path2.GetRelationshipAt(i));
     }
 
-    result.SetValue(path1);
+    result.SetValue(std::move(path1));
 
   } catch (const std::exception &e) {
     result.SetErrorMessage(e.what());
@@ -61,7 +60,7 @@ void Path::Slice(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mg
       new_path.Expand(path.GetRelationshipAt(i));
     }
 
-    result.SetValue(new_path);
+    result.SetValue(std::move(new_path));
 
   } catch (const std::exception &e) {
     result.SetErrorMessage(e.what());
