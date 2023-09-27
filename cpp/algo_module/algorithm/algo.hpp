@@ -9,16 +9,33 @@
 #include <set>
 
 namespace Algo {
+
+    class RelObject{
+        public:
+            int id;
+            int id_prev;
+            mgp::Relationship rel;
+
+            RelObject(int id, int id_prev, const mgp::Relationship &rel): id(id), id_prev(id_prev), rel(rel) {}
+
+            bool operator==(const RelObject& other) const {
+                return id == other.id;
+            }
+
+            struct Hash {
+                size_t operator()(const RelObject& rel) const {
+                    return std::hash<int>()(rel.id);
+                }
+            };
+    };
     class NodeObject{
         public:
-            NodeObject* prev;
             double heuristic_distance;
             double total_distance;
-            mgp::Relationship rel;
             mgp::Node node;
 
-            NodeObject(NodeObject* prev, const double heuristic_distance, const double total_distance, const mgp::Relationship &rel, const mgp::Node &node)
-            : prev(prev), heuristic_distance(heuristic_distance), total_distance(total_distance), rel(rel), node(node){}
+            NodeObject(const double heuristic_distance, const double total_distance, const mgp::Node &node)
+            :  heuristic_distance(heuristic_distance), total_distance(total_distance), node(node){}
             
 
             bool operator==(const NodeObject& other) const {
@@ -114,10 +131,9 @@ namespace Algo {
     double haversineDistance(double lat1, double lon1, double lat2, double lon2);
     double toRadians(double degrees);
     void AStar(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory); 
-    mgp::Path BuildResult(const std::vector<mgp::Relationship> &rels, const mgp::Node &startNode);
+    mgp::Path BuildResult(const std::unordered_set<RelObject, RelObject::Hash> &vis_rel, const mgp::Node &startNode, int id);
     mgp::Path HelperAstar(mgp::Node &start, const mgp::Node &target);
-    void FindPath(NodeObject &final, std::vector<mgp::Relationship> &rels);
-    void ParseRelationships(const mgp::Relationships &rels, Open &open, bool in, const mgp::Node &target, NodeObject* prev, Closed &closed);
+    void ParseRelationships(const mgp::Relationships &rels, Open &open, bool in, const mgp::Node &target, NodeObject* prev, Closed &closed, std::unordered_set<RelObject, RelObject::Hash> &vis_rel);
     NodeObject InitializeStart(mgp::Node &startNode);
 
 }  // namespace Algo

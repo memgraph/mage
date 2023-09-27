@@ -24,27 +24,28 @@ double Algo::haversineDistance(double lat1, double lon1, double lat2, double lon
     return distance * 1000;
 }
 
-mgp::Path Algo::BuildResult(const std::vector<mgp::Relationship> &rels, const mgp::Node &startNode){
+mgp::Path Algo::BuildResult(const std::unordered_set<RelObject, RelObject::Hash> &vis_rel, const mgp::Node &startNode, int id){
 
-    auto resultPath = mgp::Path(startNode);
-    for (auto it = rels.rbegin(); it != rels.rend() - 1; ++it){ // to evade the first node
-        resultPath.Expand((*it));
+    auto dummy_rel = (*vis_rel.begin()).rel;
+    auto relobj = RelObject(id, 0, dummy_rel);
+    int start_id = startNode.Id().AsInt();
+    std::vector<mgp::Relationship> final_rels;
+    while(relobj.id != start_id){
+        auto other = vis_rel.find(relobj);
+        final_rels.push_back(other->rel);
+        relobj.id = other->id_prev;
     }
-    return resultPath;
+
+    mgp::Path path = mgp::Path(startNode);
+    for(auto it = final_rels.rbegin(); it != final_rels.rend(); ++it){
+        path.Expand(*it);
+    }
+
+    return path;
+
+
 }
 
-void Algo::FindPath(NodeObject &final, std::vector<mgp::Relationship> &rels){
-    bool proceed = true;
-    while(proceed){
-        rels.push_back(final.rel);
-        if(final.prev){
-            final = (*final.prev);
-            continue;
-        }
-        proceed = false;
-        
-    }
-}
 
 bool RelOk(){
     return true;
@@ -53,7 +54,7 @@ bool RelOk(){
 bool LabelOk(){
     return true;
 }
-void Algo::ParseRelationships(const mgp::Relationships &rels, Open &open, bool in, const mgp::Node &target, NodeObject* prev, Closed &closed){
+void Algo::ParseRelationships(const mgp::Relationships &rels, Open &open, bool in, const mgp::Node &target, NodeObject* prev, Closed &closed, std::unordered_set<RelObject, RelObject::Hash> &vis_rel){
     for(const auto rel: rels){
         if(!RelOk()){
             continue;
@@ -62,12 +63,22 @@ void Algo::ParseRelationships(const mgp::Relationships &rels, Open &open, bool i
         if(!LabelOk){
             continue;
         }
-        NodeObject nb = NodeObject(prev, node.GetProperty("heur").ValueNumeric(), rel.GetProperty("distance").ValueNumeric() + prev->total_distance, rel, node);
+        NodeObject nb = NodeObject(node.GetProperty("heur").ValueNumeric(), rel.GetProperty("distance").ValueNumeric() + prev->total_distance, node);
         if(!closed.FindAndCompare(nb)){
             continue;
         }
         open.Insert(nb);
         
+        int node_id = node.Id().AsInt();
+        int prev_id = prev->node.Id().AsInt();
+        RelObject relobj = RelObject(node_id, prev_id, rel);
+        auto it = vis_rel.find(relobj);
+        if(it == vis_rel.end()){ //not sure if this if loop is needed
+            vis_rel.insert(relobj);
+        }else{
+            vis_rel.erase(it);
+            vis_rel.insert(relobj);
+        }
     }
 
 }
@@ -78,30 +89,28 @@ Algo::NodeObject Algo::InitializeStart(mgp::Node &startNode){
     }
 
     if(startNode.InDegree() != 0){
-        NodeObject nb = NodeObject(nullptr, 0.0, 0.0, *startNode.InRelationships().begin(), startNode);
+        NodeObject nb = NodeObject( 0.0, 0.0, startNode);
         return nb;
     }
-    NodeObject nb = NodeObject(nullptr, 0.0, 0.0, *startNode.OutRelationships().begin(), startNode);
+    NodeObject nb = NodeObject(0.0, 0.0, startNode);
     return nb;
 }
 
 mgp::Path Algo::HelperAstar(mgp::Node &start, const mgp::Node &target){
     Open open = Open();
     Closed closed = Closed();
+    std::unordered_set<RelObject, RelObject::Hash> vis_rel;
     auto start_nb = InitializeStart(start);
     open.Insert(start_nb);
     while(!open.Empty()){
         auto nb = open.Top();
         open.Pop();
         std::cout << nb.ToString() << std::endl;
-        std::cout << &nb << std::endl;
         if(nb.node == target){
-            std::vector<mgp::Relationship> rels;
-            FindPath(nb, rels);
-            return BuildResult(rels, start);
+            return BuildResult(vis_rel, start, nb.node.Id().AsInt());
         }
         closed.Insert(nb);
-        ParseRelationships(nb.node.OutRelationships(), open, false, target, &nb, closed);
+        ParseRelationships(nb.node.OutRelationships(), open, false, target, &nb, closed, vis_rel);
 
     }
     return mgp::Path(start);
