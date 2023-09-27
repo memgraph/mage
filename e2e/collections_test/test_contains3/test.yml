@@ -3,7 +3,7 @@ query: >
     MATCH ()-[r]->()
     MATCH (n:Dog)-[k]->(t:Human)
     WITH collect(DISTINCT r) AS collectedR, k
-    CALL collections.contains(collectedR, k) YIELD output RETURN output;
+    RETURN collections.contains(collectedR, k) AS output;
 
 output:
   - output: true

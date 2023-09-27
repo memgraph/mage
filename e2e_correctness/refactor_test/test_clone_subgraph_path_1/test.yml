@@ -7,8 +7,8 @@ memgraph_query: >
       standinNodes:[[ana, marija]],
       skipProperties: ["name"]
   })
-  YIELD cloned_node_id, new_node
-  RETURN cloned_node_id, new_node;
+  YIELD input, output
+  RETURN input, output;
 
 neo4j_query: >
   MATCH (ana:Ana),

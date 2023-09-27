@@ -1,6 +1,5 @@
 query: >
-    CALL collections.union([0, 1, 2, 3], [2, 2, 3, 4, 5]) YIELD union
-    RETURN union
+    RETURN collections.union([0, 1, 2, 3], [2, 2, 3, 4, 5]) AS union
 
 output:
     - union: [

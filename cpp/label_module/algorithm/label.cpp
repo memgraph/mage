@@ -1,9 +1,9 @@
 #include "label.hpp"
 
-void Label::Exists(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Label::Exists(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  auto result = mgp::Result(res);
   try {
     bool exists = false;
 
@@ -12,12 +12,10 @@ void Label::Exists(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result
       const auto node = arguments[0].ValueNode();
       exists = node.HasLabel(label);
     }
-
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultExists).c_str(), std::move(exists));
+    result.SetValue(exists);
 
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result.SetErrorMessage(e.what());
     return;
   }
 }
