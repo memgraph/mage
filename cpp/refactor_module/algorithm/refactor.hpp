@@ -86,8 +86,7 @@ void RenameNodeProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *r
 
 void Categorize(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
-void InsertCloneNodesRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const int cycle_id,
-                            const int node_id);
+void InsertCloneNodesRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, int cycle_id, int node_id);
 
 void CloneNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
@@ -98,8 +97,6 @@ void CloneNodesAndRels(mgp_graph *memgraph_graph, mgp_result *result, mgp_memory
 void CloneSubgraphFromPaths(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 void CloneSubgraph(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
-
-
 
 void TransferProperties(const mgp::Node &node, mgp::Relationship &rel);
 
