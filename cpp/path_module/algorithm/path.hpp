@@ -3,6 +3,7 @@
 #include <limits>
 #include <mgp.hpp>
 
+#include <queue>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -101,16 +102,55 @@ class PathHelper {
   Config config_;
 };
 
+class PathData {
+ public:
+  explicit PathData(const PathHelper &helper, const mgp::RecordFactory &record_factory, const mgp::Graph &graph)
+      : helper_(helper), record_factory_(record_factory), graph_(graph) {}
+
+ protected:
+  PathHelper helper_;
+  const mgp::RecordFactory &record_factory_;
+  const mgp::Graph &graph_;
+  std::unordered_set<int64_t> visited_;
+};
+
+class PathExpand : PathData {
+ public:
+  explicit PathExpand(const PathHelper &helper, const mgp::RecordFactory &record_factory, const mgp::Graph &graph)
+      : PathData(helper, record_factory, graph) {}
+
+  void ExpandPath(mgp::Path &path, const mgp::Relationship &relationship, int64_t path_size);
+  void Expand(mgp::Path &path, mgp::Relationships relationships, bool outgoing, int64_t path_size,
+              std::set<std::pair<std::string_view, int64_t>> &seen);
+  void StartAlgorithm(mgp::Node node);
+  void Parse(const mgp::Value &value);
+  void DFS(mgp::Path &path, int64_t path_size);
+};
+
+class PathSubgraph : PathData {
+ public:
+  explicit PathSubgraph(const PathHelper &helper, const mgp::RecordFactory &record_factory, const mgp::Graph &graph)
+      : PathData(helper, record_factory, graph) {}
+
+  struct Pair {
+    mgp::Node node;
+    int64_t hop_count;
+  };
+
+  void Expand(Pair &pair, mgp::Relationships relationships, bool outgoing, std::queue<Pair> &queue,
+              std::set<std::pair<std::string_view, int64_t>> &seen);
+  void Parse(const mgp::Value &value);
+  void InsertNode(const mgp::Node &node, int64_t hop_count, LabelBools &label_bools);
+  mgp::List BFS();
+
+ private:
+  std::unordered_set<mgp::Node> start_nodes_;
+  mgp::List to_be_returned_nodes_;
+};
+
 void Create(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 void Expand(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
-
-void ParseLabels(const mgp::List &list_of_labels, LabelSets &labelSets);
-
-void PathDFS(mgp::Path &path, const mgp::RecordFactory &record_factory, int64_t path_size, PathHelper &path_helper,
-             std::unordered_set<int64_t> &visited);
-
-void StartFunction(const mgp::Node &node, const mgp::RecordFactory &record_factory, PathHelper &path_helper);
 
 void RunBFS(std::unordered_set<mgp::Node> &start_nodes, mgp::List &to_be_returned_nodes, Path::PathHelper &path_helper);
 void SubgraphNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
