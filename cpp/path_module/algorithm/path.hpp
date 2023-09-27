@@ -1,6 +1,5 @@
 #pragma once
 
-#include <limits>
 #include <mgp.hpp>
 
 #include <queue>

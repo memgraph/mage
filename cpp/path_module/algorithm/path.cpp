@@ -1,10 +1,5 @@
 #include "path.hpp"
 
-#include <algorithm>
-#include <cstdint>
-#include <queue>
-#include <unordered_set>
-
 #include "mgp.hpp"
 
 Path::PathHelper::PathHelper(const mgp::List &labels, const mgp::List &relationships, int64_t min_hops,
