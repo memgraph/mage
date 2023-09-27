@@ -488,7 +488,7 @@ void Refactor::ExtractNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_result
     auto out_type{arguments[2].ValueString()};
     auto in_type{arguments[3].ValueString()};
 
-    auto extract = [&graph, &labels, &record_factory, out_type, in_type](mgp::Relationship relationship) {
+    auto extract = [&graph, &labels, &record_factory, out_type, in_type](const mgp::Relationship &relationship) {
       auto new_node = graph.CreateNode();
       for (const auto &label : labels) {
         new_node.AddLabel(label.ValueString());
@@ -531,7 +531,7 @@ void Refactor::ExtractNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_result
       return;
     }
 
-    for (auto relationship : graph.Relationships()) {
+    for (const auto relationship : graph.Relationships()) {
       if (ids.contains(relationship.Id().AsInt())) {
         extract(relationship);
       }
