@@ -349,7 +349,6 @@ void Refactor::CloneNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
       skip_props_searchable.insert(property_key.ValueString());
     }
 
-    std::unordered_map<int64_t, mgp::Node> old_to_new_node;
     for (const auto &node : nodes) {
       mgp::Node old_node = node.ValueNode();
       mgp::Node new_node = graph.CreateNode();
@@ -363,24 +362,19 @@ void Refactor::CloneNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
           new_node.SetProperty(prop.first, prop.second);
         }
       }
-      if (!clone_rels) {
-        InsertCloneNodesRecord(memgraph_graph, result, memory, static_cast<int>(old_node.Id().AsInt()),
-                               static_cast<int>(new_node.Id().AsInt()));
-        continue;
-      }
 
-      for (auto rel : old_node.InRelationships()) {
-        graph.CreateRelationship(rel.From(), new_node, rel.Type());
-      }
+      if (clone_rels) {
+        for (auto rel : old_node.InRelationships()) {
+          graph.CreateRelationship(rel.From(), new_node, rel.Type());
+        }
 
-      for (auto rel : old_node.OutRelationships()) {
-        graph.CreateRelationship(new_node, rel.To(), rel.Type());
+        for (auto rel : old_node.OutRelationships()) {
+          graph.CreateRelationship(new_node, rel.To(), rel.Type());
+        }
       }
 
       InsertCloneNodesRecord(memgraph_graph, result, memory, static_cast<int>(old_node.Id().AsInt()),
                              static_cast<int>(new_node.Id().AsInt()));
-
-      old_to_new_node.insert({old_node.Id().AsInt(), std::move(new_node)});
     }
   } catch (const std::exception &e) {
     mgp::result_set_error_msg(result, e.what());
