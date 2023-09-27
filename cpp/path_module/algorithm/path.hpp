@@ -152,10 +152,8 @@ void Create(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
 
 void Expand(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
-void RunBFS(std::unordered_set<mgp::Node> &start_nodes, mgp::List &to_be_returned_nodes, Path::PathHelper &path_helper);
 void SubgraphNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+
 void SubgraphAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
-void VisitNode(const mgp::Node &node, std::map<mgp::Node, std::int64_t> &visited_nodes, bool is_start,
-               int64_t hop_count, mgp::List &to_be_returned_nodes, PathHelper &path_helper);
 
 }  // namespace Path
