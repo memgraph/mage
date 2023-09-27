@@ -8,8 +8,9 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
 
     AddProcedure(Algo::AStar, "astar", mgp::ProcedureType::Read,
                  {mgp::Parameter("start", mgp::Type::Node),
-                 mgp::Parameter("target", mgp::Type::Node)},
-                 {mgp::Return("res", mgp::Type::Path)}, module, memory);
+                 mgp::Parameter("target", mgp::Type::Node),
+                 mgp::Parameter("config", mgp::Type::Map)},
+                 {mgp::Return("result", mgp::Type::Path)}, module, memory);
 
   } catch (const std::exception &e) {
     return 1;

@@ -7,13 +7,11 @@ double Algo::toRadians(double degrees) {
 double Algo::haversineDistance(double lat1, double lon1, double lat2, double lon2) {
 
     const double earthRadius = 6371.0;
-
-
+    
     lat1 = toRadians(lat1);
     lon1 = toRadians(lon1);
     lat2 = toRadians(lat2);
     lon2 = toRadians(lon2);
-
 
     double dLat = lat2 - lat1;
     double dLon = lon2 - lon1;
@@ -21,22 +19,151 @@ double Algo::haversineDistance(double lat1, double lon1, double lat2, double lon
     double c = 2 * atan2(sqrt(a), sqrt(1 - a));
     double distance = earthRadius * c;
 
-    return distance * 1000;
+    return distance;  //returns distance in km, could be further configurated
 }
 
-mgp::Path Algo::BuildResult(const std::unordered_set<RelObject, RelObject::Hash> &vis_rel, const mgp::Node &startNode, int id){
+/*calculates the heuristic based on haversine, or returns the value if the heuristic is custom*/
+double Algo::CalculateHeuristic(const Config &config, const mgp::Node &node, const GoalNodes &nodes){
 
-    auto dummy_rel = (*vis_rel.begin()).rel;
+    if(config.heuristic_name != ""){
+        auto heuristic = node.GetProperty(config.heuristic_name);
+        if(heuristic.IsNumeric()){
+            return heuristic.ValueNumeric();
+        }
+        throw mgp::ValueException("Custom heuristic property must be of a numeric data type!");
+    }
+
+    auto latitude_source = node.GetProperty(config.latitude_name);
+    auto longitude_source = node.GetProperty(config.latitude_name);
+    if(latitude_source.IsNull() || longitude_source.IsNull()){
+        throw mgp::ValueException("Latitude and longitude properties, or a custom heuristic value, must be specified in every node!");
+    }
+    if(latitude_source.IsNumeric() && longitude_source.IsNumeric()){
+        return haversineDistance(latitude_source.ValueNumeric(), longitude_source.ValueNumeric(), nodes.latLon.first, nodes.latLon.second);
+    }
+    throw mgp::ValueException("Latitude and longitude must be numeric data types!");
+
+}
+
+std::pair<double, double> Algo::TargetLatLon(const mgp::Node &target, const Config &config){
+
+    if(config.heuristic_name != ""){  //if custom heuristic, dont return latitude and longitude
+        return std::make_pair<double,double>(0,0);
+    }
+
+    auto latitude = target.GetProperty(config.latitude_name);
+    auto longitude= target.GetProperty(config.latitude_name);
+    if(latitude.IsNull() || longitude.IsNull()){
+        throw mgp::ValueException("Latitude and longitude properties of the target node must be specified!");
+    }
+    if(latitude.IsNumeric() && longitude.IsNumeric()){
+        return std::make_pair<double, double>(latitude.ValueNumeric(), longitude.ValueNumeric());
+    }
+    throw mgp::ValueException("Latitude and longitude must be numeric data types!");
+
+}
+
+double Algo::CalculateDistance(const Config &config, const mgp::Relationship &rel){
+    if(config.unweighted){
+        return 10;
+    }
+    auto distance = rel.GetProperty(config.distance_prop);
+    if(distance.IsNull()){
+        throw mgp::ValueException("If the graph is weighted, distance property of the relationship must be specified!");
+    }
+    if(distance.IsNumeric()){
+        return distance.ValueNumeric();
+    }
+    throw mgp::ValueException("Distance property must be a numeric datatype!");
+
+}
+
+bool RelOk(){
+    return true;
+}
+
+bool LabelOk(){
+    return true;
+}
+void Algo::ParseRelationships(const mgp::Relationships &rels,  bool in, const GoalNodes &nodes, NodeObject* prev, Lists &lists, const Config &config){
+    for(const auto rel: rels){
+        if(!RelOk()){
+            continue;
+        }
+        const auto node = in ? rel.From() : rel.To();
+        if(!LabelOk){
+            continue;
+        }
+        auto heuristic = CalculateHeuristic(config, node, nodes) * config.epsilon; //epsilon 0 == UCS
+        auto distance = CalculateDistance(config, rel);
+        std::shared_ptr<NodeObject> nb = std::make_shared<NodeObject>(heuristic, distance + prev->total_distance, node);
+        if(!lists.closed.FindAndCompare(*nb)){
+            continue;
+        }
+        if(!lists.open.Insert(nb)){  //this check is absolutely necessary, it may seem trivial, but, to any future refactorers, DO NOT REMOVE IT
+            continue;   //you need thic check, so you dont add worse relationships than one that exists in the open list
+        }
+        
+
+        //rel obj part
+
+        RelObject relobj = RelObject(node.Id().AsInt(), prev->node.Id().AsInt(), rel);
+
+        auto it = lists.visited_rel.find(relobj);
+        if(it == lists.visited_rel.end()){
+            lists.visited_rel.insert(relobj);
+        }else{
+            lists.visited_rel.erase(it);  //if we already visited with this relationship, we need to remove it and add better, because we passed the closed  and open test
+            lists.visited_rel.insert(relobj);
+        }
+    }
+
+}
+
+mgp::Path Algo::HelperAstar(const GoalNodes &nodes, const Config &config){
+
+    Lists lists = Lists();
+
+    std::shared_ptr<NodeObject> start_nb = std::make_shared<NodeObject>(0,0,nodes.start);
+    lists.open.Insert(start_nb);
+
+    while(!lists.open.Empty()){
+
+        auto nb = lists.open.Top();
+        lists.open.Pop();
+        std::cout << nb.ToString() << std::endl;
+        if(nb.node == nodes.target){
+            return BuildResult(lists.visited_rel, nodes.start, nb.node.Id().AsInt());
+        }
+        lists.closed.Insert(nb);
+
+        ParseRelationships(nb.node.OutRelationships(), false, nodes, &nb, lists, config);
+        ParseRelationships(nb.node.InRelationships(), true, nodes, &nb, lists, config);
+
+    }
+    return mgp::Path(nodes.start);
+}
+ 
+
+mgp::Path Algo::BuildResult(const std::unordered_set<RelObject, RelObject::Hash> &visited_rel, const mgp::Node &startNode, int id){
+
+    mgp::Path path = mgp::Path(startNode);
+
+    if(visited_rel.size() == 0){
+        return path;
+    }
+
+    auto dummy_rel = (*visited_rel.begin()).rel;
     auto relobj = RelObject(id, 0, dummy_rel);
     int start_id = startNode.Id().AsInt();
     std::vector<mgp::Relationship> final_rels;
+
     while(relobj.id != start_id){
-        auto other = vis_rel.find(relobj);
+        auto other = visited_rel.find(relobj);
         final_rels.push_back(other->rel);
         relobj.id = other->id_prev;
     }
 
-    mgp::Path path = mgp::Path(startNode);
     for(auto it = final_rels.rbegin(); it != final_rels.rend(); ++it){
         path.Expand(*it);
     }
@@ -46,77 +173,6 @@ mgp::Path Algo::BuildResult(const std::unordered_set<RelObject, RelObject::Hash>
 
 }
 
-
-bool RelOk(){
-    return true;
-}
-
-bool LabelOk(){
-    return true;
-}
-void Algo::ParseRelationships(const mgp::Relationships &rels, Open &open, bool in, const mgp::Node &target, NodeObject* prev, Closed &closed, std::unordered_set<RelObject, RelObject::Hash> &vis_rel){
-    for(const auto rel: rels){
-        if(!RelOk()){
-            continue;
-        }
-        const auto node = in ? rel.From() : rel.To();
-        if(!LabelOk){
-            continue;
-        }
-        NodeObject nb = NodeObject(node.GetProperty("heur").ValueNumeric(), rel.GetProperty("distance").ValueNumeric() + prev->total_distance, node);
-        if(!closed.FindAndCompare(nb)){
-            continue;
-        }
-        open.Insert(nb);
-        
-        int node_id = node.Id().AsInt();
-        int prev_id = prev->node.Id().AsInt();
-        RelObject relobj = RelObject(node_id, prev_id, rel);
-        auto it = vis_rel.find(relobj);
-        if(it == vis_rel.end()){ //not sure if this if loop is needed
-            vis_rel.insert(relobj);
-        }else{
-            vis_rel.erase(it);
-            vis_rel.insert(relobj);
-        }
-    }
-
-}
-
-Algo::NodeObject Algo::InitializeStart(mgp::Node &startNode){
-    if(startNode.InDegree() == 0 && startNode.OutDegree() == 0){
-        throw mgp::ValueException("Start node doesnt have any ingoing or outgoing relationships");
-    }
-
-    if(startNode.InDegree() != 0){
-        NodeObject nb = NodeObject( 0.0, 0.0, startNode);
-        return nb;
-    }
-    NodeObject nb = NodeObject(0.0, 0.0, startNode);
-    return nb;
-}
-
-mgp::Path Algo::HelperAstar(mgp::Node &start, const mgp::Node &target){
-    Open open = Open();
-    Closed closed = Closed();
-    std::unordered_set<RelObject, RelObject::Hash> vis_rel;
-    auto start_nb = InitializeStart(start);
-    open.Insert(start_nb);
-    while(!open.Empty()){
-        auto nb = open.Top();
-        open.Pop();
-        std::cout << nb.ToString() << std::endl;
-        if(nb.node == target){
-            return BuildResult(vis_rel, start, nb.node.Id().AsInt());
-        }
-        closed.Insert(nb);
-        ParseRelationships(nb.node.OutRelationships(), open, false, target, &nb, closed, vis_rel);
-
-    }
-    return mgp::Path(start);
-}
- 
-
 void Algo::AStar(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
@@ -125,7 +181,14 @@ void Algo::AStar(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, 
   try {
     auto start = arguments[0].ValueNode();
     auto target = arguments[1].ValueNode();
-    std::cout << HelperAstar(start,target).ToString() << std::endl;
+    auto config = Config(arguments[2].ValueMap());
+    std::pair<double, double> latLon = TargetLatLon(target, config);
+    auto nodes = GoalNodes(start, target, latLon);
+    std::cout << config.ToString() << std::endl;
+    mgp::Path path = HelperAstar(nodes, config);
+    
+    auto record = record_factory.NewRecord();
+    record.Insert("result", path);
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
