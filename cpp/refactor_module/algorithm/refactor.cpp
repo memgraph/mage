@@ -1,6 +1,7 @@
 #include "refactor.hpp"
 
 #include <mg_utils.hpp>
+#include <string_view>
 #include <unordered_set>
 #include "mgp.hpp"
 
@@ -436,7 +437,7 @@ void Refactor::CollapseNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
     const mgp::Value input = arguments[0];
     const std::string type{arguments[1].ValueString()};
 
-    if(!input.IsNode() && !input.IsInt() && !input.IsList()){
+    if (!input.IsNode() && !input.IsInt() && !input.IsList()) {
       record_factory.SetErrorMessage("Input can only be node, node ID, or list of nodes/IDs");
       return;
     }
@@ -460,9 +461,149 @@ void Refactor::CollapseNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
           return;
         }
       }
-    } 
-      
-    
+    }
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
+
+enum class RelSelectStrategy { INCOMING = 0, OUTGOING = 1, MERGE = 2 };
+
+enum class PropertiesStrategy { DISCARD = 0, OVERRIDE = 1, COMBINE = 2 };
+
+struct Config {
+  explicit Config(const mgp::Map &config) {
+    auto rel_strategy_string = config.At("relationshipSelectionStrategy");
+    auto prop_strategy_string = config.At("properties");
+
+    SetRelStrategy(rel_strategy_string.ValueString());
+    if (!prop_strategy_string.IsNull()) {
+      SetPropStrategy(prop_strategy_string.ValueString());
+    }
+  }
+
+  void SetRelStrategy(std::string_view strategy) {
+    if (strategy == "incoming") {
+      rel_strategy = RelSelectStrategy::INCOMING;
+    } else if (strategy == "outgoing") {
+      rel_strategy = RelSelectStrategy::OUTGOING;
+    } else if (strategy == "merge") {
+      rel_strategy = RelSelectStrategy::MERGE;
+    } else {
+      throw mgp::ValueException("Invalid relationship selection strategy");
+    }
+  }
+
+  void SetPropStrategy(std::string_view strategy) {
+    if (strategy == "discard") {
+      prop_strategy = PropertiesStrategy::DISCARD;
+    } else if (strategy == "overwrite" || strategy == "override") {
+      prop_strategy = PropertiesStrategy::OVERRIDE;
+    } else if (strategy == "merge") {
+      prop_strategy = PropertiesStrategy::COMBINE;
+    } else {
+      throw mgp::ValueException("Invalid properties selection strategy");
+    }
+  }
+
+  RelSelectStrategy rel_strategy;
+  PropertiesStrategy prop_strategy;
+};
+
+void Refactor::DeleteAndReconnect(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+  try {
+    const auto path{arguments[0].ValuePath()};
+    const auto nodes_to_delete_list{arguments[1].ValueList()};
+    const auto config_map{arguments[2].ValueMap()};
+
+    std::unordered_set<int64_t> nodes_to_delete;
+    for (const auto &node : nodes_to_delete_list) {
+      nodes_to_delete.insert(node.ValueNode().Id().AsInt());
+    }
+
+    Config config{config_map};
+    mgp::List nodes;
+    mgp::List relationships;
+    int64_t prev_non_deleted_path_id = -1;
+    int64_t prev_non_deleted_node_id = -1;
+    std::unordered_set<mgp::Node> to_be_deleted;
+    auto graph = mgp::Graph{memgraph_graph};
+
+    for (size_t i = 0; i < path.Length() + 1; ++i) {
+      auto node = path.GetNodeAt(i);
+      int64_t id = node.Id().AsInt();
+
+      auto delete_node = nodes_to_delete.contains(id);
+
+      auto modify_relationship = [&graph, &relationships](const mgp::Relationship &relationship, const mgp::Node &node,
+                                                          int64_t node_id) {
+        if (relationship.From().Id().AsInt() == node_id) {
+          graph.SetTo(const_cast<mgp::Relationship &>(relationship), node);
+        } else {
+          graph.SetFrom(const_cast<mgp::Relationship &>(relationship), node);
+        }
+        relationships.AppendExtend(mgp::Value(relationship));
+      };
+
+      auto merge_relationships = [](mgp::Relationship &rel, mgp::Relationship &other, bool combine = false) {
+        for (const auto &[key, value] : other.Properties()) {
+          auto old_property = rel.GetProperty(key);
+          if (!old_property.IsNull()) {
+            if (combine) {
+              rel.SetProperty(key, mgp::Value(mgp::List{old_property, value}));
+            }
+            continue;
+          }
+          rel.SetProperty(key, value);
+        }
+      };
+
+      if (!delete_node && prev_non_deleted_path_id != i - 1) {  // there was a deleted node in between
+        if (config.rel_strategy == RelSelectStrategy::INCOMING) {
+          modify_relationship(path.GetRelationshipAt(prev_non_deleted_path_id), node, prev_non_deleted_node_id);
+        } else if (config.rel_strategy == RelSelectStrategy::OUTGOING) {
+          modify_relationship(path.GetRelationshipAt(i - 1), path.GetNodeAt(prev_non_deleted_path_id), id);
+        } else {  // RelSelectStrategy::MERGE
+          auto new_rel = path.GetRelationshipAt(
+              config.prop_strategy == PropertiesStrategy::OVERRIDE ? prev_non_deleted_path_id : i - 1);
+          auto old_rel = path.GetRelationshipAt(
+              config.prop_strategy == PropertiesStrategy::OVERRIDE ? i - 1 : prev_non_deleted_node_id);
+          if (config.prop_strategy == PropertiesStrategy::DISCARD) {
+            modify_relationship(new_rel, node, prev_non_deleted_node_id);
+            merge_relationships(new_rel, old_rel);
+          } else if (config.prop_strategy == PropertiesStrategy::OVERRIDE) {
+            modify_relationship(path.GetRelationshipAt(i - 1), path.GetNodeAt(prev_non_deleted_path_id), id);
+            merge_relationships(new_rel, old_rel);
+          } else {  // PropertiesStrategy::COMBINE
+            modify_relationship(new_rel, node, prev_non_deleted_node_id);
+            merge_relationships(new_rel, old_rel, true);
+          }
+        }
+      } else if (!delete_node && prev_non_deleted_path_id != -1) {  // not first node and no nodes in between
+        relationships.AppendExtend(mgp::Value(path.GetRelationshipAt(prev_non_deleted_path_id)));
+      }
+
+      if (!delete_node) {
+        nodes.AppendExtend(mgp::Value(node));
+        prev_non_deleted_path_id = static_cast<int64_t>(i);
+        prev_non_deleted_node_id = id;
+      } else {
+        to_be_deleted.insert(node);
+      }
+    }
+
+    for (const auto &node : to_be_deleted) {
+      graph.DetachDeleteNode(node);
+    }
+
+    auto record = record_factory.NewRecord();
+    record.Insert(std::string(kReturnDeleteAndReconnect1).c_str(), nodes);
+    record.Insert(std::string(kReturnDeleteAndReconnect2).c_str(), relationships);
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());

@@ -2,6 +2,7 @@
 
 #include <mgp.hpp>
 #include <string>
+#include <string_view>
 namespace Refactor {
 
 /* categorize constants */
@@ -76,6 +77,14 @@ constexpr std::string_view kArgumentRelationship = "relationship";
 constexpr std::string_view kReturnRelationshipInvert = "relationship";
 constexpr std::string_view kReturnIdInvert = "id_inverted";
 
+/* delete_and_reconnect constants */
+constexpr std::string_view kProcedureDeleteAndReconnect = "delete_and_reconnect";
+constexpr std::string_view kDeleteAndReconnectArg1 = "path";
+constexpr std::string_view kDeleteAndReconnectArg2 = "nodes";
+constexpr std::string_view kDeleteAndReconnectArg3 = "config";
+constexpr std::string_view kReturnDeleteAndReconnect1 = "nodes";
+constexpr std::string_view kReturnDeleteAndReconnect2 = "relationships";
+
 void From(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 void To(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
@@ -99,8 +108,6 @@ void CloneSubgraphFromPaths(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
 
 void CloneSubgraph(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
-
-
 void TransferProperties(const mgp::Node &node, mgp::Relationship &rel);
 
 void Collapse(mgp::Graph &graph, const mgp::Node &node, const std::string &type,
@@ -111,5 +118,7 @@ void CollapseNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
 void Invert(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 void InvertRel(mgp::Graph &graph, mgp::Relationship &rel);
+
+void DeleteAndReconnect(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 }  // namespace Refactor

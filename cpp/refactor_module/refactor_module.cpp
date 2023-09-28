@@ -76,6 +76,15 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
                  {mgp::Return(std::string(Refactor::kReturnIdCollapseNode).c_str(), mgp::Type::Int),
                   mgp::Return(std::string(Refactor::kReturnRelationshipCollapseNode).c_str(), mgp::Type::Relationship)},
                  module, memory);
+
+    AddProcedure(Refactor::DeleteAndReconnect, Refactor::kProcedureDeleteAndReconnect, mgp::ProcedureType::Write,
+                 {mgp::Parameter(Refactor::kDeleteAndReconnectArg1, mgp::Type::Path),
+                  mgp::Parameter(Refactor::kDeleteAndReconnectArg2, {mgp::Type::List, mgp::Type::Node}),
+                  mgp::Parameter(Refactor::kDeleteAndReconnectArg3, mgp::Type::Map)},
+                 {mgp::Return(Refactor::kReturnDeleteAndReconnect1, {mgp::Type::List, mgp::Type::Node}),
+                  mgp::Return(Refactor::kReturnDeleteAndReconnect2, {mgp::Type::List, mgp::Type::Relationship})},
+                 module, memory);
+
   } catch (const std::exception &e) {
     return 1;
   }
