@@ -2,6 +2,7 @@
 
 #include <unordered_set>
 
+#include <fmt/format.h>
 #include <mg_utils.hpp>
 #include "mgp.hpp"
 
@@ -9,7 +10,7 @@ namespace {
 void ThrowInvalidTypeException(const mgp::Value &value) {
   std::ostringstream oss;
   oss << value.Type();
-  throw mgp::ValueException("Unsupported type for this operation, received type: " + oss.str());
+  throw mgp::ValueException(fmt::format("Unsupported type for this operation, received type: {}", oss.str()));
 }
 }  // namespace
 
@@ -479,26 +480,30 @@ void Refactor::CollapseNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
 
 namespace {
 
-template <typename node_or_rel>
-void NormalizeToBoolean(node_or_rel object, std::string &property_key, std::unordered_set<mgp::Value> &true_values,
-                        std::unordered_set<mgp::Value> &false_values) {
+template <typename T>
+concept GraphObject = std::is_same<T, mgp::Node>::value || std::is_same<T, mgp::Relationship>::value;
+
+template <GraphObject NodeOrRel>
+void NormalizeToBoolean(NodeOrRel object, const std::string &property_key,
+                        const std::unordered_set<mgp::Value> &true_values,
+                        const std::unordered_set<mgp::Value> &false_values) {
   auto old_value = object.GetProperty(property_key);
   if (old_value.IsNull()) {
     return;
   }
 
-  bool in_true = true_values.contains(old_value);
-  bool in_false = false_values.contains(old_value);
+  bool property_in_true_vals = true_values.contains(old_value);
+  bool property_in_false_vals = false_values.contains(old_value);
 
-  if (in_true && !in_false) {
+  if (property_in_true_vals && !property_in_false_vals) {
     object.SetProperty(property_key, mgp::Value(true));
-  } else if (!in_true && in_false) {
+  } else if (!property_in_true_vals && property_in_false_vals) {
     object.SetProperty(property_key, mgp::Value(false));
-  } else if (!in_true && !in_false) {
+  } else if (!property_in_true_vals && !property_in_false_vals) {
     object.RemoveProperty(property_key);
   } else {
-    throw mgp::ValueException("The value {" + old_value.ToString() +
-                              "} is contained in both true_values and false_values.");
+    throw mgp::ValueException(
+        fmt::format("The value {} is contained in both true_values and false_values.", old_value.ToString()));
   }
 }
 
@@ -514,16 +519,8 @@ void Refactor::NormalizeAsBoolean(mgp_list *args, mgp_graph *memgraph_graph, mgp
     const auto true_values_list{arguments[2].ValueList()};
     const auto false_values_list{arguments[3].ValueList()};
 
-    auto convert_to_set = [](const mgp::List &list) {
-      std::unordered_set<mgp::Value> set;
-      for (const auto &list_item : list) {
-        set.insert(list_item);
-      }
-      return set;
-    };
-
-    std::unordered_set<mgp::Value> true_values{convert_to_set(true_values_list)};
-    std::unordered_set<mgp::Value> false_values{convert_to_set(false_values_list)};
+    std::unordered_set<mgp::Value> true_values{true_values_list.begin(), true_values_list.end()};
+    std::unordered_set<mgp::Value> false_values{false_values_list.begin(), false_values_list.end()};
 
     auto parse = [&property_key, &true_values, &false_values](const mgp::Value &object) {
       if (object.IsNode()) {
