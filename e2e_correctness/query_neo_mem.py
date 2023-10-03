@@ -308,19 +308,17 @@ def sort_dict(dict):
     keys = list(dict.keys())
     keys.sort()
     sorted_dict = {i: dict[i] for i in keys}
-    if "id" in sorted_dict:
-        sorted_dict.pop("id")
     return sorted_dict
 
 
-def execute_query_neo4j(driver, query):
+def execute_query_neo4j(driver: neo4j.BoltDriver, query: str) -> list:
     with driver.session() as session:
         query = neo4j.Query(query)
         results = session.run(query).value()
     return results
 
 
-def path_to_string_neo4j(path):
+def path_to_string_neo4j(path):  #type should be neo4j.graph.path but it doesnt recognize it in the definition
     path_string_list = ["PATH: "]
 
     n = len(path.nodes)
@@ -329,32 +327,30 @@ def path_to_string_neo4j(path):
         node = path.nodes[i]
         node_labels = list(node.labels)
         node_labels.sort()
-        node_props = str(sort_dict(node._properties))
-        path_string_list.append("(id:")
-        path_string_list.append(str(node.get("id")) + " labels: ")
-        path_string_list.append(str(node_labels) + " ")
-        path_string_list.append(str(node_props) + ")-")
+        sorted_dict = sort_dict(node._properties)
+        if "id" in sorted_dict:
+            sorted_dict.pop("id")
+        node_props = str(sorted_dict)
+        path_string_list.append(f"(id:{str(node.get('id'))} labels: {str(node_labels)} {node_props})-")
 
         if i == n - 1:
             path_string = "".join(path_string_list)
             return path_string[:-1]
 
         relationship = path.relationships[i]
-        rel_props = str(sort_dict(relationship._properties))
-        path_string_list.append("[")
-        path_string_list.append("id:" + str(relationship.get("id")))
-        path_string_list.append(" type: " + relationship.type)
-        path_string_list.append(" " + rel_props)
-        path_string_list.append("]-")
+        sorted_dict_rel = sort_dict(relationship._properties)
+        if "id" in sorted_dict_rel:
+            sorted_dict_rel.pop("id")
+        rel_props = str(sorted_dict_rel)
+        path_string_list.append(f"[id:{str(relationship.get('id'))} type: {relationship.type} {str(rel_props)}]-")
 
-
-def parse_neo4j(results):
+def parse_neo4j(results: list) -> List[str]:
     paths = [path_to_string_neo4j(res) for res in results]
     paths.sort()
     return paths
 
 
-def path_to_string_mem(path):
+def path_to_string_mem(path: gqlalchemy.Path) -> str:
     path_string_list = ["PATH: "]
 
     n = len(path._nodes)
@@ -363,26 +359,25 @@ def path_to_string_mem(path):
         node = path._nodes[i]
         node_labels = list(node._labels)
         node_labels.sort()
-        node_props = str(sort_dict(node._properties))
-        path_string_list.append("(id:")
-        path_string_list.append(str(node._properties.get("id")) + " labels: ")
-        path_string_list.append(str(node_labels) + " ")
-        path_string_list.append(str(node_props) + ")-")
+        sorted_dict = sort_dict(node._properties)
+        if "id" in sorted_dict:
+            sorted_dict.pop("id")
+        node_props = str(sorted_dict)
+        path_string_list.append(f"(id:{str(node._properties.get('id'))} labels: {str(node_labels)} {str(node_props)})-")
 
         if i == n - 1:
             path_string = "".join(path_string_list)
             return path_string[:-1]
 
         relationship = path._relationships[i]
-        rel_props = str(sort_dict(relationship._properties))
-        path_string_list.append("[")
-        path_string_list.append("id:" + str(relationship._properties.get("id")))
-        path_string_list.append(" type: " + relationship._type)
-        path_string_list.append(" " + rel_props)
-        path_string_list.append("]-")
+        sorted_dict_rel = sort_dict(relationship._properties)
+        if "id" in sorted_dict_rel:
+            sorted_dict_rel.pop("id")
+        rel_props = str(sorted_dict_rel)
+        path_string_list.append(f"[id:{str(relationship._properties.get('id'))} type: {relationship._type} {str(rel_props)}]-")
 
 
-def parse_mem(results):
+def parse_mem(results:list) -> List[str]:
     paths = [path_to_string_mem(result["result"]) for result in results]
     paths.sort()
     return paths
