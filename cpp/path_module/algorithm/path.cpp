@@ -12,13 +12,17 @@ Path::PathHelper::PathHelper(const mgp::List &labels, const mgp::List &relations
 }
 
 Path::PathHelper::PathHelper(const mgp::Map &config) {
-  if (!(config.At("minHops").IsNull() || config.At("minHops").IsInt()) ||
-      !(config.At("maxHops").IsNull() || config.At("maxHops").IsInt()) ||
-      !(config.At("relationshipFilter").IsNull() || config.At("relationshipFilter").IsList()) ||
-      !(config.At("labelFilter").IsNull() || config.At("labelFilter").IsList()) ||
-      !(config.At("filterStartNode").IsNull() || config.At("filterStartNode").IsBool()) ||
-      !(config.At("beginSequenceAtStart").IsNull() || config.At("beginSequenceAtStart").IsBool()) ||
-      !(config.At("bfs").IsNull() || config.At("bfs").IsBool())) {
+  auto same_type_or_null = [](const mgp::Type type, const mgp::Type wanted_type) {
+    return type == wanted_type || type == mgp::Type::Null;
+  };
+
+  if (!same_type_or_null(config.At("minHops").Type(), mgp::Type::Int) ||
+      !same_type_or_null(config.At("maxHops").Type(), mgp::Type::Int) ||
+      !same_type_or_null(config.At("relationshipFilter").Type(), mgp::Type::List) ||
+      !same_type_or_null(config.At("labelFilter").Type(), mgp::Type::List) ||
+      !same_type_or_null(config.At("filterStartNode").Type(), mgp::Type::Bool) ||
+      !same_type_or_null(config.At("beginSequenceAtStart").Type(), mgp::Type::Bool) ||
+      !same_type_or_null(config.At("bfs").Type(), mgp::Type::Bool)) {
     throw mgp::ValueException(
         "The config parameter needs to be a map with keys and values in line with the documentation.");
   }
@@ -57,7 +61,7 @@ Path::PathHelper::PathHelper(const mgp::Map &config) {
   config_.bfs = value.IsNull() ? false : value.ValueBool();
 }
 
-Path::RelDirection Path::PathHelper::GetDirection(std::string &rel_type) {
+Path::RelDirection Path::PathHelper::GetDirection(std::string &rel_type) const {
   auto it = config_.relationship_sets.find(rel_type);
   if (it == config_.relationship_sets.end()) {
     return RelDirection::kNone;
@@ -65,9 +69,9 @@ Path::RelDirection Path::PathHelper::GetDirection(std::string &rel_type) {
   return it->second;
 }
 
-Path::LabelBools Path::PathHelper::GetLabelBools(const mgp::Node &node) {
+Path::LabelBools Path::PathHelper::GetLabelBools(const mgp::Node &node) const {
   LabelBools label_bools;
-  for (auto label : node.Labels()) {
+  for (const auto &label : node.Labels()) {
     FilterLabel(label, label_bools);
   }
   return label_bools;
@@ -96,41 +100,34 @@ bool Path::PathHelper::Whitelisted(const bool whitelisted) const {
 }
 
 void Path::PathHelper::FilterLabelBoolStatus() {
-  // end node is activated, which means only paths ending with it can be saved as
-  // result, but they can be expanded further
   config_.label_bools_status.end_node_activated = !config_.label_sets.end_list.empty();
-
-  // whitelist is empty, which means all nodes are whitelisted
   config_.label_bools_status.whitelist_empty = config_.label_sets.whitelist.empty();
-
-  // there is a termination node, so only paths ending with it are allowed
   config_.label_bools_status.termination_activated = !config_.label_sets.termination_list.empty();
 }
 
 /*function to set appropriate parameters for filtering*/
-void Path::PathHelper::FilterLabel(std::string_view label, LabelBools &label_bools) {
-  if (config_.label_sets.blacklist.find(label) != config_.label_sets.blacklist.end()) {  // if label is blacklisted
+void Path::PathHelper::FilterLabel(std::string_view label, LabelBools &label_bools) const {
+  if (config_.label_sets.blacklist.contains(label)) {
     label_bools.blacklisted = true;
   }
 
-  if (config_.label_sets.termination_list.find(label) !=
-      config_.label_sets.termination_list.end()) {  // if label is termination label
+  if (config_.label_sets.termination_list.contains(label)) {
     label_bools.terminated = true;
   }
 
-  if (config_.label_sets.end_list.find(label) != config_.label_sets.end_list.end()) {  // if label is end label
+  if (config_.label_sets.end_list.contains(label)) {
     label_bools.end_node = true;
   }
 
-  if (config_.label_sets.whitelist.find(label) != config_.label_sets.whitelist.end()) {  // if label is whitelisted
+  if (config_.label_sets.whitelist.contains(label)) {
     label_bools.whitelisted = true;
   }
 }
 
-/*function that takes input list of labels, and sorts them into appropriate category
-sets were used so when filtering is done, its done in O(1)*/
+// Function that takes input list of labels, and sorts them into appropriate category
+// sets were used so when filtering is done, its done in O(1)
 void Path::PathHelper::ParseLabels(const mgp::List &list_of_labels) {
-  for (const auto label : list_of_labels) {
+  for (const auto &label : list_of_labels) {
     std::string_view label_string = label.ValueString();
     const char first_elem = label_string.front();
     switch (first_elem) {
@@ -157,8 +154,8 @@ void Path::PathHelper::ParseLabels(const mgp::List &list_of_labels) {
   }
 }
 
-/*function that takes input list of relationships, and sorts them into appropriate categories
-sets were also used to reduce complexity*/
+// Function that takes input list of relationships, and sorts them into appropriate categories
+// sets were also used to reduce complexity
 void Path::PathHelper::ParseRelationships(const mgp::List &list_of_relationships) {
   if (list_of_relationships.Size() ==
       0) {  // if no relationships were passed as arguments, all relationships are allowed
@@ -167,7 +164,7 @@ void Path::PathHelper::ParseRelationships(const mgp::List &list_of_relationships
     return;
   }
 
-  for (const auto rel : list_of_relationships) {
+  for (const auto &rel : list_of_relationships) {
     std::string rel_type{std::string(rel.ValueString())};
     bool starts_with = rel_type.starts_with('<');
     bool ends_with = rel_type.ends_with('>');
@@ -184,10 +181,10 @@ void Path::PathHelper::ParseRelationships(const mgp::List &list_of_relationships
     }
 
     if (starts_with && ends_with) {
-      config_.relationship_sets[rel_type.substr(1, rel_type.size() - 2)] = RelDirection::kBoth;
-    } else if (starts_with) {
+      config_.relationship_sets[rel_type.substr(1, rel_type.size() - 2)] = RelDirection::kBoth;  // <type>
+    } else if (starts_with) {                                                                    // <type
       config_.relationship_sets[rel_type.substr(1)] = RelDirection::kIncoming;
-    } else if (ends_with) {
+    } else if (ends_with) {  // type>
       config_.relationship_sets[rel_type.substr(0, rel_type.size() - 1)] = RelDirection::kOutgoing;
     } else {
       config_.relationship_sets[rel_type] = RelDirection::kAny;
@@ -257,8 +254,9 @@ void Path::PathExpand::ExpandPath(mgp::Path &path, const mgp::Relationship &rela
   path.Pop();
 }
 
-void Path::PathExpand::Expand(mgp::Path &path, mgp::Relationships relationships, bool outgoing, int64_t path_size,
-                              std::set<std::pair<std::string_view, int64_t>> &seen) {
+void Path::PathExpand::ExpandFromRelationships(mgp::Path &path, mgp::Relationships relationships, bool outgoing,
+                                               int64_t path_size,
+                                               std::set<std::pair<std::string_view, int64_t>> &seen) {
   for (const auto relationship : relationships) {
     auto type = std::string(relationship.Type());
     auto wanted_direction = helper_.GetDirection(type);
@@ -297,8 +295,8 @@ void Path::PathExpand::DFS(mgp::Path &path, int64_t path_size) {
   }
 
   std::set<std::pair<std::string_view, int64_t>> seen;
-  this->Expand(path, node.InRelationships(), false, path_size, seen);
-  this->Expand(path, node.OutRelationships(), true, path_size, seen);
+  this->ExpandFromRelationships(path, node.InRelationships(), false, path_size, seen);
+  this->ExpandFromRelationships(path, node.OutRelationships(), true, path_size, seen);
 }
 
 void Path::PathExpand::StartAlgorithm(const mgp::Node node) {
@@ -308,11 +306,17 @@ void Path::PathExpand::StartAlgorithm(const mgp::Node node) {
 
 void Path::PathExpand::Parse(const mgp::Value &value) {
   if (value.IsNode()) {
-    StartAlgorithm(value.ValueNode());
+    start_nodes_.insert((value.ValueNode()));
   } else if (value.IsInt()) {
-    StartAlgorithm(graph_.GetNodeById(mgp::Id::FromInt(value.ValueInt())));
+    start_nodes_.insert((graph_.GetNodeById(mgp::Id::FromInt(value.ValueInt()))));
   } else {
     throw mgp::ValueException("Invalid start type. Expected Node, Int, List[Node, Int]");
+  }
+}
+
+void Path::PathExpand::RunAlgorithm() {
+  for (const auto &node : start_nodes_) {
+    StartAlgorithm(node);
   }
 }
 
@@ -328,17 +332,17 @@ void Path::Expand(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
     int64_t min_hops{arguments[3].ValueInt()};
     int64_t max_hops{arguments[4].ValueInt()};
 
-    PathHelper path_helper{labels, relationships, min_hops, max_hops};
-    PathExpand path_expand{path_helper, record_factory, graph};
+    PathExpand path_expand{PathHelper{labels, relationships, min_hops, max_hops}, record_factory, graph};
 
     if (!start_value.IsList()) {
       path_expand.Parse(start_value);
-      return;
+    } else {
+      for (const auto &list_item : start_value.ValueList()) {
+        path_expand.Parse(list_item);
+      }
     }
 
-    for (const auto &list_item : start_value.ValueList()) {
-      path_expand.Parse(list_item);
-    }
+    path_expand.RunAlgorithm();
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
@@ -357,14 +361,16 @@ void Path::PathSubgraph::Parse(const mgp::Value &value) {
   start_nodes_.insert(graph_.GetNodeById(mgp::Id::FromInt(value.ValueInt())));
 }
 
-void Path::PathSubgraph::Expand(Pair &pair, mgp::Relationships relationships, bool outgoing, std::queue<Pair> &queue,
-                                std::set<std::pair<std::string_view, int64_t>> &seen) {
+void Path::PathSubgraph::ExpandFromRelationships(const std::pair<mgp::Node, int64_t> &pair,
+                                                 const mgp::Relationships relationships, bool outgoing,
+                                                 std::queue<std::pair<mgp::Node, int64_t>> &queue,
+                                                 std::set<std::pair<std::string_view, int64_t>> &seen) {
   for (const auto relationship : relationships) {
     auto next_node = outgoing ? relationship.To() : relationship.From();
     auto type = std::string(relationship.Type());
     auto wanted_direction = helper_.GetDirection(type);
 
-    if (helper_.FilterRelationships(pair.hop_count == 0)) {
+    if (helper_.IsNotStartOrSupportsStartRel(pair.second == 0)) {
       if ((wanted_direction == RelDirection::kNone && !helper_.AnyDirected(outgoing)) ||
           visited_.contains(next_node.Id().AsInt())) {
         continue;
@@ -375,11 +381,11 @@ void Path::PathSubgraph::Expand(Pair &pair, mgp::Relationships relationships, bo
 
     if (wanted_direction == RelDirection::kAny || curr_direction == wanted_direction || helper_.AnyDirected(outgoing)) {
       visited_.insert(next_node.Id().AsInt());
-      queue.push({next_node, pair.hop_count + 1});
+      queue.push({next_node, pair.second + 1});
     } else if (wanted_direction == RelDirection::kBoth) {
       if (outgoing && seen.contains({type, relationship.To().Id().AsInt()})) {
         visited_.insert(next_node.Id().AsInt());
-        queue.push({next_node, pair.hop_count + 1});
+        queue.push({next_node, pair.second + 1});
         to_be_returned_nodes_.AppendExtend(mgp::Value{next_node});
       } else {
         seen.insert({type, relationship.From().Id().AsInt()});
@@ -388,8 +394,8 @@ void Path::PathSubgraph::Expand(Pair &pair, mgp::Relationships relationships, bo
   }
 }
 
-void Path::PathSubgraph::InsertNode(const mgp::Node &node, int64_t hop_count, LabelBools &label_bools) {
-  if (helper_.FilterNodes(hop_count == 0)) {
+void Path::PathSubgraph::TryInsertNode(const mgp::Node &node, int64_t hop_count, LabelBools &label_bools) {
+  if (helper_.IsNotStartOrSupportsStartNode(hop_count == 0)) {
     if (helper_.AreLabelsValid(label_bools)) {
       to_be_returned_nodes_.AppendExtend(mgp::Value(node));
     }
@@ -402,7 +408,7 @@ void Path::PathSubgraph::InsertNode(const mgp::Node &node, int64_t hop_count, La
 }
 
 mgp::List Path::PathSubgraph::BFS() {
-  std::queue<Pair> queue;
+  std::queue<std::pair<mgp::Node, int64_t>> queue;
   std::unordered_set<int64_t> visited;
 
   for (const auto &node : start_nodes_) {
@@ -414,19 +420,19 @@ mgp::List Path::PathSubgraph::BFS() {
     auto pair = queue.front();
     queue.pop();
 
-    if (helper_.PathTooBig(pair.hop_count)) {
+    if (helper_.PathTooBig(pair.second)) {
       continue;
     }
 
-    LabelBools label_bools = helper_.GetLabelBools(pair.node);
-    InsertNode(pair.node, pair.hop_count, label_bools);
-    if (!helper_.ContinueExpanding(label_bools, pair.hop_count + 1)) {
+    LabelBools label_bools = helper_.GetLabelBools(pair.first);
+    TryInsertNode(pair.first, pair.second, label_bools);
+    if (!helper_.ContinueExpanding(label_bools, pair.second + 1)) {
       continue;
     }
 
     std::set<std::pair<std::string_view, int64_t>> seen;
-    this->Expand(pair, pair.node.InRelationships(), false, queue, seen);
-    this->Expand(pair, pair.node.OutRelationships(), true, queue, seen);
+    this->ExpandFromRelationships(pair, pair.first.InRelationships(), false, queue, seen);
+    this->ExpandFromRelationships(pair, pair.first.OutRelationships(), true, queue, seen);
   }
 
   return to_be_returned_nodes_;
@@ -439,8 +445,7 @@ void Path::SubgraphNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *
   const auto record_factory = mgp::RecordFactory(result);
   try {
     auto config = arguments[1].ValueMap();
-    PathHelper path_helper{config};
-    PathSubgraph path_subgraph{path_helper, record_factory, graph};
+    PathSubgraph path_subgraph{PathHelper{config}, record_factory, graph};
 
     auto start_value = arguments[0];
     if (!start_value.IsList()) {
@@ -471,8 +476,7 @@ void Path::SubgraphAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *re
   const auto record_factory = mgp::RecordFactory(result);
   try {
     auto config = arguments[1].ValueMap();
-    PathHelper path_helper{config};
-    PathSubgraph path_subgraph{path_helper, record_factory, graph};
+    PathSubgraph path_subgraph{PathHelper{config}, record_factory, graph};
 
     auto start_value = arguments[0];
     if (!start_value.IsList()) {
@@ -483,12 +487,13 @@ void Path::SubgraphAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *re
       }
     }
 
-    auto to_be_returned_nodes = path_subgraph.BFS();
+    const auto to_be_returned_nodes = path_subgraph.BFS();
 
     std::unordered_set<mgp::Node> to_be_returned_nodes_searchable;
-    for (const auto &node : to_be_returned_nodes) {
-      to_be_returned_nodes_searchable.insert(node.ValueNode());
-    }
+
+    std::transform(to_be_returned_nodes.begin(), to_be_returned_nodes.end(),
+                   std::inserter(to_be_returned_nodes_searchable, to_be_returned_nodes_searchable.begin()),
+                   [](const mgp::Value &node) { return node.ValueNode(); });
 
     mgp::List to_be_returned_rels;
     for (auto node : to_be_returned_nodes) {

@@ -45,19 +45,22 @@ struct LabelSets {
 };
 
 struct LabelBools {
-  bool blacklisted = false;
-  bool terminated = false;
-  bool end_node = false;
-  bool whitelisted = false;
+  bool blacklisted = false;  // no node in the path will be blacklisted
+  bool terminated = false;   // returned paths end with a termination node but don't continue to be expanded further,
+                             // takes precedence over end nodes
+  bool end_node = false;     // returned paths end with an end node but continue to be expanded further
+  bool whitelisted = false;  // all nodes in the path will be whitelisted (except end and termination nodes)
+  // end and termination nodes don't have to respect whitelists and blacklists
 };
 
 struct LabelBoolsStatus {
-  bool end_node_activated = false;
-  bool whitelist_empty = false;
-  bool termination_activated = false;
+  bool end_node_activated = false;  // true if there is an end node -> only paths ending with it can be saved as result,
+                                    // but they can be expanded further
+  bool whitelist_empty = false;     // true if no whitelist is given -> all nodes are whitelisted
+  bool termination_activated = false;  // true if there is a termination node -> only paths ending with it are allowed
 };
 
-enum RelDirection { kNone = -1, kAny = 0, kIncoming = 1, kOutgoing = 2, kBoth = 3 };
+enum class RelDirection { kNone = -1, kAny = 0, kIncoming = 1, kOutgoing = 2, kBoth = 3 };
 
 struct Config {
   LabelBoolsStatus label_bools_status;
@@ -77,12 +80,12 @@ class PathHelper {
   explicit PathHelper(const mgp::List &labels, const mgp::List &relationships, int64_t min_hops, int64_t max_hops);
   explicit PathHelper(const mgp::Map &config);
 
-  RelDirection GetDirection(std::string &rel_type);
-  LabelBools GetLabelBools(const mgp::Node &node);
+  RelDirection GetDirection(std::string &rel_type) const;
+  LabelBools GetLabelBools(const mgp::Node &node) const;
 
   bool AnyDirected(bool outgoing) const { return outgoing ? config_.any_outgoing : config_.any_incoming; }
-  bool FilterNodes(bool is_start) const { return (config_.filter_start_node || !is_start); }
-  bool FilterRelationships(bool is_start) const { return (config_.begin_sequence_at_start || !is_start); }
+  bool IsNotStartOrSupportsStartNode(bool is_start) const { return (config_.filter_start_node || !is_start); }
+  bool IsNotStartOrSupportsStartRel(bool is_start) const { return (config_.begin_sequence_at_start || !is_start); }
 
   bool AreLabelsValid(const LabelBools &label_bools) const;
   bool ContinueExpanding(const LabelBools &label_bools, size_t path_size) const;
@@ -93,7 +96,7 @@ class PathHelper {
 
   // methods for parsing config
   void FilterLabelBoolStatus();
-  void FilterLabel(std::string_view label, LabelBools &label_bools);
+  void FilterLabel(std::string_view label, LabelBools &label_bools) const;
   void ParseLabels(const mgp::List &list_of_labels);
   void ParseRelationships(const mgp::List &list_of_relationships);
 
@@ -101,48 +104,44 @@ class PathHelper {
   Config config_;
 };
 
-class PathData {
+class PathExpand {
  public:
-  explicit PathData(const PathHelper &helper, const mgp::RecordFactory &record_factory, const mgp::Graph &graph)
+  explicit PathExpand(PathHelper &&helper, const mgp::RecordFactory &record_factory, const mgp::Graph &graph)
       : helper_(helper), record_factory_(record_factory), graph_(graph) {}
 
- protected:
+  void ExpandPath(mgp::Path &path, const mgp::Relationship &relationship, int64_t path_size);
+  void ExpandFromRelationships(mgp::Path &path, mgp::Relationships relationships, bool outgoing, int64_t path_size,
+                               std::set<std::pair<std::string_view, int64_t>> &seen);
+  void StartAlgorithm(mgp::Node node);
+  void Parse(const mgp::Value &value);
+  void DFS(mgp::Path &path, int64_t path_size);
+  void RunAlgorithm();
+
+ private:
   PathHelper helper_;
   const mgp::RecordFactory &record_factory_;
   const mgp::Graph &graph_;
   std::unordered_set<int64_t> visited_;
+  std::unordered_set<mgp::Node> start_nodes_;
 };
 
-class PathExpand : PathData {
+class PathSubgraph {
  public:
-  explicit PathExpand(const PathHelper &helper, const mgp::RecordFactory &record_factory, const mgp::Graph &graph)
-      : PathData(helper, record_factory, graph) {}
+  explicit PathSubgraph(PathHelper &&helper, const mgp::RecordFactory &record_factory, const mgp::Graph &graph)
+      : helper_(helper), record_factory_(record_factory), graph_(graph) {}
 
-  void ExpandPath(mgp::Path &path, const mgp::Relationship &relationship, int64_t path_size);
-  void Expand(mgp::Path &path, mgp::Relationships relationships, bool outgoing, int64_t path_size,
-              std::set<std::pair<std::string_view, int64_t>> &seen);
-  void StartAlgorithm(mgp::Node node);
+  void ExpandFromRelationships(const std::pair<mgp::Node, int64_t> &pair, mgp::Relationships relationships,
+                               bool outgoing, std::queue<std::pair<mgp::Node, int64_t>> &queue,
+                               std::set<std::pair<std::string_view, int64_t>> &seen);
   void Parse(const mgp::Value &value);
-  void DFS(mgp::Path &path, int64_t path_size);
-};
-
-class PathSubgraph : PathData {
- public:
-  explicit PathSubgraph(const PathHelper &helper, const mgp::RecordFactory &record_factory, const mgp::Graph &graph)
-      : PathData(helper, record_factory, graph) {}
-
-  struct Pair {
-    mgp::Node node;
-    int64_t hop_count;
-  };
-
-  void Expand(Pair &pair, mgp::Relationships relationships, bool outgoing, std::queue<Pair> &queue,
-              std::set<std::pair<std::string_view, int64_t>> &seen);
-  void Parse(const mgp::Value &value);
-  void InsertNode(const mgp::Node &node, int64_t hop_count, LabelBools &label_bools);
+  void TryInsertNode(const mgp::Node &node, int64_t hop_count, LabelBools &label_bools);
   mgp::List BFS();
 
  private:
+  PathHelper helper_;
+  const mgp::RecordFactory &record_factory_;
+  const mgp::Graph &graph_;
+  std::unordered_set<int64_t> visited_;
   std::unordered_set<mgp::Node> start_nodes_;
   mgp::List to_be_returned_nodes_;
 };
