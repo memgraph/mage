@@ -61,7 +61,7 @@ Path::PathHelper::PathHelper(const mgp::Map &config) {
   config_.bfs = value.IsNull() ? false : value.ValueBool();
 }
 
-Path::RelDirection Path::PathHelper::GetDirection(std::string &rel_type) const {
+Path::RelDirection Path::PathHelper::GetDirection(const std::string &rel_type) const {
   auto it = config_.relationship_sets.find(rel_type);
   if (it == config_.relationship_sets.end()) {
     return RelDirection::kNone;

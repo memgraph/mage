@@ -80,7 +80,7 @@ class PathHelper {
   explicit PathHelper(const mgp::List &labels, const mgp::List &relationships, int64_t min_hops, int64_t max_hops);
   explicit PathHelper(const mgp::Map &config);
 
-  RelDirection GetDirection(std::string &rel_type) const;
+  RelDirection GetDirection(const std::string &rel_type) const;
   LabelBools GetLabelBools(const mgp::Node &node) const;
 
   bool AnyDirected(bool outgoing) const { return outgoing ? config_.any_outgoing : config_.any_incoming; }
