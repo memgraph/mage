@@ -10,33 +10,16 @@
 #include <memory>
 
 namespace Algo {
-
-    class RelObject{
-        public:
-            int id;
-            int id_prev;
-            mgp::Relationship rel;
-
-            RelObject(int id, int id_prev, const mgp::Relationship &rel): id(id), id_prev(id_prev), rel(rel) {}
-
-            bool operator==(const RelObject& other) const {
-                return id == other.id;
-            }
-
-            struct Hash {
-                size_t operator()(const RelObject& rel) const {
-                    return std::hash<int>()(rel.id);
-                }
-            };
-    };
     class NodeObject{
         public:
             double heuristic_distance;
             double total_distance;
             mgp::Node node;
+            mgp::Relationship rel;
+            std::shared_ptr<NodeObject> prev;
 
-            NodeObject(const double heuristic_distance, const double total_distance, const mgp::Node &node)
-            :  heuristic_distance(heuristic_distance), total_distance(total_distance), node(node){}
+            NodeObject(const double heuristic_distance, const double total_distance, const mgp::Node &node, const mgp::Relationship &rel, std::shared_ptr<NodeObject> prev)
+            :  heuristic_distance(heuristic_distance), total_distance(total_distance), node(node), rel(rel), prev(prev){}
             
 
             bool operator==(const NodeObject& other) const {
@@ -54,8 +37,8 @@ namespace Algo {
             }
 
             struct Hash {
-                size_t operator()(const NodeObject& nodeObj) const {
-                    return std::hash<int64_t>()(nodeObj.node.Id().AsInt());
+                size_t operator()(const std::shared_ptr<NodeObject> &nodeObj) const {
+                    return std::hash<int64_t>()(nodeObj->node.Id().AsInt());
                 }
             };
 
@@ -76,11 +59,11 @@ namespace Algo {
                 return set.empty();
             }
 
-            const NodeObject& Top(){  //should this be just object without reference
+            const std::shared_ptr<NodeObject> Top(){  
                 while(set.find(pq.top()->node.Id()) == set.end()){ //this is to make sure duplicates are ignored
                     pq.pop();
                 }
-                return *pq.top();
+                return pq.top();
             }
 
             void Pop(){
@@ -109,19 +92,19 @@ namespace Algo {
     
     class Closed{
         public:
-            std::unordered_map<mgp::Id, double> closed;
+            std::unordered_set<std::shared_ptr<NodeObject>,NodeObject::Hash> closed;
             
             bool Empty(){
                 return closed.empty();
             }
-            void Erase(const NodeObject &obj){
-                closed.erase(obj.node.Id());
+            void Erase(const std::shared_ptr<NodeObject> &obj){
+                closed.erase(obj);
             } 
 
-            bool FindAndCompare(const NodeObject &obj){
-                auto it = closed.find(obj.node.Id());
+            bool FindAndCompare(const std::shared_ptr<NodeObject> &obj){
+                auto it = closed.find(obj);
                 if(it != closed.end()){
-                    bool erase = it->second > obj.total_distance;
+                    bool erase = (*it)->total_distance > obj->total_distance;
                     if(erase){
                         closed.erase(it);
                     }
@@ -130,8 +113,8 @@ namespace Algo {
                 return true;
             }
 
-            void Insert(const NodeObject &obj){
-                closed.insert({obj.node.Id(), obj.total_distance});
+            void Insert(const std::shared_ptr<NodeObject> &obj){
+                closed.insert(obj);
             }
 
             Closed() = default;
@@ -147,6 +130,10 @@ namespace Algo {
             std::string heuristic_name = "";
             std::string latitude_name = "lat";
             std::string longitude_name = "lon";
+            std::unordered_set<std::string> whitelist;
+            std::unordered_set<std::string> blacklist;
+            std::unordered_set<std::string> in_rels;
+            std::unordered_set<std::string> out_rels;
 
             Config(const mgp::Map &map){
                 if(!map.At("unweighted").IsNull() && map.At("unweighted").IsBool()){
@@ -167,10 +154,46 @@ namespace Algo {
                 if(!map.At("longitude_name").IsNull() && map.At("longitude_name").IsString()){
                     longitude_name = map.At("longitude_name").ValueString();
                 }
-            }
+                if(!map.At("whitelisted_labels").IsNull() && map.At("whitelisted_labels").IsList()){
+                    auto list = map.At("whitelisted_labels").ValueList();
+                    for(auto value: list){
+                        if(value.IsString()){
+                            whitelist.insert(std::string(value.ValueString()));
+                        }
+                    }
+                }
+                if(!map.At("blacklisted_labels").IsNull() && map.At("blacklisted_labels").IsList()){
+                    auto list = map.At("blacklisted_labels").ValueList();
+                    for(auto value: list){
+                        if(value.IsString()){
+                            blacklist.insert(std::string(value.ValueString()));
+                        }
+                    }
+                }
+                if(!map.At("relationships_filter").IsNull() && map.At("relationships_filter").IsList()){
+                    auto list = map.At("relationships_filter").ValueList();
+                    for(auto value: list){
+                        if(!value.IsString()){
+                            continue;
+                        }
+                        auto rel_type = std::string(value.ValueString());
+                        const size_t size = rel_type.size();
+                        const char first_elem = rel_type[0];
+                        const char last_elem = rel_type[size - 1];
 
-            std::string ToString(){
-                return distance_prop + " " + heuristic_name + " " + latitude_name + " " + longitude_name + " " + std::to_string(epsilon) + " " + std::to_string(unweighted);
+                        if (first_elem == '<' && last_elem == '>') {
+                            throw mgp::ValueException("Wrong relationship format => <relationship> is not allowed!");
+                        } else if (first_elem == '<' && size != 1) {
+                            in_rels.insert(rel_type.erase(0, 1));  // only specified incoming relationships are allowed
+                        }else if (last_elem == '>' && size != 1) {
+                            rel_type.pop_back();
+                            out_rels.insert(rel_type);  // only specifed outgoing relationships are allowed
+                        } else {                                           // if not specified, a relationship goes both ways
+                            in_rels.insert(rel_type);
+                            out_rels.insert(rel_type);
+                        }
+                    }
+                }
             }
 
     };
@@ -186,8 +209,6 @@ namespace Algo {
     struct Lists{
         Open open;
         Closed closed;
-        std::unordered_set<RelObject, RelObject::Hash> visited_rel;
-
         Lists() = default;
 
     };
@@ -195,9 +216,11 @@ namespace Algo {
     double haversineDistance(double lat1, double lon1, double lat2, double lon2);
     double toRadians(double degrees);
     void AStar(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory); 
-    mgp::Path BuildResult(const std::unordered_set<RelObject, RelObject::Hash> &vis_rel, const mgp::Node &startNode, int id);
+    bool LabelOk(const mgp::Node &node, const Config &config);
+    mgp::Path BuildResult(std::shared_ptr<NodeObject> final, const mgp::Node &start);
+    std::shared_ptr<NodeObject> InitializeStart(const mgp::Node &start);
     mgp::Path HelperAstar(const GoalNodes &nodes, const Config &config);
-    void ParseRelationships(const mgp::Relationships &rels,  bool in, const GoalNodes &nodes, NodeObject* prev, Lists &lists, const Config &config);
+    void ParseRelationships(const mgp::Relationships &rels,  bool in, const GoalNodes &nodes, std::shared_ptr<NodeObject> prev, Lists &lists, const Config &config);
     double CalculateHeuristic(const Config &config, const mgp::Node &node, const GoalNodes &nodes);
     std::pair<double, double> TargetLatLon(const mgp::Node &target, const Config &config);
     double CalculateDistance(const Config &config, const mgp::Relationship &rel);

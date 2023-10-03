@@ -82,89 +82,88 @@ bool RelOk(){
     return true;
 }
 
-bool LabelOk(){
+bool Algo::LabelOk(const mgp::Node &node, const Config &config){
+
+    bool whitelist_empty = config.whitelist.empty();
+    
+    for(auto label: node.Labels()){
+        if(config.blacklist.find(std::string(label)) != config.blacklist.end()){
+            return false;
+        }
+        if(!whitelist_empty && config.whitelist.find(std::string(label)) == config.whitelist.end()){
+            return false;
+        }
+    }
     return true;
 }
-void Algo::ParseRelationships(const mgp::Relationships &rels,  bool in, const GoalNodes &nodes, NodeObject* prev, Lists &lists, const Config &config){
+void Algo::ParseRelationships(const mgp::Relationships &rels,  bool in, const GoalNodes &nodes, std::shared_ptr<NodeObject> prev, Lists &lists, const Config &config){
     for(const auto rel: rels){
         if(!RelOk()){
             continue;
         }
         const auto node = in ? rel.From() : rel.To();
-        if(!LabelOk){
+        if(!LabelOk(node, config)){
             continue;
         }
         auto heuristic = CalculateHeuristic(config, node, nodes) * config.epsilon; //epsilon 0 == UCS
         auto distance = CalculateDistance(config, rel);
-        std::shared_ptr<NodeObject> nb = std::make_shared<NodeObject>(heuristic, distance + prev->total_distance, node);
-        if(!lists.closed.FindAndCompare(*nb)){
+        std::shared_ptr<NodeObject> nb = std::make_shared<NodeObject>(heuristic, distance + prev->total_distance, node, rel, prev);
+        if(!lists.closed.FindAndCompare(nb)){
             continue;
         }
-        if(!lists.open.Insert(nb)){  //this check is absolutely necessary, it may seem trivial, but, to any future refactorers, DO NOT REMOVE IT
-            continue;   //you need thic check, so you dont add worse relationships than one that exists in the open list
-        }
-        
-
-        //rel obj part
-
-        RelObject relobj = RelObject(node.Id().AsInt(), prev->node.Id().AsInt(), rel);
-
-        auto it = lists.visited_rel.find(relobj);
-        if(it == lists.visited_rel.end()){
-            lists.visited_rel.insert(relobj);
-        }else{
-            lists.visited_rel.erase(it);  //if we already visited with this relationship, we need to remove it and add better, because we passed the closed  and open test
-            lists.visited_rel.insert(relobj);
-        }
+        lists.open.Insert(nb);
     }
 
+}
+
+std::shared_ptr<Algo::NodeObject> Algo::InitializeStart(const mgp::Node &start){
+    if(start.InDegree() == 0 && start.OutDegree() == 0){
+        throw mgp::ValueException("Start node must have in or out relationships!");
+    }
+
+    if(start.InDegree() != 0){
+        return std::make_shared<NodeObject>(0, 0, start, *start.InRelationships().begin(), nullptr);
+    }
+
+    return std::make_shared<NodeObject>(0, 0, start, *start.OutRelationships().begin(), nullptr);
 }
 
 mgp::Path Algo::HelperAstar(const GoalNodes &nodes, const Config &config){
 
     Lists lists = Lists();
 
-    std::shared_ptr<NodeObject> start_nb = std::make_shared<NodeObject>(0,0,nodes.start);
+    std::shared_ptr<NodeObject> start_nb = InitializeStart(nodes.start);
     lists.open.Insert(start_nb);
 
     while(!lists.open.Empty()){
 
         auto nb = lists.open.Top();
         lists.open.Pop();
-        std::cout << nb.ToString() << std::endl;
-        if(nb.node == nodes.target){
-            return BuildResult(lists.visited_rel, nodes.start, nb.node.Id().AsInt());
+        std::cout << nb->ToString() << std::endl;
+        if(nb->node == nodes.target){
+            return BuildResult(nb, nodes.start);
         }
         lists.closed.Insert(nb);
 
-        ParseRelationships(nb.node.OutRelationships(), false, nodes, &nb, lists, config);
-        ParseRelationships(nb.node.InRelationships(), true, nodes, &nb, lists, config);
+        ParseRelationships(nb->node.OutRelationships(), false, nodes, nb, lists, config);
+        ParseRelationships(nb->node.InRelationships(), true, nodes, nb, lists, config);
 
     }
     return mgp::Path(nodes.start);
 }
  
 
-mgp::Path Algo::BuildResult(const std::unordered_set<RelObject, RelObject::Hash> &visited_rel, const mgp::Node &startNode, int id){
+mgp::Path Algo::BuildResult(std::shared_ptr<NodeObject> final, const mgp::Node &start){
 
-    mgp::Path path = mgp::Path(startNode);
+    mgp::Path path = mgp::Path(start);
+    std::vector<mgp::Relationship> rels;
 
-    if(visited_rel.size() == 0){
-        return path;
+    while(final->prev){
+        rels.push_back(final->rel);
+        final = final->prev;
     }
 
-    auto dummy_rel = (*visited_rel.begin()).rel;
-    auto relobj = RelObject(id, 0, dummy_rel);
-    int start_id = startNode.Id().AsInt();
-    std::vector<mgp::Relationship> final_rels;
-
-    while(relobj.id != start_id){
-        auto other = visited_rel.find(relobj);
-        final_rels.push_back(other->rel);
-        relobj.id = other->id_prev;
-    }
-
-    for(auto it = final_rels.rbegin(); it != final_rels.rend(); ++it){
+    for(auto it = rels.rbegin(); it != rels.rend(); ++it){
         path.Expand(*it);
     }
 
@@ -184,9 +183,15 @@ void Algo::AStar(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, 
     auto config = Config(arguments[2].ValueMap());
     std::pair<double, double> latLon = TargetLatLon(target, config);
     auto nodes = GoalNodes(start, target, latLon);
-    std::cout << config.ToString() << std::endl;
     mgp::Path path = HelperAstar(nodes, config);
     
+    for(auto elem: config.in_rels){
+        std::cout << elem << std::endl;
+    }
+
+    for(auto elem: config.out_rels){
+        std::cout << "OUT" << elem << std::endl;
+    }      
     auto record = record_factory.NewRecord();
     record.Insert("result", path);
 
