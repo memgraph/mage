@@ -1,6 +1,5 @@
 query: >
-    CALL collections.sort(["abd", "aba", "abc"]) YIELD sorted
-    RETURN sorted
+    RETURN collections.sort(["abd", "aba", "abc"]) AS sorted
 
 output:
     - sorted: [

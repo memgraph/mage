@@ -1,6 +1,5 @@
 query: >
-    CALL collections.sum([1, 2, 'a']) YIELD sum
-    RETURN sum
+    RETURN collections.sum([1, 2, 'a']) AS sum
 
 exception: >
     One of the list elements is not a number.
