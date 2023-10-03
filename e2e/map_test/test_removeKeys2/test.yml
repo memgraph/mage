@@ -1,5 +1,5 @@
 query: >
-  CALL map.remove_keys({name:{}},["matija"],false) YIELD result RETURN result;
+  RETURN map.remove_keys({name:{}},["matija"],{recursive: false}) AS result;
 
 output:
   - result: {"name": {}}

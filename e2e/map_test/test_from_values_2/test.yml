@@ -1,5 +1,5 @@
 query: >
-  CALL map.from_values(["name", "Zdravko", "name", "Mamac", "name", 3])
-  yield map;
+  RETURN map.from_values(["name", "Zdravko", "name", "Mamac", "name", 3])
+  AS map;
 output:
   - map: {"name": 3}
