@@ -134,6 +134,7 @@ namespace Algo {
             std::unordered_set<std::string> blacklist;
             std::unordered_set<std::string> in_rels;
             std::unordered_set<std::string> out_rels;
+            bool duration = false;
 
             Config(const mgp::Map &map){
                 if(!map.At("unweighted").IsNull() && map.At("unweighted").IsBool()){
@@ -194,6 +195,10 @@ namespace Algo {
                         }
                     }
                 }
+
+                if(!map.At("duration").IsNull() && map.At("duration").IsBool()){
+                    duration = map.At("duration").ValueBool();
+                }
             }
 
     };
@@ -216,6 +221,7 @@ namespace Algo {
     double haversineDistance(double lat1, double lon1, double lat2, double lon2);
     double toRadians(double degrees);
     void AStar(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory); 
+    bool RelOk(const mgp::Relationship &rel, const Config &config, const bool in);
     bool LabelOk(const mgp::Node &node, const Config &config);
     mgp::Path BuildResult(std::shared_ptr<NodeObject> final, const mgp::Node &start);
     std::shared_ptr<NodeObject> InitializeStart(const mgp::Node &start);

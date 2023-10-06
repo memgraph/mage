@@ -30,7 +30,10 @@ double Algo::CalculateHeuristic(const Config &config, const mgp::Node &node, con
         if(heuristic.IsNumeric()){
             return heuristic.ValueNumeric();
         }
-        throw mgp::ValueException("Custom heuristic property must be of a numeric data type!");
+        if(heuristic.IsDuration() && config.duration){
+            return heuristic.ValueDuration().Microseconds();
+        }
+        throw mgp::ValueException("Custom heuristic property must be of a numeric, or duration data type!");
     }
 
     auto latitude_source = node.GetProperty(config.latitude_name);
@@ -74,12 +77,27 @@ double Algo::CalculateDistance(const Config &config, const mgp::Relationship &re
     if(distance.IsNumeric()){
         return distance.ValueNumeric();
     }
-    throw mgp::ValueException("Distance property must be a numeric datatype!");
+    if(distance.IsDuration() && config.duration){
+        return distance.ValueDuration().Microseconds();
+    }
+    throw mgp::ValueException("Distance property must be a numeric or duration datatype!");
 
 }
 
-bool RelOk(){
-    return true;
+bool Algo::RelOk(const mgp::Relationship &rel, const Config &config, const bool in){ //in true incoming, in false outgoing
+    if(config.in_rels.size() == 0 && config.out_rels.size() == 0){
+        return true;
+    }
+
+    if(in && config.in_rels.find(std::string(rel.Type())) != config.in_rels.end()){
+        return true;
+    }
+
+    if(!in && config.out_rels.find(std::string(rel.Type())) != config.out_rels.end()){
+        return true;
+    }
+
+    return false;
 }
 
 bool Algo::LabelOk(const mgp::Node &node, const Config &config){
@@ -98,7 +116,7 @@ bool Algo::LabelOk(const mgp::Node &node, const Config &config){
 }
 void Algo::ParseRelationships(const mgp::Relationships &rels,  bool in, const GoalNodes &nodes, std::shared_ptr<NodeObject> prev, Lists &lists, const Config &config){
     for(const auto rel: rels){
-        if(!RelOk()){
+        if(!RelOk(rel, config, in)){
             continue;
         }
         const auto node = in ? rel.From() : rel.To();
