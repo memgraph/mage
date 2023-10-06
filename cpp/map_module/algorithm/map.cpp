@@ -181,9 +181,12 @@ void Map::Merge(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp
     const auto map2 = arguments[1].ValueMap();
 
     mgp::Map merged_map = mgp::Map(std::move(map2));
-
+    std::unordered_set<std::string> keys;
+    for(const auto &[key,value]: merged_map){
+      keys.insert(std::string(key));
+    }
     for (const auto element : map1) {
-      if (merged_map.At(element.key).IsNull()) {
+      if (keys.find(std::string(element.key)) == keys.end()) {
         merged_map.Insert(element.key, element.value);
       }
     }
