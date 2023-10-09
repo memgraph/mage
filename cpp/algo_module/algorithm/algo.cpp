@@ -19,7 +19,7 @@ double Algo::haversineDistance(double lat1, double lon1, double lat2, double lon
     double c = 2 * atan2(sqrt(a), sqrt(1 - a));
     double distance = earthRadius * c;
 
-    return distance;  //returns distance in km, could be further configurated
+    return distance;  //returns distance in km
 }
 
 /*calculates the heuristic based on haversine, or returns the value if the heuristic is custom*/
@@ -146,7 +146,7 @@ std::shared_ptr<Algo::NodeObject> Algo::InitializeStart(const mgp::Node &start){
     return std::make_shared<NodeObject>(0, 0, start, *start.OutRelationships().begin(), nullptr);
 }
 
-mgp::Path Algo::HelperAstar(const GoalNodes &nodes, const Config &config){
+std::pair<mgp::Path, double> Algo::HelperAstar(const GoalNodes &nodes, const Config &config){
 
     Lists lists = Lists();
 
@@ -158,6 +158,7 @@ mgp::Path Algo::HelperAstar(const GoalNodes &nodes, const Config &config){
         auto nb = lists.open.Top();
         lists.open.Pop();
         std::cout << nb->ToString() << std::endl;
+        std::cout << nb->node.ToString() << std::endl;
         if(nb->node == nodes.target){
             return BuildResult(nb, nodes.start);
         }
@@ -167,15 +168,16 @@ mgp::Path Algo::HelperAstar(const GoalNodes &nodes, const Config &config){
         ParseRelationships(nb->node.InRelationships(), true, nodes, nb, lists, config);
 
     }
-    return mgp::Path(nodes.start);
+    return std::pair<mgp::Path, double>(mgp::Path(nodes.start), 0);
 }
  
 
-mgp::Path Algo::BuildResult(std::shared_ptr<NodeObject> final, const mgp::Node &start){
+std::pair<mgp::Path, double> Algo::BuildResult(std::shared_ptr<NodeObject> final, const mgp::Node &start){
 
     mgp::Path path = mgp::Path(start);
     std::vector<mgp::Relationship> rels;
 
+    double weight = final->total_distance;
     while(final->prev){
         rels.push_back(final->rel);
         final = final->prev;
@@ -185,7 +187,7 @@ mgp::Path Algo::BuildResult(std::shared_ptr<NodeObject> final, const mgp::Node &
         path.Expand(*it);
     }
 
-    return path;
+    return std::pair<mgp::Path, double>(path, weight);
 
 
 }
@@ -201,17 +203,13 @@ void Algo::AStar(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, 
     auto config = Config(arguments[2].ValueMap());
     std::pair<double, double> latLon = TargetLatLon(target, config);
     auto nodes = GoalNodes(start, target, latLon);
-    mgp::Path path = HelperAstar(nodes, config);
-    
-    for(auto elem: config.in_rels){
-        std::cout << elem << std::endl;
-    }
-
-    for(auto elem: config.out_rels){
-        std::cout << "OUT" << elem << std::endl;
-    }      
+    std::pair<mgp::Path, double> pair = HelperAstar(nodes, config);
+    const mgp::Path path = pair.first;
+    const double weight = pair.second;
+     
     auto record = record_factory.NewRecord();
     record.Insert("result", path);
+    record.Insert("weight", weight);
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());

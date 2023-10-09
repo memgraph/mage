@@ -223,9 +223,9 @@ namespace Algo {
     void AStar(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory); 
     bool RelOk(const mgp::Relationship &rel, const Config &config, const bool in);
     bool LabelOk(const mgp::Node &node, const Config &config);
-    mgp::Path BuildResult(std::shared_ptr<NodeObject> final, const mgp::Node &start);
+    std::pair<mgp::Path, double> BuildResult(std::shared_ptr<NodeObject> final, const mgp::Node &start);
     std::shared_ptr<NodeObject> InitializeStart(const mgp::Node &start);
-    mgp::Path HelperAstar(const GoalNodes &nodes, const Config &config);
+    std::pair<mgp::Path, double> HelperAstar(const GoalNodes &nodes, const Config &config);
     void ParseRelationships(const mgp::Relationships &rels,  bool in, const GoalNodes &nodes, std::shared_ptr<NodeObject> prev, Lists &lists, const Config &config);
     double CalculateHeuristic(const Config &config, const mgp::Node &node, const GoalNodes &nodes);
     std::pair<double, double> TargetLatLon(const mgp::Node &target, const Config &config);
