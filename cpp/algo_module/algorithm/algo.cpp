@@ -6,7 +6,7 @@ double Algo::toRadians(double degrees) {
 
 double Algo::haversineDistance(double lat1, double lon1, double lat2, double lon2) {
 
-    const double earthRadius = 6371.0;
+    const double earthRadius = 6371.0; //IN KM
     
     lat1 = toRadians(lat1);
     lon1 = toRadians(lon1);
@@ -67,7 +67,7 @@ std::pair<double, double> Algo::TargetLatLon(const mgp::Node &target, const Conf
 }
 
 double Algo::CalculateDistance(const Config &config, const mgp::Relationship &rel){
-    if(config.unweighted){
+    if(config.unweighted){ //return same distance if unweighted
         return 10;
     }
     auto distance = rel.GetProperty(config.distance_prop);
@@ -114,7 +114,8 @@ bool Algo::LabelOk(const mgp::Node &node, const Config &config){
     }
     return true;
 }
-void Algo::ParseRelationships(const mgp::Relationships &rels,  bool in, const GoalNodes &nodes, std::shared_ptr<NodeObject> prev, Lists &lists, const Config &config){
+void Algo::ParseRelationships(const std::shared_ptr<NodeObject> &prev, bool in, const GoalNodes &nodes,  Lists &lists, const Config &config){
+    auto rels = in ? prev->node.InRelationships() : prev->node.OutRelationships();
     for(const auto rel: rels){
         if(!RelOk(rel, config, in)){
             continue;
@@ -154,18 +155,14 @@ std::pair<mgp::Path, double> Algo::HelperAstar(const GoalNodes &nodes, const Con
     lists.open.Insert(start_nb);
 
     while(!lists.open.Empty()){
-
         auto nb = lists.open.Top();
         lists.open.Pop();
-        std::cout << nb->ToString() << std::endl;
-        std::cout << nb->node.ToString() << std::endl;
         if(nb->node == nodes.target){
             return BuildResult(nb, nodes.start);
         }
         lists.closed.Insert(nb);
-
-        ParseRelationships(nb->node.OutRelationships(), false, nodes, nb, lists, config);
-        ParseRelationships(nb->node.InRelationships(), true, nodes, nb, lists, config);
+        ParseRelationships(nb, false, nodes, lists, config);
+        ParseRelationships(nb, true, nodes, lists, config);
 
     }
     return std::pair<mgp::Path, double>(mgp::Path(nodes.start), 0);
@@ -208,8 +205,8 @@ void Algo::AStar(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, 
     const double weight = pair.second;
      
     auto record = record_factory.NewRecord();
-    record.Insert("result", path);
-    record.Insert("weight", weight);
+    record.Insert(std::string(kAStarRet1).c_str(), path);
+    record.Insert(std::string(kAStarRet2).c_str(), weight);
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());

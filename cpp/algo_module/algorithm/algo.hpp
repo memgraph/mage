@@ -6,10 +6,17 @@
 #include <unordered_set>
 #include <queue>
 #include <unordered_map>
-#include <set>
 #include <memory>
 
 namespace Algo {
+
+    /* from_nodes constants */
+    constexpr const std::string_view kProcedureAStar = "astar";
+    constexpr const std::string_view kAStarArg1 = "start";
+    constexpr const std::string_view kAStarArg2 = "target";
+    constexpr const std::string_view kAStarArg3 = "config";
+    constexpr const std::string_view kAStarRet1 = "path";
+    constexpr const std::string_view kAStarRet2 = "weight";
     class NodeObject{
         public:
             double heuristic_distance;
@@ -18,23 +25,9 @@ namespace Algo {
             mgp::Relationship rel;
             std::shared_ptr<NodeObject> prev;
 
-            NodeObject(const double heuristic_distance, const double total_distance, const mgp::Node &node, const mgp::Relationship &rel, std::shared_ptr<NodeObject> prev)
+            NodeObject(const double heuristic_distance, const double total_distance, const mgp::Node &node, const mgp::Relationship &rel, const std::shared_ptr<NodeObject> &prev)
             :  heuristic_distance(heuristic_distance), total_distance(total_distance), node(node), rel(rel), prev(prev){}
             
-
-            bool operator==(const NodeObject& other) const {
-                return node.Id() == other.node.Id();
-            }
-
-            bool operator<(const NodeObject& other) const { //flipped because of priority queue
-                return (total_distance + heuristic_distance) > (other.total_distance + other.heuristic_distance);
-
-            }
-
-
-            const std::string ToString() const{
-                return std::to_string(node.Id().AsInt()) + " " + std::to_string(total_distance) + " " + std::to_string(heuristic_distance);
-            }
 
             struct Hash {
                 size_t operator()(const std::shared_ptr<NodeObject> &nodeObj) const {
@@ -45,6 +38,12 @@ namespace Algo {
             struct Comp {
                 bool operator()(const std::shared_ptr<NodeObject> &nodeObj, const std::shared_ptr<NodeObject> &nodeObj2){
                     return nodeObj->total_distance + nodeObj->heuristic_distance > nodeObj2->total_distance + nodeObj2->heuristic_distance;
+                }
+            };
+
+            struct Equal {
+                bool operator()(const std::shared_ptr<NodeObject> &nodeObj, const std::shared_ptr<NodeObject> &nodeObj2) const{
+                    return nodeObj->node.Id() == nodeObj2->node.Id();
                 }
             };
 
@@ -71,19 +70,17 @@ namespace Algo {
                 pq.pop();
             }
 
-            bool Insert(const std::shared_ptr<NodeObject> &elem){ //returns true if we insert, or if we insert a better option
+            void Insert(const std::shared_ptr<NodeObject> &elem){
                 auto it = set.find(elem->node.Id());
                 if(it != set.end()){
                     if(elem->total_distance < it->second){
                         it->second = elem->total_distance;
                         pq.push(elem);
-                        return true;
                     }
-                    return false;
+                    return;
                 }
                 pq.push(elem);
                 set.insert({elem->node.Id(), elem->total_distance});
-                return true;
             }
 
             Open() = default;
@@ -92,7 +89,7 @@ namespace Algo {
     
     class Closed{
         public:
-            std::unordered_set<std::shared_ptr<NodeObject>,NodeObject::Hash> closed;
+            std::unordered_set<std::shared_ptr<NodeObject>,NodeObject::Hash,NodeObject::Equal> closed;
             
             bool Empty(){
                 return closed.empty();
@@ -226,7 +223,7 @@ namespace Algo {
     std::pair<mgp::Path, double> BuildResult(std::shared_ptr<NodeObject> final, const mgp::Node &start);
     std::shared_ptr<NodeObject> InitializeStart(const mgp::Node &start);
     std::pair<mgp::Path, double> HelperAstar(const GoalNodes &nodes, const Config &config);
-    void ParseRelationships(const mgp::Relationships &rels,  bool in, const GoalNodes &nodes, std::shared_ptr<NodeObject> prev, Lists &lists, const Config &config);
+    void ParseRelationships(const std::shared_ptr<NodeObject> &prev, bool in, const GoalNodes &nodes,  Lists &lists, const Config &config);
     double CalculateHeuristic(const Config &config, const mgp::Node &node, const GoalNodes &nodes);
     std::pair<double, double> TargetLatLon(const mgp::Node &target, const Config &config);
     double CalculateDistance(const Config &config, const mgp::Relationship &rel);
