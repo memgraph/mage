@@ -45,19 +45,26 @@ struct LabelSets {
 };
 
 struct LabelBools {
-  bool blacklisted = false;  // no node in the path will be blacklisted
-  bool terminated = false;   // returned paths end with a termination node but don't continue to be expanded further,
-                             // takes precedence over end nodes
-  bool end_node = false;     // returned paths end with an end node but continue to be expanded further
-  bool whitelisted = false;  // all nodes in the path will be whitelisted (except end and termination nodes)
+  // no node in the path will be blacklisted
+  bool blacklisted = false;
+  // returned paths end with a termination node but don't continue to be expanded further,
+  // takes precedence over end nodes
+  bool terminated = false;
+  // returned paths end with an end node but continue to be expanded further
+  bool end_node = false;
+  // all nodes in the path will be whitelisted (except end and termination nodes)
   // end and termination nodes don't have to respect whitelists and blacklists
+  bool whitelisted = false;
 };
 
 struct LabelBoolsStatus {
-  bool end_node_activated = false;  // true if there is an end node -> only paths ending with it can be saved as result,
-                                    // but they can be expanded further
-  bool whitelist_empty = false;     // true if no whitelist is given -> all nodes are whitelisted
-  bool termination_activated = false;  // true if there is a termination node -> only paths ending with it are allowed
+  // true if there is an end node -> only paths ending with it can be saved as result,
+  // but they can be expanded further
+  bool end_node_activated = false;
+  // true if no whitelist is given -> all nodes are whitelisted
+  bool whitelist_empty = false;
+  // true if there is a termination node -> only paths ending with it are allowed
+  bool termination_activated = false;
 };
 
 enum class RelDirection { kNone = -1, kAny = 0, kIncoming = 1, kOutgoing = 2, kBoth = 3 };
@@ -104,10 +111,24 @@ class PathHelper {
   Config config_;
 };
 
+class PathData {
+ public:
+  friend class PathExpand;
+  friend class PathSubgraph;
+
+  explicit PathData(PathHelper &&helper, const mgp::RecordFactory &record_factory, const mgp::Graph &graph)
+      : helper_(std::move(helper)), record_factory_(record_factory), graph_(graph) {}
+
+  PathHelper helper_;
+  const mgp::RecordFactory &record_factory_;
+  const mgp::Graph &graph_;
+  std::unordered_set<int64_t> visited_;
+  std::unordered_set<mgp::Node> start_nodes_;
+};
+
 class PathExpand {
  public:
-  explicit PathExpand(PathHelper &&helper, const mgp::RecordFactory &record_factory, const mgp::Graph &graph)
-      : helper_(helper), record_factory_(record_factory), graph_(graph) {}
+  explicit PathExpand(PathData &&path_data) : path_data_(std::move(path_data)) {}
 
   void ExpandPath(mgp::Path &path, const mgp::Relationship &relationship, int64_t path_size);
   void ExpandFromRelationships(mgp::Path &path, mgp::Relationships relationships, bool outgoing, int64_t path_size,
@@ -118,17 +139,12 @@ class PathExpand {
   void RunAlgorithm();
 
  private:
-  PathHelper helper_;
-  const mgp::RecordFactory &record_factory_;
-  const mgp::Graph &graph_;
-  std::unordered_set<int64_t> visited_;
-  std::unordered_set<mgp::Node> start_nodes_;
+  PathData path_data_;
 };
 
 class PathSubgraph {
  public:
-  explicit PathSubgraph(PathHelper &&helper, const mgp::RecordFactory &record_factory, const mgp::Graph &graph)
-      : helper_(helper), record_factory_(record_factory), graph_(graph) {}
+  explicit PathSubgraph(PathData &&path_data) : path_data_(std::move(path_data)) {}
 
   void ExpandFromRelationships(const std::pair<mgp::Node, int64_t> &pair, mgp::Relationships relationships,
                                bool outgoing, std::queue<std::pair<mgp::Node, int64_t>> &queue,
@@ -138,11 +154,7 @@ class PathSubgraph {
   mgp::List BFS();
 
  private:
-  PathHelper helper_;
-  const mgp::RecordFactory &record_factory_;
-  const mgp::Graph &graph_;
-  std::unordered_set<int64_t> visited_;
-  std::unordered_set<mgp::Node> start_nodes_;
+  PathData path_data_;
   mgp::List to_be_returned_nodes_;
 };
 
