@@ -109,4 +109,6 @@ void Invert(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
 
 void InvertRel(mgp::Graph &graph, mgp::Relationship &rel);
 
+void RenameTypeProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+
 }  // namespace Refactor

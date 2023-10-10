@@ -474,3 +474,45 @@ void Refactor::CollapseNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
     return;
   }
 }
+
+
+
+void Refactor::RenameTypeProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+  try {
+    mgp::Graph graph = mgp::Graph(memgraph_graph);
+    const std::string old_name{arguments[0].ValueString()};
+    const std::string new_name{arguments[1].ValueString()};
+    const auto rels = arguments[2].ValueList();
+
+    if(rels.Empty()){
+      for(auto rel: graph.Relationships()){
+        const auto prop_value = rel.GetProperty(old_name);
+        if(prop_value.IsNull()){
+          continue;
+        }
+        rel.RemoveProperty(old_name);
+        rel.SetProperty(new_name, prop_value);
+         
+      }
+      return;
+    }
+
+    for(auto rel_value: rels){
+      auto rel = rel_value.ValueRelationship();
+      const auto prop_value = rel.GetProperty(old_name);
+      if(prop_value.IsNull()){
+        continue;
+      }
+      rel.RemoveProperty(old_name);
+      rel.SetProperty(new_name, prop_value);
+    }
+
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
