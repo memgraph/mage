@@ -180,7 +180,7 @@ void Node::RelationshipTypes(mgp_list *args, mgp_graph *memgraph_graph, mgp_resu
 
 
 void Node::DegreeIn(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory){
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
   try {
@@ -205,7 +205,7 @@ void Node::DegreeIn(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res,
 }
 
 void Node::DegreeOut(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory){
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
   try {

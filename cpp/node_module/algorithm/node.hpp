@@ -30,7 +30,7 @@ constexpr std::string_view kFunctionDegreeIn = "degree_in";
 constexpr std::string_view kDegreeInArg1 = "node";
 constexpr std::string_view kDegreeInArg2 = "types";
 
-/* degree_in constants */
+/* degree_out constants */
 constexpr std::string_view kFunctionDegreeOut = "degree_out";
 constexpr std::string_view kDegreeOutArg1 = "node";
 constexpr std::string_view kDegreeOutArg2 = "types";
