@@ -178,21 +178,20 @@ void Node::RelationshipTypes(mgp_list *args, mgp_graph *memgraph_graph, mgp_resu
   }
 }
 
-
-void Node::DegreeIn(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory){
+void Node::DegreeIn(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
   try {
     const auto node = arguments[0].ValueNode();
     const auto type = arguments[1].ValueString();
-    if(type.size() == 0){
+    if (type.size() == 0) {
       result.SetValue((int64_t)node.InDegree());
-    }else{
+    } else {
       int64_t degree = 0;
-      for(const auto rel : node.InRelationships()){
-        if(rel.Type() == type){
-          degree +=1;
+      for (const auto rel : node.InRelationships()) {
+        if (rel.Type() == type) {
+          degree += 1;
         }
       }
       result.SetValue(degree);
@@ -204,20 +203,20 @@ void Node::DegreeIn(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res,
   }
 }
 
-void Node::DegreeOut(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory){
+void Node::DegreeOut(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
   try {
     const auto node = arguments[0].ValueNode();
     const auto type = arguments[1].ValueString();
-    if(type.size() == 0){
+    if (type.size() == 0) {
       result.SetValue((int64_t)node.OutDegree());
-    }else{
+    } else {
       int64_t degree = 0;
-      for(const auto rel : node.OutRelationships()){
-        if(rel.Type() == type){
-          degree +=1;
+      for (const auto rel : node.OutRelationships()) {
+        if (rel.Type() == type) {
+          degree += 1;
         }
       }
       result.SetValue(degree);
