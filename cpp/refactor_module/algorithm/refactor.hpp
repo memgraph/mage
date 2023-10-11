@@ -76,6 +76,13 @@ constexpr std::string_view kArgumentRelationship = "relationship";
 constexpr std::string_view kReturnRelationshipInvert = "relationship";
 constexpr std::string_view kReturnIdInvert = "id_inverted";
 
+/* rename_node_property constants */
+constexpr std::string_view kProcedureRenameTypeProperty = "rename_type_property";
+constexpr std::string_view kRenameTypePropertyArg1 = "old_property";
+constexpr std::string_view kRenameTypePropertyArg2 = "new_property";
+constexpr std::string_view kRenameTypePropertyArg3 = "rels";
+constexpr std::string_view kRenameTypePropertyResult = "relationships_changed";
+
 void From(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 void To(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);

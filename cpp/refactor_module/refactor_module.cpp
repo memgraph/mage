@@ -76,15 +76,15 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
                  {mgp::Return(std::string(Refactor::kReturnIdCollapseNode).c_str(), mgp::Type::Int),
                   mgp::Return(std::string(Refactor::kReturnRelationshipCollapseNode).c_str(), mgp::Type::Relationship)},
                  module, memory);
-    AddProcedure(Refactor::RenameTypeProperty, "rename_type_property",
+    AddProcedure(Refactor::RenameTypeProperty, std::string(Refactor::kProcedureRenameTypeProperty).c_str(),
                  mgp::ProcedureType::Write,
-                 {mgp::Parameter("old_name", mgp::Type::String),
-                  mgp::Parameter("new_name", mgp::Type::String),
-                  mgp::Parameter("rels", {mgp::Type::List, mgp::Type::Any})},
-                 {},
-                 module, memory);
+                 {mgp::Parameter(std::string(Refactor::kRenameTypePropertyArg1).c_str(), mgp::Type::String),
+                  mgp::Parameter(std::string(Refactor::kRenameTypePropertyArg2).c_str(), mgp::Type::String),
+                  mgp::Parameter(std::string(Refactor::kRenameTypePropertyArg3).c_str(),
+                                 {mgp::Type::List, mgp::Type::Relationship})},
+                 {mgp::Return(std::string(Refactor::kRenameTypePropertyResult).c_str(), mgp::Type::Int)}, module,
+                 memory);
 
-    
   } catch (const std::exception &e) {
     return 1;
   }
