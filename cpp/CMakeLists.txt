@@ -158,5 +158,6 @@ add_subdirectory(node_module)
 add_subdirectory(neighbors_module)
 add_subdirectory(refactor_module)
 add_subdirectory(schema_module)
+add_subdirectory(merge_module)
 
 add_cugraph_subdirectory(cugraph_module)
