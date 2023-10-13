@@ -344,9 +344,13 @@ void Refactor::CloneNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
     const auto nodes = arguments[0].ValueList();
     const auto clone_rels = arguments[1].ValueBool();
     const auto skip_props = arguments[2].ValueList();
-    std::unordered_set<mgp::Value> skip_props_searchable{skip_props.begin(), skip_props.end()};
+    std::unordered_set<std::string_view> skip_props_searchable;
 
-    for (auto node : nodes) {
+    for (const auto &property_key : skip_props) {
+      skip_props_searchable.insert(property_key.ValueString());
+    }
+
+    for (const auto &node : nodes) {
       mgp::Node old_node = node.ValueNode();
       mgp::Node new_node = graph.CreateNode();
 
@@ -354,8 +358,8 @@ void Refactor::CloneNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
         new_node.AddLabel(label);
       }
 
-      for (auto prop : old_node.Properties()) {
-        if (skip_props.Empty() || !skip_props_searchable.contains(mgp::Value(prop.first))) {
+      for (const auto &prop : old_node.Properties()) {
+        if (skip_props.Empty() || !skip_props_searchable.contains(prop.first)) {
           new_node.SetProperty(prop.first, prop.second);
         }
       }
@@ -364,11 +368,14 @@ void Refactor::CloneNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
         for (auto rel : old_node.InRelationships()) {
           graph.CreateRelationship(rel.From(), new_node, rel.Type());
         }
+
         for (auto rel : old_node.OutRelationships()) {
           graph.CreateRelationship(new_node, rel.To(), rel.Type());
         }
       }
-      InsertCloneNodesRecord(memgraph_graph, result, memory, old_node.Id().AsInt(), new_node.Id().AsInt());
+
+      InsertCloneNodesRecord(memgraph_graph, result, memory, static_cast<int>(old_node.Id().AsInt()),
+                             static_cast<int>(new_node.Id().AsInt()));
     }
   } catch (const std::exception &e) {
     mgp::result_set_error_msg(result, e.what());
