@@ -1,25 +1,24 @@
 query: >
-  CALL schema.rel_type_properties() YIELD mandatory, property_name, property_type, rel_type RETURN rel_type, property_name, property_type, mandatory
-  ORDER BY property_name, rel_type;
-
+  CALL schema.rel_type_properties() YIELD relType,propertyName, propertyTypes , mandatory RETURN relType, propertyName, propertyTypes , mandatory
+  ORDER BY propertyName, relType;
 output:
 
-  - rel_type: FLIES
-    property_name: ""
-    property_type: ""
+  - relType: ":`FLIES`"
+    propertyName: ""
+    propertyTypes: ""
     mandatory: false
 
-  - rel_type: CATCHES
-    property_name: property
-    property_type: List[Any]
+  - relType: ":`CATCHES`"
+    propertyName: property
+    propertyTypes: ["List[Any]"]
     mandatory: true
 
-  - rel_type: CATCHES
-    property_name: property2
-    property_type: Map[Any]
+  - relType: ":`CATCHES`"
+    propertyName: property2
+    propertyTypes: ["Map[Any]"]
     mandatory: true
 
-  - rel_type: FALLS_FROM
-    property_name: speed_in_km
-    property_type: Int
+  - relType: ":`FALLS_FROM`"
+    propertyName: speed_in_km
+    propertyTypes: ["Int"]
     mandatory: true

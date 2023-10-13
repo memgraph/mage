@@ -1,7 +1,7 @@
 #pragma once
 
 #include <mgp.hpp>
-#include <string>
+
 namespace Refactor {
 
 /* categorize constants */
@@ -19,13 +19,12 @@ constexpr const std::string_view kResultCategorize = "status";
 
 /* clone_nodes constants */
 constexpr const std::string_view kProcedureCloneNodes = "clone_nodes";
-constexpr const std::string_view kReturnClonedNodeId = "cloned_node_id";
-constexpr const std::string_view kReturnNewNode = "new_node";
 constexpr const std::string_view kArgumentsNodesToClone = "nodes";
-constexpr const std::string_view kArgumentsCloneRels = "clone_rels";
-constexpr const std::string_view kArgumentsSkipPropClone = "skip_props";
-constexpr const std::string_view kResultClonedNodeId = "cloned_node_id";
-constexpr const std::string_view kResultNewNode = "new_node";
+constexpr const std::string_view kArgumentsCloneRels = "withRelationships";
+constexpr const std::string_view kArgumentsSkipPropClone = "skipProperties";
+constexpr const std::string_view kResultClonedNodeId = "input";
+constexpr const std::string_view kResultNewNode = "output";
+constexpr const std::string_view kResultCloneNodeError = "error";
 
 /* clone_subgraph_from_paths constants */
 constexpr const std::string_view kProcedureCSFP = "clone_subgraph_from_paths";
@@ -73,8 +72,9 @@ constexpr std::string_view kReturnRelationshipCollapseNode = "new_relationship";
 /*invert constants*/
 constexpr std::string_view kProcedureInvert = "invert";
 constexpr std::string_view kArgumentRelationship = "relationship";
-constexpr std::string_view kReturnRelationshipInvert = "relationship";
-constexpr std::string_view kReturnIdInvert = "id_inverted";
+constexpr std::string_view kResultRelationshipInvert = "output";
+constexpr std::string_view kResultIdInvert = "input";
+constexpr std::string_view kResultErrorInvert = "error";
 
 /* normalize_as_boolean constants */
 constexpr std::string_view kProcedureNormalizeAsBoolean = "normalize_as_boolean";
