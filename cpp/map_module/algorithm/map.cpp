@@ -6,6 +6,8 @@
 
 const auto number_of_elements_in_pair = 2;
 
+/*NOTE: FromNodes isn't 1:1 for graphQL, because first, we need to extend C and CPP API to iterate vertices using ctx
+object, since the `FromNodes` procedure (function if we want to change API) needs to iterate over all graph nodes*/
 void Map::FromNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
@@ -52,10 +54,10 @@ void Map::FromNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resul
   }
 }
 
-void Map::FromValues(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Map::FromValues(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  auto result = mgp::Result(res);
 
   try {
     const auto values{arguments[0].ValueList()};
@@ -76,31 +78,28 @@ void Map::FromValues(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
       ++iterator;
     }
 
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultFromValues).c_str(), map);
+    result.SetValue(map);
 
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result.SetErrorMessage(e.what());
     return;
   }
 }
 
-void Map::SetKey(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Map::SetKey(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  auto result = mgp::Result(res);
 
   try {
     auto map = arguments[0].ValueMap();
-    const auto key{arguments[1].ValueString()};
+    const auto key{std::string(arguments[1].ValueString())};
     const auto value{arguments[2]};
     map.Update(key, std::move(value));
-
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultSetKey).c_str(), std::move(map));
+    result.SetValue(std::move(map));
 
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result.SetErrorMessage(e.what());
     return;
   }
 }
@@ -124,32 +123,31 @@ void Map::RemoveRecursion(mgp::Map &result, bool recursive, std::string_view key
   }
 }
 
-void Map::RemoveKey(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Map::RemoveKey(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  auto result = mgp::Result(res);
   try {
     const auto map = arguments[0].ValueMap();
-    const auto key = arguments[1].ValueString();
-    const auto recursive = arguments[2].ValueBool();
-
+    const auto key = std::string(arguments[1].ValueString());
+    const auto config = arguments[2].ValueMap();
+    const auto recursive = (config.At("recursive").IsBool()) ? config.At("recursive").ValueBool() : false;
     mgp::Map map_removed = mgp::Map(std::move(map));
 
     RemoveRecursion(map_removed, recursive, key);
 
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultRemoveKey).c_str(), std::move(map_removed));
+    result.SetValue(std::move(map_removed));
 
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result.SetErrorMessage(e.what());
     return;
   }
 }
 
-void Map::FromPairs(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Map::FromPairs(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  auto result = mgp::Result(res);
   try {
     const auto list = arguments[0].ValueList();
 
@@ -166,19 +164,18 @@ void Map::FromPairs(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resul
       pairs_map.Update(inside_list.ValueList()[0].ValueString(), std::move(inside_list.ValueList()[1]));
     }
 
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultFromPairs).c_str(), std::move(pairs_map));
+    result.SetValue(std::move(pairs_map));
 
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result.SetErrorMessage(e.what());
     return;
   }
 }
 
-void Map::Merge(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Map::Merge(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  auto result = mgp::Result(res);
   try {
     const auto map1 = arguments[0].ValueMap();
     const auto map2 = arguments[1].ValueMap();
@@ -191,11 +188,10 @@ void Map::Merge(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, m
       }
     }
 
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultMerge).c_str(), std::move(merged_map));
+    result.SetValue(std::move(merged_map));
 
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result.SetErrorMessage(e.what());
     return;
   }
 }
@@ -212,28 +208,27 @@ void Map::FlattenRecursion(mgp::Map &result, const mgp::Map &input, const std::s
   }
 }
 
-void Map::Flatten(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Map::Flatten(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  auto result = mgp::Result(res);
   try {
     const mgp::Map map = arguments[0].ValueMap();
     const std::string delimiter(arguments[1].ValueString());
     mgp::Map result_map = mgp::Map();
     FlattenRecursion(result_map, map, "", delimiter);
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(Map::kReturnValueFlatten).c_str(), std::move(result_map));
+    result.SetValue(std::move(result_map));
 
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result.SetErrorMessage(e.what());
     return;
   }
 }
 
-void Map::FromLists(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Map::FromLists(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  auto result_object = mgp::Result(res);
   try {
     mgp::List list1 = arguments[0].ValueList();
     mgp::List list2 = arguments[1].ValueList();
@@ -246,19 +241,18 @@ void Map::FromLists(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resul
     for (size_t i = 0; i < expected_list_size; i++) {
       result.Update(std::move(list1[i].ValueString()), std::move(list2[i]));
     }
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(Map::kReturnListFromLists).c_str(), std::move(result));
+    result_object.SetValue(std::move(result));
 
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result_object.SetErrorMessage(e.what());
     return;
   }
 }
 
-void Map::RemoveRecursionSet(mgp::Map &result, bool recursive, std::unordered_set<std::string_view> &set) {
+void Map::RemoveRecursionSet(mgp::Map &result, bool recursive, std::unordered_set<std::string> &set) {
   for (auto element : result) {
     bool inSet = false;
-    if (set.find(element.key) != set.end()) {
+    if (set.find(std::string(element.key)) != set.end()) {
       inSet = true;
     }
     if (inSet) {
@@ -277,24 +271,24 @@ void Map::RemoveRecursionSet(mgp::Map &result, bool recursive, std::unordered_se
   }
 }
 
-void Map::RemoveKeys(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void Map::RemoveKeys(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  auto result = mgp::Result(res);
   try {
     mgp::Map map = arguments[0].ValueMap();
     const mgp::List list = arguments[1].ValueList();
-    bool recursive = arguments[2].ValueBool();
-    std::unordered_set<std::string_view> set;
+    const auto config = arguments[2].ValueMap();
+    const auto recursive = (config.At("recursive").IsBool()) ? config.At("recursive").ValueBool() : false;
+    std::unordered_set<std::string> set;
     for (auto elem : list) {
-      set.insert(std::move(elem.ValueString()));
+      set.insert(std::move(std::string(elem.ValueString())));
     }
     RemoveRecursionSet(map, recursive, set);
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(Map::kReturnRemoveKeys).c_str(), std::move(map));
+    result.SetValue(std::move(map));
 
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result.SetErrorMessage(e.what());
     return;
   }
 }

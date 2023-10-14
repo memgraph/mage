@@ -9,47 +9,47 @@ query: >
         (ana)-[r1:KNOWS]->(p2),
         (p2)-[r2:KNOWS]->(p3)
   CALL refactor.clone_subgraph([ana, marija, p2, p3, p4, p5, p6], [r2, r1])
-  YIELD new_node
-  RETURN new_node;
+  YIELD output
+  RETURN output;
 
 output:
-  - new_node:
+  - output:
         labels:
           - Person
         properties:
           id: 6
           name: person6
-  - new_node:
+  - output:
         labels:
           - Person
         properties:
           id: 5
           name: person5
-  - new_node:
+  - output:
         labels:
           - Person
         properties:
           id: 4
           name: person4
-  - new_node:
+  - output:
         labels:
           - Person
         properties:
           id: 3
           name: person3
-  - new_node:
+  - output:
         labels:
           - Person
         properties:
           id: 2
           name: person2
-  - new_node:
+  - output:
         labels:
           - Marija
         properties:
           id: 1
           name: Marija
-  - new_node:
+  - output:
         labels:
           - Ana
         properties:

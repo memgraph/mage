@@ -1,7 +1,7 @@
 query: >
   MATCH (b:B)
-  CALL collections.pairs([3, "s", b, [1, 2]]) YIELD pairs
-  RETURN pairs
+  RETURN collections.pairs([3, "s", b, [1, 2]]) AS pairs
+
 output:
     - pairs: [
    [

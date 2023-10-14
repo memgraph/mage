@@ -2,15 +2,16 @@
 
 #include <unordered_set>
 
+#include <fmt/format.h>
 #include <mg_utils.hpp>
 #include "mgp.hpp"
 
-namespace {
-void ThrowInvalidTypeException(const mgp::Value &value) {
-  std::ostringstream oss;
-  oss << value.Type();
-  throw mgp::ValueException("Unsupported type for this operation, received type: " + oss.str());
-}
+    namespace {
+  void ThrowInvalidTypeException(const mgp::Value &value) {
+    std::ostringstream oss;
+    oss << value.Type();
+    throw mgp::ValueException(fmt::format("Unsupported type for this operation, received type: {}", oss.str()));
+  }
 }  // namespace
 
 void Refactor::From(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
@@ -117,6 +118,7 @@ void Refactor::InsertCloneNodesRecord(mgp_graph *graph, mgp_result *result, mgp_
 
   mg_utility::InsertIntValueResult(record, std::string(kResultClonedNodeId).c_str(), cycle_id, memory);
   mg_utility::InsertNodeValueResult(graph, record, std::string(kResultNewNode).c_str(), node_id, memory);
+  mg_utility::InsertStringValueResult(record, std::string(kResultCloneNodeError).c_str(), "", memory);
 }
 
 mgp::Node GetStandinOrCopy(const mgp::List &standin_nodes, const mgp::Node node,
@@ -408,9 +410,9 @@ void Refactor::Invert(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
 
     InvertRel(graph, rel);
     auto record = record_factory.NewRecord();
-    record.Insert(std::string(kReturnIdInvert).c_str(), rel.Id().AsInt());
-    record.Insert(std::string(kReturnRelationshipInvert).c_str(), rel);
-
+    record.Insert(std::string(kResultIdInvert).c_str(), rel.Id().AsInt());
+    record.Insert(std::string(kResultRelationshipInvert).c_str(), rel);
+    record.Insert(std::string(kResultErrorInvert).c_str(), "");
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
     return;
@@ -476,6 +478,75 @@ void Refactor::CollapseNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
           return;
         }
       }
+    }
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
+
+namespace {
+
+template <typename T>
+concept GraphObject = std::is_same<T, mgp::Node>::value || std::is_same<T, mgp::Relationship>::value;
+
+template <GraphObject NodeOrRel>
+void NormalizeToBoolean(NodeOrRel object, const std::string &property_key,
+                        const std::unordered_set<mgp::Value> &true_values,
+                        const std::unordered_set<mgp::Value> &false_values) {
+  auto old_value = object.GetProperty(property_key);
+  if (old_value.IsNull()) {
+    return;
+  }
+
+  bool property_in_true_vals = true_values.contains(old_value);
+  bool property_in_false_vals = false_values.contains(old_value);
+
+  if (property_in_true_vals && !property_in_false_vals) {
+    object.SetProperty(property_key, mgp::Value(true));
+  } else if (!property_in_true_vals && property_in_false_vals) {
+    object.SetProperty(property_key, mgp::Value(false));
+  } else if (!property_in_true_vals && !property_in_false_vals) {
+    object.RemoveProperty(property_key);
+  } else {
+    throw mgp::ValueException(
+        fmt::format("The value {} is contained in both true_values and false_values.", old_value.ToString()));
+  }
+}
+
+}  // namespace
+
+void Refactor::NormalizeAsBoolean(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+  try {
+    auto object{arguments[0]};
+    auto property_key{std::string(arguments[1].ValueString())};
+    const auto true_values_list{arguments[2].ValueList()};
+    const auto false_values_list{arguments[3].ValueList()};
+
+    std::unordered_set<mgp::Value> true_values{true_values_list.begin(), true_values_list.end()};
+    std::unordered_set<mgp::Value> false_values{false_values_list.begin(), false_values_list.end()};
+
+    auto parse = [&property_key, &true_values, &false_values](const mgp::Value &object) {
+      if (object.IsNode()) {
+        NormalizeToBoolean(object.ValueNode(), property_key, true_values, false_values);
+      } else if (object.IsRelationship()) {
+        NormalizeToBoolean(object.ValueRelationship(), property_key, true_values, false_values);
+      } else {
+        ThrowInvalidTypeException(object);
+      }
+    };
+
+    if (!object.IsList()) {
+      parse(object);
+      return;
+    }
+
+    for (const auto &list_item : object.ValueList()) {
+      parse(list_item);
     }
 
   } catch (const std::exception &e) {
