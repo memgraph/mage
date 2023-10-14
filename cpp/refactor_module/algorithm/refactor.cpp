@@ -554,3 +554,69 @@ void Refactor::NormalizeAsBoolean(mgp_list *args, mgp_graph *memgraph_graph, mgp
     return;
   }
 }
+
+void Refactor::ExtractNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+  try {
+    mgp::Graph graph{memgraph_graph};
+    mgp::Value rel_or_id{arguments[0]};
+    auto labels{arguments[1].ValueList()};
+    auto out_type{arguments[2].ValueString()};
+    auto in_type{arguments[3].ValueString()};
+
+    auto extract = [&graph, &labels, &record_factory, out_type, in_type](const mgp::Relationship &relationship) {
+      auto new_node = graph.CreateNode();
+      for (const auto &label : labels) {
+        new_node.AddLabel(label.ValueString());
+      }
+      for (auto &[key, property] : relationship.Properties()) {
+        new_node.SetProperty(key, std::move(property));
+      }
+
+      graph.CreateRelationship(relationship.From(), new_node, in_type);
+      graph.CreateRelationship(new_node, relationship.To(), out_type);
+
+      auto record = record_factory.NewRecord();
+      record.Insert(std::string(kResultExtractNode1).c_str(), relationship.Id().AsInt());
+      graph.DeleteRelationship(relationship);
+
+      record.Insert(std::string(kResultExtractNode2).c_str(), new_node);
+      record.Insert(std::string(kResultExtractNode3).c_str(), "");
+    };
+
+    std::unordered_set<int64_t> ids;
+    auto parse = [&ids, &extract](const mgp::Value &rel_or_id) {
+      if (rel_or_id.IsInt()) {
+        ids.insert(rel_or_id.ValueInt());
+      } else if (rel_or_id.IsRelationship()) {
+        extract(rel_or_id.ValueRelationship());
+      } else {
+        ThrowInvalidTypeException(rel_or_id);
+      }
+    };
+
+    if (!rel_or_id.IsList()) {
+      parse(rel_or_id);
+    } else {
+      for (const auto &list_element : rel_or_id.ValueList()) {
+        parse(list_element);
+      }
+    }
+
+    if (ids.empty()) {
+      return;
+    }
+
+    for (const auto relationship : graph.Relationships()) {
+      if (ids.contains(relationship.Id().AsInt())) {
+        extract(relationship);
+      }
+    }
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}

@@ -83,6 +83,16 @@ constexpr std::string_view kNormalizeAsBooleanArg2 = "property_key";
 constexpr std::string_view kNormalizeAsBooleanArg3 = "true_values";
 constexpr std::string_view kNormalizeAsBooleanArg4 = "false_values";
 
+/* extract_node constants */
+constexpr std::string_view kProcedureExtractNode = "extract_node";
+constexpr std::string_view kExtractNodeArg1 = "relationships";
+constexpr std::string_view kExtractNodeArg2 = "labels";
+constexpr std::string_view kExtractNodeArg3 = "outType";
+constexpr std::string_view kExtractNodeArg4 = "inType";
+constexpr std::string_view kResultExtractNode1 = "input";
+constexpr std::string_view kResultExtractNode2 = "output";
+constexpr std::string_view kResultExtractNode3 = "error";
+
 void From(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 void To(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
@@ -117,5 +127,7 @@ void Invert(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
 void InvertRel(mgp::Graph &graph, mgp::Relationship &rel);
 
 void NormalizeAsBoolean(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+
+void ExtractNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 }  // namespace Refactor

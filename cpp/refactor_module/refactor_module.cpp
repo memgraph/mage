@@ -27,6 +27,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
                                     mgp::Value(mgp::List{})),
                  },
                  {mgp::Return(Refactor::kReturnCategorize, mgp::Type::String)}, module, memory);
+
     AddProcedure(Refactor::CloneNodes, Refactor::kProcedureCloneNodes, mgp::ProcedureType::Write,
                  {mgp::Parameter(Refactor::kArgumentsNodesToClone, {mgp::Type::List, mgp::Type::Node}),
                   mgp::Parameter(Refactor::kArgumentsCloneRels, mgp::Type::Bool, false),
@@ -67,18 +68,30 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
                   mgp::Parameter(Refactor::kRenameNodePropertyArg2, mgp::Type::String),
                   mgp::Parameter(Refactor::kRenameNodePropertyArg3, {mgp::Type::List, mgp::Type::Node})},
                  {mgp::Return(Refactor::kRenameNodePropertyResult, mgp::Type::Int)}, module, memory);
+
     AddProcedure(Refactor::Invert, std::string(Refactor::kProcedureInvert).c_str(), mgp::ProcedureType::Write,
                  {mgp::Parameter(std::string(Refactor::kArgumentRelationship).c_str(), mgp::Type::Any)},
                  {mgp::Return(std::string(Refactor::kResultIdInvert).c_str(), mgp::Type::Int),
                   mgp::Return(std::string(Refactor::kResultRelationshipInvert).c_str(), mgp::Type::Relationship),
                   mgp::Return(std::string(Refactor::kResultErrorInvert).c_str(), mgp::Type::String)},
                  module, memory);
+
     AddProcedure(Refactor::CollapseNode, std::string(Refactor::kProcedureCollapseNode).c_str(),
                  mgp::ProcedureType::Write,
                  {mgp::Parameter(std::string(Refactor::kArgumentNodesCollapseNode).c_str(), mgp::Type::Any),
                   mgp::Parameter(std::string(Refactor::kArgumentTypeCollapseNode).c_str(), mgp::Type::String)},
                  {mgp::Return(std::string(Refactor::kReturnIdCollapseNode).c_str(), mgp::Type::Int),
                   mgp::Return(std::string(Refactor::kReturnRelationshipCollapseNode).c_str(), mgp::Type::Relationship)},
+                 module, memory);
+
+    AddProcedure(Refactor::ExtractNode, Refactor::kProcedureExtractNode, mgp::ProcedureType::Write,
+                 {mgp::Parameter(Refactor::kExtractNodeArg1, mgp::Type::Any),
+                  mgp::Parameter(Refactor::kExtractNodeArg2, {mgp::Type::List, mgp::Type::String}),
+                  mgp::Parameter(Refactor::kExtractNodeArg3, mgp::Type::String),
+                  mgp::Parameter(Refactor::kExtractNodeArg4, mgp::Type::String)},
+                 {mgp::Return(Refactor::kResultExtractNode1, mgp::Type::Int),
+                  mgp::Return(Refactor::kResultExtractNode2, mgp::Type::Node),
+                  mgp::Return(Refactor::kResultExtractNode3, mgp::Type::String)},
                  module, memory);
 
     AddProcedure(Refactor::NormalizeAsBoolean, Refactor::kProcedureNormalizeAsBoolean, mgp::ProcedureType::Write,
