@@ -6,12 +6,12 @@
 #include <mg_utils.hpp>
 #include "mgp.hpp"
 
-    namespace {
-  void ThrowInvalidTypeException(const mgp::Value &value) {
-    std::ostringstream oss;
-    oss << value.Type();
-    throw mgp::ValueException(fmt::format("Unsupported type for this operation, received type: {}", oss.str()));
-  }
+namespace {
+void ThrowInvalidTypeException(const mgp::Value &value) {
+  std::ostringstream oss;
+  oss << value.Type();
+  throw mgp::ValueException(fmt::format("Unsupported type for this operation, received type: {}", oss.str()));
+}
 }  // namespace
 
 void Refactor::From(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
