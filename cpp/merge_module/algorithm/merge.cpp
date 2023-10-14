@@ -13,9 +13,12 @@ concept GraphObject = std::is_same<T, mgp::Node>::value || std::is_same<T, mgp::
 
 template <GraphObject NodeOrRel>
 bool SameProps(const NodeOrRel &node_or_rel, const mgp::Map &props) {
-  return std::all_of(props.begin(), props.end(), [&node_or_rel](auto &map_item) {
-    return node_or_rel.GetProperty(std::string(map_item.key)) == map_item.value;
-  });
+  for (const auto &[k, v] : props) {
+    if (node_or_rel.GetProperty(std::string(k)) != v) {
+      return false;
+    }
+  }
+  return true;
 }
 
 std::vector<mgp::Relationship> MatchRelationship(const mgp::Node &from, const mgp::Node &to, std::string_view type,
