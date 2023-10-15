@@ -4,7 +4,7 @@
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
-    mgp::memory = memory;
+    mgp::MemoryDispatcherGuard guard{memory};
     AddProcedure(Neighbors::AtHop, Neighbors::kProcedureAtHop, mgp::ProcedureType::Read,
                  {mgp::Parameter(Neighbors::kArgumentsNode, mgp::Type::Node),
                   mgp::Parameter(Neighbors::kArgumentsRelType, {mgp::Type::List, mgp::Type::String}),
@@ -16,6 +16,12 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
                   mgp::Parameter(Neighbors::kArgumentsRelType, {mgp::Type::List, mgp::Type::String}),
                   mgp::Parameter(Neighbors::kArgumentsDistance, mgp::Type::Int)},
                  {mgp::Return(Neighbors::kReturnByHop, {mgp::Type::List, mgp::Type::Node})}, module, memory);
+
+    AddProcedure(Neighbors::ToHop, Neighbors::kProcedureToHop, mgp::ProcedureType::Read,
+                 {mgp::Parameter(Neighbors::kToHopArg1, mgp::Type::Node),
+                  mgp::Parameter(Neighbors::kToHopArg2, {mgp::Type::List, mgp::Type::String}),
+                  mgp::Parameter(Neighbors::kToHopArg3, mgp::Type::Int)},
+                 {mgp::Return(Neighbors::kResultToHop, mgp::Type::Node)}, module, memory);
 
   } catch (const std::exception &e) {
     return 1;

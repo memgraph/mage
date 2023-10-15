@@ -2,7 +2,52 @@
 
 #include <fmt/format.h>
 #include <list>
+#include <string_view>
 #include <unordered_set>
+
+Neighbors::Config::Config(const mgp::List &list_of_relationships) {
+  if (list_of_relationships.Size() ==
+      0) {  // if no relationships were passed as arguments, all relationships are allowed
+    any_outgoing = true;
+    any_incoming = true;
+    return;
+  }
+
+  for (const auto &rel : list_of_relationships) {
+    std::string rel_type{std::string(rel.ValueString())};
+    bool starts_with = rel_type.starts_with('<');
+    bool ends_with = rel_type.ends_with('>');
+
+    if (rel_type.size() == 1) {
+      if (starts_with) {
+        any_incoming = true;
+      } else if (ends_with) {
+        any_outgoing = true;
+      } else {
+        rel_direction[rel_type] = RelDirection::kAny;
+      }
+      continue;
+    }
+
+    if (starts_with && ends_with) {  // <type>
+      rel_direction[rel_type.substr(1, rel_type.size() - 2)] = RelDirection::kBoth;
+    } else if (starts_with) {  // <type
+      rel_direction[rel_type.substr(1)] = RelDirection::kIncoming;
+    } else if (ends_with) {  // type>
+      rel_direction[rel_type.substr(0, rel_type.size() - 1)] = RelDirection::kOutgoing;
+    } else {  // type
+      rel_direction[rel_type] = RelDirection::kAny;
+    }
+  }
+}
+
+Neighbors::RelDirection Neighbors::Config::GetDirection(std::string_view rel_type) {
+  auto it = rel_direction.find(rel_type);
+  if (it == rel_direction.end()) {
+    return RelDirection::kNone;
+  }
+  return it->second;
+}
 
 bool Known(const mgp::Node &node, std::list<std::unordered_set<mgp::Node>> &list) {
   for (auto element : list) {
@@ -38,7 +83,7 @@ void DetermineDirection(mgp::List &rel_types, std::unordered_set<std::string_vie
 }
 
 void Neighbors::AtHop(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
@@ -92,7 +137,7 @@ void Neighbors::AtHop(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
 }
 
 void Neighbors::ByHop(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
@@ -140,6 +185,23 @@ void Neighbors::ByHop(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
       auto record = record_factory.NewRecord();
       record.Insert(std::string(kResultByHop).c_str(), return_list);
     }
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
+
+void Neighbors::ToHop(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+  try {
+    const auto node{arguments[0].ValueNode()};
+    const auto rel_types{arguments[1].ValueList()};
+    const auto distance{arguments[2].ValueInt()};
+
+    Config config{rel_types};
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
