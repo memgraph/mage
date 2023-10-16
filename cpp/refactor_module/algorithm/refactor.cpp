@@ -529,7 +529,7 @@ void Refactor::DeleteAndReconnect(mgp_list *args, mgp_graph *memgraph_graph, mgp
     Config config{config_map};
     mgp::List nodes;
     mgp::List relationships;
-    int64_t prev_non_deleted_path_id = -1;
+    int64_t prev_non_deleted_path_index = -1;
     int64_t prev_non_deleted_node_id = -1;
     std::unordered_set<mgp::Node> to_be_deleted;
     auto graph = mgp::Graph{memgraph_graph};
@@ -540,12 +540,12 @@ void Refactor::DeleteAndReconnect(mgp_list *args, mgp_graph *memgraph_graph, mgp
 
       auto delete_node = nodes_to_delete.contains(id);
 
-      auto modify_relationship = [&graph, &relationships](const mgp::Relationship &relationship, const mgp::Node &node,
-                                                          int64_t node_id) {
-        if (relationship.From().Id().AsInt() == node_id) {
-          graph.SetTo(const_cast<mgp::Relationship &>(relationship), node);
+      auto modify_relationship = [&graph, &relationships](mgp::Relationship relationship, const mgp::Node node,
+                                                          int64_t other_node_id) {
+        if (relationship.From().Id().AsInt() == other_node_id) {
+          graph.SetTo(relationship, node);
         } else {
-          graph.SetFrom(const_cast<mgp::Relationship &>(relationship), node);
+          graph.SetFrom(relationship, node);
         }
         relationships.AppendExtend(mgp::Value(relationship));
       };
@@ -563,34 +563,43 @@ void Refactor::DeleteAndReconnect(mgp_list *args, mgp_graph *memgraph_graph, mgp
         }
       };
 
-      if (!delete_node && prev_non_deleted_path_id != i - 1) {  // there was a deleted node in between
+      if (!delete_node && prev_non_deleted_path_index != i - 1) {  // there was a deleted node in between
         if (config.rel_strategy == RelSelectStrategy::INCOMING) {
-          modify_relationship(path.GetRelationshipAt(prev_non_deleted_path_id), node, prev_non_deleted_node_id);
+          modify_relationship(path.GetRelationshipAt(prev_non_deleted_path_index), node, prev_non_deleted_node_id);
         } else if (config.rel_strategy == RelSelectStrategy::OUTGOING) {
-          modify_relationship(path.GetRelationshipAt(i - 1), path.GetNodeAt(prev_non_deleted_path_id), id);
+          modify_relationship(path.GetRelationshipAt(i - 1), path.GetNodeAt(prev_non_deleted_path_index), id);
         } else {  // RelSelectStrategy::MERGE
           auto new_rel = path.GetRelationshipAt(
-              config.prop_strategy == PropertiesStrategy::OVERRIDE ? prev_non_deleted_path_id : i - 1);
+              config.prop_strategy == PropertiesStrategy::OVERRIDE ? prev_non_deleted_path_index : i - 1);
           auto old_rel = path.GetRelationshipAt(
               config.prop_strategy == PropertiesStrategy::OVERRIDE ? i - 1 : prev_non_deleted_node_id);
+
+          std::string new_rel_type{};
+          if (config.prop_strategy == PropertiesStrategy::OVERRIDE) {
+            new_rel_type = std::string(new_rel.Type()) + "_" + std::string(old_rel.Type());
+          } else {
+            new_rel_type = std::string(old_rel.Type()) + "_" + std::string(new_rel.Type());
+          }
+          graph.ChangeType(new_rel, new_rel_type);
+
           if (config.prop_strategy == PropertiesStrategy::DISCARD) {
             modify_relationship(new_rel, node, prev_non_deleted_node_id);
             merge_relationships(new_rel, old_rel);
           } else if (config.prop_strategy == PropertiesStrategy::OVERRIDE) {
-            modify_relationship(path.GetRelationshipAt(i - 1), path.GetNodeAt(prev_non_deleted_path_id), id);
+            modify_relationship(path.GetRelationshipAt(i - 1), path.GetNodeAt(prev_non_deleted_path_index), id);
             merge_relationships(new_rel, old_rel);
           } else {  // PropertiesStrategy::COMBINE
             modify_relationship(new_rel, node, prev_non_deleted_node_id);
             merge_relationships(new_rel, old_rel, true);
           }
         }
-      } else if (!delete_node && prev_non_deleted_path_id != -1) {  // not first node and no nodes in between
-        relationships.AppendExtend(mgp::Value(path.GetRelationshipAt(prev_non_deleted_path_id)));
+      } else if (!delete_node && prev_non_deleted_path_index != -1) {  // not first node and no nodes in between
+        relationships.AppendExtend(mgp::Value(path.GetRelationshipAt(prev_non_deleted_path_index)));
       }
 
       if (!delete_node) {
         nodes.AppendExtend(mgp::Value(node));
-        prev_non_deleted_path_id = static_cast<int64_t>(i);
+        prev_non_deleted_path_index = static_cast<int64_t>(i);
         prev_non_deleted_node_id = id;
       } else {
         to_be_deleted.insert(node);
