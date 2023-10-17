@@ -180,15 +180,81 @@ void Path::PathHelper::ParseRelationships(const mgp::List &list_of_relationships
       continue;
     }
 
-    if (starts_with && ends_with) {
-      config_.relationship_sets[rel_type.substr(1, rel_type.size() - 2)] = RelDirection::kBoth;  // <type>
-    } else if (starts_with) {                                                                    // <type
+    if (starts_with && ends_with) {  // <type>
+      config_.relationship_sets[rel_type.substr(1, rel_type.size() - 2)] = RelDirection::kBoth;
+    } else if (starts_with) {  // <type
       config_.relationship_sets[rel_type.substr(1)] = RelDirection::kIncoming;
     } else if (ends_with) {  // type>
       config_.relationship_sets[rel_type.substr(0, rel_type.size() - 1)] = RelDirection::kOutgoing;
-    } else {
+    } else {  // type
       config_.relationship_sets[rel_type] = RelDirection::kAny;
     }
+  }
+}
+
+void Path::Elements(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard(memory);
+  const auto arguments = mgp::List(args);
+  auto result = mgp::Result(res);
+
+  try {
+    const auto path{arguments[0].ValuePath()};
+    size_t path_length = path.Length();
+    mgp::List split_path(path_length * 2 + 1);
+    for (int i = 0; i < path_length; ++i) {
+      split_path.Append(mgp::Value(path.GetNodeAt(i)));
+      split_path.Append(mgp::Value(path.GetRelationshipAt(i)));
+    }
+    split_path.Append(mgp::Value(path.GetNodeAt(path.Length())));
+    result.SetValue(std::move(split_path));
+
+  } catch (const std::exception &e) {
+    result.SetErrorMessage(e.what());
+  }
+}
+
+void Path::Combine(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard(memory);
+  const auto arguments = mgp::List(args);
+  auto result = mgp::Result(res);
+
+  try {
+    auto path1{arguments[0].ValuePath()};
+    const auto path2{arguments[1].ValuePath()};
+
+    for (int i = 0; i < path2.Length(); ++i) {
+      // Expand will throw an exception if it can't connect
+      path1.Expand(path2.GetRelationshipAt(i));
+    }
+
+    result.SetValue(std::move(path1));
+
+  } catch (const std::exception &e) {
+    result.SetErrorMessage(e.what());
+  }
+}
+
+void Path::Slice(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard(memory);
+  const auto arguments = mgp::List(args);
+  auto result = mgp::Result(res);
+
+  try {
+    const auto path{arguments[0].ValuePath()};
+    const auto offset{arguments[1].ValueInt()};
+    const auto length{arguments[2].ValueInt()};
+
+    mgp::Path new_path{path.GetNodeAt(offset)};
+    size_t old_path_length = path.Length();
+    size_t max_iteration = std::min((length == -1 ? old_path_length : offset + length), old_path_length);
+    for (int i = static_cast<int>(offset); i < max_iteration; ++i) {
+      new_path.Expand(path.GetRelationshipAt(i));
+    }
+
+    result.SetValue(std::move(new_path));
+
+  } catch (const std::exception &e) {
+    result.SetErrorMessage(e.what());
   }
 }
 
@@ -441,7 +507,7 @@ mgp::List Path::PathSubgraph::BFS() {
 }
 
 void Path::SubgraphNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   const auto graph = mgp::Graph(memgraph_graph);
   const auto record_factory = mgp::RecordFactory(result);

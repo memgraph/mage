@@ -8,6 +8,21 @@
 
 namespace Path {
 
+/* elements constants */
+constexpr const std::string_view kProcedureElements = "elements";
+constexpr const std::string_view kElementsArg1 = "path";
+
+/* combine constants */
+constexpr const std::string_view kProcedureCombine = "combine";
+constexpr const std::string_view kCombineArg1 = "first";
+constexpr const std::string_view kCombineArg2 = "second";
+
+/* slice constants */
+constexpr const std::string_view kProcedureSlice = "slice";
+constexpr const std::string_view kSliceArg1 = "path";
+constexpr const std::string_view kSliceArg2 = "offset";
+constexpr const std::string_view kSliceArg3 = "length";
+
 /* create constants */
 constexpr const std::string_view kProcedureCreate = "create";
 constexpr const std::string_view kCreateArg1 = "start_node";
@@ -157,6 +172,12 @@ class PathSubgraph {
   PathData path_data_;
   mgp::List to_be_returned_nodes_;
 };
+
+void Elements(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
+
+void Combine(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
+
+void Slice(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
 
 void Create(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
