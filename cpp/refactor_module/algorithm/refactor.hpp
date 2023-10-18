@@ -93,6 +93,13 @@ constexpr std::string_view kResultExtractNode1 = "input";
 constexpr std::string_view kResultExtractNode2 = "output";
 constexpr std::string_view kResultExtractNode3 = "error";
 
+/* rename_type constants */
+constexpr std::string_view kProcedureRenameType = "rename_type";
+constexpr std::string_view kRenameTypeArg1 = "relationships";
+constexpr std::string_view kRenameTypeArg2 = "labels";
+constexpr std::string_view kRenameTypeArg3 = "outType";
+constexpr std::string_view kResultRenameType = "relationships_changed";
+
 void From(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 void To(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
@@ -129,5 +136,7 @@ void InvertRel(mgp::Graph &graph, mgp::Relationship &rel);
 void NormalizeAsBoolean(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 void ExtractNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+
+void RenameType(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 }  // namespace Refactor
