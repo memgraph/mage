@@ -3,6 +3,7 @@
 #include <mg_utils.hpp>
 #include <string_view>
 #include <unordered_set>
+
 #include "mgp.hpp"
 
 void Refactor::From(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
