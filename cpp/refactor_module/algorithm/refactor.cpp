@@ -478,10 +478,16 @@ struct Config {
     auto rel_strategy_string = config.At("relationshipSelectionStrategy");
     auto prop_strategy_string = config.At("properties");
 
-    SetRelStrategy(rel_strategy_string.ValueString());
-    if (!prop_strategy_string.IsNull()) {
-      SetPropStrategy(prop_strategy_string.ValueString());
+    if (rel_strategy_string.IsNull()) {
+      SetRelStrategy("incoming");
+      return;
     }
+    SetRelStrategy(rel_strategy_string.ValueString());
+    if (prop_strategy_string.IsNull()) {
+      SetPropStrategy("combine");
+      return;
+    }
+    SetPropStrategy(prop_strategy_string.ValueString());
   }
 
   void SetRelStrategy(std::string_view strategy) {
@@ -501,7 +507,7 @@ struct Config {
       prop_strategy = PropertiesStrategy::DISCARD;
     } else if (strategy == "overwrite" || strategy == "override") {
       prop_strategy = PropertiesStrategy::OVERRIDE;
-    } else if (strategy == "merge") {
+    } else if (strategy == "combine") {
       prop_strategy = PropertiesStrategy::COMBINE;
     } else {
       throw mgp::ValueException("Invalid properties selection strategy");
@@ -529,15 +535,14 @@ void Refactor::DeleteAndReconnect(mgp_list *args, mgp_graph *memgraph_graph, mgp
     Config config{config_map};
     mgp::List nodes;
     mgp::List relationships;
-    int64_t prev_non_deleted_path_index = -1;
-    int64_t prev_non_deleted_node_id = -1;
+    int64_t prev_non_deleted_path_index{-1};
+    int64_t prev_non_deleted_node_id{-1};
     std::unordered_set<mgp::Node> to_be_deleted;
     auto graph = mgp::Graph{memgraph_graph};
 
     for (size_t i = 0; i < path.Length() + 1; ++i) {
       auto node = path.GetNodeAt(i);
       int64_t id = node.Id().AsInt();
-
       auto delete_node = nodes_to_delete.contains(id);
 
       auto modify_relationship = [&graph, &relationships](mgp::Relationship relationship, const mgp::Node node,
@@ -563,37 +568,38 @@ void Refactor::DeleteAndReconnect(mgp_list *args, mgp_graph *memgraph_graph, mgp
         }
       };
 
-      if (!delete_node && prev_non_deleted_path_index != i - 1) {  // there was a deleted node in between
+      if (!delete_node &&
+          (prev_non_deleted_path_index != static_cast<int64_t>(i - 1))) {  // there was a deleted node in between
         if (config.rel_strategy == RelSelectStrategy::INCOMING) {
           modify_relationship(path.GetRelationshipAt(prev_non_deleted_path_index), node, prev_non_deleted_node_id);
         } else if (config.rel_strategy == RelSelectStrategy::OUTGOING) {
           modify_relationship(path.GetRelationshipAt(i - 1), path.GetNodeAt(prev_non_deleted_path_index), id);
         } else {  // RelSelectStrategy::MERGE
           auto new_rel = path.GetRelationshipAt(
-              config.prop_strategy == PropertiesStrategy::OVERRIDE ? prev_non_deleted_path_index : i - 1);
+              config.prop_strategy == PropertiesStrategy::OVERRIDE ? i - 1 : prev_non_deleted_path_index);
           auto old_rel = path.GetRelationshipAt(
-              config.prop_strategy == PropertiesStrategy::OVERRIDE ? i - 1 : prev_non_deleted_node_id);
+              config.prop_strategy == PropertiesStrategy::OVERRIDE ? prev_non_deleted_path_index : i - 1);
 
-          std::string new_rel_type{};
+          std::string new_type;
           if (config.prop_strategy == PropertiesStrategy::OVERRIDE) {
-            new_rel_type = std::string(new_rel.Type()) + "_" + std::string(old_rel.Type());
+            new_type = std::string(new_rel.Type()) + "_" + std::string(old_rel.Type());
           } else {
-            new_rel_type = std::string(old_rel.Type()) + "_" + std::string(new_rel.Type());
+            new_type = std::string(old_rel.Type()) + "_" + std::string(new_rel.Type());
           }
-          graph.ChangeType(new_rel, new_rel_type);
+          graph.ChangeType(new_rel, new_type);
 
           if (config.prop_strategy == PropertiesStrategy::DISCARD) {
             modify_relationship(new_rel, node, prev_non_deleted_node_id);
             merge_relationships(new_rel, old_rel);
           } else if (config.prop_strategy == PropertiesStrategy::OVERRIDE) {
-            modify_relationship(path.GetRelationshipAt(i - 1), path.GetNodeAt(prev_non_deleted_path_index), id);
+            modify_relationship(new_rel, path.GetNodeAt(prev_non_deleted_path_index), id);
             merge_relationships(new_rel, old_rel);
           } else {  // PropertiesStrategy::COMBINE
             modify_relationship(new_rel, node, prev_non_deleted_node_id);
             merge_relationships(new_rel, old_rel, true);
           }
         }
-      } else if (!delete_node && prev_non_deleted_path_index != -1) {  // not first node and no nodes in between
+      } else if (!delete_node && prev_non_deleted_path_index != -1) {
         relationships.AppendExtend(mgp::Value(path.GetRelationshipAt(prev_non_deleted_path_index)));
       }
 
