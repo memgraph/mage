@@ -569,7 +569,7 @@ void Refactor::DeleteAndReconnect(mgp_list *args, mgp_graph *memgraph_graph, mgp
         }
       };
 
-      if (!delete_node &&
+      if (!delete_node && prev_non_deleted_path_index != -1 &&
           (prev_non_deleted_path_index != static_cast<int64_t>(i - 1))) {  // there was a deleted node in between
         if (config.rel_strategy == RelSelectStrategy::INCOMING) {
           modify_relationship(path.GetRelationshipAt(prev_non_deleted_path_index), node, prev_non_deleted_node_id);
