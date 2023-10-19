@@ -53,7 +53,7 @@ std::string saved_weight_property = kDefaultWeightProperty.data();
 
 void Set(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    mgp::memory = memory;
+    mgp::MemoryDispatcherGuard guard{memory};;
 
     const auto graph = mgp::Graph(memgraph_graph);
     const auto arguments = mgp::List(args);
@@ -90,7 +90,7 @@ void Set(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memo
 
 void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    mgp::memory = memory;
+    mgp::MemoryDispatcherGuard guard{memory};;
 
     const auto graph = mgp::Graph(memgraph_graph);
     const auto record_factory = mgp::RecordFactory(result);
@@ -119,7 +119,7 @@ void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memo
 
 void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    mgp::memory = memory;
+    mgp::MemoryDispatcherGuard guard{memory};;
 
     const auto graph = mgp::Graph(memgraph_graph);
     const auto arguments = mgp::List(args);
@@ -189,7 +189,7 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
 
 void Reset(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    mgp::memory = memory;
+    mgp::MemoryDispatcherGuard guard{memory};;
 
     const auto record_factory = mgp::RecordFactory(result);
 
@@ -203,7 +203,7 @@ void Reset(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_me
     auto record = record_factory.NewRecord();
     record.Insert(kFieldMessage.data(), "The algorithm has been successfully reset!");
   } catch (const std::exception &e) {
-    mgp::memory = memory;
+    mgp::MemoryDispatcherGuard guard{memory};;
 
     const auto record_factory = mgp::RecordFactory(result);
     auto record = record_factory.NewRecord();
@@ -216,7 +216,7 @@ void Reset(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_me
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
-    mgp::memory = memory;
+    mgp::MemoryDispatcherGuard guard{memory};;
 
     const auto node_list = std::make_pair(mgp::Type::List, mgp::Type::Node);
     const auto relationship_list = std::make_pair(mgp::Type::List, mgp::Type::Relationship);
