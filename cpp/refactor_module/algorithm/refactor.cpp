@@ -1,24 +1,18 @@
 #include "refactor.hpp"
 
-<<<<<<< HEAD
-#include <mg_utils.hpp>
 #include <string_view>
-#include <unordered_set>
-
-    =======
 #include <unordered_set>
 
 #include <fmt/format.h>
 #include <mg_utils.hpp>
-    >>>>>>> f516dce1b8b6bc485ce9006a2416fb7105ed77b5
 #include "mgp.hpp"
 
-    namespace {
-  void ThrowInvalidTypeException(const mgp::Value &value) {
-    std::ostringstream oss;
-    oss << value.Type();
-    throw mgp::ValueException(fmt::format("Unsupported type for this operation, received type: {}", oss.str()));
-  }
+namespace {
+void ThrowInvalidTypeException(const mgp::Value &value) {
+  std::ostringstream oss;
+  oss << value.Type();
+  throw mgp::ValueException(fmt::format("Unsupported type for this operation, received type: {}", oss.str()));
+}
 }  // namespace
 
 void Refactor::From(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
