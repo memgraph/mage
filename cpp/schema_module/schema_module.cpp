@@ -4,13 +4,14 @@
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
-    mgp::memory = memory;
+    mgp::MemoryDispatcherGuard guard{memory};;
 
     AddProcedure(Schema::NodeTypeProperties, std::string(Schema::kProcedureNodeType).c_str(), mgp::ProcedureType::Read,
                  {},
-                 {mgp::Return(std::string(Schema::kReturnLabels).c_str(), {mgp::Type::List, mgp::Type::String}),
+                 {mgp::Return(std::string(Schema::kReturnNodeType).c_str(), mgp::Type::String),
+                  mgp::Return(std::string(Schema::kReturnLabels).c_str(), {mgp::Type::List, mgp::Type::String}),
                   mgp::Return(std::string(Schema::kReturnPropertyName).c_str(), mgp::Type::String),
-                  mgp::Return(std::string(Schema::kReturnPropertyType).c_str(), mgp::Type::String),
+                  mgp::Return(std::string(Schema::kReturnPropertyType).c_str(), mgp::Type::Any),
                   mgp::Return(std::string(Schema::kReturnMandatory).c_str(), mgp::Type::Bool)},
                  module, memory);
 
@@ -18,7 +19,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
                  {},
                  {mgp::Return(std::string(Schema::kReturnRelType).c_str(), mgp::Type::String),
                   mgp::Return(std::string(Schema::kReturnPropertyName).c_str(), mgp::Type::String),
-                  mgp::Return(std::string(Schema::kReturnPropertyType).c_str(), mgp::Type::String),
+                  mgp::Return(std::string(Schema::kReturnPropertyType).c_str(), mgp::Type::Any),
                   mgp::Return(std::string(Schema::kReturnMandatory).c_str(), mgp::Type::Bool)},
                  module, memory);
 

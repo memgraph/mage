@@ -1,5 +1,5 @@
 query: >
-  CALL collections.contains_all(["Pero", 1, 2, 3], ["Pero", 3])
-  YIELD contained;
+  RETURN collections.contains_all(["Pero", 1, 2, 3], ["Pero", 3])
+  AS contained;
 output:
   - contained: true

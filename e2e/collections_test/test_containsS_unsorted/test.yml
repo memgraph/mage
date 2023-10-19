@@ -1,6 +1,5 @@
 query: >
-    CALL collections.contains_sorted(['a', 'b', 'c', 'd', 'e', 'g', 'f'], 'f') YIELD contains
-    RETURN contains
+    RETURN collections.contains_sorted(['a', 'b', 'c', 'd', 'e', 'g', 'f'], 'f') AS contains;
 
 output:
     - contains: false

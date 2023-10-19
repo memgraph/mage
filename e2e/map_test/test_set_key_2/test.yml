@@ -1,9 +1,9 @@
 query: >
-  CALL map.set_key(
+  RETURN map.set_key(
     {name:"Zdravko",country:"Croatia"},
     "name",
     "Zoran"
-  ) YIELD map;
+  ) AS map;
 
 output:
   - map: {"country": "Croatia","name": "Zoran"}
