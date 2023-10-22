@@ -1,7 +1,7 @@
 #pragma once
 
 #include <mgp.hpp>
-#include <string>
+
 namespace Refactor {
 
 /* categorize constants */
@@ -19,13 +19,12 @@ constexpr const std::string_view kResultCategorize = "status";
 
 /* clone_nodes constants */
 constexpr const std::string_view kProcedureCloneNodes = "clone_nodes";
-constexpr const std::string_view kReturnClonedNodeId = "cloned_node_id";
-constexpr const std::string_view kReturnNewNode = "new_node";
 constexpr const std::string_view kArgumentsNodesToClone = "nodes";
-constexpr const std::string_view kArgumentsCloneRels = "clone_rels";
-constexpr const std::string_view kArgumentsSkipPropClone = "skip_props";
-constexpr const std::string_view kResultClonedNodeId = "cloned_node_id";
-constexpr const std::string_view kResultNewNode = "new_node";
+constexpr const std::string_view kArgumentsCloneRels = "withRelationships";
+constexpr const std::string_view kArgumentsSkipPropClone = "skipProperties";
+constexpr const std::string_view kResultClonedNodeId = "input";
+constexpr const std::string_view kResultNewNode = "output";
+constexpr const std::string_view kResultCloneNodeError = "error";
 
 /* clone_subgraph_from_paths constants */
 constexpr const std::string_view kProcedureCSFP = "clone_subgraph_from_paths";
@@ -73,8 +72,26 @@ constexpr std::string_view kReturnRelationshipCollapseNode = "new_relationship";
 /*invert constants*/
 constexpr std::string_view kProcedureInvert = "invert";
 constexpr std::string_view kArgumentRelationship = "relationship";
-constexpr std::string_view kReturnRelationshipInvert = "relationship";
-constexpr std::string_view kReturnIdInvert = "id_inverted";
+constexpr std::string_view kResultRelationshipInvert = "output";
+constexpr std::string_view kResultIdInvert = "input";
+constexpr std::string_view kResultErrorInvert = "error";
+
+/* normalize_as_boolean constants */
+constexpr std::string_view kProcedureNormalizeAsBoolean = "normalize_as_boolean";
+constexpr std::string_view kNormalizeAsBooleanArg1 = "entity";
+constexpr std::string_view kNormalizeAsBooleanArg2 = "property_key";
+constexpr std::string_view kNormalizeAsBooleanArg3 = "true_values";
+constexpr std::string_view kNormalizeAsBooleanArg4 = "false_values";
+
+/* extract_node constants */
+constexpr std::string_view kProcedureExtractNode = "extract_node";
+constexpr std::string_view kExtractNodeArg1 = "relationships";
+constexpr std::string_view kExtractNodeArg2 = "labels";
+constexpr std::string_view kExtractNodeArg3 = "outType";
+constexpr std::string_view kExtractNodeArg4 = "inType";
+constexpr std::string_view kResultExtractNode1 = "input";
+constexpr std::string_view kResultExtractNode2 = "output";
+constexpr std::string_view kResultExtractNode3 = "error";
 
 /* rename_node_property constants */
 constexpr std::string_view kProcedureRenameTypeProperty = "rename_type_property";
@@ -118,4 +135,7 @@ void InvertRel(mgp::Graph &graph, mgp::Relationship &rel);
 
 void RenameTypeProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
+void NormalizeAsBoolean(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory); 
+
+void ExtractNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 }  // namespace Refactor

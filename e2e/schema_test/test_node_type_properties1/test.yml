@@ -1,24 +1,31 @@
 query: >
-  CALL schema.node_type_properties() YIELD labels, mandatory, property_name, property_type RETURN labels, mandatory, property_name, property_type 
-  ORDER BY property_name, labels[0];
+  CALL schema.node_type_properties() YIELD nodeType, nodeLabels, propertyName, propertyTypes , mandatory
+  RETURN nodeType, nodeLabels, propertyName, propertyTypes , mandatory
+  ORDER BY propertyName, nodeLabels[0];
 
 output:
-  - labels: ["Activity"]
+    
+  - nodeType: ":`Activity`"
+    nodeLabels: ["Activity"]
+    propertyName: location
+    propertyTypes: ["String"]
     mandatory: true
-    property_name: location
-    property_type: String
 
-  - labels: ["Activity"]
+  - nodeType: ":`Activity`"
+    nodeLabels: ["Activity"]
+    propertyName: name
+    propertyTypes: ["String"]
     mandatory: true
-    property_name: name
-    property_type: String
 
-  - labels: ["Dog"]
+  - nodeType: ":`Dog`"
+    nodeLabels: ["Dog"]
+    propertyName: name
+    propertyTypes: ["String"]
     mandatory: true
-    property_name: name
-    property_type: String
 
-  - labels: ["Dog"]
+  - nodeType: ":`Dog`"
+    nodeLabels: ["Dog"]
+    propertyName: owner
+    propertyTypes: ["String"]
     mandatory: true
-    property_name: owner
-    property_type: String
+
