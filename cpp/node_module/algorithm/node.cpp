@@ -187,15 +187,16 @@ void Node::DegreeIn(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res,
     const auto type = arguments[1].ValueString();
     if (type.size() == 0) {
       result.SetValue((int64_t)node.InDegree());
-    } else {
-      int64_t degree = 0;
-      for (const auto rel : node.InRelationships()) {
-        if (rel.Type() == type) {
-          degree += 1;
-        }
-      }
-      result.SetValue(degree);
+      return;
     }
+    int64_t degree = 0;
+    for (const auto rel : node.InRelationships()) {
+      if (rel.Type() == type) {
+        degree += 1;
+      }
+    }
+    result.SetValue(degree);
+    
 
   } catch (const std::exception &e) {
     result.SetErrorMessage(e.what());
@@ -212,15 +213,16 @@ void Node::DegreeOut(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res
     const auto type = arguments[1].ValueString();
     if (type.size() == 0) {
       result.SetValue((int64_t)node.OutDegree());
-    } else {
-      int64_t degree = 0;
-      for (const auto rel : node.OutRelationships()) {
-        if (rel.Type() == type) {
-          degree += 1;
-        }
+      return;
+    } 
+    int64_t degree = 0;
+    for (const auto rel : node.OutRelationships()) {
+      if (rel.Type() == type) {
+        degree += 1;
       }
-      result.SetValue(degree);
     }
+    result.SetValue(degree);
+    
 
   } catch (const std::exception &e) {
     result.SetErrorMessage(e.what());
