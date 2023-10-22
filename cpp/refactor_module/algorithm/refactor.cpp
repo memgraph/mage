@@ -585,8 +585,8 @@ void Refactor::DeleteAndReconnect(mgp_list *args, mgp_graph *memgraph_graph, mgp
       int64_t id = node.Id().AsInt();
       auto delete_node = nodes_to_delete.contains(id);
 
-      auto modify_relationship = [&graph, &relationships](mgp::Relationship relationship, const mgp::Node node,
-                                                          int64_t other_node_id) {
+      const auto modify_relationship = [&graph, &relationships](mgp::Relationship relationship, const mgp::Node &node,
+                                                                int64_t other_node_id) {
         if (relationship.From().Id().AsInt() == other_node_id) {
           graph.SetTo(relationship, node);
         } else {
@@ -595,7 +595,7 @@ void Refactor::DeleteAndReconnect(mgp_list *args, mgp_graph *memgraph_graph, mgp
         relationships.AppendExtend(mgp::Value(relationship));
       };
 
-      auto merge_relationships = [](mgp::Relationship &rel, mgp::Relationship &other, bool combine = false) {
+      const auto merge_relationships = [](mgp::Relationship &rel, mgp::Relationship &other, bool combine = false) {
         for (const auto &[key, value] : other.Properties()) {
           auto old_property = rel.GetProperty(key);
           if (!old_property.IsNull()) {
