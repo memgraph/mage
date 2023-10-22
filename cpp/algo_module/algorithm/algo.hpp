@@ -12,17 +12,22 @@ namespace Algo {
 
 /* from_nodes constants */
 constexpr const std::string_view kProcedureAStar = "astar";
-constexpr const std::string_view kAStarArg1 = "start";
-constexpr const std::string_view kAStarArg2 = "target";
-constexpr const std::string_view kAStarArg3 = "config";
-constexpr const std::string_view kAStarRet1 = "path";
-constexpr const std::string_view kAStarRet2 = "weight";
-class NodeObject {
+constexpr const std::string_view kAStarStart = "start";
+constexpr const std::string_view kAStarTarget = "target";
+constexpr const std::string_view kAStarConfig = "config";
+constexpr const std::string_view kAStarPath = "path";
+constexpr const std::string_view kAStarWeight = "weight";
+struct NodeObject {
  public:
+  //heuristic distance of the node
   double heuristic_distance;
+  //total distance of the path to the node
   double total_distance;
+  //the node the object represents
   mgp::Node node;
+  //path relationship that leads into the node
   mgp::Relationship rel;
+  //previous node object
   std::shared_ptr<NodeObject> prev;
 
   NodeObject(const double heuristic_distance, const double total_distance, const mgp::Node &node,
@@ -51,6 +56,10 @@ class NodeObject {
 
 class Open {
  public:
+  /*since C++ pq doesnt enable to do std::find or loop and find element in pq,
+  and for A* we need to see if elements already exist in pq, I created a class open, which
+  uses a pq normally for A*, but also has a set which checks if the value is
+  already in pq, and if it has lesser path distance to it*/
   std::priority_queue<std::shared_ptr<NodeObject>, std::vector<std::shared_ptr<NodeObject>>, NodeObject::Comp> pq;
   std::unordered_map<mgp::Id, double> set;
 
@@ -68,7 +77,7 @@ class Open {
     pq.pop();
   }
 
-  void Insert(const std::shared_ptr<NodeObject> &elem) {
+  void InsertOrUpdate(const std::shared_ptr<NodeObject> &elem) {
     auto it = set.find(elem->node.Id());
     if (it != set.end()) {
       if (elem->total_distance < it->second) {
@@ -123,43 +132,43 @@ class Config {
   bool duration = false;
 
   Config(const mgp::Map &map) {
-    if (!map.At("unweighted").IsNull() && map.At("unweighted").IsBool()) {
+    if (!map.At("unweighted").IsNull()) {
       unweighted = map.At("unweighted").ValueBool();
     }
-    if (!map.At("epsilon").IsNull() && map.At("epsilon").IsNumeric()) {
+    if (!map.At("epsilon").IsNull()) {
       epsilon = map.At("epsilon").ValueNumeric();
     }
-    if (!map.At("distance_prop").IsNull() && map.At("distance_prop").IsString()) {
+    if (!map.At("distance_prop").IsNull()) {
       distance_prop = map.At("distance_prop").ValueString();
     }
-    if (!map.At("heuristic_name").IsNull() && map.At("heuristic_name").IsString()) {
+    if (!map.At("heuristic_name").IsNull()) {
       heuristic_name = map.At("heuristic_name").ValueString();
     }
-    if (!map.At("latitude_name").IsNull() && map.At("latitude_name").IsString()) {
+    if (!map.At("latitude_name").IsNull()) {
       latitude_name = map.At("latitude_name").ValueString();
     }
-    if (!map.At("longitude_name").IsNull() && map.At("longitude_name").IsString()) {
+    if (!map.At("longitude_name").IsNull()) {
       longitude_name = map.At("longitude_name").ValueString();
     }
-    if (!map.At("whitelisted_labels").IsNull() && map.At("whitelisted_labels").IsList()) {
+    if (!map.At("whitelisted_labels").IsNull()) {
       auto list = map.At("whitelisted_labels").ValueList();
-      for (auto value : list) {
+      for (const auto value : list) {
         if (value.IsString()) {
           whitelist.insert(std::string(value.ValueString()));
         }
       }
     }
-    if (!map.At("blacklisted_labels").IsNull() && map.At("blacklisted_labels").IsList()) {
+    if (!map.At("blacklisted_labels").IsNull()) {
       auto list = map.At("blacklisted_labels").ValueList();
-      for (auto value : list) {
+      for (const auto value : list) {
         if (value.IsString()) {
           blacklist.insert(std::string(value.ValueString()));
         }
       }
     }
-    if (!map.At("relationships_filter").IsNull() && map.At("relationships_filter").IsList()) {
+    if (!map.At("relationships_filter").IsNull()) {
       auto list = map.At("relationships_filter").ValueList();
-      for (auto value : list) {
+      for (const auto value : list) {
         if (!value.IsString()) {
           continue;
         }
@@ -168,9 +177,7 @@ class Config {
         const char first_elem = rel_type[0];
         const char last_elem = rel_type[size - 1];
 
-        if (first_elem == '<' && last_elem == '>') {
-          throw mgp::ValueException("Wrong relationship format => <relationship> is not allowed!");
-        } else if (first_elem == '<' && size != 1) {
+        if (first_elem == '<' && size != 1) {
           in_rels.insert(rel_type.erase(0, 1));  // only specified incoming relationships are allowed
         } else if (last_elem == '>' && size != 1) {
           rel_type.pop_back();
@@ -182,7 +189,7 @@ class Config {
       }
     }
 
-    if (!map.At("duration").IsNull() && map.At("duration").IsBool()) {
+    if (!map.At("duration").IsNull()) {
       duration = map.At("duration").ValueBool();
     }
   }
@@ -191,30 +198,32 @@ class Config {
 struct GoalNodes {
   const mgp::Node start;
   const mgp::Node target;
-  std::pair<double, double> latLon;
+  std::pair<double, double> lat_lon;
 
-  GoalNodes(const mgp::Node &start, const mgp::Node &target, const std::pair<double, double> latLon)
-      : start(start), target(target), latLon(latLon) {}
+  GoalNodes(const mgp::Node &start, const mgp::Node &target, const std::pair<double, double> lat_lon)
+      : start(start), target(target), lat_lon(lat_lon) {}
 };
 
-struct Lists {
+struct TrackingLists {
   Open open;
   Closed closed;
-  Lists() = default;
 };
 
-double haversineDistance(double lat1, double lon1, double lat2, double lon2);
-double toRadians(double degrees);
+
+
+double GetHaversineDistance(double lat1, double lon1, double lat2, double lon2);
+double GetRadians(double degrees);
 void AStar(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 bool RelOk(const mgp::Relationship &rel, const Config &config, const bool in);
-bool LabelOk(const mgp::Node &node, const Config &config);
-std::pair<mgp::Path, double> BuildResult(std::shared_ptr<NodeObject> final, const mgp::Node &start);
+bool IsLabelOk(const mgp::Node &node, const Config &config);
+std::pair<mgp::Path, double> BuildResult(std::shared_ptr<NodeObject> final_node, const mgp::Node &start);
 std::shared_ptr<NodeObject> InitializeStart(const mgp::Node &start);
 std::pair<mgp::Path, double> HelperAstar(const GoalNodes &nodes, const Config &config);
-void ParseRelationships(const std::shared_ptr<NodeObject> &prev, bool in, const GoalNodes &nodes, Lists &lists,
+void ParseRelationships(const std::shared_ptr<NodeObject> &prev, bool in, const GoalNodes &nodes, TrackingLists &lists,
                         const Config &config);
 double CalculateHeuristic(const Config &config, const mgp::Node &node, const GoalNodes &nodes);
-std::pair<double, double> TargetLatLon(const mgp::Node &target, const Config &config);
+std::pair<double, double> GetTargetLatLon(const mgp::Node &target, const Config &config);
 double CalculateDistance(const Config &config, const mgp::Relationship &rel);
+void CheckConfigTypes(const mgp::Map &map);
 
 }  // namespace Algo

@@ -1,14 +1,62 @@
 #include "algo.hpp"
 
-double Algo::toRadians(double degrees) { return degrees * M_PI / 180.0; }
+void Algo::CheckConfigTypes(const mgp::Map &map){
+    if (!map.At("unweighted").IsNull() && !map.At("unweighted").IsBool()) {
+      throw mgp::ValueException("unweighted config option should be bool!");
+    }
+    if (!map.At("epsilon").IsNull() && !map.At("epsilon").IsNumeric()) {
+      throw mgp::ValueException("epsilon config option should be numeric!");
+    }
+    if (!map.At("distance_prop").IsNull() && !map.At("distance_prop").IsString()) {
+      throw mgp::ValueException("distance_prop config option should be string!");
+    }
+    if (!map.At("heuristic_name").IsNull() && !map.At("heuristic_name").IsString()) {
+      throw mgp::ValueException("heuristic_name config option should be string!");
+    }
+    if (!map.At("latitude_name").IsNull() && !map.At("latitude_name").IsString()) {
+      throw mgp::ValueException("latitude_name config option should be string!");
+    }
+    if (!map.At("longitude_name").IsNull() && !map.At("longitude_name").IsString()) {
+      throw mgp::ValueException("longitude_name config option should be string!");
+    }
+    if (!map.At("whitelisted_labels").IsNull() && !map.At("whitelisted_labels").IsList()) {
+      throw mgp::ValueException("whitelisted_labels config option should be list!");
+    }
+    if (!map.At("blacklisted_labels").IsNull() && !map.At("blacklisted_labels").IsList()) {
+      throw mgp::ValueException("blacklisted_labels config option should be list!");
+    }
+    if (!map.At("relationships_filter").IsNull() && !map.At("relationships_filter").IsList()) {
+      throw mgp::ValueException("relationships_filter config option should be list!");
+    }else if(!map.At("relationships_filter").IsNull() && map.At("relationships_filter").IsList()){
+      auto list = map.At("relationships_filter").ValueList();
+      for (const auto value : list) {
+        if (!value.IsString()) {
+          continue;
+        }
+        auto rel_type = std::string(value.ValueString());
+        const size_t size = rel_type.size();
+        const char first_elem = rel_type[0];
+        const char last_elem = rel_type[size - 1];
 
-double Algo::haversineDistance(double lat1, double lon1, double lat2, double lon2) {
-  const double earthRadius = 6371.0;  // IN KM
+        if (first_elem == '<' && last_elem == '>') {
+          throw mgp::ValueException("Wrong relationship format => <relationship> is not allowed!");
+        }
+      }
+    }
 
-  lat1 = toRadians(lat1);
-  lon1 = toRadians(lon1);
-  lat2 = toRadians(lat2);
-  lon2 = toRadians(lon2);
+    if (!map.At("duration").IsNull() && !map.At("duration").IsBool()) {
+      throw mgp::ValueException("duration config option should be bool!");
+    }
+}
+double Algo::GetRadians(double degrees) { return degrees * M_PI / 180.0; }
+
+double Algo::GetHaversineDistance(double lat1, double lon1, double lat2, double lon2) {
+   // IN KM
+  const double earthRadius = 6371.0;
+  lat1 = GetRadians(lat1);
+  lon1 = GetRadians(lon1);
+  lat2 = GetRadians(lat2);
+  lon2 = GetRadians(lon2);
 
   double dLat = lat2 - lat1;
   double dLon = lon2 - lon1;
@@ -16,10 +64,11 @@ double Algo::haversineDistance(double lat1, double lon1, double lat2, double lon
   double c = 2 * atan2(sqrt(a), sqrt(1 - a));
   double distance = earthRadius * c;
 
-  return distance;  // returns distance in km
+  // returns distance in km
+  return distance;
 }
 
-/*calculates the heuristic based on haversine, or returns the value if the heuristic is custom*/
+//calculates the heuristic based on haversine, or returns the value if the heuristic is custom
 double Algo::CalculateHeuristic(const Config &config, const mgp::Node &node, const GoalNodes &nodes) {
   if (config.heuristic_name != "") {
     auto heuristic = node.GetProperty(config.heuristic_name);
@@ -39,13 +88,13 @@ double Algo::CalculateHeuristic(const Config &config, const mgp::Node &node, con
         "Latitude and longitude properties, or a custom heuristic value, must be specified in every node!");
   }
   if (latitude_source.IsNumeric() && longitude_source.IsNumeric()) {
-    return haversineDistance(latitude_source.ValueNumeric(), longitude_source.ValueNumeric(), nodes.latLon.first,
-                             nodes.latLon.second);
+    return GetHaversineDistance(latitude_source.ValueNumeric(), longitude_source.ValueNumeric(), nodes.lat_lon.first,
+                             nodes.lat_lon.second);
   }
   throw mgp::ValueException("Latitude and longitude must be numeric data types!");
 }
 
-std::pair<double, double> Algo::TargetLatLon(const mgp::Node &target, const Config &config) {
+std::pair<double, double> Algo::GetTargetLatLon(const mgp::Node &target, const Config &config) {
   if (config.heuristic_name != "") {  // if custom heuristic, dont return latitude and longitude
     return std::make_pair<double, double>(0, 0);
   }
@@ -95,7 +144,7 @@ bool Algo::RelOk(const mgp::Relationship &rel, const Config &config,
   return false;
 }
 
-bool Algo::LabelOk(const mgp::Node &node, const Config &config) {
+bool Algo::IsLabelOk(const mgp::Node &node, const Config &config) {
   bool whitelist_empty = config.whitelist.empty();
 
   for (auto label : node.Labels()) {
@@ -108,7 +157,7 @@ bool Algo::LabelOk(const mgp::Node &node, const Config &config) {
   }
   return true;
 }
-void Algo::ParseRelationships(const std::shared_ptr<NodeObject> &prev, bool in, const GoalNodes &nodes, Lists &lists,
+void Algo::ParseRelationships(const std::shared_ptr<NodeObject> &prev, bool in, const GoalNodes &nodes, TrackingLists &lists,
                               const Config &config) {
   auto rels = in ? prev->node.InRelationships() : prev->node.OutRelationships();
   for (const auto rel : rels) {
@@ -116,17 +165,17 @@ void Algo::ParseRelationships(const std::shared_ptr<NodeObject> &prev, bool in, 
       continue;
     }
     const auto node = in ? rel.From() : rel.To();
-    if (!LabelOk(node, config)) {
+    if (!IsLabelOk(node, config)) {
       continue;
     }
     auto heuristic = CalculateHeuristic(config, node, nodes) * config.epsilon;  // epsilon 0 == UCS
     auto distance = CalculateDistance(config, rel);
-    std::shared_ptr<NodeObject> nb =
+    auto nb =
         std::make_shared<NodeObject>(heuristic, distance + prev->total_distance, node, rel, prev);
     if (!lists.closed.FindAndCompare(nb)) {
       continue;
     }
-    lists.open.Insert(nb);
+    lists.open.InsertOrUpdate(nb);
   }
 }
 
@@ -143,10 +192,10 @@ std::shared_ptr<Algo::NodeObject> Algo::InitializeStart(const mgp::Node &start) 
 }
 
 std::pair<mgp::Path, double> Algo::HelperAstar(const GoalNodes &nodes, const Config &config) {
-  Lists lists = Lists();
+  TrackingLists lists = TrackingLists();
 
-  std::shared_ptr<NodeObject> start_nb = InitializeStart(nodes.start);
-  lists.open.Insert(start_nb);
+  auto start_nb = InitializeStart(nodes.start);
+  lists.open.InsertOrUpdate(start_nb);
 
   while (!lists.open.Empty()) {
     auto nb = lists.open.Top();
@@ -161,21 +210,21 @@ std::pair<mgp::Path, double> Algo::HelperAstar(const GoalNodes &nodes, const Con
   return std::pair<mgp::Path, double>(mgp::Path(nodes.start), 0);
 }
 
-std::pair<mgp::Path, double> Algo::BuildResult(std::shared_ptr<NodeObject> final, const mgp::Node &start) {
+std::pair<mgp::Path, double> Algo::BuildResult(std::shared_ptr<NodeObject> final_node, const mgp::Node &start) {
   mgp::Path path = mgp::Path(start);
   std::vector<mgp::Relationship> rels;
 
-  double weight = final->total_distance;
-  while (final->prev) {
-    rels.push_back(final->rel);
-    final = final->prev;
+  double weight = final_node->total_distance;
+  while (final_node->prev) {
+    rels.push_back(final_node->rel);
+    final_node = final_node->prev;
   }
 
   for (auto it = rels.rbegin(); it != rels.rend(); ++it) {
-    path.Expand(*it);
+    path.Expand(std::move(*it));
   }
 
-  return std::pair<mgp::Path, double>(path, weight);
+  return std::pair<mgp::Path, double>(std::move(path), weight);
 }
 
 void Algo::AStar(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
@@ -186,16 +235,18 @@ void Algo::AStar(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, 
   try {
     auto start = arguments[0].ValueNode();
     auto target = arguments[1].ValueNode();
-    auto config = Config(arguments[2].ValueMap());
-    std::pair<double, double> latLon = TargetLatLon(target, config);
-    auto nodes = GoalNodes(start, target, latLon);
+    auto config_map = arguments[2].ValueMap();
+    CheckConfigTypes(config_map);
+    auto config = Config(config_map);
+    std::pair<double, double> lat_lon = GetTargetLatLon(target, config);
+    auto nodes = GoalNodes(start, target, lat_lon);
     std::pair<mgp::Path, double> pair = HelperAstar(nodes, config);
-    const mgp::Path path = pair.first;
+    mgp::Path &path = pair.first;
     const double weight = pair.second;
 
     auto record = record_factory.NewRecord();
-    record.Insert(std::string(kAStarRet1).c_str(), path);
-    record.Insert(std::string(kAStarRet2).c_str(), weight);
+    record.Insert(std::string(kAStarPath).c_str(), std::move(path));
+    record.Insert(std::string(kAStarWeight).c_str(), weight);
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
