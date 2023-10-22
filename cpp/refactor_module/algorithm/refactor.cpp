@@ -482,17 +482,17 @@ void Refactor::RenameTypeProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp
   try {
     const std::string old_name{arguments[0].ValueString()};
     const std::string new_name{arguments[1].ValueString()};
-    const auto rels = arguments[2].ValueList();
+    const auto rels{arguments[2].ValueList()};
 
     int64_t rels_changed{0};
-    for (auto rel_value : rels) {
+    for (auto &rel_value : rels) {
       auto rel = rel_value.ValueRelationship();
       const auto prop_value = rel.GetProperty(old_name);
-      if (prop_value.IsNull()) {  // unlike mgp::Maps, property maps cant have null, so the map.merge bug shoulsnt be
-                                  // reproduced
-        continue;  // since there is no bug, it is faster to just check isNull instead of copying entire properties map
-                   // and then find
-      }  // if someone manages to reproduce map.merge bug in this function, we will change the code
+      /*since there is no bug(prop map cant have null values), it is faster to just check isNull 
+      instead of copying entire properties map and then find*/
+      if (prop_value.IsNull()) { 
+        continue;  
+      } 
       rel.RemoveProperty(old_name);
       rel.SetProperty(new_name, prop_value);
       rels_changed++;
