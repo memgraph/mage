@@ -28,12 +28,12 @@ constexpr std::string_view kResultRelationshipTypes = "relationship_types";
 /* degree_in constants */
 constexpr std::string_view kFunctionDegreeIn = "degree_in";
 constexpr std::string_view kDegreeInArg1 = "node";
-constexpr std::string_view kDegreeInArg2 = "types";
+constexpr std::string_view kDegreeInArg2 = "type";
 
 /* degree_out constants */
 constexpr std::string_view kFunctionDegreeOut = "degree_out";
 constexpr std::string_view kDegreeOutArg1 = "node";
-constexpr std::string_view kDegreeOutArg2 = "types";
+constexpr std::string_view kDegreeOutArg2 = "type";
 
 void RelationshipsExist(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
