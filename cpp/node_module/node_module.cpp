@@ -27,12 +27,12 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
 
     mgp::AddFunction(Node::DegreeIn, Node::kFunctionDegreeIn,
                      {mgp::Parameter(Node::kDegreeInArg1, mgp::Type::Node),
-                      mgp::Parameter(Node::kDegreeInArg1, mgp::Type::String, "")},
+                      mgp::Parameter(Node::kDegreeInArg2, mgp::Type::String, "")},
                      module, memory);
 
     mgp::AddFunction(Node::DegreeOut, Node::kFunctionDegreeOut,
                      {mgp::Parameter(Node::kDegreeOutArg1, mgp::Type::Node),
-                      mgp::Parameter(Node::kDegreeOutArg1, mgp::Type::String, "")},
+                      mgp::Parameter(Node::kDegreeOutArg2, mgp::Type::String, "")},
                      module, memory);
 
   } catch (const std::exception &e) {
