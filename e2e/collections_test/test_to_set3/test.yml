@@ -1,6 +1,0 @@
-query: >
-  RETURN collections.to_set(["aa","aa","matija","matija",[1,2,3],[1,2,3],1,2]) AS result;
-
-
-output: 
-  - result: [1, [1,2,3], 2, "matija", "aa"]

@@ -71,7 +71,7 @@ void Path::Slice(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mg
 }
 
 void Path::Create(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};;
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
@@ -316,7 +316,7 @@ void Path::StartFunction(const mgp::Node &node, const mgp::RecordFactory &record
 }
 
 void Path::Expand(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};;
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
@@ -482,7 +482,7 @@ void SetConfig(mgp::Map &config) {
 }
 
 void Path::SubgraphNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};;
   const auto arguments = mgp::List(args);
   const auto graph = mgp::Graph(memgraph_graph);
   const auto record_factory = mgp::RecordFactory(result);
@@ -520,7 +520,7 @@ void Path::SubgraphNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *
 }
 
 void Path::SubgraphAll(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};;
   const auto arguments = mgp::List(args);
   const auto graph = mgp::Graph(memgraph_graph);
   const auto record_factory = mgp::RecordFactory(result);
