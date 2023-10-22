@@ -632,7 +632,7 @@ void Refactor::RenameType(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
     auto graph{mgp::Graph(memgraph_graph)};
 
     int64_t rels_changed{0};
-    for (const auto &relationship_value : relationships) {
+    for (auto &relationship_value : relationships) {
       auto relationship{relationship_value.ValueRelationship()};
       if (relationship.Type() == old_type) {
         graph.ChangeType(relationship, new_type);
