@@ -101,6 +101,12 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
                   mgp::Parameter(Refactor::kNormalizeAsBooleanArg4, {mgp::Type::List, mgp::Type::Any})},
                  {}, module, memory);
 
+    AddProcedure(Refactor::RenameType, Refactor::kProcedureRenameType, mgp::ProcedureType::Write,
+                 {mgp::Parameter(Refactor::kRenameTypeArg1, mgp::Type::String),
+                  mgp::Parameter(Refactor::kRenameTypeArg2, mgp::Type::String),
+                  mgp::Parameter(Refactor::kRenameTypeArg3, {mgp::Type::List, mgp::Type::Relationship})},
+                 {mgp::Return(Refactor::kResultRenameType, mgp::Type::Int)}, module, memory);
+
   } catch (const std::exception &e) {
     return 1;
   }
