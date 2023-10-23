@@ -115,6 +115,13 @@ constexpr std::string_view kDeleteAndReconnectArg3 = "config";
 constexpr std::string_view kReturnDeleteAndReconnect1 = "nodes";
 constexpr std::string_view kReturnDeleteAndReconnect2 = "relationships";
 
+/* rename_type constants */
+constexpr std::string_view kProcedureRenameType = "rename_type";
+constexpr std::string_view kRenameTypeArg1 = "relationships";
+constexpr std::string_view kRenameTypeArg2 = "labels";
+constexpr std::string_view kRenameTypeArg3 = "outType";
+constexpr std::string_view kResultRenameType = "relationships_changed";
+
 void From(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 void To(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
@@ -153,5 +160,7 @@ void DeleteAndReconnect(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *r
 void NormalizeAsBoolean(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 void ExtractNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+
+void RenameType(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 }  // namespace Refactor

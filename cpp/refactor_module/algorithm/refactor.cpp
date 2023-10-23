@@ -769,3 +769,31 @@ void Refactor::ExtractNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_result
     return;
   }
 }
+
+void Refactor::RenameType(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+  try {
+    const auto old_type{arguments[0].ValueString()};
+    const auto new_type{arguments[1].ValueString()};
+    const auto relationships{arguments[2].ValueList()};
+    auto graph{mgp::Graph(memgraph_graph)};
+
+    int64_t rels_changed{0};
+    for (auto &relationship_value : relationships) {
+      auto relationship{relationship_value.ValueRelationship()};
+      if (relationship.Type() == old_type) {
+        graph.ChangeType(relationship, new_type);
+        ++rels_changed;
+      }
+    }
+
+    auto record = record_factory.NewRecord();
+    record.Insert(std::string(kResultRenameType).c_str(), rels_changed);
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
