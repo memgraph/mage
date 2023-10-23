@@ -9,9 +9,9 @@
 #include <memory>
 #include <unordered_set>
 
+#include "_mgp.hpp"
 #include "mg_graph.hpp"
 #include "mgp.hpp"
-#include "_mgp.hpp"
 
 namespace mg_graph {
 
@@ -119,6 +119,8 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(mgp_graph *memgraph_graph, 
                                                      const char *weight_property = nullptr,
                                                      double default_weight = 1.0) {
   auto graph = std::make_unique<mg_graph::Graph<TSize>>();
+  bool isTransactionalStorage = mgp::graph_is_transactional(memgraph_graph);
+  graph->SetIsTransactional(isTransactionalStorage);
 
   ///
   /// Mapping Memgraph in-memory vertices into the graph view

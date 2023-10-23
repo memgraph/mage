@@ -199,8 +199,14 @@ class Graph : public GraphView<TSize> {
       return std::nullopt;
     }
 
-    auto from = GetInnerNodeId(memgraph_id_from);
-    auto to = GetInnerNodeId(memgraph_id_to);
+    auto fromOpt = GetInnerNodeIdOpt(memgraph_id_from);
+    auto toOpt = GetInnerNodeIdOpt(memgraph_id_to);
+    if (!fromOpt || !toOpt) {
+      return std::nullopt;
+    }
+
+    auto from = *fromOpt;
+    auto to = *toOpt;
 
     auto id = edges_.size();
     inner_to_memgraph_edge_id_.emplace(id, edge_id);
@@ -315,6 +321,21 @@ class Graph : public GraphView<TSize> {
   }
 
   ///
+  /// Returns the GraphView ID from Memgraph's internal ID
+  ///
+  /// @param node_id Memgraphs's inner ID
+  ///
+  std::optional<TSize> GetInnerNodeIdOpt(std::uint64_t memgraph_id) const override {
+    if (memgraph_to_inner_id_.find(memgraph_id) == memgraph_to_inner_id_.end()) {
+      if (IsTransactional()) {
+        throw mg_exception::InvalidIDException();
+      }
+      return std::nullopt;
+    }
+    return memgraph_to_inner_id_.at(memgraph_id);
+  }
+
+  ///
   /// Returns the Memgraph database ID from graph view
   ///
   /// @param node_id view's inner ID
@@ -381,6 +402,10 @@ class Graph : public GraphView<TSize> {
     nodes_to_edge_.clear();
   }
 
+  void SetIsTransactional(bool is_transactional) { is_transactional_ = is_transactional; }
+
+  bool IsTransactional() const { return is_transactional_; }
+
  private:
   // Constant is used for marking deleted edges.
   // If edge id is equal to constant, edge is deleted.
@@ -402,5 +427,7 @@ class Graph : public GraphView<TSize> {
   std::unordered_map<std::uint64_t, TSize> memgraph_to_inner_edge_id_;
 
   std::multimap<std::pair<TSize, TSize>, TSize> nodes_to_edge_;
+
+  bool is_transactional_;
 };
 }  // namespace mg_graph
