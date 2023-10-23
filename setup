@@ -24,13 +24,14 @@ MG_CONF_DEFAULT_PATH = f"/etc/memgraph/memgraph.conf"
 MG_CONF_QUERY_MODULES_FLAG = "--query-modules-directory"
 MAGE_GPU_BUILD = "MAGE_CUGRAPH_ENABLE=ON"
 
-logging.basicConfig(format='%(asctime)-15s [%(levelname)s]: %(message)s')
-logger = logging.getLogger('setup')
+logging.basicConfig(format="%(asctime)-15s [%(levelname)s]: %(message)s")
+logger = logging.getLogger("setup")
 logger.setLevel(logging.DEBUG)
 
 HELP_MESSAGE = """\
     For usage info run: python3 setup -h
     """
+
 
 class Lang(Enum):
     PYTHON = "Python"
@@ -51,6 +52,7 @@ class Lang(Enum):
     def __str__(self):
         return str(self.value)
 
+
 class BuildType(Enum):
     DEBUG = "Debug"
     RELEASE = "Release"
@@ -58,12 +60,14 @@ class BuildType(Enum):
     def __str__(self):
         return str(self.value)
 
+
 class Parameter(Enum):
     GPU = "gpu"
     CPP_BUILD_FLAGS = "cpp_build_flags"
     LANG = "lang"
     PATH = "path"
     TYPE = "type"
+
 
 def get_arguments():
     parser = argparse.ArgumentParser(
@@ -80,7 +84,7 @@ def get_arguments():
     build_args_parser.add_argument(
         "--lang",
         help="Programming languages to build",
-        nargs='*',
+        nargs="*",
         type=Lang.from_str,
         choices=Lang,
         default=list(Lang),
@@ -155,7 +159,8 @@ def copytree(src, dst, ignore_patterns=[]) -> None:
 
     _copytree()
 
-def run_command(command:List[str])->bool:
+
+def run_command(command: List[str]) -> bool:
     logger.debug(f"[Terminal] Running command `{command}`.")
     try:
         subprocess.check_output(command)
@@ -164,7 +169,8 @@ def run_command(command:List[str])->bool:
         return False
     return True
 
-def build_and_copy_cpp_modules(args:Dict[str,Any])->bool:
+
+def build_and_copy_cpp_modules(args: Dict[str, Any]) -> bool:
     """
     This function builds and copies C++ modules. Returns true if successful, false otherwise.
     """
@@ -183,9 +189,8 @@ def build_and_copy_cpp_modules(args:Dict[str,Any])->bool:
         cmake_args += [f"-D{flag}" for flag in args[Parameter.CPP_BUILD_FLAGS.value]]
     else:
         cmake_args += [f"-DCMAKE_BUILD_TYPE={BuildType.RELEASE}"]
-    
+
     cmake_command = ["cmake"] + cmake_args
-   
 
     cmake_status = run_command(cmake_command)
     if not cmake_status:
@@ -194,7 +199,7 @@ def build_and_copy_cpp_modules(args:Dict[str,Any])->bool:
 
     core_count = mp.cpu_count()
     make_command = ["make", f"-j{core_count}"]
-   
+
     make_status = run_command(make_command)
     if not make_status:
         logger.error("[Terminal] (1/8) Building C++ modules failed.")
@@ -209,21 +214,33 @@ def build_and_copy_cpp_modules(args:Dict[str,Any])->bool:
     # NOTE: This is dependent on the cpp/cmake/cugraph ExternalProject_Add (on
     # the INSTALL_DIR).
 
-    logger.info(f"[Terminal] (3/8) Copying built C++ modules to {MAGE_BUILD_DIRECTORY}.")
+    logger.info(
+        f"[Terminal] (3/8) Copying built C++ modules to {MAGE_BUILD_DIRECTORY}."
+    )
     all_so = set(glob.glob("**/*.so", recursive=True))
+    all_so -= {
+        "mgclient/src/mgclient-proj-build/src/libmgclient.so",
+        "mgclient/lib/libmgclient.so",
+    }
+
     for file in all_so:
         shutil.copy2(file, MAGE_BUILD_DIRECTORY)
 
-    logger.info(f"[Terminal]  (4/8) Successfully copied C++ modules to {MAGE_BUILD_DIRECTORY}.")
+    logger.info(
+        f"[Terminal]  (4/8) Successfully copied C++ modules to {MAGE_BUILD_DIRECTORY}."
+    )
 
     return True
 
-def copy_python_modules()->bool:
+
+def copy_python_modules() -> bool:
     """
     Function copies Python modules to MAGE_BUILD_DIRECTORY. Returns true if successful, otherwise false.
     """
 
-    logger.info(f"[Terminal] (5/8) Copying Python modules to {MAGE_BUILD_DIRECTORY} started.")
+    logger.info(
+        f"[Terminal] (5/8) Copying Python modules to {MAGE_BUILD_DIRECTORY} started."
+    )
 
     os.chdir(PY_DIRECTORY)
     ignore_list = [
@@ -239,11 +256,14 @@ def copy_python_modules()->bool:
     copytree(PY_DIRECTORY, MAGE_BUILD_DIRECTORY, ignore_list)
     os.environ["PYTHONPATH"] = PY_DIRECTORY
 
-    logger.info(f"[Terminal] (6/8) Successfully copied Python modules to {MAGE_BUILD_DIRECTORY}.")
+    logger.info(
+        f"[Terminal] (6/8) Successfully copied Python modules to {MAGE_BUILD_DIRECTORY}."
+    )
 
     return True
 
-def build_and_copy_rust_modules(args:Dict[str,Any])->bool:
+
+def build_and_copy_rust_modules(args: Dict[str, Any]) -> bool:
     """
     Function builds and copies Rust modules.
     """
@@ -264,10 +284,13 @@ def build_and_copy_rust_modules(args:Dict[str,Any])->bool:
                 rs_build_mode = BuildType.RELEASE
             rs_build_mode = rs_build_mode.lower()
         rs_build_flags = ["--release"]
-        if args[Parameter.TYPE.value] is not None and args[Parameter.TYPE.value] == BuildType.DEBUG:
+        if (
+            args[Parameter.TYPE.value] is not None
+            and args[Parameter.TYPE.value] == BuildType.DEBUG
+        ):
             rs_build_flags = []
 
-        # Build Rust query modules    
+        # Build Rust query modules
         subprocess.run(
             ["cargo", "build"] + rs_build_flags,
             check=True,
@@ -285,10 +308,13 @@ def build_and_copy_rust_modules(args:Dict[str,Any])->bool:
         dst_file = os.path.join(MAGE_BUILD_DIRECTORY, module)
         shutil.copy2(src_file, dst_file)
 
-    logger.info(f"[Terminal] (8/8) Successfully built and copied Rust modules to {MAGE_BUILD_DIRECTORY}.")
+    logger.info(
+        f"[Terminal] (8/8) Successfully built and copied Rust modules to {MAGE_BUILD_DIRECTORY}."
+    )
     return True
 
-def build(args:Dict[str, Any])->bool:
+
+def build(args: Dict[str, Any]) -> bool:
     shutil.rmtree(MAGE_BUILD_DIRECTORY, ignore_errors=True)
     os.makedirs(MAGE_BUILD_DIRECTORY, exist_ok=True)
     copytree(LICENCE_DIRECTORY, MAGE_BUILD_DIRECTORY)
@@ -302,20 +328,22 @@ def build(args:Dict[str, Any])->bool:
         python_status = copy_python_modules()
         if not python_status:
             return False
-    
+
     if Lang.RUST in args[Parameter.LANG.value]:
         rust_status = build_and_copy_rust_modules(args)
         if not rust_status:
             return False
-    
+
     return True
 
 
-def run_build_action(args:Dict[str,Any])->bool:
+def run_build_action(args: Dict[str, Any]) -> bool:
     logger.info("[Terminal] Starting building and copying source code...")
     status = build(args)
     if not status:
-        logging.error( "[Terminal] An error occurred while building. Check the output message for more information.")
+        logging.error(
+            "[Terminal] An error occurred while building. Check the output message for more information."
+        )
         return False
 
     logger.info("[Terminal] Building done successfully.")
@@ -323,7 +351,9 @@ def run_build_action(args:Dict[str,Any])->bool:
     if args[Parameter.PATH.value] is None:
         return True
 
-    logger.info(f"[Terminal] Copying build files from folder {MAGE_BUILD_DIRECTORY} to {args[Parameter.PATH.value]} folder.")
+    logger.info(
+        f"[Terminal] Copying build files from folder {MAGE_BUILD_DIRECTORY} to {args[Parameter.PATH.value]} folder."
+    )
 
     copytree(MAGE_BUILD_DIRECTORY, args[Parameter.PATH.value])
     logger.info("[Terminal] Copying done!")
@@ -344,10 +374,14 @@ def run_modules_storage_setup_action(
     modules_storage_path=MAGE_BUILD_DIRECTORY, mg_conf_path=MG_CONF_DEFAULT_PATH
 ):
     if not os.path.isfile(mg_conf_path):
-        logger.info(f"[Terminal] Configuration path does not exist: {mg_conf_path}. Check that Memgraph is installed.")
+        logger.info(
+            f"[Terminal] Configuration path does not exist: {mg_conf_path}. Check that Memgraph is installed."
+        )
         return
 
-    logger.info(f"[Terminal] --query-modules-dir flag in {modules_storage_path} will be set to {mg_conf_path}")
+    logger.info(
+        f"[Terminal] --query-modules-dir flag in {modules_storage_path} will be set to {mg_conf_path}"
+    )
 
     change_file_lines(
         mg_conf_path,
