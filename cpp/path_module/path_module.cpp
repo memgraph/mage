@@ -4,7 +4,7 @@
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
 
     mgp::AddFunction(Path::Elements, Path::kProcedureElements, {mgp::Parameter(Path::kElementsArg1, mgp::Type::Path)},
                      module, memory);
