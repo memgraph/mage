@@ -4,6 +4,20 @@
 
 namespace Refactor {
 
+enum class RelSelectStrategy { INCOMING = 0, OUTGOING = 1, MERGE = 2 };
+
+enum class PropertiesStrategy { DISCARD = 0, OVERRIDE = 1, COMBINE = 2 };
+
+struct Config {
+  explicit Config(const mgp::Map &config);
+
+  void SetRelStrategy(std::string_view strategy);
+  void SetPropStrategy(std::string_view strategy);
+
+  RelSelectStrategy rel_strategy;
+  PropertiesStrategy prop_strategy;
+};
+
 /* categorize constants */
 constexpr const std::string_view kProcedureCategorize = "categorize";
 constexpr const std::string_view kReturnCategorize = "status";
@@ -93,6 +107,14 @@ constexpr std::string_view kResultExtractNode1 = "input";
 constexpr std::string_view kResultExtractNode2 = "output";
 constexpr std::string_view kResultExtractNode3 = "error";
 
+/* delete_and_reconnect constants */
+constexpr std::string_view kProcedureDeleteAndReconnect = "delete_and_reconnect";
+constexpr std::string_view kDeleteAndReconnectArg1 = "path";
+constexpr std::string_view kDeleteAndReconnectArg2 = "nodes";
+constexpr std::string_view kDeleteAndReconnectArg3 = "config";
+constexpr std::string_view kReturnDeleteAndReconnect1 = "nodes";
+constexpr std::string_view kReturnDeleteAndReconnect2 = "relationships";
+
 /* rename_type constants */
 constexpr std::string_view kProcedureRenameType = "rename_type";
 constexpr std::string_view kRenameTypeArg1 = "relationships";
@@ -132,6 +154,8 @@ void CollapseNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
 void Invert(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 void InvertRel(mgp::Graph &graph, mgp::Relationship &rel);
+
+void DeleteAndReconnect(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 void NormalizeAsBoolean(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
