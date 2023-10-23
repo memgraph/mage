@@ -69,7 +69,7 @@ void OnlinePageRankSet(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *re
 
 void OnlinePageRankUpdate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    mgp::memory = memory;
+    mgp::MemoryDispatcherGuard guard{memory};;
 
     const auto graph = mgp::Graph(memgraph_graph);
     const auto arguments = mgp::List(args);

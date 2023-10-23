@@ -1,5 +1,5 @@
 query: >
-  CALL collections.intersection([1, 1, 1, 1, 1, 1], [true, false, 0, 0, 0, 0])
-  YIELD intersection
+  RETURN collections.intersection([1, 1, 1, 1, 1, 1], [true, false, 0, 0, 0, 0])
+  AS intersection;
 output:
   - intersection: []

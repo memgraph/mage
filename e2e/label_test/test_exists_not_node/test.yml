@@ -1,7 +1,6 @@
 query: >
   MATCH (:Student)-[k:KNOWS]->(:Student)
-  CALL label.exists(k, "Knows") YIELD exists
-  RETURN exists
+  RETURN label.exists(k, "Knows") AS output;
 
 output:
-  - exists: False
+  - output: False
