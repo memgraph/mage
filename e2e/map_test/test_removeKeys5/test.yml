@@ -1,5 +1,5 @@
 query: > 
-  CALL map.remove_keys({a:{b:{c:{d:"pas"}}}},["d"],true) YIELD result RETURN result;
+  RETURN map.remove_keys({a:{b:{c:{d:"pas"}}}},["d"],{recursive: true}) AS result;
 
 output:
   - result: {}
