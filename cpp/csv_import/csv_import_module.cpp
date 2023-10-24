@@ -10,9 +10,10 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
                       {
                           mgp::Parameter("string", mgp::Type::String),
                           mgp::Parameter("string", mgp::Type::String),
+                          mgp::Parameter("boolean", mgp::Type::Bool, false),
                       },
                       {mgp::Return(CsvImport::kFilepath, {mgp::Type::String})}, module, memory);
-    mgp::AddProcedure(CsvImport::DeleteFile, "delete_file", mgp::ProcedureType::Read,
+    mgp::AddProcedure(CsvImport::DeleteCsvFile, "delete_file", mgp::ProcedureType::Read,
                       {
                           mgp::Parameter("string", mgp::Type::String),
                       },

@@ -11,9 +11,10 @@ void CreateCsvFile(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result
   try {
     const std::string_view filepath = arguments[0].ValueString();
     const auto content = arguments[1].ValueString();
+    const auto isAppend = arguments[2].ValueBool();
 
     std::ofstream fout;
-    fout.open(std::string(filepath));
+    fout.open(std::string(filepath), isAppend ? std::ofstream::app : std::ofstream::out);
     fout << content << std::endl;
     fout.close();
 
@@ -30,7 +31,7 @@ void CreateCsvFile(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result
   return;
 }
 
-void DeleteFile(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+void DeleteCsvFile(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   // mgp::memory = memory;
   mgp::MemoryDispatcherGuard guard(memory);
   const auto arguments = mgp::List(args);
