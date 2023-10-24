@@ -122,6 +122,13 @@ constexpr std::string_view kRenameTypeArg2 = "newType";
 constexpr std::string_view kRenameTypeArg3 = "rels";
 constexpr std::string_view kResultRenameType = "relationships_changed";
 
+/* rename_node_property constants */
+constexpr std::string_view kProcedureRenameTypeProperty = "rename_type_property";
+constexpr std::string_view kRenameTypePropertyArg1 = "old_property";
+constexpr std::string_view kRenameTypePropertyArg2 = "new_property";
+constexpr std::string_view kRenameTypePropertyArg3 = "rels";
+constexpr std::string_view kRenameTypePropertyResult = "relationships_changed";
+
 void From(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 void To(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
@@ -157,10 +164,11 @@ void InvertRel(mgp::Graph &graph, mgp::Relationship &rel);
 
 void DeleteAndReconnect(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
-void NormalizeAsBoolean(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void RenameTypeProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+
+void NormalizeAsBoolean(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory); 
 
 void ExtractNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 void RenameType(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
-
 }  // namespace Refactor

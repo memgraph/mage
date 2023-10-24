@@ -527,6 +527,38 @@ void Refactor::Config::SetPropStrategy(std::string_view strategy) {
   }
 }
 
+void Refactor::RenameTypeProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+  try {
+    const std::string old_name{arguments[0].ValueString()};
+    const std::string new_name{arguments[1].ValueString()};
+    const auto rels{arguments[2].ValueList()};
+
+    int64_t rels_changed{0};
+    for (auto &rel_value : rels) {
+      auto rel = rel_value.ValueRelationship();
+      const auto prop_value = rel.GetProperty(old_name);
+      /*since there is no bug(prop map cant have null values), it is faster to just check isNull 
+      instead of copying entire properties map and then find*/
+      if (prop_value.IsNull()) { 
+        continue;  
+      } 
+      rel.RemoveProperty(old_name);
+      rel.SetProperty(new_name, prop_value);
+      rels_changed++;
+    }
+
+    auto record = record_factory.NewRecord();
+    record.Insert(std::string(kRenameTypePropertyResult).c_str(), rels_changed);
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
+
 namespace {
 
 template <typename T>

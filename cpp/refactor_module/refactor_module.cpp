@@ -115,6 +115,15 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
                   mgp::Parameter(Refactor::kRenameTypeArg3, {mgp::Type::List, mgp::Type::Relationship})},
                  {mgp::Return(Refactor::kResultRenameType, mgp::Type::Int)}, module, memory);
 
+    AddProcedure(Refactor::RenameTypeProperty, std::string(Refactor::kProcedureRenameTypeProperty).c_str(),
+                 mgp::ProcedureType::Write,
+                 {mgp::Parameter(std::string(Refactor::kRenameTypePropertyArg1).c_str(), mgp::Type::String),
+                  mgp::Parameter(std::string(Refactor::kRenameTypePropertyArg2).c_str(), mgp::Type::String),
+                  mgp::Parameter(std::string(Refactor::kRenameTypePropertyArg3).c_str(),
+                                 {mgp::Type::List, mgp::Type::Relationship})},
+                 {mgp::Return(std::string(Refactor::kRenameTypePropertyResult).c_str(), mgp::Type::Int)}, module,
+                 memory);
+
   } catch (const std::exception &e) {
     return 1;
   }
