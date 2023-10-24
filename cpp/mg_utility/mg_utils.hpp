@@ -283,10 +283,15 @@ void InsertNodeValueResult(mgp_result_record *record, const char *field_name, mg
 
 /// Inserts a node with its ID node_id to create a vertex and insert
 /// the node to the field field_name of the record mgp_result_record record.
-void InsertNodeValueResult(mgp_graph *graph, mgp_result_record *record, const char *field_name, const int node_id,
+/// Returns true is insert is successful, false otherwise
+bool InsertNodeValueResult(mgp_graph *graph, mgp_result_record *record, const char *field_name, const int node_id,
                            mgp_memory *memory) {
   auto *vertex = mgp::graph_get_vertex_by_id(graph, mgp_vertex_id{.as_int = node_id}, memory);
+  if (!vertex) {
+    return false;
+  }
   InsertNodeValueResult(record, field_name, vertex, memory);
+  return true;
 }
 
 /// Inserts a relationship of value edge_value to the field field_name of

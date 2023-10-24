@@ -27,7 +27,14 @@ void InsertLouvainRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memor
   mgp_result_record *record = mgp::result_new_record(result);
   if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
 
-  mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
+  bool res = mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
+  if (!res) {
+    mgp::result_delete_last_record(result);
+    if (mgp::graph_is_transactional(graph)) {
+      throw mg_exception::InvalidIDException();
+    }
+    return;
+  }
   mg_utility::InsertIntValueResult(record, kFieldCommunity, community, memory);
 }
 
