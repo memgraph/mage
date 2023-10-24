@@ -119,7 +119,7 @@ constexpr std::string_view kReturnDeleteAndReconnect2 = "relationships";
 constexpr std::string_view kProcedureRenameType = "rename_type";
 constexpr std::string_view kRenameTypeArg1 = "oldType";
 constexpr std::string_view kRenameTypeArg2 = "newType";
-constexpr std::string_view kRenameTypeArg3 = "labels";
+constexpr std::string_view kRenameTypeArg3 = "rels";
 constexpr std::string_view kResultRenameType = "relationships_changed";
 
 void From(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
