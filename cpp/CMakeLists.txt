@@ -158,6 +158,6 @@ add_subdirectory(node_module)
 add_subdirectory(neighbors_module)
 add_subdirectory(refactor_module)
 add_subdirectory(schema_module)
-add_subdirectory(csv_import)
+add_subdirectory(csv_utils_module)
 
 add_cugraph_subdirectory(cugraph_module)

@@ -1,9 +1,9 @@
-#include "csv_import.hpp"
+#include "csv_utils.hpp"
 
-namespace CsvImport {
+namespace CsvUtils {
 
 void CreateCsvFile(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  // mgp::memory = memory;
+  mgp::memory = memory;
   mgp::MemoryDispatcherGuard guard(memory);
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
@@ -32,7 +32,7 @@ void CreateCsvFile(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result
 }
 
 void DeleteCsvFile(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  // mgp::memory = memory;
+  mgp::memory = memory;
   mgp::MemoryDispatcherGuard guard(memory);
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
@@ -51,4 +51,4 @@ void DeleteCsvFile(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result
   return;
 }
 
-}  // namespace CsvImport
+}  // namespace CsvUtils
