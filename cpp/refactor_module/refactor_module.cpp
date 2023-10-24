@@ -84,6 +84,14 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
                   mgp::Return(std::string(Refactor::kReturnRelationshipCollapseNode).c_str(), mgp::Type::Relationship)},
                  module, memory);
 
+    AddProcedure(Refactor::DeleteAndReconnect, Refactor::kProcedureDeleteAndReconnect, mgp::ProcedureType::Write,
+                 {mgp::Parameter(Refactor::kDeleteAndReconnectArg1, mgp::Type::Path),
+                  mgp::Parameter(Refactor::kDeleteAndReconnectArg2, {mgp::Type::List, mgp::Type::Node}),
+                  mgp::Parameter(Refactor::kDeleteAndReconnectArg3, mgp::Type::Map, mgp::Value(mgp::Map()))},
+                 {mgp::Return(Refactor::kReturnDeleteAndReconnect1, {mgp::Type::List, mgp::Type::Node}),
+                  mgp::Return(Refactor::kReturnDeleteAndReconnect2, {mgp::Type::List, mgp::Type::Relationship})},
+                 module, memory);
+
     AddProcedure(Refactor::ExtractNode, Refactor::kProcedureExtractNode, mgp::ProcedureType::Write,
                  {mgp::Parameter(Refactor::kExtractNodeArg1, mgp::Type::Any),
                   mgp::Parameter(Refactor::kExtractNodeArg2, {mgp::Type::List, mgp::Type::String}),
@@ -100,6 +108,12 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
                   mgp::Parameter(Refactor::kNormalizeAsBooleanArg3, {mgp::Type::List, mgp::Type::Any}),
                   mgp::Parameter(Refactor::kNormalizeAsBooleanArg4, {mgp::Type::List, mgp::Type::Any})},
                  {}, module, memory);
+
+    AddProcedure(Refactor::RenameType, Refactor::kProcedureRenameType, mgp::ProcedureType::Write,
+                 {mgp::Parameter(Refactor::kRenameTypeArg1, mgp::Type::String),
+                  mgp::Parameter(Refactor::kRenameTypeArg2, mgp::Type::String),
+                  mgp::Parameter(Refactor::kRenameTypeArg3, {mgp::Type::List, mgp::Type::Relationship})},
+                 {mgp::Return(Refactor::kResultRenameType, mgp::Type::Int)}, module, memory);
 
     AddProcedure(Refactor::RenameTypeProperty, std::string(Refactor::kProcedureRenameTypeProperty).c_str(),
                  mgp::ProcedureType::Write,
