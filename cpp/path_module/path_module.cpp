@@ -4,7 +4,7 @@
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
-    mgp::memory = memory;
+    mgp::MemoryDispatcherGuard guard{memory};;
     AddProcedure(
         Path::Expand, std::string(Path::kProcedureExpand).c_str(), mgp::ProcedureType::Read,
         {mgp::Parameter(std::string(Path::kArgumentStartExpand).c_str(), mgp::Type::Any),

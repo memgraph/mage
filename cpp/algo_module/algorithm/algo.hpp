@@ -3,6 +3,7 @@
 #include <unordered_set>
 
 #include <mgp.hpp>
+#include <unordered_set>
 
 namespace Algo {
 
@@ -15,14 +16,14 @@ class PathFinder {
   std::vector<mgp::Path> FindAllPaths();
 
  private:
-  const mgp::Node _start_node;
-  const mgp::Id _end_node_id;
-  std::unordered_map<std::string_view, uint8_t> _rel_direction;
-  const int64_t _max_length;
-  std::vector<mgp::Path> _paths;
+  const mgp::Node start_node_;
+  const mgp::Id end_node_id_;
+  std::unordered_map<std::string_view, uint8_t> rel_direction_;
+  const int64_t max_length_;
+  std::vector<mgp::Path> paths_;
 };
 
-/* sum_longs constants */
+/* all_simple_paths constants */
 constexpr const std::string_view kProcedureAllSimplePaths = "all_simple_paths";
 constexpr const std::string_view kAllSimplePathsArg1 = "start_node";
 constexpr const std::string_view kAllSimplePathsArg2 = "end_node";
@@ -30,6 +31,13 @@ constexpr const std::string_view kAllSimplePathsArg3 = "relationship_types";
 constexpr const std::string_view kAllSimplePathsArg4 = "max_length";
 constexpr const std::string_view kResultAllSimplePaths = "path";
 
+/* cover constants */
+constexpr std::string_view kProcedureCover = "cover";
+constexpr std::string_view kCoverArg1 = "nodes";
+constexpr std::string_view kCoverRet1 = "rel";
+
 void AllSimplePaths(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+
+void Cover(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 }  // namespace Algo

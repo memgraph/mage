@@ -3,26 +3,26 @@
 #include "mgp.hpp"
 
 Algo::PathFinder::PathFinder(const mgp::Node &start_node, const mgp::Node &end_node, int64_t max_length)
-    : _start_node(start_node), _end_node_id(end_node.Id()), _max_length(max_length) {}
+    : start_node_(start_node), end_node_id_(end_node.Id()), max_length_(max_length) {}
 
 void Algo::PathFinder::UpdateRelationshipDirection(const mgp::List &relationship_types) {
-  _rel_direction.clear();
+  rel_direction_.clear();
   for (const auto relationship : relationship_types) {
     auto value = relationship.ValueString();
     auto incoming = static_cast<uint8_t>(value.starts_with('<'));
     auto outgoing = static_cast<uint8_t>(value.ends_with('>'));
     auto substr = value.substr(incoming, value.size() - incoming - outgoing);
-    _rel_direction[substr] |= (incoming | (outgoing << 1U));
+    rel_direction_[substr] |= (incoming | (outgoing << 1U));
   }
 }
 
 void Algo::PathFinder::DFS(const mgp::Node &curr_node, mgp::Path &curr_path, std::unordered_set<int64_t> &visited) {
-  if (curr_node.Id() == _end_node_id) {
-    _paths.emplace_back(curr_path);
+  if (curr_node.Id() == end_node_id_) {
+    paths_.emplace_back(curr_path);
     return;
   }
 
-  if (static_cast<int64_t>(curr_path.Length()) == _max_length) {
+  if (static_cast<int64_t>(curr_path.Length()) == max_length_) {
     return;
   }
 
@@ -42,9 +42,9 @@ void Algo::PathFinder::DFS(const mgp::Node &curr_node, mgp::Path &curr_path, std
       auto label = std::string(relationship.Type());
       int label_bitmask = 0;
 
-      if (!_rel_direction.empty()) {
-        auto it = _rel_direction.find(label);
-        if (it == _rel_direction.end()) {
+      if (!rel_direction_.empty()) {
+        auto it = rel_direction_.find(label);
+        if (it == rel_direction_.end()) {
           continue;
         }
         label_bitmask = it->second;
@@ -72,11 +72,11 @@ void Algo::PathFinder::DFS(const mgp::Node &curr_node, mgp::Path &curr_path, std
 }
 
 std::vector<mgp::Path> Algo::PathFinder::FindAllPaths() {
-  _paths.clear();
-  mgp::Path path{_start_node};
+  paths_.clear();
+  mgp::Path path{start_node_};
   std::unordered_set<int64_t> visited;
-  DFS(_start_node, path, visited);
-  return _paths;
+  DFS(start_node_, path, visited);
+  return paths_;
 }
 
 void Algo::AllSimplePaths(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
@@ -98,6 +98,32 @@ void Algo::AllSimplePaths(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
     for (const auto &path : paths) {
       auto record = record_factory.NewRecord();
       record.Insert(std::string(kResultAllSimplePaths).c_str(), path);
+    }
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
+
+void Algo::Cover(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+  try {
+    auto list_nodes = arguments[0].ValueList();
+    std::unordered_set<mgp::Node> nodes;
+    for (const auto &elem : list_nodes) {
+      auto node = elem.ValueNode();
+      nodes.insert(node);
+    }
+
+    for (const auto &node : nodes) {
+      for (const auto rel : node.OutRelationships()) {
+        if (nodes.find(rel.To()) != nodes.end()) {
+          auto record = record_factory.NewRecord();
+          record.Insert(std::string(kCoverRet1).c_str(), rel);
+        }
+      }
     }
 
   } catch (const std::exception &e) {

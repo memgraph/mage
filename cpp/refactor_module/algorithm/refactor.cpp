@@ -108,6 +108,7 @@ void Refactor::InsertCloneNodesRecord(mgp_graph *graph, mgp_result *result, mgp_
 
   mg_utility::InsertIntValueResult(record, std::string(kResultClonedNodeId).c_str(), cycle_id, memory);
   mg_utility::InsertNodeValueResult(graph, record, std::string(kResultNewNode).c_str(), node_id, memory);
+  mg_utility::InsertStringValueResult(record, std::string(kResultCloneNodeError).c_str(), "", memory);
 }
 
 mgp::Node GetStandinOrCopy(const mgp::List &standin_nodes, const mgp::Node node,
@@ -383,7 +384,7 @@ void Refactor::InvertRel(mgp::Graph &graph, mgp::Relationship &rel) {
 }
 
 void Refactor::Invert(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};;
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
@@ -392,9 +393,9 @@ void Refactor::Invert(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
 
     InvertRel(graph, rel);
     auto record = record_factory.NewRecord();
-    record.Insert(std::string(kReturnIdInvert).c_str(), rel.Id().AsInt());
-    record.Insert(std::string(kReturnRelationshipInvert).c_str(), rel);
-
+    record.Insert(std::string(kResultIdInvert).c_str(), rel.Id().AsInt());
+    record.Insert(std::string(kResultRelationshipInvert).c_str(), rel);
+    record.Insert(std::string(kResultErrorInvert).c_str(), "");
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
     return;
@@ -428,7 +429,7 @@ void Refactor::Collapse(mgp::Graph &graph, const mgp::Node &node, const std::str
 }
 
 void Refactor::CollapseNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};;
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
@@ -436,7 +437,7 @@ void Refactor::CollapseNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
     const mgp::Value input = arguments[0];
     const std::string type{arguments[1].ValueString()};
 
-    if(!input.IsNode() && !input.IsInt() && !input.IsList()){
+    if (!input.IsNode() && !input.IsInt() && !input.IsList()) {
       record_factory.SetErrorMessage("Input can only be node, node ID, or list of nodes/IDs");
       return;
     }
@@ -460,9 +461,7 @@ void Refactor::CollapseNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
           return;
         }
       }
-    } 
-      
-    
+    }
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
