@@ -1,10 +1,102 @@
 #include "merge.hpp"
-
 #include <algorithm>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
 #include "mgp.hpp"
+
+bool Merge::LabelsContained(const std::unordered_set<std::string_view> &labels, const mgp::Node &node) {
+  bool contained = false;
+  auto size = labels.size();  // this works if labels are unique, which they are
+  size_t counter = 0;
+
+  for (const auto label : node.Labels()) {
+    if (labels.find(label) != labels.end()) {
+      counter++;
+    }
+  }
+
+  if (counter == size) {
+    contained = true;
+  }
+
+  return contained;
+}
+
+bool Merge::IdentProp(const mgp::Map &ident_prop, const mgp::Node &node) {
+  bool match = true;
+  for (const auto &[key, value] : ident_prop) {
+    if (value != node.GetProperty(std::string(key))) {
+      match = false;
+    }
+  }
+  return match;
+}
+
+void Merge::Node(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+  try {
+    auto graph = mgp::Graph(memgraph_graph);
+    auto labels = arguments[0].ValueList();
+    auto ident_prop = arguments[1].ValueMap();
+    auto create_prop = arguments[2].ValueMap();
+    auto match_prop = arguments[3].ValueMap();
+    std::unordered_set<std::string_view> label_set;
+    std::unordered_map<std::string_view, mgp::Value> ident_prop_map;
+    std::unordered_map<std::string_view, mgp::Value> create_prop_map;
+    std::unordered_map<std::string_view, mgp::Value> match_prop_map;
+    /*conversion of mgp::Maps to unordered_map for easier use of SetProperties(it expects an unordered map as
+     * argument)*/
+    auto convert_to_map = [](const auto& source, auto& destination) {
+        for (const auto& [key, value] : source) {
+            destination.emplace(key, value);
+        }
+    };
+    convert_to_map(ident_prop, ident_prop_map);
+
+    convert_to_map(create_prop, create_prop_map);
+
+    convert_to_map(match_prop, match_prop_map);
+
+
+    /*creating a set of labels for O(1) check of labels*/
+    for (const auto elem : labels) {
+      const auto label = elem.ValueString();
+      if (label.empty()) {
+        throw mgp::ValueException("List of labels cannot contain empty string!");
+      }
+      label_set.insert(elem.ValueString());
+    }
+
+    bool matched = false;
+    for (auto node : graph.Nodes()) {
+      //check if node already exists, if true, merge, if not, create
+      if (LabelsContained(label_set, node) && IdentProp(ident_prop, node)) {
+        matched = true;
+        node.SetProperties(match_prop_map);
+        auto record = record_factory.NewRecord();
+        record.Insert(std::string(kNodeRes).c_str(), node);
+      }
+    }
+    if (!matched) {
+      auto node = graph.CreateNode();
+      for (const auto label : label_set) {
+        node.AddLabel(label);
+      }
+      // when merge creates it creates identyfing props also
+      node.SetProperties(ident_prop_map); 
+      node.SetProperties(create_prop_map);
+      auto record = record_factory.NewRecord();
+      record.Insert(std::string(kNodeRes).c_str(), node);
+    }
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
 
 namespace {
 
