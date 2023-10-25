@@ -2,7 +2,7 @@ query: >
   MATCH (a:Node {name: "A"})
   CALL path.subgraph_nodes(a, {relationshipFilter: ['CONNECTED_TO>']})
   YIELD nodes
-  RETURN nodes
+  RETURN nodes ORDER BY id(nodes) ASC;
 
 output:
       - nodes:
@@ -19,7 +19,7 @@ output:
           labels:
             - Node
           properties:
-            name: E
+            name: C
       - nodes:
           labels:
             - Node
@@ -29,4 +29,4 @@ output:
           labels:
             - Node
           properties:
-            name: C
+            name: E
