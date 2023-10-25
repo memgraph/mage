@@ -7,20 +7,28 @@
 
 namespace Algo {
 
+enum class RelDirection { kNone = -1, kAny = 0, kIncoming = 1, kOutgoing = 2, kBoth = 3 };
+
 class PathFinder {
  public:
-  PathFinder(const mgp::Node &start_node, const mgp::Node &end_node, int64_t max_length);
+  PathFinder(const mgp::Node &start_node, const mgp::Node &end_node, int64_t max_length, const mgp::List &rel_types,
+             const mgp::RecordFactory &record_factory);
+
+  RelDirection GetDirection(const std::string &rel_type) const;
 
   void UpdateRelationshipDirection(const mgp::List &relationship_types);
   void DFS(const mgp::Node &curr_node, mgp::Path &curr_path, std::unordered_set<int64_t> &visited);
-  std::vector<mgp::Path> FindAllPaths();
+  void FindAllPaths();
 
  private:
   const mgp::Node start_node_;
   const mgp::Id end_node_id_;
-  std::unordered_map<std::string_view, uint8_t> rel_direction_;
   const int64_t max_length_;
-  std::vector<mgp::Path> paths_;
+  bool any_incoming_;
+  bool any_outgoing_;
+
+  std::unordered_map<std::string_view, RelDirection> rel_direction_;
+  const mgp::RecordFactory &record_factory_;
 };
 
 /* all_simple_paths constants */
