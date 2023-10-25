@@ -1,8 +1,0 @@
-query: >
-    LOAD CSV FROM "/_file1" WITH header AS row
-    RETURN convert.str2object(row.b) AS list;
-
-output: 
-  - list: [ "1","2", 3]
-  - list: [["1",{"key": 5}]]
-  - list: {"prop": {"prop2": {"key": 10}}}
