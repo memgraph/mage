@@ -4,7 +4,9 @@
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
-    mgp::MemoryDispatcherGuard guard{memory};;
+
+    mgp::MemoryDispatcherGuard guard{memory};
+
     AddProcedure(Node::RelationshipsExist, std::string(Node::kProcedureRelationshipsExist).c_str(),
                  mgp::ProcedureType::Read,
                  {mgp::Parameter(std::string(Node::kArgumentNodesRelationshipsExist).c_str(), mgp::Type::Node),
@@ -24,6 +26,16 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
         {mgp::Parameter(Node::kRelationshipTypesArg1, mgp::Type::Node),
          mgp::Parameter(Node::kRelationshipTypesArg2, {mgp::Type::List, mgp::Type::String}, mgp::Value(mgp::List{}))},
         {mgp::Return(Node::kResultRelationshipTypes, {mgp::Type::List, mgp::Type::String})}, module, memory);
+
+    mgp::AddFunction(Node::DegreeIn, Node::kFunctionDegreeIn,
+                     {mgp::Parameter(Node::kDegreeInArg1, mgp::Type::Node),
+                      mgp::Parameter(Node::kDegreeInArg2, mgp::Type::String, "")},
+                     module, memory);
+
+    mgp::AddFunction(Node::DegreeOut, Node::kFunctionDegreeOut,
+                     {mgp::Parameter(Node::kDegreeOutArg1, mgp::Type::Node),
+                      mgp::Parameter(Node::kDegreeOutArg2, mgp::Type::String, "")},
+                     module, memory);
 
   } catch (const std::exception &e) {
     return 1;

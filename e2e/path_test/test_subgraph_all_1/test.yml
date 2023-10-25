@@ -10,6 +10,10 @@ query: >
 output:
   - nodes:
         - labels:
+            - Operations
+          properties:
+            name: Jill
+        - labels:
             - Research
           properties:
             name: Matt
@@ -17,10 +21,6 @@ output:
             - Operations
           properties:
             name: Steve
-        - labels:
-            - Operations
-          properties:
-            name: Jill
     rels:
         - label: FOLLOWS
           properties: {}
