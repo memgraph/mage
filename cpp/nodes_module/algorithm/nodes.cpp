@@ -27,7 +27,7 @@ bool Nodes::RelationshipExist(const mgp::Node &node, std::string &rel_type) {
 }
 
 void Nodes::RelationshipsExist(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};;
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
@@ -167,7 +167,7 @@ void DetachDeleteNode(const mgp::Value &node, mgp::Graph &graph) {
 }  // namespace
 
 void Nodes::RelationshipTypes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};;
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
@@ -182,7 +182,7 @@ void Nodes::RelationshipTypes(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
 }
 
 void Nodes::Delete(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};;
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
@@ -206,7 +206,7 @@ void Nodes::Delete(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result
 
 
 void Nodes::Link(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};;
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
