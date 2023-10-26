@@ -17,17 +17,23 @@ constexpr const std::string_view kAStarTarget = "target";
 constexpr const std::string_view kAStarConfig = "config";
 constexpr const std::string_view kAStarPath = "path";
 constexpr const std::string_view kAStarWeight = "weight";
+const std::string kDefaultHeuristic = "";
+const std::string kDefaultDistance = "distance";
+const std::string kDefaultLatitude = "lat";
+const std::string kDefaultLongitude = "lon";
+
+enum class RelationshipType { IN, OUT };
 struct NodeObject {
  public:
-  //heuristic distance of the node
+  // heuristic distance of the node
   double heuristic_distance;
-  //total distance of the path to the node
+  // total distance of the path to the node
   double total_distance;
-  //the node the object represents
+  // the node the object represents
   mgp::Node node;
-  //path relationship that leads into the node
+  // path relationship that leads into the node
   mgp::Relationship rel;
-  //previous node object
+  // previous node object
   std::shared_ptr<NodeObject> prev;
 
   NodeObject(const double heuristic_distance, const double total_distance, const mgp::Node &node,
@@ -121,10 +127,10 @@ class Config {
  public:
   bool unweighted = false;
   double epsilon = 1.0;
-  std::string distance_prop = "distance";
-  std::string heuristic_name = "";
-  std::string latitude_name = "lat";
-  std::string longitude_name = "lon";
+  std::string distance_prop = kDefaultDistance;
+  std::string heuristic_name = kDefaultHeuristic;
+  std::string latitude_name = kDefaultLatitude;
+  std::string longitude_name = kDefaultLongitude;
   std::unordered_set<std::string> whitelist;
   std::unordered_set<std::string> blacklist;
   std::unordered_set<std::string> in_rels;
@@ -153,25 +159,18 @@ class Config {
     if (!map.At("whitelisted_labels").IsNull()) {
       auto list = map.At("whitelisted_labels").ValueList();
       for (const auto value : list) {
-        if (value.IsString()) {
-          whitelist.insert(std::string(value.ValueString()));
-        }
+        whitelist.insert(std::string(value.ValueString()));
       }
     }
     if (!map.At("blacklisted_labels").IsNull()) {
       auto list = map.At("blacklisted_labels").ValueList();
       for (const auto value : list) {
-        if (value.IsString()) {
-          blacklist.insert(std::string(value.ValueString()));
-        }
+        blacklist.insert(std::string(value.ValueString()));
       }
     }
     if (!map.At("relationships_filter").IsNull()) {
       auto list = map.At("relationships_filter").ValueList();
       for (const auto value : list) {
-        if (!value.IsString()) {
-          continue;
-        }
         auto rel_type = std::string(value.ValueString());
         const size_t size = rel_type.size();
         const char first_elem = rel_type[0];
@@ -202,6 +201,7 @@ struct GoalNodes {
 
   GoalNodes(const mgp::Node &start, const mgp::Node &target, const std::pair<double, double> lat_lon)
       : start(start), target(target), lat_lon(lat_lon) {}
+  GoalNodes(const mgp::Node &start, const mgp::Node &target) : start(start), target(target) {}
 };
 
 struct TrackingLists {
@@ -209,20 +209,18 @@ struct TrackingLists {
   Closed closed;
 };
 
-
-
 double GetHaversineDistance(double lat1, double lon1, double lat2, double lon2);
 double GetRadians(double degrees);
 void AStar(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
-bool RelOk(const mgp::Relationship &rel, const Config &config, const bool in);
+bool RelOk(const mgp::Relationship &rel, const Config &config, const RelationshipType rel_type);
 bool IsLabelOk(const mgp::Node &node, const Config &config);
 std::pair<mgp::Path, double> BuildResult(std::shared_ptr<NodeObject> final_node, const mgp::Node &start);
 std::shared_ptr<NodeObject> InitializeStart(const mgp::Node &start);
 std::pair<mgp::Path, double> HelperAstar(const GoalNodes &nodes, const Config &config);
-void ParseRelationships(const std::shared_ptr<NodeObject> &prev, bool in, const GoalNodes &nodes, TrackingLists &lists,
-                        const Config &config);
+void ExpandRelationships(const std::shared_ptr<NodeObject> &prev, const RelationshipType rel_type,
+                         const GoalNodes &nodes, TrackingLists &lists, const Config &config);
 double CalculateHeuristic(const Config &config, const mgp::Node &node, const GoalNodes &nodes);
-std::pair<double, double> GetTargetLatLon(const mgp::Node &target, const Config &config);
+std::pair<double, double> GetLatLon(const mgp::Node &target, const Config &config);
 double CalculateDistance(const Config &config, const mgp::Relationship &rel);
 void CheckConfigTypes(const mgp::Map &map);
 
