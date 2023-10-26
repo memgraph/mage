@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <mg_exceptions.hpp>
 #include <mg_utils.hpp>
 
@@ -24,17 +25,20 @@ const double kDefaultWeight = 1.0;
 
 void InsertLouvainRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
                          const std::uint64_t community) {
-  mgp_result_record *record = mgp::result_new_record(result);
-  if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
-
-  bool res = mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
-  if (!res) {
-    mgp::result_delete_last_record(result);
+  auto *vertex = mgp::graph_get_vertex_by_id(graph, mgp_vertex_id{.as_int = static_cast<int64_t>(node_id)}, memory);
+  if (!vertex) {
     if (mgp::graph_is_transactional(graph)) {
       throw mg_exception::InvalidIDException();
     }
+    // For Analytical mode it's possible that some vertices/edges are missing
+    // because of changes in parallel transactions.
     return;
   }
+
+  mgp_result_record *record = mgp::result_new_record(result);
+  if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
+
+  mg_utility::InsertNodeValueResult(record, kFieldNode, vertex, memory);
   mg_utility::InsertIntValueResult(record, kFieldCommunity, community, memory);
 }
 
