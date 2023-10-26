@@ -26,6 +26,8 @@ void Algo::PathFinder::UpdateRelationshipDirection(const mgp::List &relationship
     bool starts_with = rel_type.starts_with('<');
     bool ends_with = rel_type.ends_with('>');
 
+    // '<' -> all incoming relationship are accepted
+    // '>' -> all outgoing relationships are good
     if (rel_type.size() == 1) {
       if (starts_with) {
         any_incoming_ = true;
