@@ -65,11 +65,11 @@ void Algo::PathFinder::DFS(const mgp::Node &curr_node, mgp::Path &curr_path, std
   visited.insert(curr_node.Id().AsInt());
   std::unordered_set<int64_t> seen;
 
-  auto iterate = [&visited, &seen, &curr_path, this](mgp::Relationships relationships, bool outgoing) {
-    RelDirection direction = (outgoing ? RelDirection::kOutgoing : RelDirection::kIncoming);
-
+  auto iterate = [&visited, &seen, &curr_path, this](mgp::Relationships relationships, RelDirection direction,
+                                                     bool always_expand) {
     for (const auto relationship : relationships) {
-      auto next_node_id = outgoing ? relationship.To().Id().AsInt() : relationship.From().Id().AsInt();
+      auto next_node_id =
+          direction == RelDirection::kOutgoing ? relationship.To().Id().AsInt() : relationship.From().Id().AsInt();
 
       if (visited.contains(next_node_id)) {
         continue;
@@ -78,26 +78,24 @@ void Algo::PathFinder::DFS(const mgp::Node &curr_node, mgp::Path &curr_path, std
       auto type = std::string(relationship.Type());
       auto wanted_direction = GetDirection(type);
 
-      if (wanted_direction == RelDirection::kAny || wanted_direction == direction ||
-          (any_incoming_ && direction == RelDirection::kIncoming) ||
-          (any_outgoing_ && direction == RelDirection::kOutgoing)) {
+      if (always_expand || wanted_direction == RelDirection::kAny || wanted_direction == direction) {
         curr_path.Expand(relationship);
-        DFS(outgoing ? relationship.To() : relationship.From(), curr_path, visited);
+        DFS(direction == RelDirection::kOutgoing ? relationship.To() : relationship.From(), curr_path, visited);
         curr_path.Pop();
       } else if (wanted_direction == RelDirection::kBoth) {
-        if (outgoing && seen.contains(relationship.To().Id().AsInt())) {
+        if (direction == RelDirection::kOutgoing && seen.contains(relationship.To().Id().AsInt())) {
           curr_path.Expand(relationship);
           DFS(relationship.To(), curr_path, visited);
           curr_path.Pop();
-        } else if (!outgoing) {
+        } else if (direction == RelDirection::kIncoming) {
           seen.insert(relationship.From().Id().AsInt());
         }
       }
     }
   };
 
-  iterate(curr_node.InRelationships(), false);
-  iterate(curr_node.OutRelationships(), true);
+  iterate(curr_node.InRelationships(), RelDirection::kIncoming, any_incoming_);
+  iterate(curr_node.OutRelationships(), RelDirection::kOutgoing, any_outgoing_);
   visited.erase(curr_node.Id().AsInt());
 }
 
