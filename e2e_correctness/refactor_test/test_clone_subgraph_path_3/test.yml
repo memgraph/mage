@@ -6,8 +6,8 @@ memgraph_query: >
   CALL refactor.clone_subgraph_from_paths([], {
       standinNodes:[[ana, marija]]
   })
-  YIELD cloned_node_id, new_node
-  RETURN cloned_node_id, new_node;
+  YIELD input, output
+  RETURN input, output;
 
 neo4j_query: >
   MATCH (ana:Ana),

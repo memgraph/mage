@@ -10,36 +10,36 @@ query: >
       standinNodes:[[ana, marija]],
       skipProperties: ["name"]
   })
-  YIELD new_node
-  RETURN new_node;
+  YIELD output
+  RETURN output;
 
 output:
-  - new_node:
+  - output:
         labels:
           - Person
         properties:
           id: 6
-  - new_node:
+  - output:
         labels:
           - Person
         properties:
           id: 5
-  - new_node:
+  - output:
         labels:
           - Person
         properties:
           id: 4
-  - new_node:
+  - output:
         labels:
           - Person
         properties:
           id: 3
-  - new_node:
+  - output:
         labels:
           - Person
         properties:
           id: 2
-  - new_node:
+  - output:
         labels:
           - Marija
         properties:

@@ -1,7 +1,6 @@
 query: >
     MATCH (c:C)
-    CALL collections.sum([1, 2.3, -3, c.id]) YIELD sum
-    RETURN sum
+    RETURN collections.sum([1, 2.3, -3, c.id]) AS sum
 
 output:
     - sum: 3.3

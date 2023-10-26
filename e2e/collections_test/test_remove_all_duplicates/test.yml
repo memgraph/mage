@@ -1,6 +1,5 @@
 query: >
-    CALL collections.remove_all([1, 2, 3, 4, 5, 1, 2], [1, 2, 3]) YIELD removed
-    RETURN removed
+    RETURN collections.remove_all([1, 2, 3, 4, 5, 1, 2], [1, 2, 3]) AS removed
 
 output:
     - removed: [4, 5]

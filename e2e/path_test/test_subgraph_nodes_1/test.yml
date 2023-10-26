@@ -5,7 +5,7 @@ query: >
       labelFilter: ["+Strategy", "/Operations", ">Research", "-Support", "Analytics"]
   })
   YIELD nodes
-  RETURN nodes;
+  RETURN nodes ORDER BY id(nodes) ASC
 
 output:
       - nodes:
@@ -17,9 +17,9 @@ output:
           labels:
             - Operations
           properties:
-            name: Steve
+            name: Jill
       - nodes:
           labels:
             - Operations
           properties:
-            name: Jill
+            name: Steve

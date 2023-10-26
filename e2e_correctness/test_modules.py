@@ -155,7 +155,7 @@ def _graphs_equal(memgraph_graph: Graph, neo4j_graph: Graph) -> bool:
 
 def _run_test(
     test_dir: str, memgraph_db: Memgraph, neo4j_driver: neo4j.BoltDriver
-):
+) -> None:
     """
     Run input queries on Memgraph and Neo4j and compare graphs after running test query
     """
@@ -192,7 +192,7 @@ def _run_test(
 
 def _run_path_test(
     test_dir: str, memgraph_db: Memgraph, neo4j_driver: neo4j.BoltDriver
-):
+) -> None:
     """
     Run input queries on Memgraph and Neo4j and compare path results after running test query
     """
