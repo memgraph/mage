@@ -3,7 +3,6 @@
 namespace CsvUtils {
 
 void CreateCsvFile(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
   mgp::MemoryDispatcherGuard guard(memory);
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
@@ -18,9 +17,8 @@ void CreateCsvFile(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result
     fout << content << std::endl;
     fout.close();
 
-    mgp::List return_list;
     auto record = record_factory.NewRecord();
-    record.Insert(std::string(kFilepath).c_str(), filepath);
+    record.Insert(std::string(filepath).c_str(), filepath);
 
     return;
 
@@ -32,7 +30,6 @@ void CreateCsvFile(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result
 }
 
 void DeleteCsvFile(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
   mgp::MemoryDispatcherGuard guard(memory);
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);

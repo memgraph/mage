@@ -5,7 +5,7 @@
 
 extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
   try {
-    mgp::memory = memory;
+    mgp::MemoryDispatcherGuard guard(memory);
     mgp::AddProcedure(CsvUtils::CreateCsvFile, CsvUtils::kProcedureCreateCsvFile, mgp::ProcedureType::Read,
                       {
                           mgp::Parameter(CsvUtils::kArgumentCreateCsvFile1, mgp::Type::String),
