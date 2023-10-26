@@ -2,28 +2,13 @@ query: >
   MATCH (p:Strategy {name: "Amber"})
   CALL path.subgraph_nodes(p, {
       relationshipFilter: [">"],
-      minLevel: 0,
-      maxLevel: 2
+      minHops: 0,
+      maxHops: 2
   })
   YIELD nodes
-  RETURN nodes;
+  RETURN nodes ORDER BY id(nodes);
 
 output:
-      - nodes:
-          labels:
-            - Strategy
-          properties:
-            name: Amber
-      - nodes:
-          labels:
-            - Strategy
-          properties:
-            name: Jacob
-      - nodes:
-          labels:
-            - Operations
-          properties:
-            name: Jill
       - nodes:
           labels:
             - Research
@@ -39,6 +24,21 @@ output:
             - Analytics
           properties:
             name: Zack
+      - nodes:
+          labels:
+            - Operations
+          properties:
+            name: Jill
+      - nodes:
+          labels:
+            - Strategy
+          properties:
+            name: Amber
+      - nodes:
+          labels:
+            - Strategy
+          properties:
+            name: Jacob
       - nodes:
           labels:
             - Support

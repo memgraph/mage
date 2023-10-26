@@ -17,15 +17,15 @@ output:
         - labels:
             - Node
           properties:
+            name: C
+        - labels:
+            - Node
+          properties:
             name: E
         - labels:
             - Node
           properties:
             name: D
-        - labels:
-            - Node
-          properties:
-            name: C
     rels:
         - label: CONNECTED_TO
           properties: {}
