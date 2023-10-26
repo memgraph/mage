@@ -9,11 +9,17 @@ Algo::PathFinder::PathFinder(const mgp::Node &start_node, const mgp::Node &end_n
 }
 
 void Algo::PathFinder::UpdateRelationshipDirection(const mgp::List &relationship_types) {
+  all_incoming_ = false;
+  all_outgoing_ = false;
+
   if (relationship_types.Size() == 0) {  // if no relationships were passed as arguments, all relationships are allowed
     any_outgoing_ = true;
     any_incoming_ = true;
     return;
   }
+
+  bool in_rel = false;
+  bool out_rel = false;
 
   for (const auto &rel : relationship_types) {
     std::string rel_type{std::string(rel.ValueString())};
@@ -23,23 +29,36 @@ void Algo::PathFinder::UpdateRelationshipDirection(const mgp::List &relationship
     if (rel_type.size() == 1) {
       if (starts_with) {
         any_incoming_ = true;
+        in_rel = true;
       } else if (ends_with) {
         any_outgoing_ = true;
+        out_rel = true;
       } else {
         rel_direction_[rel_type] = RelDirection::kAny;
+        in_rel = out_rel = true;
       }
       continue;
     }
 
     if (starts_with && ends_with) {  // <type>
       rel_direction_[rel_type.substr(1, rel_type.size() - 2)] = RelDirection::kBoth;
+      in_rel = out_rel = true;
     } else if (starts_with) {  // <type
       rel_direction_[rel_type.substr(1)] = RelDirection::kIncoming;
+      in_rel = true;
     } else if (ends_with) {  // type>
       rel_direction_[rel_type.substr(0, rel_type.size() - 1)] = RelDirection::kOutgoing;
+      out_rel = true;
     } else {  // type
       rel_direction_[rel_type] = RelDirection::kAny;
+      in_rel = out_rel = true;
     }
+  }
+
+  if (!in_rel) {
+    all_outgoing_ = true;
+  } else if (!out_rel) {
+    all_incoming_ = true;
   }
 }
 
@@ -94,8 +113,12 @@ void Algo::PathFinder::DFS(const mgp::Node &curr_node, mgp::Path &curr_path, std
     }
   };
 
-  iterate(curr_node.InRelationships(), RelDirection::kIncoming, any_incoming_);
-  iterate(curr_node.OutRelationships(), RelDirection::kOutgoing, any_outgoing_);
+  if (!all_outgoing_) {
+    iterate(curr_node.InRelationships(), RelDirection::kIncoming, any_incoming_);
+  }
+  if (!all_incoming_) {
+    iterate(curr_node.OutRelationships(), RelDirection::kOutgoing, any_outgoing_);
+  }
   visited.erase(curr_node.Id().AsInt());
 }
 

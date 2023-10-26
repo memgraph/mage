@@ -26,6 +26,8 @@ class PathFinder {
   const int64_t max_length_;
   bool any_incoming_;
   bool any_outgoing_;
+  bool all_incoming_;
+  bool all_outgoing_;
 
   std::unordered_map<std::string_view, RelDirection> rel_direction_;
   const mgp::RecordFactory &record_factory_;
