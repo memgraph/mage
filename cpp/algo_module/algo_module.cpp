@@ -5,6 +5,14 @@
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
     mgp::MemoryDispatcherGuard guard{memory};
+
+    AddProcedure(Algo::AStar, std::string(Algo::kProcedureAStar).c_str(), mgp::ProcedureType::Read,
+                 {mgp::Parameter(std::string(Algo::kAStarStart).c_str(), mgp::Type::Node),
+                  mgp::Parameter(std::string(Algo::kAStarTarget).c_str(), mgp::Type::Node),
+                  mgp::Parameter(std::string(Algo::kAStarConfig).c_str(), mgp::Type::Map)},
+                 {mgp::Return(std::string(Algo::kAStarPath).c_str(), mgp::Type::Path),
+                  mgp::Return(std::string(Algo::kAStarWeight).c_str(), mgp::Type::Double)},
+                 module, memory);
     AddProcedure(Algo::Cover, std::string(Algo::kProcedureCover).c_str(), mgp::ProcedureType::Read,
                  {mgp::Parameter(std::string(Algo::kCoverArg1).c_str(), {mgp::Type::List, mgp::Type::Node})},
                  {mgp::Return(std::string(Algo::kCoverRet1).c_str(), mgp::Type::Relationship)}, module, memory);
@@ -17,3 +25,5 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
 }
 
 extern "C" int mgp_shutdown_module() { return 0; }
+
+
