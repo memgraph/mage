@@ -75,7 +75,7 @@ void Neighbors::AtHop(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
         }
       }
       if (set.empty()) {
-        throw mgp::ValueException(fmt::format("There are no nodes at hop {}.", distance));
+        return;
       }
       list.push_back(set);
     }
