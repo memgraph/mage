@@ -83,7 +83,7 @@ bool Node::RelationshipExist(const mgp::Node &node, std::string &rel_type) {
 }
 
 void Node::RelationshipsExist(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};;
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
@@ -123,7 +123,7 @@ bool Node::FindRelationship(std::unordered_set<std::string_view> types, mgp::Rel
 }
 
 void Node::RelationshipExists(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};;
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
@@ -165,7 +165,7 @@ void Node::RelationshipExists(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
 }
 
 void Node::RelationshipTypes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};;
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
@@ -174,6 +174,58 @@ void Node::RelationshipTypes(mgp_list *args, mgp_graph *memgraph_graph, mgp_resu
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
+
+void Node::DegreeIn(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  auto result = mgp::Result(res);
+  try {
+    const auto node = arguments[0].ValueNode();
+    const auto type = arguments[1].ValueString();
+    if (type.size() == 0) {
+      result.SetValue((int64_t)node.InDegree());
+      return;
+    }
+    int64_t degree = 0;
+    for (const auto rel : node.InRelationships()) {
+      if (rel.Type() == type) {
+        degree += 1;
+      }
+    }
+    result.SetValue(degree);
+    
+
+  } catch (const std::exception &e) {
+    result.SetErrorMessage(e.what());
+    return;
+  }
+}
+
+void Node::DegreeOut(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  auto result = mgp::Result(res);
+  try {
+    const auto node = arguments[0].ValueNode();
+    const auto type = arguments[1].ValueString();
+    if (type.size() == 0) {
+      result.SetValue((int64_t)node.OutDegree());
+      return;
+    } 
+    int64_t degree = 0;
+    for (const auto rel : node.OutRelationships()) {
+      if (rel.Type() == type) {
+        degree += 1;
+      }
+    }
+    result.SetValue(degree);
+    
+
+  } catch (const std::exception &e) {
+    result.SetErrorMessage(e.what());
     return;
   }
 }

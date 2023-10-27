@@ -4,7 +4,22 @@
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
-    mgp::memory = memory;
+    mgp::MemoryDispatcherGuard guard{memory};
+
+    mgp::AddFunction(Path::Elements, Path::kProcedureElements, {mgp::Parameter(Path::kElementsArg1, mgp::Type::Path)},
+                     module, memory);
+
+    mgp::AddFunction(
+        Path::Combine, Path::kProcedureCombine,
+        {mgp::Parameter(Path::kCombineArg1, mgp::Type::Path), mgp::Parameter(Path::kCombineArg2, mgp::Type::Path)},
+        module, memory);
+
+    mgp::AddFunction(Path::Slice, Path::kProcedureSlice,
+                     {mgp::Parameter(Path::kSliceArg1, mgp::Type::Path),
+                      mgp::Parameter(Path::kSliceArg2, mgp::Type::Int, static_cast<int64_t>(0)),
+                      mgp::Parameter(Path::kSliceArg3, mgp::Type::Int, static_cast<int64_t>(-1))},
+                     module, memory);
+
     AddProcedure(
         Path::Expand, std::string(Path::kProcedureExpand).c_str(), mgp::ProcedureType::Read,
         {mgp::Parameter(std::string(Path::kArgumentStartExpand).c_str(), mgp::Type::Any),
