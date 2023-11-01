@@ -123,7 +123,8 @@ std::string ConstructQueryPrefix(const ParamNames &names) {
   return fmt::format("{} {} {}", unwind_batch, with_variables, match_string);
 }
 
-mg::Map ConstructQueryParams(const std::vector<std::string> &columns, const std::vector<std::vector<mg::Value>> &batch) {
+mg::Map ConstructQueryParams(const std::vector<std::string> &columns,
+                             const std::vector<std::vector<mg::Value>> &batch) {
   mg::Map params(1);
   mg::List list_value(batch.size());
 
@@ -167,8 +168,7 @@ void ExecuteRunningQuery(const std::string running_query, const std::vector<std:
 
   auto query_params = ConstructQueryParams(columns, batch);
 
-  mg::Client::Params session_params{.host = "localhost", .port = 7687};
-  auto client = mg::Client::Connect(session_params);
+  auto client = mg::Client::Connect(GetClientParams());
   if (!client) {
     throw std::runtime_error("Unable to connect to client!");
   }
@@ -226,7 +226,8 @@ mg::Client::Params GetClientParams() {
 }
 
 void PeriodicIterate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
+  ;
   const auto arguments = mgp::List(args);
 
   auto num_of_executed_batches = 0;
@@ -296,7 +297,8 @@ void PeriodicIterate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
+    ;
     mgp::AddProcedure(
         PeriodicIterate, kProcedurePeriodic, mgp::ProcedureType::Read,
         {mgp::Parameter(kArgumentInputQuery, mgp::Type::String),
