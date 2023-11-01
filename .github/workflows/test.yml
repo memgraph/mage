@@ -19,7 +19,7 @@ jobs:
       MEMGRAPH_VERSION: 2.12.0
     strategy:
       matrix:
-        #architecture: ["amd64", "arm64"]
+        architecture: ["amd64", "arm64"]
         architecture: ["amd64"]
         target: ["prod", "dev"]
     steps:
@@ -45,7 +45,7 @@ jobs:
           else
             sudo apt update && sudo apt install -y ca-certificates wget git
             wget -q https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/memgraph_${MEMGRAPH_VERSION}-1_amd64.deb -O memgraph-amd64.deb
-            # wget -q https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb -O memgraph-arm64.deb
+            wget -q https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb -O memgraph-arm64.deb
 
           fi
       - name: Disk status before cleaning
@@ -131,7 +131,7 @@ jobs:
 
 
       - name: Run End-to-end tests
-        #if: matrix.architecture != 'arm64'
+        if: matrix.architecture != 'arm64'
         env:
           PYTHONPATH: "$PWD/e2e"
         run: |
@@ -139,7 +139,7 @@ jobs:
           docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/e2e/ && python3 -m pytest . -k 'not cugraph'"
 
       - name: Run End-to-end correctness tests
-        #if: matrix.architecture != 'arm64'
+        if: matrix.architecture != 'arm64'
         env:
           PYTHONPATH: "$PWD/e2e"
         run: |
