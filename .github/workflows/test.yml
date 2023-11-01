@@ -7,7 +7,7 @@ env:
   MEMGRAPH_PORT: 7687
   NEO4J_PORT: 7688
   NEO4J_CONTAINER: "neo4j_test"
-  OFFICIAL: "false"
+  OFFICIAL: "true"
 
 on: [pull_request, workflow_dispatch]
 
