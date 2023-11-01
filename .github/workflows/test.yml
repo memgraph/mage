@@ -20,7 +20,6 @@ jobs:
     strategy:
       matrix:
         architecture: ["amd64", "arm64"]
-        architecture: ["amd64"]
         target: ["prod", "dev"]
     steps:
       - name: Checkout repository and submodules
