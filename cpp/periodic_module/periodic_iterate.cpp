@@ -156,6 +156,38 @@ std::string ConstructFinalQuery(const std::string &running_query, const std::str
   return fmt::format("{} {}", prefix_query, running_query);
 }
 
+mg::Client::Params GetClientParams() {
+  auto *host = kDefaultHost;
+  auto port = kDefaultPort;
+  auto *username = "";
+  auto *password = "";
+
+  auto *maybe_host = std::getenv(kMgHost);
+  if (maybe_host) {
+    host = std::move(maybe_host);
+  }
+
+  const auto *maybe_port = std::getenv(kMgPort);
+  if (maybe_port) {
+    port = static_cast<uint16_t>(std::move(*maybe_port));
+  }
+
+  const auto *maybe_username = std::getenv(kMgUsername);
+  if (maybe_username) {
+    username = std::move(maybe_username);
+  }
+
+  const auto *maybe_password = std::getenv(kMgPassword);
+  if (maybe_password) {
+    password = std::move(maybe_password);
+  }
+
+  return mg::Client::Params{.host = std::move(host),
+                            .port = std::move(port),
+                            .username = std::move(username),
+                            .password = std::move(password)};
+}
+
 void ExecuteRunningQuery(const std::string running_query, const std::vector<std::string> &columns,
                          const std::vector<std::vector<mg::Value>> &batch) {
   if (!batch.size()) {
@@ -191,38 +223,6 @@ void ValidateBatchSize(const mgp::Value &batch_size_value) {
   if (batch_size <= 0) {
     throw std::runtime_error("Batch size must be a non-negative number!");
   }
-}
-
-mg::Client::Params GetClientParams() {
-  auto *host = kDefaultHost;
-  auto port = kDefaultPort;
-  auto *username = "";
-  auto *password = "";
-
-  auto *maybe_host = std::getenv(kMgHost);
-  if (maybe_host) {
-    host = std::move(maybe_host);
-  }
-
-  const auto *maybe_port = std::getenv(kMgPort);
-  if (maybe_port) {
-    port = static_cast<uint16_t>(std::move(*maybe_port));
-  }
-
-  const auto *maybe_username = std::getenv(kMgUsername);
-  if (maybe_username) {
-    username = std::move(maybe_username);
-  }
-
-  const auto *maybe_password = std::getenv(kMgPassword);
-  if (maybe_password) {
-    password = std::move(maybe_password);
-  }
-
-  return mg::Client::Params{.host = std::move(host),
-                            .port = std::move(port),
-                            .username = std::move(username),
-                            .password = std::move(password)};
 }
 
 void PeriodicIterate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
