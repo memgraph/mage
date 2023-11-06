@@ -1,4 +1,6 @@
+#include <chrono>
 #include <mg_utils.hpp>
+#include <thread>
 
 #include "algorithm/pagerank.hpp"
 
@@ -14,9 +16,16 @@ constexpr char const *kArgumentStopEpsilon = "stop_epsilon";
 
 void InsertPagerankRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
                           double rank) {
-  auto *record = mgp::result_new_record(result);
+  auto *vertex = mgp::graph_get_vertex_by_id(graph, mgp_vertex_id{.as_int = static_cast<int64_t>(node_id)}, memory);
+  if (!vertex) {
+    if (mgp::graph_is_transactional(graph)) {
+      throw mg_exception::InvalidIDException();
+    }
+    return;
+  }
 
-  mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
+  auto *record = mgp::result_new_record(result);
+  mg_utility::InsertNodeValueResult(record, kFieldNode, vertex, memory);
   mg_utility::InsertDoubleValueResult(record, kFieldRank, rank, memory);
 }
 
