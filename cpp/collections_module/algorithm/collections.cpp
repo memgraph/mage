@@ -42,7 +42,7 @@ void Collections::SetResult(mgp::Result &result, const mgp::Value &value) {
 }
 
 void Collections::SumLongs(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
 
@@ -67,7 +67,7 @@ void Collections::SumLongs(mgp_list *args, mgp_func_context *ctx, mgp_func_resul
 }
 
 void Collections::Avg(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
 
@@ -94,7 +94,7 @@ void Collections::Avg(mgp_list *args, mgp_func_context *ctx, mgp_func_result *re
 }
 
 void Collections::ContainsAll(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
 
@@ -104,7 +104,7 @@ void Collections::ContainsAll(mgp_list *args, mgp_func_context *ctx, mgp_func_re
 
     const auto list2{arguments[1].ValueList()};
 
-    std::unordered_set<mgp::Value> values(list2.begin(), list2.end());;
+    std::unordered_set<mgp::Value> values(list2.begin(), list2.end());
 
     result.SetValue(std::all_of(values.begin(), values.end(), [&set](const auto &x) { return set.contains(x); }));
 
@@ -115,7 +115,7 @@ void Collections::ContainsAll(mgp_list *args, mgp_func_context *ctx, mgp_func_re
 }
 
 void Collections::Intersection(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
 
@@ -147,7 +147,7 @@ void Collections::Intersection(mgp_list *args, mgp_func_context *ctx, mgp_func_r
 }
 
 void Collections::RemoveAll(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
 
@@ -181,7 +181,7 @@ void Collections::RemoveAll(mgp_list *args, mgp_func_context *ctx, mgp_func_resu
 }
 
 void Collections::Sum(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
   try {
@@ -204,7 +204,7 @@ void Collections::Sum(mgp_list *args, mgp_func_context *ctx, mgp_func_result *re
 }
 
 void Collections::Union(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
   try {
@@ -249,7 +249,7 @@ void Collections::Union(mgp_list *args, mgp_func_context *ctx, mgp_func_result *
 }
 
 void Collections::Sort(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
   try {
@@ -271,7 +271,7 @@ void Collections::Sort(mgp_list *args, mgp_func_context *ctx, mgp_func_result *r
 }
 
 void Collections::ContainsSorted(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
   try {
@@ -304,7 +304,7 @@ void Collections::ContainsSorted(mgp_list *args, mgp_func_context *ctx, mgp_func
 }
 
 void Collections::Max(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
   try {
@@ -331,7 +331,7 @@ void Collections::Max(mgp_list *args, mgp_func_context *ctx, mgp_func_result *re
 }
 
 void Collections::Split(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
 
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
@@ -370,7 +370,7 @@ void Collections::Split(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *r
 }
 
 void Collections::Pairs(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
   try {
@@ -401,7 +401,7 @@ void Collections::Pairs(mgp_list *args, mgp_func_context *ctx, mgp_func_result *
 }
 
 void Collections::Contains(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
   try {
@@ -429,7 +429,7 @@ void Collections::Contains(mgp_list *args, mgp_func_context *ctx, mgp_func_resul
 }
 
 void Collections::UnionAll(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
   try {
@@ -448,7 +448,7 @@ void Collections::UnionAll(mgp_list *args, mgp_func_context *ctx, mgp_func_resul
 }
 
 void Collections::Min(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
   try {
@@ -486,7 +486,7 @@ void Collections::Min(mgp_list *args, mgp_func_context *ctx, mgp_func_result *re
 }
 
 void Collections::ToSet(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
   try {
@@ -506,7 +506,7 @@ void Collections::ToSet(mgp_list *args, mgp_func_context *ctx, mgp_func_result *
 }
 
 void Collections::Partition(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {

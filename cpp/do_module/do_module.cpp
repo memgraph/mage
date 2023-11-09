@@ -309,7 +309,7 @@ bool IsGlobalOperation(std::string_view query) {
 }
 
 void When(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
 
   const auto arguments = mgp::List(args);
   const auto condition = arguments[0].ValueBool();
@@ -335,7 +335,7 @@ void When(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_mem
 }
 
 void Case(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
 
   const auto arguments = mgp::List(args);
   const auto conditionals = arguments[0].ValueList();
@@ -391,7 +391,7 @@ void Case(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_mem
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
 
     mgp::AddProcedure(Case, kProcedureCase, mgp::ProcedureType::Read,
                       {mgp::Parameter(kArgumentConditionals, {mgp::Type::List, mgp::Type::Any}),

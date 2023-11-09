@@ -67,7 +67,7 @@ void SetKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *re
 
 void UpdateKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
 
     const auto record_factory = mgp::RecordFactory(result);
     const auto graph = mgp::Graph(memgraph_graph);

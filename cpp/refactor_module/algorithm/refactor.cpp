@@ -384,7 +384,7 @@ void Refactor::InvertRel(mgp::Graph &graph, mgp::Relationship &rel) {
 }
 
 void Refactor::Invert(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
@@ -429,7 +429,7 @@ void Refactor::Collapse(mgp::Graph &graph, const mgp::Node &node, const std::str
 }
 
 void Refactor::CollapseNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {

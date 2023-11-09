@@ -34,7 +34,7 @@ void ModifyAndOutput(mgp::Relationship &relationship, const mgp::List &keys, con
 }  // namespace
 
 void Create::RemoveRelProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
 
@@ -80,7 +80,7 @@ void Create::RemoveRelProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_
 }
 
 void Create::SetRelProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
 
@@ -131,7 +131,7 @@ void Create::SetRelProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
 }
 
 void Create::Relationship(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
 
@@ -181,7 +181,7 @@ void Create::ProcessElement(const mgp::Value &element, const mgp::Graph graph, c
 }
 
 void Create::SetRelProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   const auto graph = mgp::Graph(memgraph_graph);
   const auto record_factory = mgp::RecordFactory(result);
@@ -256,7 +256,7 @@ void Create::ProcessElement(const mgp::Value &element, const mgp::Graph graph, c
 }
 
 void Create::RemoveLabels(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   const auto graph = mgp::Graph(memgraph_graph);
   const auto record_factory = mgp::RecordFactory(result);
@@ -278,7 +278,7 @@ void Create::RemoveLabels(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
 }
 
 void Create::RemoveProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
@@ -324,7 +324,7 @@ void Create::ProcessElement(const mgp::Value &element, const mgp::Graph graph, c
 }
 
 void Create::SetProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   const auto graph = mgp::Graph(memgraph_graph);
   const auto record_factory = mgp::RecordFactory(result);
@@ -351,7 +351,7 @@ void Create::SetProperties(mgp_list *args, mgp_graph *memgraph_graph, mgp_result
 }
 
 void Create::Node(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto graph = mgp::Graph(memgraph_graph);
   const auto record_factory = mgp::RecordFactory(result);
@@ -379,7 +379,7 @@ void Create::Node(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
 }
 
 void Create::Nodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
@@ -407,7 +407,7 @@ void Create::Nodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result
 }
 
 void Create::SetProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {

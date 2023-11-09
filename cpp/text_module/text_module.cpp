@@ -4,7 +4,7 @@
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
 
     AddProcedure(Text::Join, Text::kProcedureJoin, mgp::ProcedureType::Read,
                  {mgp::Parameter(Text::kJoinArg1, {mgp::Type::List, mgp::Type::String}),
