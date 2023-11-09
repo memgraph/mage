@@ -13,10 +13,22 @@ const char *k_field_node_to = "node_to";
 
 void InsertBridgeRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_from_id,
                         const std::uint64_t node_to_id) {
-  auto *record = mgp::result_new_record(result);
+  auto *node_from =
+      mgp::graph_get_vertex_by_id(graph, mgp_vertex_id{.as_int = static_cast<int64_t>(node_from_id)}, memory);
+  auto *node_to = mgp::graph_get_vertex_by_id(graph, mgp_vertex_id{.as_int = static_cast<int64_t>(node_to_id)}, memory);
+  if (!node_from || !node_to) {
+    if (mgp::graph_is_transactional(graph)) {
+      throw mg_exception::InvalidIDException();
+    }
+    // In IN_MEMORY_ANALYTICAL mode, vertices/edges may be erased by parallel transactions.
+    return;
+  }
 
-  mg_utility::InsertNodeValueResult(graph, record, k_field_node_from, node_from_id, memory);
-  mg_utility::InsertNodeValueResult(graph, record, k_field_node_to, node_to_id, memory);
+  auto *record = mgp::result_new_record(result);
+  if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
+
+  mg_utility::InsertNodeValueResult(record, k_field_node_from, node_from, memory);
+  mg_utility::InsertNodeValueResult(record, k_field_node_to, node_to, memory);
 }
 
 void GetBridges(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {

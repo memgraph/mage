@@ -19,11 +19,21 @@ const char *kAlgorithmUndirected = "undirected";
 const char *kAlgorithmOut = "out";
 const char *kAlgorithmIn = "in";
 
-void InsertDegreeCentralityRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, std::uint64_t node,
+void InsertDegreeCentralityRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, std::uint64_t node_id,
                                   double degree) {
-  auto *record = mgp::result_new_record(result);
+  auto *node = mgp::graph_get_vertex_by_id(graph, mgp_vertex_id{.as_int = static_cast<int64_t>(node_id)}, memory);
+  if (!node) {
+    if (mgp::graph_is_transactional(graph)) {
+      throw mg_exception::InvalidIDException();
+    }
+    // In IN_MEMORY_ANALYTICAL mode, vertices/edges may be erased by parallel transactions.
+    return;
+  }
 
-  mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node, memory);
+  auto *record = mgp::result_new_record(result);
+  if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
+
+  mg_utility::InsertNodeValueResult(record, kFieldNode, node, memory);
   mg_utility::InsertDoubleValueResult(record, kFieldDegree, degree, memory);
 }
 
