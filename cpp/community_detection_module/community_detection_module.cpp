@@ -30,8 +30,7 @@ void InsertLouvainRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memor
     if (mgp::graph_is_transactional(graph)) {
       throw mg_exception::InvalidIDException();
     }
-    // For Analytical mode it's possible that some vertices/edges are missing
-    // because of changes in parallel transactions.
+    // In IN_MEMORY_ANALYTICAL mode, vertices/edges may be erased by parallel transactions.
     return;
   }
 
