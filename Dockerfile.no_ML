@@ -1,0 +1,86 @@
+ARG PY_VERSION_DEFAULT=3.9
+
+FROM debian:bullseye as base
+
+USER root
+
+ARG TARGETARCH
+ARG PY_VERSION_DEFAULT
+ENV PY_VERSION ${PY_VERSION_DEFAULT}
+
+#essentials for production/dev
+RUN apt-get update && apt-get install -y \
+    libcurl4        `memgraph` \
+    libpython${PY_VERSION}   `memgraph` \
+    libssl-dev       `memgraph` \
+    openssl         `memgraph` \
+    build-essential `mage-memgraph` \
+    cmake           `mage-memgraph` \
+    curl            `mage-memgraph` \
+    g++             `mage-memgraph` \
+    python3         `mage-memgraph` \
+    python3-pip     `mage-memgraph` \
+    python3-setuptools     `mage-memgraph` \
+    python3-dev     `mage-memgraph` \
+    clang           `mage-memgraph` \
+    git             `mage-memgraph` \
+    unixodbc-dev        `mage-memgraph` \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+COPY memgraph-${TARGETARCH}.deb .
+
+RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb
+
+ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
+
+# Memgraph listens for Bolt Protocol on this port by default.
+EXPOSE 7687
+
+FROM base as dev
+
+WORKDIR /mage
+COPY . /mage
+
+
+#MAGE
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
+    && export PATH="/root/.cargo/bin:${PATH}" \
+    && python3 -m  pip install -r /mage/python/requirements_no_ml.txt \
+    && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/ \
+    && chown -R memgraph: /mage/e2e
+
+
+USER memgraph
+ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
+CMD [""]
+
+
+
+FROM base as prod
+
+USER root
+ENTRYPOINT []
+ARG PY_VERSION_DEFAULT
+ENV PY_VERSION ${PY_VERSION_DEFAULT}
+
+#copy modules
+COPY --from=dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
+
+#copy python build
+COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
+
+#copy e2e tests
+COPY --from=dev /mage/e2e/ /mage/e2e/
+
+RUN mv /mage/e2e /e2e/ \
+    && rm -rf /mage/* \
+    && mv /e2e/ /mage/ \
+    && chown -R memgraph: /mage/e2e \
+    && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
+    && apt-get -y --purge autoremove clang git curl python3-pip python3-dev cmake build-essential \
+    && apt-get clean
+
+USER memgraph
+ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
+CMD [""]
