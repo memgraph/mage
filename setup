@@ -10,7 +10,7 @@ import multiprocessing as mp
 import argparse
 import logging
 from enum import Enum
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 
 WORK_DIRECTORY = os.getcwd()
@@ -23,6 +23,7 @@ CPP_BUILD_DIRECTORY = f"{CPP_DIRECTORY}/build"
 MG_CONF_DEFAULT_PATH = f"/etc/memgraph/memgraph.conf"
 MG_CONF_QUERY_MODULES_FLAG = "--query-modules-directory"
 MAGE_GPU_BUILD = "MAGE_CUGRAPH_ENABLE=ON"
+MEMGRAPH_MODULES_DIR="/usr/lib/memgraph/query_modules/"
 
 logging.basicConfig(format="%(asctime)-15s [%(levelname)s]: %(message)s")
 logger = logging.getLogger("setup")
@@ -336,8 +337,44 @@ def build(args: Dict[str, Any]) -> bool:
 
     return True
 
+def clean_folder(folder_path: str, remove_subfolders: Optional[bool] = False) -> None:
+    """
+    Cleans the specified folder by removing all files and optionally subfolders.
+
+    Parameters:
+    - folder_path (str): The path to the folder to be cleaned.
+    - remove_subfolders (bool, optional): If True, removes all subfolders as well. Default is False.
+
+    Returns:
+    None
+    """
+    try:
+        # Ensure the provided path is a directory
+        if not os.path.isdir(folder_path):
+            raise ValueError(f"The path '{folder_path}' is not a valid directory.")
+
+        # Iterate over all files and subfolders in the specified folder
+        for root, dirs, files in os.walk(folder_path, topdown=False):
+            # Remove files
+            for file_name in files:
+                file_path = os.path.join(root, file_name)
+                os.remove(file_path)
+
+            # Remove subfolders if specified
+            if remove_subfolders:
+                for dir_name in dirs:
+                    dir_path = os.path.join(root, dir_name)
+                    os.rmdir(dir_path)
+
+        print(f"Folder '{folder_path}' cleaned successfully.")
+
+    except Exception as e:
+        print(f"An error occurred while cleaning the folder: {e}")
+
 
 def run_build_action(args: Dict[str, Any]) -> bool:
+    # TODO This needs to be removed, dirty hack for removing problematic modules
+    clean_folder(MEMGRAPH_MODULES_DIR)
     logger.info("[Terminal] Starting building and copying source code...")
     status = build(args)
     if not status:
