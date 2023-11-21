@@ -10,7 +10,7 @@ import multiprocessing as mp
 import argparse
 import logging
 from enum import Enum
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 
 WORK_DIRECTORY = os.getcwd()
@@ -23,7 +23,6 @@ CPP_BUILD_DIRECTORY = f"{CPP_DIRECTORY}/build"
 MG_CONF_DEFAULT_PATH = f"/etc/memgraph/memgraph.conf"
 MG_CONF_QUERY_MODULES_FLAG = "--query-modules-directory"
 MAGE_GPU_BUILD = "MAGE_CUGRAPH_ENABLE=ON"
-MEMGRAPH_MODULES_DIR="/usr/lib/memgraph/query_modules/"
 
 logging.basicConfig(format="%(asctime)-15s [%(levelname)s]: %(message)s")
 logger = logging.getLogger("setup")
