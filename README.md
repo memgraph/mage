@@ -109,11 +109,11 @@ streaming graph algorithms! Drop us a message on the channels below:
 With changes in Memgraph API, MAGE started to track version numbers. The table
 below lists the compatibility of MAGE with Memgraph versions.
 | MAGE version | Memgraph version |
-| ------------ | ----------------- |
-| >= 1.11.9 | >= 2.11.0 |
-| >= 1.5.1 | >= 2.5.1 |
-| >= 1.5 | >= 2.5.0 |
-| >= 1.4 | >= 2.4.0 |
+| ------------ | ---------------- |
+| >= 1.11.9    | >= 2.11.0        |
+| >= 1.5.1     | >= 2.5.1         |
+| >= 1.5       | >= 2.5.0         |
+| >= 1.4       | >= 2.4.0         |
 | >= 1.0 | >= 2.0.0 |
 | ^0 | >= 1.4.0 <= 1.6.1 |
 
@@ -153,12 +153,12 @@ yourself inside the repo in your terminal:
 git clone --recurse-submodules https://github.com/memgraph/mage.git && cd mage
 ```
 
-**0. b** Download memgraph from our official download site inside memgraph mage. Change ${MEMGRAPH_VERSION} with latest version Memgraph released, and
-run command depending on which system you are, following command for `amd64`:
+**0. b** Download Memgraph from our official download site inside your cloned MAGE repository. Set ${MEMGRAPH_VERSION} to the latest release of Memgraph, and
+${ARCHITECTURE} to your system architecture (`amd64` or `arm64`):
 
 ```bash
 
-curl -L "https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11/memgraph_${MEMGRAPH_VERSION}-1_amd64.deb" > memgraph-amd64.deb
+curl -L "https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11/memgraph_${MEMGRAPH_VERSION}-1_${ARCHITECTURE}.deb" > memgraph-${ARCHITECTURE}.deb
 
 ```
 
@@ -168,7 +168,7 @@ or this one if you are on `arm64`:
 curl -L "https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb" > memgraph-arm64.deb
 ```
 
-**1.** To build the **MAGE** image run the following command where you change ${architecture} with `amd64` or `arm64`, depending on which system you are.
+**1.** To build the **MAGE** image run the following command where you set ${architecture} to your system architecture (`amd64` or `arm64`):
 
 ```
 DOCKER_BUILDKIT=1 docker buildx build \
@@ -232,7 +232,7 @@ Before you start, don't forget to clone MAGE with `--recurse-submodules` flag:
 git clone --recurse-submodules https://github.com/memgraph/mage.git && cd mage
 
 ```
-Run following command to install rust and python dependencies:
+Run the following command to install Rust and Python dependencies:
 ```bash
 curl https://sh.rustup.rs -sSf | sh -s -- -y \
 && export PATH="/root/.cargo/bin:${PATH}" \
@@ -243,7 +243,7 @@ curl https://sh.rustup.rs -sSf | sh -s -- -y \
 
 
 
-Now you can run this command to compile and copy all C++ and Rust modules, and copy Python modules to following path `/usr/lib/memgraph/query_modules`.
+Now you can run the following command to compile and copy the query modules to the `/usr/lib/memgraph/query_modules` path:
 
 ```bash
 python3 setup build -p /usr/lib/memgraph/query_modules
