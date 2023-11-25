@@ -1,6 +1,4 @@
-#include <chrono>
 #include <mg_utils.hpp>
-#include <thread>
 
 #include "algorithm/pagerank.hpp"
 

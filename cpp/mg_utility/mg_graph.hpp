@@ -326,13 +326,14 @@ class Graph : public GraphView<TSize> {
   /// @param node_id Memgraphs's inner ID
   ///
   std::optional<TSize> GetInnerNodeIdOpt(std::uint64_t memgraph_id) const override {
-    if (memgraph_to_inner_id_.find(memgraph_id) == memgraph_to_inner_id_.end()) {
+    auto maybe_found = memgraph_to_inner_edge_id_.find(memgraph_id);
+    if (maybe_found == memgraph_to_inner_edge_id_.end()) {
       if (IsTransactional()) {
         throw mg_exception::InvalidIDException();
       }
       return std::nullopt;
     }
-    return memgraph_to_inner_id_.at(memgraph_id);
+    return maybe_found->second;
   }
 
   ///
