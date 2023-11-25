@@ -336,7 +336,6 @@ def build(args: Dict[str, Any]) -> bool:
 
     return True
 
-
 def run_build_action(args: Dict[str, Any]) -> bool:
     logger.info("[Terminal] Starting building and copying source code...")
     status = build(args)

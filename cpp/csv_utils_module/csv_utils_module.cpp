@@ -23,3 +23,5 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
   }
   return 0;
 }
+
+extern "C" int mgp_shutdown_module() { return 0; }

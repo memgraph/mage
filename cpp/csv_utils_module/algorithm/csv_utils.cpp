@@ -14,7 +14,7 @@ void CreateCsvFile(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result
 
     std::ofstream fout;
     fout.open(std::string(filepath), is_append ? std::ofstream::app : std::ofstream::out);
-    fout << content << std::endl;
+    fout << content << std::flush;
     fout.close();
 
     auto record = record_factory.NewRecord();
