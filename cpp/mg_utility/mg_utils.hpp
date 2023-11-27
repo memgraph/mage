@@ -119,8 +119,7 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(mgp_graph *memgraph_graph, 
                                                      const char *weight_property = nullptr,
                                                      double default_weight = 1.0) {
   auto graph = std::make_unique<mg_graph::Graph<TSize>>();
-  bool isTransactionalStorage = mgp::graph_is_transactional(memgraph_graph);
-  graph->SetIsTransactional(isTransactionalStorage);
+  graph->SetIsTransactional(mgp::graph_is_transactional(memgraph_graph));
 
   ///
   /// Mapping Memgraph in-memory vertices into the graph view

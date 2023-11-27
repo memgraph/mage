@@ -123,11 +123,11 @@ void OnlinePageRankUpdate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
       // As IN_MEMORY_ANALYTICAL doesn’t offer ACID guarantees, check if the graph elements in the result exist
       try {
         // If so, throw an exception:
-        const auto maybe_node = graph.GetNodeById(mgp::Id::FromUint(node_id));
+        const auto node = graph.GetNodeById(mgp::Id::FromUint(node_id));
 
         // Otherwise:
         auto record = record_factory.NewRecord();
-        record.Insert(kFieldNode, graph.GetNodeById(mgp::Id::FromUint(node_id)));
+        record.Insert(kFieldNode, node);
         record.Insert(kFieldRank, rank);
       } catch (const std::exception &e) {
         continue;
