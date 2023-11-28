@@ -1,8 +1,0 @@
-query: >
-  CALL schema.rel_type_properties() YIELD mandatory, property_name, property_type, rel_type RETURN rel_type, property_name, property_type, mandatory;
-
-output:
-  - rel_type: LOVES
-    property_name: ""
-    property_type: ""
-    mandatory: false

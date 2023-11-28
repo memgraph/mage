@@ -1,8 +1,8 @@
 #pragma once
 
-#include <mgp.hpp>
-#include <string_view>
 #include <unordered_set>
+
+#include <mgp.hpp>
 
 namespace Create {
 
@@ -29,8 +29,8 @@ constexpr std::string_view kResultRelationship = "relationship";
 
 /*nodes constants*/
 constexpr std::string_view kProcedureNodes = "nodes";
-constexpr std::string_view kArgumentLabelsNodes = "labels";
-constexpr std::string_view kArgumentPropertiesNodes = "properties";
+constexpr std::string_view kArgumentLabelsNodes = "label";
+constexpr std::string_view kArgumentPropertiesNodes = "props";
 constexpr std::string_view kReturnNodes = "node";
 
 /*set_property constants*/
@@ -43,14 +43,14 @@ constexpr std::string_view kReturntSetProperty = "node";
 /*remove_properties constants*/
 constexpr std::string_view kProcedureRemoveProperties = "remove_properties";
 constexpr std::string_view kArgumentNodeRemoveProperties = "nodes";
-constexpr std::string_view kArgumentKeysRemoveProperties = "list_keys";
+constexpr std::string_view kArgumentKeysRemoveProperties = "keys";
 constexpr std::string_view kReturntRemoveProperties = "node";
 
 /*node constants*/
 constexpr std::string_view kReturnNode = "node";
 constexpr std::string_view kProcedureNode = "node";
-constexpr std::string_view kArgumentsLabelsList = "labels";
-constexpr std::string_view kArgumentsProperties = "properties";
+constexpr std::string_view kArgumentsLabelsList = "label";
+constexpr std::string_view kArgumentsProperties = "props";
 constexpr std::string_view kResultNode = "node";
 
 /*set_properties constants*/
@@ -62,10 +62,11 @@ constexpr std::string_view kArgumentsValues = "input_values";
 constexpr std::string_view kResultProperties = "node";
 
 /*remove_labels constants*/
-constexpr std::string_view kReturnRemoveLabels = "nodes";
+constexpr std::string_view kReturnRemoveLabels = "node";
 constexpr std::string_view kProcedureRemoveLabels = "remove_labels";
-constexpr std::string_view kArgumentsLabels = "labels";
-constexpr std::string_view kResultRemoveLabels = "nodes";
+constexpr std::string_view kArgumentNodesRemoveLabels = "nodes";
+constexpr std::string_view kArgumentsLabels = "label";
+constexpr std::string_view kResultRemoveLabels = "node";
 
 /*set_rel_properties constants*/
 constexpr std::string_view kReturnRelProp = "relationship";

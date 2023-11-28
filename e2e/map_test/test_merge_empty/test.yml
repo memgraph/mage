@@ -1,6 +1,5 @@
 query: >
-  CALL map.merge({}, {}) YIELD merged
-  RETURN merged
+  RETURN map.merge({}, {}) AS merged
 
 output:
   - merged: {}

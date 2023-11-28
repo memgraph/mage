@@ -1,8 +1,19 @@
 #include "refactor.hpp"
 
-#include <mg_utils.hpp>
+#include <string_view>
 #include <unordered_set>
+
+#include <fmt/format.h>
+#include <mg_utils.hpp>
 #include "mgp.hpp"
+
+namespace {
+void ThrowInvalidTypeException(const mgp::Value &value) {
+  std::ostringstream oss;
+  oss << value.Type();
+  throw mgp::ValueException(fmt::format("Unsupported type for this operation, received type: {}", oss.str()));
+}
+}  // namespace
 
 void Refactor::From(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::MemoryDispatcherGuard guard{memory};
@@ -108,6 +119,7 @@ void Refactor::InsertCloneNodesRecord(mgp_graph *graph, mgp_result *result, mgp_
 
   mg_utility::InsertIntValueResult(record, std::string(kResultClonedNodeId).c_str(), cycle_id, memory);
   mg_utility::InsertNodeValueResult(graph, record, std::string(kResultNewNode).c_str(), node_id, memory);
+  mg_utility::InsertStringValueResult(record, std::string(kResultCloneNodeError).c_str(), "", memory);
 }
 
 mgp::Node GetStandinOrCopy(const mgp::List &standin_nodes, const mgp::Node node,
@@ -343,9 +355,13 @@ void Refactor::CloneNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
     const auto nodes = arguments[0].ValueList();
     const auto clone_rels = arguments[1].ValueBool();
     const auto skip_props = arguments[2].ValueList();
-    std::unordered_set<mgp::Value> skip_props_searchable{skip_props.begin(), skip_props.end()};
+    std::unordered_set<std::string_view> skip_props_searchable;
 
-    for (auto node : nodes) {
+    for (const auto &property_key : skip_props) {
+      skip_props_searchable.insert(property_key.ValueString());
+    }
+
+    for (const auto &node : nodes) {
       mgp::Node old_node = node.ValueNode();
       mgp::Node new_node = graph.CreateNode();
 
@@ -353,8 +369,8 @@ void Refactor::CloneNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
         new_node.AddLabel(label);
       }
 
-      for (auto prop : old_node.Properties()) {
-        if (skip_props.Empty() || !skip_props_searchable.contains(mgp::Value(prop.first))) {
+      for (const auto &prop : old_node.Properties()) {
+        if (skip_props.Empty() || !skip_props_searchable.contains(prop.first)) {
           new_node.SetProperty(prop.first, prop.second);
         }
       }
@@ -363,11 +379,14 @@ void Refactor::CloneNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
         for (auto rel : old_node.InRelationships()) {
           graph.CreateRelationship(rel.From(), new_node, rel.Type());
         }
+
         for (auto rel : old_node.OutRelationships()) {
           graph.CreateRelationship(new_node, rel.To(), rel.Type());
         }
       }
-      InsertCloneNodesRecord(memgraph_graph, result, memory, old_node.Id().AsInt(), new_node.Id().AsInt());
+
+      InsertCloneNodesRecord(memgraph_graph, result, memory, static_cast<int>(old_node.Id().AsInt()),
+                             static_cast<int>(new_node.Id().AsInt()));
     }
   } catch (const std::exception &e) {
     mgp::result_set_error_msg(result, e.what());
@@ -383,7 +402,7 @@ void Refactor::InvertRel(mgp::Graph &graph, mgp::Relationship &rel) {
 }
 
 void Refactor::Invert(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
@@ -392,9 +411,9 @@ void Refactor::Invert(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
 
     InvertRel(graph, rel);
     auto record = record_factory.NewRecord();
-    record.Insert(std::string(kReturnIdInvert).c_str(), rel.Id().AsInt());
-    record.Insert(std::string(kReturnRelationshipInvert).c_str(), rel);
-
+    record.Insert(std::string(kResultIdInvert).c_str(), rel.Id().AsInt());
+    record.Insert(std::string(kResultRelationshipInvert).c_str(), rel);
+    record.Insert(std::string(kResultErrorInvert).c_str(), "");
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
     return;
@@ -428,7 +447,7 @@ void Refactor::Collapse(mgp::Graph &graph, const mgp::Node &node, const std::str
 }
 
 void Refactor::CollapseNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
@@ -436,7 +455,7 @@ void Refactor::CollapseNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
     const mgp::Value input = arguments[0];
     const std::string type{arguments[1].ValueString()};
 
-    if(!input.IsNode() && !input.IsInt() && !input.IsList()){
+    if (!input.IsNode() && !input.IsInt() && !input.IsList()) {
       record_factory.SetErrorMessage("Input can only be node, node ID, or list of nodes/IDs");
       return;
     }
@@ -460,9 +479,350 @@ void Refactor::CollapseNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
           return;
         }
       }
-    } 
-      
-    
+    }
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
+
+Refactor::Config::Config(const mgp::Map &config) {
+  auto rel_strategy_string = config.At("relationshipSelectionStrategy");
+  auto prop_strategy_string = config.At("properties");
+
+  if (rel_strategy_string.IsNull()) {
+    SetRelStrategy("incoming");
+    return;
+  }
+  SetRelStrategy(rel_strategy_string.ValueString());
+  if (prop_strategy_string.IsNull()) {
+    SetPropStrategy("combine");
+    return;
+  }
+  SetPropStrategy(prop_strategy_string.ValueString());
+}
+
+void Refactor::Config::SetRelStrategy(std::string_view strategy) {
+  if (strategy == "incoming") {
+    rel_strategy = RelSelectStrategy::INCOMING;
+  } else if (strategy == "outgoing") {
+    rel_strategy = RelSelectStrategy::OUTGOING;
+  } else if (strategy == "merge") {
+    rel_strategy = RelSelectStrategy::MERGE;
+  } else {
+    throw mgp::ValueException("Invalid relationship selection strategy");
+  }
+}
+
+void Refactor::Config::SetPropStrategy(std::string_view strategy) {
+  if (strategy == "discard") {
+    prop_strategy = PropertiesStrategy::DISCARD;
+  } else if (strategy == "overwrite" || strategy == "override") {
+    prop_strategy = PropertiesStrategy::OVERRIDE;
+  } else if (strategy == "combine") {
+    prop_strategy = PropertiesStrategy::COMBINE;
+  } else {
+    throw mgp::ValueException("Invalid properties selection strategy");
+  }
+}
+
+void Refactor::RenameTypeProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+  try {
+    const std::string old_name{arguments[0].ValueString()};
+    const std::string new_name{arguments[1].ValueString()};
+    const auto rels{arguments[2].ValueList()};
+
+    int64_t rels_changed{0};
+    for (auto &rel_value : rels) {
+      auto rel = rel_value.ValueRelationship();
+      const auto prop_value = rel.GetProperty(old_name);
+      /*since there is no bug(prop map cant have null values), it is faster to just check isNull 
+      instead of copying entire properties map and then find*/
+      if (prop_value.IsNull()) { 
+        continue;  
+      } 
+      rel.RemoveProperty(old_name);
+      rel.SetProperty(new_name, prop_value);
+      rels_changed++;
+    }
+
+    auto record = record_factory.NewRecord();
+    record.Insert(std::string(kRenameTypePropertyResult).c_str(), rels_changed);
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
+
+namespace {
+
+template <typename T>
+concept GraphObject = std::is_same<T, mgp::Node>::value || std::is_same<T, mgp::Relationship>::value;
+
+template <GraphObject NodeOrRel>
+void NormalizeToBoolean(NodeOrRel object, const std::string &property_key,
+                        const std::unordered_set<mgp::Value> &true_values,
+                        const std::unordered_set<mgp::Value> &false_values) {
+  auto old_value = object.GetProperty(property_key);
+  if (old_value.IsNull()) {
+    return;
+  }
+
+  bool property_in_true_vals = true_values.contains(old_value);
+  bool property_in_false_vals = false_values.contains(old_value);
+
+  if (property_in_true_vals && !property_in_false_vals) {
+    object.SetProperty(property_key, mgp::Value(true));
+  } else if (!property_in_true_vals && property_in_false_vals) {
+    object.SetProperty(property_key, mgp::Value(false));
+  } else if (!property_in_true_vals && !property_in_false_vals) {
+    object.RemoveProperty(property_key);
+  } else {
+    throw mgp::ValueException(
+        fmt::format("The value {} is contained in both true_values and false_values.", old_value.ToString()));
+  }
+}
+
+}  // namespace
+
+void Refactor::DeleteAndReconnect(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+  try {
+    const auto path{arguments[0].ValuePath()};
+    const auto nodes_to_delete_list{arguments[1].ValueList()};
+    const auto config_map{arguments[2].ValueMap()};
+
+    std::unordered_set<int64_t> nodes_to_delete;
+    for (const auto &node : nodes_to_delete_list) {
+      nodes_to_delete.insert(node.ValueNode().Id().AsInt());
+    }
+
+    Config config{config_map};
+    mgp::List nodes;
+    mgp::List relationships;
+    int64_t prev_non_deleted_path_index{-1};
+    int64_t prev_non_deleted_node_id{-1};
+    std::unordered_set<mgp::Node> to_be_deleted;
+    auto graph = mgp::Graph{memgraph_graph};
+
+    for (size_t i = 0; i < path.Length() + 1; ++i) {
+      auto node = path.GetNodeAt(i);
+      int64_t id = node.Id().AsInt();
+      auto delete_node = nodes_to_delete.contains(id);
+
+      const auto modify_relationship = [&graph, &relationships](mgp::Relationship relationship, const mgp::Node &node,
+                                                                int64_t other_node_id) {
+        if (relationship.From().Id().AsInt() == other_node_id) {
+          graph.SetTo(relationship, node);
+        } else {
+          graph.SetFrom(relationship, node);
+        }
+        relationships.AppendExtend(mgp::Value(relationship));
+      };
+
+      const auto merge_relationships = [](mgp::Relationship &rel, mgp::Relationship &other, bool combine = false) {
+        for (const auto &[key, value] : other.Properties()) {
+          auto old_property = rel.GetProperty(key);
+          if (!old_property.IsNull()) {
+            if (combine) {
+              rel.SetProperty(key, mgp::Value(mgp::List{old_property, value}));
+            }
+            continue;
+          }
+          rel.SetProperty(key, value);
+        }
+      };
+
+      if (!delete_node && prev_non_deleted_path_index != -1 &&
+          (prev_non_deleted_path_index != static_cast<int64_t>(i - 1))) {  // there was a deleted node in between
+        if (config.rel_strategy == RelSelectStrategy::INCOMING) {
+          modify_relationship(path.GetRelationshipAt(prev_non_deleted_path_index), node, prev_non_deleted_node_id);
+        } else if (config.rel_strategy == RelSelectStrategy::OUTGOING) {
+          modify_relationship(path.GetRelationshipAt(i - 1), path.GetNodeAt(prev_non_deleted_path_index), id);
+        } else {  // RelSelectStrategy::MERGE
+          auto new_rel = path.GetRelationshipAt(
+              config.prop_strategy == PropertiesStrategy::OVERRIDE ? i - 1 : prev_non_deleted_path_index);
+          auto old_rel = path.GetRelationshipAt(
+              config.prop_strategy == PropertiesStrategy::OVERRIDE ? prev_non_deleted_path_index : i - 1);
+
+          std::string new_type;
+          if (config.prop_strategy == PropertiesStrategy::OVERRIDE) {
+            new_type = std::string(new_rel.Type()) + "_" + std::string(old_rel.Type());
+          } else {
+            new_type = std::string(old_rel.Type()) + "_" + std::string(new_rel.Type());
+          }
+          graph.ChangeType(new_rel, new_type);
+
+          if (config.prop_strategy == PropertiesStrategy::DISCARD) {
+            modify_relationship(new_rel, node, prev_non_deleted_node_id);
+            merge_relationships(new_rel, old_rel);
+          } else if (config.prop_strategy == PropertiesStrategy::OVERRIDE) {
+            modify_relationship(new_rel, path.GetNodeAt(prev_non_deleted_path_index), id);
+            merge_relationships(new_rel, old_rel);
+          } else {  // PropertiesStrategy::COMBINE
+            modify_relationship(new_rel, node, prev_non_deleted_node_id);
+            merge_relationships(new_rel, old_rel, true);
+          }
+        }
+      } else if (!delete_node && prev_non_deleted_path_index != -1) {
+        relationships.AppendExtend(mgp::Value(path.GetRelationshipAt(prev_non_deleted_path_index)));
+      }
+
+      if (!delete_node) {
+        nodes.AppendExtend(mgp::Value(node));
+        prev_non_deleted_path_index = static_cast<int64_t>(i);
+        prev_non_deleted_node_id = id;
+      } else {
+        to_be_deleted.insert(node);
+      }
+    }
+
+    for (const auto &node : to_be_deleted) {
+      graph.DetachDeleteNode(node);
+    }
+
+    auto record = record_factory.NewRecord();
+    record.Insert(std::string(kReturnDeleteAndReconnect1).c_str(), nodes);
+    record.Insert(std::string(kReturnDeleteAndReconnect2).c_str(), relationships);
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
+
+void Refactor::NormalizeAsBoolean(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+  try {
+    auto object{arguments[0]};
+    auto property_key{std::string(arguments[1].ValueString())};
+    const auto true_values_list{arguments[2].ValueList()};
+    const auto false_values_list{arguments[3].ValueList()};
+
+    std::unordered_set<mgp::Value> true_values{true_values_list.begin(), true_values_list.end()};
+    std::unordered_set<mgp::Value> false_values{false_values_list.begin(), false_values_list.end()};
+
+    auto parse = [&property_key, &true_values, &false_values](const mgp::Value &object) {
+      if (object.IsNode()) {
+        NormalizeToBoolean(object.ValueNode(), property_key, true_values, false_values);
+      } else if (object.IsRelationship()) {
+        NormalizeToBoolean(object.ValueRelationship(), property_key, true_values, false_values);
+      } else {
+        ThrowInvalidTypeException(object);
+      }
+    };
+
+    if (!object.IsList()) {
+      parse(object);
+      return;
+    }
+
+    for (const auto &list_item : object.ValueList()) {
+      parse(list_item);
+    }
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
+
+void Refactor::ExtractNode(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+  try {
+    mgp::Graph graph{memgraph_graph};
+    mgp::Value rel_or_id{arguments[0]};
+    auto labels{arguments[1].ValueList()};
+    auto out_type{arguments[2].ValueString()};
+    auto in_type{arguments[3].ValueString()};
+
+    auto extract = [&graph, &labels, &record_factory, out_type, in_type](const mgp::Relationship &relationship) {
+      auto new_node = graph.CreateNode();
+      for (const auto &label : labels) {
+        new_node.AddLabel(label.ValueString());
+      }
+      for (auto &[key, property] : relationship.Properties()) {
+        new_node.SetProperty(key, std::move(property));
+      }
+
+      graph.CreateRelationship(relationship.From(), new_node, in_type);
+      graph.CreateRelationship(new_node, relationship.To(), out_type);
+
+      auto record = record_factory.NewRecord();
+      record.Insert(std::string(kResultExtractNode1).c_str(), relationship.Id().AsInt());
+      graph.DeleteRelationship(relationship);
+
+      record.Insert(std::string(kResultExtractNode2).c_str(), new_node);
+      record.Insert(std::string(kResultExtractNode3).c_str(), "");
+    };
+
+    std::unordered_set<int64_t> ids;
+    auto parse = [&ids, &extract](const mgp::Value &rel_or_id) {
+      if (rel_or_id.IsInt()) {
+        ids.insert(rel_or_id.ValueInt());
+      } else if (rel_or_id.IsRelationship()) {
+        extract(rel_or_id.ValueRelationship());
+      } else {
+        ThrowInvalidTypeException(rel_or_id);
+      }
+    };
+
+    if (!rel_or_id.IsList()) {
+      parse(rel_or_id);
+    } else {
+      for (const auto &list_element : rel_or_id.ValueList()) {
+        parse(list_element);
+      }
+    }
+
+    if (ids.empty()) {
+      return;
+    }
+
+    for (const auto relationship : graph.Relationships()) {
+      if (ids.contains(relationship.Id().AsInt())) {
+        extract(relationship);
+      }
+    }
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}
+
+void Refactor::RenameType(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+  try {
+    const auto old_type{arguments[0].ValueString()};
+    const auto new_type{arguments[1].ValueString()};
+    const auto relationships{arguments[2].ValueList()};
+    auto graph{mgp::Graph(memgraph_graph)};
+
+    int64_t rels_changed{0};
+    for (auto &relationship_value : relationships) {
+      auto relationship{relationship_value.ValueRelationship()};
+      if (relationship.Type() == old_type) {
+        graph.ChangeType(relationship, new_type);
+        ++rels_changed;
+      }
+    }
+
+    auto record = record_factory.NewRecord();
+    record.Insert(std::string(kResultRenameType).c_str(), rels_changed);
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());

@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: True
     env:
-      MEMGRAPH_VERSION: 2.11.0
+      MEMGRAPH_VERSION: 2.12.1
     strategy:
       matrix:
         architecture: ["amd64", "arm64"]
@@ -47,7 +47,7 @@ jobs:
             wget -q https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb -O memgraph-arm64.deb
 
           fi
-      - name: Disk
+      - name: Disk status before cleaning
         run: |
           df -h
           docker buildx du
@@ -59,14 +59,21 @@ jobs:
           sudo rm -rf /opt/hostedtoolcache/go
           sudo rm -rf /opt/hostedtoolcache
 
-      - name: Disk 2
+      - name: Disk status after cleaning
         run: |
           df -h
           docker buildx du
 
+      - name: Rust library tests
+        if: matrix.target == 'dev'
+        run: |
+          cd rust/rsmgp-sys
+          cargo fmt -- --check
+          cargo test
+
       - name: Build and run Memgraph MAGE:${{ matrix.target }}
         run: |
-          
+
           DOCKER_BUILDKIT=1 docker buildx build \
           --tag memgraph-mage:${{ matrix.target }} \
           --target ${{ matrix.target }} \
@@ -84,7 +91,6 @@ jobs:
       - name: Get all current images
         run: |
           docker images
-
 
       - name: Set up C++
         run: |
@@ -121,12 +127,7 @@ jobs:
         run: |
           docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/python/ && python3 -m pytest ."
 
-      - name: Rust library tests
-        if: matrix.target == 'dev'
-        run: |
-          cd rust/rsmgp-sys
-          cargo fmt -- --check
-          cargo test
+
 
       - name: Run End-to-end tests
         if: matrix.architecture != 'arm64'
@@ -135,7 +136,7 @@ jobs:
         run: |
           cd e2e
           docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/e2e/ && python3 -m pytest . -k 'not cugraph'"
-      
+
       - name: Run End-to-end correctness tests
         if: matrix.architecture != 'arm64'
         env:

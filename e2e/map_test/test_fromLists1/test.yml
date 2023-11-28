@@ -1,5 +1,5 @@
 query: >
-  CALL map.from_lists(["name", "surname"],["Pero", "Peric"]) YIELD result RETURN result;
+  RETURN map.from_lists(["name", "surname"],["Pero", "Peric"]) AS result;
 
 output:
   - result: {"name": "Pero","surname": "Peric"}

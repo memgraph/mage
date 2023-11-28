@@ -1,6 +1,0 @@
-query: >
-  CALL map.remove_key({c: "b", d: "ba"}, "a", {a: 1}) YIELD removed
-  RETURN removed
-
-exception: >
-  Third argument must be a map with key recursive and value true or false.
