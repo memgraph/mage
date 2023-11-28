@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: True
     env:
-      MEMGRAPH_VERSION: 2.11.0
+      MEMGRAPH_VERSION: 2.12.1
     strategy:
       matrix:
         architecture: ["amd64", "arm64"]
@@ -63,7 +63,7 @@ jobs:
         run: |
           df -h
           docker buildx du
-      
+
       - name: Rust library tests
         if: matrix.target == 'dev'
         run: |
@@ -73,7 +73,7 @@ jobs:
 
       - name: Build and run Memgraph MAGE:${{ matrix.target }}
         run: |
-          
+
           DOCKER_BUILDKIT=1 docker buildx build \
           --tag memgraph-mage:${{ matrix.target }} \
           --target ${{ matrix.target }} \
@@ -127,7 +127,7 @@ jobs:
         run: |
           docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/python/ && python3 -m pytest ."
 
-     
+
 
       - name: Run End-to-end tests
         if: matrix.architecture != 'arm64'
@@ -136,7 +136,7 @@ jobs:
         run: |
           cd e2e
           docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/e2e/ && python3 -m pytest . -k 'not cugraph'"
-      
+
       - name: Run End-to-end correctness tests
         if: matrix.architecture != 'arm64'
         env:
