@@ -1,4 +1,4 @@
-name: Build and Test no ML
+name: Build and Test no
 
 env:
   PY_VERSION: "3.9"
@@ -135,7 +135,6 @@ jobs:
           PYTHONPATH: "$PWD/e2e"
         run: |
           cd e2e
-# skip ML files test, skip temporarily things which fail locally
           docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/e2e/ && python3 -m pytest . -k 'not cugraph and not tgn and not link_prediction and not node_classification and not export_util and not refactor and not collections and not node_similarity'"
 
       - name: Run End-to-end correctness tests
