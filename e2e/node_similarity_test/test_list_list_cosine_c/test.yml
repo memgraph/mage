@@ -1,6 +1,6 @@
 query: >
         MATCH (m)
-        WHERE m.id > 2 AND m.id < 5
+        WHERE m.id > 0 AND m.id < 2
         WITH collect(m) as nodes1
 
         MATCH (n)

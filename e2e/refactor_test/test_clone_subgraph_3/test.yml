@@ -1,13 +1,6 @@
 query: >
-  MATCH (ana:Ana),
-        (marija:Marija),
-        (p2:Person{id: 2}),
-        (p3:Person{id: 3}),
-        (p4:Person{id: 4}),
-        (p5:Person{id: 5}),
-        (p6:Person{id: 6}),
-        (ana)-[r1:KNOWS]->(p2),
-        (p2)-[r2:KNOWS]->(p3)
+  MATCH (ana:Ana)-[r1:KNOWS]->(p2)-[r2:KNOWS]->(p3)
+  MATCH (marija:Marija),(p4:Person{id: 4}),(p5:Person{id: 5}),(p6:Person{id: 6})
   CALL refactor.clone_subgraph([ana, marija, p2, p3, p4, p5, p6], [r2, r1])
   YIELD output
   RETURN output;
