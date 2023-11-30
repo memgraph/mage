@@ -125,7 +125,7 @@ jobs:
         env:
           PYTHONPATH: "$PWD/python"
         run: |
-          docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/python/ && python3 -m pytest ."
+          docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/python/ && python3 -m pytest . -k 'not tgn and not link_prediction and not node_classification'"
 
 
 
