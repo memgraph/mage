@@ -135,7 +135,7 @@ jobs:
           PYTHONPATH: "$PWD/e2e"
         run: |
           cd e2e
-          docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/e2e/ && python3 -m pytest . -k 'not cugraph and not tgn and not link_prediction and not node_classification and not export_util and not refactor and not collections and not node_similarity'"
+          docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/e2e/ && python3 -m pytest . -k 'not cugraph and not tgn and not link_prediction and not node_classification'"
 
       - name: Run End-to-end correctness tests
         if: matrix.architecture != 'arm64'
