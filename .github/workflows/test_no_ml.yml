@@ -120,15 +120,6 @@ jobs:
           cd cpp/build
           ctest -j${{ env.CORE_COUNT }}
 
-      # - name: Python modules unit tests
-      #   if: matrix.target == 'dev'
-      #   env:
-      #     PYTHONPATH: "$PWD/python"
-      #   run: |
-      #     docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/python/ && python3 -m pytest . -k 'not tgn and not link_prediction and not node_classification'"
-
-
-
       - name: Run End-to-end tests
         if: matrix.architecture != 'arm64'
         env:
