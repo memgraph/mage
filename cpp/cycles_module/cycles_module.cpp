@@ -11,14 +11,8 @@ constexpr char const *kFieldNode = "node";
 
 void InsertCycleRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const int cycle_id,
                        const int node_id) {
-  auto *node = mgp::graph_get_vertex_by_id(graph, mgp_vertex_id{.as_int = static_cast<int64_t>(node_id)}, memory);
-  if (!node) {
-    if (mgp::graph_is_transactional(graph)) {
-      throw mg_exception::InvalidIDException();
-    }
-    // In IN_MEMORY_ANALYTICAL mode, vertices/edges may be erased by parallel transactions.
-    return;
-  }
+  auto *node = mg_utility::GetNodeForInsertion(node_id, graph, memory);
+  if (!node) return;
 
   auto *record = mgp::result_new_record(result);
   if (record == nullptr) throw mg_exception::NotEnoughMemoryException();

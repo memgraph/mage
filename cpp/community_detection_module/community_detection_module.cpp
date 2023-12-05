@@ -25,14 +25,8 @@ const double kDefaultWeight = 1.0;
 
 void InsertLouvainRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
                          const std::uint64_t community) {
-  auto *vertex = mgp::graph_get_vertex_by_id(graph, mgp_vertex_id{.as_int = static_cast<int64_t>(node_id)}, memory);
-  if (!vertex) {
-    if (mgp::graph_is_transactional(graph)) {
-      throw mg_exception::InvalidIDException();
-    }
-    // In IN_MEMORY_ANALYTICAL mode, vertices/edges may be erased by parallel transactions.
-    return;
-  }
+  auto *vertex = mg_utility::GetNodeForInsertion(node_id, graph, memory);
+  if (!vertex) return;
 
   mgp_result_record *record = mgp::result_new_record(result);
   if (record == nullptr) throw mg_exception::NotEnoughMemoryException();

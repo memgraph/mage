@@ -280,6 +280,22 @@ void InsertNodeValueResult(mgp_result_record *record, const char *field_name, mg
   InsertRecord(record, field_name, value);
 }
 
+/// @brief Retrieves a node with the given ID to be fed into InsertNodeValueResult. If no node is found, the behavior’s
+/// up to the storage mode:
+/// * In transactional (ACID-compliant) storage modes one can expect vertices to not be erased -> InvalidIDException
+/// * In IN_MEMORY_ANALYTICAL mode, vertices might be erased by parallel transactions -> nullptr
+/// @param node_id
+/// @param graph
+/// @param memory
+/// @return
+mgp_vertex *GetNodeForInsertion(const int node_id, mgp_graph *graph, mgp_memory *memory) {
+  auto *vertex = mgp::graph_get_vertex_by_id(graph, mgp_vertex_id{.as_int = static_cast<int64_t>(node_id)}, memory);
+  if (!vertex && mgp::graph_is_transactional(graph)) {
+    throw mg_exception::InvalidIDException();
+  }
+  return vertex;
+}
+
 /// Inserts a node with its ID node_id to create a vertex and insert
 /// the node to the field field_name of the record mgp_result_record record.
 /// Returns true is insert is successful, false otherwise

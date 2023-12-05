@@ -13,14 +13,8 @@ constexpr char const *kFieldComponentId = "component_id";
 
 void InsertWeaklyComponentResult(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const int component_id,
                                  const int vertex_id) {
-  auto *vertex = mgp::graph_get_vertex_by_id(graph, mgp_vertex_id{.as_int = static_cast<int64_t>(vertex_id)}, memory);
-  if (!vertex) {
-    if (mgp::graph_is_transactional(graph)) {
-      throw mg_exception::InvalidIDException();
-    }
-    // In IN_MEMORY_ANALYTICAL mode, vertices/edges may be erased by parallel transactions.
-    return;
-  }
+  auto *vertex = mg_utility::GetNodeForInsertion(vertex_id, graph, memory);
+  if (!vertex) return;
 
   auto *record = mgp::result_new_record(result);
   if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
