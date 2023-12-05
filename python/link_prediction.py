@@ -454,7 +454,7 @@ def predict(
 
 
 @mgp.read_proc
-def recommended_vertex(  # noqa: C901
+def recommend(  # noqa: C901
     ctx: mgp.ProcCtx,
     src_vertex: mgp.Vertex,
     dest_vertices: mgp.List[mgp.Vertex],
