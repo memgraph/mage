@@ -123,7 +123,8 @@ std::string ConstructQueryPrefix(const ParamNames &names) {
   return fmt::format("{} {} {}", unwind_batch, with_variables, match_string);
 }
 
-mg::Map ConstructQueryParams(const std::vector<std::string> &columns, const std::vector<std::vector<mg::Value>> &batch) {
+mg::Map ConstructQueryParams(const std::vector<std::string> &columns,
+                             const std::vector<std::vector<mg::Value>> &batch) {
   mg::Map params(1);
   mg::List list_value(batch.size());
 
@@ -153,44 +154,6 @@ mg::Map ConstructQueryParams(const std::vector<std::string> &columns, const std:
 
 std::string ConstructFinalQuery(const std::string &running_query, const std::string &prefix_query) {
   return fmt::format("{} {}", prefix_query, running_query);
-}
-
-void ExecuteRunningQuery(const std::string running_query, const std::vector<std::string> &columns,
-                         const std::vector<std::vector<mg::Value>> &batch) {
-  if (!batch.size()) {
-    return;
-  }
-
-  auto param_names = ExtractParamNames(columns, batch[0]);
-  auto prefix_query = ConstructQueryPrefix(param_names);
-  auto final_query = ConstructFinalQuery(running_query, prefix_query);
-
-  auto query_params = ConstructQueryParams(columns, batch);
-
-  mg::Client::Params session_params{.host = "localhost", .port = 7687};
-  auto client = mg::Client::Connect(session_params);
-  if (!client) {
-    throw std::runtime_error("Unable to connect to client!");
-  }
-  if (!client->Execute(final_query, query_params.AsConstMap())) {
-    throw std::runtime_error("Error while executing periodic iterate!");
-  }
-
-  client->DiscardAll();
-}
-
-void ValidateBatchSize(const mgp::Value &batch_size_value) {
-  if (batch_size_value.IsNull()) {
-    throw std::runtime_error(fmt::format("Configuration parameter {} is not set.", kConfigKeyBatchSize));
-  }
-  if (!batch_size_value.IsInt()) {
-    throw std::runtime_error("Batch size not provided as an integer in the periodic iterate configuration!");
-  }
-
-  const auto batch_size = batch_size_value.ValueInt();
-  if (batch_size <= 0) {
-    throw std::runtime_error("Batch size must be a non-negative number!");
-  }
 }
 
 mg::Client::Params GetClientParams() {
@@ -225,8 +188,46 @@ mg::Client::Params GetClientParams() {
                             .password = std::move(password)};
 }
 
+void ExecuteRunningQuery(const std::string running_query, const std::vector<std::string> &columns,
+                         const std::vector<std::vector<mg::Value>> &batch) {
+  if (!batch.size()) {
+    return;
+  }
+
+  auto param_names = ExtractParamNames(columns, batch[0]);
+  auto prefix_query = ConstructQueryPrefix(param_names);
+  auto final_query = ConstructFinalQuery(running_query, prefix_query);
+
+  auto query_params = ConstructQueryParams(columns, batch);
+
+  auto client = mg::Client::Connect(GetClientParams());
+  if (!client) {
+    throw std::runtime_error("Unable to connect to client!");
+  }
+  if (!client->Execute(final_query, query_params.AsConstMap())) {
+    throw std::runtime_error("Error while executing periodic iterate!");
+  }
+
+  client->DiscardAll();
+}
+
+void ValidateBatchSize(const mgp::Value &batch_size_value) {
+  if (batch_size_value.IsNull()) {
+    throw std::runtime_error(fmt::format("Configuration parameter {} is not set.", kConfigKeyBatchSize));
+  }
+  if (!batch_size_value.IsInt()) {
+    throw std::runtime_error("Batch size not provided as an integer in the periodic iterate configuration!");
+  }
+
+  const auto batch_size = batch_size_value.ValueInt();
+  if (batch_size <= 0) {
+    throw std::runtime_error("Batch size must be a non-negative number!");
+  }
+}
+
 void PeriodicIterate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
+  ;
   const auto arguments = mgp::List(args);
 
   auto num_of_executed_batches = 0;
@@ -296,7 +297,8 @@ void PeriodicIterate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
+    ;
     mgp::AddProcedure(
         PeriodicIterate, kProcedurePeriodic, mgp::ProcedureType::Read,
         {mgp::Parameter(kArgumentInputQuery, mgp::Type::String),
