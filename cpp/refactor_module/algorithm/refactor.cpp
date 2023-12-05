@@ -537,7 +537,7 @@ void Refactor::RenameTypeProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp
     const auto rels{arguments[2].ValueList()};
 
     int64_t rels_changed{0};
-    for (auto &rel_value : rels) {
+    for (auto rel_value : rels) {
       auto rel = rel_value.ValueRelationship();
       const auto prop_value = rel.GetProperty(old_name);
       /*since there is no bug(prop map cant have null values), it is faster to just check isNull 
@@ -813,7 +813,7 @@ void Refactor::RenameType(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
     auto graph{mgp::Graph(memgraph_graph)};
 
     int64_t rels_changed{0};
-    for (auto &relationship_value : relationships) {
+    for (auto relationship_value : relationships) {
       auto relationship{relationship_value.ValueRelationship()};
       if (relationship.Type() == old_type) {
         graph.ChangeType(relationship, new_type);
