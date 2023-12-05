@@ -51,6 +51,21 @@ auto saved_directedness = kDefaultDirected;
 auto saved_weightedness = kDefaultWeighted;
 std::string saved_weight_property = kDefaultWeightProperty.data();
 
+void WriteResults(const std::uint64_t node_id, const std::int64_t label, const mgp::Graph &graph,
+                  const mgp::RecordFactory &record_factory) {
+  // As IN_MEMORY_ANALYTICAL doesn’t offer ACID guarantees, check if the graph elements in the result exist
+  try {
+    // If so, throw an exception:
+    const auto node = graph.GetNodeById(mgp::Id::FromUint(node_id));
+
+    auto record = record_factory.NewRecord();
+    record.Insert(kFieldNode.data(), node);
+    record.Insert(kFieldCommunityId.data(), label);
+  } catch (const std::exception &) {
+    // If no node has been found, it’s enough to not write the result
+  }
+}
+
 void Set(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
     mgp::MemoryDispatcherGuard guard{memory};
@@ -78,18 +93,7 @@ void Set(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memo
     ::initialized = true;
 
     for (const auto [node_id, label] : labels) {
-      // As IN_MEMORY_ANALYTICAL doesn’t offer ACID guarantees, check if the graph elements in the result exist
-      try {
-        // If so, throw an exception:
-        const auto node = graph.GetNodeById(mgp::Id::FromUint(node_id));
-
-        // Otherwise:
-        auto record = record_factory.NewRecord();
-        record.Insert(kFieldNode.data(), node);
-        record.Insert(kFieldCommunityId.data(), label);
-      } catch (const std::exception &e) {
-        continue;
-      }
+      WriteResults(node_id, label, graph, record_factory);
     }
   } catch (const std::exception &e) {
     return;
@@ -176,35 +180,13 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
           algorithm.UpdateLabels(graph, modified_nodes, modified_relationships, deleted_nodes, deleted_relationships);
 
       for (const auto [node_id, label] : labels) {
-        // As IN_MEMORY_ANALYTICAL doesn’t offer ACID guarantees, check if the graph elements in the result exist
-        try {
-          // If so, throw an exception:
-          const auto node = graph.GetNodeById(mgp::Id::FromUint(node_id));
-
-          // Otherwise:
-          auto record = record_factory.NewRecord();
-          record.Insert(kFieldNode.data(), node);
-          record.Insert(kFieldCommunityId.data(), label);
-        } catch (const std::exception &e) {
-          continue;
-        }
+        WriteResults(node_id, label, graph, record_factory);
       }
     } else {
       const auto labels = algorithm.SetLabels(graph);
 
       for (const auto [node_id, label] : labels) {
-        // As IN_MEMORY_ANALYTICAL doesn’t offer ACID guarantees, check if the graph elements in the result exist
-        try {
-          // If so, throw an exception:
-          const auto node = graph.GetNodeById(mgp::Id::FromUint(node_id));
-
-          // Otherwise:
-          auto record = record_factory.NewRecord();
-          record.Insert(kFieldNode.data(), node);
-          record.Insert(kFieldCommunityId.data(), label);
-        } catch (const std::exception &e) {
-          continue;
-        }
+        WriteResults(node_id, label, graph, record_factory);
       }
     }
 
