@@ -50,7 +50,7 @@ using namespace std;
 //         Assume C_orig is initialized appropriately
 //WARNING: Graph G will be destroyed at the end of this routine
 //Runs the Louvain algorithm with Fast Track Resistance (Arenas et al., 2012)
-void runMultiPhaseBasicFastTrackResistance(graph *G, long *C_orig, int basicOpt, long minGraphSize,
+void runMultiPhaseBasicFastTrackResistance(graph *G, mgp_graph *mg_graph, long *C_orig, int basicOpt, long minGraphSize,
                         double threshold, double C_threshold, int numThreads, int threadsOpt)
 {
     double totTimeClustering=0, totTimeBuildingPhase=0, totTimeColoring=0, tmpTime=0;
@@ -58,12 +58,12 @@ void runMultiPhaseBasicFastTrackResistance(graph *G, long *C_orig, int basicOpt,
     long NV = G->numVertices;
     double rmin = 0.0;
     double finMod = -1.0;
-    
+
     /* Step 1: Find communities */
     double currModAFG = -1.0;
 
     long phase = 1;
-    
+
     graph *Gnew; //To build new hierarchical graphs
     long numClusters;
     long *C = (long *) malloc (NV * sizeof(long));
@@ -72,24 +72,24 @@ void runMultiPhaseBasicFastTrackResistance(graph *G, long *C_orig, int basicOpt,
     for (long i=0; i<NV; i++) {
         C[i] = -1;
     }
-    
+
     while(1){
-        
+
         // TODO add coloring routines when the basic has stabilized
         if(basicOpt == 1){
-            currModAFG = parallelLouvianMethodNoMapFastTrackResistance(G, C, numThreads, currModAFG, threshold, &tmpTime, &tmpItr, phase, &rmin, &finMod);
+            currModAFG = parallelLouvianMethodNoMapFastTrackResistance(G, mg_graph, C, numThreads, currModAFG, threshold, &tmpTime, &tmpItr, phase, &rmin, &finMod);
         }else if(threadsOpt == 1){
-            currModAFG = parallelLouvianMethodFastTrackResistance(G, C, numThreads, currModAFG, threshold, &tmpTime, &tmpItr, phase, &rmin, &finMod);
+            currModAFG = parallelLouvianMethodFastTrackResistance(G, mg_graph, C, numThreads, currModAFG, threshold, &tmpTime, &tmpItr, phase, &rmin, &finMod);
         }else{
-            currModAFG = parallelLouvianMethodScaleFastTrackResistance(G, C, numThreads, currModAFG, threshold, &tmpTime, &tmpItr, phase, &rmin, &finMod);
+            currModAFG = parallelLouvianMethodScaleFastTrackResistance(G, mg_graph, C, numThreads, currModAFG, threshold, &tmpTime, &tmpItr, phase, &rmin, &finMod);
         }
-        
+
         totTimeClustering += tmpTime;
         totItr += tmpItr;
-        
+
         //Renumber the clusters contiguously
         numClusters = renumberClustersContiguously(C, G->numVertices);
-        
+
         //Keep track of clusters in C_orig
         if(phase == 1) {
 #pragma omp parallel for
@@ -109,7 +109,7 @@ void runMultiPhaseBasicFastTrackResistance(graph *G, long *C_orig, int basicOpt,
         if((phase > 200)||(totItr > 10000)) {
             break;
         }
-        
+
         //Check for modularity gain and build the graph for next phase
         //In case coloring is used, make sure the non-coloring routine is run at least once
         if(currModAFG != 0) {
@@ -123,11 +123,11 @@ void runMultiPhaseBasicFastTrackResistance(graph *G, long *C_orig, int basicOpt,
             G = Gnew; //Swap the pointers
             G->edgeListPtrs = Gnew->edgeListPtrs;
             G->edgeList = Gnew->edgeList;
-            
+
             //Free up the previous cluster & create new one of a different size
             free(C);
             C = (long *) malloc (numClusters * sizeof(long)); assert(C != 0);
-            
+
 #pragma omp parallel for
             for (long i=0; i<numClusters; i++) {
                 C[i] = -1;
@@ -137,8 +137,8 @@ void runMultiPhaseBasicFastTrackResistance(graph *G, long *C_orig, int basicOpt,
             break; //minimal r_min reached when Q_afg == 0. Exit.
         }
     } //End of while(1)
-    
-    
+
+
     //Clean up:
     free(C);
     if(G != 0) {

@@ -39,6 +39,7 @@
 //
 // ************************************************************************
 
+#include <mg_procedure.h>
 #include "defs.h"
 #include "coloring.h"
 #include "stdlib.h"
@@ -57,23 +58,23 @@ void generateRandomNumbers2(double* randValues, long NVer)
     }
 }
 
-int algoColoringMultiHashMaxMin(graph *G, int *vtxColor, int nThreads, double *totTime, int nHash, int nItrs)
+int algoColoringMultiHashMaxMin(graph *G, mgp_graph *mg_graph, int *vtxColor, int nThreads, double *totTime, int nHash, int nItrs)
 {
 #ifdef PRINT_DETAILED_STATS_
     std::cout << "Within algoColoringMultiHashMaxMin(nHash= " << nHash << " -- nItrs= " << nItrs << ")\n";
 #endif
-    
+
     if (nThreads < 1)
         omp_set_num_threads(1); //default to one thread
     else
         omp_set_num_threads(nThreads);
     int nT;
-    
+
 #pragma omp parallel
     {
         nT = omp_get_num_threads();
     }
-    
+
 #ifdef PRINT_DETAILED_STATS_
 #endif
     assert(nItrs > 0); assert(nHash > 0);
@@ -83,12 +84,12 @@ int algoColoringMultiHashMaxMin(graph *G, int *vtxColor, int nThreads, double *t
     long NEdge   = G->numEdges;
     long *verPtr = G->edgeListPtrs;   //Vertex Pointer: pointers to endV
     edge *verInd = G->edgeList;       //Vertex Index: destination id of an edge (src -> dest)
-    
+
     int maxColor = (2 * nHash * nItrs); //Two colors for each hash per iteration; zero is a valid color
     int totalColored = 0;
 #ifdef PRINT_DETAILED_STATS_
 #endif
-    
+
     //Build a vector of random numbers:
     //Note: Cheating a little bit now -- need to fix this with a hash function
     /*
@@ -117,7 +118,10 @@ int algoColoringMultiHashMaxMin(graph *G, int *vtxColor, int nThreads, double *t
         time1 = omp_get_wtime();
         for (int ihash=0; ihash<nHash; ihash++) {
             int currentColor = (2*itr*nHash + 2*ihash); //Color to be used in current itr-hash combination
-#pragma omp parallel for
+#pragma omp parallel
+{
+            mgp_track_current_thread_allocations(mg_graph);
+#pragma omp for
             for (long v=0; v<NVer; v++) {
                 //Iterate over all the vertices:
                 //Check if this vertex has already been colored
@@ -151,6 +155,8 @@ int algoColoringMultiHashMaxMin(graph *G, int *vtxColor, int nThreads, double *t
                     __sync_fetch_and_add(&iterFreq,1);
                 }
             }//End of for(v)
+        mgp_untrack_current_thread_allocations(mg_graph);
+}
         }//End of for(ihash)
         totalColored += iterFreq;
         time2 = omp_get_wtime();
@@ -164,11 +170,14 @@ int algoColoringMultiHashMaxMin(graph *G, int *vtxColor, int nThreads, double *t
             iterFreq = 0; //reset the counter
         }
     } //End of for(itr)
-    
+
     //Verify Results and Cleanup
     long myConflicts = 0;
     long unColored = 0;
-#pragma omp parallel for
+#pragma omp parallel
+{
+    mgp_track_current_thread_allocations(mg_graph);
+#pragma omp for
     for (long v=0; v < NVer; v++ ) {
         long adj1 = verPtr[v];
         long adj2 = verPtr[v+1];
@@ -185,12 +194,14 @@ int algoColoringMultiHashMaxMin(graph *G, int *vtxColor, int nThreads, double *t
             }
         }//End of inner for loop: w in adj(v)
     }//End of outer for loop: for each vertex
+    mgp_untrack_current_thread_allocations(mg_graph);
+}
     myConflicts = myConflicts / 2; //Have counted each conflict twice
-    
+
 #ifdef PRINT_DETAILED_STATS_
 #endif
     *totTime = totalTime;
-    
+
     //Cleanup:
     for(int i = 0; i < nHash; i++)
     {
@@ -201,7 +212,7 @@ int algoColoringMultiHashMaxMin(graph *G, int *vtxColor, int nThreads, double *t
     if (randValuesPtr != 0)
         free(randValuesPtr);
     return maxColor; //Return the number of colors used (maxColor is also a valid color)
-    
+
 }//End of algoColoringMultiHashMaxMin()
 
 

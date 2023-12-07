@@ -2,52 +2,52 @@
 //
 //            Grappolo: A C++ library for graph clustering
 //               Mahantesh Halappanavar (hala@pnnl.gov)
-//               Pacific Northwest National Laboratory     
+//               Pacific Northwest National Laboratory
 //
 // ***********************************************************************
 //
 //       Copyright (2014) Battelle Memorial Institute
 //                      All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without 
-// modification, are permitted provided that the following conditions 
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
 // are met:
 //
-// 1. Redistributions of source code must retain the above copyright 
+// 1. Redistributions of source code must retain the above copyright
 // notice, this list of conditions and the following disclaimer.
 //
-// 2. Redistributions in binary form must reproduce the above copyright 
-// notice, this list of conditions and the following disclaimer in the 
+// 2. Redistributions in binary form must reproduce the above copyright
+// notice, this list of conditions and the following disclaimer in the
 // documentation and/or other materials provided with the distribution.
 //
-// 3. Neither the name of the copyright holder nor the names of its 
-// contributors may be used to endorse or promote products derived from 
+// 3. Neither the name of the copyright holder nor the names of its
+// contributors may be used to endorse or promote products derived from
 // this software without specific prior written permission.
 //
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
-// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
-// FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
-// COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
-// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
-// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN 
-// ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+// FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+// COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+// ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 //
 // ************************************************************************
 
+#include <mg_procedure.h>
 #include "defs.h"
 #include "coloring.h"
-
 
 //////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////  DISTANCE ONE COLORING      ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////
 //Return the number of colors used (zero is a valid color)
-int algoDistanceOneVertexColoringOpt(graph *G, int *vtxColor, int nThreads, double *totTime)
+int algoDistanceOneVertexColoringOpt(graph *G, mgp_graph *mg_graph, int *vtxColor, int nThreads, double *totTime)
 {
 #ifdef PRINT_DETAILED_STATS_
 #endif
@@ -65,11 +65,11 @@ int algoDistanceOneVertexColoringOpt(graph *G, int *vtxColor, int nThreads, doub
 
 #ifdef PRINT_DETAILED_STATS_
 #endif
-	
+
   double time1=0, time2=0, totalTime=0;
   //Get the iterators for the graph:
   long NVer    = G->numVertices;
-  long NEdge   = G->numEdges;  
+  long NEdge   = G->numEdges;
   long *verPtr = G->edgeListPtrs;   //Vertex Pointer: pointers to endV
   edge *verInd = G->edgeList;       //Vertex Index: destination id of an edge (src -> dest)
 
@@ -83,14 +83,14 @@ int algoDistanceOneVertexColoringOpt(graph *G, int *vtxColor, int nThreads, doub
 
   long *Q    = (long *) malloc (NVer * sizeof(long)); assert(Q != 0);
   long *Qtmp = (long *) malloc (NVer * sizeof(long)); assert(Qtmp != 0);
-  long *Qswap;    
+  long *Qswap;
   if( (Q == NULL) || (Qtmp == NULL) ) {
     exit(1);
   }
-  long QTail=0;    //Tail of the queue 
+  long QTail=0;    //Tail of the queue
   long QtmpTail=0; //Tail of the queue (implicitly will represent the size)
   long realMaxDegree = 0;
-	
+
 	#pragma omp parallel for
   for (long i=0; i<NVer; i++) {
       Q[i]= i;     //Natural order
@@ -115,10 +115,10 @@ int algoDistanceOneVertexColoringOpt(graph *G, int *vtxColor, int nThreads, doub
   /////////////////////////////////////////////////////////////////////////////////////////
   //////////////////////////// START THE WHILE LOOP ///////////////////////////////////////
   /////////////////////////////////////////////////////////////////////////////////////////
-  long nConflicts = 0; //Number of conflicts 
+  long nConflicts = 0; //Number of conflicts
   int nLoops = 0;     //Number of rounds of conflict resolution
 
-#ifdef PRINT_DETAILED_STATS_ 
+#ifdef PRINT_DETAILED_STATS_
 #endif
   do{
     ///////////////////////////////////////// PART 1 ////////////////////////////////////////
@@ -133,15 +133,15 @@ int algoDistanceOneVertexColoringOpt(graph *G, int *vtxColor, int nThreads, doub
 			int maxColor = 0;
 			BitVector mark(MaxDegree, false);
 			maxColor = distanceOneMarkArray(mark,G,v,vtxColor);
-				
+
 			int myColor;
 			for (myColor=0; myColor<=maxColor; myColor++) {
 				if ( mark[myColor] == false )
 					break;
-			}     
+			}
 			vtxColor[v] = myColor; //Color the vertex
 		} //End of outer for loop: for each vertex
-		
+
 		time1  = omp_get_wtime() - time1;
 		totalTime += time1;
 
@@ -150,18 +150,23 @@ int algoDistanceOneVertexColoringOpt(graph *G, int *vtxColor, int nThreads, doub
     ///////////////////////////////////////// PART 2 ////////////////////////////////////////
     //Detect Conflicts:
     //Add the conflicting vertices into a Q:
-    //Conflicts are resolved by changing the color of only one of the 
-    //two conflicting vertices, based on their random values 
+    //Conflicts are resolved by changing the color of only one of the
+    //two conflicting vertices, based on their random values
     time2 = omp_get_wtime();
-		
-		#pragma omp parallel for
+
+		#pragma omp parallel
+    {
+    mgp_track_current_thread_allocations(mg_graph);
+    #pragma omp for
 		for (long Qi=0; Qi<QTail; Qi++) {
 			long v = Q[Qi]; //Q.pop_front();
 			distanceOneConfResolution(G, v, vtxColor, randValues, &QtmpTail, Qtmp, freq, 0);
 		} //End of outer for loop: for each vertex
-  
+    mgp_untrack_current_thread_allocations(mg_graph);
+    }
+
 		time2  = omp_get_wtime() - time2;
-		totalTime += time2;    
+		totalTime += time2;
 		nConflicts += QtmpTail;
 		nLoops++;
 
@@ -173,14 +178,14 @@ int algoDistanceOneVertexColoringOpt(graph *G, int *vtxColor, int nThreads, doub
     Q = Qtmp; //Q now points to the second vector
     Qtmp = Qswap;
     QTail = QtmpTail; //Number of elements
-    QtmpTail = 0; //Symbolic emptying of the second queue    
+    QtmpTail = 0; //Symbolic emptying of the second queue
   } while (QTail > 0);
   //Check the number of colors used
   int nColors = -1;
-  for (long v=0; v < NVer; v++ ) 
+  for (long v=0; v < NVer; v++ )
     if (vtxColor[v] > nColors) nColors = vtxColor[v];
 #ifdef PRINT_DETAILED_STATS_
-#endif  
+#endif
   *totTime = totalTime;
   //////////////////////////// /////////////////////////////////////////////////////////////
   ///////////////////////////////// VERIFY THE COLORS /////////////////////////////////////
@@ -188,7 +193,10 @@ int algoDistanceOneVertexColoringOpt(graph *G, int *vtxColor, int nThreads, doub
 
   //Verify Results and Cleanup
   int myConflicts = 0;
-	#pragma omp parallel for
+	#pragma omp parallel
+  {
+  mgp_track_current_thread_allocations(mg_graph);
+  #pragma omp for
   for (long v=0; v < NVer; v++ ) {
     long adj1 = verPtr[v];
     long adj2 = verPtr[v+1];
@@ -201,13 +209,15 @@ int algoDistanceOneVertexColoringOpt(graph *G, int *vtxColor, int nThreads, doub
       }
     }//End of inner for loop: w in adj(v)
   }//End of outer for loop: for each vertex
+  mgp_untrack_current_thread_allocations(mg_graph);
+  }
   myConflicts = myConflicts / 2; //Have counted each conflict twice
-	
+
   //Clean Up:
   free(Q);
   free(Qtmp);
   free(randValues);
-  
+
   return nColors; //Return the number of colors used
 }
 
@@ -216,7 +226,7 @@ int algoDistanceOneVertexColoringOpt(graph *G, int *vtxColor, int nThreads, doub
 //////////////////////////  DISTANCE ONE COLORING      ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////
 //Return the number of colors used (zero is a valid color)
-int algoDistanceOneVertexColoring(graph *G, int *vtxColor, int nThreads, double *totTime)
+int algoDistanceOneVertexColoring(graph *G, mgp_graph *mg_graph, int *vtxColor, int nThreads, double *totTime)
 {
 	if (nThreads < 1)
 		omp_set_num_threads(1); //default to one thread
@@ -227,8 +237,8 @@ int algoDistanceOneVertexColoring(graph *G, int *vtxColor, int nThreads, double 
 	{
 		nT = omp_get_num_threads();
 	}
-	
-	
+
+
 	double time1=0, time2=0, totalTime=0;
   //Get the iterators for the graph:
   long NVer    = G->numVertices;
@@ -238,7 +248,7 @@ int algoDistanceOneVertexColoring(graph *G, int *vtxColor, int nThreads, double 
   long *verPtr         = G->edgeListPtrs;   //Vertex Pointer: pointers to endV
   edge *verInd         = G->edgeList;       //Vertex Index: destination id of an edge (src -> dest)
 
-  //const int MaxDegree = 4096; //Increase if number of colors is larger    
+  //const int MaxDegree = 4096; //Increase if number of colors is larger
 
   //Build a vector of random numbers
   double *randValues = (double*) malloc (NVer * sizeof(double));
@@ -247,19 +257,19 @@ int algoDistanceOneVertexColoring(graph *G, int *vtxColor, int nThreads, double 
   }
   generateRandomNumbers(randValues, NVer);
 
-  //The Queue Data Structure for the storing the vertices 
+  //The Queue Data Structure for the storing the vertices
   //   the need to be colored/recolored
   //Have two queues - read from one, write into another
   //   at the end, swap the two.
   long *Q    = (long *) malloc (NVer * sizeof(long));
   long *Qtmp = (long *) malloc (NVer * sizeof(long));
-  long *Qswap;    
+  long *Qswap;
   if( (Q == NULL) || (Qtmp == NULL) ) {
     exit(1);
   }
-  long QTail=0;    //Tail of the queue 
+  long QTail=0;    //Tail of the queue
   long QtmpTail=0; //Tail of the queue (implicitly will represent the size)
-  
+
 #pragma omp parallel for
   for (long i=0; i<NVer; i++) {
       Q[i]= i;     //Natural order
@@ -269,7 +279,7 @@ int algoDistanceOneVertexColoring(graph *G, int *vtxColor, int nThreads, double 
   /////////////////////////////////////////////////////////////////////////////////////////
   //////////////////////////// START THE WHILE LOOP ///////////////////////////////////////
   /////////////////////////////////////////////////////////////////////////////////////////
-  long nConflicts = 0; //Number of conflicts 
+  long nConflicts = 0; //Number of conflicts
   int nLoops = 0;     //Number of rounds of conflict resolution
   int *Mark = (int *) malloc ( MaxDegree * NVer * sizeof(int) );
   if( Mark == NULL ) {
@@ -283,7 +293,10 @@ int algoDistanceOneVertexColoring(graph *G, int *vtxColor, int nThreads, double 
     ///////////////////////////////////////// PART 1 ////////////////////////////////////////
     //Color the vertices in parallel - do not worry about conflicts
     time1 = omp_get_wtime();
-#pragma omp parallel for
+#pragma omp parallel
+{
+    mgp_track_current_thread_allocations(mg_graph);
+#pragma omp for
     for (long Qi=0; Qi<QTail; Qi++) {
       long v = Q[Qi]; //Q.pop_front();
       long StartIndex = v*MaxDegree; //Location in Mark
@@ -315,27 +328,32 @@ int algoDistanceOneVertexColoring(graph *G, int *vtxColor, int nThreads, double 
 	myColor++; /* no available color with # less than cmax */
       vtxColor[v] = myColor; //Color the vertex
     } //End of outer for loop: for each vertex
+    mgp_untrack_current_thread_allocations(mg_graph);
+}
     time1  = omp_get_wtime() - time1;
     totalTime += time1;
 
     ///////////////////////////////////////// PART 2 ////////////////////////////////////////
     //Detect Conflicts:
     //Add the conflicting vertices into a Q:
-    //Conflicts are resolved by changing the color of only one of the 
-    //two conflicting vertices, based on their random values 
+    //Conflicts are resolved by changing the color of only one of the
+    //two conflicting vertices, based on their random values
     time2 = omp_get_wtime();
-#pragma omp parallel for
+#pragma omp parallel
+{
+    mgp_track_current_thread_allocations(mg_graph);
+#pragma omp for
     for (long Qi=0; Qi<QTail; Qi++) {
       long v = Q[Qi]; //Q.pop_front();
       long adj1 = verPtr[v];
-      long adj2 = verPtr[v+1];      
+      long adj2 = verPtr[v+1];
       //Browse the adjacency set of vertex v
       for(long k = adj1; k < adj2; k++ ) {
 	//if ( v == verInd[k] ) //Self-loops
 	//continue;
 	if ( vtxColor[v] == vtxColor[verInd[k].tail] ) {
 	  //Q.push_back(v or w)
-	  if ( (randValues[v] < randValues[verInd[k].tail]) || 
+	  if ( (randValues[v] < randValues[verInd[k].tail]) ||
 	       ((randValues[v] == randValues[verInd[k].tail])&&(v < verInd[k].tail)) ) {
 	    long whereInQ = __sync_fetch_and_add(&QtmpTail, 1);
 	    Qtmp[whereInQ] = v;//Add to the queue
@@ -345,8 +363,10 @@ int algoDistanceOneVertexColoring(graph *G, int *vtxColor, int nThreads, double 
 	} //End of if( vtxColor[v] == vtxColor[verInd[k]] )
       } //End of inner for loop: w in adj(v)
     } //End of outer for loop: for each vertex
+    mgp_untrack_current_thread_allocations(mg_graph);
+}
     time2  = omp_get_wtime() - time2;
-    totalTime += time2;    
+    totalTime += time2;
     nConflicts += QtmpTail;
     nLoops++;
     //Swap the two queues:
@@ -354,20 +374,23 @@ int algoDistanceOneVertexColoring(graph *G, int *vtxColor, int nThreads, double 
     Q = Qtmp; //Q now points to the second vector
     Qtmp = Qswap;
     QTail = QtmpTail; //Number of elements
-    QtmpTail = 0; //Symbolic emptying of the second queue    
+    QtmpTail = 0; //Symbolic emptying of the second queue
   } while (QTail > 0);
   //Check the number of colors used
   int nColors = -1;
-  for (long v=0; v < NVer; v++ ) 
+  for (long v=0; v < NVer; v++ )
     if (vtxColor[v] > nColors) nColors = vtxColor[v];
-  
+
   *totTime = totalTime;
   /////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////// VERIFY THE COLORS /////////////////////////////////////
   /////////////////////////////////////////////////////////////////////////////////////////
   //Verify Results and Cleanup
   int myConflicts = 0;
-#pragma omp parallel for
+#pragma omp parallel
+{
+  mgp_track_current_thread_allocations(mg_graph);
+#pragma omp for
   for (long v=0; v < NVer; v++ ) {
     long adj1 = verPtr[v];
     long adj2 = verPtr[v+1];
@@ -381,12 +404,14 @@ int algoDistanceOneVertexColoring(graph *G, int *vtxColor, int nThreads, double 
       }
     }//End of inner for loop: w in adj(v)
   }//End of outer for loop: for each vertex
+  mgp_untrack_current_thread_allocations(mg_graph);
+}
   myConflicts = myConflicts / 2; //Have counted each conflict twice
   //Clean Up:
   free(Q);
   free(Qtmp);
-  free(Mark); 
+  free(Mark);
   free(randValues);
-  
+
   return nColors; //Return the number of colors used
 }

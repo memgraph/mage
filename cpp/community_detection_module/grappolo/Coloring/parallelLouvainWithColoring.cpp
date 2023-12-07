@@ -39,12 +39,13 @@
 //
 // ************************************************************************
 
+#include <mg_procedure.h>
 #include "defs.h"
 #include "utilityClusteringFunctions.h"
 #include "color_comm.h"
 using namespace std;
 
-double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* color,
+double algoLouvainWithDistOneColoring(graph* G, mgp_graph *mg_graph, long *C, int nThreads, int* color,
                                       int numColor, double Lower, double thresh, double *totTime, int *numItr) {
 #ifdef PRINT_DETAILED_STATS_
 #endif
@@ -59,7 +60,7 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
     }
 #ifdef PRINT_DETAILED_STATS_
 #endif
-    
+
     double time1, time2, time3, time4; //For timing purposes
     double total = 0, totItr = 0;
     /* Indexs are vertex */
@@ -68,18 +69,18 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
     //long* targetCommAss;	//Store the target of community assignment
     double* vDegree;	//Store each vertex's degree
     double* clusterWeightInternal;//use for Modularity calculation (eii)
-    
+
     /* Indexs are community */
     Comm* cInfo;	 //Community info. (ai and size)
     Comm* cUpdate; //use for updating Community
-    
+
     /* Book keeping variables */
     long    NV        = G->numVertices;
     long    NS        = G->sVertices;
     long    NE        = G->numEdges;
     long    *vtxPtr   = G->edgeListPtrs;
     edge    *vtxInd   = G->edgeList;
-    
+
     /* Modularity Needed variables */
     long totalEdgeWeightTwice;
     double constantForSecondTerm;
@@ -87,26 +88,26 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
     double currMod=-1;
     double thresMod = thresh;
     int numItrs = 0;
-    
+
     /********************** Initialization **************************/
     time1 = omp_get_wtime();
     vDegree = (double *) malloc (NV * sizeof(double)); assert(vDegree != 0);
     cInfo = (Comm *) malloc (NV * sizeof(Comm)); assert(cInfo != 0);
     cUpdate = (Comm*)malloc(NV*sizeof(Comm)); assert(cUpdate != 0);
-    
+
     sumVertexDegree(vtxInd, vtxPtr, vDegree, NV , cInfo);	// Sum up the vertex degree
     /*** Compute the total edge weight (2m) and 1/2m ***/
     constantForSecondTerm = calConstantForSecondTerm(vDegree, NV);	// 1 over sum of the degree
-    
+
     pastCommAss = (long *) malloc (NV * sizeof(long)); assert(pastCommAss != 0);
     //Community provided as input:
     currCommAss = C; assert(currCommAss != 0);
-    
+
     /*** Assign each vertex to its own Community ***/
     initCommAss( pastCommAss, currCommAss, NV);
-    
+
     clusterWeightInternal = (double*) malloc (NV*sizeof(double)); assert(clusterWeightInternal != 0);
-    
+
     /*** Create a CSR-like datastructure for vertex-colors ***/
     long * colorPtr = (long *) malloc ((numColor+1) * sizeof(long));
     long * colorIndex = (long *) malloc (NV * sizeof(long));
@@ -144,7 +145,7 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
 #endif
     while(true) {
         numItrs++;
-        
+
         time1 = omp_get_wtime();
         for( long ci = 0; ci < numColor; ci++) // Begin of color loop
         {
@@ -156,8 +157,11 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
             }
             long coloradj1 = colorPtr[ci];
             long coloradj2 = colorPtr[ci+1];
-            
-#pragma omp parallel for
+
+#pragma omp parallel
+{
+            mgp_track_current_thread_allocations(mg_graph);
+#pragma omp for
             for (long K = coloradj1; K<coloradj2; K++) {
                 long i = colorIndex[K];
                 long localTarget = -1;
@@ -168,7 +172,7 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
                 map<long, long> clusterLocalMap; //Map each neighbor's cluster to a local number
                 map<long, long>::iterator storedAlready;
                 vector<double> Counter; //Number of edges to each unique cluster
-                
+
                 if(adj1 != adj2) {
                     //Add v's current cluster:
                     clusterLocalMap[currCommAss[i]] = 0;
@@ -199,7 +203,9 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
                 currCommAss[i] = localTarget;
                 clusterLocalMap.clear();
             }//End of for(i)
-            
+          mgp_untrack_current_thread_allocations(mg_graph);
+}
+
             // UPDATE
 #pragma omp parallel for
             for (long i=0; i<NV; i++) {
@@ -208,11 +214,11 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
             }
         }//End of Color loop
         time2 = omp_get_wtime();
-        
+
         time3 = omp_get_wtime();
         double e_xx = 0;
         double a2_x = 0;
-        
+
         // CALCULATE MOD
 #pragma omp parallel for  //Parallelize on each vertex
         for (long i =0; i<NV;i++){
@@ -228,7 +234,7 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
                 }
             }
         }
-        
+
 #pragma omp parallel for \
 reduction(+:e_xx) reduction(+:a2_x)
         for (long i=0; i<NV; i++) {
@@ -236,34 +242,34 @@ reduction(+:e_xx) reduction(+:a2_x)
             a2_x += (cInfo[i].degree)*(cInfo[i].degree);
         }
         time4 = omp_get_wtime();
-        
+
         currMod = e_xx*(double)constantForSecondTerm  - a2_x*(double)constantForSecondTerm*(double)constantForSecondTerm;
-        
+
         totItr = (time2-time1) + (time4-time3);
         total += totItr;
-        
+
 #ifdef PRINT_DETAILED_STATS_
 #endif
 #ifdef PRINT_TERSE_STATS_
 #endif
-        if((currMod - prevMod) < thresMod) {	
+        if((currMod - prevMod) < thresMod) {
             break;
         }
-        
+
         prevMod = currMod;
     }//End of while(true)
     *totTime = total; //Return back the total time
     *numItr  = numItrs;
-    
-#ifdef PRINT_DETAILED_STATS_  
+
+#ifdef PRINT_DETAILED_STATS_
 #endif
-#ifdef PRINT_TERSE_STATS_  
+#ifdef PRINT_TERSE_STATS_
 #endif
     //Cleanup:
     free(vDegree); free(cInfo); free(cUpdate); free(clusterWeightInternal);
     free(colorPtr); free(colorIndex); free(colorAdded);
     free(pastCommAss);
-    
+
     return prevMod;
-    
+
 }//End of algoLouvainWithDistOneColoring()
