@@ -35,9 +35,13 @@ bool ConnectedVia(std::uint64_t node_id, std::pair<std::uint64_t, std::uint64_t>
 
 void InsertOnlineBCRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
                           double bc_score) {
-  auto *record = mgp::result_new_record(result);
+  auto *node = mg_utility::GetNodeForInsertion(node_id, graph, memory);
+  if (!node) return;
 
-  mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
+  auto *record = mgp::result_new_record(result);
+  if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
+
+  mg_utility::InsertNodeValueResult(record, kFieldNode, node, memory);
   mg_utility::InsertDoubleValueResult(record, kFieldBCScore, bc_score, memory);
 }
 

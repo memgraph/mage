@@ -11,10 +11,14 @@ constexpr char const *kFieldNode = "node";
 
 void InsertCycleRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const int cycle_id,
                        const int node_id) {
+  auto *node = mg_utility::GetNodeForInsertion(node_id, graph, memory);
+  if (!node) return;
+
   auto *record = mgp::result_new_record(result);
+  if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
 
   mg_utility::InsertIntValueResult(record, kFieldCycleId, cycle_id, memory);
-  mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
+  mg_utility::InsertNodeValueResult(record, kFieldNode, node, memory);
 }
 
 void GetCycles(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
