@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 #include "graph_data.hpp"
@@ -97,8 +98,17 @@ class GraphView {
   ///
   ///@param memgraph_id Memgraph's internal ID
   ///@return TSize
+  ///@throws mg_exception::InvalidIDException if vertex does not exist
   ///
   virtual TSize GetInnerNodeId(std::uint64_t memgraph_id) const = 0;
+
+  ///
+  ///@brief Get the Inner Node ID from Memgraph ID
+  ///
+  ///@param memgraph_id Memgraph's internal ID
+  ///@return std::optional<TSize>, which is null if vertex does not exist
+  ///
+  virtual std::optional<TSize> GetInnerNodeIdOpt(std::uint64_t memgraph_id) const = 0;
 
   ///
   ///@brief Get the Memgraph Edge Id from the inner renumbered node ID

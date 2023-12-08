@@ -13,13 +13,18 @@ const char *fieldNodeTo = "node_to";
 
 void InsertBiconnectedComponentRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const int bcc_id,
                                       const int edge_id, const int node_from_id, const int node_to_id) {
+  auto *node_from = mg_utility::GetNodeForInsertion(node_from_id, graph, memory);
+  auto *node_to = mg_utility::GetNodeForInsertion(node_to_id, graph, memory);
+  if (!node_from || !node_to) return;
+
   auto *record = mgp::result_new_record(result);
+  if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
 
   mg_utility::InsertIntValueResult(record, fieldBiconnectedComponentID, bcc_id, memory);
   // TODO: Implement edge getting function
   // mg_utility::InsertIntValueResult(record, fieldEdgeID, edge_id, memory);
-  mg_utility::InsertNodeValueResult(graph, record, fieldNodeFrom, node_from_id, memory);
-  mg_utility::InsertNodeValueResult(graph, record, fieldNodeTo, node_to_id, memory);
+  mg_utility::InsertNodeValueResult(record, fieldNodeFrom, node_from, memory);
+  mg_utility::InsertNodeValueResult(record, fieldNodeTo, node_to, memory);
 }
 
 void GetBiconnectedComponents(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {

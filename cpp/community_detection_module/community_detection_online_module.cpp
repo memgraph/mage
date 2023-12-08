@@ -51,9 +51,24 @@ auto saved_directedness = kDefaultDirected;
 auto saved_weightedness = kDefaultWeighted;
 std::string saved_weight_property = kDefaultWeightProperty.data();
 
+void WriteResults(const std::uint64_t node_id, const std::int64_t label, const mgp::Graph &graph,
+                  const mgp::RecordFactory &record_factory) {
+  // As IN_MEMORY_ANALYTICAL doesn’t offer ACID guarantees, check if the graph elements in the result exist
+  try {
+    // If so, throw an exception:
+    const auto node = graph.GetNodeById(mgp::Id::FromUint(node_id));
+
+    auto record = record_factory.NewRecord();
+    record.Insert(kFieldNode.data(), node);
+    record.Insert(kFieldCommunityId.data(), label);
+  } catch (const std::exception &) {
+    // If no node has been found, it’s enough to not write the result
+  }
+}
+
 void Set(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
 
     const auto graph = mgp::Graph(memgraph_graph);
     const auto arguments = mgp::List(args);
@@ -78,9 +93,7 @@ void Set(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memo
     ::initialized = true;
 
     for (const auto [node_id, label] : labels) {
-      auto record = record_factory.NewRecord();
-      record.Insert(kFieldNode.data(), graph.GetNodeById(mgp::Id::FromUint(node_id)));
-      record.Insert(kFieldCommunityId.data(), label);
+      WriteResults(node_id, label, graph, record_factory);
     }
   } catch (const std::exception &e) {
     return;
@@ -90,7 +103,7 @@ void Set(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memo
 
 void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
 
     const auto graph = mgp::Graph(memgraph_graph);
     const auto record_factory = mgp::RecordFactory(result);
@@ -101,11 +114,11 @@ void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memo
       // Previously-computed communities may contain nodes since deleted
       try {
         // If so, throw an exception:
-        const auto maybe_node = graph.GetNodeById(mgp::Id::FromUint(node_id));
+        const auto node = graph.GetNodeById(mgp::Id::FromUint(node_id));
 
         // Otherwise:
         auto record = record_factory.NewRecord();
-        record.Insert(kFieldNode.data(), graph.GetNodeById(mgp::Id::FromUint(node_id)));
+        record.Insert(kFieldNode.data(), node);
         record.Insert(kFieldCommunityId.data(), label);
       } catch (const std::exception &e) {
         continue;
@@ -119,7 +132,7 @@ void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memo
 
 void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
 
     const auto graph = mgp::Graph(memgraph_graph);
     const auto arguments = mgp::List(args);
@@ -167,17 +180,13 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
           algorithm.UpdateLabels(graph, modified_nodes, modified_relationships, deleted_nodes, deleted_relationships);
 
       for (const auto [node_id, label] : labels) {
-        auto record = record_factory.NewRecord();
-        record.Insert(kFieldNode.data(), graph.GetNodeById(mgp::Id::FromUint(node_id)));
-        record.Insert(kFieldCommunityId.data(), label);
+        WriteResults(node_id, label, graph, record_factory);
       }
     } else {
       const auto labels = algorithm.SetLabels(graph);
 
       for (const auto [node_id, label] : labels) {
-        auto record = record_factory.NewRecord();
-        record.Insert(kFieldNode.data(), graph.GetNodeById(mgp::Id::FromUint(node_id)));
-        record.Insert(kFieldCommunityId.data(), label);
+        WriteResults(node_id, label, graph, record_factory);
       }
     }
 
@@ -189,7 +198,7 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
 
 void Reset(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
 
     const auto record_factory = mgp::RecordFactory(result);
 
@@ -203,7 +212,7 @@ void Reset(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_me
     auto record = record_factory.NewRecord();
     record.Insert(kFieldMessage.data(), "The algorithm has been successfully reset!");
   } catch (const std::exception &e) {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
 
     const auto record_factory = mgp::RecordFactory(result);
     auto record = record_factory.NewRecord();
@@ -216,7 +225,7 @@ void Reset(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_me
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
 
     const auto node_list = std::make_pair(mgp::Type::List, mgp::Type::Node);
     const auto relationship_list = std::make_pair(mgp::Type::List, mgp::Type::Relationship);

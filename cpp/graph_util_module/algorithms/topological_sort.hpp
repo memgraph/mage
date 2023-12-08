@@ -5,7 +5,7 @@
 const char *kResultSortedNodes = "sorted_nodes";
 
 void TopologicalSort(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto record_factory = mgp::RecordFactory(result);
   const auto graph = mgp::Graph(memgraph_graph);
   mgp::List topological_ordering = mgp::List();

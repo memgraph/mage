@@ -49,7 +49,7 @@ double distance_calc(const mgp::Node &node1, const mgp::Node &node2, bool use_km
 }
 
 void Single(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto record_factory = mgp::RecordFactory(result);
 
   try {
@@ -69,7 +69,7 @@ void Single(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
 }
 
 void Multiple(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto record_factory = mgp::RecordFactory(result);
 
   try {
@@ -102,7 +102,7 @@ void Multiple(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
 
     AddProcedure(
         Single, kProcedureSingle, mgp::ProcedureType::Read,

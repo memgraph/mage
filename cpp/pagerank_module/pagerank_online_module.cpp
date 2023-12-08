@@ -21,9 +21,18 @@ constexpr char const *kArgumentDeletedEdges = "deleted_edges";
 
 void InsertPageRankRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
                           const double rank) {
-  auto *record = mgp::result_new_record(result);
+  auto *node = mgp::graph_get_vertex_by_id(graph, mgp_vertex_id{.as_int = static_cast<int64_t>(node_id)}, memory);
+  if (!node) {
+    if (mgp::graph_is_transactional(graph)) {
+      throw mg_exception::InvalidIDException();
+    }
+    return;
+  }
 
-  mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
+  auto *record = mgp::result_new_record(result);
+  if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
+  
+  mg_utility::InsertNodeValueResult(record, kFieldNode, node, memory);
   mg_utility::InsertDoubleValueResult(record, kFieldRank, rank, memory);
 }
 
@@ -69,7 +78,7 @@ void OnlinePageRankSet(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *re
 
 void OnlinePageRankUpdate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
 
     const auto graph = mgp::Graph(memgraph_graph);
     const auto arguments = mgp::List(args);
@@ -111,9 +120,18 @@ void OnlinePageRankUpdate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
     }
 
     for (auto const &[node_id, rank] : pageranks) {
-      auto record = record_factory.NewRecord();
-      record.Insert(kFieldNode, graph.GetNodeById(mgp::Id::FromUint(node_id)));
-      record.Insert(kFieldRank, rank);
+      // As IN_MEMORY_ANALYTICAL doesn’t offer ACID guarantees, check if the graph elements in the result exist
+      try {
+        // If so, throw an exception:
+        const auto node = graph.GetNodeById(mgp::Id::FromUint(node_id));
+
+        // Otherwise:
+        auto record = record_factory.NewRecord();
+        record.Insert(kFieldNode, node);
+        record.Insert(kFieldRank, rank);
+      } catch (const std::exception &e) {
+        continue;
+      }
     }
   } catch (const std::exception &e) {
     mgp::result_set_error_msg(result, e.what());
