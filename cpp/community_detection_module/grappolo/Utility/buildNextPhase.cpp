@@ -207,6 +207,7 @@ double buildNextLevelGraphOpt(graph *Gin, mgp_graph *mg_graph, graph *Gout, long
     //Now add the edges in no particular order
 #pragma omp parallel
 {
+  mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
     for (long i=0; i<NV_out; i++) {
         long Where;
