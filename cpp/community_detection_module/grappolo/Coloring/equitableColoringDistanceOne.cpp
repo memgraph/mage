@@ -77,7 +77,7 @@ void computeVariance(long NVer, int numColors, long *colorSize) {
 
 //Perform recoloring based on the CFF & CLU schemes
 //type: Specifies the type for First-Fit (1 -- default) or Least-Used (2)
-void equitableDistanceOneColorBased(graph *G, int *vtxColor, int numColors, long *colorSize,
+void equitableDistanceOneColorBased(graph *G, mgp_graph *mg_graph, int *vtxColor, int numColors, long *colorSize,
 				    int nThreads, double *totTime, int type) {
 
   /*
@@ -153,7 +153,10 @@ void equitableDistanceOneColorBased(graph *G, int *vtxColor, int numColors, long
     //Now move the vertices to bring the size to average
     long adjC1 = colorPtr[ci];
     long adjC2 = colorPtr[ci+1];
-#pragma omp parallel for
+#pragma omp parallel
+{
+    mgp_track_current_thread_allocations(mg_graph);
+#pragma omp for
     for (long vi=adjC1; vi<adjC2; vi++) {
       if(colorSize[ci] <= avgColorSize)
 	continue; //break the loop when enough vertices have been moved
@@ -194,6 +197,8 @@ void equitableDistanceOneColorBased(graph *G, int *vtxColor, int numColors, long
       free(Mark);
     } //End of outer for loop(vi)
   }//End of for(ci)
+  mgp_untrack_current_thread_allocations(mg_graph);
+}
   time2  = omp_get_wtime();
   totalTime += time2 - time1;
 #ifdef PRINT_DETAILED_STATS_

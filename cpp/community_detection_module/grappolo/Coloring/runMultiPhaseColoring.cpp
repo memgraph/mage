@@ -66,7 +66,7 @@ void runMultiPhaseColoring(graph *G, mgp_graph *mg_graph, long *C_orig, int colo
     int nColors = 0;
     // Coloring Steps
     if((coloring == 1)||(coloring == 2)) {
-        nColors = algoDistanceOneVertexColoringOpt(G, colors, numThreads, &tmpTime)+1;
+        nColors = algoDistanceOneVertexColoringOpt(G, mg_graph, colors, numThreads, &tmpTime)+1;
         totTimeColoring += tmpTime;
         //Check if balanced coloring is enabled:
         if(coloring == 2)
@@ -80,7 +80,7 @@ void runMultiPhaseColoring(graph *G, mgp_graph *mg_graph, long *C_orig, int colo
         if (nItrs <= 0)
             nItrs = 1;
         //int nItrs = numColors / 4;
-        nColors = algoColoringMultiHashMaxMin(G, colors, numThreads, &tmpTime, nHash, nItrs)+1;
+        nColors = algoColoringMultiHashMaxMin(G, mg_graph, colors, numThreads, &tmpTime, nHash, nItrs)+1;
         totTimeColoring += tmpTime;
     }
 
@@ -145,7 +145,7 @@ void runMultiPhaseColoring(graph *G, mgp_graph *mg_graph, long *C_orig, int colo
         //In case coloring is used, make sure the non-coloring routine is run at least once
         if( (currMod - prevMod) > threshold ) {
             Gnew = (graph *) malloc (sizeof(graph)); assert(Gnew != 0);
-            tmpTime =  buildNextLevelGraphOpt(G, Gnew, C, numClusters, numThreads);
+            tmpTime =  buildNextLevelGraphOpt(G, mg_graph, Gnew, C, numClusters, numThreads);
             totTimeBuildingPhase += tmpTime;
             //Free up the previous graph
             free(G->edgeListPtrs);
@@ -171,7 +171,7 @@ void runMultiPhaseColoring(graph *G, mgp_graph *mg_graph, long *C_orig, int colo
                 nColors = 0;
                 // Coloring Steps
                 if((coloring == 1)||(coloring == 2)) {
-                    nColors = algoDistanceOneVertexColoringOpt(G, colors, numThreads, &tmpTime)+1;
+                    nColors = algoDistanceOneVertexColoringOpt(G, mg_graph, colors, numThreads, &tmpTime)+1;
                     totTimeColoring += tmpTime;
                     //Check if balanced coloring is enabled:
                     if(coloring == 2)
@@ -185,7 +185,7 @@ void runMultiPhaseColoring(graph *G, mgp_graph *mg_graph, long *C_orig, int colo
                     if (nItrs <= 0)
                         nItrs = 1;
                     //int nItrs = numColors / 4;
-                    nColors = algoColoringMultiHashMaxMin(G, colors, numThreads, &tmpTime, nHash, nItrs)+1;
+                    nColors = algoColoringMultiHashMaxMin(G, mg_graph, colors, numThreads, &tmpTime, nHash, nItrs)+1;
                     totTimeColoring += tmpTime;
                 }
             }

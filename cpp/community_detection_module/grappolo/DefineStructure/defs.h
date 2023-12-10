@@ -132,7 +132,7 @@ struct clustering_parameters
 };
 
 //Reverse Cuthill-McKee Algorithm
-void algoReverseCuthillMcKee( graph *G, long *pOrder, int nThreads );
+void algoReverseCuthillMcKee( graph *G, mgp_graph *mg_graph, long *pOrder, int nThreads );
 void algoReverseCuthillMcKeeStrict( graph *G, long *pOrder, int nThreads );
 
 #endif

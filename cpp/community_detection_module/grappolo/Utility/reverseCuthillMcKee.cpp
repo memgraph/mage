@@ -31,7 +31,7 @@
 // Perform reverse Cuthill-McKee operation on the graph
 // SSize indicates the size of Source
 // Sets the pointer in isChordal from one direction ONLY
-void algoReverseCuthillMcKee( graph *G, long *pOrder, int nThreads )
+void algoReverseCuthillMcKee(graph *G, mgp_graph *mg_graph, long *pOrder, int nThreads )
 {
     if (nThreads < 1)
         omp_set_num_threads(1);
@@ -42,7 +42,7 @@ void algoReverseCuthillMcKee( graph *G, long *pOrder, int nThreads )
     {
         nT = omp_get_num_threads();
     }
-    
+
     double time1=0, time2=0, total=0, totalTime=0;
     long    NV        = G->numVertices;
     long    NS        = G->sVertices;
@@ -53,9 +53,9 @@ void algoReverseCuthillMcKee( graph *G, long *pOrder, int nThreads )
     long    NE        = G->numEdges;
     long    *vtxPtr   = G->edgeListPtrs;
     edge    *vtxInd   = G->edgeList;
-    
+
     //////STEP 1: Sort the vertices in order of their degree
-    
+
     //Compute the degree of each vertex:
     time1 = omp_get_wtime();
     long *degree  = (long *) malloc (NV * sizeof(long)); assert(degree != 0);
@@ -67,7 +67,7 @@ void algoReverseCuthillMcKee( graph *G, long *pOrder, int nThreads )
     heap *myHeap = (heap*) malloc (sizeof(heap));
     heapInitializeToN(myHeap, NV);
     term newTerm;
-    
+
     long *visited  = (long *) malloc (NV * sizeof(long)); assert(visited != 0);
     long *R = (long *) malloc (NV * sizeof(long)); assert(R != 0);
     //Initialize the Vectors:
@@ -92,10 +92,10 @@ void algoReverseCuthillMcKee( graph *G, long *pOrder, int nThreads )
     free(degree);
     time2 = omp_get_wtime();
     totalTime += time2-time1;
-    
+
     ////////STEP 2: Now perform the BFS
-    
-    
+
+
     //The Queue Data Structure for the Dominating Set:
     //The Queues are important for synchornizing the concurrency:
     //Have two queues - read from one, write into another
@@ -103,7 +103,7 @@ void algoReverseCuthillMcKee( graph *G, long *pOrder, int nThreads )
     long *Q    = (long *) malloc (NV * sizeof(long)); assert(Q != 0);
     long *Qtmp = (long *) malloc (NV * sizeof(long)); assert(Qtmp != 0);
     long *Qswap;
-    
+
 #pragma omp parallel for
     for (long i=0; i<NV; i++) {
         Q[i]= -1;
@@ -111,7 +111,7 @@ void algoReverseCuthillMcKee( graph *G, long *pOrder, int nThreads )
     }
     long QTail=0; //Tail of the queue (implicitly will represent the size)
     long QtmpTail=0; //Tail of the queue (implicitly will represent the size)
-    
+
     //Get the smallest degree as the first source vertex
     term *data = myHeap->elements;
     heapRemoveMin(myHeap);     //Remove it from the heap
@@ -120,16 +120,19 @@ void algoReverseCuthillMcKee( graph *G, long *pOrder, int nThreads )
     visited[data[0].id] = 1; //Mark the vertex as visited
     R[howManyAdded] = data[0].id; //Enter the vertex in the vector
     howManyAdded++;
-    
+
     long nCC = 1;
-    
+
     while (howManyAdded < NV) { //Process until all the vertices have been added to the queue
         //The size of Q1 is now QTail+1; the elements are contained in Q1[0] through Q1[Q1Tail]
         int nLoops=0; //Count number of iterations in the while loop
         while ( QTail > 0 ) {
             //KEY IDEA: Process all the members of the queue concurrently:
             time1 = omp_get_wtime();
-#pragma omp parallel for
+#pragma omp parallel
+{
+      mgp_track_current_thread_allocations(mg_graph);
+#pragma omp for
             for (long Qi=0; Qi<QTail; Qi++) {
                 long v = Q[Qi];
                 long adj1 = vtxPtr[v];
@@ -146,6 +149,8 @@ void algoReverseCuthillMcKee( graph *G, long *pOrder, int nThreads )
                     }
                 } //End of for loop on k: the neighborhood of v
             } //End of for(Qi)
+    mgp_untrack_current_thread_allocations(mg_graph);
+}
             // Also end of the parallel region
             // Swap the two queues:
             Qswap = Q;
@@ -157,7 +162,7 @@ void algoReverseCuthillMcKee( graph *G, long *pOrder, int nThreads )
             time2  = omp_get_wtime();
             total += time2-time1;
         } //end of while ( !Q.empty() )
-        
+
         /////Now look for the next smallest id:
         bool found = 1;
         if(howManyAdded < NV) {
@@ -190,7 +195,7 @@ void algoReverseCuthillMcKee( graph *G, long *pOrder, int nThreads )
     free(visited);
     free(myHeap->elements);
     free(myHeap);
-    
+
     assert(howManyAdded == NV); //Sanity check before moving to next step
     //////STEP 3: Received a valid vector; reverse the order:
     if (isSym) { //A symmetric matrix
@@ -223,11 +228,11 @@ void algoReverseCuthillMcKee( graph *G, long *pOrder, int nThreads )
         //Clean up:
         free(Rprime);
     }//End of else(bipartite graph)
-    
-    
+
+
     //Clean Up:
     free(R);
-    
+
 } //End of algoReverseCuthillMcKee
 
 // Perform reverse Cuthill-McKee operation on the graph: Strict variant
@@ -244,7 +249,7 @@ void algoReverseCuthillMcKeeStrict( graph *G, long *pOrder, int nThreads )
     {
         nT = omp_get_num_threads();
     }
-    
+
     double time1=0, time2=0, total=0, totalTime=0;
     long    NV        = G->numVertices;
     long    NS        = G->sVertices;
@@ -255,9 +260,9 @@ void algoReverseCuthillMcKeeStrict( graph *G, long *pOrder, int nThreads )
     long    NE        = G->numEdges;
     long    *vtxPtr   = G->edgeListPtrs;
     edge    *vtxInd   = G->edgeList;
-    
+
     //////STEP 1: Sort the vertices in order of their degree
-    
+
     //Compute the degree of each vertex:
     time1 = omp_get_wtime();
     long *degree  = (long *) malloc (NV * sizeof(long)); assert(degree != 0);
@@ -269,7 +274,7 @@ void algoReverseCuthillMcKeeStrict( graph *G, long *pOrder, int nThreads )
     heap *myHeap = (heap*) malloc (sizeof(heap));
     heapInitializeToN(myHeap, NV);
     term newTerm;
-    
+
     long *visited  = (long *) malloc (NV * sizeof(long)); assert(visited != 0);
     long *R = (long *) malloc (NV * sizeof(long)); assert(R != 0);
     long *oneLevel = (long *) malloc (NV * sizeof(long)); assert(oneLevel != 0);
@@ -297,10 +302,10 @@ void algoReverseCuthillMcKeeStrict( graph *G, long *pOrder, int nThreads )
     free(degree);
     time2 = omp_get_wtime();
     totalTime += time2-time1;
-    
+
     ////////STEP 2: Now perform the BFS
-    
-    
+
+
     //The Queue Data Structure for the Dominating Set:
     //The Queues are important for synchornizing the concurrency:
     //Have two queues - read from one, write into another
@@ -308,7 +313,7 @@ void algoReverseCuthillMcKeeStrict( graph *G, long *pOrder, int nThreads )
     long *Q    = (long *) malloc (NV * sizeof(long)); assert(Q != 0);
     long *Qtmp = (long *) malloc (NV * sizeof(long)); assert(Qtmp != 0);
     long *Qswap;
-    
+
 #pragma omp parallel for
     for (long i=0; i<NV; i++) {
         Q[i]= -1;
@@ -316,7 +321,7 @@ void algoReverseCuthillMcKeeStrict( graph *G, long *pOrder, int nThreads )
     }
     long QTail=0; //Tail of the queue (implicitly will represent the size)
     long QtmpTail=0; //Tail of the queue (implicitly will represent the size)
-    
+
     //Get the smallest degree as the first source vertex
     term *data = myHeap->elements;
     heapRemoveMin(myHeap);     //Remove it from the heap
@@ -325,9 +330,9 @@ void algoReverseCuthillMcKeeStrict( graph *G, long *pOrder, int nThreads )
     visited[data[0].id] = 1; //Mark the vertex as visited
     R[howManyAdded] = data[0].id; //Enter the vertex in the vector
     howManyAdded++;
-    
+
     long nCC = 1;
-    
+
     while (howManyAdded < NV) { //Process until all the vertices have been added to the queue
         //The size of Q1 is now QTail+1; the elements are contained in Q1[0] through Q1[Q1Tail]
         int nLoops=0; //Count number of iterations in the while loop
@@ -377,7 +382,7 @@ void algoReverseCuthillMcKeeStrict( graph *G, long *pOrder, int nThreads )
             time2  = omp_get_wtime();
             total += time2-time1;
         } //end of while ( !Q.empty() )
-        
+
         /////Now look for the next smallest id:
         bool found = 1;
         if(howManyAdded < NV) {
@@ -410,7 +415,7 @@ void algoReverseCuthillMcKeeStrict( graph *G, long *pOrder, int nThreads )
     free(visited);
     free(myHeap->elements);
     free(myHeap);
-    
+
     assert(howManyAdded == NV); //Sanity check before moving to next step
     //////STEP 3: Received a valid vector; reverse the order:
     if (isSym) { //A symmetric matrix
@@ -443,10 +448,10 @@ void algoReverseCuthillMcKeeStrict( graph *G, long *pOrder, int nThreads )
         //Clean up:
         free(Rprime);
     }//End of else(bipartite graph)
-    
-    
+
+
     //Clean Up:
     free(R);
-    
+
 } //End of algoEdgeApproxDominatingEdgesLinearSearch
 

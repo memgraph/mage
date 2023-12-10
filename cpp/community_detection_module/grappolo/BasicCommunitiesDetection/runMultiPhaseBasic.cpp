@@ -115,7 +115,7 @@ void runMultiPhaseBasic(graph *G, mgp_graph *mg_graph, long *C_orig, int basicOp
         //In case coloring is used, make sure the non-coloring routine is run at least once
         if( (currMod - prevMod) > threshold ) {
             Gnew = (graph *) malloc (sizeof(graph)); assert(Gnew != 0);
-            tmpTime =  buildNextLevelGraphOpt(G, Gnew, C, numClusters, numThreads);
+            tmpTime =  buildNextLevelGraphOpt(G, mg_graph, Gnew, C, numClusters, numThreads);
             totTimeBuildingPhase += tmpTime;
             //Free up the previous graph
             free(G->edgeListPtrs);
@@ -199,7 +199,7 @@ void runMultiPhaseBasicOnce(graph *G, mgp_graph *mg_graph, long *C_orig, int bas
         //In case coloring is used, make sure the non-coloring routine is run at least once
         if( (currMod - prevMod) > threshold ) {
             Gnew = (graph *) malloc (sizeof(graph)); assert(Gnew != 0);
-            tmpTime =  buildNextLevelGraphOpt(G, Gnew, C, numClusters, numThreads);
+            tmpTime =  buildNextLevelGraphOpt(G, mg_graph, Gnew, C, numClusters, numThreads);
             totTimeBuildingPhase += tmpTime;
             //Free up the previous graph
             free(G->edgeListPtrs);

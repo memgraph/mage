@@ -109,7 +109,7 @@ double parallelLouvianMethodNoMap(graph *G, mgp_graph *graph, long *C, int nThre
 
     //Initialize each vertex to its own cluster
     //  initCommAss(pastCommAss, currCommAss, NV);
-    initCommAssOpt(pastCommAss, currCommAss, NV, clusterLocalMap, vtxPtr, vtxInd, cInfo, constantForSecondTerm, vDegree);
+    initCommAssOpt(pastCommAss, currCommAss, NV, clusterLocalMap, vtxPtr, vtxInd, cInfo, constantForSecondTerm, vDegree, graph);
 
     time2 = omp_get_wtime();
 

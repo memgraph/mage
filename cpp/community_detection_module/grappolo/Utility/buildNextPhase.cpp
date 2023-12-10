@@ -40,6 +40,7 @@
 // ************************************************************************
 
 #include "defs.h"
+#include <mg_procedure.h>
 #include "basic_util.h"
 using namespace std;
 
@@ -78,7 +79,7 @@ long renumberClustersContiguously(long *C, long size) {
 
 //WARNING: Will assume that the cluster id have been renumbered contiguously
 //Return the total time for building the next level of graph
-double buildNextLevelGraphOpt(graph *Gin, graph *Gout, long *C, long numUniqueClusters, int nThreads) {
+double buildNextLevelGraphOpt(graph *Gin, mgp_graph *mg_graph, graph *Gout, long *C, long numUniqueClusters, int nThreads) {
 
 #ifdef PRINT_DETAILED_STATS_
 #endif
@@ -112,12 +113,16 @@ double buildNextLevelGraphOpt(graph *Gin, graph *Gout, long *C, long numUniqueCl
     map<long,double>** cluPtrIn = (map<long,double>**) malloc (numUniqueClusters*sizeof(map<long,double>*));
     assert(cluPtrIn != 0);
 
-#pragma omp parallel for
+#pragma omp parallel
+{
+  mgp_track_current_thread_allocations(mg_graph);
+#pragma omp for
     for (long i=0; i<numUniqueClusters; i++) {
         cluPtrIn[i] = new map<long,double>();
         (*(cluPtrIn[i]))[i] = 0; //Add for a self loop with zero weight
     }
-
+  mgp_untrack_current_thread_allocations(mg_graph);
+}
 #pragma omp parallel for
     for (long i=1; i<=NV_out; i++)
         vtxPtrOut[i] = 1; //Count self-loops for every vertex
@@ -137,7 +142,10 @@ double buildNextLevelGraphOpt(graph *Gin, graph *Gout, long *C, long numUniqueCl
 #endif
     time1 = omp_get_wtime();
 
-#pragma omp parallel for
+#pragma omp parallel
+{
+    mgp_track_current_thread_allocations(mg_graph);
+#pragma omp for
     for (long i=0; i<NV_in; i++) {
         long adj1 = vtxPtrIn[i];
         long adj2 = vtxPtrIn[i+1];
@@ -167,6 +175,8 @@ double buildNextLevelGraphOpt(graph *Gin, graph *Gout, long *C, long numUniqueCl
             }//End of if
         }//End of for(j)
     }//End of for(i)
+    mgp_untrack_current_thread_allocations(mg_graph);
+}
 
     //Prefix sum:
     for(long i=0; i<NV_out; i++) {
@@ -195,7 +205,9 @@ double buildNextLevelGraphOpt(graph *Gin, graph *Gout, long *C, long numUniqueCl
     }
 
     //Now add the edges in no particular order
-#pragma omp parallel for
+#pragma omp parallel
+{
+#pragma omp for
     for (long i=0; i<NV_out; i++) {
         long Where;
         map<long, double>::iterator localIterator = cluPtrIn[i]->begin();
@@ -214,6 +226,8 @@ double buildNextLevelGraphOpt(graph *Gin, graph *Gout, long *C, long numUniqueCl
             localIterator++;
         }
     }//End of for(i)
+  mgp_untrack_current_thread_allocations(mg_graph);
+}
     time2 = omp_get_wtime();
     TotTime += (time2-time1);
 #ifdef PRINT_DETAILED_STATS_
@@ -230,22 +244,32 @@ double buildNextLevelGraphOpt(graph *Gin, graph *Gout, long *C, long numUniqueCl
 
     //Clean up
     free(Added);
-#pragma omp parallel for
+#pragma omp parallel
+{
+    mgp_track_current_thread_allocations(mg_graph);
+#pragma omp for
     for (long i=0; i<numUniqueClusters; i++)
         delete cluPtrIn[i];
+    mgp_untrack_current_thread_allocations(mg_graph);
+}
     free(cluPtrIn);
 
-#pragma omp parallel for
+#pragma omp parallel
+{
+    mgp_track_current_thread_allocations(mg_graph);
+#pragma omp for
     for (long i=0; i<numUniqueClusters; i++) {
         omp_destroy_lock(&nlocks[i]);
     }
+  mgp_untrack_current_thread_allocations(mg_graph);
+}
     free(nlocks);
 
     return TotTime;
 }//End of buildNextLevelGraph2()
 
 //WARNING: Will assume that the cluster ids have been renumbered contiguously
-void buildNextLevelGraph(graph *Gin, graph *Gout, long *C, long numUniqueClusters) {
+void buildNextLevelGraph(graph *Gin, mgp_graph *mg_graph, graph *Gout, long *C, long numUniqueClusters) {
 #ifdef PRINT_DETAILED_STATS_
 #endif
     double time1, time2, time3, time4; //For timing purposes
@@ -269,7 +293,10 @@ void buildNextLevelGraph(graph *Gin, graph *Gout, long *C, long numUniqueCluster
     for (long i=0; i<vecSize; i++)
         tmpCounter[i] = 0;
 
-#pragma omp parallel for
+#pragma omp parallel
+{
+  mgp_track_current_thread_allocations(mg_graph);
+#pragma omp for
     for (long i=0; i<NV_in; i++) {
         long adj1 = vtxPtrIn[i];
         long adj2 = vtxPtrIn[i+1];
@@ -288,6 +315,8 @@ void buildNextLevelGraph(graph *Gin, graph *Gout, long *C, long numUniqueCluster
             }//End of else
         }//End of for(j)
     }//End of for(i)
+  mgp_untrack_current_thread_allocations(mg_graph);
+}
 
     /////STEP-2: Build the graph data structure:
     long NV_out = numUniqueClusters;
@@ -329,7 +358,10 @@ void buildNextLevelGraph(graph *Gin, graph *Gout, long *C, long numUniqueCluster
         Added[i] = 0;
 
     //Now add the edges: NOT IN SORTED ORDER
-#pragma omp parallel for
+#pragma omp parallel
+{
+    mgp_track_current_thread_allocations(mg_graph);
+#pragma omp for
     for (long i=0; i<NV_out; i++) {
         long location = (i*(i+1))/2; //Starting location for i
         //Add the self-loop: i-i
@@ -357,6 +389,8 @@ void buildNextLevelGraph(graph *Gin, graph *Gout, long *C, long numUniqueCluster
             }//End of if
         }//End of for(j)
     }//End of for(i)
+  mgp_untrack_current_thread_allocations(mg_graph);
+}
 
     // Set the pointers
     Gout->numVertices  = NV_out;
