@@ -22,9 +22,13 @@ constexpr char const *kArgumentDeletedEdges = "deleted_edges";
 
 void InsertKatzRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const double katz_centrality,
                       const int node_id) {
-  auto *record = mgp::result_new_record(result);
+  auto *node = mg_utility::GetNodeForInsertion(node_id, graph, memory);
+  if (!node) return;
 
-  mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
+  auto *record = mgp::result_new_record(result);
+  if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
+
+  mg_utility::InsertNodeValueResult(record, kFieldNode, node, memory);
   mg_utility::InsertDoubleValueResult(record, kFieldRank, katz_centrality, memory);
 }
 
@@ -67,7 +71,7 @@ void SetKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *re
 
 void UpdateKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
 
     const auto record_factory = mgp::RecordFactory(result);
     const auto graph = mgp::Graph(memgraph_graph);
@@ -80,9 +84,18 @@ void UpdateKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
       katz_centralities = katz_alg::SetKatz(*legacy_graph);
 
       for (auto &[node_id, centrality] : katz_centralities) {
-        auto record = record_factory.NewRecord();
-        record.Insert(kFieldNode, graph.GetNodeById(mgp::Id::FromUint(node_id)));
-        record.Insert(kFieldRank, centrality);
+        // As IN_MEMORY_ANALYTICAL doesn’t offer ACID guarantees, check if the graph elements in the result exist
+        try {
+          // If so, throw an exception:
+          const auto node = graph.GetNodeById(mgp::Id::FromUint(node_id));
+
+          // Otherwise:
+          auto record = record_factory.NewRecord();
+          record.Insert(kFieldNode, node);
+          record.Insert(kFieldRank, centrality);
+        } catch (const std::exception &e) {
+          continue;
+        }
       }
 
       return;
@@ -124,9 +137,18 @@ void UpdateKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
                                              deleted_nodes, deleted_relationships);
 
     for (auto &[node_id, centrality] : katz_centralities) {
-      auto record = record_factory.NewRecord();
-      record.Insert(kFieldNode, graph.GetNodeById(mgp::Id::FromUint(node_id)));
-      record.Insert(kFieldRank, centrality);
+      // As IN_MEMORY_ANALYTICAL doesn’t offer ACID guarantees, check if the graph elements in the result exist
+      try {
+        // If so, throw an exception:
+        const auto node = graph.GetNodeById(mgp::Id::FromUint(node_id));
+
+        // Otherwise:
+        auto record = record_factory.NewRecord();
+        record.Insert(kFieldNode, node);
+        record.Insert(kFieldRank, centrality);
+      } catch (const std::exception &e) {
+        continue;
+      }
     }
   } catch (const std::exception &e) {
     mgp::result_set_error_msg(result, e.what());

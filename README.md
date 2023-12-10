@@ -153,8 +153,8 @@ yourself inside the repo in your terminal:
 git clone --recurse-submodules https://github.com/memgraph/mage.git && cd mage
 ```
 
-**0. b** Download Memgraph from our official download site inside your cloned MAGE repository. Set ${MEMGRAPH_VERSION} to the latest release of Memgraph, and
-${ARCHITECTURE} to your system architecture (`amd64` or `arm64`):
+**0. b** Download Memgraph from our official download site inside your cloned MAGE repository. Set `${MEMGRAPH_VERSION}` to the latest release of Memgraph, and
+`${ARCHITECTURE}` to your system architecture (`amd64` or `arm64`):
 
 ```bash
 
@@ -168,7 +168,7 @@ or this one if you are on `arm64`:
 curl -L "https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb" > memgraph-arm64.deb
 ```
 
-**1.** To build the **MAGE** image run the following command where you set ${architecture} to your system architecture (`amd64` or `arm64`):
+**1.** To build the **MAGE** image run the following command where you set `${architecture}` to your system architecture (`amd64` or `arm64`):
 
 ```
 DOCKER_BUILDKIT=1 docker buildx build \

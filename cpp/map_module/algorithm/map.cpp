@@ -9,7 +9,7 @@ const auto number_of_elements_in_pair = 2;
 /*NOTE: FromNodes isn't 1:1 for graphQL, because first, we need to extend C and CPP API to iterate vertices using ctx
 object, since the `FromNodes` procedure (function if we want to change API) needs to iterate over all graph nodes*/
 void Map::FromNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
 
@@ -55,7 +55,7 @@ void Map::FromNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resul
 }
 
 void Map::FromValues(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
 
@@ -87,7 +87,7 @@ void Map::FromValues(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res
 }
 
 void Map::SetKey(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
 
@@ -124,7 +124,7 @@ void Map::RemoveRecursion(mgp::Map &result, bool recursive, std::string_view key
 }
 
 void Map::RemoveKey(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
   try {
@@ -145,7 +145,7 @@ void Map::RemoveKey(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res,
 }
 
 void Map::FromPairs(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
   try {
@@ -173,7 +173,7 @@ void Map::FromPairs(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res,
 }
 
 void Map::Merge(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
   try {
@@ -208,7 +208,7 @@ void Map::FlattenRecursion(mgp::Map &result, const mgp::Map &input, const std::s
 }
 
 void Map::Flatten(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
   try {
@@ -225,7 +225,7 @@ void Map::Flatten(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, m
 }
 
 void Map::FromLists(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   auto arguments = mgp::List(args);
   auto result_object = mgp::Result(res);
   try {
@@ -271,7 +271,7 @@ void Map::RemoveRecursionSet(mgp::Map &result, bool recursive, std::unordered_se
 }
 
 void Map::RemoveKeys(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
   try {

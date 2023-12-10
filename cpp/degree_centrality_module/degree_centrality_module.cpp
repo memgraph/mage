@@ -19,11 +19,15 @@ const char *kAlgorithmUndirected = "undirected";
 const char *kAlgorithmOut = "out";
 const char *kAlgorithmIn = "in";
 
-void InsertDegreeCentralityRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, std::uint64_t node,
+void InsertDegreeCentralityRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, std::uint64_t node_id,
                                   double degree) {
-  auto *record = mgp::result_new_record(result);
+  auto *node = mg_utility::GetNodeForInsertion(node_id, graph, memory);
+  if (!node) return;
 
-  mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node, memory);
+  auto *record = mgp::result_new_record(result);
+  if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
+
+  mg_utility::InsertNodeValueResult(record, kFieldNode, node, memory);
   mg_utility::InsertDoubleValueResult(record, kFieldDegree, degree, memory);
 }
 
