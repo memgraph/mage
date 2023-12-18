@@ -299,3 +299,6 @@ def test_end2end(test_dir: Path, db: Memgraph):
 
     # Clean database once testing module is finished
     db.drop_database()
+    db.drop_indexes()
+    db.ensure_constraints([])
+   
