@@ -12,7 +12,7 @@ constexpr const char *kArgumentStartNode = "start_node";
 constexpr const char *kArgumentEndNode = "end_node";
 constexpr const char *kArgumentNumberOfWeightedShortestPaths = "number_of_weighted_shortest_paths";
 constexpr const char *kArgumentWeightName = "weight_property_name";
-constexpr const char *kResult = "result";
+constexpr const char *kResultPaths = "paths";
 constexpr const int64_t kDefaultNumberOfWeightedShortestPaths = 5;
 constexpr const char *kDefaultWeightName = "weight";
 

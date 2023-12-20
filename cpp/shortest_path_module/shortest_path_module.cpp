@@ -6,16 +6,16 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   try {
     mgp::MemoryDispatcherGuard guard{memory};
 
-    AddProcedure(KWeightedShortestPaths::KWeightedShortestPaths, KWeightedShortestPaths::kProcedure,
-                 mgp::ProcedureType::Read,
-                 {mgp::Parameter(KWeightedShortestPaths::kArgumentStartNode, mgp::Type::Node),
-                  mgp::Parameter(KWeightedShortestPaths::kArgumentEndNode, mgp::Type::Node),
-                  mgp::Parameter(KWeightedShortestPaths::kArgumentNumberOfWeightedShortestPaths, mgp::Type::Int,
-                                 mgp::Value(KWeightedShortestPaths::kDefaultNumberOfWeightedShortestPaths)),
-                  mgp::Parameter(KWeightedShortestPaths::kArgumentWeightName, mgp::Type::String,
-                                 mgp::Value(KWeightedShortestPaths::kDefaultWeightName))},
+    AddProcedure(
+        KWeightedShortestPaths::KWeightedShortestPaths, KWeightedShortestPaths::kProcedure, mgp::ProcedureType::Read,
+        {mgp::Parameter(KWeightedShortestPaths::kArgumentStartNode, mgp::Type::Node),
+         mgp::Parameter(KWeightedShortestPaths::kArgumentEndNode, mgp::Type::Node),
+         mgp::Parameter(KWeightedShortestPaths::kArgumentNumberOfWeightedShortestPaths, mgp::Type::Int,
+                        mgp::Value(KWeightedShortestPaths::kDefaultNumberOfWeightedShortestPaths)),
+         mgp::Parameter(KWeightedShortestPaths::kArgumentWeightName, mgp::Type::String,
+                        mgp::Value(KWeightedShortestPaths::kDefaultWeightName))},
 
-                 {}, module, memory);
+        {mgp::Return(KWeightedShortestPaths::kResultPaths, {mgp::Type::List, mgp::Type::Map})}, module, memory);
   } catch (const std::exception &e) {
     return 1;
   }

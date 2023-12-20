@@ -160,6 +160,7 @@ void KWeightedShortestPaths::KWeightedShortestPaths(mgp_list *args, mgp_graph *m
   mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
+  mgp::List paths{};
   try {
     auto start_node = arguments[0];
     auto end_node = arguments[1];
@@ -184,27 +185,23 @@ void KWeightedShortestPaths::KWeightedShortestPaths(mgp_list *args, mgp_graph *m
     auto weight = weight_name.ValueString();
 
     mgp::Graph graph{memgraph_graph};
-    auto dijkstra_result = KWeightedShortestPaths::Dijkstra(graph, source, sync, weight);
-
-    for (auto node : dijkstra_result.path.vertices) {
-      std::string node_string = node.ToString() + "\n";
-      mgp_error er = mgp_log(mgp_log_level::MGP_LOG_LEVEL_CRITICAL, node_string.c_str());
-    }
-    std::string result_string = "Shortest path: " + std::to_string(dijkstra_result.path.weight) + "\n";
-    mgp_error er = mgp_log(mgp_log_level::MGP_LOG_LEVEL_CRITICAL, result_string.c_str());
 
     auto k_shortest_paths = KWeightedShortestPaths::YenKSP(graph, source, sync, k, weight);
-    for (auto path : k_shortest_paths) {
-      for (auto node : path.vertices) {
-        std::string node_string = node.ToString() + "\n";
-        mgp_error er = mgp_log(mgp_log_level::MGP_LOG_LEVEL_CRITICAL, node_string.c_str());
-      }
-      std::string path_string = "Path: " + std::to_string(path.weight) + "\n";
-      mgp_error er = mgp_log(mgp_log_level::MGP_LOG_LEVEL_CRITICAL, path_string.c_str());
-    }
 
-    // auto record = record_factory.NewRecord();
-    // record.Insert(std::string(kProcedureKShortestPath).c_str(), result);
+    for (auto path : k_shortest_paths) {
+      mgp::Map path_map{};
+      path_map.Insert("weight", mgp::Value(path.weight));
+      mgp::List path_list;
+      for (auto node : path.vertices) {
+        path_list.AppendExtend(mgp::Value(node));
+      }
+      path_map.Insert("path", mgp::Value(path_list));
+
+      paths.AppendExtend(mgp::Value(path_map));
+    }
+    auto record = record_factory.NewRecord();
+    record.Insert(KWeightedShortestPaths::kResultPaths, paths);
+
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
     return;
