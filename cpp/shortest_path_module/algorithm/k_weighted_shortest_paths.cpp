@@ -197,10 +197,9 @@ void KWeightedShortestPaths::KWeightedShortestPaths(mgp_list *args, mgp_graph *m
       }
       path_map.Insert("path", mgp::Value(path_list));
 
-      paths.AppendExtend(mgp::Value(path_map));
+      auto record = record_factory.NewRecord();
+      record.Insert(KWeightedShortestPaths::kResultPaths, path_map);
     }
-    auto record = record_factory.NewRecord();
-    record.Insert(KWeightedShortestPaths::kResultPaths, paths);
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
