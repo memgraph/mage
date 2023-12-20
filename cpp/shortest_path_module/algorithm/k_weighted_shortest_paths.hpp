@@ -2,6 +2,7 @@
 
 #include <sys/types.h>
 #include <mgp.hpp>
+#include <string_view>
 
 namespace KWeightedShortestPaths {
 
@@ -10,8 +11,10 @@ constexpr const char *kProcedure = "k_weighted_shortest_paths";
 constexpr const char *kArgumentStartNode = "start_node";
 constexpr const char *kArgumentEndNode = "end_node";
 constexpr const char *kArgumentNumberOfWeightedShortestPaths = "number_of_weighted_shortest_paths";
+constexpr const char *kArgumentWeightName = "weight_property_name";
 constexpr const char *kResult = "result";
 constexpr const int64_t kDefaultNumberOfWeightedShortestPaths = 5;
+constexpr const char *kDefaultWeightName = "weight";
 
 struct TempPath {
   double weight;
@@ -49,14 +52,15 @@ struct DijkstraResult {
   std::unordered_map<uint64_t, double> distances;
 };
 
-double GetEdgeWeight(mgp::Node &node1, mgp::Node &node2);
+double GetEdgeWeight(mgp::Node &node1, mgp::Node &node2, const std::string_view &weight_name);
 
-DijkstraResult Dijkstra(mgp::Graph &graph, mgp::Node &source, mgp::Node &sink,
+DijkstraResult Dijkstra(mgp::Graph &graph, mgp::Node &source, mgp::Node &sink, const std::string_view &weight_name,
                         const std::set<uint64_t> &ignore_nodes = {},
                         const std::set<std::pair<uint64_t, uint64_t>> &ignore_edges = {});
 
 void KWeightedShortestPaths(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
-std::vector<TempPath> YenKSP(mgp::Graph &graph, mgp::Node &source, mgp::Node &sink, int K);
+std::vector<TempPath> YenKSP(mgp::Graph &graph, mgp::Node &source, mgp::Node &sink, int K,
+                             const std::string_view &weight_name);
 
 }  // namespace KWeightedShortestPaths
