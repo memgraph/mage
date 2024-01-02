@@ -3,7 +3,6 @@
 #include <mgp.hpp>
 #include <queue>
 #include <string>
-#include <syncstream>
 #include <unordered_map>
 #include "mg_procedure.h"
 
