@@ -8,7 +8,7 @@ six==1.16.0
 torchmetrics==0.9.3
 igraph==0.10.2
 scikit-learn==0.24.2
-gqlalchemy==1.4.1
+gqlalchemy==1.5.0
 mysql-connector-python==8.0.32
 oracledb==1.2.2
 pyodbc==4.0.35
