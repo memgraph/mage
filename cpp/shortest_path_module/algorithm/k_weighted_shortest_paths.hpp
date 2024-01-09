@@ -19,6 +19,12 @@ constexpr const char *kDefaultWeightName = "weight";
 struct TempPath {
   double weight;
   std::vector<mgp::Node> vertices;
+  std::vector<mgp::Relationship> edges;
+};
+
+struct EdgeWeight {
+  mgp::Relationship rel;
+  double weight;
 };
 
 struct ComparePaths {
@@ -52,7 +58,7 @@ struct DijkstraResult {
   std::unordered_map<uint64_t, double> distances;
 };
 
-double GetEdgeWeight(mgp::Node &node1, mgp::Node &node2, const std::string_view &weight_name);
+EdgeWeight GetEdgeWeight(mgp::Node &node1, mgp::Node &node2, const std::string_view &weight_name);
 
 DijkstraResult Dijkstra(mgp::Graph &graph, mgp::Node &source, mgp::Node &sink, const std::string_view &weight_name,
                         const std::set<uint64_t> &ignore_nodes = {},

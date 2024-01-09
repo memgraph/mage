@@ -6,28 +6,29 @@
 #include <unordered_map>
 #include "mg_procedure.h"
 
-double KWeightedShortestPaths::GetEdgeWeight(mgp::Node &node1, mgp::Node &node2, const std::string_view &weight_name) {
+KWeightedShortestPaths::EdgeWeight KWeightedShortestPaths::GetEdgeWeight(mgp::Node &node1, mgp::Node &node2,
+                                                                         const std::string_view &weight_name) {
   for (const auto &relationship : node1.OutRelationships()) {
     if (relationship.To() == node2 && relationship.GetProperty(std::string(weight_name)).IsNumeric()) {
-      return relationship.GetProperty(std::string(weight_name)).ValueNumeric();
+      return {relationship, relationship.GetProperty(std::string(weight_name)).ValueNumeric()};
     }
   }
   for (const auto &relationship : node1.InRelationships()) {
     if (relationship.From() == node2 && relationship.GetProperty(std::string(weight_name)).IsNumeric()) {
-      return relationship.GetProperty(std::string(weight_name)).ValueNumeric();
+      return {relationship, relationship.GetProperty(std::string(weight_name)).ValueNumeric()};
     }
   }
-  return 0.0;
 }
 
 KWeightedShortestPaths::DijkstraResult KWeightedShortestPaths::Dijkstra(
     mgp::Graph &graph, mgp::Node &source, mgp::Node &sink, const std::string_view &weight_name,
     const std::set<uint64_t> &ignore_nodes, const std::set<std::pair<uint64_t, uint64_t>> &ignore_edges) {
   std::unordered_map<uint64_t, double> distances;
-  std::unordered_map<uint64_t, mgp::Id> previous;
+  std::unordered_map<uint64_t, mgp::Id> previous_nodes;
   std::priority_queue<std::pair<mgp::Node, double>, std::vector<std::pair<mgp::Node, double>>,
                       KWeightedShortestPaths::CompareWeightDistance>
       queue;
+  std::unordered_map<uint64_t, mgp::Id> previous_edges;
   for (const auto &node : graph.Nodes()) {
     if (node == source) {
       distances[node.Id().AsUint()] = 0;
@@ -58,22 +59,31 @@ KWeightedShortestPaths::DijkstraResult KWeightedShortestPaths::Dijkstra(
 
       if (alternative_distance < distances[neighbor.Id().AsUint()]) {
         distances[neighbor.Id().AsUint()] = alternative_distance;
-        previous[neighbor.Id().AsUint()] = node.Id();
+        previous_nodes[neighbor.Id().AsUint()] = node.Id();
+        previous_edges[neighbor.Id().AsUint()] = relationship.Id();
         queue.push({neighbor, distances[neighbor.Id().AsUint()]});
       }
     }
   }
 
-  if (previous.find(sink.Id().AsUint()) == previous.end()) {
+  if (previous_nodes.find(sink.Id().AsUint()) == previous_nodes.end()) {
     // Dijkstra's algorithm didn't find a path from the source to the sink
-    return {{std::numeric_limits<double>::infinity(), {}}};
+    return {{std::numeric_limits<double>::infinity(), {}, {}}};
   }
-  KWeightedShortestPaths::TempPath shortest_path = {0, {}};
-  for (mgp::Node node = sink; node != source; node = graph.GetNodeById(previous[node.Id().AsUint()])) {
+  KWeightedShortestPaths::TempPath shortest_path = {0, {}, {}};
+  for (mgp::Node node = sink; node != source; node = graph.GetNodeById(previous_nodes[node.Id().AsUint()])) {
     shortest_path.vertices.push_back(node);
+    auto relationships = node.InRelationships();
+    for (const auto &relationship : relationships) {
+      if (relationship.Id() == previous_edges[node.Id().AsUint()]) {
+        shortest_path.edges.push_back(relationship);
+        break;
+      }
+    }
   }
   shortest_path.vertices.push_back(source);
   std::reverse(shortest_path.vertices.begin(), shortest_path.vertices.end());
+  std::reverse(shortest_path.edges.begin(), shortest_path.edges.end());
   shortest_path.weight = distances[sink.Id().AsUint()];
 
   return {shortest_path, distances};
@@ -101,10 +111,15 @@ std::vector<KWeightedShortestPaths::TempPath> KWeightedShortestPaths::YenKSP(mgp
       root_path.vertices.insert(root_path.vertices.end(), prev_shortest_path.vertices.begin(),
                                 prev_shortest_path.vertices.begin() + i + 1);
 
+      // Add previous edge weights
       for (size_t j = 0; j < root_path.vertices.size() - 1; ++j) {
-        root_path.weight +=
-            KWeightedShortestPaths::GetEdgeWeight(root_path.vertices[j], root_path.vertices[j + 1], weight_name);
+        KWeightedShortestPaths::EdgeWeight edge_weight =
+            GetEdgeWeight(root_path.vertices[j], root_path.vertices[j + 1], weight_name);
+        root_path.weight += edge_weight.weight;
+
+        root_path.edges.push_back(edge_weight.rel);
       }
+
       std::set<uint64_t> ignore_nodes;
       std::set<std::pair<uint64_t, uint64_t>> ignore_edges;
 
@@ -127,6 +142,7 @@ std::vector<KWeightedShortestPaths::TempPath> KWeightedShortestPaths::YenKSP(mgp
         total_path.weight += spur_result.path.weight;
         total_path.vertices.insert(total_path.vertices.end(), spur_result.path.vertices.begin() + 1,
                                    spur_result.path.vertices.end());
+        total_path.edges.insert(total_path.edges.end(), spur_result.path.edges.begin(), spur_result.path.edges.end());
 
         candidates.push(total_path);
       }
@@ -190,11 +206,16 @@ void KWeightedShortestPaths::KWeightedShortestPaths(mgp_list *args, mgp_graph *m
     for (auto path : k_shortest_paths) {
       mgp::Map path_map{};
       path_map.Insert("weight", mgp::Value(path.weight));
-      mgp::List path_list;
+      mgp::List path_nodes;
+      mgp::List path_edges;
       for (auto node : path.vertices) {
-        path_list.AppendExtend(mgp::Value(node));
+        path_nodes.AppendExtend(mgp::Value(node));
       }
-      path_map.Insert("path", mgp::Value(path_list));
+      for (auto edge : path.edges) {
+        path_edges.AppendExtend(mgp::Value(edge));
+      }
+      path_map.Insert("path_nodes", mgp::Value(path_nodes));
+      path_map.Insert("path_edges", mgp::Value(path_edges));
 
       auto record = record_factory.NewRecord();
       record.Insert(KWeightedShortestPaths::kResultPaths, path_map);
