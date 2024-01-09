@@ -69,12 +69,12 @@ void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, GrappoloGr
     edge_index++;
   }
 
-  auto edge_list_ptrs = new long[number_of_vertices + 1];
+  auto edge_list_ptrs = static_cast<long *>(malloc((number_of_vertices + 1) * sizeof(long)));
   if (edge_list_ptrs == nullptr) {
     throw mg_exception::NotEnoughMemoryException();
   }
 
-  auto edge_list = new edge[number_of_edges * 2];  // Every edge stored twice
+  auto edge_list = static_cast<edge *>(malloc(number_of_edges * 2 * sizeof(edge)));  // Every edge stored twice
   if (edge_list == nullptr) {
     throw mg_exception::NotEnoughMemoryException();
   }
