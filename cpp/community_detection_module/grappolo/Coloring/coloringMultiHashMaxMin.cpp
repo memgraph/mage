@@ -120,7 +120,7 @@ int algoColoringMultiHashMaxMin(graph *G, mgp_graph *mg_graph, int *vtxColor, in
             int currentColor = (2*itr*nHash + 2*ihash); //Color to be used in current itr-hash combination
 #pragma omp parallel
 {
-            mgp_track_current_thread_allocations(mg_graph);
+            [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
             for (long v=0; v<NVer; v++) {
                 //Iterate over all the vertices:
@@ -155,7 +155,7 @@ int algoColoringMultiHashMaxMin(graph *G, mgp_graph *mg_graph, int *vtxColor, in
                     __sync_fetch_and_add(&iterFreq,1);
                 }
             }//End of for(v)
-        mgp_untrack_current_thread_allocations(mg_graph);
+        [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
         }//End of for(ihash)
         totalColored += iterFreq;
@@ -176,7 +176,7 @@ int algoColoringMultiHashMaxMin(graph *G, mgp_graph *mg_graph, int *vtxColor, in
     long unColored = 0;
 #pragma omp parallel
 {
-    mgp_track_current_thread_allocations(mg_graph);
+    [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
     for (long v=0; v < NVer; v++ ) {
         long adj1 = verPtr[v];
@@ -194,7 +194,7 @@ int algoColoringMultiHashMaxMin(graph *G, mgp_graph *mg_graph, int *vtxColor, in
             }
         }//End of inner for loop: w in adj(v)
     }//End of outer for loop: for each vertex
-    mgp_untrack_current_thread_allocations(mg_graph);
+    [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
     myConflicts = myConflicts / 2; //Have counted each conflict twice
 

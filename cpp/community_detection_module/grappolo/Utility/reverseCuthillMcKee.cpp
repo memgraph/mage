@@ -131,7 +131,7 @@ void algoReverseCuthillMcKee(graph *G, mgp_graph *mg_graph, long *pOrder, int nT
             time1 = omp_get_wtime();
 #pragma omp parallel
 {
-      mgp_track_current_thread_allocations(mg_graph);
+      [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
             for (long Qi=0; Qi<QTail; Qi++) {
                 long v = Q[Qi];
@@ -149,7 +149,7 @@ void algoReverseCuthillMcKee(graph *G, mgp_graph *mg_graph, long *pOrder, int nT
                     }
                 } //End of for loop on k: the neighborhood of v
             } //End of for(Qi)
-    mgp_untrack_current_thread_allocations(mg_graph);
+    [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
             // Also end of the parallel region
             // Swap the two queues:

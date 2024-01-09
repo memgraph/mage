@@ -46,7 +46,7 @@
 
 using namespace std;
 
-double parallelLouvianMethodFastTrackResistance(graph *G, mgp_graph *graph, long *C, int nThreads, double Lower,
+double parallelLouvianMethodFastTrackResistance(graph *G, mgp_graph *mg_graph, long *C, int nThreads, double Lower,
         double thresh, double *totTime, int *numItr, int phase, double* rmin, double* finMod) {
 #ifdef PRINT_DETAILED_STATS_
 #endif
@@ -128,7 +128,7 @@ double parallelLouvianMethodFastTrackResistance(graph *G, mgp_graph *graph, long
 
 #pragma omp parallel
 {
-        mgp_track_current_thread_allocations(graph);
+        [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
         for (long i=0; i<NV; i++) {
             long adj1 = vtxPtr[i];
@@ -167,7 +167,7 @@ double parallelLouvianMethodFastTrackResistance(graph *G, mgp_graph *graph, long
             clusterLocalMap.clear();
             Counter.clear();
         }//End of for(i)
-        mgp_untrack_current_thread_allocations(graph);
+        [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
         time2 = omp_get_wtime();
 

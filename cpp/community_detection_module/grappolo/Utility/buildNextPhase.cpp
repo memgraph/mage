@@ -115,13 +115,13 @@ double buildNextLevelGraphOpt(graph *Gin, mgp_graph *mg_graph, graph *Gout, long
 
 #pragma omp parallel
 {
-  mgp_track_current_thread_allocations(mg_graph);
+  [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
     for (long i=0; i<numUniqueClusters; i++) {
         cluPtrIn[i] = new map<long,double>();
         (*(cluPtrIn[i]))[i] = 0; //Add for a self loop with zero weight
     }
-  mgp_untrack_current_thread_allocations(mg_graph);
+  [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
 #pragma omp parallel for
     for (long i=1; i<=NV_out; i++)
@@ -144,7 +144,7 @@ double buildNextLevelGraphOpt(graph *Gin, mgp_graph *mg_graph, graph *Gout, long
 
 #pragma omp parallel
 {
-    mgp_track_current_thread_allocations(mg_graph);
+    [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
     for (long i=0; i<NV_in; i++) {
         long adj1 = vtxPtrIn[i];
@@ -175,7 +175,7 @@ double buildNextLevelGraphOpt(graph *Gin, mgp_graph *mg_graph, graph *Gout, long
             }//End of if
         }//End of for(j)
     }//End of for(i)
-    mgp_untrack_current_thread_allocations(mg_graph);
+    [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
 
     //Prefix sum:
@@ -207,7 +207,7 @@ double buildNextLevelGraphOpt(graph *Gin, mgp_graph *mg_graph, graph *Gout, long
     //Now add the edges in no particular order
 #pragma omp parallel
 {
-  mgp_track_current_thread_allocations(mg_graph);
+  [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
     for (long i=0; i<NV_out; i++) {
         long Where;
@@ -227,7 +227,7 @@ double buildNextLevelGraphOpt(graph *Gin, mgp_graph *mg_graph, graph *Gout, long
             localIterator++;
         }
     }//End of for(i)
-  mgp_untrack_current_thread_allocations(mg_graph);
+  [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
     time2 = omp_get_wtime();
     TotTime += (time2-time1);
@@ -247,22 +247,22 @@ double buildNextLevelGraphOpt(graph *Gin, mgp_graph *mg_graph, graph *Gout, long
     free(Added);
 #pragma omp parallel
 {
-    mgp_track_current_thread_allocations(mg_graph);
+    [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
     for (long i=0; i<numUniqueClusters; i++)
         delete cluPtrIn[i];
-    mgp_untrack_current_thread_allocations(mg_graph);
+    [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
     free(cluPtrIn);
 
 #pragma omp parallel
 {
-    mgp_track_current_thread_allocations(mg_graph);
+    [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
     for (long i=0; i<numUniqueClusters; i++) {
         omp_destroy_lock(&nlocks[i]);
     }
-  mgp_untrack_current_thread_allocations(mg_graph);
+  [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
     free(nlocks);
 
@@ -296,7 +296,7 @@ void buildNextLevelGraph(graph *Gin, mgp_graph *mg_graph, graph *Gout, long *C, 
 
 #pragma omp parallel
 {
-  mgp_track_current_thread_allocations(mg_graph);
+  [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
     for (long i=0; i<NV_in; i++) {
         long adj1 = vtxPtrIn[i];
@@ -316,7 +316,7 @@ void buildNextLevelGraph(graph *Gin, mgp_graph *mg_graph, graph *Gout, long *C, 
             }//End of else
         }//End of for(j)
     }//End of for(i)
-  mgp_untrack_current_thread_allocations(mg_graph);
+  [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
 
     /////STEP-2: Build the graph data structure:
@@ -361,7 +361,7 @@ void buildNextLevelGraph(graph *Gin, mgp_graph *mg_graph, graph *Gout, long *C, 
     //Now add the edges: NOT IN SORTED ORDER
 #pragma omp parallel
 {
-    mgp_track_current_thread_allocations(mg_graph);
+    [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
     for (long i=0; i<NV_out; i++) {
         long location = (i*(i+1))/2; //Starting location for i
@@ -390,7 +390,7 @@ void buildNextLevelGraph(graph *Gin, mgp_graph *mg_graph, graph *Gout, long *C, 
             }//End of if
         }//End of for(j)
     }//End of for(i)
-  mgp_untrack_current_thread_allocations(mg_graph);
+  [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
 
     // Set the pointers

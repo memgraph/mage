@@ -46,7 +46,7 @@
 
 using namespace std;
 
-double parallelLouvianMethodNoMap(graph *G, mgp_graph *graph, long *C, int nThreads, double Lower,
+double parallelLouvianMethodNoMap(graph *G, mgp_graph *mg_graph, long *C, int nThreads, double Lower,
                                   double thresh, double *totTime, int *numItr) {
 #ifdef PRINT_DETAILED_STATS_
 #endif
@@ -109,7 +109,7 @@ double parallelLouvianMethodNoMap(graph *G, mgp_graph *graph, long *C, int nThre
 
     //Initialize each vertex to its own cluster
     //  initCommAss(pastCommAss, currCommAss, NV);
-    initCommAssOpt(pastCommAss, currCommAss, NV, clusterLocalMap, vtxPtr, vtxInd, cInfo, constantForSecondTerm, vDegree, graph);
+    initCommAssOpt(pastCommAss, currCommAss, NV, clusterLocalMap, vtxPtr, vtxInd, cInfo, constantForSecondTerm, vDegree, mg_graph);
 
     time2 = omp_get_wtime();
 
@@ -131,7 +131,7 @@ double parallelLouvianMethodNoMap(graph *G, mgp_graph *graph, long *C, int nThre
 
 #pragma omp parallel
 {
-        mgp_track_current_thread_allocations(graph);
+        [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
         for (long i=0; i<NV; i++) {
             long adj1 = vtxPtr[i];
@@ -182,7 +182,7 @@ double parallelLouvianMethodNoMap(graph *G, mgp_graph *graph, long *C, int nThre
             }//End of If()
             //numClustSize = 0;
         }//End of for(i)
-        mgp_untrack_current_thread_allocations(graph);
+        [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
         time2 = omp_get_wtime();
 

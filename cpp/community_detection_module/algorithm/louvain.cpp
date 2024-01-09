@@ -107,7 +107,7 @@ void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, GrappoloGr
     // Build the edgeList from edgeListTmp:
 #pragma omp parallel
 {
-  mgp_track_current_thread_allocations(graph);
+  [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(graph);
 
   #pragma omp for
   for (std::size_t i = 0; i < number_of_edges; i++) {
@@ -126,7 +126,7 @@ void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, GrappoloGr
     edge_list[index].weight = weight;
   }
 
-  mgp_untrack_current_thread_allocations(graph);
+  [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(graph);
 }
   // Define Grappolo graph structure
   grappolo_graph.sVertices = number_of_vertices;

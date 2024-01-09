@@ -155,7 +155,7 @@ void equitableDistanceOneColorBased(graph *G, mgp_graph *mg_graph, int *vtxColor
     long adjC2 = colorPtr[ci+1];
 #pragma omp parallel
 {
-    mgp_track_current_thread_allocations(mg_graph);
+    [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
     for (long vi=adjC1; vi<adjC2; vi++) {
       if(colorSize[ci] <= avgColorSize)
@@ -197,7 +197,7 @@ void equitableDistanceOneColorBased(graph *G, mgp_graph *mg_graph, int *vtxColor
       free(Mark);
     } //End of outer for loop(vi)
   }//End of for(ci)
-  mgp_untrack_current_thread_allocations(mg_graph);
+  [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
   time2  = omp_get_wtime();
   totalTime += time2 - time1;

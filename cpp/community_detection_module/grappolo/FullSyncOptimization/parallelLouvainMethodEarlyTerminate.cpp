@@ -148,7 +148,7 @@ double parallelLouvianMethodEarlyTerminate(graph *G, mgp_graph *mg_graph, long *
         //#pragma omp parallel for reduction(+:totalEdgeTravel), reduction(+:totalUniqueComm)
 #pragma omp parallel
 {
-        mgp_track_current_thread_allocations(mg_graph);
+        [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
         for (long i=0; i<NV; i++) {
             if(verT[i])
@@ -201,7 +201,7 @@ double parallelLouvianMethodEarlyTerminate(graph *G, mgp_graph *mg_graph, long *
                 cUpdate[currCommAss[i]].size -=1;
             }//End of If()
         }//End of for(i)
-        mgp_untrack_current_thread_allocations(mg_graph);
+        [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
         time2 = omp_get_wtime();
 

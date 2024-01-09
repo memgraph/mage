@@ -62,7 +62,7 @@ static void print_err_message(int err)
 using namespace std;
 
 
-double parallelLouvianMethod(graph *G, mgp_graph *graph, long *C, int nThreads, double Lower,
+double parallelLouvianMethod(graph *G, mgp_graph *mg_graph, long *C, int nThreads, double Lower,
                              double thresh, double *totTime, int *numItr) {
 #ifdef PRINT_DETAILED_STATS_
 #endif
@@ -185,7 +185,7 @@ double parallelLouvianMethod(graph *G, mgp_graph *graph, long *C, int nThreads, 
 
 #pragma omp parallel
 {
-        mgp_track_current_thread_allocations(graph);
+        [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
         for (long i=0; i<NV; i++) {
             long adj1 = vtxPtr[i];
@@ -228,7 +228,7 @@ double parallelLouvianMethod(graph *G, mgp_graph *graph, long *C, int nThreads, 
             clusterLocalMap.clear();
             Counter.clear();
         }//End of for(i)
-        mgp_untrack_current_thread_allocations(graph);
+        [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
         time2 = omp_get_wtime();
 

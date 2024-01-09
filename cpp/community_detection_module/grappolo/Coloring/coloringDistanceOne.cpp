@@ -156,13 +156,13 @@ int algoDistanceOneVertexColoringOpt(graph *G, mgp_graph *mg_graph, int *vtxColo
 
 		#pragma omp parallel
     {
-    mgp_track_current_thread_allocations(mg_graph);
+    [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
     #pragma omp for
 		for (long Qi=0; Qi<QTail; Qi++) {
 			long v = Q[Qi]; //Q.pop_front();
 			distanceOneConfResolution(G, v, vtxColor, randValues, &QtmpTail, Qtmp, freq, 0);
 		} //End of outer for loop: for each vertex
-    mgp_untrack_current_thread_allocations(mg_graph);
+    [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
     }
 
 		time2  = omp_get_wtime() - time2;
@@ -195,7 +195,7 @@ int algoDistanceOneVertexColoringOpt(graph *G, mgp_graph *mg_graph, int *vtxColo
   int myConflicts = 0;
 	#pragma omp parallel
   {
-  mgp_track_current_thread_allocations(mg_graph);
+  [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
   #pragma omp for
   for (long v=0; v < NVer; v++ ) {
     long adj1 = verPtr[v];
@@ -209,7 +209,7 @@ int algoDistanceOneVertexColoringOpt(graph *G, mgp_graph *mg_graph, int *vtxColo
       }
     }//End of inner for loop: w in adj(v)
   }//End of outer for loop: for each vertex
-  mgp_untrack_current_thread_allocations(mg_graph);
+  [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
   }
   myConflicts = myConflicts / 2; //Have counted each conflict twice
 
@@ -295,7 +295,7 @@ int algoDistanceOneVertexColoring(graph *G, mgp_graph *mg_graph, int *vtxColor, 
     time1 = omp_get_wtime();
 #pragma omp parallel
 {
-    mgp_track_current_thread_allocations(mg_graph);
+    [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
     for (long Qi=0; Qi<QTail; Qi++) {
       long v = Q[Qi]; //Q.pop_front();
@@ -328,7 +328,7 @@ int algoDistanceOneVertexColoring(graph *G, mgp_graph *mg_graph, int *vtxColor, 
 	myColor++; /* no available color with # less than cmax */
       vtxColor[v] = myColor; //Color the vertex
     } //End of outer for loop: for each vertex
-    mgp_untrack_current_thread_allocations(mg_graph);
+    [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
     time1  = omp_get_wtime() - time1;
     totalTime += time1;
@@ -341,7 +341,7 @@ int algoDistanceOneVertexColoring(graph *G, mgp_graph *mg_graph, int *vtxColor, 
     time2 = omp_get_wtime();
 #pragma omp parallel
 {
-    mgp_track_current_thread_allocations(mg_graph);
+    [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
     for (long Qi=0; Qi<QTail; Qi++) {
       long v = Q[Qi]; //Q.pop_front();
@@ -363,7 +363,7 @@ int algoDistanceOneVertexColoring(graph *G, mgp_graph *mg_graph, int *vtxColor, 
 	} //End of if( vtxColor[v] == vtxColor[verInd[k]] )
       } //End of inner for loop: w in adj(v)
     } //End of outer for loop: for each vertex
-    mgp_untrack_current_thread_allocations(mg_graph);
+    [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
     time2  = omp_get_wtime() - time2;
     totalTime += time2;
@@ -389,7 +389,7 @@ int algoDistanceOneVertexColoring(graph *G, mgp_graph *mg_graph, int *vtxColor, 
   int myConflicts = 0;
 #pragma omp parallel
 {
-  mgp_track_current_thread_allocations(mg_graph);
+  [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
   for (long v=0; v < NVer; v++ ) {
     long adj1 = verPtr[v];
@@ -404,7 +404,7 @@ int algoDistanceOneVertexColoring(graph *G, mgp_graph *mg_graph, int *vtxColor, 
       }
     }//End of inner for loop: w in adj(v)
   }//End of outer for loop: for each vertex
-  mgp_untrack_current_thread_allocations(mg_graph);
+  [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
   myConflicts = myConflicts / 2; //Have counted each conflict twice
   //Clean Up:

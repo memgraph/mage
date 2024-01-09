@@ -111,7 +111,7 @@ void initCommAssOpt(long* pastCommAss, long* currCommAss, long NV,
 
 #pragma omp parallel
 {
-  mgp_track_current_thread_allocations(mg_graph);
+  [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
   for (long v=0; v<NV; v++) {
     long adj1  = vtxPtr[v];
@@ -167,7 +167,7 @@ void initCommAssOpt(long* pastCommAss, long* currCommAss, long NV,
     }
     currCommAss[v] = maxIndex; //Assign the new community
   }
-  mgp_untrack_current_thread_allocations(mg_graph);
+  [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
 
   updateAxForOpt(cInfo,currCommAss,vDegree,NV);

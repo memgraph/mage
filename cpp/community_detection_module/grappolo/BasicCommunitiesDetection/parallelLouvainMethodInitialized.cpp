@@ -131,7 +131,7 @@ double parallelLouvianMethodInitialized(graph *G, mgp_graph *graph, long *C, int
 
 #pragma omp parallel
 {
-        mgp_track_current_thread_allocations(graph);
+        [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(graph);
 #pragma omp for
         for (long i=0; i<NV; i++) {
             long adj1 = vtxPtr[i];
@@ -169,7 +169,7 @@ double parallelLouvianMethodInitialized(graph *G, mgp_graph *graph, long *C, int
             clusterLocalMap.clear();
             Counter.clear();
         }//End of for(i)
-        mgp_untrack_current_thread_allocations(graph);
+        [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(graph);
 }
         time2 = omp_get_wtime();
 

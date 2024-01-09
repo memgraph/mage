@@ -48,7 +48,7 @@
 
 using namespace std;
 
-double parallelLouvianMethodApprox2(graph *G, mgp_graph *graph, long *C, int nThreads, double Lower,
+double parallelLouvianMethodApprox2(graph *G, mgp_graph *mg_graph, long *C, int nThreads, double Lower,
                                     double thresh, double *totTime, int *numItr, int percentage) {
 #ifdef PRINT_DETAILED_STATS_
 #endif
@@ -145,7 +145,7 @@ double parallelLouvianMethodApprox2(graph *G, mgp_graph *graph, long *C, int nTh
         }
 #pragma omp parallel
 {
-        mgp_track_current_thread_allocations(graph);
+        [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
         for (long i=0; i<NV; i++) {
             if(randValues[i] < percentage) { //process this vertex
@@ -193,7 +193,7 @@ double parallelLouvianMethodApprox2(graph *G, mgp_graph *graph, long *C, int nTh
             }
 
         }//End of for(i)
-        mgp_untrack_current_thread_allocations(graph);
+        [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
         time2 = omp_get_wtime();
 

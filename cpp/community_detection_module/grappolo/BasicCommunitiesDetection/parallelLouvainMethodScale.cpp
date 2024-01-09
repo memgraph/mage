@@ -45,7 +45,7 @@
 
 using namespace std;
 
-double parallelLouvianMethodScale(graph *G, mgp_graph *graph, long *C, int nThreads, double Lower,
+double parallelLouvianMethodScale(graph *G, mgp_graph *mg_graph, long *C, int nThreads, double Lower,
 				double thresh, double *totTime, int *numItr) {
 #ifdef PRINT_DETAILED_STATS_
 #endif
@@ -133,7 +133,7 @@ double parallelLouvianMethodScale(graph *G, mgp_graph *graph, long *C, int nThre
     /* Re-initialize datastructures */
 #pragma omp parallel
 {
-  mgp_track_current_thread_allocations(graph);
+  [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 
 #pragma omp for
     for (long i=0; i<NV; i++) {
@@ -213,7 +213,7 @@ double parallelLouvianMethodScale(graph *G, mgp_graph *graph, long *C, int nThre
         clusterLocalMap.clear();
         Counter.clear();
     }//End of for(i)
-    mgp_untrack_current_thread_allocations(graph);
+    [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
   }
     time2 = omp_get_wtime();
 
@@ -248,7 +248,7 @@ double parallelLouvianMethodScale(graph *G, mgp_graph *graph, long *C, int nThre
 	prevMod = Lower;
 #pragma omp parallel
 {
-    mgp_track_current_thread_allocations(graph);
+    [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
     for (long i=0; i<nT; i++) {
       map<long,Comm>::iterator it;
@@ -269,7 +269,7 @@ double parallelLouvianMethodScale(graph *G, mgp_graph *graph, long *C, int nThre
 //    cInfo[i].size += cUpdate[i].size;
 //    cInfo[i].degree += cUpdate[i].degree;
     }
-    mgp_untrack_current_thread_allocations(graph);
+    [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
 
     //Do pointer swaps to reuse memory:
@@ -305,12 +305,12 @@ double parallelLouvianMethodScale(graph *G, mgp_graph *graph, long *C, int nThre
 
   #pragma omp parallel
   {
-  mgp_track_current_thread_allocations(graph);
+  [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
   #pragma omp for
   for (long i = 0; i<nT*nT; i++){
       cUpdate[i].clear();
   }
-  mgp_untrack_current_thread_allocations(graph);
+  [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
   }
 
   return prevMod;

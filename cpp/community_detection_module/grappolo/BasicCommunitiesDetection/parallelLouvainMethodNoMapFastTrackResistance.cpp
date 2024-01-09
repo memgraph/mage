@@ -46,7 +46,7 @@
 
 using namespace std;
 
-double parallelLouvianMethodNoMapFastTrackResistance(graph *G, mgp_graph *graph, long *C, int nThreads, double Lower,
+double parallelLouvianMethodNoMapFastTrackResistance(graph *G, mgp_graph *mg_graph, long *C, int nThreads, double Lower,
         double thresh, double *totTime, int *numItr, int phase, double* rmin, double* finMod) {
 #ifdef PRINT_DETAILED_STATS_
 #endif
@@ -110,7 +110,7 @@ double parallelLouvianMethodNoMapFastTrackResistance(graph *G, mgp_graph *graph,
 
     //Initialize each vertex to its own cluster
     //  initCommAss(pastCommAss, currCommAss, NV);
-    initCommAssOpt(pastCommAss, currCommAss, NV, clusterLocalMap, vtxPtr, vtxInd, cInfo, constantForSecondTerm, vDegree, graph);
+    initCommAssOpt(pastCommAss, currCommAss, NV, clusterLocalMap, vtxPtr, vtxInd, cInfo, constantForSecondTerm, vDegree, mg_graph);
 
     time2 = omp_get_wtime();
 
@@ -131,7 +131,7 @@ double parallelLouvianMethodNoMapFastTrackResistance(graph *G, mgp_graph *graph,
 
 #pragma omp parallel
 {
-        mgp_track_current_thread_allocations(graph);
+        [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
         for (long i=0; i<NV; i++) {
             long adj1 = vtxPtr[i];
@@ -175,7 +175,7 @@ double parallelLouvianMethodNoMapFastTrackResistance(graph *G, mgp_graph *graph,
                 cUpdate[currCommAss[i]].size -=1;
             }//End of If()
         }//End of for(i)
-        mgp_untrack_current_thread_allocations(graph);
+        [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
         time2 = omp_get_wtime();
 
@@ -281,12 +281,12 @@ double parallelLouvianMethodNoMapFastTrackResistance(graph *G, mgp_graph *graph,
     //Note: No matter when the while loop exits, we are interested in the previous assignment
 #pragma omp parallel
 {
-    mgp_track_current_thread_allocations(graph);
+    [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
     for (long i=0; i<NV; i++) {
         C[i] = pastCommAss[i];
     }
-    mgp_untrack_current_thread_allocations(graph);
+    [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
     //Cleanup
     free(pastCommAss);
