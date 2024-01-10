@@ -48,7 +48,7 @@ using namespace std;
 
 //Perform the Louvain method on an already initialized graph
 //Initial clustering is provided as input in C
-double parallelLouvianMethodInitialized(graph *G, mgp_graph *graph, long *C, int nThreads, double Lower,
+double parallelLouvianMethodInitialized(graph *G, mgp_graph *mg_graph, long *C, int nThreads, double Lower,
                                         double thresh, double *totTime, int *numItr) {
 #ifdef PRINT_DETAILED_STATS_
 #endif
@@ -131,7 +131,7 @@ double parallelLouvianMethodInitialized(graph *G, mgp_graph *graph, long *C, int
 
 #pragma omp parallel
 {
-        [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(graph);
+        [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
         for (long i=0; i<NV; i++) {
             long adj1 = vtxPtr[i];
@@ -169,7 +169,7 @@ double parallelLouvianMethodInitialized(graph *G, mgp_graph *graph, long *C, int
             clusterLocalMap.clear();
             Counter.clear();
         }//End of for(i)
-        [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(graph);
+        [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
 }
         time2 = omp_get_wtime();
 
