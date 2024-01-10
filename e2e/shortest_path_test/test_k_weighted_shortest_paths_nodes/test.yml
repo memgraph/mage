@@ -1,0 +1,28 @@
+query: >
+    MATCH (startNode:Node{id:1}) 
+    WITH startNode
+    MATCH (endNode:Node{id:5})
+    WITH startNode, endNode
+    CALL shortest_path.k_weighted_shortest_paths(startNode, endNode, 5, "weight") YIELD paths 
+    WITH paths.path_nodes AS nodes
+    UNWIND nodes AS node
+    RETURN node.id AS id
+
+output:
+    - id: 1
+    - id: 5 # 1. path
+    - id: 1
+    - id: 2
+    - id: 3
+    - id: 5 # 2. path
+    - id: 1
+    - id: 3
+    - id: 5 # 3. path
+    - id: 1
+    - id: 4
+    - id: 5 # 4. path
+    - id: 1
+    - id: 2
+    - id: 3
+    - id: 4
+    - id: 5 # 5. path

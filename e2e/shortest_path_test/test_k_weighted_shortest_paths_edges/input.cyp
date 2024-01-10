@@ -1,0 +1,13 @@
+CREATE (:Node {id:1});
+CREATE (:Node {id:2});
+CREATE (:Node {id:3});
+CREATE (:Node {id:4});
+CREATE (:Node {id:5});
+MATCH (n1:Node {id:1}), (n2:Node{id:2}) CREATE (n1)-[:REL {weight:1, rel:"1 and 2"}]->(n2);
+MATCH (n1:Node {id:1}), (n2:Node{id:3}) CREATE (n1)-[:REL {weight:4, rel:"1 and 3"}]->(n2);
+MATCH (n1:Node {id:1}), (n2:Node{id:4}) CREATE (n1)-[:REL {weight:4, rel:"1 and 4"}]->(n2);
+MATCH (n1:Node {id:2}), (n2:Node{id:3}) CREATE (n1)-[:REL {weight:1, rel:"2 and 3"}]->(n2);
+MATCH (n1:Node {id:3}), (n2:Node{id:4}) CREATE (n1)-[:REL {weight:2, rel:"3 and 4"}]->(n2);
+MATCH (n1:Node {id:3}), (n2:Node{id:5}) CREATE (n1)-[:REL {weight:2, rel:"3 and 5"}]->(n2);
+MATCH (n1:Node {id:4}), (n2:Node{id:5}) CREATE (n1)-[:REL {weight:2, rel:"4 and 5"}]->(n2);
+MATCH (n1:Node {id:1}), (n2:Node{id:5}) CREATE (n1)-[:REL {weight:3, rel:"1 and 5"}]->(n2);
