@@ -13,6 +13,9 @@ constexpr const char *kArgumentEndNode = "end_node";
 constexpr const char *kArgumentNumberOfWeightedShortestPaths = "number_of_weighted_shortest_paths";
 constexpr const char *kArgumentWeightName = "weight_property_name";
 constexpr const char *kResultPaths = "paths";
+constexpr const char *kResultPathNodes = "path_nodes";
+constexpr const char *kResultPathEdges = "path_edges";
+constexpr const char *kResultPathObject = "path_object";
 constexpr const int64_t kDefaultNumberOfWeightedShortestPaths = 5;
 constexpr const char *kDefaultWeightName = "weight";
 
@@ -58,7 +61,7 @@ struct DijkstraResult {
   std::unordered_map<uint64_t, double> distances;
 };
 
-EdgeWeight GetEdgeWeight(mgp::Node &node1, mgp::Node &node2, const std::string_view &weight_name);
+EdgeWeight GetEdgeWeight(mgp::Graph &graph, mgp::Node &node1, mgp::Node &node2, const std::string_view &weight_name);
 
 DijkstraResult Dijkstra(mgp::Graph &graph, mgp::Node &source, mgp::Node &sink, const std::string_view &weight_name,
                         const std::set<uint64_t> &ignore_nodes = {},
