@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: True
     env:
-      MEMGRAPH_VERSION: 2.12.0
+      MEMGRAPH_VERSION: 2.13.0
     strategy:
       matrix:
         architecture: ["amd64", "arm64"]
