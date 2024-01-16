@@ -129,10 +129,7 @@ double parallelLouvianMethodNoMap(graph *G, mgp_graph *mg_graph, long *C, int nT
             cUpdate[i].size =0;
         }
 
-#pragma omp parallel
-{
-        [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
-#pragma omp for
+#pragma omp parallel for
         for (long i=0; i<NV; i++) {
             long adj1 = vtxPtr[i];
             long adj2 = vtxPtr[i+1];
@@ -182,8 +179,7 @@ double parallelLouvianMethodNoMap(graph *G, mgp_graph *mg_graph, long *C, int nT
             }//End of If()
             //numClustSize = 0;
         }//End of for(i)
-        [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
-}
+
         time2 = omp_get_wtime();
 
         time3 = omp_get_wtime();

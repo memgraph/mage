@@ -49,7 +49,7 @@ std::vector<std::int64_t> GrappoloCommunityDetection(GrappoloGraph &grappolo_gra
  * @param memgraph_graph Memgraph graph instance
  * @param grappolo_graph Grappolo graph instance
  */
-void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, GrappoloGraph &grappolo_graph, mgp_graph *graph);
+void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, GrappoloGraph &grappolo_graph);
 
 }  // namespace
 

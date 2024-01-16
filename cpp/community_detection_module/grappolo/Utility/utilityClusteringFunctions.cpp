@@ -109,10 +109,7 @@ void initCommAssOpt(long* pastCommAss, long* currCommAss, long NV,
 		    mapElement* clusterLocalMap, long* vtxPtr, edge* vtxInd,
 		    Comm* cInfo, double constant, double* vDegree, mgp_graph *mg_graph) {
 
-#pragma omp parallel
-{
-  [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
-#pragma omp for
+#pragma omp parallel for
   for (long v=0; v<NV; v++) {
     long adj1  = vtxPtr[v];
     long adj2  = vtxPtr[v+1];
@@ -167,8 +164,6 @@ void initCommAssOpt(long* pastCommAss, long* currCommAss, long NV,
     }
     currCommAss[v] = maxIndex; //Assign the new community
   }
-  [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
-}
 
   updateAxForOpt(cInfo,currCommAss,vDegree,NV);
 }//End of initCommAssOpt()

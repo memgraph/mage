@@ -255,15 +255,11 @@ double buildNextLevelGraphOpt(graph *Gin, mgp_graph *mg_graph, graph *Gout, long
 }
     free(cluPtrIn);
 
-#pragma omp parallel
-{
-    [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
-#pragma omp for
+#pragma omp parallel for
     for (long i=0; i<numUniqueClusters; i++) {
         omp_destroy_lock(&nlocks[i]);
     }
-  [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
-}
+
     free(nlocks);
 
     return TotTime;
@@ -294,10 +290,7 @@ void buildNextLevelGraph(graph *Gin, mgp_graph *mg_graph, graph *Gout, long *C, 
     for (long i=0; i<vecSize; i++)
         tmpCounter[i] = 0;
 
-#pragma omp parallel
-{
-  [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
-#pragma omp for
+#pragma omp parallel for
     for (long i=0; i<NV_in; i++) {
         long adj1 = vtxPtrIn[i];
         long adj2 = vtxPtrIn[i+1];
@@ -316,8 +309,6 @@ void buildNextLevelGraph(graph *Gin, mgp_graph *mg_graph, graph *Gout, long *C, 
             }//End of else
         }//End of for(j)
     }//End of for(i)
-  [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
-}
 
     /////STEP-2: Build the graph data structure:
     long NV_out = numUniqueClusters;
@@ -359,10 +350,7 @@ void buildNextLevelGraph(graph *Gin, mgp_graph *mg_graph, graph *Gout, long *C, 
         Added[i] = 0;
 
     //Now add the edges: NOT IN SORTED ORDER
-#pragma omp parallel
-{
-    [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
-#pragma omp for
+#pragma omp parallel for
     for (long i=0; i<NV_out; i++) {
         long location = (i*(i+1))/2; //Starting location for i
         //Add the self-loop: i-i
@@ -390,8 +378,6 @@ void buildNextLevelGraph(graph *Gin, mgp_graph *mg_graph, graph *Gout, long *C, 
             }//End of if
         }//End of for(j)
     }//End of for(i)
-  [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
-}
 
     // Set the pointers
     Gout->numVertices  = NV_out;

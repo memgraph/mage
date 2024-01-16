@@ -42,7 +42,7 @@ std::vector<std::int64_t> GrappoloCommunityDetection(GrappoloGraph &grappolo_gra
   return result;
 }
 
-void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, GrappoloGraph &grappolo_graph, mgp_graph *graph) {
+void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, GrappoloGraph &grappolo_graph) {
   int num_threads = 1;
 #pragma omp parallel
   { num_threads = omp_get_num_threads(); }
@@ -105,11 +105,8 @@ void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, GrappoloGr
   for (std::size_t i = 0; i < number_of_vertices; i++) added[i] = 0;
 
     // Build the edgeList from edgeListTmp:
-#pragma omp parallel
-{
-  [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(graph);
 
-  #pragma omp for
+#pragma omp parallel for 
   for (std::size_t i = 0; i < number_of_edges; i++) {
     auto head = tmp_edge_list[i].head;
     auto tail = tmp_edge_list[i].tail;
@@ -126,8 +123,6 @@ void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, GrappoloGr
     edge_list[index].weight = weight;
   }
 
-  [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(graph);
-}
   // Define Grappolo graph structure
   grappolo_graph.sVertices = number_of_vertices;
   grappolo_graph.numVertices = number_of_vertices;
@@ -146,7 +141,7 @@ std::vector<std::int64_t> GetCommunities(const mg_graph::GraphView<> &memgraph_g
   // The structure will be deleted in afterward calls in grappolo methods
   auto grappolo_graph = (GrappoloGraph *)malloc(sizeof(GrappoloGraph));
   // Create structure and load undirected edges
-  LoadUndirectedEdges(memgraph_graph, *grappolo_graph, graph);
+  LoadUndirectedEdges(memgraph_graph, *grappolo_graph);
 
   return GrappoloCommunityDetection(*grappolo_graph, graph, coloring, min_graph_shrink, threshold, coloring_threshold);
 }

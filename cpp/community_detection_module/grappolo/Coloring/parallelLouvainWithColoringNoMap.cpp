@@ -161,10 +161,7 @@ double algoLouvainWithDistOneColoringNoMap(graph* G, mgp_graph *mg_graph, long *
 			long coloradj1 = colorPtr[ci];
 			long coloradj2 = colorPtr[ci+1];
 
-#pragma omp parallel
-{
-      [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
-#pragma omp for
+#pragma omp parallel for
 			for (long K = coloradj1; K<coloradj2; K++) {
 				long i = colorIndex[K];
 				long localTarget = -1;
@@ -209,8 +206,6 @@ double algoLouvainWithDistOneColoringNoMap(graph* G, mgp_graph *mg_graph, long *
 				currCommAss[i] = localTarget;
 				//clusterLocalMap.clear();
 			}//End of for(i)
-      [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
-}
 
 			// UPDATE
 #pragma omp parallel for

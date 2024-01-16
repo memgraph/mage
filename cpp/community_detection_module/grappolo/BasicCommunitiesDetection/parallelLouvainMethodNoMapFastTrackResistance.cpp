@@ -129,10 +129,7 @@ double parallelLouvianMethodNoMapFastTrackResistance(graph *G, mgp_graph *mg_gra
             cUpdate[i].size =0;
         }
 
-#pragma omp parallel
-{
-        [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
-#pragma omp for
+#pragma omp parallel for
         for (long i=0; i<NV; i++) {
             long adj1 = vtxPtr[i];
             long adj2 = vtxPtr[i+1];
@@ -175,8 +172,7 @@ double parallelLouvianMethodNoMapFastTrackResistance(graph *G, mgp_graph *mg_gra
                 cUpdate[currCommAss[i]].size -=1;
             }//End of If()
         }//End of for(i)
-        [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
-}
+
         time2 = omp_get_wtime();
 
         time3 = omp_get_wtime();
@@ -279,15 +275,11 @@ double parallelLouvianMethodNoMapFastTrackResistance(graph *G, mgp_graph *mg_gra
 
     //Store back the community assignments in the input variable:
     //Note: No matter when the while loop exits, we are interested in the previous assignment
-#pragma omp parallel
-{
-    [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
-#pragma omp for
+#pragma omp parallel for
     for (long i=0; i<NV; i++) {
         C[i] = pastCommAss[i];
     }
-    [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
-}
+
     //Cleanup
     free(pastCommAss);
     free(currCommAss);

@@ -154,16 +154,11 @@ int algoDistanceOneVertexColoringOpt(graph *G, mgp_graph *mg_graph, int *vtxColo
     //two conflicting vertices, based on their random values
     time2 = omp_get_wtime();
 
-		#pragma omp parallel
-    {
-    [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
-    #pragma omp for
+#pragma omp parallel for
 		for (long Qi=0; Qi<QTail; Qi++) {
 			long v = Q[Qi]; //Q.pop_front();
 			distanceOneConfResolution(G, v, vtxColor, randValues, &QtmpTail, Qtmp, freq, 0);
 		} //End of outer for loop: for each vertex
-    [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
-    }
 
 		time2  = omp_get_wtime() - time2;
 		totalTime += time2;
@@ -193,10 +188,7 @@ int algoDistanceOneVertexColoringOpt(graph *G, mgp_graph *mg_graph, int *vtxColo
 
   //Verify Results and Cleanup
   int myConflicts = 0;
-	#pragma omp parallel
-  {
-  [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
-  #pragma omp for
+#pragma omp parallel for
   for (long v=0; v < NVer; v++ ) {
     long adj1 = verPtr[v];
     long adj2 = verPtr[v+1];
@@ -209,8 +201,6 @@ int algoDistanceOneVertexColoringOpt(graph *G, mgp_graph *mg_graph, int *vtxColo
       }
     }//End of inner for loop: w in adj(v)
   }//End of outer for loop: for each vertex
-  [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
-  }
   myConflicts = myConflicts / 2; //Have counted each conflict twice
 
   //Clean Up:
@@ -293,10 +283,7 @@ int algoDistanceOneVertexColoring(graph *G, mgp_graph *mg_graph, int *vtxColor, 
     ///////////////////////////////////////// PART 1 ////////////////////////////////////////
     //Color the vertices in parallel - do not worry about conflicts
     time1 = omp_get_wtime();
-#pragma omp parallel
-{
-    [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
-#pragma omp for
+#pragma omp parallel for
     for (long Qi=0; Qi<QTail; Qi++) {
       long v = Q[Qi]; //Q.pop_front();
       long StartIndex = v*MaxDegree; //Location in Mark
@@ -328,8 +315,7 @@ int algoDistanceOneVertexColoring(graph *G, mgp_graph *mg_graph, int *vtxColor, 
 	myColor++; /* no available color with # less than cmax */
       vtxColor[v] = myColor; //Color the vertex
     } //End of outer for loop: for each vertex
-    [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
-}
+
     time1  = omp_get_wtime() - time1;
     totalTime += time1;
 
@@ -339,10 +325,7 @@ int algoDistanceOneVertexColoring(graph *G, mgp_graph *mg_graph, int *vtxColor, 
     //Conflicts are resolved by changing the color of only one of the
     //two conflicting vertices, based on their random values
     time2 = omp_get_wtime();
-#pragma omp parallel
-{
-    [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
-#pragma omp for
+#pragma omp parallel for
     for (long Qi=0; Qi<QTail; Qi++) {
       long v = Q[Qi]; //Q.pop_front();
       long adj1 = verPtr[v];
@@ -363,8 +346,7 @@ int algoDistanceOneVertexColoring(graph *G, mgp_graph *mg_graph, int *vtxColor, 
 	} //End of if( vtxColor[v] == vtxColor[verInd[k]] )
       } //End of inner for loop: w in adj(v)
     } //End of outer for loop: for each vertex
-    [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
-}
+
     time2  = omp_get_wtime() - time2;
     totalTime += time2;
     nConflicts += QtmpTail;
@@ -387,10 +369,7 @@ int algoDistanceOneVertexColoring(graph *G, mgp_graph *mg_graph, int *vtxColor, 
   /////////////////////////////////////////////////////////////////////////////////////////
   //Verify Results and Cleanup
   int myConflicts = 0;
-#pragma omp parallel
-{
-  [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
-#pragma omp for
+#pragma omp parallel for
   for (long v=0; v < NVer; v++ ) {
     long adj1 = verPtr[v];
     long adj2 = verPtr[v+1];
@@ -404,8 +383,7 @@ int algoDistanceOneVertexColoring(graph *G, mgp_graph *mg_graph, int *vtxColor, 
       }
     }//End of inner for loop: w in adj(v)
   }//End of outer for loop: for each vertex
-  [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
-}
+
   myConflicts = myConflicts / 2; //Have counted each conflict twice
   //Clean Up:
   free(Q);

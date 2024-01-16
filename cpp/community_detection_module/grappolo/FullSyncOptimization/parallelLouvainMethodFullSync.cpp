@@ -125,10 +125,7 @@ double parallelLouvainMethodFullSync(graph *G, mgp_graph *mg_graph, long *C, int
         long totalEdgeTravel= 0;
         long totalUniqueComm = 0;
 
-#pragma omp parallel
-{
-        [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
-#pragma omp for reduction(+:totalEdgeTravel), reduction(+:totalUniqueComm)
+#pragma omp parallel for reduction(+:totalEdgeTravel), reduction(+:totalUniqueComm)
         for (long i=0; i<NV; i++) {
             long adj1 = vtxPtr[i];
             long adj2 = vtxPtr[i+1];
@@ -155,8 +152,6 @@ double parallelLouvainMethodFullSync(graph *G, mgp_graph *mg_graph, long *C, int
             }
             totalUniqueComm += numUniqueClusters;
         }//End of for(i)
-      [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
-}
         time2 = omp_get_wtime();
 
         time3 = omp_get_wtime();
