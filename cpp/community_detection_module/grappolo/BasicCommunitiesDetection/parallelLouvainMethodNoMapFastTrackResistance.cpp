@@ -39,7 +39,6 @@
 //
 // ************************************************************************
 
-#include <mg_procedure.h>
 #include "defs.h"
 #include "basic_comm.h"
 #include "utilityClusteringFunctions.h"
