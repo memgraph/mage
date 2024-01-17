@@ -10,7 +10,7 @@ void runMultiPhaseColoring(graph *G, mgp_graph *mg_graph, long *C_orig, int colo
 double algoLouvainWithDistOneColoring(graph* G, mgp_graph *mg_graph, long *C, int nThreads, int* color,
 			int numColor, double Lower, double thresh, double *totTime, int *numItr);
 
-double algoLouvainWithDistOneColoringNoMap(graph* G, mgp_graph *mg_graph, long *C, int nThreads, int* color,
+double algoLouvainWithDistOneColoringNoMap(graph* G, long *C, int nThreads, int* color,
 			int numColor, double Lower, double thresh, double *totTime, int *numItr);
 
 #endif

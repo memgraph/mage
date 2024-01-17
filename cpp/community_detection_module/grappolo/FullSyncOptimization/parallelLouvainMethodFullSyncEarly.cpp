@@ -40,13 +40,12 @@
 // ************************************************************************
 
 #include "defs.h"
-#include "mg_procedure.h"
 #include "utilityClusteringFunctions.h"
 #include "sync_comm.h"
 
 using namespace std;
 
-double parallelLouvainMethodFullSyncEarly(graph *G, mgp_graph *mg_graph, long *C, int nThreads, double Lower,
+double parallelLouvainMethodFullSyncEarly(graph *G, long *C, int nThreads, double Lower,
                                           double thresh, double *totTime, int *numItr,int ytype, int freedom) {
 #ifdef PRINT_DETAILED_STATS_
 #endif

@@ -47,7 +47,7 @@
 //////////////////////////  DISTANCE ONE COLORING      ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////
 //Return the number of colors used (zero is a valid color)
-int algoDistanceOneVertexColoringOpt(graph *G, mgp_graph *mg_graph, int *vtxColor, int nThreads, double *totTime)
+int algoDistanceOneVertexColoringOpt(graph *G, int *vtxColor, int nThreads, double *totTime)
 {
 #ifdef PRINT_DETAILED_STATS_
 #endif
@@ -216,7 +216,7 @@ int algoDistanceOneVertexColoringOpt(graph *G, mgp_graph *mg_graph, int *vtxColo
 //////////////////////////  DISTANCE ONE COLORING      ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////
 //Return the number of colors used (zero is a valid color)
-int algoDistanceOneVertexColoring(graph *G, mgp_graph *mg_graph, int *vtxColor, int nThreads, double *totTime)
+int algoDistanceOneVertexColoring(graph *G, int *vtxColor, int nThreads, double *totTime)
 {
 	if (nThreads < 1)
 		omp_set_num_threads(1); //default to one thread

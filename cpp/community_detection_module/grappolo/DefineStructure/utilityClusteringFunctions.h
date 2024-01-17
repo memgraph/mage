@@ -54,7 +54,7 @@ void initCommAss(long* pastCommAss, long* currCommAss, long NV);
 
 void initCommAssOpt(long* pastCommAss, long* currCommAss, long NV,
 		    mapElement* clusterLocalMap, long* vtxPtr, edge* vtxInd,
-		    Comm* cInfo, double constant, double* vDegree, mgp_graph *mg_graph);
+		    Comm* cInfo, double constant, double* vDegree);
 
 double buildLocalMapCounter(long adj1, long adj2, map<long, long> &clusterLocalMap,
 						  vector<double> &Counter, edge* vtxInd, long* currCommAss, long me);

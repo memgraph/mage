@@ -46,7 +46,7 @@
 
 using namespace std;
 
-double parallelLouvianMethodNoMap(graph *G, mgp_graph *mg_graph, long *C, int nThreads, double Lower,
+double parallelLouvianMethodNoMap(graph *G, long *C, int nThreads, double Lower,
                                   double thresh, double *totTime, int *numItr) {
 #ifdef PRINT_DETAILED_STATS_
 #endif
@@ -109,7 +109,7 @@ double parallelLouvianMethodNoMap(graph *G, mgp_graph *mg_graph, long *C, int nT
 
     //Initialize each vertex to its own cluster
     //  initCommAss(pastCommAss, currCommAss, NV);
-    initCommAssOpt(pastCommAss, currCommAss, NV, clusterLocalMap, vtxPtr, vtxInd, cInfo, constantForSecondTerm, vDegree, mg_graph);
+    initCommAssOpt(pastCommAss, currCommAss, NV, clusterLocalMap, vtxPtr, vtxInd, cInfo, constantForSecondTerm, vDegree);
 
     time2 = omp_get_wtime();
 

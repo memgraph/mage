@@ -79,30 +79,30 @@ void runMultiPhaseSyncType(graph *G, mgp_graph *mg_graph, long *C_orig, int sync
         if(nonET == false) {
             switch (syncType){
                 case 2:
-                    currMod = parallelLouvainMethodFullSync(G, mg_graph, C, numThreads, currMod, threshold, &tmpTime, &tmpItr,syncType, freedom);
+                    currMod = parallelLouvainMethodFullSync(G, C, numThreads, currMod, threshold, &tmpTime, &tmpItr,syncType, freedom);
                     break;
                 case 4:
-                    currMod = parallelLouvainMethodFullSyncEarly(G, mg_graph, C, numThreads, currMod, C_threshold, &tmpTime, &tmpItr,syncType, freedom);
+                    currMod = parallelLouvainMethodFullSyncEarly(G, C, numThreads, currMod, C_threshold, &tmpTime, &tmpItr,syncType, freedom);
                     break;
                 case 3:
-                    currMod = parallelLouvianMethodEarlyTerminate(G, mg_graph, C, numThreads, currMod, C_threshold, &tmpTime, &tmpItr); break;
+                    currMod = parallelLouvianMethodEarlyTerminate(G, C, numThreads, currMod, C_threshold, &tmpTime, &tmpItr); break;
                 default:
-                    currMod = parallelLouvainMethodFullSync(G, mg_graph, C, numThreads, currMod, threshold, &tmpTime, &tmpItr,syncType, freedom);
+                    currMod = parallelLouvainMethodFullSync(G, C, numThreads, currMod, threshold, &tmpTime, &tmpItr,syncType, freedom);
                     break;
             }
         } else {
             switch (syncType){
                 case 2:
-                    currMod = parallelLouvainMethodFullSync(G, mg_graph, C, numThreads, currMod, threshold, &tmpTime, &tmpItr,syncType, freedom);
+                    currMod = parallelLouvainMethodFullSync(G, C, numThreads, currMod, threshold, &tmpTime, &tmpItr,syncType, freedom);
                     break;
                 case 4:
-                    currMod = parallelLouvainMethodFullSyncEarly(G, mg_graph, C, numThreads, currMod, threshold, &tmpTime, &tmpItr,syncType, freedom);
+                    currMod = parallelLouvainMethodFullSyncEarly(G, C, numThreads, currMod, threshold, &tmpTime, &tmpItr,syncType, freedom);
                     break;
                 case 3:
-                    currMod = parallelLouvianMethodEarlyTerminate(G, mg_graph, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
+                    currMod = parallelLouvianMethodEarlyTerminate(G, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
                     break;
                 default:
-                    currMod = parallelLouvainMethodFullSync(G, mg_graph, C, numThreads, currMod, threshold, &tmpTime, &tmpItr,syncType, freedom);
+                    currMod = parallelLouvainMethodFullSync(G, C, numThreads, currMod, threshold, &tmpTime, &tmpItr,syncType, freedom);
                     break;
             }
             nonET = true;

@@ -58,7 +58,7 @@ void generateRandomNumbers2(double* randValues, long NVer)
     }
 }
 
-int algoColoringMultiHashMaxMin(graph *G, mgp_graph *mg_graph, int *vtxColor, int nThreads, double *totTime, int nHash, int nItrs)
+int algoColoringMultiHashMaxMin(graph *G, int *vtxColor, int nThreads, double *totTime, int nHash, int nItrs)
 {
 #ifdef PRINT_DETAILED_STATS_
     std::cout << "Within algoColoringMultiHashMaxMin(nHash= " << nHash << " -- nItrs= " << nItrs << ")\n";

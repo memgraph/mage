@@ -40,13 +40,12 @@
 // ************************************************************************
 
 #include "defs.h"
-#include "mg_procedure.h"
 #include "utilityClusteringFunctions.h"
 #include "sync_comm.h"
 
 using namespace std;
 
-double parallelLouvianMethodEarlyTerminate(graph *G, mgp_graph *mg_graph, long *C, int nThreads, double Lower,
+double parallelLouvianMethodEarlyTerminate(graph *G, long *C, int nThreads, double Lower,
                                            double thresh, double *totTime, int *numItr) {
 #ifdef PRINT_DETAILED_STATS_
 #endif
@@ -110,7 +109,7 @@ double parallelLouvianMethodEarlyTerminate(graph *G, mgp_graph *mg_graph, long *
 
     //Initialize each vertex to its own cluster
     //  initCommAss(pastCommAss, currCommAss, NV);
-    initCommAssOpt(pastCommAss, currCommAss, NV, clusterLocalMap, vtxPtr, vtxInd, cInfo, constantForSecondTerm, vDegree, mg_graph);
+    initCommAssOpt(pastCommAss, currCommAss, NV, clusterLocalMap, vtxPtr, vtxInd, cInfo, constantForSecondTerm, vDegree);
 
     // Store the termination node
     bool* verT = (bool *) malloc (NV * sizeof(bool)); assert(verT != 0);

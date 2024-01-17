@@ -76,7 +76,7 @@ void runMultiPhaseBasicApprox(graph *G, mgp_graph *mg_graph, long *C_orig, int b
 
 
         if(basicOpt == 1){
-            currMod = parallelLouvianMethodNoMap(G, mg_graph, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
+            currMod = parallelLouvianMethodNoMap(G, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
         }else if(threadsOpt == 1){
             //currMod = parallelLouvianMethod(G, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
 	    currMod = parallelLouvianMethodApprox(G, mg_graph, C, numThreads, currMod, threshold, &tmpTime, &tmpItr, percentage);

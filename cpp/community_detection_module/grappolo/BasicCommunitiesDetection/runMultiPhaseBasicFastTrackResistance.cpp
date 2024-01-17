@@ -77,7 +77,7 @@ void runMultiPhaseBasicFastTrackResistance(graph *G, mgp_graph *mg_graph, long *
 
         // TODO add coloring routines when the basic has stabilized
         if(basicOpt == 1){
-            currModAFG = parallelLouvianMethodNoMapFastTrackResistance(G, mg_graph, C, numThreads, currModAFG, threshold, &tmpTime, &tmpItr, phase, &rmin, &finMod);
+            currModAFG = parallelLouvianMethodNoMapFastTrackResistance(G, C, numThreads, currModAFG, threshold, &tmpTime, &tmpItr, phase, &rmin, &finMod);
         }else if(threadsOpt == 1){
             currModAFG = parallelLouvianMethodFastTrackResistance(G, mg_graph, C, numThreads, currModAFG, threshold, &tmpTime, &tmpItr, phase, &rmin, &finMod);
         }else{

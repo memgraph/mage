@@ -266,7 +266,7 @@ double buildNextLevelGraphOpt(graph *Gin, mgp_graph *mg_graph, graph *Gout, long
 }//End of buildNextLevelGraph2()
 
 //WARNING: Will assume that the cluster ids have been renumbered contiguously
-void buildNextLevelGraph(graph *Gin, mgp_graph *mg_graph, graph *Gout, long *C, long numUniqueClusters) {
+void buildNextLevelGraph(graph *Gin, graph *Gout, long *C, long numUniqueClusters) {
 #ifdef PRINT_DETAILED_STATS_
 #endif
     double time1, time2, time3, time4; //For timing purposes

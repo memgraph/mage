@@ -78,7 +78,7 @@ void runMultiPhaseBasic(graph *G, mgp_graph *mg_graph, long *C_orig, int basicOp
 
 
         if(basicOpt == 1){
-            currMod = parallelLouvianMethodNoMap(G, mg_graph, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
+            currMod = parallelLouvianMethodNoMap(G, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
         }else if(threadsOpt == 1){
             currMod = parallelLouvianMethod(G, mg_graph, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
 	    //currMod = parallelLouvianMethodApprox(G, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
@@ -175,7 +175,7 @@ void runMultiPhaseBasicOnce(graph *G, mgp_graph *mg_graph, long *C_orig, int bas
         prevMod = currMod;
 
         if(basicOpt == 1){
-            currMod = parallelLouvianMethodNoMap(G, mg_graph, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
+            currMod = parallelLouvianMethodNoMap(G, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
         }else if(threadsOpt == 1){
             currMod = parallelLouvianMethod(G, mg_graph, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
 	    //currMod = parallelLouvianMethodApprox(G, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);

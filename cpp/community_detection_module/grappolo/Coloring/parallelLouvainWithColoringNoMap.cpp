@@ -45,7 +45,7 @@
 #include "color_comm.h"
 using namespace std;
 
-double algoLouvainWithDistOneColoringNoMap(graph* G, mgp_graph *mg_graph, long *C, int nThreads, int* color,
+double algoLouvainWithDistOneColoringNoMap(graph* G, long *C, int nThreads, int* color,
 			int numColor, double Lower, double thresh, double *totTime, int *numItr) {
 #ifdef PRINT_DETAILED_STATS_
 #endif

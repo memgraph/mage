@@ -8,13 +8,13 @@
 void runMultiPhaseSyncType(graph *G, mgp_graph *mg_graph, long *C_orig, int syncType, long minGraphSize,
 			double threshold, double C_threshold, int numThreads, int threadsOpt);
 
-double parallelLouvainMethodFullSyncEarly(graph *G, mgp_graph *mg_graph, long *C, int nThreads, double Lower,
+double parallelLouvainMethodFullSyncEarly(graph *G, long *C, int nThreads, double Lower,
 				double thresh, double *totTime, int *numItr,int ytype, int freedom);
 
-double parallelLouvainMethodFullSync(graph *G, mgp_graph *mg_graph, long *C, int nThreads, double Lower,
+double parallelLouvainMethodFullSync(graph *G, long *C, int nThreads, double Lower,
 				double thresh, double *totTime, int *numItr,int ytype, int freedom);
 
-double parallelLouvianMethodEarlyTerminate(graph *G, mgp_graph *mg_graph, long *C, int nThreads, double Lower,
+double parallelLouvianMethodEarlyTerminate(graph *G, long *C, int nThreads, double Lower,
 				double thresh, double *totTime, int *numItr);
 
 // Define in fullSyncUtility.cpp

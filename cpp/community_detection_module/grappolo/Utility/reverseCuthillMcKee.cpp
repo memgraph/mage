@@ -31,7 +31,7 @@
 // Perform reverse Cuthill-McKee operation on the graph
 // SSize indicates the size of Source
 // Sets the pointer in isChordal from one direction ONLY
-void algoReverseCuthillMcKee(graph *G, mgp_graph *mg_graph, long *pOrder, int nThreads )
+void algoReverseCuthillMcKee(graph *G, long *pOrder, int nThreads )
 {
     if (nThreads < 1)
         omp_set_num_threads(1);

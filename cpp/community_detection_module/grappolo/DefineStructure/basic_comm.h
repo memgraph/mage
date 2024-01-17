@@ -25,7 +25,7 @@ double parallelLouvianMethod(graph *G, mgp_graph *mg_graph, long *C, int nThread
 double parallelLouvianMethodApprox(graph *G, mgp_graph *mg_graph, long *C, int nThreads, double Lower,
 				double thresh, double *totTime, int *numItr, int percentage);
 
-double parallelLouvianMethodNoMap(graph *G, mgp_graph *mg_graph, long *C, int nThreads, double Lower,
+double parallelLouvianMethodNoMap(graph *G, long *C, int nThreads, double Lower,
 				double thresh, double *totTime, int *numItr);
 
 double parallelLouvianMethodScale(graph *G, mgp_graph *mg_graph, long *C, int nThreads, double Lower,
@@ -41,7 +41,7 @@ double parallelLouvianMethodFastTrackResistance(graph *G, mgp_graph *mg_graph, l
         double thresh, double *totTime, int *numItr, int phase, double* rmin, double* finMod);
 
 // Define in parallelLouvianMethodNoMapFastTrackResistance.cpp
-double parallelLouvianMethodNoMapFastTrackResistance(graph *G, mgp_graph *mg_graph, long *C, int nThreads, double Lower,
+double parallelLouvianMethodNoMapFastTrackResistance(graph *G, long *C, int nThreads, double Lower,
         double thresh, double *totTime, int *numItr, int phase, double* rmin, double* finMod);
 
 // Define in parallelLouvianMethodScaleFastTrackResistance.cpp

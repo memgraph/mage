@@ -1,4 +1,3 @@
-#include <mg_procedure.h>
 #include "coloringUtils.h"
 #include "defs.h"
 #include "coloring.h"

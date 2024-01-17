@@ -40,7 +40,6 @@
 // ************************************************************************
 
 #include "utilityClusteringFunctions.h"
-#include "mg_procedure.h"
 
 using namespace std;
 
@@ -107,7 +106,7 @@ void initCommAss(long* pastCommAss, long* currCommAss, long NV) {
 //WARNING: Will ignore duplicate edge entries (multi-graph)
 void initCommAssOpt(long* pastCommAss, long* currCommAss, long NV,
 		    mapElement* clusterLocalMap, long* vtxPtr, edge* vtxInd,
-		    Comm* cInfo, double constant, double* vDegree, mgp_graph *mg_graph) {
+		    Comm* cInfo, double constant, double* vDegree) {
 
 #pragma omp parallel for
   for (long v=0; v<NV; v++) {

@@ -66,7 +66,7 @@ void runMultiPhaseColoring(graph *G, mgp_graph *mg_graph, long *C_orig, int colo
     int nColors = 0;
     // Coloring Steps
     if((coloring == 1)||(coloring == 2)) {
-        nColors = algoDistanceOneVertexColoringOpt(G, mg_graph, colors, numThreads, &tmpTime)+1;
+        nColors = algoDistanceOneVertexColoringOpt(G, colors, numThreads, &tmpTime)+1;
         totTimeColoring += tmpTime;
         //Check if balanced coloring is enabled:
         if(coloring == 2)
@@ -80,7 +80,7 @@ void runMultiPhaseColoring(graph *G, mgp_graph *mg_graph, long *C_orig, int colo
         if (nItrs <= 0)
             nItrs = 1;
         //int nItrs = numColors / 4;
-        nColors = algoColoringMultiHashMaxMin(G, mg_graph, colors, numThreads, &tmpTime, nHash, nItrs)+1;
+        nColors = algoColoringMultiHashMaxMin(G, colors, numThreads, &tmpTime, nHash, nItrs)+1;
         totTimeColoring += tmpTime;
     }
 
@@ -105,14 +105,14 @@ void runMultiPhaseColoring(graph *G, mgp_graph *mg_graph, long *C_orig, int colo
         if(nonColor == false) {
 			//Use higher modularity for the first few iterations when graph is big enough
         	if (replaceMap == 1)
-        		currMod = algoLouvainWithDistOneColoringNoMap(G, mg_graph, C, numThreads, colors, nColors, currMod, C_threshold, &tmpTime, &tmpItr);
+        		currMod = algoLouvainWithDistOneColoringNoMap(G, C, numThreads, colors, nColors, currMod, C_threshold, &tmpTime, &tmpItr);
         	else
         	    currMod = algoLouvainWithDistOneColoring(G, mg_graph, C, numThreads, colors, nColors, currMod, C_threshold, &tmpTime, &tmpItr);
             totTimeClustering += tmpTime;
             totItr += tmpItr;
         } else {
 			if (replaceMap == 1)
-		    	currMod = parallelLouvianMethodNoMap(G, mg_graph, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
+		    	currMod = parallelLouvianMethodNoMap(G, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
         	else
             	currMod = parallelLouvianMethod(G, mg_graph, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
             totTimeClustering += tmpTime;
@@ -171,7 +171,7 @@ void runMultiPhaseColoring(graph *G, mgp_graph *mg_graph, long *C_orig, int colo
                 nColors = 0;
                 // Coloring Steps
                 if((coloring == 1)||(coloring == 2)) {
-                    nColors = algoDistanceOneVertexColoringOpt(G, mg_graph, colors, numThreads, &tmpTime)+1;
+                    nColors = algoDistanceOneVertexColoringOpt(G, colors, numThreads, &tmpTime)+1;
                     totTimeColoring += tmpTime;
                     //Check if balanced coloring is enabled:
                     if(coloring == 2)
@@ -185,7 +185,7 @@ void runMultiPhaseColoring(graph *G, mgp_graph *mg_graph, long *C_orig, int colo
                     if (nItrs <= 0)
                         nItrs = 1;
                     //int nItrs = numColors / 4;
-                    nColors = algoColoringMultiHashMaxMin(G, mg_graph, colors, numThreads, &tmpTime, nHash, nItrs)+1;
+                    nColors = algoColoringMultiHashMaxMin(G, colors, numThreads, &tmpTime, nHash, nItrs)+1;
                     totTimeColoring += tmpTime;
                 }
             }
