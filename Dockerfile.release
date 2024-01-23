@@ -94,12 +94,7 @@ RUN mv /mage/e2e /e2e/ \
     && chown -R memgraph: /mage/e2e \
     && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
     && apt-get -y --purge autoremove clang git curl python3-pip python3-dev cmake build-essential \
-    && apt-get clean \
-
-# Remove modules with issues
-RUN rm /usr/lib/memgraph/query_modules/node_classification.py \
-    && rm /usr/lib/memgraph/query_modules/link_prediction.py \
-    && rm /usr/lib/memgraph/query_modules/text.so
+    && apt-get clean
     
 
 USER memgraph
