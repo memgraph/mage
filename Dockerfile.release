@@ -33,8 +33,7 @@ COPY memgraph-${TARGETARCH}.deb .
 # Hack to remove modules that cause error on loading of torch modules
 # Must be here due to multi-phase build. The setup script is in dev phase
 # whereas we unpack memgraph in the base phase
-RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb && rm /usr/lib/memgraph/query_modules/schema.so  \
-&& rm /usr/lib/memgraph/query_modules/example_cpp.so
+RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb
 
 ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
 
@@ -61,6 +60,11 @@ RUN git clone --recurse-submodules -b 0.9.x https://github.com/dmlc/dgl.git  \
     && cd dgl && mkdir build && cd build && cmake .. \
     && make -j4 && cd ../python && python3 setup.py install
 
+# Needs to be here and in prod phase
+# Remove modules with issues
+RUN rm /usr/lib/memgraph/query_modules/node_classification.py \
+    && rm /usr/lib/memgraph/query_modules/link_prediction.py \
+    && rm /usr/lib/memgraph/query_modules/text.so
 
 USER memgraph
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
@@ -91,6 +95,7 @@ RUN mv /mage/e2e /e2e/ \
     && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
     && apt-get -y --purge autoremove clang git curl python3-pip python3-dev cmake build-essential \
     && apt-get clean
+    
 
 USER memgraph
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
