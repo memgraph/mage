@@ -58,8 +58,7 @@ mg::Client::Params GetClientParams() {
 }
 
 void ExecuteSetPropertiesQuery(const std::string query) {
-  mg::Client::Params session_params{.host = kDefaultHost, .port = kDefaultPort};
-  auto client = mg::Client::Connect(session_params);
+  auto client = mg::Client::Connect(GetClientParams());
   if (!client) {
     throw std::runtime_error("Unable to connect to client!");
   }
@@ -68,36 +67,6 @@ void ExecuteSetPropertiesQuery(const std::string query) {
   }
 
   client->DiscardAll();
-}
-
-mgp::Value GetNodeProperty(mgp::Node node, std::string property, mgp::Record record, mgp::Type dataType) {
-  mgp::Value val;
-
-  std::unordered_map<std::string, mgp::Value> properties = node.Properties();
-
-  if (dataType == mgp::Type::String) {
-    val = mgp::Value("");
-
-    if (properties.find(property) != properties.end()) {
-      val = node.GetProperty(property);
-    }
-
-    record.Insert(kResult.data(), val.ValueString());
-    return val;
-  }
-
-  if (dataType == mgp::Type::Int) {
-    if (properties.find(property) == properties.end()) {
-      record.Insert(kResult.data(), val.ValueInt());
-    } else {
-      val = node.GetProperty(property);
-      record.Insert(kResult.data(), val.ValueInt());
-    }
-
-    return val;
-  }
-
-  return val;
 }
 
 void GetPropertyValue(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
@@ -128,7 +97,6 @@ void GetPropertyValue(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
     }
 
     record.Insert(kResult.data(), val.ValueString());
-
   } catch (const std::exception &e) {
     mgp::result_set_error_msg(result, e.what());
     return;
