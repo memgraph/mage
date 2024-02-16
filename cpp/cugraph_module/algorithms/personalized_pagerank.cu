@@ -37,8 +37,18 @@ constexpr char const *kDefaultWeightProperty = "weight";
 
 void InsertPersonalizedPagerankRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory,
                                       const std::uint64_t node_id, double rank) {
+  auto *node = mgp::graph_get_vertex_by_id(graph, mgp_vertex_id{.as_int = static_cast<int64_t>(node_id)}, memory);
+  if (!node) {
+    if (mgp::graph_is_transactional(graph)) {
+      throw mg_exception::InvalidIDException();
+    }
+    return;
+  }
+
   auto *record = mgp::result_new_record(result);
-  mg_utility::InsertNodeValueResult(graph, record, kResultFieldNode, node_id, memory);
+  if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
+
+  mg_utility::InsertNodeValueResult(record, kResultFieldNode, node, memory);
   mg_utility::InsertDoubleValueResult(record, kResultFieldPageRank, rank, memory);
 }
 

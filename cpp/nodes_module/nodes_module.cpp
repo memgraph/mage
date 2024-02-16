@@ -5,7 +5,7 @@
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
 
     AddProcedure(Nodes::Link, std::string(Nodes::kProcedureLink).c_str(), mgp::ProcedureType::Write,
                  {mgp::Parameter(std::string(Nodes::kArgumentNodesLink).c_str(), {mgp::Type::List, mgp::Type::Node}),

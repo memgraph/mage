@@ -109,10 +109,11 @@ streaming graph algorithms! Drop us a message on the channels below:
 With changes in Memgraph API, MAGE started to track version numbers. The table
 below lists the compatibility of MAGE with Memgraph versions.
 | MAGE version | Memgraph version |
-| ------------ | ----------------- |
-| >= 1.5.1 | >= 2.5.1 |
-| >= 1.5 | >= 2.5.0 |
-| >= 1.4 | >= 2.4.0 |
+| ------------ | ---------------- |
+| >= 1.11.9    | >= 2.11.0        |
+| >= 1.5.1     | >= 2.5.1         |
+| >= 1.5       | >= 2.5.0         |
+| >= 1.4       | >= 2.4.0         |
 | >= 1.0 | >= 2.0.0 |
 | ^0 | >= 1.4.0 <= 1.6.1 |
 
@@ -145,17 +146,38 @@ docker run -p 7687:7687 -p 7444:7444 memgraph/memgraph-mage
 
 #### 2 Install MAGE with Docker build of the repository
 
-**0.** Make sure that you have cloned the MAGE Github repository and positioned
+**0. a** Make sure that you have cloned the MAGE Github repository and positioned
 yourself inside the repo in your terminal:
 
 ```bash
 git clone --recurse-submodules https://github.com/memgraph/mage.git && cd mage
 ```
 
-**1.** To build the **MAGE** image run the following command:
+**0. b** Download Memgraph from our official download site inside your cloned MAGE repository. Set `${MEMGRAPH_VERSION}` to the latest release of Memgraph, and
+`${ARCHITECTURE}` to your system architecture (`amd64` or `arm64`):
+
+```bash
+
+curl -L "https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11/memgraph_${MEMGRAPH_VERSION}-1_${ARCHITECTURE}.deb" > memgraph-${ARCHITECTURE}.deb
 
 ```
-docker build  -t memgraph-mage .
+
+or this one if you are on `arm64`:
+
+```bash
+curl -L "https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb" > memgraph-arm64.deb
+```
+
+**1.** To build the **MAGE** image run the following command where you set `${architecture}` to your system architecture (`amd64` or `arm64`):
+
+```
+DOCKER_BUILDKIT=1 docker buildx build \
+--tag memgraph-mage:prod \
+--target prod \
+--platform linux/${architecture} \
+--file Dockerfile.release \
+--load .
+
 ```
 
 This will build any new algorithm added to MAGE, and load it inside Memgraph.
@@ -200,6 +222,7 @@ To learn more about development with MAGE and Docker, visit the
   - clang
   - unixodbc  
 
+
 Since Memgraph needs to load MAGE's modules, there is the `setup` script to help you. With it, you can build the modules so that Memgraph
 can load them on start up.
 
@@ -209,10 +232,20 @@ Before you start, don't forget to clone MAGE with `--recurse-submodules` flag:
 git clone --recurse-submodules https://github.com/memgraph/mage.git && cd mage
 
 ```
-
-After you clone MAGE, run the following command:
-
+Run the following command to install Rust and Python dependencies:
+```bash
+curl https://sh.rustup.rs -sSf | sh -s -- -y \
+&& export PATH="/root/.cargo/bin:${PATH}" \
+&& python3 -m  pip install -r /mage/python/requirements.txt \
+&& python3 -m  pip install -r /mage/python/tests/requirements.txt \
+&& python3 -m  pip install torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-1.12.0+cu102.html \
 ```
+
+
+
+Now you can run the following command to compile and copy the query modules to the `/usr/lib/memgraph/query_modules` path:
+
+```bash
 python3 setup build -p /usr/lib/memgraph/query_modules
 ```
 

@@ -17,9 +17,13 @@ constexpr char const *kArgumentThreads = "threads";
 
 void InsertBCRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const double betweenness_centrality,
                     const int node_id) {
-  auto *record = mgp::result_new_record(result);
+  auto *node = mg_utility::GetNodeForInsertion(node_id, graph, memory);
+  if (!node) return;
 
-  mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
+  auto *record = mgp::result_new_record(result);
+  if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
+
+  mg_utility::InsertNodeValueResult(record, kFieldNode, node, memory);
   mg_utility::InsertDoubleValueResult(record, kFieldBCScore, betweenness_centrality, memory);
 }
 

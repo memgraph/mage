@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <mg_exceptions.hpp>
 #include <mg_utils.hpp>
 
@@ -24,10 +25,13 @@ const double kDefaultWeight = 1.0;
 
 void InsertLouvainRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
                          const std::uint64_t community) {
+  auto *vertex = mg_utility::GetNodeForInsertion(node_id, graph, memory);
+  if (!vertex) return;
+
   mgp_result_record *record = mgp::result_new_record(result);
   if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
 
-  mg_utility::InsertNodeValueResult(graph, record, kFieldNode, node_id, memory);
+  mg_utility::InsertNodeValueResult(record, kFieldNode, vertex, memory);
   mg_utility::InsertIntValueResult(record, kFieldCommunity, community, memory);
 }
 

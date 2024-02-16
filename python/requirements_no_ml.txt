@@ -1,0 +1,13 @@
+gekko==0.2.8
+networkx==2.6.2
+python-Levenshtein==0.12.1
+elasticsearch==8.4.3
+gensim==4.0.0
+six==1.16.0
+igraph==0.10.2
+scikit-learn==0.24.2
+gqlalchemy==1.4.1
+mysql-connector-python==8.0.32
+oracledb==1.2.2
+pyodbc==4.0.35
+defusedxml==0.7.1
