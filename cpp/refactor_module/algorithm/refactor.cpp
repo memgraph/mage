@@ -115,10 +115,19 @@ void Refactor::RenameNodeProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp
 
 void Refactor::InsertCloneNodesRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const int cycle_id,
                                       const int node_id) {
+  auto *node = mgp::graph_get_vertex_by_id(graph, mgp_vertex_id{.as_int = static_cast<int64_t>(node_id)}, memory);
+  if (!node) {
+    if (mgp::graph_is_transactional(graph)) {
+      throw mg_exception::InvalidIDException();
+    }
+    return;
+  }
+
   auto *record = mgp::result_new_record(result);
+  if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
 
   mg_utility::InsertIntValueResult(record, std::string(kResultClonedNodeId).c_str(), cycle_id, memory);
-  mg_utility::InsertNodeValueResult(graph, record, std::string(kResultNewNode).c_str(), node_id, memory);
+  mg_utility::InsertNodeValueResult(record, std::string(kResultNewNode).c_str(), node, memory);
   mg_utility::InsertStringValueResult(record, std::string(kResultCloneNodeError).c_str(), "", memory);
 }
 
@@ -537,7 +546,7 @@ void Refactor::RenameTypeProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp
     const auto rels{arguments[2].ValueList()};
 
     int64_t rels_changed{0};
-    for (auto &rel_value : rels) {
+    for (auto rel_value : rels) {
       auto rel = rel_value.ValueRelationship();
       const auto prop_value = rel.GetProperty(old_name);
       /*since there is no bug(prop map cant have null values), it is faster to just check isNull 
@@ -813,7 +822,7 @@ void Refactor::RenameType(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
     auto graph{mgp::Graph(memgraph_graph)};
 
     int64_t rels_changed{0};
-    for (auto &relationship_value : relationships) {
+    for (auto relationship_value : relationships) {
       auto relationship{relationship_value.ValueRelationship()};
       if (relationship.Type() == old_type) {
         graph.ChangeType(relationship, new_type);

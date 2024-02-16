@@ -38,7 +38,7 @@ void insert_results(const std::vector<std::tuple<mgp::Node, mgp::Node, double>> 
 Calculates Jaccard similarity between given pairs of nodes.
 */
 void JaccardPairwise(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
     const auto record_factory = mgp::RecordFactory(result);
     const auto &arguments = mgp::List(args);
     try {
@@ -52,7 +52,7 @@ void JaccardPairwise(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
 Calculates overlap similarity between given pairs of nodes.
 */
 void OverlapPairwise(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
     const auto &arguments = mgp::List(args);
     const auto record_factory = mgp::RecordFactory(result);
     try {
@@ -67,7 +67,7 @@ Calculates Jaccard similarity between all pairs of nodes.
 Jacc. similarity of two nodes can be calculated as len(intersection(neighbours(node1), neighbours(node2))) / len(union(neighbours(node1), neighbours(node2))) 
 */
 void Jaccard(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
     const auto record_factory = mgp::RecordFactory(result);
     try {
         insert_results(node_similarity_algs::CalculateSimilarityCartesian(mgp::Graph(memgraph_graph), node_similarity_util::Similarity::jaccard), record_factory);
@@ -81,7 +81,7 @@ Calculates overlap similarity between all pairs of nodes.
 Overlap similarity of two nodes can be calculated as len(intersection(neighbours(node1), neighbours(node2))) / min(len(neighbours(node1), len(node2))) 
 */
 void Overlap(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
     const auto record_factory = mgp::RecordFactory(result);
     try {
         insert_results(node_similarity_algs::CalculateSimilarityCartesian(mgp::Graph(memgraph_graph), node_similarity_util::Similarity::overlap), record_factory);
@@ -95,7 +95,7 @@ void Overlap(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_
 Calculates cosine similarity between all pairs of nodes.
 */
 void Cosine(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
     const auto record_factory = mgp::RecordFactory(result);
     const auto &arguments = mgp::List(args);
     try {
@@ -109,7 +109,7 @@ void Cosine(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
 Calculates overlap similarity between given pairs of nodes.
 */
 void CosinePairwise(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
     const auto record_factory = mgp::RecordFactory(result);
     const auto &arguments = mgp::List(args);
     try {
@@ -121,7 +121,7 @@ void CosinePairwise(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resul
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
     try {
-        mgp::MemoryDispatcherGuard guard{memory};;
+        mgp::MemoryDispatcherGuard guard{memory};
         // method objects
         std::vector<mgp::Return> returns = {
             mgp::Return(node1_name, mgp::Type::Node),

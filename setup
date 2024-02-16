@@ -67,6 +67,7 @@ class Parameter(Enum):
     LANG = "lang"
     PATH = "path"
     TYPE = "type"
+    NO_ML = "no_ml"
 
 
 def get_arguments():
@@ -103,6 +104,13 @@ def get_arguments():
         help="CMake flags for the cpp part (without -D)",
         required=False,
     )
+
+    build_args_parser.add_argument(
+        "--no-ml",
+        help="Exclude ML files",
+        action="store_true"
+    )
+
     subparsers.add_parser(
         "build", help="Build memgraph-mage", parents=[build_args_parser]
     )
@@ -124,6 +132,8 @@ def get_arguments():
         required=False,
         default=MAGE_BUILD_DIRECTORY,
     )
+
+    
 
     return parser.parse_args()
 
@@ -233,7 +243,7 @@ def build_and_copy_cpp_modules(args: Dict[str, Any]) -> bool:
     return True
 
 
-def copy_python_modules() -> bool:
+def copy_python_modules(args:Dict[str,Any]) -> bool:
     """
     Function copies Python modules to MAGE_BUILD_DIRECTORY. Returns true if successful, otherwise false.
     """
@@ -243,6 +253,8 @@ def copy_python_modules() -> bool:
     )
 
     os.chdir(PY_DIRECTORY)
+
+    
     ignore_list = [
         "tests",
         "requirements.txt",
@@ -251,7 +263,8 @@ def copy_python_modules() -> bool:
         "__pycache__",
         ".*",
     ]
-
+    if args[Parameter.NO_ML.value]:
+        ignore_list.extend(["tgn.py", "link_prediction.py", "node_classification.py"])
     # Copy python repository tree inside dist folder
     copytree(PY_DIRECTORY, MAGE_BUILD_DIRECTORY, ignore_list)
     os.environ["PYTHONPATH"] = PY_DIRECTORY
@@ -325,7 +338,7 @@ def build(args: Dict[str, Any]) -> bool:
             return False
 
     if Lang.PYTHON in args[Parameter.LANG.value]:
-        python_status = copy_python_modules()
+        python_status = copy_python_modules(args)
         if not python_status:
             return False
 
@@ -335,7 +348,6 @@ def build(args: Dict[str, Any]) -> bool:
             return False
 
     return True
-
 
 def run_build_action(args: Dict[str, Any]) -> bool:
     logger.info("[Terminal] Starting building and copying source code...")

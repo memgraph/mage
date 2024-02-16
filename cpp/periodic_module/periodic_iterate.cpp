@@ -226,7 +226,7 @@ mg::Client::Params GetClientParams() {
 }
 
 void PeriodicIterate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};;
+  mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
 
   auto num_of_executed_batches = 0;
@@ -296,7 +296,7 @@ void PeriodicIterate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
     mgp::AddProcedure(
         PeriodicIterate, kProcedurePeriodic, mgp::ProcedureType::Read,
         {mgp::Parameter(kArgumentInputQuery, mgp::Type::String),

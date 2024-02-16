@@ -4,7 +4,7 @@
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
-    mgp::MemoryDispatcherGuard guard{memory};;
+    mgp::MemoryDispatcherGuard guard{memory};
 
     mgp::AddFunction(Collections::SumLongs, Collections::kProcedureSumLongs,
                      {mgp::Parameter(Collections::kSumLongsArg1, {mgp::Type::List, mgp::Type::Any})}, module, memory);
