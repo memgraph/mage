@@ -9,9 +9,9 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
                  {mgp::Parameter(std::string(Util::kArgumentValuesMd5).c_str(), {mgp::Type::List, mgp::Type::Any})},
                  {mgp::Return(std::string(Util::kArgumentResultMd5).c_str(), mgp::Type::String)}, module, memory);
 
-    mgp::AddFunction(Util::Md5Func, "md5", {mgp::Parameter("stringToHash", mgp::Type::String)}, module, memory);
+    mgp::AddFunction(Util::Md5Func, "md5", {mgp::Parameter("stringToHash", mgp::Type::Any)}, module, memory);
     mgp::AddFunction(Util::Md5ListFunc, "md5List",
-                     {mgp::Parameter("stringToHash", std::pair(mgp::Type::List, mgp::Type::String))}, module, memory);
+                     {mgp::Parameter("stringToHash", std::pair(mgp::Type::List, mgp::Type::Any))}, module, memory);
   } catch (const std::exception &e) {
     return 1;
   }
