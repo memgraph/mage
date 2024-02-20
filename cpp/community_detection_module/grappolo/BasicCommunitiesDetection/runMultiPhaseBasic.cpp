@@ -39,6 +39,7 @@
 //
 // ************************************************************************
 
+#include <mg_procedure.h>
 #include "defs.h"
 #include "basic_comm.h"
 #include "basic_util.h"
@@ -49,7 +50,7 @@ using namespace std;
 // Return: C_orig will hold the cluster ids for vertices in the original graph
 //         Assume C_orig is initialized appropriately
 //WARNING: Graph G will be destroyed at the end of this routine
-void runMultiPhaseBasic(graph *G, long *C_orig, int basicOpt, long minGraphSize,
+void runMultiPhaseBasic(graph *G, mgp_graph *mg_graph, long *C_orig, int basicOpt, long minGraphSize,
                         double threshold, double C_threshold, int numThreads, int threadsOpt)
 {
     double totTimeClustering=0, totTimeBuildingPhase=0, totTimeColoring=0, tmpTime=0;
@@ -57,12 +58,12 @@ void runMultiPhaseBasic(graph *G, long *C_orig, int basicOpt, long minGraphSize,
     long NV = G->numVertices;
     double* vDegree = nullptr;
     Comm* cInfo = nullptr;
-    
+
     /* Step 1: Find communities */
     double prevMod = -1;
     double currMod = -1;
     long phase = 1;
-    
+
     graph *Gnew; //To build new hierarchical graphs
     long numClusters;
     long *C = (long *) malloc (NV * sizeof(long));
@@ -71,23 +72,23 @@ void runMultiPhaseBasic(graph *G, long *C_orig, int basicOpt, long minGraphSize,
     for (long i=0; i<NV; i++) {
         C[i] = -1;
     }
-    
+
     while(1){
         prevMod = currMod;
-        
-        
+
+
         if(basicOpt == 1){
             currMod = parallelLouvianMethodNoMap(G, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
         }else if(threadsOpt == 1){
-            currMod = parallelLouvianMethod(G, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
+            currMod = parallelLouvianMethod(G, mg_graph, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
 	    //currMod = parallelLouvianMethodApprox(G, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
         }else{
-            currMod = parallelLouvianMethodScale(G, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
+            currMod = parallelLouvianMethodScale(G, mg_graph, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
         }
-        
+
         totTimeClustering += tmpTime;
         totItr += tmpItr;
-        
+
         //Renumber the clusters contiguiously
         numClusters = renumberClustersContiguously(C, G->numVertices);
         //Keep track of clusters in C_orig
@@ -109,12 +110,12 @@ void runMultiPhaseBasic(graph *G, long *C_orig, int basicOpt, long minGraphSize,
         if((phase > 200)||(totItr > 100000)) {
             break;
         }
-        
+
         //Check for modularity gain and build the graph for next phase
         //In case coloring is used, make sure the non-coloring routine is run at least once
         if( (currMod - prevMod) > threshold ) {
             Gnew = (graph *) malloc (sizeof(graph)); assert(Gnew != 0);
-            tmpTime =  buildNextLevelGraphOpt(G, Gnew, C, numClusters, numThreads);
+            tmpTime =  buildNextLevelGraphOpt(G, mg_graph, Gnew, C, numClusters, numThreads);
             totTimeBuildingPhase += tmpTime;
             //Free up the previous graph
             free(G->edgeListPtrs);
@@ -123,11 +124,11 @@ void runMultiPhaseBasic(graph *G, long *C_orig, int basicOpt, long minGraphSize,
             G = Gnew; //Swap the pointers
             G->edgeListPtrs = Gnew->edgeListPtrs;
             G->edgeList = Gnew->edgeList;
-            
+
             //Free up the previous cluster & create new one of a different size
             free(C);
             C = (long *) malloc (numClusters * sizeof(long)); assert(C != 0);
-            
+
 #pragma omp parallel for
             for (long i=0; i<numClusters; i++) {
                 C[i] = -1;
@@ -136,7 +137,7 @@ void runMultiPhaseBasic(graph *G, long *C_orig, int basicOpt, long minGraphSize,
         }else {
             break; //Modularity gain is not enough. Exit.
         }
-        
+
     } //End of while(1)
 
     //Clean up:
@@ -149,17 +150,17 @@ void runMultiPhaseBasic(graph *G, long *C_orig, int basicOpt, long minGraphSize,
 }//End of runMultiPhaseLouvainAlgorithm()
 
 // run one phase of Louvain and return modularity
-void runMultiPhaseBasicOnce(graph *G, long *C_orig, int basicOpt, long minGraphSize,
+void runMultiPhaseBasicOnce(graph *G, mgp_graph *mg_graph, long *C_orig, int basicOpt, long minGraphSize,
                         double threshold, double C_threshold, int numThreads, int threadsOpt)
 {
     double totTimeClustering=0, totTimeBuildingPhase=0, totTimeColoring=0, tmpTime=0;
     int tmpItr=0, totItr = 0;
     long NV = G->numVertices;
-    
+
     /* Step 1: Find communities */
     double prevMod = -1;
     double currMod = -1;
-    
+
     graph *Gnew; //To build new hierarchical graphs
     long numClusters;
     long *C = (long *) malloc (NV * sizeof(long));
@@ -168,23 +169,23 @@ void runMultiPhaseBasicOnce(graph *G, long *C_orig, int basicOpt, long minGraphS
     for (long i=0; i<NV; i++) {
         C[i] = -1;
     }
-    
+
     // Run just one phase
     {
         prevMod = currMod;
-        
+
         if(basicOpt == 1){
             currMod = parallelLouvianMethodNoMap(G, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
         }else if(threadsOpt == 1){
-            currMod = parallelLouvianMethod(G, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
+            currMod = parallelLouvianMethod(G, mg_graph, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
 	    //currMod = parallelLouvianMethodApprox(G, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
         }else{
-            currMod = parallelLouvianMethodScale(G, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
+            currMod = parallelLouvianMethodScale(G, mg_graph, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
         }
-        
+
         totTimeClustering += tmpTime;
         totItr += tmpItr;
-        
+
         //Renumber the clusters contiguiously
         numClusters = renumberClustersContiguously(C, G->numVertices);
 
@@ -198,7 +199,7 @@ void runMultiPhaseBasicOnce(graph *G, long *C_orig, int basicOpt, long minGraphS
         //In case coloring is used, make sure the non-coloring routine is run at least once
         if( (currMod - prevMod) > threshold ) {
             Gnew = (graph *) malloc (sizeof(graph)); assert(Gnew != 0);
-            tmpTime =  buildNextLevelGraphOpt(G, Gnew, C, numClusters, numThreads);
+            tmpTime =  buildNextLevelGraphOpt(G, mg_graph, Gnew, C, numClusters, numThreads);
             totTimeBuildingPhase += tmpTime;
             //Free up the previous graph
             free(G->edgeListPtrs);
@@ -207,19 +208,19 @@ void runMultiPhaseBasicOnce(graph *G, long *C_orig, int basicOpt, long minGraphS
             G = Gnew; //Swap the pointers
             G->edgeListPtrs = Gnew->edgeListPtrs;
             G->edgeList = Gnew->edgeList;
-            
+
             //Free up the previous cluster & create new one of a different size
             free(C);
             C = (long *) malloc (numClusters * sizeof(long)); assert(C != 0);
-            
+
 #pragma omp parallel for
             for (long i=0; i<numClusters; i++) {
                 C[i] = -1;
             }
         }
-        
+
     } //End of while(1)
-    
+
 
     //Clean up:
     free(C);

@@ -62,13 +62,13 @@ double parallelLouvainMethodFullSyncEarly(graph *G, long *C, int nThreads, doubl
 #endif
     double time1, time2, time3, time4; //For timing purposes
     double total = 0, totItr = 0;
-    
+
     long    NV        = G->numVertices;
     long    NS        = G->sVertices;
     long    NE        = G->numEdges;
     long    *vtxPtr   = G->edgeListPtrs;
     edge    *vtxInd   = G->edgeList;
-    
+
     /* Variables for computing modularity */
     long totalEdgeWeightTwice;
     double constantForSecondTerm;
@@ -76,7 +76,7 @@ double parallelLouvainMethodFullSyncEarly(graph *G, long *C, int nThreads, doubl
     double currMod=-1;
     double thresMod = thresh; //Input parameter
     int numItrs = 0;
-    
+
     /********************** Initialization **************************/
     time1 = omp_get_wtime();
     //Store the degree of all vertices
@@ -85,30 +85,30 @@ double parallelLouvainMethodFullSyncEarly(graph *G, long *C, int nThreads, doubl
     Comm *cInfo = (Comm *) malloc (NV * sizeof(Comm)); assert(cInfo != 0);
     omp_lock_t* vlocks = (omp_lock_t*) malloc (NV*sizeof(*vlocks));
     omp_lock_t* clocks = (omp_lock_t*) malloc (NV*sizeof(*clocks));
-    
+
     //use for Modularity calculation (eii)
     double* clusterWeightInternal = (double*) malloc (NV*sizeof(double)); assert(clusterWeightInternal != 0);
-    
+
     sumVertexDegree(vtxInd, vtxPtr, vDegree, NV , cInfo);	// Sum up the vertex degree
-    
+
     /*** Compute the total edge weight (2m) and 1/2m ***/
     constantForSecondTerm = calConstantForSecondTerm(vDegree, NV); // 1 over sum of the degree
-    
+
     //Vectors used in place of maps: Total size = |V|+2*|E| -- The |V| part takes care of self loop
     mapElement* clusterLocalMap = (mapElement *) malloc ((NV + 2*NE) * sizeof(mapElement)); assert(clusterLocalMap != 0);
-    
-    
+
+
     //Store previous iteration's community assignment
     long* pastCommAss = (long *) malloc (NV * sizeof(long)); assert(pastCommAss != 0);
     //Store current community assignment
     long* currCommAss = (long *) malloc (NV * sizeof(long)); assert(currCommAss != 0);
     //Store the target of community assignment
-    
+
     //Initialize each vertex to its own cluster
     initCommAss(C, C, NV);
     initCommAss(pastCommAss, currCommAss, NV);
-    
-    
+
+
     // Store the termination node
     bool* verT = (bool *) malloc (NV * sizeof(bool)); assert(verT != 0);
 #pragma omp parallel for
@@ -116,18 +116,18 @@ double parallelLouvainMethodFullSyncEarly(graph *G, long *C, int nThreads, doubl
         verT[i] = false;
     }
     long termNodes = 0;
-    
+
     time2 = omp_get_wtime();
-    
-    
+
+
     // Set up locks for full sync
 #pragma omp parallel for
     for (long i=0; i<NV; i++) {
         omp_init_lock(&vlocks[i]);
         omp_init_lock(&clocks[i]);
     }
-    
-    
+
+
 #ifdef PRINT_DETAILED_STATS_
 #endif
 #ifdef PRINT_TERSE_STATS_
@@ -137,10 +137,10 @@ double parallelLouvainMethodFullSyncEarly(graph *G, long *C, int nThreads, doubl
         numItrs++;
         time1 = omp_get_wtime();
         /* Re-initialize datastructures */
-        
+
         long totalEdgeTravel= 0;
         long totalUniqueComm = 0;
-        
+
 #pragma omp parallel for reduction(+:totalEdgeTravel), reduction(+:totalUniqueComm)
         for (long i=0; i<NV; i++) {
             if(verT[i])
@@ -158,14 +158,14 @@ double parallelLouvainMethodFullSyncEarly(graph *G, long *C, int nThreads, doubl
                 clusterLocalMap[sPosition].Counter = 0;          //Initialize the counter to ZERO (no edges incident yet)
                 clusterLocalMap[sPosition].cid = C[i]; //Initialize with current community
                 numUniqueClusters++; //Added the first entry
-                
+
                 //Find unique cluster ids and #of edges incident (eicj) to them
                 selfLoop = buildAndLockLocalMapCounter(i, clusterLocalMap, vtxPtr, vtxInd, C, numUniqueClusters, vlocks, clocks, ytype, eix, freedom);
                 // Update delta Q calculation
                 //Calculate the max
                 maxAndFree(i, clusterLocalMap, vtxPtr, vtxInd, selfLoop, cInfo, C, constantForSecondTerm, numUniqueClusters, vlocks, clocks, ytype, eix, vDegree);
                 //assert((targetCommAss[i] >= 0)&&(targetCommAss[i] < NV));
-                
+
                 if(numItrs > 2 && C[i] == currCommAss[i] && pastCommAss[i]==currCommAss[i]){
                     //Swaping!!!
                     verT[i] = true;
@@ -176,17 +176,17 @@ double parallelLouvainMethodFullSyncEarly(graph *G, long *C, int nThreads, doubl
                     currCommAss[i] = C[i];
                 }
             } else {
-                
+
             }
             totalUniqueComm += numUniqueClusters;
         }//End of for(i)
         time2 = omp_get_wtime();
-        
+
         time3 = omp_get_wtime();
         double e_xx = 0;
         double a2_x = 0;
-        
-        
+
+
         // Calculate Modularity
 #pragma omp parallel for  //Parallelize on each vertex
         for (long i =0; i<NV;i++){
@@ -208,16 +208,16 @@ double parallelLouvainMethodFullSyncEarly(graph *G, long *C, int nThreads, doubl
             a2_x += (cInfo[i].degree)*(cInfo[i].degree);
         }
         time4 = omp_get_wtime();
-        
+
         currMod = (e_xx*(double)constantForSecondTerm) - (a2_x*(double)constantForSecondTerm*(double)constantForSecondTerm);
         totItr = (time2-time1) + (time4-time3);
         total += totItr;
-        
+
 #ifdef PRINT_DETAILED_STATS_
 #endif
 #ifdef PRINT_TERSE_STATS_
 #endif
-        
+
         //Break if modularity gain is not sufficient
         if((currMod - prevMod) < thresMod) {
             break;
@@ -226,17 +226,17 @@ double parallelLouvainMethodFullSyncEarly(graph *G, long *C, int nThreads, doubl
     }//End of while(true)
     *totTime = total; //Return back the total time for clustering
     *numItr  = numItrs;
-    
+
 #ifdef PRINT_DETAILED_STATS_
-#endif  
+#endif
 #ifdef PRINT_TERSE_STATS_
 #endif
-    
+
     //Cleanup
     free(vDegree);
     free(cInfo);
     free(clusterWeightInternal);
     free(clusterLocalMap);
-    
+
     return currMod;
 }
