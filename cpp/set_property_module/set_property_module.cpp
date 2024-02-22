@@ -69,75 +69,6 @@ void ExecuteSetPropertiesQuery(const std::string query) {
   client->DiscardAll();
 }
 
-void GetPropertyValue(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  try {
-    mgp::MemoryDispatcherGuard guard(memory);
-
-    std::vector<mgp::Value> arguments;
-    for (size_t i = 0; i < mgp::list_size(args); i++) {
-      auto arg = mgp::Value(mgp::list_at(args, i));
-      arguments.push_back(arg);
-    }
-
-    if (arguments[0].IsNode() == false) throw new std::exception();
-
-    mgp::Node node = arguments[0].ValueNode();
-
-    std::string_view propertyName = arguments[1].ValueString();
-
-    std::string prop = static_cast<std::string>(propertyName);
-    mgp::Value val = mgp::Value("");
-
-    auto record = mgp::RecordFactory(result).NewRecord();
-
-    std::unordered_map<std::string, mgp::Value> properties = node.Properties();
-
-    if (properties.find(prop) != properties.end()) {
-      val = node.GetProperty(prop);
-    }
-
-    record.Insert(kResult.data(), val.ValueString());
-  } catch (const std::exception &e) {
-    mgp::result_set_error_msg(result, e.what());
-    return;
-  }
-}
-
-void SetPropertyValue(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  try {
-    mgp::MemoryDispatcherGuard guard(memory);
-
-    std::vector<mgp::Value> arguments;
-    for (size_t i = 0; i < mgp::list_size(args); i++) {
-      auto arg = mgp::Value(mgp::list_at(args, i));
-      arguments.push_back(arg);
-    }
-
-    if (arguments[0].IsNode() == false) throw new std::exception();
-
-    mgp::Node node = arguments[0].ValueNode();
-
-    std::string_view propertyName = arguments[1].ValueString();
-
-    std::string prop = static_cast<std::string>(propertyName);
-    mgp::Value val = mgp::Value("");
-
-    auto record = mgp::RecordFactory(result).NewRecord();
-
-    std::unordered_map<std::string, mgp::Value> properties = node.Properties();
-
-    if (properties.find(prop) == properties.end()) {
-      record.Insert("out", val.ValueString());
-    } else {
-      val = node.GetProperty(prop);
-      record.Insert("out", val.ValueString());
-    }
-  } catch (const std::exception &e) {
-    mgp::result_set_error_msg(result, e.what());
-    return;
-  }
-}
-
 // -------------------------------------------------------------------------------
 // ---------------------- OPTIMIZED METHODS --------------------------------------
 // -------------------------------------------------------------------------------
@@ -357,75 +288,9 @@ std::string TransformIntoSetPropertiesClause(std::string_view source_variable, m
   return fmt::format("SET {} += {{ {} }}", target_variable, sp);
 }
 
-void SetPropertyQuery(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard(memory);
-
-  auto arguments = mgp::List(args);
-  auto record_factory = mgp::RecordFactory(result);
-  auto record = record_factory.NewRecord();
-
-  std::string query_executed;
-
-  try {
-    auto source_query = arguments[0].ValueString();
-    auto source_variable = arguments[1].ValueString();
-    auto source_props = arguments[2].ValueList();
-    auto target_variable = arguments[3].ValueString();
-    auto target_props = arguments[4].ValueList();
-
-    if (source_props.Size() != target_props.Size()) {
-      throw std::runtime_error("SetPropertyQuery source properties and target properties are not of the same size!");
-    }
-
-    if (source_props.Empty()) {
-      record.Insert(kResult.data(), true);
-      record.Insert(kQueryExecuted.data(), query_executed);
-      return;
-    }
-
-    auto set_properties_part = TransformIntoSetPropertiesClause(source_variable, std::move(source_props),
-                                                                target_variable, std::move(target_props));
-
-    auto final_query = fmt::format("{} {};", source_query, set_properties_part);
-
-    query_executed = final_query;
-
-    mg::Client::Init();
-
-    auto client = mg::Client::Connect(GetClientParams());
-
-    if (!client) {
-      throw std::runtime_error("Unable to connect to client!");
-    }
-
-    ExecuteSetPropertiesQuery(final_query);
-
-    mg::Client::Finalize();
-
-    record.Insert(kResult.data(), true);
-    record.Insert(kQueryExecuted.data(), query_executed);
-  } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
-    record.Insert(kResult.data(), false);
-    record.Insert(kQueryExecuted.data(), query_executed);
-  }
-}
-
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
     mgp::MemoryDispatcherGuard guard(memory);
-
-    AddProcedure(GetPropertyValue, "getPropertyValue", mgp::ProcedureType::Read,
-                 {mgp::Parameter("node", mgp::Type::Node), mgp::Parameter("propertyName", mgp::Type::String)},
-                 {mgp::Return(kResult, mgp::Type::String)}, module, memory);
-
-    AddProcedure(SetPropertyValue, "setPropertyValue", mgp::ProcedureType::Write,
-                 {mgp::Parameter(kSourceNode, mgp::Type::Node),
-                  mgp::Parameter(kSourceProperties, {mgp::Type::List, mgp::Type::String}),
-                  mgp::Parameter(kTargetNode, mgp::Type::Node),
-                  mgp::Parameter(kTargetProperties, {mgp::Type::List, mgp::Type::String})},
-                 {mgp::Return("out", mgp::Type::String)}, module, memory);
-
     AddProcedure(CopyPropertyNode2Node, "copyPropertyNode2Node", mgp::ProcedureType::Write,
                  {mgp::Parameter(kSourceNode, mgp::Type::Node),
                   mgp::Parameter(kSourceProperties, {mgp::Type::List, mgp::Type::String}),
@@ -453,14 +318,6 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
                   mgp::Parameter(kTargetRel, mgp::Type::Relationship),
                   mgp::Parameter(kTargetProperties, {mgp::Type::List, mgp::Type::String})},
                  {mgp::Return(kResult, mgp::Type::Bool)}, module, memory);
-
-    AddProcedure(SetPropertyQuery, "setPropertyQuery", mgp::ProcedureType::Write,
-                 {mgp::Parameter("inputQuery", mgp::Type::String), mgp::Parameter(kSourceVariable, mgp::Type::String),
-                  mgp::Parameter(kSourceProperties, {mgp::Type::List, mgp::Type::String}),
-                  mgp::Parameter(kTargetVariable, mgp::Type::String),
-                  mgp::Parameter(kTargetProperties, {mgp::Type::List, mgp::Type::String})},
-                 {mgp::Return(kResult, mgp::Type::Bool), mgp::Return(kQueryExecuted, mgp::Type::String)}, module,
-                 memory);
   } catch (const std::exception &e) {
     return 1;
   }
