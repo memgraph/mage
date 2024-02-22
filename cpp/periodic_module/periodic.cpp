@@ -1,15 +1,21 @@
 #include <fmt/core.h>
 #include <mgp.hpp>
+#include <string>
+#include <string_view>
 
 #include "mgclient.hpp"
 
-const char *kProcedurePeriodic = "iterate";
+const char *kProcedurePeriodicIterate = "iterate";
+const char *kProcedurePeriodicDelete = "delete";
 const char *kArgumentInputQuery = "input_query";
 const char *kArgumentRunningQuery = "running_query";
 const char *kArgumentConfig = "config";
 const char *kConfigKeyBatchSize = "batch_size";
 const char *kBatchInternalName = "__batch";
 const char *kBatchRowInternalName = "__batch_row";
+const char *kConfigKeyLabels = "labels";
+const char *kConfigKeyEdgeTypes = "edge_types";
+
 const char *kReturnSuccess = "success";
 const char *kReturnNumBatches = "number_of_executed_batches";
 
@@ -26,6 +32,44 @@ struct ParamNames {
   std::vector<std::string> relationship_names;
   std::vector<std::string> primitive_names;
 };
+
+struct DeletionInfo {
+  uint64_t batch_size;
+  std::vector<std::string> labels;
+  std::vector<std::string> edge_types;
+};
+
+mg::Client::Params GetClientParams() {
+  auto *host = kDefaultHost;
+  auto port = kDefaultPort;
+  auto *username = "";
+  auto *password = "";
+
+  auto *maybe_host = std::getenv(kMgHost);
+  if (maybe_host) {
+    host = std::move(maybe_host);
+  }
+
+  const auto *maybe_port = std::getenv(kMgPort);
+  if (maybe_port) {
+    port = static_cast<uint16_t>(std::move(*maybe_port));
+  }
+
+  const auto *maybe_username = std::getenv(kMgUsername);
+  if (maybe_username) {
+    username = std::move(maybe_username);
+  }
+
+  const auto *maybe_password = std::getenv(kMgPassword);
+  if (maybe_password) {
+    password = std::move(maybe_password);
+  }
+
+  return mg::Client::Params{.host = std::move(host),
+                            .port = std::move(port),
+                            .username = std::move(username),
+                            .password = std::move(password)};
+}
 
 ParamNames ExtractParamNames(const std::vector<std::string> &columns, const std::vector<mg::Value> &batch_row) {
   ParamNames res;
@@ -123,7 +167,8 @@ std::string ConstructQueryPrefix(const ParamNames &names) {
   return fmt::format("{} {} {}", unwind_batch, with_variables, match_string);
 }
 
-mg::Map ConstructQueryParams(const std::vector<std::string> &columns, const std::vector<std::vector<mg::Value>> &batch) {
+mg::Map ConstructQueryParams(const std::vector<std::string> &columns,
+                             const std::vector<std::vector<mg::Value>> &batch) {
   mg::Map params(1);
   mg::List list_value(batch.size());
 
@@ -193,36 +238,177 @@ void ValidateBatchSize(const mgp::Value &batch_size_value) {
   }
 }
 
-mg::Client::Params GetClientParams() {
-  auto *host = kDefaultHost;
-  auto port = kDefaultPort;
-  auto *username = "";
-  auto *password = "";
-
-  auto *maybe_host = std::getenv(kMgHost);
-  if (maybe_host) {
-    host = std::move(maybe_host);
+void ValidateDeletionConfigEntities(const mgp::Map &config, std::string config_key) {
+  auto key = std::string_view(config_key);
+  if (!config.KeyExists(key)) {
+    return;
   }
 
-  const auto *maybe_port = std::getenv(kMgPort);
-  if (maybe_port) {
-    port = static_cast<uint16_t>(std::move(*maybe_port));
+  auto value = config.At(key);
+  if (!value.IsString() && !value.IsList()) {
+    throw std::runtime_error(fmt::format("Invalid config for config parameter {}!", config_key));
   }
 
-  const auto *maybe_username = std::getenv(kMgUsername);
-  if (maybe_username) {
-    username = std::move(maybe_username);
+  if (value.IsString()) {
+    return;
   }
 
-  const auto *maybe_password = std::getenv(kMgPassword);
-  if (maybe_password) {
-    password = std::move(maybe_password);
+  if (value.IsList()) {
+    auto list_value = value.ValueList();
+    for (auto elem : list_value) {
+      if (!elem.IsString()) {
+        throw std::runtime_error(fmt::format("Invalid config for config parameter {}!", config_key));
+      }
+    }
+  }
+}
+
+void ValidateDeletionConfig(const mgp::Map &config) {
+  auto batch_size_key = std::string(kConfigKeyBatchSize);
+  auto labels_key = std::string(kConfigKeyLabels);
+  auto edge_types_key = std::string(kConfigKeyEdgeTypes);
+
+  if (!config.KeyExists(batch_size_key)) {
+    throw std::runtime_error("No config batch size specified!");
   }
 
-  return mg::Client::Params{.host = std::move(host),
-                            .port = std::move(port),
-                            .username = std::move(username),
-                            .password = std::move(password)};
+  auto batch_size_value = config.At(batch_size_key);
+  if (!batch_size_value.IsInt()) {
+    throw std::runtime_error("Batch size needs to be an integer!");
+  }
+
+  if (batch_size_value.ValueInt() <= 0) {
+    throw std::runtime_error("Batch size can't be a non-negative integer!");
+  }
+
+  ValidateDeletionConfigEntities(config, labels_key);
+  ValidateDeletionConfigEntities(config, edge_types_key);
+}
+
+void EmplaceFromConfig(const mgp::Map &config, std::vector<std::string> &vec, std::string &config_key) {
+  auto key = std::string_view(config_key);
+  if (config.KeyExists(key)) {
+    auto value = config.At(key);
+    if (value.IsString()) {
+      vec.emplace_back(std::string(value.ValueString()));
+    } else if (value.IsList()) {
+      auto list_value = value.ValueList();
+      for (const auto elem : list_value) {
+        vec.emplace_back(elem.ValueString());
+      }
+    }
+  }
+}
+
+DeletionInfo GetDeletionInfo(const mgp::Map &config) {
+  std::vector<std::string> labels, edge_types;
+
+  ValidateDeletionConfig(config);
+
+  auto batch_size_key = std::string(kConfigKeyBatchSize);
+  auto labels_key = std::string(kConfigKeyLabels);
+  auto edge_types_key = std::string(kConfigKeyEdgeTypes);
+
+  auto batch_size = config.At(batch_size_key).ValueInt();
+
+  EmplaceFromConfig(config, labels, labels_key);
+  EmplaceFromConfig(config, edge_types, edge_types_key);
+
+  return {.batch_size = static_cast<uint64_t>(batch_size),
+          .labels = std::move(labels),
+          .edge_types = std::move(edge_types)};
+}
+
+uint64_t ExecutePeriodicDelete(DeletionInfo deletion_info) {
+  uint64_t num_of_executed_batches = 0;
+  auto labels_formatted = deletion_info.labels.empty() ? "" : fmt::format(":{}", Join(deletion_info.labels, ":"));
+  auto edge_types_formatted =
+      deletion_info.edge_types.empty() ? "" : fmt::format(":{}", Join(deletion_info.edge_types, "|"));
+
+  auto relationships_deletion_query =
+      fmt::format("MATCH (n{})-[r{}]-(m) WITH r LIMIT {} DELETE r RETURN count(r) AS num_deleted", labels_formatted,
+                  edge_types_formatted, deletion_info.batch_size);
+  auto nodes_deletion_query = fmt::format("MATCH (n{}) WITH n LIMIT {} DETACH DELETE n RETURN count(n) AS num_deleted",
+                                          labels_formatted, deletion_info.batch_size);
+
+  auto client = mg::Client::Connect(GetClientParams());
+  if (!client) {
+    throw std::runtime_error("Unable to connect to client!");
+  }
+
+  while (true) {
+    if (!client->Execute(relationships_deletion_query)) {
+      throw std::runtime_error("Error while executing periodic iterate!");
+    }
+
+    auto result = client->FetchOne();
+    if (!result || (*result).size() != 1) {
+      throw std::runtime_error("No result received from periodic delete!");
+    }
+
+    client->DiscardAll();
+
+    auto num_deleted = (*result)[0].ValueInt();
+    num_of_executed_batches++;
+    if (static_cast<uint64_t>(num_deleted) < deletion_info.batch_size) {
+      break;
+    }
+  }
+
+  while (true) {
+    if (!client->Execute(nodes_deletion_query)) {
+      throw std::runtime_error("Error while executing periodic iterate!");
+    }
+
+    auto result = client->FetchOne();
+    if (!result || (*result).size() != 1) {
+      throw std::runtime_error("No result received from periodic delete!");
+    }
+
+    client->DiscardAll();
+
+    auto num_deleted = (*result)[0].ValueInt();
+    num_of_executed_batches++;
+    if (static_cast<uint64_t>(num_deleted) < deletion_info.batch_size) {
+      break;
+    }
+  }
+
+  return num_of_executed_batches;
+}
+
+void PeriodicDelete(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+
+  uint64_t num_of_executed_batches = 0;
+  const auto record_factory = mgp::RecordFactory(result);
+  auto record = record_factory.NewRecord();
+
+  const auto config = arguments[0].ValueMap();
+
+  try {
+    mg::Client::Init();
+
+    auto client = mg::Client::Connect(GetClientParams());
+
+    if (!client) {
+      throw std::runtime_error("Unable to connect to client!");
+    }
+
+    auto deletion_info = GetDeletionInfo(config);
+
+    num_of_executed_batches = ExecutePeriodicDelete(std::move(deletion_info));
+
+    mg::Client::Finalize();
+
+    record.Insert(kReturnSuccess, true);
+    record.Insert(kReturnNumBatches, static_cast<int64_t>(num_of_executed_batches));
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    record.Insert(kReturnSuccess, false);
+    record.Insert(kReturnNumBatches, static_cast<int64_t>(num_of_executed_batches));
+  }
 }
 
 void PeriodicIterate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
@@ -298,10 +484,15 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   try {
     mgp::MemoryDispatcherGuard guard{memory};
     mgp::AddProcedure(
-        PeriodicIterate, kProcedurePeriodic, mgp::ProcedureType::Read,
+        PeriodicIterate, kProcedurePeriodicIterate, mgp::ProcedureType::Read,
         {mgp::Parameter(kArgumentInputQuery, mgp::Type::String),
          mgp::Parameter(kArgumentRunningQuery, mgp::Type::String), mgp::Parameter(kArgumentConfig, mgp::Type::Map)},
         {mgp::Return(kReturnSuccess, mgp::Type::Bool), mgp::Return(kReturnNumBatches, mgp::Type::Int)}, module, memory);
+
+    mgp::AddProcedure(PeriodicDelete, kProcedurePeriodicDelete, mgp::ProcedureType::Read,
+                      {mgp::Parameter(kArgumentConfig, mgp::Type::Map)},
+                      {mgp::Return(kReturnSuccess, mgp::Type::Bool), mgp::Return(kReturnNumBatches, mgp::Type::Int)},
+                      module, memory);
   } catch (const std::exception &e) {
     return 1;
   }
