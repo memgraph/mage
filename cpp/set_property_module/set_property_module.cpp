@@ -69,10 +69,6 @@ void ExecuteSetPropertiesQuery(const std::string query) {
   client->DiscardAll();
 }
 
-// -------------------------------------------------------------------------------
-// ---------------------- OPTIMIZED METHODS --------------------------------------
-// -------------------------------------------------------------------------------
-
 void CopyPropertyNode2Node(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::MemoryDispatcherGuard guard(memory);
 
@@ -258,34 +254,6 @@ void CopyPropertyRel2Rel(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *
     record_factory.SetErrorMessage(e.what());
     record.Insert(kResult.data(), false);
   }
-}
-
-std::string TransformIntoSetPropertiesClause(std::string_view source_variable, mgp::List source_props,
-                                             std::string_view target_variable, mgp::List target_props) {
-  std::unordered_set<std::string> prop_key_set;
-  std::vector<std::string> set_prop_strings;
-  set_prop_strings.reserve(source_props.Size());
-
-  for (size_t i = 0, size = source_props.Size(); i < size; i++) {
-    if (prop_key_set.contains(std::string(target_props[i].ValueString()))) {
-      continue;
-    }
-
-    set_prop_strings.push_back(
-        fmt::format("{}: {}.{}", target_props[i].ValueString(), source_variable, source_props[i].ValueString()));
-
-    prop_key_set.insert(std::string(target_props[i].ValueString()));
-  }
-
-  std::string sp;
-  for (size_t i = 0, size = set_prop_strings.size(); i < size; i++) {
-    sp += set_prop_strings[i];
-    if (i < size - 1) {
-      sp += ", ";
-    }
-  }
-
-  return fmt::format("SET {} += {{ {} }}", target_variable, sp);
 }
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
