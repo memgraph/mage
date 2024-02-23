@@ -1,0 +1,5 @@
+query: >
+    RETURN util_module.md5(1) AS result; 
+
+exception: >
+  Invalid type provided as the first argument for the md5 function!

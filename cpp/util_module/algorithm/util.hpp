@@ -9,9 +9,6 @@ constexpr std::string_view kProcedureMd5 = "md5";
 constexpr std::string_view kArgumentValuesMd5 = "values";
 constexpr std::string_view kArgumentResultMd5 = "result";
 
-void Md5(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
-void Md5List(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
-
-void Md5Func(mgp_list *args, mgp_func_context *func_context, mgp_func_result *res, mgp_memory *memory);
-void Md5ListFunc(mgp_list *args, mgp_func_context *func_context, mgp_func_result *res, mgp_memory *memory);
+void Md5Procedure(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void Md5Function(mgp_list *args, mgp_func_context *func_context, mgp_func_result *res, mgp_memory *memory);
 }  // namespace Util
