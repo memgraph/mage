@@ -329,8 +329,8 @@ DeletionInfo GetDeletionInfo(const mgp::Map &config) {
 
 void ExecutePeriodicDelete(DeletionInfo deletion_info, DeletionResult &deletion_result) {
   auto delete_all = deletion_info.edge_types.empty() && deletion_info.labels.empty();
-  auto delete_nodes = delete_all || (!deletion_info.labels.empty() && deletion_info.edge_types.empty());
-  auto delete_edges = delete_all || (deletion_info.labels.empty() && !deletion_info.edge_types.empty());
+  auto delete_nodes = delete_all || !deletion_info.labels.empty();
+  auto delete_edges = delete_all || !deletion_info.labels.empty() || !deletion_info.edge_types.empty();
 
   auto labels_formatted = deletion_info.labels.empty() ? "" : fmt::format(":{}", Join(deletion_info.labels, ":"));
   auto edge_types_formatted =
