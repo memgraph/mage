@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 
+#include <mg_procedure.h>
 #include <mg_exceptions.hpp>
 #include <mg_graph.hpp>
 
@@ -38,9 +39,9 @@ namespace {
  * gain in modularity is less than `coloringThreshold`
  * @return Vector of community indices
  */
-std::vector<std::int64_t> GrappoloCommunityDetection(GrappoloGraph &grappolo_graph, bool coloring,
+std::vector<std::int64_t> GrappoloCommunityDetection(GrappoloGraph &grappolo_graph, mgp_graph *graph, bool coloring,
                                                      std::uint64_t min_graph_size, double threshold,
-                                                     double coloringThreshold);
+                                                     double coloring_threshold);
 
 /**
  * Method for loading Grappolo graph from the instance of Memgraph graph.
@@ -52,7 +53,7 @@ void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, GrappoloGr
 
 }  // namespace
 
-std::vector<std::int64_t> GetCommunities(const mg_graph::GraphView<> &memgraph_graph, bool coloring = false,
+std::vector<std::int64_t> GetCommunities(const mg_graph::GraphView<> &memgraph_graph, mgp_graph *graph, bool coloring = false,
                                          std::uint64_t min_graph_shrink = 100000, double threshold = 0.000001,
                                          double coloring_threshold = 0.01);
 

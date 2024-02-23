@@ -2,50 +2,53 @@
 //
 //            Grappolo: A C++ library for graph clustering
 //               Mahantesh Halappanavar (hala@pnnl.gov)
-//               Pacific Northwest National Laboratory     
+//               Pacific Northwest National Laboratory
 //
 // ***********************************************************************
 //
 //       Copyright (2014) Battelle Memorial Institute
 //                      All rights reserved.
 //
-// Redistribution and use in source and binary forms, with or without 
-// modification, are permitted provided that the following conditions 
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
 // are met:
 //
-// 1. Redistributions of source code must retain the above copyright 
+// 1. Redistributions of source code must retain the above copyright
 // notice, this list of conditions and the following disclaimer.
 //
-// 2. Redistributions in binary form must reproduce the above copyright 
-// notice, this list of conditions and the following disclaimer in the 
+// 2. Redistributions in binary form must reproduce the above copyright
+// notice, this list of conditions and the following disclaimer in the
 // documentation and/or other materials provided with the distribution.
 //
-// 3. Neither the name of the copyright holder nor the names of its 
-// contributors may be used to endorse or promote products derived from 
+// 3. Neither the name of the copyright holder nor the names of its
+// contributors may be used to endorse or promote products derived from
 // this software without specific prior written permission.
 //
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
-// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
-// FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
-// COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
-// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
-// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN 
-// ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+// FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+// COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+// ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 //
 // ************************************************************************
 
 #include "defs.h"
 #include "utilityClusteringFunctions.h"
+
+#include <mg_procedure.h>
+
 using namespace std;
 
-double parallelLouvianMethodScaleFastTrackResistance(graph *G, long *C, int nThreads, double Lower, 
+double parallelLouvianMethodScaleFastTrackResistance(graph *G, mgp_graph *mg_graph, long *C, int nThreads, double Lower,
         double thresh, double *totTime, int *numItr, int phase, double* rmin, double* finMod) {
-#ifdef PRINT_DETAILED_STATS_  
+#ifdef PRINT_DETAILED_STATS_
 #endif
   if (nThreads < 1)
     omp_set_num_threads(1);
@@ -58,15 +61,15 @@ double parallelLouvianMethodScaleFastTrackResistance(graph *G, long *C, int nThr
   }
 #ifdef PRINT_DETAILED_STATS_
 #endif
-  double time1, time2, time3, time4; //For timing purposes  
+  double time1, time2, time3, time4; //For timing purposes
   double total = 0, totItr = 0;
-  
+
   long    NV        = G->numVertices;
-  long    NS        = G->sVertices;      
+  long    NS        = G->sVertices;
   long    NE        = G->numEdges;
   long    *vtxPtr   = G->edgeListPtrs;
   edge    *vtxInd   = G->edgeList;
- 
+
   /* Variables for computing modularity */
   long totalEdgeWeightTwice;
   double constantForSecondTerm;
@@ -76,7 +79,7 @@ double parallelLouvianMethodScaleFastTrackResistance(graph *G, long *C, int nThr
   double currModAFG=-1;
   double thresMod = thresh; //Input parameter
   int numItrs = 0;
-  
+
   /********************** Initialization **************************/
   time1 = omp_get_wtime();
   //Store the degree of all vertices
@@ -91,12 +94,12 @@ double parallelLouvianMethodScaleFastTrackResistance(graph *G, long *C, int nThr
  //   cUpdate[i].resize(nT);
  // }
 
-  
+
   //use for Modularity calculation (eii)
   double* clusterWeightInternal = (double*) malloc (NV*sizeof(double)); assert(clusterWeightInternal != 0);
 
   sumVertexDegree(vtxInd, vtxPtr, vDegree, NV , cInfo);	// Sum up the vertex degree
-  
+
   /*** Compute the total edge weight (2m) and 1/2m ***/
   constantForSecondTerm = calConstantForSecondTerm(vDegree, NV); // 1 over sum of the degree
 
@@ -105,22 +108,22 @@ double parallelLouvianMethodScaleFastTrackResistance(graph *G, long *C, int nThr
   //Store previous iteration's community assignment
   long* pastCommAss = (long *) malloc (NV * sizeof(long)); assert(pastCommAss != 0);
   //Store current community assignment
-  long* currCommAss = (long *) malloc (NV * sizeof(long)); assert(currCommAss != 0);  
-  //Store the target of community assignment  
+  long* currCommAss = (long *) malloc (NV * sizeof(long)); assert(currCommAss != 0);
+  //Store the target of community assignment
   long* targetCommAss = (long *) malloc (NV * sizeof(long)); assert(targetCommAss != 0);
- 
+
 //Vectors used in place of maps: Total size = |V|+2*|E| -- The |V| part takes care of self loop
 //  mapElement* clusterLocalMapX = (mapElement *) malloc ((NV + 2*NE) * sizeof(mapElement)); assert(clusterLocalMapX != 0);
   //double* Counter             = (double *)     malloc ((NV + 2*NE) * sizeof(double));     assert(Counter != 0);
- 
+
   //Initialize each vertex to its own cluster
   //initCommAssOpt(pastCommAss, currCommAss, NV, clusterLocalMapX, vtxPtr, vtxInd, cInfo, constantForSecondTerm, vDegree);
-  
+
   //Initialize each vertex to its own cluster
-  initCommAss(pastCommAss, currCommAss, NV); 
+  initCommAss(pastCommAss, currCommAss, NV);
 
   time2 = omp_get_wtime();
-	
+
 #ifdef PRINT_DETAILED_STATS_
 #endif
 #ifdef PRINT_TERSE_STATS_
@@ -131,10 +134,10 @@ double parallelLouvianMethodScaleFastTrackResistance(graph *G, long *C, int nThr
     /* Re-initialize datastructures */
 #pragma omp parallel
 {
- 
+    [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
 #pragma omp for
     for (long i=0; i<NV; i++) {
-      clusterWeightInternal[i] = 0; 
+      clusterWeightInternal[i] = 0;
     }
 #pragma omp for
     for (long i = 0; i<nT*nT; i++){
@@ -152,17 +155,17 @@ double parallelLouvianMethodScaleFastTrackResistance(graph *G, long *C, int nThr
 
     #pragma omp for
     for (long i=0; i<NV; i++) {
-        
+
         long adj1 = vtxPtr[i];
         long adj2 = vtxPtr[i+1];
 	double selfLoop = 0;
-	  
-        //Build a datastructure to hold the cluster structure of its neighbors      	
+
+        //Build a datastructure to hold the cluster structure of its neighbors
 	map<long, long> clusterLocalMap; //Map each neighbor's cluster to a local number
 	map<long, long>::iterator storedAlready;
 	vector<double> Counter; //Number of edges in each unique cluster
 	//Add v's current cluster:
-	if(adj1 != adj2){	
+	if(adj1 != adj2){
             clusterLocalMap[currCommAss[i]] = 0;
 	    Counter.push_back(0); //Initialize the counter to ZERO (no edges incident yet)
 	    //Find unique cluster ids and #of edges incident (eicj) to them
@@ -173,28 +176,28 @@ double parallelLouvianMethodScaleFastTrackResistance(graph *G, long *C, int nThr
 	    targetCommAss[i] = max(clusterLocalMap, Counter, selfLoop, cInfo, vDegree[i], currCommAss[i], constantForSecondTerm);
             //assert((targetCommAss[i] >= 0)&&(targetCommAss[i] < NV));
         } else {
-            targetCommAss[i] = -1;	
-        }          
+            targetCommAss[i] = -1;
+        }
 
         //Update
         if(targetCommAss[i] != currCommAss[i]  && targetCommAss[i] != -1) {
           int owner1 = currCommAss[i] / blkSize + myMap;
           int owner2 = targetCommAss[i]/ blkSize + myMap;
-          
+
           map<long,Comm>::iterator it = cUpdate[owner1].find(currCommAss[i]);
           if(it == cUpdate[owner1].end()){
             it = cUpdate[owner1].insert(std::make_pair(currCommAss[i],Comm())).first;
           }
           it->second.size -=1;
           it->second.degree-=vDegree[i];
-          
+
           it = cUpdate[owner2].find(targetCommAss[i]);
           if(it == cUpdate[owner2].end()){
             it = cUpdate[owner2].insert(std::make_pair(targetCommAss[i],Comm())).first;
           }
           it->second.size +=1;
           it->second.degree+=vDegree[i];
-          
+
           /*#pragma omp atomic update
 	        cUpdate[targetCommAss[i]].degree += vDegree[i];
 	        #pragma omp atomic update
@@ -203,39 +206,40 @@ double parallelLouvianMethodScaleFastTrackResistance(graph *G, long *C, int nThr
 	        cUpdate[currCommAss[i]].degree -= vDegree[i];
           #pragma omp atomic update
 	        cUpdate[currCommAss[i]].size -=1;
-          
+
           __sync_fetch_and_add(&cUpdate[targetCommAss[i]].size, 1);
 	        __sync_fetch_and_sub(&cUpdate[currCommAss[i]].degree, vDegree[i]);
 	        __sync_fetch_and_sub(&cUpdate[currCommAss[i]].size, 1);*/
-        }//End of If()      
-        clusterLocalMap.clear();      
+        }//End of If()
+        clusterLocalMap.clear();
         Counter.clear();
     }//End of for(i)
+    [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
     } // End of omp parallel
     time2 = omp_get_wtime();
- 
-    time3 = omp_get_wtime();    
-     
+
+    time3 = omp_get_wtime();
+
     double e_xx = 0;
     double a2_x = 0;
-        
+
     // Compute coefficients for Q and Q_afg
-        
+
 #pragma omp parallel for \
         reduction(+:e_xx) reduction(+:a2_x)
         for (long i=0; i<NV; i++) {
             e_xx += clusterWeightInternal[i];
             a2_x += (cInfo[i].degree)*(cInfo[i].degree);
         }
-        
+
         // calculate Q[w,C]
         currMod = (e_xx*(double)constantForSecondTerm) - (a2_x*(double)constantForSecondTerm*(double)constantForSecondTerm);
- 
+
         // Calculate r_min(C) and Q_AFG
         if (phase > 1) {
             long n_c = 0;
-            
-            // total weight twice (2m) 
+
+            // total weight twice (2m)
             double w_2 = ((double)1.0 / (double)constantForSecondTerm);
             // N - (1/N)*\sigma(n_s^2)
             double Nrecp = ((double)1.0/(double)NV);
@@ -253,15 +257,15 @@ double parallelLouvianMethodScaleFastTrackResistance(graph *G, long *C, int nThr
 
             // 1 / (2w - Nr)
             double denomAFG = ((double)1.0 / (((double)w_2) - ((double)NV * r_min)));
-            // 2w * Q[w,C] 
+            // 2w * Q[w,C]
             double constantForFirstTermAFG = (double)(w_2 * currMod);
             // r * (N - (1/N)*\sigma(n_s^2))
             double constantForSecondTermAFG = r_min * Nd;
             currModAFG = denomAFG * ((double)constantForFirstTermAFG + (double)constantForSecondTermAFG);
-        }   
-    
+        }
+
     time4 = omp_get_wtime();
-          
+
     totItr = (time2-time1) + (time4-time3);
     total += totItr;
 
@@ -269,7 +273,7 @@ double parallelLouvianMethodScaleFastTrackResistance(graph *G, long *C, int nThr
 #endif
 #ifdef PRINT_TERSE_STATS_
 #endif
-       
+
         // exit criteria
         // optimal C when Q_AFG == 0
         if (phase > 1) {
@@ -287,7 +291,10 @@ double parallelLouvianMethodScaleFastTrackResistance(graph *G, long *C, int nThr
                 prevMod = Lower;
         }
 
-#pragma omp parallel for 
+#pragma omp parallel
+{
+    [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
+#pragma omp for
     for (long i=0; i<nT; i++) {
       map<long,Comm>::iterator it;
       for( long j =0; j<nT;j++){
@@ -307,30 +314,32 @@ double parallelLouvianMethodScaleFastTrackResistance(graph *G, long *C, int nThr
 //    cInfo[i].size += cUpdate[i].size;
 //    cInfo[i].degree += cUpdate[i].degree;
     }
-    
+    [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
+}
+
     //Do pointer swaps to reuse memory:
     long* tmp;
     tmp = pastCommAss;
     pastCommAss = currCommAss; //Previous holds the current
     currCommAss = targetCommAss; //Current holds the chosen assignment
     targetCommAss = tmp;      //Reuse the vector
-          
+
     // prevent infinite loop
     if (numItrs > 200)
           break;
-    numItrs++;    
+    numItrs++;
   }//End of while(true)
   *totTime = total; //Return back the total time for clustering
   *numItr  = numItrs;
 
 #ifdef PRINT_DETAILED_STATS_
-#endif  
+#endif
 #ifdef PRINT_TERSE_STATS_
 #endif
 
   //Store back the community assignments in the input variable:
   //Note: No matter when the while loop exits, we are interested in the previous assignment
-#pragma omp parallel for 
+#pragma omp parallel for
   for (long i=0; i<NV; i++) {
     C[i] = pastCommAss[i];
   }
@@ -347,7 +356,7 @@ double parallelLouvianMethodScaleFastTrackResistance(graph *G, long *C, int nThr
   for (long i = 0; i<nT*nT; i++){
       cUpdate[i].clear();
   }
-    
+
   *rmin = r_min;
   *finMod = currMod;
 

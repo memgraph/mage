@@ -58,7 +58,7 @@ void LouvainCommunityDetection(mgp_list *args, mgp_graph *memgraph_graph, mgp_re
                                              weight_property, kDefaultWeight);
 
   auto communities =
-      louvain_alg::GetCommunities(*graph, coloring, min_graph_shrink, community_alg_threshold, coloring_alg_threshold);
+      louvain_alg::GetCommunities(*graph, memgraph_graph, coloring, min_graph_shrink, community_alg_threshold, coloring_alg_threshold);
 
   for (std::uint64_t node_id = 0; node_id < graph->Nodes().size(); ++node_id) {
     InsertLouvainRecord(memgraph_graph, result, memory, graph->GetMemgraphNodeId(node_id), communities[node_id]);

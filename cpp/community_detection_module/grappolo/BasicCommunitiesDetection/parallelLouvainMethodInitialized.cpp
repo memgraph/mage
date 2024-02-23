@@ -39,14 +39,16 @@
 //
 // ************************************************************************
 
+#include <mg_procedure.h>
 #include "defs.h"
 #include "utilityClusteringFunctions.h"
 #include "basic_comm.h"
+
 using namespace std;
 
 //Perform the Louvain method on an already initialized graph
 //Initial clustering is provided as input in C
-double parallelLouvianMethodInitialized(graph *G, long *C, int nThreads, double Lower,
+double parallelLouvianMethodInitialized(graph *G, mgp_graph *mg_graph, long *C, int nThreads, double Lower,
                                         double thresh, double *totTime, int *numItr) {
 #ifdef PRINT_DETAILED_STATS_
 #endif
@@ -63,13 +65,13 @@ double parallelLouvianMethodInitialized(graph *G, long *C, int nThreads, double 
 #endif
     double time1, time2, time3, time4; //For timing purposes
     double total = 0, totItr = 0;
-    
+
     long    NV        = G->numVertices;
     long    NS        = G->sVertices;
     long    NE        = G->numEdges;
     long    *vtxPtr   = G->edgeListPtrs;
     edge    *vtxInd   = G->edgeList;
-    
+
     /* Variables for computing modularity */
     long totalEdgeWeightTwice;
     double constantForSecondTerm;
@@ -78,7 +80,7 @@ double parallelLouvianMethodInitialized(graph *G, long *C, int nThreads, double 
     //double thresMod = 0.000001;
     double thresMod = thresh; //Input parameter
     int numItrs = 0;
-    
+
     /********************** Initialization **************************/
     time1 = omp_get_wtime();
     //Store the degree of all vertices
@@ -99,7 +101,7 @@ double parallelLouvianMethodInitialized(graph *G, long *C, int nThreads, double 
     long* currCommAss = (long *) malloc (NV * sizeof(long)); assert(currCommAss != 0);
     //Store the target of community assignment
     long* targetCommAss = (long *) malloc (NV * sizeof(long)); assert(targetCommAss != 0);
-    
+
     //Initialize each vertex to its own cluster
     //Original: initCommAss(pastCommAss, currCommAss, NV);
 #pragma omp parallel for
@@ -108,9 +110,9 @@ double parallelLouvianMethodInitialized(graph *G, long *C, int nThreads, double 
         pastCommAss[i] = C[i]; //Initialize each vertex to its cluster
         currCommAss[i] = C[i];
     }
-    
+
     time2 = omp_get_wtime();
-    
+
 #ifdef PRINT_DETAILED_STATS_
 #endif
 #ifdef PRINT_TERSE_STATS_
@@ -127,7 +129,10 @@ double parallelLouvianMethodInitialized(graph *G, long *C, int nThreads, double 
             cUpdate[i].size =0;
         }
 
-#pragma omp parallel for
+#pragma omp parallel
+{
+        [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
+#pragma omp for
         for (long i=0; i<NV; i++) {
             long adj1 = vtxPtr[i];
             long adj2 = vtxPtr[i+1];
@@ -164,12 +169,14 @@ double parallelLouvianMethodInitialized(graph *G, long *C, int nThreads, double 
             clusterLocalMap.clear();
             Counter.clear();
         }//End of for(i)
+        [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
+}
         time2 = omp_get_wtime();
-        
+
         time3 = omp_get_wtime();
         double e_xx = 0;
         double a2_x = 0;
-        
+
 #pragma omp parallel for \
 reduction(+:e_xx) reduction(+:a2_x)
         for (long i=0; i<NV; i++) {
@@ -177,7 +184,7 @@ reduction(+:e_xx) reduction(+:a2_x)
             a2_x += (cInfo[i].degree)*(cInfo[i].degree);
         }
         time4 = omp_get_wtime();
-        
+
         currMod = (e_xx*(double)constantForSecondTerm) - (a2_x*(double)constantForSecondTerm*(double)constantForSecondTerm);
         totItr = (time2-time1) + (time4-time3);
         total += totItr;
@@ -185,12 +192,12 @@ reduction(+:e_xx) reduction(+:a2_x)
 #endif
 #ifdef PRINT_TERSE_STATS_
 #endif
-        
+
         //Break if modularity gain is not sufficient
         if((currMod - prevMod) < thresMod) {
             break;
         }
-        
+
         //Else update information for the next iteration
         prevMod = currMod;
         if(prevMod < Lower)
@@ -200,26 +207,26 @@ reduction(+:e_xx) reduction(+:a2_x)
             cInfo[i].size += cUpdate[i].size;
             cInfo[i].degree += cUpdate[i].degree;
         }
-        
+
         //Do pointer swaps to reuse memory:
         long* tmp;
         tmp = pastCommAss;
         pastCommAss = currCommAss; //Previous holds the current
         currCommAss = targetCommAss; //Current holds the chosen assignment
         targetCommAss = tmp;      //Reuse the vector
-        
+
     }//End of while(true)
     *totTime = total; //Return back the total time for clustering
     *numItr  = numItrs;
-    
+
 #ifdef PRINT_DETAILED_STATS_
 #endif
 #ifdef PRINT_TERSE_STATS_
 #endif
-    
+
     //Store back the community assignments in the input variable:
     //Note: No matter when the while loop exits, we are interested in the previous assignment
-#pragma omp parallel for 
+#pragma omp parallel for
     for (long i=0; i<NV; i++) {
         C[i] = pastCommAss[i];
     }
@@ -231,6 +238,6 @@ reduction(+:e_xx) reduction(+:a2_x)
     free(cInfo);
     free(cUpdate);
     free(clusterWeightInternal);
-    
+
     return prevMod;
 } //End of parallelLouvianMethodInitialized()

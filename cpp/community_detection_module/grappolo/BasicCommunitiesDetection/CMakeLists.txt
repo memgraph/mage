@@ -1,4 +1,4 @@
-# grappolo 
+# grappolo
 
 
 set( COFOLDER_SRC
@@ -17,12 +17,12 @@ set( COFOLDER_SRC
 
 
 add_library( basic_cd
-  ${COFOLDER_SRC} 
+  ${COFOLDER_SRC}
 )
 
 target_include_directories(basic_cd PUBLIC ${IO_HEADERS} )
 
-target_link_libraries( basic_cd )
+target_link_libraries(basic_cd PRIVATE mg_utility)
 
 install( TARGETS
   basic_cd
