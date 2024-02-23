@@ -2,7 +2,7 @@ query: >
     CALL periodic.delete({batch_size: 10}) YIELD * RETURN *;ng
 
 output:
-    - boolean: true
+    - success: true
       number_of_executed_batches: 3
       number_of_deleted_nodes: 10
       number_of_deleted_edges: 0
