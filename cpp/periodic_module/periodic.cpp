@@ -18,6 +18,8 @@ const char *kConfigKeyEdgeTypes = "edge_types";
 
 const char *kReturnSuccess = "success";
 const char *kReturnNumBatches = "number_of_executed_batches";
+const char *kReturnNumDeletedNodes = "number_of_deleted_nodes";
+const char *kReturnNumDeletedRelationships = "number_of_deleted_relationships";
 
 const char *kMgHost = "MG_HOST";
 const char *kMgPort = "MG_PORT";
@@ -37,6 +39,12 @@ struct DeletionInfo {
   uint64_t batch_size;
   std::vector<std::string> labels;
   std::vector<std::string> edge_types;
+};
+
+struct DeletionResult {
+  uint64_t num_batches;
+  uint64_t num_deleted_nodes;
+  uint64_t num_deleted_relationships;
 };
 
 mg::Client::Params GetClientParams() {
@@ -319,8 +327,7 @@ DeletionInfo GetDeletionInfo(const mgp::Map &config) {
           .edge_types = std::move(edge_types)};
 }
 
-uint64_t ExecutePeriodicDelete(DeletionInfo deletion_info) {
-  uint64_t num_of_executed_batches = 0;
+void ExecutePeriodicDelete(DeletionInfo deletion_info, DeletionResult &deletion_result) {
   auto labels_formatted = deletion_info.labels.empty() ? "" : fmt::format(":{}", Join(deletion_info.labels, ":"));
   auto edge_types_formatted =
       deletion_info.edge_types.empty() ? "" : fmt::format(":{}", Join(deletion_info.edge_types, "|"));
@@ -349,7 +356,8 @@ uint64_t ExecutePeriodicDelete(DeletionInfo deletion_info) {
     client->DiscardAll();
 
     auto num_deleted = (*result)[0].ValueInt();
-    num_of_executed_batches++;
+    deletion_result.num_batches++;
+    deletion_result.num_deleted_relationships += num_deleted;
     if (static_cast<uint64_t>(num_deleted) < deletion_info.batch_size) {
       break;
     }
@@ -368,24 +376,24 @@ uint64_t ExecutePeriodicDelete(DeletionInfo deletion_info) {
     client->DiscardAll();
 
     auto num_deleted = (*result)[0].ValueInt();
-    num_of_executed_batches++;
+    deletion_result.num_batches++;
+    deletion_result.num_deleted_nodes += num_deleted;
     if (static_cast<uint64_t>(num_deleted) < deletion_info.batch_size) {
       break;
     }
   }
-
-  return num_of_executed_batches;
 }
 
 void PeriodicDelete(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
 
-  uint64_t num_of_executed_batches = 0;
   const auto record_factory = mgp::RecordFactory(result);
   auto record = record_factory.NewRecord();
 
   const auto config = arguments[0].ValueMap();
+
+  DeletionResult deletion_result;
 
   try {
     mg::Client::Init();
@@ -398,16 +406,20 @@ void PeriodicDelete(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resul
 
     auto deletion_info = GetDeletionInfo(config);
 
-    num_of_executed_batches = ExecutePeriodicDelete(std::move(deletion_info));
+    ExecutePeriodicDelete(std::move(deletion_info), deletion_result);
 
     mg::Client::Finalize();
 
     record.Insert(kReturnSuccess, true);
-    record.Insert(kReturnNumBatches, static_cast<int64_t>(num_of_executed_batches));
+    record.Insert(kReturnNumBatches, static_cast<int64_t>(deletion_result.num_batches));
+    record.Insert(kReturnNumDeletedNodes, static_cast<int64_t>(deletion_result.num_deleted_nodes));
+    record.Insert(kReturnNumDeletedRelationships, static_cast<int64_t>(deletion_result.num_deleted_relationships));
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
     record.Insert(kReturnSuccess, false);
-    record.Insert(kReturnNumBatches, static_cast<int64_t>(num_of_executed_batches));
+    record.Insert(kReturnNumBatches, static_cast<int64_t>(deletion_result.num_batches));
+    record.Insert(kReturnNumDeletedNodes, static_cast<int64_t>(deletion_result.num_deleted_nodes));
+    record.Insert(kReturnNumDeletedRelationships, static_cast<int64_t>(deletion_result.num_deleted_relationships));
   }
 }
 
@@ -491,7 +503,9 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
 
     mgp::AddProcedure(PeriodicDelete, kProcedurePeriodicDelete, mgp::ProcedureType::Read,
                       {mgp::Parameter(kArgumentConfig, mgp::Type::Map)},
-                      {mgp::Return(kReturnSuccess, mgp::Type::Bool), mgp::Return(kReturnNumBatches, mgp::Type::Int)},
+                      {mgp::Return(kReturnSuccess, mgp::Type::Bool), mgp::Return(kReturnNumBatches, mgp::Type::Int),
+                       mgp::Return(kReturnNumDeletedNodes, mgp::Type::Int),
+                       mgp::Return(kReturnNumDeletedRelationships, mgp::Type::Int)},
                       module, memory);
   } catch (const std::exception &e) {
     return 1;
