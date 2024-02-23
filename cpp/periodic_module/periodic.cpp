@@ -36,15 +36,15 @@ struct ParamNames {
 };
 
 struct DeletionInfo {
-  uint64_t batch_size;
-  std::vector<std::string> labels;
-  std::vector<std::string> edge_types;
+  uint64_t batch_size{0};
+  std::vector<std::string> labels{};
+  std::vector<std::string> edge_types{};
 };
 
 struct DeletionResult {
-  uint64_t num_batches;
-  uint64_t num_deleted_nodes;
-  uint64_t num_deleted_relationships;
+  uint64_t num_batches{0};
+  uint64_t num_deleted_nodes{0};
+  uint64_t num_deleted_relationships{0};
 };
 
 mg::Client::Params GetClientParams() {
@@ -337,9 +337,9 @@ void ExecutePeriodicDelete(DeletionInfo deletion_info, DeletionResult &deletion_
       deletion_info.edge_types.empty() ? "" : fmt::format(":{}", Join(deletion_info.edge_types, "|"));
 
   auto relationships_deletion_query =
-      fmt::format("MATCH (n{})-[r{}]-(m) WITH r LIMIT {} DELETE r RETURN count(r) AS num_deleted", labels_formatted,
+      fmt::format("MATCH (n{})-[r{}]-(m) WITH DISTINCT r LIMIT {} DELETE r RETURN count(r) AS num_deleted", labels_formatted,
                   edge_types_formatted, deletion_info.batch_size);
-  auto nodes_deletion_query = fmt::format("MATCH (n{}) WITH n LIMIT {} DETACH DELETE n RETURN count(n) AS num_deleted",
+  auto nodes_deletion_query = fmt::format("MATCH (n{}) WITH DISTINCT n LIMIT {} DETACH DELETE n RETURN count(n) AS num_deleted",
                                           labels_formatted, deletion_info.batch_size);
 
   auto client = mg::Client::Connect(GetClientParams());
@@ -360,7 +360,7 @@ void ExecutePeriodicDelete(DeletionInfo deletion_info, DeletionResult &deletion_
 
       client->DiscardAll();
 
-      auto num_deleted = (*result)[0].ValueInt();
+      uint64_t num_deleted = static_cast<uint64_t>((*result)[0].ValueInt());
       deletion_result.num_batches++;
       deletion_result.num_deleted_relationships += num_deleted;
       if (static_cast<uint64_t>(num_deleted) < deletion_info.batch_size) {
@@ -382,7 +382,7 @@ void ExecutePeriodicDelete(DeletionInfo deletion_info, DeletionResult &deletion_
 
       client->DiscardAll();
 
-      auto num_deleted = (*result)[0].ValueInt();
+      uint64_t num_deleted = static_cast<uint64_t>((*result)[0].ValueInt());
       deletion_result.num_batches++;
       deletion_result.num_deleted_nodes += num_deleted;
       if (static_cast<uint64_t>(num_deleted) < deletion_info.batch_size) {
