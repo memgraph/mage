@@ -1,0 +1,8 @@
+query: >
+    CALL periodic.delete({batch_size: 10, edge_types:["TYPE"]}) YIELD * RETURN *;ng
+
+output:
+    - boolean: true
+      number_of_executed_batches: 2
+      number_of_deleted_nodes: 0
+      number_of_deleted_edges: 10

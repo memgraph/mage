@@ -277,7 +277,7 @@ void ValidateDeletionConfig(const mgp::Map &config) {
   auto edge_types_key = std::string(kConfigKeyEdgeTypes);
 
   if (!config.KeyExists(batch_size_key)) {
-    throw std::runtime_error("No config batch size specified!");
+    throw std::runtime_error("Periodic.delete() did not specify config parameter batch_size!");
   }
 
   auto batch_size_value = config.At(batch_size_key);
@@ -328,6 +328,10 @@ DeletionInfo GetDeletionInfo(const mgp::Map &config) {
 }
 
 void ExecutePeriodicDelete(DeletionInfo deletion_info, DeletionResult &deletion_result) {
+  auto delete_all = deletion_info.edge_types.empty() && deletion_info.labels.empty();
+  auto delete_nodes = delete_all || (!deletion_info.labels.empty() && deletion_info.edge_types.empty());
+  auto delete_edges = delete_all || (deletion_info.labels.empty() && !deletion_info.edge_types.empty());
+
   auto labels_formatted = deletion_info.labels.empty() ? "" : fmt::format(":{}", Join(deletion_info.labels, ":"));
   auto edge_types_formatted =
       deletion_info.edge_types.empty() ? "" : fmt::format(":{}", Join(deletion_info.edge_types, "|"));
@@ -343,43 +347,47 @@ void ExecutePeriodicDelete(DeletionInfo deletion_info, DeletionResult &deletion_
     throw std::runtime_error("Unable to connect to client!");
   }
 
-  while (true) {
-    if (!client->Execute(relationships_deletion_query)) {
-      throw std::runtime_error("Error while executing periodic iterate!");
-    }
+  if (delete_edges) {
+    while (true) {
+      if (!client->Execute(relationships_deletion_query)) {
+        throw std::runtime_error("Error while executing periodic iterate!");
+      }
 
-    auto result = client->FetchOne();
-    if (!result || (*result).size() != 1) {
-      throw std::runtime_error("No result received from periodic delete!");
-    }
+      auto result = client->FetchOne();
+      if (!result || (*result).size() != 1) {
+        throw std::runtime_error("No result received from periodic delete!");
+      }
 
-    client->DiscardAll();
+      client->DiscardAll();
 
-    auto num_deleted = (*result)[0].ValueInt();
-    deletion_result.num_batches++;
-    deletion_result.num_deleted_relationships += num_deleted;
-    if (static_cast<uint64_t>(num_deleted) < deletion_info.batch_size) {
-      break;
+      auto num_deleted = (*result)[0].ValueInt();
+      deletion_result.num_batches++;
+      deletion_result.num_deleted_relationships += num_deleted;
+      if (static_cast<uint64_t>(num_deleted) < deletion_info.batch_size) {
+        break;
+      }
     }
   }
 
-  while (true) {
-    if (!client->Execute(nodes_deletion_query)) {
-      throw std::runtime_error("Error while executing periodic iterate!");
-    }
+  if (delete_nodes) {
+    while (true) {
+      if (!client->Execute(nodes_deletion_query)) {
+        throw std::runtime_error("Error while executing periodic iterate!");
+      }
 
-    auto result = client->FetchOne();
-    if (!result || (*result).size() != 1) {
-      throw std::runtime_error("No result received from periodic delete!");
-    }
+      auto result = client->FetchOne();
+      if (!result || (*result).size() != 1) {
+        throw std::runtime_error("No result received from periodic delete!");
+      }
 
-    client->DiscardAll();
+      client->DiscardAll();
 
-    auto num_deleted = (*result)[0].ValueInt();
-    deletion_result.num_batches++;
-    deletion_result.num_deleted_nodes += num_deleted;
-    if (static_cast<uint64_t>(num_deleted) < deletion_info.batch_size) {
-      break;
+      auto num_deleted = (*result)[0].ValueInt();
+      deletion_result.num_batches++;
+      deletion_result.num_deleted_nodes += num_deleted;
+      if (static_cast<uint64_t>(num_deleted) < deletion_info.batch_size) {
+        break;
+      }
     }
   }
 }
