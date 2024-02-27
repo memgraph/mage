@@ -506,7 +506,7 @@ pub(crate) unsafe fn mgp_raw_value_to_value(
     match invoke_mgp_func!(mgp_value_type, ffi::mgp_value_get_type, value).unwrap() {
         mgp_value_type::MGP_VALUE_TYPE_NULL => Ok(Value::Null),
         mgp_value_type::MGP_VALUE_TYPE_BOOL => Ok(Value::Bool(
-            invoke_mgp_func!(::std::os::raw::c_int, ffi::mgp_value_get_bool, value).unwrap() == 0,
+            invoke_mgp_func!(::std::os::raw::c_int, ffi::mgp_value_get_bool, value).unwrap() != 0,
         )),
         mgp_value_type::MGP_VALUE_TYPE_INT => Ok(Value::Int(
             invoke_mgp_func!(i64, ffi::mgp_value_get_int, value).unwrap(),
