@@ -1,9 +1,31 @@
 name: Publish Docker image
 on:
-  push:
-    tags:
-      - v*.*-memgraph-*.*
-      - v*.*.*-memgraph-*.*
+  workflow_dispatch:
+    inputs:
+      mage_version:
+        type: string
+        description: "Mage version built into this image (format: X.Y.Z)"
+        required: true
+      memgraph_version:
+        type: string
+        description: "Memgraph version built into this image (format: X.Y.Z)"
+        required: true
+      shorten_tag:
+        type: boolean
+        description: "Make the final tag as short as possible, shortest format is X.Y-memgraph-X.Y"
+        default: true
+      additional_tag:
+        type: choice
+        default: 'latest'
+        descritpion: "Additional tag for the image"
+        required: true
+        options:
+          - 'latest'
+          - 'fix'
+      force_release:
+        type: boolean
+        description: "Overwrite existing image on dockerhub"
+        default: true
 
 jobs:
   build_and_release_docker:
@@ -12,7 +34,6 @@ jobs:
     env:
       DOCKER_ORGANIZATION_NAME: memgraph
       DOCKER_REPOSITORY_NAME: memgraph-mage
-      MEMGRAPH_VERSION: 2.14.1
     steps:            
       - name: Checkout repository and submodules
         uses: actions/checkout@v3
@@ -28,54 +49,56 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v1
 
-      - name: Get latest tag
-        id: get-latest-tag
-        uses: oprypin/find-latest-tag@v1
-        with:
-          repository: memgraph/mage
-          releases-only: false
-          prefix: "v"
-
-      - run: echo "MAGE is at version ${{ steps.get-latest-tag.outputs.tag }}"
-
-      - name: Get commit tag
-        id: get-commit-tag
-        run: |
-          export VERSION=${GITHUB_REF#refs/tags/}
-          echo "::set-output name=VERSION_TAG::${VERSION:1}"
-          echo "::set-output name=VERSION::${VERSION}"
-
-      - name: Get version
-        run: echo "Version is ${{ steps.get-commit-tag.outputs.VERSION }}"
-
-      - name: Set production tag
-        id: get-prod-tags
-        run: |
-          if [ "${{ steps.get-commit-tag.outputs.VERSION }}" == "${{ steps.get-latest-tag.outputs.tag }}" ]
-          then
-            echo "::set-output name=LATEST::latest"
-          else
-            echo "::set-output name=LATEST::fix"
-          fi
-      - run: echo "Additional tag for production image - ${{ steps.get-prod-tags.outputs.LATEST }}"
       - name: Log in to Docker Hub
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Set image version tag
+        run: |
+          MEMGRAPH_VERSION=${{ github.event.inputs.memgraph_version }}
+          MAGE_VERSION=${{ github.event.inputs.mage_version }}
+          if [[ ${{ github.event.inputs.shorten_tag }} == true ]]; then
+            memgraph_patch_version=${MEMGRAPH_VERSION##*.}
+            mage_patch_version=${MAGE_VERSION##*.}
+            if [[ "$memgraph_patch_version" -eq 0 ]]; then
+              MEMGRAPH_VERSION=${MEMGRAPH_VERSION%.*}
+            fi
+            if [[ "$mage_patch_version" -eq 0 ]]; then
+              MAGE_VERSION=${MAGE_VERSION%.*}
+            fi
+          fi
+          echo "VERSION_TAG=$MAGE_VERSION-memgraph-$MEMGRAPH_VERSION" >> $GITHUB_ENV
+
+      - name: Check if specified version tag is already pushed
+        run: |
+          EXISTS=$(docker manifest inspect $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.VERSION_TAG }} > /dev/null; echo $?)
+          echo $EXISTS
+          if [[ ${EXISTS} -eq 0 ]]; then
+              echo The specified version has been already released to DockerHub!
+              if [[ ${{ github.event.inputs.force_release }} = true ]]; then
+                echo Forcing the release
+              else
+                echo Stopping the release
+                exit 1
+              fi
+          else
+              echo All good the specified version has not been release to DockerHub
+          fi
 
       - name: Download memgraph binary
         run: |
-          curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11/memgraph_${MEMGRAPH_VERSION}-1_amd64.deb > memgraph-amd64.deb
-          curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb > memgraph-arm64.deb
+          curl -L https://download.memgraph.com/memgraph/v${{ github.event.inputs.memgraph_version }}/debian-11/memgraph_${{ github.event.inputs.memgraph_version }}-1_amd64.deb > memgraph-amd64.deb
+          curl -L https://download.memgraph.com/memgraph/v${{ github.event.inputs.memgraph_version }}/debian-11-aarch64/memgraph_${{ github.event.inputs.memgraph_version }}-1_arm64.deb > memgraph-arm64.deb
 
       - name: Build & push prod docker images
         run: |
           docker buildx build \
           --target prod \
           --platform linux/amd64,linux/arm64 \
-          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ steps.get-commit-tag.outputs.VERSION_TAG }} \
-          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ steps.get-prod-tags.outputs.LATEST }} \
+          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.VERSION_TAG }} \
+          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ github.event.inputs.addional_tag }} \
           --file Dockerfile.release \
           --push .
 
@@ -84,6 +107,6 @@ jobs:
           docker buildx build \
           --target dev \
           --platform linux/amd64,linux/arm64 \
-          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ steps.get-commit-tag.outputs.VERSION_TAG }}-dev \
+          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.VERSION_TAG }}-dev \
           --file Dockerfile.release \
           --push .
