@@ -98,7 +98,7 @@ jobs:
           --target prod \
           --platform linux/amd64,linux/arm64 \
           --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.VERSION_TAG }} \
-          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ github.event.inputs.addional_tag }} \
+          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ github.event.inputs.additonal_tag }} \
           --file Dockerfile.release \
           --push .
 
