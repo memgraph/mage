@@ -1,16 +1,20 @@
+from collections import deque
+
 import sys
 import mgp
 
 try:
     import networkx as nx
+    from networkx.algorithms import community
     import numpy  # noqa E401
     import scipy  # noqa E401
 except ImportError as import_error:
     sys.stderr.write(
         (
-            f"NOTE: Please install networkx, numpy, scipy to be able to "
-            f"use proxied NetworkX algorithms. E.g., CALL nxalg.pagerank(...).\n"
-            f"Using Python:\n{sys.version}\n"
+            f"NOTE: Please install networkx, numpy and scipy to be able to "
+            f"use the proxied NetworkX algorithms."
+            f"Example usage: CALL nxalg_<FUNCTION_NAME>(...).\n"
+            f"Using Python {sys.version}.\n"
         )
     )
     raise import_error
@@ -32,7 +36,9 @@ def node_connectivity(
     target: mgp.Nullable[mgp.Vertex] = None,
 ) -> mgp.Record(connectivity=int):
     return mgp.Record(
-        connectivity=nx.node_connectivity(MemgraphMultiDiGraph(ctx=ctx), source, target)
+        connectivity=nx.node_connectivity(
+            MemgraphMultiDiGraph(ctx=ctx), s=source, t=target
+        )
     )
 
 
@@ -136,9 +142,13 @@ def is_chordal(ctx: mgp.ProcCtx) -> mgp.Record(is_chordal=bool):
 # networkx.algorithms.clique.find_cliques
 @mgp.read_proc
 def find_cliques(
-    ctx: mgp.ProcCtx,
+    ctx: mgp.ProcCtx, nodes: mgp.Nullable[mgp.List[mgp.Vertex]] = None
 ) -> mgp.Record(cliques=mgp.List[mgp.List[mgp.Vertex]]):
-    return mgp.Record(cliques=list(nx.find_cliques(MemgraphMultiGraph(ctx=ctx))))
+    print(len(nodes))
+    print(nx.find_cliques(MemgraphMultiGraph(ctx=ctx), nodes=nodes))
+    return mgp.Record(
+        cliques=list(nx.find_cliques(MemgraphMultiGraph(ctx=ctx), nodes=nodes))
+    )
 
 
 # networkx.algorithms.cluster.clustering
@@ -198,6 +208,57 @@ def k_clique_communities(
     )
 
 
+# networkx.algorithms.community.louvain.louvain_communities
+#
+# NOTE: NetworkX 2.8.4, algorithms/connectivity/louvain.py:172: We create
+# a *copy* of the graph because the algorithm copies the graph using __class__()
+# and tries to modify it.
+@mgp.read_proc
+def louvain_communities(
+    ctx: mgp.ProcCtx,
+    weight: mgp.Nullable[str] = "weight",
+    resolution: float = 1.0,
+    threshold: float = 1e-7,
+    seed: mgp.Nullable[int] = None,
+) -> mgp.Record(communities=mgp.List[mgp.List[mgp.Vertex]]):
+    return mgp.Record(
+        communities=[
+            list(c)
+            for c in community.louvain_communities(
+                nx.MultiGraph(MemgraphMultiGraph(ctx=ctx)).copy(),
+                weight=weight,
+                resolution=resolution,
+                threshold=threshold,
+                seed=seed,
+            )
+        ]
+    )
+
+
+# networkx.algorithms.community.louvain.louvain_partitions
+#
+# NOTE: NetworkX 2.8.4, algorithms/connectivity/louvain.py:172: We create
+# a *copy* of the graph because the algorithm copies the graph using __class__()
+# and tries to modify it.
+@mgp.read_proc
+def louvain_partitions(
+    ctx: mgp.ProcCtx,
+    weight: mgp.Nullable[str] = "weight",
+    resolution: float = 1.0,
+    threshold: float = 1e-7,
+    seed: mgp.Nullable[int] = None,
+) -> mgp.Record(partitions=mgp.List[mgp.List[mgp.Vertex]]):
+    partitions = community.louvain_partitions(
+        nx.MultiGraph(MemgraphMultiGraph(ctx=ctx)).copy(),
+        weight=weight,
+        resolution=resolution,
+        threshold=threshold,
+        seed=seed,
+    )
+
+    return mgp.Record(partitions=[list(p) for p in deque(partitions, maxlen=1).pop()])
+
+
 # networkx.algorithms.approximation.kcomponents.k_components
 @mgp.read_proc
 def k_components(
@@ -231,9 +292,9 @@ def strongly_connected_components(
 
 # networkx.algorithms.connectivity.edge_kcomponents.k_edge_components
 #
-# NOTE: NetworkX 2.4, algorithms/connectivity/edge_kcompnents.py:367. We create
-# a *copy* of the graph because the algorithm copies the graph using
-# __class__() and tries to modify it.
+# NOTE: NetworkX 2.8.4, algorithms/connectivity/edge_kcomponents.py:356: We create
+# a *copy* of the graph because the algorithm copies the graph using __class__()
+# and tries to modify it.
 @mgp.read_proc
 def k_edge_components(
     ctx: mgp.ProcCtx, k: int
@@ -241,7 +302,9 @@ def k_edge_components(
     return mgp.Record(
         components=[
             list(s)
-            for s in nx.k_edge_components(nx.DiGraph(MemgraphDiGraph(ctx=ctx)), k)
+            for s in nx.k_edge_components(
+                nx.DiGraph(MemgraphDiGraph(ctx=ctx)).copy(), k
+            )
         ]
     )
 
@@ -288,7 +351,7 @@ def find_cycle(
 
 # networkx.algorithms.cycles.simple_cycles
 #
-# NOTE: NetworkX 2.4, algorithms/cycles.py:183. We create a *copy* of the graph
+# NOTE: NetworkX 2.8.4, algorithms/cycles.py:172: We create a *copy* of the graph
 # because the algorithm copies the graph using type() and tries to pass initial
 # data.
 @mgp.read_proc
@@ -344,16 +407,24 @@ def descendants(
 #
 # NOTE: Takes more parameters.
 @mgp.read_proc
-def center(ctx: mgp.ProcCtx) -> mgp.Record(center=mgp.List[mgp.Vertex]):
-    return mgp.Record(center=list(nx.center(MemgraphMultiDiGraph(ctx=ctx))))
+def center(
+    ctx: mgp.ProcCtx, eccentricities: mgp.Nullable[mgp.Map]
+) -> mgp.Record(center=mgp.List[mgp.Vertex]):
+    return mgp.Record(
+        center=list(nx.center(MemgraphMultiDiGraph(ctx=ctx), e=eccentricities))
+    )
 
 
 # networkx.algorithms.distance_measures.diameter
 #
 # NOTE: Takes more parameters.
 @mgp.read_proc
-def diameter(ctx: mgp.ProcCtx) -> mgp.Record(diameter=int):
-    return mgp.Record(diameter=nx.diameter(MemgraphMultiDiGraph(ctx=ctx)))
+def diameter(
+    ctx: mgp.ProcCtx, eccentricities: mgp.Nullable[mgp.Map]
+) -> mgp.Record(diameter=int):
+    return mgp.Record(
+        diameter=nx.diameter(MemgraphMultiDiGraph(ctx=ctx), e=eccentricities)
+    )
 
 
 # networkx.algorithms.distance_regular.is_distance_regular
@@ -375,8 +446,7 @@ def is_strongly_regular(ctx: mgp.ProcCtx) -> mgp.Record(is_strongly_regular=bool
 # networkx.algorithms.dominance.dominance_frontiers
 @mgp.read_proc
 def dominance_frontiers(
-    ctx: mgp.ProcCtx,
-    start: mgp.Vertex,
+    ctx: mgp.ProcCtx, start: mgp.Vertex
 ) -> mgp.Record(node=mgp.Vertex, frontier=mgp.List[mgp.Vertex]):
     return [
         mgp.Record(node=n, frontier=list(f))
@@ -387,8 +457,7 @@ def dominance_frontiers(
 # networkx.algorithms.dominance.immediate_dominatorss
 @mgp.read_proc
 def immediate_dominators(
-    ctx: mgp.ProcCtx,
-    start: mgp.Vertex,
+    ctx: mgp.ProcCtx, start: mgp.Vertex
 ) -> mgp.Record(node=mgp.Vertex, dominator=mgp.Vertex):
     return [
         mgp.Record(node=n, dominator=d)
@@ -401,11 +470,12 @@ def immediate_dominators(
 # networkx.algorithms.dominating.dominating_set
 @mgp.read_proc
 def dominating_set(
-    ctx: mgp.ProcCtx,
-    start: mgp.Vertex,
+    ctx: mgp.ProcCtx, start_with: mgp.Nullable[mgp.Vertex] = None
 ) -> mgp.Record(dominating_set=mgp.List[mgp.Vertex]):
     return mgp.Record(
-        dominating_set=list(nx.dominating_set(MemgraphMultiDiGraph(ctx=ctx), start))
+        dominating_set=list(
+            nx.dominating_set(MemgraphMultiDiGraph(ctx=ctx), start_with=start_with)
+        )
     )
 
 
@@ -437,9 +507,13 @@ def is_semieulerian(ctx: mgp.ProcCtx) -> mgp.Record(is_semieulerian=bool):
 
 # networkx.algorithms.euler.has_eulerian_path
 @mgp.read_proc
-def has_eulerian_path(ctx: mgp.ProcCtx) -> mgp.Record(has_eulerian_path=bool):
+def has_eulerian_path(
+    ctx: mgp.ProcCtx, source: mgp.Nullable[mgp.Vertex] = None
+) -> mgp.Record(has_eulerian_path=bool):
     return mgp.Record(
-        has_eulerian_path=nx.has_eulerian_path(MemgraphMultiDiGraph(ctx=ctx))
+        has_eulerian_path=nx.has_eulerian_path(
+            MemgraphMultiDiGraph(ctx=ctx, source=source)
+        )
     )
 
 
@@ -462,10 +536,12 @@ def isolates(ctx: mgp.ProcCtx) -> mgp.Record(isolates=mgp.List[mgp.Vertex]):
 # networkx.algorithms.isolate.is_isolate
 @mgp.read_proc
 def is_isolate(ctx: mgp.ProcCtx, n: mgp.Vertex) -> mgp.Record(is_isolate=bool):
-    return mgp.Record(is_isolate=nx.is_isolate(MemgraphMultiDiGraph(ctx=ctx), n))
+    return mgp.Record(is_isolate=nx.is_isolate(MemgraphMultiDiGraph(ctx=ctx), n=n))
 
 
 # networkx.algorithms.isomorphism.is_isomorphic
+#
+# NOTE: Takes more parameters.
 @mgp.read_proc
 def is_isomorphic(
     ctx: mgp.ProcCtx,
@@ -516,8 +592,8 @@ def jaccard_coefficient(
     ctx: mgp.ProcCtx, ebunch: mgp.Nullable[mgp.List[mgp.List[mgp.Vertex]]] = None
 ) -> mgp.Record(u=mgp.Vertex, v=mgp.Vertex, coef=float):
     return [
-        mgp.Record(u=u, v=v, coef=c)
-        for u, v, c in nx.jaccard_coefficient(MemgraphGraph(ctx=ctx), ebunch)
+        mgp.Record(u=u, v=v, coef=p)
+        for u, v, p in nx.jaccard_coefficient(MemgraphGraph(ctx=ctx), ebunch)
     ]
 
 
@@ -551,9 +627,9 @@ def check_planarity(ctx: mgp.ProcCtx) -> mgp.Record(is_planar=bool):
 # networkx.algorithms.non_randomness.non_randomness
 @mgp.read_proc
 def non_randomness(
-    ctx: mgp.ProcCtx, k: mgp.Nullable[int] = None
+    ctx: mgp.ProcCtx, k: mgp.Nullable[int] = None, weight: mgp.Nullable[str] = "weight"
 ) -> mgp.Record(non_randomness=float, relative_non_randomness=float):
-    nn, rnn = nx.non_randomness(MemgraphGraph(ctx=ctx), k=k)
+    nn, rnn = nx.non_randomness(MemgraphGraph(ctx=ctx), k=k, weight=weight)
     return mgp.Record(non_randomness=nn, relative_non_randomness=rnn)
 
 
@@ -565,8 +641,7 @@ def reciprocity(
     rp = nx.reciprocity(MemgraphMultiDiGraph(ctx=ctx), nodes=nodes)
     if nodes is None:
         return mgp.Record(node=None, reciprocity=rp)
-    else:
-        return [mgp.Record(node=n, reciprocity=r) for n, r in rp.items()]
+    return [mgp.Record(node=n, reciprocity=r) for n, r in rp.items()]
 
 
 # networkx.algorithms.shortest_paths.generic.shortest_path
@@ -718,7 +793,10 @@ def all_simple_paths(
     return mgp.Record(
         paths=list(
             nx.all_simple_paths(
-                MemgraphMultiDiGraph(ctx=ctx), source, target, cutoff=cutoff
+                MemgraphMultiDiGraph(ctx=ctx),
+                source=source,
+                target=target,
+                cutoff=cutoff,
             )
         )
     )
@@ -733,6 +811,8 @@ def is_tournament(ctx: mgp.ProcCtx) -> mgp.Record(is_tournament=bool):
 
 
 # networkx.algorithms.traversal.breadth_first_search.bfs_edges
+#
+# NOTE: Takes more parameters.
 @mgp.read_proc
 def bfs_edges(
     ctx: mgp.ProcCtx,
@@ -744,7 +824,7 @@ def bfs_edges(
         edges=list(
             nx.bfs_edges(
                 MemgraphMultiDiGraph(ctx=ctx),
-                source,
+                source=source,
                 reverse=reverse,
                 depth_limit=depth_limit,
             )
@@ -753,6 +833,8 @@ def bfs_edges(
 
 
 # networkx.algorithms.traversal.breadth_first_search.bfs_tree
+#
+# NOTE: Takes more parameters.
 @mgp.read_proc
 def bfs_tree(
     ctx: mgp.ProcCtx,
@@ -764,7 +846,7 @@ def bfs_tree(
         tree=list(
             nx.bfs_tree(
                 MemgraphMultiDiGraph(ctx=ctx),
-                source,
+                source=source,
                 reverse=reverse,
                 depth_limit=depth_limit,
             )
@@ -773,6 +855,8 @@ def bfs_tree(
 
 
 # networkx.algorithms.traversal.breadth_first_search.bfs_predecessors
+#
+# NOTE: Takes more parameters.
 @mgp.read_proc
 def bfs_predecessors(
     ctx: mgp.ProcCtx, source: mgp.Vertex, depth_limit: mgp.Nullable[int] = None
@@ -780,12 +864,14 @@ def bfs_predecessors(
     return [
         mgp.Record(node=n, predecessor=p)
         for n, p in nx.bfs_predecessors(
-            MemgraphMultiDiGraph(ctx=ctx), source, depth_limit=depth_limit
+            MemgraphMultiDiGraph(ctx=ctx), source=source, depth_limit=depth_limit
         )
     ]
 
 
 # networkx.algorithms.traversal.breadth_first_search.bfs_successors
+#
+# NOTE: Takes more parameters.
 @mgp.read_proc
 def bfs_successors(
     ctx: mgp.ProcCtx, source: mgp.Vertex, depth_limit: mgp.Nullable[int] = None
@@ -793,7 +879,7 @@ def bfs_successors(
     return [
         mgp.Record(node=n, successors=s)
         for n, s in nx.bfs_successors(
-            MemgraphMultiDiGraph(ctx=ctx), source, depth_limit=depth_limit
+            MemgraphMultiDiGraph(ctx=ctx), source=source, depth_limit=depth_limit
         )
     ]
 
@@ -805,7 +891,9 @@ def dfs_tree(
 ) -> mgp.Record(tree=mgp.List[mgp.Vertex]):
     return mgp.Record(
         tree=list(
-            nx.dfs_tree(MemgraphMultiDiGraph(ctx=ctx), source, depth_limit=depth_limit)
+            nx.dfs_tree(
+                MemgraphMultiDiGraph(ctx=ctx), source=source, depth_limit=depth_limit
+            )
         )
     )
 
@@ -818,7 +906,7 @@ def dfs_predecessors(
     return [
         mgp.Record(node=n, predecessor=p)
         for n, p in nx.dfs_predecessors(
-            MemgraphMultiDiGraph(ctx=ctx), source, depth_limit=depth_limit
+            MemgraphMultiDiGraph(ctx=ctx), source=source, depth_limit=depth_limit
         ).items()
     ]
 
@@ -831,7 +919,7 @@ def dfs_successors(
     return [
         mgp.Record(node=n, successors=s)
         for n, s in nx.dfs_successors(
-            MemgraphMultiDiGraph(ctx=ctx), source, depth_limit=depth_limit
+            MemgraphMultiDiGraph(ctx=ctx), source=source, depth_limit=depth_limit
         ).items()
     ]
 
@@ -844,7 +932,7 @@ def dfs_preorder_nodes(
     return mgp.Record(
         nodes=list(
             nx.dfs_preorder_nodes(
-                MemgraphMultiDiGraph(ctx=ctx), source, depth_limit=depth_limit
+                MemgraphMultiDiGraph(ctx=ctx), source=source, depth_limit=depth_limit
             )
         )
     )
@@ -858,7 +946,7 @@ def dfs_postorder_nodes(
     return mgp.Record(
         nodes=list(
             nx.dfs_postorder_nodes(
-                MemgraphMultiDiGraph(ctx=ctx), source, depth_limit=depth_limit
+                MemgraphMultiDiGraph(ctx=ctx), source=source, depth_limit=depth_limit
             )
         )
     )
@@ -940,10 +1028,14 @@ def minimum_spanning_tree(
 
 # networkx.algorithms.triads.triadic_census
 @mgp.read_proc
-def triadic_census(ctx: mgp.ProcCtx) -> mgp.Record(triad=str, count=int):
+def triadic_census(
+    ctx: mgp.ProcCtx, nodelist: mgp.Nullable[mgp.List[mgp.Vertex]] = None
+) -> mgp.Record(triad=str, count=int):
     return [
         mgp.Record(triad=t, count=c)
-        for t, c in nx.triadic_census(MemgraphDiGraph(ctx=ctx)).items()
+        for t, c in nx.triadic_census(
+            MemgraphDiGraph(ctx=ctx), nodelist=nodelist
+        ).items()
     ]
 
 
