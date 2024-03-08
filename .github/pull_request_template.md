@@ -1,5 +1,3 @@
-test
-
 ### Description
 
 Please briefly explain the changes you made here.
@@ -25,11 +23,18 @@ Delete if this PR doesn't resolve any issues. Link the issue if it does.
 #### Module/Algorithm
 - [ ] Core algorithm/module implementation
 - [ ] [Query module](https://memgraph.com/docs/memgraph/reference-guide/query-modules) implementation
-- [ ] Unit tests
-- [ ] End-to-end tests
+- [ ] Tests provided (unit / e2e)
 - [ ] Code documentation
 - [ ] README short description
-- [ ] Documentation on [memgraph/docs](https://github.com/memgraph/docs)
-- [ ] Update GQLALchemy signatures in [query builder](https://github.com/memgraph/gqlalchemy/blob/main/gqlalchemy/graph_algorithms/query_builder.py  ) using [query module signature generator](https://github.com/memgraph/gqlalchemy/blob/main/scripts/query_module_signature_generator.py)
 
-######################################
+
+### Documentation checklist
+- [ ] Add the documentation label tag
+- [ ] Add the bug / feature label tag
+- [ ] Add the milestone for which this feature is intended
+    - If not known, set for a later milestone
+- [ ] Write a release note, including added/changed clauses
+    - **[Release note text]**
+- [ ] Link the documentation PR here
+    - **[Documentation PR link]**
+- [ ] Tag someone from docs team in the comments
