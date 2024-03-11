@@ -1,5 +1,0 @@
-query: >
-    CALL util_module.md5(1) YIELD result RETURN result; 
-
-exception: >
-  Invalid type provided as the first argument for the md5 procedure!

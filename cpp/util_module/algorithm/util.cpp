@@ -6,11 +6,7 @@ void Util::Md5Procedure(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *r
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
-    if (arguments[0].IsString()) {
-      auto record = record_factory.NewRecord();
-      auto string_value = std::string(arguments[0].ValueString());
-      record.Insert(std::string(kArgumentResultMd5).c_str(), md5(string_value));
-    } else if (arguments[0].IsList()) {
+    if (arguments[0].IsList()) {
       const mgp::List arg_list = arguments[0].ValueList();
       std::string return_string{""};
       for (auto value : arg_list) {
@@ -19,7 +15,9 @@ void Util::Md5Procedure(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *r
       auto record = record_factory.NewRecord();
       record.Insert(std::string(kArgumentResultMd5).c_str(), md5(return_string));
     } else {
-      throw std::runtime_error("Invalid type provided as the first argument for the md5 procedure!");
+      auto record = record_factory.NewRecord();
+      auto string_value = std::string(arguments[0].ToString());
+      record.Insert(std::string(kArgumentResultMd5).c_str(), md5(string_value));
     }
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
@@ -32,10 +30,7 @@ void Util::Md5Function(mgp_list *args, mgp_func_context *func_context, mgp_func_
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
   try {
-    if (arguments[0].IsString()) {
-      auto string_to_hash = std::string(arguments[0].ValueString());
-      result.SetValue(md5(string_to_hash));
-    } else if (arguments[0].IsList()) {
+    if (arguments[0].IsList()) {
       const mgp::List arg_list = arguments[0].ValueList();
       std::string return_string{""};
       for (auto value : arg_list) {
@@ -43,7 +38,8 @@ void Util::Md5Function(mgp_list *args, mgp_func_context *func_context, mgp_func_
       }
       result.SetValue(md5(return_string));
     } else {
-      throw std::runtime_error("Invalid type provided as the first argument for the md5 function!");
+      auto string_to_hash = std::string(arguments[0].ToString());
+      result.SetValue(md5(string_to_hash));
     }
   } catch (const std::exception &e) {
     result.SetErrorMessage(e.what());
