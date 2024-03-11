@@ -1,4 +1,4 @@
-# grappolo 
+# grappolo
 
 
 set( CLFOLDER_SRC
@@ -13,12 +13,12 @@ set( CLFOLDER_SRC
    )
 
 add_library( coloring STATIC
-  ${CLFOLDER_SRC} 
+  ${CLFOLDER_SRC}
 )
 
 target_include_directories( coloring PUBLIC ${IO_HEADERS} )
 
-target_link_libraries( coloring )
+target_link_libraries(coloring PRIVATE mg_utility)
 
 install( TARGETS
   coloring

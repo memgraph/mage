@@ -39,6 +39,7 @@
 //
 // ************************************************************************
 
+#include <mg_procedure.h>
 #include "defs.h"
 #include "basic_comm.h"
 #include "color_comm.h"
@@ -48,7 +49,7 @@ using namespace std;
 // Return: C_orig will hold the cluster ids for vertices in the original graph
 //         Assume C_orig is initialized appropriately
 //WARNING: Graph G will be destroyed at the end of this routine
-void runMultiPhaseColoring(graph *G, long *C_orig, int coloring, int numColors, int replaceMap, long minGraphSize,
+void runMultiPhaseColoring(graph *G, mgp_graph *mg_graph, long *C_orig, int coloring, int numColors, int replaceMap, long minGraphSize,
                            double threshold, double C_threshold, int numThreads, int threadsOpt)
 {
     assert((coloring>0) && (coloring<4)); //Check for the correct coloring specification
@@ -106,14 +107,14 @@ void runMultiPhaseColoring(graph *G, long *C_orig, int coloring, int numColors, 
         	if (replaceMap == 1)
         		currMod = algoLouvainWithDistOneColoringNoMap(G, C, numThreads, colors, nColors, currMod, C_threshold, &tmpTime, &tmpItr);
         	else
-        	    currMod = algoLouvainWithDistOneColoring(G, C, numThreads, colors, nColors, currMod, C_threshold, &tmpTime, &tmpItr);
+        	    currMod = algoLouvainWithDistOneColoring(G, mg_graph, C, numThreads, colors, nColors, currMod, C_threshold, &tmpTime, &tmpItr);
             totTimeClustering += tmpTime;
             totItr += tmpItr;
         } else {
 			if (replaceMap == 1)
 		    	currMod = parallelLouvianMethodNoMap(G, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
         	else
-            	currMod = parallelLouvianMethod(G, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
+            	currMod = parallelLouvianMethod(G, mg_graph, C, numThreads, currMod, threshold, &tmpTime, &tmpItr);
             totTimeClustering += tmpTime;
             totItr += tmpItr;
             nonColor = true;
@@ -144,7 +145,7 @@ void runMultiPhaseColoring(graph *G, long *C_orig, int coloring, int numColors, 
         //In case coloring is used, make sure the non-coloring routine is run at least once
         if( (currMod - prevMod) > threshold ) {
             Gnew = (graph *) malloc (sizeof(graph)); assert(Gnew != 0);
-            tmpTime =  buildNextLevelGraphOpt(G, Gnew, C, numClusters, numThreads);
+            tmpTime =  buildNextLevelGraphOpt(G, mg_graph, Gnew, C, numClusters, numThreads);
             totTimeBuildingPhase += tmpTime;
             //Free up the previous graph
             free(G->edgeListPtrs);
