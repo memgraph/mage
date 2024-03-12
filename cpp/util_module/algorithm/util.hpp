@@ -12,4 +12,5 @@ constexpr std::string_view kArgumentStringToHash = "stringToHash";
 
 void Md5Procedure(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 void Md5Function(mgp_list *args, mgp_func_context *func_context, mgp_func_result *res, mgp_memory *memory);
+std::string Md5(mgp::List arguments);
 }  // namespace Util

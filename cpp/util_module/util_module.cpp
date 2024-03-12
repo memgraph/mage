@@ -5,7 +5,7 @@
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
     mgp::MemoryDispatcherGuard guard{memory};
-    AddProcedure(Util::Md5Procedure, std::string(Util::kProcedureMd5).c_str(), mgp::ProcedureType::Write,
+    AddProcedure(Util::Md5Procedure, std::string(Util::kProcedureMd5).c_str(), mgp::ProcedureType::Read,
                  {mgp::Parameter(std::string(Util::kArgumentValuesMd5).c_str(), mgp::Type::Any)},
                  {mgp::Return(std::string(Util::kArgumentResultMd5).c_str(), mgp::Type::String)}, module, memory);
 
