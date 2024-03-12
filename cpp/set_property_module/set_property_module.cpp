@@ -4,8 +4,6 @@
 #include <fmt/core.h>
 #include <mgp.hpp>
 
-#include "mgclient.hpp"
-
 constexpr static std::string_view kResult = "result";
 constexpr static std::string_view kQueryExecuted = "queryExecuted";
 constexpr static std::string_view kSourceProperties = "sourceProperties";
@@ -16,52 +14,6 @@ constexpr static std::string_view kTargetProperties = "targetProperties";
 constexpr static std::string_view kTargetVariable = "targetVariable";
 constexpr static std::string_view kTargetNode = "targetNode";
 constexpr static std::string_view kTargetRel = "targetRel";
-
-constexpr char *kMgHost = "MG_HOST";
-constexpr char *kMgPort = "MG_PORT";
-constexpr char *kMgUsername = "MG_USERNAME";
-constexpr char *kMgPassword = "MG_PASSWORD";
-
-constexpr char *kDefaultHost = "localhost";
-constexpr uint16_t kDefaultPort = 7687;
-
-mg::Client::Params GetClientParams() {
-  mg::Client::Params mg_params{.host = "", .port = 0, .username = "", .password = ""};
-
-  auto *maybe_host = std::getenv(kMgHost);
-  if (maybe_host) {
-    mg_params.host = std::string(maybe_host);
-  }
-
-  const auto *maybe_port = std::getenv(kMgPort);
-  if (maybe_port) {
-    mg_params.port = static_cast<uint16_t>(std::stoi(std::string(maybe_port)));
-  }
-
-  const auto *maybe_username = std::getenv(kMgUsername);
-  if (maybe_username) {
-    mg_params.username = std::string(maybe_username);
-  }
-
-  const auto *maybe_password = std::getenv(kMgPassword);
-  if (maybe_password) {
-    mg_params.password = std::string(maybe_password);
-  }
-
-  return mg_params;
-}
-
-void ExecuteSetPropertiesQuery(const std::string query) {
-  auto client = mg::Client::Connect(GetClientParams());
-  if (!client) {
-    throw std::runtime_error("Unable to connect to client!");
-  }
-  if (!client->Execute(query)) {
-    throw std::runtime_error("Error while executing set property query, please look at the logs!");
-  }
-
-  client->DiscardAll();
-}
 
 void CopyPropertyNode2Node(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::MemoryDispatcherGuard guard(memory);
