@@ -48,7 +48,8 @@ struct DeletionResult {
 };
 
 mg::Client::Params GetClientParams() {
-  mg::Client::Params mg_params = {.host = "", .port = 0, .username = "", .password = ""};
+  mg::Client::Params mg_params = {
+      .host = std::string(kDefaultHost), .port = kDefaultPort, .username = "", .password = ""};
 
   auto *maybe_host = std::getenv(kMgHost);
   if (maybe_host) {
@@ -110,11 +111,11 @@ std::string Join(const std::vector<std::string> &strings, const std::string &del
 }
 
 std::string GetGraphFirstClassEntityAlias(const std::string &internal_name, const std::string &entity_name) {
-  return fmt::format("{}.{} AS __{}_id", internal_name, entity_name, entity_name);
+  return fmt::format("{0}.{1} AS __{1}_id", internal_name, entity_name);
 }
 
 std::string GetPrimitiveEntityAlias(const std::string &internal_name, const std::string &primitive_name) {
-  return fmt::format("{}.{} AS {}", internal_name, primitive_name, primitive_name);
+  return fmt::format("{0}.{1} AS {1}", internal_name, primitive_name);
 }
 
 std::string ConstructWithStatement(const ParamNames &names) {
@@ -133,11 +134,11 @@ std::string ConstructWithStatement(const ParamNames &names) {
 }
 
 std::string ConstructMatchingNodeById(const std::string &node_name) {
-  return fmt::format("MATCH ({}) WHERE ID({}) = __{}_id", node_name, node_name, node_name);
+  return fmt::format("MATCH ({0}) WHERE ID({0}) = __{0}_id", node_name);
 }
 
 std::string ConstructMatchingRelationshipById(const std::string &rel_name) {
-  return fmt::format("MATCH ()-[{}]->() WHERE ID({}) = __{}_id", rel_name, rel_name, rel_name);
+  return fmt::format("MATCH ()-[{0}]->() WHERE ID({0}) = __{0}_id", rel_name);
 }
 
 std::string ConstructMatchGraphEntitiesById(const ParamNames &names) {
@@ -255,12 +256,10 @@ void ValidateDeletionConfigEntities(const mgp::Map &config, std::string config_k
     return;
   }
 
-  if (value.IsList()) {
-    auto list_value = value.ValueList();
-    for (auto elem : list_value) {
-      if (!elem.IsString()) {
-        throw std::runtime_error(fmt::format("Invalid config for config parameter {}!", config_key));
-      }
+  auto list_value = value.ValueList();
+  for (auto elem : list_value) {
+    if (!elem.IsString()) {
+      throw std::runtime_error(fmt::format("Invalid config for config parameter {}!", config_key));
     }
   }
 }
@@ -289,15 +288,17 @@ void ValidateDeletionConfig(const mgp::Map &config) {
 
 void EmplaceFromConfig(const mgp::Map &config, std::vector<std::string> &vec, std::string &config_key) {
   auto key = std::string_view(config_key);
-  if (config.KeyExists(key)) {
-    auto value = config.At(key);
-    if (value.IsString()) {
-      vec.emplace_back(std::string(value.ValueString()));
-    } else if (value.IsList()) {
-      auto list_value = value.ValueList();
-      for (const auto elem : list_value) {
-        vec.emplace_back(elem.ValueString());
-      }
+  if (!config.KeyExists(key)) {
+    return;
+  }
+
+  auto value = config.At(key);
+  if (value.IsString()) {
+    vec.emplace_back(value.ValueString());
+  } else if (value.IsList()) {
+    auto list_value = value.ValueList();
+    for (const auto elem : list_value) {
+      vec.emplace_back(elem.ValueString());
     }
   }
 }
@@ -321,7 +322,7 @@ DeletionInfo GetDeletionInfo(const mgp::Map &config) {
           .edge_types = std::move(edge_types)};
 }
 
-void ExecutePeriodicDelete(DeletionInfo deletion_info, DeletionResult &deletion_result) {
+void ExecutePeriodicDelete(const DeletionInfo &deletion_info, DeletionResult &deletion_result) {
   auto delete_all = deletion_info.edge_types.empty() && deletion_info.labels.empty();
   auto delete_nodes = delete_all || !deletion_info.labels.empty();
   auto delete_edges = delete_all || !deletion_info.labels.empty() || !deletion_info.edge_types.empty();
@@ -409,7 +410,7 @@ void PeriodicDelete(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resul
 
     auto deletion_info = GetDeletionInfo(config);
 
-    ExecutePeriodicDelete(std::move(deletion_info), deletion_result);
+    ExecutePeriodicDelete(deletion_info, deletion_result);
 
     mg::Client::Finalize();
 
