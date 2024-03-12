@@ -40,12 +40,12 @@ mg::Client::Params GetClientParams() {
 
   const auto *maybe_username = std::getenv(kMgUsername);
   if (maybe_username) {
-    mg_params.username = maybe_username;
+    mg_params.username = std::string(maybe_username);
   }
 
   const auto *maybe_password = std::getenv(kMgPassword);
   if (maybe_password) {
-    mg_params.password = maybe_password;
+    mg_params.password = std::string(maybe_password);
   }
 
   return mg_params;
