@@ -48,35 +48,29 @@ struct DeletionResult {
 };
 
 mg::Client::Params GetClientParams() {
-  auto *host = kDefaultHost;
-  auto port = kDefaultPort;
-  auto *username = "";
-  auto *password = "";
+  mg::Client::Params mg_params = {.host = "", .port = 0, .username = "", .password = ""};
 
   auto *maybe_host = std::getenv(kMgHost);
   if (maybe_host) {
-    host = std::move(maybe_host);
+    mg_params.host = std::string(maybe_host);
   }
 
   const auto *maybe_port = std::getenv(kMgPort);
   if (maybe_port) {
-    port = static_cast<uint16_t>(std::move(*maybe_port));
+    mg_params.port = static_cast<uint16_t>(std::stoi(std::string(maybe_port)));
   }
 
   const auto *maybe_username = std::getenv(kMgUsername);
   if (maybe_username) {
-    username = std::move(maybe_username);
+    mg_params.username = std::string(maybe_username);
   }
 
   const auto *maybe_password = std::getenv(kMgPassword);
   if (maybe_password) {
-    password = std::move(maybe_password);
+    mg_params.password = std::string(maybe_password);
   }
 
-  return mg::Client::Params{.host = std::move(host),
-                            .port = std::move(port),
-                            .username = std::move(username),
-                            .password = std::move(password)};
+  return mg_params;
 }
 
 ParamNames ExtractParamNames(const std::vector<std::string> &columns, const std::vector<mg::Value> &batch_row) {
@@ -337,10 +331,11 @@ void ExecutePeriodicDelete(DeletionInfo deletion_info, DeletionResult &deletion_
       deletion_info.edge_types.empty() ? "" : fmt::format(":{}", Join(deletion_info.edge_types, "|"));
 
   auto relationships_deletion_query =
-      fmt::format("MATCH (n{})-[r{}]-(m) WITH DISTINCT r LIMIT {} DELETE r RETURN count(r) AS num_deleted", labels_formatted,
-                  edge_types_formatted, deletion_info.batch_size);
-  auto nodes_deletion_query = fmt::format("MATCH (n{}) WITH DISTINCT n LIMIT {} DETACH DELETE n RETURN count(n) AS num_deleted",
-                                          labels_formatted, deletion_info.batch_size);
+      fmt::format("MATCH (n{})-[r{}]-(m) WITH DISTINCT r LIMIT {} DELETE r RETURN count(r) AS num_deleted",
+                  labels_formatted, edge_types_formatted, deletion_info.batch_size);
+  auto nodes_deletion_query =
+      fmt::format("MATCH (n{}) WITH DISTINCT n LIMIT {} DETACH DELETE n RETURN count(n) AS num_deleted",
+                  labels_formatted, deletion_info.batch_size);
 
   auto client = mg::Client::Connect(GetClientParams());
   if (!client) {
