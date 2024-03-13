@@ -1,4 +1,4 @@
-# grappolo 
+# grappolo
 
 set( UTFOLDER_SRC
      ${CMAKE_SOURCE_DIR}/${MODULE_DIR}/${UTFOLDER}/buildNextPhase.cpp
@@ -13,12 +13,12 @@ set( UTFOLDER_SRC
    )
 
 add_library( util STATIC
-  ${UTFOLDER_SRC} 
+  ${UTFOLDER_SRC}
 )
 
 target_include_directories( util PUBLIC ${IO_HEADERS} )
 
-target_link_libraries( util )
+target_link_libraries( util PRIVATE mg_utility )
 
 install( TARGETS
   util

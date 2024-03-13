@@ -62,13 +62,13 @@ double parallelLouvianMethodEarlyTerminate(graph *G, long *C, int nThreads, doub
 #endif
     double time1, time2, time3, time4; //For timing purposes
     double total = 0, totItr = 0;
-    
+
     long    NV        = G->numVertices;
     long    NS        = G->sVertices;
     long    NE        = G->numEdges;
     long    *vtxPtr   = G->edgeListPtrs;
     edge    *vtxInd   = G->edgeList;
-    
+
     /* Variables for computing modularity */
     long totalEdgeWeightTwice;
     double constantForSecondTerm;
@@ -77,7 +77,7 @@ double parallelLouvianMethodEarlyTerminate(graph *G, long *C, int nThreads, doub
     //double thresMod = 0.000001;
     double thresMod = thresh; //Input parameter
     int numItrs = 0;
-    
+
     /********************** Initialization **************************/
     time1 = omp_get_wtime();
     //Store the degree of all vertices
@@ -88,12 +88,12 @@ double parallelLouvianMethodEarlyTerminate(graph *G, long *C, int nThreads, doub
     Comm *cUpdate = (Comm*)malloc(NV*sizeof(Comm)); assert(cUpdate != 0);
     //use for Modularity calculation (eii)
     double* clusterWeightInternal = (double*) malloc (NV*sizeof(double)); assert(clusterWeightInternal != 0);
-    
+
     sumVertexDegree(vtxInd, vtxPtr, vDegree, NV , cInfo);	// Sum up the vertex degree
-    
+
     /*** Compute the total edge weight (2m) and 1/2m ***/
     constantForSecondTerm = calConstantForSecondTerm(vDegree, NV); // 1 over sum of the degree
-    
+
     //cout<< "**constantForSecondTerm= "<< constantForSecondTerm<<endl;
     //Community assignments:
     //Store previous iteration's community assignment
@@ -102,15 +102,15 @@ double parallelLouvianMethodEarlyTerminate(graph *G, long *C, int nThreads, doub
     long* currCommAss = (long *) malloc (NV * sizeof(long)); assert(currCommAss != 0);
     //Store the target of community assignment
     long* targetCommAss = (long *) malloc (NV * sizeof(long)); assert(targetCommAss != 0);
-    
+
     //Vectors used in place of maps: Total size = |V|+2*|E| -- The |V| part takes care of self loop
     mapElement* clusterLocalMap = (mapElement *) malloc ((NV + 2*NE) * sizeof(mapElement)); assert(clusterLocalMap != 0);
     //double* Counter             = (double *)     malloc ((NV + 2*NE) * sizeof(double));     assert(Counter != 0);
-    
+
     //Initialize each vertex to its own cluster
     //  initCommAss(pastCommAss, currCommAss, NV);
     initCommAssOpt(pastCommAss, currCommAss, NV, clusterLocalMap, vtxPtr, vtxInd, cInfo, constantForSecondTerm, vDegree);
-    
+
     // Store the termination node
     bool* verT = (bool *) malloc (NV * sizeof(bool)); assert(verT != 0);
 #pragma omp parallel for
@@ -118,7 +118,7 @@ double parallelLouvianMethodEarlyTerminate(graph *G, long *C, int nThreads, doub
         verT[i] = false;
     }
     time2 = omp_get_wtime();
-    
+
 #ifdef PRINT_DETAILED_STATS_
 #endif
 #ifdef PRINT_TERSE_STATS_
@@ -128,7 +128,7 @@ double parallelLouvianMethodEarlyTerminate(graph *G, long *C, int nThreads, doub
     while(true) {
         numItrs++;
         time1 = omp_get_wtime();
-        
+
         /* Re-initialize datastructures */
 #pragma omp parallel for
         for (long i=0; i<NV; i++) {
@@ -140,10 +140,10 @@ double parallelLouvianMethodEarlyTerminate(graph *G, long *C, int nThreads, doub
             //if(verT[i])
             //    __sync_fetch_and_add(&termNodes, 1);
         }
-        
+
         //long totalEdgeTravel= 0;
         //long totalUniqueComm = 0;
-        
+
         //#pragma omp parallel for reduction(+:totalEdgeTravel), reduction(+:totalUniqueComm)
 #pragma omp parallel for
         for (long i=0; i<NV; i++) {
@@ -152,7 +152,7 @@ double parallelLouvianMethodEarlyTerminate(graph *G, long *C, int nThreads, doub
             long adj1 = vtxPtr[i];
             long adj2 = vtxPtr[i+1];
             long selfLoop = 0;
-            
+
             //totalEdgeTravel += (adj2-adj1);
             //Build a datastructure to hold the cluster structure of its neighbors
             //map<long, long> clusterLocalMap; //Map each neighbor's cluster to a local number
@@ -166,7 +166,7 @@ double parallelLouvianMethodEarlyTerminate(graph *G, long *C, int nThreads, doub
                 clusterLocalMap[sPosition].Counter = 0;          //Initialize the counter to ZERO (no edges incident yet)
                 clusterLocalMap[sPosition].cid = currCommAss[i]; //Initialize with current community
                 numUniqueClusters++; //Added the first entry
-                
+
                 //Find unique cluster ids and #of edges incident (eicj) to them
                 selfLoop = buildLocalMapCounterNoMap(i, clusterLocalMap, vtxPtr, vtxInd, currCommAss, numUniqueClusters);
                 // Update delta Q calculation
@@ -179,12 +179,12 @@ double parallelLouvianMethodEarlyTerminate(graph *G, long *C, int nThreads, doub
                 targetCommAss[i] = -1;
             }
             //totalUniqueComm += numUniqueClusters;
-            
+
             if((numItrs > 1) && (targetCommAss[i] == pastCommAss[i]) && (targetCommAss[i]==currCommAss[i]) ){
                 verT[i] = true; //Commuity assignment has not changed
                 __sync_fetch_and_add(&termNodes, 1); //Update the number of terminated nodes
             }
-            
+
             //Update
             if((targetCommAss[i] != currCommAss[i])  && (targetCommAss[i] != -1)) {
 #pragma omp atomic update
@@ -197,12 +197,13 @@ double parallelLouvianMethodEarlyTerminate(graph *G, long *C, int nThreads, doub
                 cUpdate[currCommAss[i]].size -=1;
             }//End of If()
         }//End of for(i)
+
         time2 = omp_get_wtime();
-        
+
         time3 = omp_get_wtime();
         double e_xx = 0;
         double a2_x = 0;
-        
+
 #pragma omp parallel for \
         reduction(+:e_xx) reduction(+:a2_x)
         for (long i=0; i<NV; i++) {
@@ -210,7 +211,7 @@ double parallelLouvianMethodEarlyTerminate(graph *G, long *C, int nThreads, doub
             a2_x += (cInfo[i].degree)*(cInfo[i].degree);
         }
         time4 = omp_get_wtime();
-        
+
         currMod = (e_xx*(double)constantForSecondTerm) - (a2_x*(double)constantForSecondTerm*(double)constantForSecondTerm);
         totItr = (time2-time1) + (time4-time3);
         total += totItr;
@@ -218,12 +219,12 @@ double parallelLouvianMethodEarlyTerminate(graph *G, long *C, int nThreads, doub
 #endif
 #ifdef PRINT_TERSE_STATS_
 #endif
-        
+
         //Break if modularity gain is not sufficient
         if((currMod - prevMod) < thresMod) {
             break;
         }
-        
+
         //Else update information for the next iteration
         prevMod = currMod;
         if(prevMod < Lower)
@@ -233,23 +234,23 @@ double parallelLouvianMethodEarlyTerminate(graph *G, long *C, int nThreads, doub
             cInfo[i].size += cUpdate[i].size;
             cInfo[i].degree += cUpdate[i].degree;
         }
-        
+
         //Do pointer swaps to reuse memory:
         long* tmp;
         tmp = pastCommAss;
         pastCommAss = currCommAss; //Previous holds the current
         currCommAss = targetCommAss; //Current holds the chosen assignment
         targetCommAss = tmp;      //Reuse the vector
-        
+
     }//End of while(true)
     *totTime = total; //Return back the total time for clustering
     *numItr  = numItrs;
-    
+
 #ifdef PRINT_DETAILED_STATS_
 #endif
 #ifdef PRINT_TERSE_STATS_
 #endif
-    
+
     //Store back the community assignments in the input variable:
     //Note: No matter when the while loop exits, we are interested in the previous assignment
 #pragma omp parallel for
@@ -265,6 +266,6 @@ double parallelLouvianMethodEarlyTerminate(graph *G, long *C, int nThreads, doub
     free(cUpdate);
     free(clusterWeightInternal);
     free(clusterLocalMap);
-    
+
     return prevMod;
 }
