@@ -227,17 +227,20 @@ void ExecuteRunningQuery(const std::string running_query, const std::vector<std:
   client->DiscardAll();
 }
 
-void ValidateBatchSize(const mgp::Value &batch_size_value) {
-  if (batch_size_value.IsNull()) {
+void ValidateBatchSizeFromConfig(const mgp::Map &config) {
+  auto batch_size_key = std::string(kConfigKeyBatchSize);
+
+  if (!config.KeyExists(batch_size_key)) {
     throw std::runtime_error(fmt::format("Configuration parameter {} is not set.", kConfigKeyBatchSize));
   }
+
+  auto batch_size_value = config.At(batch_size_key);
   if (!batch_size_value.IsInt()) {
-    throw std::runtime_error("Batch size not provided as an integer in the periodic iterate configuration!");
+    throw std::runtime_error("Batch size needs to be an integer!");
   }
 
-  const auto batch_size = batch_size_value.ValueInt();
-  if (batch_size <= 0) {
-    throw std::runtime_error("Batch size must be a non-negative number!");
+  if (batch_size_value.ValueInt() <= 0) {
+    throw std::runtime_error("Batch size can't be a non-negative integer!");
   }
 }
 
@@ -265,23 +268,10 @@ void ValidateDeletionConfigEntities(const mgp::Map &config, std::string config_k
 }
 
 void ValidateDeletionConfig(const mgp::Map &config) {
-  auto batch_size_key = std::string(kConfigKeyBatchSize);
   auto labels_key = std::string(kConfigKeyLabels);
   auto edge_types_key = std::string(kConfigKeyEdgeTypes);
 
-  if (!config.KeyExists(batch_size_key)) {
-    throw std::runtime_error("Periodic.delete() did not specify config parameter batch_size!");
-  }
-
-  auto batch_size_value = config.At(batch_size_key);
-  if (!batch_size_value.IsInt()) {
-    throw std::runtime_error("Batch size needs to be an integer!");
-  }
-
-  if (batch_size_value.ValueInt() <= 0) {
-    throw std::runtime_error("Batch size can't be a non-negative integer!");
-  }
-
+  ValidateBatchSizeFromConfig(config);
   ValidateDeletionConfigEntities(config, labels_key);
   ValidateDeletionConfigEntities(config, edge_types_key);
 }
@@ -439,12 +429,9 @@ void PeriodicIterate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
   const auto running_query = std::string(arguments[1].ValueString());
   const auto config = arguments[2].ValueMap();
 
-  const auto batch_size_value = config.At(kConfigKeyBatchSize);
-
   try {
-    ValidateBatchSize(batch_size_value);
-
-    const auto batch_size = batch_size_value.ValueInt();
+    ValidateBatchSizeFromConfig(config);
+    const auto batch_size = config.At(kConfigKeyBatchSize).ValueInt();
 
     mg::Client::Init();
 
