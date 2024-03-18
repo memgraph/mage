@@ -15,7 +15,7 @@ except ImportError as import_error:
     )
     raise import_error
 # Imported last because it also depends on networkx.
-from mgp_networkx import (
+from mage.mgp_networkx import (
     MemgraphMultiDiGraph,
     MemgraphDiGraph,  # noqa: E402
     MemgraphMultiGraph,

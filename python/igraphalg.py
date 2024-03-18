@@ -3,7 +3,7 @@ from typing import Dict, List
 
 import mgp
 
-from mgp_igraph import (
+from mage.mgp_igraph import (
     InvalidTopologicalSortingModeException,
     InvalidPageRankImplementationOption,
     MemgraphIgraph,
