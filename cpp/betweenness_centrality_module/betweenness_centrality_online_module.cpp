@@ -59,7 +59,7 @@ void Set(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memo
     if (threads <= 0) threads = std::thread::hardware_concurrency();
 
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
-    const auto node_bc_scores = algorithm.Set(*graph, normalize, threads);
+    const auto node_bc_scores = algorithm.Set(*graph, memgraph_graph, normalize, threads);
 
     for (const auto [node_id, bc_score] : node_bc_scores) {
       InsertOnlineBCRecord(memgraph_graph, result, memory, node_id, bc_score);
@@ -78,7 +78,7 @@ void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memo
 
     std::unordered_map<uint64_t, double> node_bc_scores;
     if (!algorithm.Initialized())
-      node_bc_scores = algorithm.Set(*graph, normalize);
+      node_bc_scores = algorithm.Set(*graph, memgraph_graph, normalize);
     else
       node_bc_scores = algorithm.Get(*graph, normalize);
 
@@ -100,7 +100,7 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
     std::unordered_map<uint64_t, double> node_bc_scores;
 
     if (!algorithm.Initialized()) {
-      node_bc_scores = algorithm.Set(*graph, normalize, threads);
+      node_bc_scores = algorithm.Set(*graph, memgraph_graph, normalize, threads);
     } else {
       std::vector<std::uint64_t> graph_nodes_ids;
       for (const auto [node_id] : graph->Nodes()) {
@@ -135,7 +135,7 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
         for (const auto created_edge : created_edges) {
           prior_edges_ids.push_back(created_edge);
           graph = mg_generate::BuildGraph(graph_nodes_ids, prior_edges_ids, mg_graph::GraphType::kUndirectedGraph);
-          node_bc_scores = algorithm.EdgeUpdate(*prior_graph, *graph, online_bc::Operation::CREATE_EDGE, created_edge,
+          node_bc_scores = algorithm.EdgeUpdate(*prior_graph, *graph, memgraph_graph, online_bc::Operation::CREATE_EDGE, created_edge,
                                                 normalize, threads);
           prior_graph = std::move(graph);
         }
@@ -143,7 +143,7 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
           prior_edges_ids.erase(std::remove(prior_edges_ids.begin(), prior_edges_ids.end(), deleted_edge),
                                 prior_edges_ids.end());
           graph = mg_generate::BuildGraph(graph_nodes_ids, prior_edges_ids, mg_graph::GraphType::kUndirectedGraph);
-          node_bc_scores = algorithm.EdgeUpdate(*prior_graph, *graph, online_bc::Operation::DELETE_EDGE, deleted_edge,
+          node_bc_scores = algorithm.EdgeUpdate(*prior_graph, *graph, memgraph_graph, online_bc::Operation::DELETE_EDGE, deleted_edge,
                                                 normalize, threads);
           prior_graph = std::move(graph);
         }
@@ -163,7 +163,7 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
         algorithm.NodeEdgeUpdate(*graph, online_bc::Operation::DETACH_DELETE_NODE, deleted_nodes[0], deleted_edges[0],
                                  normalize);
       } else {  // Default to offline update
-        node_bc_scores = algorithm.Set(*graph, normalize, threads);
+        node_bc_scores = algorithm.Set(*graph, memgraph_graph, normalize, threads);
       }
     }
 
