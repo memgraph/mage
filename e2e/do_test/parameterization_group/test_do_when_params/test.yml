@@ -7,5 +7,5 @@ query: >
     WITH collect(value.n) as nodes 
     RETURN SIZE(nodes) AS n_nodes;
 
-exception:
-    Returning nodes in do procedures not yet supported.
+output:
+  - n_nodes: 1
