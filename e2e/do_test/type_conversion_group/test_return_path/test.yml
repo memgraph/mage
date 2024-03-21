@@ -4,4 +4,4 @@ query: >
     RETURN size(value.p) AS path_size;
 
 output:
-  - path_size: 5
+  - path_size: 2

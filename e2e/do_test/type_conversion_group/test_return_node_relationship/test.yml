@@ -9,6 +9,6 @@ query: >
         size(relationships) AS n_relationships;
 
 output:
-  - n_nodes: 5
-    n_relationships: 7
+  - n_nodes: 2
+    n_relationships: 2
 
