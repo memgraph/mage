@@ -3,6 +3,14 @@ import pytz
 import datetime
 
 from mage.date.constants import Conversion, Epoch
+from mage.date.unit_conversion import toInt, toTimedelta
+
+
+MILLISECOND = {"ms", "milli", "millis", "milliseconds"}
+SECOND = {"s", "second", "seconds"}
+MINUTE = {"m", "minute", "minutes"}
+HOUR = {"h", "hour", "hours"}
+DAY = {"d", "day", "days"}
 
 
 def getOffset(timezone, date):
@@ -121,4 +129,17 @@ def format(
 
     return mgp.Record(
         formatted=pytz.timezone(timezone).localize(tz_new).strftime(format)
+    )
+
+
+@mgp.function
+def add(
+    time: int = None,
+    unit: str = None,
+    add_value: int = None,
+    add_unit: str = None,
+) -> int:
+    return toInt(
+        toTimedelta(time=time, unit=unit) + toTimedelta(time=add_value, unit=add_unit),
+        unit=unit,
     )
