@@ -134,10 +134,10 @@ def format(
 
 @mgp.function
 def add(
-    time: int = None,
-    unit: str = None,
-    add_value: int = None,
-    add_unit: str = None,
+    time: int,
+    unit: str,
+    add_value: int,
+    add_unit: str,
 ) -> int:
     return to_int(
         to_timedelta(time=time, unit=unit) + to_timedelta(time=add_value, unit=add_unit),
