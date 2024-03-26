@@ -6,13 +6,6 @@ from mage.date.constants import Conversion, Epoch
 from mage.date.unit_conversion import to_int, to_timedelta
 
 
-MILLISECOND = {"ms", "milli", "millis", "milliseconds"}
-SECOND = {"s", "second", "seconds"}
-MINUTE = {"m", "minute", "minutes"}
-HOUR = {"h", "hour", "hours"}
-DAY = {"d", "day", "days"}
-
-
 def getOffset(timezone, date):
     offset = pytz.timezone(timezone).utcoffset(date)
     if offset.days == 1:

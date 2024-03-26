@@ -19,7 +19,6 @@ def to_timedelta(time: int, unit: str) -> datetime.timedelta:
 
 
 def to_int(duration: datetime.timedelta, unit: str) -> int:
-    print(duration)
     if unit in Units.MILLISECOND:
         return duration / datetime.timedelta(milliseconds=1)
     elif unit in Units.SECOND:
