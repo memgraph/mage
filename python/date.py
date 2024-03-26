@@ -3,7 +3,7 @@ import pytz
 import datetime
 
 from mage.date.constants import Conversion, Epoch
-from mage.date.unit_conversion import toInt, toTimedelta
+from mage.date.unit_conversion import to_int, to_timedelta
 
 
 MILLISECOND = {"ms", "milli", "millis", "milliseconds"}
@@ -139,7 +139,7 @@ def add(
     add_value: int = None,
     add_unit: str = None,
 ) -> int:
-    return toInt(
-        toTimedelta(time=time, unit=unit) + toTimedelta(time=add_value, unit=add_unit),
+    return to_int(
+        to_timedelta(time=time, unit=unit) + to_timedelta(time=add_value, unit=add_unit),
         unit=unit,
     )

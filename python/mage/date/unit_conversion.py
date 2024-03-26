@@ -3,7 +3,7 @@ import datetime
 from mage.date.constants import Units
 
 
-def toTimedelta(time: int, unit: str) -> datetime.timedelta:
+def to_timedelta(time: int, unit: str) -> datetime.timedelta:
     if unit in Units.MILLISECOND:
         return datetime.timedelta(milliseconds=time)
     elif unit in Units.SECOND:
@@ -15,10 +15,10 @@ def toTimedelta(time: int, unit: str) -> datetime.timedelta:
     elif unit in Units.DAY:
         return datetime.timedelta(days=time)
     else:
-        raise Exception(f"The unit {unit} is not correct.")
+        raise TypeError(f"The unit {unit} is not correct.")
 
 
-def toInt(duration: datetime.timedelta, unit: str) -> int:
+def to_int(duration: datetime.timedelta, unit: str) -> int:
     print(duration)
     if unit in Units.MILLISECOND:
         return duration / datetime.timedelta(milliseconds=1)
@@ -31,4 +31,4 @@ def toInt(duration: datetime.timedelta, unit: str) -> int:
     elif unit in Units.DAY:
         return duration / datetime.timedelta(days=1)
     else:
-        raise Exception(f"The unit {unit} is not correct.")
+        raise TypeError(f"The unit {unit} is not correct.")
