@@ -140,6 +140,7 @@ def add(
     add_unit: str,
 ) -> int:
     return to_int(
-        to_timedelta(time=time, unit=unit) + to_timedelta(time=add_value, unit=add_unit),
+        to_timedelta(time=time, unit=unit)
+        + to_timedelta(time=add_value, unit=add_unit),
         unit=unit,
     )
