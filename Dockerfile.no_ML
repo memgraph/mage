@@ -1,6 +1,6 @@
-ARG PY_VERSION_DEFAULT=3.9
+ARG PY_VERSION_DEFAULT=3.11
 
-FROM debian:bullseye as base
+FROM debian:bookworm as base
 
 USER root
 
@@ -12,6 +12,7 @@ ENV PY_VERSION ${PY_VERSION_DEFAULT}
 RUN apt-get update && apt-get install -y \
     libcurl4        `memgraph` \
     libpython${PY_VERSION}   `memgraph` \
+    libssl3          `memgraph` \
     libssl-dev       `memgraph` \
     openssl         `memgraph` \
     build-essential `mage-memgraph` \
@@ -47,8 +48,8 @@ COPY . /mage
 #MAGE
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
     && export PATH="/root/.cargo/bin:${PATH}" \
-    && python3 -m  pip install -r /mage/python/tests/requirements.txt \
-    && python3 -m  pip install -r /mage/python/requirements_no_ml.txt \
+    && python3 -m  pip install --break-system-packages -r /mage/python/tests/requirements.txt \
+    && python3 -m  pip install --break-system-packages -r /mage/python/requirements_no_ml.txt \
     && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/ --no-ml \
     && chown -R memgraph: /mage/e2e
 
