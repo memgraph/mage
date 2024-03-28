@@ -1,6 +1,6 @@
-ARG PY_VERSION_DEFAULT=3.9
+ARG PY_VERSION_DEFAULT=3.11
 
-FROM debian:bullseye as base
+FROM debian:bookworm as base
 
 USER root
 
@@ -13,6 +13,7 @@ ENV PY_VERSION ${PY_VERSION_DEFAULT}
 RUN apt-get update && apt-get install -y \
     libcurl4        `memgraph` \
     libpython${PY_VERSION}   `memgraph` \
+    libssl3          `memgraph` \
     libssl-dev       `memgraph` \
     openssl         `memgraph` \
     build-essential `mage-memgraph` \
@@ -30,7 +31,7 @@ RUN apt-get update && apt-get install -y \
     libboost-all-dev `mage-memgraph` \
     --no-install-recommends \
     # Download and install Memgraph
-    && curl https://download.memgraph.com/memgraph/v${MG_VERSION}/debian-11/memgraph_${MG_VERSION}-1_amd64.deb --output memgraph.deb \
+    && curl https://download.memgraph.com/memgraph/v${MG_VERSION}/debian-12/memgraph_${MG_VERSION}-1_amd64.deb --output memgraph.deb \
     && dpkg -i memgraph.deb \
     && rm memgraph.deb \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -48,9 +49,9 @@ COPY . /mage
 #MAGE
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
     && export PATH="/root/.cargo/bin:${PATH}" \
-    && python3 -m  pip install -r /mage/python/requirements.txt \
-    && python3 -m  pip install -r /mage/python/tests/requirements.txt \
-    && python3 -m  pip install torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-1.12.0+cu102.html\
+    && python3 -m  pip install --break-system-packages -r /mage/python/requirements.txt \
+    && python3 -m  pip install --break-system-packages -r /mage/python/tests/requirements.txt \
+    && python3 -m  pip install --break-system-packages torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-1.12.0+cu102.html\
     && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/
 
 #DGL build from source
