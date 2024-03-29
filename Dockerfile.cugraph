@@ -16,8 +16,8 @@ ENV MG_VERSION ${MG_VERSION}
 ENV PY_VERSION ${PY_VERSION}
 
 # Copy RAPIDS libraries
-COPY --from=cugraph-dev /opt/conda/envs/rapids/lib/libcugraph.so /opt/conda/envs/rapids/lib/libcugraph.so
-COPY --from=cugraph-dev /opt/conda/envs/rapids/include /opt/conda/envs/rapids/include
+COPY --from=cugraph-dev /opt/conda/lib/libcugraph.so /opt/conda/lib/libcugraph.so
+COPY --from=cugraph-dev /opt/conda/include /opt/conda/include
 
 # Prevent from linking the Conda environment
 ENV LD_LIBRARY_PATH=/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64:/usr/local/lib
@@ -69,7 +69,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
     python3 -m pip install dgl -f https://data.dgl.ai/wheels/repo.html && \ 
     python3 /mage/setup build \ 
     --gpu \
-    --cpp-build-flags MAGE_CUGRAPH_ROOT=/opt/conda/envs/rapids/ CMAKE_BUILD_TYPE=Release \
+    --cpp-build-flags MAGE_CUGRAPH_ROOT=/opt/conda/ CMAKE_BUILD_TYPE=Release \
     -p /usr/lib/memgraph/query_modules/ 
 
 #DGL build from source
@@ -93,7 +93,7 @@ ENV PY_VERSION ${PY_VERSION}
 # Copy modules
 COPY --from=dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
 # Copy cugraph library
-COPY --from=dev /opt/conda/envs/rapids/lib/libcugraph.so /opt/conda/envs/rapids/lib/libcugraph.so
+COPY --from=dev /opt/conda/lib/libcugraph.so /opt/conda/lib/libcugraph.so
 # Copy python build
 COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
 

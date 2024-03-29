@@ -9,7 +9,8 @@ env:
   NEO4J_CONTAINER: "neo4j_test"
   OFFICIAL: "true"
 
-on: [pull_request, workflow_dispatch]
+# TODO(gitbuda): Revert
+# on: [pull_request, workflow_dispatch]
 
 jobs:
   build:
