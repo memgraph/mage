@@ -51,7 +51,6 @@ jobs:
             -O memgraph-arm64.deb
           fi
 
-          fi
       - name: Disk status before cleaning
         run: |
           df -h
