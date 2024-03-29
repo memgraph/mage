@@ -1,12 +1,11 @@
-ARG CUGRAPH_VERSION=22.02
-ARG CUDA_VERSION=11.5
-ARG CUDA_VERSION_MINOR=11.5.2
-ARG PY_VERSION=3.8
+ARG CUGRAPH_VERSION=24.06a
+ARG CUDA_VERSION=12.2
+ARG CUDA_VERSION_MINOR=12.2.2
+ARG PY_VERSION=3.11
 ARG MG_VERSION=2.15.1
 
-FROM rapidsai/rapidsai:${CUGRAPH_VERSION}-cuda${CUDA_VERSION}-runtime-ubuntu20.04-py${PY_VERSION} as cugraph-dev
-
-FROM nvidia/cuda:${CUDA_VERSION_MINOR}-devel-ubuntu20.04 AS dev
+FROM rapidsai/base:${CUGRAPH_VERSION}-cuda${CUDA_VERSION}-py${PY_VERSION} as cugraph-dev
+FROM nvidia/cuda:${CUDA_VERSION_MINOR}-devel-ubuntu22.04 AS dev
 
 USER root
 
@@ -81,7 +80,7 @@ RUN git clone --recurse-submodules -b 0.9.x https://github.com/dmlc/dgl.git   \
 USER memgraph
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
 
-FROM nvidia/cuda:${CUDA_VERSION_MINOR}-runtime-ubuntu20.04 AS prod
+FROM nvidia/cuda:${CUDA_VERSION_MINOR}-runtime-ubuntu22.04 AS prod
 
 USER root
 
@@ -112,7 +111,7 @@ RUN apt-get update && apt-get install -y \
     libgomp1         `mage-memgraph` \
     python3         `mage-memgraph` \
     python3-setuptools     `mage-memgraph` \
-    && curl https://download.memgraph.com/memgraph/v${MG_VERSION}/ubuntu-20.04/memgraph_${MG_VERSION}-1_amd64.deb --output memgraph.deb \
+    && curl https://download.memgraph.com/memgraph/v${MG_VERSION}/ubuntu-22.04/memgraph_${MG_VERSION}-1_amd64.deb --output memgraph.deb \
     && dpkg -i memgraph.deb \
     && rm memgraph.deb \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
