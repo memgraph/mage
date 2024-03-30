@@ -22,9 +22,6 @@ COPY --from=cugraph-dev /opt/conda/include /opt/conda/include
 # Prevent from linking the Conda environment
 ENV LD_LIBRARY_PATH=/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64:/usr/local/lib
 
-# NVIDIA key rotation
-RUN rm /etc/apt/sources.list.d/cuda.list
-
 # Essentials for production/dev
 RUN apt-get update && apt-get install -y \
     libcurl4        `memgraph` \
@@ -73,7 +70,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
     -p /usr/lib/memgraph/query_modules/ 
 
 #DGL build from source
-RUN git clone --recurse-submodules -b 0.9.x https://github.com/dmlc/dgl.git   \
+RUN git clone --recurse-submodules -b 2.1.x https://github.com/dmlc/dgl.git   \
     && cd dgl && mkdir build && cd build && cmake -DUSE_CUDA=ON .. \
     && make -j4 && cd ../python && python3 setup.py install
 
