@@ -1,4 +1,4 @@
 query: >
-  CALL text.join(["idora", " ", "ivan", "", "matija"], ",") YIELD string RETURN string;
+  CALL text_utils.join(["idora", " ", "ivan", "", "matija"], ",") YIELD string RETURN string;
 output:
   - string: "idora, ,ivan,,matija"
