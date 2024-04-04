@@ -9,7 +9,13 @@ env:
   NEO4J_CONTAINER: "neo4j_test"
   OFFICIAL: "true"
 
-on: [pull_request, workflow_dispatch]
+on: 
+  push:
+    tags:
+      - "v*.*.*-rc*"
+      - "v*.*-rc*"
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
