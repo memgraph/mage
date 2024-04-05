@@ -13,3 +13,4 @@ mysql-connector-python==8.0.32
 oracledb==1.2.2
 pyodbc==4.0.35
 defusedxml==0.7.1
+scipy==1.12.0
