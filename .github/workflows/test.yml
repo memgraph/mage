@@ -9,14 +9,20 @@ env:
   NEO4J_CONTAINER: "neo4j_test"
   OFFICIAL: "true"
 
-on: [pull_request, workflow_dispatch]
+on: 
+  push:
+    tags:
+      - "v*.*.*-rc*"
+      - "v*.*-rc*"
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     continue-on-error: True
     env:
-      MEMGRAPH_VERSION: 2.14.1
+      MEMGRAPH_VERSION: 2.15.1
     strategy:
       matrix:
         architecture: ["amd64", "arm64"]
