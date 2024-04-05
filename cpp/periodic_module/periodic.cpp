@@ -3,30 +3,22 @@
 #include <string>
 #include <string_view>
 
-const char *kProcedurePeriodicIterate = "iterate";
-const char *kProcedurePeriodicDelete = "delete";
-const char *kArgumentInputQuery = "input_query";
-const char *kArgumentRunningQuery = "running_query";
-const char *kArgumentConfig = "config";
-const char *kConfigKeyBatchSize = "batch_size";
-const char *kBatchInternalName = "__batch";
-const char *kBatchRowInternalName = "__batch_row";
-const char *kConfigKeyLabels = "labels";
-const char *kConfigKeyEdgeTypes = "edge_types";
+constexpr char *kProcedurePeriodicIterate = "iterate";
+constexpr char *kProcedurePeriodicDelete = "delete";
+constexpr char *kArgumentInputQuery = "input_query";
+constexpr char *kArgumentRunningQuery = "running_query";
+constexpr char *kArgumentConfig = "config";
+constexpr char *kConfigKeyBatchSize = "batch_size";
+constexpr char *kBatchInternalName = "__batch";
+constexpr char *kBatchRowInternalName = "__batch_row";
+constexpr char *kConfigKeyLabels = "labels";
+constexpr char *kConfigKeyEdgeTypes = "edge_types";
 
-const char *kReturnSuccess = "success";
-const char *kReturnNumBatches = "number_of_executed_batches";
-const char *kReturnNumDeletedNodes = "number_of_deleted_nodes";
-const char *kReturnNumDeletedRelationships = "number_of_deleted_relationships";
-const char *kReturnInternalNumDeleted = "num_deleted";
-
-const char *kMgHost = "MG_HOST";
-const char *kMgPort = "MG_PORT";
-const char *kMgUsername = "MG_USERNAME";
-const char *kMgPassword = "MG_PASSWORD";
-
-const char *kDefaultHost = "localhost";
-const uint16_t kDefaultPort = 7687;
+constexpr char *kReturnSuccess = "success";
+constexpr char *kReturnNumBatches = "number_of_executed_batches";
+constexpr char *kReturnNumDeletedNodes = "number_of_deleted_nodes";
+constexpr char *kReturnNumDeletedRelationships = "number_of_deleted_relationships";
+constexpr char *kReturnInternalNumDeleted = "num_deleted";
 
 struct ParamNames {
   std::vector<std::string> node_names;
