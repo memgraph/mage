@@ -44,15 +44,10 @@ jobs:
 
       - name: Download memgraph binaries
         run: |
-          if [ "${{ env.OFFICIAL }}" = "true" ]; then
-            curl -L "https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/unofficial/2.16.0/debian-11/memgraph_2.16.0%2B4~e3bb5c9f7-1_amd64.deb" > memgraph-amd64.deb
-            curl -L "https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/unofficial/2.16.0/debian-11/memgraph_2.16.0%2B4~e3bb5c9f7-1_amd64.deb" > memgraph-arm64.deb
-          else
-            sudo apt update && sudo apt install -y ca-certificates wget git
-            wget -q https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/unofficial/2.16.0/debian-11/memgraph_2.16.0%2B4~e3bb5c9f7-1_amd64.deb -O memgraph-amd64.deb
-            wget -q https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/unofficial/2.16.0/debian-11/memgraph_2.16.0%2B4~e3bb5c9f7-1_amd64.deb -O memgraph-arm64.deb
+          sudo apt update && sudo apt install -y ca-certificates wget git
+          wget -q https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/unofficial/2.16.0/debian-11/memgraph_2.16.0%2B4~e3bb5c9f7-1_amd64.deb -O memgraph-amd64.deb
+          wget -q https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/unofficial/2.16.0/debian-11/memgraph_2.16.0%2B4~e3bb5c9f7-1_amd64.deb -O memgraph-arm64.deb
 
-          fi
       - name: Disk status before cleaning
         run: |
           df -h
