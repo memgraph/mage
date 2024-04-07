@@ -1,0 +1,79 @@
+ARG PY_VERSION=3.11
+ARG CUDA_VERSION=12.2
+ARG CUDA_VERSION_MINOR=12.2.2
+ARG RAPIDS_VERSION=24.06a
+ARG MG_VERSION=2.15.1
+
+## COMPILATION START
+FROM rapidsai/base:${RAPIDS_VERSION}-cuda${CUDA_VERSION}-py${PY_VERSION} as rapids-dev
+FROM nvidia/cuda:${CUDA_VERSION_MINOR}-devel-ubuntu22.04 AS cuda-dev
+USER root
+ARG DEBIAN_FRONTEND=noninteractive
+ARG PY_VERSION
+ENV PY_VERSION ${PY_VERSION}
+
+# Take cugraph lib from the rapids image
+COPY --from=rapids-dev /opt/conda/lib/libcugraph.so /opt/conda/lib/libcugraph.so
+COPY --from=rapids-dev /opt/conda/include /opt/conda/include
+# Prevent from linking the Conda environment
+ENV LD_LIBRARY_PATH=/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64:/usr/local/lib
+RUN apt-get update && apt-get install -y       \
+    libcurl4                   `memgraph`      \
+    libpython${PY_VERSION}     `memgraph`      \
+    libssl3                    `memgraph`      \
+    libssl-dev                 `memgraph`      \
+    openssl                    `memgraph`      \
+    build-essential            `mage-memgraph` \
+    cmake                      `mage-memgraph` \
+    curl                       `mage-memgraph` \
+    g++                        `mage-memgraph` \
+    python3                    `mage-memgraph` \
+    python3-pip                `mage-memgraph` \
+    python3-setuptools         `mage-memgraph` \
+    python3-dev                `mage-memgraph` \
+    clang                      `mage-memgraph` \
+    git                        `mage-memgraph` \
+    unixodbc-dev               `mage-memgraph` \
+    software-properties-common `mage-cugraph`  \
+    lsb-release                `mage-cugraph`  \
+    wget                       `mage-cugraph`  \
+    --no-install-recommends                    \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
+    # Install newest CMake (cuGraph requires >= 20.01)
+    && wget -qO - https://apt.kitware.com/keys/kitware-archive-latest.asc | apt-key add - && \
+    apt-add-repository "deb https://apt.kitware.com/ubuntu/ $(lsb_release -cs) main" && \
+    apt-get install -y \
+    cmake           `mage-memgraph` \
+    --no-install-recommends
+ENV PATH=/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/bin/cmake:/usr/lib/cmake
+# TODO(gitbuda): How to cleanup rust installation cache?
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && export PATH="/root/.cargo/bin:${PATH}"
+# # NOTE: miniconda will be installed under /root/miniconda3
+# RUN cd /root && \
+#     curl -o miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+#     bash miniconda.sh -b
+WORKDIR /mage
+COPY . /mage
+# TODO(gitbuda): Experiment with pipx, the below works on debian-12 (on newer systems)
+# RUN python3 -m pip install --break-system-packages -r /mage/python/requirements.txt && \
+#     python3 -m pip install --break-system-packages -r /mage/python/tests/requirements.txt
+RUN python3 -m pip install -r /mage/python/requirements.txt && \
+    python3 -m pip install -r /mage/python/tests/requirements.txt
+# TODO(gitbuda): git clone --recursive OR git submodule update --init --recursive REQUIRED
+RUN python3 /mage/setup build \
+    --gpu \
+    --cpp-build-flags \
+      CMAKE_BUILD_TYPE=Release \
+      CMAKE_C_COMPILER=gcc \
+      CMAKE_CXX_COMPILER=g++ \
+      MAGE_CUGRAPH_ROOT=/opt/conda/ \
+    -p /usr/lib/memgraph/query_modules/
+RUN ls -alh /usr/lib/memgraph/query_modules/
+## COMPILATION END
+
+## RUNTIME START
+# TODO(gitbuda): Package for runtime
+# RUN curl https://download.memgraph.com/memgraph/v${MG_VERSION}/ubuntu-22.04/memgraph_${MG_VERSION}-1_amd64.deb --output memgraph.deb \
+#     && dpkg -i memgraph.deb \
+#     && rm memgraph.deb
+## RUNTIME END

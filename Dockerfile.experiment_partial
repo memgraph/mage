@@ -1,0 +1,13 @@
+ARG PY_VERSION=3.11
+ARG RAPIDS_VERSION=24.06a
+ARG CUDA_VERSION=12.2
+ARG CUDA_VERSION_MINOR=12.2.2
+ARG MG_VERSION=2.15.1
+
+FROM rapidsai/base:${RAPIDS_VERSION}-cuda${CUDA_VERSION}-py${PY_VERSION} as rapids-dev
+RUN ls -alh /opt/ && ls -alh /opt/conda/ && ls -alh /opt/conda/lib/ | grep cugraph
+RUN nvcc --version
+#
+# FROM nvidia/cuda:${CUDA_VERSION_MINOR}-devel-ubuntu22.04 AS cuda-dev
+# RUN ls -alh /opt/ && ls -alh /opt/nvidia/
+# RUN nvcc --version

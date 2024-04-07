@@ -3,11 +3,11 @@ networkx==2.6.2
 python-Levenshtein==0.12.1
 elasticsearch==8.4.3
 gensim==4.3.2
-torch==1.12.0
+torch==1.13.0
 six==1.16.0
 torchmetrics==0.9.3
 igraph==0.10.2
-scikit-learn==1.0.2
+scikit-learn==1.4.0
 gqlalchemy==1.4.1
 mysql-connector-python==8.0.32
 oracledb==1.2.2
