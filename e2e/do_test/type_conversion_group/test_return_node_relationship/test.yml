@@ -8,5 +8,7 @@ query: >
         size(nodes) AS n_nodes,
         size(relationships) AS n_relationships;
 
-exception: >
-    Returning nodes in do procedures not yet 
+output:
+  - n_nodes: 2
+    n_relationships: 2
+
