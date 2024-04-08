@@ -3,5 +3,5 @@ query: >
     YIELD value
     RETURN size(value.p) AS path_size;
 
-exception: >
-    Returning paths in do procedures not yet supported.
+output:
+  - path_size: 2

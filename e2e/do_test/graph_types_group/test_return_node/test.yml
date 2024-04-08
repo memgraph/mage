@@ -2,8 +2,9 @@ query: >
     CALL do.case([TRUE, "MATCH (n) WHERE n.id < 2 RETURN n AS node;"],
                  "")
     YIELD value
-    RETURN value.node AS node
-    ORDER BY node.id ASC;
+    RETURN value.node.id AS node_id
+    ORDER BY node_id ASC;
 
-exception: >
-    Returning nodes in do procedures not yet supported.
+output:
+  - node_id: 0
+  - node_id: 1
