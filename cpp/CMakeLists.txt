@@ -116,9 +116,10 @@ add_subdirectory(mg_utility)
 
 FetchContent_Declare(fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 10.0.0
+  GIT_TAG 10.2.1
 )
 FetchContent_MakeAvailable(fmt)
+add_compile_definitions(SPDLOG_FMT_EXTERNAL)
 
 function(add_query_module target_name version src)
   add_library(${target_name} SHARED ${src})

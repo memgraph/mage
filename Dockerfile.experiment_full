@@ -57,8 +57,9 @@ COPY . /mage
 # TODO(gitbuda): Experiment with pipx, the below works on debian-12 (on newer systems)
 # RUN python3 -m pip install --break-system-packages -r /mage/python/requirements.txt && \
 #     python3 -m pip install --break-system-packages -r /mage/python/tests/requirements.txt
-RUN python3 -m pip install -r /mage/python/requirements.txt && \
-    python3 -m pip install -r /mage/python/tests/requirements.txt
+# TODO(gitbuda): python requirements are IMPORTANT.
+# RUN python3 -m pip install -r /mage/python/requirements.txt && \
+#     python3 -m pip install -r /mage/python/tests/requirements.txt
 # TODO(gitbuda): git clone --recursive OR git submodule update --init --recursive REQUIRED
 RUN python3 /mage/setup build \
     --gpu \
@@ -68,7 +69,7 @@ RUN python3 /mage/setup build \
       CMAKE_CXX_COMPILER=g++ \
       MAGE_CUGRAPH_ROOT=/opt/conda/ \
     -p /usr/lib/memgraph/query_modules/
-RUN ls -alh /usr/lib/memgraph/query_modules/
+# RUN ls -alh /usr/lib/memgraph/query_modules/
 ## COMPILATION END
 
 ## RUNTIME START
