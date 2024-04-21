@@ -1,10 +1,10 @@
 #include <cugraph/algorithms.hpp>
-#include <cugraph/functions.hpp>  // legacy coo_to_csr
+#include <cugraph/legacy/functions.hpp>  // legacy coo_to_csr
 #include <cugraph/graph_functions.hpp>
 #include <cugraph/graph_generators.hpp>
 
-#include <raft/distance/distance.hpp>
-#include <raft/handle.hpp>
+#include <raft/distance/distance.cuh>
+#include <raft/raft.hpp>
 #include <rmm/device_uvector.hpp>
 
 #include <mg_exceptions.hpp>

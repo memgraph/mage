@@ -27,7 +27,7 @@
 # Order of the languages matters because cmake pics different compilers.
 #
 # Compiling cugraph takes ages and it's complex.
-# TODO(gitbuda): Allow linking of an already compiled version of cugraph.
+#   -> Defining MAGE_CUGRAPH_ROOT will skip compilation.
 #
 # CUDA_ARCHITECTURES ->
 # https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
@@ -39,23 +39,23 @@ message(STATUS "MAGE cuGraph build enabled: ${MAGE_CUGRAPH_ENABLE}")
 
 if (MAGE_CUGRAPH_ENABLE)
   # Version of cuGraph for local build
-  set(MAGE_CUGRAPH_TAG "v22.02.00" CACHE STRING "cuGraph GIT tag to checkout" )
+  set(MAGE_CUGRAPH_TAG "v24.04.00" CACHE STRING "cuGraph GIT tag to checkout" )
   set(MAGE_CUGRAPH_REPO "https://github.com/rapidsai/cugraph.git" CACHE STRING "cuGraph GIT repo URL")
   # Custom MAGE_CUGRAPH_BUILD_TYPE.
   set(MAGE_CUGRAPH_BUILD_TYPE "Release" CACHE STRING "Passed to cuGraph as CMAKE_BUILD_TYPE")
   # NATIVE | ALL -> possible because cugraph calls rapids_cuda_init_architectures
   set(MAGE_CUDA_ARCHITECTURES "NATIVE" CACHE STRING "Passed to cuGraph as CMAKE_CUDA_ARCHITECTURES")
 
-  # RAPIDS.cmake is here because rapids_cuda_init_architectures is required to
-  # properly set both CMAKE_CUDA_ARCHITECTURES and CUDA_ARCHITECTURES target
-  # property.
-  file(DOWNLOAD "https://raw.githubusercontent.com/rapidsai/rapids-cmake/${MAGE_CUGRAPH_TAG}a/RAPIDS.cmake"
-                ${CMAKE_BINARY_DIR}/RAPIDS.cmake)
-  include(${CMAKE_BINARY_DIR}/RAPIDS.cmake)
-
-  include(rapids-cuda)
-  rapids_cuda_init_architectures("${MEMGRAPH_MAGE_PROJECT_NAME}")
-  enable_language(CUDA)
+  # # RAPIDS.cmake is here because rapids_cuda_init_architectures is required to
+  # # properly set both CMAKE_CUDA_ARCHITECTURES and CUDA_ARCHITECTURES target
+  # # property.
+  # file(DOWNLOAD "https://raw.githubusercontent.com/rapidsai/rapids-cmake/${MAGE_CUGRAPH_TAG}a/RAPIDS.cmake"
+  #               ${CMAKE_BINARY_DIR}/RAPIDS.cmake)
+  # include(${CMAKE_BINARY_DIR}/RAPIDS.cmake)
+  #
+  # include(rapids-cuda)
+  # rapids_cuda_init_architectures("${MEMGRAPH_MAGE_PROJECT_NAME}")
+  # enable_language(CUDA)
 
   set(CMAKE_CUDA_STANDARD 17)
   set(CMAKE_CUDA_STANDARD_REQUIRED ON)

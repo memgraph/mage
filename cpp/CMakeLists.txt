@@ -1,9 +1,26 @@
 # Memgraph Mage C++ Query Modules CMake configuration.
 cmake_minimum_required(VERSION 3.14)
 set(MEMGRAPH_MAGE_PROJECT_NAME "memgraph-mage")
-project("${MEMGRAPH_MAGE_PROJECT_NAME}" LANGUAGES C CXX)
-include(FetchContent)
 
+if (MAGE_CUGRAPH_ENABLE)
+  set(MAGE_CUGRAPH_TAG "v24.04.00" CACHE STRING "cuGraph GIT tag to checkout" )
+  # RAPIDS.cmake is here because rapids_cuda_init_architectures is required to
+  # properly set both CMAKE_CUDA_ARCHITECTURES and CUDA_ARCHITECTURES target
+  # property.
+  file(DOWNLOAD "https://raw.githubusercontent.com/rapidsai/rapids-cmake/${MAGE_CUGRAPH_TAG}a/RAPIDS.cmake"
+                ${CMAKE_BINARY_DIR}/RAPIDS.cmake)
+  include(${CMAKE_BINARY_DIR}/RAPIDS.cmake)
+
+  include(rapids-cuda)
+  rapids_cuda_init_architectures("${MEMGRAPH_MAGE_PROJECT_NAME}")
+  enable_language(CUDA)
+endif()
+project("${MEMGRAPH_MAGE_PROJECT_NAME}" LANGUAGES C CXX)
+if (MAGE_CUGRAPH_ENABLE)
+  enable_language(CUDA)
+endif()
+
+include(FetchContent)
 
 # setup CMake module path, defines path for include() and find_package()
 # https://cmake.org/cmake/help/latest/variable/CMAKE_MODULE_PATH.html
