@@ -1,7 +1,7 @@
 ARG PY_VERSION=3.11
 ARG CUDA_VERSION=12.2
 ARG CUDA_VERSION_MINOR=12.2.2
-ARG RAPIDS_VERSION=24.06a
+ARG RAPIDS_VERSION=24.04a
 ARG MG_VERSION=2.16.0
 
 ## COMPILATION START
@@ -61,12 +61,12 @@ COPY . /mage
 # RUN python3 -m pip install -r /mage/python/requirements.txt && \
 #     python3 -m pip install -r /mage/python/tests/requirements.txt
 # TODO(gitbuda): git clone --recursive OR git submodule update --init --recursive REQUIRED
+      # CMAKE_C_COMPILER=gcc \
+      # CMAKE_CXX_COMPILER=g++ \
 RUN python3 /mage/setup build \
     --gpu \
     --cpp-build-flags \
       CMAKE_BUILD_TYPE=Release \
-      CMAKE_C_COMPILER=gcc \
-      CMAKE_CXX_COMPILER=g++ \
       MAGE_CUGRAPH_ROOT=/opt/conda/ \
     -p /usr/lib/memgraph/query_modules/
 # RUN ls -alh /usr/lib/memgraph/query_modules/

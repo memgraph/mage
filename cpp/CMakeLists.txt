@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.14)
 set(MEMGRAPH_MAGE_PROJECT_NAME "memgraph-mage")
 
 if (MAGE_CUGRAPH_ENABLE)
+  # TODO(gitbuda): Duplicated under cugraph.cmake -> FIX.
   set(MAGE_CUGRAPH_TAG "v24.04.00" CACHE STRING "cuGraph GIT tag to checkout" )
   # RAPIDS.cmake is here because rapids_cuda_init_architectures is required to
   # properly set both CMAKE_CUDA_ARCHITECTURES and CUDA_ARCHITECTURES target
@@ -10,14 +11,15 @@ if (MAGE_CUGRAPH_ENABLE)
   file(DOWNLOAD "https://raw.githubusercontent.com/rapidsai/rapids-cmake/${MAGE_CUGRAPH_TAG}a/RAPIDS.cmake"
                 ${CMAKE_BINARY_DIR}/RAPIDS.cmake)
   include(${CMAKE_BINARY_DIR}/RAPIDS.cmake)
-
+  # NOTE: RAPIDS init is required to be called before project().
   include(rapids-cuda)
   rapids_cuda_init_architectures("${MEMGRAPH_MAGE_PROJECT_NAME}")
-  enable_language(CUDA)
+  # rapids_cuda_patch_toolkit()
 endif()
 project("${MEMGRAPH_MAGE_PROJECT_NAME}" LANGUAGES C CXX)
 if (MAGE_CUGRAPH_ENABLE)
   enable_language(CUDA)
+  # find_package(CUDAToolkit REQUIRED)
 endif()
 
 include(FetchContent)
@@ -29,14 +31,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cugraph_cmake)
 # Export the compile commands so that we can use clang-tidy. Additional benefit
 # is easier debugging of compilation and linker flags.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-# Required C++ standard.
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Compile flags.

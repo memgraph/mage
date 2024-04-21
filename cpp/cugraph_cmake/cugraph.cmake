@@ -33,13 +33,15 @@
 # https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
 # Rapids CMake add NATIVE + ALL options as CUDA_ARCHITECTURES which simplifies
 # build configuration.
+#
+# CUDA + CMake -> https://developer.download.nvidia.com/video/gputechconf/gtc/2019/presentation/s9444-build-systems-exploring-modern-cmake-cuda-v2.pdf
 
 option(MAGE_CUGRAPH_ENABLE "Enable cuGraph build" OFF)
 message(STATUS "MAGE cuGraph build enabled: ${MAGE_CUGRAPH_ENABLE}")
 
 if (MAGE_CUGRAPH_ENABLE)
   # Version of cuGraph for local build
-  set(MAGE_CUGRAPH_TAG "v24.04.00" CACHE STRING "cuGraph GIT tag to checkout" )
+  # set(MAGE_CUGRAPH_TAG "v24.04.00" CACHE STRING "cuGraph GIT tag to checkout" )
   set(MAGE_CUGRAPH_REPO "https://github.com/rapidsai/cugraph.git" CACHE STRING "cuGraph GIT repo URL")
   # Custom MAGE_CUGRAPH_BUILD_TYPE.
   set(MAGE_CUGRAPH_BUILD_TYPE "Release" CACHE STRING "Passed to cuGraph as CMAKE_BUILD_TYPE")
@@ -57,7 +59,7 @@ if (MAGE_CUGRAPH_ENABLE)
   # rapids_cuda_init_architectures("${MEMGRAPH_MAGE_PROJECT_NAME}")
   # enable_language(CUDA)
 
-  set(CMAKE_CUDA_STANDARD 17)
+  set(CMAKE_CUDA_STANDARD 20)
   set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
   message(STATUS "MAGE cuGraph root: ${MAGE_CUGRAPH_ROOT}")
@@ -109,5 +111,6 @@ macro(target_mage_cugraph target_name)
               "$<$<COMPILE_LANGUAGE:CUDA>:${MAGE_CUDA_FLAGS}>"
     )
     target_link_libraries("${target_name}" PRIVATE mage_cugraph)
+    # target_link_libraries("${target_name}" PRIVATE CUDA::toolkit)
   endif()
 endmacro()
