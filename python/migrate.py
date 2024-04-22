@@ -268,6 +268,7 @@ mgp.add_batch_read_proc(oracle_db, init_migrate_oracle_db, cleanup_migrate_oracl
 # PostgreSQL dictionary to store connections and cursors by thread
 postgres_dict = {}
 
+
 def init_migrate_postgresql(
     table_or_sql: str,
     config: mgp.Map,
@@ -304,6 +305,7 @@ def init_migrate_postgresql(
             column.name for column in cursor.description
         ]
 
+
 def postgresql(
     table_or_sql: str,
     config: mgp.Map,
@@ -329,6 +331,7 @@ def postgresql(
 
     return [mgp.Record(row=_name_row_cells(row, column_names)) for row in rows]
 
+
 def cleanup_migrate_postgresql():
     global postgres_dict
     postgres_dict[threading.get_native_id][Constants.CURSOR] = None
@@ -336,6 +339,7 @@ def cleanup_migrate_postgresql():
     postgres_dict[threading.get_native_id][Constants.CONNECTION].commit()
     postgres_dict[threading.get_native_id][Constants.CONNECTION] = None
     postgres_dict[threading.get_native_id][Constants.COLUMN_NAMES] = None
+
 
 mgp.add_batch_read_proc(postgresql, init_migrate_postgresql, cleanup_migrate_postgresql)
 
