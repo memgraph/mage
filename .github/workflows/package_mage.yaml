@@ -1,4 +1,4 @@
-name: Package mage
+name: "Package mage"
 
 on:
   workflow_dispatch:
@@ -14,6 +14,13 @@ on:
         type: string
         description: "Custom tag for the final image. Required if 'Image tag format' is set to 'custom'."
         default: ""
+      mage_build_scope:
+        type: choice
+        description: "Mage build scope"
+        default: 'all'
+        options:
+          - "all"
+          - "no_ml"
       mage_version:
         type: string
         description: "Mage version to build into the package (format: X.Y.Z). Required if 'Image tag format' is set to 'X.Y.Z-memgraph-X.Y.Z'."
@@ -30,9 +37,8 @@ on:
         type: string
       additional_tag:
         type: choice
-        default: 'none'
         descritpion: "Additional tag for the image"
-        required: true
+        default: 'none'
         options:
           - 'none'
           - 'latest'
