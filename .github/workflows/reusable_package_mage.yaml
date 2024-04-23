@@ -138,7 +138,7 @@ jobs:
       - name: Build docker image
         run: |
           docker buildx build \
-          --target ${{ inputs.mage_image_target }} \
+          --target ${{ inputs.mage_build_target }} \
           --platform linux/${{ inputs.arch }} \
           --tag ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} \
           --file ${{ env.DOCKERFILE }} \
