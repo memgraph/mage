@@ -25,7 +25,7 @@ on:
         default: false
         type: boolean
       memgraph_download_link:
-        description: "URL of the Memgraph package to download. Required if 'Download official Memgraph package?' is set to 'false'."
+        description: "Memgraph package download link. Required if 'Download official Memgraph package?' is set to 'false'."
         default: ""
         type: string
       additional_tag:
