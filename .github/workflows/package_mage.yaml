@@ -47,7 +47,10 @@ on:
         type: boolean
         description: "Overwrite existing image on dockerhub"
         default: true
-
+      push_to_s3:
+        type: boolean
+        description: "Push the package to S3?"
+        default: false 
 
 jobs:
   dummy:
