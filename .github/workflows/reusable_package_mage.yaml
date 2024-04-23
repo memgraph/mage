@@ -87,15 +87,15 @@ jobs:
             fi
           fi
           BUILD_SCOPE_TAG=""
-          if [[ ${{ inputs.mage_build_scope }} == 'without ML' ]]; then
+          if [[ "${{ inputs.mage_build_scope }}" == 'without ML' ]]; then
             BUILD_SCOPE_TAG="-no-ML"
           fi
           BUILD_TYPE_TAG=""
-          if [[ ${{ inputs.mage_build_type }} == 'RelWithDebInfo' ]]; then
+          if [[ "${{ inputs.mage_build_type }}" == 'RelWithDebInfo' ]]; then
             BUILD_TYPE_TAG="-RelWithDebInfo"
           fi
           BUILD_TARGET_TAG=""
-          if [[ ${{ inputs.mage_build_target }} == 'dev' ]]; then
+          if [[ "${{ inputs.mage_build_target }}" == 'dev' ]]; then
             BUILD_TARGET_TAG="-dev"
           fi
           echo "IMAGE_TAG=${MAGE_VERSION}-memgraph-${MEMGRAPH_VERSION}${BUILD_SCOPE_TAG}${BUILD_TYPE_TAG}${BUILD_TARGET_TAG}" >> $GITHUB_ENV
@@ -103,7 +103,7 @@ jobs:
       - name: Set target dockerfile
         run: |
           DOCKERFILE="Dockerfile.release"
-          if [[ ${{ inputs.mage_build_scope }} == "without ML" ]]; then
+          if [[ "${{ inputs.mage_build_scope }}" == "without ML" ]]; then
             DOCKERFILE="Dockerfile.no_ML"
           fi
           echo "DOCKERFILE=${DOCKERFILE}" >> $GITHUB_ENV
