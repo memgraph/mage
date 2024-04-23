@@ -3,58 +3,50 @@ name: "Package mage"
 on:
   workflow_dispatch:
     inputs:
-      image_tag_format:
-        type: choice
-        description: "Image tag format"
-        default: 'X.Y.Z-memgraph-X.Y.Z'
-        options:
-          - 'X.Y.Z-memgraph-X.Y.Z'
-          - 'custom'
-      custom_image_tag:
+      mage_version:
         type: string
-        description: "Custom tag for the final image. Required if 'Image tag format' is set to 'custom'."
-        default: ""
+        description: "Mage version to build into the package (format: X.Y.Z)."
       mage_build_scope:
         type: choice
         description: "Mage build scope"
-        default: 'all'
+        default: 'with ML'
         options:
-          - "all"
-          - "no_ml"
-      mage_version:
-        type: string
-        description: "Mage version to build into the package (format: X.Y.Z). Required if 'Image tag format' is set to 'X.Y.Z-memgraph-X.Y.Z'."
+          - "with ML"
+          - "without ML"
+      mage_build_target:
+        type: choice
+        description: "Mage image target"
+        default: 'prod'
+        options:
+          - "prod"
+          - "dev"
+      mage_build_type:
+        type: choice
+        description: "Mage build type"
+        default: 'Release'
+        options:
+          - "Release"
+          - "RelWithDebInfo"
       memgraph_version:
         type: string
-        description: "Memgraph version to build into the package (format: X.Y.Z). Required if 'Image tag format' is set to 'X.Y.Z-memgraph-X.Y.Z'."
-      download_official_memgraph:
-        description: "Download official Memgraph package?"
-        default: false
-        type: boolean
+        description: "Memgraph version to build into the package (format: X.Y.Z)."
       memgraph_download_link:
-        description: "Memgraph package download link. Required if 'Download official Memgraph package?' is set to 'false'."
+        description: "Memgraph package download link. Leave empty to use the official download link."
         default: ""
         type: string
-      additional_tag:
-        type: choice
-        descritpion: "Additional tag for the image"
-        default: 'none'
-        options:
-          - 'none'
-          - 'latest'
-          - 'fix'
-      force_release:
-        type: boolean
-        description: "Overwrite existing image on dockerhub"
-        default: true
-      push_to_s3:
-        type: boolean
-        description: "Push the package to S3?"
-        default: false 
 
 jobs:
-  dummy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Dummy step
-        run: echo "This is a dummy step"
+  BuildMage:
+    uses: ./.github/workflows/reusable_package_mage.yaml
+    with:
+      arch: "amd"
+      mage_build_scope: ${{ github.event.inputs.mage_build_scope || 'all' }}
+      mage_build_target: ${{ github.event.inputs.mage_build_target_target || 'prod' }}
+      mage_build_type: ${{ github.event.inputs.mage_build_type || 'Release' }}
+      mage_version: ${{ github.event.inputs.mage_version }}
+      memgraph_version: ${{ github.event.inputs.memgraph_version }}
+      memgraph_download_link: ${{ github.event.inputs.memgraph_download_link || '' }}
+      shorten_tag: true
+      force_release: true
+      push_to_dockerhub: false
+    secrets: inherit

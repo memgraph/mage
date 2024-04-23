@@ -1,0 +1,158 @@
+name: "Reusable package mage and upload"
+on:
+  workflow_call:
+    inputs:
+      arch:
+        type: string
+        description: "Architecture to build the image for"
+        required: true
+      mage_version:
+        type: string
+        description: "Mage version built into this image (format: X.Y.Z)"
+        required: true
+      mage_build_scope:
+        type: string
+        description: "Mage build scope"
+        default: 'all'
+      mage_build_target:
+        type: string
+        description: "Mage build target"
+        default: 'prod'
+      mage_build_type:
+        type: string
+        description: "Mage build type"
+        default: 'Release'
+      memgraph_version:
+        type: string
+        description: "Memgraph version built into this image (format: X.Y.Z)"
+        required: true
+      memgraph_download_link:
+        description: "Memgraph package download link. Leave empty to use the official download link."
+        default: ""
+        type: string
+      shorten_tag:
+        type: boolean
+        description: "Make the final tag as short as possible, shortest format is X.Y-memgraph-X.Y"
+        default: true
+      force_release:
+        type: boolean
+        description: "Overwrite existing image on dockerhub"
+        default: true
+      push_to_dockerhub:
+        type: boolean
+        description: "Push the image to DockerHub?"
+        default: false
+
+env:
+  OS: debian-11
+  DOCKER_REPOSITORY_NAME: memrgaph/memgraph-mage
+
+jobs:
+  build_and_release_docker:
+    name: Build & release Docker image with tag
+    runs-on: ubuntu-latest
+    steps:            
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set image version tag
+        run: |
+          MEMGRAPH_VERSION=${{ inputs.memgraph_version }}
+          MAGE_VERSION=${{ inputs.mage_version }}
+          if [[ ${{ inputs.shorten_tag }} == true ]]; then
+            memgraph_patch_version=${MEMGRAPH_VERSION##*.}
+            mage_patch_version=${MAGE_VERSION##*.}
+            if [[ "$memgraph_patch_version" -eq 0 ]]; then
+              MEMGRAPH_VERSION=${MEMGRAPH_VERSION%.*}
+            fi
+            if [[ "$mage_patch_version" -eq 0 ]]; then
+              MAGE_VERSION=${MAGE_VERSION%.*}
+            fi
+          fi
+          BUILD_SCOPE_TAG=""
+          if [[ ${{ inputs.mage_build_scope }} == 'without ML' ]]; then
+            BUILD_SCOPE_TAG="-no-ML"
+          fi
+          BUILD_TYPE_TAG=""
+          if [[ ${{ inputs.mage_build_type }} == 'RelWithDebInfo' ]]; then
+            BUILD_TYPE_TAG="-RelWithDebInfo"
+          fi
+          BUILD_TARGET_TAG=""
+          if [[ ${{ inputs.mage_build_target }} == 'dev' ]]; then
+            BUILD_TARGET_TAG="-dev"
+          fi
+          echo "IMAGE_TAG=${MAGE_VERSION}-memgraph-${MEMGRAPH_VERSION}${BUILD_SCOPE_TAG}${BUILD_TYPE_TAG}${BUILD_TARGET_TAG}" >> $GITHUB_ENV
+
+      - name: Set target dockerfile
+        run: |
+          DOCKERFILE="Dockerfile.release"
+          if [[ ${{ inputs.mage_build_scope == "without ML" }} ]]; then
+            DOCKERFILE="Dockerfile.no_ML"
+          fi
+          echo "DOCKERFILE=${DOCKERFILE}" >> $GITHUB_ENV
+
+      - name: Check if specified version tag is already pushed
+        if: ${{ inputs.push_to_dockerhub == 'true' }}
+        run: |
+          EXISTS=$(docker manifest inspect $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.IMAGE_TAG }} > /dev/null; echo $?)
+          echo $EXISTS
+          if [[ ${EXISTS} -eq 0 ]]; then
+              echo The specified version has been already released to DockerHub!
+              if [[ ${{ inputs.force_release }} = true ]]; then
+                echo Forcing the release
+              else
+                echo Stopping the release
+                exit 1
+              fi
+          else
+              echo All good the specified version has not been release to DockerHub
+          fi
+
+      - name: Download memgraph binary
+        run: |
+          if [[ -z ${{ inputs.memgraph_download_link }} ]]; then
+            curl -L https://download.memgraph.com/memgraph/v${{ inputs.memgraph_version }}/$OS/memgraph_${{ inputs.memgraph_version }}-1_${{ inputs.arch }}64.deb > memgraph-${{ inputs.arch }}64.deb
+          else
+            curl -L ${{ inputs.memgraph_download_link }} > memgraph-${{ inputs.arch }}64.deb
+          fi
+
+      # Add ability to add additional tag after the image has been built
+      # --tag ${DOCKER_REPOSITORY_NAME}:${{ inputs.additional_tag }} \
+      - name: Build docker image
+        run: |
+          docker buildx build \
+          --target ${{ inputs.mage_image_target }} \
+          --platform linux/${{ inputs.arch }} \
+          --tag ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} \
+          --file ${{ env.DOCKERFILE }} \
+          --load .
+
+      - name: Save docker image
+        run: docker save ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} > mage_${{ env.IMAGE_TAG }}.tar.gz
+
+      - name: Upload docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: mage_${{ env.IMAGE_TAG }}
+          path: mage_${{ env.IMAGE_TAG }}.tar.gz
+
+      - name: Push docker image
+        if: ${{ inputs.push_to_dockerhub == 'true' }}
+        run: docker push ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }}
