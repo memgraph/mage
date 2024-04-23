@@ -127,7 +127,7 @@ jobs:
 
       - name: Download memgraph binary
         run: |
-          if [[ -z ${{ inputs.memgraph_download_link }} ]]; then
+          if [[ -z "${{ inputs.memgraph_download_link }}" ]]; then
             curl -L https://download.memgraph.com/memgraph/v${{ inputs.memgraph_version }}/$OS/memgraph_${{ inputs.memgraph_version }}-1_${{ inputs.arch }}64.deb > memgraph-${{ inputs.arch }}64.deb
           else
             curl -L ${{ inputs.memgraph_download_link }} > memgraph-${{ inputs.arch }}64.deb
