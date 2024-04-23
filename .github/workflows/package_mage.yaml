@@ -48,4 +48,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Dummy step
-      run: echo "This is a dummy step"
+        run: echo "This is a dummy step"
