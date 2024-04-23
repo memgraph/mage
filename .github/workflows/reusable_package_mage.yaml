@@ -103,7 +103,7 @@ jobs:
       - name: Set target dockerfile
         run: |
           DOCKERFILE="Dockerfile.release"
-          if [[ ${{ inputs.mage_build_scope == "without ML" }} ]]; then
+          if [[ ${{ inputs.mage_build_scope }} == "without ML" ]]; then
             DOCKERFILE="Dockerfile.no_ML"
           fi
           echo "DOCKERFILE=${DOCKERFILE}" >> $GITHUB_ENV
