@@ -45,7 +45,7 @@ on:
 
 env:
   OS: debian-11
-  DOCKER_REPOSITORY_NAME: memrgraph/memgraph-mage-test
+  DOCKER_REPOSITORY_NAME: memgraph/memgraph-mage-test
 
 jobs:
   BuildAndPush:
