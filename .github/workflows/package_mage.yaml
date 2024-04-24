@@ -34,6 +34,10 @@ on:
         description: "Memgraph package download link. Leave empty to use the official download link."
         default: ""
         type: string
+      push_to_dockerhub:
+        type: boolean
+        description: "Push the image to DockerHub?"
+        default: false
 
 jobs:
   BuildMage:
@@ -48,5 +52,5 @@ jobs:
       memgraph_download_link: ${{ github.event.inputs.memgraph_download_link || '' }}
       shorten_tag: true
       force_release: true
-      push_to_dockerhub: false
+      push_to_dockerhub: ${{ github.event.inputs.push_to_dockerhub }}
     secrets: inherit
