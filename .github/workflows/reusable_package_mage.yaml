@@ -27,19 +27,19 @@ on:
         description: "Memgraph version built into this image (format: X.Y.Z)"
         required: true
       memgraph_download_link:
+        type: string
         description: "Memgraph package download link. Leave empty to use the official download link."
         default: ""
-        type: string
       shorten_tag:
-        type: boolean
+        type: string
         description: "Make the final tag as short as possible, shortest format is X.Y-memgraph-X.Y"
         default: true
       force_release:
-        type: boolean
+        type: string
         description: "Overwrite existing image on dockerhub"
         default: true
       push_to_dockerhub:
-        type: boolean
+        type: string
         description: "Push the image to DockerHub?"
         default: false
 

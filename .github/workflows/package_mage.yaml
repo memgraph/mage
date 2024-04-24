@@ -50,7 +50,7 @@ jobs:
       mage_version: ${{ github.event.inputs.mage_version }}
       memgraph_version: ${{ github.event.inputs.memgraph_version }}
       memgraph_download_link: ${{ github.event.inputs.memgraph_download_link || '' }}
-      shorten_tag: true
-      force_release: true
+      shorten_tag: 'true'
+      force_release: 'true'
       push_to_dockerhub: ${{ github.event.inputs.push_to_dockerhub }}
     secrets: inherit
