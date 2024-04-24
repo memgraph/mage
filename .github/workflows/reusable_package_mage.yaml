@@ -45,10 +45,10 @@ on:
 
 env:
   OS: debian-11
-  DOCKER_REPOSITORY_NAME: memrgaph/memgraph-mage
+  DOCKER_REPOSITORY_NAME: memrgaph/memgraph-mage-test
 
 jobs:
-  build_and_release_docker:
+  BuildAndPush:
     name: Build & release Docker image with tag
     runs-on: ubuntu-latest
     steps:            
