@@ -49,7 +49,6 @@ env:
 
 jobs:
   BuildAndPush:
-    name: Build & release Docker image with tag
     runs-on: ubuntu-latest
     steps:            
       - name: Checkout repository and submodules
