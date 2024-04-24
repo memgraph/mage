@@ -52,7 +52,7 @@ jobs:
     with:
       arch: ${{ github.event.inputs.mage_build_arch || 'amd' }}
       mage_build_scope: ${{ github.event.inputs.mage_build_scope || 'all' }}
-      mage_build_target: ${{ github.event.inputs.mage_build_target_target || 'prod' }}
+      mage_build_target: ${{ github.event.inputs.mage_build_target || 'prod' }}
       mage_build_type: ${{ github.event.inputs.mage_build_type || 'Release' }}
       mage_version: ${{ github.event.inputs.mage_version }}
       memgraph_version: ${{ github.event.inputs.memgraph_version }}
