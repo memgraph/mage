@@ -71,7 +71,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Set image version tag
+      - name: Set image tag
         run: |
           MEMGRAPH_VERSION=${{ inputs.memgraph_version }}
           MAGE_VERSION=${{ inputs.mage_version }}
@@ -85,19 +85,22 @@ jobs:
               MAGE_VERSION=${MAGE_VERSION%.*}
             fi
           fi
-          BUILD_SCOPE_TAG=""
+          BUILD_TAGS=""
+          if [[ "${{ inputs.arch }}" == 'arm' ]]; then
+            BUILD_TAGS="${BUILD_TAGS}-arm"
+          fi
           if [[ "${{ inputs.mage_build_scope }}" == 'without ML' ]]; then
-            BUILD_SCOPE_TAG="-no-ML"
+            BUILD_TAGS="${BUILD_TAGS}-no-ML"
           fi
-          BUILD_TYPE_TAG=""
-          if [[ "${{ inputs.mage_build_type }}" == 'RelWithDebInfo' ]]; then
-            BUILD_TYPE_TAG="-RelWithDebInfo"
-          fi
-          BUILD_TARGET_TAG=""
           if [[ "${{ inputs.mage_build_target }}" == 'dev' ]]; then
-            BUILD_TARGET_TAG="-dev"
+            BUILD_TAGS="${BUILD_TAGS}-dev"
           fi
-          echo "IMAGE_TAG=${MAGE_VERSION}-memgraph-${MEMGRAPH_VERSION}${BUILD_SCOPE_TAG}${BUILD_TYPE_TAG}${BUILD_TARGET_TAG}" >> $GITHUB_ENV
+          if [[ "${{ inputs.mage_build_type }}" == 'RelWithDebInfo' ]]; then
+            BUILD_TAGS"${BUILD_TAGS}-RelWithDebInfo"
+          elif [[ "${{ inputs.mage_build_type }}" == 'Debug' ]]; then
+            BUILD_TAGS="${BUILD_TAGS}-Debug"
+          fi
+          echo "IMAGE_TAG=${MAGE_VERSION}-memgraph-${MEMGRAPH_VERSION}${BUILD_TAGS}" >> $GITHUB_ENV
 
       - name: Set target dockerfile
         run: |
