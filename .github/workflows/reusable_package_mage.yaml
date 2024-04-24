@@ -96,7 +96,7 @@ jobs:
             BUILD_TAGS="${BUILD_TAGS}-dev"
           fi
           if [[ "${{ inputs.mage_build_type }}" == 'RelWithDebInfo' ]]; then
-            BUILD_TAGS"${BUILD_TAGS}-RelWithDebInfo"
+            BUILD_TAGS="${BUILD_TAGS}-RelWithDebInfo"
           elif [[ "${{ inputs.mage_build_type }}" == 'Debug' ]]; then
             BUILD_TAGS="${BUILD_TAGS}-Debug"
           fi
