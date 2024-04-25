@@ -42,6 +42,10 @@ on:
         type: string
         description: "Push the image to DockerHub?"
         default: false
+      push_to_s3:
+        type: string
+        description: "Push the image to S3?"
+        default: false
 
 env:
   OS: ${{ inputs.arch == 'arm' && 'debian-11-aarch64' || 'debian' }}
@@ -147,14 +151,27 @@ jobs:
           --load .
 
       - name: Save docker image
-        run: docker save ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} > mage_${{ env.IMAGE_TAG }}.tar.gz
+        run: |
+          mkdir output
+          docker save ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} > output/mage_${{ env.IMAGE_TAG }}.tar.gz
 
-      - name: Upload docker image
+      - name: Push to GitHub
         uses: actions/upload-artifact@v4
         with:
           name: mage_${{ env.IMAGE_TAG }}
           path: mage_${{ env.IMAGE_TAG }}.tar.gz
 
-      - name: Push docker image
+      - name: Push to DockerHub
         if: ${{ inputs.push_to_dockerhub == 'true' }}
         run: docker push ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }}
+
+      - name: Push to S3
+        if: ${{ inputs.push_to_s3 == 'true' }}
+        uses: jakejarvis/s3-sync-action@v0.5.1
+        env:
+          AWS_S3_BUCKET: "deps.memgraph.io"
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: "eu-west-1"
+          SOURCE_DIR: "output"
+          DEST_DIR: "mage-unofficial/mage_${{ env.IMAGE_TAG }}/"

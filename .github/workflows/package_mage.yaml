@@ -45,6 +45,10 @@ on:
         type: boolean
         description: "Push the image to DockerHub?"
         default: false
+      push_to_s3:
+        type: boolean
+        description: "Push the image to S3?"
+        default: false
 
 jobs:
   BuildMage:
@@ -60,4 +64,5 @@ jobs:
       shorten_tag: 'true'
       force_release: 'true'
       push_to_dockerhub: ${{ github.event.inputs.push_to_dockerhub || 'false' }}
+      push_to_s3: ${{ github.event.inputs.push_to_s3 || 'false' }}
     secrets: inherit
