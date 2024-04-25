@@ -67,7 +67,7 @@ void PagerankProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memo
 
     auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph(*mg_graph.get(), mg_graph::GraphType::kDirectedGraph, handle);
     auto cu_graph_view = cu_graph.view();
-    auto n_vertices = cu_graph_view.get_number_of_vertices();
+    auto n_vertices = cu_graph_view.number_of_vertices();
 
     rmm::device_uvector<result_t> pagerank_results(n_vertices, stream);
     // IMPORTANT: store_transposed has to be true because cugraph::pagerank

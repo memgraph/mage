@@ -59,7 +59,7 @@ if (MAGE_CUGRAPH_ENABLE)
   # rapids_cuda_init_architectures("${MEMGRAPH_MAGE_PROJECT_NAME}")
   # enable_language(CUDA)
 
-  set(CMAKE_CUDA_STANDARD 17)
+  set(CMAKE_CUDA_STANDARD 20)
   set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
   message(STATUS "MAGE cuGraph root: ${MAGE_CUGRAPH_ROOT}")
@@ -110,8 +110,6 @@ macro(target_mage_cugraph target_name)
       PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:${MAGE_CXX_FLAGS}>"
               "$<$<COMPILE_LANGUAGE:CUDA>:${MAGE_CUDA_FLAGS}>"
     )
-    target_link_libraries("${target_name}" PRIVATE mage_cugraph)
-    # target_link_libraries("${target_name}" PRIVATE CUDA::toolkit)
-    target_compile_features("${target_name}" PRIVATE cxx_std_17) # taken from https://github.com/rapidsai/cugraph/blob/branch-24.04/cpp/examples/users/single_gpu_application/CMakeLists.txt -> 0 impact...
+    target_link_libraries("${target_name}" PRIVATE mage_cugraph CUDA::toolkit)
   endif()
 endmacro()

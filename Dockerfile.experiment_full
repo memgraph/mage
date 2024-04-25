@@ -18,6 +18,7 @@ COPY --from=rapids-dev /opt/conda/include /opt/conda/include
 # Prevent from linking the Conda environment
 ENV LD_LIBRARY_PATH=/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64:/usr/local/lib
 RUN apt-get update && apt-get install -y       \
+    vim                        `memgraph`      \
     libcurl4                   `memgraph`      \
     libpython${PY_VERSION}     `memgraph`      \
     libssl3                    `memgraph`      \

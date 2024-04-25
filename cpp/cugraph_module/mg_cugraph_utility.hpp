@@ -53,6 +53,12 @@ auto CreateCugraphFromMemgraph(const mg_graph::GraphView<> &mg_graph, const mg_g
   std::vector<TVertexT> mg_vertices;
   mg_vertices.reserve(mg_nodes.size());
 
+  // TODO(gitbuda): Update types
+  std::vector<int64_t> mg_edge_ids;
+  mg_edge_ids.reserve(mg_edges.size());
+  std::vector<int32_t> mg_edge_types;
+  mg_edge_types.reserve(mg_edges.size());
+
   std::transform(mg_edges.begin(), mg_edges.end(), std::back_inserter(mg_src),
                  [](const auto &edge) -> TVertexT { return edge.from; });
   std::transform(mg_edges.begin(), mg_edges.end(), std::back_inserter(mg_dst),
@@ -75,13 +81,22 @@ auto CreateCugraphFromMemgraph(const mg_graph::GraphView<> &mg_graph, const mg_g
   rmm::device_uvector<TVertexT> cu_vertices(mg_vertices.size(), stream);
   raft::update_device(cu_vertices.data(), mg_vertices.data(), mg_vertices.size(), stream);
 
+  // TODO(gitbuda): Update types and inject valid ids / edge types.
+  rmm::device_uvector<int64_t> cu_edge_ids(mg_edge_ids.size(), stream);
+  raft::update_device(cu_edge_ids.data(), mg_edge_ids.data(), mg_edge_ids.size(), stream);
+  rmm::device_uvector<int32_t> cu_edge_types(mg_edge_types.size(), stream);
+  raft::update_device(cu_edge_types.data(), mg_edge_types.data(), mg_edge_types.size(), stream);
+
   // TODO: Deal_with/pass edge weights to CuGraph graph.
   // TODO: Allow for multigraphs
-  cugraph::graph_t<TVertexT, TEdgeT, TWeightT, TStoreTransposed, TMultiGPU> cu_graph(handle);
+  // TODO(gitbuda): graph_t doesn't have weight anymore -> use std::optional<edge_property_view_t<edge_t, weight_t const*>> edge_weight_view
+  //                for a given algorithm.
+  cugraph::graph_t<TVertexT, TEdgeT, TStoreTransposed, TMultiGPU> cu_graph(handle);
   // NOTE: Renumbering is not required because graph coming from Memgraph is already correctly numbered.
   std::tie(cu_graph, std::ignore) =
-      cugraph::create_graph_from_edgelist<TVertexT, TEdgeT, TWeightT, TStoreTransposed, TMultiGPU>(
+      cugraph::create_graph_from_edgelist<TVertexT, TEdgeT, TWeightT, int64_t, int32_t, TStoreTransposed, TMultiGPU>(
           handle, std::move(cu_vertices), std::move(cu_src), std::move(cu_dst), std::move(cu_weight),
+          std::move(cu_edge_ids), std::move(cu_edge_types),
           cugraph::graph_properties_t{false, false}, false, false);
   stream.synchronize_no_throw();
 
