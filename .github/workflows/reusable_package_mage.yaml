@@ -131,13 +131,25 @@ jobs:
               echo All good the specified version has not been release to DockerHub
           fi
 
-      - name: Download memgraph binary
+      - name: Set up and check memgrpah download link
         run: |
-          if [[ -z "${{ inputs.memgraph_download_link }}" ]]; then
-            curl -L https://download.memgraph.com/memgraph/v${{ inputs.memgraph_version }}/$OS/memgraph_${{ inputs.memgraph_version }}-1_${{ inputs.arch }}64.deb > memgraph-${{ inputs.arch }}64.deb
+          if ![[ -z "${{ inputs.memgraph_download_link }}" ]]; then
+            echo "Using official download link"
+            mg_url="https://download.memgraph.com/memgraph/v${{ inputs.memgraph_version }}/$OS/memgraph_${{ inputs.memgraph_version }}-1_${{ inputs.arch }}64.deb"
           else
-            curl -L ${{ inputs.memgraph_download_link }} > memgraph-${{ inputs.arch }}64.deb
+            echo "Using custom download link"
+            mg_url=${{ inputs.memgraph_download_link }
           fi
+          if curl --output /dev/null --silent --head --fail $mg_url; then
+            echo "Memgraph download link is valid"
+            echo "MEMGRAPH_DOWNLOAD_LINK=${mg_url}" >> $GITHUB_ENV 
+          else
+            echo "Memgraph download link is not valid"
+            exit 1
+          fi
+
+      - name: Download memgraph binary
+        run: curl -L ${{ env.MEMGRAPH_DOWNLOAD_LINK }} > memgraph-${{ inputs.arch }}64.deb
 
       # Add ability to add additional tag after the image has been built
       # --tag ${DOCKER_REPOSITORY_NAME}:${{ inputs.additional_tag }} \
