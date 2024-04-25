@@ -170,8 +170,8 @@ jobs:
       - name: Push to GitHub
         uses: actions/upload-artifact@v4
         with:
-          name: mage_${{ env.IMAGE_TAG }}
-          path: mage_${{ env.IMAGE_TAG }}.tar.gz
+          name: "mage_${{ env.IMAGE_TAG }}"
+          path: "output/mage_${{ env.IMAGE_TAG }}.tar.gz"
 
       - name: Push to DockerHub
         if: ${{ inputs.push_to_dockerhub == 'true' }}
