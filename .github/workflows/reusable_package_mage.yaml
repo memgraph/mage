@@ -138,7 +138,7 @@ jobs:
             mg_url="https://download.memgraph.com/memgraph/v${{ inputs.memgraph_version }}/$OS/memgraph_${{ inputs.memgraph_version }}-1_${{ inputs.arch }}64.deb"
           else
             echo "Using custom download link"
-            mg_url=${{ inputs.memgraph_download_link }
+            mg_url=${{ inputs.memgraph_download_link }}
           fi
           if curl --output /dev/null --silent --head --fail $mg_url; then
             echo "Memgraph download link is valid"
