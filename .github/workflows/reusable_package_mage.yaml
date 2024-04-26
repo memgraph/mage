@@ -18,10 +18,6 @@ on:
         type: string
         description: "Mage build target"
         default: 'prod'
-      mage_build_type:
-        type: string
-        description: "Mage build type"
-        default: 'Release'
       memgraph_version:
         type: string
         description: "Memgraph version built into this image (format: X.Y.Z)"
@@ -98,11 +94,6 @@ jobs:
           fi
           if [[ "${{ inputs.mage_build_target }}" == 'dev' ]]; then
             BUILD_TAGS="${BUILD_TAGS}-dev"
-          fi
-          if [[ "${{ inputs.mage_build_type }}" == 'RelWithDebInfo' ]]; then
-            BUILD_TAGS="${BUILD_TAGS}-RelWithDebInfo"
-          elif [[ "${{ inputs.mage_build_type }}" == 'Debug' ]]; then
-            BUILD_TAGS="${BUILD_TAGS}-Debug"
           fi
           echo "IMAGE_TAG=${MAGE_VERSION}-memgraph-${MEMGRAPH_VERSION}${BUILD_TAGS}" >> $GITHUB_ENV
 
