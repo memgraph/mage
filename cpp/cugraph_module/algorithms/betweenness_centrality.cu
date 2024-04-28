@@ -64,8 +64,8 @@ void BetweennessProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_m
         weight_property, kDefaultWeight);
     if (mg_graph->Empty()) return;
 
+    // TODO(gitbuda): The betweenness_centrality legacy function still works -> try to replace with latest option.
     auto n_vertices = mg_graph.get()->Nodes().size();
-
     // IMPORTANT: Betweenness centrality cuGraph algorithm works only on legacy code
     auto cu_graph_ptr =
         mg_cugraph::CreateCugraphLegacyFromMemgraph<vertex_t, edge_t, weight_t>(*mg_graph.get(), handle);

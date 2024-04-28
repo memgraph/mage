@@ -68,8 +68,9 @@ void HITSProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *
     auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph(*mg_graph.get(), graph_type, handle);
     auto cu_graph_view = cu_graph.view();
 
-    rmm::device_uvector<result_t> hubs_result(cu_graph_view.get_number_of_local_vertices(), stream);
-    rmm::device_uvector<result_t> authorities_result(cu_graph_view.get_number_of_local_vertices(), stream);
+    // TODO(gitbuda): Inspect local vs non-local vertices change in hits
+    rmm::device_uvector<result_t> hubs_result(cu_graph_view.number_of_vertices(), stream);
+    rmm::device_uvector<result_t> authorities_result(cu_graph_view.number_of_vertices(), stream);
     cugraph::hits(handle, cu_graph_view, hubs_result.data(), authorities_result.data(), tolerance, max_iterations,
                   false, normalize, false);
 

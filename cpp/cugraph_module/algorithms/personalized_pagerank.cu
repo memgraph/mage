@@ -71,7 +71,7 @@ void PersonalizedPagerankProc(mgp_list *args, mgp_graph *graph, mgp_result *resu
 
     auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph(*mg_graph.get(), mg_graph::GraphType::kDirectedGraph, handle);
     auto cu_graph_view = cu_graph.view();
-    auto n_vertices = cu_graph_view.get_number_of_vertices();
+    auto n_vertices = cu_graph_view.number_of_vertices();
 
     rmm::device_uvector<result_t> pagerank_results(n_vertices, stream);
     // IMPORTANT: store_transposed has to be true because cugraph::pagerank
@@ -97,9 +97,11 @@ void PersonalizedPagerankProc(mgp_list *args, mgp_graph *graph, mgp_result *resu
     raft::update_device(personalization_values.data(), v_personalization_values.data(), v_personalization_values.size(),
                         stream);
 
+    // TODO(gitbuda): Here weight has to be passed correctly.
     cugraph::pagerank<vertex_t, edge_t, weight_t, result_t, false>(
-        handle, cu_graph_view, std::nullopt, personalization_vertices.data(), personalization_values.data(),
-        v_personalization_vertices.size(), pagerank_results.data(), damping_factor, stop_epsilon, max_iterations);
+        handle, cu_graph_view, std::nullopt, std::nullopt, personalization_vertices.data(),
+        personalization_values.data(), v_personalization_vertices.size(), pagerank_results.data(), damping_factor,
+        stop_epsilon, max_iterations);
 
     for (vertex_t node_id = 0; node_id < pagerank_results.size(); ++node_id) {
       auto rank = pagerank_results.element(node_id, stream);

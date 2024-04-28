@@ -69,7 +69,7 @@ void KatzCentralityProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mg
 
     auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph(*mg_graph.get(), graph_type, handle);
     auto cu_graph_view = cu_graph.view();
-    auto n_vertices = cu_graph_view.get_number_of_vertices();
+    auto n_vertices = cu_graph_view.number_of_vertices();
 
     auto degrees = cu_graph_view.compute_in_degrees(handle);
     std::vector<edge_t> cu_degrees(degrees.size());
@@ -81,8 +81,12 @@ void KatzCentralityProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mg
     result_t beta{beta_arg};
     result_t epsilon{epsilon_arg};
     rmm::device_uvector<result_t> katz_results(n_vertices, stream);
-    cugraph::katz_centrality(handle, cu_graph_view, static_cast<result_t *>(nullptr), katz_results.data(), alpha, beta,
-                             epsilon, max_iterations, false, normalized, false);
+    // TODO(gitbuda): pass the right weight to the katz centrality; size_t and other casts, -> second problem with nvcc
+    // is that, true, false template arguments missmatch are not obvious
+    cugraph::katz_centrality<vertex_t, edge_t, weight_t, result_t, false>(
+        handle, cu_graph_view, std::nullopt, static_cast<result_t const *>(nullptr),
+        static_cast<result_t *>(katz_results.data()), alpha, beta, epsilon, (size_t)max_iterations, false, normalized,
+        false);
 
     for (vertex_t node_id = 0; node_id < katz_results.size(); ++node_id) {
       auto rank = katz_results.element(node_id, stream);

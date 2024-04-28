@@ -2,6 +2,15 @@
 
 This is fairly simple installation setup (created for Ubuntu 20.04) to follow:
 
+## TODOs
+
+* Test all results on small graphs (in an automated way!).
+* Try to resolve all compile warnings.
+* Give some pointers on how to manage nvcc (TODOs in the code).
+* cugraph v24.04 docs is the code!
+    * https://github.com/rapidsai/cugraph/blob/v24.04.00/cpp/include/cugraph/graph_functions.hpp
+    * https://github.com/rapidsai/cugraph/blob/v24.04.00/cpp/include/cugraph/algorithms.hpp
+* Try to benchmark again :eyes:
 
 #### 1. [IF NEEDED] Install the newer version of CMake (Version 20.0+) since it is requirement for cuGraph CMakeLists.txt. Example shows CMake 3.22.
 

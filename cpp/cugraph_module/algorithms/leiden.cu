@@ -53,20 +53,21 @@ void LeidenProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory
     auto mg_graph = mg_utility::GetGraphView(graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
     if (mg_graph->Empty()) return;
 
-    auto n_vertices = mg_graph.get()->Nodes().size();
-
     // Define handle and operation stream
     raft::handle_t handle{};
     auto stream = handle.get_stream();
+    // TODO(gitbuda): Inject the valid seed.
+    raft::random::RngState rng_state(0);
 
-    // IMPORTANT: Leiden cuGraph algorithm works only on legacy code
-    auto cu_graph_ptr =
-        mg_cugraph::CreateCugraphLegacyFromMemgraph<vertex_t, edge_t, weight_t>(*mg_graph.get(), handle);
-    auto cu_graph_view = cu_graph_ptr->view();
-    cu_graph_view.prop.directed = false;
-
+    auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph<vertex_t, edge_t, weight_t, false, false>(
+        *mg_graph.get(), mg_graph::GraphType::kUndirectedGraph, handle);
+    auto cu_graph_view = cu_graph.view();
+    auto n_vertices = cu_graph_view.number_of_vertices();
     rmm::device_uvector<vertex_t> clustering_result(n_vertices, stream);
-    cugraph::leiden<vertex_t, edge_t, weight_t>(handle, cu_graph_view, clustering_result.data(), max_iterations, resulution);
+    // TODO(gitbuda): Leiden weights and other arguments. Add theta argument.
+    cugraph::leiden<vertex_t, edge_t, weight_t, false>(handle, rng_state, cu_graph_view, std::nullopt,
+                                                       clustering_result.data(), (size_t)max_iterations, resulution,
+                                                       1.0);
 
     for (vertex_t node_id = 0; node_id < clustering_result.size(); ++node_id) {
       auto partition = clustering_result.element(node_id, stream);

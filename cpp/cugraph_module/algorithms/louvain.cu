@@ -63,10 +63,14 @@ void LouvainProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memor
     auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph<vertex_t, edge_t, weight_t, false, false>(*mg_graph.get(),
                                                                                                     graph_type, handle);
     auto cu_graph_view = cu_graph.view();
-    auto n_vertices = cu_graph_view.get_number_of_vertices();
+    auto n_vertices = cu_graph_view.number_of_vertices();
 
     rmm::device_uvector<vertex_t> clustering_result(n_vertices, stream);
-    cugraph::louvain(handle, cu_graph_view, clustering_result.data(), max_iterations, resolution);
+    // TODO(gitbuda): louvain arguments have to passed correctly
+    // TODO(gitbuda): NOTE for the documentation -> nvcc is not great at telling what are the options, the solution here
+    // was to pass template arguments to pick the right function overload.
+    cugraph::louvain<vertex_t, edge_t, weight_t, false>(handle, std::nullopt, cu_graph_view, std::nullopt,
+                                                        clustering_result.data(), max_iterations, resolution, 0.0);
 
     for (vertex_t node_id = 0; node_id < clustering_result.size(); ++node_id) {
       auto partition = clustering_result.element(node_id, stream);

@@ -67,7 +67,6 @@ void BalancedCutClusteringProc(mgp_list *args, mgp_graph *graph, mgp_result *res
     auto mg_graph = mg_utility::GetWeightedGraphView(graph, result, memory, mg_graph::GraphType::kUndirectedGraph,
                                                      weight_property, kDefaultWeight);
     if (mg_graph->Empty()) return;
-
     auto n_vertices = mg_graph.get()->Nodes().size();
 
     // Define handle and operation stream

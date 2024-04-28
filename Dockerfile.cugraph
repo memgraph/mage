@@ -4,6 +4,8 @@ ARG CUDA_VERSION_MINOR=12.2.2
 ARG PY_VERSION=3.11
 ARG MG_VERSION=2.15.1
 
+# TODO(gitbuda): Probably turn this into Dockerfile.only_cugraph
+
 FROM rapidsai/base:${CUGRAPH_VERSION}-cuda${CUDA_VERSION}-py${PY_VERSION} as cugraph-dev
 FROM nvidia/cuda:${CUDA_VERSION_MINOR}-devel-ubuntu22.04 AS dev
 

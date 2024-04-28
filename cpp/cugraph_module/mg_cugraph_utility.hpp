@@ -1,7 +1,7 @@
 #include <cugraph/algorithms.hpp>
-#include <cugraph/legacy/functions.hpp>  // legacy coo_to_csr
 #include <cugraph/graph_functions.hpp>
 #include <cugraph/graph_generators.hpp>
+#include <cugraph/legacy/functions.hpp>  // legacy coo_to_csr
 
 #include <raft/distance/distance.cuh>
 #include <raft/raft.hpp>
@@ -89,20 +89,21 @@ auto CreateCugraphFromMemgraph(const mg_graph::GraphView<> &mg_graph, const mg_g
 
   // TODO: Deal_with/pass edge weights to CuGraph graph.
   // TODO: Allow for multigraphs
-  // TODO(gitbuda): graph_t doesn't have weight anymore -> use std::optional<edge_property_view_t<edge_t, weight_t const*>> edge_weight_view
+  // TODO(gitbuda): graph_t doesn't have weight anymore -> use std::optional<edge_property_view_t<edge_t, weight_t
+  // const*>> edge_weight_view
   //                for a given algorithm.
   cugraph::graph_t<TVertexT, TEdgeT, TStoreTransposed, TMultiGPU> cu_graph(handle);
   // NOTE: Renumbering is not required because graph coming from Memgraph is already correctly numbered.
-  std::tie(cu_graph, std::ignore) =
+  std::tie(cu_graph, std::ignore, std::ignore, std::ignore, std::ignore) =
       cugraph::create_graph_from_edgelist<TVertexT, TEdgeT, TWeightT, int64_t, int32_t, TStoreTransposed, TMultiGPU>(
           handle, std::move(cu_vertices), std::move(cu_src), std::move(cu_dst), std::move(cu_weight),
-          std::move(cu_edge_ids), std::move(cu_edge_types),
-          cugraph::graph_properties_t{false, false}, false, false);
+          std::move(cu_edge_ids), std::move(cu_edge_types), cugraph::graph_properties_t{false, false}, false, false);
   stream.synchronize_no_throw();
 
   return std::move(cu_graph);
 }
 
+// TODO(gitbuda): If CreateCugraphLegacy... is not used -> delete.
 ///
 ///@brief Create a cuGraph legacy graph object from a given Memgraph graph. This method generates the graph in the
 /// Compressed Sparse Row format that defines offsets and indices.  Description is available at [Compressed Sparse
@@ -173,9 +174,9 @@ auto CreateCugraphLegacyFromMemgraph(const mg_graph::GraphView<> &mg_graph, raft
 ///@param b Probability of the second partition
 ///@param c Probability of the third partition
 ///@param seed Random seed applied
-///@param clip_and_flip Clip and flip 
+///@param clip_and_flip Clip and flip
 ///@param handle Handle for GPU communication
-///@return Edges in edge list format 
+///@return Edges in edge list format
 ///
 template <typename TVertexT = int64_t, typename TEdgeT = int64_t, typename TWeightT = double>
 auto GenerateCugraphRMAT(std::size_t scale, std::size_t num_edges, double a, double b, double c, std::uint64_t seed,

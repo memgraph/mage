@@ -74,9 +74,9 @@ void PagerankProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memo
     // only accepts true. It's hard to detect/debug problem because nvcc error
     // messages contain only the top call details + graph_view has many
     // template paremeters.
-    cugraph::pagerank<vertex_t, edge_t, weight_t, result_t, false>(handle, cu_graph_view, std::nullopt, std::nullopt,
-                                                                   std::nullopt, std::nullopt, pagerank_results.data(),
-                                                                   damping_factor, stop_epsilon, max_iterations);
+    cugraph::pagerank<vertex_t, edge_t, weight_t, result_t, false>(
+        handle, cu_graph_view, std::nullopt, std::nullopt, std::nullopt, std::nullopt, std::nullopt,
+        pagerank_results.data(), damping_factor, stop_epsilon, max_iterations);
 
     for (vertex_t node_id = 0; node_id < pagerank_results.size(); ++node_id) {
       auto rank = pagerank_results.element(node_id, stream);
