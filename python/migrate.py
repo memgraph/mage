@@ -1,3 +1,4 @@
+from decimal import Decimal
 import json
 import mgp
 import mysql.connector as mysql_connector
@@ -364,9 +365,8 @@ def _combine_config(config: mgp.Map, config_path: str) -> Dict[str, Any]:
         config[key] = value
     return config
 
-
 def _name_row_cells(row_cells, column_names) -> Dict[str, Any]:
-    return dict(map(lambda column, value: (column, value), column_names, row_cells))
+    return {column: (value if not isinstance(value, Decimal) else float(value)) for column, value in zip(column_names, row_cells)}
 
 
 def _check_params_type(params: Any, types=(dict, list, tuple)) -> None:
