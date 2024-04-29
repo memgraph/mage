@@ -122,7 +122,7 @@ jobs:
               echo All good the specified version has not been release to DockerHub
           fi
 
-      - name: Set up and check memgrpah download link
+      - name: Set up and check memgraph download link
         run: |
           if [[ -z "${{ inputs.memgraph_download_link }}" ]]; then
             echo "Using official download link"
