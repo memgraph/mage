@@ -45,7 +45,7 @@ on:
 
 env:
   OS: ${{ inputs.arch == 'arm' && 'debian-11-aarch64' || 'debian-11' }}
-  DOCKER_REPOSITORY_NAME: memgraph/memgraph-mage-test
+  DOCKER_REPOSITORY_NAME: memgraph/memgraph-mage
 
 jobs:
   BuildAndPush:
