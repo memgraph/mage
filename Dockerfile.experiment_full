@@ -1,10 +1,12 @@
-ARG PY_VERSION=3.11
+# It's important to be 3.10 on Ubuntu 22.04 because memgraph binary depends on exactly that version.
+ARG PY_VERSION=3.10
 ARG CUDA_VERSION=12.2
 ARG CUDA_VERSION_MINOR=12.2.2
 ARG RAPIDS_VERSION=24.04a
 ARG MG_VERSION=2.16.0
+# TODO(gitbuda): Try to build on ARM and adjust settings if needed.
 
-## COMPILATION START
+## COMPILATION
 FROM rapidsai/base:${RAPIDS_VERSION}-cuda${CUDA_VERSION}-py${PY_VERSION} as rapids-dev
 FROM nvidia/cuda:${CUDA_VERSION_MINOR}-devel-ubuntu22.04 AS cuda-dev
 USER root
@@ -12,7 +14,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG PY_VERSION
 ENV PY_VERSION ${PY_VERSION}
 
-# Take cugraph lib from the rapids image
+### SYSTEM SETUP
 COPY --from=rapids-dev /opt/conda/lib/libcugraph.so /opt/conda/lib/libcugraph.so
 COPY --from=rapids-dev /opt/conda/lib/libcugraph-ops++.so /opt/conda/lib/libcugraph-ops++.so
 COPY --from=rapids-dev /opt/conda/lib/libraft.so /opt/conda/lib/libraft.so
@@ -50,34 +52,67 @@ RUN apt-get update && apt-get install -y       \
     --no-install-recommends
 ENV PATH=/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/bin/cmake:/usr/lib/cmake
 # TODO(gitbuda): How to cleanup rust installation cache?
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && export PATH="/root/.cargo/bin:${PATH}"
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+ENV PATH="${PATH}:/root/.cargo/bin"
 # # NOTE: miniconda will be installed under /root/miniconda3
 # RUN cd /root && \
 #     curl -o miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
 #     bash miniconda.sh -b
 WORKDIR /mage
 COPY . /mage
+RUN python3 -m pip install -r /mage/python/requirements.txt && \
+    python3 -m pip install -r /mage/python/tests/requirements.txt
 # TODO(gitbuda): Experiment with pipx, the below works on debian-12 (on newer systems)
 # RUN python3 -m pip install --break-system-packages -r /mage/python/requirements.txt && \
 #     python3 -m pip install --break-system-packages -r /mage/python/tests/requirements.txt
-# TODO(gitbuda): python requirements are IMPORTANT.
-# RUN python3 -m pip install -r /mage/python/requirements.txt && \
-#     python3 -m pip install -r /mage/python/tests/requirements.txt
-# TODO(gitbuda): git clone --recursive OR git submodule update --init --recursive REQUIRED
-      # CMAKE_C_COMPILER=gcc \
-      # CMAKE_CXX_COMPILER=g++ \
+
+### BUILD
 RUN python3 /mage/setup build \
     --gpu \
     --cpp-build-flags \
-      CMAKE_BUILD_TYPE=Release \
+      CMAKE_BUILD_TYPE=RelWithDebInfo \
       MAGE_CUGRAPH_ROOT=/opt/conda/ \
     -p /usr/lib/memgraph/query_modules/
-# RUN ls -alh /usr/lib/memgraph/query_modules/
-## COMPILATION END
 
-## RUNTIME START
-# TODO(gitbuda): Package for runtime
-# RUN curl https://download.memgraph.com/memgraph/v${MG_VERSION}/ubuntu-22.04/memgraph_${MG_VERSION}-1_amd64.deb --output memgraph.deb \
-#     && dpkg -i memgraph.deb \
-#     && rm memgraph.deb
-## RUNTIME END
+## RUNTIME
+# TODO(gitbuda): Add the ability to inject local RelWithDebInfo package of Memgraph
+FROM nvidia/cuda:${CUDA_VERSION_MINOR}-runtime-ubuntu22.04 AS cuda-prod
+USER root
+ARG DEBIAN_FRONTEND=noninteractive
+ARG MG_VERSION
+ENV MG_VERSION ${MG_VERSION}
+ARG PY_VERSION
+ENV PY_VERSION ${PY_VERSION}
+
+#### SYSTEM SETUP
+COPY --from=cuda-dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
+COPY --from=cuda-dev /opt/conda/lib/libcugraph.so /opt/conda/lib/libcugraph.so
+COPY --from=cuda-dev /opt/conda/lib/libcugraph-ops++.so /opt/conda/lib/libcugraph-ops++.so
+COPY --from=cuda-dev /opt/conda/lib/libraft.so /opt/conda/lib/libraft.so
+COPY --from=cuda-dev /usr/lib/python${PY_VERSION}/ /usr/lib/python${PY_VERSION}/
+# TODO(gitbuda): Consider how to copy all the requirements from python -> because the above is not full, e.g. networkx is not working.
+RUN rm -rf /etc/apt/sources.list.d/cuda*
+RUN apt-get update && apt-get install -y \
+    libcurl4               `memgraph` \
+    libpython${PY_VERSION} `memgraph` \
+    libssl3                `memgraph` \
+    libssl-dev             `memgraph` \
+    openssl                `memgraph` \
+    curl                   `mage-memgraph` \
+    libgomp1               `mage-memgraph` \
+    python3                `mage-memgraph` \
+    python3-setuptools     `mage-memgraph` \
+    && curl https://download.memgraph.com/memgraph/v${MG_VERSION}/ubuntu-22.04/memgraph_${MG_VERSION}-1_amd64.deb --output memgraph.deb \
+    && dpkg -i memgraph.deb \
+    && rm memgraph.deb \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+ENV PATH="/usr/lib/python${PY_VERSION}:${PATH}"
+# TODO(gitbuda): extra packages python3-setuptools, python3-pip, cmake -> make sure the dev step wasn't wrongly cached.
+# TODO(gitbuda): The rm part should be under the apt install RUN part (/mage is not present here)
+RUN rm -rf /mage \
+    && export PATH="/usr/lib/python${PY_VERSION}:${PATH}" \
+    && apt-get -y --purge autoremove curl python3-dev \
+    && apt-get clean
+
+USER memgraph
+ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
