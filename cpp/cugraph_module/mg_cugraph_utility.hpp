@@ -52,7 +52,6 @@ auto CreateCugraphFromMemgraph(const mg_graph::GraphView<> &mg_graph, const mg_g
   mg_weight.reserve(mg_edges.size());
   std::vector<TVertexT> mg_vertices;
   mg_vertices.reserve(mg_nodes.size());
-
   // TODO(gitbuda): Update types
   std::vector<int64_t> mg_edge_ids;
   mg_edge_ids.reserve(mg_edges.size());
@@ -63,12 +62,16 @@ auto CreateCugraphFromMemgraph(const mg_graph::GraphView<> &mg_graph, const mg_g
                  [](const auto &edge) -> TVertexT { return edge.from; });
   std::transform(mg_edges.begin(), mg_edges.end(), std::back_inserter(mg_dst),
                  [](const auto &edge) -> TVertexT { return edge.to; });
-
   std::transform(
       mg_edges.begin(), mg_edges.end(), std::back_inserter(mg_weight),
       [&mg_graph](const auto &edge) -> TWeightT { return mg_graph.IsWeighted() ? mg_graph.GetWeight(edge.id) : 1.0; });
   std::transform(mg_nodes.begin(), mg_nodes.end(), std::back_inserter(mg_vertices),
                  [](const auto &node) -> TVertexT { return node.id; });
+  std::transform(mg_edges.begin(), mg_edges.end(), std::back_inserter(mg_edge_ids),
+                 [](const auto &edge) -> TVertexT { return edge.id; });
+  // TODO(gitbuda): Add valid edge type (bigger changes because the mage util data structure has to change).
+  std::transform(mg_edges.begin(), mg_edges.end(), std::back_inserter(mg_edge_types),
+                 [](const auto &edge) -> TVertexT { return 0; });
 
   // Synchronize the data structures to the GPU
   auto stream = handle.get_stream();

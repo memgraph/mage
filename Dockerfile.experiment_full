@@ -14,6 +14,8 @@ ENV PY_VERSION ${PY_VERSION}
 
 # Take cugraph lib from the rapids image
 COPY --from=rapids-dev /opt/conda/lib/libcugraph.so /opt/conda/lib/libcugraph.so
+COPY --from=rapids-dev /opt/conda/lib/libcugraph-ops++.so /opt/conda/lib/libcugraph-ops++.so
+COPY --from=rapids-dev /opt/conda/lib/libraft.so /opt/conda/lib/libraft.so
 COPY --from=rapids-dev /opt/conda/include /opt/conda/include
 # Prevent from linking the Conda environment
 ENV LD_LIBRARY_PATH=/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64:/usr/local/lib
