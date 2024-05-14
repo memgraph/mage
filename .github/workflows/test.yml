@@ -23,7 +23,7 @@ jobs:
     continue-on-error: True
     env:
       MEMGRAPH_VERSION: 2.16.1
-      MEMGRAPH_VERSION_SUFFIX: -rc2
+      MEMGRAPH_VERSION_SUFFIX: -rc3
     strategy:
       matrix:
         architecture: ["amd64", "arm64"]
