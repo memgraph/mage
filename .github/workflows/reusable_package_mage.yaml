@@ -18,6 +18,10 @@ on:
         type: string
         description: "Mage build target"
         default: 'prod'
+      mage_build_type:
+        type: string
+        description: "Mage build type"
+        default: 'Release'
       memgraph_version:
         type: string
         description: "Memgraph version built into this image (format: X.Y.Z)"
@@ -95,6 +99,9 @@ jobs:
           if [[ "${{ inputs.mage_build_target }}" == 'dev' ]]; then
             BUILD_TAGS="${BUILD_TAGS}-dev"
           fi
+          if [[ "${{ inputs.mage_build_type }}" == 'RelWithDebInfo' ]]; then
+            BUILD_TAGS="${BUILD_TAGS}-relwithdebinfo"
+          fi
           echo "IMAGE_TAG=${MAGE_VERSION}-memgraph-${MEMGRAPH_VERSION}${BUILD_TAGS}" >> $GITHUB_ENV
 
       - name: Set target dockerfile
@@ -151,6 +158,7 @@ jobs:
           --platform linux/${{ inputs.arch }}64 \
           --tag ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} \
           --file ${{ env.DOCKERFILE }} \
+          --build-arg BUILD_TYPE=${{ inputs.mage_build_type }} \
           --load .
 
       - name: Save docker image

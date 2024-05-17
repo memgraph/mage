@@ -27,6 +27,13 @@ on:
         options:
           - "prod"
           - "dev"
+      mage_build_type:
+        type: choice
+        description: "Mage build type"
+        default: 'Release'
+        options:
+          - "Release"
+          - "RelWithDebInfo"
       memgraph_version:
         type: string
         description: "Memgraph version to build into the package (format: X.Y.Z)."
@@ -50,6 +57,7 @@ jobs:
       arch: ${{ github.event.inputs.mage_build_arch || 'amd' }}
       mage_build_scope: ${{ github.event.inputs.mage_build_scope || 'all' }}
       mage_build_target: ${{ github.event.inputs.mage_build_target || 'prod' }}
+      mage_build_type: ${{ github.event.inputs.mage_build_type || 'Release' }}
       mage_version: ${{ github.event.inputs.mage_version }}
       memgraph_version: ${{ github.event.inputs.memgraph_version }}
       memgraph_download_link: ${{ github.event.inputs.memgraph_download_link || '' }}
