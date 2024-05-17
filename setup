@@ -298,7 +298,7 @@ def build_and_copy_rust_modules(args: Dict[str, Any]) -> bool:
                 rs_build_mode = BuildType.RELEASE
             if args[Parameter.TYPE.value] == BuildType.RELWITHDEBINFO:
                 rs_build_mode = BuildType.RELWITHDEBINFO
-            rs_build_mode = rs_build_mode.lower()
+            rs_build_mode = rs_build_mode.value.lower()
         rs_build_flags = ["--release"]
         if (
             args[Parameter.TYPE.value] is not None
