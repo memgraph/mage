@@ -4,6 +4,7 @@ import os
 import re
 import subprocess
 import shutil
+import sys
 import glob
 import fnmatch
 import multiprocessing as mp
@@ -417,11 +418,15 @@ def main():
         return
 
     if args.action == "build":
-        run_build_action(vars(args))
+        status = run_build_action(vars(args))
+        if not status:
+            sys.exit(1)
         return
 
     if args.action == "modules_storage":
-        run_modules_storage_setup_action(args.path, args.conf_path)
+        status = run_modules_storage_setup_action(args.path, args.conf_path)
+        if not status:
+            sys.exit(1)
         return
 
 
