@@ -22,7 +22,7 @@ on:
           - "without ML"
       mage_build_target:
         type: choice
-        description: "Mage image target"
+        description: "Mage image target. By default 'dev' uses 'RelWithDebInfo' and 'with ML'.'
         default: 'prod'
         options:
           - "prod"
