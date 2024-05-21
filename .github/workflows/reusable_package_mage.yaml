@@ -77,9 +77,9 @@ jobs:
 
       - name: Set build scope, target and type
         run: |
-          BUILD_TARGET=${{ inputs.mage_build_target }}
-          BUILD_SCOPE=${{ inputs.mage_build_scope }}
-          BUILD_TYPE=${{ inputs.mage_build_type }}
+          BUILD_TARGET="${{ inputs.mage_build_target }}"
+          BUILD_SCOPE="${{ inputs.mage_build_scope }}"
+          BUILD_TYPE="${{ inputs.mage_build_type }}"
           if [[ "$BUILD_TARGET" == 'dev' ]]; then
             BUILD_SCOPE="with ML"
             BUILD_TYPE="RelWithDebInfo"
