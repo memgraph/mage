@@ -103,7 +103,7 @@ jobs:
             fi
           fi
           IMAGE_TAG="${MAGE_VERSION}-memgraph-${MEMGRAPH_VERSION}"
-          ARTIFACT_NAME="mage-${IMAGE_TAG}
+          ARTIFACT_NAME="mage-${IMAGE_TAG}"
           if [[ "${{ inputs.arch }}" == 'arm' ]]; then
             ARTIFACT_NAME="${ARTIFACT_NAME}-arm"
           fi
