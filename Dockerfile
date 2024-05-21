@@ -37,6 +37,7 @@ RUN apt-get update && apt-get install -y \
     && curl https://download.memgraph.com/memgraph/v${MG_VERSION}/debian-11/memgraph_${MG_VERSION}-1_amd64.deb --output memgraph.deb \
     && dpkg -i memgraph.deb \
     && rm memgraph.deb \
+    && ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
