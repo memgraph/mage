@@ -75,7 +75,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Set image tag
+      - name: Set image tag and artifact name
         run: |
           MEMGRAPH_VERSION=${{ inputs.memgraph_version }}
           MAGE_VERSION=${{ inputs.mage_version }}
@@ -89,20 +89,25 @@ jobs:
               MAGE_VERSION=${MAGE_VERSION%.*}
             fi
           fi
+          ARTIFACT_TAGS=""
           BUILD_TAGS=""
           if [[ "${{ inputs.arch }}" == 'arm' ]]; then
-            BUILD_TAGS="${BUILD_TAGS}-arm"
+            ARTIFACT_TAGS="${ARTIFACT_TAGS}-arm"
           fi
           if [[ "${{ inputs.mage_build_scope }}" == 'without ML' ]]; then
-            BUILD_TAGS="${BUILD_TAGS}-no-ML"
+            ARTIFACT_TAGS="${ARTIFACT_TAGS}-no-ml"
+            BUILD_TAGS="${BUILD_TAGS}-no-ml"
           fi
           if [[ "${{ inputs.mage_build_target }}" == 'dev' ]]; then
+            ARTIFACT_TAGS="${ARTIFACT_TAGS}-dev"
             BUILD_TAGS="${BUILD_TAGS}-dev"
           fi
           if [[ "${{ inputs.mage_build_type }}" == 'RelWithDebInfo' ]]; then
+            ARTIFACT_TAGS="${ARTIFACT_TAGS}-relwithdebinfo"
             BUILD_TAGS="${BUILD_TAGS}-relwithdebinfo"
           fi
           echo "IMAGE_TAG=${MAGE_VERSION}-memgraph-${MEMGRAPH_VERSION}${BUILD_TAGS}" >> $GITHUB_ENV
+          echo "ARTIFACT_NAME=mage-${MAGE_VERSION}-memgraph-${MEMGRAPH_VERSION}${ARTIFACT_TAGS}" >> $GITHUB_ENV
 
       - name: Set target dockerfile
         run: |
@@ -164,13 +169,13 @@ jobs:
       - name: Save docker image
         run: |
           mkdir output
-          docker save ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} > output/mage_${{ env.IMAGE_TAG }}.tar.gz
+          docker save ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} > output/${{ env.ARTIFACT_NAME }}.tar.gz
 
       - name: Push to GitHub
         uses: actions/upload-artifact@v4
         with:
-          name: "mage_${{ env.IMAGE_TAG }}"
-          path: "output/mage_${{ env.IMAGE_TAG }}.tar.gz"
+          name: "${{ env.ARTIFACT_NAME }}"
+          path: "output/${{ env.ARTIFACT_NAME }}.tar.gz"
 
       - name: Push to DockerHub
         if: ${{ inputs.push_to_dockerhub == 'true' }}
@@ -185,4 +190,4 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: "eu-west-1"
           SOURCE_DIR: "output"
-          DEST_DIR: "mage-unofficial/mage_${{ env.IMAGE_TAG }}/"
+          DEST_DIR: "mage-unofficial/${{ env.ARTIFACT_NAME }}/"
