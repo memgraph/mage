@@ -18,6 +18,10 @@ on:
         type: string
         description: "Mage build target"
         default: 'prod'
+      mage_build_type:
+        type: string
+        description: "Mage build type"
+        default: 'Release'
       memgraph_version:
         type: string
         description: "Memgraph version built into this image (format: X.Y.Z)"
@@ -71,7 +75,20 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Set image tag
+      - name: Set build scope, target and type
+        run: |
+          BUILD_TARGET="${{ inputs.mage_build_target }}"
+          BUILD_SCOPE="${{ inputs.mage_build_scope }}"
+          BUILD_TYPE="${{ inputs.mage_build_type }}"
+          if [[ "$BUILD_TARGET" == 'dev' ]]; then
+            BUILD_SCOPE="with ML"
+            BUILD_TYPE="RelWithDebInfo"
+          fi
+          echo "MAGE_BUILD_SCOPE=$BUILD_SCOPE" >> $GITHUB_ENV
+          echo "MAGE_BUILD_TARGET=$BUILD_TARGET" >> $GITHUB_ENV
+          echo "MAGE_BUILD_TYPE=$BUILD_TYPE" >> $GITHUB_ENV
+
+      - name: Set image tag and artifact name
         run: |
           MEMGRAPH_VERSION=${{ inputs.memgraph_version }}
           MAGE_VERSION=${{ inputs.mage_version }}
@@ -85,22 +102,30 @@ jobs:
               MAGE_VERSION=${MAGE_VERSION%.*}
             fi
           fi
-          BUILD_TAGS=""
+          IMAGE_TAG="${MAGE_VERSION}-memgraph-${MEMGRAPH_VERSION}"
+          ARTIFACT_NAME="mage-${IMAGE_TAG}"
           if [[ "${{ inputs.arch }}" == 'arm' ]]; then
-            BUILD_TAGS="${BUILD_TAGS}-arm"
+            ARTIFACT_NAME="${ARTIFACT_NAME}-arm"
           fi
-          if [[ "${{ inputs.mage_build_scope }}" == 'without ML' ]]; then
-            BUILD_TAGS="${BUILD_TAGS}-no-ML"
+          if [[ "${{ env.MAGE_BUILD_SCOPE }}" == 'without ML' ]]; then
+            ARTIFACT_NAME="${ARTIFACT_NAME}-no-ml"
+            IMAGE_TAG="${IMAGE_TAG}-no-ml"
           fi
-          if [[ "${{ inputs.mage_build_target }}" == 'dev' ]]; then
-            BUILD_TAGS="${BUILD_TAGS}-dev"
+          if [[ "${{ env.MAGE_BUILD_TARGET }}" == 'dev' ]]; then
+            ARTIFACT_NAME="${ARTIFACT_NAME}-dev"
+            IMAGE_TAG="${IMAGE_TAG}-dev"
           fi
-          echo "IMAGE_TAG=${MAGE_VERSION}-memgraph-${MEMGRAPH_VERSION}${BUILD_TAGS}" >> $GITHUB_ENV
+          if [[ "${{ env.MAGE_BUILD_TYPE }}" == 'RelWithDebInfo' ]]; then
+            ARTIFACT_NAME="${ARTIFACT_NAME}-relwithdebinfo"
+            IMAGE_TAG="${IMAGE_TAG}-relwithdebinfo"
+          fi
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
+          echo "ARTIFACT_NAME=${ARTIFACT_NAME}" >> $GITHUB_ENV
 
       - name: Set target dockerfile
         run: |
           DOCKERFILE="Dockerfile.release"
-          if [[ "${{ inputs.mage_build_scope }}" == "without ML" ]]; then
+          if [[ "${{ env.MAGE_BUILD_SCOPE }}" == "without ML" ]]; then
             DOCKERFILE="Dockerfile.no_ML"
           fi
           echo "DOCKERFILE=${DOCKERFILE}" >> $GITHUB_ENV
@@ -147,22 +172,23 @@ jobs:
       - name: Build docker image
         run: |
           docker buildx build \
-          --target ${{ inputs.mage_build_target }} \
+          --target ${{ env.MAGE_BUILD_TARGET }} \
           --platform linux/${{ inputs.arch }}64 \
           --tag ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} \
           --file ${{ env.DOCKERFILE }} \
+          --build-arg BUILD_TYPE=${{ env.MAGE_BUILD_TYPE }} \
           --load .
 
       - name: Save docker image
         run: |
           mkdir output
-          docker save ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} > output/mage_${{ env.IMAGE_TAG }}.tar.gz
+          docker save ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} > output/${{ env.ARTIFACT_NAME }}.tar.gz
 
       - name: Push to GitHub
         uses: actions/upload-artifact@v4
         with:
-          name: "mage_${{ env.IMAGE_TAG }}"
-          path: "output/mage_${{ env.IMAGE_TAG }}.tar.gz"
+          name: "${{ env.ARTIFACT_NAME }}"
+          path: "output/${{ env.ARTIFACT_NAME }}.tar.gz"
 
       - name: Push to DockerHub
         if: ${{ inputs.push_to_dockerhub == 'true' }}
@@ -177,4 +203,4 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: "eu-west-1"
           SOURCE_DIR: "output"
-          DEST_DIR: "mage-unofficial/mage_${{ env.IMAGE_TAG }}/"
+          DEST_DIR: "mage-unofficial/${{ env.ARTIFACT_NAME }}/"

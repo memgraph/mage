@@ -57,6 +57,7 @@ class Lang(Enum):
 class BuildType(Enum):
     DEBUG = "Debug"
     RELEASE = "Release"
+    RELWITHDEBINFO = "RelWithDebInfo"
 
     def __str__(self):
         return str(self.value)
@@ -296,7 +297,9 @@ def build_and_copy_rust_modules(args: Dict[str, Any]) -> bool:
                 rs_build_mode = BuildType.DEBUG
             if args[Parameter.TYPE.value] == BuildType.RELEASE:
                 rs_build_mode = BuildType.RELEASE
-            rs_build_mode = rs_build_mode.lower()
+            if args[Parameter.TYPE.value] == BuildType.RELWITHDEBINFO:
+                rs_build_mode = BuildType.RELWITHDEBINFO
+            rs_build_mode = rs_build_mode.value.lower()
         rs_build_flags = ["--release"]
         if (
             args[Parameter.TYPE.value] is not None
