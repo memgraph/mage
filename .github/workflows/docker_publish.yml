@@ -73,7 +73,7 @@ jobs:
 
       - name: Check if specified version tag is already pushed
         run: |
-          EXISTS=$(docker manifest inspect $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.VERSION_TAG }} > /dev/null; echo $?)
+          EXISTS=$(docker manifest inspect $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.VERSION_TAG }}-no-ml > /dev/null; echo $?)
           echo $EXISTS
           if [[ ${EXISTS} -eq 0 ]]; then
               echo The specified version has been already released to DockerHub!
@@ -97,7 +97,6 @@ jobs:
           docker buildx build \
           --target prod \
           --platform linux/amd64,linux/arm64 \
-          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.VERSION_TAG }} \
-          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ github.event.inputs.additional_tag }} \
-          --file Dockerfile.release \
+          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.VERSION_TAG }}-no-ml \
+          --file Dockerfile.no_ML \
           --push .
