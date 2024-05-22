@@ -69,7 +69,7 @@ jobs:
               MAGE_VERSION=${MAGE_VERSION%.*}
             fi
           fi
-          echo "VERSION_TAG=$MAGE_VERSION-memgraph-$MEMGRAPH_VERSION-no-ml-relwithdebinfo" >> $GITHUB_ENV
+          echo "VERSION_TAG=$MAGE_VERSION-memgraph-$MEMGRAPH_VERSION-relwithdebinfo" >> $GITHUB_ENV
 
       - name: Check if specified version tag is already pushed
         run: |
@@ -98,6 +98,6 @@ jobs:
           --target prod \
           --platform linux/amd64,linux/arm64 \
           --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.VERSION_TAG }} \
-          --file Dockerfile.no_ML \
+          --file Dockerfile.release \
           --build-arg BUILD_TYPE=RelWithDebInfo \
           --push .
