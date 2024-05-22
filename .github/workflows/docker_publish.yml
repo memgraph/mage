@@ -99,4 +99,5 @@ jobs:
           --platform linux/amd64,linux/arm64 \
           --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.VERSION_TAG }} \
           --file Dockerfile.no_ML \
+          --build-arg BUILD_TYPE=RelWithDebInfo \
           --push .
