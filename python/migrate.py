@@ -86,8 +86,8 @@ def mysql(
 def cleanup_migrate_mysql():
     global mysql_dict
     mysql_dict[threading.get_native_id][Constants.CURSOR] = None
-    mysql_dict[threading.get_native_id][Constants.CONNECTION].close()
     mysql_dict[threading.get_native_id][Constants.CONNECTION].commit()
+    mysql_dict[threading.get_native_id][Constants.CONNECTION].close()
     mysql_dict[threading.get_native_id][Constants.CONNECTION] = None
     mysql_dict[threading.get_native_id][Constants.COLUMN_NAMES] = None
 
@@ -165,8 +165,8 @@ def sql_server(
 def cleanup_migrate_sql_server():
     global sql_server_dict
     sql_server_dict[threading.get_native_id][Constants.CURSOR] = None
-    sql_server_dict[threading.get_native_id][Constants.CONNECTION].close()
     sql_server_dict[threading.get_native_id][Constants.CONNECTION].commit()
+    sql_server_dict[threading.get_native_id][Constants.CONNECTION].close()
     sql_server_dict[threading.get_native_id][Constants.CONNECTION] = None
     sql_server_dict[threading.get_native_id][Constants.COLUMN_NAMES] = None
 
@@ -257,8 +257,8 @@ def oracle_db(
 def cleanup_migrate_oracle_db():
     global oracle_db_dict
     oracle_db_dict[threading.get_native_id][Constants.CURSOR] = None
-    oracle_db_dict[threading.get_native_id][Constants.CONNECTION].close()
     oracle_db_dict[threading.get_native_id][Constants.CONNECTION].commit()
+    oracle_db_dict[threading.get_native_id][Constants.CONNECTION].close()
     oracle_db_dict[threading.get_native_id][Constants.CONNECTION] = None
     oracle_db_dict[threading.get_native_id][Constants.COLUMN_NAMES] = None
 
@@ -336,8 +336,8 @@ def postgresql(
 def cleanup_migrate_postgresql():
     global postgres_dict
     postgres_dict[threading.get_native_id][Constants.CURSOR] = None
-    postgres_dict[threading.get_native_id][Constants.CONNECTION].close()
     postgres_dict[threading.get_native_id][Constants.CONNECTION].commit()
+    postgres_dict[threading.get_native_id][Constants.CONNECTION].close()
     postgres_dict[threading.get_native_id][Constants.CONNECTION] = None
     postgres_dict[threading.get_native_id][Constants.COLUMN_NAMES] = None
 
