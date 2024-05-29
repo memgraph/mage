@@ -197,10 +197,7 @@ def init_migrate_oracle_db(
         config = {}
 
     # To prevent query execution from hanging
-    if "disable_oob" not in config:
-        config["disable_oob"] = True
-    else:
-        config["disable_oob"] = True  # overwrite
+    config["disable_oob"] = True
 
     if threading.get_native_id not in oracle_db_dict:
         oracle_db_dict[threading.get_native_id] = {}
@@ -255,8 +252,8 @@ def oracle_db(
 def cleanup_migrate_oracle_db():
     global oracle_db_dict
     oracle_db_dict[threading.get_native_id][Constants.CURSOR] = None
-    oracle_db_dict[threading.get_native_id][Constants.CONNECTION].close()
     oracle_db_dict[threading.get_native_id][Constants.CONNECTION].commit()
+    oracle_db_dict[threading.get_native_id][Constants.CONNECTION].close()
     oracle_db_dict[threading.get_native_id][Constants.CONNECTION] = None
     oracle_db_dict[threading.get_native_id][Constants.COLUMN_NAMES] = None
 
