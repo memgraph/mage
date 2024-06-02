@@ -1,0 +1,12 @@
+query: >
+  CALL cugraph.pagerank.get() YIELD node, pagerank
+  RETURN node.id AS id, pagerank AS rank
+  ORDER BY id ASC;
+
+output:
+  - id: "A"
+    rank: 0.3878
+  - id: "B"
+    rank: 0.2148
+  - id: "C"
+    rank: 0.3973
