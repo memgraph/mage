@@ -106,6 +106,10 @@ macro(target_mage_cugraph target_name)
       message(STATUS "Building with CUDA debugging flags")
       list(APPEND MAGE_CUDA_FLAGS -g -G -Xcompiler=-rdynamic)
     endif()
+    # NOTE: Ignore some of the warnings produced by nvcc:
+    #   * 186   warning related to pointless comparison of unsigned integer with zero
+    #   * 20200 remark about deprecation of gem.hpp under Nvidia RAFT library
+    list(APPEND MAGE_CUDA_FLAGS --diag-suppress 186,20200)
     target_compile_options("${target_name}"
       PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:${MAGE_CXX_FLAGS}>"
               "$<$<COMPILE_LANGUAGE:CUDA>:${MAGE_CUDA_FLAGS}>"
