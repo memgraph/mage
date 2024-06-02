@@ -15,25 +15,26 @@ def parse_arguments():
     parser.add_argument(
         "-k", help="Add filter to tests you want to run", type=str, required=False
     )
+    parser.add_argument(
+        "-l", help="List available tests (also works with the filter)", action="store_true"
+    )
     args = parser.parse_args()
     return args
 
 
-#################################################
-#                End to end tests               #
-#################################################
-
-
-def main(test_filter: str = None):
+def main(test_filter: str = "", list_tests: bool = False):
     os.environ["PYTHONPATH"] = E2E_DIRECTORY
     os.chdir(E2E_DIRECTORY)
     command = ["python3", "-m", "pytest", ".", "-vv"]
     if test_filter:
         command.extend(["-k", test_filter])
+    if list_tests:
+        command.extend(["--collect-only"])
     subprocess.run(command)
 
 
 if __name__ == "__main__":
     args = parse_arguments()
     test_filter = args.k
-    main(test_filter=test_filter)
+    list_tests = args.l
+    main(test_filter=test_filter, list_tests=list_tests)
