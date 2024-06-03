@@ -287,7 +287,8 @@ def build_and_copy_rust_modules(args: Dict[str, Any]) -> bool:
 
     os.chdir(RS_DIRECTORY)
     for project in filter(
-        lambda f: os.path.isdir(f) and f != "rsmgp-sys", os.listdir(RS_DIRECTORY)
+        lambda f: os.path.isdir(os.path.join(RS_DIRECTORY, f)) and f != "rsmgp-sys",
+        os.listdir(RS_DIRECTORY),
     ):
         project_dir = os.path.join(RS_DIRECTORY, project)
         os.chdir(project_dir)
