@@ -199,10 +199,7 @@ def init_migrate_oracle_db(
         config = {}
 
     # To prevent query execution from hanging
-    if "disable_oob" not in config:
-        config["disable_oob"] = True
-    else:
-        config["disable_oob"] = True  # overwrite
+    config["disable_oob"] = True
 
     if threading.get_native_id not in oracle_db_dict:
         oracle_db_dict[threading.get_native_id] = {}
