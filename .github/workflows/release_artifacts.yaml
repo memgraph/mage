@@ -1,0 +1,37 @@
+name: 'Create release artifacts'
+
+on:
+  workflow_dispatch:
+
+env:
+  mage_version: '1.2.3'
+  memgraph_version: '1.2.3'
+
+jobs:
+  dev:
+    continue-on-error: true
+    strategy:
+      matrix:
+        build_target: ["prod", "dev"]
+        build_scope: ["with ML", "without ML"]
+        build_type: ["Release", "RelWithDebInfo"]
+        build_arch: ["amd", "arm"]
+        exclude:
+          - build_target: "dev"
+            build_scope: "without ML"
+          - build_target: "dev"
+            build_type: "Release"
+    uses: ./.github/workflows/reusable_package_mage.yaml
+    with:
+      arch: ${{ matrix.build_arch }}
+      mage_build_scope: ${{ matrix.build_scope }}
+      mage_build_target: ${{ matrix.build_target }}
+      mage_build_type: ${{ matrix.build_type }}
+      mage_version: ${{ env.mage_version }}
+      memgraph_version: ${{ env.memgraph_version }}
+      memgraph_download_link: ''
+      shorten_tag: 'true'
+      force_release: 'true'
+      push_to_dockerhub: 'false'
+      push_to_s3: 'true'
+    secrets: inherit
