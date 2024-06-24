@@ -1,14 +1,25 @@
 name: 'Create release artifacts'
 
 on:
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      mage_version:
+        type: string
+        description: "Mage version built into this image (format: X.Y.Z)"
+        required: true
+      memgraph_version:
+        type: string
+        description: "Memgraph version built into this image (format: X.Y.Z)"
+        required: true
+      official_memgraph:
+        type: boolean
+        description: "Use the official Memgraph bucket?"
+        default: false
 
 env:
-  mage_version: '1.2.3'
-  memgraph_version: '1.2.3'
   os: 'debian-11'
   s3_link_base: "https://s3.eu-west-1.amazonaws.com"
-  s3_bucket: ${{ github.event.inputs.official_memgraph == 'true' && 'download.memgraph.com' || 'deps.memgraph.io' }}
+  s3_bucket: ${{ inputs.official_memgraph == 'true' && 'download.memgraph.com' || 'deps.memgraph.io' }}
 
 jobs:
   dev:
@@ -35,8 +46,8 @@ jobs:
       mage_build_scope: ${{ matrix.build_scope }}
       mage_build_target: ${{ matrix.build_target }}
       mage_build_type: ${{ matrix.build_type }}
-      mage_version: ${{ env.mage_version }}
-      memgraph_version: ${{ env.memgraph_version }}
+      mage_version: ${{ inputs.mage_version }}
+      memgraph_version: ${{ inputs.memgraph_version }}
       memgraph_download_link: "${{ env.s3_link_base }}/${{ env.s3_bucket }}/${{ env.os }}${{ matrix.rwid_ext }}${{ matrix.arm_ext }}/memgraph_${{ env.memgraph_version }}-1_${{ matrix.build_arch }}64.deb"
       shorten_tag: 'true'
       force_release: 'true'
