@@ -464,3 +464,7 @@ def _check_params_type(params: Any, types=(dict, list, tuple)) -> None:
         raise TypeError(
             "Database query parameter values must be passed in a container of type List[Any] (or Map, if migrating from MySQL or Oracle DB)"
         )
+
+
+def _create_connection_string(config: mgp.Map) -> str:
+    return ";".join(f"{key}={value}" for key, value in config.items())
