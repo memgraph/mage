@@ -346,6 +346,7 @@ mgp.add_batch_read_proc(postgresql, init_migrate_postgresql, cleanup_migrate_pos
 # IBM DB2 dictionary to store connections and cursors by thread
 db2_dict = {}
 
+
 def init_migrate_db2(
     table_or_sql: str,
     config: mgp.Map,
@@ -425,6 +426,7 @@ def cleanup_migrate_db2():
     ibm_db.close(db2_dict[threading.get_native_id][Constants.CONNECTION])
     db2_dict[threading.get_native_id][Constants.CONNECTION] = None
     db2_dict[threading.get_native_id][Constants.COLUMN_NAMES] = None
+
 
 mgp.add_batch_read_proc(db2, init_migrate_db2, cleanup_migrate_db2)
 
