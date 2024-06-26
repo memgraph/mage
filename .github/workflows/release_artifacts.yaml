@@ -30,7 +30,7 @@ jobs:
     outputs:
       download_link_base: ${{ steps.download_link.outputs.download_link_base }}
     env:
-      s3_link_base: "https://s3.eu-west-1.amazonaws.com"
+      s3_link_base: ${{ github.event.inputs.official_memgraph == 'true' && 'https://s3.eu-west-1.amazonaws.com' || 'https://' }}
       s3_bucket: ${{ github.event.inputs.official_memgraph == 'true' && 'download.memgraph.com' || 'deps.memgraph.io' }}
     steps:
       - name: Download Memgraph base link
