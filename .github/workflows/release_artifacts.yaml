@@ -29,8 +29,8 @@ env:
 
 jobs:
   dev:
-    continue-on-error: true
     strategy:
+      fail-fast: false
       matrix:
         build_target: ["prod", "dev"]
         build_scope: ["with ML", "without ML"]
@@ -61,4 +61,24 @@ jobs:
       push_to_s3: "true"
       s3_dest_bucket: "deps.memgraph.io"
       s3_dest_dir: "mage/v${{ github.event.inputs.mage_version}}"
+    secrets: inherit
+
+
+
+  PackageArtifact:
+    if: github.ref_type == 'tag'
+    needs: [TestIndividual]
+    strategy:
+      fail-fast: false
+    uses: ./.github/workflows/reusable_package.yaml
+    with:
+      os: ${{ matrix.os }}
+      arch: ${{ matrix.arch }}
+      build_type: ${{ matrix.build_type }}
+      toolchain: v5
+      push_to_github: 'false'
+      push_to_s3: 'true'
+      s3_bucket: deps.memgraph.io
+      s3_region: eu-west-1
+      s3_dest_dir: "memgraph/${{ github.ref_name }}"
     secrets: inherit
