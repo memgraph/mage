@@ -36,7 +36,7 @@ jobs:
       - name: Download Memgraph base link
         id: download_link
         run: |
-          echo "download_link_base=${{ env.s3_link_base }}/${{ env.s3_bucket }}/v${{ github.event.inputs.memgraph_version }}/${{ github.event.inputs.os }}" >> $GITHUB_OUTPUT
+          echo "download_link_base=${{ env.s3_link_base }}/${{ env.s3_bucket }}/memgraph/v${{ github.event.inputs.memgraph_version }}/${{ github.event.inputs.os }}" >> $GITHUB_OUTPUT
   Artifact:
     needs: [DownloadLinkBase]
     strategy:
