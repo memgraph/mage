@@ -59,4 +59,6 @@ jobs:
       force_release: "true"
       push_to_dockerhub: "false"
       push_to_s3: "true"
+      s3_dest_bucket: "deps.memgraph.io"
+      s3_dest_dir: "mage/v${{ github.event.inputs.mage_version}}"
     secrets: inherit
