@@ -48,15 +48,15 @@ jobs:
             build_type: "Release"
     uses: ./.github/workflows/reusable_package_mage.yaml
     with:
-      arch: ${{ matrix.build_arch }}
-      mage_build_scope: ${{ matrix.build_scope }}
-      mage_build_target: ${{ matrix.build_target }}
-      mage_build_type: ${{ matrix.build_type }}
-      mage_version: ${{ github.event.inputs.mage_version }}
-      memgraph_version: ${{ github.event.inputs.memgraph_version }}
+      arch: "${{ matrix.build_arch }}"
+      mage_version: "${{ github.event.inputs.mage_version }}"
+      mage_build_scope: "${{ matrix.build_scope }}"
+      mage_build_target: "${{ matrix.build_target }}"
+      mage_build_type: "${{ matrix.build_type }}"
+      memgraph_version: "${{ github.event.inputs.memgraph_version }}"
       memgraph_download_link: "${{ env.s3_link_base }}/${{ env.s3_bucket }}/${{ github.event.inputs.os }}${{ matrix.rwid_ext }}${{ matrix.arm_ext }}/memgraph_${{ env.memgraph_version }}-1_${{ matrix.build_arch }}64.deb"
-      shorten_tag: 'true'
-      force_release: 'true'
-      push_to_dockerhub: 'false'
-      push_to_s3: 'true'
+      shorten_tag: "true"
+      force_release: "true"
+      push_to_dockerhub: "false"
+      push_to_s3: "true"
     secrets: inherit
