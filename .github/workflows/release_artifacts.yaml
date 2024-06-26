@@ -1,0 +1,64 @@
+name: 'Create release artifacts'
+
+on:
+  workflow_dispatch:
+    inputs:
+      os:
+        type: choice
+        default: 'debian-11'
+        description: "Operating system to build the image for"
+        required: true
+        options:
+          - "debian-11"
+      mage_version:
+        type: string
+        description: "Mage version built into this image (format: X.Y.Z)"
+        required: true
+      memgraph_version:
+        type: string
+        description: "Memgraph version built into this image (format: X.Y.Z)"
+        required: true
+      official_memgraph:
+        type: boolean
+        description: "Use the official Memgraph bucket?"
+        default: false
+
+env:
+  s3_link_base: "https://s3.eu-west-1.amazonaws.com"
+  s3_bucket: ${{ github.event.inputs.official_memgraph == 'true' && 'download.memgraph.com' || 'deps.memgraph.io' }}
+
+jobs:
+  dev:
+    continue-on-error: true
+    strategy:
+      matrix:
+        build_target: ["prod", "dev"]
+        build_scope: ["with ML", "without ML"]
+        build_type: ["Release", "RelWithDebInfo"]
+        build_arch: ["amd", "arm"]
+        include:
+          - build_type: "RelWithDebInfo"
+            rwid_ext: "-rwdi"
+          - build_arch: "arm"
+            arm_ext: "-aarch64"
+        exclude:
+          - build_target: "dev"
+            build_scope: "without ML"
+          - build_target: "dev"
+            build_type: "Release"
+    uses: ./.github/workflows/reusable_package_mage.yaml
+    with:
+      arch: "${{ matrix.build_arch }}"
+      mage_version: "${{ github.event.inputs.mage_version }}"
+      mage_build_scope: "${{ matrix.build_scope }}"
+      mage_build_target: "${{ matrix.build_target }}"
+      mage_build_type: "${{ matrix.build_type }}"
+      memgraph_version: "${{ github.event.inputs.memgraph_version }}"
+      memgraph_download_link: "${{ env.s3_link_base }}/${{ env.s3_bucket }}/${{ github.event.inputs.os }}${{ matrix.rwid_ext }}${{ matrix.arm_ext }}/memgraph_${{ env.memgraph_version }}-1_${{ matrix.build_arch }}64.deb"
+      shorten_tag: "true"
+      force_release: "true"
+      push_to_dockerhub: "false"
+      push_to_s3: "true"
+      s3_dest_bucket: "deps.memgraph.io"
+      s3_dest_dir: "mage/v${{ github.event.inputs.mage_version}}"
+    secrets: inherit
