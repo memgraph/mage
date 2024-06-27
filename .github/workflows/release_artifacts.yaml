@@ -55,7 +55,7 @@ jobs:
         build_arch: ["amd", "arm"]
         include:
           - build_type: "RelWithDebInfo"
-            rwid_ext: "-rwdi"
+            rwid_ext: "-relwithdebinfo"
           - build_arch: "arm"
             arm_ext: "-aarch64"
         exclude:
