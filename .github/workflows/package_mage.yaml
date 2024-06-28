@@ -65,4 +65,5 @@ jobs:
       force_release: 'true'
       push_to_dockerhub: ${{ github.event.inputs.push_to_dockerhub || 'false' }}
       push_to_s3: ${{ github.event.inputs.push_to_s3 || 'false' }}
+      large_runner: ${{ github.event.inputs.mage_build_target == 'dev' && 'true' || 'false' }}
     secrets: inherit
