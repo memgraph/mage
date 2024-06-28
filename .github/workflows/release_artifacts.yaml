@@ -71,7 +71,7 @@ jobs:
       mage_build_target: "${{ matrix.build_target }}"
       mage_build_type: "${{ matrix.build_type }}"
       memgraph_version: "${{ github.event.inputs.memgraph_version }}"
-      memgraph_download_link: "${{ needs.SetupNames.outputs.download_link_base }}${{ matrix.rwid_ext }}${{ matrix.arm_ext }}/${{ needs.SetupNames.outputs.dowlnoad_binary_name_base }}_${{ matrix.build_arch }}64.deb"
+      memgraph_download_link: "${{ needs.SetupNames.outputs.download_link_base }}${{ matrix.arm_ext }}${{ matrix.rwid_ext }}/${{ needs.SetupNames.outputs.dowlnoad_binary_name_base }}_${{ matrix.build_arch }}64.deb"
       shorten_tag: "true"
       force_release: "true"
       push_to_dockerhub: "false"
