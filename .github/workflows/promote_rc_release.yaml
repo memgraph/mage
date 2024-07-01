@@ -65,7 +65,7 @@ jobs:
     steps:
       - name: Setup environment variables
         run: |
-          mage_version=${{ github.event.inputs.mage_version || '1.18.0' }
+          mage_version=${{ github.event.inputs.mage_version || '1.18.0' }}
           memgraph_version=${{ github.event.inputs.memgraph_version || '2.18.0' }}
           echo "docker_tar_amd=mage-${mage_version%.0}-memgraph-${memgraph_version%.0}${{ matrix.image_ext }}.tar.gz" >> $GITHUB_ENV
           echo "docker_tar_arm=mage-${mage_version%.0}-memgraph-${memgraph_version%.0}-arm${{ matrix.image_ext }}.tar.gz" >> $GITHUB_ENV
@@ -143,6 +143,6 @@ jobs:
       - name: Clean up temporary images
         run: |
           echo "Deleting temporary image ${release_image_amd} ..."
-        curl -i -n -X DELETE -H "Authorization: JWT ${dockerhub_token}" https://hub.docker.com/v2/repositories/${docker_repo_release}/tags/${release_image#*:}-amd64/
+          curl -i -n -X DELETE -H "Authorization: JWT ${dockerhub_token}" https://hub.docker.com/v2/repositories/${docker_repo_release}/tags/${release_image#*:}-amd64/
           echo "Deleting temporary image ${release_image_arm} ..."
-        curl -i -n -X DELETE -H "Authorization: JWT ${dockerhub_token}" https://hub.docker.com/v2/repositories/${docker_repo_release}/tags/${release_image#*:}-arm64/
+          curl -i -n -X DELETE -H "Authorization: JWT ${dockerhub_token}" https://hub.docker.com/v2/repositories/${docker_repo_release}/tags/${release_image#*:}-arm64/
