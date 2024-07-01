@@ -135,8 +135,6 @@ def get_arguments():
         default=MAGE_BUILD_DIRECTORY,
     )
 
-    
-
     return parser.parse_args()
 
 
@@ -245,7 +243,7 @@ def build_and_copy_cpp_modules(args: Dict[str, Any]) -> bool:
     return True
 
 
-def copy_python_modules(args:Dict[str,Any]) -> bool:
+def copy_python_modules(args: Dict[str, Any]) -> bool:
     """
     Function copies Python modules to MAGE_BUILD_DIRECTORY. Returns true if successful, otherwise false.
     """
@@ -256,7 +254,6 @@ def copy_python_modules(args:Dict[str,Any]) -> bool:
 
     os.chdir(PY_DIRECTORY)
 
-    
     ignore_list = [
         "tests",
         "requirements.txt",
@@ -285,10 +282,11 @@ def build_and_copy_rust_modules(args: Dict[str, Any]) -> bool:
 
     logger.info(f"[Terminal] (7/8) Building and copying Rust modules started.")
 
-    os.chdir(RS_DIRECTORY)
-    for project in filter(
-        lambda f: os.path.isdir(f) and f != "rsmgp-sys", os.listdir(RS_DIRECTORY)
-    ):
+    for project in os.listdir(RS_DIRECTORY):
+        os.chdir(RS_DIRECTORY)
+        if not os.path.isdir(project) or project == "rsmgp-sys":
+            continue
+
         project_dir = os.path.join(RS_DIRECTORY, project)
         os.chdir(project_dir)
         rs_build_mode = "release"
@@ -352,6 +350,7 @@ def build(args: Dict[str, Any]) -> bool:
             return False
 
     return True
+
 
 def run_build_action(args: Dict[str, Any]) -> bool:
     logger.info("[Terminal] Starting building and copying source code...")
