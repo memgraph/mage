@@ -120,12 +120,16 @@ jobs:
           # arm64
           aws s3 cp s3://${rc_bucket}/${rc_dir}/${docker_tar_arm} - | docker load
           echo "Downloaded and loaded ${rc_image} for arm ..."
+          echo "Tagging ${rc_image} as ${relase_image_arm} ..."
+          echo "Running command: docker tag ${rc_image} ${relase_image_arm} ..."
           docker tag ${rc_image} ${relase_image_arm}
           docker push ${release_image_arm}
           echo "Pushed ${release_image_arm} to DockerHub!"
           # amd64
           aws s3 cp s3://${rc_bucket}/${rc_dir}/${docker_tar_amd} - | docker load
           echo "Downloaded and loaded ${rc_image} for amd ..."
+          echo "Tagging ${rc_image} as ${relase_image_amd} ..."
+          echo "Running command: docker tag ${rc_image} ${relase_image_amd} ..."
           docker tag ${rc_image} ${relase_image_amd}
           docker push ${release_image_amd}
           echo "Pushed ${release_image_amd} to DockerHub!"
