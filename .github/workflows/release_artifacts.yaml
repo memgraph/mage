@@ -23,14 +23,31 @@ on:
         description: "Use the official Memgraph bucket?"
         default: false
 
-env:
-  s3_link_base: "https://s3.eu-west-1.amazonaws.com"
-  s3_bucket: ${{ github.event.inputs.official_memgraph == 'true' && 'download.memgraph.com' || 'deps.memgraph.io' }}
 
 jobs:
-  dev:
-    continue-on-error: true
+  SetupNames:
+    runs-on: ubuntu-latest
+    outputs:
+      download_link_base: ${{ steps.base_link.outputs.link }}
+      dowlnoad_binary_name_base: ${{ steps.binary_name.outputs.name }}
+    env:
+      s3_link_base: ${{ github.event.inputs.official_memgraph == 'true' && 'https://' || 'https://s3.eu-west-1.amazonaws.com' }}
+      s3_bucket: ${{ github.event.inputs.official_memgraph == 'true' && 'download.memgraph.com' || 'deps.memgraph.io' }}
+    steps:
+      - name: Set base memgraph download link
+        id: base_link
+        run: |
+          echo "link=${{ env.s3_link_base }}/${{ env.s3_bucket }}/memgraph/v${{ github.event.inputs.memgraph_version }}/${{ github.event.inputs.os }}" >> $GITHUB_OUTPUT
+      - name: Set binary name base
+        id: binary_name
+        run: |
+          version=${{ github.event.inputs.memgraph_version }}
+          echo "name=memgraph_${version%%-*}-1" >> $GITHUB_OUTPUT
+
+  Artifact:
+    needs: [SetupNames]
     strategy:
+      fail-fast: false
       matrix:
         build_target: ["prod", "dev"]
         build_scope: ["with ML", "without ML"]
@@ -38,7 +55,7 @@ jobs:
         build_arch: ["amd", "arm"]
         include:
           - build_type: "RelWithDebInfo"
-            rwid_ext: "-rwdi"
+            rwid_ext: "-relwithdebinfo"
           - build_arch: "arm"
             arm_ext: "-aarch64"
         exclude:
@@ -54,11 +71,12 @@ jobs:
       mage_build_target: "${{ matrix.build_target }}"
       mage_build_type: "${{ matrix.build_type }}"
       memgraph_version: "${{ github.event.inputs.memgraph_version }}"
-      memgraph_download_link: "${{ env.s3_link_base }}/${{ env.s3_bucket }}/${{ github.event.inputs.os }}${{ matrix.rwid_ext }}${{ matrix.arm_ext }}/memgraph_${{ env.memgraph_version }}-1_${{ matrix.build_arch }}64.deb"
+      memgraph_download_link: "${{ needs.SetupNames.outputs.download_link_base }}${{ matrix.arm_ext }}${{ matrix.rwid_ext }}/${{ needs.SetupNames.outputs.dowlnoad_binary_name_base }}_${{ matrix.build_arch }}64.deb"
       shorten_tag: "true"
       force_release: "true"
       push_to_dockerhub: "false"
       push_to_s3: "true"
       s3_dest_bucket: "deps.memgraph.io"
       s3_dest_dir: "mage/v${{ github.event.inputs.mage_version}}"
+      large_runner: ${{ matrix.build_target == 'dev' && 'true' || 'false' }}
     secrets: inherit
