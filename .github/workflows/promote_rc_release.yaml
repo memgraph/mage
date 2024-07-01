@@ -37,31 +37,30 @@ env:
 
 jobs:
   PromoteDocker:
-    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - build_target: "prod"
-            build_scope: "with ML"
-            build_type: "Release"
-          - build_target: "prod"
-            build_scope: "with ML"
-            build_type: "RelWithDebInfo"
-            image_ext: "-relwithdebinfo"
-          - build_target: "prod"
-            build_scope: "without ML"
-            build_type: "Release"
-            image_ext: "-no-ml"
-          - build_target: "prod"
-            build_scope: "without ML"
-            build_type: "RelWithDebInfo"
-            image_ext: "-no-ml-relwithdebinfo"
+          # - build_target: "prod"
+          #   build_scope: "with ML"
+          #   build_type: "Release"
+          # - build_target: "prod"
+          #   build_scope: "with ML"
+          #   build_type: "RelWithDebInfo"
+          #   image_ext: "-relwithdebinfo"
+          # - build_target: "prod"
+          #   build_scope: "without ML"
+          #   build_type: "Release"
+          #   image_ext: "-no-ml"
+          # - build_target: "prod"
+          #   build_scope: "without ML"
+          #   build_type: "RelWithDebInfo"
+          #   image_ext: "-no-ml-relwithdebinfo"
           - build_target: "dev"
             build_scope: "with ML"
             build_type: "RelwithDebInfo"
             image_ext: "-dev-relwithdebinfo"
-            
+    runs-on: ${{ matrix.build_target == "dev" && "ubuntu-large" || "ubuntu-latest" }}
     steps:
       - name: Setup environment variables
         run: |
