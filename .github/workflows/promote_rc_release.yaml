@@ -4,6 +4,7 @@ concurrency:
   cancel-in-progress: true
 
 on:
+  pull_request:
   workflow_dispatch:
     inputs:
       mage_version:
@@ -30,9 +31,9 @@ on:
 env:
   s3_region: eu-west-1
   rc_bucket: deps.memgraph.io
-  rc_dir: mage/v${{ github.event.inputs.mage_version }}-${{ github.event.inputs.mage_rc_version }}
+  rc_dir: mage/v${{ github.event.inputs.mage_version || '1.18.0' }}-${{ github.event.inputs.mage_rc_version || 'test' }}
   docker_repo_rc: memgraph/memgraph-mage
-  docker_repo_release: memgraph/memgraph-mage${{ github.event.inputs.test == true && '-release-test' || '' }}
+  docker_repo_release: memgraph/memgraph-mage-release-test
 
 jobs:
   PromoteDocker:
@@ -64,8 +65,8 @@ jobs:
     steps:
       - name: Setup environment variables
         run: |
-          mage_version=${{ github.event.inputs.mage_version }}
-          memgraph_version=${{ github.event.inputs.memgraph_version }}
+          mage_version=${{ github.event.inputs.mage_version || '1.18.0' }
+          memgraph_version=${{ github.event.inputs.memgraph_version || '2.18.0' }}
           echo "docker_tar_amd=mage-${mage_version%.0}-memgraph-${memgraph_version%.0}${{ matrix.image_ext }}.tar.gz" >> $GITHUB_ENV
           echo "docker_tar_arm=mage-${mage_version%.0}-memgraph-${memgraph_version%.0}-arm${{ matrix.image_ext }}.tar.gz" >> $GITHUB_ENV
           echo "rc_image=${docker_repo_rc}:${mage_version%.0}-memgraph-${memgraph_version%.0}${{ matrix.image_ext }}" >> $GITHUB_ENV
