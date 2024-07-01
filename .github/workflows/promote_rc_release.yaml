@@ -60,7 +60,7 @@ jobs:
           - build_target: "dev"
             build_scope: "with ML"
             build_type: "RelwithDebInfo"
-            image_ext: "-dev"
+            image_ext: "-dev-relwithdebinfo"
             
     steps:
       - name: Setup environment variables
