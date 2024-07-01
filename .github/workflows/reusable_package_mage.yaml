@@ -127,7 +127,7 @@ jobs:
             ARTIFACT_NAME="${ARTIFACT_NAME}-dev"
             IMAGE_TAG="${IMAGE_TAG}-dev"
           fi
-          if [[ "${{ env.MAGE_BUILD_TYPE }}" == 'RelWithDebInfo' ]]; then
+          if [[ "${{ env.MAGE_BUILD_TYPE }}" == 'RelWithDebInfo' ]] && [[ "${{ env.MAGE_BUILD_TARGET }}" != 'dev' ]]; then
             ARTIFACT_NAME="${ARTIFACT_NAME}-relwithdebinfo"
             IMAGE_TAG="${IMAGE_TAG}-relwithdebinfo"
           fi
