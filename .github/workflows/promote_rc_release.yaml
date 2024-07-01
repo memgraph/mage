@@ -135,7 +135,7 @@ jobs:
           docker manifest create ${release_image} \
           --amend ${release_image_amd} \
           --amend ${release_image_arm}
-          docker manifest push${release_image}
+          docker manifest push ${release_image}
           echo "Successfully published ${release_image} to DockerHub!"
           # Setup manifest list for latest image if production image
           if [[ -z "${{ matrix.image_ext }}" ]]; then
