@@ -12,7 +12,7 @@ on:
         type: string
       mage_rc_version:
         description: "Mage RC version to promote (format: rcX)"
-        required: true
+        required: false
         type: string
       memgraph_version:
         description: "Memgraph version (format: X.Y.Z)"
