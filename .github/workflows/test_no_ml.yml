@@ -49,8 +49,8 @@ jobs:
             curl -L "https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb" > memgraph-arm64.deb
           else
             sudo apt update && sudo apt install -y ca-certificates wget git
-            wget -q https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph/v${MEMGRAPH_VERSION%-*}/debian-11/memgraph_${MEMGRAPH_VERSION}-1_amd64.deb -O memgraph-amd64.deb
-            wget -q https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph/v${MEMGRAPH_VERSION%-*}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb -O memgraph-arm64.deb
+            wget -q https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph/v${MEMGRAPH_VERSION}/debian-11/memgraph_${MEMGRAPH_VERSION%-*}-1_amd64.deb -O memgraph-amd64.deb
+            wget -q https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph/v${MEMGRAPH_VERSION}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION%-*}-1_arm64.deb -O memgraph-arm64.deb
           fi
       - name: Disk status before cleaning
         run: |
