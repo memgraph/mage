@@ -1,0 +1,13 @@
+[package]
+name = "rsmgp-mrma"
+version = "0.1.0"
+authors = ["Josip Mrden <josip.mrden@memgraph.io>"]
+edition = "2018"
+
+[dependencies]
+c_str_macro = "1.0.2"
+rsmgp-sys = { path = "../rsmgp-sys" }
+
+[lib]
+name = "rust_mrma"
+crate-type = ["cdylib"]

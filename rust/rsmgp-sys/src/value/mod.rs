@@ -575,5 +575,27 @@ pub(crate) unsafe fn mgp_raw_value_to_value(
     }
 }
 
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Value::Null, Value::Null) => true,
+            (Value::Bool(a), Value::Bool(b)) => a == b,
+            (Value::Int(a), Value::Int(b)) => a == b,
+            (Value::Float(a), Value::Float(b)) => a == b,
+            (Value::String(a), Value::String(b)) => a == b,
+            // (Value::Vertex(a), Value::Vertex(b)) => a == b, // You need to implement PartialEq for Vertex
+            // (Value::Edge(a), Value::Edge(b)) => a == b, // You need to implement PartialEq for Edge
+            // (Value::Path(a), Value::Path(b)) => a == b, // You need to implement PartialEq for Path
+            (Value::List(a), Value::List(b)) => a == b, // You need to implement PartialEq for List
+            (Value::Map(a), Value::Map(b)) => a == b, // You need to implement PartialEq for Map
+            (Value::Date(a), Value::Date(b)) => a == b,
+            (Value::LocalTime(a), Value::LocalTime(b)) => a == b,
+            (Value::LocalDateTime(a), Value::LocalDateTime(b)) => a == b,
+            (Value::Duration(a), Value::Duration(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests;

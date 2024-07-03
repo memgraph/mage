@@ -181,5 +181,24 @@ impl List {
     }
 }
 
+impl PartialEq for List {
+    fn eq(&self, other: &Self) -> bool {
+        // Ensure both lists have the same length
+        if self.size() != other.size() {
+            return false;
+        }
+        // Compare each element in the list
+        let self_iter = self.iter().unwrap();
+        let other_iter = other.iter().unwrap();
+        for (self_value, other_value) in self_iter.zip(other_iter) {
+            if self_value != other_value {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+
 #[cfg(test)]
 mod tests;
