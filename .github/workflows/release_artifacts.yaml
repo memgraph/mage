@@ -78,5 +78,5 @@ jobs:
       push_to_s3: "true"
       s3_dest_bucket: "deps.memgraph.io"
       s3_dest_dir: "mage/v${{ github.event.inputs.mage_version}}"
-      large_runner: "true"
+      large_runner: ${{ matrix.build_target == 'dev' && 'true' || 'false' }}
     secrets: inherit
