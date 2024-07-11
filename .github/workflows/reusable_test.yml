@@ -85,8 +85,8 @@ jobs:
           df -h
           docker buildx du
 
-      - name : Docker system prune
-        run : |
+      - name: Docker system prune
+        run: |
           docker buildx prune --all -f
           sudo rm -rf /opt/hostedtoolcache/CodeQL
           sudo rm -rf /opt/hostedtoolcache/go
