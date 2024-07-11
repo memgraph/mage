@@ -7,10 +7,6 @@ on:
         type: string
         description: "Architecture to build the image for (amd64/arm64)"
         required: true
-      mage_version:
-        type: string
-        description: "Mage version built into this image (format: X.Y.Z)"
-        required: true
       build_scope:
         type: string
         description: "Mage build scope"
