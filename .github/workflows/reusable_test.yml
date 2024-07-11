@@ -23,6 +23,14 @@ on:
         type: string
         description: "Memgraph package download link. Leave empty to use the official download link."
         required: false
+      memgraph_ref:
+        type: string
+        description: "Memgraph submodule branch to build query modules from"
+        default: 'master'
+      memgraph_ref_update:
+        type: boolean
+        description: "Update Memgraph submodule to the latest commit"
+        default: false
 
 env:
   PY_VERSION: "3.9"
@@ -34,7 +42,7 @@ env:
   OS: "debian-11"
 
 jobs:
-  build:
+  BuildAndTest:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository and submodules
@@ -43,6 +51,14 @@ jobs:
           fetch-depth: 0
           submodules: recursive
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout specific branch in submodule
+        run: |
+          cd cpp/memgraph
+          git checkout ${{ inputs.memgraph_ref }}
+          if [[ "${{ inputs.memgraph_ref_update }}" == "true" ]]; then
+            git pull
+          fi
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
