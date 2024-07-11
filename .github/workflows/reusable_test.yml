@@ -102,7 +102,7 @@ jobs:
           --tag memgraph-mage:${{ inputs.build_target }} \
           --target ${{ inputs.build_target }} \
           --platform linux/${{ inputs.arch }} \
-          --file Dockerfile.${{ inputs.build_scope == 'without ML' && 'nl_ML' || 'release' }} \
+          --file Dockerfile.${{ inputs.build_scope == 'without ML' && 'no_ML' || 'release' }} \
           --load .
           docker run -d -p ${{ env.MEMGRAPH_PORT }}:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:${{ inputs.build_target }} --telemetry-enabled=False
 
