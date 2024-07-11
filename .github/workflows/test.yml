@@ -39,7 +39,7 @@ on:
 
 jobs:
   BuildAndTest_RC:
-    if: github.event_name == 'tags'
+    if: github.ref_type == 'tag'
     strategy:
       fail-fast: false
       matrix:
@@ -52,6 +52,7 @@ jobs:
       build_target: "${{ matrix.build_target }}"
       build_scope: "${{ matrix.build_scope }}"
       memgraph_version: "2.18.0"
+    secrets: inherit
 
   BuildAndTest_PR:
     if: github.event_name == 'pull_request'
@@ -67,6 +68,7 @@ jobs:
       build_target: "${{ matrix.build_target }}"
       build_scope: "${{ matrix.build_scope }}"
       memgraph_version: "2.18.0"
+    secrets: inherit
 
   BuildAndTest_Manual:
     if: github.event_name == 'workflow_dispatch'
@@ -77,3 +79,4 @@ jobs:
       build_scope: ${{ github.event.inputs.build_scope }}
       memgraph_version: ${{ github.event.inputs.memgraph_version }}
       memgraph_download_link: ${{ github.event.inputs.memgraph_download_link }}
+    secrets: inherit
