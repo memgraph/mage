@@ -28,7 +28,7 @@ on:
         description: "Memgraph submodule branch to build query modules from"
         default: 'master'
       memgraph_ref_update:
-        type: boolean
+        type: string
         description: "Update Memgraph submodule to the latest commit"
         default: false
 
