@@ -10,35 +10,36 @@ on:
       - "v*.*-rc*"
   pull_request:
   workflow_dispatch:
-    arch:
-      description: "Architecture to build the image for (amd64/arm64)"
-      type: choice
-      default: "amd64"
-      options:
-        - "amd64"
-        - "arm64"
-    build_target:
-      description: "Mage build target"
-      type: choice
-      default: "prod"
-      options:
-        - "prod"
-        - "dev"
-    build_scope:
-      description: "Mage build scope"
-      type: choice
-      default: "with ML"
-      options:
-        - "with ML"
-        - "without ML"
-    memgraph_version:
-      description: "Memgraph version built into this image (format: X.Y.Z)"
-      type: string
-      required: false
-    memgraph_download_link:
-      description: "Memgraph package download link. Leave empty to use the official download link."
-      type: string
-      required: false
+    inputs:
+      arch:
+        description: "Architecture to build the image for (amd64/arm64)"
+        type: choice
+        default: "amd64"
+        options:
+          - "amd64"
+          - "arm64"
+      build_target:
+        description: "Mage build target"
+        type: choice
+        default: "prod"
+        options:
+          - "prod"
+          - "dev"
+      build_scope:
+        description: "Mage build scope"
+        type: choice
+        default: "with ML"
+        options:
+          - "with ML"
+          - "without ML"
+      memgraph_version:
+        description: "Memgraph version built into this image (format: X.Y.Z)"
+        type: string
+        required: false
+      memgraph_download_link:
+        description: "Memgraph package download link. Leave empty to use the official download link."
+        type: string
+        required: false
 
 jobs:
   RC_test:
@@ -77,9 +78,9 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/reusable_test.yml
     with:
-      arch: ${{ github.event.inputs.arch }}
-      build_target: ${{ github.event.inputs.build_target }}
-      build_scope: ${{ github.event.inputs.build_scope }}
-      memgraph_version: ${{ github.event.inputs.memgraph_version }}
-      memgraph_download_link: ${{ github.event.inputs.memgraph_download_link }}
+      arch: "${{ github.event.inputs.arch }}"
+      build_target: "${{ github.event.inputs.build_target }}"
+      build_scope: "${{ github.event.inputs.build_scope }}"
+      memgraph_version: "${{ github.event.inputs.memgraph_version }}"
+      memgraph_download_link: "${{ github.event.inputs.memgraph_download_link }}"
     secrets: inherit
