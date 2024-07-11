@@ -40,8 +40,8 @@ on:
 jobs:
   BuildAndTest_RC:
     if: github.event_name == 'tags'
-    continue-on-error: True
     strategy:
+      fail-fast: false
       matrix:
         arch: ["amd64", "arm64"]
         build_target: ["prod", "dev"]
@@ -55,8 +55,8 @@ jobs:
 
   BuildAndTest_PR:
     if: github.event_name == 'pull_request'
-    continue-on-error: True
     strategy:
+      fail-fast: false
       matrix:
         arch: ["amd64"]
         build_target: ["prod"]
