@@ -40,6 +40,14 @@ on:
         description: "Memgraph package download link. Leave empty to use the official download link."
         type: string
         required: false
+      memgraph_ref:
+        type: string
+        description: "Memgraph submodule branch to build query modules from"
+        default: 'master'
+      memgraph_ref_update:
+        type: boolean
+        description: "Update Memgraph submodule to the latest commit"
+        default: true
 
 jobs:
   RC_test:
@@ -56,6 +64,7 @@ jobs:
       build_target: "${{ matrix.build_target }}"
       build_scope: "${{ matrix.build_scope }}"
       memgraph_version: "2.18.0"
+      memgraph_ref: "v2.18.0-rc1"
     secrets: inherit
 
   PR_test:
@@ -72,6 +81,8 @@ jobs:
       build_target: "${{ matrix.build_target }}"
       build_scope: "${{ matrix.build_scope }}"
       memgraph_version: "2.18.0"
+      memgraph_ref: "master"
+      memgraph_ref_update: "true"
     secrets: inherit
 
   Manual_test:
@@ -83,4 +94,6 @@ jobs:
       build_scope: "${{ github.event.inputs.build_scope }}"
       memgraph_version: "${{ github.event.inputs.memgraph_version }}"
       memgraph_download_link: "${{ github.event.inputs.memgraph_download_link }}"
+      memgraph_ref: "${{ github.event.inputs.memgraph_ref }}"
+      memgraph_ref_update: "${{ github.event.inputs.memgraph_ref_update }}"
     secrets: inherit
