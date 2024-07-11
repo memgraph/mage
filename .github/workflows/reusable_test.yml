@@ -19,10 +19,6 @@ on:
         type: string
         description: "Mage build target"
         default: 'prod'
-      build_type:
-        type: string
-        description: "Mage build type"
-        default: 'Release'
       memgraph_version:
         type: string
         description: "Memgraph version built into this image (format: X.Y.Z)"
