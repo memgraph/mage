@@ -38,7 +38,7 @@ on:
       required: false
 
 jobs:
-  BuildAndTest_RC:
+  RC_test:
     if: github.ref_type == 'tag'
     strategy:
       fail-fast: false
@@ -54,7 +54,7 @@ jobs:
       memgraph_version: "2.18.0"
     secrets: inherit
 
-  BuildAndTest_PR:
+  PR_test:
     if: github.event_name == 'pull_request'
     strategy:
       fail-fast: false
@@ -70,7 +70,7 @@ jobs:
       memgraph_version: "2.18.0"
     secrets: inherit
 
-  BuildAndTest_Manual:
+  Manual_test:
     if: github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/reusable_test.yml
     with:
