@@ -99,11 +99,6 @@ jobs:
           sudo rm -rf /opt/hostedtoolcache/go
           sudo rm -rf /opt/hostedtoolcache
 
-      - name: Disk status after cleaning
-        run: |
-          df -h
-          docker buildx du
-
       - name: Rust library tests
         if: inputs.build_target == 'dev'
         run: |
@@ -121,10 +116,6 @@ jobs:
           --file Dockerfile.${{ inputs.build_scope == 'without ML' && 'no_ML' || 'release' }} \
           --load .
           docker run -d -p ${{ env.MEMGRAPH_PORT }}:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:${{ inputs.build_target }} --telemetry-enabled=False
-
-      - name: Get all current images
-        run: |
-          docker images
 
       - name: Set up C++
         run: |
