@@ -30,7 +30,7 @@ on:
       memgraph_ref_update:
         type: string
         description: "Update Memgraph submodule to the latest commit"
-        default: false
+        default: true
 
 env:
   PY_VERSION: "3.9"

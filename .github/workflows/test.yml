@@ -67,6 +67,7 @@ jobs:
       build_scope: "${{ matrix.build_scope }}"
       memgraph_version: "2.18.0"
       memgraph_ref: "v2.18.0-rc1"
+      memgraph_ref_update: "false"
     secrets: inherit
 
   PR_test:
@@ -115,4 +116,5 @@ jobs:
       build_scope: "${{ matrix.build_scope }}"
       memgraph_version: "master"
       memgraph_ref: "true"
+      memgraph_ref_update: "true"
     secrets: inherit
