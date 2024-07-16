@@ -35,7 +35,7 @@ on:
           - "with ML"
           - "without ML"
       memgraph_version:
-        description: "Memgraph version built into this image (format: X.Y.Z)"
+        description: "Memgraph version built into this image (format: X.Y.Z). You can leave empty if using custom download link."
         type: string
         required: false
       memgraph_download_link:
@@ -114,7 +114,7 @@ jobs:
       arch: "${{ matrix.arch }}"
       build_target: "${{ matrix.build_target }}"
       build_scope: "${{ matrix.build_scope }}"
-      memgraph_version: "master"
-      memgraph_ref: "true"
+      memgraph_version: "2.18.0"
+      memgraph_ref: "master"
       memgraph_ref_update: "true"
     secrets: inherit
