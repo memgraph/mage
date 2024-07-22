@@ -68,7 +68,7 @@ jobs:
       memgraph_version: "2.18.1"
       memgraph_ref: "v2.18.0-rc1"
       memgraph_ref_update: "false"
-      memgraph_download_link: "https://deps.memgraph.io/memgraph/v2.18.1-rc1/debian-11${{ inputs.arch == 'arm64' && '-aarch64' || '' }}/memgraph_2.18.1-1_${{ matrix.arch }}.deb"
+      memgraph_download_link: "https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph/v2.18.1-rc1/debian-11${{ inputs.arch == 'arm64' && '-aarch64' || '' }}/memgraph_2.18.1-1_${{ matrix.arch }}.deb"
     secrets: inherit
 
   PR_test:
