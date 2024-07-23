@@ -105,7 +105,9 @@ jobs:
           MEMGRAPH_VERSION=${{ inputs.memgraph_version }}
           MAGE_VERSION=${{ inputs.mage_version }}
           if [[ ${{ inputs.shorten_tag }} == true ]]; then
+            MEMGRAPH_VERSION=${MEMGRAPH_VERSION%%-*}
             memgraph_patch_version=${MEMGRAPH_VERSION##*.}
+            MAGE_VERSION=${MAGE_VERSION%%-*}
             mage_patch_version=${MAGE_VERSION##*.}
             if [[ "$memgraph_patch_version" -eq 0 ]]; then
               MEMGRAPH_VERSION=${MEMGRAPH_VERSION%.*}
