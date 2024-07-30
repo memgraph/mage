@@ -18,7 +18,7 @@ on:
       memgraph_version:
         type: string
         description: "Memgraph version built into this image (format: X.Y.Z)"
-        default: '2.18.0'
+        default: '2.18.1'
       memgraph_download_link:
         type: string
         description: "Memgraph package download link. Leave empty to use the official download link."
@@ -40,6 +40,7 @@ env:
   NEO4J_PORT: 7688
   NEO4J_CONTAINER: "neo4j_test"
   OS: "debian-11"
+  s3_region: "eu-west-1"
 
 jobs:
   BuildAndTest:
@@ -69,23 +70,43 @@ jobs:
 
       - name: Set up and check memgraph download link
         run: |
+          mg_url=${{ inputs.memgraph_download_link }}
           if [[ -z "${{ inputs.memgraph_download_link }}" ]]; then
-            echo "Using official download link"
-            mg_url="https://download.memgraph.com/memgraph/v${{ inputs.memgraph_version }}/$OS${{ inputs.arch == 'arm64' && '-aarch64' || '' }}/memgraph_${{ inputs.memgraph_version }}-1_${{ inputs.arch }}.deb"
-          else
-            echo "Using custom download link"
-            mg_url=${{ inputs.memgraph_download_link }}
+            mg_url="s3://download.memgraph.com/memgraph/v${{ inputs.memgraph_version }}/$OS${{ inputs.arch == 'arm64' && '-aarch64' || '' }}/memgraph_${{ inputs.memgraph_version }}-1_${{ inputs.arch }}.deb"
           fi
-          if curl --output /dev/null --silent --head --fail $mg_url; then
-            echo "Memgraph download link is valid"
-            echo "MEMGRAPH_DOWNLOAD_LINK=${mg_url}" >> $GITHUB_ENV 
+          echo "Download link: $mg_url"
+          url_protocol=${mg_url%%://*}
+          if [[ $url_protocol == "s3" ]]; then
+            echo "MEMGRAPH_S3_URI=${mg_url}" >> $GITHUB_ENV
+          elif [[ $url_protocol == "https" ]]; then
+            echo "Checking if the https link is valid"
+            if curl --output /dev/null --silent --head --fail $mg_url; then
+              echo "Memgraph download link is valid"
+              echo "MEMGRAPH_OBJECT_URL=${mg_url}" >> $GITHUB_ENV 
+            else
+              echo "Memgraph download link is not valid"
+              exit 1
+            fi
           else
-            echo "Memgraph download link is not valid"
+            echo "Invalid download link protocol, only supporting s3:// and https://"
             exit 1
           fi
 
-      - name: Download memgraph binary
-        run: curl -L ${{ env.MEMGRAPH_DOWNLOAD_LINK }} > memgraph-${{ inputs.arch }}.deb
+      - name: Download memgraph binary (Object URL)
+        if: env.MEMGRAPH_OBJECT_URL
+        run: curl -L ${{ env.MEMGRAPH_OBJECT_URL }} > memgraph-${{ inputs.arch }}.deb
+      
+      - name: Setup AWS credentials
+        if: env.MEMGRAPH_S3_URI
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.s3_region }}
+
+      - name: Download memgraph binary (S3 URI)
+        if: env.MEMGRAPH_S3_URI
+        run: aws s3 cp ${{ env.MEMGRAPH_S3_URI }} memgraph-${{ inputs.arch }}.deb
 
       - name: Disk status before cleaning
         run: |
