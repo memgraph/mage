@@ -105,7 +105,7 @@ jobs:
           aws-region: ${{ env.s3_region }}
 
       - name: Download memgraph binary (S3 URI)
-        if: env.MEMGRAPH_S3_URI != ''
+        if: env.MEMGRAPH_S3_URI
         run: aws s3 cp ${{ env.MEMGRAPH_S3_URI }} memgraph-${{ inputs.arch }}.deb && exit 1
 
       - name: Disk status before cleaning
