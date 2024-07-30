@@ -94,7 +94,7 @@ jobs:
 
       - name: Download memgraph binary (Object URL)
         if: env.MEMGRAPH_OBJECT_URL
-        run: curl -L ${{ env.MEMGRAPH_OBJECT_URL }} > memgraph-${{ inputs.arch }}.deb && exit 1
+        run: curl -L ${{ env.MEMGRAPH_OBJECT_URL }} > memgraph-${{ inputs.arch }}.deb
       
       - name: Setup AWS credentials
         if: env.MEMGRAPH_S3_URI
@@ -106,7 +106,7 @@ jobs:
 
       - name: Download memgraph binary (S3 URI)
         if: env.MEMGRAPH_S3_URI
-        run: aws s3 cp ${{ env.MEMGRAPH_S3_URI }} memgraph-${{ inputs.arch }}.deb && exit 1
+        run: aws s3 cp ${{ env.MEMGRAPH_S3_URI }} memgraph-${{ inputs.arch }}.deb
 
       - name: Disk status before cleaning
         run: |
