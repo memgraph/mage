@@ -23,7 +23,6 @@ on:
         description: "Use the official Memgraph bucket?"
         default: false
 
-
 jobs:
   SetupNames:
     runs-on: ubuntu-latest
