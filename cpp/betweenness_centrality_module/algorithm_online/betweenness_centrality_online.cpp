@@ -1,4 +1,5 @@
 #include <mg_graph.hpp>
+#include <mg_procedure.h>
 
 #include "../../biconnected_components_module/algorithm/biconnected_components.hpp"
 #include "../algorithm/betweenness_centrality.hpp"
@@ -49,10 +50,10 @@ std::unordered_map<std::uint64_t, double> OnlineBC::NormalizeBC(
   return normalized_bc_scores;
 }
 
-void OnlineBC::CallBrandesAlgorithm(const mg_graph::GraphView<> &graph, const std::uint64_t threads) {
+void OnlineBC::CallBrandesAlgorithm(const mg_graph::GraphView<> &graph, mgp_graph *mg_graph, const std::uint64_t threads) {
   this->node_bc_scores.clear();
 
-  const auto bc_scores = betweenness_centrality_alg::BetweennessCentrality(graph, false, false, threads);
+  const auto bc_scores = betweenness_centrality_alg::BetweennessCentrality(graph, mg_graph, false, false, threads);
   for (std::uint64_t node_id = 0; node_id < graph.Nodes().size(); ++node_id) {
     this->node_bc_scores[graph.GetMemgraphNodeId(node_id)] = bc_scores[node_id];
   }
@@ -400,9 +401,9 @@ void OnlineBC::iCentralIteration(const mg_graph::GraphView<> &graph, const Opera
   }
 }
 
-std::unordered_map<std::uint64_t, double> OnlineBC::Set(const mg_graph::GraphView<> &graph, const bool normalize,
+std::unordered_map<std::uint64_t, double> OnlineBC::Set(const mg_graph::GraphView<> &graph, mgp_graph *mg_graph, const bool normalize,
                                                         const std::uint64_t threads) {
-  CallBrandesAlgorithm(graph, threads);
+  CallBrandesAlgorithm(graph, mg_graph, threads);
   this->initialized = true;
 
   if (normalize) return NormalizeBC(this->node_bc_scores, graph.Nodes().size());
@@ -424,22 +425,22 @@ std::unordered_map<std::uint64_t, double> OnlineBC::Get(const mg_graph::GraphVie
 }
 
 std::unordered_map<std::uint64_t, double> OnlineBC::EdgeUpdate(
-    const mg_graph::GraphView<> &prior_graph, const mg_graph::GraphView<> &current_graph, const Operation operation,
+    const mg_graph::GraphView<> &prior_graph, const mg_graph::GraphView<> &current_graph, mgp_graph *mg_graph, const Operation operation,
     const std::pair<std::uint64_t, std::uint64_t> updated_edge, const bool normalize, const std::uint64_t threads) {
   if (operation == Operation::CREATE_EDGE) {
     const bool first_endpoint_isolated =
-        prior_graph.Neighbours(prior_graph.GetInnerNodeId(updated_edge.first)).size() == 0;
+        prior_graph.Neighbours(prior_graph.GetInnerNodeId(updated_edge.first)).empty();
     const bool second_endpoint_isolated =
-        prior_graph.Neighbours(prior_graph.GetInnerNodeId(updated_edge.second)).size() == 0;
+        prior_graph.Neighbours(prior_graph.GetInnerNodeId(updated_edge.second)).empty();
 
     if (first_endpoint_isolated && second_endpoint_isolated) {
-      return Set(current_graph, normalize, threads);
+      return Set(current_graph, mg_graph, normalize, threads);
     } else if (first_endpoint_isolated) {
       return NodeEdgeUpdate(current_graph, Operation::CREATE_ATTACH_NODE, updated_edge.first, updated_edge, normalize);
     } else if (second_endpoint_isolated) {
       return NodeEdgeUpdate(current_graph, Operation::CREATE_ATTACH_NODE, updated_edge.second, updated_edge, normalize);
     } else {
-      if (!Connected(prior_graph)) return Set(current_graph, normalize, threads);
+      if (!Connected(prior_graph)) return Set(current_graph, mg_graph, normalize, threads);
     }
   }
 
@@ -474,7 +475,10 @@ std::unordered_map<std::uint64_t, double> OnlineBC::EdgeUpdate(
 
   omp_set_dynamic(0);
   omp_set_num_threads(threads);
-#pragma omp parallel for
+#pragma omp parallel
+{
+  [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
+#pragma omp for
   for (std::uint64_t i = 0; i < array_size; i++) {
     auto node_id = affected_bcc_nodes_array[i];
     if (distances_first.at(node_id) != distances_second.at(node_id)) {
@@ -482,6 +486,8 @@ std::unordered_map<std::uint64_t, double> OnlineBC::EdgeUpdate(
                         affected_bcc_articulation_points, updated_edge, peripheral_subgraph_orders);
     }
   }
+  [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
+}
 
   if (normalize) return NormalizeBC(this->node_bc_scores, current_graph.Nodes().size());
 
