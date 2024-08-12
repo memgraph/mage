@@ -1,5 +1,5 @@
 import json
-from typing import Any, List, Dict, Tuple
+from typing import Any, List, Dict, Tuple, Union
 from datetime import datetime
 
 import elasticsearch
@@ -226,7 +226,7 @@ def elastic_search_parallel_bulk(
 
 @mgp.read_proc
 def connect(
-    elastic_url: str, ca_certs: str, elastic_user: str, elastic_password
+    elastic_url: str, ca_certs: Union[str, None]=None, elastic_user: str="", elastic_password: str=""
 ) -> mgp.Record(connection_status=mgp.Map):
     """Establishes connection with the Elasticsearch. This configuration needs to be specific to the Elasticsearch deployment. Uses basic authentication
     Args:
