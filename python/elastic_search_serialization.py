@@ -570,7 +570,7 @@ def scan(
     )
     items = []
     for item in response:
-        if item.get(_SOURCE, None) and item[_SOURCE].get(INDEX, None):
+        if _SOURCE in item and INDEX in item[_SOURCE]:
             item[ID] = item[_SOURCE][INDEX][ID]
             item[_SOURCE].pop(INDEX, None)
         items.append(item)
@@ -609,7 +609,7 @@ def search(
     )
     hits = []
     for hit in response[HITS][HITS]:
-        if hit.get(_SOURCE, None) and hit[_SOURCE].get(INDEX, None):
+        if _SOURCE in hit and INDEX in hit[_SOURCE]:
             hit[ID] = hit[_SOURCE][INDEX][ID]
             hit[_SOURCE].pop(INDEX, None)
         hits.append(hit)
