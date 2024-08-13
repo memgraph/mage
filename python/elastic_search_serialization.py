@@ -570,8 +570,9 @@ def scan(
     )
     items = []
     for item in response:
-        item[ID] = item[_SOURCE][INDEX][ID]
-        item[_SOURCE].pop(INDEX, None)
+        if _SOURCE in item and INDEX in item[_SOURCE]:
+            item[ID] = item[_SOURCE][INDEX][ID]
+            item[_SOURCE].pop(INDEX, None)
         items.append(item)
 
     return mgp.Record(items=items)
@@ -608,8 +609,9 @@ def search(
     )
     hits = []
     for hit in response[HITS][HITS]:
-        hit[ID] = hit[_SOURCE][INDEX][ID]
-        hit[_SOURCE].pop(INDEX, None)
+        if _SOURCE in hit and INDEX in hit[_SOURCE]:
+            hit[ID] = hit[_SOURCE][INDEX][ID]
+            hit[_SOURCE].pop(INDEX, None)
         hits.append(hit)
 
     result = {}
