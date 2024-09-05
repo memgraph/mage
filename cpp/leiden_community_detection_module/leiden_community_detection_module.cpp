@@ -27,8 +27,6 @@ void InsertLeidenRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory
 
 
 void OnGraph(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-    int i = 0;
-
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
     try {
         auto communities = leiden_alg::GetCommunities(*graph);
@@ -45,14 +43,10 @@ void OnGraph(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_
 
 extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
     try {
-    
-        {
-        auto proc = mgp::module_add_read_procedure(module, kProcedureGet, OnGraph);
-    
+        auto *proc = mgp::module_add_read_procedure(module, kProcedureGet, OnGraph);
+
         mgp::proc_add_result(proc, kFieldNode, mgp::type_node());
         mgp::proc_add_result(proc, kFieldCommunity, mgp::type_int());
-        }
-    
     } catch (const std::exception &e) {
         return 1;
     }
