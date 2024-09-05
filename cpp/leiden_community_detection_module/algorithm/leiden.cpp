@@ -1,10 +1,11 @@
-#include "leiden.hpp"
 #include <cstddef>
 #include <queue>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 #include <cstdint>
+
+#include "leiden.hpp"
 #include "data_structures/graph_view.hpp"
 
 namespace leiden_alg {
