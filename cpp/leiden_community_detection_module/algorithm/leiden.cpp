@@ -18,7 +18,7 @@ const double gamma = 1.0; // TODO: user should be able to set this
 const double theta = 1.0; // TODO: user should be able to set this
 
 struct Graph {
-  std::size_t num_nodes;
+  std::size_t num_nodes = 0;
   std::unordered_map<int, std::pair<std::unordered_set<int>, int>> adjacency_list; // node_id -> (neighbors, community_id)
 
   // Add an edge to the graph
