@@ -108,7 +108,7 @@ double computeCPM (Partition &partitions, const Graph &graph) {
     return h;
 }
 
-Partition moveNodesFast(Partition &partitions, const Graph &graph) {
+void moveNodesFast(Partition &partitions, const Graph &graph) {
     std::queue<int> nodes;
     std::unordered_set<int> nodes_set;
     for (int i = 0; i < graph.size(); i++) {
@@ -255,7 +255,7 @@ Partition leiden(const mg_graph::GraphView<> &graph) {
     auto partitions = singletonPartition(G);
     bool done = false;
     while(!done) {
-        partitions = moveNodesFast(partitions, G);
+        moveNodesFast(partitions, G);
         done = partitions.size() == G.size();
         if (!done) {
             auto refined_partitions = refinePartition(partitions, G);
@@ -273,6 +273,17 @@ Partition leiden(const mg_graph::GraphView<> &graph) {
     }
 
     return partitions;
+}
+
+std::vector<std::int64_t> GetCommunities(const mg_graph::GraphView<> &graph) {
+    auto partitions = leiden(graph);
+    std::vector<std::int64_t> communities(graph.Nodes().size());
+    for (const auto &[community_id, node_ids] : partitions) {
+        for (const auto &node_id : node_ids) {
+            communities[node_id] = community_id;
+        }
+    }
+    return communities;
 }
 
 }  // namespace leiden_alg
