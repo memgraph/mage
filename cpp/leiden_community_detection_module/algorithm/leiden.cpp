@@ -1,9 +1,13 @@
 #include <cstddef>
+#include <iterator>
 #include <queue>
+#include <random>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 #include <cstdint>
+#include <algorithm>
+#include <cmath>
 
 #include "leiden.hpp"
 #include "data_structures/graph_view.hpp"
@@ -11,14 +15,20 @@
 namespace leiden_alg {
 
 const double gamma = 1.0; // TODO: user should be able to set this
+const double theta = 1.0; // TODO: user should be able to set this
 
 struct Graph {
   std::size_t num_nodes;
   std::unordered_map<int, std::pair<std::unordered_set<int>, int>> adjacency_list; // node_id -> (neighbors, community_id)
+
   // Add an edge to the graph
   void addEdge(int u, int v) {
       adjacency_list[u].first.insert(v);
       adjacency_list[v].first.insert(u);
+  }
+
+  bool isVertexInGraph(int u) const {
+      return adjacency_list.find(u) != adjacency_list.end();
   }
 
   std::size_t size() const {
@@ -36,13 +46,29 @@ struct Graph {
 
 using Partition = std::unordered_map<int, std::unordered_set<int>>; // community_id -> node_ids within the community
 
+bool isSubset(const std::unordered_set<int> &set1, const std::unordered_set<int> &set2) {
+    return std::includes(set2.begin(), set2.end(), set1.begin(), set1.end());
+}
+
 // Function to count edges between a node and a set of nodes in a community
-int countEdgesBetween(const Graph &G, int node, Partition &partitions, int &number_of_nodes_in_subset) {
+int countEdgesBetweenNodeAndCommunity(const Graph &G, int node, const std::unordered_set<int> &community) {
+  int count = 0;
+  for (const auto &neighbor : G.neighbors(node)) {
+    if (community.find(neighbor) != community.end()) {
+      count++;
+    }
+  }
+  return count;
+}
+
+// E(C, S - C)
+int countEdgesBetweenCommunities(const Graph &G, const std::unordered_set<int> &community, const std::unordered_set<int> &subset) {
+    std::unordered_set<int> set_intersection;
+    std::set_difference(community.begin(), community.end(), subset.begin(), subset.end(), std::inserter(set_intersection, set_intersection.begin()));
     int count = 0;
-    for (const auto &[neighbor, community] : partitions) {
-        if (community == partitions[node]) {
-            number_of_nodes_in_subset++;
-            if (G.adjacency_list.at(node).first.find(neighbor) != G.adjacency_list.at(node).first.end()) {
+    for (const auto &node : set_intersection) {
+        for (const auto &neighbor : G.neighbors(node)) {
+            if (subset.find(neighbor) != subset.end()) {
                 count++;
             }
         }
@@ -122,31 +148,77 @@ Partition singletonPartition(const Graph &graph) {
   return partitions;
 }
 
-// Partition mergeNodesSubset(Partition &partitions, const Graph &graph, int subset) {
-//   // 1 - find well connected nodes within the subset
-//   std::vector<int> well_connected_nodes;
-//   for (const auto &[node_id, community_id] : partitions) {
-//     if (community_id == subset) {
-//       int num_of_nodes_in_subset = 0;
-//       int num_edges = countEdgesBetween(graph, node_id, partitions, num_of_nodes_in_subset);
-//       std::size_t degree = graph.adjacency_list.at(node_id).size();
-//       if (num_edges >= gamma * degree * (num_of_nodes_in_subset - degree)) {
-//         well_connected_nodes.push_back(node_id);
-//       }
-//     }
-//     break;
-//   }
-//   for (const auto &node : well_connected_nodes) {
-//     // 2 
-//   }
-// }
+bool isInSingletonCommunity(const Partition &partitions, int node_id, const Graph &graph) {
+  auto community_id = graph.getCommunityForNode(node_id);
+  return partitions.at(community_id).size() == 1;
+}
+
+Partition mergeNodesSubset(Partition &partitions, const Graph &graph, int subset) {
+    std::vector<double> probabilities; // probability of merging with each community
+    std::vector<std::pair<int, int>> node_and_community; // node_id, community_id -> corresponding to the probabilities
+
+    // 1 - find well connected nodes within the subset
+    std::vector<int> well_connected_nodes;
+    auto nodes_in_subset = partitions[subset];
+    auto number_of_nodes_in_subset = static_cast<int>(nodes_in_subset.size());
+    for (const auto &node_id : nodes_in_subset) {
+        int num_edges = countEdgesBetweenNodeAndCommunity(graph, node_id, partitions[subset]);
+        auto node_degree = static_cast<int>(graph.neighbors(node_id).size());
+        if (num_edges > gamma * node_degree * (number_of_nodes_in_subset - node_degree)) {
+            well_connected_nodes.push_back(node_id);
+        }
+    }
+    
+    // 2 - find well connected communities to the subset and calculate their probability of merging
+    for (const auto &node_id : well_connected_nodes) {
+        if (isInSingletonCommunity(partitions, node_id, graph)) { // TODO: check if this should be called on P_refined
+            for (auto &community : partitions) {
+                auto cpm_before_merge = computeCPM(partitions, graph);
+                if (isSubset(community.second, partitions[subset])) {
+                    // check if the community is well connected to the subset
+                    auto number_of_edges_between_community_and_subset = countEdgesBetweenCommunities(graph, community.second, partitions[subset]);
+                    if (number_of_edges_between_community_and_subset >= gamma * community.second.size() * (partitions[subset].size() - community.second.size())) {
+                        // community is well connected to the subset -> calculate probability of merging
+                        community.second.insert(node_id);
+                        auto cpm_after_merge = computeCPM(partitions, graph);
+                        community.second.erase(node_id);
+                        auto delta_cpm = cpm_after_merge - cpm_before_merge;
+                        if (delta_cpm > 0) {
+                            auto probability = std::exp(1 / theta * delta_cpm);
+                            probabilities.push_back(probability);
+                            node_and_community.emplace_back(node_id, community.first);
+                        }
+                        else {
+                            probabilities.push_back(0.0);
+                            node_and_community.emplace_back(node_id, community.first);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 3 - sample from the probabilities and merge the node with the community
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::discrete_distribution<> d(probabilities.begin(), probabilities.end());
+
+    auto index = d(gen);
+    auto [node_id, community_id] = node_and_community[index];
+    partitions[community_id].insert(node_id);
+
+    // 4 - erase node from the subset
+    partitions[subset].erase(node_id);
+
+    return partitions;
+}
 
 Partition refinePartition(Partition &partitions, Graph &graph) {
-  auto refined_partitions = singletonPartition(graph);
-  for (const auto &[node_id, community_id] : partitions) {
-      // TODO: merge nodes subset function
-  }
-  return refined_partitions;
+    auto refined_partitions = singletonPartition(graph);
+    for (const auto &[community_id, node_ids] : partitions) {
+        refined_partitions = mergeNodesSubset(refined_partitions, graph, community_id);
+    }
+    return refined_partitions;
 }
 
 
@@ -171,5 +243,36 @@ void aggregateGraph (Partition &partitions, Graph &graph) {
   graph.adjacency_list = std::move(new_adjacency_list);
 }
 
+Partition leiden(const mg_graph::GraphView<> &graph) {
+    Graph G;
+    for (const auto &node : graph.Nodes()) {
+        G.num_nodes++;
+        for (const auto &neighbor : graph.Neighbours(node.id)) {
+            G.addEdge(node.id, neighbor.node_id);
+        }
+    }
+    
+    auto partitions = singletonPartition(G);
+    bool done = false;
+    while(!done) {
+        partitions = moveNodesFast(partitions, G);
+        done = partitions.size() == G.size();
+        if (!done) {
+            auto refined_partitions = refinePartition(partitions, G);
+            aggregateGraph(refined_partitions, G);
+
+            // get new partitions
+            for (const auto &[community_id, node_ids] : partitions) {
+                for (const auto &node_id : node_ids) {
+                    if (!G.isVertexInGraph(node_id)) {
+                        partitions[community_id].erase(node_id);
+                    }
+                }
+            }
+        }
+    }
+
+    return partitions;
+}
 
 }  // namespace leiden_alg
