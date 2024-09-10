@@ -122,42 +122,70 @@ std::pair<std::vector<int>, int> moveNode(const std::vector<int> &community, int
    return {neighbors_in_different_community, weight_update};
 }
 
+std::pair<double, int> computeDeltaCPM(const Partitions &partitions, const int node_id, const int new_community_id, const Graph &graph) {
+    double result = 0.0;
+    
+    const auto current_community_id = partitions.getCommunityForNode(node_id);
+    const auto current_community_size = static_cast<int>(partitions.communities[current_community_id].size());
+    const auto new_community_size = static_cast<int>(partitions.communities[new_community_id].size());
+    const auto current_community_weight = partitions.community_weights[current_community_id];
+    const auto new_community_weight = partitions.community_weights[new_community_id];
+
+    const auto source_weight = current_community_weight - gamma * getNumOfPossibleEdges(current_community_size);
+    const auto target_weight = new_community_weight - gamma * getNumOfPossibleEdges(new_community_size);
+
+    const auto num_edges_between_node_and_current_community = countEdgesBetweenNodeAndCommunity(graph, node_id, current_community_id, partitions);
+
+    const auto new_source_weight = current_community_weight + num_edges_between_node_and_current_community - gamma * getNumOfPossibleEdges(current_community_size + 1);
+    const auto new_target_weight = new_community_weight - num_edges_between_node_and_current_community - gamma * getNumOfPossibleEdges(new_community_size - 1);
+
+    result = new_source_weight + new_target_weight - source_weight - target_weight;
+    return {result, num_edges_between_node_and_current_community};
+}
+
 void moveNodesFast(Partitions &partitions, Graph &graph) {
-    std::queue<int> nodes;
+    std::deque<int> nodes;
     std::unordered_set<int> nodes_set;
     for (int i = 0; i < graph.size(); i++) {
-        nodes.push(i);
+        nodes.push_back(i);
         nodes_set.insert(i);
     }
 
+    std::shuffle(nodes.begin(), nodes.end(), std::mt19937(std::random_device()()));
+
     while(!nodes.empty()) {
         auto node_id = nodes.front();
-        nodes.pop();
+        nodes.pop_front();
         nodes_set.erase(node_id);
         auto best_community = partitions.getCommunityForNode(node_id);
-        auto best_delta = computeCPM(partitions); 
-        auto weight_update = 0;
+        double best_delta = 0;
+        int weight_update = 0;
 
-        for (auto i = 0; i < partitions.communities.size(); i++) {
-            if (i != best_community) {
-                auto nodes_for_queue_and_weight_update = moveNode(partitions.communities[i], node_id, i, partitions, graph, &nodes_set);
-                auto delta = computeCPM(partitions, nodes_for_queue_and_weight_update.second);
-                if (delta > best_delta) {
-                    best_delta = delta;
-                    best_community = i;
-                    weight_update = nodes_for_queue_and_weight_update.second;
-                    // add neighbors to the queue
-                    for (const auto &neighbor : nodes_for_queue_and_weight_update.first) {
-                        nodes.push(neighbor);
-                        nodes_set.insert(neighbor);
-                    }
+        for (const auto neighbor_id : graph.neighbors(node_id)) {
+            const auto community_id_of_neighbor = partitions.getCommunityForNode(neighbor_id);
+            if (community_id_of_neighbor != best_community) {
+                const auto result = computeDeltaCPM(partitions, node_id, community_id_of_neighbor, graph);
+                if (result.first > best_delta) {
+                    best_delta = result.first;
+                    best_community = community_id_of_neighbor;
+                    weight_update = result.second;
                 }
             }
         }
-        // add node to the best community and update the community weights
-        if (weight_update > 0) {
-            partitions.updateWeightForCommunity(best_community, weight_update);
+
+        if (best_delta > 0) {
             partitions.communities[best_community].push_back(node_id);
+            partitions.community_id[node_id] = best_community;
+            partitions.updateWeightForCommunity(best_community, weight_update);
+            partitions.communities[partitions.getCommunityForNode(node_id)].erase(std::remove(partitions.communities[partitions.getCommunityForNode(node_id)].begin(), partitions.communities[partitions.getCommunityForNode(node_id)].end(), node_id), partitions.communities[partitions.getCommunityForNode(node_id)].end());
+        }
+
+        // add neighbors to the queue
+        for (const auto neighbor_id : graph.neighbors(node_id)) {
+            if (nodes_set.find(neighbor_id) != nodes_set.end()) {
+                nodes.push_back(neighbor_id);
+                nodes_set.insert(neighbor_id);
+            }
         }
     }
 }
@@ -283,6 +311,16 @@ void aggregateGraph (const Partitions &partitions, Graph &graph) {
   graph.num_nodes = partitions.communities.size();
 }
 
+int countNonEmptyCommunities(const Partitions &partitions) {
+    int count = 0;
+    for (const auto &community : partitions.communities) {
+        if (!community.empty()) {
+            count++;
+        }
+    }
+    return count;
+}
+
 Partitions leiden(const mg_graph::GraphView<> &memgraph_graph) {
     Graph graph;
     for (const auto &node : memgraph_graph.Nodes()) {
@@ -296,7 +334,8 @@ Partitions leiden(const mg_graph::GraphView<> &memgraph_graph) {
     bool done = false;
     while(!done) {
         moveNodesFast(partitions, graph);
-        done = partitions.communities.size() == graph.size();
+        const auto non_empty_communities = countNonEmptyCommunities(partitions);
+        done = non_empty_communities == graph.num_nodes;
         if (!done) {
             auto refined_partitions = refinePartition(partitions, graph);
             aggregateGraph(refined_partitions, graph);
