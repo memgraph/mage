@@ -15,7 +15,7 @@
 namespace leiden_alg {
 
 const double gamma = 1.0; // TODO: user should be able to set this
-const double theta = 1.0; // TODO: user should be able to set this
+const double theta = 0.01; // TODO: user should be able to set this
 
 struct Graph {
   std::size_t num_nodes = 0;
@@ -76,16 +76,8 @@ int countEdgesBetweenCommunities(const Graph &G, const std::unordered_set<int> &
     return count;
 }
 
-// TODO: Optimize this function
-int BinomialCoefficient(const int n, const int k) {
-  std::vector<int> aSolutions(k);
-  aSolutions[0] = n - k + 1;
-
-  for (int i = 1; i < k; ++i) {
-    aSolutions[i] = aSolutions[i - 1] * (n - k + 1 + i) / (i + 1);
-  }
-
-  return aSolutions[k - 1];
+int getPossibleEdges(int n) {
+    return n * (n - 1) / 2;
 }
 
 double computeCPM (Partition &partitions, const Graph &graph) {
@@ -102,12 +94,13 @@ double computeCPM (Partition &partitions, const Graph &graph) {
             }
         }
         int community_size = static_cast<int>(node_ids.size());
-        h += num_edges - gamma * BinomialCoefficient(community_size, 2);
+        h += num_edges - gamma * getPossibleEdges(community_size);
     }
 
     return h;
 }
 
+//TODO: add community weights to partitions 
 void moveNodesFast(Partition &partitions, const Graph &graph) {
     std::queue<int> nodes;
     std::unordered_set<int> nodes_set;
@@ -121,22 +114,30 @@ void moveNodesFast(Partition &partitions, const Graph &graph) {
         nodes.pop();
         nodes_set.erase(node_id);
         auto best_community = graph.getCommunityForNode(node_id);
-        auto best_delta = computeCPM(partitions, graph); // fix later
-        for (const auto &neighbor : graph.neighbors(node_id)) {
-            auto delta = computeCPM(partitions, graph); // fix later
-            if (delta > best_delta) {
-                best_delta = delta;
-                best_community = neighbor;
-                // find neighbors that are not in this community and in the queue and add them
-                for (const auto &neighbor2 : graph.neighbors(node_id)) {
-                    if (nodes_set.find(neighbor2) == nodes_set.end() && graph.getCommunityForNode(neighbor2) != best_community) {
-                        nodes.push(neighbor2);
-                        nodes_set.insert(neighbor2);
+        auto best_delta = computeCPM(partitions, graph); 
+
+        for (auto &partition: partitions) {
+            if (partition.first != best_community) {
+                partition.second.insert(node_id);
+                auto delta = computeCPM(partitions, graph); 
+                if (delta > best_delta) {
+                    best_delta = delta;
+                    best_community = partition.first;
+                    // find neighbors that are not in this community and in the queue and add them
+                    for (const auto &neighbor : graph.neighbors(node_id)) {
+                        if (nodes_set.find(neighbor) == nodes_set.end() && graph.getCommunityForNode(neighbor) != best_community) {
+                            nodes.push(neighbor);
+                            nodes_set.insert(neighbor);
+                        }
                     }
+                    // erase it from the previous community
+                    partitions[graph.getCommunityForNode(node_id)].erase(node_id);
+                }
+                else {
+                    partition.second.erase(node_id);
                 }
             }
         }
-        partitions[best_community].insert(node_id);
     }
 }
 
@@ -164,7 +165,7 @@ Partition mergeNodesSubset(Partition &partitions, const Graph &graph, int subset
     for (const auto &node_id : nodes_in_subset) {
         int num_edges = countEdgesBetweenNodeAndCommunity(graph, node_id, partitions[subset]);
         auto node_degree = static_cast<int>(graph.neighbors(node_id).size());
-        if (num_edges > gamma * node_degree * (number_of_nodes_in_subset - node_degree)) {
+        if (num_edges >= gamma * node_degree * (number_of_nodes_in_subset - node_degree)) {
             well_connected_nodes.push_back(node_id);
         }
     }
