@@ -13,7 +13,7 @@
 
 namespace leiden_alg {
 
-const double gamma = 1.0; // TODO: user should be able to set this
+const double gamma = 0.25; // TODO: user should be able to set this
 const double theta = 0.01; // TODO: user should be able to set this
 
 struct Graph {
@@ -62,7 +62,7 @@ bool isSubset(const std::vector<int> &set1, const std::vector<int> &set2) {
     return std::includes(set2.begin(), set2.end(), set1.begin(), set1.end());
 }
 
-// |E(node, C \ node)|
+// |E(node, C \ node)| -> fix this
 int countEdgesBetweenNodeAndCommunity(const Graph &graph, int node_id, int community_id, const Partitions &partitions) {
   int count = 0;
   for (const auto &neighbor : graph.neighbors(node_id)) {
@@ -134,9 +134,11 @@ std::pair<double, int> computeDeltaCPM(const Partitions &partitions, const int n
     const auto source_weight = current_community_weight - gamma * getNumOfPossibleEdges(current_community_size);
     const auto target_weight = new_community_weight - gamma * getNumOfPossibleEdges(new_community_size);
 
+    // TODO: this can be done in one function call -> not that important for now
     const auto num_edges_between_node_and_current_community = countEdgesBetweenNodeAndCommunity(graph, node_id, current_community_id, partitions);
+    const auto num_edges_between_node_and_new_community = countEdgesBetweenNodeAndCommunity(graph, node_id, new_community_id, partitions);
 
-    const auto new_source_weight = current_community_weight + num_edges_between_node_and_current_community - gamma * getNumOfPossibleEdges(current_community_size + 1);
+    const auto new_source_weight = current_community_weight + num_edges_between_node_and_new_community - gamma * getNumOfPossibleEdges(current_community_size + 1);
     const auto new_target_weight = new_community_weight - num_edges_between_node_and_current_community - gamma * getNumOfPossibleEdges(new_community_size - 1);
 
     result = new_source_weight + new_target_weight - source_weight - target_weight;
@@ -178,13 +180,13 @@ void moveNodesFast(Partitions &partitions, Graph &graph) {
             partitions.community_id[node_id] = best_community;
             partitions.updateWeightForCommunity(best_community, weight_update);
             partitions.communities[partitions.getCommunityForNode(node_id)].erase(std::remove(partitions.communities[partitions.getCommunityForNode(node_id)].begin(), partitions.communities[partitions.getCommunityForNode(node_id)].end(), node_id), partitions.communities[partitions.getCommunityForNode(node_id)].end());
-        }
 
-        // add neighbors to the queue
-        for (const auto neighbor_id : graph.neighbors(node_id)) {
-            if (nodes_set.find(neighbor_id) != nodes_set.end()) {
-                nodes.push_back(neighbor_id);
-                nodes_set.insert(neighbor_id);
+            // add neighbors to the queue
+            for (const auto neighbor_id : graph.neighbors(node_id)) {
+                if (nodes_set.find(neighbor_id) != nodes_set.end()) {
+                    nodes.push_back(neighbor_id);
+                    nodes_set.insert(neighbor_id);
+                }
             }
         }
     }
