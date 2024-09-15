@@ -15,11 +15,9 @@
 #include "mg_cugraph_utility.hpp"
 
 namespace {
-// TODO: Check Betweenness instances. Update in new cuGraph API.
 using vertex_t = int64_t;
 using edge_t = int64_t;
 using weight_t = double;
-using result_t = double;
 
 constexpr char const *kProcedureBetweenness = "get";
 
@@ -62,7 +60,7 @@ void BetweennessProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_m
     auto mg_graph =
         mg_utility::GetWeightedGraphView(graph, result, memory, mg_graph_type, weight_property, kDefaultWeight);
     if (mg_graph->Empty()) return;
-    auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph<vertex_t, edge_t, result_t, false, false>(
+    auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph<vertex_t, edge_t, weight_t, false, false>(
         *mg_graph.get(), mg_graph_type, handle);
     auto cu_graph_view = cu_graph.view();
 
