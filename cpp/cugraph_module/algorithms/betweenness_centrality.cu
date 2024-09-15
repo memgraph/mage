@@ -16,8 +16,8 @@
 
 namespace {
 // TODO: Check Betweenness instances. Update in new cuGraph API.
-using vertex_t = int32_t;
-using edge_t = int32_t;
+using vertex_t = int64_t;
+using edge_t = int64_t;
 using weight_t = double;
 using result_t = double;
 
@@ -58,25 +58,18 @@ void BetweennessProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_m
 
     raft::handle_t handle{};
     auto stream = handle.get_stream();
-
-    auto mg_graph = mg_utility::GetWeightedGraphView(
-        graph, result, memory, directed ? mg_graph::GraphType::kDirectedGraph : mg_graph::GraphType::kUndirectedGraph,
-        weight_property, kDefaultWeight);
+    auto mg_graph_type = directed ? mg_graph::GraphType::kDirectedGraph : mg_graph::GraphType::kUndirectedGraph;
+    auto mg_graph =
+        mg_utility::GetWeightedGraphView(graph, result, memory, mg_graph_type, weight_property, kDefaultWeight);
     if (mg_graph->Empty()) return;
+    auto cu_graph = mg_cugraph::CreateCugraphFromMemgraph<vertex_t, edge_t, result_t, false, false>(
+        *mg_graph.get(), mg_graph_type, handle);
+    auto cu_graph_view = cu_graph.view();
 
-    // TODO(gitbuda): The betweenness_centrality legacy function still works -> try to replace with latest option.
-    auto n_vertices = mg_graph.get()->Nodes().size();
-    // IMPORTANT: Betweenness centrality cuGraph algorithm works only on legacy code
-    auto cu_graph_ptr =
-        mg_cugraph::CreateCugraphLegacyFromMemgraph<vertex_t, edge_t, weight_t>(*mg_graph.get(), handle);
-    auto cu_graph_view = cu_graph_ptr->view();
-    cu_graph_view.prop.directed = directed;
-
-    rmm::device_uvector<result_t> betweenness_result(n_vertices, stream);
-    // TODO: Add weights to the betweenness centrality algorithm
-    cugraph::betweenness_centrality<vertex_t, edge_t, weight_t>(handle, cu_graph_view, betweenness_result.data(),
-                                                                normalized, false, static_cast<weight_t *>(nullptr));
-
+    // Calling https://github.com/rapidsai/cugraph/blob/branch-24.04/cpp/include/cugraph/algorithms.hpp#L341
+    // NOTE: The current implementation does not support a weighted graph.
+    auto betweenness_result = cugraph::betweenness_centrality<vertex_t, edge_t, weight_t, false>(
+        handle, cu_graph_view, std::nullopt, std::nullopt);
     for (vertex_t node_id = 0; node_id < betweenness_result.size(); ++node_id) {
       auto rank = betweenness_result.element(node_id, stream);
       InsertBetweennessRecord(graph, result, memory, mg_graph->GetMemgraphNodeId(node_id), rank);
