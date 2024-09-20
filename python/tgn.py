@@ -94,6 +94,7 @@ from mage.tgn.definitions.instances import (
 # params and classes
 ##################
 
+
 # params TGN must receive
 class TGNParameters:
     NUM_OF_LAYERS = "num_of_layers"
@@ -820,7 +821,6 @@ def train_eval_epochs(
     assert batch_size > 0
 
     for epoch in range(num_epochs):
-
         # update global epoch counter
         update_epoch_counter()
 
@@ -885,6 +885,7 @@ def train_eval_epochs(
 #####################################################
 
 # all available read_procs
+
 
 #####################################################
 @mgp.read_proc
@@ -1286,6 +1287,7 @@ def set_params(
 #####################################
 
 # helper functions
+
 
 #####################################
 def get_tgn_layer_enum(layer_type: str) -> TGNLayerType:

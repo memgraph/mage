@@ -43,7 +43,6 @@ UNDIRECT_GRAPH_NODE_NEIGHBORS = {
 
 @pytest.fixture(params=[True, False])
 def is_directed(request):
-
     return request.param
 
 

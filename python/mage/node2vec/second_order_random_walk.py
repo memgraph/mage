@@ -134,7 +134,6 @@ class SecondOrderRandomWalk:
         unnorm_trans_probs = []
 
         for dest_neighbor_id in graph.get_neighbors(dest_node_id):
-
             edge_weight = graph.get_edge_weight(dest_node_id, dest_neighbor_id)
 
             if dest_neighbor_id == src_node_id:
@@ -153,7 +152,7 @@ class SecondOrderRandomWalk:
         Args:
             graph (Graph): Graph for which to set first pass transition probs
         """
-        for (node_from, node_to) in graph.get_edges():
+        for node_from, node_to in graph.get_edges():
             graph.set_edge_transition_probs(
                 (node_from, node_to),
                 self.calculate_edge_transition_probs(graph, node_from, node_to),

@@ -6,7 +6,6 @@ from mage.graph_coloring_module.graph import Graph
 def param_value(
     graph: Graph, parameters: Dict[str, Any], param: str, initial_value: Any = None
 ) -> Any:
-
     if parameters is None:
         if initial_value is None:
             return None
