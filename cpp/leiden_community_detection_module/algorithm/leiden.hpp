@@ -5,13 +5,15 @@
 #include <vector>
 
 #include <memory>
-#include <vector>
 
 #include <mg_procedure.h>
 #include <mg_exceptions.hpp>
 #include <mg_graph.hpp>
 
 namespace leiden_alg {
+
+const double gamma = 0.25; // TODO: user should be able to set this
+const double theta = 0.01; // TODO: user should be able to set this
 
 ///
 ///@brief A method that performs the Leiden community detection algorithm on the given graph.
