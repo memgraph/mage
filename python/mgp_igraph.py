@@ -45,7 +45,6 @@ class MemgraphIgraph(igraph.Graph):
     def get_all_simple_paths(
         self, v: mgp.Vertex, to: mgp.Vertex, cutoff: int
     ) -> List[List[mgp.Vertex]]:
-
         paths = [
             self._convert_vertex_ids_to_mgp_vertices(path)
             for path in super().get_all_simple_paths(
@@ -86,7 +85,6 @@ class MemgraphIgraph(igraph.Graph):
     def mincut(
         self, source: mgp.Vertex, target: mgp.Vertex, capacity: str
     ) -> Tuple[List[mgp.Vertex], float]:
-
         cut = super().mincut(
             source=self.id_mappings[source.id],
             target=self.id_mappings[target.id],
@@ -117,7 +115,6 @@ class MemgraphIgraph(igraph.Graph):
     def shortest_path_length(
         self, source: mgp.Vertex, target: mgp.Vertex, weights: str
     ) -> float:
-
         length = super().distances(
             source=self.id_mappings[source.id],
             target=self.id_mappings[target.id],
@@ -134,7 +131,6 @@ class MemgraphIgraph(igraph.Graph):
     def get_shortest_path(
         self, source: mgp.Vertex, target: mgp.Vertex, weights: str
     ) -> List[mgp.Vertex]:
-
         path = super().get_shortest_paths(
             v=self.id_mappings[source.id],
             to=self.id_mappings[target.id],
@@ -149,7 +145,6 @@ class MemgraphIgraph(igraph.Graph):
     def _convert_vertex_ids_to_mgp_vertices(
         self, vertex_ids: List[int]
     ) -> List[mgp.Vertex]:
-
         vertices = []
         for id in vertex_ids:
             vertices.append(

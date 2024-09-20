@@ -226,7 +226,10 @@ def elastic_search_parallel_bulk(
 
 @mgp.read_proc
 def connect(
-    elastic_url: str, ca_certs: Union[str, None]=None, elastic_user: str="", elastic_password: str=""
+    elastic_url: str,
+    ca_certs: Union[str, None] = None,
+    elastic_user: str = "",
+    elastic_password: str = "",
 ) -> mgp.Record(connection_status=mgp.Map):
     """Establishes connection with the Elasticsearch. This configuration needs to be specific to the Elasticsearch deployment. Uses basic authentication
     Args:
