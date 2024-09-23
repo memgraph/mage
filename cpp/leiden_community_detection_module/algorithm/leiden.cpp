@@ -249,7 +249,7 @@ void recalculateWeights(Partitions &partitions, const Graph &graph) {
 }
 
 
-Partitions leiden(const mg_graph::GraphView<> &memgraph_graph) {
+std::vector<std::vector<IntermediaryCommunityId>> leiden(const mg_graph::GraphView<> &memgraph_graph) {
     Graph graph;
     Partitions partitions;
     std::vector<std::vector<IntermediaryCommunityId>> intermediary_communities; // level -> community_ids
@@ -282,16 +282,23 @@ Partitions leiden(const mg_graph::GraphView<> &memgraph_graph) {
         }
     }
 
-    return partitions;
+    return intermediary_communities;
 }
 
-std::vector<std::int64_t> GetCommunities(const mg_graph::GraphView<> &graph) {
-    auto partitions = leiden(graph);
-    std::vector<std::int64_t> communities(graph.Nodes().size());
-    for (const auto &node : graph.Nodes()) {
-        communities[node.id] = partitions.getCommunityForNode(node.id);
+std::vector<std::vector<int>> getCommunities(const mg_graph::GraphView<> &graph) {
+    std::vector<std::vector<int>> node_and_community_hierarchy; // node_id -> list of community_ids
+    auto communities_hierarchy = leiden(graph);
+    for (const auto &node : communities_hierarchy[0]) {
+        std::vector<int> community_ids;
+        const auto *current_community = &node;
+        while (current_community != nullptr) {
+            community_ids.push_back(current_community->community_id);
+            current_community = current_community->parent;
+        }
+        node_and_community_hierarchy.emplace_back(std::move(community_ids));
     }
-    return communities;
+
+    return node_and_community_hierarchy;
 }
 
 }  // namespace leiden_alg

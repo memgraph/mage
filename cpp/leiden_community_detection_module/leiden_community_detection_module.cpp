@@ -2,7 +2,9 @@
 #include <mg_exceptions.hpp>
 #include <mg_utils.hpp>
 
+#include "_mgp.hpp"
 #include "algorithm/leiden.hpp"
+#include "mg_procedure.h"
 
 
 namespace {
@@ -10,11 +12,10 @@ namespace {
 const char *kProcedureGet = "get";
 const char *kFieldNode = "node";
 const char *kFieldCommunity = "community_id";
-const double kDefaultWeight = 1.0;
-
+const char *kFieldCommunities = "communities";
 
 void InsertLeidenRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
-                        const std::uint64_t community) {
+                        const std::vector<int> &community) {
     auto *vertex = mg_utility::GetNodeForInsertion(node_id, graph, memory);
     if (!vertex) return;
 
@@ -22,14 +23,21 @@ void InsertLeidenRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory
     if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
 
     mg_utility::InsertNodeValueResult(record, kFieldNode, vertex, memory);
-    mg_utility::InsertIntValueResult(record, kFieldCommunity, community, memory);
+    mg_utility::InsertIntValueResult(record, kFieldCommunity, community.back(), memory);
+
+    auto *community_list = mgp::list_make_empty(0, memory);
+    for (const auto &community_id : community) {
+        mgp::list_append(community_list, mgp::value_make_int(community_id, memory));
+    }
+
+    mg_utility::InsertListValueResult(record, kFieldCommunities, community_list, memory);
 }
 
 
 void OnGraph(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
     try {
-        auto communities = leiden_alg::GetCommunities(*graph);
+        auto communities = leiden_alg::getCommunities(*graph);
 
         for (std::size_t i = 0; i < communities.size(); i++) {
             InsertLeidenRecord(memgraph_graph, result, memory, i, communities[i]);
