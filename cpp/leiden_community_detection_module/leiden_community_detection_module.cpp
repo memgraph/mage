@@ -27,7 +27,7 @@ void InsertLeidenRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory
 
     auto *community_list = mgp::list_make_empty(0, memory);
     for (const auto &community_id : community) {
-        mgp::list_append(community_list, mgp::value_make_int(community_id, memory));
+        mgp::list_append_extend(community_list, mgp::value_make_int(community_id, memory));
     }
 
     mg_utility::InsertListValueResult(record, kFieldCommunities, community_list, memory);
@@ -55,6 +55,7 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
 
         mgp::proc_add_result(proc, kFieldNode, mgp::type_node());
         mgp::proc_add_result(proc, kFieldCommunity, mgp::type_int());
+        mgp::proc_add_result(proc, kFieldCommunities, mgp::type_list(mgp::type_int()));
     } catch (const std::exception &e) {
         return 1;
     }

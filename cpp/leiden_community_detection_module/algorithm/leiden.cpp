@@ -168,6 +168,7 @@ Partitions aggregateGraph (const Partitions &refined_partitions, Graph &graph, P
     std::vector<std::vector<int>> new_adjacency_list;
     int new_community_id = 0;
     Partitions new_partitions;
+    intermediary_communities.emplace_back();
 
     for (auto i = 0; i < refined_partitions.communities.size(); i++) {
         const auto &community = refined_partitions.communities[i];
@@ -192,11 +193,11 @@ Partitions aggregateGraph (const Partitions &refined_partitions, Graph &graph, P
         }
 
         // 2. step
-        IntermediaryCommunityId new_intermediary_community_id {new_community_id, current_level + 1, nullptr};
+        auto *new_intermediary_community_id = new IntermediaryCommunityId({i, current_level + 1, nullptr});
         for (const auto &node_id : remapped_communities[i]) {
-            intermediary_communities[current_level][node_id].parent = &new_intermediary_community_id;
+            intermediary_communities[current_level][node_id].parent = new_intermediary_community_id;    
         }
-        intermediary_communities[current_level + 1].push_back(new_intermediary_community_id);
+        intermediary_communities[current_level + 1].push_back(*new_intermediary_community_id);
     }
 
     graph.adjacency_list = std::move(new_adjacency_list);
