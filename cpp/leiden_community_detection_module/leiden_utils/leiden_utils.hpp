@@ -57,6 +57,12 @@ struct Partitions {
     }
 };
 
+struct IntermediaryCommunityId {
+    int community_id;
+    int level;
+    IntermediaryCommunityId *parent;
+};
+
 bool edgeBetweenCommunities(const std::vector<int>& community1, const std::vector<int>& community2, const Graph& graph);
 bool isSubset(std::vector<int>& set1, std::vector<int>& set2);
 int countEdgesBetweenNodeAndCommunity(const Graph& graph, int node_id, int community_id, Partitions& partitions);

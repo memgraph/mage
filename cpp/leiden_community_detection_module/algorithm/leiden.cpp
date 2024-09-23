@@ -162,7 +162,7 @@ Partitions refinePartition(Partitions &partitions, const Graph &graph) {
 }
 
 // communities becomes the new nodes
-Partitions aggregateGraph (const Partitions &refined_partitions, Graph &graph, Partitions &original_partitions) {
+Partitions aggregateGraph (const Partitions &refined_partitions, Graph &graph, Partitions &original_partitions, std::vector<std::vector<IntermediaryCommunityId>> &intermediary_communities, int current_level) {
     std::vector<std::vector<int>> remapped_communities;
     std::unordered_map<int, int> old_community_to_new_community; // old_community_id -> new_community_id
     std::vector<std::vector<int>> new_adjacency_list;
@@ -178,8 +178,10 @@ Partitions aggregateGraph (const Partitions &refined_partitions, Graph &graph, P
         }
     }
     
-    // go through communities of partitions and create new edges where there is an edge between two communities 
+    // 1. step - go through communities of partitions and create new edges where there is an edge between two communities 
+    // 2. step - create new intermediary community ids -> nodes that are in community i are children of the new intermediary community id
     for (auto i = 0; i < remapped_communities.size(); i++) {
+        // 1. step
         new_adjacency_list.emplace_back();
         new_partitions.community_id.push_back(-1);
         new_partitions.community_weights.push_back(0);
@@ -188,7 +190,15 @@ Partitions aggregateGraph (const Partitions &refined_partitions, Graph &graph, P
                 new_adjacency_list[i].push_back(j);
             }
         }
+
+        // 2. step
+        IntermediaryCommunityId new_intermediary_community_id {new_community_id, current_level + 1, nullptr};
+        for (const auto &node_id : remapped_communities[i]) {
+            intermediary_communities[current_level][node_id].parent = &new_intermediary_community_id;
+        }
+        intermediary_communities[current_level + 1].push_back(new_intermediary_community_id);
     }
+
     graph.adjacency_list = std::move(new_adjacency_list);
     new_community_id = 0;
     new_partitions.communities.reserve(original_partitions.communities.size());
@@ -241,7 +251,16 @@ void recalculateWeights(Partitions &partitions, const Graph &graph) {
 
 Partitions leiden(const mg_graph::GraphView<> &memgraph_graph) {
     Graph graph;
+    Partitions partitions;
+    std::vector<std::vector<IntermediaryCommunityId>> intermediary_communities; // level -> community_ids
+    intermediary_communities.emplace_back();
+    int level = 0;
     for (const auto &node : memgraph_graph.Nodes()) {
+        partitions.communities.push_back({static_cast<int>(node.id)});
+        partitions.community_id.push_back(static_cast<int>(node.id));
+        partitions.community_weights.push_back(0);
+        intermediary_communities[level].push_back({static_cast<int>(node.id), level, nullptr});
+
         int previous_neighbour = -1;
         for (const auto &neighbor : memgraph_graph.Neighbours(node.id)) {
             if (neighbor.node_id != previous_neighbour) {
@@ -250,7 +269,6 @@ Partitions leiden(const mg_graph::GraphView<> &memgraph_graph) {
             }
         }
     }
-    auto partitions = singletonPartition(graph);
     bool done = false;
     while(!done) {
         moveNodesFast(partitions, graph);
@@ -258,8 +276,9 @@ Partitions leiden(const mg_graph::GraphView<> &memgraph_graph) {
         if (!done) {
             partitions.clearCache();
             auto refined_partitions = refinePartition(partitions, graph);
-            partitions = aggregateGraph(refined_partitions, graph, partitions);
-            recalculateWeights(partitions, graph); // TODO: fix this
+            partitions = aggregateGraph(refined_partitions, graph, partitions, intermediary_communities, level);
+            recalculateWeights(partitions, graph);
+            level++;
         }
     }
 
