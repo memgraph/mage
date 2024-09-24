@@ -40,7 +40,7 @@ void OnGraph(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_
         auto communities = leiden_alg::getCommunities(*graph);
 
         for (std::size_t i = 0; i < communities.size(); i++) {
-            InsertLeidenRecord(memgraph_graph, result, memory, i, communities[i]);
+            InsertLeidenRecord(memgraph_graph, result, memory, graph->GetMemgraphNodeId(i), communities[i]);
         }
     } catch (const std::exception &e) {
         mgp::result_set_error_msg(result, e.what());
