@@ -21,6 +21,6 @@ const double theta = 0.01; // TODO: user should be able to set this
 ///@param graph Graph for exploration
 ///@return A vector that contains community identifiers placed on indices that correspond to the identifiers of the nodes.
 ///
-std::vector<std::vector<int>> getCommunities(const mg_graph::GraphView<> &graph);
+std::vector<std::vector<std::uint64_t>> getCommunities(const mg_graph::GraphView<> &graph);
 
 }  // namespace leiden_alg

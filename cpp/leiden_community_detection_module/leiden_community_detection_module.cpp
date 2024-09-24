@@ -15,7 +15,7 @@ const char *kFieldCommunity = "community_id";
 const char *kFieldCommunities = "communities";
 
 void InsertLeidenRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
-                        const std::vector<int> &community) {
+                        const std::vector<std::uint64_t> &community) {
     auto *vertex = mg_utility::GetNodeForInsertion(node_id, graph, memory);
     if (!vertex) return;
 

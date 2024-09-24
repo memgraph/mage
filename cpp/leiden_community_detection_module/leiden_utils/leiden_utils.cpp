@@ -6,7 +6,7 @@
 
 namespace leiden_alg {
 
-bool edgeBetweenCommunities(const std::vector<int> &community1, const std::vector<int> &community2, const Graph &graph) {
+bool edgeBetweenCommunities(const std::vector<std::uint64_t> &community1, const std::vector<std::uint64_t> &community2, const Graph &graph) {
     for (const auto &node1 : community1) {
         for (const auto &node2 : community2) {
             if (std::find(graph.neighbors(node1).begin(), graph.neighbors(node1).end(), node2) != graph.neighbors(node1).end()) {
@@ -17,20 +17,20 @@ bool edgeBetweenCommunities(const std::vector<int> &community1, const std::vecto
     return false;
 }
 
-bool isSubset(std::vector<int> &set1, std::vector<int> &set2) {
+bool isSubset(std::vector<std::uint64_t> &set1, std::vector<std::uint64_t> &set2) {
     std::sort(set1.begin(), set1.end());
     std::sort(set2.begin(), set2.end());
     return std::includes(set2.begin(), set2.end(), set1.begin(), set1.end());
 }
 
 // |E(node, C \ node)|
-int countEdgesBetweenNodeAndCommunity(const Graph &graph, int node_id, int community_id, Partitions &partitions) {
+std::uint64_t countEdgesBetweenNodeAndCommunity(const Graph &graph, std::uint64_t node_id, std::uint64_t community_id, Partitions &partitions) {
     if (partitions.node_and_community_cache.find({node_id, community_id}) != partitions.node_and_community_cache.end()) {
         return partitions.node_and_community_cache[{node_id, community_id}];
     }
     int count = 0;
     #pragma omp parallel for reduction(+:count) 
-    for (int neighbor : graph.neighbors(node_id)) {
+    for (const auto &neighbor : graph.neighbors(node_id)) {
          if (partitions.getCommunityForNode(neighbor) == community_id) {
             count++;
         }
@@ -40,28 +40,28 @@ int countEdgesBetweenNodeAndCommunity(const Graph &graph, int node_id, int commu
 }
 
 // |E(C, S \ C)|
-int countEdgesBetweenCommunities(int community_id, int subset, Partitions &refined_partitions, Partitions &partitions, const Graph &graph) {
-    std::vector<int> set_intersection;
+std::uint64_t countEdgesBetweenCommunities(std::uint64_t community_id, std::uint64_t subset, Partitions &refined_partitions, Partitions &partitions, const Graph &graph) {
+    std::vector<std::uint64_t> set_intersection;
     const auto &refined_community = refined_partitions.communities[community_id];
     const auto &original_community = partitions.communities[subset];
     std::set_difference(original_community.begin(), original_community.end(), refined_community.begin(), refined_community.end(), std::inserter(set_intersection, set_intersection.begin()));
-    int count = 0;
+    std::uint64_t count = 0;
     for (const auto &node : set_intersection) {
         count += countEdgesBetweenNodeAndCommunity(graph, node, community_id, refined_partitions);
     }
     return count;
 }
 
-int getNumOfPossibleEdges(int n) {
+std::uint64_t getNumOfPossibleEdges(std::uint64_t n) {
     return n * (n - 1) / 2;
 }
 
-std::pair<double, int> computeDeltaCPM(Partitions &partitions, const int node_id, const int new_community_id, const Graph &graph, const double gamma) {
+std::pair<double, std::uint64_t> computeDeltaCPM(Partitions &partitions, const std::uint64_t node_id, const std::uint64_t new_community_id, const Graph &graph, const double gamma) {
     double result = 0.0;
     
     const auto current_community_id = partitions.getCommunityForNode(node_id);
-    const auto current_community_size = static_cast<int>(partitions.communities[current_community_id].size());
-    const auto new_community_size = static_cast<int>(partitions.communities[new_community_id].size());
+    const auto current_community_size = partitions.communities[current_community_id].size();
+    const auto new_community_size = partitions.communities[new_community_id].size();
     const auto current_community_weight = partitions.community_weights[current_community_id];
     const auto new_community_weight = partitions.community_weights[new_community_id];
 
