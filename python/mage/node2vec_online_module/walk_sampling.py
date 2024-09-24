@@ -67,7 +67,6 @@ class StreamWalkUpdater:
         return walks
 
     def sample_single_walk(self, source: Any, target: Any, time: int) -> List[Any]:
-
         node_ = source
         time_ = self.last_timestamp.get(source, 0)
         centrality_ = self.centrality.get(source, 0)
@@ -84,7 +83,7 @@ class StreamWalkUpdater:
             sum_ = centrality_ * random.uniform(0, 1)
             sum__ = 0
             broken = False
-            for (n, t, c) in reversed(self.graph[node_]):
+            for n, t, c in reversed(self.graph[node_]):
                 if t < time_:
                     sum__ += (c + 1) * self.beta * math.exp(self.c * (t - time_))
                     if sum__ >= sum_:
@@ -100,7 +99,6 @@ class StreamWalkUpdater:
         return (node_, target)
 
     def update(self, source: Any, target: Any, time: int) -> None:
-
         # all walks that terminated at the target before adding the new edge are decayed
         if target in self.centrality:
             self.centrality[target] *= math.exp(
@@ -133,7 +131,7 @@ class StreamWalkUpdater:
 
         # possible improvement by binary search
         index = 0
-        for (source, time, centrality) in self.graph[node]:
+        for source, time, centrality in self.graph[node]:
             if current_time - time < self.cutoff:
                 break
             index += 1

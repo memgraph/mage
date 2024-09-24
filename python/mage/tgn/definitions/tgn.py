@@ -179,7 +179,6 @@ class TGN(nn.Module):
         edge_idxs: np.array,
         timestamps: np.array,
     ) -> None:
-
         self._update_raw_message_store_current_batch(
             sources=sources,
             destinations=destinations,
@@ -203,7 +202,6 @@ class TGN(nn.Module):
             self.node_features[node_id] = node_feature
 
     def _process_previous_batches(self) -> None:
-
         # dict nodeid -> List[event]
         raw_messages = self.raw_message_store.get_messages()
 
@@ -226,7 +224,6 @@ class TGN(nn.Module):
         edge_features: Dict[int, torch.Tensor],
         node_features: Dict[int, torch.Tensor],
     ) -> None:
-
         interaction_events: Dict[int, List[Event]] = create_interaction_events(
             sources=sources,
             destinations=destinations,
@@ -269,7 +266,6 @@ class TGN(nn.Module):
                         )
                     )
                 elif type(message) is InteractionRawMessage:
-
                     interaction_raw_message = message
 
                     processed_messages_dict[node].append(
@@ -424,8 +420,12 @@ class TGN(nn.Module):
             cur_arr = [(n, v) for (n, v) in prev]
 
             node_arr = []
-            for (v, t) in cur_arr:
-                (neighbors, edge_idxs, timestamps,) = (
+            for v, t in cur_arr:
+                (
+                    neighbors,
+                    edge_idxs,
+                    timestamps,
+                ) = (
                     self.temporal_neighborhood.get_neighborhood(
                         v, t, self.num_neighbors
                     )
@@ -447,8 +447,12 @@ class TGN(nn.Module):
 
         global_edge_indexes = []
         global_timestamps = []
-        for (v, t) in node_layers[0]:
-            (neighbors, edge_idxs, timestamps,) = (
+        for v, t in node_layers[0]:
+            (
+                neighbors,
+                edge_idxs,
+                timestamps,
+            ) = (
                 self.temporal_neighborhood.get_neighborhood(v, t, self.num_neighbors)
                 if (v, t) not in sampled_neighborhood
                 else sampled_neighborhood[(v, t)]

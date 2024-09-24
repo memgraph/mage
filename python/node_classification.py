@@ -22,6 +22,7 @@ from mage.node_classification.models.train_model import train_epoch
 # constants
 ##############################
 
+
 # parameters for the model
 class ModelParams:
     IN_CHANNELS = "in_channels"
@@ -597,8 +598,10 @@ def train(
 
 
 @mgp.read_proc
-def get_training_data() -> mgp.Record(
-    epoch=int, loss=float, val_loss=float, train_log=mgp.Any, val_log=mgp.Any
+def get_training_data() -> (
+    mgp.Record(
+        epoch=int, loss=float, val_loss=float, train_log=mgp.Any, val_log=mgp.Any
+    )
 ):
     """This function is used so user can see what is logged data from training.
 

@@ -73,7 +73,6 @@ def test_individual_error_no_setting(
 
 
 def test_population_error(set_seed, chain_population):
-
     error = ConflictError().population_err(
         graph,
         chain_population,

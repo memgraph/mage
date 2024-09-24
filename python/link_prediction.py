@@ -644,7 +644,6 @@ def recommend(  # noqa: C901
 def get_training_results(
     ctx: mgp.ProcCtx,
 ) -> mgp.Record(training_results=mgp.Any, validation_results=mgp.Any):
-
     """This method is used when user wants to get performance data obtained from the last training. It is in the form of list of records where each record is a Dict[metric_name, metric_value]. Training and validation
     results are returned.
 
@@ -1011,6 +1010,7 @@ def validate_user_parameters(parameters: mgp.Map) -> None:  # noqa: C901
     Returns:
         Nothing or raises an exception if something is wrong.
     """
+
     # Hacky Python
     def raise_(ex):
         raise ex
