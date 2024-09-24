@@ -9,8 +9,8 @@
 #include <set>
 #include <iterator>
 
-#include "boost/unordered/unordered_map.hpp"
-#include "boost/unordered/unordered_set.hpp"
+#include <boost/unordered_map.hpp>
+#include <boost/unordered_set.hpp>
 
 namespace leiden_alg {
 
