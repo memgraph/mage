@@ -38,7 +38,6 @@ def nodes_fetching(
     inv_label_reindexing = defaultdict()
 
     for node in nodes:
-
         if features_name not in node.properties:
             continue  # if features are not available, skip the node
 
@@ -79,7 +78,6 @@ def nodes_fetching(
 
     # since node_types is Counter, key is the node type and value is the number of nodes of that type
     for node_type, num_types_node in node_types.items():
-
         # for each node type, create a tensor of size num_types_node x embedding_lengths[node_type]
         data[node_type].x = torch.tensor(
             np.zeros((num_types_node, embedding_lengths[node_type])),

@@ -10,7 +10,6 @@ class Population(ABC):
     information with individuals that are located next to it."""
 
     def __init__(self, graph: Graph, individuals: List[Individual]):
-
         self._size = len(individuals)
         self._individuals = individuals
         self._best_individuals = self._individuals[:]

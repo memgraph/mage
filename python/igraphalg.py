@@ -22,7 +22,6 @@ def maxflow(
     target: mgp.Vertex,
     capacity: str = "weight",
 ) -> mgp.Record(max_flow=mgp.Number):
-
     graph = MemgraphIgraph(ctx=ctx, directed=True)
     max_flow_value = graph.maxflow(source=source, target=target, capacity=capacity)
 
@@ -95,7 +94,6 @@ def mincut(
 def topological_sort(
     ctx: mgp.ProcCtx, mode: str = "out"
 ) -> mgp.Record(nodes=mgp.List[mgp.Vertex]):
-
     if mode not in [
         TopologicalSortingModes.IN.value,
         TopologicalSortingModes.OUT.value,

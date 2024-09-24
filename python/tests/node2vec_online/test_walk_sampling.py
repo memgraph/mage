@@ -26,7 +26,6 @@ def test_correct_walk_number(walk_sampling):
 
 
 def test_legal_combinations_time_crossover_edges(walk_sampling):
-
     walk_sampling.process_new_edge(1, 2, time.time())
     walk_sampling.process_new_edge(0, 1, time.time())
 
@@ -40,7 +39,6 @@ def test_legal_combinations_time_crossover_edges(walk_sampling):
 
 
 def test_legal_combinations_time_linear_edges(walk_sampling):
-
     walk_sampling.process_new_edge(0, 1, time.time())
     walk_sampling.process_new_edge(1, 2, time.time())
     walks = walk_sampling.process_new_edge(2, 3, time.time())
