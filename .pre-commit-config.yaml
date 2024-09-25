@@ -1,0 +1,19 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.2.0
+    hooks:
+      - id: check-yaml
+
+  - repo: https://github.com/psf/black
+    rev: 22.3.0  # Should be the same as in python/tests/requirements.txt
+    hooks:
+      - id: black
+        args: [--quiet]
+        files: ^python/ 
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 3.9.2  # Should be the same as in python/tests/requirements.txt
+    hooks:
+      - id: flake8
+        args: [--config=python/.flake8]
+        files: ^python/ 

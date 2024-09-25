@@ -421,11 +421,7 @@ class TGN(nn.Module):
 
             node_arr = []
             for v, t in cur_arr:
-                (
-                    neighbors,
-                    edge_idxs,
-                    timestamps,
-                ) = (
+                (neighbors, edge_idxs, timestamps,) = (
                     self.temporal_neighborhood.get_neighborhood(
                         v, t, self.num_neighbors
                     )
@@ -448,11 +444,7 @@ class TGN(nn.Module):
         global_edge_indexes = []
         global_timestamps = []
         for v, t in node_layers[0]:
-            (
-                neighbors,
-                edge_idxs,
-                timestamps,
-            ) = (
+            (neighbors, edge_idxs, timestamps,) = (
                 self.temporal_neighborhood.get_neighborhood(v, t, self.num_neighbors)
                 if (v, t) not in sampled_neighborhood
                 else sampled_neighborhood[(v, t)]
