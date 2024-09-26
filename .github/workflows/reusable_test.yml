@@ -18,7 +18,7 @@ on:
       memgraph_version:
         type: string
         description: "Memgraph version built into this image (format: X.Y.Z)"
-        default: '2.19.0'
+        default: '2.20.0'
       memgraph_download_link:
         type: string
         description: "Memgraph package download link. Leave empty to use the official download link."
