@@ -85,7 +85,7 @@ jobs:
       arch: "${{ matrix.arch }}"
       build_target: "${{ matrix.build_target }}"
       build_scope: "${{ matrix.build_scope }}"
-      memgraph_version: "2.19.0"
+      memgraph_version: "2.20.0"
       memgraph_ref: "master"
       memgraph_ref_update: "true"
     secrets: inherit
@@ -116,7 +116,7 @@ jobs:
       arch: "${{ matrix.arch }}"
       build_target: "${{ matrix.build_target }}"
       build_scope: "${{ matrix.build_scope }}"
-      memgraph_version: "2.19.0"
+      memgraph_version: "2.20.0"
       memgraph_ref: "master"
       memgraph_ref_update: "true"
     secrets: inherit
