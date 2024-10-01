@@ -56,6 +56,8 @@ std::uint64_t getNumOfPossibleEdges(std::uint64_t n) {
     return n * (n - 1) / 2;
 }
 
+// CPM - Constant Potts Model
+// it computes the change in modularity when a node is moved from its current community to a new community
 std::pair<double, std::uint64_t> computeDeltaCPM(Partitions &partitions, const std::uint64_t node_id, const std::uint64_t new_community_id, const Graph &graph, const double gamma) {
     double result = 0.0;
     
