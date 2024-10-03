@@ -1,7 +1,5 @@
 #include "leiden_utils.hpp"
 #include <algorithm>
-#include <omp.h>
-#include <set>
 #include <iterator>
 
 namespace leiden_alg {
@@ -24,30 +22,30 @@ bool isSubset(std::vector<std::uint64_t> &set1, std::vector<std::uint64_t> &set2
 }
 
 // |E(node, C \ node)|
-std::uint64_t countEdgesBetweenNodeAndCommunity(const Graph &graph, std::uint64_t node_id, std::uint64_t community_id, Partitions &partitions) {
-    if (partitions.node_and_community_cache.find({node_id, community_id}) != partitions.node_and_community_cache.end()) {
-        return partitions.node_and_community_cache[{node_id, community_id}];
+std::uint64_t countEdgesBetweenNodeAndCommunity(const Graph &graph, std::uint64_t node_id, std::uint64_t community_id, Partitions &partitions, cache_between_node_and_community &cache) {
+    const auto cached_count = cache.find({node_id, community_id});
+    if (cached_count != cache.end()) {
+        return cached_count->second;
     }
     int count = 0;
-    #pragma omp parallel for reduction(+:count) 
     for (const auto &neighbor : graph.neighbors(node_id)) {
          if (partitions.getCommunityForNode(neighbor) == community_id) {
             count++;
         }
     }
-    partitions.node_and_community_cache[{node_id, community_id}] = count;
+    cache[{node_id, community_id}] = count;
     return count;
 }
 
 // |E(C, S \ C)|
-std::uint64_t countEdgesBetweenCommunities(std::uint64_t community_id, std::uint64_t subset, Partitions &refined_partitions, Partitions &partitions, const Graph &graph) {
+std::uint64_t countEdgesBetweenCommunities(std::uint64_t community_id, std::uint64_t subset, Partitions &refined_partitions, Partitions &partitions, const Graph &graph, cache_between_node_and_community &cache) {
     std::vector<std::uint64_t> set_intersection;
     const auto &refined_community = refined_partitions.communities[community_id];
     const auto &original_community = partitions.communities[subset];
     std::set_difference(original_community.begin(), original_community.end(), refined_community.begin(), refined_community.end(), std::inserter(set_intersection, set_intersection.begin()));
     std::uint64_t count = 0;
     for (const auto &node : set_intersection) {
-        count += countEdgesBetweenNodeAndCommunity(graph, node, community_id, refined_partitions);
+        count += countEdgesBetweenNodeAndCommunity(graph, node, community_id, refined_partitions, cache);
     }
     return count;
 }
@@ -58,7 +56,7 @@ std::uint64_t getNumOfPossibleEdges(std::uint64_t n) {
 
 // CPM - Constant Potts Model
 // it computes the change in modularity when a node is moved from its current community to a new community
-std::pair<double, std::uint64_t> computeDeltaCPM(Partitions &partitions, const std::uint64_t node_id, const std::uint64_t new_community_id, const Graph &graph, const double gamma) {
+std::pair<double, std::uint64_t> computeDeltaCPM(Partitions &partitions, const std::uint64_t node_id, const std::uint64_t new_community_id, const Graph &graph, const double gamma, cache_between_node_and_community &cache) {
     double result = 0.0;
     
     const auto current_community_id = partitions.getCommunityForNode(node_id);
@@ -67,14 +65,14 @@ std::pair<double, std::uint64_t> computeDeltaCPM(Partitions &partitions, const s
     const auto current_community_weight = partitions.community_weights[current_community_id];
     const auto new_community_weight = partitions.community_weights[new_community_id];
 
-    const auto source_weight = current_community_weight - gamma * getNumOfPossibleEdges(current_community_size);
-    const auto target_weight = new_community_weight - gamma * getNumOfPossibleEdges(new_community_size);
+    const auto source_weight = static_cast<double>(current_community_weight) - gamma * static_cast<double>(getNumOfPossibleEdges(current_community_size));
+    const auto target_weight = static_cast<double>(new_community_weight) - gamma * static_cast<double>(getNumOfPossibleEdges(new_community_size));
     
-    const auto num_edges_between_node_and_current_community = countEdgesBetweenNodeAndCommunity(graph, node_id, current_community_id, partitions);
-    const auto num_edges_between_node_and_new_community = countEdgesBetweenNodeAndCommunity(graph, node_id, new_community_id, partitions);
+    const auto num_edges_between_node_and_current_community = countEdgesBetweenNodeAndCommunity(graph, node_id, current_community_id, partitions, cache);
+    const auto num_edges_between_node_and_new_community = countEdgesBetweenNodeAndCommunity(graph, node_id, new_community_id, partitions, cache);
 
-    const auto new_source_weight = current_community_weight - num_edges_between_node_and_current_community - gamma * getNumOfPossibleEdges(current_community_size + 1);
-    const auto new_target_weight = new_community_weight + num_edges_between_node_and_new_community - gamma * getNumOfPossibleEdges(new_community_size - 1);
+    const auto new_source_weight = static_cast<double>(current_community_weight) - static_cast<double>(num_edges_between_node_and_current_community) - gamma * static_cast<double>(getNumOfPossibleEdges(current_community_size + 1));
+    const auto new_target_weight = static_cast<double>(new_community_weight) + static_cast<double>(num_edges_between_node_and_new_community) - gamma * static_cast<double>(getNumOfPossibleEdges(new_community_size - 1));
 
     result = new_source_weight + new_target_weight - source_weight - target_weight;
     return {result, num_edges_between_node_and_new_community};
