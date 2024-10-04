@@ -83,13 +83,11 @@ bool isInSingletonCommunity(const Partitions &partitions, std::uint64_t node_id)
 
 void mergeNodesSubset(Partitions &refined_partitions, const Graph &graph, std::uint64_t subset, Partitions &partitions, std::mt19937 &gen, std::discrete_distribution<> &distribution, const double gamma, const double theta) {
     // external_edge_weight_per_cluster_in_subset[i] - tracks the external edge weight between nodes in cluster i and the other clusters in the same subset
-    std::vector<std::uint64_t> external_edge_weight_per_cluster_in_subset(partitions.communities[subset].size(), 0);
+    std::vector<std::uint64_t> external_edge_weight_per_cluster_in_subset(refined_partitions.communities.size(), 0);
     std::vector<std::uint64_t> edge_weights(refined_partitions.communities.size(), 0); // number of edges in the community
-    std::uint64_t total_node_weight = 0;
 
     std::vector<std::uint64_t> neighbor_communities;
     for (const auto &node_id : partitions.communities[subset]) {
-        total_node_weight++;
         for (const auto &neighbor_id : graph.neighbors(node_id)) {
             if (partitions.getCommunityForNode(neighbor_id) == subset) {
                 external_edge_weight_per_cluster_in_subset[node_id]++;
@@ -104,7 +102,7 @@ void mergeNodesSubset(Partitions &refined_partitions, const Graph &graph, std::u
 
         if (isInSingletonCommunity(refined_partitions, node_id) && (
                 static_cast<double>(external_edge_weight_per_cluster_in_subset[current_community]) >= 
-                gamma * static_cast<double>(refined_partitions.getCommunityWeight(current_community)) * static_cast<double>((total_node_weight - refined_partitions.getCommunityWeight(current_community))))) {
+                gamma * static_cast<double>(refined_partitions.getCommunityWeight(current_community)) * static_cast<double>((partitions.communities[subset].size() - refined_partitions.getCommunityWeight(current_community))))) {
             
             neighbor_communities.clear();
             neighbor_communities.reserve(refined_partitions.communities.size() - 1);
@@ -126,7 +124,7 @@ void mergeNodesSubset(Partitions &refined_partitions, const Graph &graph, std::u
 
             for (const auto &neighbor_community : neighbor_communities) {
                 if (static_cast<double>(external_edge_weight_per_cluster_in_subset[neighbor_community]) >= gamma * static_cast<double>(refined_partitions.getCommunityWeight(neighbor_community))
-                    * static_cast<double>((total_node_weight - refined_partitions.getCommunityWeight(neighbor_community)))) {
+                    * static_cast<double>((partitions.communities[subset].size() - refined_partitions.getCommunityWeight(neighbor_community)))) {
                     
                     const auto delta = static_cast<double>(edge_weights[neighbor_community]) - static_cast<double>(refined_partitions.getCommunityWeight(neighbor_community)) * gamma;
                     if (delta > max_delta) {
