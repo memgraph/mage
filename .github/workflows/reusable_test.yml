@@ -44,7 +44,7 @@ env:
 
 jobs:
   BuildAndTest:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, DockerMgBuild]
     steps:
       - name: Checkout repository and submodules
         uses: actions/checkout@v4
