@@ -276,24 +276,6 @@ bool checkIfDone(const Partitions &partitions, const Graph &graph) {
     return count_single_node_communities == graph.size();
 }
 
-void sanityCheck (const Partitions &partitions, std::uint64_t level) {
-    for (std::uint64_t i = 0; i < partitions.communities.size(); i++) {
-        for (const auto &node_id : partitions.communities[i]) {
-            if (partitions.getCommunityForNode(node_id) != i) {
-                throw std::runtime_error("Community id does not match at level " + std::to_string(level) + " for node " + std::to_string(node_id) + " expected " + std::to_string(i) + " but got " + std::to_string(partitions.getCommunityForNode(node_id)));
-            }
-        }
-    }
-    for (const auto &community_id : partitions.community_id) {
-        if (community_id >= partitions.communities.size()) {
-            throw std::runtime_error("Community id is out of bounds at level " + std::to_string(level) + " for node " + std::to_string(community_id));
-        }
-        if (community_id == -1) {
-            throw std::runtime_error("Community id is -1 at level " + std::to_string(level));
-        }
-    }
-}
-
 std::vector<std::vector<IntermediaryCommunityId>> leiden(const mg_graph::GraphView<> &memgraph_graph) {
     Graph graph;
     Partitions partitions;
@@ -327,7 +309,6 @@ std::vector<std::vector<IntermediaryCommunityId>> leiden(const mg_graph::GraphVi
         if (!done) {
             const auto refined_partitions = refinePartition(partitions, graph, gamma, theta);
             partitions = aggregateGraph(refined_partitions, graph, partitions, intermediary_communities, level);
-            sanityCheck(partitions, level);
             level++;
         }
     }
