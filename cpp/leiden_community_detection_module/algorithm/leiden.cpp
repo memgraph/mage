@@ -141,7 +141,7 @@ void mergeNodesSubset(Partitions &refined_partitions, const Graph &graph, std::u
             }
 
             if (max_delta > 0) {
-                distribution.param(std::discrete_distribution<>::param_type(probability_of_merging.begin(), probability_of_merging.end()));
+                distribution.param(std::discrete_distribution<>::param_type(probability_of_merging.begin(), probability_of_merging.end())); // TODO: Construction of the distribution is very expensive -> get rid of it
                 best_community = distribution(gen);
                 refined_partitions.communities[best_community].push_back(node_id);
                 refined_partitions.community_id[node_id] = best_community;
@@ -228,7 +228,7 @@ Partitions aggregateGraph(const Partitions &refined_partitions, Graph &graph, Pa
     for (auto &community : original_partitions.communities) {
         if (!community.empty()) {
             for (std::uint64_t j = 0; j < remapped_communities.size(); j++) {
-                if (already_added_communities.find(j) == already_added_communities.end() && isSubset(remapped_communities[j], community)) {
+                if (already_added_communities.find(j) == already_added_communities.end() && isSubset(remapped_communities[j], community)) { // TODO: Get rid of isSubset
                     if (new_partitions.communities.size() <= new_community_id) {
                         new_partitions.communities.emplace_back();
                     }
