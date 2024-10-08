@@ -51,9 +51,7 @@ struct IntermediaryCommunityId {
 };
 
 std::vector<std::uint64_t> calculateEdgeWeightsPerCommunity(const Partitions &partitions, const Graph &graph);
-bool edgeBetweenCommunities(const std::vector<std::uint64_t>& community1, const std::vector<std::uint64_t>& community2, const Graph& graph);
-bool isSubset(std::vector<std::uint64_t>& set1, std::vector<std::uint64_t>& set2);
-std::uint64_t getNumOfPossibleEdges(std::uint64_t n);
+
 }  // namespace leiden_alg
 
 #endif // LEIDEN_UTILS_HPP

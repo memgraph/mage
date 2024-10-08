@@ -10,11 +10,16 @@
 #include "leiden_utils/leiden_utils.hpp"
 #include "data_structures/graph_view.hpp"
 
+
+
 namespace leiden_alg {
+
+const double MAX_DOUBLE = std::numeric_limits<double>::max();
 
 void moveNodesFast(Partitions &partitions, Graph &graph, const double gamma, std::vector<std::uint64_t> &edge_weights_per_community) {
     std::deque<std::uint64_t> nodes;
     std::unordered_set<std::uint64_t> nodes_set;
+    nodes_set.reserve(graph.size());
     
     for (std::uint64_t i = 0; i < graph.size(); i++) {
         nodes.push_back(i);
@@ -82,13 +87,14 @@ bool isInSingletonCommunity(const Partitions &partitions, std::uint64_t node_id)
     return partitions.communities[community_id].size() == 1;
 }
 
-void mergeNodesSubset(Partitions &refined_partitions, const Graph &graph, std::uint64_t subset, Partitions &partitions, std::mt19937 &gen, std::discrete_distribution<> &distribution, const double gamma, const double theta) {
+void mergeNodesSubset(Partitions &refined_partitions, const Graph &graph, std::uint64_t subset, Partitions &partitions, const double gamma, const double theta, std::unordered_set<std::uint64_t> &refined_communities_within_subset) {
     // external_edge_weight_per_cluster_in_subset[i] - tracks the external edge weight between nodes in cluster i and the other clusters in the same subset
     std::vector<std::uint64_t> external_edge_weight_per_cluster_in_subset(refined_partitions.communities.size(), 0);
     std::vector<std::uint64_t> edge_weights(refined_partitions.communities.size(), 0); // number of edges in the community
 
     std::vector<std::uint64_t> neighbor_communities;
     for (const auto &node_id : partitions.communities[subset]) {
+        refined_communities_within_subset.insert(node_id); // at the beginning, all nodes are in its own community
         for (const auto &neighbor_id : graph.neighbors(node_id)) {
             if (partitions.getCommunityForNode(neighbor_id) == subset) {
                 external_edge_weight_per_cluster_in_subset[node_id]++;
@@ -97,17 +103,21 @@ void mergeNodesSubset(Partitions &refined_partitions, const Graph &graph, std::u
     }
 
     for (const auto &node_id : partitions.communities[subset]) {
-        std::vector<double> probability_of_merging(refined_partitions.communities.size(), 0);
-        auto current_community = refined_partitions.getCommunityForNode(node_id);
-        auto best_community = current_community;
+        const auto current_community = refined_partitions.getCommunityForNode(node_id);
 
         if (isInSingletonCommunity(refined_partitions, node_id) && (
                 static_cast<double>(external_edge_weight_per_cluster_in_subset[current_community]) >= 
                 gamma * static_cast<double>(refined_partitions.getCommunityWeight(current_community)) * static_cast<double>((partitions.communities[subset].size() - refined_partitions.getCommunityWeight(current_community))))) {
             
+            std::vector<double> probability_of_merging;
+            probability_of_merging.reserve(neighbor_communities.size());
+            auto total_cum_sum = 0.0;
+
             neighbor_communities.clear();
             neighbor_communities.reserve(refined_partitions.communities.size() - 1);
             std::vector<bool> visited(refined_partitions.communities.size(), false);
+            double max_delta = 0.0;
+            auto best_community = current_community;
 
             // find neighbor communities
             for (const auto &neighbor : graph.neighbors(node_id)) {
@@ -121,42 +131,47 @@ void mergeNodesSubset(Partitions &refined_partitions, const Graph &graph, std::u
                 }
             }
 
-            auto max_delta = 0.0;
-
-            for (const auto &neighbor_community : neighbor_communities) {
-                if (static_cast<double>(external_edge_weight_per_cluster_in_subset[neighbor_community]) >= gamma * static_cast<double>(refined_partitions.getCommunityWeight(neighbor_community))
+            for (const auto neighbor_community : neighbor_communities) {
+                 if (static_cast<double>(external_edge_weight_per_cluster_in_subset[neighbor_community]) >= gamma * static_cast<double>(refined_partitions.getCommunityWeight(neighbor_community))
                     * static_cast<double>((partitions.communities[subset].size() - refined_partitions.getCommunityWeight(neighbor_community)))) {
                     
                     const auto delta = static_cast<double>(edge_weights[neighbor_community]) - static_cast<double>(refined_partitions.getCommunityWeight(neighbor_community)) * gamma;
+
+                    if (delta > 0) {
+                        total_cum_sum += std::exp(delta / theta);
+                    }
+
                     if (delta > max_delta) {
                         max_delta = delta;
                         best_community = neighbor_community;
                     }
-
-                    if (delta > 0) {
-                        probability_of_merging[neighbor_community] = std::exp(delta / theta); // check this formula
-                    }
                 }
-                edge_weights[neighbor_community] = 0;
+                probability_of_merging.push_back(total_cum_sum);
+            }
+            if (total_cum_sum < MAX_DOUBLE) {
+                static std::minstd_rand gen(std::random_device{}());
+                std::uniform_real_distribution<double> dis(0, total_cum_sum);
+                const auto random_number = dis(gen); 
+                
+                // use lower_bound to find the first element that is greater than random_number
+                const auto best_community_index = std::lower_bound(probability_of_merging.begin(), probability_of_merging.end(), random_number) - probability_of_merging.begin();
+                best_community = neighbor_communities[best_community_index];
+                refined_partitions.communities[best_community].push_back(node_id);
             }
 
-            if (max_delta > 0) {
-                distribution.param(std::discrete_distribution<>::param_type(probability_of_merging.begin(), probability_of_merging.end())); // TODO: Construction of the distribution is very expensive -> get rid of it
-                best_community = distribution(gen);
-                refined_partitions.communities[best_community].push_back(node_id);
-                refined_partitions.community_id[node_id] = best_community;
+            // refined_partitions.communities[best_community].push_back(node_id);
+            refined_partitions.community_id[node_id] = best_community;
 
-                // remove the node from the current community, note that it is a singleton community
-                refined_partitions.communities[current_community].clear();
+            // remove the node from the current community, note that it is a singleton community
+            refined_partitions.communities[current_community].clear();
 
-                // update the external edge weight for the new community
-                for (const auto &neighbor : graph.neighbors(node_id)) {
-                    if (partitions.getCommunityForNode(neighbor) == subset) {
-                        if (refined_partitions.getCommunityForNode(neighbor) == best_community) {
-                            external_edge_weight_per_cluster_in_subset[neighbor]++;
-                        } else {
-                            external_edge_weight_per_cluster_in_subset[neighbor]--;
-                        }
+            // update the external edge weight for the new community
+            for (const auto &neighbor : graph.neighbors(node_id)) {
+                if (partitions.getCommunityForNode(neighbor) == subset) {
+                    if (refined_partitions.getCommunityForNode(neighbor) == best_community) {
+                        external_edge_weight_per_cluster_in_subset[neighbor]++;
+                    } else {
+                        external_edge_weight_per_cluster_in_subset[neighbor]--;
                     }
                 }
             }
@@ -164,20 +179,24 @@ void mergeNodesSubset(Partitions &refined_partitions, const Graph &graph, std::u
     }
 }
 
-Partitions refinePartition(Partitions &partitions, const Graph &graph, std::mt19937 &gen, std::discrete_distribution<> &distribution, const double gamma, const double theta) {
+Partitions refinePartition(Partitions &partitions, const Graph &graph, const double gamma, const double theta, std::vector<std::unordered_set<std::uint64_t>> &subset_to_refined_communities) {
     auto refined_partitions = singletonPartition(graph);
     for (std::uint64_t i = 0; i < partitions.communities.size(); i++) {
         if (partitions.communities[i].size() > 1) {
-            mergeNodesSubset(refined_partitions, graph, i, partitions, gen, distribution, gamma, theta); 
+            mergeNodesSubset(refined_partitions, graph, i, partitions, gamma, theta, subset_to_refined_communities[i]);
+        }
+        if (partitions.communities[i].size() == 1) {
+            subset_to_refined_communities[i].insert(i);
         }
     }
     return refined_partitions;
 }
 
 // communities becomes the new nodes
-Partitions aggregateGraph(const Partitions &refined_partitions, Graph &graph, Partitions &original_partitions, std::vector<std::vector<IntermediaryCommunityId>> &intermediary_communities, std::uint64_t current_level) {
-    std::vector<std::vector<std::uint64_t>> remapped_communities;
+Partitions aggregateGraph(const Partitions &refined_partitions, Graph &graph, Partitions &original_partitions, std::vector<std::vector<IntermediaryCommunityId>> &intermediary_communities, std::uint64_t current_level, const std::vector<std::unordered_set<std::uint64_t>> &subset_to_refined_communities) {
+    std::vector<std::vector<std::uint64_t>> remapped_communities; // nodes and communities should go from 0 to n
     std::unordered_map<std::uint64_t, std::uint64_t> old_community_to_new_community; // old_community_id -> new_community_id
+    std::unordered_map<std::uint64_t, std::uint64_t> new_community_to_old_community; // new_community_id -> old_community_id
     std::vector<std::vector<std::uint64_t>> new_adjacency_list;
     std::uint64_t new_community_id = 0;
     Partitions new_partitions;
@@ -189,23 +208,26 @@ Partitions aggregateGraph(const Partitions &refined_partitions, Graph &graph, Pa
         if (!community.empty()) {
             remapped_communities.push_back(community);
             old_community_to_new_community[i] = new_community_id;
+            new_community_to_old_community[new_community_id] = i;
             new_community_id++;
         }
     }
     
     // create new adjacency list -> if there is an edge between two communities, add it to the new adjacency list
-    std::vector<std::vector<bool>> edge_exists(remapped_communities.size(), std::vector<bool>(remapped_communities.size(), false));
+    std::vector<std::vector<bool>> edge_exists(refined_partitions.communities.size(), std::vector<bool>(refined_partitions.communities.size(), false));
     new_adjacency_list = std::vector<std::vector<std::uint64_t>>(remapped_communities.size(), std::vector<std::uint64_t>());
     for (std::uint64_t i = 0; i < graph.adjacency_list.size(); i++) {
         const auto community_id = refined_partitions.getCommunityForNode(i);
+        const auto new_community_id = old_community_to_new_community[community_id];
         for (const auto &neighbor : graph.adjacency_list[i]) {
             const auto neighbor_community_id = refined_partitions.getCommunityForNode(neighbor);
-            if (edge_exists[old_community_to_new_community[community_id]][old_community_to_new_community[neighbor_community_id]] || community_id == neighbor_community_id) {
-                continue;
-            }
-            new_adjacency_list[old_community_to_new_community[community_id]].push_back(old_community_to_new_community[neighbor_community_id]);
-            new_adjacency_list[old_community_to_new_community[neighbor_community_id]].push_back(old_community_to_new_community[community_id]);
-            edge_exists[old_community_to_new_community[community_id]][old_community_to_new_community[neighbor_community_id]] = true;
+            const auto new_neighbor_community_id = old_community_to_new_community[neighbor_community_id];
+            if (edge_exists[new_community_id][new_neighbor_community_id] || new_community_id == new_neighbor_community_id) continue;
+
+            new_adjacency_list[new_community_id].push_back(new_neighbor_community_id);
+            new_adjacency_list[new_neighbor_community_id].push_back(new_community_id);
+            edge_exists[new_community_id][new_neighbor_community_id] = true;
+            edge_exists[new_neighbor_community_id][new_community_id] = true;
         }
     }
 
@@ -220,23 +242,26 @@ Partitions aggregateGraph(const Partitions &refined_partitions, Graph &graph, Pa
 
     graph.adjacency_list = std::move(new_adjacency_list);
     new_community_id = 0;
-    new_partitions.communities.reserve(original_partitions.communities.size());
-    new_partitions.community_id.reserve(remapped_communities.size());
-    new_partitions.community_id = std::vector<std::uint64_t>(remapped_communities.size(), -1);
+    new_partitions.communities.reserve(graph.size());
+    new_partitions.community_id.reserve(graph.size());
+    new_partitions.community_id = std::vector<std::uint64_t>(graph.size(), -1);
 
-    std::unordered_set<std::uint64_t> already_added_communities;
-    for (auto &community : original_partitions.communities) {
-        if (!community.empty()) {
-            for (std::uint64_t j = 0; j < remapped_communities.size(); j++) {
-                if (already_added_communities.find(j) == already_added_communities.end() && isSubset(remapped_communities[j], community)) { // TODO: Get rid of isSubset
-                    if (new_partitions.communities.size() <= new_community_id) {
-                        new_partitions.communities.emplace_back();
-                    }
-                    new_partitions.communities[new_community_id].push_back(j);
-                    new_partitions.community_id[j] = new_community_id;
-                    already_added_communities.insert(j);
+    // create new partitions -> communities that are a subset of the original community are added to the new partitions as a part of the same community
+    for (const auto &community_list : original_partitions.communities) {
+        bool new_community_created = false;
+        for (const auto &community_id : community_list) {
+            // if community was added to remapped communities that means it wasn't empty
+            const auto remapped_community_id = old_community_to_new_community.find(community_id);
+            if (remapped_community_id != old_community_to_new_community.end()) {
+                if (!new_community_created) {
+                    new_partitions.communities.emplace_back();
+                    new_community_created = true;
                 }
+                new_partitions.communities[new_community_id].push_back(remapped_community_id->second);
+                new_partitions.community_id[remapped_community_id->second] = new_community_id;
             }
+        }
+        if (new_community_created) {
             new_community_id++;
         }
     }
@@ -254,6 +279,23 @@ bool checkIfDone(const Partitions &partitions, const Graph &graph) {
     return count_single_node_communities == graph.size();
 }
 
+void sanityCheck (const Partitions &partitions, std::uint64_t level) {
+    for (std::uint64_t i = 0; i < partitions.communities.size(); i++) {
+        for (const auto &node_id : partitions.communities[i]) {
+            if (partitions.getCommunityForNode(node_id) != i) {
+                throw std::runtime_error("Community id does not match at level " + std::to_string(level) + " for node " + std::to_string(node_id) + " expected " + std::to_string(i) + " but got " + std::to_string(partitions.getCommunityForNode(node_id)));
+            }
+        }
+    }
+    for (const auto &community_id : partitions.community_id) {
+        if (community_id >= partitions.communities.size()) {
+            throw std::runtime_error("Community id is out of bounds at level " + std::to_string(level) + " for node " + std::to_string(community_id));
+        }
+        if (community_id == -1) {
+            throw std::runtime_error("Community id is -1 at level " + std::to_string(level));
+        }
+    }
+}
 
 std::vector<std::vector<IntermediaryCommunityId>> leiden(const mg_graph::GraphView<> &memgraph_graph) {
     Graph graph;
@@ -261,11 +303,6 @@ std::vector<std::vector<IntermediaryCommunityId>> leiden(const mg_graph::GraphVi
     std::vector<std::vector<IntermediaryCommunityId>> intermediary_communities; // level -> community_ids
     intermediary_communities.emplace_back();
     std::uint64_t level = 0;
-
-    // random device -> used when sampling from the merging probabilities
-    std::random_device random_device;
-    std::mt19937 gen(random_device());
-    std::discrete_distribution<> distribution;
 
     std::uint64_t number_of_edges = 0;
 
@@ -291,8 +328,10 @@ std::vector<std::vector<IntermediaryCommunityId>> leiden(const mg_graph::GraphVi
         moveNodesFast(partitions, graph, gamma, edge_weights_per_community);
         done = checkIfDone(partitions, graph) || partitions.communities.size() <= 2;
         if (!done) {
-            auto refined_partitions = refinePartition(partitions, graph, gen, distribution, gamma, theta);
-            partitions = aggregateGraph(refined_partitions, graph, partitions, intermediary_communities, level);
+            std::vector<std::unordered_set<std::uint64_t>> subset_to_refined_communities(partitions.communities.size(), std::unordered_set<std::uint64_t>()); // subset_id -> refined_community_ids
+            const auto refined_partitions = refinePartition(partitions, graph, gamma, theta, subset_to_refined_communities);
+            partitions = aggregateGraph(refined_partitions, graph, partitions, intermediary_communities, level, subset_to_refined_communities);
+            sanityCheck(partitions, level);
             level++;
         }
     }
