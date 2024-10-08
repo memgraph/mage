@@ -51,7 +51,8 @@ void moveNodesFast(Partitions &partitions, Graph &graph, const double gamma, std
             if (iterator == community.end()) {
                 throw std::runtime_error("Node not found in the community");
             }
-            partitions.communities[partitions.getCommunityForNode(node_id)].erase(iterator);
+            std::iter_swap(iterator, community.end() - 1);
+            community.pop_back();
 
             partitions.communities[best_community].push_back(node_id);
             partitions.community_id[node_id] = best_community;
@@ -192,19 +193,24 @@ Partitions aggregateGraph(const Partitions &refined_partitions, Graph &graph, Pa
         }
     }
     
-    // 1. step - go through communities of partitions and create new edges where there is an edge between two communities 
-    // 2. step - create new intermediary community ids -> nodes that are in community i are children of the new intermediary community id
-    for (std::uint64_t i = 0; i < remapped_communities.size(); i++) {
-        // 1. step
-        new_adjacency_list.emplace_back();
-        new_partitions.community_id.push_back(-1);
-        for (std::uint64_t j = 0; j < remapped_communities.size(); j++) {
-            if (i != j && edgeBetweenCommunities(remapped_communities[i], remapped_communities[j], graph)) {
-                new_adjacency_list[i].push_back(j);
+    // create new adjacency list -> if there is an edge between two communities, add it to the new adjacency list
+    std::vector<std::vector<bool>> edge_exists(remapped_communities.size(), std::vector<bool>(remapped_communities.size(), false));
+    new_adjacency_list = std::vector<std::vector<std::uint64_t>>(remapped_communities.size(), std::vector<std::uint64_t>());
+    for (std::uint64_t i = 0; i < graph.adjacency_list.size(); i++) {
+        const auto community_id = refined_partitions.getCommunityForNode(i);
+        for (const auto &neighbor : graph.adjacency_list[i]) {
+            const auto neighbor_community_id = refined_partitions.getCommunityForNode(neighbor);
+            if (edge_exists[old_community_to_new_community[community_id]][old_community_to_new_community[neighbor_community_id]] || community_id == neighbor_community_id) {
+                continue;
             }
+            new_adjacency_list[old_community_to_new_community[community_id]].push_back(old_community_to_new_community[neighbor_community_id]);
+            new_adjacency_list[old_community_to_new_community[neighbor_community_id]].push_back(old_community_to_new_community[community_id]);
+            edge_exists[old_community_to_new_community[community_id]][old_community_to_new_community[neighbor_community_id]] = true;
         }
+    }
 
-        // 2. step
+    // create new intermediary community ids -> nodes that are in community i are children of the new intermediary community id
+    for (std::uint64_t i = 0; i < remapped_communities.size(); i++) {
         auto *new_intermediary_community_id = new IntermediaryCommunityId({i, current_level + 1, nullptr});
         for (const auto &node_id : remapped_communities[i]) {
             intermediary_communities[current_level][node_id].parent = new_intermediary_community_id;    
@@ -216,7 +222,7 @@ Partitions aggregateGraph(const Partitions &refined_partitions, Graph &graph, Pa
     new_community_id = 0;
     new_partitions.communities.reserve(original_partitions.communities.size());
     new_partitions.community_id.reserve(remapped_communities.size());
-    new_partitions.community_id = std::vector<std::uint64_t>(remapped_communities.size(), 0);
+    new_partitions.community_id = std::vector<std::uint64_t>(remapped_communities.size(), -1);
 
     std::unordered_set<std::uint64_t> already_added_communities;
     for (auto &community : original_partitions.communities) {
