@@ -116,9 +116,11 @@ jobs:
       - name: Docker system prune
         run: |
           docker buildx prune --all -f
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo rm -rf /opt/hostedtoolcache/go
-          sudo rm -rf /opt/hostedtoolcache
+          # TODO(gitbuda): Remove sudo from here, in general sudo should be avoided + it doesn't work
+          #                under Memgraph CI because security.
+          # sudo rm -rf /opt/hostedtoolcache/CodeQL
+          # sudo rm -rf /opt/hostedtoolcache/go
+          # sudo rm -rf /opt/hostedtoolcache
 
       - name: Rust library tests
         if: inputs.build_target == 'dev'
@@ -138,10 +140,11 @@ jobs:
           --load .
           docker run -d -p ${{ env.MEMGRAPH_PORT }}:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:${{ inputs.build_target }} --telemetry-enabled=False
 
-      - name: Set up C++
-        run: |
-          sudo apt update
-          sudo apt install -y build-essential cmake
+      # TODO(gitbuda): The same as above TODO, also figure out setup somehow.
+      # - name: Set up C++
+      #   run: |
+      #     sudo apt update
+      #     sudo apt install -y build-essential cmake
 
       - name: Set up Python
         uses: actions/setup-python@v5
