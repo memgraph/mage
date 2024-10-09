@@ -1,6 +1,7 @@
 #ifndef LEIDEN_UTILS_HPP
 #define LEIDEN_UTILS_HPP
 
+#include <memory>
 #include <vector>
 
 #include <boost/unordered_map.hpp>
@@ -47,7 +48,7 @@ struct Partitions {
 struct IntermediaryCommunityId {
     std::uint64_t community_id;
     std::uint64_t level;
-    IntermediaryCommunityId *parent;
+    std::shared_ptr<IntermediaryCommunityId> parent;
 };
 
 std::vector<std::uint64_t> calculateEdgeWeightsPerCommunity(const Partitions &partitions, const Graph &graph);

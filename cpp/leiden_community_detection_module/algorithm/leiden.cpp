@@ -1,3 +1,4 @@
+#include <memory>
 #include <random>
 #include <unordered_map>
 #include <unordered_set>
@@ -190,7 +191,7 @@ Partitions refinePartition(Partitions &partitions, const Graph &graph, const dou
 }
 
 // communities becomes the new nodes
-Partitions aggregateGraph(const Partitions &refined_partitions, Graph &graph, Partitions &original_partitions, std::vector<std::vector<IntermediaryCommunityId*>> &intermediary_communities, std::uint64_t current_level) {
+Partitions aggregateGraph(const Partitions &refined_partitions, Graph &graph, Partitions &original_partitions, std::vector<std::vector<std::shared_ptr<IntermediaryCommunityId>>> &intermediary_communities, std::uint64_t current_level) {
     std::vector<std::vector<std::uint64_t>> remapped_communities; // nodes and communities should go from 0 to n
     std::unordered_map<std::uint64_t, std::uint64_t> old_community_to_new_community; // old_community_id -> new_community_id
     std::unordered_map<std::uint64_t, std::uint64_t> new_community_to_old_community; // new_community_id -> old_community_id
@@ -230,7 +231,8 @@ Partitions aggregateGraph(const Partitions &refined_partitions, Graph &graph, Pa
 
     // create new intermediary community ids -> nodes that are in community i are children of the new intermediary community id
     for (std::uint64_t i = 0; i < remapped_communities.size(); i++) {
-        auto *new_intermediary_community_id = new IntermediaryCommunityId({i, current_level + 1, nullptr});
+        const auto new_intermediary_community_id = 
+            std::make_shared<IntermediaryCommunityId>(IntermediaryCommunityId{i, current_level + 1, nullptr});
         for (const auto &node_id : remapped_communities[i]) {
             intermediary_communities[current_level][node_id]->parent = new_intermediary_community_id;    
         }
@@ -276,10 +278,10 @@ bool checkIfDone(const Partitions &partitions, const Graph &graph) {
     return count_single_node_communities == graph.size();
 }
 
-std::vector<std::vector<IntermediaryCommunityId*>> leiden(const mg_graph::GraphView<> &memgraph_graph) {
+std::vector<std::vector<std::shared_ptr<IntermediaryCommunityId>>> leiden(const mg_graph::GraphView<> &memgraph_graph) {
     Graph graph;
     Partitions partitions;
-    std::vector<std::vector<IntermediaryCommunityId*>> intermediary_communities; // level -> community_ids
+    std::vector<std::vector<std::shared_ptr<IntermediaryCommunityId>>> intermediary_communities; // level -> community_ids
     intermediary_communities.emplace_back();
     std::uint64_t level = 0;
 
@@ -288,8 +290,7 @@ std::vector<std::vector<IntermediaryCommunityId*>> leiden(const mg_graph::GraphV
     for (const auto &node : memgraph_graph.Nodes()) {
         partitions.communities.push_back({node.id});
         partitions.community_id.push_back(node.id);
-        intermediary_communities[level].push_back(new IntermediaryCommunityId{node.id, level, nullptr});
-
+        intermediary_communities[level].push_back(std::make_shared<IntermediaryCommunityId>(IntermediaryCommunityId{node.id, level, nullptr}));
         std::uint64_t previous_neighbour = node.id; // to avoid adding the same edge twice 
         for (const auto &neighbor : memgraph_graph.Neighbours(node.id)) {
             if (neighbor.node_id != previous_neighbour) {
@@ -318,10 +319,10 @@ std::vector<std::vector<IntermediaryCommunityId*>> leiden(const mg_graph::GraphV
 
 std::vector<std::vector<std::uint64_t>> getCommunities(const mg_graph::GraphView<> &graph) {
     std::vector<std::vector<std::uint64_t>> node_and_community_hierarchy; // node_id -> list of community_ids
-    auto communities_hierarchy = leiden(graph);
-    for (const auto *node : communities_hierarchy[0]) {
+    const auto communities_hierarchy = leiden(graph);
+    for (const auto &node : communities_hierarchy[0]) {
         std::vector<std::uint64_t> community_ids;
-        const auto *current_community = node;
+        auto current_community = node;
         while (current_community != nullptr) {
             community_ids.push_back(current_community->community_id);
             current_community = current_community->parent;
