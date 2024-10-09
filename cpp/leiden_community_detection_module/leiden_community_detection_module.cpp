@@ -10,9 +10,16 @@
 namespace {
 
 const char *kProcedureGet = "get";
+const char *kProcedureGetSubgraph = "get_subgraph";
+const char *kArgumentSubgraphNodes = "subgraph_nodes";
+const char *kArgumentSubgraphRelationships = "subgraph_relationships";
+
 const char *kFieldNode = "node";
 const char *kFieldCommunity = "community_id";
 const char *kFieldCommunities = "communities";
+const char *kDefaultWeightProperty = "weight";
+const double kDefaultGamma = 1.0;
+const double kDefaultTheta = 0.01;
 
 void InsertLeidenRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
                         const std::vector<std::uint64_t> &community) {
@@ -33,15 +40,40 @@ void InsertLeidenRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory
     mg_utility::InsertListValueResult(record, kFieldCommunities, community_list, memory);
 }
 
+void LeidenCommunityDetection(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory, bool subgraph) {
+    int index = 0;
+    auto gamma = mgp::value_get_double(mgp::list_at(args, index++));
+    auto theta = mgp::value_get_double(mgp::list_at(args, index++));
+    const auto *weight_property = mgp::value_get_string(mgp::list_at(args, index++));
+    mgp_list *subgraph_nodes = nullptr;
+    mgp_list *subgraph_relationships = nullptr;
+    if (subgraph) {
+        subgraph_nodes = mgp::value_get_list(mgp::list_at(args, index++));
+        subgraph_relationships = mgp::value_get_list(mgp::list_at(args, index++));
+    }
+
+    const auto graph = subgraph
+                           ? mg_utility::GetWeightedSubgraphView(memgraph_graph, result, memory, subgraph_nodes, subgraph_relationships, mg_graph::GraphType::kUndirectedGraph, weight_property, 1.0)
+                           : mg_utility::GetWeightedGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph, weight_property, 1.0);
+    auto communities = leiden_alg::getCommunities(*graph, gamma, theta);
+
+    for (std::size_t i = 0; i < communities.size(); i++) {
+        InsertLeidenRecord(memgraph_graph, result, memory, graph->GetMemgraphNodeId(i), communities[i]);
+    }
+}
 
 void OnGraph(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
     try {
-        auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
-        auto communities = leiden_alg::getCommunities(*graph);
+        LeidenCommunityDetection(args, memgraph_graph, result, memory, false);
+    } catch (const std::exception &e) {
+        mgp::result_set_error_msg(result, e.what());
+        return;
+    }
+}
 
-        for (std::size_t i = 0; i < communities.size(); i++) {
-            InsertLeidenRecord(memgraph_graph, result, memory, graph->GetMemgraphNodeId(i), communities[i]);
-        }
+void OnSubgraph(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+    try {
+        LeidenCommunityDetection(args, memgraph_graph, result, memory, true);
     } catch (const std::exception &e) {
         mgp::result_set_error_msg(result, e.what());
         return;
@@ -51,12 +83,36 @@ void OnGraph(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_
 
 extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
     try {
-        mgp::MemoryDispatcherGuard guard{memory};
-        auto *proc = mgp::module_add_read_procedure(module, kProcedureGet, OnGraph);
+        auto *const default_gamma = mgp::value_make_double(kDefaultGamma, memory);
+        auto *const default_theta = mgp::value_make_double(kDefaultTheta, memory);
+        auto *const default_weight_property = mgp::value_make_string(kDefaultWeightProperty, memory);
 
-        mgp::proc_add_result(proc, kFieldNode, mgp::type_node());
-        mgp::proc_add_result(proc, kFieldCommunity, mgp::type_int());
-        mgp::proc_add_result(proc, kFieldCommunities, mgp::type_list(mgp::type_int()));
+        mgp::MemoryDispatcherGuard guard{memory};
+        {
+            auto *proc = mgp::module_add_read_procedure(module, kProcedureGet, OnGraph);
+            mgp::proc_add_opt_arg(proc, "gamma", mgp::type_float(), default_gamma);
+            mgp::proc_add_opt_arg(proc, "theta", mgp::type_float(), default_theta);
+            mgp::proc_add_opt_arg(proc, "weight_property", mgp::type_string(), default_weight_property);
+
+            mgp::proc_add_result(proc, kFieldNode, mgp::type_node());
+            mgp::proc_add_result(proc, kFieldCommunity, mgp::type_int());
+            mgp::proc_add_result(proc, kFieldCommunities, mgp::type_list(mgp::type_int()));
+        }
+
+        {
+            auto *proc = mgp::module_add_read_procedure(module, kProcedureGetSubgraph, OnSubgraph);
+            mgp::proc_add_opt_arg(proc, "gamma", mgp::type_float(), default_gamma);
+            mgp::proc_add_opt_arg(proc, "theta", mgp::type_float(), default_theta);
+            mgp::proc_add_opt_arg(proc, "weight_property", mgp::type_string(), default_weight_property);
+
+            mgp::proc_add_result(proc, kFieldNode, mgp::type_node());
+            mgp::proc_add_result(proc, kFieldCommunity, mgp::type_int());
+            mgp::proc_add_result(proc, kFieldCommunities, mgp::type_list(mgp::type_int()));
+        }
+
+        mgp::value_destroy(default_gamma);
+        mgp::value_destroy(default_theta);
+        mgp::value_destroy(default_weight_property);
     } catch (const std::exception &e) {
         return 1;
     }

@@ -1,6 +1,7 @@
 #ifndef LEIDEN_UTILS_HPP
 #define LEIDEN_UTILS_HPP
 
+#include <atomic>
 #include <memory>
 #include <vector>
 
@@ -10,14 +11,13 @@
 namespace leiden_alg {
 
 struct Graph {
-  std::vector<std::vector<std::uint64_t>> adjacency_list; // node_id -> neighbors
+  std::vector<std::vector<std::pair<std::uint64_t, double>>> adjacency_list; // node_id -> (neighbor_id, edge_weight)
 
-  // Add an edge to the graph
-  inline void addEdge(std::uint64_t u, std::uint64_t v) {
+  inline void addEdge(std::uint64_t u, std::uint64_t v, double edge_weight = 1.0) {
     if (u >= adjacency_list.size()) {
         adjacency_list.resize(u + 1);
     }
-    adjacency_list[u].push_back(v);
+    adjacency_list[u].emplace_back(v, edge_weight);
   }
 
   inline bool isVertexInGraph(std::uint64_t u) const {
@@ -28,8 +28,8 @@ struct Graph {
       return adjacency_list.size();
   }
 
-  inline const std::vector<std::uint64_t> &neighbors(std::uint64_t u) const {
-    return adjacency_list[u];
+  inline const std::vector<std::pair<std::uint64_t, double>> &neighbors(std::uint64_t node_id) const {
+      return adjacency_list[node_id];
   }
 };
 
@@ -51,8 +51,10 @@ struct IntermediaryCommunityId {
     std::shared_ptr<IntermediaryCommunityId> parent;
 };
 
-std::vector<std::uint64_t> calculateEdgeWeightsPerCommunity(const Partitions &partitions, const Graph &graph);
-void createIntermediaryCommunities(std::vector<std::vector<std::shared_ptr<IntermediaryCommunityId>>> &intermediary_communities, const std::vector<std::vector<std::uint64_t>> &communities, std::uint64_t current_level);
+using Dendrogram = std::vector<std::vector<std::shared_ptr<IntermediaryCommunityId>>>;
+
+std::vector<double> calculateEdgeWeightsPerCommunity(const Partitions &partitions, const Graph &graph);
+void createIntermediaryCommunities(Dendrogram &intermediary_communities, const std::vector<std::vector<std::uint64_t>> &communities, std::uint64_t current_level);
 
 }  // namespace leiden_alg
 

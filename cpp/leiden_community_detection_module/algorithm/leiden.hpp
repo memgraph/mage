@@ -15,6 +15,6 @@ namespace leiden_alg {
 ///@param graph Graph for exploration
 ///@return A vector that contains community identifiers placed on indices that correspond to the identifiers of the nodes.
 ///
-std::vector<std::vector<std::uint64_t>> getCommunities(const mg_graph::GraphView<> &graph);
+std::vector<std::vector<std::uint64_t>> getCommunities(const mg_graph::GraphView<> &graph, double gamma, double theta);
 
 }  // namespace leiden_alg
