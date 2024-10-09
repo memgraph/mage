@@ -133,7 +133,7 @@ void mergeNodesSubset(Partitions &refined_partitions, const Graph &graph, std::u
             }
 
             for (const auto neighbor_community : neighbor_communities) {
-                 if (static_cast<double>(external_edge_weight_per_cluster_in_subset[neighbor_community]) >= gamma * static_cast<double>(refined_partitions.getCommunityWeight(neighbor_community))
+                if (static_cast<double>(external_edge_weight_per_cluster_in_subset[neighbor_community]) >= gamma * static_cast<double>(refined_partitions.getCommunityWeight(neighbor_community))
                     * static_cast<double>((partitions.communities[subset].size() - refined_partitions.getCommunityWeight(neighbor_community)))) {
                     
                     const auto delta = static_cast<double>(edge_weights[neighbor_community]) - static_cast<double>(refined_partitions.getCommunityWeight(neighbor_community)) * gamma;
@@ -190,7 +190,7 @@ Partitions refinePartition(Partitions &partitions, const Graph &graph, const dou
 }
 
 // communities becomes the new nodes
-Partitions aggregateGraph(const Partitions &refined_partitions, Graph &graph, Partitions &original_partitions, std::vector<std::vector<IntermediaryCommunityId>> &intermediary_communities, std::uint64_t current_level) {
+Partitions aggregateGraph(const Partitions &refined_partitions, Graph &graph, Partitions &original_partitions, std::vector<std::vector<IntermediaryCommunityId*>> &intermediary_communities, std::uint64_t current_level) {
     std::vector<std::vector<std::uint64_t>> remapped_communities; // nodes and communities should go from 0 to n
     std::unordered_map<std::uint64_t, std::uint64_t> old_community_to_new_community; // old_community_id -> new_community_id
     std::unordered_map<std::uint64_t, std::uint64_t> new_community_to_old_community; // new_community_id -> old_community_id
@@ -232,9 +232,9 @@ Partitions aggregateGraph(const Partitions &refined_partitions, Graph &graph, Pa
     for (std::uint64_t i = 0; i < remapped_communities.size(); i++) {
         auto *new_intermediary_community_id = new IntermediaryCommunityId({i, current_level + 1, nullptr});
         for (const auto &node_id : remapped_communities[i]) {
-            intermediary_communities[current_level][node_id].parent = new_intermediary_community_id;    
+            intermediary_communities[current_level][node_id]->parent = new_intermediary_community_id;    
         }
-        intermediary_communities[current_level + 1].push_back(*new_intermediary_community_id);
+        intermediary_communities[current_level + 1].push_back(new_intermediary_community_id);
     }
 
     graph.adjacency_list = std::move(new_adjacency_list);
@@ -276,10 +276,10 @@ bool checkIfDone(const Partitions &partitions, const Graph &graph) {
     return count_single_node_communities == graph.size();
 }
 
-std::vector<std::vector<IntermediaryCommunityId>> leiden(const mg_graph::GraphView<> &memgraph_graph) {
+std::vector<std::vector<IntermediaryCommunityId*>> leiden(const mg_graph::GraphView<> &memgraph_graph) {
     Graph graph;
     Partitions partitions;
-    std::vector<std::vector<IntermediaryCommunityId>> intermediary_communities; // level -> community_ids
+    std::vector<std::vector<IntermediaryCommunityId*>> intermediary_communities; // level -> community_ids
     intermediary_communities.emplace_back();
     std::uint64_t level = 0;
 
@@ -288,7 +288,7 @@ std::vector<std::vector<IntermediaryCommunityId>> leiden(const mg_graph::GraphVi
     for (const auto &node : memgraph_graph.Nodes()) {
         partitions.communities.push_back({node.id});
         partitions.community_id.push_back(node.id);
-        intermediary_communities[level].emplace_back(IntermediaryCommunityId{node.id, level, nullptr});
+        intermediary_communities[level].push_back(new IntermediaryCommunityId{node.id, level, nullptr});
 
         std::uint64_t previous_neighbour = node.id; // to avoid adding the same edge twice 
         for (const auto &neighbor : memgraph_graph.Neighbours(node.id)) {
@@ -319,9 +319,9 @@ std::vector<std::vector<IntermediaryCommunityId>> leiden(const mg_graph::GraphVi
 std::vector<std::vector<std::uint64_t>> getCommunities(const mg_graph::GraphView<> &graph) {
     std::vector<std::vector<std::uint64_t>> node_and_community_hierarchy; // node_id -> list of community_ids
     auto communities_hierarchy = leiden(graph);
-    for (const auto &node : communities_hierarchy[0]) {
+    for (const auto *node : communities_hierarchy[0]) {
         std::vector<std::uint64_t> community_ids;
-        const auto *current_community = &node;
+        const auto *current_community = node;
         while (current_community != nullptr) {
             community_ids.push_back(current_community->community_id);
             current_community = current_community->parent;
