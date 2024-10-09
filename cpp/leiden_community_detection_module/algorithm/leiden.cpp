@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <algorithm>
 #include <cmath>
+#include <future>
 
 #include "leiden.hpp"
 #include "leiden_utils/leiden_utils.hpp"
@@ -194,7 +195,6 @@ Partitions refinePartition(Partitions &partitions, const Graph &graph, const dou
 Partitions aggregateGraph(const Partitions &refined_partitions, Graph &graph, Partitions &original_partitions, std::vector<std::vector<std::shared_ptr<IntermediaryCommunityId>>> &intermediary_communities, std::uint64_t current_level) {
     std::vector<std::vector<std::uint64_t>> remapped_communities; // nodes and communities should go from 0 to n
     std::unordered_map<std::uint64_t, std::uint64_t> old_community_to_new_community; // old_community_id -> new_community_id
-    std::unordered_map<std::uint64_t, std::uint64_t> new_community_to_old_community; // new_community_id -> old_community_id
     std::vector<std::vector<std::uint64_t>> new_adjacency_list;
     std::uint64_t new_community_id = 0;
     Partitions new_partitions;
@@ -206,10 +206,11 @@ Partitions aggregateGraph(const Partitions &refined_partitions, Graph &graph, Pa
         if (!community.empty()) {
             remapped_communities.push_back(community);
             old_community_to_new_community[i] = new_community_id;
-            new_community_to_old_community[new_community_id] = i;
             new_community_id++;
         }
     }
+
+    auto future = std::async(std::launch::async, createIntermediaryCommunities, std::ref(intermediary_communities), std::ref(remapped_communities), current_level);
     
     // create new adjacency list -> if there is an edge between two communities, add it to the new adjacency list
     std::vector<std::vector<bool>> edge_exists(refined_partitions.communities.size(), std::vector<bool>(refined_partitions.communities.size(), false));
@@ -227,16 +228,6 @@ Partitions aggregateGraph(const Partitions &refined_partitions, Graph &graph, Pa
             edge_exists[new_community_id][new_neighbor_community_id] = true;
             edge_exists[new_neighbor_community_id][new_community_id] = true;
         }
-    }
-
-    // create new intermediary community ids -> nodes that are in community i are children of the new intermediary community id
-    for (std::uint64_t i = 0; i < remapped_communities.size(); i++) {
-        const auto new_intermediary_community_id = 
-            std::make_shared<IntermediaryCommunityId>(IntermediaryCommunityId{i, current_level + 1, nullptr});
-        for (const auto &node_id : remapped_communities[i]) {
-            intermediary_communities[current_level][node_id]->parent = new_intermediary_community_id;    
-        }
-        intermediary_communities[current_level + 1].push_back(new_intermediary_community_id);
     }
 
     graph.adjacency_list = std::move(new_adjacency_list);
@@ -264,6 +255,8 @@ Partitions aggregateGraph(const Partitions &refined_partitions, Graph &graph, Pa
             new_community_id++;
         }
     }
+
+    future.wait();
 
     return new_partitions;
 }

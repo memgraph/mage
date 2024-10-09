@@ -52,6 +52,7 @@ struct IntermediaryCommunityId {
 };
 
 std::vector<std::uint64_t> calculateEdgeWeightsPerCommunity(const Partitions &partitions, const Graph &graph);
+void createIntermediaryCommunities(std::vector<std::vector<std::shared_ptr<IntermediaryCommunityId>>> &intermediary_communities, const std::vector<std::vector<std::uint64_t>> &communities, std::uint64_t current_level);
 
 }  // namespace leiden_alg
 
