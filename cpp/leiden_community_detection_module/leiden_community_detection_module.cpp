@@ -20,6 +20,7 @@ const char *kFieldCommunities = "communities";
 const char *kDefaultWeightProperty = "weight";
 const double kDefaultGamma = 1.0;
 const double kDefaultTheta = 0.01;
+const double kDefaultResolutionParameter = 0.01;
 
 void InsertLeidenRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
                         const std::vector<std::uint64_t> &community) {
@@ -42,9 +43,10 @@ void InsertLeidenRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory
 
 void LeidenCommunityDetection(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory, bool subgraph) {
     int index = 0;
-    auto gamma = mgp::value_get_double(mgp::list_at(args, index++));
-    auto theta = mgp::value_get_double(mgp::list_at(args, index++));
+    const auto gamma = mgp::value_get_double(mgp::list_at(args, index++));
+    const auto theta = mgp::value_get_double(mgp::list_at(args, index++));
     const auto *weight_property = mgp::value_get_string(mgp::list_at(args, index++));
+    const auto resolution_parameter = mgp::value_get_double(mgp::list_at(args, index++));
     mgp_list *subgraph_nodes = nullptr;
     mgp_list *subgraph_relationships = nullptr;
     if (subgraph) {
@@ -55,7 +57,7 @@ void LeidenCommunityDetection(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
     const auto graph = subgraph
                            ? mg_utility::GetWeightedSubgraphView(memgraph_graph, result, memory, subgraph_nodes, subgraph_relationships, mg_graph::GraphType::kUndirectedGraph, weight_property, 1.0)
                            : mg_utility::GetWeightedGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph, weight_property, 1.0);
-    auto communities = leiden_alg::getCommunities(*graph, gamma, theta);
+    auto communities = leiden_alg::getCommunities(*graph, gamma, theta, resolution_parameter);
 
     for (std::size_t i = 0; i < communities.size(); i++) {
         InsertLeidenRecord(memgraph_graph, result, memory, graph->GetMemgraphNodeId(i), communities[i]);
@@ -86,6 +88,7 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
         auto *const default_gamma = mgp::value_make_double(kDefaultGamma, memory);
         auto *const default_theta = mgp::value_make_double(kDefaultTheta, memory);
         auto *const default_weight_property = mgp::value_make_string(kDefaultWeightProperty, memory);
+        auto *const default_resolution_parameter = mgp::value_make_double(kDefaultResolutionParameter, memory);
 
         mgp::MemoryDispatcherGuard guard{memory};
         {
@@ -93,6 +96,7 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
             mgp::proc_add_opt_arg(proc, "gamma", mgp::type_float(), default_gamma);
             mgp::proc_add_opt_arg(proc, "theta", mgp::type_float(), default_theta);
             mgp::proc_add_opt_arg(proc, "weight_property", mgp::type_string(), default_weight_property);
+            mgp::proc_add_opt_arg(proc, "resolution_parameter", mgp::type_float(), default_resolution_parameter);
 
             mgp::proc_add_result(proc, kFieldNode, mgp::type_node());
             mgp::proc_add_result(proc, kFieldCommunity, mgp::type_int());
@@ -104,6 +108,9 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
             mgp::proc_add_opt_arg(proc, "gamma", mgp::type_float(), default_gamma);
             mgp::proc_add_opt_arg(proc, "theta", mgp::type_float(), default_theta);
             mgp::proc_add_opt_arg(proc, "weight_property", mgp::type_string(), default_weight_property);
+            mgp::proc_add_opt_arg(proc, "resolution_parameter", mgp::type_float(), default_resolution_parameter);
+            // mgp::proc_add_arg(proc, kArgumentSubgraphNodes, mgp::type_list(mgp::type_node()));
+            // mgp::proc_add_arg(proc, kArgumentSubgraphRelationships, mgp::type_list(mgp::type_relationship()));
 
             mgp::proc_add_result(proc, kFieldNode, mgp::type_node());
             mgp::proc_add_result(proc, kFieldCommunity, mgp::type_int());
