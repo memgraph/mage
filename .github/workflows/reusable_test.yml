@@ -141,7 +141,7 @@ jobs:
       - name: Set up C++
         run: |
           sudo apt update
-          sudo apt install -y build-essential cmake
+          sudo apt install -y build-essential cmake libboost-all-dev
 
       - name: Set up Python
         uses: actions/setup-python@v5

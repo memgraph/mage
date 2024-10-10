@@ -280,6 +280,13 @@ void InsertNodeValueResult(mgp_result_record *record, const char *field_name, mg
   InsertRecord(record, field_name, value);
 }
 
+// Inserts a list of value list_value to the field field_name of
+// the record mgp_result_record record.
+void InsertListValueResult(mgp_result_record *record, const char *field_name, mgp_list *list_value, mgp_memory *memory) {
+  auto value = mgp::value_make_list(list_value);
+  InsertRecord(record, field_name, value);
+}
+
 /// @brief Retrieves a node with the given ID to be fed into InsertNodeValueResult. If no node is found, the behavior’s
 /// up to the storage mode:
 /// * In transactional (ACID-compliant) storage modes one can expect vertices to not be erased -> InvalidIDException
