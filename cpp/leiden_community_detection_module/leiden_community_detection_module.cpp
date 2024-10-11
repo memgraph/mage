@@ -44,18 +44,18 @@ void InsertLeidenRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory
 }
 
 void LeidenCommunityDetection(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory, bool subgraph) {
-    int index = 0;
-    const auto gamma = mgp::value_get_double(mgp::list_at(args, index++));
-    const auto theta = mgp::value_get_double(mgp::list_at(args, index++));
-    const auto *weight_property = mgp::value_get_string(mgp::list_at(args, index++));
-    const auto resolution_parameter = mgp::value_get_double(mgp::list_at(args, index++));
-    const auto max_iterations = mgp::value_get_int(mgp::list_at(args, index++));
+    auto index = 0;
     mgp_list *subgraph_nodes = nullptr;
     mgp_list *subgraph_relationships = nullptr;
     if (subgraph) {
         subgraph_nodes = mgp::value_get_list(mgp::list_at(args, index++));
         subgraph_relationships = mgp::value_get_list(mgp::list_at(args, index++));
     }
+    const auto *weight_property = mgp::value_get_string(mgp::list_at(args, index++));
+    const auto gamma = mgp::value_get_double(mgp::list_at(args, index++));
+    const auto theta = mgp::value_get_double(mgp::list_at(args, index++));
+    const auto resolution_parameter = mgp::value_get_double(mgp::list_at(args, index++));
+    const auto max_iterations = mgp::value_get_int(mgp::list_at(args, index++));
 
     const auto graph = subgraph
                            ? mg_utility::GetWeightedSubgraphView(memgraph_graph, result, memory, subgraph_nodes, subgraph_relationships, mg_graph::GraphType::kUndirectedGraph, weight_property, 1.0)
@@ -88,18 +88,18 @@ void OnSubgraph(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, m
 
 extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
     try {
+        auto *const default_weight_property = mgp::value_make_string(kDefaultWeightProperty, memory);
         auto *const default_gamma = mgp::value_make_double(kDefaultGamma, memory);
         auto *const default_theta = mgp::value_make_double(kDefaultTheta, memory);
-        auto *const default_weight_property = mgp::value_make_string(kDefaultWeightProperty, memory);
         auto *const default_resolution_parameter = mgp::value_make_double(kDefaultResolutionParameter, memory);
         auto *const default_max_iterations = mgp::value_make_int(kDefaultMaxIterations, memory);
 
         mgp::MemoryDispatcherGuard guard{memory};
-        {
+        {   
             auto *proc = mgp::module_add_read_procedure(module, kProcedureGet, OnGraph);
+            mgp::proc_add_opt_arg(proc, "weight_property", mgp::type_string(), default_weight_property);
             mgp::proc_add_opt_arg(proc, "gamma", mgp::type_float(), default_gamma);
             mgp::proc_add_opt_arg(proc, "theta", mgp::type_float(), default_theta);
-            mgp::proc_add_opt_arg(proc, "weight_property", mgp::type_string(), default_weight_property);
             mgp::proc_add_opt_arg(proc, "resolution_parameter", mgp::type_float(), default_resolution_parameter);
             mgp::proc_add_opt_arg(proc, "number_of_iterations", mgp::type_int(), default_max_iterations);
 
@@ -113,9 +113,9 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
 
             mgp::proc_add_arg(proc, kArgumentSubgraphNodes, mgp::type_list(mgp::type_node()));
             mgp::proc_add_arg(proc, kArgumentSubgraphRelationships, mgp::type_list(mgp::type_relationship()));
+            mgp::proc_add_opt_arg(proc, "weight_property", mgp::type_string(), default_weight_property);
             mgp::proc_add_opt_arg(proc, "gamma", mgp::type_float(), default_gamma);
             mgp::proc_add_opt_arg(proc, "theta", mgp::type_float(), default_theta);
-            mgp::proc_add_opt_arg(proc, "weight_property", mgp::type_string(), default_weight_property);
             mgp::proc_add_opt_arg(proc, "resolution_parameter", mgp::type_float(), default_resolution_parameter);
             mgp::proc_add_opt_arg(proc, "number_of_iterations", mgp::type_int(), default_max_iterations);
 

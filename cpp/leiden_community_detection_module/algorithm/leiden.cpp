@@ -326,6 +326,8 @@ Dendrogram leiden(const mg_graph::GraphView<> &memgraph_graph, double gamma, dou
     }
     edge_exists.clear();
 
+    bool any_isolated_nodes = memgraph_graph.Nodes().size() != graph.size();
+
     // initialize partitions and leafs of the dendrogram
     partitions = singletonPartition(graph);
     intermediary_communities[0].reserve(memgraph_graph.Nodes().size());
@@ -342,7 +344,8 @@ Dendrogram leiden(const mg_graph::GraphView<> &memgraph_graph, double gamma, dou
         done = checkIfDone(partitions);
         if (!done) {
             auto refined_partitions = refinePartition(partitions, graph, gamma, theta, resolution_parameter);
-            if (onlySingleCommunity(refined_partitions)) {
+            // if there are no isolated nodes, we can stop -> otherwise, we will end up with all nodes in the same community which doesn't make sense
+            if (onlySingleCommunity(refined_partitions) && !any_isolated_nodes) { 
                 done = true;
                 continue;
             }
