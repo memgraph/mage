@@ -1,5 +1,5 @@
 query: >
-    CALL leiden_community_detection.get() YIELD node, community_id
+    CALL leiden_community_detection.get() YIELD node, community_id, communities
     RETURN node.id AS node_id, community_id, communities
     ORDER BY node_id ASC
 
