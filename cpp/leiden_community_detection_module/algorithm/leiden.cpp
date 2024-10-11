@@ -1,4 +1,3 @@
-#include <filesystem>
 #include <memory>
 #include <random>
 #include <unordered_map>
@@ -13,8 +12,6 @@
 #include "leiden_utils/leiden_utils.hpp"
 #include "data_structures/graph_view.hpp"
 
-
-
 namespace leiden_alg {
 
 const double MAX_DOUBLE = std::numeric_limits<double>::max();
@@ -24,8 +21,7 @@ void moveNodesFast(Partitions &partitions, Graph &graph, double gamma, double re
     std::unordered_set<std::uint64_t> nodes_set;
     std::vector<double> edge_weights_per_community(partitions.communities.size(), 0);
     std::vector<char> visited(partitions.communities.size(), false);
-    std::vector<std::uint64_t> neighbor_communities;
-    neighbor_communities.reserve(partitions.communities.size());
+    std::vector<std::uint64_t> neighbor_communities(partitions.communities.size(), 0);
     nodes_set.reserve(graph.size());
     
     for (std::uint64_t i = 0; i < graph.size(); i++) {
@@ -33,7 +29,7 @@ void moveNodesFast(Partitions &partitions, Graph &graph, double gamma, double re
         nodes_set.insert(i);
     }
 
-    std::shuffle(nodes.begin(), nodes.end(), std::mt19937(42));
+    std::shuffle(nodes.begin(), nodes.end(), std::mt19937(std::random_device{}()));
 
     while(!nodes.empty()) {
         auto node_id = nodes.front();
@@ -55,7 +51,7 @@ void moveNodesFast(Partitions &partitions, Graph &graph, double gamma, double re
         const auto current_delta = static_cast<double>(edge_weights_per_community[best_community]) - (static_cast<double>(partitions.getCommunityWeight(best_community)) -1) * gamma;
         auto best_delta = current_delta;
         for (std::uint64_t i = 0; i < number_of_neighbor_communities; i++) {
-            const auto community_id_of_neighbor = partitions.getCommunityForNode(neighbor_communities[i]);
+            const auto community_id_of_neighbor = neighbor_communities[i];
 
             // look only at the neighbors that are not in the same community
             if (community_id_of_neighbor != best_community) { 
@@ -107,31 +103,28 @@ bool isInSingletonCommunity(const Partitions &partitions, std::uint64_t node_id)
 }
 
 void mergeNodesSubset(Partitions &refined_partitions, const Graph &graph, std::uint64_t subset, Partitions &partitions, double gamma, double theta, double resolution_parameter) {
-    // external_edge_weight_per_cluster_in_subset[i] - tracks the external edge weight between nodes in cluster i and the other clusters in the same subset
-    std::vector<double> external_edge_weight_per_cluster_in_subset(refined_partitions.communities.size(), 0);
-    std::vector<std::uint64_t> neighbor_communities;
+    // external_edge_weight[i] - tracks the external edge weight between nodes in cluster i and the other clusters in the same subset
+    std::vector<double> external_edge_weight(refined_partitions.communities.size(), 0);
+    std::vector<std::uint64_t> neighbor_communities(refined_partitions.communities.size(), 0);
     std::vector<char> visited(refined_partitions.communities.size(), false);
     std::vector<double> edge_weights(refined_partitions.communities.size(), 0); // edge weight of community
-    std::vector<double> probability_of_merging;      
-
-    probability_of_merging.reserve(refined_partitions.communities.size());
-    neighbor_communities.reserve(refined_partitions.communities.size());
+    std::vector<double> probability_of_merging(refined_partitions.communities.size(), 0);
 
     // at the beginning all nodes are in singleton communities                                 
     for (const auto &node_id : partitions.communities[subset]) {                                
         for (const auto &[neighbor_id, edge_weight] : graph.neighbors(node_id)) {
             if (partitions.getCommunityForNode(neighbor_id) == subset) {
-                external_edge_weight_per_cluster_in_subset[refined_partitions.getCommunityForNode(node_id)] += edge_weight;
+                external_edge_weight[refined_partitions.getCommunityForNode(node_id)] += edge_weight;
             }                                                                       
         }                                                                                                                       
     }                                                                                                                         
-
-    for (const auto &node_id : partitions.communities[subset]) {                                                                                                                                                                                                                                                                                                                                                                                       
+    const auto &subset_community = partitions.communities[subset];
+    for (const auto &node_id : subset_community) {     
         const auto current_community = refined_partitions.getCommunityForNode(node_id);
-        std::uint64_t number_of_neighbor_communities = 0;
+        auto number_of_neighbor_communities = 0;
 
         if (isInSingletonCommunity(refined_partitions, node_id) && 
-                (external_edge_weight_per_cluster_in_subset[current_community] >= gamma * static_cast<double>(refined_partitions.getCommunityWeight(current_community)) * 
+                (external_edge_weight[current_community] >= gamma * static_cast<double>(refined_partitions.getCommunityWeight(current_community)) * 
                 static_cast<double>((partitions.communities[subset].size() - refined_partitions.getCommunityWeight(current_community))))) {
             auto total_cum_sum = 0.0;
 
@@ -151,11 +144,11 @@ void mergeNodesSubset(Partitions &refined_partitions, const Graph &graph, std::u
             }
 
             // it's important that this goes from 0 to neighbor_communities.size() because we need to update first neighbor_communities.size() elements of probability_of_merging
-            for (std::uint64_t j = 0; j < neighbor_communities.size(); j++) {
+            for (auto j = 0; j < number_of_neighbor_communities; j++) {
                 const auto neighbor_community = neighbor_communities[j];
                 if (refined_partitions.getCommunityWeight(neighbor_community) == 0) continue; // skip empty communities
 
-                if (external_edge_weight_per_cluster_in_subset[neighbor_community] >= gamma * static_cast<double>(refined_partitions.getCommunityWeight(neighbor_community))
+                if (external_edge_weight[neighbor_community] >= gamma * static_cast<double>(refined_partitions.getCommunityWeight(neighbor_community))
                     * static_cast<double>((partitions.communities[subset].size() - refined_partitions.getCommunityWeight(neighbor_community)))) {
                     
                     const auto delta = edge_weights[neighbor_community] - static_cast<double>(refined_partitions.getCommunityWeight(neighbor_community)) * gamma;
@@ -174,11 +167,11 @@ void mergeNodesSubset(Partitions &refined_partitions, const Graph &graph, std::u
                 visited[neighbor_community] = 0;
             }
             if (total_cum_sum < MAX_DOUBLE) {
-                static std::minstd_rand gen(42);
+                static std::minstd_rand gen(std::random_device{}());
                 std::uniform_real_distribution<double> dis(0, total_cum_sum);
                 const auto random_number = dis(gen); 
                 
-                const auto last = probability_of_merging.begin() + static_cast<std::int64_t>(neighbor_communities.size());
+                const auto last = probability_of_merging.begin() + static_cast<std::int64_t>(number_of_neighbor_communities);
                 const auto best_community_index = std::lower_bound(probability_of_merging.begin(), last, random_number) - probability_of_merging.begin();
                 best_community = neighbor_communities[best_community_index];
             }
@@ -195,9 +188,9 @@ void mergeNodesSubset(Partitions &refined_partitions, const Graph &graph, std::u
                 if (neighbor_community == subset) {
                     // update external edge weight for the new community
                     if (neighbor_community == best_community) {
-                        external_edge_weight_per_cluster_in_subset[best_community] -= weight;
+                        external_edge_weight[best_community] -= weight;
                     } else {
-                        external_edge_weight_per_cluster_in_subset[best_community] += weight;
+                        external_edge_weight[best_community] += weight;
                     }
                 }
             }
@@ -307,7 +300,7 @@ bool onlySingleCommunity(const Partitions &partitions) {
     return partitions.communities.size() == number_of_empty_communities + 1;
 }
 
-Dendrogram leiden(const mg_graph::GraphView<> &memgraph_graph, double gamma, double theta, double resolution_parameter) {
+Dendrogram leiden(const mg_graph::GraphView<> &memgraph_graph, double gamma, double theta, double resolution_parameter, std::uint64_t max_iterations) {
     Graph graph;
     Partitions partitions;
     Dendrogram intermediary_communities; // level -> community_ids
@@ -334,15 +327,17 @@ Dendrogram leiden(const mg_graph::GraphView<> &memgraph_graph, double gamma, dou
     }
 
     bool done = false;
+    auto number_of_iterations = 0;
     while(!done) {
+        number_of_iterations++;
         moveNodesFast(partitions, graph, gamma, resolution_parameter);
         done = checkIfDone(partitions);
         if (!done) {
             auto refined_partitions = refinePartition(partitions, graph, gamma, theta, resolution_parameter);
-            // if (onlySingleCommunity(refined_partitions)) {
-            //     done = true;
-            //     continue;
-            // }
+            if (onlySingleCommunity(refined_partitions)) {
+                done = true;
+                continue;
+            }
             if (checkIfDone(refined_partitions)) {
                 refined_partitions = std::move(partitions);
                 partitions = aggregateGraph(refined_partitions, graph, refined_partitions, intermediary_communities, level);
@@ -352,7 +347,7 @@ Dendrogram leiden(const mg_graph::GraphView<> &memgraph_graph, double gamma, dou
             }
             level++;
         }
-        if (partitions.communities.size() == 1) {
+        if (partitions.communities.size() == 1 || number_of_iterations >= max_iterations) {
             done = true;
         }
     }
@@ -360,9 +355,9 @@ Dendrogram leiden(const mg_graph::GraphView<> &memgraph_graph, double gamma, dou
     return intermediary_communities;
 }
 
-std::vector<std::vector<std::uint64_t>> getCommunities(const mg_graph::GraphView<> &graph, double gamma, double theta, double resolution_parameter) {
+std::vector<std::vector<std::uint64_t>> getCommunities(const mg_graph::GraphView<> &graph, double gamma, double theta, double resolution_parameter, std::uint64_t max_iterations) {
     std::vector<std::vector<std::uint64_t>> node_and_community_hierarchy; // node_id -> list of community_ids
-    const auto communities_hierarchy = leiden(graph, gamma, theta, resolution_parameter);
+    const auto communities_hierarchy = leiden(graph, gamma, theta, resolution_parameter, max_iterations);
     for (const auto &node : communities_hierarchy[0]) {
         std::vector<std::uint64_t> community_ids;
         auto current_community = node;
