@@ -60,7 +60,7 @@ void LeidenCommunityDetection(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
     const auto graph = subgraph
                            ? mg_utility::GetWeightedSubgraphView(memgraph_graph, result, memory, subgraph_nodes, subgraph_relationships, mg_graph::GraphType::kUndirectedGraph, weight_property, 1.0)
                            : mg_utility::GetWeightedGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph, weight_property, 1.0);
-    auto communities = leiden_alg::getCommunities(*graph, gamma, theta, resolution_parameter, max_iterations);
+    auto communities = leiden_alg::GetCommunities(*graph, gamma, theta, resolution_parameter, max_iterations);
 
     for (std::size_t i = 0; i < communities.size(); i++) {
         InsertLeidenRecord(memgraph_graph, result, memory, graph->GetMemgraphNodeId(i), communities[i]);
