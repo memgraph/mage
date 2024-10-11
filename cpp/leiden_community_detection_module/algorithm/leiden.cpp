@@ -11,7 +11,6 @@
 #include "leiden.hpp"
 #include "leiden_utils/leiden_utils.hpp"
 #include "data_structures/graph_view.hpp"
-
 namespace leiden_alg {
 
 const double MAX_DOUBLE = std::numeric_limits<double>::max();
@@ -307,17 +306,25 @@ Dendrogram leiden(const mg_graph::GraphView<> &memgraph_graph, double gamma, dou
     intermediary_communities.emplace_back();
     std::uint64_t level = 0;
     double sum_of_weights = 0.0;
+    boost::unordered_map<std::pair<std::uint64_t, std::uint64_t>, bool> edge_exists;
+    edge_exists.reserve(memgraph_graph.Edges().size());
 
     for (const auto &[id, from, to] : memgraph_graph.Edges()) {
         const auto edge_weight = memgraph_graph.IsWeighted()
                                            ? memgraph_graph.GetWeight(id)
                                            : 1.0;  // Make it positive and cast to Double, fixed to 1.0
         // always add the edge, because the algorithm works on undirected graphs
+
+        if (edge_exists.find(std::make_pair(from, to)) != edge_exists.end() || edge_exists.find(std::make_pair(to, from)) != edge_exists.end()) {
+            continue;
+        }
+            
         graph.addEdge(from, to, edge_weight);
         graph.addEdge(to, from, edge_weight);
+        edge_exists[std::make_pair(to, from)] = true;
         sum_of_weights += edge_weight;
     }
-    gamma /= sum_of_weights;
+    edge_exists.clear();
 
     // initialize partitions and leafs of the dendrogram
     partitions = singletonPartition(graph);
@@ -326,6 +333,7 @@ Dendrogram leiden(const mg_graph::GraphView<> &memgraph_graph, double gamma, dou
         intermediary_communities[0].push_back(std::make_shared<IntermediaryCommunityId>(IntermediaryCommunityId{i, 0, nullptr}));
     }
 
+    gamma /= sum_of_weights;
     bool done = false;
     auto number_of_iterations = 0;
     while(!done) {
@@ -347,7 +355,7 @@ Dendrogram leiden(const mg_graph::GraphView<> &memgraph_graph, double gamma, dou
             }
             level++;
         }
-        if (partitions.communities.size() == 1 || number_of_iterations >= max_iterations) {
+        if (number_of_iterations >= max_iterations) {
             done = true;
         }
     }
