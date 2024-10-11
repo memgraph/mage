@@ -44,8 +44,8 @@ void MoveNodesFast(Partitions &partitions, Graph &graph, double gamma, double re
         nodes.push_back(i);
         nodes_set.insert(i);
     }
-
-    std::shuffle(nodes.begin(), nodes.end(), std::mt19937(std::random_device{}()));
+    static std::mt19937 gen(std::random_device{}());
+    std::shuffle(nodes.begin(), nodes.end(), gen);
 
     while(!nodes.empty()) {
         auto node_id = nodes.front();
