@@ -431,6 +431,11 @@ bool AllSingletonCommunities(const Partitions &partitions) {
 /// @return A dendrogram representing hierarchical communities, where each level captures a coarser aggregation of nodes.
 ///
 Dendrogram Leiden(const mg_graph::GraphView<> &memgraph_graph, double gamma, double theta, double resolution_parameter, std::uint64_t max_iterations) {
+
+    if (memgraph_graph.Nodes().empty() || memgraph_graph.Edges().empty()) {
+        return {};
+    }
+
     Graph graph(memgraph_graph.Nodes().size());
     Partitions partitions;
     Dendrogram intermediary_communities; // level -> community_ids
@@ -507,15 +512,17 @@ Dendrogram Leiden(const mg_graph::GraphView<> &memgraph_graph, double gamma, dou
 std::vector<std::vector<std::uint64_t>> GetCommunities(const mg_graph::GraphView<> &graph, double gamma, double theta, double resolution_parameter, std::uint64_t max_iterations) {
     std::vector<std::vector<std::uint64_t>> node_and_community_hierarchy; // node_id -> list of community_ids
     const auto communities_hierarchy = Leiden(graph, gamma, theta, resolution_parameter, max_iterations);
-    for (const auto &node : communities_hierarchy[0]) {
+    if (!communities_hierarchy.empty()) {
+        for (const auto &node : communities_hierarchy[0]) {
         std::vector<std::uint64_t> community_ids;
-        auto current_community = node;
+        auto current_community = node->parent; // we don't need the leaf, since it's the same as the node_id
         while (current_community != nullptr) {
             community_ids.push_back(current_community->community_id);
             current_community = current_community->parent;
         }
         node_and_community_hierarchy.emplace_back(std::move(community_ids));
-    }
+        }
+    }   
 
     return node_and_community_hierarchy;
 }
