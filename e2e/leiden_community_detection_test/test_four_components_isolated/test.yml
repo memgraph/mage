@@ -11,6 +11,6 @@ output:
     - node_id: 2
       community_id: 0
     - node_id: 3
-      community_id: 3
+      community_id: 1
     - node_id: 4
-      community_id: 4
+      community_id: 2

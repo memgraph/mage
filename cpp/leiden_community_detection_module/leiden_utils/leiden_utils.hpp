@@ -18,6 +18,7 @@ namespace leiden_alg {
 ///
 struct Graph {
     std::vector<std::vector<std::pair<std::uint64_t, double>>> adjacency_list;  ///< node_id -> (neighbor_id, edge_weight)
+    std::vector<double> node_weights;                                           ///< node_id -> node_weight
 
     ///
     /// @brief Adds a directed edge between two nodes in the graph with an optional weight.
@@ -27,9 +28,6 @@ struct Graph {
     /// @param edge_weight The weight of the edge (default is 1.0).
     ///
     void AddEdge(std::uint64_t u, std::uint64_t v, double edge_weight = 1.0) {
-        if (u >= adjacency_list.size()) {
-            adjacency_list.resize(u + 1);
-        }
         adjacency_list[u].emplace_back(v, edge_weight);
     }
 
@@ -60,6 +58,26 @@ struct Graph {
     ///
     const std::vector<std::pair<std::uint64_t, double>> &Neighbors(std::uint64_t node_id) const {
         return adjacency_list[node_id];
+    }
+
+    /// 
+    /// @brief Updates the weight of a given node.
+    /// 
+    /// @param node_id The identifier of the node.
+    /// @param weight The new weight of the node.
+    ///
+    void UpdateNodeWeight(std::uint64_t node_id, double weight = 1.0) {
+        node_weights[node_id] += weight;
+    }
+
+    ///
+    /// @brief Retrieves the weight of a given node.
+    ///
+    /// @param node_id The identifier of the node.
+    /// @return The weight of the node.
+    ///
+    double GetNodeWeight(std::uint64_t node_id) const {
+        return node_weights[node_id];
     }
 };
 

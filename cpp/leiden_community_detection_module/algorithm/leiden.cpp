@@ -28,16 +28,18 @@ const double MAX_DOUBLE = std::numeric_limits<double>::max();
 /// @param graph The graph being analyzed, consisting of nodes and edges.
 /// @param gamma A parameter that influences the modularity calculation during community assignments.
 /// @param resolution_parameter A threshold value that determines the minimum improvement required to move a node.
+/// @return The number of empty communities created during the process.
 ///
 /// @note The function modifies the `partitions` structure directly, updating the community assignments of nodes
 /// and maintaining the integrity of the partitioning process.
 ///
-void MoveNodesFast(Partitions &partitions, Graph &graph, double gamma, double resolution_parameter) {
+std::uint64_t MoveNodesFast(Partitions &partitions, const Graph &graph, double gamma, double resolution_parameter) {
     std::deque<std::uint64_t> nodes;
     std::unordered_set<std::uint64_t> nodes_set;
     std::vector<double> edge_weights_per_community(partitions.communities.size(), 0);
     std::vector<char> visited(partitions.communities.size(), false);
     std::vector<std::uint64_t> neighbor_communities(partitions.communities.size(), 0);
+    std::uint64_t number_of_empty_communities = 0;
     nodes_set.reserve(graph.Size());
     
     for (std::uint64_t i = 0; i < graph.Size(); i++) {
@@ -93,6 +95,9 @@ void MoveNodesFast(Partitions &partitions, Graph &graph, double gamma, double re
             
             std::iter_swap(iterator, community.end() - 1);
             community.pop_back();
+            if (community.empty()) {
+                number_of_empty_communities++;
+            }
 
             partitions.communities[best_community].push_back(node_id);
             partitions.community_id[node_id] = best_community;
@@ -107,6 +112,8 @@ void MoveNodesFast(Partitions &partitions, Graph &graph, double gamma, double re
             }
         }
     }
+
+    return number_of_empty_communities;
 }
 
 /// 
@@ -153,36 +160,34 @@ bool IsInSingletonCommunity(const Partitions &partitions, std::uint64_t node_id)
 ///
 /// @note This function operates on a subset of nodes, updating both the partition and external edge weights to reflect the new structure.
 ///
-void MergeNodesSubset(Partitions &refined_partitions, const Graph &graph, std::uint64_t subset, Partitions &partitions, double gamma, double theta, double resolution_parameter, int &number_of_empty_communities) {
+void MergeNodesSubset(Partitions &refined_partitions, const Graph &graph, const Partitions &original_partitions, std::uint64_t subset, double gamma, double theta, double resolution_parameter, std::uint64_t &number_of_empty_communities) {
     // external_edge_weight[i] - tracks the external edge weight between nodes in cluster i and the other clusters in the same subset
     std::vector<double> external_edge_weight(refined_partitions.communities.size(), 0);
     std::vector<std::uint64_t> neighbor_communities(refined_partitions.communities.size(), 0);
     std::vector<char> visited(refined_partitions.communities.size(), false);
-    std::vector<double> edge_weights(refined_partitions.communities.size(), 0); // edge weight of community
+    std::vector<double> edge_weights(refined_partitions.communities.size(), 0); // edge weight from the node to the community
     std::vector<double> probability_of_merging(refined_partitions.communities.size(), 0);
-    std::uint64_t node_degree_in_subset = 0;
+    double subset_weight = 0;
 
-    const auto &subset_community = partitions.communities[subset];
+    const auto &subset_community = original_partitions.communities[subset];
 
     // at the beginning all nodes are in singleton communities                                 
     for (const auto &node_id : subset_community) {                                
         for (const auto &[neighbor_id, edge_weight] : graph.Neighbors(node_id)) {
-            if (partitions.GetCommunityForNode(neighbor_id) == subset) {
+            if (original_partitions.GetCommunityForNode(neighbor_id) == subset) {
                 external_edge_weight[refined_partitions.GetCommunityForNode(node_id)] += edge_weight;
             }                                                                       
         }
-        const auto node_degree = graph.Neighbors(node_id).size();
-        node_degree_in_subset += node_degree;                                                                                                                       
+        subset_weight += graph.GetNodeWeight(node_id);  
     }                                                                                                                         
     for (const auto &node_id : subset_community) {     
         const auto current_community = refined_partitions.GetCommunityForNode(node_id);
+        const auto node_weight = graph.GetNodeWeight(node_id);
         auto number_of_neighbor_communities = 0;
-
         // check if node is in a singleton community (that means it hasn't been moved to a different community yet) and if node is a well connected node
-        // C - current community, S - subset
+        // S - subset, v - node (vertex)
         // gamma * |v| * (|S| - |v|) -> right term in the equation
-        const auto node_degree = graph.Neighbors(node_id).size();
-        const auto right_term = gamma * static_cast<double>(node_degree) * static_cast<double>(node_degree_in_subset - node_degree);
+        const auto right_term = gamma * node_weight * (subset_weight - node_weight);
         if (IsInSingletonCommunity(refined_partitions, node_id) && external_edge_weight[current_community] >= right_term) {
             auto total_cum_sum = 0.0;
 
@@ -191,7 +196,7 @@ void MergeNodesSubset(Partitions &refined_partitions, const Graph &graph, std::u
 
             // find neighbor communities and calculate edge weights per each community
             for (const auto &[neighbor_id, weight] : graph.Neighbors(node_id)) {
-                if (partitions.GetCommunityForNode(neighbor_id) == subset) {
+                if (original_partitions.GetCommunityForNode(neighbor_id) == subset) {
                     const auto refined_community = refined_partitions.GetCommunityForNode(neighbor_id);
                     edge_weights[refined_community] += weight;
                     if (!visited[refined_community]) {
@@ -280,12 +285,12 @@ void MergeNodesSubset(Partitions &refined_partitions, const Graph &graph, std::u
 ///
 /// @note Communities with only one node are ignored during refinement.
 ///
-std::pair<Partitions, std::uint64_t> RefinePartition(Partitions &partitions, const Graph &graph, double gamma, double theta, double resolution_parameter) {
+std::pair<Partitions, std::uint64_t> RefinePartition(const Partitions &original_partitions, const Graph &graph, double gamma, double theta, double resolution_parameter) {
     auto refined_partitions = CreateSingletonPartition(graph);
-    auto number_of_empty_communities = 0;
-    for (std::uint64_t i = 0; i < partitions.communities.size(); i++) {
-        if (partitions.communities[i].size() > 1) {
-            MergeNodesSubset(refined_partitions, graph, i, partitions, gamma, theta, resolution_parameter, number_of_empty_communities);
+    std::uint64_t number_of_empty_communities = 0;
+    for (std::uint64_t i = 0; i < original_partitions.communities.size(); i++) {
+        if (original_partitions.communities[i].size() > 1) {
+            MergeNodesSubset(refined_partitions, graph, original_partitions, i, gamma, theta, resolution_parameter, number_of_empty_communities);
         }
     }
     return {refined_partitions, number_of_empty_communities};
@@ -304,22 +309,19 @@ std::pair<Partitions, std::uint64_t> RefinePartition(Partitions &partitions, con
 /// @param original_partitions The original partitioning of the graph.
 /// @param intermediary_communities The hierarchical structure of communities, updated with the new level.
 /// @param current_level The current level of the dendrogram hierarchy being built.
-/// @return A new set of partitions representing the aggregated communities.
+/// @return A pair containing the new partitions and the aggregated graph with communities as nodes.
 ///
 /// @note This function leverages parallelism via `std::async` for creating the intermediary communities, as it operates 
 ///       on data that does not interfere with the main graph processing loop.
 ///
-Partitions AggregateGraph(const Partitions &refined_partitions, Graph &graph, Partitions &original_partitions, Dendrogram &intermediary_communities, std::uint64_t current_level) {
+std::pair<Partitions, Graph> AggregateGraph(const Partitions &refined_partitions, const Graph &graph, const Partitions &original_partitions, Dendrogram &intermediary_communities, std::uint64_t current_level) {
     std::vector<std::vector<std::uint64_t>> remapped_communities; // nodes and communities should go from 0 to n
     std::unordered_map<std::uint64_t, std::uint64_t> old_community_to_new_community; // old_community_id -> new_community_id
-    std::vector<std::vector<std::pair<std::uint64_t, double>>> new_adjacency_list;
-    new_adjacency_list.reserve(refined_partitions.communities.size());
     std::uint64_t new_community_id = 0;
     Partitions new_partitions;
-    new_partitions.communities.reserve(refined_partitions.communities.size());
-    new_partitions.community_id.reserve(graph.Size());
-    intermediary_communities.emplace_back();
+    Graph aggregated_graph;
 
+    intermediary_communities.emplace_back();
     // remap communities to go from 0 to n -> this is important since we are using vectors everywhere and positions are important
     for (std::uint64_t i = 0; i < refined_partitions.communities.size(); i++) {
         const auto &community = refined_partitions.communities[i];
@@ -334,7 +336,10 @@ Partitions AggregateGraph(const Partitions &refined_partitions, Graph &graph, Pa
     auto future = std::async(std::launch::async, CreateIntermediaryCommunities, std::ref(intermediary_communities), std::ref(remapped_communities), current_level);
     
     std::unordered_map<std::uint64_t, std::unordered_set<std::uint64_t>> edge_exists; // keep track of already added edges
-    new_adjacency_list = std::vector<std::vector<std::pair<std::uint64_t, double>>>(remapped_communities.size(), std::vector<std::pair<std::uint64_t, double>>());
+
+    // now we now that max size of the new adjacency list is new_community_id because communities become nodes
+    aggregated_graph.adjacency_list.resize(new_community_id);
+    aggregated_graph.node_weights.resize(new_community_id, 0.0);
 
     // create new adjacency list -> if there is an edge between two communities, add it to the new adjacency list
     for (std::uint64_t i = 0; i < graph.adjacency_list.size(); i++) {
@@ -349,17 +354,19 @@ Partitions AggregateGraph(const Partitions &refined_partitions, Graph &graph, Pa
             auto edge_exists_iter = edge_exists.find(new_community_id);
             if (edge_exists_iter != edge_exists.end() && edge_exists_iter->second.find(new_neighbor_community_id) != edge_exists_iter->second.end()) continue; // edge already exists
             
-            // add edge to the adjacency list and update the edge_exists
+            // add edge to the adjacency list, update node weights and add the edge to the edge_exists
             edge_exists[new_community_id].insert(new_neighbor_community_id);
             edge_exists[new_neighbor_community_id].insert(new_community_id);
-            new_adjacency_list[new_community_id].emplace_back(new_neighbor_community_id, weight);
-            new_adjacency_list[new_neighbor_community_id].emplace_back(new_community_id, weight);
+            aggregated_graph.AddEdge(new_community_id, new_neighbor_community_id, weight);
+            aggregated_graph.AddEdge(new_neighbor_community_id, new_community_id, weight);
+            aggregated_graph.UpdateNodeWeight(new_community_id, weight);
+            aggregated_graph.UpdateNodeWeight(new_neighbor_community_id, weight);
         }
     }
 
-    graph.adjacency_list = std::move(new_adjacency_list);
     new_community_id = 0;
-    new_partitions.community_id = std::vector<std::uint64_t>(graph.Size(), -1);
+    new_partitions.communities.reserve(remapped_communities.size());
+    new_partitions.community_id.resize(graph.Size(), 0);
 
     // create new partitions -> communities that are a subset of the original community are added to the new partitions as a part of the same community
     for (const auto &community_list : original_partitions.communities) {
@@ -383,7 +390,7 @@ Partitions AggregateGraph(const Partitions &refined_partitions, Graph &graph, Pa
 
     future.wait();
 
-    return new_partitions;
+    return {new_partitions, aggregated_graph};
 }
 
 ///
@@ -426,10 +433,13 @@ Dendrogram Leiden(const mg_graph::GraphView<> &memgraph_graph, double gamma, dou
     Partitions partitions;
     Dendrogram intermediary_communities; // level -> community_ids
     intermediary_communities.emplace_back();
+    intermediary_communities[0].reserve(memgraph_graph.Nodes().size());
     std::uint64_t level = 0;
     double sum_of_weights = 0.0;
     boost::unordered_map<std::pair<std::uint64_t, std::uint64_t>, bool> edge_exists;
     edge_exists.reserve(memgraph_graph.Edges().size());
+    graph.adjacency_list.resize(memgraph_graph.Nodes().size());
+    graph.node_weights.resize(memgraph_graph.Nodes().size(), 0.0);
 
     for (const auto &[id, from, to] : memgraph_graph.Edges()) {
         const auto edge_weight = memgraph_graph.IsWeighted()
@@ -443,11 +453,12 @@ Dendrogram Leiden(const mg_graph::GraphView<> &memgraph_graph, double gamma, dou
             
         graph.AddEdge(from, to, edge_weight);
         graph.AddEdge(to, from, edge_weight);
+        graph.UpdateNodeWeight(from, edge_weight);
+        graph.UpdateNodeWeight(to, edge_weight);
         edge_exists[std::make_pair(to, from)] = true;
         sum_of_weights += edge_weight;
     }
     edge_exists.clear();
-
     bool any_isolated_nodes = memgraph_graph.Nodes().size() != graph.Size();
 
     // initialize partitions and leafs of the dendrogram
@@ -459,24 +470,29 @@ Dendrogram Leiden(const mg_graph::GraphView<> &memgraph_graph, double gamma, dou
 
     gamma /= sum_of_weights;
     bool done = false;
-    auto number_of_iterations = 0;
+    std::uint64_t number_of_iterations = 0;
     while(!done) {
         number_of_iterations++;
-        MoveNodesFast(partitions, graph, gamma, resolution_parameter);
+        const auto empty_communities = MoveNodesFast(partitions, graph, gamma, resolution_parameter);
         done = AllSingletonCommunities(partitions);
         if (!done) {
-            auto [refined_partitions, number_of_empty_communities] = RefinePartition(partitions, graph, gamma, theta, resolution_parameter);
+            auto [refined_partitions, refined_empty_communities] = RefinePartition(partitions, graph, gamma, theta, resolution_parameter);
             // if there are no isolated nodes and we have only one non-empty community, we can stop -> otherwise, we will end up with all nodes in the same community which doesn't make sense
-            if (number_of_empty_communities == refined_partitions.communities.size() - 1 && !any_isolated_nodes) {
+            if (refined_empty_communities == (refined_partitions.communities.size() - 1) && !any_isolated_nodes) {
                 done = true;
             }
             // this means that no nodes were moved to a different community -> we will use communities from MoveNodesFast 
-            else if (number_of_empty_communities == 0) {
+            else if (refined_empty_communities == 0) {
+                // this check is mandatory because we can end up with all nodes in the same community
+                if (empty_communities == partitions.communities.size() - 1) {
+                    done = true;
+                    continue;
+                }                 
                 refined_partitions = std::move(partitions);
-                partitions = AggregateGraph(refined_partitions, graph, refined_partitions, intermediary_communities, level);
+                std::tie(partitions, graph) = AggregateGraph(refined_partitions, graph, refined_partitions, intermediary_communities, level);
             }
             else {
-                partitions = AggregateGraph(refined_partitions, graph, partitions, intermediary_communities, level);
+                std::tie(partitions, graph) = AggregateGraph(refined_partitions, graph, partitions, intermediary_communities, level);
             }
             level++;
         }
