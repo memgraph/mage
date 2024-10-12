@@ -17,8 +17,9 @@ namespace leiden_alg {
 /// Each adjacency list contains pairs of neighboring node identifiers and the weights of edges to those neighbors.
 ///
 struct Graph {
-    std::vector<std::vector<std::pair<std::uint64_t, double>>> adjacency_list;  ///< node_id -> (neighbor_id, edge_weight)
-    std::vector<double> node_weights;                                           ///< node_id -> node_weight
+
+    Graph() = default;
+    explicit Graph(std::uint64_t size) : adjacency_list(size), node_weights(size, 0.0) {}
 
     ///
     /// @brief Adds a directed edge between two nodes in the graph with an optional weight.
@@ -79,6 +80,9 @@ struct Graph {
     double GetNodeWeight(std::uint64_t node_id) const {
         return node_weights[node_id];
     }
+
+    std::vector<std::vector<std::pair<std::uint64_t, double>>> adjacency_list;  ///< node_id -> (neighbor_id, edge_weight)
+    std::vector<double> node_weights;                                           ///< node_id -> node_weight
 };
 
 ///

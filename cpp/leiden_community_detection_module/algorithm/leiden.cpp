@@ -161,6 +161,7 @@ bool IsInSingletonCommunity(const Partitions &partitions, std::uint64_t node_id)
 /// @note This function operates on a subset of nodes, updating both the partition and external edge weights to reflect the new structure.
 ///
 void MergeNodesSubset(Partitions &refined_partitions, const Graph &graph, const Partitions &original_partitions, std::uint64_t subset, double gamma, double theta, double resolution_parameter, std::uint64_t &number_of_empty_communities) {
+    // TODO (DavIvek): Consider making some kind of mappings from subset to original partitions -> this vectors could be smaller
     // external_edge_weight[i] - tracks the external edge weight between nodes in cluster i and the other clusters in the same subset
     std::vector<double> external_edge_weight(refined_partitions.communities.size(), 0);
     std::vector<std::uint64_t> neighbor_communities(refined_partitions.communities.size(), 0);
@@ -179,7 +180,8 @@ void MergeNodesSubset(Partitions &refined_partitions, const Graph &graph, const 
             }                                                                       
         }
         subset_weight += graph.GetNodeWeight(node_id);  
-    }                                                                                                                         
+    } 
+
     for (const auto &node_id : subset_community) {     
         const auto current_community = refined_partitions.GetCommunityForNode(node_id);
         const auto node_weight = graph.GetNodeWeight(node_id);
@@ -429,7 +431,7 @@ bool AllSingletonCommunities(const Partitions &partitions) {
 /// @return A dendrogram representing hierarchical communities, where each level captures a coarser aggregation of nodes.
 ///
 Dendrogram Leiden(const mg_graph::GraphView<> &memgraph_graph, double gamma, double theta, double resolution_parameter, std::uint64_t max_iterations) {
-    Graph graph;
+    Graph graph(memgraph_graph.Nodes().size());
     Partitions partitions;
     Dendrogram intermediary_communities; // level -> community_ids
     intermediary_communities.emplace_back();
@@ -438,8 +440,6 @@ Dendrogram Leiden(const mg_graph::GraphView<> &memgraph_graph, double gamma, dou
     double sum_of_weights = 0.0;
     boost::unordered_map<std::pair<std::uint64_t, std::uint64_t>, bool> edge_exists;
     edge_exists.reserve(memgraph_graph.Edges().size());
-    graph.adjacency_list.resize(memgraph_graph.Nodes().size());
-    graph.node_weights.resize(memgraph_graph.Nodes().size(), 0.0);
 
     for (const auto &[id, from, to] : memgraph_graph.Edges()) {
         const auto edge_weight = memgraph_graph.IsWeighted()
