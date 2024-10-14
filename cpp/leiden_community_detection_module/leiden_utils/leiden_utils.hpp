@@ -1,9 +1,5 @@
 #pragma once
 
-#ifndef LEIDEN_UTILS_HPP
-#define LEIDEN_UTILS_HPP
-
-#include <atomic>
 #include <memory>
 #include <vector>
 
@@ -145,5 +141,3 @@ void CreateIntermediaryCommunities(Dendrogram &intermediary_communities,
                                    std::uint64_t current_level);
 
 }  // namespace leiden_alg
-
-#endif  // LEIDEN_UTILS_HPP
