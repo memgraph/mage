@@ -209,6 +209,7 @@ To learn more about development with MAGE and Docker, visit the
   - libcurl4
   - libpython3.9
   - libssl-dev
+  - libboost-all-dev
   - openssl 
   - build-essential
   - make     
