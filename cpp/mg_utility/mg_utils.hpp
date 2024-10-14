@@ -282,7 +282,8 @@ void InsertNodeValueResult(mgp_result_record *record, const char *field_name, mg
 
 // Inserts a list of value list_value to the field field_name of
 // the record mgp_result_record record.
-void InsertListValueResult(mgp_result_record *record, const char *field_name, mgp_list *list_value, mgp_memory *memory) {
+void InsertListValueResult(mgp_result_record *record, const char *field_name, mgp_list *list_value,
+                           mgp_memory *memory) {
   auto value = mgp::value_make_list(list_value);
   InsertRecord(record, field_name, value);
 }
