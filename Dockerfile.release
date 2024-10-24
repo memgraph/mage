@@ -1,6 +1,7 @@
 ARG PY_VERSION_DEFAULT=3.9
+ARG OS_VERSION=bullseye
 
-FROM debian:bullseye as base
+FROM debian:${OS_VERSION} as base
 
 USER root
 
@@ -10,28 +11,32 @@ ENV PY_VERSION ${PY_VERSION_DEFAULT}
 
 #essentials for production/dev
 RUN apt-get update && apt-get install -y \
-    libcurl4        `memgraph` \
-    libpython${PY_VERSION}   `memgraph` \
-    libssl-dev       `memgraph` \
-    openssl         `memgraph` \
-    build-essential `mage-memgraph` \
-    cmake           `mage-memgraph` \
-    curl            `mage-memgraph` \
-    g++             `mage-memgraph` \
-    python3         `mage-memgraph` \
-    python3-pip     `mage-memgraph` \
-    python3-setuptools     `mage-memgraph` \
-    python3-dev     `mage-memgraph` \
-    clang           `mage-memgraph` \
-    git             `mage-memgraph` \
-    unixodbc-dev        `mage-memgraph` \
+    libcurl4 \
+    libpython${PY_VERSION} \
+    libssl-dev \
+    openssl \
+    build-essential \
+    cmake \
+    curl \
+    g++ \
+    python3 \
+    python3-pip \
+    python3-setuptools \
+    python3-dev \
+    python${PY_VERSION}-venv \
+    clang \
+    git \
+    unixodbc-dev \
     gdb \
     procps \
     linux-perf \
     libc6-dbg \
     --no-install-recommends \
-    && ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+RUN if [ "$OS_VERSION" = "bullseye" ]; then \
+  ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf; \
+  fi
 
 COPY memgraph-${TARGETARCH}.deb .
 
@@ -50,22 +55,34 @@ FROM base as dev
 ARG BUILD_TYPE=Release
 
 WORKDIR /mage
-COPY . /mage
-
-
-#MAGE
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
     && export PATH="/root/.cargo/bin:${PATH}" \
-    && python3 -m  pip install -r /mage/python/requirements.txt \
-    && python3 -m  pip install -r /mage/python/tests/requirements.txt \
-    && python3 -m  pip install torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-1.12.0+cu102.html \
+    && python3 -m venv /mage/venv
+
+#MAGE
+COPY ./python/requirements.txt /mage/python/requirements.txt
+RUN . /mage/venv/bin/activate \
+    && python3 -m pip install -r /mage/python/requirements.txt
+
+COPY ./python/tests/requirements.txt /mage/python/tests/requirements.txt
+RUN . /mage/venv/bin/activate \
+    && python3 -m pip install -r /mage/python/tests/requirements.txt
+
+RUN . /mage/venv/bin/activate \
+    && python3 -m pip install torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.4.0+cu124.html
+
+COPY . /mage
+RUN . /mage/venv/bin/activate \
+    && export PATH="/root/.cargo/bin:${PATH}" \
     && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/ --cpp-build-flags CMAKE_BUILD_TYPE=${BUILD_TYPE} \
     && chown -R memgraph: /mage/e2e
 
 #DGL build from source
 RUN git clone --recurse-submodules -b 0.9.x https://github.com/dmlc/dgl.git  \
     && cd dgl && mkdir build && cd build && cmake .. \
-    && make -j4 && cd ../python && python3 setup.py install
+    && make -j4 && cd ../python \
+    && . /mage/venv/bin/activate \
+    && python3 setup.py install
 
 USER memgraph
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]

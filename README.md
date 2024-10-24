@@ -238,7 +238,7 @@ curl https://sh.rustup.rs -sSf | sh -s -- -y \
 && export PATH="/root/.cargo/bin:${PATH}" \
 && python3 -m  pip install -r /mage/python/requirements.txt \
 && python3 -m  pip install -r /mage/python/tests/requirements.txt \
-&& python3 -m  pip install torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-1.12.0+cu102.html \
+&& python3 -m  pip install torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.4.0+cu124.html \
 ```
 
 

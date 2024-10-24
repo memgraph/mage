@@ -13,5 +13,5 @@ python-Levenshtein==0.12.1
 scikit-learn==1.5.2
 scipy==1.13.0
 six==1.16.0
-torch==2.4.1
+torch==2.4.0
 torchmetrics==1.4.2
