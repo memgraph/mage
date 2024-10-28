@@ -196,8 +196,9 @@ void MergeNodesSubset(Partitions &refined_partitions, const Graph &graph, const 
     const auto node_weight = graph.GetNodeWeight(node_id);
     auto number_of_neighbor_communities = 0;
     // check if node is in a singleton community (that means it hasn't been moved to a different community yet) and if
-    // node is a well connected node S - subset, v - node (vertex) gamma * |v| * (|S| - |v|) -> right term in the
-    // equation
+    // node is a well connected node 
+    // S - subset, v - node (vertex) 
+    // gamma * |v| * (|S| - |v|) -> right term in the equation
     const auto right_term = gamma * node_weight * (subset_weight - node_weight);
     if (IsInSingletonCommunity(refined_partitions, node_id) && external_edge_weight[current_community] >= right_term) {
       auto total_cum_sum = 0.0;
@@ -542,14 +543,20 @@ Dendrogram Leiden(const mg_graph::GraphView<> &memgraph_graph, double gamma, dou
 std::vector<std::vector<std::uint64_t>> GetCommunities(const mg_graph::GraphView<> &graph, double gamma, double theta,
                                                        double resolution_parameter, std::uint64_t max_iterations) {
   std::vector<std::vector<std::uint64_t>> node_and_community_hierarchy;  // node_id -> list of community_ids
+  node_and_community_hierarchy.reserve(graph.Nodes().size());
   const auto communities_hierarchy = Leiden(graph, gamma, theta, resolution_parameter, max_iterations);
   if (!communities_hierarchy.empty()) {
     for (const auto &node : communities_hierarchy[0]) {
       std::vector<std::uint64_t> community_ids;
+      community_ids.reserve(communities_hierarchy.size());
       auto current_community = node->parent;  // we don't need the leaf, since it's the same as the node_id
       while (current_community != nullptr) {
         community_ids.push_back(current_community->community_id);
         current_community = current_community->parent;
+      }
+
+      if (community_ids.empty()) {
+        throw std::runtime_error("No communities detected.");
       }
       node_and_community_hierarchy.emplace_back(std::move(community_ids));
     }
