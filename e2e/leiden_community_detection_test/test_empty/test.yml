@@ -3,4 +3,4 @@ query: >
     RETURN node.id AS node_id, community_id, communities
     ORDER BY node_id ASC
 
-output: []
+exception: "No communities detected."
