@@ -6,6 +6,7 @@
 #include "_mgp.hpp"
 #include "algorithm/leiden.hpp"
 #include "mg_procedure.h"
+#include "mgp.hpp"
 
 
 namespace {
@@ -61,7 +62,10 @@ void LeidenCommunityDetection(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
                            ? mg_utility::GetWeightedSubgraphView(memgraph_graph, result, memory, subgraph_nodes, subgraph_relationships, mg_graph::GraphType::kUndirectedGraph, weight_property, 1.0)
                            : mg_utility::GetWeightedGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph, weight_property, 1.0);
     auto communities = leiden_alg::GetCommunities(*graph, gamma, theta, resolution_parameter, max_iterations);
-    if (communities.empty()) return;
+    if (communities.empty()) {
+        mgp::result_set_error_msg(result, "No communities detected.");
+        return;
+    }
 
     for (std::size_t i = 0; i < communities.size(); i++) {
         InsertLeidenRecord(memgraph_graph, result, memory, graph->GetMemgraphNodeId(i), communities[i]);
@@ -69,6 +73,7 @@ void LeidenCommunityDetection(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
 }
 
 void OnGraph(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+    mgp::MemoryDispatcherGuard guard{memory};
     try {
         LeidenCommunityDetection(args, memgraph_graph, result, memory, false);
     } catch (const std::exception &e) {
@@ -78,6 +83,7 @@ void OnGraph(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_
 }
 
 void OnSubgraph(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+    mgp::MemoryDispatcherGuard guard{memory};
     try {
         LeidenCommunityDetection(args, memgraph_graph, result, memory, true);
     } catch (const std::exception &e) {
@@ -88,6 +94,7 @@ void OnSubgraph(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, m
 
 
 extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
+    mgp::MemoryDispatcherGuard guard{memory};
     try {
         auto *const default_weight_property = mgp::value_make_string(kDefaultWeightProperty, memory);
         auto *const default_gamma = mgp::value_make_double(kDefaultGamma, memory);
@@ -95,7 +102,6 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
         auto *const default_resolution_parameter = mgp::value_make_double(kDefaultResolutionParameter, memory);
         auto *const default_max_iterations = mgp::value_make_int(kDefaultMaxIterations, memory);
 
-        mgp::MemoryDispatcherGuard guard{memory};
         {   
             auto *proc = mgp::module_add_read_procedure(module, kProcedureGet, OnGraph);
             mgp::proc_add_opt_arg(proc, "weight_property", mgp::type_string(), default_weight_property);
