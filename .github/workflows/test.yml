@@ -57,7 +57,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mg_version: ["2.19.0"]
+        mg_version: ["2.21.0"]
         mg_rc_version: ["rc1"]
         arch: ["amd64", "arm64"]
         build_target: ["prod", "dev"]
