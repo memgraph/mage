@@ -83,6 +83,7 @@ ENV PY_VERSION ${PY_VERSION_DEFAULT}
 
 #copy modules
 COPY --from=dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
+COPY --from=dev /usr/lib/memgraph/auth_module/ /usr/lib/memgraph/auth_module/
 
 #copy python build
 COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
@@ -97,7 +98,8 @@ RUN mv /mage/e2e /e2e/ \
     && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
     && apt-get -y --purge autoremove clang git curl python3-pip python3-dev cmake build-essential \
     && apt-get clean
-
+    
+RUN pip3 install --no-cache-dir --break-system-packages -r /usr/lib/memgraph/auth_module/requirements.txt
 
 USER memgraph
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
