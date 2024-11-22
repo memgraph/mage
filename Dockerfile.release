@@ -59,6 +59,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
     && export PATH="/root/.cargo/bin:${PATH}" \
     && python3 -m  pip install -r /mage/python/requirements.txt \
     && python3 -m  pip install -r /mage/python/tests/requirements.txt \
+    && python3 -m  pip install --no-cache-dir --break-system-packages -r /usr/lib/memgraph/auth_module/requirements.txt \
     && python3 -m  pip install torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-1.12.0+cu102.html \
     && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/ --cpp-build-flags CMAKE_BUILD_TYPE=${BUILD_TYPE} \
     && chown -R memgraph: /mage/e2e
@@ -98,8 +99,6 @@ RUN mv /mage/e2e /e2e/ \
     && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
     && apt-get -y --purge autoremove clang git curl python3-pip python3-dev cmake build-essential \
     && apt-get clean
-    
-RUN pip3 install --no-cache-dir --break-system-packages -r /usr/lib/memgraph/auth_module/requirements.txt
 
 USER memgraph
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
