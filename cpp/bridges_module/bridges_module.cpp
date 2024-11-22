@@ -1,5 +1,6 @@
 #include <mg_exceptions.hpp>
 #include <mg_utils.hpp>
+#include <mgp.hpp>
 
 #include "algorithm/bridges.hpp"
 
@@ -25,6 +26,7 @@ void InsertBridgeRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory
 }
 
 void GetBridges(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
   try {
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
     auto bridges = bridges_alg::GetBridges(*graph);
@@ -44,6 +46,7 @@ void GetBridges(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, m
 // Each module needs to define mgp_init_module function.
 // Here you can register multiple procedures your module supports.
 extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
   try {
     auto *proc = mgp::module_add_read_procedure(module, kProcedureGet, GetBridges);
     mgp::proc_add_result(proc, k_field_node_from, mgp::type_node());

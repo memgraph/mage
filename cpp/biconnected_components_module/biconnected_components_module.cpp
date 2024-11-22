@@ -1,5 +1,6 @@
 #include <mg_exceptions.hpp>
 #include <mg_utils.hpp>
+#include <mgp.hpp>
 
 #include "algorithm/biconnected_components.hpp"
 
@@ -28,6 +29,7 @@ void InsertBiconnectedComponentRecord(mgp_graph *graph, mgp_result *result, mgp_
 }
 
 void GetBiconnectedComponents(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
   try {
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
 
@@ -53,6 +55,7 @@ void GetBiconnectedComponents(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
 // Each module needs to define mgp_init_module function.
 // Here you can register multiple procedures your module supports.
 extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
   try {
     auto *proc = mgp::module_add_read_procedure(module, kProcedureGet, GetBiconnectedComponents);
 

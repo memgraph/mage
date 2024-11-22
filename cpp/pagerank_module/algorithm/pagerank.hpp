@@ -1,6 +1,7 @@
 #pragma once
 
-#include <future>
+#include <cstdint>
+#include <vector>
 
 namespace pagerank_alg {
 

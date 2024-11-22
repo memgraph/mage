@@ -1,3 +1,5 @@
+#include <mgp.hpp>
+
 #include <omp.h>
 #include <queue>
 #include <stack>

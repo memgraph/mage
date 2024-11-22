@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include <mgp.hpp>
 #include <omp.h>
 
 ///@brief Remove repeat elements from vector except for the first instance. The vector is modified in-place.
