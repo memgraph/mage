@@ -1,6 +1,7 @@
-#include <list>
-
 #include <mgp.hpp>
+
+#include <list>
+#include <set>
 
 const char *kResultAncestors = "ancestors";
 

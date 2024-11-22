@@ -1,6 +1,6 @@
 #include <algorithm>
 #include <numeric>
-#include <queue>
+#include <future>
 
 #include "pagerank.hpp"
 

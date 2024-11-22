@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <deque>
 
 #include "data_structures/graph_view.hpp"
 #include "leiden.hpp"
