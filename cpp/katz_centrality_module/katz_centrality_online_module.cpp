@@ -40,7 +40,6 @@ void InsertMessageRecord(mgp_result *result, mgp_memory *memory, const char *mes
 }
 
 void GetKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};
   try {
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
     auto katz_centralities = katz_alg::GetKatz(*graph);
@@ -55,7 +54,6 @@ void GetKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *re
 }
 
 void SetKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};
   try {
     auto alpha = mgp::value_get_double(mgp::list_at(args, 0));
     auto epsilon = mgp::value_get_double(mgp::list_at(args, 1));
@@ -159,7 +157,6 @@ void UpdateKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
 }
 
 void KatzCentralityReset(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};
   try {
     katz_alg::Reset();
     InsertMessageRecord(result, memory, "The algorithm has been successfully reset!");
@@ -170,7 +167,6 @@ void KatzCentralityReset(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *
 }  // namespace
 
 extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};
   try {
     // Dynamic Katz centrality
     {

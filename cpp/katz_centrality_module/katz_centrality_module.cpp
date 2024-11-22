@@ -1,7 +1,6 @@
 #include "algorithm/katz.hpp"
 
 #include <mg_utils.hpp>
-#include "mgp.hpp"
 
 namespace {
 
@@ -26,7 +25,6 @@ void InsertKatzRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, 
 }
 
 void GetKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};
   try {
     auto alpha = mgp::value_get_double(mgp::list_at(args, 0));
     auto epsilon = mgp::value_get_double(mgp::list_at(args, 1));
@@ -46,7 +44,6 @@ void GetKatzCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *re
 }  // namespace
 
 extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};
   try {
     // Static Katz centrality
     {

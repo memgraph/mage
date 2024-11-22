@@ -1,6 +1,5 @@
 #include <mg_exceptions.hpp>
 #include <mg_utils.hpp>
-#include <mgp.hpp>
 
 #include "algorithm/bipartite_matching.hpp"
 
@@ -17,7 +16,6 @@ void InsertBipartiteMatchingRecord(mgp_result *result, mgp_memory *memory, const
 }
 
 void GetMaximumBipartiteMatching(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};
   try {
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
     auto maximum_bipartite_matching = bipartite_matching_alg::BipartiteMatching(*graph);
@@ -34,7 +32,6 @@ void GetMaximumBipartiteMatching(mgp_list *args, mgp_graph *memgraph_graph, mgp_
 // Each module needs to define mgp_init_module function.
 // Here you can register multiple procedures your module supports.
 extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};
   try {
     mgp_proc *proc = mgp::module_add_read_procedure(module, kProcedureMax, GetMaximumBipartiteMatching);
 

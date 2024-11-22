@@ -1,7 +1,6 @@
 #include <thread>
 
 #include <mg_utils.hpp>
-#include <mgp.hpp>
 
 #include "algorithm/betweenness_centrality.hpp"
 
@@ -29,7 +28,6 @@ void InsertBCRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, co
 }
 
 void GetBetweennessCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};
   try {
     auto directed = mgp::value_get_bool(mgp::list_at(args, 0));
     auto normalize = mgp::value_get_bool(mgp::list_at(args, 1));
@@ -57,7 +55,6 @@ void GetBetweennessCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
 // Each module needs to define mgp_init_module function.
 // Here you can register multiple procedures your module supports.
 extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};
   mgp_value *bool_value_directed;
   mgp_value *bool_value_normalized;
   mgp_value *int_value_threads;
