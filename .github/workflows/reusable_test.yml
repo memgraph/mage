@@ -180,7 +180,7 @@ jobs:
         run: |
           cd e2e
           docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c \
-          "cd /mage/e2e/ && python3 -m pytest . -k 'not cugraph and not node_classification and not link_prediction and not text ${{ inputs.build_scope == 'without ML' && 'and not tgn' || '' }}'"
+          "cd /mage/e2e/ && python3 -m pytest . -k 'not cugraph ${{ inputs.build_scope == 'without ML' && 'and not tgn' || '' }}'"
 
       - name: Run End-to-end correctness tests
         if: inputs.arch != 'arm64'
