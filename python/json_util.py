@@ -36,6 +36,23 @@ def load_from_path(ctx: mgp.ProcCtx, path: str) -> mgp.Record(objects=mgp.List[o
 
 
 @mgp.read_proc
+def load_from_str(ctx: mgp.ProcCtx, json_str: str) -> mgp.Record(objects=mgp.List[object]):
+    """
+    Procedure to load JSON from a string.
+
+    Parameters
+    ----------
+    json_str : str
+        JSON string that is being loaded.
+    """
+    objects = json.loads(json_str)
+    if type(objects) is dict:
+        objects = [objects]
+
+    return mgp.Record(objects=objects)
+
+
+@mgp.read_proc
 def load_from_url(ctx: mgp.ProcCtx, url: str) -> mgp.Record(objects=mgp.List[object]):
     """
     Procedure to load JSON from a remote address.
