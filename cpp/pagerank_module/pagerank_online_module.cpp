@@ -72,36 +72,36 @@ void OnlinePagerankSet(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *re
 void OnlinePagerankUpdate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
     // Created vertices
-    auto created_vertices_list = mgp::value_get_list(mgp::list_at(args, 0));
+    auto *created_vertices_list = mgp::value_get_list(mgp::list_at(args, 0));
     auto size = mgp::list_size(created_vertices_list);
     auto created_vertices = std::vector<std::uint64_t>(size);
     for (std::size_t i = 0; i < size; i++) {
       created_vertices[i] = mgp::vertex_get_id(mgp::value_get_vertex(mgp::list_at(created_vertices_list, i))).as_int;
     }
 
-    auto created_edges_list = mgp::value_get_list(mgp::list_at(args, 1));
+    auto *created_edges_list = mgp::value_get_list(mgp::list_at(args, 1));
     size = mgp::list_size(created_edges_list);
     auto created_edges = std::vector<std::pair<std::uint64_t, std::uint64_t>>(size);
     for (std::size_t i = 0; i < size; i++) {
-      auto edge = mgp::value_get_edge(mgp::list_at(created_edges_list, i));
+      auto *edge = mgp::value_get_edge(mgp::list_at(created_edges_list, i));
       auto from = mgp::vertex_get_id(mgp::edge_get_from(edge)).as_int;
       auto to = mgp::vertex_get_id(mgp::edge_get_to(edge)).as_int;
       created_edges[i] = std::make_pair(from, to);
     }
 
     // Deleted vertices
-    auto deleted_vertices_list = mgp::value_get_list(mgp::list_at(args, 2));
+    auto *deleted_vertices_list = mgp::value_get_list(mgp::list_at(args, 2));
     size = mgp::list_size(deleted_vertices_list);
     auto deleted_vertices = std::vector<std::uint64_t>(size);
     for (std::size_t i = 0; i < size; i++) {
       deleted_vertices[i] = mgp::vertex_get_id(mgp::value_get_vertex(mgp::list_at(deleted_vertices_list, i))).as_int;
     }
 
-    auto deleted_edges_list = mgp::value_get_list(mgp::list_at(args, 3));
+    auto *deleted_edges_list = mgp::value_get_list(mgp::list_at(args, 3));
     size = mgp::list_size(deleted_edges_list);
     auto deleted_edges = std::vector<std::pair<std::uint64_t, std::uint64_t>>(size);
     for (std::size_t i = 0; i < size; i++) {
-      auto edge = mgp::value_get_edge(mgp::list_at(deleted_edges_list, i));
+      auto *edge = mgp::value_get_edge(mgp::list_at(deleted_edges_list, i));
       auto from = mgp::vertex_get_id(mgp::edge_get_from(edge)).as_int;
       auto to = mgp::vertex_get_id(mgp::edge_get_to(edge)).as_int;
       deleted_edges[i] = std::make_pair(from, to);

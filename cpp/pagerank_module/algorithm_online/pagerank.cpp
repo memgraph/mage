@@ -222,7 +222,7 @@ void UpdateDelete(const mg_graph::GraphView<> &graph, const std::pair<std::uint6
 ///@param graph Graph for updating
 ///@param removed_vertex Removed vertex
 ///
-void UpdateDelete(const mg_graph::GraphView<> &graph, std::uint64_t removed_vertex) {
+void UpdateDelete(std::uint64_t removed_vertex) {
   pagerank_online_alg::context.walks_table.erase(removed_vertex);
   pagerank_online_alg::context.walks_counter.erase(removed_vertex);
 }
@@ -291,7 +291,7 @@ std::vector<std::pair<std::uint64_t, double>> UpdatePagerank(
     UpdateDelete(graph, edge);
   }
   for (const auto vertex : deleted_vertices) {
-    UpdateDelete(graph, vertex);
+    UpdateDelete(vertex);
   }
   for (const auto vertex : new_vertices) {
     UpdateCreate(graph, vertex);
