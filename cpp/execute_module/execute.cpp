@@ -11,6 +11,7 @@ constexpr char *kArgumentInputQuery = "input_query";
 constexpr char *kArgumentParameters = "parameters";
 constexpr char *kArgumentConfig = "config";
 constexpr char *kReturnSuccess = "success";
+constexpr char *kReturnNumberOfRetries = "number_of_retries";
 
 constexpr char *kConfigKeyMaxRetries = "max_retries";
 constexpr char *kConfigKeyRetryType = "retry_type";
@@ -88,6 +89,7 @@ void ExecuteQuery(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
     }
   }
 
+  int64_t number_of_retries = 0;
   do {
     try {
       auto input_query_execution = mgp::QueryExecution(memgraph_graph);
@@ -97,23 +99,27 @@ void ExecuteQuery(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
       }
 
       record.Insert(kReturnSuccess, true);
-    } catch (const mg_exception::SerializationException &e) {
-      record_factory.SetErrorMessage(e.what());
-      record.Insert(kReturnSuccess, false);
-      max_retries--;
+      record.Insert(kReturnNumberOfRetries, number_of_retries);
+      return;
+    } catch (const mg_exception::RetryBasicException &) {
+      number_of_retries++;
 
-      std::this_thread::sleep_for(std::chrono::milliseconds(initial_backoff));
-      if (backoff == kConfigKeyExponentialBackoff) {
-        initial_backoff *= 2;
+      if (number_of_retries <= max_retries) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(initial_backoff));
+        if (backoff == kConfigKeyExponentialBackoff) {
+          initial_backoff *= 2;
+        }
       }
     } catch (const std::exception &e) {
       record_factory.SetErrorMessage(e.what());
       record.Insert(kReturnSuccess, false);
+      record.Insert(kReturnNumberOfRetries, number_of_retries);
       return;
     }
-  } while (max_retries > 0);
+  } while (number_of_retries <= max_retries);
 
-  record_factory.SetErrorMessage("Did not successfully execute query!");
+  record_factory.SetErrorMessage(
+      fmt::format("Did not successfully execute query! Number of retries: {}.", max_retries));
   record.Insert(kReturnSuccess, false);
   return;
 }
@@ -125,7 +131,8 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
         ExecuteQuery, kProcedureExecuteQuery, mgp::ProcedureType::Read,
         {mgp::Parameter(kArgumentInputQuery, mgp::Type::String), mgp::Parameter(kArgumentParameters, mgp::Type::Map),
          mgp::Parameter(kArgumentConfig, mgp::Type::Map)},
-        {mgp::Return(kReturnSuccess, mgp::Type::Bool)}, module, memory);
+        {mgp::Return(kReturnSuccess, mgp::Type::Bool), mgp::Return(kReturnNumberOfRetries, mgp::Type::Int)}, module,
+        memory);
   } catch (const std::exception &e) {
     return 1;
   }
