@@ -1,17 +1,17 @@
 cython==3.0.11
-numpy==2.2.1
+numpy==1.26.0 # gekko 1.2.1 depends on numpy>=1.8.0 and gensim 4.3.3 depends on numpy<2.0 and >=1.18.5
 defusedxml==0.7.1
 elasticsearch==8.17.0
 gekko==1.2.1
 gensim==4.3.3
-gqlalchemy==1.6.0
+gqlalchemy==1.6.0 
 igraph==0.11.8
 mysql-connector-python==9.1.0
-networkx==3.4.2
+networkx==2.8.8 # gqlalchemy 1.6.0 depends on networkx<3.0.0 and >=2.5.1
 oracledb==2.5.1
 psycopg2-binary==2.9.10
 pyodbc==5.2.0
 python-Levenshtein==0.26.1
 scikit-learn==1.6.1
-scipy==1.15.1
+scipy==1.13.1 # gensim 4.3.3 depends on scipy<1.14.0 and >=1.7.0
 six==1.17.0
