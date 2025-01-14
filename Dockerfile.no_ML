@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
     curl \
-    g++-15 \
+    g++ \
     python3 \
     python3-pip \
     python3-setuptools \
