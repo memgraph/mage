@@ -45,6 +45,7 @@ RUN apt-get update && apt-get install -y \
     software-properties-common  `mage-cugraph` \
     lsb-release `mage-cugraph` \
     wget `mage-cugraph` \
+    uuid-dev \
     gdb \
     procps \
     linux-perf \
