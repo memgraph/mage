@@ -28,6 +28,7 @@ RUN apt-get update && apt-get install -y \
     git             `mage-memgraph` \
     unixodbc        `mage-memgraph` \
     libboost-all-dev `mage-memgraph` \
+    uuid-dev \
     gdb \
     procps \
     linux-perf \
