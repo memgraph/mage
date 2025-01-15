@@ -222,6 +222,7 @@ To learn more about development with MAGE and Docker, visit the
   - python3-dev     
   - clang
   - unixodbc  
+  - uuid-dev
 
 
 Since Memgraph needs to load MAGE's modules, there is the `setup` script to help you. With it, you can build the modules so that Memgraph

@@ -17,7 +17,7 @@ void ThrowInvalidTypeException(const mgp::Value &value) {
 
 namespace {
 void CopyRelProperties(mgp::Relationship &to, mgp::Relationship const &from) {
-  for (auto &[k, v] : from.Properties()) {
+  for (auto const &[k, v] : from.Properties()) {
     to.SetProperty(k, v);
   }
 }
