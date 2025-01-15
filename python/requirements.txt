@@ -1,4 +1,3 @@
-torch==2.5.1
 defusedxml==0.7.1
 elasticsearch==8.17.0
 gekko==1.2.1
@@ -14,4 +13,5 @@ python-Levenshtein==0.26.1
 scikit-learn==1.5.2
 scipy==1.13.1
 six==1.17.0
+torch==2.4.0
 torchmetrics==1.6.1
