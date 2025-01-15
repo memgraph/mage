@@ -13,7 +13,7 @@ namespace {
 // This way of generating UUID is also used in Memgraph repo
 std::string GenerateUUID() {
   uuid_t uuid;
-  char decoded[37];  // magic size from: man 2 uuid_unparse
+  char decoded[37];  // 36 bytes for UUID + 1 for null-terminator
   uuid_generate(uuid);
   uuid_unparse(uuid, decoded);
   return {decoded};
