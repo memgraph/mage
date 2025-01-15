@@ -71,21 +71,6 @@ if(OPENMP_FOUND)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 
-# Add stduuid - cross-platform UUID implementation
-set(UUID_ROOT ${PROJECT_BINARY_DIR}/uuid)
-ExternalProject_Add(uuid-proj
-  PREFIX ${UUID_ROOT}
-  INSTALL_DIR ${UUID_ROOT}
-  GIT_REPOSITORY https://github.com/mariusbancila/stduuid.git
-  GIT_TAG v1.2.2
-  CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
-  "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
-  "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
-set(UUID_INCLUDE_DIR ${UUID_ROOT}/include)
-add_library(mage_uuid INTERFACE)
-target_include_directories(mage_uuid INTERFACE ${UUID_INCLUDE_DIR}/gsl)
-target_include_directories(mage_uuid INTERFACE ${UUID_INCLUDE_DIR})
-add_dependencies(mage_uuid uuid-proj)
 
 # Add mgclient
 set(MGCLIENT_ROOT ${PROJECT_BINARY_DIR}/mgclient)
