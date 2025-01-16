@@ -37,9 +37,7 @@ RUN apt-get update && apt-get install -y \
 COPY memgraph-${TARGETARCH}.deb .
 
 # Install Memgraph and remove unwanted modules
-RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb \
-    && rm /usr/lib/memgraph/query_modules/schema.so \
-    && rm /usr/lib/memgraph/query_modules/example_cpp.so
+RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb 
 
 ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
 
