@@ -27,6 +27,7 @@ RUN apt-get update && apt-get install -y \
     git \
     unixodbc-dev \
     libboost-all-dev \
+    uuid-dev \
     gdb \
     procps \
     libc6-dbg \
