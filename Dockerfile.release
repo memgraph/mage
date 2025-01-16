@@ -66,16 +66,19 @@ RUN /mage/venv/bin/pip install \
     torch-sparse -f https://data.pyg.org/whl/torch-${TORCH_VERSION}+cpu.html \
     torch-cluster -f https://data.pyg.org/whl/torch-${TORCH_VERSION}+cpu.html \
     torch-spline-conv -f https://data.pyg.org/whl/torch-${TORCH_VERSION}+cpu.html \
-    && /mage/venv/bin/pip install torch-geometric
+    && /mage/venv/bin/pip install torch-geometric \
+    && /mage/venv/bin/pip install  dgl -f https://data.dgl.ai/wheels/torch-2.4/repo.html
 
 # Build query modules
-RUN /mage/venv/bin/python /mage/setup build -p /usr/lib/memgraph/query_modules/ --cpp-build-flags CMAKE_BUILD_TYPE=${BUILD_TYPE} \
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
+    && export PATH="/root/.cargo/bin:${PATH}" \
+    && /mage/venv/bin/python /mage/setup build -p /usr/lib/memgraph/query_modules/ --cpp-build-flags CMAKE_BUILD_TYPE=${BUILD_TYPE} \
     && chown -R memgraph: /mage/e2e
 
-# DGL build from source
-RUN git clone --recurse-submodules -b 0.9.x https://github.com/dmlc/dgl.git \
-    && cd dgl && mkdir build && cd build && cmake .. \
-    && make -j4 && cd ../python && /mage/venv/bin/python3 setup.py install
+# # DGL build from source
+# RUN git clone --recurse-submodules -b 2.4.x https://github.com/dmlc/dgl.git \
+#     && cd dgl && mkdir build && cd build && cmake .. \
+#     && make -j4 && cd ../python && /mage/venv/bin/python3 setup.py install
 
 USER memgraph
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
