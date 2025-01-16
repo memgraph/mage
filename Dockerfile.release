@@ -11,22 +11,22 @@ ENV TORCH_VERSION=2.4.0
 
 # Essentials for production/dev
 RUN apt-get update && apt-get install -y \
-    libcurl4 \
-    libpython${PY_VERSION} \
-    libssl-dev \
-    openssl \
-    build-essential \
-    cmake \
-    curl \
-    g++ \
-    python3 \
-    python3-pip \
-    python3-setuptools \
-    python3-dev \
-    clang \
-    git \
-    unixodbc-dev \
-    libboost-all-dev \
+    libcurl4        `memgraph` \
+    libpython${PY_VERSION}   `memgraph` \
+    libssl-dev       `memgraph` \
+    openssl         `memgraph` \
+    build-essential `mage-memgraph` \
+    cmake           `mage-memgraph` \
+    curl            `mage-memgraph` \
+    g++             `mage-memgraph` \
+    python3         `mage-memgraph` \
+    python3-pip     `mage-memgraph` \
+    python3-setuptools     `mage-memgraph` \
+    python3-dev     `mage-memgraph` \
+    clang           `mage-memgraph` \
+    git             `mage-memgraph` \
+    unixodbc-dev        `mage-memgraph` \
+    libboost-all-dev `mage-memgraph` \
     uuid-dev \
     gdb \
     procps \
