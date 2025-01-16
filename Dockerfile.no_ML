@@ -19,9 +19,6 @@ RUN apt-get update && apt-get install -y \
     curl            `mage-memgraph` \
     g++             `mage-memgraph` \
     python3         `mage-memgraph` \
-    python3-pip     `mage-memgraph` \
-    python3-setuptools     `mage-memgraph` \
-    python3-dev     `mage-memgraph` \
     clang           `mage-memgraph` \
     git             `mage-memgraph` \
     unixodbc-dev        `mage-memgraph` \
@@ -79,17 +76,22 @@ COPY --from=dev /usr/lib/memgraph/auth_module/ /usr/lib/memgraph/auth_module/
 # Copy Python build
 COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
 
+# Copy virtual environment
+COPY --from=dev /mage/venv/ /mage/venv/
+
 # Copy e2e tests
 COPY --from=dev /mage/e2e/ /mage/e2e/
 
 RUN mv /mage/e2e /e2e/ \
+    && mv /mage/venv /venv/ \
     && rm -rf /mage/* \
     && mv /e2e/ /mage/ \
     && chown -R memgraph: /mage/e2e \
-    && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
+    && export PATH="/usr/local/lib/python${PY_VERSION}:/venv/bin:${PATH}" \
     && apt-get -y --purge autoremove clang git curl python3-pip python3-dev cmake build-essential \
     && apt-get clean
 
 USER memgraph
+ENV PATH="/venv/bin:${PATH}"
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
 CMD [""]
