@@ -15,18 +15,29 @@ void ThrowInvalidTypeException(const mgp::Value &value) {
 }
 }  // namespace
 
+namespace {
+void CopyRelProperties(mgp::Relationship &to, mgp::Relationship const &from) {
+  for (auto const &[k, v] : from.Properties()) {
+    to.SetProperty(k, v);
+  }
+}
+}  // namespace
+
 void Refactor::From(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   mgp::MemoryDispatcherGuard guard{memory};
   auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
-    mgp::Relationship relationship{arguments[0].ValueRelationship()};
-    const mgp::Node new_from{arguments[1].ValueNode()};
-    mgp::Graph graph{memgraph_graph};
+    auto relationship{arguments[0].ValueRelationship()};
+    auto const new_from{arguments[1].ValueNode()};
 
-    graph.SetFrom(relationship, new_from);
+    mgp::Graph graph{memgraph_graph};
+    auto new_relationship = graph.CreateRelationship(relationship.To(), new_from, relationship.Type());
+    CopyRelProperties(new_relationship, relationship);
+    graph.DeleteRelationship(relationship);
+
     auto record = record_factory.NewRecord();
-    record.Insert(std::string(kFromResult).c_str(), relationship);
+    record.Insert(std::string(kFromResult).c_str(), new_relationship);
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
@@ -39,13 +50,16 @@ void Refactor::To(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
   auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
-    mgp::Relationship relationship{arguments[0].ValueRelationship()};
-    const mgp::Node new_to{arguments[1].ValueNode()};
-    mgp::Graph graph{memgraph_graph};
+    auto relationship{arguments[0].ValueRelationship()};
+    auto const new_to{arguments[1].ValueNode()};
 
-    graph.SetTo(relationship, new_to);
+    mgp::Graph graph{memgraph_graph};
+    auto new_relationship = graph.CreateRelationship(relationship.From(), new_to, relationship.Type());
+    CopyRelProperties(new_relationship, relationship);
+    graph.DeleteRelationship(relationship);
+
     auto record = record_factory.NewRecord();
-    record.Insert(std::string(kToResult).c_str(), relationship);
+    record.Insert(std::string(kToResult).c_str(), new_relationship);
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
@@ -58,8 +72,8 @@ void Refactor::RenameLabel(mgp_list *args, mgp_graph *memgraph_graph, mgp_result
   auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
-    const auto old_label{arguments[0].ValueString()};
-    const auto new_label{arguments[1].ValueString()};
+    auto old_label{arguments[0].ValueString()};
+    auto new_label{arguments[1].ValueString()};
     const auto nodes{arguments[2].ValueList()};
 
     int64_t nodes_changed{0};
@@ -403,11 +417,14 @@ void Refactor::CloneNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
   }
 }
 
-void Refactor::InvertRel(mgp::Graph &graph, mgp::Relationship &rel) {
+mgp::Relationship Refactor::InvertRel(mgp::Graph &graph, mgp::Relationship &rel) {
   const auto old_from = rel.From();
   const auto old_to = rel.To();
-  graph.SetFrom(rel, old_to);
-  graph.SetTo(rel, old_from);
+
+  auto new_rel = graph.CreateRelationship(old_to, old_from, rel.Type());
+  CopyRelProperties(new_rel, rel);
+  graph.DeleteRelationship(rel);
+  return new_rel;
 }
 
 void Refactor::Invert(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
@@ -415,13 +432,13 @@ void Refactor::Invert(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *res
   const auto arguments = mgp::List(args);
   const auto record_factory = mgp::RecordFactory(result);
   try {
-    mgp::Graph graph = mgp::Graph(memgraph_graph);
+    auto graph = mgp::Graph(memgraph_graph);
     mgp::Relationship rel = arguments[0].ValueRelationship();
 
-    InvertRel(graph, rel);
+    auto relationship = InvertRel(graph, rel);
     auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultIdInvert).c_str(), rel.Id().AsInt());
-    record.Insert(std::string(kResultRelationshipInvert).c_str(), rel);
+    record.Insert(std::string(kResultIdInvert).c_str(), relationship.Id().AsInt());
+    record.Insert(std::string(kResultRelationshipInvert).c_str(), relationship);
     record.Insert(std::string(kResultErrorInvert).c_str(), "");
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
@@ -549,11 +566,11 @@ void Refactor::RenameTypeProperty(mgp_list *args, mgp_graph *memgraph_graph, mgp
     for (auto rel_value : rels) {
       auto rel = rel_value.ValueRelationship();
       const auto prop_value = rel.GetProperty(old_name);
-      /*since there is no bug(prop map cant have null values), it is faster to just check isNull 
+      /*since there is no bug(prop map cant have null values), it is faster to just check isNull
       instead of copying entire properties map and then find*/
-      if (prop_value.IsNull()) { 
-        continue;  
-      } 
+      if (prop_value.IsNull()) {
+        continue;
+      }
       rel.RemoveProperty(old_name);
       rel.SetProperty(new_name, prop_value);
       rels_changed++;
@@ -628,12 +645,15 @@ void Refactor::DeleteAndReconnect(mgp_list *args, mgp_graph *memgraph_graph, mgp
 
       const auto modify_relationship = [&graph, &relationships](mgp::Relationship relationship, const mgp::Node &node,
                                                                 int64_t other_node_id) {
-        if (relationship.From().Id().AsInt() == other_node_id) {
-          graph.SetTo(relationship, node);
-        } else {
-          graph.SetFrom(relationship, node);
-        }
-        relationships.AppendExtend(mgp::Value(relationship));
+        auto new_relationship = std::invoke([&]() {
+          if (relationship.From().Id().AsInt() == other_node_id) {
+            return graph.CreateRelationship(relationship.From(), node, relationship.Type());
+          }
+          return graph.CreateRelationship(node, relationship.To(), relationship.Type());
+        });
+        CopyRelProperties(new_relationship, relationship);
+        graph.DeleteRelationship(relationship);
+        relationships.AppendExtend(mgp::Value(new_relationship));
       };
 
       const auto merge_relationships = [](mgp::Relationship &rel, mgp::Relationship &other, bool combine = false) {
@@ -667,17 +687,19 @@ void Refactor::DeleteAndReconnect(mgp_list *args, mgp_graph *memgraph_graph, mgp
           } else {
             new_type = std::string(old_rel.Type()) + "_" + std::string(new_rel.Type());
           }
-          graph.ChangeType(new_rel, new_type);
+          auto new_relationship = graph.CreateRelationship(new_rel.From(), new_rel.To(), new_type);
+          CopyRelProperties(new_relationship, new_rel);
+          graph.DeleteRelationship(new_rel);
 
           if (config.prop_strategy == PropertiesStrategy::DISCARD) {
-            modify_relationship(new_rel, node, prev_non_deleted_node_id);
-            merge_relationships(new_rel, old_rel);
+            modify_relationship(new_relationship, node, prev_non_deleted_node_id);
+            merge_relationships(new_relationship, old_rel);
           } else if (config.prop_strategy == PropertiesStrategy::OVERRIDE) {
-            modify_relationship(new_rel, path.GetNodeAt(prev_non_deleted_path_index), id);
-            merge_relationships(new_rel, old_rel);
+            modify_relationship(new_relationship, path.GetNodeAt(prev_non_deleted_path_index), id);
+            merge_relationships(new_relationship, old_rel);
           } else {  // PropertiesStrategy::COMBINE
-            modify_relationship(new_rel, node, prev_non_deleted_node_id);
-            merge_relationships(new_rel, old_rel, true);
+            modify_relationship(new_relationship, node, prev_non_deleted_node_id);
+            merge_relationships(new_relationship, old_rel, true);
           }
         }
       } else if (!delete_node && prev_non_deleted_path_index != -1) {
@@ -825,7 +847,9 @@ void Refactor::RenameType(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
     for (auto relationship_value : relationships) {
       auto relationship{relationship_value.ValueRelationship()};
       if (relationship.Type() == old_type) {
-        graph.ChangeType(relationship, new_type);
+        auto new_relationship = graph.CreateRelationship(relationship.From(), relationship.To(), new_type);
+        CopyRelProperties(new_relationship, relationship);
+        graph.DeleteRelationship(relationship);
         ++rels_changed;
       }
     }
