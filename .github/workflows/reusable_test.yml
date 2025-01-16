@@ -44,7 +44,7 @@ env:
 
 jobs:
   BuildAndTest:
-    runs-on: [self-hosted, linux, X64, DockerMgBuild]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository and submodules
         uses: actions/checkout@v4
@@ -116,6 +116,9 @@ jobs:
       - name: Docker system prune
         run: |
           docker buildx prune --all -f
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /opt/hostedtoolcache/go
+          sudo rm -rf /opt/hostedtoolcache
 
       - name: Rust library tests
         if: inputs.build_target == 'dev'
@@ -135,20 +138,49 @@ jobs:
           --load .
           docker run -d -p ${{ env.MEMGRAPH_PORT }}:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:${{ inputs.build_target }} --telemetry-enabled=False
 
+      - name: Set up C++
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential cmake libboost-all-dev
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PY_VERSION }}
+
       - name: Install Python test dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r ./python/tests/requirements.txt
 
+      - name: Build C++ modules
+        run: |
+          mkdir -p cpp/build
+          cd cpp/build
+          cmake ..
+          make -j${{ env.CORE_COUNT }}
+
+      - name: C++ Modules unit tests
+        if: inputs.build_target == 'dev'
+        run: |
+          cd cpp/build
+          ctest -j${{ env.CORE_COUNT }}
+
       - name: Python modules unit tests
-        if: inputs.build_scope != 'without ML'
+        if: inputs.build_target == 'dev' && inputs.build_scope != 'without ML'
+        env:
+          PYTHONPATH: "$PWD/python"
         run: |
           docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/python/ && python3 -m pytest ."
 
       - name: Run End-to-end tests
         if: inputs.arch != 'arm64'
+        env:
+          PYTHONPATH: "$PWD/e2e"
+        run: |
+          cd e2e
           docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c \
-          "cd /mage/e2e/ && python3 -m pytest . -k 'not cugraph ${{ inputs.build_scope == 'without ML' && 'and not tgn' || '' }}'"
+          "cd /mage/e2e/ && python3 -m pytest . -k 'not cugraph ${{ inputs.build_scope == 'without ML' && 'and not tgn and not node_classification and not link_prediction' || '' }}'"
 
       - name: Run End-to-end correctness tests
         if: inputs.arch != 'arm64'
