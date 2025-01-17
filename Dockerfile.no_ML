@@ -10,24 +10,25 @@ ENV PY_VERSION ${PY_VERSION_DEFAULT}
 
 # Essentials for production/dev
 RUN apt-get update && apt-get install -y \
-    libcurl4        `memgraph` \
-    libpython${PY_VERSION}   `memgraph` \
-    libssl-dev       `memgraph` \
-    openssl         `memgraph` \
-    build-essential `mage-memgraph` \
-    cmake           `mage-memgraph` \
-    curl            `mage-memgraph` \
-    g++             `mage-memgraph` \
-    python3         `mage-memgraph` \
-    clang           `mage-memgraph` \
-    git             `mage-memgraph` \
-    unixodbc-dev        `mage-memgraph` \
-    libboost-all-dev `mage-memgraph` \
+    libcurl4 \
+    libpython${PY_VERSION} \
+    libssl-dev \
+    openssl \
+    build-essential \
+    cmake \
+    curl \
+    g++ \
+    python3 \
+    python3-pip \
+    python3-venv \
+    clang \
+    git \
+    unixodbc-dev \
+    libboost-all-dev \
     uuid-dev \
     gdb \
     procps \
     libc6-dbg \
-    python3.12-venv \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -36,7 +37,12 @@ COPY memgraph-${TARGETARCH}.deb .
 # Install Memgraph and remove unwanted modules
 RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb 
 
-ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
+ENV LD_LIBRARY_PATH=/usr/lib/memgraph/query_modules
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+# Create virtual environment
+RUN python3 -m venv $VIRTUAL_ENV
 
 # Memgraph listens for Bolt Protocol on this port by default.
 EXPOSE 7687
@@ -50,12 +56,12 @@ COPY . /mage
 
 # MAGE
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
-    && export PATH="/root/.cargo/bin:${PATH}" \
-    && python3 -m venv /mage/venv \
-    && /mage/venv/bin/pip install -r /mage/python/tests/requirements.txt \
-    && /mage/venv/bin/pip install -r /mage/python/requirements_no_ml.txt \
-    && /mage/venv/bin/pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt \
-    && /mage/venv/bin/python /mage/setup build -p /usr/lib/memgraph/query_modules/ --no-ml --cpp-build-flags CMAKE_BUILD_TYPE=${BUILD_TYPE} \
+    && . "$HOME/.cargo/env" \
+    && pip install --upgrade pip \
+    && pip install -r /mage/python/tests/requirements.txt \
+    && pip install -r /mage/python/requirements_no_ml.txt \
+    && pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt \
+    && python /mage/setup build -p /usr/lib/memgraph/query_modules/ --no-ml --cpp-build-flags CMAKE_BUILD_TYPE=${BUILD_TYPE} \
     && chown -R memgraph: /mage/e2e
 
 USER memgraph
@@ -73,25 +79,23 @@ ENV PY_VERSION ${PY_VERSION_DEFAULT}
 COPY --from=dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
 COPY --from=dev /usr/lib/memgraph/auth_module/ /usr/lib/memgraph/auth_module/
 
-# Copy Python build
-COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
-
 # Copy virtual environment
-COPY --from=dev /mage/venv/ /mage/venv/
+COPY --from=dev /opt/venv/ /opt/venv/
 
 # Copy e2e tests
 COPY --from=dev /mage/e2e/ /mage/e2e/
 
 RUN mv /mage/e2e /e2e/ \
-    && mv /mage/venv /venv/ \
     && rm -rf /mage/* \
     && mv /e2e/ /mage/ \
     && chown -R memgraph: /mage/e2e \
-    && export PATH="/usr/local/lib/python${PY_VERSION}:/venv/bin:${PATH}" \
+    && apt-get update && apt install gdb -y \
     && apt-get -y --purge autoremove clang git curl python3-pip python3-dev cmake build-essential \
     && apt-get clean
 
 USER memgraph
-ENV PATH="/venv/bin:${PATH}"
+ENV PATH="/opt/venv/bin:$PATH"
+
+# No need to source activate in ENTRYPOINT since PATH is already set
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
 CMD [""]
