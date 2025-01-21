@@ -66,6 +66,7 @@ RUN python3 -m pip install torch-spline-conv -f https://data.pyg.org/whl/torch-2
 RUN python3 -m pip install torch-geometric -f https://data.pyg.org/whl/torch-2.3.0+cu121.html --break-system-packages --default-timeout=10000
 RUN python3 -m pip install torch-scatter -f https://data.pyg.org/whl/torch-2.3.0+cu121.html --break-system-packages --default-timeout=10000
 RUN python3 -m pip install dgl -f https://data.dgl.ai/wheels/torch-2.3/cu121/repo.html --break-system-packages --default-timeout=10000
+RUN python3 -m pip install torchmetrics==0.10.0 --break-system-packages --default-timeout=10000
 
 # Build query modules
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
