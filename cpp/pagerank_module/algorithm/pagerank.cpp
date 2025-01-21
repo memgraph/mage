@@ -1,8 +1,9 @@
+#include "pagerank.hpp"
+
 #include <algorithm>
 #include <numeric>
 #include <future>
 
-#include "pagerank.hpp"
 
 namespace pagerank_alg {
 
