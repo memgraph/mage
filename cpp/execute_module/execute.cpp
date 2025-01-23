@@ -101,7 +101,7 @@ void ExecuteQuery(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result,
       record.Insert(kReturnSuccess, true);
       record.Insert(kReturnNumberOfRetries, number_of_retries);
       return;
-    } catch (const mg_exception::RetryBasicException &) {
+    } catch (const mg_exception::RetryBasicException &e) {
       number_of_retries++;
 
       if (number_of_retries <= max_retries) {
