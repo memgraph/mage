@@ -73,7 +73,7 @@ void ThrowException(const mgp::Value &value) {
 };
 
 mgp::Value InsertNodeRelationshipTypes(const mgp::Node &node,
-                                       std::unordered_map<std::string_view, uint8_t> &type_direction) {
+                                       std::unordered_map<std::string, uint8_t> &type_direction) {
   mgp::Map result{};
   result.Insert("node", mgp::Value(node));
 
@@ -87,12 +87,12 @@ mgp::Value InsertNodeRelationshipTypes(const mgp::Node &node,
     }
   } else {
     for (const auto relationship : node.InRelationships()) {
-      if (type_direction[relationship.Type()] & 1) {
+      if (type_direction[std::string(relationship.Type())] & 1) {
         types.insert(relationship.Type());
       }
     }
     for (const auto relationship : node.OutRelationships()) {
-      if (type_direction[relationship.Type()] & 2) {
+      if (type_direction[std::string(relationship.Type())] & 2) {
         types.insert(relationship.Type());
       }
     }
@@ -108,19 +108,22 @@ mgp::Value InsertNodeRelationshipTypes(const mgp::Node &node,
   return mgp::Value(std::move(result));
 }
 
-std::unordered_map<std::string_view, uint8_t> GetTypeDirection(const mgp::Value &types) {
-  std::unordered_map<std::string_view, uint8_t> result;
+std::unordered_map<std::string, uint8_t> GetTypeDirection(const mgp::Value &types) {
+  std::unordered_map<std::string, uint8_t> result;
   for (const auto &type_value : types.ValueList()) {
+    // string view of temporary object ValueList(), invalid after the loop
     auto type = type_value.ValueString();
     if (type.starts_with('<')) {
       if (type.ends_with('>')) {
         throw mgp::ValueException("<type> format not allowed. Use type instead.");
       }
-      result[type.substr(1, type.size() - 1)] |= 1;
+      auto key = type.substr(1, type.size() - 1);
+      result[std::string(key)] |= 1;
     } else if (type.ends_with('>')) {
-      result[type.substr(0, type.size() - 1)] |= 2;
+      auto key = type.substr(0, type.size() - 1);
+      result[std::string(key)] |= 2;
     } else {
-      result[type] |= 3;
+      result[std::string(type)] |= 3;
     }
   }
   return result;
