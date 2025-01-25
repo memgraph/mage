@@ -5,7 +5,9 @@
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
+#include "data_structures/graph_view.hpp"
 
+#include <mg_procedure.h>
 #include <omp.h>
 
 ///@brief Remove repeat elements from vector except for the first instance. The vector is modified in-place.
@@ -62,7 +64,7 @@ class OnlineBC {
   ///
   ///@param graph Current graph
   ///@param threads Number of concurrent threads
-  void CallBrandesAlgorithm(const mg_graph::GraphView<> &graph, const std::uint64_t threads);
+  void CallBrandesAlgorithm(const mg_graph::GraphView<> &graph, mgp_graph *mg_graph, const std::uint64_t threads);
 
   ///@brief Returns whether the (undirected) graph is connected.
   ///
@@ -191,7 +193,7 @@ class OnlineBC {
   ///@param threads Number of concurrent threads
   ///
   ///@return {node ID, BC score} pairs
-  std::unordered_map<std::uint64_t, double> Set(const mg_graph::GraphView<> &graph, const bool normalize = true,
+  std::unordered_map<std::uint64_t, double> Set(const mg_graph::GraphView<> &graph, mgp_graph *mg_graph, const bool normalize = true,
                                                 const std::uint64_t threads = std::thread::hardware_concurrency());
 
   ///@brief Returns previously computed betweennness centrality scores.
@@ -218,7 +220,7 @@ class OnlineBC {
   ///
   ///@return {node ID, BC score} pairs
   std::unordered_map<std::uint64_t, double> EdgeUpdate(
-      const mg_graph::GraphView<> &prior_graph, const mg_graph::GraphView<> &current_graph, const Operation operation,
+      const mg_graph::GraphView<> &prior_graph, const mg_graph::GraphView<> &current_graph, mgp_graph *mg_graph, const Operation operation,
       const std::pair<std::uint64_t, std::uint64_t> updated_edge, const bool normalize = true,
       const std::uint64_t threads = std::thread::hardware_concurrency());
 
