@@ -41,6 +41,8 @@ env:
   NEO4J_CONTAINER: "neo4j_test"
   OS: "debian-11"
   s3_region: "eu-west-1"
+  MEMGRAPH_ENTERPRISE_LICENSE: ${{ secrets.MEMGRAPH_ENTERPRISE_LICENSE }}
+  MEMGRAPH_ORGANIZATION_NAME: ${{ secrets.MEMGRAPH_ORGANIZATION_NAME }}
 
 jobs:
   BuildAndTest:
@@ -136,7 +138,13 @@ jobs:
           --platform linux/${{ inputs.arch }} \
           --file Dockerfile.${{ inputs.build_scope == 'without ML' && 'no_ML' || 'release' }} \
           --load .
-          docker run -d -p ${{ env.MEMGRAPH_PORT }}:7687 --name ${{ env.MAGE_CONTAINER }} memgraph-mage:${{ inputs.build_target }} --telemetry-enabled=False
+          docker run -d \
+            -p ${{ env.MEMGRAPH_PORT }}:7687 \
+            --name ${{ env.MAGE_CONTAINER }} \
+            -e MEMGRAPH_ENTERPRISE_LICENSE=${{ env.MEMGRAPH_ENTERPRISE_LICENSE }} \
+            -e MEMGRAPH_ORGANIZATION_NAME=${{ env.MEMGRAPH_ORGANIZATION_NAME }} \
+            memgraph-mage:${{ inputs.build_target }} \
+            --telemetry-enabled=False
 
       - name: Set up C++
         run: |
