@@ -117,13 +117,14 @@ std::unordered_map<std::string, uint8_t> GetTypeDirection(const mgp::Value &type
       if (type.ends_with('>')) {
         throw mgp::ValueException("<type> format not allowed. Use type instead.");
       }
-      auto key = type.substr(1, type.size() - 1);
-      result[std::string(key)] |= 1;
+      auto key = std::string(type.substr(1, type.size() - 1));
+      result[key] |= 1;
     } else if (type.ends_with('>')) {
-      auto key = type.substr(0, type.size() - 1);
-      result[std::string(key)] |= 2;
+      auto key = std::string(type.substr(0, type.size() - 1));
+      result[key] |= 2;
     } else {
-      result[std::string(type)] |= 3;
+      auto key = std::string(type);
+      result[key] |= 3;
     }
   }
   return result;
