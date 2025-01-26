@@ -58,7 +58,7 @@ jobs:
       fail-fast: false
       matrix:
         mg_version: ["3.0.0"]
-        mg_rc_version: ["rc1"]
+        mg_rc_version: ["rc2"]
         arch: ["amd64", "arm64"]
         build_target: ["prod", "dev"]
         build_scope: ["with ML", "without ML"]
