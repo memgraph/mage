@@ -68,7 +68,9 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
 #DGL build from source
 RUN git clone --recurse-submodules -b 0.9.x https://github.com/dmlc/dgl.git  \
     && cd dgl && mkdir build && cd build && cmake .. \
-    && make -j4 && cd ../python && python3 setup.py install
+    && make -j4 && cd ../python \
+    && python3 setup.py bdist_wheel \
+    && pip3 install dist/*.whl
 
 USER memgraph
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]

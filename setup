@@ -257,6 +257,7 @@ def copy_python_modules(args: Dict[str, Any]) -> bool:
     ignore_list = [
         "tests",
         "requirements.txt",
+        "requirements_no_ml.txt",
         "pytest.ini",
         "htmlcov",
         "__pycache__",
