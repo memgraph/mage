@@ -57,8 +57,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mg_version: ["2.21.0"]
-        mg_rc_version: ["rc1"]
+        mg_version: ["3.0.0"]
+        mg_rc_version: ["rc2"]
         arch: ["amd64", "arm64"]
         build_target: ["prod", "dev"]
         build_scope: ["with ML", "without ML"]
@@ -85,7 +85,7 @@ jobs:
       arch: "${{ matrix.arch }}"
       build_target: "${{ matrix.build_target }}"
       build_scope: "${{ matrix.build_scope }}"
-      memgraph_version: "2.21.0"
+      memgraph_version: "3.0.0"
       memgraph_ref: "master"
       memgraph_ref_update: "true"
     secrets: inherit
@@ -116,7 +116,7 @@ jobs:
       arch: "${{ matrix.arch }}"
       build_target: "${{ matrix.build_target }}"
       build_scope: "${{ matrix.build_scope }}"
-      memgraph_version: "2.21.0"
+      memgraph_version: "3.0.0"
       memgraph_ref: "master"
       memgraph_ref_update: "true"
     secrets: inherit
