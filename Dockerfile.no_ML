@@ -1,6 +1,6 @@
-ARG PY_VERSION_DEFAULT=3.12
+ARG PY_VERSION_DEFAULT=3.9
 
-FROM ubuntu:24.04 as base
+FROM debian:bullseye as base
 
 USER root
 
@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y \
     g++             `mage-memgraph` \
     python3         `mage-memgraph` \
     python3-pip     `mage-memgraph` \
-    python3-setuptools `mage-memgraph` \
+    python3-setuptools     `mage-memgraph` \
     python3-dev     `mage-memgraph` \
     clang           `mage-memgraph` \
     git             `mage-memgraph` \
@@ -31,14 +31,14 @@ RUN apt-get update && apt-get install -y \
     procps \
     libc6-dbg \
     --no-install-recommends \
+    && ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 COPY memgraph-${TARGETARCH}.deb .
 
-# Install Memgraph and remove unwanted modules
 RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb 
 
-ENV LD_LIBRARY_PATH=/usr/lib/memgraph/query_modules
+ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
 
 # Memgraph listens for Bolt Protocol on this port by default.
 EXPOSE 7687
@@ -50,20 +50,21 @@ ARG BUILD_TYPE=Release
 WORKDIR /mage
 COPY . /mage
 
-# Python packages
-RUN python3 -m pip install -r /mage/python/tests/requirements.txt --break-system-packages \
-    && python3 -m pip install -r /mage/python/requirements_no_ml.txt --break-system-packages \
-    && python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages
 
-# MAGE
+#MAGE
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
-    && . "$HOME/.cargo/env" \
+    && export PATH="/root/.cargo/bin:${PATH}" \
+    && python3 -m  pip install -r /mage/python/tests/requirements.txt --break-system-packages \
+    && python3 -m  pip install -r /mage/python/requirements_no_ml.txt --break-system-packages \
+    && python3 -m  pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages \
     && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/ --no-ml --cpp-build-flags CMAKE_BUILD_TYPE=${BUILD_TYPE} \
     && chown -R memgraph: /mage/e2e
+
 
 USER memgraph
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
 CMD [""]
+
 
 
 FROM base as prod
@@ -73,21 +74,21 @@ ENTRYPOINT []
 ARG PY_VERSION_DEFAULT
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
 
-# Copy modules
+#copy modules
 COPY --from=dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
 COPY --from=dev /usr/lib/memgraph/auth_module/ /usr/lib/memgraph/auth_module/
 
-# Copy e2e tests
-COPY --from=dev /mage/e2e/ /mage/e2e/
-
 #copy python build
 COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
+
+#copy e2e tests
+COPY --from=dev /mage/e2e/ /mage/e2e/
 
 RUN mv /mage/e2e /e2e/ \
     && rm -rf /mage/* \
     && mv /e2e/ /mage/ \
     && chown -R memgraph: /mage/e2e \
-    && apt-get update && apt install gdb -y \
+    && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
     && apt-get -y --purge autoremove clang git curl python3-pip python3-dev cmake build-essential \
     && apt-get clean
 

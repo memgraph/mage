@@ -60,12 +60,8 @@ RUN python3 -m pip install -r /mage/python/requirements.txt --break-system-packa
     && python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages
 
 # Torch and DGL torch-spline-conv torch-geometric torch-scatter
-RUN python3 -m pip install torch-sparse -f https://data.pyg.org/whl/torch-2.3.0+cu121.html --break-system-packages --default-timeout=10000
-RUN python3 -m pip install torch-cluster -f https://data.pyg.org/whl/torch-2.3.0+cu121.html --break-system-packages --default-timeout=10000
-RUN python3 -m pip install torch-spline-conv -f https://data.pyg.org/whl/torch-2.3.0+cu121.html --break-system-packages --default-timeout=10000
-RUN python3 -m pip install torch-geometric -f https://data.pyg.org/whl/torch-2.3.0+cu121.html --break-system-packages --default-timeout=10000
-RUN python3 -m pip install torch-scatter -f https://data.pyg.org/whl/torch-2.3.0+cu121.html --break-system-packages --default-timeout=10000
-RUN python3 -m pip install dgl -f https://data.dgl.ai/wheels/torch-2.3/cu121/repo.html --break-system-packages --default-timeout=10000
+RUN python3 -m pip install torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.3.0+cu121.html --break-system-packages \
+    && python3 -m pip install dgl -f https://data.dgl.ai/wheels/torch-2.3/cu121/repo.html --break-system-packages
 
 # Build query modules
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
