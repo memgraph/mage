@@ -32,7 +32,7 @@ void Refactor::From(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resul
     auto const new_from{arguments[1].ValueNode()};
 
     mgp::Graph graph{memgraph_graph};
-    auto new_relationship = graph.CreateRelationship(relationship.To(), new_from, relationship.Type());
+    auto new_relationship = graph.CreateRelationship(new_from, relationship.To(), relationship.Type());
     CopyRelProperties(new_relationship, relationship);
     graph.DeleteRelationship(relationship);
 
