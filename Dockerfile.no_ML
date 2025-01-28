@@ -1,6 +1,6 @@
-ARG PY_VERSION_DEFAULT=3.9
+ARG PY_VERSION_DEFAULT=3.12
 
-FROM debian:bullseye as base
+FROM ubuntu:24.04 as base
 
 USER root
 
