@@ -3,6 +3,7 @@
 import os
 import subprocess
 import argparse
+import sys
 
 WORK_DIRECTORY = os.getcwd()
 E2E_CORRECTNESS_DIRECTORY = f"{WORK_DIRECTORY}/e2e_correctness"
@@ -57,7 +58,11 @@ def main(
     command.extend(["--neo4j-port", neo4j_port])
 
 
-    subprocess.run(command)
+    try:
+        subprocess.run(command, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error: {e}")
+        sys.exit(e.returncode)
 
 
 if __name__ == "__main__":
