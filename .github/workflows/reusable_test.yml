@@ -205,7 +205,7 @@ jobs:
           -e NEO4J_apoc_export_file_enabled=true \
           -e NEO4J_apoc_import_file_enabled=true \
           -e NEO4J_apoc_import_file_use__neo4j__config=true  \
-          -e 'NEO4J_PLUGINS=["apoc"]'  --health-cmd "cypher-shell -u neo4j -p none 'RETURN 1'" \
+          -e NEO4J_PLUGINS='["apoc"]'  --health-cmd "cypher-shell -u neo4j -p none 'RETURN 1'" \
           --health-interval=10s \
           --health-timeout=5s \
           --health-retries=5 \
