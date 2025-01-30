@@ -4,7 +4,7 @@ MEMGRAPH_PORT=$1
 NEO4J_PORT=$2
 NEO4J_CONTAINER=$3
 
-timeout=10
+timeout=20
 counter=0
 
 docker run --rm \
@@ -19,10 +19,9 @@ docker run --rm \
           -e NEO4J_PLUGINS='["apoc"]' neo4j:5.10.0
 
 echo "Waiting for Neo4j to start..."
-start_time=$(date +%s)
 while ! curl --silent --fail http://localhost:7474; do
   sleep 1
-    counter=$((counter+1))
+  counter=$((counter+1))
   if [ $counter -gt $timeout ]; then
     echo "Neo4j failed to start in $timeout seconds"
     exit 1
