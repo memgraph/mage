@@ -195,4 +195,5 @@ jobs:
         env:
           PYTHONPATH: "$PWD/e2e"
         run: |
+          chmod +x run_e2e_correctness_tests.sh
           ./run_e2e_correctness_tests.sh ${{ env.MEMGRAPH_PORT }} ${{ env.NEO4J_PORT }} ${{ env.NEO4J_CONTAINER }}
