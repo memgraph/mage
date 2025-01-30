@@ -4,7 +4,7 @@ MEMGRAPH_PORT=$1
 NEO4J_PORT=$2
 NEO4J_CONTAINER=$3
 
-timeout=15
+timeout=10
 counter=0
 
 docker run --rm \
