@@ -32,7 +32,7 @@ void Refactor::From(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resul
     auto const new_from{arguments[1].ValueNode()};
 
     mgp::Graph graph{memgraph_graph};
-    auto new_relationship = graph.CreateRelationship(relationship.To(), new_from, relationship.Type());
+    auto new_relationship = graph.CreateRelationship(new_from, relationship.To(), relationship.Type());
     CopyRelProperties(new_relationship, relationship);
     graph.DeleteRelationship(relationship);
 
@@ -654,6 +654,7 @@ void Refactor::DeleteAndReconnect(mgp_list *args, mgp_graph *memgraph_graph, mgp
         CopyRelProperties(new_relationship, relationship);
         graph.DeleteRelationship(relationship);
         relationships.AppendExtend(mgp::Value(new_relationship));
+        return new_relationship;
       };
 
       const auto merge_relationships = [](mgp::Relationship &rel, mgp::Relationship &other, bool combine = false) {
@@ -692,14 +693,14 @@ void Refactor::DeleteAndReconnect(mgp_list *args, mgp_graph *memgraph_graph, mgp
           graph.DeleteRelationship(new_rel);
 
           if (config.prop_strategy == PropertiesStrategy::DISCARD) {
-            modify_relationship(new_relationship, node, prev_non_deleted_node_id);
-            merge_relationships(new_relationship, old_rel);
+            auto modified_rel = modify_relationship(new_relationship, node, prev_non_deleted_node_id);
+            merge_relationships(modified_rel, old_rel);
           } else if (config.prop_strategy == PropertiesStrategy::OVERRIDE) {
-            modify_relationship(new_relationship, path.GetNodeAt(prev_non_deleted_path_index), id);
-            merge_relationships(new_relationship, old_rel);
+            auto modified_rel = modify_relationship(new_relationship, path.GetNodeAt(prev_non_deleted_path_index), id);
+            merge_relationships(modified_rel, old_rel);
           } else {  // PropertiesStrategy::COMBINE
-            modify_relationship(new_relationship, node, prev_non_deleted_node_id);
-            merge_relationships(new_relationship, old_rel, true);
+            auto modified_rel = modify_relationship(new_relationship, node, prev_non_deleted_node_id);
+            merge_relationships(modified_rel, old_rel, true);
           }
         }
       } else if (!delete_node && prev_non_deleted_path_index != -1) {
