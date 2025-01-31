@@ -69,7 +69,7 @@ jobs:
       build_scope: "${{ matrix.build_scope }}"
       memgraph_ref: "v${{ matrix.mg_version }}-${{ matrix.mg_rc_version }}"
       memgraph_ref_update: "false"
-      memgraph_download_link: "s3://deps.memgraph.io/memgraph/v${{ matrix.mg_version }}-${{ matrix.mg_rc_version }}/debian-11${{ matrix.arch == 'arm64' && '-aarch64' || '' }}${{ matrix.build_scope == 'dev' && '-relwithdebinfo' || '' }}/memgraph_${{ matrix.mg_version }}-1_${{ matrix.arch }}.deb"
+      memgraph_download_link: "s3://deps.memgraph.io/memgraph/v${{ matrix.mg_version }}-${{ matrix.mg_rc_version }}/ubuntu-24.04${{ matrix.arch == 'arm64' && '-aarch64' || '' }}${{ matrix.build_scope == 'dev' && '-relwithdebinfo' || '' }}/memgraph_${{ matrix.mg_version }}-1_${{ matrix.arch }}.deb"
     secrets: inherit
 
   PR_test:

@@ -158,14 +158,14 @@ git clone --recurse-submodules https://github.com/memgraph/mage.git && cd mage
 
 ```bash
 
-curl -L "https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11/memgraph_${MEMGRAPH_VERSION}-1_${ARCHITECTURE}.deb" > memgraph-${ARCHITECTURE}.deb
+curl -L "https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/ubuntu-24.04/memgraph_${MEMGRAPH_VERSION}-1_${ARCHITECTURE}.deb" > memgraph-${ARCHITECTURE}.deb
 
 ```
 
 or this one if you are on `arm64`:
 
 ```bash
-curl -L "https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb" > memgraph-arm64.deb
+curl -L "https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/ubuntu-24.04-aarch64/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb" > memgraph-arm64.deb
 ```
 
 **1.** To build the **MAGE** image run the following command where you set `${architecture}` to your system architecture (`amd64` or `arm64`):
@@ -207,7 +207,7 @@ To learn more about development with MAGE and Docker, visit the
   [site](https://memgraph.com/docs/memgraph/installation).
 - To build and install MAGE query modules you will need:
   - libcurl4
-  - libpython3.9
+  - libpython3.12
   - libssl-dev
   - libboost-all-dev
   - openssl 
