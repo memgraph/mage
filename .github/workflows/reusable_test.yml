@@ -150,12 +150,6 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y build-essential cmake libboost-all-dev uuid-dev
-      
-      -name: Set up C++ sanitizers
-        if: inputs.sanitizer == "on"
-        run: |
-          export CXXFLAGS="-fsanitize=address,undefined 
-          export LDFLAGS="-fsanitize=address,undefined"
           
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -171,7 +165,11 @@ jobs:
         run: |
           mkdir -p cpp/build
           cd cpp/build
-          cmake ..
+          if [[ "${{ matrix.sanitizer }}" == "on" ]]; then
+            cmake .. -DASAN=ON -DUBSAN=ON
+          else
+            cmake ..
+          fi
           make -j${{ env.CORE_COUNT }}
 
       - name: C++ Modules unit tests

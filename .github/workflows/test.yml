@@ -62,11 +62,13 @@ jobs:
         arch: ["amd64", "arm64"]
         build_target: ["prod", "dev"]
         build_scope: ["with ML", "without ML"]
+        sanitizer: ["off", "on"]
     uses: ./.github/workflows/reusable_test.yml
     with:
       arch: "${{ matrix.arch }}"
       build_target: "${{ matrix.build_target }}"
       build_scope: "${{ matrix.build_scope }}"
+      sanitizer: "${{ matrix.sanitizer }}"
       memgraph_ref: "v${{ matrix.mg_version }}-${{ matrix.mg_rc_version }}"
       memgraph_ref_update: "false"
       memgraph_download_link: "s3://deps.memgraph.io/memgraph/v${{ matrix.mg_version }}-${{ matrix.mg_rc_version }}/debian-11${{ matrix.arch == 'arm64' && '-aarch64' || '' }}${{ matrix.build_scope == 'dev' && '-relwithdebinfo' || '' }}/memgraph_${{ matrix.mg_version }}-1_${{ matrix.arch }}.deb"
@@ -78,7 +80,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: ["amd64"]
-        build_target: ["prod"]
+        build_target: ["dev"]
         build_scope: ["with ML", "without ML"]
         sanitizer: ["off", "on"]
     uses: ./.github/workflows/reusable_test.yml

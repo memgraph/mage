@@ -19,6 +19,8 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+option(ASAN "Build with Address Sanitizer. To get a reasonable performance option should be used only in Release or RelWithDebInfo build " OFF)
+option(UBSAN "Build with Undefined Behaviour Sanitizer" OFF)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -95,6 +97,38 @@ set_target_properties(mgclient PROPERTIES
   IMPORTED_LOCATION "${MGCLIENT_LIBRARY_PATH}"
   INTERFACE_LINK_LIBRARIES "${CMAKE_THREAD_LIBS_INIT}")
 add_dependencies(mgclient mgclient-proj)
+
+if (ASAN)
+  # Enable Address sanitizer and get nicer stack traces in error messages.
+  # NOTE: AddressSanitizer uses llvm-symbolizer binary from the Clang
+  # distribution to symbolize the stack traces (note that ideally the
+  # llvm-symbolizer version must match the version of ASan runtime library).
+  # Just make sure llvm-symbolizer is in PATH before running the binary or
+  # provide it in separate ASAN_SYMBOLIZER_PATH environment variable.
+  add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+  add_link_options(-fsanitize=address)
+  # To detect Stack-use-after-return bugs set run-time flag:
+  #   ASAN_OPTIONS=detect_stack_use_after_return=1
+  # To check initialization order bugs set run-time flag:
+  #   ASAN_OPTIONS=check_initialization_order=true
+  #     This mode reports an error if initializer for a global variable accesses
+  #     dynamically initialized global from another translation unit, which is
+  #     not yet initialized
+  #   ASAN_OPTIONS=strict_init_order=true
+  #     This mode reports an error if initializer for a global variable accesses
+  #     any dynamically initialized global from another translation unit.
+endif()
+
+if (UBSAN)
+  # Compile with UBSAN but disable vptr check. This is disabled because it
+  # requires linking with clang++ to make sure C++ specific parts of the
+  # runtime library and c++ standard libraries are present.
+  add_compile_options(-fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize=vptr)
+  add_link_options(-fsanitize=undefined -fno-sanitize=vptr)
+  # Run program with environment variable UBSAN_OPTIONS=print_stacktrace=1.
+  # Make sure llvm-symbolizer binary is in path.
+  # To make the program abort on undefined behavior, use UBSAN_OPTIONS=halt_on_error=1.
+endif()
 
 # mg_utility library
 add_subdirectory(mg_utility)
