@@ -18,7 +18,7 @@ on:
       memgraph_version:
         type: string
         description: "Memgraph version built into this image (format: X.Y.Z)"
-        default: '2.21.0'
+        default: '3.0.0'
       memgraph_download_link:
         type: string
         description: "Memgraph package download link. Leave empty to use the official download link."
@@ -195,17 +195,4 @@ jobs:
         env:
           PYTHONPATH: "$PWD/e2e"
         run: |
-          docker run --rm \
-          --name ${{ env.NEO4J_CONTAINER}}  \
-          -p 7474:7474 -p ${{ env.NEO4J_PORT }}:7687 \
-          --rm \
-          -d \
-          -v $HOME/neo4j/plugins:/plugins \
-          --env NEO4J_AUTH=none  \
-          -e NEO4J_apoc_export_file_enabled=true \
-          -e NEO4J_apoc_import_file_enabled=true \
-          -e NEO4J_apoc_import_file_use__neo4j__config=true  \
-          -e NEO4JLABS_PLUGINS=\["apoc"\]  neo4j:5.10.0
-          sleep 5
-          python3 test_e2e_correctness.py --memgraph-port ${{ env.MEMGRAPH_PORT }} --neo4j-port ${{ env.NEO4J_PORT }}
-          docker stop ${{ env.NEO4J_CONTAINER}}
+          ./run_e2e_correctness_tests.sh ${{ env.MEMGRAPH_PORT }} ${{ env.NEO4J_PORT }} ${{ env.NEO4J_CONTAINER }}
