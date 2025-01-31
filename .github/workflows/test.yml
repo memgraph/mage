@@ -34,6 +34,13 @@ on:
         options:
           - "with ML"
           - "without ML"
+      sanitizer:
+        description: "Enable AddressSanitizer"
+        type: choice
+        default: "off"
+        options:
+          - "off"
+          - "on"
       memgraph_version:
         description: "Memgraph version built into this image (format: X.Y.Z). You can leave empty if using custom download link."
         type: string
