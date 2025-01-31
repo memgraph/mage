@@ -15,6 +15,10 @@ on:
         type: string
         description: "Mage build target"
         default: 'prod'
+      sanitizer:
+        type: string
+        description: "Enable AddressSanitizer"
+        default: 'off'
       memgraph_version:
         type: string
         description: "Memgraph version built into this image (format: X.Y.Z)"
