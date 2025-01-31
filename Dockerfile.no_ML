@@ -1,6 +1,6 @@
-ARG PY_VERSION_DEFAULT=3.9
+ARG PY_VERSION_DEFAULT=3.12
 
-FROM debian:bullseye as base
+FROM ubuntu:24.04 as base
 
 USER root
 
@@ -8,7 +8,7 @@ ARG TARGETARCH
 ARG PY_VERSION_DEFAULT
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
 
-#essentials for production/dev
+# Essentials for production/dev
 RUN apt-get update && apt-get install -y \
     libcurl4        `memgraph` \
     libpython${PY_VERSION}   `memgraph` \
@@ -29,7 +29,6 @@ RUN apt-get update && apt-get install -y \
     uuid-dev \
     gdb \
     procps \
-    linux-perf \
     libc6-dbg \
     --no-install-recommends \
     && ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf \
@@ -37,8 +36,7 @@ RUN apt-get update && apt-get install -y \
 
 COPY memgraph-${TARGETARCH}.deb .
 
-RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb && rm /usr/lib/memgraph/query_modules/schema.so  \
-&& rm /usr/lib/memgraph/query_modules/example_cpp.so
+RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb 
 
 ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
 
@@ -56,9 +54,9 @@ COPY . /mage
 #MAGE
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
     && export PATH="/root/.cargo/bin:${PATH}" \
-    && python3 -m  pip install -r /mage/python/tests/requirements.txt \
-    && python3 -m  pip install -r /mage/python/requirements_no_ml.txt \
-    && python3 -m  pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt \
+    && python3 -m  pip install -r /mage/python/tests/requirements.txt --break-system-packages \
+    && python3 -m  pip install -r /mage/python/requirements_no_ml.txt --break-system-packages \
+    && python3 -m  pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages \
     && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/ --no-ml --cpp-build-flags CMAKE_BUILD_TYPE=${BUILD_TYPE} \
     && chown -R memgraph: /mage/e2e
 

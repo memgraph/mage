@@ -5,11 +5,11 @@ on:
     inputs:
       os:
         type: choice
-        default: 'debian-11'
+        default: 'ubuntu-24.04'
         description: "Operating system to build the image for"
         required: true
         options:
-          - "debian-11"
+          - "ubuntu-24.04"
       mage_version:
         type: string
         description: "Mage version built into this image (format: X.Y.Z)"

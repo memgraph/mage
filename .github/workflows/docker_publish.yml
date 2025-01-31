@@ -89,8 +89,8 @@ jobs:
 
       - name: Download memgraph binary
         run: |
-          curl -L https://download.memgraph.com/memgraph/v${{ github.event.inputs.memgraph_version }}/debian-11/memgraph_${{ github.event.inputs.memgraph_version }}-1_amd64.deb > memgraph-amd64.deb
-          curl -L https://download.memgraph.com/memgraph/v${{ github.event.inputs.memgraph_version }}/debian-11-aarch64/memgraph_${{ github.event.inputs.memgraph_version }}-1_arm64.deb > memgraph-arm64.deb
+          curl -L https://download.memgraph.com/memgraph/v${{ github.event.inputs.memgraph_version }}/ubuntu-24.04/memgraph_${{ github.event.inputs.memgraph_version }}-1_amd64.deb > memgraph-amd64.deb
+          curl -L https://download.memgraph.com/memgraph/v${{ github.event.inputs.memgraph_version }}/ubuntu-24.04-aarch64/memgraph_${{ github.event.inputs.memgraph_version }}-1_arm64.deb > memgraph-arm64.deb
 
       - name: Build & push prod docker images
         run: |
