@@ -150,7 +150,13 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y build-essential cmake libboost-all-dev uuid-dev
-
+      
+      -name: Set up C++ sanitizers
+        if: inputs.sanitizer == "on"
+        run: |
+          export CXXFLAGS="-fsanitize=address,undefined 
+          export LDFLAGS="-fsanitize=address,undefined"
+          
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

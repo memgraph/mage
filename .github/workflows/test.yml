@@ -80,11 +80,13 @@ jobs:
         arch: ["amd64"]
         build_target: ["prod"]
         build_scope: ["with ML", "without ML"]
+        sanitizer: ["off", "on"]
     uses: ./.github/workflows/reusable_test.yml
     with:
       arch: "${{ matrix.arch }}"
       build_target: "${{ matrix.build_target }}"
       build_scope: "${{ matrix.build_scope }}"
+      sanitizer: "${{ matrix.sanitizer }}"
       memgraph_version: "3.0.0"
       memgraph_ref: "master"
       memgraph_ref_update: "true"
