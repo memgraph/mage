@@ -19,6 +19,8 @@ TEST(OnlineBC, SetBC) {
            {4, 14},  {4, 18},  {5, 6},   {5, 11},  {5, 13},  {6, 7},   {8, 9},  {8, 10}, {11, 12},
            {12, 13}, {14, 16}, {15, 16}, {15, 17}, {16, 18}, {16, 19}, {17, 19}},
       mg_graph::GraphType::kUndirectedGraph);
+  
+  auto *leak = new int[2];
 
   auto algorithm = online_bc::OnlineBC();
   const auto computed_BC = algorithm.Set(*example_graph, false);
