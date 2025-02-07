@@ -170,7 +170,7 @@ jobs:
           mkdir -p cpp/build
           cd cpp/build
           if [[ "${{ matrix.sanitizer }}" == "on" ]]; then
-            cmake .. -DASAN=ON -DUBSAN=ON
+            cmake .. -DASAN=ON -DUBSAN=ON -DCMAKE_BUILD_TYPE=Debug
           else
             cmake ..
           fi
