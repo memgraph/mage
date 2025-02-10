@@ -118,9 +118,6 @@ jobs:
       - name: Docker system prune
         run: |
           docker buildx prune --all -f
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo rm -rf /opt/hostedtoolcache/go
-          sudo rm -rf /opt/hostedtoolcache
 
       - name: Rust library tests
         if: inputs.build_target == 'dev'
