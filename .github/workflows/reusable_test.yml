@@ -149,7 +149,7 @@ jobs:
       - name: Rust library tests
         if: inputs.build_target == 'dev'
         run: |
-          docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/rust/rsmgp-sys && cargo fmt -- --check && cargo test"
+          docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "source ~/.cargo/env && cd /mage/rust/rsmgp-sys && cargo fmt -- --check && cargo test"
 
       - name: C++ Modules unit tests
         if: inputs.build_target == 'dev'
