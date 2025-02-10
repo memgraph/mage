@@ -146,11 +146,6 @@ jobs:
             memgraph-mage:${{ inputs.build_target }} \
             --telemetry-enabled=False
 
-      - name: Set up C++
-        run: |
-          sudo apt update
-          sudo apt install -y build-essential cmake libboost-all-dev uuid-dev
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -161,18 +156,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r ./python/tests/requirements.txt --break-system-packages
 
-      - name: Build C++ modules
-        run: |
-          mkdir -p cpp/build
-          cd cpp/build
-          cmake ..
-          make -j${{ env.CORE_COUNT }}
-
       - name: C++ Modules unit tests
         if: inputs.build_target == 'dev'
         run: |
-          cd cpp/build
-          ctest -j${{ env.CORE_COUNT }}
+          docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/cpp/build/ && ctest --output-on-failure -j${{ env.CORE_COUNT }}"
 
       - name: Python modules unit tests
         if: inputs.build_target == 'dev' && inputs.build_scope != 'without ML'
