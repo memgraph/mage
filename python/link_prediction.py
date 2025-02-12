@@ -219,16 +219,11 @@ def set_model_parameters(
         else torch.device(Devices.CPU_DEVICE)
     )
 
-    # Lists handling=generator expression + unpacking
-    if type(link_prediction_parameters.hidden_features_size) == tuple:
-        link_prediction_parameters.hidden_features_size = [
-            *(x for x in link_prediction_parameters.hidden_features_size)
-        ]
+    if isinstance(link_prediction_parameters.hidden_features_size, tuple):
+        link_prediction_parameters.hidden_features_size = list(link_prediction_parameters.hidden_features_size)
 
-    if type(link_prediction_parameters.attn_num_heads) == tuple:
-        link_prediction_parameters.attn_num_heads = [
-            *(x for x in link_prediction_parameters.attn_num_heads)
-        ]
+    if isinstance(link_prediction_parameters.attn_num_heads, tuple):
+        link_prediction_parameters.attn_num_heads = list(link_prediction_parameters.attn_num_heads)
 
     if device.type == "cuda":
         link_prediction_parameters.sampling_workers = 0
@@ -383,7 +378,7 @@ def predict(
     dest_old_id, dest_type = dest_vertex.id, merge_labels(dest_vertex.labels)
 
     # Check if src_type and dest_type are of the same target relation
-    if type(link_prediction_parameters.target_relation) == tuple:
+    if isinstance(link_prediction_parameters.target_relation, tuple):
         if (
             src_type != link_prediction_parameters.target_relation[0]
             or dest_type != link_prediction_parameters.target_relation[2]
@@ -499,7 +494,7 @@ def recommend(  # noqa: C901
     src_old_id, src_type = src_vertex.id, merge_labels(src_vertex.labels)
 
     # Check if src_type is of the same target relation
-    if type(link_prediction_parameters.target_relation) == tuple:
+    if isinstance(link_prediction_parameters.target_relation, tuple):
         if src_type != link_prediction_parameters.target_relation[0]:
             raise Exception(
                 "Prediction can be only computed on edges on which model was trained. "
@@ -529,7 +524,7 @@ def recommend(  # noqa: C901
         dest_id = reindex[Reindex.MEMGRAPH][dest_type][dest_old_id]
 
         # Check if dest_type is of the same target relation
-        if type(link_prediction_parameters.target_relation) == tuple:
+        if isinstance(link_prediction_parameters.target_relation, tuple):
             if dest_type != link_prediction_parameters.target_relation[2]:
                 raise Exception(
                     "Prediction can be only computed on edges on which model was trained. "
@@ -743,7 +738,7 @@ def _process_help_function(
             old_index
         ] = ind  # save old_to_new relationship
         # Check if list is given as a string
-        if type(features) == str:
+        if isinstance(features, str):
             index_dgl_to_features[type_][ind] = eval(
                 features
             )  # Save new to features relationship.
@@ -1018,7 +1013,7 @@ def validate_user_parameters(parameters: mgp.Map) -> None:  # noqa: C901
     # Define lambda type checkers
     type_checker = (
         lambda arg, mess, real_type: None
-        if type(arg) == real_type
+        if isinstance(arg, real_type)
         else raise_(Exception(mess))
     )  # noqa: E731
 
@@ -1233,7 +1228,7 @@ def validate_user_parameters(parameters: mgp.Map) -> None:  # noqa: C901
         target_relation = parameters[Parameters.TARGET_RELATION]
 
         # check typing
-        if type(target_relation) != tuple and type(target_relation) != str:
+        if not isinstance(target_relation, str) and not isinstance(target_relation, tuple):
             raise Exception("target relation must be a string or a tuple. ")
 
     # num_neg_per_positive_edge
