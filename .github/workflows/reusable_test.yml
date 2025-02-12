@@ -162,7 +162,7 @@ jobs:
         run: |
           ./run_e2e_correctness_tests.sh ${{ env.MEMGRAPH_PORT }} ${{ env.NEO4J_PORT }} ${{ env.NEO4J_CONTAINER }} ${{ env.MAGE_CONTAINER }} ${{ env.MEMGRAPH_NETWORK }}
       
-      -name: Cleanup
+      - name: Cleanup
         run: |
           docker stop ${{ env.MAGE_CONTAINER }}
           docker rm ${{ env.MAGE_CONTAINER }}
