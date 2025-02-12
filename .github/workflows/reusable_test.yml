@@ -140,6 +140,10 @@ jobs:
         if: inputs.build_target == 'dev'
         run: |
           docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/cpp/build/ && ctest --output-on-failure -j${{ env.CORE_COUNT }}"
+      
+      - name: Install Python dependencies
+        run: |
+          docker exec -i -u root "$MAGE_CONTAINER" bash -c "pip install -r /mage/python/tests/requirements.txt --break-system-packages"
 
       - name: Python modules unit tests
         if: inputs.build_target == 'dev' && inputs.build_scope != 'without ML'

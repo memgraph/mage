@@ -30,9 +30,6 @@ while ! curl --silent --fail http://localhost:7474; do
 done
 echo "Neo4j is up and running."
 
-echo "Installing python3 dependencies..."
-docker exec -i -u root "$MAGE_CONTAINER" bash -c "pip install -r /mage/python/tests/requirements.txt --break-system-packages"
-
 echo "Running e2e correctness tests..."
 docker exec -i -u root "$MAGE_CONTAINER" bash -c "cd /mage && python3 test_e2e_correctness.py --memgraph-port $MEMGRAPH_PORT --neo4j-port $NEO4J_PORT --neo4j-container $NEO4J_CONTAINER"
 
