@@ -361,14 +361,14 @@ def set_model_parameters(
     # which are not hashable, but conversion to lists makes them hashable
     if (
         ModelParams.HIDDEN_FEATURES_SIZE in params.keys()
-        and type(params[ModelParams.HIDDEN_FEATURES_SIZE]) == tuple
+        and isinstance(params[ModelParams.HIDDEN_FEATURES_SIZE], tuple)
     ):
         params[ModelParams.HIDDEN_FEATURES_SIZE] = list(
             params[ModelParams.HIDDEN_FEATURES_SIZE]
         )
     if (
         DataParams.METRICS in params.keys()
-        and type(params[DataParams.METRICS]) == tuple
+        and isinstance(params[DataParams.METRICS], tuple)
     ):
         params[DataParams.METRICS] = list(params[DataParams.METRICS])
 
