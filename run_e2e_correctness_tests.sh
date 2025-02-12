@@ -10,6 +10,7 @@ echo "Start Neo4j..."
 docker run --rm \
     --name "$NEO4J_CONTAINER"  \
     --network "$MEMGRAPH_NETWORK" \
+    -p 7474:7474 \
     -d \
     -v "$HOME/neo4j/plugins:/plugins" \
     --env NEO4J_AUTH=none  \
@@ -17,6 +18,17 @@ docker run --rm \
     -e NEO4J_apoc_import_file_enabled=true \
     -e NEO4J_apoc_import_file_use__neo4j__config=true  \
     -e NEO4J_PLUGINS='["apoc"]' neo4j:5.10.0
+
+echo "Waiting for Neo4j to start..."
+while ! curl --silent --fail http://localhost:7474; do
+  sleep 1
+  counter=$((counter+1))
+  if [ $counter -gt $timeout ]; then
+    echo "Neo4j failed to start in $timeout seconds"
+    exit 1
+  fi
+done
+echo "Neo4j is up and running."
 
 echo "Installing python3 dependencies..."
 docker exec -i -u root "$MAGE_CONTAINER" bash -c "pip install -r /mage/python/tests/requirements.txt --break-system-packages"
