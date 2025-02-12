@@ -163,9 +163,10 @@ jobs:
           ./run_e2e_correctness_tests.sh ${{ env.MEMGRAPH_PORT }} ${{ env.NEO4J_PORT }} ${{ env.NEO4J_CONTAINER }} ${{ env.MAGE_CONTAINER }} ${{ env.MEMGRAPH_NETWORK }}
       
       - name: Cleanup
+        if: always()
         run: |
-          docker stop ${{ env.MAGE_CONTAINER }}
-          docker rm ${{ env.MAGE_CONTAINER }}
-          docker rmi memgraph-mage:${{ inputs.build_target }}
-          docker network rm ${{ env.MEMGRAPH_NETWORK }}
-          docker stop ${{ env.NEO4J_CONTAINER }}
+          docker stop ${{ env.MAGE_CONTAINER }} || true
+          docker rm ${{ env.MAGE_CONTAINER }} || true
+          docker rmi memgraph-mage:${{ inputs.build_target }} || true
+          docker network rm ${{ env.MEMGRAPH_NETWORK }} || true
+          docker stop ${{ env.NEO4J_CONTAINER }} || true
