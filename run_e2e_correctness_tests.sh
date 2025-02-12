@@ -22,7 +22,7 @@ echo "Installing python3 dependencies..."
 docker exec -i -u root "$MAGE_CONTAINER" bash -c "pip install -r /mage/python/tests/requirements.txt --break-system-packages"
 
 echo "Running e2e correctness tests..."
-docker exec -i -u root "$MAGE_CONTAINER" bash -c "cd /mage/e2e_correctness && python3 test_e2e_correctness.py --memgraph-port $MEMGRAPH_PORT --neo4j-port $NEO4J_PORT --neo4j-container $NEO4J_CONTAINER"
+docker exec -i -u root "$MAGE_CONTAINER" bash -c "cd /mage && python3 test_e2e_correctness.py --memgraph-port $MEMGRAPH_PORT --neo4j-port $NEO4J_PORT --neo4j-container $NEO4J_CONTAINER"
 
 echo "Stopping Neo4j..."
 docker stop "$NEO4J_CONTAINER"
