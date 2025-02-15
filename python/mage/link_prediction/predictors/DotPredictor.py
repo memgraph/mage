@@ -41,13 +41,11 @@ class DotPredictor(nn.Module):
                 etype=target_relation,
             )
             scores = g.edata[Predictors.EDGE_SCORE]
-            if type(scores) != dict:
+            if not isinstance(scores, dict):
                 return scores.view(-1)
-
-            if type(target_relation) == tuple:  # Tuple[str, str, str] identification
+            if isinstance(target_relation, tuple):  # Tuple[str, str, str] identification
                 return scores[target_relation].view(-1)
-
-            if type(target_relation) == str:  # edge type identification
+            if isinstance(target_relation, str):  # edge type identification
                 for key, val in scores.items():
                     if key[1] == target_relation:
                         return val.view(-1)

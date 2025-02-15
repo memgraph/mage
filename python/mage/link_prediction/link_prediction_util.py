@@ -20,7 +20,7 @@ from mage.link_prediction.constants import (
 # Function for obtaining reverse_relation naming given original relation
 reverse_relation = (
     lambda relation: "rev_" + relation
-    if type(relation) == str
+    if isinstance(relation, str)
     else (relation[2], "rev_" + relation[1], relation[0])
 )
 

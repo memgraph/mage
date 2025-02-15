@@ -37,8 +37,9 @@ env:
   CORE_COUNT: "8"
   MAGE_CONTAINER: "mage"
   MEMGRAPH_PORT: 7687
-  NEO4J_PORT: 7688
+  NEO4J_PORT: 7687
   NEO4J_CONTAINER: "neo4j_test"
+  MEMGRAPH_NETWORK: "memgraph_test_network"
   OS: "ubuntu-24.04"
   s3_region: "eu-west-1"
   MEMGRAPH_ENTERPRISE_LICENSE: ${{ secrets.MEMGRAPH_ENTERPRISE_LICENSE }}
@@ -46,7 +47,7 @@ env:
 
 jobs:
   BuildAndTest:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, DockerMgBuild]
     steps:
       - name: Checkout repository and submodules
         uses: actions/checkout@v4
@@ -110,69 +111,39 @@ jobs:
         if: env.MEMGRAPH_S3_URI
         run: aws s3 cp ${{ env.MEMGRAPH_S3_URI }} memgraph-${{ inputs.arch }}.deb
 
-      - name: Disk status before cleaning
-        run: |
-          df -h
-          docker buildx du
-
-      - name: Docker system prune
-        run: |
-          docker buildx prune --all -f
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo rm -rf /opt/hostedtoolcache/go
-          sudo rm -rf /opt/hostedtoolcache
-
-      - name: Rust library tests
-        if: inputs.build_target == 'dev'
-        run: |
-          cd rust/rsmgp-sys
-          cargo fmt -- --check
-          cargo test
-
       - name: Build and run Memgraph MAGE:${{ inputs.build_target }}
         run: |
-
           DOCKER_BUILDKIT=1 docker buildx build \
           --tag memgraph-mage:${{ inputs.build_target }} \
           --target ${{ inputs.build_target }} \
           --platform linux/${{ inputs.arch }} \
           --file Dockerfile.${{ inputs.build_scope == 'without ML' && 'no_ML' || 'release' }} \
           --load .
+
+          docker network create ${{ env.MEMGRAPH_NETWORK }} || true
+
           docker run -d \
-            -p ${{ env.MEMGRAPH_PORT }}:7687 \
+            --rm \
+            --network ${{ env.MEMGRAPH_NETWORK }} \
             --name ${{ env.MAGE_CONTAINER }} \
             -e MEMGRAPH_ENTERPRISE_LICENSE=${{ env.MEMGRAPH_ENTERPRISE_LICENSE }} \
             -e MEMGRAPH_ORGANIZATION_NAME=${{ env.MEMGRAPH_ORGANIZATION_NAME }} \
             memgraph-mage:${{ inputs.build_target }} \
             --telemetry-enabled=False
-
-      - name: Set up C++
+      
+      - name: Rust library tests
+        if: inputs.build_target == 'dev'
         run: |
-          sudo apt update
-          sudo apt install -y build-essential cmake libboost-all-dev uuid-dev
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PY_VERSION }}
-
-      - name: Install Python test dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r ./python/tests/requirements.txt --break-system-packages
-
-      - name: Build C++ modules
-        run: |
-          mkdir -p cpp/build
-          cd cpp/build
-          cmake ..
-          make -j${{ env.CORE_COUNT }}
+          docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "source ~/.cargo/env && cd /mage/rust/rsmgp-sys && cargo fmt -- --check && cargo test"
 
       - name: C++ Modules unit tests
         if: inputs.build_target == 'dev'
         run: |
-          cd cpp/build
-          ctest -j${{ env.CORE_COUNT }}
+          docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/cpp/build/ && ctest --output-on-failure -j${{ env.CORE_COUNT }}"
+      
+      - name: Install Python dependencies
+        run: |
+          docker exec -i -u root "$MAGE_CONTAINER" bash -c "pip install -r /mage/python/tests/requirements.txt --break-system-packages"
 
       - name: Python modules unit tests
         if: inputs.build_target == 'dev' && inputs.build_scope != 'without ML'
@@ -195,4 +166,13 @@ jobs:
         env:
           PYTHONPATH: "$PWD/e2e"
         run: |
-          ./run_e2e_correctness_tests.sh ${{ env.MEMGRAPH_PORT }} ${{ env.NEO4J_PORT }} ${{ env.NEO4J_CONTAINER }}
+          ./run_e2e_correctness_tests.sh ${{ env.MEMGRAPH_PORT }} ${{ env.NEO4J_PORT }} ${{ env.NEO4J_CONTAINER }} ${{ env.MAGE_CONTAINER }} ${{ env.MEMGRAPH_NETWORK }}
+      
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop ${{ env.MAGE_CONTAINER }} || true
+          docker rm ${{ env.MAGE_CONTAINER }} || true
+          docker rmi memgraph-mage:${{ inputs.build_target }} || true
+          docker network rm ${{ env.MEMGRAPH_NETWORK }} || true
+          docker stop ${{ env.NEO4J_CONTAINER }} || true
