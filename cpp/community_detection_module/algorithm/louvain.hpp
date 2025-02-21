@@ -41,20 +41,20 @@ namespace {
  */
 std::vector<std::int64_t> GrappoloCommunityDetection(GrappoloGraph &grappolo_graph, mgp_graph *graph, bool coloring,
                                                      std::uint64_t min_graph_size, double threshold,
-                                                     double coloring_threshold);
-
+                                                     double coloring_threshold, int num_threads);
+                                                     
 /**
  * Method for loading Grappolo graph from the instance of Memgraph graph.
  *
  * @param memgraph_graph Memgraph graph instance
  * @param grappolo_graph Grappolo graph instance
  */
-void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, GrappoloGraph &grappolo_graph);
+void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, GrappoloGraph &grappolo_graph, int num_threads);
 
 }  // namespace
 
-std::vector<std::int64_t> GetCommunities(const mg_graph::GraphView<> &memgraph_graph, mgp_graph *graph, bool coloring = false,
-                                         std::uint64_t min_graph_shrink = 100000, double threshold = 0.000001,
-                                         double coloring_threshold = 0.01);
+std::vector<std::int64_t> GetCommunities(const mg_graph::GraphView<> &memgraph_graph, mgp_graph *graph, bool coloring,
+                                         std::uint64_t min_graph_shrink, double threshold,
+                                         double coloring_threshold, int num_threads);
 
 }  // namespace louvain_alg
