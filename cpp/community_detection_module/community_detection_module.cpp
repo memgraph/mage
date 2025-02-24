@@ -26,29 +26,31 @@ const char *kFieldCommunity = "community_id";
 const char *kDefaultWeightProperty = "weight";
 const double kDefaultWeight = 1.0;
 
-void InsertLouvainRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
-                         const std::uint64_t community) {
-  auto *vertex = mg_utility::GetNodeForInsertion(node_id, graph, memory);
-  if (!vertex) return;
-
-  mgp_result_record *record = mgp::result_new_record(result);
-  if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
-
-  mg_utility::InsertNodeValueResult(record, kFieldNode, vertex, memory);
-  mg_utility::InsertIntValueResult(record, kFieldCommunity, community, memory);
+void InsertLouvainRecords(mgp_graph *graph, mgp_result *result, mgp_memory *memory, std::vector<std::int64_t> &communities) {
+  auto *vertices_it = mgp::graph_iter_vertices(graph, memory);  // Safe vertex iterator creation
+  mg_utility::OnScopeExit delete_vertices_it([&vertices_it] { mgp::vertices_iterator_destroy(vertices_it); });
+  for (auto *source = mgp::vertices_iterator_get(vertices_it); source;
+        source = mgp::vertices_iterator_next(vertices_it)) {
+    auto vertex_id = mgp::vertex_get_id(source).as_int;
+    auto community = communities[vertex_id];
+    mgp_result_record *record = mgp::result_new_record(result);
+    if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
+    mg_utility::InsertNodeValueResult(record, kFieldNode, source, memory);
+    mg_utility::InsertIntValueResult(record, kFieldCommunity, community, memory);
+  }
 }
 
 void LouvainCommunityDetection(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory,
                                bool subgraph) {
   int i = 0;
 
-  mgp_list *subgraph_nodes = nullptr;
-  mgp_list *subgraph_relationships = nullptr;
-  if (subgraph) {
-    subgraph_nodes = mgp::value_get_list(mgp::list_at(args, i++));
-    subgraph_relationships = mgp::value_get_list(mgp::list_at(args, i++));
-  }
-  const auto *weight_property = mgp::value_get_string(mgp::list_at(args, i++));
+  //mgp_list *subgraph_nodes = nullptr;
+  //mgp_list *subgraph_relationships = nullptr;
+  // if (subgraph) {
+  //   subgraph_nodes = mgp::value_get_list(mgp::list_at(args, i++));
+  //   subgraph_relationships = mgp::value_get_list(mgp::list_at(args, i++));
+  // }
+  //const auto *weight_property = mgp::value_get_string(mgp::list_at(args, i++));
   auto coloring = mgp::value_get_bool(mgp::list_at(args, i++));
   auto min_graph_shrink = mgp::value_get_int(mgp::list_at(args, i++));
   auto community_alg_threshold = mgp::value_get_double(mgp::list_at(args, i++));
@@ -56,19 +58,16 @@ void LouvainCommunityDetection(mgp_list *args, mgp_graph *memgraph_graph, mgp_re
   auto num_threads = mgp::value_get_int(mgp::list_at(args, i++));
   num_threads = num_threads > omp_get_max_threads() ? omp_get_max_threads() : num_threads;
 
-  auto graph =
-      subgraph
-          ? mg_utility::GetWeightedSubgraphView(memgraph_graph, result, memory, subgraph_nodes, subgraph_relationships,
-                                                mg_graph::GraphType::kUndirectedGraph, weight_property, kDefaultWeight)
-          : mg_utility::GetWeightedGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph,
-                                             weight_property, kDefaultWeight);
+  // auto graph =
+  //     subgraph
+  //         ? mg_utility::GetWeightedSubgraphView(memgraph_graph, result, memory, subgraph_nodes, subgraph_relationships,
+  //                                               mg_graph::GraphType::kUndirectedGraph, weight_property, kDefaultWeight)
+  //         : mg_utility::GetWeightedGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph,
+  //                                            weight_property, kDefaultWeight);
 
   auto communities =
-      louvain_alg::GetCommunities(*graph, memgraph_graph, coloring, min_graph_shrink, community_alg_threshold, coloring_alg_threshold, num_threads);
-
-  for (std::uint64_t node_id = 0; node_id < graph->Nodes().size(); ++node_id) {
-    InsertLouvainRecord(memgraph_graph, result, memory, graph->GetMemgraphNodeId(node_id), communities[node_id]);
-  }
+      louvain_alg::GetCommunities(memory, memgraph_graph, coloring, min_graph_shrink, community_alg_threshold, coloring_alg_threshold, num_threads);
+  InsertLouvainRecords(memgraph_graph, result, memory, communities);
 }
 
 void OnGraph(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {

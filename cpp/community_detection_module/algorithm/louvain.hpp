@@ -42,18 +42,12 @@ namespace {
 std::vector<std::int64_t> GrappoloCommunityDetection(GrappoloGraph &grappolo_graph, mgp_graph *graph, bool coloring,
                                                      std::uint64_t min_graph_size, double threshold,
                                                      double coloring_threshold, int num_threads);
-                                                     
-/**
- * Method for loading Grappolo graph from the instance of Memgraph graph.
- *
- * @param memgraph_graph Memgraph graph instance
- * @param grappolo_graph Grappolo graph instance
- */
-void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, GrappoloGraph &grappolo_graph, int num_threads);
 
+void GetGrappoloSuitableGraph(GrappoloGraph &grappolo_graph, mgp_graph *memgraph_graph, mgp_memory *memory,
+                              int num_threads, const char *weight_property = nullptr, double default_weight = 1.0);
 }  // namespace
 
-std::vector<std::int64_t> GetCommunities(const mg_graph::GraphView<> &memgraph_graph, mgp_graph *graph, bool coloring,
+std::vector<std::int64_t> GetCommunities(mgp_memory *memory, mgp_graph *graph, bool coloring,
                                          std::uint64_t min_graph_shrink, double threshold,
                                          double coloring_threshold, int num_threads);
 

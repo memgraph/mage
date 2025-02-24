@@ -1,5 +1,8 @@
 #include "louvain.hpp"
 #include <omp.h>
+#include <cstdint>
+#include "mg_procedure.h"
+#include "mg_utils.hpp"
 
 namespace louvain_alg {
 
@@ -42,30 +45,44 @@ std::vector<std::int64_t> GrappoloCommunityDetection(GrappoloGraph &grappolo_gra
   return result;
 }
 
-void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, GrappoloGraph &grappolo_graph, int num_threads) {
-  omp_set_num_threads(num_threads);
-  auto number_of_vertices = memgraph_graph.Nodes().size();
-  auto number_of_edges = memgraph_graph.Edges().size();
+void GetGrappoloSuitableGraph(GrappoloGraph &grappolo_graph, mgp_graph *memgraph_graph, mgp_memory *memory, int num_threads, const char *weight_property, double default_weight) {
+  std::size_t number_of_vertices = 0; // maybe need additional function to get number of vertices
+  std::unordered_set<int64_t> vertices;
+  std::vector<std::tuple<int, int, int>> edges; // source, destination, weight
+  auto number_of_edges = 0;
 
-  // Case without graph edges
-  if (number_of_edges == 0) {
-    grappolo_graph.numEdges = 0;
-    return;
+  auto *vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);  // Safe vertex iterator creation
+  mg_utility::OnScopeExit delete_vertices_it([&vertices_it] { mgp::vertices_iterator_destroy(vertices_it); });
+  for (auto *source = mgp::vertices_iterator_get(vertices_it); source;
+        source = mgp::vertices_iterator_next(vertices_it)) {
+    auto *edges_it = mgp::vertex_iter_out_edges(source, memory);  // Safe edge iterator creation
+    mg_utility::OnScopeExit delete_edges_it([&edges_it] { mgp::edges_iterator_destroy(edges_it); });
+
+    for (auto *out_edge = mgp::edges_iterator_get(edges_it); out_edge;
+          out_edge = mgp::edges_iterator_next(edges_it)) {
+      auto *destination = mgp::edge_get_to(out_edge);
+
+      double weight = mg_utility::GetNumericProperty(out_edge, weight_property, memory, default_weight);
+      auto source_id = mgp::vertex_get_id(source).as_int;
+      auto destination_id = mgp::vertex_get_id(destination).as_int;
+      vertices.insert(source_id);
+      vertices.insert(destination_id);
+      number_of_edges++;
+      edges.emplace_back(source_id, destination_id, weight);
+    }
   }
 
+  number_of_vertices = vertices.size();
+  auto edge_index = 0;
   auto tmp_edge_list = std::unique_ptr<edge[]>(new edge[number_of_edges]);  // Every edge stored ONCE
-
-  // TODO: Add different weights on edges
-  std::uint64_t edge_index = 0;
-  for (const auto [id, from, to] : memgraph_graph.Edges()) {
-    tmp_edge_list[edge_index].head = from;  // The S index
-    tmp_edge_list[edge_index].tail = to;    // The T index: Zero-based indexing
-    tmp_edge_list[edge_index].weight = memgraph_graph.IsWeighted()
-                                           ? memgraph_graph.GetWeight(id)
-                                           : 1.0;  // Make it positive and cast to Double, fixed to 1.0
+  for (auto [source, destination, weight] : edges) {
+    tmp_edge_list[edge_index].head = source;  // The S index
+    tmp_edge_list[edge_index].tail = destination;    // The T index: Zero-based indexing
+    tmp_edge_list[edge_index].weight = weight;  // Make it positive and cast to Double, fixed to 1.0
     edge_index++;
   }
 
+  omp_set_num_threads(num_threads);
   auto edge_list_ptrs = static_cast<long *>(malloc((number_of_vertices + 1) * sizeof(long)));
   if (edge_list_ptrs == nullptr) {
     throw mg_exception::NotEnoughMemoryException();
@@ -119,26 +136,21 @@ void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, GrappoloGr
     edge_list[index].tail = head;
     edge_list[index].weight = weight;
   }
-
-  // Define Grappolo graph structure
-  grappolo_graph.sVertices = number_of_vertices;
   grappolo_graph.numVertices = number_of_vertices;
   grappolo_graph.numEdges = number_of_edges;
   grappolo_graph.edgeListPtrs = edge_list_ptrs;
   grappolo_graph.edgeList = edge_list;
+  grappolo_graph.sVertices = number_of_vertices;
 }
 }  // namespace
 
-std::vector<std::int64_t> GetCommunities(const mg_graph::GraphView<> &memgraph_graph, mgp_graph *graph, bool coloring,
+std::vector<std::int64_t> GetCommunities(mgp_memory *memory, mgp_graph *graph, bool coloring,
                                          std::uint64_t min_graph_shrink, double threshold, double coloring_threshold, int num_threads) {
-  if (memgraph_graph.Nodes().empty()) {
-    return {};
-  }
-
   // The structure will be deleted in afterward calls in grappolo methods
   auto *grappolo_graph = (GrappoloGraph *)malloc(sizeof(GrappoloGraph));
   // Create structure and load undirected edges
-  LoadUndirectedEdges(memgraph_graph, *grappolo_graph, num_threads);
+  // LoadUndirectedEdges(memgraph_graph, *grappolo_graph, num_threads);
+  GetGrappoloSuitableGraph(*grappolo_graph, graph, memory, num_threads, "weight", 1.0);
 
   return GrappoloCommunityDetection(*grappolo_graph, graph, coloring, min_graph_shrink, threshold, coloring_threshold, num_threads);
 }
