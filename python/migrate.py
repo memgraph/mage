@@ -350,7 +350,6 @@ mgp.add_batch_read_proc(postgresql, init_migrate_postgresql, cleanup_migrate_pos
 s3_dict = {}
 
 
-
 def init_migrate_s3(
     file_path: str,
     config: mgp.Map,
@@ -358,7 +357,7 @@ def init_migrate_s3(
 ):
     """
     Initialize an S3 connection and prepare to stream a CSV file.
-    
+
     :param file_path: S3 file path in the format 's3://bucket-name/path/to/file.csv'
     :param config: Configuration map containing AWS credentials (access_key, secret_key, region, etc.)
     :param config_path: Path to a JSON file containing configuration parameters
@@ -371,7 +370,7 @@ def init_migrate_s3(
     # Extract S3 bucket and key
     if not file_path.startswith("s3://"):
         raise ValueError("Invalid S3 path format. Expected 's3://bucket-name/path'.")
-    
+
     file_path_no_protocol = file_path[5:]
     bucket_name, *key_parts = file_path_no_protocol.split("/")
     s3_key = "/".join(key_parts)
@@ -426,7 +425,7 @@ def s3(
             batch_rows.append(mgp.Record(row=_name_row_cells(row, column_names)))
         except StopIteration:
             break
-    
+
     return batch_rows
 
 
