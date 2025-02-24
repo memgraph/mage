@@ -1,10 +1,12 @@
 from decimal import Decimal
 import boto3
 import csv
+import io
 import json
 import mgp
 import mysql.connector as mysql_connector
 import oracledb
+import os
 import pyodbc
 import psycopg2
 import threading
@@ -369,25 +371,29 @@ def init_migrate_s3(
     # Extract S3 bucket and key
     if not file_path.startswith("s3://"):
         raise ValueError("Invalid S3 path format. Expected 's3://bucket-name/path'.")
-
-    _, bucket_name, *key_parts = file_path.split("/")
+    
+    file_path_no_protocol = file_path[5:]
+    bucket_name, *key_parts = file_path_no_protocol.split("/")
     s3_key = "/".join(key_parts)
 
     # Initialize S3 client
     s3_client = boto3.client(
         "s3",
-        aws_access_key_id=config.get("aws_access_key_id"),
-        aws_secret_access_key=config.get("aws_secret_access_key"),
-        region_name=config.get("region_name"),
+        aws_access_key_id=config.get("aws_access_key_id", os.getenv("AWS_ACCESS_KEY_ID", None)),
+        aws_secret_access_key=config.get("aws_secret_access_key", os.getenv("AWS_SECRET_ACCESS_KEY", None)),
+        aws_session_token=config.get("aws_session_token", os.getenv("AWS_SESSION_TOKEN", None)),
+        region_name=config.get("region_name", os.getenv("AWS_REGION", None)),
     )
 
     # Fetch and read file as a streaming object
     response = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
-    data_stream = response["Body"].iter_lines(decode_unicode=True)
+    # Convert binary stream to text stream
+    text_stream = io.TextIOWrapper(response["Body"], encoding="utf-8")
 
     # Read CSV headers
-    csv_reader = csv.reader(data_stream)
+    csv_reader = csv.reader(text_stream)
     column_names = next(csv_reader)  # First row contains column names
+    print(f"Column names: {column_names}")
 
     if threading.get_native_id not in s3_dict:
         s3_dict[threading.get_native_id] = {}
@@ -420,7 +426,8 @@ def s3(
             batch_rows.append(mgp.Record(row=_name_row_cells(row, column_names)))
         except StopIteration:
             break
-
+    
+    print("Row size", len(batch_rows))
     return batch_rows
 
 
