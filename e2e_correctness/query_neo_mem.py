@@ -237,8 +237,8 @@ def create_graph_neo4j_json(json_neo4j_data) -> Graph:
     return graph
 
 
-def create_neo4j_driver(port: int) -> neo4j.BoltDriver:
-    return neo4j.GraphDatabase.driver(f"bolt://localhost:{port}", encrypted=False)
+def create_neo4j_driver(port: int, container: str) -> neo4j.BoltDriver:
+    return neo4j.GraphDatabase.driver(f"bolt://{container}:{port}", encrypted=False)
 
 
 def create_memgraph_db(port: int) -> gqlalchemy.Memgraph:

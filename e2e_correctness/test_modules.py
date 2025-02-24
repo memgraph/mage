@@ -27,9 +27,7 @@ from query_neo_mem import (
     run_memgraph_query,
     run_neo4j_query,
     execute_query_neo4j,
-    path_to_string_neo4j,
     parse_neo4j,
-    path_to_string_mem,
     parse_mem,
 )
 
@@ -56,18 +54,6 @@ class TestConstants:
     MEMGRAPH_QUERY = "memgraph_query"
     NEO4J_QUERY = "neo4j_query"
     CONFIG_FILE = "config.yml"
-    
-
-
-class ConfigConstants:
-    NEO4J_PORT = 7688
-    MEMGRAPH_PORT = 7687
-    NEO4J_CONTAINER_NAME = "test_neo4j_apoc"
-    MEMGRAPH_CONTAINER_NAME = "test_memgraph_mage"
-
-    NEO4J_IMAGE_NAME = "neo4j:latest"
-    MEMGRAPH_IMAGE_NAME = "memgraph-mage:test"
-
 
 def get_all_tests():
     """
@@ -253,10 +239,14 @@ def memgraph_db(memgraph_port):
 def neo4j_port(pytestconfig):
     return pytestconfig.getoption("--neo4j-port")
 
+@pytest.fixture(scope="session")
+def neo4j_container(pytestconfig):
+    return pytestconfig.getoption("--neo4j-container")
+
 
 @pytest.fixture(scope="session", autouse=True)
-def neo4j_driver(neo4j_port):
-    neo4j_driver = create_neo4j_driver(neo4j_port)
+def neo4j_driver(neo4j_port, neo4j_container):
+    neo4j_driver = create_neo4j_driver(neo4j_port, neo4j_container)
     logger.info("Created neo4j driver")
 
     yield neo4j_driver
