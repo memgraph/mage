@@ -427,7 +427,6 @@ def s3(
         except StopIteration:
             break
     
-    print("Row size", len(batch_rows))
     return batch_rows
 
 
