@@ -82,7 +82,8 @@ cd $BASE_DIR
 ./memgraph/build/memgraph \
   --query-modules-directory $BASE_DIR/mage/dist \
   --storage-properties-on-edges true \
-  --log-level=TRACE &
+  --log-level=TRACE \
+  --also-log-to-stderr &
 cd mage/e2e
 python3 -m pytest . -vv -k "not cugraph"
 #./test_e2e "not cugraph"
