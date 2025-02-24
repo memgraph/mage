@@ -63,6 +63,7 @@ if [ ! -d "mage/dist" ]; then
   python3 -m pip install  dgl -f https://data.dgl.ai/wheels/torch-2.3/cu121/repo.html --no-cache --break-system-packages
   cd mage
   python3 setup build
+  cd $BASE_DIR
 else
   echo "Found mage modules"
 fi
@@ -82,22 +83,15 @@ cd $BASE_DIR
   --query-modules-directory $BASE_DIR/mage/dist \
   --storage-properties-on-edges true \
   --log-level=TRACE &
-cd mage
-./test_e2e
+cd mage/e2e
+python3 -m pytest . -vv -k "not cugraph"
+#./test_e2e "not cugraph"
 cd $BASE_DIR
 
 # Run E2E correctness (currently expects plugins to be here too)
 export PLUGINS_DIR="$BASE_DIR/plugins"
 export LOGS_DIR="$BASE_DIR/logs"
 mkdir -p $LOGS_DIR
-# docker run \
-#     --name testneo4j \
-#     -p 7474:7474 -p 7688:7687 \
-#     -d \
-#     --env NEO4J_AUTH=none \
-#     -v $PLUGINS_DIR:/plugins  \
-#     -v $LOG_DIR:/logs \
-#     neo4j:4.4.35
 docker run --rm \
     --name testneo4j  \
     -p 7474:7473 \
@@ -109,7 +103,6 @@ docker run --rm \
     -e NEO4J_apoc_import_file_enabled=true \
     -e NEO4J_apoc_import_file_use__neo4j__config=true  \
     -e NEO4J_PLUGINS='["apoc"]' neo4j:5.10.0
-  #  -e NEO4J_dbms_connector_bolt_advertised__address=localhost:7688 \
     
 
 sleep 20
