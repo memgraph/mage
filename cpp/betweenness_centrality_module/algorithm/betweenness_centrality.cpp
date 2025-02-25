@@ -1,9 +1,11 @@
+#include "betweenness_centrality.hpp"
+
 #include <omp.h>
 #include <queue>
 #include <stack>
 #include <vector>
 
-#include "betweenness_centrality.hpp"
+#include "mg_procedure.h"
 
 namespace betweenness_centrality_util {
 
@@ -58,7 +60,7 @@ void Normalize(std::vector<double> &vec, double constant) {
 
 namespace betweenness_centrality_alg {
 
-std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bool directed, bool normalize,
+std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, mgp_graph *mg_graph, bool directed, bool normalize,
                                           int threads) {
   auto number_of_nodes = graph.Nodes().size();
   std::vector<double> betweenness_centrality(number_of_nodes, 0);
@@ -66,7 +68,10 @@ std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bo
   // perform bfs for every node in the graph
   omp_set_dynamic(0);
   omp_set_num_threads(threads);
-#pragma omp parallel for
+#pragma omp parallel
+{
+  [[maybe_unused]] const enum mgp_error tracking_error = mgp_track_current_thread_allocations(mg_graph);
+#pragma omp for
   for (std::uint64_t node_id = 0; node_id < number_of_nodes; node_id++) {
     // data structures used in BFS
     std::stack<std::uint64_t> visited;
@@ -98,6 +103,8 @@ std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bo
       }
     }
   }
+  [[maybe_unused]] const enum mgp_error untracking_error = mgp_untrack_current_thread_allocations(mg_graph);
+}
 
   if (normalize) {
     // normalized by dividing the value by the number of pairs of nodes

@@ -38,7 +38,7 @@ void GetBetweennessCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
     auto graph_type = directed ? mg_graph::GraphType::kDirectedGraph : mg_graph::GraphType::kUndirectedGraph;
 
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, graph_type);
-    auto BC = betweenness_centrality_alg::BetweennessCentrality(*graph, directed, normalize, threads);
+    auto BC = betweenness_centrality_alg::BetweennessCentrality(*graph, memgraph_graph, directed, normalize, threads);
 
     auto number_of_nodes = graph->Nodes().size();
     for (std::uint64_t node_id = 0; node_id < number_of_nodes; ++node_id)
