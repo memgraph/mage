@@ -392,7 +392,6 @@ def init_migrate_s3(
     # Read CSV headers
     csv_reader = csv.reader(text_stream)
     column_names = next(csv_reader)  # First row contains column names
-    print(f"Column names: {column_names}")
 
     if threading.get_native_id not in s3_dict:
         s3_dict[threading.get_native_id] = {}
