@@ -1,8 +1,11 @@
 #pragma once
 
 #include <cstdint>
+#include <unordered_map>
 #include <vector>
-#include <mgp.hpp>
+
+struct mgp_graph;
+struct mgp_memory;
 
 namespace pagerank_alg {
 
@@ -24,7 +27,7 @@ class PageRankGraph {
   /// @param edges -- pairs (source, target) representing directed edges
   PageRankGraph(std::uint64_t number_of_nodes, std::uint64_t number_of_edges, const std::vector<EdgePair> &edges);
 
-  PageRankGraph(mgp_graph *memgraph_graph);
+  PageRankGraph(mgp_graph *memgraph_graph, mgp_memory *memory);
 
   std::uint64_t GetMemgraphNodeId(std::uint64_t node_id) const;
 
