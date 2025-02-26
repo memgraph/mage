@@ -182,7 +182,7 @@ PageRankGraph::PageRankGraph(mgp_graph *memgraph_graph) {
   for (auto const &edge : graph.Relationships()) {
     auto from = memgraph_to_id[edge.From().Id().AsUint()];
     auto to = memgraph_to_id[edge.To().Id().AsUint()];
-    ordered_edges_.emplace_back(from, to);
+    ordered_edges_.emplace_back(to, from);
     out_degree_[from] += 1;
   }
   edge_count_ = ordered_edges_.size();
