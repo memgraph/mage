@@ -4,13 +4,7 @@ set(pagerank_module_src
 
 add_query_module(pagerank 1 "${pagerank_module_src}")
 
-# Link external libraries
-#target_link_libraries(pagerank PRIVATE mg_utility)
-#target_include_directories(pagerank PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-
-################################################################
-
-# # Module tests
+# Module tests
 # if (NOT MAGE_CUGRAPH_ENABLE)
 #     include(GoogleTest)
 #     set(pagerank_test_src

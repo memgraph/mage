@@ -4,7 +4,6 @@
 #include <numeric>
 #include <future>
 
-#include <mg_utils.hpp>
 namespace pagerank_alg {
 
 namespace {

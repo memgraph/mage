@@ -4,8 +4,7 @@
 #include <unordered_map>
 #include <vector>
 
-struct mgp_graph;
-struct mgp_memory;
+#include <mg_utils.hpp>
 
 namespace pagerank_alg {
 
