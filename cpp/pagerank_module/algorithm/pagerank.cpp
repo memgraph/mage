@@ -1,9 +1,10 @@
+#include "pagerank.hpp"
+
 #include <algorithm>
 #include <numeric>
 #include <future>
 
-#include "pagerank.hpp"
-
+#include <mg_utils.hpp>
 namespace pagerank_alg {
 
 namespace {
@@ -168,22 +169,33 @@ PageRankGraph::PageRankGraph(const std::uint64_t number_of_nodes, const std::uin
   }
 }
 
-PageRankGraph::PageRankGraph(mgp_graph *memgraph_graph) {
-  mgp::Graph graph(memgraph_graph);
+PageRankGraph::PageRankGraph(mgp_graph *memgraph_graph, mgp_memory *memory) {
+  auto *vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);  // Safe vertex iterator creation
+  mg_utility::OnScopeExit delete_vertices_it([&vertices_it] { mgp::vertices_iterator_destroy(vertices_it); });
+  for (auto *source = mgp::vertices_iterator_get(vertices_it); source;
+        source = mgp::vertices_iterator_next(vertices_it)) {
+    auto *edges_it = mgp::vertex_iter_out_edges(source, memory);  // Safe edge iterator creation
+    mg_utility::OnScopeExit delete_edges_it([&edges_it] { mgp::edges_iterator_destroy(edges_it); });
 
-  for (auto node : graph.Nodes()) {
-    auto mg_id = node.Id().AsUint();
-    memgraph_to_id[mg_id] = id_to_memgraph.size();
-    id_to_memgraph.emplace_back(mg_id);
+    auto source_id = mgp::vertex_get_id(source).as_int;
+
+    for (auto *out_edge = mgp::edges_iterator_get(edges_it); out_edge;
+          out_edge = mgp::edges_iterator_next(edges_it)) {
+
+      auto *destination = mgp::edge_get_to(out_edge);
+      auto destination_id = mgp::vertex_get_id(destination).as_int;
+      ordered_edges_.emplace_back(destination_id, source_id);
+      edge_count_ ++;
+    }
+    memgraph_to_id[source_id] = id_to_memgraph.size();
+    id_to_memgraph.emplace_back(source_id);
   }
 
   node_count_ = id_to_memgraph.size();
   out_degree_.resize(node_count_, 0);
-  for (auto const &edge : graph.Relationships()) {
-    auto from = memgraph_to_id[edge.From().Id().AsUint()];
-    auto to = memgraph_to_id[edge.To().Id().AsUint()];
-    ordered_edges_.emplace_back(to, from);
-    out_degree_[from] += 1;
+  for (auto &edge : ordered_edges_) {
+    edge = {memgraph_to_id[edge.first], memgraph_to_id[edge.second]};
+    out_degree_[edge.second] += 1;
   }
   edge_count_ = ordered_edges_.size();
 }

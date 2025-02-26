@@ -1,7 +1,6 @@
-#include <mg_utils.hpp>
-
 #include "algorithm/pagerank.hpp"
-#include "mgp.hpp"
+
+#include <mg_utils.hpp>
 
 namespace {
 constexpr char const *kProcedureGet = "get";
@@ -38,13 +37,12 @@ void InsertPagerankRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memo
 /// @param result Memgraph result storage
 /// @param memory Memgraph memory storage
 void PagerankWrapper(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};
   try {
     auto max_iterations = mgp::value_get_int(mgp::list_at(args, 0));
     auto damping_factor = mgp::value_get_double(mgp::list_at(args, 1));
     auto stop_epsilon = mgp::value_get_double(mgp::list_at(args, 2));
 
-    auto pagerank_graph = pagerank_alg::PageRankGraph(memgraph_graph);
+    auto pagerank_graph = pagerank_alg::PageRankGraph(memgraph_graph, memory);
     auto pageranks =
         pagerank_alg::ParallelIterativePageRank(pagerank_graph, max_iterations, damping_factor, stop_epsilon);
 
@@ -60,7 +58,6 @@ void PagerankWrapper(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
 }  // namespace
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
-  mgp::MemoryDispatcherGuard guard{memory};
   mgp_value *default_max_iterations;
   mgp_value *default_damping_factor;
   mgp_value *default_stop_epsilon;
