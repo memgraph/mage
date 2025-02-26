@@ -29,9 +29,15 @@ const double kDefaultWeight = 1.0;
 void InsertLouvainRecords(mgp_graph *graph, mgp_result *result, mgp_memory *memory, std::vector<std::int64_t> &communities) {
   auto *vertices_it = mgp::graph_iter_vertices(graph, memory);  // Safe vertex iterator creation
   mg_utility::OnScopeExit delete_vertices_it([&vertices_it] { mgp::vertices_iterator_destroy(vertices_it); });
+  auto first_vertex_id = 0;
+  bool first_vertex = true;
   for (auto *source = mgp::vertices_iterator_get(vertices_it); source;
         source = mgp::vertices_iterator_next(vertices_it)) {
-    auto vertex_id = mgp::vertex_get_id(source).as_int;
+    if (first_vertex) {
+      first_vertex_id = mgp::vertex_get_id(source).as_int;
+      first_vertex = false;
+    }
+    auto vertex_id = mgp::vertex_get_id(source).as_int - first_vertex_id;
     auto community = communities[vertex_id];
     mgp_result_record *record = mgp::result_new_record(result);
     if (record == nullptr) throw mg_exception::NotEnoughMemoryException();

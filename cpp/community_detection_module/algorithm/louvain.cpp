@@ -50,21 +50,27 @@ void GetGrappoloSuitableGraph(GrappoloGraph &grappolo_graph, mgp_graph *memgraph
   std::unordered_set<int64_t> vertices;
   std::vector<std::tuple<int, int, int>> edges; // source, destination, weight
   auto number_of_edges = 0;
+  auto first_vertex_id = 0;
+  bool first_vertex = true;
 
   auto *vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);  // Safe vertex iterator creation
-  mg_utility::OnScopeExit delete_vertices_it([&vertices_it] { mgp::vertices_iterator_destroy(vertices_it); });
+  mg_utility::OnScopeExit delete_vertices_it([&vertices_it] { mgp::vertices_iterator_destroy(vertices_it); }); 
   for (auto *source = mgp::vertices_iterator_get(vertices_it); source;
         source = mgp::vertices_iterator_next(vertices_it)) {
+    if (first_vertex) {
+      first_vertex_id = mgp::vertex_get_id(source).as_int;
+      first_vertex = false;
+    }
     auto *edges_it = mgp::vertex_iter_out_edges(source, memory);  // Safe edge iterator creation
     mg_utility::OnScopeExit delete_edges_it([&edges_it] { mgp::edges_iterator_destroy(edges_it); });
-    auto source_id = mgp::vertex_get_id(source).as_int;
+    auto source_id = mgp::vertex_get_id(source).as_int - first_vertex_id;
     vertices.insert(source_id);
 
     for (auto *out_edge = mgp::edges_iterator_get(edges_it); out_edge;
           out_edge = mgp::edges_iterator_next(edges_it)) {
       auto *destination = mgp::edge_get_to(out_edge);
       double weight = mg_utility::GetNumericProperty(out_edge, weight_property, memory, default_weight);
-      auto destination_id = mgp::vertex_get_id(destination).as_int;
+      auto destination_id = mgp::vertex_get_id(destination).as_int - first_vertex_id;
       vertices.insert(destination_id);
       number_of_edges++;
       edges.emplace_back(source_id, destination_id, weight);
