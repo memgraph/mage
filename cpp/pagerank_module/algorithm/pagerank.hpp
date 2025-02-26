@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <vector>
+#include <mgp.hpp>
 
 namespace pagerank_alg {
 
@@ -22,6 +23,10 @@ class PageRankGraph {
   /// @param number_of_edges -- number of edges in graph
   /// @param edges -- pairs (source, target) representing directed edges
   PageRankGraph(std::uint64_t number_of_nodes, std::uint64_t number_of_edges, const std::vector<EdgePair> &edges);
+
+  PageRankGraph(mgp_graph *memgraph_graph);
+
+  std::uint64_t GetMemgraphNodeId(std::uint64_t node_id) const;
 
   /// @return -- number of nodes in graph
   std::uint64_t GetNodeCount() const;
@@ -47,6 +52,9 @@ class PageRankGraph {
   /// out degree for each node in graph because it is required in calculating
   /// PageRank
   std::vector<std::uint64_t> out_degree_;
+
+  std::vector<std::uint64_t> id_to_memgraph;
+  std::unordered_map<std::uint64_t, std::uint64_t> memgraph_to_id;
 };
 
 /// If we present nodes as pages and directed edges between them as links the

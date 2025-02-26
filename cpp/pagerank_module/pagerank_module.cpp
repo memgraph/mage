@@ -1,6 +1,7 @@
 #include <mg_utils.hpp>
 
 #include "algorithm/pagerank.hpp"
+#include "mgp.hpp"
 
 namespace {
 constexpr char const *kProcedureGet = "get";
@@ -37,28 +38,18 @@ void InsertPagerankRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memo
 /// @param result Memgraph result storage
 /// @param memory Memgraph memory storage
 void PagerankWrapper(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
   try {
     auto max_iterations = mgp::value_get_int(mgp::list_at(args, 0));
     auto damping_factor = mgp::value_get_double(mgp::list_at(args, 1));
     auto stop_epsilon = mgp::value_get_double(mgp::list_at(args, 2));
 
-    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
-
-    const auto &graph_edges = graph->Edges();
-    std::vector<pagerank_alg::EdgePair> pagerank_edges;
-    std::transform(graph_edges.begin(), graph_edges.end(), std::back_inserter(pagerank_edges),
-                   [](const mg_graph::Edge<std::uint64_t> &edge) -> pagerank_alg::EdgePair {
-                     return {edge.from, edge.to};
-                   });
-
-    auto number_of_nodes = graph->Nodes().size();
-
-    auto pagerank_graph = pagerank_alg::PageRankGraph(number_of_nodes, pagerank_edges.size(), pagerank_edges);
+    auto pagerank_graph = pagerank_alg::PageRankGraph(memgraph_graph);
     auto pageranks =
         pagerank_alg::ParallelIterativePageRank(pagerank_graph, max_iterations, damping_factor, stop_epsilon);
 
-    for (std::uint64_t node_id = 0; node_id < number_of_nodes; ++node_id) {
-      InsertPagerankRecord(memgraph_graph, result, memory, graph->GetMemgraphNodeId(node_id), pageranks[node_id]);
+    for (std::uint64_t node_id = 0; node_id < pagerank_graph.GetNodeCount(); ++node_id) {
+      InsertPagerankRecord(memgraph_graph, result, memory, pagerank_graph.GetMemgraphNodeId(node_id), pageranks[node_id]);
     }
   } catch (const std::exception &e) {
     // We must not let any exceptions out of our module.
@@ -69,6 +60,7 @@ void PagerankWrapper(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
 }  // namespace
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
   mgp_value *default_max_iterations;
   mgp_value *default_damping_factor;
   mgp_value *default_stop_epsilon;
