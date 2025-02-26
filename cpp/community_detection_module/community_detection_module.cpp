@@ -53,8 +53,8 @@ void InsertLouvainRecordsForSubgraph(mgp_list *subgraph_nodes, mgp_result *resul
   for (std::size_t i = 0; i < mgp::list_size(subgraph_nodes); i++) {
     auto *vertex = mgp::value_get_vertex(mgp::list_at(subgraph_nodes, i));
     auto community = communities[subgraph_node_ids.size()];
-    const auto insterted = subgraph_node_ids.insert(mgp::vertex_get_id(vertex).as_int).second;
-    if (insterted) {
+    const auto inserted = subgraph_node_ids.insert(mgp::vertex_get_id(vertex).as_int).second;
+    if (inserted) {
       mgp_result_record *record = mgp::result_new_record(result);
       if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
       mg_utility::InsertNodeValueResult(record, kFieldNode, vertex, memory);
