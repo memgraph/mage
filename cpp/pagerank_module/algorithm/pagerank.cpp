@@ -155,7 +155,7 @@ PageRankGraph::PageRankGraph(const std::uint64_t number_of_nodes, const std::uin
     : node_count_(number_of_nodes), edge_count_(number_of_edges), out_degree_(number_of_nodes) {
   AdjacencyList<std::uint64_t> in_neighbours(number_of_nodes);
 
-  for (const auto [from, to] : edges) {
+  for (const auto &[from, to] : edges) {
     // Because PageRank needs a set of nodes that point to a given node.
     in_neighbours.AddAdjacentPair(from, to);
     out_degree_[from] += 1;
@@ -167,6 +167,28 @@ PageRankGraph::PageRankGraph(const std::uint64_t number_of_nodes, const std::uin
     }
   }
 }
+
+PageRankGraph::PageRankGraph(mgp_graph *memgraph_graph) {
+  mgp::Graph graph(memgraph_graph);
+
+  for (auto node : graph.Nodes()) {
+    auto mg_id = node.Id().AsUint();
+    memgraph_to_id[mg_id] = id_to_memgraph.size();
+    id_to_memgraph.emplace_back(mg_id);
+  }
+
+  node_count_ = id_to_memgraph.size();
+  out_degree_.resize(node_count_, 0);
+  for (auto const &edge : graph.Relationships()) {
+    auto from = memgraph_to_id[edge.From().Id().AsUint()];
+    auto to = memgraph_to_id[edge.To().Id().AsUint()];
+    ordered_edges_.emplace_back(from, to);
+    out_degree_[from] += 1;
+  }
+  edge_count_ = ordered_edges_.size();
+}
+
+std::uint64_t PageRankGraph::GetMemgraphNodeId(const std::uint64_t node_id) const { return id_to_memgraph[node_id]; }
 
 std::uint64_t PageRankGraph::GetNodeCount() const { return node_count_; }
 
