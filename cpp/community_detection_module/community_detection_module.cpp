@@ -48,13 +48,18 @@ void InsertLouvainRecords(mgp_graph *graph, mgp_result *result, mgp_memory *memo
 
 void InsertLouvainRecordsForSubgraph(mgp_list *subgraph_nodes, mgp_result *result, mgp_memory *memory,
                                      std::vector<std::int64_t> &communities) {
+  std::unordered_set<int64_t> subgraph_node_ids;
+  subgraph_node_ids.reserve(mgp::list_size(subgraph_nodes));
   for (std::size_t i = 0; i < mgp::list_size(subgraph_nodes); i++) {
     auto *vertex = mgp::value_get_vertex(mgp::list_at(subgraph_nodes, i));
-    auto community = communities[i];
-    mgp_result_record *record = mgp::result_new_record(result);
-    if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
-    mg_utility::InsertNodeValueResult(record, kFieldNode, vertex, memory);
-    mg_utility::InsertIntValueResult(record, kFieldCommunity, community, memory);
+    auto community = communities[subgraph_node_ids.size()];
+    const auto insterted = subgraph_node_ids.insert(mgp::vertex_get_id(vertex).as_int).second;
+    if (insterted) {
+      mgp_result_record *record = mgp::result_new_record(result);
+      if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
+      mg_utility::InsertNodeValueResult(record, kFieldNode, vertex, memory);
+      mg_utility::InsertIntValueResult(record, kFieldCommunity, community, memory);
+    }
   }
 }
 
@@ -67,9 +72,6 @@ void LouvainCommunityDetection(mgp_list *args, mgp_graph *memgraph_graph, mgp_re
     subgraph_nodes = mgp::value_get_list(mgp::list_at(args, i++));
     subgraph_relationships = mgp::value_get_list(mgp::list_at(args, i++));
   }
-  // print size of nodes and edges
-  std::cout << "Size of nodes: " << mgp::list_size(subgraph_nodes) << std::endl;
-  std::cout << "Size of edges: " << mgp::list_size(subgraph_relationships) << std::endl;
   const auto *weight_property = mgp::value_get_string(mgp::list_at(args, i++));
   auto coloring = mgp::value_get_bool(mgp::list_at(args, i++));
   auto min_graph_shrink = mgp::value_get_int(mgp::list_at(args, i++));
