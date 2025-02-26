@@ -89,6 +89,6 @@ class PageRankGraph {
 /// above
 /// @return -- probability distribution, as described above
 std::vector<double> ParallelIterativePageRank(const PageRankGraph &graph, size_t max_iterations = 100,
-                                              double damping_factor = 0.85, double stop_epsilon = 10e-6);
+                                              double damping_factor = 0.85, double stop_epsilon = 10e-6, uint32_t number_of_threads = 0);
 
 }  // namespace pagerank_alg

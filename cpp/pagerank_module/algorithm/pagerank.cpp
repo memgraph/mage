@@ -210,8 +210,11 @@ const std::vector<EdgePair> &PageRankGraph::GetOrderedEdges() const { return ord
 std::uint64_t PageRankGraph::GetOutDegree(const std::uint64_t node_id) const { return out_degree_[node_id]; }
 
 std::vector<double> ParallelIterativePageRank(const PageRankGraph &graph, std::size_t max_iterations,
-                                              double damping_factor, double stop_epsilon) {
-  const std::uint64_t number_of_threads = std::thread::hardware_concurrency();
+                                              double damping_factor, double stop_epsilon, uint32_t number_of_threads) {
+  if (number_of_threads == 0) {
+    number_of_threads = std::thread::hardware_concurrency() / 2;
+  }
+  number_of_threads = std::min(number_of_threads, std::thread::hardware_concurrency());
 
   auto borders = CalculateOptimalBorders(graph, number_of_threads);
 
