@@ -57,15 +57,14 @@ void GetGrappoloSuitableGraph(GrappoloGraph &grappolo_graph, mgp_graph *memgraph
         source = mgp::vertices_iterator_next(vertices_it)) {
     auto *edges_it = mgp::vertex_iter_out_edges(source, memory);  // Safe edge iterator creation
     mg_utility::OnScopeExit delete_edges_it([&edges_it] { mgp::edges_iterator_destroy(edges_it); });
+    auto source_id = mgp::vertex_get_id(source).as_int;
+    vertices.insert(source_id);
 
     for (auto *out_edge = mgp::edges_iterator_get(edges_it); out_edge;
           out_edge = mgp::edges_iterator_next(edges_it)) {
       auto *destination = mgp::edge_get_to(out_edge);
-
       double weight = mg_utility::GetNumericProperty(out_edge, weight_property, memory, default_weight);
-      auto source_id = mgp::vertex_get_id(source).as_int;
       auto destination_id = mgp::vertex_get_id(destination).as_int;
-      vertices.insert(source_id);
       vertices.insert(destination_id);
       number_of_edges++;
       edges.emplace_back(source_id, destination_id, weight);
