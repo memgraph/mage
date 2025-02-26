@@ -18,8 +18,7 @@ namespace louvain_alg {
 
 // Used for removing the ambiguity of existing graph instances
 using GrappoloGraph = graph;
-
-namespace {
+using EdgesGraph = std::vector<std::tuple<int64_t, int64_t, double>>;
 
 /**
  * Grappolo community detection algorithm. Implementation by: https://github.com/Exa-Graph/grappolo
@@ -43,12 +42,7 @@ std::vector<std::int64_t> GrappoloCommunityDetection(GrappoloGraph &grappolo_gra
                                                      std::uint64_t min_graph_size, double threshold,
                                                      double coloring_threshold, int num_threads);
 
-void GetGrappoloSuitableGraph(GrappoloGraph &grappolo_graph, mgp_graph *memgraph_graph, mgp_memory *memory,
-                              int num_threads, const char *weight_property = nullptr, double default_weight = 1.0);
-}  // namespace
-
-std::vector<std::int64_t> GetCommunities(mgp_memory *memory, mgp_graph *graph, bool coloring,
-                                         std::uint64_t min_graph_shrink, double threshold,
-                                         double coloring_threshold, int num_threads);
-
+EdgesGraph GetGraphEdgeList(mgp_graph *memgraph_graph, mgp_memory *memory, const char *weight_property, double default_weight = 1.0);
+EdgesGraph GetSubgraphEdgeList(mgp_graph *memgraph_graph, mgp_memory *memory, mgp_list *subgraph_nodes, mgp_list *subgraph_edges, const char *weight_property, double default_weight = 1.0);
+void GetGrappoloSuitableGraph(GrappoloGraph &grappolo_graph, int num_threads, const EdgesGraph &edges);
 }  // namespace louvain_alg
