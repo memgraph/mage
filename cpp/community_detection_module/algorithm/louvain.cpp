@@ -74,7 +74,7 @@ EdgesGraph GetGraphEdgeList(mgp_graph *memgraph_graph, mgp_memory *memory, const
   return edges;
 }
 
-EdgesGraph GetSubgraphEdgeList(mgp_graph *memgraph_graph, mgp_memory *memory, mgp_list *subgraph_nodes, mgp_list *subgraph_edges, const char *weight_property, double default_weight) {
+EdgesGraph GetSubgraphEdgeList(mgp_memory *memory, mgp_list *subgraph_nodes, mgp_list *subgraph_edges, const char *weight_property, double default_weight) {
   EdgesGraph edges; // source, destination, weight
   edges.reserve(mgp::list_size(subgraph_edges));
   std::unordered_map<int64_t, int64_t> subgraph_node_to_id;
@@ -83,7 +83,9 @@ EdgesGraph GetSubgraphEdgeList(mgp_graph *memgraph_graph, mgp_memory *memory, mg
 
   for (std::size_t i = 0; i < mgp::list_size(subgraph_nodes); i++) {
     auto *vertex = mgp::value_get_vertex(mgp::list_at(subgraph_nodes, i));
-    subgraph_node_to_id.emplace(mgp::vertex_get_id(vertex).as_int, i);
+    if (subgraph_node_to_id.find(mgp::vertex_get_id(vertex).as_int) == subgraph_node_to_id.end()) {
+      subgraph_node_to_id[mgp::vertex_get_id(vertex).as_int] = static_cast<int64_t>(subgraph_node_to_id.size());
+    }
   }
 
   for (std::size_t i = 0; i < mgp::list_size(subgraph_edges); i++) {

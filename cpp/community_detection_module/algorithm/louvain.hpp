@@ -43,6 +43,6 @@ std::vector<std::int64_t> GrappoloCommunityDetection(GrappoloGraph &grappolo_gra
                                                      double coloring_threshold, int num_threads);
 
 EdgesGraph GetGraphEdgeList(mgp_graph *memgraph_graph, mgp_memory *memory, const char *weight_property, double default_weight = 1.0);
-EdgesGraph GetSubgraphEdgeList(mgp_graph *memgraph_graph, mgp_memory *memory, mgp_list *subgraph_nodes, mgp_list *subgraph_edges, const char *weight_property, double default_weight = 1.0);
+EdgesGraph GetSubgraphEdgeList(mgp_memory *memory, mgp_list *subgraph_nodes, mgp_list *subgraph_edges, const char *weight_property, double default_weight = 1.0);
 void GetGrappoloSuitableGraph(GrappoloGraph &grappolo_graph, int num_threads, const EdgesGraph &edges);
 }  // namespace louvain_alg

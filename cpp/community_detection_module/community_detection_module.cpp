@@ -67,6 +67,9 @@ void LouvainCommunityDetection(mgp_list *args, mgp_graph *memgraph_graph, mgp_re
     subgraph_nodes = mgp::value_get_list(mgp::list_at(args, i++));
     subgraph_relationships = mgp::value_get_list(mgp::list_at(args, i++));
   }
+  // print size of nodes and edges
+  std::cout << "Size of nodes: " << mgp::list_size(subgraph_nodes) << std::endl;
+  std::cout << "Size of edges: " << mgp::list_size(subgraph_relationships) << std::endl;
   const auto *weight_property = mgp::value_get_string(mgp::list_at(args, i++));
   auto coloring = mgp::value_get_bool(mgp::list_at(args, i++));
   auto min_graph_shrink = mgp::value_get_int(mgp::list_at(args, i++));
@@ -75,10 +78,12 @@ void LouvainCommunityDetection(mgp_list *args, mgp_graph *memgraph_graph, mgp_re
   auto num_threads = mgp::value_get_int(mgp::list_at(args, i++));
   num_threads = num_threads > omp_get_max_threads() ? omp_get_max_threads() : num_threads;
   auto edges_graph = subgraph
-                        ? louvain_alg::GetSubgraphEdgeList(memgraph_graph, memory, subgraph_nodes, subgraph_relationships,
+                        ? louvain_alg::GetSubgraphEdgeList(memory, subgraph_nodes, subgraph_relationships,
                                                           weight_property, kDefaultWeight)
                         : louvain_alg::GetGraphEdgeList(memgraph_graph, memory, weight_property, kDefaultWeight);
-
+  if (edges_graph.empty()) {
+    return;
+  }
   auto *grappolo_graph = (louvain_alg::GrappoloGraph *)malloc(sizeof(louvain_alg::GrappoloGraph));
   louvain_alg::GetGrappoloSuitableGraph(*grappolo_graph, num_threads, edges_graph);
   auto communities = louvain_alg::GrappoloCommunityDetection(*grappolo_graph, memgraph_graph, coloring, min_graph_shrink, community_alg_threshold, coloring_alg_threshold, num_threads);
@@ -138,6 +143,7 @@ extern "C" int mgp_init_module(mgp_module *module, mgp_memory *memory) {
       mgp::proc_add_opt_arg(proc, kArgumentMinGraphShrink, mgp::type_int(), default_min_graph_shrink);
       mgp::proc_add_opt_arg(proc, kArgumentCommunityAlgThreshold, mgp::type_float(), default_community_alg_threshold);
       mgp::proc_add_opt_arg(proc, kArgumentColoringAlgThreshold, mgp::type_float(), default_coloring_alg_threshold);
+      mgp::proc_add_opt_arg(proc, kNumberOfThreads, mgp::type_int(), default_num_threads);
 
       mgp::proc_add_result(proc, kFieldNode, mgp::type_node());
       mgp::proc_add_result(proc, kFieldCommunity, mgp::type_int());
