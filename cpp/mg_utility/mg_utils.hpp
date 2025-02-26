@@ -24,7 +24,7 @@ namespace mg_graph {
 ///@param vertex Memgraph’s vertex instance
 ///
 template <typename TSize>
-void CreateGraphNode(mg_graph::Graph<TSize> *graph, mgp_vertex *vertex) {
+inline void CreateGraphNode(mg_graph::Graph<TSize> *graph, mgp_vertex *vertex) {
   // Get Memgraph internal ID property
   auto id_val = mgp::vertex_get_id(vertex);
   auto memgraph_id = id_val.as_int;
@@ -45,7 +45,7 @@ void CreateGraphNode(mg_graph::Graph<TSize> *graph, mgp_vertex *vertex) {
 ///@param weight -- Edge weight
 ///
 template <typename TSize>
-void CreateGraphEdge(mg_graph::Graph<TSize> *graph, mgp_vertex *source, mgp_vertex *destination, mgp_edge *edge,
+inline void CreateGraphEdge(mg_graph::Graph<TSize> *graph, mgp_vertex *source, mgp_vertex *destination, mgp_edge *edge,
                      const mg_graph::GraphType graph_type, bool weighted = false, double weight = 0.0) {
   // Get Memgraph-internal endpoint node IDs
   auto memgraph_id_from = mgp::vertex_get_id(source).as_int;
@@ -59,7 +59,7 @@ void CreateGraphEdge(mg_graph::Graph<TSize> *graph, mgp_vertex *source, mgp_vert
 }  // namespace mg_graph
 
 namespace mg_utility {
-double GetNumericProperty(mgp_edge *edge, const char *property_name, mgp_memory *memory, double default_weight);
+inline double GetNumericProperty(mgp_edge *edge, const char *property_name, mgp_memory *memory, double default_weight);
 
 /// Calls a function in its destructor (on scope exit).
 ///
@@ -91,7 +91,7 @@ class OnScopeExit {
 ///
 ///@param graph -- graph view
 template <typename TSize>
-std::unordered_set<std::uint64_t> GraphNodeIDs(mg_graph::Graph<TSize> *graph) {
+inline std::unordered_set<std::uint64_t> GraphNodeIDs(mg_graph::Graph<TSize> *graph) {
   return graph->GetMemgraphNodeIDs();
 }
 
@@ -113,7 +113,7 @@ std::unordered_set<std::uint64_t> GraphNodeIDs(mg_graph::Graph<TSize> *graph) {
 ///
 ///@return mg_graph::Graph -- graph view
 template <typename TSize = std::uint64_t>
-std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory,
+inline std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory,
                                                      const mg_graph::GraphType graph_type, bool weighted = false,
                                                      const char *weight_property = nullptr,
                                                      double default_weight = 1.0) {
@@ -165,7 +165,7 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetGraphView(mgp_graph *memgraph_graph, 
 ///@brief Maps the Memgraph in-memory graph to a user-defined *weighted* graph view.
 /// Kept for backward compatibility purposes.
 template <typename TSize = std::uint64_t>
-std::unique_ptr<mg_graph::Graph<TSize>> GetWeightedGraphView(mgp_graph *memgraph_graph, mgp_result *result,
+inline std::unique_ptr<mg_graph::Graph<TSize>> GetWeightedGraphView(mgp_graph *memgraph_graph, mgp_result *result,
                                                              mgp_memory *memory, const mg_graph::GraphType graph_type,
                                                              const char *weight_property, double default_weight) {
   return GetGraphView(memgraph_graph, result, memory, graph_type, true, weight_property, default_weight);
@@ -188,7 +188,7 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetWeightedGraphView(mgp_graph *memgraph
 ///
 ///@return mg_graph::Graph -- graph view
 template <typename TSize = std::uint64_t>
-std::unique_ptr<mg_graph::Graph<TSize>> GetSubgraphView(mgp_graph *memgraph_graph, mgp_result *result,
+inline std::unique_ptr<mg_graph::Graph<TSize>> GetSubgraphView(mgp_graph *memgraph_graph, mgp_result *result,
                                                         mgp_memory *memory, mgp_list *subgraph_nodes,
                                                         mgp_list *subgraph_edges, const mg_graph::GraphType graph_type,
                                                         bool weighted = false, const char *weight_property = nullptr,
@@ -232,7 +232,7 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetSubgraphView(mgp_graph *memgraph_grap
 ///@brief Maps the Memgraph in-memory graph to a user-defined *weighted* subgraph view.
 /// Kept for backward compatibility purposes.
 template <typename TSize = std::uint64_t>
-std::unique_ptr<mg_graph::Graph<TSize>> GetWeightedSubgraphView(mgp_graph *memgraph_graph, mgp_result *result,
+inline std::unique_ptr<mg_graph::Graph<TSize>> GetWeightedSubgraphView(mgp_graph *memgraph_graph, mgp_result *result,
                                                                 mgp_memory *memory, mgp_list *subgraph_nodes,
                                                                 mgp_list *subgraph_edges,
                                                                 const mg_graph::GraphType graph_type,
@@ -242,7 +242,7 @@ std::unique_ptr<mg_graph::Graph<TSize>> GetWeightedSubgraphView(mgp_graph *memgr
 }
 
 namespace {
-void InsertRecord(mgp_result_record *record, const char *field_name, mgp_value *value) {
+inline void InsertRecord(mgp_result_record *record, const char *field_name, mgp_value *value) {
   mg_utility::OnScopeExit delete_value([&value] { mgp::value_destroy(value); });
   mgp::result_record_insert(record, field_name, value);
 }
@@ -250,7 +250,7 @@ void InsertRecord(mgp_result_record *record, const char *field_name, mgp_value *
 
 /// Inserts a string of value string_value to the field field_name of
 /// the record mgp_result_record record.
-void InsertStringValueResult(mgp_result_record *record, const char *field_name, const char *string_value,
+inline void InsertStringValueResult(mgp_result_record *record, const char *field_name, const char *string_value,
                              mgp_memory *memory) {
   auto value = mgp::value_make_string(string_value, memory);
   InsertRecord(record, field_name, value);
@@ -258,14 +258,14 @@ void InsertStringValueResult(mgp_result_record *record, const char *field_name, 
 
 /// Inserts an integer of value int_value to the field field_name of
 /// the record mgp_result_record record.
-void InsertIntValueResult(mgp_result_record *record, const char *field_name, const int int_value, mgp_memory *memory) {
+inline void InsertIntValueResult(mgp_result_record *record, const char *field_name, const int int_value, mgp_memory *memory) {
   auto value = mgp::value_make_int(int_value, memory);
   InsertRecord(record, field_name, value);
 }
 
 /// Inserts a double of value double_value to the field field_name of
 /// the record mgp_result_record record.
-void InsertDoubleValueResult(mgp_result_record *record, const char *field_name, const double double_value,
+inline void InsertDoubleValueResult(mgp_result_record *record, const char *field_name, const double double_value,
                              mgp_memory *memory) {
   auto value = mgp::value_make_double(double_value, memory);
   InsertRecord(record, field_name, value);
@@ -273,7 +273,7 @@ void InsertDoubleValueResult(mgp_result_record *record, const char *field_name, 
 
 /// Inserts a node of value vertex_value to the field field_name of
 /// the record mgp_result_record record.
-void InsertNodeValueResult(mgp_result_record *record, const char *field_name, mgp_vertex *vertex_value,
+inline void InsertNodeValueResult(mgp_result_record *record, const char *field_name, mgp_vertex *vertex_value,
                            mgp_memory *memory) {
   auto value = mgp::value_make_vertex(vertex_value);
   InsertRecord(record, field_name, value);
@@ -281,7 +281,7 @@ void InsertNodeValueResult(mgp_result_record *record, const char *field_name, mg
 
 // Inserts a list of value list_value to the field field_name of
 // the record mgp_result_record record.
-void InsertListValueResult(mgp_result_record *record, const char *field_name, mgp_list *list_value,
+inline void InsertListValueResult(mgp_result_record *record, const char *field_name, mgp_list *list_value,
                            mgp_memory *memory) {
   auto value = mgp::value_make_list(list_value);
   InsertRecord(record, field_name, value);
@@ -295,7 +295,7 @@ void InsertListValueResult(mgp_result_record *record, const char *field_name, mg
 /// @param graph
 /// @param memory
 /// @return
-mgp_vertex *GetNodeForInsertion(const int node_id, mgp_graph *graph, mgp_memory *memory) {
+inline mgp_vertex *GetNodeForInsertion(const int node_id, mgp_graph *graph, mgp_memory *memory) {
   auto *vertex = mgp::graph_get_vertex_by_id(graph, mgp_vertex_id{.as_int = static_cast<int64_t>(node_id)}, memory);
   if (!vertex && mgp::graph_is_transactional(graph)) {
     throw mg_exception::InvalidIDException();
@@ -306,7 +306,7 @@ mgp_vertex *GetNodeForInsertion(const int node_id, mgp_graph *graph, mgp_memory 
 /// Inserts a node with its ID node_id to create a vertex and insert
 /// the node to the field field_name of the record mgp_result_record record.
 /// Returns true is insert is successful, false otherwise
-bool InsertNodeValueResult(mgp_graph *graph, mgp_result_record *record, const char *field_name, const int node_id,
+inline bool InsertNodeValueResult(mgp_graph *graph, mgp_result_record *record, const char *field_name, const int node_id,
                            mgp_memory *memory) {
   auto *vertex = mgp::graph_get_vertex_by_id(graph, mgp_vertex_id{.as_int = node_id}, memory);
   if (!vertex) {
@@ -318,7 +318,7 @@ bool InsertNodeValueResult(mgp_graph *graph, mgp_result_record *record, const ch
 
 /// Inserts a relationship of value edge_value to the field field_name of
 /// the record mgp_result_record record.
-void InsertRelationshipValueResult(mgp_result_record *record, const char *field_name, mgp_edge *edge_value,
+inline void InsertRelationshipValueResult(mgp_result_record *record, const char *field_name, mgp_edge *edge_value,
                                    mgp_memory *memory) {
   auto value = mgp::value_make_edge(edge_value);
   InsertRecord(record, field_name, value);
@@ -327,7 +327,7 @@ void InsertRelationshipValueResult(mgp_result_record *record, const char *field_
 /// Inserts a relationship with its ID edge_id to create a relationship and
 /// insert the edge to the field field_name of the record mgp_result_record
 /// record.
-void InsertRelationshipValueResult(mgp_graph *graph, mgp_result_record *record, const char *field_name,
+inline void InsertRelationshipValueResult(mgp_graph *graph, mgp_result_record *record, const char *field_name,
                                    const int edge_id, mgp_memory *memory);
 
 /// Handles non-double weights for GetWeight().
@@ -335,7 +335,7 @@ void InsertRelationshipValueResult(mgp_graph *graph, mgp_result_record *record, 
 /// To address that, this function checks the type of the edge property and
 /// calls mgp::value_get_int() in case it’s an integer.
 /// If the weight property is not a number, it returns the default weight.
-double GetNumericProperty(mgp_edge *edge, const char *property_name, mgp_memory *memory, double default_weight) {
+inline double GetNumericProperty(mgp_edge *edge, const char *property_name, mgp_memory *memory, double default_weight) {
   double weight;
   auto raw_value = mgp::edge_get_property(edge, property_name, memory);
   auto type = mgp::value_get_type(raw_value);
@@ -356,7 +356,7 @@ double GetNumericProperty(mgp_edge *edge, const char *property_name, mgp_memory 
 }
 
 /// Returns a vector of node_ids of nodes from the mgp_list node_list.
-std::vector<std::uint64_t> GetNodeIDs(mgp_list *node_list) {
+inline std::vector<std::uint64_t> GetNodeIDs(mgp_list *node_list) {
   std::vector<std::uint64_t> node_ids;
   for (std::size_t i = 0; i < mgp::list_size(node_list); i++) {
     node_ids.push_back(mgp::vertex_get_id(mgp::value_get_vertex(mgp::list_at(node_list, i))).as_int);
@@ -367,7 +367,7 @@ std::vector<std::uint64_t> GetNodeIDs(mgp_list *node_list) {
 
 /// Returns a vector of endpoints ({node_id, node_id} pairs) of edges
 /// from the mgp_list edge_list.
-std::vector<std::pair<std::uint64_t, std::uint64_t>> GetEdgeEndpointIDs(mgp_list *edge_list) {
+inline std::vector<std::pair<std::uint64_t, std::uint64_t>> GetEdgeEndpointIDs(mgp_list *edge_list) {
   std::vector<std::pair<std::uint64_t, std::uint64_t>> edge_endpoint_ids;
   for (std::size_t i = 0; i < mgp::list_size(edge_list); i++) {
     auto edge = mgp::value_get_edge(mgp::list_at(edge_list, i));
@@ -380,7 +380,7 @@ std::vector<std::pair<std::uint64_t, std::uint64_t>> GetEdgeEndpointIDs(mgp_list
 }
 
 /// Return a vector of edge ids from the mgp_list edge_list
-std::vector<std::uint64_t> GetEdgeIDs(mgp_list *edge_list) {
+inline std::vector<std::uint64_t> GetEdgeIDs(mgp_list *edge_list) {
   auto size = mgp::list_size(edge_list);
   auto edge_ids = std::vector<std::uint64_t>(size);
   for (std::size_t i = 0; i < size; i++) {
