@@ -4,7 +4,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include <mg_utils.hpp>
+struct mgp_graph;
+struct mgp_memory;
 
 namespace pagerank_alg {
 
@@ -17,6 +18,8 @@ using EdgePair = std::pair<std::uint64_t, std::uint64_t>;
 /// Graph is allowed to be disconnected.
 class PageRankGraph {
  public:
+  PageRankGraph() = default;
+
   /// Creates graph with given number of nodes with node ids from interval
   /// [0, number_of_nodes - 1] and with given edges between them.
   /// Node ids describing edges have to be integers from
@@ -57,6 +60,8 @@ class PageRankGraph {
 
   std::vector<std::uint64_t> id_to_memgraph;
   std::unordered_map<std::uint64_t, std::uint64_t> memgraph_to_id;
+
+  friend PageRankGraph CreatePageRankGraph(mgp_graph *memgraph_graph, mgp_memory *memory);
 };
 
 /// If we present nodes as pages and directed edges between them as links the
@@ -89,6 +94,7 @@ class PageRankGraph {
 /// above
 /// @return -- probability distribution, as described above
 std::vector<double> ParallelIterativePageRank(const PageRankGraph &graph, size_t max_iterations = 100,
-                                              double damping_factor = 0.85, double stop_epsilon = 10e-6, uint32_t number_of_threads = 0);
+                                              double damping_factor = 0.85, double stop_epsilon = 10e-6,
+                                              uint32_t number_of_threads = 0);
 
 }  // namespace pagerank_alg

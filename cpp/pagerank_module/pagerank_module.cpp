@@ -2,6 +2,39 @@
 
 #include <mg_utils.hpp>
 
+namespace pagerank_alg {
+PageRankGraph CreatePageRankGraph(mgp_graph *memgraph_graph, mgp_memory *memory) {
+  PageRankGraph graph{};
+  auto *vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);  // Safe vertex iterator creation
+  mg_utility::OnScopeExit delete_vertices_it([&vertices_it] { mgp::vertices_iterator_destroy(vertices_it); });
+  for (auto *source = mgp::vertices_iterator_get(vertices_it); source;
+       source = mgp::vertices_iterator_next(vertices_it)) {
+    auto *edges_it = mgp::vertex_iter_out_edges(source, memory);  // Safe edge iterator creation
+    mg_utility::OnScopeExit delete_edges_it([&edges_it] { mgp::edges_iterator_destroy(edges_it); });
+
+    auto source_id = mgp::vertex_get_id(source).as_int;
+    for (auto *out_edge = mgp::edges_iterator_get(edges_it); out_edge; out_edge = mgp::edges_iterator_next(edges_it)) {
+      auto *destination = mgp::edge_get_to(out_edge);
+      auto destination_id = mgp::vertex_get_id(destination).as_int;
+      graph.ordered_edges_.emplace_back(destination_id, source_id);
+      graph.edge_count_++;
+    }
+    graph.memgraph_to_id[source_id] = graph.id_to_memgraph.size();
+    graph.id_to_memgraph.emplace_back(source_id);
+  }
+
+  graph.node_count_ = graph.id_to_memgraph.size();
+  graph.out_degree_.resize(graph.node_count_, 0);
+  for (auto &edge : graph.ordered_edges_) {
+    edge = {graph.memgraph_to_id[edge.first], graph.memgraph_to_id[edge.second]};
+    graph.out_degree_[edge.second] += 1;
+  }
+  graph.edge_count_ = graph.ordered_edges_.size();
+  return graph;
+}
+
+}  // namespace pagerank_alg
+
 namespace {
 constexpr char const *kProcedureGet = "get";
 
@@ -42,12 +75,13 @@ void PagerankWrapper(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
     auto damping_factor = mgp::value_get_double(mgp::list_at(args, 1));
     auto stop_epsilon = mgp::value_get_double(mgp::list_at(args, 2));
 
-    auto pagerank_graph = pagerank_alg::PageRankGraph(memgraph_graph, memory);
+    auto pagerank_graph = pagerank_alg::CreatePageRankGraph(memgraph_graph, memory);
     auto pageranks =
         pagerank_alg::ParallelIterativePageRank(pagerank_graph, max_iterations, damping_factor, stop_epsilon);
 
     for (std::uint64_t node_id = 0; node_id < pagerank_graph.GetNodeCount(); ++node_id) {
-      InsertPagerankRecord(memgraph_graph, result, memory, pagerank_graph.GetMemgraphNodeId(node_id), pageranks[node_id]);
+      InsertPagerankRecord(memgraph_graph, result, memory, pagerank_graph.GetMemgraphNodeId(node_id),
+                           pageranks[node_id]);
     }
   } catch (const std::exception &e) {
     // We must not let any exceptions out of our module.
