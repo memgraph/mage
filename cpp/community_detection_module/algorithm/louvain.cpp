@@ -2,6 +2,7 @@
 #include <omp.h>
 #include <cstdint>
 #include <unordered_set>
+#include "_mgp.hpp"
 #include "mg_procedure.h"
 #include "mg_utils.hpp"
 
@@ -46,6 +47,7 @@ std::vector<std::int64_t> GrappoloCommunityDetection(GrappoloGraph &grappolo_gra
 
 EdgesGraph GetGraphEdgeList(mgp_graph *memgraph_graph, mgp_memory *memory, const char *weight_property, double default_weight) {
   EdgesGraph edges; // source, destination, weight
+  edges.reserve(mgp::graph_count_edges(memgraph_graph));
   auto number_of_edges = 0;
   auto first_vertex_id = 0;
   bool first_vertex = true;
