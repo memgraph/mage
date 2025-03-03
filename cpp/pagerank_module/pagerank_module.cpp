@@ -5,6 +5,14 @@
 namespace pagerank_alg {
 PageRankGraph CreatePageRankGraph(mgp_graph *memgraph_graph, mgp_memory *memory) {
   PageRankGraph graph{};
+
+  graph.node_count_ = mgp::graph_count_vertices(memgraph_graph);
+  graph.edge_count_ = mgp::graph_count_edges(memgraph_graph);
+  graph.id_to_memgraph.reserve(graph.node_count_);
+  graph.memgraph_to_id.reserve(graph.node_count_);
+  graph.out_degree_.resize(graph.node_count_, 0);
+  graph.ordered_edges_.reserve(graph.edge_count_);
+
   auto *vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);  // Safe vertex iterator creation
   mg_utility::OnScopeExit delete_vertices_it([&vertices_it] { mgp::vertices_iterator_destroy(vertices_it); });
   for (auto *source = mgp::vertices_iterator_get(vertices_it); source;
@@ -17,19 +25,15 @@ PageRankGraph CreatePageRankGraph(mgp_graph *memgraph_graph, mgp_memory *memory)
       auto *destination = mgp::edge_get_to(out_edge);
       auto destination_id = mgp::vertex_get_id(destination).as_int;
       graph.ordered_edges_.emplace_back(destination_id, source_id);
-      graph.edge_count_++;
     }
     graph.memgraph_to_id[source_id] = graph.id_to_memgraph.size();
     graph.id_to_memgraph.emplace_back(source_id);
   }
 
-  graph.node_count_ = graph.id_to_memgraph.size();
-  graph.out_degree_.resize(graph.node_count_, 0);
   for (auto &edge : graph.ordered_edges_) {
     edge = {graph.memgraph_to_id[edge.first], graph.memgraph_to_id[edge.second]};
     graph.out_degree_[edge.second] += 1;
   }
-  graph.edge_count_ = graph.ordered_edges_.size();
   return graph;
 }
 
