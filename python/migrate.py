@@ -1,8 +1,12 @@
 from decimal import Decimal
+import boto3
+import csv
+import io
 import json
 import mgp
 import mysql.connector as mysql_connector
 import oracledb
+import os
 import pyodbc
 import psycopg2
 import threading
@@ -340,6 +344,99 @@ def cleanup_migrate_postgresql():
 
 
 mgp.add_batch_read_proc(postgresql, init_migrate_postgresql, cleanup_migrate_postgresql)
+
+
+##### S3
+s3_dict = {}
+
+
+def init_migrate_s3(
+    file_path: str,
+    config: mgp.Map,
+    config_path: str = "",
+):
+    """
+    Initialize an S3 connection and prepare to stream a CSV file.
+
+    :param file_path: S3 file path in the format 's3://bucket-name/path/to/file.csv'
+    :param config: Configuration map containing AWS credentials (access_key, secret_key, region, etc.)
+    :param config_path: Path to a JSON file containing configuration parameters
+    """
+    global s3_dict
+
+    if len(config_path) > 0:
+        config = _combine_config(config=config, config_path=config_path)
+
+    # Extract S3 bucket and key
+    if not file_path.startswith("s3://"):
+        raise ValueError("Invalid S3 path format. Expected 's3://bucket-name/path'.")
+
+    file_path_no_protocol = file_path[5:]
+    bucket_name, *key_parts = file_path_no_protocol.split("/")
+    s3_key = "/".join(key_parts)
+
+    # Initialize S3 client
+    s3_client = boto3.client(
+        "s3",
+        aws_access_key_id=config.get("aws_access_key_id", os.getenv("AWS_ACCESS_KEY_ID", None)),
+        aws_secret_access_key=config.get("aws_secret_access_key", os.getenv("AWS_SECRET_ACCESS_KEY", None)),
+        aws_session_token=config.get("aws_session_token", os.getenv("AWS_SESSION_TOKEN", None)),
+        region_name=config.get("region_name", os.getenv("AWS_REGION", None)),
+    )
+
+    # Fetch and read file as a streaming object
+    response = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
+    # Convert binary stream to text stream
+    text_stream = io.TextIOWrapper(response["Body"], encoding="utf-8")
+
+    # Read CSV headers
+    csv_reader = csv.reader(text_stream)
+    column_names = next(csv_reader)  # First row contains column names
+
+    if threading.get_native_id not in s3_dict:
+        s3_dict[threading.get_native_id] = {}
+
+    s3_dict[threading.get_native_id][Constants.CURSOR] = csv_reader
+    s3_dict[threading.get_native_id][Constants.COLUMN_NAMES] = column_names
+
+
+def s3(
+    file_path: str,
+    config: mgp.Map,
+    config_path: str = "",
+) -> mgp.Record(row=mgp.Map):
+    """
+    Fetch rows from an S3 CSV file in batches.
+
+    :param file_path: S3 file path in the format 's3://bucket-name/path/to/file.csv'
+    :param config: AWS S3 connection parameters (AWS credentials, region, etc.)
+    :param config_path: Optional path to a JSON file containing AWS credentials
+    :return: The result table as a stream of rows
+    """
+    global s3_dict
+    csv_reader = s3_dict[threading.get_native_id][Constants.CURSOR]
+    column_names = s3_dict[threading.get_native_id][Constants.COLUMN_NAMES]
+
+    batch_rows = []
+    for _ in range(Constants.BATCH_SIZE):
+        try:
+            row = next(csv_reader)
+            batch_rows.append(mgp.Record(row=_name_row_cells(row, column_names)))
+        except StopIteration:
+            break
+
+    return batch_rows
+
+
+def cleanup_migrate_s3():
+    """
+    Clean up S3 dictionary references per-thread.
+    """
+    global s3_dict
+    s3_dict.pop(threading.get_native_id, None)
+
+
+mgp.add_batch_read_proc(s3, init_migrate_s3, cleanup_migrate_s3)
 
 
 def _query_is_table(table_or_sql: str) -> bool:
