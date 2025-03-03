@@ -44,6 +44,7 @@ constexpr char const *kFieldRank = "rank";
 constexpr char const *kArgumentMaxIterations = "max_iterations";
 constexpr char const *kArgumentDampingFactor = "damping_factor";
 constexpr char const *kArgumentStopEpsilon = "stop_epsilon";
+constexpr char const *kArgumentNumThreads = "num_of_threads";
 
 void InsertPagerankRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
                           double rank) {
@@ -74,10 +75,11 @@ void PagerankWrapper(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
     auto max_iterations = mgp::value_get_int(mgp::list_at(args, 0));
     auto damping_factor = mgp::value_get_double(mgp::list_at(args, 1));
     auto stop_epsilon = mgp::value_get_double(mgp::list_at(args, 2));
+    auto num_threads = mgp::value_get_int(mgp::list_at(args, 3));
 
     auto pagerank_graph = pagerank_alg::CreatePageRankGraph(memgraph_graph, memory);
     auto pageranks =
-        pagerank_alg::ParallelIterativePageRank(pagerank_graph, max_iterations, damping_factor, stop_epsilon);
+        pagerank_alg::ParallelIterativePageRank(pagerank_graph, max_iterations, damping_factor, stop_epsilon, num_threads);
 
     for (std::uint64_t node_id = 0; node_id < pagerank_graph.GetNodeCount(); ++node_id) {
       InsertPagerankRecord(memgraph_graph, result, memory, pagerank_graph.GetMemgraphNodeId(node_id),
@@ -95,16 +97,19 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   mgp_value *default_max_iterations;
   mgp_value *default_damping_factor;
   mgp_value *default_stop_epsilon;
+  mgp_value *default_num_threads;
   try {
     auto *pagerank_proc = mgp::module_add_read_procedure(module, kProcedureGet, PagerankWrapper);
 
     default_max_iterations = mgp::value_make_int(100, memory);
     default_damping_factor = mgp::value_make_double(0.85, memory);
     default_stop_epsilon = mgp::value_make_double(1e-5, memory);
+    default_num_threads = mgp::value_make_int(1, memory);
 
     mgp::proc_add_opt_arg(pagerank_proc, kArgumentMaxIterations, mgp::type_int(), default_max_iterations);
     mgp::proc_add_opt_arg(pagerank_proc, kArgumentDampingFactor, mgp::type_float(), default_damping_factor);
     mgp::proc_add_opt_arg(pagerank_proc, kArgumentStopEpsilon, mgp::type_float(), default_stop_epsilon);
+    mgp::proc_add_opt_arg(pagerank_proc, kArgumentNumThreads, mgp::type_int(), default_num_threads);
 
     // Query module output record
     mgp::proc_add_result(pagerank_proc, kFieldNode, mgp::type_node());
@@ -115,12 +120,14 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     mgp_value_destroy(default_max_iterations);
     mgp_value_destroy(default_damping_factor);
     mgp_value_destroy(default_stop_epsilon);
+    mgp_value_destroy(default_num_threads);
     return 1;
   }
 
   mgp_value_destroy(default_max_iterations);
   mgp_value_destroy(default_damping_factor);
   mgp_value_destroy(default_stop_epsilon);
+  mgp_value_destroy(default_num_threads);
 
   return 0;
 }
