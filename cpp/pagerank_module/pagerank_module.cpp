@@ -10,7 +10,6 @@ PageRankGraph CreatePageRankGraph(mgp_graph *memgraph_graph, mgp_memory *memory)
   graph.edge_count_ = mgp::graph_count_edges(memgraph_graph);
   graph.id_to_memgraph.reserve(graph.node_count_);
   graph.memgraph_to_id.reserve(graph.node_count_);
-  graph.out_degree_.resize(graph.node_count_, 0);
   graph.ordered_edges_.reserve(graph.edge_count_);
 
   auto *vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);  // Safe vertex iterator creation
@@ -30,6 +29,7 @@ PageRankGraph CreatePageRankGraph(mgp_graph *memgraph_graph, mgp_memory *memory)
     graph.id_to_memgraph.emplace_back(source_id);
   }
 
+  graph.out_degree_.resize(graph.node_count_, 0);
   for (auto &edge : graph.ordered_edges_) {
     edge = {graph.memgraph_to_id[edge.first], graph.memgraph_to_id[edge.second]};
     graph.out_degree_[edge.second] += 1;
