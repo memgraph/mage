@@ -86,7 +86,7 @@ jobs:
       build_target: "${{ matrix.build_target }}"
       build_scope: "${{ matrix.build_scope }}"
       memgraph_version: "3.0.0"
-      memgraph_download_link: "s3://deps.memgraph.io/memgraph-unofficial/04-03-2025-master/ubuntu-24.04/memgraph_3.0.0+58~51c15624d9-1_amd64.deb"
+      memgraph_download_link: "s3://deps.memgraph.io/memgraph-unofficial/04-03-2025-update-mgp-count/ubuntu-24.04/memgraph_3.0.0+60~a932168b3-1_amd64.deb"
       memgraph_ref: "master"
       memgraph_ref_update: "true"
     secrets: inherit
