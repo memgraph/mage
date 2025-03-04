@@ -168,7 +168,7 @@ PageRankGraph::PageRankGraph(const std::uint64_t number_of_nodes, const std::uin
   }
 }
 
-std::uint64_t PageRankGraph::GetMemgraphNodeId(const std::uint64_t node_id) const { return id_to_memgraph[node_id]; }
+std::uint64_t PageRankGraph::GetMemgraphNodeId(std::uint64_t node_id) const { return id_to_memgraph[node_id]; }
 
 std::uint64_t PageRankGraph::GetNodeCount() const { return node_count_; }
 
