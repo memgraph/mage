@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
 #include <mg_procedure.h>
@@ -18,7 +19,11 @@ namespace louvain_alg {
 
 // Used for removing the ambiguity of existing graph instances
 using GrappoloGraph = graph;
-using EdgesGraph = std::vector<std::tuple<int64_t, int64_t, double>>;
+
+struct LouvainGraph {
+    std::vector<std::tuple<std::int64_t, std::int64_t, double>> edges;
+    std::unordered_map<std::int64_t, std::int64_t> memgraph_id_to_id;
+};
 
 /**
  * Grappolo community detection algorithm. Implementation by: https://github.com/Exa-Graph/grappolo
@@ -42,7 +47,7 @@ std::vector<std::int64_t> GrappoloCommunityDetection(GrappoloGraph &grappolo_gra
                                                      std::uint64_t min_graph_size, double threshold,
                                                      double coloring_threshold, int num_threads);
 
-EdgesGraph GetGraphEdgeList(mgp_graph *memgraph_graph, mgp_memory *memory, const char *weight_property, double default_weight = 1.0);
-EdgesGraph GetSubgraphEdgeList(mgp_memory *memory, mgp_list *subgraph_nodes, mgp_list *subgraph_edges, const char *weight_property, double default_weight = 1.0);
-void GetGrappoloSuitableGraph(GrappoloGraph &grappolo_graph, int num_threads, const EdgesGraph &edges);
+LouvainGraph GetGraphEdgeList(mgp_graph *memgraph_graph, mgp_memory *memory, const char *weight_property, double default_weight = 1.0);
+LouvainGraph GetSubgraphEdgeList(mgp_memory *memory, mgp_list *subgraph_nodes, mgp_list *subgraph_edges, const char *weight_property, double default_weight = 1.0);
+void GetGrappoloSuitableGraph(GrappoloGraph &grappolo_graph, int num_threads, const LouvainGraph &edges);
 }  // namespace louvain_alg
