@@ -58,10 +58,11 @@ LouvainGraph GetLouvainGraph(mgp_graph *memgraph_graph, mgp_memory *memory, cons
     uint64_t source_id = 0;
     auto *edges_it = mgp::vertex_iter_out_edges(source, memory);  // Safe edge iterator creation
     mg_utility::OnScopeExit delete_edges_it([&edges_it] { mgp::edges_iterator_destroy(edges_it); });
-    auto memgraph_source_id_it = louvain_graph.memgraph_id_to_id.find(mgp::vertex_get_id(source).as_int);
+    auto memgraph_source_id = mgp::vertex_get_id(source).as_int;
+    auto memgraph_source_id_it = louvain_graph.memgraph_id_to_id.find(memgraph_source_id);
     if (memgraph_source_id_it == louvain_graph.memgraph_id_to_id.end()) {
       source_id = static_cast<uint64_t>(louvain_graph.memgraph_id_to_id.size());
-      louvain_graph.memgraph_id_to_id[source_id] = source_id;
+      louvain_graph.memgraph_id_to_id[memgraph_source_id] = source_id;
     }
     else {
       source_id = memgraph_source_id_it->second;
@@ -74,10 +75,11 @@ LouvainGraph GetLouvainGraph(mgp_graph *memgraph_graph, mgp_memory *memory, cons
       uint64_t destination_id = 0;
       auto *destination = mgp::edge_get_to(out_edge);
       double weight = mg_utility::GetNumericProperty(out_edge, weight_property, memory, default_weight);
-      auto memgraph_destination_id_it = louvain_graph.memgraph_id_to_id.find(mgp::vertex_get_id(destination).as_int);
+      auto memgraph_destination_id = mgp::vertex_get_id(destination).as_int;
+      auto memgraph_destination_id_it = louvain_graph.memgraph_id_to_id.find(memgraph_destination_id);
       if (memgraph_destination_id_it == louvain_graph.memgraph_id_to_id.end()) {
         destination_id = static_cast<uint64_t>(louvain_graph.memgraph_id_to_id.size());
-        louvain_graph.memgraph_id_to_id[destination_id] = destination_id;
+        louvain_graph.memgraph_id_to_id[memgraph_destination_id] = destination_id;
       }
       else {
         destination_id = memgraph_destination_id_it->second;
