@@ -59,7 +59,7 @@ void LouvainCommunityDetection(mgp_list *args, mgp_graph *memgraph_graph, mgp_re
   louvain_alg::GetGrappoloSuitableGraph(*grappolo_graph, num_threads, louvain_graph);
   const auto communities = louvain_alg::GrappoloCommunityDetection(*grappolo_graph, memgraph_graph, coloring, min_graph_shrink, community_alg_threshold, coloring_alg_threshold, num_threads);
   for (const auto &[memgraph_id, _] : louvain_graph.memgraph_id_to_id) {
-    if (mgp::must_abort(memgraph_graph)) {
+    if (mgp::must_abort(memgraph_graph)) [[unlikely]] {
       throw mgp::TerminatedMustAbortException();
     }
     InsertLouvainRecord(memgraph_graph, result, memory, memgraph_id, communities[louvain_graph.memgraph_id_to_id[memgraph_id]]);

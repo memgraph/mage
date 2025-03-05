@@ -15,8 +15,8 @@ namespace louvain_alg {
 using GrappoloGraph = graph;
 
 struct LouvainGraph {
-    std::vector<std::tuple<std::int64_t, std::int64_t, double>> edges;
-    std::unordered_map<std::int64_t, std::int64_t> memgraph_id_to_id;
+    std::vector<std::tuple<uint64_t, uint64_t, double>> edges;
+    std::unordered_map<uint64_t, uint64_t> memgraph_id_to_id;
 };
 
 /**
@@ -38,7 +38,7 @@ struct LouvainGraph {
  * @return Vector of community indices
  */
 std::vector<std::int64_t> GrappoloCommunityDetection(GrappoloGraph &grappolo_graph, mgp_graph *graph, bool coloring,
-                                                     std::uint64_t min_graph_size, double threshold,
+                                                     uint64_t min_graph_size, double threshold,
                                                      double coloring_threshold, int num_threads);
 
 LouvainGraph GetLouvainGraph(mgp_graph *memgraph_graph, mgp_memory *memory, const char *weight_property, double default_weight = 1.0);
