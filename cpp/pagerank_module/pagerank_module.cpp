@@ -1,6 +1,48 @@
+#include "_mgp.hpp"
+#include "algorithm/pagerank.hpp"
+
 #include <mg_utils.hpp>
 
-#include "algorithm/pagerank.hpp"
+namespace pagerank_alg {
+PageRankGraph CreatePageRankGraph(mgp_graph *memgraph_graph, mgp_memory *memory) {
+  PageRankGraph graph{};
+
+  auto approx_vertex_count = mgp::graph_approximate_vertex_count(memgraph_graph);
+  auto approx_edge_count = mgp::graph_approximate_edge_count(memgraph_graph);
+
+  graph.id_to_memgraph.reserve(approx_vertex_count);
+  graph.memgraph_to_id.reserve(approx_vertex_count);
+  graph.ordered_edges_.reserve(approx_edge_count);
+
+  auto *vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);  // Safe vertex iterator creation
+  mg_utility::OnScopeExit delete_vertices_it([&vertices_it] { mgp::vertices_iterator_destroy(vertices_it); });
+  for (auto *source = mgp::vertices_iterator_get(vertices_it); source;
+       source = mgp::vertices_iterator_next(vertices_it)) {
+    auto *edges_it = mgp::vertex_iter_out_edges(source, memory);  // Safe edge iterator creation
+    mg_utility::OnScopeExit delete_edges_it([&edges_it] { mgp::edges_iterator_destroy(edges_it); });
+
+    auto source_id = mgp::vertex_get_id(source).as_int;
+    for (auto *out_edge = mgp::edges_iterator_get(edges_it); out_edge; out_edge = mgp::edges_iterator_next(edges_it)) {
+      auto *destination = mgp::edge_get_to(out_edge);
+      auto destination_id = mgp::vertex_get_id(destination).as_int;
+      graph.ordered_edges_.emplace_back(destination_id, source_id);
+    }
+    graph.memgraph_to_id[source_id] = graph.id_to_memgraph.size();
+    graph.id_to_memgraph.emplace_back(source_id);
+  }
+
+  graph.node_count_ = graph.id_to_memgraph.size();
+  graph.edge_count_ = graph.ordered_edges_.size();
+
+  graph.out_degree_.resize(graph.node_count_, 0);
+  for (auto &edge : graph.ordered_edges_) {
+    edge = {graph.memgraph_to_id[edge.first], graph.memgraph_to_id[edge.second]};
+    graph.out_degree_[edge.second] += 1;
+  }
+  return graph;
+}
+
+}  // namespace pagerank_alg
 
 namespace {
 constexpr char const *kProcedureGet = "get";
@@ -11,6 +53,7 @@ constexpr char const *kFieldRank = "rank";
 constexpr char const *kArgumentMaxIterations = "max_iterations";
 constexpr char const *kArgumentDampingFactor = "damping_factor";
 constexpr char const *kArgumentStopEpsilon = "stop_epsilon";
+constexpr char const *kArgumentNumThreads = "num_of_threads";
 
 void InsertPagerankRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
                           double rank) {
@@ -41,24 +84,15 @@ void PagerankWrapper(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
     auto max_iterations = mgp::value_get_int(mgp::list_at(args, 0));
     auto damping_factor = mgp::value_get_double(mgp::list_at(args, 1));
     auto stop_epsilon = mgp::value_get_double(mgp::list_at(args, 2));
+    auto num_threads = mgp::value_get_int(mgp::list_at(args, 3));
 
-    auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kDirectedGraph);
-
-    const auto &graph_edges = graph->Edges();
-    std::vector<pagerank_alg::EdgePair> pagerank_edges;
-    std::transform(graph_edges.begin(), graph_edges.end(), std::back_inserter(pagerank_edges),
-                   [](const mg_graph::Edge<std::uint64_t> &edge) -> pagerank_alg::EdgePair {
-                     return {edge.from, edge.to};
-                   });
-
-    auto number_of_nodes = graph->Nodes().size();
-
-    auto pagerank_graph = pagerank_alg::PageRankGraph(number_of_nodes, pagerank_edges.size(), pagerank_edges);
+    auto pagerank_graph = pagerank_alg::CreatePageRankGraph(memgraph_graph, memory);
     auto pageranks =
-        pagerank_alg::ParallelIterativePageRank(pagerank_graph, max_iterations, damping_factor, stop_epsilon);
+        pagerank_alg::ParallelIterativePageRank(pagerank_graph, max_iterations, damping_factor, stop_epsilon, num_threads);
 
-    for (std::uint64_t node_id = 0; node_id < number_of_nodes; ++node_id) {
-      InsertPagerankRecord(memgraph_graph, result, memory, graph->GetMemgraphNodeId(node_id), pageranks[node_id]);
+    for (std::uint64_t node_id = 0; node_id < pagerank_graph.GetNodeCount(); ++node_id) {
+      InsertPagerankRecord(memgraph_graph, result, memory, pagerank_graph.GetMemgraphNodeId(node_id),
+                           pageranks[node_id]);
     }
   } catch (const std::exception &e) {
     // We must not let any exceptions out of our module.
@@ -72,16 +106,19 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
   mgp_value *default_max_iterations;
   mgp_value *default_damping_factor;
   mgp_value *default_stop_epsilon;
+  mgp_value *default_num_threads;
   try {
     auto *pagerank_proc = mgp::module_add_read_procedure(module, kProcedureGet, PagerankWrapper);
 
     default_max_iterations = mgp::value_make_int(100, memory);
     default_damping_factor = mgp::value_make_double(0.85, memory);
     default_stop_epsilon = mgp::value_make_double(1e-5, memory);
+    default_num_threads = mgp::value_make_int(1, memory);
 
     mgp::proc_add_opt_arg(pagerank_proc, kArgumentMaxIterations, mgp::type_int(), default_max_iterations);
     mgp::proc_add_opt_arg(pagerank_proc, kArgumentDampingFactor, mgp::type_float(), default_damping_factor);
     mgp::proc_add_opt_arg(pagerank_proc, kArgumentStopEpsilon, mgp::type_float(), default_stop_epsilon);
+    mgp::proc_add_opt_arg(pagerank_proc, kArgumentNumThreads, mgp::type_int(), default_num_threads);
 
     // Query module output record
     mgp::proc_add_result(pagerank_proc, kFieldNode, mgp::type_node());
@@ -92,12 +129,14 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     mgp_value_destroy(default_max_iterations);
     mgp_value_destroy(default_damping_factor);
     mgp_value_destroy(default_stop_epsilon);
+    mgp_value_destroy(default_num_threads);
     return 1;
   }
 
   mgp_value_destroy(default_max_iterations);
   mgp_value_destroy(default_damping_factor);
   mgp_value_destroy(default_stop_epsilon);
+  mgp_value_destroy(default_num_threads);
 
   return 0;
 }

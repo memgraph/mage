@@ -97,7 +97,8 @@ set_target_properties(mgclient PROPERTIES
 add_dependencies(mgclient mgclient-proj)
 
 # mg_utility library
-add_subdirectory(mg_utility)
+add_library(mg_utility INTERFACE)
+target_include_directories(mg_utility INTERFACE ${CMAKE_SOURCE_DIR}/memgraph/include)
 
 FetchContent_Declare(fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt.git
