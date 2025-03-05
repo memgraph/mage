@@ -1,11 +1,6 @@
-#include <omp.h>
-#include <cstdint>
-#include <mg_exceptions.hpp>
-#include <mg_utils.hpp>
-
-#include "_mgp.hpp"
 #include "algorithm/louvain.hpp"
-
+#include "mg_utils.hpp"
+#include "mgp.hpp"
 namespace {
 
 const char *kProcedureGet = "get";
@@ -54,7 +49,7 @@ void LouvainCommunityDetection(mgp_list *args, mgp_graph *memgraph_graph, mgp_re
   auto num_threads = mgp::value_get_int(mgp::list_at(args, i++));
   num_threads = num_threads > omp_get_max_threads() ? omp_get_max_threads() : num_threads;
   auto louvain_graph = subgraph
-                        ? louvain_alg::GetLouvainSubgraph(memory, subgraph_nodes, subgraph_relationships,
+                        ? louvain_alg::GetLouvainSubgraph(memory, memgraph_graph, subgraph_nodes, subgraph_relationships,
                                                           weight_property, kDefaultWeight)
                         : louvain_alg::GetLouvainGraph(memgraph_graph, memory, weight_property, kDefaultWeight);
   if (louvain_graph.edges.empty()) {
@@ -64,6 +59,9 @@ void LouvainCommunityDetection(mgp_list *args, mgp_graph *memgraph_graph, mgp_re
   louvain_alg::GetGrappoloSuitableGraph(*grappolo_graph, num_threads, louvain_graph);
   const auto communities = louvain_alg::GrappoloCommunityDetection(*grappolo_graph, memgraph_graph, coloring, min_graph_shrink, community_alg_threshold, coloring_alg_threshold, num_threads);
   for (const auto &[memgraph_id, _] : louvain_graph.memgraph_id_to_id) {
+    if (mgp::must_abort(memgraph_graph)) {
+      throw mgp::TerminatedMustAbortException();
+    }
     InsertLouvainRecord(memgraph_graph, result, memory, memgraph_id, communities[louvain_graph.memgraph_id_to_id[memgraph_id]]);
   }
 }

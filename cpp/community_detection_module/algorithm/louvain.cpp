@@ -1,10 +1,7 @@
-#include "louvain.hpp"
 #include <omp.h>
-#include <cstdint>
-#include <unordered_set>
-#include "_mgp.hpp"
-#include "mg_procedure.h"
+#include "louvain.hpp"
 #include "mg_utils.hpp"
+#include "mgp.hpp"
 
 namespace louvain_alg {
 
@@ -55,6 +52,9 @@ LouvainGraph GetLouvainGraph(mgp_graph *memgraph_graph, mgp_memory *memory, cons
   mg_utility::OnScopeExit delete_vertices_it([&vertices_it] { mgp::vertices_iterator_destroy(vertices_it); }); 
   for (auto *source = mgp::vertices_iterator_get(vertices_it); source;
         source = mgp::vertices_iterator_next(vertices_it)) {
+    if (mgp::must_abort(memgraph_graph)) {
+      throw mgp::TerminatedMustAbortException();
+    }
     auto *edges_it = mgp::vertex_iter_out_edges(source, memory);  // Safe edge iterator creation
     mg_utility::OnScopeExit delete_edges_it([&edges_it] { mgp::edges_iterator_destroy(edges_it); });
     auto source_id = mgp::vertex_get_id(source).as_int;
@@ -69,6 +69,9 @@ LouvainGraph GetLouvainGraph(mgp_graph *memgraph_graph, mgp_memory *memory, cons
     }
     for (auto *out_edge = mgp::edges_iterator_get(edges_it); out_edge;
           out_edge = mgp::edges_iterator_next(edges_it)) {
+      if (mgp::must_abort(memgraph_graph)) {
+        throw mgp::TerminatedMustAbortException();
+      }
       auto *destination = mgp::edge_get_to(out_edge);
       double weight = mg_utility::GetNumericProperty(out_edge, weight_property, memory, default_weight);
       auto destination_id = mgp::vertex_get_id(destination).as_int;
@@ -87,13 +90,16 @@ LouvainGraph GetLouvainGraph(mgp_graph *memgraph_graph, mgp_memory *memory, cons
   return louvain_graph;
 }
 
-LouvainGraph GetLouvainSubgraph(mgp_memory *memory, mgp_list *subgraph_nodes, mgp_list *subgraph_edges, const char *weight_property, double default_weight) {
+LouvainGraph GetLouvainSubgraph(mgp_memory *memory, mgp_graph *memgraph_graph, mgp_list *subgraph_nodes, mgp_list *subgraph_edges, const char *weight_property, double default_weight) {
   LouvainGraph louvain_graph; 
   louvain_graph.edges.reserve(mgp::list_size(subgraph_edges));
   louvain_graph.memgraph_id_to_id.reserve(mgp::list_size(subgraph_nodes));
   auto number_of_vertices = 0;
 
   for (std::size_t i = 0; i < mgp::list_size(subgraph_nodes); i++) {
+    if (mgp::must_abort(memgraph_graph)) {
+      throw mgp::TerminatedMustAbortException();
+    }
     auto *vertex = mgp::value_get_vertex(mgp::list_at(subgraph_nodes, i));
     auto vertex_id = mgp::vertex_get_id(vertex).as_int;
     auto vertex_id_it = louvain_graph.memgraph_id_to_id.find(vertex_id);
@@ -103,6 +109,9 @@ LouvainGraph GetLouvainSubgraph(mgp_memory *memory, mgp_list *subgraph_nodes, mg
   }
 
   for (std::size_t i = 0; i < mgp::list_size(subgraph_edges); i++) {
+    if (mgp::must_abort(memgraph_graph)) {
+      throw mgp::TerminatedMustAbortException();
+    }
     auto *edge = mgp::value_get_edge(mgp::list_at(subgraph_edges, i));
     auto *source = mgp::edge_get_from(edge);
     auto *destination = mgp::edge_get_to(edge);
