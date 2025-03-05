@@ -45,10 +45,10 @@ std::vector<std::int64_t> GrappoloCommunityDetection(GrappoloGraph &grappolo_gra
   return result;
 }
 
-LouvainGraph GetGraphEdgeList(mgp_graph *memgraph_graph, mgp_memory *memory, const char *weight_property, double default_weight) {
+LouvainGraph GetLouvainGraph(mgp_graph *memgraph_graph, mgp_memory *memory, const char *weight_property, double default_weight) {
   LouvainGraph louvain_graph;; 
-  louvain_graph.edges.reserve(mgp::graph_count_edges(memgraph_graph));
-  louvain_graph.memgraph_id_to_id.reserve(mgp::graph_count_vertices(memgraph_graph));
+  louvain_graph.edges.reserve(mgp::graph_approximate_edge_count(memgraph_graph));
+  louvain_graph.memgraph_id_to_id.reserve(mgp::graph_approximate_vertex_count(memgraph_graph));
   auto number_of_vertices = 0;
 
   auto *vertices_it = mgp::graph_iter_vertices(memgraph_graph, memory);  // Safe vertex iterator creation
@@ -60,7 +60,12 @@ LouvainGraph GetGraphEdgeList(mgp_graph *memgraph_graph, mgp_memory *memory, con
     auto source_id = mgp::vertex_get_id(source).as_int;
     auto source_id_it = louvain_graph.memgraph_id_to_id.find(source_id);
     if (source_id_it == louvain_graph.memgraph_id_to_id.end()) {
-      louvain_graph.memgraph_id_to_id[source_id] = number_of_vertices++;
+      louvain_graph.memgraph_id_to_id[source_id] = number_of_vertices;
+      source_id = number_of_vertices;
+      number_of_vertices++;
+    }
+    else {
+      source_id = source_id_it->second;
     }
     for (auto *out_edge = mgp::edges_iterator_get(edges_it); out_edge;
           out_edge = mgp::edges_iterator_next(edges_it)) {
@@ -69,15 +74,20 @@ LouvainGraph GetGraphEdgeList(mgp_graph *memgraph_graph, mgp_memory *memory, con
       auto destination_id = mgp::vertex_get_id(destination).as_int;
       auto destination_id_it = louvain_graph.memgraph_id_to_id.find(destination_id);
       if (destination_id_it == louvain_graph.memgraph_id_to_id.end()) {
-        louvain_graph.memgraph_id_to_id[destination_id] = number_of_vertices++;
+        louvain_graph.memgraph_id_to_id[destination_id] = number_of_vertices;
+        destination_id = number_of_vertices;
+        number_of_vertices++;
       }
-      louvain_graph.edges.emplace_back(source_id_it->second, destination_id_it->second, weight);
+      else {
+        destination_id = destination_id_it->second;
+      }
+      louvain_graph.edges.emplace_back(source_id, destination_id, weight);
     }
   }
   return louvain_graph;
 }
 
-LouvainGraph GetSubgraphEdgeList(mgp_memory *memory, mgp_list *subgraph_nodes, mgp_list *subgraph_edges, const char *weight_property, double default_weight) {
+LouvainGraph GetLouvainSubgraph(mgp_memory *memory, mgp_list *subgraph_nodes, mgp_list *subgraph_edges, const char *weight_property, double default_weight) {
   LouvainGraph louvain_graph; 
   louvain_graph.edges.reserve(mgp::list_size(subgraph_edges));
   louvain_graph.memgraph_id_to_id.reserve(mgp::list_size(subgraph_nodes));
@@ -114,8 +124,8 @@ void GetGrappoloSuitableGraph(GrappoloGraph &grappolo_graph, int num_threads, co
   auto edge_index = 0;
   auto tmp_edge_list = std::unique_ptr<edge[]>(new edge[number_of_edges]);  // Every edge stored ONCE
   for (const auto &[source, destination, weight] : louvain_graph.edges) {
-    tmp_edge_list[edge_index].head = louvain_graph.memgraph_id_to_id.at(source);  // The H index: Zero-based indexing
-    tmp_edge_list[edge_index].tail = louvain_graph.memgraph_id_to_id.at(destination);  // The T index: Zero-based indexing
+    tmp_edge_list[edge_index].head = source;  // The H index: Zero-based indexing
+    tmp_edge_list[edge_index].tail = destination;  // The T index: Zero-based indexing
     tmp_edge_list[edge_index].weight = weight; // The weight
     edge_index++;
   }
