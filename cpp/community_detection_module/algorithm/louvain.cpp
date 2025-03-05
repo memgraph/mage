@@ -31,7 +31,8 @@ std::vector<int64_t> GrappoloCommunityDetection(GrappoloGraph &grappolo_graph, m
   }
 
   // Store clustering information in vector
-  std::vector<std::int64_t> result;
+  std::vector<int64_t> result;
+  result.reserve(number_of_vertices);
   for (long i = 0; i < number_of_vertices; ++i) {
     result.emplace_back(cluster_array[i]);
   }

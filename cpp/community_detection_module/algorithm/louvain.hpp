@@ -37,7 +37,7 @@ struct LouvainGraph {
  * gain in modularity is less than `coloringThreshold`
  * @return Vector of community indices
  */
-std::vector<std::int64_t> GrappoloCommunityDetection(GrappoloGraph &grappolo_graph, mgp_graph *graph, bool coloring,
+std::vector<int64_t> GrappoloCommunityDetection(GrappoloGraph &grappolo_graph, mgp_graph *graph, bool coloring,
                                                      uint64_t min_graph_size, double threshold,
                                                      double coloring_threshold, int num_threads);
 
