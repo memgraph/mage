@@ -1,7 +1,11 @@
 #pragma once
 
 #include <cstdint>
+#include <unordered_map>
 #include <vector>
+
+struct mgp_graph;
+struct mgp_memory;
 
 namespace pagerank_alg {
 
@@ -14,6 +18,8 @@ using EdgePair = std::pair<std::uint64_t, std::uint64_t>;
 /// Graph is allowed to be disconnected.
 class PageRankGraph {
  public:
+  PageRankGraph() = default;
+
   /// Creates graph with given number of nodes with node ids from interval
   /// [0, number_of_nodes - 1] and with given edges between them.
   /// Node ids describing edges have to be integers from
@@ -22,6 +28,10 @@ class PageRankGraph {
   /// @param number_of_edges -- number of edges in graph
   /// @param edges -- pairs (source, target) representing directed edges
   PageRankGraph(std::uint64_t number_of_nodes, std::uint64_t number_of_edges, const std::vector<EdgePair> &edges);
+
+  PageRankGraph(mgp_graph *memgraph_graph, mgp_memory *memory);
+
+  std::uint64_t GetMemgraphNodeId(std::uint64_t node_id) const;
 
   /// @return -- number of nodes in graph
   std::uint64_t GetNodeCount() const;
@@ -47,6 +57,11 @@ class PageRankGraph {
   /// out degree for each node in graph because it is required in calculating
   /// PageRank
   std::vector<std::uint64_t> out_degree_;
+
+  std::vector<std::uint64_t> id_to_memgraph;
+  std::unordered_map<std::uint64_t, std::uint64_t> memgraph_to_id;
+
+  friend PageRankGraph CreatePageRankGraph(mgp_graph *memgraph_graph, mgp_memory *memory);
 };
 
 /// If we present nodes as pages and directed edges between them as links the
@@ -79,6 +94,7 @@ class PageRankGraph {
 /// above
 /// @return -- probability distribution, as described above
 std::vector<double> ParallelIterativePageRank(const PageRankGraph &graph, size_t max_iterations = 100,
-                                              double damping_factor = 0.85, double stop_epsilon = 10e-6);
+                                              double damping_factor = 0.85, double stop_epsilon = 10e-6,
+                                              uint32_t number_of_threads = 1);
 
 }  // namespace pagerank_alg

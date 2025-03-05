@@ -1,8 +1,8 @@
-#include <algorithm>
-#include <numeric>
-#include <future>
-
 #include "pagerank.hpp"
+
+#include <algorithm>
+#include <future>
+#include <numeric>
 
 namespace pagerank_alg {
 
@@ -155,7 +155,7 @@ PageRankGraph::PageRankGraph(const std::uint64_t number_of_nodes, const std::uin
     : node_count_(number_of_nodes), edge_count_(number_of_edges), out_degree_(number_of_nodes) {
   AdjacencyList<std::uint64_t> in_neighbours(number_of_nodes);
 
-  for (const auto [from, to] : edges) {
+  for (const auto &[from, to] : edges) {
     // Because PageRank needs a set of nodes that point to a given node.
     in_neighbours.AddAdjacentPair(from, to);
     out_degree_[from] += 1;
@@ -168,6 +168,8 @@ PageRankGraph::PageRankGraph(const std::uint64_t number_of_nodes, const std::uin
   }
 }
 
+std::uint64_t PageRankGraph::GetMemgraphNodeId(std::uint64_t node_id) const { return id_to_memgraph[node_id]; }
+
 std::uint64_t PageRankGraph::GetNodeCount() const { return node_count_; }
 
 std::uint64_t PageRankGraph::GetEdgeCount() const { return edge_count_; }
@@ -177,8 +179,8 @@ const std::vector<EdgePair> &PageRankGraph::GetOrderedEdges() const { return ord
 std::uint64_t PageRankGraph::GetOutDegree(const std::uint64_t node_id) const { return out_degree_[node_id]; }
 
 std::vector<double> ParallelIterativePageRank(const PageRankGraph &graph, std::size_t max_iterations,
-                                              double damping_factor, double stop_epsilon) {
-  const std::uint64_t number_of_threads = std::thread::hardware_concurrency();
+                                              double damping_factor, double stop_epsilon, uint32_t number_of_threads) {
+  number_of_threads = std::min(number_of_threads, std::thread::hardware_concurrency());
 
   auto borders = CalculateOptimalBorders(graph, number_of_threads);
 
