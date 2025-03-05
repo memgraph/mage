@@ -13,7 +13,7 @@ const char *kArgumentColoring = "coloring";
 const char *kArgumentMinGraphShrink = "min_graph_shrink";
 const char *kArgumentCommunityAlgThreshold = "community_alg_threshold";
 const char *kArgumentColoringAlgThreshold = "coloring_alg_threshold";
-const char *kNumberOfThreads = "num_threads";
+const char *kNumberOfThreads = "num_of_threads";
 
 const char *kFieldNode = "node";
 const char *kFieldCommunity = "community_id";
