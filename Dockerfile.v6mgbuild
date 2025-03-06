@@ -1,7 +1,11 @@
 # This dockerfile is for testing with the manual_test.sh script
 ARG PY_VERSION_DEFAULT=3.12
+ARG MGBUILD_IMAGE
 
-FROM memgraph/mgbuild:v6_ubuntu-24.04 as base
+FROM $MGBUILD_IMAGE as base
+
+
+#FROM memgraph/mgbuild:v6_ubuntu-24.04 as base
 
 USER root
 
