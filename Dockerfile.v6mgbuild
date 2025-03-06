@@ -21,7 +21,6 @@ ENV AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
 
 
 # Essentials for production/dev
-SHELL ["/bin/sh", "-c"]
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
     libcurl4 \
