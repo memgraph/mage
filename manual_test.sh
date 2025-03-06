@@ -56,6 +56,12 @@ else
     DOCKERFILE=Dockerfile.v6mgbuild
 fi
 
+if [[ "$arch" == "arm64" ]]; then
+    MGBUILD_IMAGE="memgraph/mgbuild:v6_ubuntu-22.04-aarch64"
+else
+    MGBUILD_IMAGE="memgraph/mgbuild:v6_ubuntu-22.04"
+fi
+
 # Check if the Docker image already exists
 if ! docker images | awk '{print $1 ":" $2}' | grep -q "memgraph-mage:$build_target"; then
     echo "Image memgraph-mage:$build_target not found. Building..."
@@ -64,6 +70,7 @@ if ! docker images | awk '{print $1 ":" $2}' | grep -q "memgraph-mage:$build_tar
         --target $build_target \
         --platform linux/$arch \
         --file $DOCKERFILE \
+        --build-arg MGBUILD_IMAGE="$MGBUILD_IMAGE" \
         --load .
 else
     echo "Image memgraph-mage:$build_target already exists. Skipping build."

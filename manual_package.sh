@@ -105,6 +105,12 @@ if [[ "$BUILD_SCOPE" == "without ML" ]]; then
     DOCKERFILE="Dockerfile.no_ML"
 fi
 
+if [[ "$MAGE_BUILD_ARCH" == "arm" ]]; then
+    MGBUILD_IMAGE="memgraph/mgbuild:v6_ubuntu-22.04-aarch64"
+else
+    MGBUILD_IMAGE="memgraph/mgbuild:v6_ubuntu-22.04"
+fi
+
 echo "Using Dockerfile: $DOCKERFILE"
 
 # Set up Docker Buildx
@@ -118,7 +124,7 @@ docker buildx build \
     --tag "$DOCKER_REPOSITORY_NAME:$IMAGE_TAG" \
     --file "$DOCKERFILE" \
     --build-arg BUILD_TYPE="$BUILD_TYPE" \
-    --build-arg MGBUIL_IMAGE=$MAGE_BUILD_ARCH \
+    --build-arg MGBUILD_IMAGE="$MGBUILD_IMAGE" \
     --load .
 
 # Save Docker image
