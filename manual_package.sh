@@ -130,7 +130,7 @@ docker buildx build \
 # Save Docker image
 echo "Saving Docker image..."
 mkdir -p output
-docker save "$DOCKER_REPOSITORY_NAME:$IMAGE_TAG" > "output/${ARTIFACT_NAME}.tar.gz"
+docker save "$DOCKER_REPOSITORY_NAME:$IMAGE_TAG" > "../output/${ARTIFACT_NAME}.tar.gz"
 
 # Push to DockerHub
 if [[ "$PUSH_TO_DOCKERHUB" == "true" ]]; then

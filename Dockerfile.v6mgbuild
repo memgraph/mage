@@ -9,7 +9,6 @@ FROM $MGBUILD_IMAGE as base
 
 USER root
 
-ARG TARGETARCH
 ARG PY_VERSION_DEFAULT
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
 ENV TORCH_VERSION=2.4.0
@@ -22,7 +21,8 @@ ENV AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
 
 
 # Essentials for production/dev
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
     libcurl4 \
     libpython${PY_VERSION} \
     libssl-dev \
