@@ -113,11 +113,17 @@ jobs:
 
       - name: Build and run Memgraph MAGE:${{ inputs.build_target }}
         run: |
+          if [[ "${{ inputs.arch }}" == "arm64" ]]; then
+            echo "MGBUILD_IMAGE=memgraph/mgbuild:v6_ubuntu-24.04-arm" >> $GITHUB_ENV
+          else
+            echo "MGBUILD_IMAGE=memgraph/mgbuild:v6_ubuntu-24.04" >> $GITHUB_ENV
+          fi
           DOCKER_BUILDKIT=1 docker buildx build \
           --tag memgraph-mage:${{ inputs.build_target }} \
           --target ${{ inputs.build_target }} \
           --platform linux/${{ inputs.arch }} \
           --file Dockerfile.${{ inputs.build_scope == 'without ML' && 'no_ML' || 'release' }} \
+          --build-arg MGBUILD_IMAGE=${{ env.MGBUILD_IMAGE }} \
           --load .
 
           docker network create ${{ env.MEMGRAPH_NETWORK }} || true
