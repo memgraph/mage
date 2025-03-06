@@ -6,6 +6,23 @@ if [ -f ../.env ]; then
     export $(grep -v '^#' ../.env | xargs)
 fi
 
+
+# Parse command-line arguments
+arch="amd64"
+while [[ "$#" -gt 0 ]]; do
+  case $1 in
+    --arch)
+      arch="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown parameter: $1"
+      exit 1
+      ;;
+  esac
+done
+
+
 echo "Using Memgraph License: $MEMGRAPH_ENTERPRISE_LICENSE"
 echo "Using Organization Name: $MEMGRAPH_ORGANIZATION_NAME"
 
@@ -22,7 +39,6 @@ NEO4J_CONTAINER="neo4j_test"
 MEMGRAPH_NETWORK="memgraph_test_network"
 OS="ubuntu-24.04"
 s3_region="eu-west-1"
-arch="amd64"
 build_target="dev"
 build_scope="with ML"
 memgraph_version="3.0.0"
