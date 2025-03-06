@@ -53,7 +53,7 @@ fi
 if [[ "$build_scope" == "without ML" ]]; then
     DOCKERFILE=Dockerfile.no_ML
 else
-    DOCKERFILE=Dockerfile.v6
+    DOCKERFILE=Dockerfile.v6mgbuild
 fi
 
 # Check if the Docker image already exists
