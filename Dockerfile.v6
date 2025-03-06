@@ -44,8 +44,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # download the memgraph deb package
-RUN curl -o /toolchain.tar.gz https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/toolchain-v6/toolchain-v6-binaries-ubuntu-24.04-amd64.tar.gz
-
+RUN curl -o memgraph-${TARGETARCH}.deb https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/memgraph_3.1.0-rc2_${TARGETARCH}.deb
 
 # Hack to remove modules that cause error on loading of torch modules
 # Must be here due to multi-phase build. The setup script is in dev phase
@@ -61,7 +60,7 @@ FROM base as dev
 
 
 # download the toolchain
-RUN wget https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/toolchain-v6/toolchain-v6-binaries-ubuntu-24.04-amd64.tar.gz -O /toolchain.tar.gz
+RUN curl -o /toolchain.tar.gz https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/toolchain-v6/toolchain-v6-binaries-ubuntu-24.04-amd64.tar.gz
 
 # extract the toolchain
 RUN tar xzvfm toolchain.tar.gz -C /opt
