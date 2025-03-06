@@ -106,7 +106,7 @@ if [[ "$BUILD_SCOPE" == "without ML" ]]; then
 fi
 
 if [[ "$MAGE_BUILD_ARCH" == "arm" ]]; then
-    MGBUILD_IMAGE="memgraph/mgbuild:v6_ubuntu-24.04-aarch64"
+    MGBUILD_IMAGE="memgraph/mgbuild:v6_ubuntu-24.04-arm"
 else
     MGBUILD_IMAGE="memgraph/mgbuild:v6_ubuntu-24.04"
 fi

@@ -73,7 +73,7 @@ else
 fi
 
 if [[ "$arch" == "arm64" ]]; then
-    MGBUILD_IMAGE="memgraph/mgbuild:v6_ubuntu-24.04-aarch64"
+    MGBUILD_IMAGE="memgraph/mgbuild:v6_ubuntu-24.04-arm"
 else
     MGBUILD_IMAGE="memgraph/mgbuild:v6_ubuntu-24.04"
 fi
