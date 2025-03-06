@@ -134,23 +134,23 @@ jobs:
       - name: Rust library tests
         if: inputs.build_target == 'dev'
         run: |
-          docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "source ~/.cargo/env && cd /mage/rust/rsmgp-sys && cargo fmt -- --check && cargo test"
+          docker exec -i -u memgraph ${{ env.MAGE_CONTAINER }} bash -c "source ~/.cargo/env && cd /mage/rust/rsmgp-sys && cargo fmt -- --check && cargo test"
 
       - name: C++ Modules unit tests
         if: inputs.build_target == 'dev'
         run: |
-          docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/cpp/build/ && ctest --output-on-failure -j${{ env.CORE_COUNT }}"
+          docker exec -i -u memgraph ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/cpp/build/ && ctest --output-on-failure -j${{ env.CORE_COUNT }}"
       
       - name: Install Python dependencies
         run: |
-          docker exec -i -u root "$MAGE_CONTAINER" bash -c "pip install -r /mage/python/tests/requirements.txt --break-system-packages"
+          docker exec -i -u memgraph "$MAGE_CONTAINER" bash -c "pip install -r /mage/python/tests/requirements.txt --break-system-packages"
 
       - name: Python modules unit tests
         if: inputs.build_target == 'dev' && inputs.build_scope != 'without ML'
         env:
           PYTHONPATH: "$PWD/python"
         run: |
-          docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/python/ && python3 -m pytest ."
+          docker exec -i -u memgraph ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/python/ && python3 -m pytest ."
 
       - name: Run End-to-end tests
         if: inputs.arch != 'arm64'
@@ -158,7 +158,7 @@ jobs:
           PYTHONPATH: "$PWD/e2e"
         run: |
           cd e2e
-          docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c \
+          docker exec -i -u memgraph ${{ env.MAGE_CONTAINER }} bash -c \
           "cd /mage/e2e/ && python3 -m pytest . -k 'not cugraph ${{ inputs.build_scope == 'without ML' && 'and not tgn and not node_classification and not link_prediction' || '' }}'"
 
       - name: Run End-to-end correctness tests
