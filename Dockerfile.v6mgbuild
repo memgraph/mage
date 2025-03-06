@@ -94,9 +94,16 @@ RUN python3 -m pip install -r /mage/python/requirements.txt --break-system-packa
     && python3 -m pip install -r /mage/python/tests/requirements.txt --break-system-packages \
     && python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages
 
-# Torch and DGL 
-RUN python3 -m pip install torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.3.0+cu121.html --break-system-packages \
-    && python3 -m pip install dgl -f https://data.dgl.ai/wheels/torch-2.3/cu121/repo.html --break-system-packages
+# Torch and DGL (for arm, we need to download our own package)
+RUN python3 -m pip install torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.3.0+cu121.html --break-system-packages 
+#RUN python3 -m pip install dgl -f https://data.dgl.ai/wheels/torch-2.3/cu121/repo.html --break-system-packages
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+        curl -o dgl.whl https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/dgl-2.4.0-cp312-cp312-linux_aarch64.whl && \
+        python3 -m pip install dgl.whl --break-system-packages; \
+    else \
+        python3 -m pip install dgl -f https://data.dgl.ai/wheels/torch-2.3/cu121/repo.html --break-system-packages; \
+    fi
+
 
 # Build query modules
 SHELL ["/bin/bash", "-c"]
