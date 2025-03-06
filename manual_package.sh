@@ -106,9 +106,9 @@ if [[ "$BUILD_SCOPE" == "without ML" ]]; then
 fi
 
 if [[ "$MAGE_BUILD_ARCH" == "arm" ]]; then
-    MGBUILD_IMAGE="memgraph/mgbuild:v6_ubuntu-22.04-aarch64"
+    MGBUILD_IMAGE="memgraph/mgbuild:v6_ubuntu-24.04-aarch64"
 else
-    MGBUILD_IMAGE="memgraph/mgbuild:v6_ubuntu-22.04"
+    MGBUILD_IMAGE="memgraph/mgbuild:v6_ubuntu-24.04"
 fi
 
 echo "Using Dockerfile: $DOCKERFILE"

@@ -73,9 +73,9 @@ else
 fi
 
 if [[ "$arch" == "arm64" ]]; then
-    MGBUILD_IMAGE="memgraph/mgbuild:v6_ubuntu-22.04-aarch64"
+    MGBUILD_IMAGE="memgraph/mgbuild:v6_ubuntu-24.04-aarch64"
 else
-    MGBUILD_IMAGE="memgraph/mgbuild:v6_ubuntu-22.04"
+    MGBUILD_IMAGE="memgraph/mgbuild:v6_ubuntu-24.04"
 fi
 
 # Check if the Docker image already exists
