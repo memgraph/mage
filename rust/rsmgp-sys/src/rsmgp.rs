@@ -244,7 +244,7 @@ macro_rules! define_deprecated_type {
         NamedType {
             name: &c_str!($name),
             types: &[$($types),+],
-            depricated: true,
+            deprecated: true,
         }
     };
 }

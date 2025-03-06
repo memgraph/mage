@@ -16,7 +16,7 @@ class MLPPredictor(torch.nn.Module):
         """Computes a scalar score for each edge of the given graph.
 
         Args:
-            edges (Tuple[torch.Tensor, torch.Tensor]): Has three members: ``src``, ``dst`` and ``data``, each of which is a dictionary representing the features of the source nodes, the destination nodes and the eedges themselves.
+            edges (Tuple[torch.Tensor, torch.Tensor]): Has three members: ``src``, ``dst`` and ``data``, each of which is a dictionary representing the features of the source nodes, the destination nodes and the edges themselves.
         Returns:
             Dict: A dictionary of new edge features
         """
