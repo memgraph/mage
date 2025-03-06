@@ -1,6 +1,7 @@
 ARG PY_VERSION_DEFAULT=3.12
+ARG MGBUILD_IMAGE
 
-FROM ubuntu:24.04 as base
+FROM $MGBUILD_IMAGE as base
 
 USER root
 
@@ -44,12 +45,6 @@ ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
 EXPOSE 7687
 
 FROM base as dev
-
-# download the toolchain
-RUN curl -o /toolchain.tar.gz https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/toolchain-v6/toolchain-v6-binaries-ubuntu-24.04-amd64.tar.gz
-
-# extract the toolchain
-RUN tar xzvfm toolchain.tar.gz -C /opt
 
 ARG BUILD_TYPE=Release
 

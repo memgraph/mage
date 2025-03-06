@@ -43,9 +43,9 @@ RUN apt-get update && apt-get install -y \
     gdb \
     procps \
     libc6-dbg \
-    --no-install-recommends \
-    && ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    --no-install-recommends 
+RUN ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf 
+RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # download the memgraph deb package
 RUN curl -o memgraph-${TARGETARCH}.deb https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/memgraph_3.1.0-rc2_${TARGETARCH}.deb
