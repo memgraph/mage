@@ -185,11 +185,15 @@ jobs:
       # --tag ${DOCKER_REPOSITORY_NAME}:${{ inputs.additional_tag }} \
       - name: Build docker image
         run: |
-          if [[ "${{ inputs.arch }}64" == "arm64" ]]; then
+          if [[ "${{ inputs.arch }}" == "arm" ]]; then
             MGBUILD_IMAGE=memgraph/mgbuild:v6_ubuntu-24.04-arm
           else
             MGBUILD_IMAGE=memgraph/mgbuild:v6_ubuntu-24.04
           fi
+
+          echo "Using base image: $MGBUILD_IMAGE"
+          echo "Image Tag: ${{ env.IMAGE_TAG }}"
+
           docker buildx build \
           --target ${{ env.MAGE_BUILD_TARGET }} \
           --platform linux/${{ inputs.arch }}64 \
