@@ -99,7 +99,7 @@ jobs:
       build_target: "${{ github.event.inputs.build_target }}"
       build_scope: "${{ github.event.inputs.build_scope }}"
       memgraph_version: "${{ github.event.inputs.memgraph_version }}"
-      memgraph_download_link: "${{ github.event.inputs.memgraph_download_link }}"
+      memgraph_download_link: "s3://deps.memgraph.io/memgraph-unofficial/04-03-2025-update-mgp-count/ubuntu-24.04/memgraph_3.0.0+60~a932168b3-1_amd64.deb"
       memgraph_ref: "${{ github.event.inputs.memgraph_ref }}"
       memgraph_ref_update: "${{ github.event.inputs.memgraph_ref_update }}"
     secrets: inherit
