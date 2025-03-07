@@ -70,7 +70,7 @@ RUN python3 -m pip install -r /mage/python/requirements.txt --break-system-packa
 
 # Torch and DGL 
 RUN python3 -m pip install torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.3.0+cu121.html --break-system-packages 
-RUN if [ "$TARGETARCH" = "arm64" ]; then \
+RUN if [ "$TARGETARCH" == "arm64" ]; then \
         curl -o dgl.whl https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/dgl-2.4.0-cp312-cp312-linux_aarch64.whl && \
         python3 -m pip install dgl.whl --break-system-packages; \
     else \
