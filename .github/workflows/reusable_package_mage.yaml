@@ -69,7 +69,7 @@ env:
 
 jobs:
   BuildAndPush:
-    runs-on: ${{ (inputs.arch == 'arm') && fromJSON('["self-hosted", "DockerMgBuild","Arm64"]') || fromJSON('["self-hosted", "DockerMgBuild", "X64"]') }}
+    runs-on: ${{ (inputs.arch == 'arm') && fromJSON('["self-hosted", "DockerMgBuild","ARM64"]') || fromJSON('["self-hosted", "DockerMgBuild", "X64"]') }}
     steps:            
       - name: Checkout repository and submodules
         uses: actions/checkout@v4
