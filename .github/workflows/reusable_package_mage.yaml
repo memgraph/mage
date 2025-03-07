@@ -38,6 +38,10 @@ on:
         type: string
         description: "Overwrite existing image on dockerhub"
         default: true
+      push_to_github:
+        type: string
+        description: "Push the image to GitHub?"
+        default: false
       push_to_dockerhub:
         type: string
         description: "Push the image to DockerHub?"
@@ -209,6 +213,7 @@ jobs:
           docker save ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} > output/${{ env.ARTIFACT_NAME }}.tar.gz
 
       - name: Push to GitHub
+        if: ${{ inputs.push_to_github == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: "${{ env.ARTIFACT_NAME }}"
