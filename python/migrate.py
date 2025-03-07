@@ -2,6 +2,7 @@ from decimal import Decimal
 import boto3
 import csv
 import io
+from gqlalchemy import Memgraph, Neo4j
 import json
 import mgp
 import mysql.connector as mysql_connector
@@ -9,7 +10,9 @@ import oracledb
 import os
 import pyodbc
 import psycopg2
+import re
 import threading
+
 
 from typing import Any, Dict
 
@@ -378,9 +381,15 @@ def init_migrate_s3(
     # Initialize S3 client
     s3_client = boto3.client(
         "s3",
-        aws_access_key_id=config.get("aws_access_key_id", os.getenv("AWS_ACCESS_KEY_ID", None)),
-        aws_secret_access_key=config.get("aws_secret_access_key", os.getenv("AWS_SECRET_ACCESS_KEY", None)),
-        aws_session_token=config.get("aws_session_token", os.getenv("AWS_SESSION_TOKEN", None)),
+        aws_access_key_id=config.get(
+            "aws_access_key_id", os.getenv("AWS_ACCESS_KEY_ID", None)
+        ),
+        aws_secret_access_key=config.get(
+            "aws_secret_access_key", os.getenv("AWS_SECRET_ACCESS_KEY", None)
+        ),
+        aws_session_token=config.get(
+            "aws_session_token", os.getenv("AWS_SESSION_TOKEN", None)
+        ),
         region_name=config.get("region_name", os.getenv("AWS_REGION", None)),
     )
 
@@ -439,6 +448,84 @@ def cleanup_migrate_s3():
 mgp.add_batch_read_proc(s3, init_migrate_s3, cleanup_migrate_s3)
 
 
+neo4j_dict = {}
+
+
+def init_migrate_neo4j(
+    label_or_rel_or_query: str,
+    config: mgp.Map,
+    config_path: str = "",
+    params: mgp.Nullable[mgp.Any] = None,
+):
+    global neo4j_dict
+
+    if threading.get_native_id not in neo4j_dict:
+        neo4j_dict[threading.get_native_id] = {}
+
+    if len(config_path) > 0:
+        config = _combine_config(config=config, config_path=config_path)
+
+    neo4j_db = Neo4j(**config)
+    query = _formulate_cypher_query(label_or_rel_or_query)
+    cursor = neo4j_db.execute_and_fetch(query, params)
+
+    neo4j_dict[threading.get_native_id]["connection"] = neo4j_db
+    neo4j_dict[threading.get_native_id]["cursor"] = cursor
+
+
+def neo4j(
+    label_or_rel_or_query: str,
+    config: mgp.Map,
+    config_path: str = "",
+    params: mgp.Nullable[mgp.Any] = None,
+) -> mgp.Record(row=mgp.Map):
+    """
+    Migrate data from Neo4j to Memgraph. Can migrate a specific node label, relationship type, or execute a custom Cypher query.
+
+    :param label_or_rel_or_query: Node label, relationship type, or a Cypher query
+    :param config: Connection configuration for Neo4j
+    :param config_path: Path to a JSON file containing connection parameters
+    :param params: Optional query parameters
+    :return: Stream of rows from Neo4j
+    """
+    global neo4j_dict
+    cursor = neo4j_dict[threading.get_native_id]["cursor"]
+
+    return [
+        mgp.Record(row=row)
+        for row in (next(cursor, None) for _ in range(Constants.BATCH_SIZE))
+        if row is not None
+    ]
+
+
+def cleanup_migrate_neo4j():
+    global neo4j_dict
+    if "connection" in neo4j_dict[threading.get_native_id]:
+        neo4j_dict[threading.get_native_id]["connection"].close()
+    neo4j_dict.pop(threading.get_native_id, None)
+
+
+mgp.add_batch_read_proc(neo4j, init_migrate_neo4j, cleanup_migrate_neo4j)
+
+
+def _formulate_cypher_query(label_or_rel_or_query: str) -> str:
+    words = label_or_rel_or_query.split()
+    if len(words) > 1:
+        return (
+            label_or_rel_or_query  # Treat it as a Cypher query if multiple words exist
+        )
+    node_match = re.match(r"^\(\s*:(\w+)\s*\)$", label_or_rel_or_query)
+    rel_match = re.match(r"^\[\s*:(\w+)\s*\]$", label_or_rel_or_query)
+
+    if node_match:
+        label = node_match.group(1)
+        return f"MATCH (n:{label}) RETURN properties(n) as properties"
+    elif rel_match:
+        rel_type = rel_match.group(1)
+        return f"MATCH ()-[r:{rel_type}]->() RETURN properties(r) as properties"
+    return label_or_rel_or_query  # Assume it's a valid query
+
+
 def _query_is_table(table_or_sql: str) -> bool:
     return len(table_or_sql.split()) == 1
 
@@ -451,12 +538,17 @@ def _load_config(path: str) -> Dict[str, Any]:
         raise OSError("Could not open/read file.")
 
 
-def _combine_config(config: mgp.Map, config_path: str) -> Dict[str, Any]:
+def _combine_config(config: mgp.Map, config_path: str) -> dict:
     assert len(config_path), "Path must not be empty"
-    config_items = _load_config(path=config_path)
 
-    for key, value in config_items.items():
-        config[key] = value
+    file_config = None
+    try:
+        with open(config_path, "r") as file:
+            file_config = json.load(file)
+    except Exception:
+        raise OSError("Could not open/read file.")
+
+    config.update(file_config)
     return config
 
 
