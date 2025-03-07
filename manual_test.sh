@@ -9,10 +9,15 @@ fi
 
 # Parse command-line arguments
 arch="amd64"
+build_target="dev"
 while [[ "$#" -gt 0 ]]; do
   case $1 in
     --arch)
       arch="$2"
+      shift 2
+      ;;
+    --build-target)
+      build_target="$2"
       shift 2
       ;;
     *)
@@ -39,7 +44,6 @@ NEO4J_CONTAINER="neo4j_test"
 MEMGRAPH_NETWORK="memgraph_test_network"
 OS="ubuntu-24.04"
 s3_region="eu-west-1"
-build_target="dev"
 build_scope="with ML"
 memgraph_version="3.0.0"
 memgraph_ref="master"

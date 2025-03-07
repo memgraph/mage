@@ -114,7 +114,7 @@ RUN mv /mage/e2e /e2e/ \
     && mv /e2e/ /mage/ \
     && chown -R memgraph: /mage/e2e \
     && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
-    && apt-get -y --purge autoremove clang git curl python3-pip python3-dev cmake build-essential \
+    && apt-get -y --purge autoremove clang git curl python3-dev cmake build-essential \
     && apt-get clean
 
 USER memgraph
