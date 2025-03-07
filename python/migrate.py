@@ -2,7 +2,7 @@ from decimal import Decimal
 import boto3
 import csv
 import io
-from gqlalchemy import Memgraph, Neo4j
+from gqlalchemy import Neo4j
 import json
 import mgp
 import mysql.connector as mysql_connector
@@ -522,7 +522,10 @@ def _formulate_cypher_query(label_or_rel_or_query: str) -> str:
         return f"MATCH (n:{label}) RETURN properties(n) as properties"
     elif rel_match:
         rel_type = rel_match.group(1)
-        return f"MATCH ()-[r:{rel_type}]->() RETURN properties(r) as properties"
+        return f"""
+    MATCH (n)-[r:{rel_type}]->(m)
+    RETURN properties(n) as from_properties, properties(r) as edge_properties, properties(m) as to_properties
+    """
     return label_or_rel_or_query  # Assume it's a valid query
 
 
@@ -538,7 +541,7 @@ def _load_config(path: str) -> Dict[str, Any]:
         raise OSError("Could not open/read file.")
 
 
-def _combine_config(config: mgp.Map, config_path: str) -> dict:
+def _combine_config(config: mgp.Map, config_path: str) -> Dict[str, Any]:
     assert len(config_path), "Path must not be empty"
 
     file_config = None
