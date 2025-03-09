@@ -77,7 +77,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: ["amd64"]
+        arch: ["amd64","arm64"]
         build_target: ["dev"]
         build_scope: ["with ML", "without ML"]
     uses: ./.github/workflows/reusable_test.yml
