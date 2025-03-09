@@ -51,11 +51,11 @@ jobs:
         build_target: ["prod", "dev"]
         build_scope: ["with ML", "without ML"]
         build_type: ["Release", "RelWithDebInfo"]
-        build_arch: ["amd", "arm"]
+        build_arch: ["amd64", "arm64"]
         include:
           - build_type: "RelWithDebInfo"
             rwid_ext: "-relwithdebinfo"
-          - build_arch: "arm"
+          - build_arch: "arm64"
             arm_ext: "-aarch64"
         exclude:
           - build_target: "dev"
@@ -70,7 +70,7 @@ jobs:
       mage_build_target: "${{ matrix.build_target }}"
       mage_build_type: "${{ matrix.build_type }}"
       memgraph_version: "${{ github.event.inputs.memgraph_version }}"
-      memgraph_download_link: "${{ needs.SetupNames.outputs.download_link_base }}${{ matrix.arm_ext }}${{ matrix.rwid_ext }}/${{ needs.SetupNames.outputs.dowlnoad_binary_name_base }}_${{ matrix.build_arch }}64.deb"
+      memgraph_download_link: "${{ needs.SetupNames.outputs.download_link_base }}${{ matrix.arm_ext }}${{ matrix.rwid_ext }}/${{ needs.SetupNames.outputs.dowlnoad_binary_name_base }}_${{ matrix.build_arch }}.deb"
       shorten_tag: "true"
       force_release: "true"
       push_to_dockerhub: "false"

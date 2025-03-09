@@ -64,12 +64,12 @@ on:
         default: false
 
 env:
-  OS: ${{ inputs.arch == 'arm' && 'ubuntu-24.04-aarch64' || 'ubuntu-24.04' }}
+  OS: ${{ inputs.arch == 'arm64' && 'ubuntu-24.04-aarch64' || 'ubuntu-24.04' }}
   DOCKER_REPOSITORY_NAME: memgraph/memgraph-mage
 
 jobs:
   BuildAndPush:
-    runs-on: ${{ (inputs.arch == 'arm') && fromJSON('["self-hosted", "DockerMgBuild","ARM64"]') || fromJSON('["self-hosted", "DockerMgBuild", "X64"]') }}
+    runs-on: ${{ (inputs.arch == 'arm64') && fromJSON('["self-hosted", "DockerMgBuild","ARM64"]') || fromJSON('["self-hosted", "DockerMgBuild", "X64"]') }}
     steps:            
       - name: Checkout repository and submodules
         uses: actions/checkout@v4
@@ -122,8 +122,8 @@ jobs:
           fi
           IMAGE_TAG="${MAGE_VERSION}-memgraph-${MEMGRAPH_VERSION}"
           ARTIFACT_NAME="mage-${IMAGE_TAG}"
-          if [[ "${{ inputs.arch }}" == 'arm' ]]; then
-            ARTIFACT_NAME="${ARTIFACT_NAME}-arm"
+          if [[ "${{ inputs.arch }}" == 'arm64' ]]; then
+            ARTIFACT_NAME="${ARTIFACT_NAME}-arm64"
           fi
           if [[ "${{ env.MAGE_BUILD_SCOPE }}" == 'without ML' ]]; then
             ARTIFACT_NAME="${ARTIFACT_NAME}-no-ml"
@@ -189,7 +189,7 @@ jobs:
       # --tag ${DOCKER_REPOSITORY_NAME}:${{ inputs.additional_tag }} \
       - name: Build docker image
         run: |
-          if [[ "${{ inputs.arch }}" == "arm" ]]; then
+          if [[ "${{ inputs.arch }}" == "arm64" ]]; then
             MGBUILD_IMAGE=memgraph/mgbuild:v6_ubuntu-24.04-arm
           else
             MGBUILD_IMAGE=memgraph/mgbuild:v6_ubuntu-24.04

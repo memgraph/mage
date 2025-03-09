@@ -10,7 +10,7 @@ fi
 
 # Set default values if not provided
 MAGE_VERSION=${MAGE_VERSION:-"3.0.0"}
-MAGE_BUILD_ARCH=${MAGE_BUILD_ARCH:-"amd"}
+MAGE_BUILD_ARCH=${MAGE_BUILD_ARCH:-"amd64"}
 MAGE_BUILD_SCOPE=${MAGE_BUILD_SCOPE:-"with ML"}
 MAGE_BUILD_TARGET=${MAGE_BUILD_TARGET:-"prod"}
 MAGE_BUILD_TYPE=${MAGE_BUILD_TYPE:-"Release"}
@@ -20,14 +20,14 @@ PUSH_TO_DOCKERHUB=${PUSH_TO_DOCKERHUB:-false}
 PUSH_TO_S3=${PUSH_TO_S3:-false}
 
 # Set architecture-based OS variable
-if [[ "$MAGE_BUILD_ARCH" == "arm" ]]; then
+if [[ "$MAGE_BUILD_ARCH" == "arm64" ]]; then
     OS="ubuntu-24.04-aarch64"
 else
     OS="ubuntu-24.04"
 fi
 
 # for testing only - use specific deb files for 3.1.0
-if [[ "$MAGE_BUILD_ARCH" == "arm" ]]; then
+if [[ "$MAGE_BUILD_ARCH" == "arm64" ]]; then
     MEMGRAPH_DOWNLOAD_LINK="https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/memgraph_3.1.0-rc2_arm64.deb"
 else
     MEMGRAPH_DOWNLOAD_LINK="https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/memgraph_3.1.0-rc2_amd64.deb"
@@ -80,8 +80,8 @@ fi
 IMAGE_TAG="${MAGE_VERSION}-memgraph-${MEMGRAPH_VERSION}"
 ARTIFACT_NAME="mage-${IMAGE_TAG}"
 
-if [[ "$MAGE_BUILD_ARCH" == "arm" ]]; then
-    ARTIFACT_NAME="${ARTIFACT_NAME}-arm"
+if [[ "$MAGE_BUILD_ARCH" == "arm64" ]]; then
+    ARTIFACT_NAME="${ARTIFACT_NAME}-arm64"
 fi
 if [[ "$BUILD_SCOPE" == "without ML" ]]; then
     ARTIFACT_NAME="${ARTIFACT_NAME}-no-ml"
@@ -105,7 +105,7 @@ if [[ "$BUILD_SCOPE" == "without ML" ]]; then
     DOCKERFILE="Dockerfile.no_ML"
 fi
 
-if [[ "$MAGE_BUILD_ARCH" == "arm" ]]; then
+if [[ "$MAGE_BUILD_ARCH" == "arm64" ]]; then
     MGBUILD_IMAGE="memgraph/mgbuild:v6_ubuntu-24.04-arm"
 else
     MGBUILD_IMAGE="memgraph/mgbuild:v6_ubuntu-24.04"

@@ -47,7 +47,7 @@ env:
 
 jobs:
   BuildAndTest:
-    runs-on: ${{ contains('arm,arm64', inputs.arch) ? fromJSON('["self-hosted", "DockerMgBuild", "ARM64"]') : fromJSON('["self-hosted", "DockerMgBuild", "X64"]') }}
+    runs-on: ${{ (inputs.arch == 'arm64') && fromJSON('["self-hosted", "DockerMgBuild","ARM64"]') || fromJSON('["self-hosted", "DockerMgBuild", "X64"]') }}
     steps:
       - name: Checkout repository and submodules
         uses: actions/checkout@v4
