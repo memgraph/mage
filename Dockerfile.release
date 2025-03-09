@@ -117,6 +117,10 @@ RUN mv /mage/e2e /e2e/ \
     && apt-get -y --purge autoremove clang git curl python3-dev cmake build-essential \
     && apt-get clean
 
+#remove the toolchain
+RUN rm -rf /opt/toolchain-v6
+
+
 USER memgraph
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
 CMD [""]
