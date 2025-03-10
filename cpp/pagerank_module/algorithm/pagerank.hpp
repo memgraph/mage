@@ -47,6 +47,8 @@ class PageRankGraph {
   /// @return -- out degree of node node_id
   std::uint64_t GetOutDegree(std::uint64_t node_id) const;
 
+  void ClearUnusedVectors();
+
  private:
   /// node_count equals number of nodes in graph
   std::uint64_t node_count_;
