@@ -144,5 +144,5 @@ docker exec -i "$MAGE_CONTAINER" bash -c 'echo "Using Memgraph License: $MEMGRAP
 
 # Cleanup
 docker stop "$MAGE_CONTAINER" || true
-#docker rmi memgraph-mage:$build_target || true
+docker rmi memgraph-mage:$build_target || true
 docker network rm "$MEMGRAPH_NETWORK" || true
