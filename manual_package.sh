@@ -114,6 +114,7 @@ fi
 echo "Using Dockerfile: $DOCKERFILE"
 
 # Set up Docker Buildx
+# (|| true stops it failing if the buildx container already exists from a previous run)
 docker buildx create --use || true
 
 # Build the Docker image
