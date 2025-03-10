@@ -17,7 +17,7 @@ import re
 import threading
 
 
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 
 class Constants:
@@ -616,7 +616,7 @@ mgp.add_batch_read_proc(
 duckdb_dict = {}
 
 
-def init_migrate_duckdb(query: str):
+def init_migrate_duckdb(query: str, warmup_queries: mgp.Nullable[List[str]] = None):
     """
     Initialize an in-memory DuckDB connection and execute the query.
 
@@ -632,6 +632,10 @@ def init_migrate_duckdb(query: str):
     # Ensure a fresh in-memory DuckDB instance for each thread
     connection = duckDB.connect()
     cursor = connection.cursor()
+    if warmup_queries is not None:
+        for warmup_query in warmup_queries:
+            cursor.execute(warmup_query)
+
     cursor.execute(query)
 
     duckdb_dict[threading.get_native_id][Constants.CONNECTION] = connection
@@ -641,7 +645,7 @@ def init_migrate_duckdb(query: str):
     ]
 
 
-def duckdb(query: str) -> mgp.Record(row=mgp.Map):
+def duckdb(query: str, warmup_queries: mgp.Nullable[List[str]] = None) -> mgp.Record(row=mgp.Map):
     """
     Fetch rows from DuckDB in batches.
 
