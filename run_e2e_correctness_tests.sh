@@ -20,6 +20,8 @@ docker run --rm \
     -e NEO4J_PLUGINS='["apoc"]' neo4j:5.10.0
 
 echo "Waiting for Neo4j to start..."
+counter=0
+timeout=30
 while ! curl --silent --fail http://localhost:7474; do
   sleep 1
   counter=$((counter+1))
@@ -31,7 +33,7 @@ done
 echo "Neo4j is up and running."
 
 echo "Running e2e correctness tests..."
-docker exec -i -u root "$MAGE_CONTAINER" bash -c "cd /mage && python3 test_e2e_correctness.py --memgraph-port $MEMGRAPH_PORT --neo4j-port $NEO4J_PORT --neo4j-container $NEO4J_CONTAINER"
+docker exec -i -u memgraph "$MAGE_CONTAINER" bash -c "cd /mage && python3 test_e2e_correctness.py --memgraph-port $MEMGRAPH_PORT --neo4j-port $NEO4J_PORT --neo4j-container $NEO4J_CONTAINER"
 
 echo "Stopping Neo4j..."
 docker stop "$NEO4J_CONTAINER"
