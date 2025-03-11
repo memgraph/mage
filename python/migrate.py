@@ -616,7 +616,7 @@ mgp.add_batch_read_proc(
 duckdb_dict = {}
 
 
-def init_migrate_duckdb(query: str, warmup_queries: mgp.Nullable[List[str]] = None):
+def init_migrate_duckdb(query: str, setup_queries: mgp.Nullable[List[str]] = None):
     """
     Initialize an in-memory DuckDB connection and execute the query.
 
@@ -632,9 +632,9 @@ def init_migrate_duckdb(query: str, warmup_queries: mgp.Nullable[List[str]] = No
     # Ensure a fresh in-memory DuckDB instance for each thread
     connection = duckDB.connect()
     cursor = connection.cursor()
-    if warmup_queries is not None:
-        for warmup_query in warmup_queries:
-            cursor.execute(warmup_query)
+    if setup_queries is not None:
+        for setup_query in setup_queries:
+            cursor.execute(setup_query)
 
     cursor.execute(query)
 
@@ -645,7 +645,7 @@ def init_migrate_duckdb(query: str, warmup_queries: mgp.Nullable[List[str]] = No
     ]
 
 
-def duckdb(query: str, warmup_queries: mgp.Nullable[List[str]] = None) -> mgp.Record(row=mgp.Map):
+def duckdb(query: str, setup_queries: mgp.Nullable[List[str]] = None) -> mgp.Record(row=mgp.Map):
     """
     Fetch rows from DuckDB in batches.
 
