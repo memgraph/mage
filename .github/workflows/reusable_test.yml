@@ -71,7 +71,7 @@ jobs:
       - name: Get Latest Tag
         run: |
           if [[ -z "${{ inputs.memgraph_version }}" ]]; then
-            latest=$(curl -s https://api.github.com/repos/memgraph/memgraph/tags | python3 -c "import sys, json; print(json.load(sys.stdin)[0]['name'])")
+            latest=$(curl -s https://api.github.com/repos/memgraph/memgraph/tags | python3 -c "import sys, json; print(json.load(sys.stdin)[0]['name'][1:])")
             echo "Using latest tag: $latest"
             echo "MEMGRAPH_VERSION=$latest" >> $GITHUB_ENV
           else
