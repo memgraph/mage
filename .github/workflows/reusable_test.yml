@@ -18,7 +18,7 @@ on:
       memgraph_version:
         type: string
         description: "Memgraph version built into this image (format: X.Y.Z)"
-        default: '3.0.0'
+        default: ''
       memgraph_download_link:
         type: string
         description: "Memgraph package download link. Leave empty to use the official download link."
@@ -68,11 +68,23 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Get Latest Tag
+        run: |
+          if [[ -z "${{ inputs.memgraph_version }}" ]]; then
+            latest=$(curl -s https://api.github.com/repos/memgraph/memgraph/tags | jq -r '.[0].name')
+            echo "Using latest tag: $latest"
+            echo "MEMGRAPH_VERSION=$latest" >> $GITHUB_ENV
+          else
+            echo "Using provided tag: ${{ inputs.memgraph_version }}"
+            echo "MEMGRAPH_VERSION=${{ inputs.memgraph_version }}" >> $GITHUB_ENV
+          fi
+
+
       - name: Set up and check memgraph download link
         run: |
           mg_url=${{ inputs.memgraph_download_link }}
           if [[ -z "${{ inputs.memgraph_download_link }}" ]]; then
-            mg_url="s3://download.memgraph.com/memgraph/v${{ inputs.memgraph_version }}/$OS${{ inputs.arch == 'arm64' && '-aarch64' || '' }}/memgraph_${{ inputs.memgraph_version }}-1_${{ inputs.arch }}.deb"
+            mg_url="s3://download.memgraph.com/memgraph/v${{ env.MEMGRAPH_VERSION }}/$OS${{ inputs.arch == 'arm64' && '-aarch64' || '' }}/memgraph_${{ env.MEMGRAPH_VERSION }}-1_${{ inputs.arch }}.deb"
           fi
           echo "Download link: $mg_url"
           url_protocol=${mg_url%%://*}
