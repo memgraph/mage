@@ -103,6 +103,9 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
+# Create the memgraph user
+RUN useradd -m memgraph
+
 #copy modules
 COPY --from=dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
 COPY --from=dev /usr/lib/memgraph/auth_module/ /usr/lib/memgraph/auth_module/
