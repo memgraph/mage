@@ -93,6 +93,7 @@ FROM ubuntu:24.04 as prod
 
 USER root
 
+ARG TARGETARCH
 ARG PY_VERSION_DEFAULT
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
 
@@ -115,8 +116,10 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
-# Create the memgraph user
-RUN useradd -m memgraph
+# install memgraph
+COPY memgraph-${TARGETARCH}.deb .
+RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb 
+ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
 
 # Copy modules
 COPY --from=dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/

@@ -104,8 +104,6 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
-# Create the memgraph user
-RUN useradd -m memgraph
 
 # install memgraph
 COPY memgraph-${TARGETARCH}.deb .
