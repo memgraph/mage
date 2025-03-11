@@ -73,13 +73,17 @@ jobs:
           if [[ -z "${{ inputs.memgraph_version }}" ]]; then
             latest=$(curl -s https://api.github.com/repos/memgraph/memgraph/tags | python3 -c "import sys, json; print(json.load(sys.stdin)[0]['name'][1:])")
             echo "Using latest tag: $latest"
+            clean_version=$(echo "$latest" | sed -E 's/(.*)-rc.*/\1/')
             echo "MEMGRAPH_VERSION_FULL=$latest" >> $GITHUB_ENV
+            echo "MEMGRAPH_VERSION=$clean_version" >> $GITHUB_ENV
           else
             echo "Using provided tag: ${{ inputs.memgraph_version }}"
             echo "MEMGRAPH_VERSION_FULL=${{ inputs.memgraph_version }}" >> $GITHUB_ENV
+            clean_version=$(echo "${{ inputs.memgraph_version }}" | sed -E 's/(.*)-rc.*/\1/')
+            echo "MEMGRAPH_VERSION=$clean_version" >> $GITHUB_ENV
           fi
-          clean_version=$(echo "$latest" | sed -E 's/(.*)-rc.*/\1/')
-          echo "MEMGRAPH_VERSION=${{ inputs.memgraph_version }}" >> $GITHUB_ENV
+          
+         
 
 
       - name: Set up and check memgraph download link
