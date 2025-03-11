@@ -1,7 +1,7 @@
 ARG PY_VERSION_DEFAULT=3.12
 ARG MGBUILD_IMAGE
 
-FROM $MGBUILD_IMAGE as base
+FROM $MGBUILD_IMAGE as builder
 
 USER root
 
@@ -44,7 +44,7 @@ ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
 # Memgraph listens for Bolt Protocol on this port by default.
 EXPOSE 7687
 
-FROM base as dev
+FROM builder as dev
 
 ARG BUILD_TYPE=Release
 
@@ -52,9 +52,9 @@ WORKDIR /mage
 COPY . /mage
 
 # hacks so we can do everything under the `memgraph` user
-RUN chown -R memgraph: /mage
-RUN mkdir -pv /usr/lib/memgraph/query_modules
-RUN chown -R memgraph: /usr/lib/memgraph/query_modules
+RUN chown -R memgraph: /mage && \
+    mkdir -pv /usr/lib/memgraph/query_modules && \
+    chown -R memgraph: /usr/lib/memgraph/query_modules
 USER memgraph
 
 #MAGE
@@ -77,12 +77,31 @@ CMD [""]
 
 
 
-FROM base as prod
+FROM ubuntu:24.04 as prod
 
 USER root
-ENTRYPOINT []
+
 ARG PY_VERSION_DEFAULT
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
+
+# Install only runtime dependencies that are needed
+RUN apt-get update && apt-get install -y \
+    libcurl4 \
+    libpython${PY_VERSION} \
+    libssl-dev \
+    openssl \
+    python3 \
+    python3-pip \
+    g++ \
+    python3-setuptools \
+    unixodbc-dev        `mage-memgraph` \
+    libboost-all-dev `mage-memgraph` \
+    uuid-dev \
+    gdb \
+    procps \
+    libc6-dbg \
+    --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
 
 #copy modules
 COPY --from=dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
@@ -98,14 +117,10 @@ RUN mv /mage/e2e /e2e/ \
     && rm -rf /mage/* \
     && mv /e2e/ /mage/ \
     && chown -R memgraph: /mage/e2e \
-    && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
-    && apt-get -y --purge autoremove clang git curl python3-pip python3-dev cmake build-essential \
-    && apt-get clean
-
-#remove the toolchain
-RUN rm -rf /opt/toolchain-v6
-
+    && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}"
 
 USER memgraph
+EXPOSE 7687
+
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
 CMD [""]
