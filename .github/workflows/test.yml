@@ -85,8 +85,8 @@ jobs:
       arch: "${{ matrix.arch }}"
       build_target: "${{ matrix.build_target }}"
       build_scope: "${{ matrix.build_scope }}"
-      memgraph_version: ""
-      memgraph_download_link: ""
+      memgraph_version: 
+      memgraph_download_link: 
       memgraph_ref: "master"
       memgraph_ref_update: "true"
     secrets: inherit

@@ -18,7 +18,7 @@ on:
       memgraph_version:
         type: string
         description: "Memgraph version built into this image (format: X.Y.Z)"
-        default: ''
+        required: false
       memgraph_download_link:
         type: string
         description: "Memgraph package download link. Leave empty to use the official download link."
@@ -87,7 +87,7 @@ jobs:
             mg_url="s3://download.memgraph.com/memgraph/v${{ env.MEMGRAPH_VERSION }}/$OS${{ inputs.arch == 'arm64' && '-aarch64' || '' }}/memgraph_${{ env.MEMGRAPH_VERSION }}-1_${{ inputs.arch }}.deb"
             # If the version contains 'rc', swap the domain in the URL
             if [[ "${{ env.MEMGRAPH_VERSION }}" == *"rc"* ]]; then
-              mg_url=${mg_url/download.memgraph.com/deps.memgraph.com}
+              mg_url=${mg_url/download.memgraph.com/deps.memgraph.io}
             fi
           fi
           echo "Download link: $mg_url"
