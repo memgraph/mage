@@ -4,7 +4,7 @@ import boto3
 import csv
 import duckdb as duckDB
 import io
-from gqlalchemy import Neo4j
+from gqlalchemy import Memgraph, Neo4j
 import json
 import mgp
 import mysql.connector as mysql_connector
@@ -676,6 +676,66 @@ def cleanup_migrate_duckdb():
 
 
 mgp.add_batch_read_proc(duckdb, init_migrate_duckdb, cleanup_migrate_duckdb)
+
+
+memgraph_dict = {}
+
+
+def init_migrate_memgraph(
+    label_or_rel_or_query: str,
+    config: mgp.Map,
+    config_path: str = "",
+    params: mgp.Nullable[mgp.Any] = None,
+):
+    global neo4j_dict
+
+    if threading.get_native_id not in neo4j_dict:
+        neo4j_dict[threading.get_native_id] = {}
+
+    if len(config_path) > 0:
+        config = _combine_config(config=config, config_path=config_path)
+
+    memgraph_db = Memgraph(**config)
+    query = _formulate_cypher_query(label_or_rel_or_query)
+    cursor = memgraph_db.execute_and_fetch(query, params)
+
+    neo4j_dict[threading.get_native_id]["connection"] = memgraph_db
+    neo4j_dict[threading.get_native_id]["cursor"] = cursor
+
+
+def memgraph(
+    label_or_rel_or_query: str,
+    config: mgp.Map,
+    config_path: str = "",
+    params: mgp.Nullable[mgp.Any] = None,
+) -> mgp.Record(row=mgp.Map):
+    """
+    Migrate data from Neo4j to Memgraph. Can migrate a specific node label, relationship type, or execute a custom Cypher query.
+
+    :param label_or_rel_or_query: Node label, relationship type, or a Cypher query
+    :param config: Connection configuration for Neo4j
+    :param config_path: Path to a JSON file containing connection parameters
+    :param params: Optional query parameters
+    :return: Stream of rows from Neo4j
+    """
+    global memgraph_dict
+    cursor = memgraph_dict[threading.get_native_id]["cursor"]
+
+    return [
+        mgp.Record(row=row)
+        for row in (next(cursor, None) for _ in range(Constants.BATCH_SIZE))
+        if row is not None
+    ]
+
+
+def cleanup_migrate_memgraph():
+    global memgraph_dict
+    if "connection" in memgraph_dict[threading.get_native_id]:
+        memgraph_dict[threading.get_native_id]["connection"].close()
+    memgraph_dict.pop(threading.get_native_id, None)
+
+
+mgp.add_batch_read_proc(memgraph, init_migrate_memgraph, cleanup_migrate_memgraph)
 
 
 def _formulate_cypher_query(label_or_rel_or_query: str) -> str:
