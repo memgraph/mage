@@ -85,6 +85,10 @@ jobs:
           mg_url=${{ inputs.memgraph_download_link }}
           if [[ -z "${{ inputs.memgraph_download_link }}" ]]; then
             mg_url="s3://download.memgraph.com/memgraph/v${{ env.MEMGRAPH_VERSION }}/$OS${{ inputs.arch == 'arm64' && '-aarch64' || '' }}/memgraph_${{ env.MEMGRAPH_VERSION }}-1_${{ inputs.arch }}.deb"
+            # If the version contains 'rc', swap the domain in the URL
+            if [[ "${{ env.MEMGRAPH_VERSION }}" == *"rc"* ]]; then
+              mg_url=${mg_url/download.memgraph.com/deps.memgraph.com}
+            fi
           fi
           echo "Download link: $mg_url"
           url_protocol=${mg_url%%://*}
