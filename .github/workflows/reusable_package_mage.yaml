@@ -200,7 +200,7 @@ jobs:
 
           docker buildx build \
           --target ${{ env.MAGE_BUILD_TARGET }} \
-          --platform linux/${{ inputs.arch }}64 \
+          --platform linux/${{ inputs.arch }} \
           --tag ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} \
           --file ${{ env.DOCKERFILE }} \
           --build-arg BUILD_TYPE=${{ env.MAGE_BUILD_TYPE }} \
