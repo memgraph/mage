@@ -115,8 +115,8 @@ jobs:
 
       - name: Promote RC to Release
         run: |
-          release_image_amd=${release_image}-amd64
-          release_image_arm=${release_image}-arm64
+          release_image_amd=${release_image}
+          release_image_arm=${release_image}
           release_image_latest=${docker_repo_release}:latest
           # Download and load, retag if necessary, push temporary image
           # arm64
