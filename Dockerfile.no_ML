@@ -131,14 +131,14 @@ COPY --from=dev /mage/test_e2e_correctness.py /mage/test_e2e_correctness.py
 COPY --from=dev /mage/run_e2e_correctness_tests.sh /mage/run_e2e_correctness_tests.sh
 
 # Copy requirements
-COPY --from=dev /mage/python/requirements.txt /python-requirements.txt
-COPY --from=dev /mage/python/tests/requirements.txt /test-requirements.txt
+COPY --from=dev /mage/python/requirements.txt /mage/python/requirements.txt
+COPY --from=dev /mage/python/tests/requirements.txt /mage/python/tests/requirements.txt 
 
 USER memgraph
 
 # First install requirements
-RUN python3 -m pip install -r /python-requirements.txt --break-system-packages \
-    && python3 -m pip install -r /test-requirements.txt --break-system-packages \
+RUN python3 -m pip install -r /mage/python/requirements.txt --break-system-packages \
+    && python3 -m pip install -r /mage/python/tests/requirements.txt  --break-system-packages \
     && python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages
 
 
