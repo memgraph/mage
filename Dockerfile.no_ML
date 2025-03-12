@@ -31,6 +31,7 @@ RUN apt-get update && apt-get install -y \
     gdb \
     procps \
     libc6-dbg \
+    libxmlsec1-dev xmlsec1 \
     --no-install-recommends \
     && ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -67,9 +68,6 @@ RUN source /opt/toolchain-v6/activate && curl https://sh.rustup.rs -sSf | sh -s 
     && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/ --no-ml --cpp-build-flags CMAKE_BUILD_TYPE=${BUILD_TYPE} \
     && chown -R memgraph: /mage/e2e
 
-#remove the toolchain
-USER root
-RUN rm -rf /opt/toolchain-v6
 
 USER memgraph
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
@@ -87,22 +85,31 @@ ENV PY_VERSION ${PY_VERSION_DEFAULT}
 
 # Install only runtime dependencies that are needed
 RUN apt-get update && apt-get install -y \
-    libcurl4 \
-    libpython${PY_VERSION} \
-    libssl-dev \
-    openssl \
-    python3 \
-    python3-pip \
-    g++ \
-    python3-setuptools \
+    libcurl4        `memgraph` \
+    libpython${PY_VERSION}   `memgraph` \
+    libssl-dev       `memgraph` \
+    openssl         `memgraph` \
+    build-essential `mage-memgraph` \
+    cmake           `mage-memgraph` \
+    curl            `mage-memgraph` \
+    g++             `mage-memgraph` \
+    python3         `mage-memgraph` \
+    python3-pip     `mage-memgraph` \
+    python3-setuptools     `mage-memgraph` \
+    python3-dev     `mage-memgraph` \
+    clang           `mage-memgraph` \
+    git             `mage-memgraph` \
     unixodbc-dev        `mage-memgraph` \
     libboost-all-dev `mage-memgraph` \
     uuid-dev \
     gdb \
     procps \
     libc6-dbg \
-    --no-install-recommends && \
-    rm -rf /var/lib/apt/lists/*
+    libxmlsec1-dev xmlsec1 \
+    pkg-config \
+    --no-install-recommends \
+    && ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 
 # install memgraph
@@ -119,12 +126,25 @@ COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VE
 
 #copy e2e tests
 COPY --from=dev /mage/e2e/ /mage/e2e/
+COPY --from=dev /mage/e2e_correctness/ /mage/e2e_correctness/
+COPY --from=dev /mage/test_e2e_correctness.py /mage/test_e2e_correctness.py
+COPY --from=dev /mage/run_e2e_correctness_tests.sh /mage/run_e2e_correctness_tests.sh
 
-RUN mv /mage/e2e /e2e/ \
-    && rm -rf /mage/* \
-    && mv /e2e/ /mage/ \
-    && chown -R memgraph: /mage/e2e \
-    && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}"
+# Copy requirements
+COPY --from=dev /mage/python/requirements.txt /python-requirements.txt
+COPY --from=dev /mage/python/tests/requirements.txt /test-requirements.txt
+
+USER memgraph
+
+# First install requirements
+RUN python3 -m pip install -r /python-requirements.txt --break-system-packages \
+    && python3 -m pip install -r /test-requirements.txt --break-system-packages \
+    && python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages
+
+
+USER root
+RUN chown -R memgraph: /mage \
+    && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" 
 
 USER memgraph
 EXPOSE 7687
