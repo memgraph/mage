@@ -66,7 +66,7 @@ jobs:
           mage_version=${{ github.event.inputs.mage_version }}
           memgraph_version=${{ github.event.inputs.memgraph_version }}
           echo "docker_tar_amd=mage-${mage_version%.0}-memgraph-${memgraph_version%.0}${{ matrix.image_ext }}.tar.gz" >> $GITHUB_ENV
-          echo "docker_tar_arm=mage-${mage_version%.0}-memgraph-${memgraph_version%.0}-arm${{ matrix.image_ext }}.tar.gz" >> $GITHUB_ENV
+          echo "docker_tar_arm=mage-${mage_version%.0}-memgraph-${memgraph_version%.0}-arm64${{ matrix.image_ext }}.tar.gz" >> $GITHUB_ENV
           echo "rc_image=${docker_repo_rc}:${mage_version%.0}-memgraph-${memgraph_version%.0}${{ matrix.image_ext }}" >> $GITHUB_ENV
           echo "release_image=${docker_repo_release}:${mage_version%.0}-memgraph-${memgraph_version%.0}${{ matrix.image_ext }}" >> $GITHUB_ENV
       
@@ -81,9 +81,13 @@ jobs:
         run: |
           if ! aws s3 ls s3://${rc_bucket}/${rc_dir}/${docker_tar_amd} &> /dev/null; then
             echo "RC package does not exist at s3://${rc_bucket}/${rc_dir}/${docker_tar_amd}"
-            exit 1
+            docker_tar_amd=""
           elif ! aws s3 ls s3://${rc_bucket}/${rc_dir}/${docker_tar_arm} &> /dev/null; then
             echo "RC package does not exist at s3://${rc_bucket}/${rc_dir}/${docker_tar_arm}"
+            docker_tar_arm=""
+          fi
+          if [[ -z "$docker_tar_amd" && -z "$docker_tar_arm" ]]; then
+            echo "No RC packages found for either architecture."
             exit 1
           fi
 
@@ -116,32 +120,47 @@ jobs:
           release_image_latest=${docker_repo_release}:latest
           # Download and load, retag if necessary, push temporary image
           # arm64
-          echo "Downloading and loading ${rc_image} for arm ..."
-          aws s3 cp s3://${rc_bucket}/${rc_dir}/${docker_tar_arm} - | docker load
-          echo "Tagging ${rc_image} as ${release_image_arm} ..."
-          docker tag ${rc_image} ${release_image_arm}
-          echo "Pushing ${release_image_arm} to DockerHub!"
-          docker push ${release_image_arm}
+          if [[ "$docker_tar_arm" != "" ]]; then 
+            echo "Downloading and loading ${rc_image} for arm ..."
+            aws s3 cp s3://${rc_bucket}/${rc_dir}/${docker_tar_arm} - | docker load
+            echo "Tagging ${rc_image} as ${release_image_arm} ..."
+            docker tag ${rc_image} ${release_image_arm}
+            echo "Pushing ${release_image_arm} to DockerHub!"
+            docker push ${release_image_arm}
+          fi
           # amd64
-          echo "Downloading and loading ${rc_image} for amd ..."
-          aws s3 cp s3://${rc_bucket}/${rc_dir}/${docker_tar_amd} - | docker load
-          echo "Tagging ${rc_image} as ${release_image_amd} ..."
-          docker tag ${rc_image} ${release_image_amd}
-          echo "Pushing ${release_image_amd} to DockerHub!"
-          docker push ${release_image_amd}
-          # Setup manifest list for release image
-          docker manifest create ${release_image} \
-          --amend ${release_image_amd} \
-          --amend ${release_image_arm}
-          docker manifest push ${release_image}
-          echo "Successfully published ${release_image} to DockerHub!"
-          # Setup manifest list for latest image if production image
+          if [[ "$docker_tar_amd" != "" ]]; then 
+            echo "Downloading and loading ${rc_image} for amd ..."
+            aws s3 cp s3://${rc_bucket}/${rc_dir}/${docker_tar_amd} - | docker load
+            echo "Tagging ${rc_image} as ${release_image_amd} ..."
+            docker tag ${rc_image} ${release_image_amd}
+            echo "Pushing ${release_image_amd} to DockerHub!"
+            docker push ${release_image_amd}
+          fi
+          # Setup manifest list for release image if at least one arch exists
+          manifest_args=""
+          if [[ "$docker_tar_amd" != "" ]]; then
+            manifest_args+=" --amend ${release_image_amd}"
+          fi
+          if [[ "$docker_tar_arm" != "" ]]; then
+            manifest_args+=" --amend ${release_image_arm}"
+          fi
+          if [[ -n "$manifest_args" ]]; then
+            docker manifest create ${release_image} ${manifest_args}
+            docker manifest push ${release_image}
+            echo "Successfully published ${release_image} to DockerHub!"
+          else
+            echo "No architecture images found, skipping manifest creation for ${release_image}"
+          fi
+          # Setup manifest list for latest image if production image and at least one arch exists
           if [[ -z "${{ matrix.image_ext }}" ]]; then
-            docker manifest create ${release_image_latest} \
-            --amend ${release_image_amd} \
-            --amend ${release_image_arm}
-            docker manifest push ${release_image_latest}
-            echo "Successfully published ${release_image_latest} to DockerHub!"
+            if [[ -n "$manifest_args" ]]; then
+              docker manifest create ${release_image_latest} ${manifest_args}
+              docker manifest push ${release_image_latest}
+              echo "Successfully published ${release_image_latest} to DockerHub!"
+            else
+              echo "No architecture images found, skipping manifest creation for ${release_image_latest}"
+            fi
           fi
 
       - name: Clean up temporary images
