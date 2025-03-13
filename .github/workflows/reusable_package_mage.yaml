@@ -183,7 +183,7 @@ jobs:
           fi
 
       - name: Download memgraph binary
-        run: curl -L ${{ env.MEMGRAPH_DOWNLOAD_LINK }} > memgraph-${{ inputs.arch }}64.deb
+        run: curl -L ${{ env.MEMGRAPH_DOWNLOAD_LINK }} > memgraph-${{ inputs.arch }}.deb
 
       # Add ability to add additional tag after the image has been built
       # --tag ${DOCKER_REPOSITORY_NAME}:${{ inputs.additional_tag }} \
@@ -200,7 +200,7 @@ jobs:
 
           docker buildx build \
           --target ${{ env.MAGE_BUILD_TARGET }} \
-          --platform linux/${{ inputs.arch }}64 \
+          --platform linux/${{ inputs.arch }} \
           --tag ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} \
           --file ${{ env.DOCKERFILE }} \
           --build-arg BUILD_TYPE=${{ env.MAGE_BUILD_TYPE }} \

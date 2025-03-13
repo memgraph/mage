@@ -33,6 +33,7 @@ RUN apt-get update && apt-get install -y \
     gdb \
     procps \
     libc6-dbg \
+    libxmlsec1-dev xmlsec1 \
     --no-install-recommends \
     && ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -57,7 +58,7 @@ ARG BUILD_TYPE=Release
 WORKDIR /mage
 COPY . /mage
 
-# hacks so we can do everything under the `memgraph` user
+#hacks so we can do everything under the `memgraph` user
 RUN chown -R memgraph: /mage && \
     mkdir -pv /usr/lib/memgraph/query_modules && \
     chown -R memgraph: /usr/lib/memgraph/query_modules
@@ -93,27 +94,42 @@ FROM ubuntu:24.04 as prod
 
 USER root
 
+ARG TARGETARCH
 ARG PY_VERSION_DEFAULT
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
 
-# Install only runtime dependencies that are needed
+# Essentials for production/dev
 RUN apt-get update && apt-get install -y \
-    libcurl4 \
-    libpython${PY_VERSION} \
-    libssl-dev \
-    openssl \
-    python3 \
-    python3-pip \
-    g++ \
-    python3-setuptools \
+    libcurl4        `memgraph` \
+    libpython${PY_VERSION}   `memgraph` \
+    libssl-dev       `memgraph` \
+    openssl         `memgraph` \
+    build-essential `mage-memgraph` \
+    cmake           `mage-memgraph` \
+    curl            `mage-memgraph` \
+    g++             `mage-memgraph` \
+    python3         `mage-memgraph` \
+    python3-pip     `mage-memgraph` \
+    python3-setuptools     `mage-memgraph` \
+    python3-dev     `mage-memgraph` \
+    clang           `mage-memgraph` \
+    git             `mage-memgraph` \
     unixodbc-dev        `mage-memgraph` \
     libboost-all-dev `mage-memgraph` \
     uuid-dev \
     gdb \
     procps \
     libc6-dbg \
-    --no-install-recommends && \
-    rm -rf /var/lib/apt/lists/*
+    libxmlsec1-dev xmlsec1 \
+    pkg-config \
+    --no-install-recommends \
+    && ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# install memgraph
+COPY memgraph-${TARGETARCH}.deb .
+RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb 
+ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
 
 # Copy modules
 COPY --from=dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
@@ -124,11 +140,33 @@ COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VE
 
 # Copy e2e tests
 COPY --from=dev /mage/e2e/ /mage/e2e/
+COPY --from=dev /mage/e2e_correctness/ /mage/e2e_correctness/
+COPY --from=dev /mage/test_e2e_correctness.py /mage/test_e2e_correctness.py
+COPY --from=dev /mage/run_e2e_correctness_tests.sh /mage/run_e2e_correctness_tests.sh
 
-RUN mv /mage/e2e /e2e/ \
-    && rm -rf /mage/* \
-    && mv /e2e/ /mage/ \
-    && chown -R memgraph: /mage/e2e \
+
+# Copy requirements
+COPY --from=dev /mage/python/requirements.txt /mage/python/requirements.txt
+COPY --from=dev /mage/python/tests/requirements.txt /mage/python/tests/requirements.txt 
+
+USER memgraph
+
+# First install requirements
+RUN python3 -m pip install -r /mage/python/requirements.txt --break-system-packages \
+    && python3 -m pip install -r /mage/python/tests/requirements.txt --break-system-packages \
+    && python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages
+
+# Torch and DGL 
+RUN python3 -m pip install torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.3.0+cu121.html --break-system-packages 
+RUN if [ "$TARGETARCH" == "arm64" ]; then \
+        curl -o dgl-2.4.0-cp312-cp312-linux_aarch64.whl https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/dgl-2.4.0-cp312-cp312-linux_aarch64.whl && \
+        python3 -m pip install dgl-2.4.0-cp312-cp312-linux_aarch64.whl --break-system-packages; \
+    else \
+        python3 -m pip install dgl -f https://data.dgl.ai/wheels/torch-2.3/cu121/repo.html --break-system-packages; \
+    fi 
+
+USER root
+RUN chown -R memgraph: /mage \
     && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" 
 
 USER memgraph
