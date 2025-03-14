@@ -23,6 +23,7 @@ use crate::value::*;
 #[double]
 use crate::mgp::ffi;
 use mockall_double::double;
+use std::collections::HashMap;
 
 pub struct Map {
     ptr: *mut mgp_map,
@@ -235,6 +236,31 @@ impl Map {
         self.ptr = new_ptr;
     }
 }
+
+impl PartialEq for Map {
+    fn eq(&self, other: &Self) -> bool {
+        // Ensure both maps have the same length
+        if self.size() != other.size() {
+            return false;
+        }
+        // Compare each key-value pair in the map
+        let self_iter = self.iter().unwrap();
+        let other_iter = other.iter().unwrap();
+        for self_item in self_iter {
+            let self_key = self_item.key.as_c_str();
+            let self_value = &self_item.value;
+            if let Ok(other_value) = other.at(self_key) {
+                if self_value != &other_value {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+        true
+    }
+}
+
 
 #[cfg(test)]
 mod tests;
