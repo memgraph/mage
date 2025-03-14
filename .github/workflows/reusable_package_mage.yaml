@@ -141,6 +141,10 @@ jobs:
             ARTIFACT_NAME="${ARTIFACT_NAME}-relwithdebinfo"
             IMAGE_TAG="${IMAGE_TAG}-relwithdebinfo"
           fi
+          if [[ "${{ inputs.malloc }}" == true ]]; then
+            ARTIFACT_NAME="${ARTIFACT_NAME}-malloc"
+            IMAGE_TAG="${IMAGE_TAG}-malloc"          
+          fi
           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
           echo "ARTIFACT_NAME=${ARTIFACT_NAME}" >> $GITHUB_ENV
 
