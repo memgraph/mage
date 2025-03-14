@@ -130,7 +130,7 @@ docker buildx build \
 
 # Save Docker image
 echo "Saving Docker image..."
-mkdir -p output
+mkdir -p ../output
 docker save "$DOCKER_REPOSITORY_NAME:$IMAGE_TAG" > "../${ARTIFACT_NAME}.tar.gz"
 
 # Push to DockerHub
