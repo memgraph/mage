@@ -9,7 +9,7 @@ gqlalchemy==1.6.0
 igraph==0.11.8
 mysql-connector-python==9.1.0
 networkx==2.8.8 # gqlalchemy 1.6.0 depends on networkx<3.0.0 and >=2.5.1
-onelogin
+onelogin==3.1.4
 oracledb==2.5.1
 psycopg2-binary==2.9.10
 pyodbc==5.2.0
