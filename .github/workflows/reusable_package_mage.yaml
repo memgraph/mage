@@ -169,7 +169,7 @@ jobs:
         run: |
           if [[ -z "${{ inputs.memgraph_download_link }}" ]]; then
             echo "Using official download link"
-            mg_url="https://download.memgraph.com/memgraph/v${{ inputs.memgraph_version }}/$OS/memgraph_${{ inputs.memgraph_version }}-1_${{ inputs.arch }}64.deb"
+            mg_url="https://download.memgraph.com/memgraph/v${{ inputs.memgraph_version }}/$OS/memgraph_${{ inputs.memgraph_version }}-1_${{ inputs.arch }}.deb"
           else
             echo "Using custom download link"
             mg_url=${{ inputs.memgraph_download_link }}
@@ -211,6 +211,7 @@ jobs:
         run: |
           mkdir output
           docker save ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} > output/${{ env.ARTIFACT_NAME }}.tar.gz
+          du -h output/${{ env.ARTIFACT_NAME }}.tar.gz
 
       - name: Push to GitHub
         if: ${{ inputs.push_to_github == 'true' }}
