@@ -103,7 +103,6 @@ RUN apt-get update && apt-get install -y \
     unixodbc-dev        `mage-memgraph` \
     libboost-all-dev `mage-memgraph` \
     uuid-dev \
-    gdb \
     procps \
     libc6-dbg \
     libxmlsec1-dev xmlsec1 \
