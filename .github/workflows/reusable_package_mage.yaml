@@ -62,9 +62,13 @@ on:
         type: string
         description: "Use large runner?"
         default: false
+      malloc:
+        type: boolean
+        description: "Use malloc build of memgraph (no jemalloc)"
+        default: false
 
 env:
-  OS: ${{ inputs.arch == 'arm64' && 'ubuntu-24.04-aarch64' || 'ubuntu-24.04' }}
+  OS: "${{ inputs.arch == 'arm64' && 'ubuntu-24.04-aarch64' || 'ubuntu-24.04' }}${{ inputs.malloc && '-malloc' || '' }}"
   DOCKER_REPOSITORY_NAME: memgraph/memgraph-mage
 
 jobs:
