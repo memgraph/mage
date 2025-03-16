@@ -65,18 +65,17 @@ RUN chown -R memgraph: /mage && \
 USER memgraph
 
 # First install requirements
-RUN python3 -m pip install -r /mage/python/requirements.txt --break-system-packages \
-    && python3 -m pip install -r /mage/python/tests/requirements.txt --break-system-packages \
-    && python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages
-
-# Torch and DGL 
-RUN python3 -m pip install torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.3.0+cu121.html --break-system-packages 
-RUN if [ "$TARGETARCH" == "arm64" ]; then \
+RUN python3 -m pip install --no-cache-dir -r /mage/python/requirements.txt --break-system-packages && \
+    python3 -m pip install --no-cache-dir -r /mage/python/tests/requirements.txt --break-system-packages && \
+    python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages && \
+    python3 -m pip install --no-cache-dir torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.3.0+cu121.html --break-system-packages && \
+    if [ "$TARGETARCH" == "arm64" ]; then \
         curl -o dgl-2.4.0-cp312-cp312-linux_aarch64.whl https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/dgl-2.4.0-cp312-cp312-linux_aarch64.whl && \
-        python3 -m pip install dgl-2.4.0-cp312-cp312-linux_aarch64.whl --break-system-packages; \
+        python3 -m pip install --no-cache-dir dgl-2.4.0-cp312-cp312-linux_aarch64.whl --break-system-packages; \
     else \
-        python3 -m pip install dgl -f https://data.dgl.ai/wheels/torch-2.3/cu121/repo.html --break-system-packages; \
-    fi 
+        python3 -m pip install --no-cache-dir dgl -f https://data.dgl.ai/wheels/torch-2.3/cu121/repo.html --break-system-packages; \
+    fi && \
+    rm -fr /var/lib/memgraph/.cache/pip
     
 # Build query modules
 SHELL ["/bin/bash", "-c"]
@@ -117,7 +116,6 @@ RUN apt-get update && apt-get install -y \
     unixodbc-dev        `mage-memgraph` \
     libboost-all-dev `mage-memgraph` \
     uuid-dev \
-    gdb \
     procps \
     libc6-dbg \
     libxmlsec1-dev xmlsec1 \
@@ -151,19 +149,18 @@ COPY --from=dev /mage/python/tests/requirements.txt /mage/python/tests/requireme
 
 USER memgraph
 
-# First install requirements
-RUN python3 -m pip install -r /mage/python/requirements.txt --break-system-packages \
-    && python3 -m pip install -r /mage/python/tests/requirements.txt --break-system-packages \
-    && python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages
-
-# Torch and DGL 
-RUN python3 -m pip install torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.3.0+cu121.html --break-system-packages 
-RUN if [ "$TARGETARCH" == "arm64" ]; then \
+# First install requirements, then Torch and DGL
+RUN python3 -m pip install --no-cache-dir -r /mage/python/requirements.txt --break-system-packages && \
+    python3 -m pip install --no-cache-dir -r /mage/python/tests/requirements.txt --break-system-packages && \
+    python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages && \
+    python3 -m pip install --no-cache-dir torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.3.0+cu121.html --break-system-packages && \
+    if [ "$TARGETARCH" == "arm64" ]; then \
         curl -o dgl-2.4.0-cp312-cp312-linux_aarch64.whl https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/dgl-2.4.0-cp312-cp312-linux_aarch64.whl && \
-        python3 -m pip install dgl-2.4.0-cp312-cp312-linux_aarch64.whl --break-system-packages; \
+        python3 -m pip install --no-cache-dir dgl-2.4.0-cp312-cp312-linux_aarch64.whl --break-system-packages; \
     else \
-        python3 -m pip install dgl -f https://data.dgl.ai/wheels/torch-2.3/cu121/repo.html --break-system-packages; \
-    fi 
+        python3 -m pip install --no-cache-dir dgl -f https://data.dgl.ai/wheels/torch-2.3/cu121/repo.html --break-system-packages; \
+    fi && \
+    rm -fr /var/lib/memgraph/.cache/pip
 
 USER root
 RUN chown -R memgraph: /mage \
