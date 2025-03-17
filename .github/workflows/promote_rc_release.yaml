@@ -110,7 +110,7 @@ jobs:
           existing_arm64=false
 
           # Get the manifest details in verbose mode; suppress errors if manifest does not exist.
-          manifest_output=$(docker manifest inspect ${release_image} --verbose 2>/dev/null)
+          manifest_output=$(docker manifest inspect ${release_image} --verbose 2>/dev/null || true)
 
           # If manifest_output is not empty, check for each architecture.
           if [[ -n "$manifest_output" ]]; then
