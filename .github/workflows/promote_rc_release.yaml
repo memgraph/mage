@@ -66,7 +66,7 @@ jobs:
           mage_version=${{ github.event.inputs.mage_version }}
           memgraph_version=${{ github.event.inputs.memgraph_version }}
           echo "docker_tar_amd=mage-${mage_version%.0}-memgraph-${memgraph_version%.0}${{ matrix.image_ext }}.tar.gz" >> $GITHUB_ENV
-          echo "docker_tar_arm=mage-${mage_version%.0}-memgraph-${memgraph_version%.0}-arm${{ matrix.image_ext }}.tar.gz" >> $GITHUB_ENV
+          echo "docker_tar_arm=mage-${mage_version%.0}-memgraph-${memgraph_version%.0}-arm64${{ matrix.image_ext }}.tar.gz" >> $GITHUB_ENV
           echo "rc_image=${docker_repo_rc}:${mage_version%.0}-memgraph-${memgraph_version%.0}${{ matrix.image_ext }}" >> $GITHUB_ENV
           echo "release_image=${docker_repo_release}:${mage_version%.0}-memgraph-${memgraph_version%.0}${{ matrix.image_ext }}" >> $GITHUB_ENV
           
