@@ -59,6 +59,10 @@ jobs:
             build_scope: "with ML"
             build_type: "RelwithDebInfo"
             image_ext: "-dev"
+          - build_target: "prod"
+            build_scope: "with ML"
+            build_type: "Release"
+            malloc: true
     runs-on: ${{ matrix.build_target == 'dev' && 'ubuntu-large' || 'ubuntu-latest' }}
     steps:
       - name: Setup environment variables
