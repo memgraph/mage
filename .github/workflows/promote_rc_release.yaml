@@ -114,28 +114,30 @@ jobs:
 
           # If manifest_output is not empty, check for each architecture.
           if [[ -n "$manifest_output" ]]; then
-            if echo "$manifest_output" | grep -q '"architecture": "amd64"'; then
-              existing_amd64=true
-            fi
-            if echo "$manifest_output" | grep -q '"architecture": "arm64"'; then
-              existing_arm64=true
-            fi
+              if echo "$manifest_output" | grep -q '"architecture": "amd64"'; then
+                  existing_amd64=true
+              fi
+              if echo "$manifest_output" | grep -q '"architecture": "arm64"'; then
+                  existing_arm64=true
+              fi
           fi
-
+          echo "On Docker Hub: amd64: $existing_amd64; arm64: $existing_arm64"
           if [ "$existing_amd64" = "true" ] || [ "$existing_arm64" = "true" ]; then
-            echo "Release image ${release_image} already exists on DockerHub with:"
-            if [ "$existing_amd64" = "true" ]; then
-              echo " - amd64"
-            fi
-            if [ "$existing_arm64" = "true" ]; then
-              echo " - arm64"
-            fi
-            
-            if [[ "${{ github.event.inputs.force_promote }}" != "true" ]]; then
-              echo "Set force_promote to true to override the existing release!"
-              exit 1
-            fi
-            echo "Forcing promotion of existing release ..."
+              echo "Release image ${release_image} already exists on DockerHub with:"
+              if [ "$existing_amd64" = "true" ]; then
+                  echo " - amd64"
+              fi
+              if [ "$existing_arm64" = "true" ]; then
+                  echo " - arm64"
+              fi
+
+              if [[ "${{ github.event.inputs.force_promote }}" != "true" ]]; then
+                  echo "Set force_promote to true to override the existing release!"
+                  exit 1
+              fi
+              echo "Forcing promotion of existing release ..."
+          else
+              echo "No conflict found..."
           fi
 
 
