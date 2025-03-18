@@ -128,6 +128,7 @@ COPY --from=builder /usr/lib/memgraph/auth_module/ /usr/lib/memgraph/auth_module
 
 # Copy Python build
 COPY --from=builder /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
+COPY --from=builder --chown=memgraph:memgraph /var/lib/memgraph/.local/ /var/lib/memgraph/.local/ 
 
 # Copy e2e tests
 COPY --from=builder /mage/e2e/ /mage/e2e/
@@ -135,27 +136,15 @@ COPY --from=builder /mage/e2e_correctness/ /mage/e2e_correctness/
 COPY --from=builder /mage/test_e2e_correctness.py /mage/test_e2e_correctness.py
 COPY --from=builder /mage/run_e2e_correctness_tests.sh /mage/run_e2e_correctness_tests.sh
 
-
 # Copy requirements
 COPY --from=builder /mage/python/requirements.txt /mage/python/requirements.txt
 COPY --from=builder /mage/python/tests/requirements.txt /mage/python/tests/requirements.txt 
 
+#RUN find / -type f > /tmp/before.txt
 USER memgraph
 
-# First install requirements, then Torch and DGL
-RUN python3 -m pip install --no-cache-dir -r /mage/python/requirements.txt --break-system-packages && \
-    python3 -m pip install --no-cache-dir -r /mage/python/tests/requirements.txt --break-system-packages && \
-    python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages && \
-    python3 -m pip install --no-cache-dir torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.3.0+cu121.html --break-system-packages && \
-    if [ "$TARGETARCH" == "arm64" ]; then \
-        curl -o dgl-2.4.0-cp312-cp312-linux_aarch64.whl https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/dgl-2.4.0-cp312-cp312-linux_aarch64.whl && \
-        python3 -m pip install --no-cache-dir dgl-2.4.0-cp312-cp312-linux_aarch64.whl --break-system-packages; \
-    else \
-        python3 -m pip install --no-cache-dir dgl -f https://data.dgl.ai/wheels/torch-2.3/cu121/repo.html --break-system-packages; \
-    fi && \
-    rm -fr /var/lib/memgraph/.cache/pip
-
 USER root
+#RUN find / -type f > /tmp/after.txt 
 RUN chown -R memgraph: /mage \
     && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" 
 
