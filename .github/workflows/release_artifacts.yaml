@@ -63,11 +63,6 @@ jobs:
             build_type: "Release"
             build_arch: "amd64"
             malloc: true
-          - build_target: "prod"
-            build_scope: "with ML"
-            build_type: "Release"
-            build_arch: "arm64"
-            malloc: true
         exclude:
           - build_target: "dev"
             build_scope: "without ML"
