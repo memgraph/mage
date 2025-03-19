@@ -7,6 +7,8 @@ USER root
 
 ARG TARGETARCH
 ARG PY_VERSION_DEFAULT
+ARG BUILD_TYPE
+ENV BUILD_TYPE=${BUILD_TYPE}
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
 
 # Essentials for production/dev
@@ -43,7 +45,6 @@ RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb
 ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
 
 
-
 WORKDIR /mage
 COPY . /mage
 
@@ -72,8 +73,12 @@ FROM ubuntu:24.04 as prod
 USER root
 
 ARG TARGETARCH
-ARG PY_VERSION_DEFAULT
+ARG PY_VERSION_DEFAULT=3.12
+ARG MAGE_COMMIT
+ARG BUILD_TYPE
+ENV BUILD_TYPE=${BUILD_TYPE}
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
+ENV MAGE_COMMIT=${MAGE_COMMIT}
 
 # Install only runtime dependencies that are needed
 RUN apt-get update && apt-get install -y \
@@ -81,23 +86,13 @@ RUN apt-get update && apt-get install -y \
     libpython${PY_VERSION}   `memgraph` \
     libssl-dev       `memgraph` \
     openssl         `memgraph` \
-    build-essential `mage-memgraph` \
-    cmake           `mage-memgraph` \
-    curl            `mage-memgraph` \
-    g++             `mage-memgraph` \
     python3         `mage-memgraph` \
     python3-pip     `mage-memgraph` \
     python3-setuptools     `mage-memgraph` \
     python3-dev     `mage-memgraph` \
-    clang           `mage-memgraph` \
-    git             `mage-memgraph` \
-    unixodbc-dev        `mage-memgraph` \
-    libboost-all-dev `mage-memgraph` \
-    uuid-dev \
-    procps \
     libc6-dbg \
-    libxmlsec1-dev xmlsec1 \
-    pkg-config \
+    adduser \
+    unixodbc-dev \
     --no-install-recommends \
     && ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -114,28 +109,20 @@ COPY --from=builder /usr/lib/memgraph/auth_module/ /usr/lib/memgraph/auth_module
 
 #copy python build
 COPY --from=builder /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
+COPY --from=builder --chown=memgraph:memgraph /var/lib/memgraph/.local/ /var/lib/memgraph/.local/ 
 
 #copy e2e tests
-COPY --from=builder /mage/e2e/ /mage/e2e/
-COPY --from=builder /mage/e2e_correctness/ /mage/e2e_correctness/
-COPY --from=builder /mage/test_e2e_correctness.py /mage/test_e2e_correctness.py
-COPY --from=builder /mage/run_e2e_correctness_tests.sh /mage/run_e2e_correctness_tests.sh
+COPY --from=builder --chown=memgraph:memgraph /mage/e2e/ /mage/e2e/
+COPY --from=builder --chown=memgraph:memgraph /mage/e2e_correctness/ /mage/e2e_correctness/
+COPY --from=builder --chown=memgraph:memgraph /mage/test_e2e_correctness.py /mage/test_e2e_correctness.py
+COPY --from=builder --chown=memgraph:memgraph /mage/run_e2e_correctness_tests.sh /mage/run_e2e_correctness_tests.sh
 
 # Copy requirements
-COPY --from=builder /mage/python/requirements_no_ml.txt /mage/python/requirements_no_ml.txt
-COPY --from=builder /mage/python/tests/requirements.txt /mage/python/tests/requirements.txt 
+COPY --from=builder --chown=memgraph:memgraph /mage/python/requirements_no_ml.txt /mage/python/requirements_no_ml.txt
+COPY --from=builder --chown=memgraph:memgraph /mage/python/tests/requirements.txt /mage/python/tests/requirements.txt 
 
-USER memgraph
-
-# First install requirements
-RUN python3 -m pip install --no-cache-dir -r /mage/python/requirements_no_ml.txt --break-system-packages && \
-    python3 -m pip install --no-cache-dir -r /mage/python/tests/requirements.txt  --break-system-packages && \
-    python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages && \
-    rm -fr /var/lib/memgraph/.cache/pip
-
-USER root
-RUN chown -R memgraph: /mage \
-    && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" 
+# copy script to convert to dev container
+COPY --from=builder /mage/make-dev-container.sh /make-dev-container.sh
 
 USER memgraph
 EXPOSE 7687
