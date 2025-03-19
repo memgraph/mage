@@ -7,6 +7,8 @@ USER root
 
 ARG TARGETARCH
 ARG PY_VERSION_DEFAULT
+ARG BUILD_TYPE
+ENV BUILD_TYPE=${BUILD_TYPE}}
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
 ENV TORCH_VERSION=2.4.0
 
@@ -87,8 +89,10 @@ FROM ubuntu:24.04 as prod
 USER root
 
 ARG TARGETARCH
-ARG PY_VERSION_DEFAULT
+ARG PY_VERSION_DEFAULT=3.12
 ARG MAGE_COMMIT
+ARG BUILD_TYPE
+ENV BUILD_TYPE=${BUILD_TYPE}}
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
 ENV MAGE_COMMIT=${MAGE_COMMIT}
 
@@ -132,6 +136,9 @@ COPY --from=builder --chown=memgraph:memgraph /mage/run_e2e_correctness_tests.sh
 # Copy requirements
 COPY --from=builder --chown=memgraph:memgraph /mage/python/requirements.txt /mage/python/requirements.txt
 COPY --from=builder --chown=memgraph:memgraph /mage/python/tests/requirements.txt /mage/python/tests/requirements.txt 
+
+# copy script to convert to dev container
+COPY --from=builder /mage/make-dev-container.sh /make-dev-container.sh
 
 USER memgraph
 EXPOSE 7687
