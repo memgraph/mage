@@ -107,6 +107,7 @@ RUN apt-get update && apt-get install -y \
     libc6-dbg \
     adduser \
     unixodbc-dev \
+    libgomp1 \
     --no-install-recommends \
     && ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
