@@ -73,7 +73,7 @@ fi
 if [[ "$build_scope" == "without ML" ]]; then
     DOCKERFILE=Dockerfile.no_ML
 else
-    DOCKERFILE=Dockerfile.v6mgbuild
+    DOCKERFILE=Dockerfile.release
 fi
 
 if [[ "$arch" == "arm64" ]]; then
