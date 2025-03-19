@@ -96,23 +96,12 @@ RUN apt-get update && apt-get install -y \
     libpython${PY_VERSION}   `memgraph` \
     libssl-dev       `memgraph` \
     openssl         `memgraph` \
-    build-essential `mage-memgraph` \
-    cmake           `mage-memgraph` \
-    curl            `mage-memgraph` \
-    g++             `mage-memgraph` \
     python3         `mage-memgraph` \
     python3-pip     `mage-memgraph` \
     python3-setuptools     `mage-memgraph` \
     python3-dev     `mage-memgraph` \
-    clang           `mage-memgraph` \
-    git             `mage-memgraph` \
-    unixodbc-dev        `mage-memgraph` \
-    libboost-all-dev `mage-memgraph` \
-    uuid-dev \
-    procps \
     libc6-dbg \
-    libxmlsec1-dev xmlsec1 \
-    pkg-config \
+    adduser \
     --no-install-recommends \
     && ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
