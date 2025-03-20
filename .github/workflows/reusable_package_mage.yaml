@@ -254,9 +254,8 @@ jobs:
         if: ${{ inputs.push_to_dockerhub == 'true' }}
         run: docker push ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }}
 
-      - name: Push to S3
+      - name: Push to S3 with retry
         if: ${{ inputs.push_to_s3 == 'true' }}
-        uses: jakejarvis/s3-sync-action@v0.5.1
         env:
           AWS_S3_BUCKET: ${{ inputs.s3_dest_bucket }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -264,3 +263,16 @@ jobs:
           AWS_REGION: "eu-west-1"
           SOURCE_DIR: "output"
           DEST_DIR: "${{ inputs.s3_dest_dir }}/"
+        run: |
+          max_attempts=3
+          attempt_num=1
+          until [ $attempt_num -gt $max_attempts ]
+          do
+            echo "Attempt $attempt_num..."
+            # Replace the next line with your actual s3 sync command or action logic
+            aws s3 sync $SOURCE_DIR s3://$AWS_S3_BUCKET/$DEST_DIR && break || {
+              echo "Attempt $attempt_num failed. Retrying in 5 seconds..."
+              sleep 5
+              attempt_num=$((attempt_num+1))
+            }
+          done
