@@ -83,7 +83,18 @@ jobs:
             echo "MEMGRAPH_VERSION=$clean_version" >> $GITHUB_ENV
           fi
           
-         
+      - name: Get Current MAGE Tag
+        run: |
+          # Get the tag that points at HEAD
+          tag=$(git tag --points-at HEAD)
+
+          # If no tag is found, fall back to the current commit hash
+          if [ -z "$tag" ]; then
+            tag=$(git rev-parse HEAD)
+          fi
+
+          echo "Using tag/commit hash: $tag"
+          echo "MAGE_COMMIT=${tag}" >> GITHUB_ENV
 
 
       - name: Set up and check memgraph download link
@@ -137,12 +148,15 @@ jobs:
           else
             MGBUILD_IMAGE=memgraph/mgbuild:v6_ubuntu-24.04
           fi
+
+          # target is always "prod" now, we convert to dev container afterwards
           DOCKER_BUILDKIT=1 docker buildx build \
           --tag memgraph-mage:${{ inputs.build_target }} \
-          --target ${{ inputs.build_target }} \
+          --target prod \
           --platform linux/${{ inputs.arch }} \
           --file Dockerfile.${{ inputs.build_scope == 'without ML' && 'no_ML' || 'release' }} \
           --build-arg MGBUILD_IMAGE=$MGBUILD_IMAGE \
+          --build-arg MAGE_COMMIT="${{ env.MAGE_COMMMIT }}" \
           --load .
 
           docker network create ${{ env.MEMGRAPH_NETWORK }} || true
@@ -156,6 +170,11 @@ jobs:
             memgraph-mage:${{ inputs.build_target }} \
             --telemetry-enabled=False
       
+      - name: Convert to "dev" Container
+        if: inputs.build_target == 'dev'
+        run: |
+          docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "./make-dev-container.sh"
+
       - name: Rust library tests
         if: inputs.build_target == 'dev'
         run: |
@@ -178,7 +197,6 @@ jobs:
           docker exec -i -u memgraph ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/python/ && python3 -m pytest ."
 
       - name: Run End-to-end tests
-        if: inputs.arch != 'arm64'
         env:
           PYTHONPATH: "$PWD/e2e"
         run: |
@@ -187,7 +205,6 @@ jobs:
           "cd /mage/e2e/ && python3 -m pytest . -k 'not cugraph ${{ inputs.build_scope == 'without ML' && 'and not tgn and not node_classification and not link_prediction' || '' }}'"
 
       - name: Run End-to-end correctness tests
-        if: inputs.arch != 'arm64'
         env:
           PYTHONPATH: "$PWD/e2e"
         run: |
