@@ -62,9 +62,13 @@ on:
         type: string
         description: "Use large runner?"
         default: false
+      malloc:
+        type: boolean
+        description: "Use malloc build of memgraph (no jemalloc)"
+        default: false
 
 env:
-  OS: ${{ inputs.arch == 'arm64' && 'ubuntu-24.04-aarch64' || 'ubuntu-24.04' }}
+  OS: "${{ inputs.arch == 'arm64' && 'ubuntu-24.04-aarch64' || 'ubuntu-24.04' }}${{ inputs.malloc && '-malloc' || '' }}"
   DOCKER_REPOSITORY_NAME: memgraph/memgraph-mage
 
 jobs:
@@ -136,6 +140,10 @@ jobs:
           if [[ "${{ env.MAGE_BUILD_TYPE }}" == 'RelWithDebInfo' ]] && [[ "${{ env.MAGE_BUILD_TARGET }}" != 'dev' ]]; then
             ARTIFACT_NAME="${ARTIFACT_NAME}-relwithdebinfo"
             IMAGE_TAG="${IMAGE_TAG}-relwithdebinfo"
+          fi
+          if [[ "${{ inputs.malloc }}" == true ]]; then
+            ARTIFACT_NAME="${ARTIFACT_NAME}-malloc"
+            IMAGE_TAG="${IMAGE_TAG}-malloc"          
           fi
           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
           echo "ARTIFACT_NAME=${ARTIFACT_NAME}" >> $GITHUB_ENV

@@ -53,7 +53,10 @@ on:
         type: boolean
         description: "Enable multiple builds via a matrix configuration?"
         default: false
-
+      malloc:
+        type: boolean
+        description: "Use malloc build of memgraph (no jemalloc)"
+        default: false
 jobs:
   BuildMage:
     if: ${{ github.event.inputs.matrix_build != 'true' }}
@@ -71,6 +74,7 @@ jobs:
       push_to_dockerhub: ${{ github.event.inputs.push_to_dockerhub || 'false' }}
       push_to_s3: ${{ github.event.inputs.push_to_s3 || 'false' }}
       large_runner: ${{ github.event.inputs.mage_build_target == 'dev' && 'true' || 'false' }}
+      malloc: ${{ github.event.inputs.malloc == 'true' }}
     secrets: inherit
 
   # New matrix build job, runs only when matrix_build is true
