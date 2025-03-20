@@ -48,7 +48,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build_target: ["prod", "dev"]
+        build_target: ["prod"]
         build_scope: ["with ML", "without ML"]
         build_type: ["Release", "RelWithDebInfo"]
         build_arch: ["amd64", "arm64"]
@@ -57,11 +57,6 @@ jobs:
             rwid_ext: "-relwithdebinfo"
           - build_arch: "arm64"
             arm_ext: "-aarch64"
-        exclude:
-          - build_target: "dev"
-            build_scope: "without ML"
-          - build_target: "dev"
-            build_type: "Release"
     uses: ./.github/workflows/reusable_package_mage.yaml
     with:
       arch: "${{ matrix.build_arch }}"
