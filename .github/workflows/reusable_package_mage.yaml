@@ -140,6 +140,20 @@ jobs:
           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
           echo "ARTIFACT_NAME=${ARTIFACT_NAME}" >> $GITHUB_ENV
 
+      - name: Get Current MAGE Tag
+        run: |
+          # Get the tag that points at HEAD
+          tag=$(git tag --points-at HEAD)
+
+          # If no tag is found, fall back to the current commit hash
+          if [ -z "$tag" ]; then
+            tag=$(git rev-parse HEAD)
+          fi
+
+          echo "Using tag/commit hash: $tag"
+          echo "MAGE_COMMIT=${tag}" >> GITHUB_ENV
+
+
       - name: Set target dockerfile
         run: |
           DOCKERFILE="Dockerfile.release"
@@ -198,13 +212,15 @@ jobs:
           echo "Using base image: $MGBUILD_IMAGE"
           echo "Image Tag: ${{ env.IMAGE_TAG }}"
 
+          # target is always "prod" now, we convert to dev container afterwards
           docker buildx build \
-          --target ${{ env.MAGE_BUILD_TARGET }} \
+          --target prod \
           --platform linux/${{ inputs.arch }} \
           --tag ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} \
           --file ${{ env.DOCKERFILE }} \
           --build-arg BUILD_TYPE=${{ env.MAGE_BUILD_TYPE }} \
           --build-arg MGBUILD_IMAGE=$MGBUILD_IMAGE \
+          --build-arg MAGE_COMMIT="${{ env.MAGE_COMMMIT }}" \
           --load .
 
       - name: Save docker image
