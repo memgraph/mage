@@ -169,7 +169,14 @@ jobs:
             -e MEMGRAPH_ORGANIZATION_NAME=${{ env.MEMGRAPH_ORGANIZATION_NAME }} \
             memgraph-mage:${{ inputs.build_target }} \
             --telemetry-enabled=False
-      
+
+          # print the image size in both SI and IEC units
+          size=$(docker image inspect memgraph-mage:${{ inputs.build_target }} -f '{{.Size}}')
+          size_si=$(numfmt --to=si --suffix=B --format="%.3f" $size | sed 's/\([KMGT]\)B/\1 B/')
+          size_iec=$(numfmt --to=iec-i --suffix=B --format="%.3f" $size | sed 's/\([KMGT]\)B/\1 B/')
+          echo "Image size: ${size_si} / ${size_iec}"
+
+
       - name: Convert to "dev" Container
         if: inputs.build_target == 'dev'
         run: |

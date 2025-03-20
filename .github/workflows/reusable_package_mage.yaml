@@ -231,6 +231,12 @@ jobs:
           --build-arg MAGE_COMMIT="${{ env.MAGE_COMMMIT }}" \
           --load .
 
+          # print the image size in both SI and IEC units
+          size=$(docker image inspect ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} -f '{{.Size}}')
+          size_si=$(numfmt --to=si --suffix=B --format="%.3f" $size | sed 's/\([KMGT]\)B/\1 B/')
+          size_iec=$(numfmt --to=iec-i --suffix=B --format="%.3f" $size | sed 's/\([KMGT]\)B/\1 B/')
+          echo "Image size: ${size_si} / ${size_iec}"
+
       - name: Save docker image
         run: |
           mkdir output
