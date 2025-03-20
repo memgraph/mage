@@ -1,7 +1,10 @@
+import base64
 from decimal import Decimal
 import boto3
 import csv
+import duckdb as duckDB
 import io
+from gqlalchemy import Neo4j
 import json
 import mgp
 import mysql.connector as mysql_connector
@@ -9,9 +12,12 @@ import oracledb
 import os
 import pyodbc
 import psycopg2
+import pyarrow.flight as flight
+import re
 import threading
 
-from typing import Any, Dict
+
+from typing import Any, Dict, List
 
 
 class Constants:
@@ -378,9 +384,15 @@ def init_migrate_s3(
     # Initialize S3 client
     s3_client = boto3.client(
         "s3",
-        aws_access_key_id=config.get("aws_access_key_id", os.getenv("AWS_ACCESS_KEY_ID", None)),
-        aws_secret_access_key=config.get("aws_secret_access_key", os.getenv("AWS_SECRET_ACCESS_KEY", None)),
-        aws_session_token=config.get("aws_session_token", os.getenv("AWS_SESSION_TOKEN", None)),
+        aws_access_key_id=config.get(
+            "aws_access_key_id", os.getenv("AWS_ACCESS_KEY_ID", None)
+        ),
+        aws_secret_access_key=config.get(
+            "aws_secret_access_key", os.getenv("AWS_SECRET_ACCESS_KEY", None)
+        ),
+        aws_session_token=config.get(
+            "aws_session_token", os.getenv("AWS_SESSION_TOKEN", None)
+        ),
         region_name=config.get("region_name", os.getenv("AWS_REGION", None)),
     )
 
@@ -439,6 +451,254 @@ def cleanup_migrate_s3():
 mgp.add_batch_read_proc(s3, init_migrate_s3, cleanup_migrate_s3)
 
 
+neo4j_dict = {}
+
+
+def init_migrate_neo4j(
+    label_or_rel_or_query: str,
+    config: mgp.Map,
+    config_path: str = "",
+    params: mgp.Nullable[mgp.Any] = None,
+):
+    global neo4j_dict
+
+    if threading.get_native_id not in neo4j_dict:
+        neo4j_dict[threading.get_native_id] = {}
+
+    if len(config_path) > 0:
+        config = _combine_config(config=config, config_path=config_path)
+
+    neo4j_db = Neo4j(**config)
+    query = _formulate_cypher_query(label_or_rel_or_query)
+    cursor = neo4j_db.execute_and_fetch(query, params)
+
+    neo4j_dict[threading.get_native_id]["connection"] = neo4j_db
+    neo4j_dict[threading.get_native_id]["cursor"] = cursor
+
+
+def neo4j(
+    label_or_rel_or_query: str,
+    config: mgp.Map,
+    config_path: str = "",
+    params: mgp.Nullable[mgp.Any] = None,
+) -> mgp.Record(row=mgp.Map):
+    """
+    Migrate data from Neo4j to Memgraph. Can migrate a specific node label, relationship type, or execute a custom Cypher query.
+
+    :param label_or_rel_or_query: Node label, relationship type, or a Cypher query
+    :param config: Connection configuration for Neo4j
+    :param config_path: Path to a JSON file containing connection parameters
+    :param params: Optional query parameters
+    :return: Stream of rows from Neo4j
+    """
+    global neo4j_dict
+    cursor = neo4j_dict[threading.get_native_id]["cursor"]
+
+    return [
+        mgp.Record(row=row)
+        for row in (next(cursor, None) for _ in range(Constants.BATCH_SIZE))
+        if row is not None
+    ]
+
+
+def cleanup_migrate_neo4j():
+    global neo4j_dict
+    if "connection" in neo4j_dict[threading.get_native_id]:
+        neo4j_dict[threading.get_native_id]["connection"].close()
+    neo4j_dict.pop(threading.get_native_id, None)
+
+
+mgp.add_batch_read_proc(neo4j, init_migrate_neo4j, cleanup_migrate_neo4j)
+
+
+# Dictionary to store Flight connections per thread
+flight_dict = {}
+
+
+def init_migrate_arrow_flight(
+    query: str,
+    config: mgp.Map,
+    config_path: str = "",
+):
+    global flight_dict
+
+    if len(config_path) > 0:
+        config = _combine_config(config=config, config_path=config_path)
+
+    host = config.get("host", None)
+    port = config.get("port", None)
+    username = config.get("username", "")
+    password = config.get("password", "")
+
+    # Encode credentials
+    auth_string = f"{username}:{password}".encode("utf-8")
+    encoded_auth = base64.b64encode(auth_string).decode("utf-8")
+
+    # Establish Flight connection
+    client = flight.connect(f"grpc://{host}:{port}")
+
+    # Authenticate
+    options = flight.FlightCallOptions(
+        headers=[(b"authorization", f"Basic {encoded_auth}".encode("utf-8"))]
+    )
+
+    flight_info = client.get_flight_info(
+        flight.FlightDescriptor.for_command(query), options
+    )
+
+    # Store connection per thread
+    thread_id = threading.get_native_id()
+    if thread_id not in flight_dict:
+        flight_dict[thread_id] = {}
+
+    flight_dict[thread_id][Constants.CONNECTION] = client
+    flight_dict[thread_id][Constants.CURSOR] = iter(
+        _fetch_flight_data(client, flight_info, options)
+    )
+
+
+def _fetch_flight_data(client, flight_info, options):
+    """
+    Efficiently fetches data in batches from Arrow Flight using RecordBatchReader.
+    This prevents high memory usage by avoiding full table loading.
+    """
+    for endpoint in flight_info.endpoints:
+        reader = client.do_get(endpoint.ticket, options)  # Stream the data
+        for chunk in reader:  # Iterate over RecordBatches
+            batch = chunk.data  # Convert each batch to an Arrow Table
+            yield from batch.to_pylist()  # Convert to row dictionaries on demand
+
+
+def arrow_flight(
+    query: str,
+    config: mgp.Map,
+    config_path: str = "",
+) -> mgp.Record(row=mgp.Map):
+    """
+    Execute a SQL query on Arrow Flight and stream results into Memgraph.
+
+    :param query: SQL query to execute
+    :param config: Arrow Flight connection configuration
+    :param config_path: Path to a JSON config file
+    :return: Stream of rows from Arrow Flight
+    """
+    global flight_dict
+    thread_id = threading.get_native_id()
+
+    cursor = flight_dict[thread_id][Constants.CURSOR]
+    batch = []
+    for _ in range(Constants.BATCH_SIZE):
+        try:
+            row = _convert_row_types(next(cursor))
+            batch.append(mgp.Record(row=row))
+        except StopIteration:
+            break
+
+    return batch
+
+
+def cleanup_migrate_arrow_flight():
+    """
+    Close the Flight connection per-thread.
+    """
+    global flight_dict
+    thread_id = threading.get_native_id()
+    if thread_id in flight_dict:
+        flight_dict.pop(thread_id, None)
+
+
+mgp.add_batch_read_proc(
+    arrow_flight, init_migrate_arrow_flight, cleanup_migrate_arrow_flight
+)
+
+
+# Dictionary to store DuckDB connections and cursors per thread
+duckdb_dict = {}
+
+
+def init_migrate_duckdb(query: str, setup_queries: mgp.Nullable[List[str]] = None):
+    """
+    Initialize an in-memory DuckDB connection and execute the query.
+
+    :param query: SQL query to execute
+    :param config: Unused but kept for consistency with other migration functions
+    :param config_path: Unused but kept for consistency with other migration functions
+    """
+    global duckdb_dict
+
+    if threading.get_native_id not in duckdb_dict:
+        duckdb_dict[threading.get_native_id] = {}
+
+    # Ensure a fresh in-memory DuckDB instance for each thread
+    connection = duckDB.connect()
+    cursor = connection.cursor()
+    if setup_queries is not None:
+        for setup_query in setup_queries:
+            cursor.execute(setup_query)
+
+    cursor.execute(query)
+
+    duckdb_dict[threading.get_native_id][Constants.CONNECTION] = connection
+    duckdb_dict[threading.get_native_id][Constants.CURSOR] = cursor
+    duckdb_dict[threading.get_native_id][Constants.COLUMN_NAMES] = [
+        desc[0] for desc in cursor.description
+    ]
+
+
+def duckdb(query: str, setup_queries: mgp.Nullable[List[str]] = None) -> mgp.Record(row=mgp.Map):
+    """
+    Fetch rows from DuckDB in batches.
+
+    :param query: SQL query to execute
+    :param config: Unused but kept for consistency with other migration functions
+    :param config_path: Unused but kept for consistency with other migration functions
+    :return: The result table as a stream of rows
+    """
+    global duckdb_dict
+    cursor = duckdb_dict[threading.get_native_id][Constants.CURSOR]
+    column_names = duckdb_dict[threading.get_native_id][Constants.COLUMN_NAMES]
+
+    rows = cursor.fetchmany(Constants.BATCH_SIZE)
+    return [mgp.Record(row=_name_row_cells(row, column_names)) for row in rows]
+
+
+def cleanup_migrate_duckdb():
+    """
+    Clean up DuckDB dictionary references per-thread.
+    """
+    global duckdb_dict
+    thread_id = threading.get_native_id()
+
+    if thread_id in duckdb_dict:
+        if Constants.CONNECTION in duckdb_dict[thread_id]:
+            duckdb_dict[thread_id][Constants.CONNECTION].close()
+        duckdb_dict.pop(thread_id, None)
+
+
+mgp.add_batch_read_proc(duckdb, init_migrate_duckdb, cleanup_migrate_duckdb)
+
+
+def _formulate_cypher_query(label_or_rel_or_query: str) -> str:
+    words = label_or_rel_or_query.split()
+    if len(words) > 1:
+        return (
+            label_or_rel_or_query  # Treat it as a Cypher query if multiple words exist
+        )
+    node_match = re.match(r"^\(\s*:(\w+)\s*\)$", label_or_rel_or_query)
+    rel_match = re.match(r"^\[\s*:(\w+)\s*\]$", label_or_rel_or_query)
+
+    if node_match:
+        label = node_match.group(1)
+        return f"MATCH (n:{label}) RETURN properties(n) as properties"
+    elif rel_match:
+        rel_type = rel_match.group(1)
+        return f"""
+    MATCH (n)-[r:{rel_type}]->(m)
+    RETURN properties(n) as from_properties, properties(r) as edge_properties, properties(m) as to_properties
+    """
+    return label_or_rel_or_query  # Assume it's a valid query
+
+
 def _query_is_table(table_or_sql: str) -> bool:
     return len(table_or_sql.split()) == 1
 
@@ -453,10 +713,15 @@ def _load_config(path: str) -> Dict[str, Any]:
 
 def _combine_config(config: mgp.Map, config_path: str) -> Dict[str, Any]:
     assert len(config_path), "Path must not be empty"
-    config_items = _load_config(path=config_path)
 
-    for key, value in config_items.items():
-        config[key] = value
+    file_config = None
+    try:
+        with open(config_path, "r") as file:
+            file_config = json.load(file)
+    except Exception:
+        raise OSError("Could not open/read file.")
+
+    config.update(file_config)
     return config
 
 
@@ -464,6 +729,13 @@ def _name_row_cells(row_cells, column_names) -> Dict[str, Any]:
     return {
         column: (value if not isinstance(value, Decimal) else float(value))
         for column, value in zip(column_names, row_cells)
+    }
+
+
+def _convert_row_types(row_cells) -> Dict[str, Any]:
+    return {
+        column: (value if not isinstance(value, Decimal) else float(value))
+        for column, value in row_cells.items()
     }
 
 
