@@ -79,7 +79,7 @@ jobs:
     uses: ./.github/workflows/reusable_package_mage.yaml
     strategy:
       matrix:
-        build_target: ["prod", "dev"]
+        build_target: ["prod"]
         build_scope: ["with ML", "without ML"]
         build_type: ["Release", "RelWithDebInfo"]
         build_arch: ["amd64", "arm64"]
