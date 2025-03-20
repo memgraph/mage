@@ -240,7 +240,7 @@ jobs:
       - name: Save docker image
         run: |
           mkdir output
-          docker save ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} > output/${{ env.ARTIFACT_NAME }}.tar.gz
+          docker save ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} | gzip > output/${{ env.ARTIFACT_NAME }}.tar.gz
           du -h output/${{ env.ARTIFACT_NAME }}.tar.gz
 
       - name: Push to GitHub
