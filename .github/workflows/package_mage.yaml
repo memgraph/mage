@@ -75,6 +75,7 @@ jobs:
     if: ${{ github.event.inputs.matrix_build == 'true' }}
     uses: ./.github/workflows/reusable_package_mage.yaml
     strategy:
+      fail-fast: false
       matrix:
         build_target: ["prod"]
         build_scope: ["with ML", "without ML"]
