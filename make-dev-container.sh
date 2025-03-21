@@ -8,10 +8,11 @@
 
 # install dependencies
 apt-get update 
-apt-get install -y libcurl4 libpython${PY_VERSION} libssl-dev openssl \
-  build-essential cmake curl g++ python3 python3-pip python3-setuptools \
-  python3-dev clang git unixodbc-dev libboost-all-dev uuid-dev gdb \
-  procps libc6-dbg libxmlsec1-dev xmlsec1 --no-install-recommends 
+apt-get install -y libpython${PY_VERSION:-$(python3 --version | sed 's/Python //')} \
+  libcurl4 libssl-dev openssl build-essential cmake curl g++ python3  \
+  python3-pip python3-setuptools python3-dev clang git unixodbc-dev \
+  libboost-all-dev uuid-dev gdb procps libc6-dbg libxmlsec1-dev xmlsec1 \
+  --no-install-recommends 
 
 
 # Function to detect architecture and set the appropriate toolchain URL
