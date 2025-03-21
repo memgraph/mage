@@ -9,10 +9,10 @@ on:
       mage_build_arch:
         type: choice
         description: "Mage build architecture"
-        default: 'amd'
+        default: 'amd64'
         options:
-          - "amd"
-          - "arm"
+          - "amd64"
+          - "arm64"
       mage_build_scope:
         type: choice
         description: "Mage build scope"
@@ -49,12 +49,15 @@ on:
         type: boolean
         description: "Push the image to S3?"
         default: false
-
+      malloc:
+        type: boolean
+        description: "Use malloc build of memgraph (no jemalloc)"
+        default: false
 jobs:
   BuildMage:
     uses: ./.github/workflows/reusable_package_mage.yaml
     with:
-      arch: ${{ github.event.inputs.mage_build_arch || 'amd' }}
+      arch: ${{ github.event.inputs.mage_build_arch || 'amd64' }}
       mage_build_scope: ${{ github.event.inputs.mage_build_scope || 'all' }}
       mage_build_target: ${{ github.event.inputs.mage_build_target || 'prod' }}
       mage_build_type: ${{ github.event.inputs.mage_build_type || 'Release' }}
@@ -66,4 +69,5 @@ jobs:
       push_to_dockerhub: ${{ github.event.inputs.push_to_dockerhub || 'false' }}
       push_to_s3: ${{ github.event.inputs.push_to_s3 || 'false' }}
       large_runner: ${{ github.event.inputs.mage_build_target == 'dev' && 'true' || 'false' }}
+      malloc: ${{ github.event.inputs.malloc == 'true' }}
     secrets: inherit

@@ -38,6 +38,10 @@ on:
         type: string
         description: "Overwrite existing image on dockerhub"
         default: true
+      push_to_github:
+        type: string
+        description: "Push the image to GitHub?"
+        default: false
       push_to_dockerhub:
         type: string
         description: "Push the image to DockerHub?"
@@ -58,14 +62,18 @@ on:
         type: string
         description: "Use large runner?"
         default: false
+      malloc:
+        type: boolean
+        description: "Use malloc build of memgraph (no jemalloc)"
+        default: false
 
 env:
-  OS: ${{ inputs.arch == 'arm' && 'ubuntu-24.04-aarch64' || 'ubuntu-24.04' }}
+  OS: "${{ inputs.arch == 'arm64' && 'ubuntu-24.04-aarch64' || 'ubuntu-24.04' }}${{ inputs.malloc && '-malloc' || '' }}"
   DOCKER_REPOSITORY_NAME: memgraph/memgraph-mage
 
 jobs:
   BuildAndPush:
-    runs-on: ${{ inputs.large_runner == 'true' && 'ubuntu-large' || 'ubuntu-latest' }}
+    runs-on: ${{ (inputs.arch == 'arm64') && fromJSON('["self-hosted", "DockerMgBuild","ARM64"]') || fromJSON('["self-hosted", "DockerMgBuild", "X64"]') }}
     steps:            
       - name: Checkout repository and submodules
         uses: actions/checkout@v4
@@ -118,8 +126,8 @@ jobs:
           fi
           IMAGE_TAG="${MAGE_VERSION}-memgraph-${MEMGRAPH_VERSION}"
           ARTIFACT_NAME="mage-${IMAGE_TAG}"
-          if [[ "${{ inputs.arch }}" == 'arm' ]]; then
-            ARTIFACT_NAME="${ARTIFACT_NAME}-arm"
+          if [[ "${{ inputs.arch }}" == 'arm64' ]]; then
+            ARTIFACT_NAME="${ARTIFACT_NAME}-arm64"
           fi
           if [[ "${{ env.MAGE_BUILD_SCOPE }}" == 'without ML' ]]; then
             ARTIFACT_NAME="${ARTIFACT_NAME}-no-ml"
@@ -132,6 +140,10 @@ jobs:
           if [[ "${{ env.MAGE_BUILD_TYPE }}" == 'RelWithDebInfo' ]] && [[ "${{ env.MAGE_BUILD_TARGET }}" != 'dev' ]]; then
             ARTIFACT_NAME="${ARTIFACT_NAME}-relwithdebinfo"
             IMAGE_TAG="${IMAGE_TAG}-relwithdebinfo"
+          fi
+          if [[ "${{ inputs.malloc }}" == true ]]; then
+            ARTIFACT_NAME="${ARTIFACT_NAME}-malloc"
+            IMAGE_TAG="${IMAGE_TAG}-malloc"          
           fi
           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
           echo "ARTIFACT_NAME=${ARTIFACT_NAME}" >> $GITHUB_ENV
@@ -165,7 +177,7 @@ jobs:
         run: |
           if [[ -z "${{ inputs.memgraph_download_link }}" ]]; then
             echo "Using official download link"
-            mg_url="https://download.memgraph.com/memgraph/v${{ inputs.memgraph_version }}/$OS/memgraph_${{ inputs.memgraph_version }}-1_${{ inputs.arch }}64.deb"
+            mg_url="https://download.memgraph.com/memgraph/v${{ inputs.memgraph_version }}/$OS/memgraph_${{ inputs.memgraph_version }}-1_${{ inputs.arch }}.deb"
           else
             echo "Using custom download link"
             mg_url=${{ inputs.memgraph_download_link }}
@@ -179,26 +191,38 @@ jobs:
           fi
 
       - name: Download memgraph binary
-        run: curl -L ${{ env.MEMGRAPH_DOWNLOAD_LINK }} > memgraph-${{ inputs.arch }}64.deb
+        run: curl -L ${{ env.MEMGRAPH_DOWNLOAD_LINK }} > memgraph-${{ inputs.arch }}.deb
 
       # Add ability to add additional tag after the image has been built
       # --tag ${DOCKER_REPOSITORY_NAME}:${{ inputs.additional_tag }} \
       - name: Build docker image
         run: |
+          if [[ "${{ inputs.arch }}" == "arm64" ]]; then
+            MGBUILD_IMAGE=memgraph/mgbuild:v6_ubuntu-24.04-arm
+          else
+            MGBUILD_IMAGE=memgraph/mgbuild:v6_ubuntu-24.04
+          fi
+
+          echo "Using base image: $MGBUILD_IMAGE"
+          echo "Image Tag: ${{ env.IMAGE_TAG }}"
+
           docker buildx build \
           --target ${{ env.MAGE_BUILD_TARGET }} \
-          --platform linux/${{ inputs.arch }}64 \
+          --platform linux/${{ inputs.arch }} \
           --tag ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} \
           --file ${{ env.DOCKERFILE }} \
           --build-arg BUILD_TYPE=${{ env.MAGE_BUILD_TYPE }} \
+          --build-arg MGBUILD_IMAGE=$MGBUILD_IMAGE \
           --load .
 
       - name: Save docker image
         run: |
           mkdir output
           docker save ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} > output/${{ env.ARTIFACT_NAME }}.tar.gz
+          du -h output/${{ env.ARTIFACT_NAME }}.tar.gz
 
       - name: Push to GitHub
+        if: ${{ inputs.push_to_github == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: "${{ env.ARTIFACT_NAME }}"
