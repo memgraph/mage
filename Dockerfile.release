@@ -108,9 +108,11 @@ RUN apt-get update && apt-get install -y \
     adduser \
     unixodbc-dev \
     libgomp1 \
+    libaio1t64 \
     --no-install-recommends \
     && ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
+    ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 /usr/lib/x86_64-linux-gnu/libaio.so.1
 
 # install memgraph
 COPY memgraph-${TARGETARCH}.deb .
