@@ -17,15 +17,16 @@ apt-get install -y libpython${PY_VERSION:-$(python3 --version | sed 's/Python //
 
 # Function to detect architecture and set the appropriate toolchain URL
 get_toolchain_url() {
+  version=$1
   arch=$(uname -m)
   case "$arch" in
     x86_64)
       # AMD64 architecture
-      echo "https://s3-eu-west-1.amazonaws.com/deps.memgraph.io/toolchain-v6/toolchain-v6-binaries-ubuntu-24.04-amd64.tar.gz"
+      echo "https://s3-eu-west-1.amazonaws.com/deps.memgraph.io/toolchain-v${version}/toolchain-v${version}-binaries-ubuntu-24.04-amd64.tar.gz"
       ;;
     aarch64)
       # ARM64 architecture
-      echo "https://s3-eu-west-1.amazonaws.com/deps.memgraph.io/toolchain-v6/toolchain-v6-binaries-ubuntu-24.04-arm64.tar.gz"
+      echo "https://s3-eu-west-1.amazonaws.com/deps.memgraph.io/toolchain-v${version}/toolchain-v${version}-binaries-ubuntu-24.04-arm64.tar.gz"
       ;;
     *)
       echo "Unsupported architecture: $arch" >&2
@@ -34,8 +35,8 @@ get_toolchain_url() {
   esac
 }
 
-
-TOOLCHAIN_URL=$(get_toolchain_url)
+toolchain_version=6
+TOOLCHAIN_URL=$(get_toolchain_url "$toolchain_version")
 echo "Downloading toolchain from: $TOOLCHAIN_URL"
 # Download the toolchain using curl
 curl -L "$TOOLCHAIN_URL" -o /toolchain.tar.gz
