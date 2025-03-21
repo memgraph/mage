@@ -62,12 +62,15 @@ rm -rf /root/mage
 
 # install toolchain run dependencies
 ./mage/cpp/memgraph/environment/os/install_deps.sh install TOOLCHAIN_RUN_DEPS
-rustversion=$(cargo --version | sed 's/cargo //')
+# TODO(matt): figure out a good way of installing the same rust version, without 
+# also having to install the toolchain build-deps. Perhaps a new option
+# MAGE_BUILD_DEPS?
+#rustversion=$(cargo --version | sed 's/cargo //')
 
 # install Rust as `memgraph` user - this is required for building mage
 su - memgraph -c "source /opt/toolchain-v6/activate && \
   source /mage/cpp/memgraph/environment/util.sh && \
-  install_rust ${rustversion}"
+  install_rust '1.80'"
 
 # add rust to the PATH for testing
 su - memgraph -c 'echo "export PATH=\$HOME/.cargo/bin:\$PATH" >> $HOME/.bashrc"'
