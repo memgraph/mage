@@ -164,10 +164,7 @@ jobs:
             --telemetry-enabled=False
 
           # print the image size in both SI and IEC units
-          size=$(docker image inspect memgraph-mage:prod -f '{{.Size}}')
-          size_si=$(numfmt --to=si --suffix=B --format="%.3f" $size | sed 's/\([KMGT]\)B/\1 B/')
-          size_iec=$(numfmt --to=iec-i --suffix=B --format="%.3f" $size | sed 's/\([KMGT]\)B/\1 B/')
-          echo "Image size: ${size_si} / ${size_iec}"
+          ./print_image_size memgraph-mage prod
 
 
       - name: Convert to "dev" Container
