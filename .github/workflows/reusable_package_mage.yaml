@@ -140,14 +140,11 @@ jobs:
 
       - name: Get Current MAGE Tag
         run: |
-          # Get the tag that points at HEAD
-          tag=$(git tag --points-at HEAD)
-
-          # If no tag is found, fall back to the current commit hash
-          if [ -z "$tag" ]; then
-            tag=$(git rev-parse HEAD)
-          fi
-
+          # Get the current tag, or commit hash if a tag doesn't exist
+          # This is used later in image creation, so that the exact version of 
+          # the MAGE git repository can be checked out within the container, 
+          # when we run the script to convert to "dev" container
+          tag=$(./get_tag.sh)
           echo "Using tag/commit hash: $tag"
           echo "MAGE_COMMIT=${tag}" >> GITHUB_ENV
 
