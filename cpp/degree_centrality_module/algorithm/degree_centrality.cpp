@@ -1,6 +1,6 @@
 #include "degree_centrality.hpp"
 
-namespace degree_cenntrality_alg {
+namespace degree_centrality_alg {
 
 std::vector<double> GetDegreeCentrality(const mg_graph::GraphView<> &graph, const AlgorithmType algorithm_type) {
   auto nodes = graph.Nodes();
@@ -33,4 +33,4 @@ std::vector<double> GetDegreeCentrality(const mg_graph::GraphView<> &graph, cons
   return degree_centralities;
 }
 
-}  // namespace degree_cenntrality_alg
+}  // namespace degree_centrality_alg

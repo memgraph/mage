@@ -43,7 +43,7 @@ void distanceOneConfResolution(graph* G, long v, int* vtxColor, double* randValu
 void distanceOneChecked(graph* G, long nv ,int* colors);
 void buildColorsIndex(int* colors, const int numColors, const long nv, ColorVector& colorPtr,  ColorVector& colorIndex, ColorVector& binSizes);
 
-/******* UtiliyFunctions *****
+/******* UtilityFunctions *****
 void computeBinSizes(ColorVector &binSizes, const ColorVector &colors, const GraphElem nv, const ColorElem numColors);
 ColorElem getDegree(const GraphElem ci, const Graph &g);
 void computeBinSizesWeighted(ColorVector &binSizes, const ColorVector &colors, const GraphElem nv, const ColorElem numColors, const Graph &g);
@@ -67,7 +67,7 @@ void generateRandomNumbers(std::vector<double> &randVec);
 
 /* Basic coloring (unbalanced) in initialColoring.cpp
 ColorElem initColoring(const Graph &g, ColorVector &colors, std::string input);
-/* Basic coloiring (ab-inital) in initialColoringLU.cpp
+/* Basic coloring (ab-inital) in initialColoringLU.cpp
 ColorElem initColoringLU(const Graph &g, ColorVector &colors, std::string input);
 
 /* Vertex base redistribution in vBase.cpp
