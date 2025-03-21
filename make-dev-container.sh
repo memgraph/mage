@@ -60,10 +60,20 @@ chown -R memgraph: /mage/
 # remove git repo from `/root`
 rm -rf /root/mage
 
-# install Rust as `memgraph` user
-su - memgraph -c 'source /opt/toolchain-v6/activate && curl https://sh.rustup.rs -sSf | sh -s -- -y && echo "export PATH=\$HOME/.cargo/bin:\$PATH" >> $HOME/.bashrc'
+# install toolchain run dependencies
+./mage/cpp/memgraph/environment/os/install_deps.sh install TOOLCHAIN_RUN_DEPS
+rustversion=$(cargo --version | sed 's/cargo //')
+
+# install Rust as `memgraph` user - this is required for building mage
+su - memgraph -c "source /opt/toolchain-v6/activate && \
+  source /mage/cpp/memgraph/environment/util.sh && \
+  install_rust ${rustversion}"
+
+# add rust to the PATH for testing
+su - memgraph -c 'echo "export PATH=\$HOME/.cargo/bin:\$PATH" >> $HOME/.bashrc"'
 
 # build everything again (because it isn't copied into the prod image)
-su - memgraph -c 'cd /mage && python3 /mage/setup build --cpp-build-flags CMAKE_BUILD_TYPE=$BUILD_TYPE'
+su - memgraph -c "source /opt/toolchain-v6/activate && \
+  cd /mage && python3 /mage/setup build --cpp-build-flags CMAKE_BUILD_TYPE=${BUILD_TYPE}"
 
 echo "Done!"
