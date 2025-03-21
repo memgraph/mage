@@ -14,10 +14,6 @@ on:
         type: string
         description: "Mage build scope"
         default: 'all'
-      mage_build_target:
-        type: string
-        description: "Mage build target"
-        default: 'prod'
       mage_build_type:
         type: string
         description: "Mage build type"
@@ -97,7 +93,6 @@ jobs:
 
       - name: Set build scope, target and type
         run: |
-          BUILD_TARGET="${{ inputs.mage_build_target }}"
           BUILD_SCOPE="${{ inputs.mage_build_scope }}"
           BUILD_TYPE="${{ inputs.mage_build_type }}"
           if [[ "$BUILD_TARGET" == 'dev' ]]; then
@@ -105,7 +100,6 @@ jobs:
             BUILD_TYPE="RelWithDebInfo"
           fi
           echo "MAGE_BUILD_SCOPE=$BUILD_SCOPE" >> $GITHUB_ENV
-          echo "MAGE_BUILD_TARGET=$BUILD_TARGET" >> $GITHUB_ENV
           echo "MAGE_BUILD_TYPE=$BUILD_TYPE" >> $GITHUB_ENV
 
       - name: Set image tag and artifact name
@@ -133,11 +127,7 @@ jobs:
             ARTIFACT_NAME="${ARTIFACT_NAME}-no-ml"
             IMAGE_TAG="${IMAGE_TAG}-no-ml"
           fi
-          if [[ "${{ env.MAGE_BUILD_TARGET }}" == 'dev' ]]; then
-            ARTIFACT_NAME="${ARTIFACT_NAME}-dev"
-            IMAGE_TAG="${IMAGE_TAG}-dev"
-          fi
-          if [[ "${{ env.MAGE_BUILD_TYPE }}" == 'RelWithDebInfo' ]] && [[ "${{ env.MAGE_BUILD_TARGET }}" != 'dev' ]]; then
+          if [[ "${{ env.MAGE_BUILD_TYPE }}" == 'RelWithDebInfo' ]]; then
             ARTIFACT_NAME="${ARTIFACT_NAME}-relwithdebinfo"
             IMAGE_TAG="${IMAGE_TAG}-relwithdebinfo"
           fi

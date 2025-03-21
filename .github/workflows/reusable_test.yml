@@ -11,10 +11,6 @@ on:
         type: string
         description: "Mage build scope"
         default: 'all'
-      build_target:
-        type: string
-        description: "Mage build target"
-        default: 'prod'
       memgraph_version:
         type: string
         description: "Memgraph version built into this image (format: X.Y.Z)"
@@ -141,7 +137,7 @@ jobs:
         if: env.MEMGRAPH_S3_URI
         run: aws s3 cp ${{ env.MEMGRAPH_S3_URI }} memgraph-${{ inputs.arch }}.deb
 
-      - name: Build and run Memgraph MAGE:${{ inputs.build_target }}
+      - name: Build and run Memgraph MAGE
         run: |
           if [[ "${{ inputs.arch }}" == "arm64" ]]; then
             MGBUILD_IMAGE=memgraph/mgbuild:v6_ubuntu-24.04-arm
@@ -151,7 +147,7 @@ jobs:
 
           # target is always "prod" now, we convert to dev container afterwards
           DOCKER_BUILDKIT=1 docker buildx build \
-          --tag memgraph-mage:${{ inputs.build_target }} \
+          --tag memgraph-mage:prod \
           --target prod \
           --platform linux/${{ inputs.arch }} \
           --file Dockerfile.${{ inputs.build_scope == 'without ML' && 'no_ML' || 'release' }} \
@@ -167,28 +163,25 @@ jobs:
             --name ${{ env.MAGE_CONTAINER }} \
             -e MEMGRAPH_ENTERPRISE_LICENSE=${{ env.MEMGRAPH_ENTERPRISE_LICENSE }} \
             -e MEMGRAPH_ORGANIZATION_NAME=${{ env.MEMGRAPH_ORGANIZATION_NAME }} \
-            memgraph-mage:${{ inputs.build_target }} \
+            memgraph-mage:prod \
             --telemetry-enabled=False
 
           # print the image size in both SI and IEC units
-          size=$(docker image inspect memgraph-mage:${{ inputs.build_target }} -f '{{.Size}}')
+          size=$(docker image inspect memgraph-mage:prod -f '{{.Size}}')
           size_si=$(numfmt --to=si --suffix=B --format="%.3f" $size | sed 's/\([KMGT]\)B/\1 B/')
           size_iec=$(numfmt --to=iec-i --suffix=B --format="%.3f" $size | sed 's/\([KMGT]\)B/\1 B/')
           echo "Image size: ${size_si} / ${size_iec}"
 
 
       - name: Convert to "dev" Container
-        if: inputs.build_target == 'dev'
         run: |
           docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "./make-dev-container.sh"
 
       - name: Rust library tests
-        if: inputs.build_target == 'dev'
         run: |
           docker exec -i -u memgraph ${{ env.MAGE_CONTAINER }} bash -c "source ~/.cargo/env && cd /mage/rust/rsmgp-sys && cargo fmt -- --check && cargo test"
 
       - name: C++ Modules unit tests
-        if: inputs.build_target == 'dev'
         run: |
           docker exec -i -u memgraph ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/cpp/build/ && ctest --output-on-failure -j${{ env.CORE_COUNT }}"
       
@@ -197,7 +190,7 @@ jobs:
           docker exec -i -u memgraph ${{ env.MAGE_CONTAINER }} bash -c "python3 -m pip install -r /mage/python/tests/requirements.txt --break-system-packages"
 
       - name: Python modules unit tests
-        if: inputs.build_target == 'dev' && inputs.build_scope != 'without ML'
+        if: inputs.build_scope != 'without ML'
         env:
           PYTHONPATH: "$PWD/python"
         run: |
@@ -222,6 +215,6 @@ jobs:
         run: |
           docker stop ${{ env.MAGE_CONTAINER }} || true
           docker rm ${{ env.MAGE_CONTAINER }} || true
-          docker rmi memgraph-mage:${{ inputs.build_target }} || true
+          docker rmi memgraph-mage:prod || true
           docker network rm ${{ env.MEMGRAPH_NETWORK }} || true
           docker stop ${{ env.NEO4J_CONTAINER }} || true

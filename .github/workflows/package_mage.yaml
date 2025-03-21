@@ -57,7 +57,6 @@ jobs:
     with:
       arch: ${{ github.event.inputs.mage_build_arch || 'amd64' }}
       mage_build_scope: ${{ github.event.inputs.mage_build_scope || 'all' }}
-      mage_build_target: 'prod'
       mage_build_type: ${{ github.event.inputs.mage_build_type || 'Release' }}
       mage_version: ${{ github.event.inputs.mage_version }}
       memgraph_version: ${{ github.event.inputs.memgraph_version }}
@@ -66,7 +65,7 @@ jobs:
       force_release: 'true'
       push_to_dockerhub: ${{ github.event.inputs.push_to_dockerhub || 'false' }}
       push_to_s3: ${{ github.event.inputs.push_to_s3 || 'false' }}
-      large_runner: ${{ github.event.inputs.mage_build_target == 'dev' && 'true' || 'false' }}
+      large_runner: 'false'
       malloc: ${{ github.event.inputs.malloc == 'true' }}
     secrets: inherit
 
@@ -77,25 +76,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build_target: ["prod"]
         build_scope: ["with ML", "without ML"]
         build_type: ["Release", "RelWithDebInfo"]
         build_arch: ["amd64", "arm64"]
+        malloc: ['false']
         include:
-          - build_type: "RelWithDebInfo"
-            rwid_ext: "-relwithdebinfo"
-          - build_arch: "arm64"
-            arm_ext: "-aarch64"
-        exclude:
-          - build_target: "dev"
-            build_scope: "without ML"
-          - build_target: "dev"
-            build_type: "Release"
+          - build_type: "Release"
+            build_scope: "with ML"
+            build_arch: "amd64"
+            malloc: 'true'
 
     with:
       arch: ${{ matrix.build_arch }}
       mage_build_scope: ${{ matrix.build_scope }}
-      mage_build_target: ${{ matrix.build_target }}
       mage_build_type: ${{ matrix.build_type }}
       mage_version: ${{ github.event.inputs.mage_version }}
       memgraph_version: ${{ github.event.inputs.memgraph_version }}
@@ -104,5 +97,6 @@ jobs:
       force_release: 'true'
       push_to_dockerhub: ${{ github.event.inputs.push_to_dockerhub || 'false' }}
       push_to_s3: ${{ github.event.inputs.push_to_s3 || 'false' }}
-      large_runner: ${{ matrix.build_target == 'dev' && 'true' || 'false' }}
+      large_runner: 'false'
+      malloc: ${{ matrix.malloc }}
     secrets: inherit
