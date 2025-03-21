@@ -219,7 +219,7 @@ jobs:
           --load .
 
           # print the image size in both SI and IEC units
-          ./print_image_size ${DOCKER_REPOSITORY_NAME} ${{ env.IMAGE_TAG }}
+          ./print_image_size.sh ${DOCKER_REPOSITORY_NAME} ${{ env.IMAGE_TAG }}
 
 
       - name: Save docker image

@@ -164,7 +164,7 @@ jobs:
             --telemetry-enabled=False
 
           # print the image size in both SI and IEC units
-          ./print_image_size memgraph-mage prod
+          ./print_image_size.sh memgraph-mage prod
 
 
       - name: Convert to "dev" Container
