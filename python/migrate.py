@@ -28,6 +28,7 @@ class Constants:
     I_COLUMN_NAME = 0
     PASSWORD = "password"
     PORT = "port"
+    RESULT = "result"
     USERNAME = "username"
 
 
@@ -51,7 +52,7 @@ def init_migrate_mysql(
 
     if _query_is_table(table_or_sql):
         table_or_sql = f"SELECT * FROM {table_or_sql};"
-        
+
     thread_id = threading.get_native_id()
     if thread_id not in mysql_dict:
         mysql_dict[thread_id] = {}
@@ -89,7 +90,7 @@ def mysql(
     :return: The result table as a stream of rows
     """
     global mysql_dict
-    
+
     thread_id = threading.get_native_id()
     cursor = mysql_dict[thread_id][Constants.CURSOR]
     column_names = mysql_dict[thread_id][Constants.COLUMN_NAMES]
@@ -101,7 +102,7 @@ def mysql(
 
 def cleanup_migrate_mysql():
     global mysql_dict
-    
+
     thread_id = threading.get_native_id()
     mysql_dict[thread_id][Constants.CURSOR] = None
     mysql_dict[thread_id][Constants.CONNECTION].commit()
@@ -135,7 +136,7 @@ def init_migrate_sql_server(
 
     if _query_is_table(table_or_sql):
         table_or_sql = f"SELECT * FROM {table_or_sql};"
-        
+
     thread_id = threading.get_native_id()
     if thread_id not in sql_server_dict:
         sql_server_dict[thread_id] = {}
@@ -173,7 +174,7 @@ def sql_server(
     :return: The result table as a stream of rows
     """
     global sql_server_dict
-    
+
     thread_id = threading.get_native_id()
     cursor = sql_server_dict[thread_id][Constants.CURSOR]
     column_names = sql_server_dict[thread_id][Constants.COLUMN_NAMES]
@@ -222,7 +223,7 @@ def init_migrate_oracle_db(
 
     # To prevent query execution from hanging
     config["disable_oob"] = True
-    
+
     thread_id = threading.get_native_id()
     if thread_id not in oracle_db_dict:
         oracle_db_dict[thread_id] = {}
@@ -350,7 +351,7 @@ def postgresql(
     :return: The result table as a stream of rows
     """
     global postgres_dict
-    
+
     thread_id = threading.get_native_id()
     cursor = postgres_dict[thread_id][Constants.CURSOR]
     column_names = postgres_dict[thread_id][Constants.COLUMN_NAMES]
@@ -362,7 +363,7 @@ def postgresql(
 
 def cleanup_migrate_postgresql():
     global postgres_dict
-    
+
     thread_id = threading.get_native_id()
     postgres_dict[thread_id][Constants.CURSOR] = None
     postgres_dict[thread_id][Constants.CONNECTION].commit()
@@ -449,7 +450,7 @@ def s3(
     :return: The result table as a stream of rows
     """
     global s3_dict
-    
+
     thread_id = threading.get_native_id()
     csv_reader = s3_dict[thread_id][Constants.CURSOR]
     column_names = s3_dict[thread_id][Constants.COLUMN_NAMES]
@@ -470,7 +471,7 @@ def cleanup_migrate_s3():
     Clean up S3 dictionary references per-thread.
     """
     global s3_dict
-    
+
     thread_id = threading.get_native_id()
     s3_dict.pop(thread_id, None)
 
@@ -520,7 +521,7 @@ def neo4j(
     :return: Stream of rows from Neo4j
     """
     global neo4j_dict
-    
+
     thread_id = threading.get_native_id()
     cursor = neo4j_dict[thread_id][Constants.CURSOR]
 
@@ -533,7 +534,7 @@ def neo4j(
 
 def cleanup_migrate_neo4j():
     global neo4j_dict
-    
+
     thread_id = threading.get_native_id()
     if Constants.CONNECTION in neo4j_dict[thread_id]:
         neo4j_dict[thread_id][Constants.CONNECTION].close()
@@ -726,7 +727,7 @@ def init_migrate_memgraph(
     params: mgp.Nullable[mgp.Any] = None,
 ):
     global neo4j_dict
-    
+
     thread_id = threading.get_native_id()
     if thread_id not in neo4j_dict:
         neo4j_dict[thread_id] = {}
@@ -758,7 +759,7 @@ def memgraph(
     :return: Stream of rows from Neo4j
     """
     global memgraph_dict
-    
+
     thread_id = threading.get_native_id()
     cursor = memgraph_dict[thread_id][Constants.CURSOR]
 
@@ -771,7 +772,7 @@ def memgraph(
 
 def cleanup_migrate_memgraph():
     global memgraph_dict
-    
+
     thread_id = threading.get_native_id()
     if Constants.CONNECTION in memgraph_dict[thread_id]:
         memgraph_dict[threading.get_native_id][Constants.CONNECTION].close()
@@ -803,20 +804,21 @@ def init_migrate_servicenow(
     if len(config_path) > 0:
         config = _combine_config(config=config, config_path=config_path)
 
-    auth = (config.get("username"), config.get("password"))
+    auth = (config.get(Constants.USERNAME), config.get(Constants.PASSWORD))
     headers = {"Accept": "application/json"}
 
     response = requests.get(endpoint, auth=auth, headers=headers, params=params)
     response.raise_for_status()
 
-    data = response.json().get("result", [])
+    data = response.json().get(Constants.RESULT, [])
     if not data:
         raise ValueError("No data found in ServiceNow response")
 
-    if threading.get_native_id not in servicenow_dict:
-        servicenow_dict[threading.get_native_id] = {}
+    thread_id = threading.get_native_id()
+    if thread_id not in servicenow_dict:
+        servicenow_dict[thread_id] = {}
 
-    servicenow_dict[threading.get_native_id][Constants.CURSOR] = iter(data)
+    servicenow_dict[thread_id][Constants.CURSOR] = iter(data)
 
 
 def servicenow(
@@ -836,7 +838,8 @@ def servicenow(
     """
     global servicenow_dict
 
-    data_iter = servicenow_dict[threading.get_native_id][Constants.CURSOR]
+    thread_id = threading.get_native_id()
+    data_iter = servicenow_dict[thread_id][Constants.CURSOR]
 
     batch_rows = []
     for _ in range(Constants.BATCH_SIZE):
@@ -854,7 +857,9 @@ def cleanup_migrate_servicenow():
     Clean up ServiceNow dictionary references per-thread.
     """
     global servicenow_dict
-    servicenow_dict.pop(threading.get_native_id, None)
+
+    thread_id = threading.get_native_id()
+    servicenow_dict.pop(thread_id, None)
 
 
 mgp.add_batch_read_proc(servicenow, init_migrate_servicenow, cleanup_migrate_servicenow)
