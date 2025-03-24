@@ -658,8 +658,9 @@ def init_migrate_duckdb(query: str, setup_queries: mgp.Nullable[List[str]] = Non
     """
     global duckdb_dict
 
-    if threading.get_native_id not in duckdb_dict:
-        duckdb_dict[threading.get_native_id] = {}
+    thread_id = threading.get_native_id()
+    if thread_id not in duckdb_dict:
+        duckdb_dict[thread_id] = {}
 
     # Ensure a fresh in-memory DuckDB instance for each thread
     connection = duckDB.connect()
@@ -670,9 +671,9 @@ def init_migrate_duckdb(query: str, setup_queries: mgp.Nullable[List[str]] = Non
 
     cursor.execute(query)
 
-    duckdb_dict[threading.get_native_id][Constants.CONNECTION] = connection
-    duckdb_dict[threading.get_native_id][Constants.CURSOR] = cursor
-    duckdb_dict[threading.get_native_id][Constants.COLUMN_NAMES] = [
+    duckdb_dict[thread_id][Constants.CONNECTION] = connection
+    duckdb_dict[thread_id][Constants.CURSOR] = cursor
+    duckdb_dict[thread_id][Constants.COLUMN_NAMES] = [
         desc[0] for desc in cursor.description
     ]
 
@@ -687,8 +688,10 @@ def duckdb(query: str, setup_queries: mgp.Nullable[List[str]] = None) -> mgp.Rec
     :return: The result table as a stream of rows
     """
     global duckdb_dict
-    cursor = duckdb_dict[threading.get_native_id][Constants.CURSOR]
-    column_names = duckdb_dict[threading.get_native_id][Constants.COLUMN_NAMES]
+
+    thread_id = threading.get_native_id()
+    cursor = duckdb_dict[thread_id][Constants.CURSOR]
+    column_names = duckdb_dict[thread_id][Constants.COLUMN_NAMES]
 
     rows = cursor.fetchmany(Constants.BATCH_SIZE)
     return [mgp.Record(row=_name_row_cells(row, column_names)) for row in rows]
@@ -699,8 +702,8 @@ def cleanup_migrate_duckdb():
     Clean up DuckDB dictionary references per-thread.
     """
     global duckdb_dict
-    thread_id = threading.get_native_id()
 
+    thread_id = threading.get_native_id()
     if thread_id in duckdb_dict:
         if Constants.CONNECTION in duckdb_dict[thread_id]:
             duckdb_dict[thread_id][Constants.CONNECTION].close()
