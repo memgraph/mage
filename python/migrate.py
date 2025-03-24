@@ -14,6 +14,7 @@ import pyodbc
 import psycopg2
 import pyarrow.flight as flight
 import re
+import requests
 import threading
 from typing import Any, Dict, List
 
@@ -27,6 +28,7 @@ class Constants:
     I_COLUMN_NAME = 0
     PASSWORD = "password"
     PORT = "port"
+    RESULT = "result"
     USERNAME = "username"
 
 
@@ -50,7 +52,7 @@ def init_migrate_mysql(
 
     if _query_is_table(table_or_sql):
         table_or_sql = f"SELECT * FROM {table_or_sql};"
-        
+
     thread_id = threading.get_native_id()
     if thread_id not in mysql_dict:
         mysql_dict[thread_id] = {}
@@ -88,7 +90,7 @@ def mysql(
     :return: The result table as a stream of rows
     """
     global mysql_dict
-    
+
     thread_id = threading.get_native_id()
     cursor = mysql_dict[thread_id][Constants.CURSOR]
     column_names = mysql_dict[thread_id][Constants.COLUMN_NAMES]
@@ -100,7 +102,7 @@ def mysql(
 
 def cleanup_migrate_mysql():
     global mysql_dict
-    
+
     thread_id = threading.get_native_id()
     mysql_dict[thread_id][Constants.CURSOR] = None
     mysql_dict[thread_id][Constants.CONNECTION].commit()
@@ -134,7 +136,7 @@ def init_migrate_sql_server(
 
     if _query_is_table(table_or_sql):
         table_or_sql = f"SELECT * FROM {table_or_sql};"
-        
+
     thread_id = threading.get_native_id()
     if thread_id not in sql_server_dict:
         sql_server_dict[thread_id] = {}
@@ -172,7 +174,7 @@ def sql_server(
     :return: The result table as a stream of rows
     """
     global sql_server_dict
-    
+
     thread_id = threading.get_native_id()
     cursor = sql_server_dict[thread_id][Constants.CURSOR]
     column_names = sql_server_dict[thread_id][Constants.COLUMN_NAMES]
@@ -221,7 +223,7 @@ def init_migrate_oracle_db(
 
     # To prevent query execution from hanging
     config["disable_oob"] = True
-    
+
     thread_id = threading.get_native_id()
     if thread_id not in oracle_db_dict:
         oracle_db_dict[thread_id] = {}
@@ -349,7 +351,7 @@ def postgresql(
     :return: The result table as a stream of rows
     """
     global postgres_dict
-    
+
     thread_id = threading.get_native_id()
     cursor = postgres_dict[thread_id][Constants.CURSOR]
     column_names = postgres_dict[thread_id][Constants.COLUMN_NAMES]
@@ -361,7 +363,7 @@ def postgresql(
 
 def cleanup_migrate_postgresql():
     global postgres_dict
-    
+
     thread_id = threading.get_native_id()
     postgres_dict[thread_id][Constants.CURSOR] = None
     postgres_dict[thread_id][Constants.CONNECTION].commit()
@@ -448,7 +450,7 @@ def s3(
     :return: The result table as a stream of rows
     """
     global s3_dict
-    
+
     thread_id = threading.get_native_id()
     csv_reader = s3_dict[thread_id][Constants.CURSOR]
     column_names = s3_dict[thread_id][Constants.COLUMN_NAMES]
@@ -469,7 +471,7 @@ def cleanup_migrate_s3():
     Clean up S3 dictionary references per-thread.
     """
     global s3_dict
-    
+
     thread_id = threading.get_native_id()
     s3_dict.pop(thread_id, None)
 
@@ -519,7 +521,7 @@ def neo4j(
     :return: Stream of rows from Neo4j
     """
     global neo4j_dict
-    
+
     thread_id = threading.get_native_id()
     cursor = neo4j_dict[thread_id][Constants.CURSOR]
 
@@ -532,7 +534,7 @@ def neo4j(
 
 def cleanup_migrate_neo4j():
     global neo4j_dict
-    
+
     thread_id = threading.get_native_id()
     if Constants.CONNECTION in neo4j_dict[thread_id]:
         neo4j_dict[thread_id][Constants.CONNECTION].close()
@@ -678,7 +680,9 @@ def init_migrate_duckdb(query: str, setup_queries: mgp.Nullable[List[str]] = Non
     ]
 
 
-def duckdb(query: str, setup_queries: mgp.Nullable[List[str]] = None) -> mgp.Record(row=mgp.Map):
+def duckdb(
+    query: str, setup_queries: mgp.Nullable[List[str]] = None
+) -> mgp.Record(row=mgp.Map):
     """
     Fetch rows from DuckDB in batches.
 
@@ -723,7 +727,7 @@ def init_migrate_memgraph(
     params: mgp.Nullable[mgp.Any] = None,
 ):
     global neo4j_dict
-    
+
     thread_id = threading.get_native_id()
     if thread_id not in neo4j_dict:
         neo4j_dict[thread_id] = {}
@@ -755,7 +759,7 @@ def memgraph(
     :return: Stream of rows from Neo4j
     """
     global memgraph_dict
-    
+
     thread_id = threading.get_native_id()
     cursor = memgraph_dict[thread_id][Constants.CURSOR]
 
@@ -768,7 +772,7 @@ def memgraph(
 
 def cleanup_migrate_memgraph():
     global memgraph_dict
-    
+
     thread_id = threading.get_native_id()
     if Constants.CONNECTION in memgraph_dict[thread_id]:
         memgraph_dict[threading.get_native_id][Constants.CONNECTION].close()
@@ -776,6 +780,89 @@ def cleanup_migrate_memgraph():
 
 
 mgp.add_batch_read_proc(memgraph, init_migrate_memgraph, cleanup_migrate_memgraph)
+
+
+servicenow_dict = {}
+
+
+def init_migrate_servicenow(
+    endpoint: str,
+    config: mgp.Map,
+    config_path: str = "",
+    params: mgp.Nullable[mgp.Any] = None,
+):
+    """
+    Initialize the connection to the ServiceNow REST API and fetch the JSON data.
+
+    :param endpoint: ServiceNow API endpoint (full URL)
+    :param config: Configuration map containing authentication details (username, password, instance URL, etc.)
+    :param config_path: Optional path to a JSON file containing authentication details
+    :param params: Optional query parameters for filtering results
+    """
+    global servicenow_dict
+
+    if len(config_path) > 0:
+        config = _combine_config(config=config, config_path=config_path)
+
+    auth = (config.get(Constants.USERNAME), config.get(Constants.PASSWORD))
+    headers = {"Accept": "application/json"}
+
+    response = requests.get(endpoint, auth=auth, headers=headers, params=params)
+    response.raise_for_status()
+
+    data = response.json().get(Constants.RESULT, [])
+    if not data:
+        raise ValueError("No data found in ServiceNow response")
+
+    thread_id = threading.get_native_id()
+    if thread_id not in servicenow_dict:
+        servicenow_dict[thread_id] = {}
+
+    servicenow_dict[thread_id][Constants.CURSOR] = iter(data)
+
+
+def servicenow(
+    endpoint: str,
+    config: mgp.Map,
+    config_path: str = "",
+    params: mgp.Nullable[mgp.Any] = None,
+) -> mgp.Record(row=mgp.Map):
+    """
+    Fetch rows from the ServiceNow REST API in batches.
+
+    :param endpoint: ServiceNow API endpoint (full URL)
+    :param config: Authentication details (username, password, instance URL, etc.)
+    :param config_path: Optional path to a JSON file containing authentication details
+    :param params: Optional query parameters for filtering results
+    :return: The result data as a stream of rows
+    """
+    global servicenow_dict
+
+    thread_id = threading.get_native_id()
+    data_iter = servicenow_dict[thread_id][Constants.CURSOR]
+
+    batch_rows = []
+    for _ in range(Constants.BATCH_SIZE):
+        try:
+            row = next(data_iter)
+            batch_rows.append(mgp.Record(row=row))
+        except StopIteration:
+            break
+
+    return batch_rows
+
+
+def cleanup_migrate_servicenow():
+    """
+    Clean up ServiceNow dictionary references per-thread.
+    """
+    global servicenow_dict
+
+    thread_id = threading.get_native_id()
+    servicenow_dict.pop(thread_id, None)
+
+
+mgp.add_batch_read_proc(servicenow, init_migrate_servicenow, cleanup_migrate_servicenow)
 
 
 def _formulate_cypher_query(label_or_rel_or_query: str) -> str:
