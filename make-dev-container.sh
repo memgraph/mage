@@ -68,12 +68,7 @@ rm -rf /root/mage
 #rustversion=$(cargo --version | sed 's/cargo //')
 
 # install Rust as `memgraph` user - this is required for building mage
-su - memgraph -c ". /opt/toolchain-v${toolchain_version}/activate && \
-  . /mage/cpp/memgraph/environment/util.sh && \
-  install_rust \"1.80\""
-
-# add rust to the PATH for testing
-su - memgraph -c 'echo "export PATH=\$HOME/.cargo/bin:\$PATH" >> $HOME/.bashrc'
+su - memgraph -c 'source /opt/toolchain-v6/activate && curl https://sh.rustup.rs -sSf | sh -s -- -y && echo "export PATH=\$HOME/.cargo/bin:\$PATH" >> $HOME/.bashrc'
 
 # build everything again (because it isn't copied into the prod image)
 su - memgraph -c ". /opt/toolchain-v${toolchain_version}/activate && \
