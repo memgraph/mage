@@ -1,6 +1,7 @@
 ARG PY_VERSION_DEFAULT=3.12
+ARG MGBUILD_IMAGE
 
-FROM ubuntu:24.04 as base
+FROM $MGBUILD_IMAGE as builder
 
 USER root
 
@@ -8,6 +9,7 @@ ARG TARGETARCH
 ARG PY_VERSION_DEFAULT
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
 ENV TORCH_VERSION=2.4.0
+
 
 # Essentials for production/dev
 RUN apt-get update && apt-get install -y \
@@ -31,6 +33,7 @@ RUN apt-get update && apt-get install -y \
     gdb \
     procps \
     libc6-dbg \
+    libxmlsec1-dev xmlsec1 \
     --no-install-recommends \
     && ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -47,38 +50,84 @@ ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
 # Memgraph listens for Bolt Protocol on this port by default.
 EXPOSE 7687
 
-FROM base as dev
+FROM builder as dev
+
 
 ARG BUILD_TYPE=Release
 
 WORKDIR /mage
 COPY . /mage
 
+#hacks so we can do everything under the `memgraph` user
+RUN chown -R memgraph: /mage && \
+    mkdir -pv /usr/lib/memgraph/query_modules && \
+    chown -R memgraph: /usr/lib/memgraph/query_modules
+USER memgraph
+
 # First install requirements
-RUN python3 -m pip install -r /mage/python/requirements.txt --break-system-packages \
-    && python3 -m pip install -r /mage/python/tests/requirements.txt --break-system-packages \
-    && python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages
-
-# Torch and DGL 
-RUN python3 -m pip install torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.3.0+cu121.html --break-system-packages \
-    && python3 -m pip install dgl -f https://data.dgl.ai/wheels/torch-2.3/cu121/repo.html --break-system-packages
-
+RUN python3 -m pip install --no-cache-dir -r /mage/python/requirements.txt --break-system-packages && \
+    python3 -m pip install --no-cache-dir -r /mage/python/tests/requirements.txt --break-system-packages && \
+    python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages && \
+    python3 -m pip install --no-cache-dir torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.3.0+cu121.html --break-system-packages && \
+    if [ "$TARGETARCH" == "arm64" ]; then \
+        curl -o dgl-2.4.0-cp312-cp312-linux_aarch64.whl https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/dgl-2.4.0-cp312-cp312-linux_aarch64.whl && \
+        python3 -m pip install --no-cache-dir dgl-2.4.0-cp312-cp312-linux_aarch64.whl --break-system-packages; \
+    else \
+        python3 -m pip install --no-cache-dir dgl -f https://data.dgl.ai/wheels/torch-2.3/cu121/repo.html --break-system-packages; \
+    fi && \
+    rm -fr /var/lib/memgraph/.cache/pip
+    
 # Build query modules
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
-    && export PATH="/root/.cargo/bin:${PATH}" \
+SHELL ["/bin/bash", "-c"]
+RUN source /opt/toolchain-v6/activate && curl https://sh.rustup.rs -sSf | sh -s -- -y \
+    && export PATH="$HOME/.cargo/bin:${PATH}" \
     && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/ --cpp-build-flags CMAKE_BUILD_TYPE=${BUILD_TYPE} \
-    && chown -R memgraph: /mage/e2e
+    && chown -R memgraph: /mage
+
 
 USER memgraph
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
 CMD [""]
 
-FROM base as prod
+FROM ubuntu:24.04 as prod
 
 USER root
-ENTRYPOINT []
+
+ARG TARGETARCH
 ARG PY_VERSION_DEFAULT
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
+
+# Essentials for production/dev
+RUN apt-get update && apt-get install -y \
+    libcurl4        `memgraph` \
+    libpython${PY_VERSION}   `memgraph` \
+    libssl-dev       `memgraph` \
+    openssl         `memgraph` \
+    build-essential `mage-memgraph` \
+    cmake           `mage-memgraph` \
+    curl            `mage-memgraph` \
+    g++             `mage-memgraph` \
+    python3         `mage-memgraph` \
+    python3-pip     `mage-memgraph` \
+    python3-setuptools     `mage-memgraph` \
+    python3-dev     `mage-memgraph` \
+    clang           `mage-memgraph` \
+    git             `mage-memgraph` \
+    unixodbc-dev        `mage-memgraph` \
+    libboost-all-dev `mage-memgraph` \
+    uuid-dev \
+    procps \
+    libc6-dbg \
+    libxmlsec1-dev xmlsec1 \
+    pkg-config \
+    --no-install-recommends \
+    && ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# install memgraph
+COPY memgraph-${TARGETARCH}.deb .
+RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb 
+ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
 
 # Copy modules
 COPY --from=dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
@@ -89,15 +138,36 @@ COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VE
 
 # Copy e2e tests
 COPY --from=dev /mage/e2e/ /mage/e2e/
+COPY --from=dev /mage/e2e_correctness/ /mage/e2e_correctness/
+COPY --from=dev /mage/test_e2e_correctness.py /mage/test_e2e_correctness.py
+COPY --from=dev /mage/run_e2e_correctness_tests.sh /mage/run_e2e_correctness_tests.sh
 
-RUN mv /mage/e2e /e2e/ \
-    && rm -rf /mage/* \
-    && mv /e2e/ /mage/ \
-    && chown -R memgraph: /mage/e2e \
-    && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
-    && apt-get -y --purge autoremove clang git curl python3-pip python3-dev cmake build-essential \
-    && apt-get clean
+
+# Copy requirements
+COPY --from=dev /mage/python/requirements.txt /mage/python/requirements.txt
+COPY --from=dev /mage/python/tests/requirements.txt /mage/python/tests/requirements.txt 
 
 USER memgraph
+
+# First install requirements, then Torch and DGL
+RUN python3 -m pip install --no-cache-dir -r /mage/python/requirements.txt --break-system-packages && \
+    python3 -m pip install --no-cache-dir -r /mage/python/tests/requirements.txt --break-system-packages && \
+    python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages && \
+    python3 -m pip install --no-cache-dir torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.3.0+cu121.html --break-system-packages && \
+    if [ "$TARGETARCH" == "arm64" ]; then \
+        curl -o dgl-2.4.0-cp312-cp312-linux_aarch64.whl https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/dgl-2.4.0-cp312-cp312-linux_aarch64.whl && \
+        python3 -m pip install --no-cache-dir dgl-2.4.0-cp312-cp312-linux_aarch64.whl --break-system-packages; \
+    else \
+        python3 -m pip install --no-cache-dir dgl -f https://data.dgl.ai/wheels/torch-2.3/cu121/repo.html --break-system-packages; \
+    fi && \
+    rm -fr /var/lib/memgraph/.cache/pip
+
+USER root
+RUN chown -R memgraph: /mage \
+    && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" 
+
+USER memgraph
+EXPOSE 7687
+
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
 CMD [""]
