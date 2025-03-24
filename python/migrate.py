@@ -519,12 +519,17 @@ def _formulate_cypher_query(label_or_rel_or_query: str) -> str:
 
     if node_match:
         label = node_match.group(1)
-        return f"MATCH (n:{label}) RETURN properties(n) as properties"
+        return f"MATCH (n:{label}) RETURN labels(n) as labels, properties(n) as properties"
     elif rel_match:
         rel_type = rel_match.group(1)
         return f"""
     MATCH (n)-[r:{rel_type}]->(m)
-    RETURN properties(n) as from_properties, properties(r) as edge_properties, properties(m) as to_properties
+    RETURN 
+        labels(n) as from_labels,
+        labels(m) as to_labels, 
+        properties(n) as from_properties, 
+        properties(r) as edge_properties, 
+        properties(m) as to_properties
     """
     return label_or_rel_or_query  # Assume it's a valid query
 
