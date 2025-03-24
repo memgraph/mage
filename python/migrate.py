@@ -723,9 +723,10 @@ def init_migrate_memgraph(
     params: mgp.Nullable[mgp.Any] = None,
 ):
     global neo4j_dict
-
-    if threading.get_native_id not in neo4j_dict:
-        neo4j_dict[threading.get_native_id] = {}
+    
+    thread_id = threading.get_native_id()
+    if thread_id not in neo4j_dict:
+        neo4j_dict[thread_id] = {}
 
     if len(config_path) > 0:
         config = _combine_config(config=config, config_path=config_path)
@@ -734,8 +735,8 @@ def init_migrate_memgraph(
     query = _formulate_cypher_query(label_or_rel_or_query)
     cursor = memgraph_db.execute_and_fetch(query, params)
 
-    neo4j_dict[threading.get_native_id]["connection"] = memgraph_db
-    neo4j_dict[threading.get_native_id]["cursor"] = cursor
+    neo4j_dict[thread_id][Constants.CONNECTION] = memgraph_db
+    neo4j_dict[thread_id][Constants.CURSOR] = cursor
 
 
 def memgraph(
@@ -754,7 +755,9 @@ def memgraph(
     :return: Stream of rows from Neo4j
     """
     global memgraph_dict
-    cursor = memgraph_dict[threading.get_native_id]["cursor"]
+    
+    thread_id = threading.get_native_id()
+    cursor = memgraph_dict[thread_id][Constants.CURSOR]
 
     return [
         mgp.Record(row=row)
@@ -765,8 +768,10 @@ def memgraph(
 
 def cleanup_migrate_memgraph():
     global memgraph_dict
-    if "connection" in memgraph_dict[threading.get_native_id]:
-        memgraph_dict[threading.get_native_id]["connection"].close()
+    
+    thread_id = threading.get_native_id()
+    if Constants.CONNECTION in memgraph_dict[thread_id]:
+        memgraph_dict[threading.get_native_id][Constants.CONNECTION].close()
     memgraph_dict.pop(threading.get_native_id, None)
 
 
