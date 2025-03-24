@@ -18,11 +18,15 @@ from typing import Any, Dict
 
 
 class Constants:
-    I_COLUMN_NAME = 0
-    CURSOR = "cursor"
+    BATCH_SIZE = 1000
     COLUMN_NAMES = "column_names"
     CONNECTION = "connection"
-    BATCH_SIZE = 1000
+    CURSOR = "cursor"
+    HOST = "host"
+    I_COLUMN_NAME = 0
+    PASSWORD = "password"
+    PORT = "port"
+    USERNAME = "username"
 
 
 ##### MYSQL
@@ -551,10 +555,10 @@ def init_migrate_arrow_flight(
     if len(config_path) > 0:
         config = _combine_config(config=config, config_path=config_path)
 
-    host = config.get("host", None)
-    port = config.get("port", None)
-    username = config.get("username", "")
-    password = config.get("password", "")
+    host = config.get(Constants.HOST, None)
+    port = config.get(Constants.PORT, None)
+    username = config.get(Constants.USERNAME, "")
+    password = config.get(Constants.PASSWORD, "")
 
     # Encode credentials
     auth_string = f"{username}:{password}".encode("utf-8")
@@ -609,8 +613,8 @@ def arrow_flight(
     :return: Stream of rows from Arrow Flight
     """
     global flight_dict
-    thread_id = threading.get_native_id()
 
+    thread_id = threading.get_native_id()
     cursor = flight_dict[thread_id][Constants.CURSOR]
     batch = []
     for _ in range(Constants.BATCH_SIZE):
@@ -628,6 +632,7 @@ def cleanup_migrate_arrow_flight():
     Close the Flight connection per-thread.
     """
     global flight_dict
+
     thread_id = threading.get_native_id()
     if thread_id in flight_dict:
         flight_dict.pop(thread_id, None)
@@ -668,14 +673,6 @@ def _formulate_cypher_query(label_or_rel_or_query: str) -> str:
 
 def _query_is_table(table_or_sql: str) -> bool:
     return len(table_or_sql.split()) == 1
-
-
-def _load_config(path: str) -> Dict[str, Any]:
-    try:
-        with open(path, mode="r") as config:
-            return json.load(config)
-    except Exception:
-        raise OSError("Could not open/read file.")
 
 
 def _combine_config(config: mgp.Map, config_path: str) -> Dict[str, Any]:
