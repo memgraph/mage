@@ -14,8 +14,6 @@ import psycopg2
 import pyarrow.flight as flight
 import re
 import threading
-
-
 from typing import Any, Dict
 
 
@@ -47,21 +45,22 @@ def init_migrate_mysql(
 
     if _query_is_table(table_or_sql):
         table_or_sql = f"SELECT * FROM {table_or_sql};"
+        
+    thread_id = threading.get_native_id()
+    if thread_id not in mysql_dict:
+        mysql_dict[thread_id] = {}
 
-    if threading.get_native_id not in mysql_dict:
-        mysql_dict[threading.get_native_id] = {}
+    if Constants.CURSOR not in mysql_dict[thread_id]:
+        mysql_dict[thread_id][Constants.CURSOR] = None
 
-    if Constants.CURSOR not in mysql_dict[threading.get_native_id]:
-        mysql_dict[threading.get_native_id][Constants.CURSOR] = None
-
-    if mysql_dict[threading.get_native_id][Constants.CURSOR] is None:
+    if mysql_dict[thread_id][Constants.CURSOR] is None:
         connection = mysql_connector.connect(**config)
         cursor = connection.cursor()
         cursor.execute(table_or_sql, params=params)
 
-        mysql_dict[threading.get_native_id][Constants.CONNECTION] = connection
-        mysql_dict[threading.get_native_id][Constants.CURSOR] = cursor
-        mysql_dict[threading.get_native_id][Constants.COLUMN_NAMES] = [
+        mysql_dict[thread_id][Constants.CONNECTION] = connection
+        mysql_dict[thread_id][Constants.CURSOR] = cursor
+        mysql_dict[thread_id][Constants.COLUMN_NAMES] = [
             column[Constants.I_COLUMN_NAME] for column in cursor.description
         ]
 
@@ -84,8 +83,10 @@ def mysql(
     :return: The result table as a stream of rows
     """
     global mysql_dict
-    cursor = mysql_dict[threading.get_native_id][Constants.CURSOR]
-    column_names = mysql_dict[threading.get_native_id][Constants.COLUMN_NAMES]
+    
+    thread_id = threading.get_native_id()
+    cursor = mysql_dict[thread_id][Constants.CURSOR]
+    column_names = mysql_dict[thread_id][Constants.COLUMN_NAMES]
 
     rows = cursor.fetchmany(Constants.BATCH_SIZE)
 
@@ -94,11 +95,13 @@ def mysql(
 
 def cleanup_migrate_mysql():
     global mysql_dict
-    mysql_dict[threading.get_native_id][Constants.CURSOR] = None
-    mysql_dict[threading.get_native_id][Constants.CONNECTION].commit()
-    mysql_dict[threading.get_native_id][Constants.CONNECTION].close()
-    mysql_dict[threading.get_native_id][Constants.CONNECTION] = None
-    mysql_dict[threading.get_native_id][Constants.COLUMN_NAMES] = None
+    
+    thread_id = threading.get_native_id()
+    mysql_dict[thread_id][Constants.CURSOR] = None
+    mysql_dict[thread_id][Constants.CONNECTION].commit()
+    mysql_dict[thread_id][Constants.CONNECTION].close()
+    mysql_dict[thread_id][Constants.CONNECTION] = None
+    mysql_dict[thread_id][Constants.COLUMN_NAMES] = None
 
 
 mgp.add_batch_read_proc(mysql, init_migrate_mysql, cleanup_migrate_mysql)
@@ -126,21 +129,22 @@ def init_migrate_sql_server(
 
     if _query_is_table(table_or_sql):
         table_or_sql = f"SELECT * FROM {table_or_sql};"
+        
+    thread_id = threading.get_native_id()
+    if thread_id not in sql_server_dict:
+        sql_server_dict[thread_id] = {}
 
-    if threading.get_native_id not in sql_server_dict:
-        sql_server_dict[threading.get_native_id] = {}
+    if Constants.CURSOR not in sql_server_dict[thread_id]:
+        sql_server_dict[thread_id][Constants.CURSOR] = None
 
-    if Constants.CURSOR not in sql_server_dict[threading.get_native_id]:
-        sql_server_dict[threading.get_native_id][Constants.CURSOR] = None
-
-    if sql_server_dict[threading.get_native_id][Constants.CURSOR] is None:
+    if sql_server_dict[thread_id][Constants.CURSOR] is None:
         connection = pyodbc.connect(**config)
         cursor = connection.cursor()
         cursor.execute(table_or_sql, *params)
 
-        sql_server_dict[threading.get_native_id][Constants.CONNECTION] = connection
-        sql_server_dict[threading.get_native_id][Constants.CURSOR] = cursor
-        sql_server_dict[threading.get_native_id][Constants.COLUMN_NAMES] = [
+        sql_server_dict[thread_id][Constants.CONNECTION] = connection
+        sql_server_dict[thread_id][Constants.CURSOR] = cursor
+        sql_server_dict[thread_id][Constants.COLUMN_NAMES] = [
             column[Constants.I_COLUMN_NAME] for column in cursor.description
         ]
 
@@ -163,9 +167,10 @@ def sql_server(
     :return: The result table as a stream of rows
     """
     global sql_server_dict
-
-    cursor = sql_server_dict[threading.get_native_id][Constants.CURSOR]
-    column_names = sql_server_dict[threading.get_native_id][Constants.COLUMN_NAMES]
+    
+    thread_id = threading.get_native_id()
+    cursor = sql_server_dict[thread_id][Constants.CURSOR]
+    column_names = sql_server_dict[thread_id][Constants.COLUMN_NAMES]
     rows = cursor.fetchmany(Constants.BATCH_SIZE)
 
     return [mgp.Record(row=_name_row_cells(row, column_names)) for row in rows]
@@ -173,11 +178,13 @@ def sql_server(
 
 def cleanup_migrate_sql_server():
     global sql_server_dict
-    sql_server_dict[threading.get_native_id][Constants.CURSOR] = None
-    sql_server_dict[threading.get_native_id][Constants.CONNECTION].commit()
-    sql_server_dict[threading.get_native_id][Constants.CONNECTION].close()
-    sql_server_dict[threading.get_native_id][Constants.CONNECTION] = None
-    sql_server_dict[threading.get_native_id][Constants.COLUMN_NAMES] = None
+
+    thread_id = threading.get_native_id()
+    sql_server_dict[thread_id][Constants.CURSOR] = None
+    sql_server_dict[thread_id][Constants.CONNECTION].commit()
+    sql_server_dict[thread_id][Constants.CONNECTION].close()
+    sql_server_dict[thread_id][Constants.CONNECTION] = None
+    sql_server_dict[thread_id][Constants.COLUMN_NAMES] = None
 
 
 mgp.add_batch_read_proc(sql_server, init_migrate_sql_server, cleanup_migrate_sql_server)
@@ -209,14 +216,15 @@ def init_migrate_oracle_db(
 
     # To prevent query execution from hanging
     config["disable_oob"] = True
+    
+    thread_id = threading.get_native_id()
+    if thread_id not in oracle_db_dict:
+        oracle_db_dict[thread_id] = {}
 
-    if threading.get_native_id not in oracle_db_dict:
-        oracle_db_dict[threading.get_native_id] = {}
+    if Constants.CURSOR not in oracle_db_dict[thread_id]:
+        oracle_db_dict[thread_id][Constants.CURSOR] = None
 
-    if Constants.CURSOR not in oracle_db_dict[threading.get_native_id]:
-        oracle_db_dict[threading.get_native_id][Constants.CURSOR] = None
-
-    if oracle_db_dict[threading.get_native_id][Constants.CURSOR] is None:
+    if oracle_db_dict[thread_id][Constants.CURSOR] is None:
         connection = oracledb.connect(**config)
         cursor = connection.cursor()
 
@@ -227,9 +235,9 @@ def init_migrate_oracle_db(
         else:
             cursor.execute(table_or_sql, **params)
 
-        oracle_db_dict[threading.get_native_id][Constants.CONNECTION] = connection
-        oracle_db_dict[threading.get_native_id][Constants.CURSOR] = cursor
-        oracle_db_dict[threading.get_native_id][Constants.COLUMN_NAMES] = [
+        oracle_db_dict[thread_id][Constants.CONNECTION] = connection
+        oracle_db_dict[thread_id][Constants.CURSOR] = cursor
+        oracle_db_dict[thread_id][Constants.COLUMN_NAMES] = [
             column[Constants.I_COLUMN_NAME] for column in cursor.description
         ]
 
@@ -253,8 +261,10 @@ def oracle_db(
     """
 
     global oracle_db_dict
-    cursor = oracle_db_dict[threading.get_native_id][Constants.CURSOR]
-    column_names = oracle_db_dict[threading.get_native_id][Constants.COLUMN_NAMES]
+
+    thread_id = threading.get_native_id()
+    cursor = oracle_db_dict[thread_id][Constants.CURSOR]
+    column_names = oracle_db_dict[thread_id][Constants.COLUMN_NAMES]
     rows = cursor.fetchmany(Constants.BATCH_SIZE)
 
     return [mgp.Record(row=_name_row_cells(row, column_names)) for row in rows]
@@ -262,11 +272,13 @@ def oracle_db(
 
 def cleanup_migrate_oracle_db():
     global oracle_db_dict
-    oracle_db_dict[threading.get_native_id][Constants.CURSOR] = None
-    oracle_db_dict[threading.get_native_id][Constants.CONNECTION].commit()
-    oracle_db_dict[threading.get_native_id][Constants.CONNECTION].close()
-    oracle_db_dict[threading.get_native_id][Constants.CONNECTION] = None
-    oracle_db_dict[threading.get_native_id][Constants.COLUMN_NAMES] = None
+
+    thread_id = threading.get_native_id()
+    oracle_db_dict[thread_id][Constants.CURSOR] = None
+    oracle_db_dict[thread_id][Constants.CONNECTION].commit()
+    oracle_db_dict[thread_id][Constants.CONNECTION].close()
+    oracle_db_dict[thread_id][Constants.CONNECTION] = None
+    oracle_db_dict[thread_id][Constants.COLUMN_NAMES] = None
 
 
 mgp.add_batch_read_proc(oracle_db, init_migrate_oracle_db, cleanup_migrate_oracle_db)
@@ -295,20 +307,21 @@ def init_migrate_postgresql(
     if _query_is_table(table_or_sql):
         table_or_sql = f"SELECT * FROM {table_or_sql};"
 
-    if threading.get_native_id not in postgres_dict:
-        postgres_dict[threading.get_native_id] = {}
+    thread_id = threading.get_native_id()
+    if thread_id not in postgres_dict:
+        postgres_dict[thread_id] = {}
 
-    if Constants.CURSOR not in postgres_dict[threading.get_native_id]:
-        postgres_dict[threading.get_native_id][Constants.CURSOR] = None
+    if Constants.CURSOR not in postgres_dict[thread_id]:
+        postgres_dict[thread_id][Constants.CURSOR] = None
 
-    if postgres_dict[threading.get_native_id][Constants.CURSOR] is None:
+    if postgres_dict[thread_id][Constants.CURSOR] is None:
         connection = psycopg2.connect(**config)
         cursor = connection.cursor()
         cursor.execute(table_or_sql, params)
 
-        postgres_dict[threading.get_native_id][Constants.CONNECTION] = connection
-        postgres_dict[threading.get_native_id][Constants.CURSOR] = cursor
-        postgres_dict[threading.get_native_id][Constants.COLUMN_NAMES] = [
+        postgres_dict[thread_id][Constants.CONNECTION] = connection
+        postgres_dict[thread_id][Constants.CURSOR] = cursor
+        postgres_dict[thread_id][Constants.COLUMN_NAMES] = [
             column.name for column in cursor.description
         ]
 
@@ -331,8 +344,10 @@ def postgresql(
     :return: The result table as a stream of rows
     """
     global postgres_dict
-    cursor = postgres_dict[threading.get_native_id][Constants.CURSOR]
-    column_names = postgres_dict[threading.get_native_id][Constants.COLUMN_NAMES]
+    
+    thread_id = threading.get_native_id()
+    cursor = postgres_dict[thread_id][Constants.CURSOR]
+    column_names = postgres_dict[thread_id][Constants.COLUMN_NAMES]
 
     rows = cursor.fetchmany(Constants.BATCH_SIZE)
 
@@ -341,11 +356,13 @@ def postgresql(
 
 def cleanup_migrate_postgresql():
     global postgres_dict
-    postgres_dict[threading.get_native_id][Constants.CURSOR] = None
-    postgres_dict[threading.get_native_id][Constants.CONNECTION].commit()
-    postgres_dict[threading.get_native_id][Constants.CONNECTION].close()
-    postgres_dict[threading.get_native_id][Constants.CONNECTION] = None
-    postgres_dict[threading.get_native_id][Constants.COLUMN_NAMES] = None
+    
+    thread_id = threading.get_native_id()
+    postgres_dict[thread_id][Constants.CURSOR] = None
+    postgres_dict[thread_id][Constants.CONNECTION].commit()
+    postgres_dict[thread_id][Constants.CONNECTION].close()
+    postgres_dict[thread_id][Constants.CONNECTION] = None
+    postgres_dict[thread_id][Constants.COLUMN_NAMES] = None
 
 
 mgp.add_batch_read_proc(postgresql, init_migrate_postgresql, cleanup_migrate_postgresql)
@@ -404,11 +421,12 @@ def init_migrate_s3(
     csv_reader = csv.reader(text_stream)
     column_names = next(csv_reader)  # First row contains column names
 
-    if threading.get_native_id not in s3_dict:
-        s3_dict[threading.get_native_id] = {}
+    thread_id = threading.get_native_id()
+    if thread_id not in s3_dict:
+        s3_dict[thread_id] = {}
 
-    s3_dict[threading.get_native_id][Constants.CURSOR] = csv_reader
-    s3_dict[threading.get_native_id][Constants.COLUMN_NAMES] = column_names
+    s3_dict[thread_id][Constants.CURSOR] = csv_reader
+    s3_dict[thread_id][Constants.COLUMN_NAMES] = column_names
 
 
 def s3(
@@ -425,8 +443,10 @@ def s3(
     :return: The result table as a stream of rows
     """
     global s3_dict
-    csv_reader = s3_dict[threading.get_native_id][Constants.CURSOR]
-    column_names = s3_dict[threading.get_native_id][Constants.COLUMN_NAMES]
+    
+    thread_id = threading.get_native_id()
+    csv_reader = s3_dict[thread_id][Constants.CURSOR]
+    column_names = s3_dict[thread_id][Constants.COLUMN_NAMES]
 
     batch_rows = []
     for _ in range(Constants.BATCH_SIZE):
@@ -444,7 +464,9 @@ def cleanup_migrate_s3():
     Clean up S3 dictionary references per-thread.
     """
     global s3_dict
-    s3_dict.pop(threading.get_native_id, None)
+    
+    thread_id = threading.get_native_id()
+    s3_dict.pop(thread_id, None)
 
 
 mgp.add_batch_read_proc(s3, init_migrate_s3, cleanup_migrate_s3)
@@ -461,8 +483,9 @@ def init_migrate_neo4j(
 ):
     global neo4j_dict
 
-    if threading.get_native_id not in neo4j_dict:
-        neo4j_dict[threading.get_native_id] = {}
+    thread_id = threading.get_native_id()
+    if thread_id not in neo4j_dict:
+        neo4j_dict[thread_id] = {}
 
     if len(config_path) > 0:
         config = _combine_config(config=config, config_path=config_path)
@@ -471,8 +494,8 @@ def init_migrate_neo4j(
     query = _formulate_cypher_query(label_or_rel_or_query)
     cursor = neo4j_db.execute_and_fetch(query, params)
 
-    neo4j_dict[threading.get_native_id]["connection"] = neo4j_db
-    neo4j_dict[threading.get_native_id]["cursor"] = cursor
+    neo4j_dict[thread_id][Constants.CONNECTION] = neo4j_db
+    neo4j_dict[thread_id][Constants.CURSOR] = cursor
 
 
 def neo4j(
@@ -491,7 +514,9 @@ def neo4j(
     :return: Stream of rows from Neo4j
     """
     global neo4j_dict
-    cursor = neo4j_dict[threading.get_native_id]["cursor"]
+    
+    thread_id = threading.get_native_id()
+    cursor = neo4j_dict[thread_id][Constants.CURSOR]
 
     return [
         mgp.Record(row=row)
@@ -502,9 +527,11 @@ def neo4j(
 
 def cleanup_migrate_neo4j():
     global neo4j_dict
-    if "connection" in neo4j_dict[threading.get_native_id]:
-        neo4j_dict[threading.get_native_id]["connection"].close()
-    neo4j_dict.pop(threading.get_native_id, None)
+    
+    thread_id = threading.get_native_id()
+    if Constants.CONNECTION in neo4j_dict[thread_id]:
+        neo4j_dict[thread_id][Constants.CONNECTION].close()
+    neo4j_dict.pop(thread_id, None)
 
 
 mgp.add_batch_read_proc(neo4j, init_migrate_neo4j, cleanup_migrate_neo4j)
@@ -622,12 +649,19 @@ def _formulate_cypher_query(label_or_rel_or_query: str) -> str:
 
     if node_match:
         label = node_match.group(1)
-        return f"MATCH (n:{label}) RETURN properties(n) as properties"
+        return (
+            f"MATCH (n:{label}) RETURN labels(n) as labels, properties(n) as properties"
+        )
     elif rel_match:
         rel_type = rel_match.group(1)
         return f"""
     MATCH (n)-[r:{rel_type}]->(m)
-    RETURN properties(n) as from_properties, properties(r) as edge_properties, properties(m) as to_properties
+    RETURN 
+        labels(n) as from_labels,
+        labels(m) as to_labels, 
+        properties(n) as from_properties, 
+        properties(r) as edge_properties, 
+        properties(m) as to_properties
     """
     return label_or_rel_or_query  # Assume it's a valid query
 
