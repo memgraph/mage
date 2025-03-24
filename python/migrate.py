@@ -469,8 +469,8 @@ def init_migrate_neo4j(
     query = _formulate_cypher_query(label_or_rel_or_query)
     cursor = neo4j_db.execute_and_fetch(query, params)
 
-    neo4j_dict[threading.get_native_id]["connection"] = neo4j_db
-    neo4j_dict[threading.get_native_id]["cursor"] = cursor
+    neo4j_dict[threading.get_native_id][Constants.CONNECTION] = neo4j_db
+    neo4j_dict[threading.get_native_id][Constants.CURSOR] = cursor
 
 
 def neo4j(
@@ -489,7 +489,7 @@ def neo4j(
     :return: Stream of rows from Neo4j
     """
     global neo4j_dict
-    cursor = neo4j_dict[threading.get_native_id]["cursor"]
+    cursor = neo4j_dict[threading.get_native_id][Constants.CURSOR]
 
     return [
         mgp.Record(row=row)
@@ -500,8 +500,8 @@ def neo4j(
 
 def cleanup_migrate_neo4j():
     global neo4j_dict
-    if "connection" in neo4j_dict[threading.get_native_id]:
-        neo4j_dict[threading.get_native_id]["connection"].close()
+    if Constants.CONNECTION in neo4j_dict[threading.get_native_id]:
+        neo4j_dict[threading.get_native_id][Constants.CONNECTION].close()
     neo4j_dict.pop(threading.get_native_id, None)
 
 
@@ -519,7 +519,9 @@ def _formulate_cypher_query(label_or_rel_or_query: str) -> str:
 
     if node_match:
         label = node_match.group(1)
-        return f"MATCH (n:{label}) RETURN labels(n) as labels, properties(n) as properties"
+        return (
+            f"MATCH (n:{label}) RETURN labels(n) as labels, properties(n) as properties"
+        )
     elif rel_match:
         rel_type = rel_match.group(1)
         return f"""
