@@ -49,7 +49,7 @@ def init_migrate_mysql(
 
     if _query_is_table(table_or_sql):
         table_or_sql = f"SELECT * FROM {table_or_sql};"
-        
+
     thread_id = threading.get_native_id()
     if thread_id not in mysql_dict:
         mysql_dict[thread_id] = {}
@@ -87,7 +87,7 @@ def mysql(
     :return: The result table as a stream of rows
     """
     global mysql_dict
-    
+
     thread_id = threading.get_native_id()
     cursor = mysql_dict[thread_id][Constants.CURSOR]
     column_names = mysql_dict[thread_id][Constants.COLUMN_NAMES]
@@ -99,7 +99,7 @@ def mysql(
 
 def cleanup_migrate_mysql():
     global mysql_dict
-    
+
     thread_id = threading.get_native_id()
     mysql_dict[thread_id][Constants.CURSOR] = None
     mysql_dict[thread_id][Constants.CONNECTION].commit()
@@ -133,7 +133,7 @@ def init_migrate_sql_server(
 
     if _query_is_table(table_or_sql):
         table_or_sql = f"SELECT * FROM {table_or_sql};"
-        
+
     thread_id = threading.get_native_id()
     if thread_id not in sql_server_dict:
         sql_server_dict[thread_id] = {}
@@ -171,7 +171,7 @@ def sql_server(
     :return: The result table as a stream of rows
     """
     global sql_server_dict
-    
+
     thread_id = threading.get_native_id()
     cursor = sql_server_dict[thread_id][Constants.CURSOR]
     column_names = sql_server_dict[thread_id][Constants.COLUMN_NAMES]
@@ -220,7 +220,7 @@ def init_migrate_oracle_db(
 
     # To prevent query execution from hanging
     config["disable_oob"] = True
-    
+
     thread_id = threading.get_native_id()
     if thread_id not in oracle_db_dict:
         oracle_db_dict[thread_id] = {}
@@ -348,7 +348,7 @@ def postgresql(
     :return: The result table as a stream of rows
     """
     global postgres_dict
-    
+
     thread_id = threading.get_native_id()
     cursor = postgres_dict[thread_id][Constants.CURSOR]
     column_names = postgres_dict[thread_id][Constants.COLUMN_NAMES]
@@ -360,7 +360,7 @@ def postgresql(
 
 def cleanup_migrate_postgresql():
     global postgres_dict
-    
+
     thread_id = threading.get_native_id()
     postgres_dict[thread_id][Constants.CURSOR] = None
     postgres_dict[thread_id][Constants.CONNECTION].commit()
@@ -447,7 +447,7 @@ def s3(
     :return: The result table as a stream of rows
     """
     global s3_dict
-    
+
     thread_id = threading.get_native_id()
     csv_reader = s3_dict[thread_id][Constants.CURSOR]
     column_names = s3_dict[thread_id][Constants.COLUMN_NAMES]
@@ -468,7 +468,7 @@ def cleanup_migrate_s3():
     Clean up S3 dictionary references per-thread.
     """
     global s3_dict
-    
+
     thread_id = threading.get_native_id()
     s3_dict.pop(thread_id, None)
 
@@ -518,7 +518,7 @@ def neo4j(
     :return: Stream of rows from Neo4j
     """
     global neo4j_dict
-    
+
     thread_id = threading.get_native_id()
     cursor = neo4j_dict[thread_id][Constants.CURSOR]
 
@@ -531,7 +531,7 @@ def neo4j(
 
 def cleanup_migrate_neo4j():
     global neo4j_dict
-    
+
     thread_id = threading.get_native_id()
     if Constants.CONNECTION in neo4j_dict[thread_id]:
         neo4j_dict[thread_id][Constants.CONNECTION].close()
@@ -649,10 +649,10 @@ def _formulate_cypher_query(label_or_rel_or_query: str) -> str:
         return (
             label_or_rel_or_query  # Treat it as a Cypher query if multiple words exist
         )
-        
+
     # Try to see if the syntax matches similar to (:Label) to migrate only nodes
     node_match = re.match(r"^\(\s*:(\w+)\s*\)$", label_or_rel_or_query)
-    
+
     # Try to see if the syntax matches similar to [:REL_TYPE] to migrate only relationships
     rel_match = re.match(r"^\[\s*:(\w+)\s*\]$", label_or_rel_or_query)
 
@@ -666,11 +666,11 @@ def _formulate_cypher_query(label_or_rel_or_query: str) -> str:
         rel_type = rel_match.group(1)
         return f"""
     MATCH (n)-[r:{rel_type}]->(m)
-    RETURN 
+    RETURN
         labels(n) as from_labels,
-        labels(m) as to_labels, 
-        properties(n) as from_properties, 
-        properties(r) as edge_properties, 
+        labels(m) as to_labels,
+        properties(n) as from_properties,
+        properties(r) as edge_properties,
         properties(m) as to_properties
     """
     return label_or_rel_or_query  # Assume it's a valid query
