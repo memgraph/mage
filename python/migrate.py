@@ -11,10 +11,7 @@ import oracledb
 import os
 import pyodbc
 import psycopg2
-<<<<<<< HEAD
 import pyarrow.flight as flight
-=======
->>>>>>> main
 import re
 import threading
 from typing import Any, Dict
