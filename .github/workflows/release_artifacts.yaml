@@ -51,7 +51,7 @@ jobs:
         build_scope: ["with ML", "without ML"]
         build_type: ["Release", "RelWithDebInfo"]
         build_arch: ["amd64", "arm64"]
-        malloc: ['false']
+        malloc: [false]
         include:
           - build_type: "RelWithDebInfo"
             rwid_ext: "-relwithdebinfo"
@@ -76,5 +76,5 @@ jobs:
       s3_dest_bucket: "deps.memgraph.io"
       s3_dest_dir: "mage/v${{ github.event.inputs.mage_version}}"
       large_runner: 'false'
-      malloc: "${{ matrix.malloc }}"
+      malloc: ${{ matrix.malloc }}
     secrets: inherit
