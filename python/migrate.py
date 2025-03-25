@@ -746,13 +746,13 @@ def memgraph(
     params: mgp.Nullable[mgp.Any] = None,
 ) -> mgp.Record(row=mgp.Map):
     """
-    Migrate data from Neo4j to Memgraph. Can migrate a specific node label, relationship type, or execute a custom Cypher query.
+    Migrate data from Memgraph to another Memgraph instance. Can migrate a specific node label, relationship type, or execute a custom Cypher query.
 
     :param label_or_rel_or_query: Node label, relationship type, or a Cypher query
-    :param config: Connection configuration for Neo4j
+    :param config: Connection configuration for Memgraph
     :param config_path: Path to a JSON file containing connection parameters
     :param params: Optional query parameters
-    :return: Stream of rows from Neo4j
+    :return: Stream of rows from Memgraph
     """
     global memgraph_dict
     
