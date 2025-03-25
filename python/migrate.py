@@ -722,11 +722,11 @@ def init_migrate_memgraph(
     config_path: str = "",
     params: mgp.Nullable[mgp.Any] = None,
 ):
-    global neo4j_dict
+    global memgraph_dict
     
     thread_id = threading.get_native_id()
-    if thread_id not in neo4j_dict:
-        neo4j_dict[thread_id] = {}
+    if thread_id not in memgraph_dict:
+        memgraph_dict[thread_id] = {}
 
     if len(config_path) > 0:
         config = _combine_config(config=config, config_path=config_path)
