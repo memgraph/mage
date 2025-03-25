@@ -736,7 +736,7 @@ def init_migrate_memgraph(
     cursor = memgraph_db.execute_and_fetch(query, params)
 
     memgraph_dict[thread_id][Constants.CONNECTION] = memgraph_db
-    neo4memgraph_dictj_dict[thread_id][Constants.CURSOR] = cursor
+    memgraph_dict[thread_id][Constants.CURSOR] = cursor
 
 
 def memgraph(
