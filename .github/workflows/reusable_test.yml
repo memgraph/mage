@@ -104,7 +104,7 @@ jobs:
           fi
 
           echo "Using tag/branch: $tag"
-          echo "MAGE_COMMIT=${tag}" >> GITHUB_ENV
+          echo "MAGE_COMMIT=${tag}" >> $GITHUB_ENV
 
 
       - name: Set up and check memgraph download link
