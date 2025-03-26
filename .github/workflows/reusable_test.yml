@@ -79,15 +79,23 @@ jobs:
             echo "MEMGRAPH_VERSION=$clean_version" >> $GITHUB_ENV
           fi
           
-      - name: Get Current MAGE Tag
-        run: |
-          # Get the current tag, or commit hash if a tag doesn't exist
-          # This is used later in image creation, so that the exact version of 
-          # the MAGE git repository can be checked out within the container, 
-          # when we run the script to convert to "dev" container
-          tag=$(./get_tag.sh)
-          echo "Using tag/commit hash: $tag"
-          echo "MAGE_COMMIT=${tag}" >> GITHUB_ENV
+          - name: Get Current MAGE Tag
+          run: |
+            # Get the current tag, or branch if a tag doesn't exist
+            # This is used later in image creation, so that the exact version of 
+            # the MAGE git repository can be checked out within the container, 
+            # when we run the script to convert to "dev" container
+            tag=$(./get_tag.sh)
+  
+            # If tag is empty, fallback to the branch name from GITHUB_REF
+            if [ -z "$tag" ]; then
+              echo "No valid tag found; using branch name."
+              # Remove the "refs/heads/" prefix to extract the branch name
+              tag="${GITHUB_REF#refs/heads/}"
+            fi
+  
+            echo "Using tag/branch: $tag"
+            echo "MAGE_COMMIT=${tag}" >> GITHUB_ENV
 
 
       - name: Set up and check memgraph download link
