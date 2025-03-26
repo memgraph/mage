@@ -138,6 +138,11 @@ jobs:
           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
           echo "ARTIFACT_NAME=${ARTIFACT_NAME}" >> $GITHUB_ENV
 
+      - name: Set CI branch name for PR events
+        if: ${{ github.event_name == 'pull_request' }}
+        run: echo "CI_BRANCH=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
+      
+
       - name: Get Current MAGE Tag
         run: |
           # Get the current tag, or branch if a tag doesn't exist
@@ -146,11 +151,15 @@ jobs:
           # when we run the script to convert to "dev" container
           tag=$(./get_tag.sh)
 
-          # If tag is empty, fallback to the branch name from GITHUB_REF
+          # If tag is empty, fallback to the branch name
           if [ -z "$tag" ]; then
             echo "No valid tag found; using branch name."
-            # Remove the "refs/heads/" prefix to extract the branch name
-            tag="${GITHUB_REF#refs/heads/}"
+            # If CI_BRANCH is set (for PR events), use it; otherwise, use GITHUB_REF
+            if [ -n "$CI_BRANCH" ]; then
+              tag="$CI_BRANCH"
+            else
+              tag="${GITHUB_REF#refs/heads/}"
+            fi
           fi
 
           echo "Using tag/branch: $tag"
