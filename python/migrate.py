@@ -558,11 +558,11 @@ def _formulate_cypher_query(label_or_rel_or_query: str) -> str:
         rel_type = rel_match.group(1)
         return f"""
     MATCH (n)-[r:{rel_type}]->(m)
-    RETURN 
+    RETURN
         labels(n) as from_labels,
-        labels(m) as to_labels, 
-        properties(n) as from_properties, 
-        properties(r) as edge_properties, 
+        labels(m) as to_labels,
+        properties(n) as from_properties,
+        properties(r) as edge_properties,
         properties(m) as to_properties
     """
 
