@@ -78,16 +78,33 @@ jobs:
             clean_version=$(echo "${{ inputs.memgraph_version }}" | sed -E 's/(.*)-rc.*/\1/')
             echo "MEMGRAPH_VERSION=$clean_version" >> $GITHUB_ENV
           fi
-          
+
+      - name: Set CI branch name for PR events
+        if: ${{ github.event_name == 'pull_request' }}
+        run: echo "CI_BRANCH=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
+      
+
       - name: Get Current MAGE Tag
         run: |
-          # Get the current tag, or commit hash if a tag doesn't exist
+          # Get the current tag, or branch if a tag doesn't exist
           # This is used later in image creation, so that the exact version of 
           # the MAGE git repository can be checked out within the container, 
           # when we run the script to convert to "dev" container
           tag=$(./get_tag.sh)
-          echo "Using tag/commit hash: $tag"
-          echo "MAGE_COMMIT=${tag}" >> GITHUB_ENV
+
+          # If tag is empty, fallback to the branch name
+          if [ -z "$tag" ]; then
+            echo "No valid tag found; using branch name."
+            # If CI_BRANCH is set (for PR events), use it; otherwise, use GITHUB_REF
+            if [ -n "$CI_BRANCH" ]; then
+              tag="$CI_BRANCH"
+            else
+              tag="${GITHUB_REF#refs/heads/}"
+            fi
+          fi
+
+          echo "Using tag/branch: $tag"
+          echo "MAGE_COMMIT=${tag}" >> $GITHUB_ENV
 
 
       - name: Set up and check memgraph download link
@@ -149,7 +166,7 @@ jobs:
           --platform linux/${{ inputs.arch }} \
           --file Dockerfile.${{ inputs.build_scope == 'without ML' && 'no_ML' || 'release' }} \
           --build-arg MGBUILD_IMAGE=$MGBUILD_IMAGE \
-          --build-arg MAGE_COMMIT="${{ env.MAGE_COMMMIT }}" \
+          --build-arg MAGE_COMMIT="${{ env.MAGE_COMMIT }}" \
           --load .
 
           docker network create ${{ env.MEMGRAPH_NETWORK }} || true

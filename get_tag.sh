@@ -5,7 +5,7 @@ tag=$(git tag --points-at HEAD)
 
 # If no tag is found, fall back to the current commit hash
 if [ -z "$tag" ]; then
-    tag=$(git rev-parse HEAD)
+    tag=""
 fi
 
 echo "$tag"
