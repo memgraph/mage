@@ -166,7 +166,7 @@ jobs:
           --platform linux/${{ inputs.arch }} \
           --file Dockerfile.${{ inputs.build_scope == 'without ML' && 'no_ML' || 'release' }} \
           --build-arg MGBUILD_IMAGE=$MGBUILD_IMAGE \
-          --build-arg MAGE_COMMIT="${{ env.MAGE_COMMMIT }}" \
+          --build-arg MAGE_COMMIT="${{ env.MAGE_COMMIT }}" \
           --load .
 
           docker network create ${{ env.MEMGRAPH_NETWORK }} || true

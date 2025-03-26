@@ -232,7 +232,7 @@ jobs:
           --file ${{ env.DOCKERFILE }} \
           --build-arg BUILD_TYPE=${{ env.MAGE_BUILD_TYPE }} \
           --build-arg MGBUILD_IMAGE=$MGBUILD_IMAGE \
-          --build-arg MAGE_COMMIT="${{ env.MAGE_COMMMIT }}" \
+          --build-arg MAGE_COMMIT="${{ env.MAGE_COMMIT }}" \
           --load .
 
           # print the image size in both SI and IEC units
