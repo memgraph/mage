@@ -110,7 +110,7 @@ COPY memgraph-${TARGETARCH}.deb .
 
 # fix `memgraph` UID and GID for compatibility with previous Debian releases
 RUN groupadd -g 103 memgraph && \
-    useradd -u 101 -g memgraph -m -d /var/lib/memgraph memgraph && \
+    useradd -u 101 -g memgraph -m -d /var/lib/memgraph -s /bin/bash memgraph && \
     dpkg -i memgraph-${TARGETARCH}.deb && \
     rm memgraph-${TARGETARCH}.deb 
 

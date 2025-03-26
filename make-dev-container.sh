@@ -47,7 +47,22 @@ echo "Cloning MAGE repo commit/tag: $MAGE_COMMIT"
 cd /root
 git clone https://github.com/memgraph/mage.git --recurse-submodules
 cd /root/mage
-git checkout $MAGE_COMMIT
+
+# Check if MAGE_COMMIT matches a version tag format: vX.Y or vX.Y.Z
+if [[ "$MAGE_COMMIT" =~ ^v[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+    echo "Detected valid tag format. Checking out tag: $MAGE_COMMIT"
+    git checkout "$MAGE_COMMIT"
+else
+    echo "Detected branch name. Checking out branch: $MAGE_COMMIT"
+    git checkout "$MAGE_COMMIT"
+    
+    echo "Fetching latest main branch..."
+    git fetch origin main
+
+    echo "Merging origin/main into branch $MAGE_COMMIT..."
+    git merge origin/main
+fi
+
 cd /
 
 echo "Copying repo files to /mage"
