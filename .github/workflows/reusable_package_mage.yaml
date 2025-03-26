@@ -138,15 +138,32 @@ jobs:
           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
           echo "ARTIFACT_NAME=${ARTIFACT_NAME}" >> $GITHUB_ENV
 
+      - name: Set CI branch name for PR events
+        if: ${{ github.event_name == 'pull_request' }}
+        run: echo "CI_BRANCH=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
+      
+
       - name: Get Current MAGE Tag
         run: |
-          # Get the current tag, or commit hash if a tag doesn't exist
+          # Get the current tag, or branch if a tag doesn't exist
           # This is used later in image creation, so that the exact version of 
           # the MAGE git repository can be checked out within the container, 
           # when we run the script to convert to "dev" container
           tag=$(./get_tag.sh)
-          echo "Using tag/commit hash: $tag"
-          echo "MAGE_COMMIT=${tag}" >> GITHUB_ENV
+
+          # If tag is empty, fallback to the branch name
+          if [ -z "$tag" ]; then
+            echo "No valid tag found; using branch name."
+            # If CI_BRANCH is set (for PR events), use it; otherwise, use GITHUB_REF
+            if [ -n "$CI_BRANCH" ]; then
+              tag="$CI_BRANCH"
+            else
+              tag="${GITHUB_REF#refs/heads/}"
+            fi
+          fi
+
+          echo "Using tag/branch: $tag"
+          echo "MAGE_COMMIT=${tag}" >> $GITHUB_ENV
 
 
       - name: Set target dockerfile
@@ -215,7 +232,7 @@ jobs:
           --file ${{ env.DOCKERFILE }} \
           --build-arg BUILD_TYPE=${{ env.MAGE_BUILD_TYPE }} \
           --build-arg MGBUILD_IMAGE=$MGBUILD_IMAGE \
-          --build-arg MAGE_COMMIT="${{ env.MAGE_COMMMIT }}" \
+          --build-arg MAGE_COMMIT="${{ env.MAGE_COMMIT }}" \
           --load .
 
           # print the image size in both SI and IEC units
