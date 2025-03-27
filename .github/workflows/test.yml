@@ -52,7 +52,7 @@ jobs:
       fail-fast: false
       matrix:
         mg_version: ["3.1.1"]
-        mg_rc_version: ["rc2"]
+        mg_rc_version: ["rc3"]
         arch: ["amd64", "arm64"]
         build_scope: ["with ML", "without ML"]
     uses: ./.github/workflows/reusable_test.yml
