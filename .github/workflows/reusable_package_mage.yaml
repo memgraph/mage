@@ -224,9 +224,16 @@ jobs:
           echo "Using base image: $MGBUILD_IMAGE"
           echo "Image Tag: ${{ env.IMAGE_TAG }}"
 
-          # target is always "prod" now, we convert to dev container afterwards
+          # target is "prod" for Release and "debug" for RelWithDebInfo
+          if [ "${{ env.MAGE_BUILD_TYPE }}" = "RelWithDebInfo" ]; then
+            DOCKER_TARGET=debug
+          else
+            DOCKER_TARGET=prod
+          fi
+          echo "Using target: $DOCKER_TARGET"
+
           docker buildx build \
-          --target prod \
+          --target $DOCKER_TARGET \
           --platform linux/${{ inputs.arch }} \
           --tag ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} \
           --file ${{ env.DOCKERFILE }} \
