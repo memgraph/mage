@@ -81,7 +81,8 @@ RUN source /opt/toolchain-v6/activate && curl https://sh.rustup.rs -sSf | sh -s 
 EXPOSE 7687
 
 
-FROM ubuntu:24.04 as prod
+
+FROM ubuntu:24.04 as base
 
 USER root
 
@@ -137,6 +138,21 @@ COPY --from=builder /usr/lib/memgraph/auth_module/ /usr/lib/memgraph/auth_module
 COPY --from=builder /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
 COPY --from=builder --chown=memgraph:memgraph /var/lib/memgraph/.local/ /var/lib/memgraph/.local/ 
 
+# copy script to convert to dev container
+COPY --from=builder /mage/make-dev-container.sh /make-dev-container.sh
+
+FROM base as prod
+
+USER root
+
+ARG TARGETARCH
+ARG PY_VERSION_DEFAULT=3.12
+ARG MAGE_COMMIT
+ARG BUILD_TYPE
+ENV BUILD_TYPE=${BUILD_TYPE}
+ENV PY_VERSION ${PY_VERSION_DEFAULT}
+ENV MAGE_COMMIT=${MAGE_COMMIT}
+
 # Copy e2e tests
 COPY --from=builder --chown=memgraph:memgraph /mage/e2e/ /mage/e2e/
 COPY --from=builder --chown=memgraph:memgraph /mage/e2e_correctness/ /mage/e2e_correctness/
@@ -147,8 +163,34 @@ COPY --from=builder --chown=memgraph:memgraph /mage/run_e2e_correctness_tests.sh
 COPY --from=builder --chown=memgraph:memgraph /mage/python/requirements.txt /mage/python/requirements.txt
 COPY --from=builder --chown=memgraph:memgraph /mage/python/tests/requirements.txt /mage/python/tests/requirements.txt 
 
-# copy script to convert to dev container
-COPY --from=builder /mage/make-dev-container.sh /make-dev-container.sh
+USER memgraph
+EXPOSE 7687
+
+ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
+CMD [""]
+
+
+FROM base as debug
+
+USER root
+
+ARG TARGETARCH
+ARG PY_VERSION_DEFAULT=3.12
+ARG MAGE_COMMIT
+ARG BUILD_TYPE
+ENV BUILD_TYPE=${BUILD_TYPE}
+ENV PY_VERSION ${PY_VERSION_DEFAULT}
+ENV MAGE_COMMIT=${MAGE_COMMIT}
+
+
+# Add gdb
+RUN apt-get update && apt-get install -y \
+    gdb \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* 
+
+# Copy entire mage repo
+COPY --from=builder --chown=memgraph:memgraph /mage/ /mage/
 
 USER memgraph
 EXPOSE 7687
