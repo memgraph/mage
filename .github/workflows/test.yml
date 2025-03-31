@@ -104,7 +104,7 @@ jobs:
     with:
       arch: "${{ matrix.arch }}"
       build_scope: "${{ matrix.build_scope }}"
-      memgraph_version: "3.0.0"
+      memgraph_version: "3.1.1"
       memgraph_ref: "master"
       memgraph_ref_update: "true"
     secrets: inherit
