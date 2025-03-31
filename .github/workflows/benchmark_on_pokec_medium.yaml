@@ -59,9 +59,9 @@ jobs:
           git checkout ${{ env.MEMGRAPH_BRANCH }}
           git pull
 
-          - name: Set up Docker Buildx
-          id: buildx
-          uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
       
       - name: Spin up mgbuild container
         run: |
