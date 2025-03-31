@@ -41,7 +41,7 @@ jobs:
       MEMGRAPH_ORGANIZATION_NAME: ${{ secrets.MEMGRAPH_ORGANIZATION_NAME }}
       OS: ubuntu-24.04
       TOOLCHAIN: v6
-      ARCH: amd # TODO: allow amd
+      ARCH: amd # TODO: allow arm
       BUILD_TYPE: Release
       MEMGRAPH_BRANCH: master
 
@@ -62,8 +62,17 @@ jobs:
           - name: Set up Docker Buildx
           id: buildx
           uses: docker/setup-buildx-action@v3
+      
+      - name: Spin up mgbuild container
+        run: |
+          cd cpp/memgraph
+          ./release/package/mgbuild.sh \
+          --toolchain ${{ env.TOOLCHAIN }} \
+          --os ${{ env.OS }} \
+          --arch ${{ env.ARCH }} \
+          run
 
-      - name: Build memgraph container
+      - name: Build release binary
         run: |
           cd cpp/memgraph
           ./release/package/mgbuild.sh \
@@ -71,7 +80,7 @@ jobs:
           --os ${{ env.OS }} \
           --arch ${{ env.ARCH }} \
           --build-type ${{ env.BUILD_TYPE }} \
-          package-memgraph
+          build-memgraph
 
       - name: Build mage container
         run: |
@@ -86,7 +95,7 @@ jobs:
         run: |
           cd cpp/memgraph
           ./release/package/mgbuild.sh \
-          --toolchain ${{ env.toolchain }} \
-          --os ${{ env.os }} \
-          --arch ${{ env.arch }} \
+          --toolchain ${{ env.TOOLCHAIN }} \
+          --os ${{ env.OS }} \
+          --arch ${{ env.ARCH }} \
           stop --remove
