@@ -1,0 +1,88 @@
+name: Run benchmark on pokec medium dataset
+
+on:
+  workflow_dispatch:
+    inputs:
+      mage_build_arch:
+        type: choice
+        description: "Mage build architecture"
+        default: 'amd64'
+        options:
+          - "amd64"
+          - "arm64"
+      mage_build_scope:
+        type: choice
+        description: "Mage build scope"
+        default: 'with ML'
+        options:
+          - "with ML"
+          - "without ML"
+      memgraph_branch:
+        type: string
+        description: "Memgraph branch to build from."
+        default: "master"
+      mage_branch:
+        type: string
+        description: "Mage branch to build from."
+        default: "main"
+
+jobs:
+  benchmark_on_pokec_medium:
+    name: "Benchmark on pokec medium dataset"
+    runs-on: ["self-hosted", "DockerMgBuild", "X64"] # amd64
+    timeout-minutes: 120
+    env:
+      THREADS: 24
+      MEMGRAPH_ENTERPRISE_LICENSE: ${{ secrets.MEMGRAPH_ENTERPRISE_LICENSE }}
+      MEMGRAPH_ORGANIZATION_NAME: ${{ secrets.MEMGRAPH_ORGANIZATION_NAME }}
+      OS: ubuntu-24.04
+      TOOLCHAIN: v6
+      ARCH: amd # TODO: allow amd
+      BUILD_TYPE: Release
+      BRANCH: master
+
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout specific branch in submodule
+        run: |
+          cd cpp/memgraph
+          git checkout ${{ inputs.memgraph_branch }}
+          git pull
+
+          - name: Set up Docker Buildx
+          id: buildx
+          uses: docker/setup-buildx-action@v3
+
+      - name: Build memgraph container
+        run: |
+          cd cpp/memgraph
+          ./release/package/mgbuild.sh \
+          --toolchain ${{ env.TOOLCHAIN }} \
+          --os ${{ env.OS }} \
+          --arch ${{ env.ARCH }} \
+          --build-type ${{ env.BUILD_TYPE }} \
+          package-memgraph
+
+      - name: Build mage container
+        run: |
+          echo "Pretend to build mage container"
+
+      - name: Run benchmarks
+        run: |
+          echo "Pretend to run benchmarks"
+
+      - name: "Stop mgbuild container"
+        if: always()
+        run: |
+          cd cpp/memgraph
+          ./release/package/mgbuild.sh \
+          --toolchain ${{ env.toolchain }} \
+          --os ${{ env.os }} \
+          --arch ${{ env.arch }} \
+          stop --remove

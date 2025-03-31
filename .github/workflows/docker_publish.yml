@@ -17,7 +17,7 @@ on:
       additional_tag:
         type: choice
         default: 'latest'
-        descritpion: "Additional tag for the image"
+        description: "Additional tag for the image"
         required: true
         options:
           - 'latest'
