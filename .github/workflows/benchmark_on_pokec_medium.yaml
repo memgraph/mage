@@ -1,6 +1,10 @@
 name: Run benchmark on pokec medium dataset
 
 on:
+  push:
+    branches:
+      - benchmarks-ci
+
   workflow_dispatch:
     inputs:
       mage_build_arch:
@@ -39,7 +43,7 @@ jobs:
       TOOLCHAIN: v6
       ARCH: amd # TODO: allow amd
       BUILD_TYPE: Release
-      BRANCH: master
+      MEMGRAPH_BRANCH: master
 
     steps:
       - name: Checkout repository and submodules
@@ -52,7 +56,7 @@ jobs:
       - name: Checkout specific branch in submodule
         run: |
           cd cpp/memgraph
-          git checkout ${{ inputs.memgraph_branch }}
+          git checkout ${{ env.MEMGRAPH_BRANCH }}
           git pull
 
           - name: Set up Docker Buildx
