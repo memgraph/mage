@@ -4,10 +4,6 @@ concurrency:
   cancel-in-progress: true
 
 on: 
-  push:
-    tags:
-      - "v*.*.*-rc*"
-      - "v*.*-rc*"
   schedule:
     - cron: "0 1 * * *" #UTC
   pull_request:
