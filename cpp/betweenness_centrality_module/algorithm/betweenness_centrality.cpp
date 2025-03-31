@@ -1,4 +1,3 @@
-#include <omp.h>
 #include <queue>
 #include <stack>
 #include <vector>
@@ -8,11 +7,14 @@
 namespace betweenness_centrality_util {
 
 void BFS(const std::uint64_t source_node, const mg_graph::GraphView<> &graph, std::stack<std::uint64_t> &visited,
-         std::vector<std::vector<std::uint64_t>> &predecessors, std::vector<std::uint64_t> &shortest_paths_counter) {
-  auto number_of_nodes = graph.Nodes().size();
-
-  // -1 to indicate that node is not visited
-  std::vector<int> distance(number_of_nodes, -1);
+         std::vector<std::vector<std::uint64_t>> &predecessors, std::vector<std::uint64_t> &shortest_paths_counter, std::vector<int> &distance) {
+  
+  // reset data structures used in BFS
+  std::fill(distance.begin(), distance.end(), -1);
+  std::fill(shortest_paths_counter.begin(), shortest_paths_counter.end(), 0);
+  for (auto &predecessor : predecessors) {
+    predecessor.clear();
+  }
 
   shortest_paths_counter[source_node] = 1;
   distance[source_node] = 0;
@@ -62,17 +64,23 @@ std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bo
                                           int threads) {
   auto number_of_nodes = graph.Nodes().size();
   std::vector<double> betweenness_centrality(number_of_nodes, 0);
+  std::vector<std::uint64_t> shortest_paths_counter;
+  shortest_paths_counter.reserve(number_of_nodes);
+  std::vector<int> distance;
+  distance.reserve(number_of_nodes);
+  std::vector<std::vector<std::uint64_t>> predecessors;
+  predecessors.reserve(number_of_nodes);
+  for (std::uint64_t node_id = 0; node_id < number_of_nodes; node_id++) {
+    std::vector<std::uint64_t> predecessor_vector;
+    predecessor_vector.reserve(graph.Neighbours(node_id).size());
+    predecessors.emplace_back(predecessor_vector);
+  }
 
   // perform bfs for every node in the graph
-  omp_set_dynamic(0);
-  omp_set_num_threads(threads);
-#pragma omp parallel for
   for (std::uint64_t node_id = 0; node_id < number_of_nodes; node_id++) {
     // data structures used in BFS
     std::stack<std::uint64_t> visited;
-    std::vector<std::vector<std::uint64_t>> predecessors(number_of_nodes, std::vector<std::uint64_t>());
-    std::vector<std::uint64_t> shortest_paths_counter(number_of_nodes, 0);
-    betweenness_centrality_util::BFS(node_id, graph, visited, predecessors, shortest_paths_counter);
+    betweenness_centrality_util::BFS(node_id, graph, visited, predecessors, shortest_paths_counter, distance);
 
     std::vector<double> dependency(number_of_nodes, 0);
 
@@ -87,12 +95,10 @@ std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bo
 
       if (current_node != node_id) {
         if (directed) {
-#pragma omp atomic update
           betweenness_centrality[current_node] += dependency[current_node];
         }
         // centrality scores need to be divided by two since all shortest paths are considered twice
         else {
-#pragma omp atomic update
           betweenness_centrality[current_node] += dependency[current_node] / 2.0;
         }
       }
