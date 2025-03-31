@@ -1,4 +1,3 @@
-#include <omp.h>
 #include <queue>
 #include <stack>
 #include <vector>
@@ -55,13 +54,11 @@ void Normalize(std::vector<double> &vec, double constant) {
 namespace betweenness_centrality_alg {
 
 std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bool directed, bool normalize,
-                                          int threads) {
+                                          int  /*threads*/) {
   auto number_of_nodes = graph.Nodes().size();
   std::vector<double> betweenness_centrality(number_of_nodes, 0);
-  std::vector<std::uint64_t> shortest_paths_counter;
-  shortest_paths_counter.reserve(number_of_nodes);
-  std::vector<int> distance;
-  distance.reserve(number_of_nodes);
+  std::vector<std::uint64_t> shortest_paths_counter(number_of_nodes, 0);
+  std::vector<int> distance(number_of_nodes, -1);
   std::vector<std::vector<std::uint64_t>> predecessors;
   predecessors.reserve(number_of_nodes);
   for (std::uint64_t node_id = 0; node_id < number_of_nodes; node_id++) {
@@ -71,23 +68,12 @@ std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bo
   }
 
   // perform bfs for every node in the graph
-  omp_set_dynamic(0);
-  omp_set_num_threads(threads);
-#pragma omp parallel for
   for (std::uint64_t node_id = 0; node_id < number_of_nodes; node_id++) {
     // data structures used in BFS
     std::stack<std::uint64_t> visited;
-
-    // reset data structures used in BFS
-    std::fill(distance.begin(), distance.end(), -1);
-    std::fill(shortest_paths_counter.begin(), shortest_paths_counter.end(), 0);
-    for (auto &predecessor : predecessors) {
-      predecessor.clear();
-    }
     betweenness_centrality_util::BFS(node_id, graph, visited, predecessors, shortest_paths_counter, distance);
 
     std::vector<double> dependency(number_of_nodes, 0);
-
     while (!visited.empty()) {
       auto current_node = visited.top();
       visited.pop();
@@ -99,14 +85,20 @@ std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bo
 
       if (current_node != node_id) {
         if (directed) {
-#pragma omp atomic update
           betweenness_centrality[current_node] += dependency[current_node];
         }
         // centrality scores need to be divided by two since all shortest paths are considered twice
         else {
-#pragma omp atomic update
           betweenness_centrality[current_node] += dependency[current_node] / 2.0;
         }
+      }
+    }
+    if (node_id != number_of_nodes - 1) {
+      // reset data structures used in BFS
+      std::fill(distance.begin(), distance.end(), -1);
+      std::fill(shortest_paths_counter.begin(), shortest_paths_counter.end(), 0);
+      for (auto &predecessor : predecessors) {
+        predecessor.clear();
       }
     }
   }
