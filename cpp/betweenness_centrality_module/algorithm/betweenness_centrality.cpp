@@ -9,13 +9,6 @@ namespace betweenness_centrality_util {
 
 void BFS(std::uint64_t source_node, const mg_graph::GraphView<> &graph, std::stack<std::uint64_t> &visited,
          std::vector<std::vector<std::uint64_t>> &predecessors, std::vector<std::uint64_t> &shortest_paths_counter, std::vector<int> &distance) {
-  
-  // reset data structures used in BFS
-  std::fill(distance.begin(), distance.end(), -1);
-  std::fill(shortest_paths_counter.begin(), shortest_paths_counter.end(), 0);
-  for (auto &predecessor : predecessors) {
-    predecessor.clear();
-  }
 
   shortest_paths_counter[source_node] = 1;
   distance[source_node] = 0;
@@ -84,6 +77,13 @@ std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bo
   for (std::uint64_t node_id = 0; node_id < number_of_nodes; node_id++) {
     // data structures used in BFS
     std::stack<std::uint64_t> visited;
+
+    // reset data structures used in BFS
+    std::fill(distance.begin(), distance.end(), -1);
+    std::fill(shortest_paths_counter.begin(), shortest_paths_counter.end(), 0);
+    for (auto &predecessor : predecessors) {
+      predecessor.clear();
+    }
     betweenness_centrality_util::BFS(node_id, graph, visited, predecessors, shortest_paths_counter, distance);
 
     std::vector<double> dependency(number_of_nodes, 0);
