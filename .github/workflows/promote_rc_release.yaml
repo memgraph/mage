@@ -59,7 +59,7 @@ jobs:
             build_scope: "with ML"
             build_type: "Release"
             image_ext: "-malloc"
-    runs-on: ${{ matrix.build_target == 'dev' && 'ubuntu-large' || 'ubuntu-latest' }}
+    runs-on: ["self-hosted", "DockerMgBuild", "X64"]
     steps:
       - name: Setup environment variables
         run: |
