@@ -43,7 +43,7 @@ jobs:
       TOOLCHAIN: v6
       ARCH: amd # TODO: allow arm
       BUILD_TYPE: Release
-      MEMGRAPH_BRANCH: 'mage-benchmarks'
+      MEMGRAPH_BRANCH: mage-benchmarks
 
     steps:
       - name: Checkout repository and submodules
@@ -56,6 +56,7 @@ jobs:
       - name: Checkout specific branch in submodule
         run: |
           cd cpp/memgraph
+          git fetch origin
           git checkout ${{ env.MEMGRAPH_BRANCH }}
           git pull
 
