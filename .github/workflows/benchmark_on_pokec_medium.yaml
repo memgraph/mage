@@ -24,7 +24,7 @@ on:
       memgraph_branch:
         type: string
         description: "Memgraph branch to build from."
-        default: "master"
+        default: "mage-benchmarks"
       mage_branch:
         type: string
         description: "Mage branch to build from."
@@ -43,7 +43,7 @@ jobs:
       TOOLCHAIN: v6
       ARCH: amd # TODO: allow arm
       BUILD_TYPE: Release
-      MEMGRAPH_BRANCH: master
+      MEMGRAPH_BRANCH: mage-benchmarks
 
     steps:
       - name: Checkout repository and submodules
