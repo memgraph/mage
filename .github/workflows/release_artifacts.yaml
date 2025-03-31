@@ -51,7 +51,7 @@ jobs:
         build_scope: ["with ML", "without ML"]
         build_type: ["Release", "RelWithDebInfo"]
         build_arch: ["amd64", "arm64"]
-        malloc: ['false']
+        malloc: [false]
         include:
           - build_type: "RelWithDebInfo"
             rwid_ext: "-relwithdebinfo"
