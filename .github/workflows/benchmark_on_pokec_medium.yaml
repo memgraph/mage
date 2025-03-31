@@ -43,7 +43,7 @@ jobs:
       TOOLCHAIN: v6
       ARCH: amd # TODO: allow arm
       BUILD_TYPE: Release
-      MEMGRAPH_BRANCH: mage-benchmarks
+      MEMGRAPH_BRANCH: 'mage-benchmarks'
 
     steps:
       - name: Checkout repository and submodules
