@@ -6,7 +6,6 @@ concurrency:
 on: 
   schedule:
     - cron: "0 1 * * *" #UTC
-  pull_request:
   merge_group:
   workflow_dispatch:
     inputs:
