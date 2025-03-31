@@ -6,7 +6,7 @@
 
 namespace betweenness_centrality_util {
 
-void BFS(const std::uint64_t source_node, const mg_graph::GraphView<> &graph, std::stack<std::uint64_t> &visited,
+void BFS(std::uint64_t source_node, const mg_graph::GraphView<> &graph, std::stack<std::uint64_t> &visited,
          std::vector<std::vector<std::uint64_t>> &predecessors, std::vector<std::uint64_t> &shortest_paths_counter, std::vector<int> &distance) {
   
   // reset data structures used in BFS
