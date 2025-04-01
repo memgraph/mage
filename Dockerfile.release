@@ -12,9 +12,6 @@ ENV BUILD_TYPE=${BUILD_TYPE}
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
 ENV TORCH_VERSION=2.4.0
 
-RUN echo "TARGETARCH is: $TARGETARCH"
-
-
 # Essentials for production/dev
 RUN apt-get update && apt-get install -y \
     libcurl4        `memgraph` \
@@ -63,9 +60,9 @@ RUN python3 -m pip install --no-cache-dir -r /mage/python/requirements.txt --bre
     python3 -m pip install --no-cache-dir -r /mage/python/tests/requirements.txt --break-system-packages && \
     python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages && \
     if [ "$TARGETARCH" == "arm64" ]; then \
-        if curl -I --silent --fail "http://mgdeps-cache:8000/wheels" >/dev/null; then \
+        if curl -I --silent --fail -L "http://mgdeps-cache:8000/wheels" >/dev/null; then \
             echo "Using mgdeps-cache for torch packages"; \
-            python3 -m pip install --no-index --find-links=http://mgdeps-cache:8000/wheels/ torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter --trusted-host mgdeps-cache; \
+            python3 -m pip install --no-index --find-links=http://mgdeps-cache:8000/wheels/ torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter --trusted-host mgdeps-cache --break-system-packages; \
         else \
             python3 -m pip install --no-cache-dir torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.3.0+cpu.html --break-system-packages; \
         fi && \
