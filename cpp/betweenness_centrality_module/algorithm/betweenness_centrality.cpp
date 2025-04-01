@@ -62,21 +62,13 @@ namespace betweenness_centrality_alg {
   
     auto process_nodes = [&](std::uint64_t start, std::uint64_t end) {
       // Thread-local BFS resources
-      std::vector<std::uint64_t> shortest_paths_counter;
-      std::vector<int> distance;
-      std::vector<std::vector<std::uint64_t>> predecessors;
-      std::vector<double> dependency;
-      std::stack<std::uint64_t> visited;
+      thread_local std::vector<std::uint64_t> shortest_paths_counter(number_of_nodes, 0);
+      thread_local std::vector<int> distance(number_of_nodes, -1);
+      thread_local std::vector<std::vector<std::uint64_t>> predecessors(number_of_nodes, std::vector<std::uint64_t>{});
+      thread_local std::vector<double> dependency(number_of_nodes, 0.0);
+      thread_local std::stack<std::uint64_t> visited;
   
-      for (auto node_id = start; node_id < end; ++node_id) {
-        // Reset BFS state
-        shortest_paths_counter.assign(number_of_nodes, 0);
-        distance.assign(number_of_nodes, -1);
-        predecessors.assign(number_of_nodes, {});
-        dependency.assign(number_of_nodes, 0.0);
-        visited = {};
-  
-        // Execute BFS
+      for (auto node_id = start; node_id < end; ++node_id) {  
         shortest_paths_counter[node_id] = 1;
         distance[node_id] = 0;
         betweenness_centrality_util::BFS(node_id, graph, visited, predecessors, shortest_paths_counter, distance);
@@ -86,10 +78,10 @@ namespace betweenness_centrality_alg {
           const auto current_node = visited.top();
           visited.pop();
   
-          for (const auto p : predecessors[current_node]) {
-            const double fraction = static_cast<double>(shortest_paths_counter[p]) / 
+          for (const auto predecessor : predecessors[current_node]) {
+            const double fraction = static_cast<double>(shortest_paths_counter[predecessor]) / 
                                   static_cast<double>(shortest_paths_counter[current_node]);
-            dependency[p] += fraction * (1 + dependency[current_node]);
+            dependency[predecessor] += fraction * (1 + dependency[current_node]);
           }
   
           if (current_node != node_id) {
@@ -97,12 +89,18 @@ namespace betweenness_centrality_alg {
             betweenness_centrality[current_node].fetch_add(value, std::memory_order_relaxed);
           }
         }
+
+        // Reset BFS resources
+        std::fill(shortest_paths_counter.begin(), shortest_paths_counter.end(), 0);
+        std::fill(distance.begin(), distance.end(), -1);
+        std::fill(dependency.begin(), dependency.end(), 0.0);
+        for (auto& preds : predecessors) preds.clear();
       }
     };
   
-    // Distribute work across threads
     const auto nodes_per_thread = (number_of_nodes + threads - 1) / threads;
     std::vector<std::future<void>> futures;
+    futures.reserve(threads);
     
     for (int i = 0; i < threads; ++i) {
       const auto start = i * nodes_per_thread;
@@ -115,14 +113,13 @@ namespace betweenness_centrality_alg {
     // Wait for completion
     for (auto& future : futures) future.wait();
   
-    // Convert to regular vector
+    // Convert to the result vector
     std::vector<double> result;
     result.reserve(number_of_nodes);
     for (const auto& bc : betweenness_centrality) {
       result.push_back(bc.load(std::memory_order_relaxed));
     }
   
-    // Normalization remains unchanged
     if (normalize) {
       const auto number_of_pairs = (number_of_nodes - 1) * (number_of_nodes - 2);
       const auto numerator = directed ? 1.0 : 2.0;
