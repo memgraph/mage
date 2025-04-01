@@ -33,10 +33,7 @@ void GetBetweennessCentrality(mgp_list *args, mgp_graph *memgraph_graph, mgp_res
     const auto normalize = mgp::value_get_bool(mgp::list_at(args, 1));
     auto threads = mgp::value_get_int(mgp::list_at(args, 2));
 
-    if (threads <= 0) {
-      const auto hardware_concurrency = std::thread::hardware_concurrency();
-      threads = (hardware_concurrency > 1) ? hardware_concurrency / 2 : 1;
-    }
+    if (threads <= 0) threads = (std::thread::hardware_concurrency() > 1) ? (std::thread::hardware_concurrency() / 2) : 1;
     threads = std::min(std::thread::hardware_concurrency(), static_cast<unsigned int>(threads));
     
     const auto graph_type = directed ? mg_graph::GraphType::kDirectedGraph : mg_graph::GraphType::kUndirectedGraph;
