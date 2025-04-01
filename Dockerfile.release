@@ -63,7 +63,7 @@ RUN python3 -m pip install --no-cache-dir -r /mage/python/requirements.txt --bre
     if [ "$TARGETARCH" == "arm64" ]; then \
         if curl -I --silent --fail "http://mgdeps-cache:8000/wheels" >/dev/null; then \
             echo "Using mgdeps-cache for torch packages"; \
-            python3 -m pip install --no-index --find-links=http://mgdeps-cache:8000/wheels torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter; \
+            python3 -m pip install --no-index --find-links=http://mgdeps-cache:8000/wheels/ torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter --trusted-host mgdeps-cache; \
         else \
             python3 -m pip install --no-cache-dir torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.3.0+cpu.html --break-system-packages; \
         fi && \
