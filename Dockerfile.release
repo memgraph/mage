@@ -12,6 +12,8 @@ ENV BUILD_TYPE=${BUILD_TYPE}
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
 ENV TORCH_VERSION=2.4.0
 
+RUN echo "TARGETARCH is: $TARGETARCH"
+
 
 # Essentials for production/dev
 RUN apt-get update && apt-get install -y \
