@@ -175,6 +175,7 @@ jobs:
           --file Dockerfile.${{ inputs.build_scope == 'without ML' && 'no_ML' || 'release' }} \
           --build-arg MGBUILD_IMAGE=$MGBUILD_IMAGE \
           --build-arg MAGE_COMMIT="${{ env.MAGE_COMMIT }}" \
+          --add-host mgdeps-cache:127.0.0.1 \
           --load .
 
           docker network create ${{ env.MEMGRAPH_NETWORK }} || true
