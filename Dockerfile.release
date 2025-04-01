@@ -39,7 +39,7 @@ RUN apt-get update && apt-get install -y \
     && ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN echo $(curl --silent --fail "http://mgdeps-cache:8000/wheels/")
+RUN curl --verbose --silent "http://mgdeps-cache:8000/wheels/" || echo "curl failed"
 
 COPY memgraph-${TARGETARCH}.deb .
 
