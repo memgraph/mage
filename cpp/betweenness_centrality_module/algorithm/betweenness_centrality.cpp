@@ -1,3 +1,4 @@
+#include <omp.h>
 #include <queue>
 #include <stack>
 #include <vector>
@@ -54,61 +55,74 @@ void Normalize(std::vector<double> &vec, double constant) {
 namespace betweenness_centrality_alg {
 
 std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bool directed, bool normalize,
-                                          int  /*threads*/) {
+                                          int threads) {
   auto number_of_nodes = graph.Nodes().size();
   std::vector<double> betweenness_centrality(number_of_nodes, 0);
-  std::vector<std::uint64_t> shortest_paths_counter(number_of_nodes, 0);
-  std::vector<int> distance(number_of_nodes, -1);
-  std::vector<std::vector<std::uint64_t>> predecessors;
-  predecessors.reserve(number_of_nodes);
-  for (std::uint64_t node_id = 0; node_id < number_of_nodes; node_id++) {
-    std::vector<std::uint64_t> predecessor_vector;
-    predecessor_vector.reserve(graph.Neighbours(node_id).size());
-    predecessors.emplace_back(predecessor_vector);
-  }
+  thread_local std::vector<std::uint64_t> shortest_paths_counter;
+  thread_local std::vector<int> distance;
+  thread_local std::vector<std::vector<std::uint64_t>> predecessors;
+  thread_local std::vector<double> dependency;
 
   // perform bfs for every node in the graph
+  omp_set_dynamic(0);
+  omp_set_num_threads(threads);
+#pragma omp parallel for
   for (std::uint64_t node_id = 0; node_id < number_of_nodes; node_id++) {
     // data structures used in BFS
     std::stack<std::uint64_t> visited;
+    shortest_paths_counter.resize(number_of_nodes, 0);
+    distance.resize(number_of_nodes, -1);
+    predecessors.resize(number_of_nodes, std::vector<std::uint64_t>());
     betweenness_centrality_util::BFS(node_id, graph, visited, predecessors, shortest_paths_counter, distance);
 
-    std::vector<double> dependency(number_of_nodes, 0);
+    dependency.resize(number_of_nodes, 0);
     while (!visited.empty()) {
       auto current_node = visited.top();
       visited.pop();
 
       for (auto p : predecessors[current_node]) {
-        double fraction = static_cast<double>(shortest_paths_counter[p]) / shortest_paths_counter[current_node];
+        double fraction = static_cast<double>(shortest_paths_counter[p]) / 
+                          static_cast<double>(shortest_paths_counter[current_node]);
         dependency[p] += fraction * (1 + dependency[current_node]);
       }
 
       if (current_node != node_id) {
         if (directed) {
+#pragma omp atomic update
           betweenness_centrality[current_node] += dependency[current_node];
         }
         // centrality scores need to be divided by two since all shortest paths are considered twice
         else {
+#pragma omp atomic update
           betweenness_centrality[current_node] += dependency[current_node] / 2.0;
         }
       }
     }
-    if (node_id != number_of_nodes - 1) {
-      // reset data structures used in BFS
-      std::fill(distance.begin(), distance.end(), -1);
-      std::fill(shortest_paths_counter.begin(), shortest_paths_counter.end(), 0);
-      for (auto &predecessor : predecessors) {
-        predecessor.clear();
-      }
-    }
+    // reset data structures used in BFS
+    std::fill(distance.begin(), distance.end(), -1);
+    std::fill(shortest_paths_counter.begin(), shortest_paths_counter.end(), 0);
+    std::fill(dependency.begin(), dependency.end(), 0);
+    for (auto &predecessor : predecessors) {
+      predecessor.clear();
+    }  
   }
+
+  // reset data structures used in BFS
+  distance.clear();
+  shortest_paths_counter.clear();
+  predecessors.clear();
+  dependency.clear();
+  distance.shrink_to_fit();
+  shortest_paths_counter.shrink_to_fit();
+  predecessors.shrink_to_fit();
+  dependency.shrink_to_fit();
 
   if (normalize) {
     // normalized by dividing the value by the number of pairs of nodes
     // not including the node whose value we normalize
     auto number_of_pairs = (number_of_nodes - 1) * (number_of_nodes - 2);
     const auto numerator = directed ? 1.0 : 2.0;
-    double constant = number_of_nodes > 2 ? numerator / number_of_pairs : 1.0;
+    double constant = number_of_nodes > 2 ? numerator / static_cast<double>(number_of_pairs) : 1.0;
     Normalize(betweenness_centrality, constant);
   }
 
