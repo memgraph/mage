@@ -44,6 +44,12 @@ env:
 jobs:
   BuildAndTest:
     runs-on: ${{ (inputs.arch == 'arm64') && fromJSON('["self-hosted", "DockerMgBuild","ARM64"]') || fromJSON('["self-hosted", "DockerMgBuild", "X64"]') }}
+    services:
+      mgdeps-cache:
+        image: your-cache-image
+        ports:
+          - 8000:8000
+          
     steps:
       - name: Checkout repository and submodules
         uses: actions/checkout@v4
