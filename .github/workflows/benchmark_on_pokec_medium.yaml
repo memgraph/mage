@@ -85,7 +85,7 @@ jobs:
             ./init &&
             cd build &&
             cmake -DCMAKE_BUILD_TYPE=Release .. &&
-            make -j$(nproc) memgraph
+            make -j$(nproc)
           "
 
       - name: Package Memgraph release binary
