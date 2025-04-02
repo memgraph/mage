@@ -44,6 +44,7 @@ jobs:
       ARCH: amd # TODO: allow arm
       BUILD_TYPE: Release
       MEMGRAPH_BRANCH: mage-benchmarks
+      CONTAINER_NAME: mgbuild_v6_ubuntu-24.04
 
     steps:
       - name: Checkout repository and submodules
@@ -76,12 +77,15 @@ jobs:
       - name: Build release binary
         run: |
           cd cpp/memgraph
-          ./release/package/mgbuild.sh \
-          --toolchain ${{ env.TOOLCHAIN }} \
-          --os ${{ env.OS }} \
-          --arch ${{ env.ARCH }} \
-          --build-type ${{ env.BUILD_TYPE }} \
-          build-memgraph
+          docker exec -i -u mg "${{ env.CONTAINER_NAME }}" bash -c "
+            cd /home/mg/memgraph &&
+            source /opt/toolchain-v6/activate &&
+            ./init &&
+            mkdir build &&
+            cd build &&
+            cmake -DCMAKE_BUILD_TYPE=Release .. &&
+            make -j$(nproc) memgraph
+          "
 
       - name: Build mage container
         run: |
