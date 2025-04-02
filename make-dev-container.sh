@@ -19,14 +19,22 @@ apt-get install -y libpython${PY_VERSION:-$(python3 --version | sed 's/Python //
 get_toolchain_url() {
   version=$1
   arch=$(uname -m)
+  
+  # Check if mgdeps-cache is reachable.
+  if curl --silent --fail "http://mgdeps-cache:8000/wheels/" -o /dev/null; then
+    base_url="http://mgdeps-cache:8000/file/"
+  else
+    base_url="https://s3-eu-west-1.amazonaws.com/deps.memgraph.io/toolchain-v${version}/"
+  fi
+
   case "$arch" in
     x86_64)
       # AMD64 architecture
-      echo "https://s3-eu-west-1.amazonaws.com/deps.memgraph.io/toolchain-v${version}/toolchain-v${version}-binaries-ubuntu-24.04-amd64.tar.gz"
+      echo "${base_url}toolchain-v${version}-binaries-ubuntu-24.04-amd64.tar.gz"
       ;;
     aarch64)
       # ARM64 architecture
-      echo "https://s3-eu-west-1.amazonaws.com/deps.memgraph.io/toolchain-v${version}/toolchain-v${version}-binaries-ubuntu-24.04-arm64.tar.gz"
+      echo "${base_url}toolchain-v${version}-binaries-ubuntu-24.04-arm64.tar.gz"
       ;;
     *)
       echo "Unsupported architecture: $arch" >&2
@@ -34,6 +42,7 @@ get_toolchain_url() {
       ;;
   esac
 }
+
 
 toolchain_version=6
 TOOLCHAIN_URL=$(get_toolchain_url "$toolchain_version")
