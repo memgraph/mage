@@ -19,28 +19,32 @@ apt-get install -y libpython${PY_VERSION:-$(python3 --version | sed 's/Python //
 get_toolchain_url() {
   version=$1
   arch=$(uname -m)
-  
-  # Check if mgdeps-cache is reachable.
-  if curl --silent --fail "http://mgdeps-cache:8000/wheels/" -o /dev/null; then
-    base_url="http://mgdeps-cache:8000/file/"
-  else
-    base_url="https://s3-eu-west-1.amazonaws.com/deps.memgraph.io/toolchain-v${version}/"
-  fi
 
+  # Determine the file name based on the architecture.
   case "$arch" in
     x86_64)
-      # AMD64 architecture
-      echo "${base_url}toolchain-v${version}-binaries-ubuntu-24.04-amd64.tar.gz"
+      file="toolchain-v${version}-binaries-ubuntu-24.04-amd64.tar.gz"
       ;;
     aarch64)
-      # ARM64 architecture
-      echo "${base_url}toolchain-v${version}-binaries-ubuntu-24.04-arm64.tar.gz"
+      file="toolchain-v${version}-binaries-ubuntu-24.04-arm64.tar.gz"
       ;;
     *)
       echo "Unsupported architecture: $arch" >&2
       exit 1
       ;;
   esac
+
+  # Construct the mgdeps-cache file URL.
+  mgdeps_url="http://mgdeps-cache:8000/file/${file}"
+  
+  # Check if the file is available on the cache using a HEAD request.
+  if curl --head --silent --fail "$mgdeps_url" -o /dev/null; then
+    echo "$mgdeps_url"
+  else
+    # Fallback to the S3 URL if the cache doesn't have the file.
+    s3_url="https://s3-eu-west-1.amazonaws.com/deps.memgraph.io/toolchain-v${version}/${file}"
+    echo "$s3_url"
+  fi
 }
 
 
