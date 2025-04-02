@@ -74,18 +74,39 @@ jobs:
           --arch ${{ env.ARCH }} \
           run
 
-      - name: Build release binary
+      - name: Build Memgraph release binary
         run: |
-          cd cpp/memgraph
-          docker exec -i -u mg "${{ env.CONTAINER_NAME }}" bash -c "
-            cd /home/mg/memgraph &&
+          docker exec -i -u root "${{ env.CONTAINER_NAME }}" bash -c "
+            cd /home/mg && 
+            rm -rf memgraph &&
+            git clone --branch ${{ env.MEMGRAPH_BRANCH }} --single-branch https://github.com/memgraph/memgraph.git &&
+            cd memgraph &&
             source /opt/toolchain-v6/activate &&
             ./init &&
-            mkdir build &&
             cd build &&
             cmake -DCMAKE_BUILD_TYPE=Release .. &&
             make -j$(nproc) memgraph
           "
+
+      - name: Package Memgraph release binary
+        run: |
+          cd cpp/memgraph
+          ./release/package/mgbuild.sh \
+          --toolchain ${{ env.TOOLCHAIN }} \
+          --os ${{ env.OS }} \
+          --arch ${{ env.ARCH }} \
+          package-memgraph
+
+      - name: "Copy package"
+        run: |
+          cd cpp/memgraph
+          ./release/package/mgbuild.sh \
+          --toolchain ${{ env.TOOLCHAIN }} \
+          --os ${{ env.OS }} \
+          --arch ${{ env.ARCH }} \
+          copy \
+          --package \
+          --dest-dir .
 
       - name: Build mage container
         run: |
