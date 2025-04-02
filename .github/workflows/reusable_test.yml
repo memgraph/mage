@@ -67,7 +67,7 @@ jobs:
           mkdir -p wheels
           if [ "$CACHE_PRESENT" = "true" ]; then
             echo "Cache is present. Fetching wheels..."
-            wget -r -np -nH --cut-dirs=1 -P wheels http://mgdeps-cache:8000/wheels/
+            wget -r -np -nH --cut-dirs=1 -P wheels "http://mgdeps-cache:8000/wheels/${{ inputs.arch }}/"
           else
             echo "Cache is not present. Skipping wheel fetch."
           fi
