@@ -82,7 +82,7 @@ jobs:
             git clone --branch ${{ env.MEMGRAPH_BRANCH }} --single-branch https://github.com/memgraph/memgraph.git &&
             cd memgraph &&
             source /opt/toolchain-v6/activate &&
-            ./init &&
+            (./init || true) &&
             cd build &&
             cmake -DCMAKE_BUILD_TYPE=Release .. &&
             make -j$(nproc)
@@ -106,7 +106,7 @@ jobs:
           --arch ${{ env.ARCH }} \
           copy \
           --package \
-          --dest-dir .
+          --dest-dir ../../.
 
       - name: Build mage container
         run: |
