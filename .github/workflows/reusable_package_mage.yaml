@@ -78,6 +78,14 @@ jobs:
           submodules: recursive
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Check mgdeps-cache availability
+        run: |
+          if curl -I --silent --fail "http://mgdeps-cache:8000/wheels"; then
+            echo "mgdeps-cache is reachable"
+          else
+            echo "mgdeps-cache is NOT reachable"
+          fi
+
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v3
