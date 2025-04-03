@@ -7,10 +7,6 @@ on:
         type: string
         description: "Architecture to build the image for (amd64/arm64)"
         required: true
-      build_scope:
-        type: string
-        description: "Mage build scope"
-        default: 'all'
       memgraph_version:
         type: string
         description: "Memgraph version built into this image (format: X.Y.Z)"
@@ -185,7 +181,7 @@ jobs:
           --tag memgraph-mage:prod \
           --target prod \
           --platform linux/${{ inputs.arch }} \
-          --file Dockerfile.${{ inputs.build_scope == 'without ML' && 'no_ML' || 'release' }} \
+          --file Dockerfile.release \
           --build-arg MGBUILD_IMAGE=$MGBUILD_IMAGE \
           --build-arg MAGE_COMMIT="${{ env.MAGE_COMMIT }}" \
           --build-arg CACHE_PRESENT=${{ env.CACHE_PRESENT }} \
@@ -223,7 +219,6 @@ jobs:
           docker exec -i -u memgraph ${{ env.MAGE_CONTAINER }} bash -c "python3 -m pip install -r /mage/python/tests/requirements.txt --break-system-packages"
 
       - name: Python modules unit tests
-        if: inputs.build_scope != 'without ML'
         env:
           PYTHONPATH: "$PWD/python"
         run: |
@@ -235,7 +230,7 @@ jobs:
         run: |
           cd e2e
           docker exec -i -u memgraph ${{ env.MAGE_CONTAINER }} bash -c \
-          "cd /mage/e2e/ && python3 -m pytest . -k 'not cugraph ${{ inputs.build_scope == 'without ML' && 'and not tgn and not node_classification and not link_prediction' || '' }}'"
+          "cd /mage/e2e/ && python3 -m pytest . -k 'not cugraph'"
 
       - name: Run End-to-end correctness tests
         env:

@@ -48,7 +48,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build_scope: ["with ML", "without ML"]
         build_type: ["Release", "RelWithDebInfo"]
         build_arch: ["amd64", "arm64"]
         malloc: [false]
@@ -58,14 +57,12 @@ jobs:
           - build_arch: "arm64"
             arm_ext: "-aarch64"
           - build_type: "Release"
-            build_scope: "with ML"
             build_arch: "amd64"
             malloc: true
     uses: ./.github/workflows/reusable_package_mage.yaml
     with:
       arch: "${{ matrix.build_arch }}"
       mage_version: "${{ github.event.inputs.mage_version }}"
-      mage_build_scope: "${{ matrix.build_scope }}"
       mage_build_type: "${{ matrix.build_type }}"
       memgraph_version: "${{ github.event.inputs.memgraph_version }}"
       memgraph_download_link: "${{ needs.SetupNames.outputs.download_link_base }}${{ matrix.arm_ext }}${{ matrix.rwid_ext }}${{ matrix.malloc && '-malloc' || '' }}/${{ needs.SetupNames.outputs.download_binary_name_base }}_${{ matrix.build_arch }}.deb"
@@ -75,6 +72,5 @@ jobs:
       push_to_s3: "true"
       s3_dest_bucket: "deps.memgraph.io"
       s3_dest_dir: "mage/v${{ github.event.inputs.mage_version}}"
-      large_runner: 'false'
       malloc: ${{ matrix.malloc }}
     secrets: inherit

@@ -21,13 +21,6 @@ on:
         options:
           - "amd64"
           - "arm64"
-      build_scope:
-        description: "Mage build scope"
-        type: choice
-        default: "with ML"
-        options:
-          - "with ML"
-          - "without ML"
       memgraph_version:
         description: "Memgraph version built into this image (format: X.Y.Z). You can leave empty if using custom download link."
         type: string
@@ -54,14 +47,12 @@ jobs:
         mg_version: ["3.1.1"]
         mg_rc_version: ["rc2"]
         arch: ["amd64", "arm64"]
-        build_scope: ["with ML", "without ML"]
     uses: ./.github/workflows/reusable_test.yml
     with:
       arch: "${{ matrix.arch }}"
-      build_scope: "${{ matrix.build_scope }}"
       memgraph_ref: "v${{ matrix.mg_version }}-${{ matrix.mg_rc_version }}"
       memgraph_ref_update: "false"
-      memgraph_download_link: "s3://deps.memgraph.io/memgraph/v${{ matrix.mg_version }}-${{ matrix.mg_rc_version }}/ubuntu-24.04${{ matrix.arch == 'arm64' && '-aarch64' || '' }}${{ matrix.build_scope == 'dev' && '-relwithdebinfo' || '' }}/memgraph_${{ matrix.mg_version }}-1_${{ matrix.arch }}.deb"
+      memgraph_download_link: "s3://deps.memgraph.io/memgraph/v${{ matrix.mg_version }}-${{ matrix.mg_rc_version }}/ubuntu-24.04${{ matrix.arch == 'arm64' && '-aarch64' || '' }}/memgraph_${{ matrix.mg_version }}-1_${{ matrix.arch }}.deb"
     secrets: inherit
 
   PR_test:
@@ -70,11 +61,9 @@ jobs:
       fail-fast: false
       matrix:
         arch: ["amd64","arm64"]
-        build_scope: ["with ML", "without ML"]
     uses: ./.github/workflows/reusable_test.yml
     with:
       arch: "${{ matrix.arch }}"
-      build_scope: "${{ matrix.build_scope }}"
       memgraph_version: 
       memgraph_download_link: 
       memgraph_ref: "master"
@@ -86,7 +75,6 @@ jobs:
     uses: ./.github/workflows/reusable_test.yml
     with:
       arch: "${{ github.event.inputs.arch }}"
-      build_scope: "${{ github.event.inputs.build_scope }}"
       memgraph_version: "${{ github.event.inputs.memgraph_version }}"
       memgraph_download_link: "${{ github.event.inputs.memgraph_download_link }}"
       memgraph_ref: "${{ github.event.inputs.memgraph_ref }}"
@@ -99,11 +87,9 @@ jobs:
       fail-fast: false
       matrix:
         arch: ["amd64", "arm64"]
-        build_scope: ["with ML", "without ML"]
     uses: ./.github/workflows/reusable_test.yml
     with:
       arch: "${{ matrix.arch }}"
-      build_scope: "${{ matrix.build_scope }}"
       memgraph_version: "3.1.1"
       memgraph_ref: "master"
       memgraph_ref_update: "true"
