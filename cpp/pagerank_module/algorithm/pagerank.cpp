@@ -178,6 +178,16 @@ const std::vector<EdgePair> &PageRankGraph::GetOrderedEdges() const { return ord
 
 std::uint64_t PageRankGraph::GetOutDegree(const std::uint64_t node_id) const { return out_degree_[node_id]; }
 
+void PageRankGraph::ClearUnusedVectors() {
+  ordered_edges_.clear();
+  out_degree_.clear();
+  memgraph_to_id.clear();
+
+  ordered_edges_.shrink_to_fit();
+  out_degree_.shrink_to_fit();
+  id_to_memgraph.shrink_to_fit();
+}
+
 std::vector<double> ParallelIterativePageRank(const PageRankGraph &graph, std::size_t max_iterations,
                                               double damping_factor, double stop_epsilon, uint32_t number_of_threads) {
   number_of_threads = std::min(number_of_threads, std::thread::hardware_concurrency());
