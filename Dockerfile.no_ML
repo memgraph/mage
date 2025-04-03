@@ -56,7 +56,7 @@ USER memgraph
 
 #MAGE
 SHELL ["/bin/bash", "-c"]
-RUN source /opt/toolchain-v6/activate && curl https://sh.rustup.rs -sSf | sh -s -- -y \
+RUN source /opt/toolchain-v6/activate && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.85.1 \
     && export PATH="$HOME/.cargo/bin:${PATH}" \
     && python3 -m  pip install --no-cache-dir -r /mage/python/tests/requirements.txt --break-system-packages \
     && python3 -m  pip install --no-cache-dir -r /mage/python/requirements_no_ml.txt --break-system-packages \
