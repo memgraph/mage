@@ -11,14 +11,10 @@ on:
         type: string
         description: "Mage build scope"
         default: 'all'
-      build_target:
-        type: string
-        description: "Mage build target"
-        default: 'prod'
       memgraph_version:
         type: string
         description: "Memgraph version built into this image (format: X.Y.Z)"
-        default: '3.0.0'
+        required: false
       memgraph_download_link:
         type: string
         description: "Memgraph package download link. Leave empty to use the official download link."
@@ -47,7 +43,7 @@ env:
 
 jobs:
   BuildAndTest:
-    runs-on: [self-hosted, Linux, X64, DockerMgBuild]
+    runs-on: ${{ (inputs.arch == 'arm64') && fromJSON('["self-hosted", "DockerMgBuild","ARM64"]') || fromJSON('["self-hosted", "DockerMgBuild", "X64"]') }}
     steps:
       - name: Checkout repository and submodules
         uses: actions/checkout@v4
@@ -64,18 +60,62 @@ jobs:
             git pull
           fi
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Get Latest Tag
+        run: |
+          if [[ -z "${{ inputs.memgraph_version }}" ]]; then
+            latest=$(./get_memgraph_tag.sh)
+            echo "Using latest tag: $latest"
+            clean_version=$(echo "$latest" | sed -E 's/(.*)-rc.*/\1/')
+            echo "MEMGRAPH_VERSION_FULL=$latest" >> $GITHUB_ENV
+            echo "MEMGRAPH_VERSION=$clean_version" >> $GITHUB_ENV
+          else
+            echo "Using provided tag: ${{ inputs.memgraph_version }}"
+            echo "MEMGRAPH_VERSION_FULL=${{ inputs.memgraph_version }}" >> $GITHUB_ENV
+            clean_version=$(echo "${{ inputs.memgraph_version }}" | sed -E 's/(.*)-rc.*/\1/')
+            echo "MEMGRAPH_VERSION=$clean_version" >> $GITHUB_ENV
+          fi
+
+      - name: Set CI branch name for PR events
+        if: ${{ github.event_name == 'pull_request' }}
+        run: echo "CI_BRANCH=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
+      
+
+      - name: Get Current MAGE Tag
+        run: |
+          # Get the current tag, or branch if a tag doesn't exist
+          # This is used later in image creation, so that the exact version of 
+          # the MAGE git repository can be checked out within the container, 
+          # when we run the script to convert to "dev" container
+          tag=$(./get_tag.sh)
+
+          # If tag is empty, fallback to the branch name
+          if [ -z "$tag" ]; then
+            echo "No valid tag found; using branch name."
+            # If CI_BRANCH is set (for PR events), use it; otherwise, use GITHUB_REF
+            if [ -n "$CI_BRANCH" ]; then
+              tag="$CI_BRANCH"
+            else
+              tag="${GITHUB_REF#refs/heads/}"
+            fi
+          fi
+
+          echo "Using tag/branch: $tag"
+          echo "MAGE_COMMIT=${tag}" >> $GITHUB_ENV
+
 
       - name: Set up and check memgraph download link
         run: |
           mg_url=${{ inputs.memgraph_download_link }}
           if [[ -z "${{ inputs.memgraph_download_link }}" ]]; then
-            mg_url="s3://download.memgraph.com/memgraph/v${{ inputs.memgraph_version }}/$OS${{ inputs.arch == 'arm64' && '-aarch64' || '' }}/memgraph_${{ inputs.memgraph_version }}-1_${{ inputs.arch }}.deb"
+            mg_url="s3://download.memgraph.com/memgraph/v${{ env.MEMGRAPH_VERSION_FULL }}/$OS${{ inputs.arch == 'arm64' && '-aarch64' || '' }}/memgraph_${{ env.MEMGRAPH_VERSION }}-1_${{ inputs.arch }}.deb"
+            # If the version contains 'rc', swap the domain in the URL
+            if [[ "${{ env.MEMGRAPH_VERSION_FULL }}" == *"rc"* ]]; then
+              mg_url=${mg_url/download.memgraph.com/deps.memgraph.io}
+            fi
           fi
           echo "Download link: $mg_url"
           url_protocol=${mg_url%%://*}
@@ -111,13 +151,22 @@ jobs:
         if: env.MEMGRAPH_S3_URI
         run: aws s3 cp ${{ env.MEMGRAPH_S3_URI }} memgraph-${{ inputs.arch }}.deb
 
-      - name: Build and run Memgraph MAGE:${{ inputs.build_target }}
+      - name: Build and run Memgraph MAGE
         run: |
+          if [[ "${{ inputs.arch }}" == "arm64" ]]; then
+            MGBUILD_IMAGE=memgraph/mgbuild:v6_ubuntu-24.04-arm
+          else
+            MGBUILD_IMAGE=memgraph/mgbuild:v6_ubuntu-24.04
+          fi
+
+          # target is always "prod" now, we convert to dev container afterwards
           DOCKER_BUILDKIT=1 docker buildx build \
-          --tag memgraph-mage:${{ inputs.build_target }} \
-          --target ${{ inputs.build_target }} \
+          --tag memgraph-mage:prod \
+          --target prod \
           --platform linux/${{ inputs.arch }} \
           --file Dockerfile.${{ inputs.build_scope == 'without ML' && 'no_ML' || 'release' }} \
+          --build-arg MGBUILD_IMAGE=$MGBUILD_IMAGE \
+          --build-arg MAGE_COMMIT="${{ env.MAGE_COMMIT }}" \
           --load .
 
           docker network create ${{ env.MEMGRAPH_NETWORK }} || true
@@ -128,41 +177,45 @@ jobs:
             --name ${{ env.MAGE_CONTAINER }} \
             -e MEMGRAPH_ENTERPRISE_LICENSE=${{ env.MEMGRAPH_ENTERPRISE_LICENSE }} \
             -e MEMGRAPH_ORGANIZATION_NAME=${{ env.MEMGRAPH_ORGANIZATION_NAME }} \
-            memgraph-mage:${{ inputs.build_target }} \
+            memgraph-mage:prod \
             --telemetry-enabled=False
-      
-      - name: Rust library tests
-        if: inputs.build_target == 'dev'
+
+          # print the image size in both SI and IEC units
+          ./print_image_size.sh memgraph-mage prod
+
+
+      - name: Convert to "dev" Container
         run: |
-          docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "source ~/.cargo/env && cd /mage/rust/rsmgp-sys && cargo fmt -- --check && cargo test"
+          docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "./make-dev-container.sh"
+
+      - name: Rust library tests
+        run: |
+          docker exec -i -u memgraph ${{ env.MAGE_CONTAINER }} bash -c "source ~/.cargo/env && cd /mage/rust/rsmgp-sys && cargo fmt -- --check && cargo test"
 
       - name: C++ Modules unit tests
-        if: inputs.build_target == 'dev'
         run: |
-          docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/cpp/build/ && ctest --output-on-failure -j${{ env.CORE_COUNT }}"
+          docker exec -i -u memgraph ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/cpp/build/ && ctest --output-on-failure -j${{ env.CORE_COUNT }}"
       
       - name: Install Python dependencies
         run: |
-          docker exec -i -u root "$MAGE_CONTAINER" bash -c "pip install -r /mage/python/tests/requirements.txt --break-system-packages"
+          docker exec -i -u memgraph ${{ env.MAGE_CONTAINER }} bash -c "python3 -m pip install -r /mage/python/tests/requirements.txt --break-system-packages"
 
       - name: Python modules unit tests
-        if: inputs.build_target == 'dev' && inputs.build_scope != 'without ML'
+        if: inputs.build_scope != 'without ML'
         env:
           PYTHONPATH: "$PWD/python"
         run: |
-          docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/python/ && python3 -m pytest ."
+          docker exec -i -u memgraph ${{ env.MAGE_CONTAINER }} bash -c "cd /mage/python/ && python3 -m pytest ."
 
       - name: Run End-to-end tests
-        if: inputs.arch != 'arm64'
         env:
           PYTHONPATH: "$PWD/e2e"
         run: |
           cd e2e
-          docker exec -i -u root ${{ env.MAGE_CONTAINER }} bash -c \
+          docker exec -i -u memgraph ${{ env.MAGE_CONTAINER }} bash -c \
           "cd /mage/e2e/ && python3 -m pytest . -k 'not cugraph ${{ inputs.build_scope == 'without ML' && 'and not tgn and not node_classification and not link_prediction' || '' }}'"
 
       - name: Run End-to-end correctness tests
-        if: inputs.arch != 'arm64'
         env:
           PYTHONPATH: "$PWD/e2e"
         run: |
@@ -173,6 +226,6 @@ jobs:
         run: |
           docker stop ${{ env.MAGE_CONTAINER }} || true
           docker rm ${{ env.MAGE_CONTAINER }} || true
-          docker rmi memgraph-mage:${{ inputs.build_target }} || true
+          docker rmi memgraph-mage:prod || true
           docker network rm ${{ env.MEMGRAPH_NETWORK }} || true
           docker stop ${{ env.NEO4J_CONTAINER }} || true

@@ -25,10 +25,10 @@ on:
 
 jobs:
   SetupNames:
-    runs-on: ubuntu-latest
+    runs-on: ["self-hosted", "X64"]
     outputs:
       download_link_base: ${{ steps.base_link.outputs.link }}
-      dowlnoad_binary_name_base: ${{ steps.binary_name.outputs.name }}
+      download_binary_name_base: ${{ steps.binary_name.outputs.name }}
     env:
       s3_link_base: ${{ github.event.inputs.official_memgraph == 'true' && 'https://' || 'https://s3.eu-west-1.amazonaws.com' }}
       s3_bucket: ${{ github.event.inputs.official_memgraph == 'true' && 'download.memgraph.com' || 'deps.memgraph.io' }}
@@ -48,34 +48,33 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build_target: ["prod", "dev"]
         build_scope: ["with ML", "without ML"]
         build_type: ["Release", "RelWithDebInfo"]
-        build_arch: ["amd", "arm"]
+        build_arch: ["amd64", "arm64"]
+        malloc: [false]
         include:
           - build_type: "RelWithDebInfo"
             rwid_ext: "-relwithdebinfo"
-          - build_arch: "arm"
+          - build_arch: "arm64"
             arm_ext: "-aarch64"
-        exclude:
-          - build_target: "dev"
-            build_scope: "without ML"
-          - build_target: "dev"
-            build_type: "Release"
+          - build_type: "Release"
+            build_scope: "with ML"
+            build_arch: "amd64"
+            malloc: true
     uses: ./.github/workflows/reusable_package_mage.yaml
     with:
       arch: "${{ matrix.build_arch }}"
       mage_version: "${{ github.event.inputs.mage_version }}"
       mage_build_scope: "${{ matrix.build_scope }}"
-      mage_build_target: "${{ matrix.build_target }}"
       mage_build_type: "${{ matrix.build_type }}"
       memgraph_version: "${{ github.event.inputs.memgraph_version }}"
-      memgraph_download_link: "${{ needs.SetupNames.outputs.download_link_base }}${{ matrix.arm_ext }}${{ matrix.rwid_ext }}/${{ needs.SetupNames.outputs.dowlnoad_binary_name_base }}_${{ matrix.build_arch }}64.deb"
+      memgraph_download_link: "${{ needs.SetupNames.outputs.download_link_base }}${{ matrix.arm_ext }}${{ matrix.rwid_ext }}${{ matrix.malloc && '-malloc' || '' }}/${{ needs.SetupNames.outputs.download_binary_name_base }}_${{ matrix.build_arch }}.deb"
       shorten_tag: "true"
       force_release: "true"
       push_to_dockerhub: "false"
       push_to_s3: "true"
       s3_dest_bucket: "deps.memgraph.io"
       s3_dest_dir: "mage/v${{ github.event.inputs.mage_version}}"
-      large_runner: ${{ matrix.build_target == 'dev' && 'true' || 'false' }}
+      large_runner: 'false'
+      malloc: ${{ matrix.malloc }}
     secrets: inherit

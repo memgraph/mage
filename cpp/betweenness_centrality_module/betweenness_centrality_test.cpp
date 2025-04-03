@@ -27,7 +27,8 @@ TEST_P(BCUtilBFSParametersTests, BetweennessCentralityUtilBFS) {
   std::stack<std::uint64_t> visited;
   std::vector<std::vector<std::uint64_t>> predecessors(number_of_nodes, std::vector<std::uint64_t>());
   std::vector<std::uint64_t> shortest_paths_counter(number_of_nodes, 0);
-  betweenness_centrality_util::BFS(0, *graph, visited, predecessors, shortest_paths_counter);
+  std::vector<int> distance(number_of_nodes, -1);
+  betweenness_centrality_util::BFS(0, *graph, visited, predecessors, shortest_paths_counter, distance);
 
   ASSERT_EQ(visited, expected_visited);
 

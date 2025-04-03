@@ -9,10 +9,10 @@ on:
       mage_build_arch:
         type: choice
         description: "Mage build architecture"
-        default: 'amd'
+        default: 'amd64'
         options:
-          - "amd"
-          - "arm"
+          - "amd64"
+          - "arm64"
       mage_build_scope:
         type: choice
         description: "Mage build scope"
@@ -20,13 +20,6 @@ on:
         options:
           - "with ML"
           - "without ML"
-      mage_build_target:
-        type: choice
-        description: "Mage image target. By default 'dev' uses 'RelWithDebInfo' and 'with ML'."
-        default: 'prod'
-        options:
-          - "prod"
-          - "dev"
       mage_build_type:
         type: choice
         description: "Mage build type"
@@ -49,14 +42,21 @@ on:
         type: boolean
         description: "Push the image to S3?"
         default: false
-
+      matrix_build:
+        type: boolean
+        description: "Enable multiple builds via a matrix configuration?"
+        default: false
+      malloc:
+        type: boolean
+        description: "Use malloc build of memgraph (no jemalloc)"
+        default: false
 jobs:
   BuildMage:
+    if: ${{ github.event.inputs.matrix_build != 'true' }}
     uses: ./.github/workflows/reusable_package_mage.yaml
     with:
-      arch: ${{ github.event.inputs.mage_build_arch || 'amd' }}
+      arch: ${{ github.event.inputs.mage_build_arch || 'amd64' }}
       mage_build_scope: ${{ github.event.inputs.mage_build_scope || 'all' }}
-      mage_build_target: ${{ github.event.inputs.mage_build_target || 'prod' }}
       mage_build_type: ${{ github.event.inputs.mage_build_type || 'Release' }}
       mage_version: ${{ github.event.inputs.mage_version }}
       memgraph_version: ${{ github.event.inputs.memgraph_version }}
@@ -65,5 +65,38 @@ jobs:
       force_release: 'true'
       push_to_dockerhub: ${{ github.event.inputs.push_to_dockerhub || 'false' }}
       push_to_s3: ${{ github.event.inputs.push_to_s3 || 'false' }}
-      large_runner: ${{ github.event.inputs.mage_build_target == 'dev' && 'true' || 'false' }}
+      large_runner: 'false'
+      malloc: ${{ github.event.inputs.malloc == 'true' }}
+    secrets: inherit
+
+  # New matrix build job, runs only when matrix_build is true
+  BuildMageMatrix:
+    if: ${{ github.event.inputs.matrix_build == 'true' }}
+    uses: ./.github/workflows/reusable_package_mage.yaml
+    strategy:
+      fail-fast: false
+      matrix:
+        build_scope: ["with ML", "without ML"]
+        build_type: ["Release", "RelWithDebInfo"]
+        build_arch: ["amd64", "arm64"]
+        malloc: [false]
+        include:
+          - build_type: "Release"
+            build_scope: "with ML"
+            build_arch: "amd64"
+            malloc: true
+
+    with:
+      arch: ${{ matrix.build_arch }}
+      mage_build_scope: ${{ matrix.build_scope }}
+      mage_build_type: ${{ matrix.build_type }}
+      mage_version: ${{ github.event.inputs.mage_version }}
+      memgraph_version: ${{ github.event.inputs.memgraph_version }}
+      memgraph_download_link: ${{ github.event.inputs.memgraph_download_link || '' }}
+      shorten_tag: 'true'
+      force_release: 'true'
+      push_to_dockerhub: ${{ github.event.inputs.push_to_dockerhub || 'false' }}
+      push_to_s3: ${{ github.event.inputs.push_to_s3 || 'false' }}
+      large_runner: 'false'
+      malloc: ${{ matrix.malloc }}
     secrets: inherit
