@@ -86,9 +86,6 @@ jobs:
             echo "mgdeps-cache is NOT reachable"
           fi
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v3
