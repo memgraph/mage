@@ -96,7 +96,7 @@ rm -rf /root/mage
 #rustversion=$(cargo --version | sed 's/cargo //')
 
 # install Rust as `memgraph` user - this is required for building mage
-su - memgraph -c 'curl https://sh.rustup.rs -sSf | sh -s -- -y && echo "export PATH=\$HOME/.cargo/bin:\$PATH" >> $HOME/.bashrc'
+su - memgraph -c 'curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.85 && echo "export PATH=\$HOME/.cargo/bin:\$PATH" >> $HOME/.bashrc'
 
 # build everything again (because it isn't copied into the prod image)
 build_cmd="source /opt/toolchain-v${toolchain_version}/activate && cd /mage && python3 /mage/setup build --cpp-build-flags CMAKE_BUILD_TYPE=${BUILD_TYPE}"
