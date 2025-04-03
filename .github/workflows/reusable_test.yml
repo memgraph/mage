@@ -212,7 +212,7 @@ jobs:
 
       - name: Rust library tests
         run: |
-          docker exec -i -u memgraph ${{ env.MAGE_CONTAINER }} bash -c "source ~/.cargo/env && cd /mage/rust/rsmgp-sys && cargo fmt -- --check && cargo test"
+          docker exec -i -u memgraph ${{ env.MAGE_CONTAINER }} bash -c "source ~/.cargo/env && cd /mage/rust/rsmgp-sys && cargo fmt -- --check && RUST_BACKTRACE=1 cargo test"
 
       - name: C++ Modules unit tests
         run: |
