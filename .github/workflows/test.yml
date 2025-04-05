@@ -21,13 +21,6 @@ on:
         options:
           - "amd64"
           - "arm64"
-      build_target:
-        description: "Mage build target"
-        type: choice
-        default: "prod"
-        options:
-          - "prod"
-          - "dev"
       build_scope:
         description: "Mage build scope"
         type: choice
@@ -58,15 +51,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mg_version: ["3.1.0"]
-        mg_rc_version: ["rc4"]
+        mg_version: ["3.1.1"]
+        mg_rc_version: ["rc2"]
         arch: ["amd64", "arm64"]
-        build_target: ["prod", "dev"]
         build_scope: ["with ML", "without ML"]
     uses: ./.github/workflows/reusable_test.yml
     with:
       arch: "${{ matrix.arch }}"
-      build_target: "${{ matrix.build_target }}"
       build_scope: "${{ matrix.build_scope }}"
       memgraph_ref: "v${{ matrix.mg_version }}-${{ matrix.mg_rc_version }}"
       memgraph_ref_update: "false"
@@ -79,12 +70,10 @@ jobs:
       fail-fast: false
       matrix:
         arch: ["amd64","arm64"]
-        build_target: ["dev"]
         build_scope: ["with ML", "without ML"]
     uses: ./.github/workflows/reusable_test.yml
     with:
       arch: "${{ matrix.arch }}"
-      build_target: "${{ matrix.build_target }}"
       build_scope: "${{ matrix.build_scope }}"
       memgraph_version: 
       memgraph_download_link: 
@@ -97,7 +86,6 @@ jobs:
     uses: ./.github/workflows/reusable_test.yml
     with:
       arch: "${{ github.event.inputs.arch }}"
-      build_target: "${{ github.event.inputs.build_target }}"
       build_scope: "${{ github.event.inputs.build_scope }}"
       memgraph_version: "${{ github.event.inputs.memgraph_version }}"
       memgraph_download_link: "${{ github.event.inputs.memgraph_download_link }}"
@@ -111,14 +99,12 @@ jobs:
       fail-fast: false
       matrix:
         arch: ["amd64", "arm64"]
-        build_target: ["prod", "dev"]
         build_scope: ["with ML", "without ML"]
     uses: ./.github/workflows/reusable_test.yml
     with:
       arch: "${{ matrix.arch }}"
-      build_target: "${{ matrix.build_target }}"
       build_scope: "${{ matrix.build_scope }}"
-      memgraph_version: "3.0.0"
+      memgraph_version: "3.1.1"
       memgraph_ref: "master"
       memgraph_ref_update: "true"
     secrets: inherit

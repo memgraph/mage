@@ -1,3 +1,4 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
 boto3==1.36.23
 defusedxml==0.7.1
 duckdb==1.2.1
@@ -10,6 +11,7 @@ mysql-connector-python==9.1.0
 networkx==2.8.8
 oracledb==2.5.1
 pandas==2.2.3
+platformdirs==4.3.6
 pyarrow==19.0.1
 psycopg2-binary==2.9.10
 pyodbc==5.2.0
@@ -17,5 +19,6 @@ python-Levenshtein==0.26.1
 scikit-learn==1.5.2
 scipy==1.13.1
 six==1.17.0
-torch==2.3.0
+torch==2.4.0+cpu; platform_machine != "aarch64"
+torch==2.4.0; platform_machine == "aarch64"
 torchmetrics==0.10.0 # current implementation of node_classification module depends on version <= 0.10.0

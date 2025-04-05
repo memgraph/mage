@@ -55,15 +55,11 @@ jobs:
             build_scope: "without ML"
             build_type: "RelWithDebInfo"
             image_ext: "-no-ml-relwithdebinfo"
-          - build_target: "dev"
-            build_scope: "with ML"
-            build_type: "RelwithDebInfo"
-            image_ext: "-dev"
           - build_target: "prod"
             build_scope: "with ML"
             build_type: "Release"
-            malloc: true
-    runs-on: ${{ matrix.build_target == 'dev' && 'ubuntu-large' || 'ubuntu-latest' }}
+            image_ext: "-malloc"
+    runs-on: ["self-hosted", "DockerMgBuild", "X64"]
     steps:
       - name: Setup environment variables
         run: |
