@@ -726,11 +726,11 @@ def init_migrate_memgraph(
     config_path: str = "",
     params: mgp.Nullable[mgp.Any] = None,
 ):
-    global neo4j_dict
+    global memgraph_dict
 
     thread_id = threading.get_native_id()
-    if thread_id not in neo4j_dict:
-        neo4j_dict[thread_id] = {}
+    if thread_id not in memgraph_dict:
+        memgraph_dict[thread_id] = {}
 
     if len(config_path) > 0:
         config = _combine_config(config=config, config_path=config_path)
@@ -739,8 +739,8 @@ def init_migrate_memgraph(
     query = _formulate_cypher_query(label_or_rel_or_query)
     cursor = memgraph_db.execute_and_fetch(query, params)
 
-    neo4j_dict[thread_id][Constants.CONNECTION] = memgraph_db
-    neo4j_dict[thread_id][Constants.CURSOR] = cursor
+    memgraph_dict[thread_id][Constants.CONNECTION] = memgraph_db
+    memgraph_dict[thread_id][Constants.CURSOR] = cursor
 
 
 def memgraph(
@@ -750,13 +750,13 @@ def memgraph(
     params: mgp.Nullable[mgp.Any] = None,
 ) -> mgp.Record(row=mgp.Map):
     """
-    Migrate data from Neo4j to Memgraph. Can migrate a specific node label, relationship type, or execute a custom Cypher query.
+    Migrate data from Memgraph to another Memgraph instance. Can migrate a specific node label, relationship type, or execute a custom Cypher query.
 
     :param label_or_rel_or_query: Node label, relationship type, or a Cypher query
-    :param config: Connection configuration for Neo4j
+    :param config: Connection configuration for Memgraph
     :param config_path: Path to a JSON file containing connection parameters
     :param params: Optional query parameters
-    :return: Stream of rows from Neo4j
+    :return: Stream of rows from Memgraph
     """
     global memgraph_dict
 
@@ -871,7 +871,11 @@ def _formulate_cypher_query(label_or_rel_or_query: str) -> str:
         return (
             label_or_rel_or_query  # Treat it as a Cypher query if multiple words exist
         )
+
+    # Try to see if the syntax matches similar to (:Label) to migrate only nodes
     node_match = re.match(r"^\(\s*:(\w+)\s*\)$", label_or_rel_or_query)
+
+    # Try to see if the syntax matches similar to [:REL_TYPE] to migrate only relationships
     rel_match = re.match(r"^\[\s*:(\w+)\s*\]$", label_or_rel_or_query)
 
     if node_match:
@@ -879,15 +883,16 @@ def _formulate_cypher_query(label_or_rel_or_query: str) -> str:
         return (
             f"MATCH (n:{label}) RETURN labels(n) as labels, properties(n) as properties"
         )
-    elif rel_match:
+
+    if rel_match:
         rel_type = rel_match.group(1)
         return f"""
     MATCH (n)-[r:{rel_type}]->(m)
-    RETURN 
+    RETURN
         labels(n) as from_labels,
-        labels(m) as to_labels, 
-        properties(n) as from_properties, 
-        properties(r) as edge_properties, 
+        labels(m) as to_labels,
+        properties(n) as from_properties,
+        properties(r) as edge_properties,
         properties(m) as to_properties
     """
     return label_or_rel_or_query  # Assume it's a valid query
