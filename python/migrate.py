@@ -2,6 +2,7 @@ import base64
 from decimal import Decimal
 import boto3
 import csv
+import duckdb as duckDB
 import io
 from gqlalchemy import Neo4j
 import json
@@ -14,7 +15,7 @@ import psycopg2
 import pyarrow.flight as flight
 import re
 import threading
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 
 class Constants:
@@ -641,6 +642,77 @@ def cleanup_migrate_arrow_flight():
 mgp.add_batch_read_proc(
     arrow_flight, init_migrate_arrow_flight, cleanup_migrate_arrow_flight
 )
+
+
+# Dictionary to store DuckDB connections and cursors per thread
+duckdb_dict = {}
+
+
+def init_migrate_duckdb(query: str, setup_queries: mgp.Nullable[List[str]] = None):
+    """
+    Initialize an in-memory DuckDB connection and execute the query.
+
+    :param query: SQL query to execute
+    :param config: Unused but kept for consistency with other migration functions
+    :param config_path: Unused but kept for consistency with other migration functions
+    """
+    global duckdb_dict
+
+    thread_id = threading.get_native_id()
+    if thread_id not in duckdb_dict:
+        duckdb_dict[thread_id] = {}
+
+    # Ensure a fresh in-memory DuckDB instance for each thread
+    connection = duckDB.connect()
+    cursor = connection.cursor()
+    if setup_queries is not None:
+        for setup_query in setup_queries:
+            cursor.execute(setup_query)
+
+    cursor.execute(query)
+
+    duckdb_dict[thread_id][Constants.CONNECTION] = connection
+    duckdb_dict[thread_id][Constants.CURSOR] = cursor
+    duckdb_dict[thread_id][Constants.COLUMN_NAMES] = [
+        desc[0] for desc in cursor.description
+    ]
+
+
+def duckdb(
+    query: str, setup_queries: mgp.Nullable[List[str]] = None
+) -> mgp.Record(row=mgp.Map):
+    """
+    Fetch rows from DuckDB in batches.
+
+    :param query: SQL query to execute
+    :param config: Unused but kept for consistency with other migration functions
+    :param config_path: Unused but kept for consistency with other migration functions
+    :return: The result table as a stream of rows
+    """
+    global duckdb_dict
+
+    thread_id = threading.get_native_id()
+    cursor = duckdb_dict[thread_id][Constants.CURSOR]
+    column_names = duckdb_dict[thread_id][Constants.COLUMN_NAMES]
+
+    rows = cursor.fetchmany(Constants.BATCH_SIZE)
+    return [mgp.Record(row=_name_row_cells(row, column_names)) for row in rows]
+
+
+def cleanup_migrate_duckdb():
+    """
+    Clean up DuckDB dictionary references per-thread.
+    """
+    global duckdb_dict
+
+    thread_id = threading.get_native_id()
+    if thread_id in duckdb_dict:
+        if Constants.CONNECTION in duckdb_dict[thread_id]:
+            duckdb_dict[thread_id][Constants.CONNECTION].close()
+        duckdb_dict.pop(thread_id, None)
+
+
+mgp.add_batch_read_proc(duckdb, init_migrate_duckdb, cleanup_migrate_duckdb)
 
 
 def _formulate_cypher_query(label_or_rel_or_query: str) -> str:
