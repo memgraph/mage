@@ -51,8 +51,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mg_version: ["3.1.0"]
-        mg_rc_version: ["rc4"]
+        mg_version: ["3.1.1"]
+        mg_rc_version: ["rc2"]
         arch: ["amd64", "arm64"]
         build_scope: ["with ML", "without ML"]
     uses: ./.github/workflows/reusable_test.yml
@@ -104,7 +104,7 @@ jobs:
     with:
       arch: "${{ matrix.arch }}"
       build_scope: "${{ matrix.build_scope }}"
-      memgraph_version: "3.0.0"
+      memgraph_version: "3.1.1"
       memgraph_ref: "master"
       memgraph_ref_update: "true"
     secrets: inherit

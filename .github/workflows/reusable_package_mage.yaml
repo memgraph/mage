@@ -78,8 +78,13 @@ jobs:
           submodules: recursive
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: Check mgdeps-cache availability
+        run: |
+          if curl -I --silent --fail "http://mgdeps-cache:8000/wheels"; then
+            echo "mgdeps-cache is reachable"
+          else
+            echo "mgdeps-cache is NOT reachable"
+          fi
 
       - name: Set up Docker Buildx
         id: buildx
@@ -138,15 +143,32 @@ jobs:
           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
           echo "ARTIFACT_NAME=${ARTIFACT_NAME}" >> $GITHUB_ENV
 
+      - name: Set CI branch name for PR events
+        if: ${{ github.event_name == 'pull_request' }}
+        run: echo "CI_BRANCH=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
+      
+
       - name: Get Current MAGE Tag
         run: |
-          # Get the current tag, or commit hash if a tag doesn't exist
+          # Get the current tag, or branch if a tag doesn't exist
           # This is used later in image creation, so that the exact version of 
           # the MAGE git repository can be checked out within the container, 
           # when we run the script to convert to "dev" container
           tag=$(./get_tag.sh)
-          echo "Using tag/commit hash: $tag"
-          echo "MAGE_COMMIT=${tag}" >> GITHUB_ENV
+
+          # If tag is empty, fallback to the branch name
+          if [ -z "$tag" ]; then
+            echo "No valid tag found; using branch name."
+            # If CI_BRANCH is set (for PR events), use it; otherwise, use GITHUB_REF
+            if [ -n "$CI_BRANCH" ]; then
+              tag="$CI_BRANCH"
+            else
+              tag="${GITHUB_REF#refs/heads/}"
+            fi
+          fi
+
+          echo "Using tag/branch: $tag"
+          echo "MAGE_COMMIT=${tag}" >> $GITHUB_ENV
 
 
       - name: Set target dockerfile
@@ -207,15 +229,22 @@ jobs:
           echo "Using base image: $MGBUILD_IMAGE"
           echo "Image Tag: ${{ env.IMAGE_TAG }}"
 
-          # target is always "prod" now, we convert to dev container afterwards
+          # target is "prod" for Release and "debug" for RelWithDebInfo
+          if [ "${{ env.MAGE_BUILD_TYPE }}" = "RelWithDebInfo" ]; then
+            DOCKER_TARGET=debug
+          else
+            DOCKER_TARGET=prod
+          fi
+          echo "Using target: $DOCKER_TARGET"
+
           docker buildx build \
-          --target prod \
+          --target $DOCKER_TARGET \
           --platform linux/${{ inputs.arch }} \
           --tag ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} \
           --file ${{ env.DOCKERFILE }} \
           --build-arg BUILD_TYPE=${{ env.MAGE_BUILD_TYPE }} \
           --build-arg MGBUILD_IMAGE=$MGBUILD_IMAGE \
-          --build-arg MAGE_COMMIT="${{ env.MAGE_COMMMIT }}" \
+          --build-arg MAGE_COMMIT="${{ env.MAGE_COMMIT }}" \
           --load .
 
           # print the image size in both SI and IEC units

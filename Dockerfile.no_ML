@@ -58,6 +58,8 @@ USER memgraph
 SHELL ["/bin/bash", "-c"]
 RUN source /opt/toolchain-v6/activate && curl https://sh.rustup.rs -sSf | sh -s -- -y \
     && export PATH="$HOME/.cargo/bin:${PATH}" \
+    && rustup toolchain install 1.85 \
+    && rustup default 1.85 \
     && python3 -m  pip install --no-cache-dir -r /mage/python/tests/requirements.txt --break-system-packages \
     && python3 -m  pip install --no-cache-dir -r /mage/python/requirements_no_ml.txt --break-system-packages \
     && python3 -m  pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages \
@@ -68,7 +70,7 @@ RUN source /opt/toolchain-v6/activate && curl https://sh.rustup.rs -sSf | sh -s 
 # Memgraph listens for Bolt Protocol on this port by default.
 EXPOSE 7687
 
-FROM ubuntu:24.04 as prod
+FROM ubuntu:24.04 as base
 
 USER root
 
@@ -110,7 +112,7 @@ COPY memgraph-${TARGETARCH}.deb .
 
 # fix `memgraph` UID and GID for compatibility with previous Debian releases
 RUN groupadd -g 103 memgraph && \
-    useradd -u 101 -g memgraph -m -d /var/lib/memgraph memgraph && \
+    useradd -u 101 -g memgraph -m -d /var/lib/memgraph -s /bin/bash memgraph && \
     dpkg -i memgraph-${TARGETARCH}.deb && \
     rm memgraph-${TARGETARCH}.deb 
 
@@ -124,6 +126,28 @@ COPY --from=builder /usr/lib/memgraph/auth_module/ /usr/lib/memgraph/auth_module
 COPY --from=builder /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
 COPY --from=builder --chown=memgraph:memgraph /var/lib/memgraph/.local/ /var/lib/memgraph/.local/ 
 
+# copy script to convert to dev container
+COPY --from=builder /mage/make-dev-container.sh /make-dev-container.sh
+
+USER memgraph
+EXPOSE 7687
+
+ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
+CMD [""]
+
+
+FROM base as prod
+
+USER root
+
+ARG TARGETARCH
+ARG PY_VERSION_DEFAULT=3.12
+ARG MAGE_COMMIT
+ARG BUILD_TYPE
+ENV BUILD_TYPE=${BUILD_TYPE}
+ENV PY_VERSION ${PY_VERSION_DEFAULT}
+ENV MAGE_COMMIT=${MAGE_COMMIT}
+
 #copy e2e tests
 COPY --from=builder --chown=memgraph:memgraph /mage/e2e/ /mage/e2e/
 COPY --from=builder --chown=memgraph:memgraph /mage/e2e_correctness/ /mage/e2e_correctness/
@@ -134,8 +158,33 @@ COPY --from=builder --chown=memgraph:memgraph /mage/run_e2e_correctness_tests.sh
 COPY --from=builder --chown=memgraph:memgraph /mage/python/requirements_no_ml.txt /mage/python/requirements_no_ml.txt
 COPY --from=builder --chown=memgraph:memgraph /mage/python/tests/requirements.txt /mage/python/tests/requirements.txt 
 
-# copy script to convert to dev container
-COPY --from=builder /mage/make-dev-container.sh /make-dev-container.sh
+USER memgraph
+EXPOSE 7687
+
+ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
+CMD [""]
+
+
+FROM base as debug
+
+USER root
+
+ARG TARGETARCH
+ARG PY_VERSION_DEFAULT=3.12
+ARG MAGE_COMMIT
+ARG BUILD_TYPE
+ENV BUILD_TYPE=${BUILD_TYPE}
+ENV PY_VERSION ${PY_VERSION_DEFAULT}
+ENV MAGE_COMMIT=${MAGE_COMMIT}
+
+# Add gdb
+RUN apt-get update && apt-get install -y \
+    gdb \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* 
+
+# Copy entire mage repo
+COPY --from=builder --chown=memgraph:memgraph /mage/ /mage/
 
 USER memgraph
 EXPOSE 7687

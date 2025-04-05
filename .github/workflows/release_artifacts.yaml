@@ -25,7 +25,7 @@ on:
 
 jobs:
   SetupNames:
-    runs-on: ubuntu-latest
+    runs-on: ["self-hosted", "X64"]
     outputs:
       download_link_base: ${{ steps.base_link.outputs.link }}
       download_binary_name_base: ${{ steps.binary_name.outputs.name }}
@@ -51,7 +51,7 @@ jobs:
         build_scope: ["with ML", "without ML"]
         build_type: ["Release", "RelWithDebInfo"]
         build_arch: ["amd64", "arm64"]
-        malloc: ['false']
+        malloc: [false]
         include:
           - build_type: "RelWithDebInfo"
             rwid_ext: "-relwithdebinfo"
@@ -60,7 +60,7 @@ jobs:
           - build_type: "Release"
             build_scope: "with ML"
             build_arch: "amd64"
-            malloc: 'true'
+            malloc: true
     uses: ./.github/workflows/reusable_package_mage.yaml
     with:
       arch: "${{ matrix.build_arch }}"
