@@ -10,6 +10,7 @@ mysql-connector-python==9.1.0
 networkx==2.8.8
 oracledb==2.5.1
 platformdirs==4.3.6
+pyarrow==19.0.1
 psycopg2-binary==2.9.10
 pyodbc==5.2.0
 python-Levenshtein==0.26.1

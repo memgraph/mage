@@ -1,3 +1,4 @@
+import base64
 from decimal import Decimal
 import boto3
 import csv
@@ -10,17 +11,22 @@ import oracledb
 import os
 import pyodbc
 import psycopg2
+import pyarrow.flight as flight
 import re
 import threading
 from typing import Any, Dict
 
 
 class Constants:
-    I_COLUMN_NAME = 0
-    CURSOR = "cursor"
+    BATCH_SIZE = 1000
     COLUMN_NAMES = "column_names"
     CONNECTION = "connection"
-    BATCH_SIZE = 1000
+    CURSOR = "cursor"
+    HOST = "host"
+    I_COLUMN_NAME = 0
+    PASSWORD = "password"
+    PORT = "port"
+    USERNAME = "username"
 
 
 ##### MYSQL
@@ -535,6 +541,108 @@ def cleanup_migrate_neo4j():
 mgp.add_batch_read_proc(neo4j, init_migrate_neo4j, cleanup_migrate_neo4j)
 
 
+# Dictionary to store Flight connections per thread
+flight_dict = {}
+
+
+def init_migrate_arrow_flight(
+    query: str,
+    config: mgp.Map,
+    config_path: str = "",
+):
+    global flight_dict
+
+    if len(config_path) > 0:
+        config = _combine_config(config=config, config_path=config_path)
+
+    host = config.get(Constants.HOST, None)
+    port = config.get(Constants.PORT, None)
+    username = config.get(Constants.USERNAME, "")
+    password = config.get(Constants.PASSWORD, "")
+
+    # Encode credentials
+    auth_string = f"{username}:{password}".encode("utf-8")
+    encoded_auth = base64.b64encode(auth_string).decode("utf-8")
+
+    # Establish Flight connection
+    client = flight.connect(f"grpc://{host}:{port}")
+
+    # Authenticate
+    options = flight.FlightCallOptions(
+        headers=[(b"authorization", f"Basic {encoded_auth}".encode("utf-8"))]
+    )
+
+    flight_info = client.get_flight_info(
+        flight.FlightDescriptor.for_command(query), options
+    )
+
+    # Store connection per thread
+    thread_id = threading.get_native_id()
+    if thread_id not in flight_dict:
+        flight_dict[thread_id] = {}
+
+    flight_dict[thread_id][Constants.CONNECTION] = client
+    flight_dict[thread_id][Constants.CURSOR] = iter(
+        _fetch_flight_data(client, flight_info, options)
+    )
+
+
+def _fetch_flight_data(client, flight_info, options):
+    """
+    Efficiently fetches data in batches from Arrow Flight using RecordBatchReader.
+    This prevents high memory usage by avoiding full table loading.
+    """
+    for endpoint in flight_info.endpoints:
+        reader = client.do_get(endpoint.ticket, options)  # Stream the data
+        for chunk in reader:  # Iterate over RecordBatches
+            batch = chunk.data  # Convert each batch to an Arrow Table
+            yield from batch.to_pylist()  # Convert to row dictionaries on demand
+
+
+def arrow_flight(
+    query: str,
+    config: mgp.Map,
+    config_path: str = "",
+) -> mgp.Record(row=mgp.Map):
+    """
+    Execute a SQL query on Arrow Flight and stream results into Memgraph.
+
+    :param query: SQL query to execute
+    :param config: Arrow Flight connection configuration
+    :param config_path: Path to a JSON config file
+    :return: Stream of rows from Arrow Flight
+    """
+    global flight_dict
+
+    thread_id = threading.get_native_id()
+    cursor = flight_dict[thread_id][Constants.CURSOR]
+    batch = []
+    for _ in range(Constants.BATCH_SIZE):
+        try:
+            row = _convert_row_types(next(cursor))
+            batch.append(mgp.Record(row=row))
+        except StopIteration:
+            break
+
+    return batch
+
+
+def cleanup_migrate_arrow_flight():
+    """
+    Close the Flight connection per-thread.
+    """
+    global flight_dict
+
+    thread_id = threading.get_native_id()
+    if thread_id in flight_dict:
+        flight_dict.pop(thread_id, None)
+
+
+mgp.add_batch_read_proc(
+    arrow_flight, init_migrate_arrow_flight, cleanup_migrate_arrow_flight
+)
+
+
 def _formulate_cypher_query(label_or_rel_or_query: str) -> str:
     words = label_or_rel_or_query.split()
     if len(words) > 1:
@@ -565,20 +673,11 @@ def _formulate_cypher_query(label_or_rel_or_query: str) -> str:
         properties(r) as edge_properties,
         properties(m) as to_properties
     """
-
     return label_or_rel_or_query  # Assume it's a valid query
 
 
 def _query_is_table(table_or_sql: str) -> bool:
     return len(table_or_sql.split()) == 1
-
-
-def _load_config(path: str) -> Dict[str, Any]:
-    try:
-        with open(path, mode="r") as config:
-            return json.load(config)
-    except Exception:
-        raise OSError("Could not open/read file.")
 
 
 def _combine_config(config: mgp.Map, config_path: str) -> Dict[str, Any]:
@@ -599,6 +698,13 @@ def _name_row_cells(row_cells, column_names) -> Dict[str, Any]:
     return {
         column: (value if not isinstance(value, Decimal) else float(value))
         for column, value in zip(column_names, row_cells)
+    }
+
+
+def _convert_row_types(row_cells) -> Dict[str, Any]:
+    return {
+        column: (value if not isinstance(value, Decimal) else float(value))
+        for column, value in row_cells.items()
     }
 
 
