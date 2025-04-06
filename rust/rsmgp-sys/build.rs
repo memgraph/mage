@@ -18,7 +18,7 @@ fn main() {
     // the resulting bindings.
     let bindings = bindgen::Builder::default()
         .header(mg_procedure_path)
-        .blacklist_function("mgp_*")
+        .blocklist_function("mgp_*")
         .rustified_enum("mgp_error")
         .rustified_enum("mgp_value_type")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
@@ -31,7 +31,7 @@ fn main() {
     bindings_string.push_str(
         &bindgen::Builder::default()
             .header(mg_procedure_path)
-            .blacklist_type(".*")
+            .blocklist_type(".*")
             .parse_callbacks(Box::new(bindgen::CargoCallbacks))
             .generate()
             .expect("Unable to generate bindings")

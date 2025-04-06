@@ -24,7 +24,7 @@ serial_test = "0.5.1"
 libc = "0.2.95"
 
 [build-dependencies]
-bindgen = "0.57.0"
+bindgen = "0.71.1"
 
 [dev-dependencies.cargo-husky]
 version = "1"
