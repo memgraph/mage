@@ -54,17 +54,10 @@ jobs:
           submodules: recursive
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Checkout specific branch in submodule
-        run: |
-          cd cpp/memgraph
-          git fetch origin
-          git checkout ${{ env.MEMGRAPH_BRANCH }}
-          git pull
-
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Spin up mgbuild container
         run: |
           cd cpp/memgraph
@@ -75,46 +68,39 @@ jobs:
           run
 
       - name: Build Memgraph release binary
-        run: |
+        run: | # For some reason --single-branch fails with get_version and node version gets messed up on init
           docker exec -i -u root "${{ env.CONTAINER_NAME }}" bash -c "
             cd /home/mg && 
             rm -rf memgraph &&
-            git clone --branch ${{ env.MEMGRAPH_BRANCH }} --single-branch https://github.com/memgraph/memgraph.git &&
+            git clone https://github.com/memgraph/memgraph.git &&
             cd memgraph &&
+            git checkout ${{ env.MEMGRAPH_BRANCH }} &&
             source /opt/toolchain-v6/activate &&
             (./init || true) &&
             cd build &&
             cmake -DCMAKE_BUILD_TYPE=Release .. &&
-            make -j$(nproc)
+            make -j$(nproc) memgraph
           "
 
-      - name: Package Memgraph release binary
+      # Skip building packages and just run everything in the mgbuild container
+      - name: Build cpp MAGE query modules
         run: |
-          cd cpp/memgraph
-          ./release/package/mgbuild.sh \
-          --toolchain ${{ env.TOOLCHAIN }} \
-          --os ${{ env.OS }} \
-          --arch ${{ env.ARCH }} \
-          package-memgraph
-
-      - name: "Copy package"
-        run: |
-          cd cpp/memgraph
-          ./release/package/mgbuild.sh \
-          --toolchain ${{ env.TOOLCHAIN }} \
-          --os ${{ env.OS }} \
-          --arch ${{ env.ARCH }} \
-          copy \
-          --package \
-          --dest-dir ../../.
-
-      - name: Build mage container
-        run: |
-          echo "Pretend to build mage container"
+          docker exec -i -u root "${{ env.CONTAINER_NAME }}" bash -c "
+            cd /home/mg && 
+            git clone https://github.com/memgraph/mage.git --recurse-submodules &&
+            cd mage &&
+            git checkout ${{ github.ref_name }} &&
+            source /opt/toolchain-v6/activate &&
+            python3 setup build -p /home/mg/memgraph/build/query_modules --cpp-build-flags CMAKE_BUILD_TYPE=Release --lang=cpp
+          "
 
       - name: Run benchmarks
         run: |
-          echo "Pretend to run benchmarks"
+          docker exec -i -u root "${{ env.CONTAINER_NAME }}" bash -c "
+            cd /home/mg/memgraph/build &&
+            source /opt/toolchain-v6/activate &&
+            ./memgraph --telemetry-enabled=false --storage-properties-on-edges=true --query-modules-directory=query_modules --log-file=memgraph.log
+          "
 
       - name: "Stop mgbuild container"
         if: always()
