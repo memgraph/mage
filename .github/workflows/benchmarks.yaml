@@ -97,7 +97,7 @@ jobs:
       - name: Run benchmarks
         run: |
           docker exec -i -u root "${{ env.CONTAINER_NAME }}" bash -c "
-            cd /home/mg/memgraph/build &&
+            cd /home/mg/memgraph/tests/mgbench &&
             source /opt/toolchain-v6/activate &&
             python3 benchmark.py vendor-native --vendor-binary /home/mg/memgraph/build/memgraph --vendor-name memgraph --vendor-specific telemetry-enabled=False query-modules-directory=/home/mg/memgraph/build/query_modules --no-authorization pokec/medium/mage/*   --export-results /home/mg/mage_benchmarks.json
           "
