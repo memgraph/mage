@@ -79,7 +79,7 @@ jobs:
             (./init || true) &&
             cd build &&
             cmake -DCMAKE_BUILD_TYPE=Release .. &&
-            make -j$(nproc) memgraph
+            make -j$(nproc)
           "
 
       # Skip building packages and just run everything in the mgbuild container
@@ -99,7 +99,25 @@ jobs:
           docker exec -i -u root "${{ env.CONTAINER_NAME }}" bash -c "
             cd /home/mg/memgraph/build &&
             source /opt/toolchain-v6/activate &&
-            ./memgraph --telemetry-enabled=false --storage-properties-on-edges=true --query-modules-directory=query_modules --log-file=memgraph.log
+            python3 benchmark.py vendor-native --vendor-binary /home/mg/memgraph/build/memgraph --vendor-name memgraph --vendor-specific telemetry-enabled=False query-modules-directory=/home/mg/memgraph/build/query_modules --no-authorization pokec/medium/mage/*   --export-results /home/mg/mage_benchmarks.json
+          "
+
+      - name: Upload benchmark results
+        run: |
+          docker exec -i -u root "${{ env.CONTAINER_NAME }}" bash -c "
+          cd /home/mg/memgraph &&
+          ./release/package/mgbuild.sh \
+            --toolchain $TOOLCHAIN \
+            --os $OS \
+            --arch $ARCH \
+            --enterprise-license $MEMGRAPH_ENTERPRISE_LICENSE \
+            --organization-name $MEMGRAPH_ORGANIZATION_NAME \
+            test-memgraph upload-to-bench-graph \
+            --benchmark-name "mgbench" \
+            --benchmark-results "/home/mg/mage_benchmarks.json" \
+            --github-run-id "${{ github.run_id }}" \
+            --github-run-number "${{ github.run_number }}" \
+            --head-branch-name "${{ env.MEMGRAPH_BRANCH }}+${{ github.ref_name }}"
           "
 
       - name: "Stop mgbuild container"
