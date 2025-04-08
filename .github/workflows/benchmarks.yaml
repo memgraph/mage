@@ -112,8 +112,8 @@ jobs:
             --arch $ARCH \
             --enterprise-license $MEMGRAPH_ENTERPRISE_LICENSE \
             --organization-name $MEMGRAPH_ORGANIZATION_NAME \
-            upload-to-bench-graph \
-            --benchmark-name "mgbench" \
+            test-memgraph upload-to-bench-graph \
+            --benchmark-name "mage" \
             --benchmark-results "/home/mg/mage_benchmarks.json" \
             --github-run-id "${{ github.run_id }}" \
             --github-run-number "${{ github.run_number }}" \
