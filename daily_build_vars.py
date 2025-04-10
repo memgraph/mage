@@ -112,14 +112,20 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Read payload from Memgraph daily build workflow")
 
     parser.add_argument(
-        '--payload',
+        'payload',
         type=str,
+        nargs='?',
         default="",
-        help='JSON data from build workflow'
+        help='JSON data from build workflow (optional)'
     )
+
     args = parser.parse_args()
     if args.payload:
-        payload = json.loads(args.payload)
+        try:
+            payload = json.loads(args.payload)
+        except json.JSONDecodeError as e:
+            print(f"Error decoding JSON: {e}")
+            payload = {}
     else:
         payload = {}
 
