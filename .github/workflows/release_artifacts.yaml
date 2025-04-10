@@ -25,10 +25,13 @@ on:
         type: boolean
         description: "Use the official Memgraph bucket?"
         default: false
-
+      trigger_daily_packaging:
+        type: boolean
+        description: "Set to true to trigger the daily packaging jobs for testing purposes."
+        default: false
 jobs:
   SetupNames:
-    if: github.ref_type != 'repository_dispatch'
+    if: github.ref_type != 'repository_dispatch' && github.event.inputs.trigger_daily_packaging == false
     runs-on: ["self-hosted", "X64"]
     outputs:
       download_link_base: ${{ steps.base_link.outputs.link }}
@@ -48,7 +51,7 @@ jobs:
           echo "name=memgraph_${version%%-*}-1" >> $GITHUB_OUTPUT
 
   DailyBuildVariables:
-    if: github.ref_type != 'repository_dispatch'
+    if: ${{ github.ref_type == 'repository_dispatch' || github.event.inputs.trigger_daily_packaging }}
     runs-on: ["self-hosted"]
     outputs:
       mage_version: ${{ steps.compute.outputs.mage_version }}
@@ -65,12 +68,16 @@ jobs:
         id: compute
         run: |
           # Pass the client payload (as JSON) to the Python script.
-          payload='${{ toJson(github.event.client_payload) }}'
+          if [ "${{ github.ref_type }}" == "repository_dispatch" ]; then
+            payload='${{ toJson(github.event.client_payload) }}'
+          else
+            payload=""
+          fi
           echo "Received payload: $payload"
           read mage_version memgraph_version build_date < <(python daily_build_vars.py "$payload")
-          echo "mage_version=mage_version" >> $GITHUB_OUTPUT
-          echo "memgraph_version=memgraph_version" >> $GITHUB_OUTPUT
-          echo "build_date=build_date" >> $GITHUB_OUTPUT
+          echo "mage_version=${mage_version}" >> $GITHUB_OUTPUT
+          echo "memgraph_version=${memgraph_version}" >> $GITHUB_OUTPUT
+          echo "build_date=${build_date}" >> $GITHUB_OUTPUT
           echo "binary_name_base=memgraph_${memgraph_version}-1" >> $GITHUB_OUTPUT
 
   Artifact:
