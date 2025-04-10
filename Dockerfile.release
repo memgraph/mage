@@ -47,7 +47,6 @@ RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb
 # move memgraph HOME so that mounting /var/lib/memgraph as a volume doesn't break Python
 RUN mkdir -pv /home/memgraph && \
     usermod -d /home/memgraph memgraph && \
-    cp -v /var/lib/memgraph/.bashrc /home/memgraph/.bashrc && \
     chown -R memgraph:memgraph /home/memgraph
 
 ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
