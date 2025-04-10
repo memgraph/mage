@@ -75,7 +75,7 @@ jobs:
             payload=""
           fi
           echo "Received payload: $payload"
-          read mage_version memgraph_version build_date < <(python daily_build_vars.py "$payload")
+          read mage_version memgraph_version build_date < <(python3 daily_build_vars.py "$payload")
           echo "mage_version=${mage_version}" >> $GITHUB_OUTPUT
           echo "memgraph_version=${memgraph_version}" >> $GITHUB_OUTPUT
           echo "build_date=${build_date}" >> $GITHUB_OUTPUT
