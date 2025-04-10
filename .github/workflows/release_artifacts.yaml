@@ -87,6 +87,12 @@ jobs:
           echo "memgraph_version=${memgraph_version}" >> $GITHUB_OUTPUT
           echo "build_date=${build_date}" >> $GITHUB_OUTPUT
           echo "binary_name_base=memgraph_${memgraph_version}-1" >> $GITHUB_OUTPUT
+      
+          # Print to console for debugging:
+          echo "DEBUG: mage_version=${mage_version}"
+          echo "DEBUG: memgraph_version=${memgraph_version}"
+          echo "DEBUG: build_date=${build_date}"
+          echo "DEBUG: binary_name_base=memgraph_${memgraph_version}-1"
 
   Artifact:
     needs: [SetupNames]
@@ -143,7 +149,7 @@ jobs:
       mage_version: "${{ needs.DailyBuildVariables.outputs.mage_version }}"
       mage_build_type: "${{ matrix.build_type }}"
       memgraph_version: "${{ needs.DailyBuildVariables.outputs.memgraph_version }}"
-      memgraph_download_link: "https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/ubuntu-24.04${{ matrix.arm_ext }}${{ matrix.rwid_ext }}${{ matrix.malloc && '-malloc' || '' }}/${{ needs.DailyBuildVariables.outputs.download_binary_name_base }}_${{ matrix.build_arch }}.deb"
+      memgraph_download_link: "https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/daily-build/memgraph/${{ needs.DailyBuildVariables.outputs.build_date }}/ubuntu-24.04${{ matrix.arm_ext }}${{ matrix.rwid_ext }}${{ matrix.malloc && '-malloc' || '' }}/${{ needs.DailyBuildVariables.outputs.binary_name_base }}_${{ matrix.build_arch }}.deb"
       shorten_tag: "false"
       force_release: "true"
       push_to_dockerhub: "false"
