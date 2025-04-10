@@ -58,7 +58,7 @@ def daily_build_vars(payload):
 
     mage_version = get_mage_version()
 
-    return memgraph_version, mage_version, date
+    return mage_version, memgraph_version, date
 
 
 def get_commit():
