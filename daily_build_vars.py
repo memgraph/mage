@@ -64,7 +64,7 @@ def daily_build_vars(payload):
 def get_commit():
 
     p = subprocess.run(
-        ["git,", "rev-parse", "--short", "HEAD"],
+        ["git", "rev-parse", "--short", "HEAD"],
         capture_output=True,
         text=True
     )
