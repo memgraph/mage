@@ -123,8 +123,7 @@ def main() -> None:
     if args.payload:
         try:
             payload = json.loads(args.payload)
-        except json.JSONDecodeError as e:
-            print(f"Error decoding JSON: {e}")
+        except json.JSONDecodeError:
             payload = {}
     else:
         payload = {}
