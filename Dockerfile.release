@@ -44,6 +44,12 @@ COPY memgraph-${TARGETARCH}.deb .
 
 RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb
 
+# move memgraph HOME so that mounting /var/lib/memgraph as a volume doesn't break Python
+RUN mkdir -pv /home/memgraph && \
+    usermod -d /home/memgraph memgraph && \
+    cp -v /var/lib/memgraph/.bashrc /home/memgraph/.bashrc && \
+    chown -R memgraph:memgraph /home/memgraph
+
 ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
 
 
@@ -78,7 +84,7 @@ RUN python3 -m pip install --no-cache-dir -r /mage/python/requirements.txt --bre
         fi && \
         python3 -m pip install --no-cache-dir dgl -f https://data.dgl.ai/wheels/torch-2.4/repo.html --break-system-packages; \
     fi && \
-    rm -fr /var/lib/memgraph/.cache/pip
+    rm -fr /home/memgraph/.cache/pip
 
 # Build query modules
 SHELL ["/bin/bash", "-c"]
@@ -137,7 +143,7 @@ COPY memgraph-${TARGETARCH}.deb .
 
 # fix `memgraph` UID and GID for compatibility with previous Debian releases
 RUN groupadd -g 103 memgraph && \
-    useradd -u 101 -g memgraph -m -d /var/lib/memgraph -s /bin/bash memgraph && \
+    useradd -u 101 -g memgraph -m -d /home/memgraph -s /bin/bash memgraph && \
     dpkg -i memgraph-${TARGETARCH}.deb && \
     rm memgraph-${TARGETARCH}.deb 
 
