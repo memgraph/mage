@@ -86,7 +86,8 @@ jobs:
           echo "mage_version=${mage_version}" >> $GITHUB_OUTPUT
           echo "memgraph_version=${memgraph_version}" >> $GITHUB_OUTPUT
           echo "build_date=${build_date}" >> $GITHUB_OUTPUT
-          echo "binary_name_base=memgraph_${memgraph_version}-1" >> $GITHUB_OUTPUT
+          binary_name_base=$(python3 -c "import urllib.parse; print(urllib.parse.quote('memgraph_' + '$memgraph_version' + '-1'))")
+          echo "binary_name_base=${binary_name_base}" >> $GITHUB_OUTPUT
       
           # Print to console for debugging:
           echo "DEBUG: mage_version=${mage_version}"
