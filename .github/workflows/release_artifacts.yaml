@@ -1,6 +1,9 @@
 name: 'Create release artifacts'
 
 on:
+  repository_dispatch:
+    types: [trigger_update_index]
+
   workflow_dispatch:
     inputs:
       os:
@@ -25,6 +28,7 @@ on:
 
 jobs:
   SetupNames:
+    if: github.ref_type != 'repository_dispatch'
     runs-on: ["self-hosted", "X64"]
     outputs:
       download_link_base: ${{ steps.base_link.outputs.link }}
@@ -42,6 +46,32 @@ jobs:
         run: |
           version=${{ github.event.inputs.memgraph_version }}
           echo "name=memgraph_${version%%-*}-1" >> $GITHUB_OUTPUT
+
+  DailyBuildVariables:
+    if: github.ref_type != 'repository_dispatch'
+    runs-on: ["self-hosted"]
+    outputs:
+      mage_version: ${{ steps.compute.outputs.mage_version }}
+      memgraph_version: ${{ steps.compute.outputs.memgraph_version }}
+      build_date: ${{ steps.compute.outputs.build_date }}
+      binary_name_base: ${{ steps.compute.outputs.binary_name_base }}
+    steps:
+      - name: Set up repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute variables using Python script
+        id: compute
+        run: |
+          # Pass the client payload (as JSON) to the Python script.
+          payload='${{ toJson(github.event.client_payload) }}'
+          echo "Received payload: $payload"
+          read mage_version memgraph_version build_date < <(python daily_build_vars.py "$payload")
+          echo "mage_version=mage_version" >> $GITHUB_OUTPUT
+          echo "memgraph_version=memgraph_version" >> $GITHUB_OUTPUT
+          echo "build_date=build_date" >> $GITHUB_OUTPUT
+          echo "binary_name_base=memgraph_${memgraph_version}-1" >> $GITHUB_OUTPUT
 
   Artifact:
     needs: [SetupNames]
@@ -72,5 +102,38 @@ jobs:
       push_to_s3: "true"
       s3_dest_bucket: "deps.memgraph.io"
       s3_dest_dir: "mage/v${{ github.event.inputs.mage_version}}"
+      malloc: ${{ matrix.malloc }}
+    secrets: inherit
+
+
+  DailyBuildArtifact:
+    needs: [DailyBuildVariables]
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: ["Release", "RelWithDebInfo"]
+        build_arch: ["amd64", "arm64"]
+        malloc: [false]
+        include:
+          - build_type: "RelWithDebInfo"
+            rwid_ext: "-relwithdebinfo"
+          - build_arch: "arm64"
+            arm_ext: "-aarch64"
+          - build_type: "Release"
+            build_arch: "amd64"
+            malloc: true
+    uses: ./.github/workflows/reusable_package_mage.yaml
+    with:
+      arch: "${{ matrix.build_arch }}"
+      mage_version: "${{ needs.DailyBuildVariables.outputs.mage_version }}"
+      mage_build_type: "${{ matrix.build_type }}"
+      memgraph_version: "${{ needs.DailyBuildVariables.outputs.memgraph_version }}"
+      memgraph_download_link: "https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/ubuntu-24.04${{ matrix.arm_ext }}${{ matrix.rwid_ext }}${{ matrix.malloc && '-malloc' || '' }}/${{ needs.DailyBuildVariables.outputs.download_binary_name_base }}_${{ matrix.build_arch }}.deb"
+      shorten_tag: "false"
+      force_release: "true"
+      push_to_dockerhub: "false"
+      push_to_s3: "true"
+      s3_dest_bucket: "deps.memgraph.io"
+      s3_dest_dir: "daily-build/mage/${{ needs.DailyBuildVariables.outputs.build_date }}"
       malloc: ${{ matrix.malloc }}
     secrets: inherit
