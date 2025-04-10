@@ -110,6 +110,8 @@ jobs:
             fi
           fi
           IMAGE_TAG="${MAGE_VERSION}-memgraph-${MEMGRAPH_VERSION}"
+          IMAGE_TAG="${IMAGE_TAG//+/_}"
+          IMAGE_TAG="${IMAGE_TAG//~/_}"
           ARTIFACT_NAME="mage-${IMAGE_TAG}"
           if [[ "${{ inputs.arch }}" == 'arm64' ]]; then
             ARTIFACT_NAME="${ARTIFACT_NAME}-arm64"
