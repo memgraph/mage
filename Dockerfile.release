@@ -154,7 +154,7 @@ COPY --from=builder /usr/lib/memgraph/auth_module/ /usr/lib/memgraph/auth_module
 
 # Copy Python build
 COPY --from=builder /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
-COPY --from=builder --chown=memgraph:memgraph /var/lib/memgraph/.local/ /var/lib/memgraph/.local/ 
+COPY --from=builder --chown=memgraph:memgraph /home/memgraph/.local/ /home/memgraph/.local/ 
 
 # copy script to convert to dev container
 COPY --from=builder /mage/make-dev-container.sh /make-dev-container.sh
