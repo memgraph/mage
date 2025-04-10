@@ -31,7 +31,7 @@ on:
         default: false
 jobs:
   SetupNames:
-    if: github.ref_type != 'repository_dispatch' && github.event.inputs.trigger_daily_packaging == false
+    if: ${{ github.ref_type != 'repository_dispatch' && github.event.inputs.trigger_daily_packaging == false }}
     runs-on: ["self-hosted", "X64"]
     outputs:
       download_link_base: ${{ steps.base_link.outputs.link }}
@@ -71,6 +71,7 @@ jobs:
           if [ "${{ github.ref_type }}" == "repository_dispatch" ]; then
             payload='${{ toJson(github.event.client_payload) }}'
           else
+            # unless we trigger this manually
             payload=""
           fi
           echo "Received payload: $payload"
