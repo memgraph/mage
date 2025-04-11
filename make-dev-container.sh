@@ -19,21 +19,34 @@ apt-get install -y libpython${PY_VERSION:-$(python3 --version | sed 's/Python //
 get_toolchain_url() {
   version=$1
   arch=$(uname -m)
+
+  # Determine the file name based on the architecture.
   case "$arch" in
     x86_64)
-      # AMD64 architecture
-      echo "https://s3-eu-west-1.amazonaws.com/deps.memgraph.io/toolchain-v${version}/toolchain-v${version}-binaries-ubuntu-24.04-amd64.tar.gz"
+      file="toolchain-v${version}-binaries-ubuntu-24.04-amd64.tar.gz"
       ;;
     aarch64)
-      # ARM64 architecture
-      echo "https://s3-eu-west-1.amazonaws.com/deps.memgraph.io/toolchain-v${version}/toolchain-v${version}-binaries-ubuntu-24.04-arm64.tar.gz"
+      file="toolchain-v${version}-binaries-ubuntu-24.04-arm64.tar.gz"
       ;;
     *)
       echo "Unsupported architecture: $arch" >&2
       exit 1
       ;;
   esac
+
+  # Construct the mgdeps-cache file URL.
+  mgdeps_url="http://mgdeps-cache:8000/file/${file}"
+  
+  # Check if the file is available on the cache using a HEAD request.
+  if curl --head --silent --fail "$mgdeps_url" -o /dev/null; then
+    echo "$mgdeps_url"
+  else
+    # Fallback to the S3 URL if the cache doesn't have the file.
+    s3_url="https://s3-eu-west-1.amazonaws.com/deps.memgraph.io/toolchain-v${version}/${file}"
+    echo "$s3_url"
+  fi
 }
+
 
 toolchain_version=6
 TOOLCHAIN_URL=$(get_toolchain_url "$toolchain_version")
@@ -83,7 +96,7 @@ rm -rf /root/mage
 #rustversion=$(cargo --version | sed 's/cargo //')
 
 # install Rust as `memgraph` user - this is required for building mage
-su - memgraph -c 'curl https://sh.rustup.rs -sSf | sh -s -- -y && echo "export PATH=\$HOME/.cargo/bin:\$PATH" >> $HOME/.bashrc'
+su - memgraph -c 'curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.85 && echo "export PATH=\$HOME/.cargo/bin:\$PATH" >> $HOME/.bashrc'
 
 # build everything again (because it isn't copied into the prod image)
 build_cmd="source /opt/toolchain-v${toolchain_version}/activate && cd /mage && python3 /mage/setup build --cpp-build-flags CMAKE_BUILD_TYPE=${BUILD_TYPE}"

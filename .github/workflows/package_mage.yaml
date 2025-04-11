@@ -13,13 +13,6 @@ on:
         options:
           - "amd64"
           - "arm64"
-      mage_build_scope:
-        type: choice
-        description: "Mage build scope"
-        default: 'with ML'
-        options:
-          - "with ML"
-          - "without ML"
       mage_build_type:
         type: choice
         description: "Mage build type"
@@ -56,7 +49,6 @@ jobs:
     uses: ./.github/workflows/reusable_package_mage.yaml
     with:
       arch: ${{ github.event.inputs.mage_build_arch || 'amd64' }}
-      mage_build_scope: ${{ github.event.inputs.mage_build_scope || 'all' }}
       mage_build_type: ${{ github.event.inputs.mage_build_type || 'Release' }}
       mage_version: ${{ github.event.inputs.mage_version }}
       memgraph_version: ${{ github.event.inputs.memgraph_version }}
@@ -65,7 +57,6 @@ jobs:
       force_release: 'true'
       push_to_dockerhub: ${{ github.event.inputs.push_to_dockerhub || 'false' }}
       push_to_s3: ${{ github.event.inputs.push_to_s3 || 'false' }}
-      large_runner: 'false'
       malloc: ${{ github.event.inputs.malloc == 'true' }}
     secrets: inherit
 
@@ -76,19 +67,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build_scope: ["with ML", "without ML"]
         build_type: ["Release", "RelWithDebInfo"]
         build_arch: ["amd64", "arm64"]
         malloc: [false]
         include:
           - build_type: "Release"
-            build_scope: "with ML"
             build_arch: "amd64"
             malloc: true
 
     with:
       arch: ${{ matrix.build_arch }}
-      mage_build_scope: ${{ matrix.build_scope }}
       mage_build_type: ${{ matrix.build_type }}
       mage_version: ${{ github.event.inputs.mage_version }}
       memgraph_version: ${{ github.event.inputs.memgraph_version }}
@@ -97,6 +85,5 @@ jobs:
       force_release: 'true'
       push_to_dockerhub: ${{ github.event.inputs.push_to_dockerhub || 'false' }}
       push_to_s3: ${{ github.event.inputs.push_to_s3 || 'false' }}
-      large_runner: 'false'
       malloc: ${{ matrix.malloc }}
     secrets: inherit
