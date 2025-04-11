@@ -68,7 +68,7 @@ def build_package_json(files: List[str], return_url: bool = True) -> dict:
         else:
             url = file
 
-        if "aarch64" in file:
+        if "arm64" in file:
             arch = "arm64"
             os = "Docker (arm64)"
         else:
