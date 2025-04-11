@@ -75,6 +75,7 @@ jobs:
           # Print to console for debugging:
           echo "DEBUG: mage_version=${mage_version}"
           echo "DEBUG: memgraph_version=${memgraph_version}"
+          echo "DEBUG: memgraph_commit=${memgraph_commit}"
           echo "DEBUG: build_date=${build_date}"
           echo "DEBUG: binary_name_base=memgraph_${memgraph_version}-1"
 
