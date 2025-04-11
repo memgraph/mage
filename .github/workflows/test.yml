@@ -8,8 +8,6 @@ on:
     tags:
       - "v*.*.*-rc*"
       - "v*.*-rc*"
-  schedule:
-    - cron: "0 1 * * *" #UTC
   pull_request:
   merge_group:
   workflow_dispatch:
@@ -94,3 +92,5 @@ jobs:
       memgraph_ref: "master"
       memgraph_ref_update: "true"
     secrets: inherit
+
+  
