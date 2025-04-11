@@ -1,0 +1,100 @@
+name: 'Create Daily Build'
+
+on:
+  repository_dispatch:
+    types: [trigger_daily_build]
+
+
+  workflow_dispatch:
+      inputs:
+          date:
+            type: string
+            description: "Date to build packages for (YYYYMMDD)"
+            required: false
+
+
+jobs:
+  DailyBuildVariables:
+    runs-on: ["self-hosted"]
+    outputs:
+      mage_version: ${{ steps.compute.outputs.mage_version }}
+      memgraph_version: ${{ steps.compute.outputs.memgraph_version }}
+      build_date: ${{ steps.compute.outputs.build_date }}
+      binary_name_base: ${{ steps.compute.outputs.binary_name_base }}
+    steps:
+      - name: Set up repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+
+
+      - name: Compute variables using Python script
+        id: compute
+        run: |
+          # Pass the client payload (as JSON) to the Python script.
+          if [ "${{ github.ref_type }}" == "repository_dispatch" ]; then
+            payload='${{ toJson(github.event.client_payload) }}'
+          else
+            # Check if the 'date' input is empty; if so, compute today's date in YYYYMMDD format.
+            if [ -z "${{ github.event.inputs.date }}" ]; then
+              build_date=$(date +'%Y%m%d')
+            else
+              build_date="${{ github.event.inputs.date }}"
+            fi
+
+            # now reformat it as JSON
+            payload="{\"date\": ${build_date}}"
+          fi
+          echo "Received payload: $payload"
+          read mage_version memgraph_version build_date < <(python3 daily_build_vars.py "$payload")
+          echo "mage_version=${mage_version}" >> $GITHUB_OUTPUT
+          echo "memgraph_version=${memgraph_version}" >> $GITHUB_OUTPUT
+          echo "build_date=${build_date}" >> $GITHUB_OUTPUT
+          binary_name_base=$(python3 -c "import urllib.parse; print(urllib.parse.quote('memgraph_' + '$memgraph_version' + '-1'))")
+          echo "binary_name_base=${binary_name_base}" >> $GITHUB_OUTPUT
+      
+          # Print to console for debugging:
+          echo "DEBUG: mage_version=${mage_version}"
+          echo "DEBUG: memgraph_version=${memgraph_version}"
+          echo "DEBUG: build_date=${build_date}"
+          echo "DEBUG: binary_name_base=memgraph_${memgraph_version}-1"
+
+          
+  DailyBuildArtifact:
+    needs: [DailyBuildVariables]
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: ["Release", "RelWithDebInfo"]
+        build_arch: ["amd64", "arm64"]
+        malloc: [false]
+        include:
+          - build_type: "RelWithDebInfo"
+            rwid_ext: "-relwithdebinfo"
+          - build_arch: "arm64"
+            arm_ext: "-aarch64"
+          - build_type: "Release"
+            build_arch: "amd64"
+            malloc: true
+    uses: ./.github/workflows/reusable_package_mage.yaml
+    with:
+      arch: "${{ matrix.build_arch }}"
+      mage_version: "${{ needs.DailyBuildVariables.outputs.mage_version }}"
+      mage_build_type: "${{ matrix.build_type }}"
+      memgraph_version: "${{ needs.DailyBuildVariables.outputs.memgraph_version }}"
+      memgraph_download_link: "https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/daily-build/memgraph/${{ needs.DailyBuildVariables.outputs.build_date }}/ubuntu-24.04${{ matrix.arm_ext }}${{ matrix.rwid_ext }}${{ matrix.malloc && '-malloc' || '' }}/${{ needs.DailyBuildVariables.outputs.binary_name_base }}_${{ matrix.build_arch }}.deb"
+      shorten_tag: "false"
+      force_release: "true"
+      push_to_dockerhub: "false"
+      push_to_s3: "true"
+      s3_dest_bucket: "deps.memgraph.io"
+      s3_dest_dir: "daily-build/mage/${{ needs.DailyBuildVariables.outputs.build_date }}"
+      malloc: ${{ matrix.malloc }}
+    secrets: inherit
