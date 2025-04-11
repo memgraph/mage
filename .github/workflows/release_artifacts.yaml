@@ -1,4 +1,7 @@
 name: 'Create release artifacts'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
 
 on:
   workflow_dispatch:
