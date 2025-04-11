@@ -1,4 +1,7 @@
 name: 'Create Daily Build'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
 
 on:
   repository_dispatch:
