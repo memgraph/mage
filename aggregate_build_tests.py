@@ -70,8 +70,10 @@ def build_package_json(files: List[str], return_url: bool = True) -> dict:
 
         if "aarch64" in file:
             arch = "arm64"
+            os = "Docker (arm64)"
         else:
             arch = "x86_64"
+            os = "Docker (x86_64)"
 
         if "relwithdebinfo" in file:
             arch = f"{arch}-debug"
@@ -79,14 +81,7 @@ def build_package_json(files: List[str], return_url: bool = True) -> dict:
         if "malloc" in file:
             arch = f"{arch}-malloc"
 
-        os = file.split("/")[3].replace(
-            "-malloc", ""
-        ).replace(
-            "-aarch64", ""
-        ).replace(
-            "-relwithdebinfo",
-            ""
-        )
+        
 
         if os not in out:
             out[os] = {}
