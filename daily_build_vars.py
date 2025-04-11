@@ -3,7 +3,7 @@ import subprocess
 import json
 import os
 import urllib.request
-
+import re
 
 def get_latest_build() -> int:
 
@@ -27,6 +27,20 @@ def get_latest_build() -> int:
 
     return max(dates)
 
+def extract_commit_hash(filename):
+    """
+    Attempts to extract a commit hash from the given filename.
+    The regex looks for a delimiter, then 8 to 12 hexadecimal characters,
+    followed by another delimiter.
+    """
+    # This regex looks for one of the delimiters (. _ + ~ -)
+    # then captures a group of 8-12 hex digits,
+    # and ensures it is followed by a delimiter like - or _ or .
+    pattern = re.compile(r"[._+~-](?P<hash>[0-9a-f]{8,12})(?=[-_\.])")
+    match = pattern.search(filename)
+    if match:
+        return match.group("hash")
+    return None
 
 def get_memgraph_version(date):
 
@@ -43,8 +57,9 @@ def get_memgraph_version(date):
     # always be the same to reveal the daily build version
     basename = os.path.basename(file)
     version = basename[9:-12]
+    hash = extract_commit_hash(version)
 
-    return version
+    return version,hash
 
 
 def daily_build_vars(payload):
@@ -54,11 +69,11 @@ def daily_build_vars(payload):
     else:
         date = get_latest_build()
 
-    memgraph_version = get_memgraph_version(date)
+    memgraph_version, memgraph_commit = get_memgraph_version(date)
 
     mage_version = get_mage_version()
 
-    return mage_version, memgraph_version, date
+    return mage_version, memgraph_version, memgraph_commit, date
 
 
 def get_commit():
@@ -128,8 +143,8 @@ def main() -> None:
     else:
         payload = {}
 
-    memgraph_version, mage_version, date = daily_build_vars(payload)
-    print(f"{memgraph_version} {mage_version} {date}")
+    memgraph_version, mage_version, memgraph_commit, date = daily_build_vars(payload)
+    print(f"{memgraph_version} {mage_version} {memgraph_commit} {date}")
 
 
 if __name__ == "__main__":
