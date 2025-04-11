@@ -92,3 +92,4 @@ jobs:
     uses: ./.github/workflows/daily_build.yml
     with:
       date: ${{ inputs.date }}
+    secrets: inherit
