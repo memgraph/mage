@@ -72,7 +72,7 @@ jobs:
       - name: Checkout specific branch in submodule
         run: |
           cd cpp/memgraph
-          if [ -z "${{ inputs.memgraph_ref }}" ] || [ ! git checkout "${{ inputs.memgraph_ref }}" ]; then
+          if [ -z "${{ inputs.memgraph_ref }}" ] || ! git checkout "${{ inputs.memgraph_ref }}"; then
             # this may happen if we're using a daily build not directly from master
             echo "Checkout of '${{ inputs.memgraph_ref }}' failed, checking out master instead."
             git checkout master
