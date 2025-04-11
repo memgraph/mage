@@ -77,8 +77,15 @@ jobs:
             echo "Checkout of '${{ inputs.memgraph_ref }}' failed, checking out master instead."
             git checkout master
           fi
-          if [[ "${{ inputs.memgraph_ref_update }}" == "true" ]]; then
-            git pull
+          
+          # Only pull if we are on a branch.
+          current_branch=$(git symbolic-ref --short -q HEAD)
+          if [ -n "$current_branch" ]; then
+            if [[ "${{ inputs.memgraph_ref_update }}" == "true" ]]; then
+              git pull
+            fi
+          else
+            echo "Detached HEAD state detected; skipping git pull."
           fi
 
       - name: Set up Docker Buildx
