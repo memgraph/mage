@@ -57,7 +57,7 @@ def get_memgraph_version(date):
     # always be the same to reveal the daily build version
     basename = os.path.basename(file)
     version = basename[9:-12]
-    hash = extract_commit_hash(version)
+    hash = extract_commit_hash(file)
 
     return version,hash
 
