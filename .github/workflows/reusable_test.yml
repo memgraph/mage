@@ -22,7 +22,7 @@ on:
       memgraph_ref_update:
         type: string
         description: "Update Memgraph submodule to the latest commit"
-        default: true
+        default: 'true'
 
 env:
   PY_VERSION: "3.12"
@@ -72,7 +72,11 @@ jobs:
       - name: Checkout specific branch in submodule
         run: |
           cd cpp/memgraph
-          git checkout ${{ inputs.memgraph_ref }}
+          if ! git checkout "${{ inputs.memgraph_ref }}"; then
+            # this may happen if we're using a daily build not directly from master
+            echo "Checkout of '${{ inputs.memgraph_ref }}' failed, checking out master instead."
+            git checkout master
+          fi
           if [[ "${{ inputs.memgraph_ref_update }}" == "true" ]]; then
             git pull
           fi
