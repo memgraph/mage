@@ -25,9 +25,17 @@ on:
         type: boolean
         description: "Use the official Memgraph bucket?"
         default: false
-
+      trigger_daily_build:
+        type: boolean
+        description: "Temporary hack"
+        default: false
+      date:
+        type: string
+        description: "Date to build packages for (YYYYMMDD)"
+        required: false
 jobs:
   SetupNames:
+    if: ${{ !inputs.trigger_daily_build }}
     runs-on: ["self-hosted", "X64"]
     outputs:
       download_link_base: ${{ steps.base_link.outputs.link }}
@@ -78,3 +86,9 @@ jobs:
       malloc: ${{ matrix.malloc }}
     secrets: inherit
 
+  # this hack is for testing
+  DailyBuildHack:
+    if: ${{ inputs.trigger_daily_build }}
+    uses: ./.github/workflows/daily_build.yml
+    with:
+      date: ${{ inputs.date }}
