@@ -88,7 +88,7 @@ jobs:
     uses: ./.github/workflows/reusable_test.yml
     with:
       arch: "${{ matrix.arch }}"
-      memgraph_version: "3.1.1"
+      memgraph_version: 
       memgraph_ref: "master"
       memgraph_ref_update: "true"
     secrets: inherit
