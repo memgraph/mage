@@ -123,8 +123,7 @@ jobs:
       arch: "${{ matrix.arch }}"
       memgraph_version: "${{ needs.DailyBuildVariables.outputs.memgraph_version }}"
       memgraph_download_link: "https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/daily-build/memgraph/${{ needs.DailyBuildVariables.outputs.build_date }}/ubuntu-24.04${{ matrix.arch == 'arm64' && '-aarch64' || '' }}/${{ needs.DailyBuildVariables.outputs.binary_name_base }}_${{ matrix.arch }}.deb"
-      #memgraph_ref: "${{ needs.DailyBuildVariables.outputs.memgraph_commit }}"
-      memgraph_ref: "master"
+      memgraph_ref: "${{ needs.DailyBuildVariables.outputs.memgraph_commit }}"
       memgraph_ref_update: "true"
     secrets: inherit
 
