@@ -37,6 +37,57 @@ on:
         default: true
 
 jobs:
+  # setup some variables for the default memgraph download link/version
+  TestVariables:
+    if: github.ref_type != 'tag'
+    runs-on: ["self-hosted"]
+    outputs:
+      mage_version: ${{ steps.compute.outputs.mage_version }}
+      memgraph_version: ${{ steps.compute.outputs.memgraph_version }}
+      memgraph_commit: ${{ steps.compute.outputs.memgraph_commit }}
+      build_date: ${{ steps.compute.outputs.build_date }}
+      binary_name_base: ${{ steps.compute.outputs.binary_name_base }}
+      arm_binary_url: ${{ steps.compute.outputs.arm_binary_url }}
+      x86_binary_url: ${{ steps.compute.outputs.x86_binary_url }}
+    steps:
+      - name: Set up repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+
+
+      - name: Compute variables using Python script
+        id: compute
+        run: |
+          read mage_version memgraph_version memgraph_commit build_date < <(python3 daily_build_vars.py)
+          echo "mage_version=${mage_version}" >> $GITHUB_OUTPUT
+          echo "memgraph_version=${memgraph_version}" >> $GITHUB_OUTPUT
+          echo "memgraph_commit=${memgraph_commit}" >> $GITHUB_OUTPUT
+          echo "build_date=${build_date}" >> $GITHUB_OUTPUT
+          binary_name_base=$(python3 -c "import urllib.parse; print(urllib.parse.quote('memgraph_' + '$memgraph_version' + '-1'))")
+          echo "binary_name_base=${binary_name_base}" >> $GITHUB_OUTPUT
+          arm_binary_url="https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/daily-build/memgraph/${build_date}/ubuntu-24.04-aarch64/${binary_name_base}_arm64.deb"
+          x86_binary_url="https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/daily-build/memgraph/${build_date}/ubuntu-24.04/${binary_name_base}_amd64.deb"
+          echo "arm_binary_url=$arm_binary_url" >> $GITHUB_OUTPUT
+          echo "x86_binary_url=$x86_binary_url" >> $GITHUB_OUTPUT
+
+
+          # Print to console for debugging:
+          echo "DEBUG: mage_version=${mage_version}"
+          echo "DEBUG: memgraph_version=${memgraph_version}"
+          echo "DEBUG: memgraph_commit=${memgraph_commit}"
+          echo "DEBUG: build_date=${build_date}"
+          echo "DEBUG: binary_name_base=memgraph_${memgraph_version}-1"
+
+
+
   RC_test:
     if: github.ref_type == 'tag'
     strategy:
@@ -55,6 +106,7 @@ jobs:
 
   PR_test:
     if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+    needs: [TestVariables]
     strategy:
       fail-fast: false
       matrix:
@@ -62,25 +114,27 @@ jobs:
     uses: ./.github/workflows/reusable_test.yml
     with:
       arch: "${{ matrix.arch }}"
-      memgraph_version: 
-      memgraph_download_link: 
-      memgraph_ref: "master"
+      memgraph_version: ${{ needs.TestVariables.outputs.memgraph_version }}
+      memgraph_download_link: ${{ github.event.inputs.arch == 'arm64' && needs.TestVariables.outputs.arm_binary_url || needs.TestVariables.outputs.x86_binary_url }}
+      memgraph_ref: ${{ needs.TestVariables.outputs.memgraph_commit }}
       memgraph_ref_update: "true"
     secrets: inherit
 
   Manual_test:
     if: github.event_name == 'workflow_dispatch'
+    needs: [TestVariables]
     uses: ./.github/workflows/reusable_test.yml
     with:
       arch: "${{ github.event.inputs.arch }}"
-      memgraph_version: "${{ github.event.inputs.memgraph_version }}"
-      memgraph_download_link: "${{ github.event.inputs.memgraph_download_link }}"
-      memgraph_ref: "${{ github.event.inputs.memgraph_ref }}"
+      memgraph_version: "${{ github.event.inputs.memgraph_version || needs.TestVariables.outputs.memgraph_version }}"
+      memgraph_download_link:  ${{ github.event.inputs.memgraph_download_link || ( github.event.inputs.arch == 'arm64' && needs.TestVariables.outputs.arm_binary_url || needs.TestVariables.outputs.x86_binary_url ) }}
+      memgraph_ref: "${{ github.event.inputs.memgraph_ref || needs.TestVariables.outputs.memgraph_commit }}"
       memgraph_ref_update: "${{ github.event.inputs.memgraph_ref_update }}"
     secrets: inherit
 
   Nightly_test:
     if: github.event_name == 'schedule'
+    needs: [TestVariables]
     strategy:
       fail-fast: false
       matrix:
@@ -88,8 +142,9 @@ jobs:
     uses: ./.github/workflows/reusable_test.yml
     with:
       arch: "${{ matrix.arch }}"
-      memgraph_version: 
-      memgraph_ref: "master"
+      memgraph_version: ${{ needs.TestVariables.outputs.memgraph_version }}
+      memgraph_download_link: ${{ github.event.inputs.arch == 'arm64' && needs.TestVariables.outputs.arm_binary_url || needs.TestVariables.outputs.x86_binary_url }}
+      memgraph_ref: ${{ needs.TestVariables.outputs.memgraph_commit }}
       memgraph_ref_update: "true"
     secrets: inherit
 
