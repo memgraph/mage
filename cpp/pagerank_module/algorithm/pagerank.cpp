@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <future>
 #include <numeric>
+#include <unordered_map>
 
 namespace pagerank_alg {
 
@@ -182,10 +183,10 @@ void PageRankGraph::ClearUnusedVectors() {
   ordered_edges_.clear();
   out_degree_.clear();
   memgraph_to_id.clear();
+  memgraph_to_id = std::unordered_map<std::uint64_t, std::uint64_t>{};
 
   ordered_edges_.shrink_to_fit();
   out_degree_.shrink_to_fit();
-  id_to_memgraph.shrink_to_fit();
 }
 
 std::vector<double> ParallelIterativePageRank(const PageRankGraph &graph, std::size_t max_iterations,
