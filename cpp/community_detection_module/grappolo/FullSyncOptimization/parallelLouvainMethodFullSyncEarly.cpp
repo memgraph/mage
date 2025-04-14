@@ -167,7 +167,7 @@ double parallelLouvainMethodFullSyncEarly(graph *G, long *C, int nThreads, doubl
                 //assert((targetCommAss[i] >= 0)&&(targetCommAss[i] < NV));
 
                 if(numItrs > 2 && C[i] == currCommAss[i] && pastCommAss[i]==currCommAss[i]){
-                    //Swaping!!!
+                    //Swapping!!!
                     verT[i] = true;
                     termNodes++;
                 }

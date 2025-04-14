@@ -2,7 +2,7 @@
 #include "defs.h"
 #include "coloring.h"
 
-/* The redistritbuted coloring step, no balance */
+/* The redistributed coloring step, no balance */
 int vBaseRedistribution(graph* G, int* vtxColor, int ncolors, int type)
 {
 #ifdef PRINT_DETAILED_STATS_
@@ -81,7 +81,7 @@ int vBaseRedistribution(graph* G, int* vtxColor, int ncolors, int type)
 		if(freq[ci]>avg)
 			overSize[ci]= true;
 
-	/* Begining of Redistribution */
+	/* Beginning of Redistribution */
 	std::cout << "VR start "<< std::endl;
 
 

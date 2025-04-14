@@ -310,7 +310,7 @@ def set_model_parameters(
     """The purpose of this function is to initialize all global variables.
     _You_ can change those via **params** dictionary.
     It checks if variables in **params** are defined appropriately. If so,
-    map of default global parameters is overriden with user defined dictionary params.
+    map of default global parameters is overridden with user defined dictionary params.
     After that it executes previously defined functions declare_globals and
     declare_model_and_data and sets each global variable to some value.
 
