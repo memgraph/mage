@@ -77,20 +77,9 @@ jobs:
             echo "No memgraph_ref provided, checking out master."
             git checkout master
           else
-            # Temporarily disable exit-on-error to capture the failure of checkout.
-            set +e
+            git fetch --all
             git checkout "${{ inputs.memgraph_ref }}"
-            checkout_status=$?
-            # Re-enable exit-on-error.
-            set -e
-            
-            # If the checkout failed, fallback to master.
-            if [ $checkout_status -ne 0 ]; then
-              echo "Checkout of '${{ inputs.memgraph_ref }}' failed, checking out master instead."
-              git checkout master
-            fi
           fi
-          echo "DEBUG: Last status $?"
           
           # Only pull if we are on a branch.
           current_branch=$(git symbolic-ref --short -q HEAD)
