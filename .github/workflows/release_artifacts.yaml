@@ -85,11 +85,3 @@ jobs:
       s3_dest_dir: "mage/v${{ github.event.inputs.mage_version}}"
       malloc: ${{ matrix.malloc }}
     secrets: inherit
-
-  # this hack is for testing
-  DailyBuildHack:
-    if: ${{ inputs.trigger_daily_build }}
-    uses: ./.github/workflows/daily_build.yml
-    with:
-      date: ${{ inputs.date }}
-    secrets: inherit

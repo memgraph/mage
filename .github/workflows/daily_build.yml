@@ -7,14 +7,6 @@ on:
   repository_dispatch:
     types: [trigger_daily_build]
 
-  # delete me once tested
-  workflow_call:
-    inputs:
-      date:
-        type: string
-        description: "Date to build packages for (YYYYMMDD)"
-        required: false
-
   workflow_dispatch:
       inputs:
           date:
