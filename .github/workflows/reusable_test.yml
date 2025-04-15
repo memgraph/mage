@@ -75,10 +75,10 @@ jobs:
           # If no ref is provided, just checkout master.
           if [ -z "${{ inputs.memgraph_ref }}" ]; then
             echo "No memgraph_ref provided, checking out master."
-            git checkout master
+            git checkout master || true
           else
             git fetch --all
-            git checkout "${{ inputs.memgraph_ref }}"
+            git checkout "${{ inputs.memgraph_ref }}" || true
           fi
           
           # Only pull if we are on a branch.
