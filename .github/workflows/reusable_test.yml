@@ -82,7 +82,7 @@ jobs:
           fi
           
           # Only pull if we are on a branch.
-          current_branch=$(git symbolic-ref --short -q HEAD)
+          current_branch=$(git symbolic-ref --short -q HEAD) || true
           echo "Current branch: $current_branch"
           if [ -n "$current_branch" ]; then
             if [[ "${{ inputs.memgraph_ref_update }}" == "true" ]]; then
