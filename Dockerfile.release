@@ -44,6 +44,11 @@ COPY memgraph-${TARGETARCH}.deb .
 
 RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb
 
+# move memgraph HOME so that mounting /var/lib/memgraph as a volume doesn't break Python
+RUN mkdir -pv /home/memgraph && \
+    usermod -d /home/memgraph memgraph && \
+    chown -R memgraph:memgraph /home/memgraph
+
 ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
 
 
@@ -76,9 +81,9 @@ RUN python3 -m pip install --no-cache-dir -r /mage/python/requirements.txt --bre
         else \
             python3 -m pip install --no-cache-dir torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.4.0+cpu.html --break-system-packages; \
         fi && \
-        python3 -m pip install --no-cache-dir dgl -f https://data.dgl.ai/wheels/torch-2.4/repo.html --break-system-packages; \
+        python3 -m pip install --no-cache-dir dgl==2.4.0 -f https://data.dgl.ai/wheels/torch-2.4/repo.html --break-system-packages; \
     fi && \
-    rm -fr /var/lib/memgraph/.cache/pip
+    rm -fr /home/memgraph/.cache/pip
 
 # Build query modules
 SHELL ["/bin/bash", "-c"]
@@ -137,7 +142,7 @@ COPY memgraph-${TARGETARCH}.deb .
 
 # fix `memgraph` UID and GID for compatibility with previous Debian releases
 RUN groupadd -g 103 memgraph && \
-    useradd -u 101 -g memgraph -m -d /var/lib/memgraph -s /bin/bash memgraph && \
+    useradd -u 101 -g memgraph -m -d /home/memgraph -s /bin/bash memgraph && \
     dpkg -i memgraph-${TARGETARCH}.deb && \
     rm memgraph-${TARGETARCH}.deb 
 
@@ -149,7 +154,7 @@ COPY --from=builder /usr/lib/memgraph/auth_module/ /usr/lib/memgraph/auth_module
 
 # Copy Python build
 COPY --from=builder /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
-COPY --from=builder --chown=memgraph:memgraph /var/lib/memgraph/.local/ /var/lib/memgraph/.local/ 
+COPY --from=builder --chown=memgraph:memgraph /home/memgraph/.local/ /home/memgraph/.local/ 
 
 # copy script to convert to dev container
 COPY --from=builder /mage/make-dev-container.sh /make-dev-container.sh
