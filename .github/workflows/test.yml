@@ -115,7 +115,7 @@ jobs:
     with:
       arch: "${{ matrix.arch }}"
       memgraph_version: ${{ needs.TestVariables.outputs.memgraph_version }}
-      memgraph_download_link: ${{ github.event.inputs.arch == 'arm64' && needs.TestVariables.outputs.arm_binary_url || needs.TestVariables.outputs.x86_binary_url }}
+      memgraph_download_link: ${{ matrix.arch == 'arm64' && needs.TestVariables.outputs.arm_binary_url || needs.TestVariables.outputs.x86_binary_url }}
       memgraph_ref: ${{ needs.TestVariables.outputs.memgraph_commit }}
       memgraph_ref_update: "true"
     secrets: inherit
@@ -143,7 +143,7 @@ jobs:
     with:
       arch: "${{ matrix.arch }}"
       memgraph_version: ${{ needs.TestVariables.outputs.memgraph_version }}
-      memgraph_download_link: ${{ github.event.inputs.arch == 'arm64' && needs.TestVariables.outputs.arm_binary_url || needs.TestVariables.outputs.x86_binary_url }}
+      memgraph_download_link: ${{ matrix.arch == 'arm64' && needs.TestVariables.outputs.arm_binary_url || needs.TestVariables.outputs.x86_binary_url }}
       memgraph_ref: ${{ needs.TestVariables.outputs.memgraph_commit }}
       memgraph_ref_update: "true"
     secrets: inherit
