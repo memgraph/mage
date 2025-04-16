@@ -3,12 +3,12 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/../utils.bash"
 
 # TODO(gitbuda): test the OR expressions https://github.com/memgraph/memgraph/pull/2783
-test_template() {
+test_or_expression_for_labels() {
   __host="$1"
   __port="$2"
-  echo "FEATURE: ABC"
+  echo "FEATURE: OR expression for labels"
 
-  echo "RETURN 1;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  echo "EXPLAIN MATCH (n:Label1|Label2) RETURN n;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
 }
 
 if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then

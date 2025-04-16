@@ -34,8 +34,28 @@ fi
 kubectl get all -A
 
 helm repo add memgraph https://memgraph.github.io/helm-charts
-helm update
-helm list
-helm my-release memgraph/memgraph
+helm repo update
+helm repo list
+# helm install my-release memgraph/memgraph # TODO: Fails if it's already there -> figure out how to skip.
+
+# NOTE: Downloading and compiling that last mgconsole.
+# rm -rf $SCRIPT_DIR/mgconsole.build # To download and rebuild everything.
+if [ ! -d "$SCRIPT_DIR/mgconsole.build" ]; then
+  git clone git@github.com:memgraph/mgconsole.git "$SCRIPT_DIR/mgconsole.build"
+fi
+MG_CONSOLE_TAG="master"
+MG_CONSOLE_BINARY="$SCRIPT_DIR/mgconsole.build/build/src/mgconsole"
+if [ ! -f "$MG_CONSOLE_BINARY" ]; then
+  cd "$SCRIPT_DIR/mgconsole.build"
+  git checkout $MG_CONSOLE_TAG
+  mkdir -p build && cd build
+  cmake -DCMAKE_RELEASE_TYPE=Release ..
+  make -j8
+fi
+if [ -x "$MG_CONSOLE_BINARY" ]; then
+  echo "mgconsole available"
+else
+  echo "failed to build mgconsole"
+fi
 
 rm $SCRIPT_DIR/get_helm.sh || true
