@@ -62,7 +62,7 @@ fi
 
 cd $SCRIPT_DIR/query_modules
 mkdir -p dist
-g++ -std=c++20 -fPIC -shared -I$SCRIPT_DIR/../mage/cpp/memgraph/include -o dist/basic_cpp.so basic.cpp
+g++ -std=c++20 -fPIC -shared -I$SCRIPT_DIR/../cpp/memgraph/include -o dist/basic_cpp.so basic.cpp
 
 rm $SCRIPT_DIR/get_helm.sh || true
 rm $SCRIPT_DIR/kubectl || true
