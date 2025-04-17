@@ -28,17 +28,56 @@ on:
 
 jobs:
   smoke-release-tests-setup:
-    runs-on: ["ubuntu-latest"]
-    env:
-      GH_CONTEXT: ${{ toJson(github) }}
-      GH_CONTEXT_FILE_NAME: github_context.json
+    runs-on: ubuntu-latest
+    outputs:
+      run_all: ${{ steps.determine.outputs.run_all }}
     steps:
-      - name: Set up repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Dump GitHub context
-        run: echo "$GH_CONTEXT" >> "$GH_CONTEXT_FILE_NAME"
-      - name: Set up test execution
-        id: setup
-        run: ./smoke-release-testing/workflow-setup.py "$GH_CONTEXT_FILE_NAME" 
+      - name: Determine whether to run “all” or “single”
+        id: determine
+        shell: bash
+        env:
+          NEXT_VERSION: ${{ github.event.inputs.next_version }}
+          LAST_VERSION: ${{ github.event.inputs.last_version }}
+          ARCH:         ${{ github.event.inputs.arch }}
+        run: |
+          # if either version is a URL, or arch != "all", we only run the "single" path
+          if [[ "$NEXT_VERSION" =~ ^https?:// ]] \
+             || [[ "$LAST_VERSION" =~ ^https?:// ]] \
+             || [[ "$ARCH" != "all" ]]; then
+            echo "run_all=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_all=true"  >> "$GITHUB_OUTPUT"
+          fi
+
+
+  smoke-release-single:
+    needs: smoke-release-tests-setup
+    if: needs.smoke-release-tests-setup.outputs.run_all == 'false'
+    uses: ./.github/workflows/reusable_smoke_tests.yml
+    with:
+      arch: ${{ inputs.arch }}
+      next_image:
+      next_type:
+      last_image:
+      last_type:
+      malloc: ${{ inputs.malloc }}
+    secrets: inherit
+    
+
+  smoke-release-all:
+    needs: smoke-release-tests-setup
+    if: needs.smoke-release-tests-setup.outputs.run_all == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ["amd64", "arm64"]
+        malloc: [false]
+    uses: ./.github/workflows/reusable_smoke_tests.yml
+    with:
+      arch: ${{ inputs.arch }}
+      next_image:
+      next_type:
+      last_image:
+      last_type:
+      malloc: ${{ inputs.malloc }}
+    secrets: inherit        

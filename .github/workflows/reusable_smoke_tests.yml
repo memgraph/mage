@@ -11,18 +11,23 @@ on:
         type: string
         required: true
         description: "URL to Docker image or docker tag"
-      next_is_url:
-        type: boolean
-        default: true
-        description: "Whether next_image is a URL (true) or docker tag (false)"
+      next_type:
+        type: string
+        default: "url"
+        description: "Whether next_image is a URL, docker tag or date (url|docker|date)"
+        required: true
       last_image:
         type: string
         required: true
         description: "URL to Docker image or docker tag"
-      last_is_url:
+      last_type:
+        type: string
+        default: "url"
+        description: "Whether last_image is a URL, docker tag or date (url|docker|date)" 
+      malloc:
         type: boolean
-        default: true
-        description: "Whether last_image is a URL (true) or docker tag (false)"   
+        default: false
+        description: "Used if next_type or last_type is of 'date'"
 
 env:
   MEMGRAPH_ENTERPRISE_LICENSE: ${{ secrets.MEMGRAPH_ENTERPRISE_LICENSE }}
@@ -42,13 +47,13 @@ jobs:
           submodules: recursive
 
       - name: Load Next Image (Docker)
-        if: ${{ inputs.next_is_url == false }}
+        if: ${{ inputs.next_type == 'docker' }}
         run: |
           docker pull "${{ inputs.next_image }}"
           echo "MEMGRAPH_NEXT_DOCKERHUB_IMAGE=${{ inputs.next_image }}" >> $GITHUB_ENV
 
       - name: Load Next Image (URL)
-        if: ${{ inputs.next_is_url }}
+        if: ${{ inputs.next_type == 'url' }}
         run: |
           curl -L ${{ inputs.next_image }} > next.tar.gz
           load_output=$(docker load -i next.tar.gz)
@@ -61,15 +66,45 @@ jobs:
 
           echo "MEMGRAPH_NEXT_DOCKERHUB_IMAGE=${repo_tag}" >> $GITHUB_ENV
 
+      - name: Load Next Image (Daily)
+        if: ${{ inputs.next_type == 'date' }}
+        run: |
+          image_url="$(python3 get_image_url.py '${{ inputs.next_image }}' '${{ inputs.arch }}' '${{ inputs.malloc }}')"
+          curl -L ${{ inputs.next_image }} > next.tar.gz
+          load_output=$(docker load -i next.tar.gz)
+
+          # grab each repo:tag, drop the ":latest" one, pick the first real tag
+          repo_tag=$(echo "$load_output" \
+            | awk -F': ' '/Loaded image:/ {print $2}' \
+            | grep -v ':latest$' \
+            | head -n1)
+
+          echo "MEMGRAPH_NEXT_DOCKERHUB_IMAGE=${repo_tag}" >> $GITHUB_ENV
+
       - name: Load Last Image (Docker)
-        if: ${{ inputs.last_is_url == false }}
+        if: ${{ inputs.last_type == 'docker' }}
         run: |
           docker pull "${{ inputs.last_image }}"
           echo "MEMGRAPH_LAST_DOCKERHUB_IMAGE=${{ inputs.last_image }}" >> $GITHUB_ENV
 
       - name: Load Last Image (URL)
-        if: ${{ inputs.last_is_url }}
+        if: ${{ inputs.last_type == 'url' }}
         run: |
+          curl -L ${{ inputs.last_image }} > last.tar.gz
+          load_output=$(docker load -i last.tar.gz)
+          
+          # grab each repo:tag, drop the ":latest" one, pick the first real tag
+          repo_tag=$(echo "$load_output" \
+            | awk -F': ' '/Loaded image:/ {print $2}' \
+            | grep -v ':latest$' \
+            | head -n1)
+
+          echo "MEMGRAPH_LAST_DOCKERHUB_IMAGE=${repo_tag}" >> $GITHUB_ENV
+
+      - name: Load Last Image (Daily)
+        if: ${{ inputs.last_type == 'date' }}
+        run: |
+          image_url="$(python3 get_image_url.py '${{ inputs.last_image }}' '${{ inputs.arch }}' '${{ inputs.malloc }}')"
           curl -L ${{ inputs.last_image }} > last.tar.gz
           load_output=$(docker load -i last.tar.gz)
           
