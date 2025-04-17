@@ -42,7 +42,7 @@ jobs:
         id: compute
         run: |
           # Pass the client payload (as JSON) to the Python script.
-          if [ "${{ github.ref_type }}" == "repository_dispatch" ]; then
+          if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
             payload='${{ toJson(github.event.client_payload) }}'
           else
             # Check if the 'date' input is empty; if so, compute today's date in YYYYMMDD format.
