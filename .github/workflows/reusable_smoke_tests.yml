@@ -1,0 +1,56 @@
+name: Reusable Smoke Test
+
+on:
+  workflow_call:
+    inputs:
+      arch:
+        type: string
+        description: "Architecture to build the image for (amd64/arm64)"
+        required: true
+      next_image:
+        type: string
+        required: true
+        description: "URL to Docker image or docker tag"
+      next_is_url:
+        type: boolean
+        default: true
+        description: "Whether next_image is a URL (true) or docker tag (false)"
+      last_image:
+        type: string
+        required: true
+        description: "URL to Docker image or docker tag"
+      last_is_url:
+        type: boolean
+        default: true
+        description: "Whether last_image is a URL (true) or docker tag (false)"   
+
+env:
+  MEMGRAPH_ENTERPRISE_LICENSE: ${{ secrets.MEMGRAPH_ENTERPRISE_LICENSE }}
+  MEMGRAPH_ORGANIZATION_NAME: ${{ secrets.MEMGRAPH_ORGANIZATION_NAME }}
+
+jobs:
+  smoke-test-image:
+    runs-on: ${{ (inputs.arch == 'arm64') && fromJSON('["self-hosted", "ARM64"]') || fromJSON('["self-hosted", "X64"]') }}
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Load Next Image (Docker)
+        if: ${{ inputs.next_is_url == false }}
+        run: |
+          docker pull "${{ inputs.next_image }}"
+          echo "MEMGRAPH_NEXT_DOCKERHUB_IMAGE=${{ inputs.next_image }}" >> $GITHUB_ENV
+
+      - name: Load Next Image (URL)
+        if: ${{ inputs.next_is_url }}
+        run: |
+          curl
+
+      - name: Load Last Image (Docker)
+        if: ${{ inputs.last_is_url == false }}
+        run: |
+          docker pull "${{ inputs.last_image }}"
+          echo "MEMGRAPH_LAST_DOCKERHUB_IMAGE=${{ inputs.last_image }}" >> $GITHUB_ENV
