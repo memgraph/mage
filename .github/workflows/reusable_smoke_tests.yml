@@ -31,6 +31,9 @@ env:
 jobs:
   smoke-test-image:
     runs-on: ${{ (inputs.arch == 'arm64') && fromJSON('["self-hosted", "ARM64"]') || fromJSON('["self-hosted", "X64"]') }}
+    container:
+      image: ubuntu-24.04
+      options: --user root
     steps:
       - name: Checkout repository and submodules
         uses: actions/checkout@v4
@@ -47,10 +50,134 @@ jobs:
       - name: Load Next Image (URL)
         if: ${{ inputs.next_is_url }}
         run: |
-          curl
+          curl -L ${{ inputs.next_image }} > next.tar.gz
+          load_output=$(docker load -i next.tar.gz)
+          
+          # grab each repo:tag, drop the ":latest" one, pick the first real tag
+          repo_tag=$(echo "$load_output" \
+            | awk -F': ' '/Loaded image:/ {print $2}' \
+            | grep -v ':latest$' \
+            | head -n1)
+
+          echo "MEMGRAPH_NEXT_DOCKERHUB_IMAGE=${repo_tag}" >> $GITHUB_ENV
 
       - name: Load Last Image (Docker)
         if: ${{ inputs.last_is_url == false }}
         run: |
           docker pull "${{ inputs.last_image }}"
           echo "MEMGRAPH_LAST_DOCKERHUB_IMAGE=${{ inputs.last_image }}" >> $GITHUB_ENV
+
+      - name: Load Last Image (URL)
+        if: ${{ inputs.last_is_url }}
+        run: |
+          curl -L ${{ inputs.last_image }} > last.tar.gz
+          load_output=$(docker load -i last.tar.gz)
+          
+          # grab each repo:tag, drop the ":latest" one, pick the first real tag
+          repo_tag=$(echo "$load_output" \
+            | awk -F': ' '/Loaded image:/ {print $2}' \
+            | grep -v ':latest$' \
+            | head -n1)
+
+          echo "MEMGRAPH_LAST_DOCKERHUB_IMAGE=${repo_tag}" >> $GITHUB_ENV
+
+      - name: Init Tests
+        run: |
+          cd smoke-release-testing
+          ./init.sh
+      
+      - name: Run Tests
+        run: |
+          cd smoke-release-testing
+          ./test.bash
+
+      
+      # remove these if init script works!
+      # - name: Install jq 
+      #   run: |
+      #     apt-get update
+      #     apt-get install -y jq          
+
+      # - name: Setup Go
+      #   uses: actions/setup-go@v4
+      #   with:
+      #     go-version: 'stable'
+
+      # - name: Install kind v0.24.0
+      #   run: |
+      #     go install sigs.k8s.io/kind@v0.24.0
+      #     echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+      # - name: Verify kind
+      #   run: kind --version
+
+      # - name: Install kubectl
+      #   run: |
+      #     KUBE_VER=$(curl -L -s https://dl.k8s.io/release/stable.txt)
+      #     mkdir -p $HOME/bin
+      #     curl -Lo kubectl \
+      #       "https://dl.k8s.io/release/${KUBE_VER}/bin/linux/amd64/kubectl"
+      #     curl -Lo kubectl.sha256 \
+      #       "https://dl.k8s.io/release/${KUBE_VER}/bin/linux/amd64/kubectl.sha256"
+      #     echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
+      #     chmod +x kubectl
+      #     mv kubectl $HOME/bin/
+      #     echo "$HOME/bin" >> $GITHUB_PATH
+
+      # - name: Verify kubectl
+      #   run: kubectl version --client
+
+      # - name: Create Kind cluster
+      #   run: |
+      #     if ! kubectl cluster-info --context kind-kind &>/dev/null; then
+      #       kind create cluster --name kind-kind
+      #     fi
+      #     kubectl get all -A
+
+      # - name: Install Helm
+      #   run: |
+      #     mkdir -p $HOME/bin
+      #     export HELM_INSTALL_DIR=$HOME/bin
+      #     curl -fsSL -o get_helm.sh \
+      #       https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+      #     chmod +x get_helm.sh
+      #     ./get_helm.sh
+      #     echo "$HOME/bin" >> $GITHUB_PATH
+
+      # - name: Configure Helm repo
+      #   run: |
+      #     helm repo add memgraph https://memgraph.github.io/helm-charts
+      #     helm repo update
+      #     helm repo list
+
+      # - name: Build mgconsole
+      #   run: |
+      #     if [ ! -d mgconsole.build ]; then
+      #       git clone git@github.com:memgraph/mgconsole.git mgconsole.build
+      #     fi
+      #     cd mgconsole.build
+      #     git checkout master
+      #     mkdir -p build && cd build
+      #     cmake -DCMAKE_RELEASE_TYPE=Release ..
+      #     make -j$(nproc)
+      #     if [ -x src/mgconsole ]; then
+      #       echo "mgconsole built successfully"
+      #     else
+      #       echo "mgconsole build failed" && exit 1
+      #     fi
+
+      # - name: Build mgconsole
+      #   run: |
+      #     if [ ! -d mgconsole.build ]; then
+      #       git clone git@github.com:memgraph/mgconsole.git mgconsole.build
+      #     fi
+      #     cd mgconsole.build
+      #     git checkout master
+      #     mkdir -p build && cd build
+      #     cmake -DCMAKE_RELEASE_TYPE=Release ..
+      #     make -j$(nproc)
+      #     if [ -x src/mgconsole ]; then
+      #       echo "mgconsole built successfully"
+      #     else
+      #       echo "mgconsole build failed" && exit 1
+      #     fi
