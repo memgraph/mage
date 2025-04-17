@@ -90,6 +90,8 @@ void PagerankWrapper(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *resu
     auto pageranks =
         pagerank_alg::ParallelIterativePageRank(pagerank_graph, max_iterations, damping_factor, stop_epsilon, num_threads);
 
+    pagerank_graph.ClearUnusedVectors();
+    mgp_result_reserve(result, pagerank_graph.GetNodeCount());
     for (std::uint64_t node_id = 0; node_id < pagerank_graph.GetNodeCount(); ++node_id) {
       InsertPagerankRecord(memgraph_graph, result, memory, pagerank_graph.GetMemgraphNodeId(node_id),
                            pageranks[node_id]);
