@@ -22,11 +22,15 @@ on:
         description: "Run in test mode"
         required: false
         type: boolean
+      use_test_rc:
+        description: "Use RC from 'mage-test/' (cannot be used for official release)"
+        default: false
+        type: boolean
 
 env:
   s3_region: eu-west-1
   rc_bucket: deps.memgraph.io
-  rc_dir: mage/v${{ github.event.inputs.mage_version }}-${{ github.event.inputs.mage_rc_version }}
+  rc_dir: ${{ inputs.use_test_rc && 'mage-test/v' || 'mage/v'}}${{ github.event.inputs.mage_version }}-${{ github.event.inputs.mage_rc_version }}
   docker_repo_rc: memgraph/memgraph-mage
   docker_repo_release: memgraph/memgraph-mage${{ github.event.inputs.test == 'true' && '-release-test' || '' }}
 
@@ -46,6 +50,13 @@ jobs:
             image_ext: "-malloc"
     runs-on: ["self-hosted", "DockerMgBuild", "X64"]
     steps:
+      - name: Check testing inputs
+        run: |
+          if [[ ${{ inputs.use_test_rc }} && !${{ inputs.test }} ]]; then
+            echo "Must not run 'use_test_rc=true' without setting 'test=true'"
+            exit 1
+          fi
+
       - name: Setup environment variables
         run: |
           mage_version=${{ github.event.inputs.mage_version }}
