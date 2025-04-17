@@ -50,12 +50,11 @@ jobs:
             image_ext: "-malloc"
     runs-on: ["self-hosted", "DockerMgBuild", "X64"]
     steps:
-      - name: Check testing inputs
+      - name: Validate “use_test_rc” only with test
+        if: inputs.use_test_rc && ! inputs.test
         run: |
-          if [[ ${{ inputs.use_test_rc }} && !${{ inputs.test }} ]]; then
-            echo "Must not run 'use_test_rc=true' without setting 'test=true'"
-            exit 1
-          fi
+          echo "Must not run 'use_test_rc=true' without setting 'test=true'"
+          exit 1
 
       - name: Setup environment variables
         run: |
