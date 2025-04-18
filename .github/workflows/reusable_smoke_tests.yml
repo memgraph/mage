@@ -7,23 +7,14 @@ on:
         type: string
         description: "Architecture to build the image for (amd64/arm64)"
         required: true
-      next_image:
+      next_version:
         type: string
-        required: true
-        description: "URL to Docker image or docker tag"
-      next_type:
+        required: false
+        description: "Version (x.y.z), daily build date (YYYYMMDD), or URL to Docker image: Default - latest daily build"
+      last_version:
         type: string
-        default: "url"
-        description: "Whether next_image is a URL, docker tag or date (url|docker|date)"
-        required: true
-      last_image:
-        type: string
-        required: true
-        description: "URL to Docker image or docker tag"
-      last_type:
-        type: string
-        default: "url"
-        description: "Whether last_image is a URL, docker tag or date (url|docker|date)" 
+        required: false
+        description: "Version (x.y.z), daily build date (YYYYMMDD), or URL to Docker image: Default - latest release"
       malloc:
         type: boolean
         default: false
@@ -46,33 +37,27 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
-      - name: Load Next Image (Docker)
-        if: ${{ inputs.next_type == 'docker' }}
+      - name: Determine Input Types
         run: |
-          docker pull "${{ inputs.next_image }}"
-          echo "MEMGRAPH_NEXT_DOCKERHUB_IMAGE=${{ inputs.next_image }}" >> $GITHUB_ENV
+          read next_type next_image < <(python3 smoke-release-testing/workflow_image_setup.py "${{ inputs.next_version }}" "${{ inputs.arch }}" "${{ inputs.malloc }}")
+          echo "NEXT_IMAGE=${next_image}" >> $GITHUB_ENV
+          echo "NEXT_TYPE=${next_type}" >> $GITHUB_ENV
+          read last_type last_image < <(python3 smoke-release-testing/workflow_image_setup.py "${{ inputs.last_version }}" "${{ inputs.arch }}" "${{ inputs.malloc }}")
+          echo "LAST_IMAGE=${last_image}" >> $GITHUB_ENV
+          echo "LAST_TYPE=${last_type}" >> $GITHUB_ENV
+
+      - name: Load Next Image (Docker)
+        if: ${{ env.NEXT_TYPE == 'docker' }}
+        run: |
+          docker pull "${{ env.NEXT_IMAGE }}"
+          echo "MEMGRAPH_NEXT_DOCKERHUB_IMAGE=${{ env.NEXT_IMAGE }}" >> $GITHUB_ENV
 
       - name: Load Next Image (URL)
-        if: ${{ inputs.next_type == 'url' }}
+        if: ${{ env.NEXT_TYPE == 'url' }}
         run: |
-          curl -L ${{ inputs.next_image }} > next.tar.gz
+          curl -L ${{ env.NEXT_IMAGE }} > next.tar.gz
           load_output=$(docker load -i next.tar.gz)
           
-          # grab each repo:tag, drop the ":latest" one, pick the first real tag
-          repo_tag=$(echo "$load_output" \
-            | awk -F': ' '/Loaded image:/ {print $2}' \
-            | grep -v ':latest$' \
-            | head -n1)
-
-          echo "MEMGRAPH_NEXT_DOCKERHUB_IMAGE=${repo_tag}" >> $GITHUB_ENV
-
-      - name: Load Next Image (Daily)
-        if: ${{ inputs.next_type == 'date' }}
-        run: |
-          image_url="$(python3 get_image_url.py '${{ inputs.next_image }}' '${{ inputs.arch }}' '${{ inputs.malloc }}')"
-          curl -L ${{ inputs.next_image }} > next.tar.gz
-          load_output=$(docker load -i next.tar.gz)
-
           # grab each repo:tag, drop the ":latest" one, pick the first real tag
           repo_tag=$(echo "$load_output" \
             | awk -F': ' '/Loaded image:/ {print $2}' \
@@ -82,15 +67,15 @@ jobs:
           echo "MEMGRAPH_NEXT_DOCKERHUB_IMAGE=${repo_tag}" >> $GITHUB_ENV
 
       - name: Load Last Image (Docker)
-        if: ${{ inputs.last_type == 'docker' }}
+        if: ${{ env.LAST_TYPE == 'docker' }}
         run: |
-          docker pull "${{ inputs.last_image }}"
-          echo "MEMGRAPH_LAST_DOCKERHUB_IMAGE=${{ inputs.last_image }}" >> $GITHUB_ENV
+          docker pull "${{ env.LAST_IMAGE }}"
+          echo "MEMGRAPH_LAST_DOCKERHUB_IMAGE=${{ env.LAST_IMAGE }}" >> $GITHUB_ENV
 
       - name: Load Last Image (URL)
-        if: ${{ inputs.last_type == 'url' }}
+        if: ${{ env.LAST_TYPE == 'url' }}
         run: |
-          curl -L ${{ inputs.last_image }} > last.tar.gz
+          curl -L ${{ env.LAST_IMAGE }} > last.tar.gz
           load_output=$(docker load -i last.tar.gz)
           
           # grab each repo:tag, drop the ":latest" one, pick the first real tag
@@ -101,20 +86,6 @@ jobs:
 
           echo "MEMGRAPH_LAST_DOCKERHUB_IMAGE=${repo_tag}" >> $GITHUB_ENV
 
-      - name: Load Last Image (Daily)
-        if: ${{ inputs.last_type == 'date' }}
-        run: |
-          image_url="$(python3 get_image_url.py '${{ inputs.last_image }}' '${{ inputs.arch }}' '${{ inputs.malloc }}')"
-          curl -L ${{ inputs.last_image }} > last.tar.gz
-          load_output=$(docker load -i last.tar.gz)
-          
-          # grab each repo:tag, drop the ":latest" one, pick the first real tag
-          repo_tag=$(echo "$load_output" \
-            | awk -F': ' '/Loaded image:/ {print $2}' \
-            | grep -v ':latest$' \
-            | head -n1)
-
-          echo "MEMGRAPH_LAST_DOCKERHUB_IMAGE=${repo_tag}" >> $GITHUB_ENV
 
       - name: Init Tests
         run: |

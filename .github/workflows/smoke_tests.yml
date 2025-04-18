@@ -55,11 +55,9 @@ jobs:
     if: needs.smoke-release-tests-setup.outputs.run_all == 'false'
     uses: ./.github/workflows/reusable_smoke_tests.yml
     with:
-      arch: ${{ inputs.arch }}
-      next_image:
-      next_type:
-      last_image:
-      last_type:
+      arch: "${{ inputs.arch }}"
+      next_version: "${{ inputs.next_version }}"
+      last_version: "${{ inputs.last_version }}"
       malloc: ${{ inputs.malloc }}
     secrets: inherit
     
@@ -72,12 +70,13 @@ jobs:
       matrix:
         arch: ["amd64", "arm64"]
         malloc: [false]
+        include:
+        - arch: "amd64"
+        - malloc: true
     uses: ./.github/workflows/reusable_smoke_tests.yml
     with:
-      arch: ${{ inputs.arch }}
-      next_image:
-      next_type:
-      last_image:
-      last_type:
-      malloc: ${{ inputs.malloc }}
+      arch: "${{ matrix.arch }}"
+      next_version: "${{ inputs.next_version }}"
+      last_version: "${{ inputs.last_version }}"
+      malloc: ${{ matrix.malloc }}
     secrets: inherit        
