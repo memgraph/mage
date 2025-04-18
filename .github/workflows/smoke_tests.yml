@@ -2,6 +2,7 @@ name: "Smoke Testing"
 
 
 on:
+  push:
   workflow_dispatch:
     inputs:
       next_version:
