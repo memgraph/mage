@@ -1,7 +1,7 @@
 memgraph:
   image:
     repository: memgraph/memgraph
-    tag: 2.18.1 # TODO(gitbuda): The tag here is not appreciated.
+    tag: 3.1.0 # TODO(gitbuda): Seems like the tag here is not appreciated -> investigate and fix.
     pullPolicy: IfNotPresent
   env:
     MEMGRAPH_ENTERPRISE_LICENSE: "<your-license>"

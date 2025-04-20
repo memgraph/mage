@@ -10,9 +10,9 @@ if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
   helm install myhadb memgraph/memgraph-high-availability \
     --set memgraph.env.MEMGRAPH_ENTERPRISE_LICENSE=$MEMGRAPH_ENTERPRISE_LICENSE,memgraph.env.MEMGRAPH_ORGANIZATION_NAME=$MEMGRAPH_ORGANIZATION_NAME \
     -f $SCRIPT_DIR/config/k8s-ha-values.yaml
-  helm list
-  kubectl get pods
   sleep 1000
+  # helm list
+  # kubectl get pods
   # kubectl get pod $pod_name -o yaml
   # kubectl logs $pod_name
   # kubectl describe pods $pod_name
