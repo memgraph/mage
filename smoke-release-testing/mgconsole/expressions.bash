@@ -2,7 +2,6 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/../utils.bash"
 
-# TODO(gitbuda): test the OR expressions https://github.com/memgraph/memgraph/pull/2783
 test_or_expression_for_labels() {
   __host="$1"
   __port="$2"
