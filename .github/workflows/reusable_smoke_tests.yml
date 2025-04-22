@@ -168,7 +168,7 @@ jobs:
       - name: Remove Image
         if: always()
         run: |
-          docker rmi ubuntu:24.04-dind
+          docker rmi ubuntu:24.04-dind --force
 
       # remove these if init script works!
       # - name: Install jq 

@@ -2,8 +2,7 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # TODO(gitbuda): Write the helper to fail with a nice error message in the case required env variables are not set.
-echo "Next image: $MEMGRAPH_NEXT_DOCKERHUB_IMAGE"
-echo "Last image: $MEMGRAPH_LAST_DOCKERHUB_IMAGE"
+
 MEMGRAPH_BUILD_PATH="${MEMGRAPH_BUILD_PATH:-/tmp/memgraph/build}"
 MEMGRAPH_CONSOLE_BINARY="${MEMGRAPH_CONSOLE_BINARY:-$SCRIPT_DIR/mgconsole.build/build/src/mgconsole}"
 # Required env vars to define.
