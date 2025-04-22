@@ -27,17 +27,9 @@ env:
 jobs:
   smoke-test-image:
     runs-on: ${{ (inputs.arch == 'arm64') && fromJSON('["self-hosted", "ARM64"]') || fromJSON('["self-hosted", "X64"]') }}
-    services:
-      docker:
-        image: docker:24-dind
-        options: >-
-          --privileged
-        env:
-          # turn off TLS so we can connect insecurely on 2375
-          DOCKER_TLS_CERTDIR: ""
     container:
-      image: ubuntu:24.04
-      options: --user root
+      image: docker:24-dind
+      options: --user root --privileged
     defaults:
       run:
         shell: bash
