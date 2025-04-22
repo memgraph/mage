@@ -28,7 +28,7 @@ jobs:
   smoke-test-image:
     runs-on: ${{ (inputs.arch == 'arm64') && fromJSON('["self-hosted", "ARM64"]') || fromJSON('["self-hosted", "X64"]') }}
     container:
-      image: ubuntu-24.04
+      image: ubuntu:24.04
       options: --user root
     steps:
       - name: Checkout repository and submodules
