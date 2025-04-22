@@ -1,6 +1,7 @@
 #!/bin/bash -e
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/utils.bash"
+apt-get update
 
 if [ ! -x "$(command -v jq)" ]; then
   apt-get install -y jq
@@ -31,10 +32,10 @@ kind delete cluster --name kind-kind || true
 kubectl cluster-info --context kind-kind-kind > /dev/null 2>&1 \
   || {
        echo "Creating cluster..."
-       kind create cluster --name kind-kind --wait 120s
+       kind create cluster --name kind-kind --wait 120s 
        echo "...done"
      }
-echo "DEBUG: here"
+
 kubectl get all -A
 
 if [ ! -f "/usr/local/bin/helm" ]; then

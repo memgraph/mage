@@ -1,0 +1,45 @@
+# Dockerfile
+FROM ubuntu:24.04
+ENV container=docker
+
+# 1. Install prerequisites
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      ca-certificates \
+      curl \
+      gnupg \
+      lsb-release \
+      python3 \
+ && rm -rf /var/lib/apt/lists/*
+
+# 2. Add Docker’s official GPG key and repo
+RUN apt-get install -y ca-certificates curl && \
+    install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc && \
+    chmod a+r /etc/apt/keyrings/docker.asc && \
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+      $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+    tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# 3. Install Docker Engine and containerd
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin && \
+    rm -rf /var/lib/apt/lists/*
+
+# 4. Tweak for DinD
+#    - create docker group
+#    - expose docker.sock and data root as volumes
+RUN mkdir -p /var/lib/docker \
+ && chown root:docker /var/lib/docker
+
+VOLUME /var/lib/docker
+
+# 5. Entrypoint: start dockerd
+COPY smoke-release-testing/dockerd-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh
+
+COPY . /mage
+
+ENTRYPOINT ["dockerd-entrypoint.sh"]
+CMD []
