@@ -57,7 +57,7 @@ helm repo list
 # Last mgconsole.
 # rm -rf $SCRIPT_DIR/mgconsole.build # To download and rebuild everything.
 if [ ! -d "$SCRIPT_DIR/mgconsole.build" ]; then
-  git clone git@github.com:memgraph/mgconsole.git "$SCRIPT_DIR/mgconsole.build"
+  git clone https://github.com/memgraph/mgconsole.git "$SCRIPT_DIR/mgconsole.build"
 fi
 MG_CONSOLE_TAG="master"
 MG_CONSOLE_BINARY="$SCRIPT_DIR/mgconsole.build/build/src/mgconsole"
