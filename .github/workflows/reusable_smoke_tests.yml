@@ -117,7 +117,7 @@ jobs:
       - name: Init Tests
         run: |
           cd smoke-release-testing
-          ./init.sh
+          ./init_workflow.bash
       
       - name: Run Tests
         run: |
