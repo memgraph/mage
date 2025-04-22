@@ -30,6 +30,7 @@ if ! kubectl cluster-info --context kind-kind-kind; then
   kind create cluster --name kind-kind --wait 120s
   echo "...done"
 fi
+echo "DEBUG: here"
 kubectl get all -A
 
 if [ ! -f "/usr/local/bin/helm" ]; then
