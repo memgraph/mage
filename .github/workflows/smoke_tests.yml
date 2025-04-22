@@ -85,8 +85,7 @@ jobs:
   # temporary hack for testing while not in `main`
   # REMOVE BEFORE MERGING!!!
   smoke-release-push:
-    needs: smoke-release-tests-setup
-    if: ${{ needs.smoke-release-tests-setup.outputs.run_all == 'false' && github.event_name == 'push' }}
+    if: ${{ github.event_name == 'push' }}
     uses: ./.github/workflows/reusable_smoke_tests.yml
     with:
       arch: "amd64"
