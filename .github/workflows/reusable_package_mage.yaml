@@ -109,7 +109,15 @@ jobs:
               MAGE_VERSION=${MAGE_VERSION%.*}
             fi
           fi
-          IMAGE_TAG="${MAGE_VERSION}-memgraph-${MEMGRAPH_VERSION}"
+
+          # if these match, then tag the image with the shortest vesion, e.g. 3.1.1
+          # rather than 3.1.1-memgraph-3.1.1, hopefully this won't affect the
+          # daily build versioning, which will still be massive
+          if [[ "$MAGE_VERSION" == "$MEMGRAPH_VERSION" ]]; then
+            IMAGE_TAG="${MAGE_VERSION}"
+          else
+            IMAGE_TAG="${MAGE_VERSION}-memgraph-${MEMGRAPH_VERSION}"
+          fi
           IMAGE_TAG="${IMAGE_TAG//+/_}"
           IMAGE_TAG="${IMAGE_TAG//\~/_}"
           ARTIFACT_NAME="mage-${IMAGE_TAG}"

@@ -25,17 +25,13 @@ on:
         type: boolean
         description: "Use the official Memgraph bucket?"
         default: false
-      trigger_daily_build:
+      test:
         type: boolean
-        description: "Temporary hack"
+        description: "Run mock artifact creation for testing (ends up in 'mage-test/vX.Y.Z')"
         default: false
-      date:
-        type: string
-        description: "Date to build packages for (YYYYMMDD)"
-        required: false
+
 jobs:
   SetupNames:
-    if: ${{ !inputs.trigger_daily_build }}
     runs-on: ["self-hosted", "X64"]
     outputs:
       download_link_base: ${{ steps.base_link.outputs.link }}
@@ -82,6 +78,6 @@ jobs:
       push_to_dockerhub: "false"
       push_to_s3: "true"
       s3_dest_bucket: "deps.memgraph.io"
-      s3_dest_dir: "mage/v${{ github.event.inputs.mage_version}}"
+      s3_dest_dir: "${{ inputs.test && 'mage-test/v' || 'mage/v'}}${{ github.event.inputs.mage_version}}"
       malloc: ${{ matrix.malloc }}
     secrets: inherit
