@@ -216,6 +216,13 @@ RUN apt-get update && apt-get install -y \
 # Copy entire mage repo
 COPY --from=builder --chown=memgraph:memgraph /mage/ /mage/
 
+# fix for arm build (gekko binaries not executable)
+# see this: https://github.com/BYU-PRISM/GEKKO/issues/177
+RUN if [ "${TARGETARCH}" = "arm64" ]; then \
+        chmod +x /home/memgraph/.local/lib/python${PY_VERSION}/site-packages/gekko/bin/apm_aarch64 && \
+        chmod +x /home/memgraph/.local/lib/python${PY_VERSION}/site-packages/gekko/bin/apm_arm; \
+    fi
+
 USER memgraph
 EXPOSE 7687
 
