@@ -156,10 +156,12 @@ jobs:
             bash -c "cd /mage/smoke-release-testing && ./test.bash"
       
       - name: Stop Container
+        if: always()
         run: |
           docker stop "$CONTAINER_NAME"
 
       - name: Remove Image
+        if: always()
         run: |
           docker rmi ubuntu:24.04-dind
 
