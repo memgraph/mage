@@ -24,6 +24,9 @@ if [ ! -f "/usr/local/bin/kubectl" ]; then
 fi
 kubectl version --client
 
+# delete any leftover cluster
+kind delete cluster --name kind-kind || true
+
 # TODO(gitbuda): Something is broken here -> properly check for cluster status.
 kubectl cluster-info --context kind-kind-kind > /dev/null 2>&1 \
   || {
