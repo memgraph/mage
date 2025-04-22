@@ -10,6 +10,11 @@ RUN apt-get update \
       gnupg \
       lsb-release \
       python3 \
+      python3-pip \
+      python3-dev \
+      cmake \
+      build-essential \
+      libssl-dev \
  && rm -rf /var/lib/apt/lists/*
 
 # 2. Add Docker’s official GPG key and repo
