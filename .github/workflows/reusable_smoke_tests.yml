@@ -133,15 +133,36 @@ jobs:
 
       - name: Init Tests
         run: |
-          cd smoke-release-testing
-          ./init_workflow.bash
+          # cd smoke-release-testing
+          # ./init_workflow.bash
+          docker exec -i $CONTAINER_NAME \
+            bash -c "cd /mage/smoke-release-testing && ./init_workflow.bash"
+
+      - name: Install Python Dependencies
+        run: |
+          docker exec -i $CONTAINER_NAME \
+            bash -c "pip install -r /mage/smoke-release-testing/requirements.txt --break-system-packages"
       
       - name: Run Tests
         run: |
-          cd smoke-release-testing
-          ./test.bash
-
+          # cd smoke-release-testing
+          # ./test.bash
+          docker exec -i -u root \
+            -e MEMGRAPH_ENTERPRISE_LICENSE="${{ secrets.MEMGRAPH_ENTERPRISE_LICENSE }}" \
+            -e MEMGRAPH_ORGANIZATION_NAME="${{ secrets.MEMGRAPH_ORGANIZATION_NAME }}" \
+            -e MEMGRAPH_LAST_DOCKERHUB_IMAGE="$LAST_IMAGE" \
+            -e MEMGRAPH_NEXT_DOCKERHUB_IMAGE="$NEXT_IMAGE" \
+            "$CONTAINER_NAME" \
+            bash -c "cd /mage/smoke-release-testing && ./test.bash"
       
+      - name: Stop Container
+        run: |
+          docker stop $CONTAINER_NAME
+
+      - name: Remove Image
+        name: |
+          docker rmi ubuntu:24.04-dind
+
       # remove these if init script works!
       # - name: Install jq 
       #   run: |
