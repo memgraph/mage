@@ -72,7 +72,10 @@ jobs:
       - name: Load Next Image (Docker)
         if: ${{ env.NEXT_TYPE == 'docker' }}
         run: |
-          docker pull "${{ env.NEXT_IMAGE }}"
+          docker exec -i \
+            -e NEXT_IMAGE="${{ env.NEXT_IMAGE }}" \
+            "$CONTAINER_NAME" \
+            bash -c 'docker pull "$NEXT_IMAGE"'
           echo "MEMGRAPH_NEXT_DOCKERHUB_IMAGE=${{ env.NEXT_IMAGE }}" >> $GITHUB_ENV
 
       - name: Load Next Image (URL)
@@ -83,8 +86,8 @@ jobs:
           
           docker exec -i \
             -e NEXT_IMAGE="${{ env.NEXT_IMAGE }}" \
-            $CONTAINER_NAME \
-            bash -c "curl -L $NEXT_IMAGE > next.tar.gz"
+            "$CONTAINER_NAME" \
+            bash -c 'curl -L "$NEXT_IMAGE" > next.tar.gz'
           
           load_output=$(docker exec -i $CONTAINER_NAME bash -c "docker load -i next.tar.gz")
 
@@ -99,14 +102,25 @@ jobs:
       - name: Load Last Image (Docker)
         if: ${{ env.LAST_TYPE == 'docker' }}
         run: |
-          docker pull "${{ env.LAST_IMAGE }}"
+          docker exec -i \
+            -e LAST_IMAGE="${{ env.LAST_IMAGE }}" \
+            "$CONTAINER_NAME" \
+            bash -c 'docker pull "$LAST_IMAGE"'
           echo "MEMGRAPH_LAST_DOCKERHUB_IMAGE=${{ env.LAST_IMAGE }}" >> $GITHUB_ENV
+
 
       - name: Load Last Image (URL)
         if: ${{ env.LAST_TYPE == 'url' }}
         run: |
-          curl -L ${{ env.LAST_IMAGE }} > last.tar.gz
-          load_output=$(docker load -i last.tar.gz)
+          #curl -L ${{ env.LAST_IMAGE }} > last.tar.gz
+          #load_output=$(docker load -i last.tar.gz)
+
+          docker exec -i \
+            -e LAST_IMAGE="${{ env.LAST_IMAGE }}" \
+            "$CONTAINER_NAME" \
+            bash -c 'curl -L "$LAST_IMAGE" > last.tar.gz'
+          
+          load_output=$(docker exec -i $CONTAINER_NAME bash -c "docker load -i last.tar.gz")
           
           # grab each repo:tag, drop the ":latest" one, pick the first real tag
           repo_tag=$(echo "$load_output" \
