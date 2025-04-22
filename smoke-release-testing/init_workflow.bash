@@ -17,9 +17,15 @@ echo "kind installed under $(go env GOPATH)/bin"
 export PATH="$(go env GOPATH)/bin:$PATH"
 kind --version
 
+if [ "$(arch)" == "x86_64" ]; then
+  ARCH="amd64"
+else
+  ARCH="arm64"
+fi
+
 if [ ! -f "/usr/local/bin/kubectl" ]; then
-  curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-  curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl.sha256"
+  curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/$ARCH/kubectl"
+  curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/$ARCH/kubectl.sha256"
   echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
   install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 fi
