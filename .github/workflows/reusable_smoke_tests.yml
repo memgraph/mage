@@ -27,38 +27,7 @@ env:
 jobs:
   smoke-test-image:
     runs-on: ${{ (inputs.arch == 'arm64') && fromJSON('["self-hosted", "ARM64"]') || fromJSON('["self-hosted", "X64"]') }}
-    container:
-      image: docker:24-dind
-      options: --user root --privileged
-    defaults:
-      run:
-        shell: bash
-    env:
-      DOCKER_HOST: tcp://docker:2375
-    
     steps:
-      - name: Wait for Docker
-        run: |
-          until docker version >/dev/null 2>&1; do sleep 1; done
-
-      - name: Install git
-        run: |
-          apt-get update
-          apt-get install -y git
-
-      - name: Install Docker
-        run: |
-          apt-get install -y ca-certificates curl
-          install -m 0755 -d /etc/apt/keyrings
-          curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-          chmod a+r /etc/apt/keyrings/docker.asc
-          echo \
-            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-            $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
-            tee /etc/apt/sources.list.d/docker.list > /dev/null
-          apt-get update
-          apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
       - name: Checkout repository and submodules
         uses: actions/checkout@v4
         with:
@@ -79,6 +48,26 @@ jobs:
           read last_type last_image < <(python3 smoke-release-testing/workflow_image_setup.py "${{ inputs.last_version }}" "${{ inputs.arch }}" "${{ inputs.malloc }}")
           echo "LAST_IMAGE=${last_image}" >> $GITHUB_ENV
           echo "LAST_TYPE=${last_type}" >> $GITHUB_ENV
+
+      - name: Build Test Image
+        run: |
+          docker build -t ubuntu:24.04-dind --file Dockerfile.smoke .
+
+      - name: Run Test Image
+        run:
+          CONTAINER_NAME="smoketester"
+          docker run -d --rm  --privileged \
+            --name $CONTAINER_NAME \
+            -e container=docker \
+            -p 2375:2375 \
+            --tmpfs /run \
+            --tmpfs /run/lock \
+            --tmpfs /tmp \
+            -v u24-data:/var/lib/docker \
+            -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+            --cgroupns=host \
+            ubuntu:24.04-dind
+          echo "CONTAINER_NAME=$CONTAINER_NAME" >> $GITHUB_ENV
 
       - name: Load Next Image (Docker)
         if: ${{ env.NEXT_TYPE == 'docker' }}
