@@ -72,12 +72,24 @@ jobs:
 
       - name: Check mgdeps-cache availability
         run: |
-          if curl -I --silent --fail "http://mgdeps-cache:8000/wheels"; then
-            echo "mgdeps-cache is reachable"
+          if curl --silent --fail "http://mgdeps-cache:8000/wheels/" -o /dev/null; then
+            echo "mgdeps-cache is reachable :D"
+            echo "CACHE_PRESENT=true" >> $GITHUB_ENV
           else
             echo "mgdeps-cache is NOT reachable"
+            echo "CACHE_PRESENT=false" >> $GITHUB_ENV
           fi
 
+      - name: Create wheels directory and fetch wheels if available
+        run: |
+          mkdir -p wheels
+          if [ "$CACHE_PRESENT" = "true" ]; then
+            echo "Cache is present. Fetching wheels..."
+            wget -r -np -nH --cut-dirs=1 -P wheels "http://mgdeps-cache:8000/wheels/"
+          else
+            echo "Cache is not present. Skipping wheel fetch."
+          fi
+      
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v3
@@ -234,6 +246,7 @@ jobs:
           --build-arg BUILD_TYPE=${{ env.MAGE_BUILD_TYPE }} \
           --build-arg MGBUILD_IMAGE=$MGBUILD_IMAGE \
           --build-arg MAGE_COMMIT="${{ env.MAGE_COMMIT }}" \
+          --build-arg CACHE_PRESENT=${{ env.CACHE_PRESENT }} \
           --load .
 
           # print the image size in both SI and IEC units
