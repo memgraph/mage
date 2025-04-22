@@ -53,7 +53,7 @@ jobs:
 
   smoke-release-single:
     needs: smoke-release-tests-setup
-    if: needs.smoke-release-tests-setup.outputs.run_all == 'false'
+    if: ${{ needs.smoke-release-tests-setup.outputs.run_all == 'false' && github.event_name != 'push' }}
     uses: ./.github/workflows/reusable_smoke_tests.yml
     with:
       arch: "${{ inputs.arch }}"
@@ -65,7 +65,7 @@ jobs:
 
   smoke-release-all:
     needs: smoke-release-tests-setup
-    if: needs.smoke-release-tests-setup.outputs.run_all == 'true'
+    if: ${{ needs.smoke-release-tests-setup.outputs.run_all == 'true' && github.event_name != 'push' }}
     strategy:
       fail-fast: false
       matrix:
@@ -81,3 +81,17 @@ jobs:
       last_version: "${{ inputs.last_version }}"
       malloc: ${{ matrix.malloc }}
     secrets: inherit        
+
+  # temporary hack for testing while not in `main`
+  # REMOVE BEFORE MERGING!!!
+  smoke-release-push:
+    needs: smoke-release-tests-setup
+    if: ${{ needs.smoke-release-tests-setup.outputs.run_all == 'false' && github.event_name == 'push' }}
+    uses: ./.github/workflows/reusable_smoke_tests.yml
+    with:
+      arch: "amd64"
+      next_version: "3.1.1"
+      last_version: "3.0.0"
+      malloc: false
+    secrets: inherit
+      
