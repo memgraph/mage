@@ -30,6 +30,9 @@ jobs:
     container:
       image: ubuntu:24.04
       options: --user root
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Install git
         run: |
