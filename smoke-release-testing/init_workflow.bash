@@ -25,11 +25,12 @@ fi
 kubectl version --client
 
 # TODO(gitbuda): Something is broken here -> properly check for cluster status.
-if ! kubectl cluster-info --context kind-kind-kind; then
-  echo "Creating cluster..."
-  kind create cluster --name kind-kind --wait 120s
-  echo "...done"
-fi
+kubectl cluster-info --context kind-kind-kind > /dev/null 2>&1 \
+  || {
+       echo "Creating cluster..."
+       kind create cluster --name kind-kind --wait 120s
+       echo "...done"
+     }
 echo "DEBUG: here"
 kubectl get all -A
 
