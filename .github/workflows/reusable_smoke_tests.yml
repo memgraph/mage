@@ -30,7 +30,10 @@ jobs:
     services:
       docker:
         image: docker:24-dind
-        privileged: true
+        ports:
+          - 2375:2375
+        options: >-
+          --privileged
     container:
       image: ubuntu:24.04
       options: --user root
@@ -44,7 +47,7 @@ jobs:
       - name: Wait for Docker
         run: |
           until docker version >/dev/null 2>&1; do sleep 1; done
-          
+
       - name: Install git
         run: |
           apt-get update
