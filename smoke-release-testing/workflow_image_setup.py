@@ -25,7 +25,6 @@ VERSION_PATTERN = re.compile(
 )
 
 
-
 def classify_string(s: str) -> str:
     """
     Classify the string provided to see if it is a URL, docker repo tag, or date.
@@ -71,7 +70,7 @@ def get_version_docker(version: str, malloc: str):
     """
     convert version number to docker image tag
 
-    This will only work for 3.0 onwards, for anything else supply the URL or 
+    This will only work for 3.0 onwards, for anything else supply the URL or
     full docker tag to the workflow
     """
 
