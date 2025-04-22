@@ -31,6 +31,11 @@ jobs:
       image: ubuntu:24.04
       options: --user root
     steps:
+      - name: Install git
+        run: |
+          apt-get update
+          apt-get install -y git
+          
       - name: Checkout repository and submodules
         uses: actions/checkout@v4
         with:
