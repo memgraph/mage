@@ -78,9 +78,16 @@ jobs:
       - name: Load Next Image (URL)
         if: ${{ env.NEXT_TYPE == 'url' }}
         run: |
-          curl -L ${{ env.NEXT_IMAGE }} > next.tar.gz
-          load_output=$(docker load -i next.tar.gz)
+          #curl -L ${{ env.NEXT_IMAGE }} > next.tar.gz
+          #load_output=$(docker load -i next.tar.gz)
           
+          docker exec -i \
+            -e NEXT_IMAGE="${{ env.NEXT_IMAGE }}" \
+            $CONTAINER_NAME \
+            bash -c "curl -L $NEXT_IMAGE > next.tar.gz"
+          
+          load_output=$(docker exec -i $CONTAINER_NAME bash -c "docker load -i next.tar.gz")
+
           # grab each repo:tag, drop the ":latest" one, pick the first real tag
           repo_tag=$(echo "$load_output" \
             | awk -F': ' '/Loaded image:/ {print $2}' \
