@@ -16,6 +16,7 @@ RUN apt-get update \
       build-essential \
       libssl-dev \
       git \
+      wget \
  && rm -rf /var/lib/apt/lists/*
 
 # 2. Add Docker’s official GPG key and repo
