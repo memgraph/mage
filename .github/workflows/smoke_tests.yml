@@ -90,8 +90,8 @@ jobs:
     uses: ./.github/workflows/reusable_smoke_tests.yml
     with:
       arch: "amd64"
-      next_version: "3.1.1"
-      last_version: "3.0.0"
+      next_version: "https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/mage/v3.2.0-rc2/mage-3.2.tar.gz"
+      last_version: "3.1.1"
       malloc: false
     secrets: inherit
       
