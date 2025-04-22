@@ -158,8 +158,13 @@ jobs:
       - name: Stop Container
         if: always()
         run: |
-          docker stop "$CONTAINER_NAME"
+          echo "📢 Stopping $CONTAINER_NAME…"
+          docker stop "$CONTAINER_NAME" || true
 
+          echo "⏳ Waiting on $CONTAINER_NAME to fully exit…"
+          docker wait "$CONTAINER_NAME" || true
+          echo "$CONTAINER_NAME has exited."
+          
       - name: Remove Image
         if: always()
         run: |
