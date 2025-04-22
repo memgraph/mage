@@ -53,8 +53,8 @@ jobs:
         run: |
           docker build -t ubuntu:24.04-dind --file Dockerfile.smoke .
 
-      - name: Run Test Image
-        run:
+      - name: Run Test Image Container
+        run: |
           CONTAINER_NAME="smoketester"
           docker run -d --rm  --privileged \
             --name $CONTAINER_NAME \
