@@ -30,6 +30,7 @@ on:
 jobs:
   smoke-release-tests-setup:
     runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'push' }}
     outputs:
       run_all: ${{ steps.determine.outputs.run_all }}
     steps:
