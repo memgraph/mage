@@ -165,6 +165,13 @@ COPY --from=builder --chown=memgraph:memgraph /home/memgraph/.local/ /home/memgr
 # copy script to convert to dev container
 COPY --from=builder /mage/make-dev-container.sh /make-dev-container.sh
 
+# fix for arm build (gekko binaries not executable)
+# see this: https://github.com/BYU-PRISM/GEKKO/issues/177
+RUN if [ "${TARGETARCH}" = "arm64" ]; then \
+        chmod +x /home/memgraph/.local/lib/python${PY_VERSION}/site-packages/gekko/bin/apm_aarch64 && \
+        chmod +x /home/memgraph/.local/lib/python${PY_VERSION}/site-packages/gekko/bin/apm_arm; \
+    fi
+
 FROM base as prod
 
 USER root
@@ -215,13 +222,6 @@ RUN apt-get update && apt-get install -y \
 
 # Copy entire mage repo
 COPY --from=builder --chown=memgraph:memgraph /mage/ /mage/
-
-# fix for arm build (gekko binaries not executable)
-# see this: https://github.com/BYU-PRISM/GEKKO/issues/177
-RUN if [ "${TARGETARCH}" = "arm64" ]; then \
-        chmod +x /home/memgraph/.local/lib/python${PY_VERSION}/site-packages/gekko/bin/apm_aarch64 && \
-        chmod +x /home/memgraph/.local/lib/python${PY_VERSION}/site-packages/gekko/bin/apm_arm; \
-    fi
 
 USER memgraph
 EXPOSE 7687
