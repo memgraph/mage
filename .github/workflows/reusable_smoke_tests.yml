@@ -157,10 +157,10 @@ jobs:
       
       - name: Stop Container
         run: |
-          docker stop $CONTAINER_NAME
+          docker stop "$CONTAINER_NAME"
 
       - name: Remove Image
-        name: |
+        run: |
           docker rmi ubuntu:24.04-dind
 
       # remove these if init script works!
