@@ -15,6 +15,7 @@ RUN apt-get update \
       cmake \
       build-essential \
       libssl-dev \
+      git \
  && rm -rf /var/lib/apt/lists/*
 
 # 2. Add Docker’s official GPG key and repo
