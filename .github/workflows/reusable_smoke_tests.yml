@@ -30,10 +30,11 @@ jobs:
     services:
       docker:
         image: docker:24-dind
-        ports:
-          - 2375:2375
         options: >-
           --privileged
+        env:
+          # turn off TLS so we can connect insecurely on 2375
+          DOCKER_TLS_CERTDIR: ""
     container:
       image: ubuntu:24.04
       options: --user root
