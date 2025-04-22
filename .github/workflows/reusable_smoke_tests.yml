@@ -29,7 +29,7 @@ jobs:
     runs-on: ${{ (inputs.arch == 'arm64') && fromJSON('["self-hosted", "ARM64"]') || fromJSON('["self-hosted", "X64"]') }}
     container:
       image: ubuntu:24.04
-      options: --user root
+      options: --user root --network host
     defaults:
       run:
         shell: bash
