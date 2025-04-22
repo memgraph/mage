@@ -75,8 +75,14 @@ def get_version_docker(version: str, malloc: str):
     full docker tag to the workflow
     """
 
+    parts = [int(x) for x in version.split(".")]
+
+    # remove patch version if == 0
+    if len(parts) == 3 and parts[-1] == 0:
+        version = version[:version.rfind(".")]
+
     # check whether version is before 3.2 or not (change in tag format)
-    major, minor = [int(x) for x in version.split(".")][:2]
+    major, minor = parts[:2]
     if major < 3 or (major == 3 and minor < 2):
         repo_tag = f"memgraph/memgraph-mage:{version}-memgraph-{version}"
     else:
