@@ -165,6 +165,12 @@ jobs:
           docker wait "$CONTAINER_NAME" || true
           echo "$CONTAINER_NAME has exited."
 
+      - name: Remove Docker Volume
+        if: always()
+        run: |
+          echo "🗑️ Removing Docker volume 'u24-data'…"
+          docker volume rm u24-data || echo "Volume 'u24-data' not found or already removed."
+    
       - name: Remove Image
         if: always()
         run: |
