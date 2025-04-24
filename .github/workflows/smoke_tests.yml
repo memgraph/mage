@@ -31,7 +31,6 @@ on:
 jobs:
   smoke-release-tests-setup:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name != 'push' }}
     outputs:
       run_all: ${{ steps.determine.outputs.run_all }}
     steps:
@@ -55,7 +54,7 @@ jobs:
 
   smoke-release-single:
     needs: smoke-release-tests-setup
-    if: ${{ needs.smoke-release-tests-setup.outputs.run_all == 'false' && github.event_name != 'push' }}
+    if: ${{ needs.smoke-release-tests-setup.outputs.run_all == 'false' }}
     uses: ./.github/workflows/reusable_smoke_tests.yml
     with:
       arch: "${{ inputs.arch }}"
@@ -67,7 +66,7 @@ jobs:
 
   smoke-release-all:
     needs: smoke-release-tests-setup
-    if: ${{ needs.smoke-release-tests-setup.outputs.run_all == 'true' && github.event_name != 'push' }}
+    if: ${{ needs.smoke-release-tests-setup.outputs.run_all == 'true' }}
     strategy:
       fail-fast: false
       matrix:
