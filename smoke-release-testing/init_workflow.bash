@@ -34,7 +34,7 @@ kubectl version --client
 # delete any leftover cluster
 kind delete cluster --name kind-kind || true
 
-# TODO(gitbuda): Something is broken here -> properly check for cluster status.
+# Create cluster and wait for it to be ready
 kubectl cluster-info --context kind-kind-kind > /dev/null 2>&1 \
   || {
        echo "Creating cluster..."
