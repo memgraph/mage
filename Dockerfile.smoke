@@ -1,8 +1,7 @@
-# Dockerfile
 FROM ubuntu:24.04
 ENV container=docker
 
-# 1. Install prerequisites
+# 1. Install prerequisites required for building dependencies
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       ca-certificates \
@@ -36,7 +35,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # 4. Tweak for DinD
 #    - create docker group
-#    - expose docker.sock and data root as volumes
 RUN mkdir -p /var/lib/docker \
  && chown root:docker /var/lib/docker
 
