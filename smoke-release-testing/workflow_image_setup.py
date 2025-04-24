@@ -3,6 +3,7 @@ import os
 import re
 import argparse
 # add mage root dir to python path to find other functions
+# TODO(matt): refactor workflow helper scripts like this into subdirectory
 sys.path.append(
     os.path.dirname(
         os.path.dirname(__file__)
@@ -32,6 +33,7 @@ def classify_string(s: str) -> str:
     - [url] for URLs to files (starting with http:// or https://)
     - [date] for dates in the format yyyymmdd
     - [docker] for Docker image name:tag
+    - [version] for version e.g. v3.2.0
 
     If no pattern matches, returns the original string unchanged.
     """
@@ -102,6 +104,27 @@ def string_to_boolean(bool_str: str) -> bool:
 
 
 def main() -> None:
+    """
+    This function will parse the inputs for the smoke test workflow and 
+    determine whether the input is a `date`, `URL`, `docker` tag or `version`.
+
+    For...
+    `date`:
+        attempt to get the appropriate daily build, return URL
+    `version`:
+        get dockerhub repo:tag - not that this will only work for 
+        memgraph/MAGE > 3.0 (i.e. since their versions matched)
+    `URL`: 
+        nothing needs to be done here if it's a full URL to an image archive
+    `docker`:
+        nothing needs to be done as long as it's a valid `repo:tag` string
+        
+    Finally, prints either:
+        - "url https://...."
+        - "docker memgraph/..."
+    which is captured by BASH within the workflow to either download the archive
+    or pull from dockerhub.
+    """
     parser = argparse.ArgumentParser(description="Check image/url/date")
 
     parser.add_argument(
