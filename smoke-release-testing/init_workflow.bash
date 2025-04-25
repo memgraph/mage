@@ -14,7 +14,8 @@ fi
 
 go install sigs.k8s.io/kind@v0.24.0
 echo "kind installed under $(go env GOPATH)/bin"
-export PATH="$(go env GOPATH)/bin:$PATH"
+goenvpath="$(go env GOPATH)"
+export PATH="$goenvpath/bin:$PATH"
 kind --version
 
 if [ "$(arch)" == "x86_64" ]; then
@@ -74,10 +75,10 @@ else
   echo "failed to build mgconsole"
 fi
 
-cd $SCRIPT_DIR/query_modules
+cd "$SCRIPT_DIR/query_modules"
 mkdir -p dist
-g++ -std=c++20 -fPIC -shared -I$SCRIPT_DIR/../cpp/memgraph/include -o dist/basic_cpp.so basic.cpp
+g++ -std=c++20 -fPIC -shared -I"$SCRIPT_DIR/../cpp/memgraph/include" -o dist/basic_cpp.so basic.cpp
 
-rm $SCRIPT_DIR/get_helm.sh || true
-rm $SCRIPT_DIR/kubectl || true
-rm $SCRIPT_DIR/kubectl.sha256 || true
+rm "$SCRIPT_DIR/get_helm.sh" || true
+rm "$SCRIPT_DIR/kubectl" || true
+rm "$SCRIPT_DIR/kubectl.sha256" || true
