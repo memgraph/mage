@@ -11,3 +11,6 @@ test_composite_indices() {
   echo "CREATE (:Label {prop1:0, prop2: 1});" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
   echo "EXPLAIN MATCH (n:Label {prop1:0, prop2: 1}) RETURN n;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port | grep -E "ScanAllByLabelProperties \(n :Label \{prop1, prop2\}\)"
 }
+
+test_nested_indices() {
+}
