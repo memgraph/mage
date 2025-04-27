@@ -8,7 +8,7 @@ source "$SCRIPT_DIR/../utils.bash"
 if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
   # NOTE: In the custom values file affinity and telemetry were disabled.
   helm install myhadb memgraph/memgraph-high-availability \
-    --set memgraph.env.MEMGRAPH_ENTERPRISE_LICENSE=$MEMGRAPH_ENTERPRISE_LICENSE,memgraph.env.MEMGRAPH_ORGANIZATION_NAME=$MEMGRAPH_ORGANIZATION_NAME \
+    --set env.MEMGRAPH_ENTERPRISE_LICENSE=$MEMGRAPH_ENTERPRISE_LICENSE,env.MEMGRAPH_ORGANIZATION_NAME=$MEMGRAPH_ORGANIZATION_NAME \
     -f $SCRIPT_DIR/config/k8s-ha-values.yaml
   sleep 1000
   # helm list
