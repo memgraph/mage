@@ -6,8 +6,7 @@ source "$SCRIPT_DIR/../utils.bash"
 test_regex() {
   __host="$1"
   __port="$2"
-  echo "FEATURE: regex"
-
+  echo "FEATURE: Regex"
 
   echo "CREATE (:Hero {name: 'xSPIDERy'});" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
   echo "CREATE (:Hero {name: 'test'});" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port

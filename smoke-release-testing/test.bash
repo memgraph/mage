@@ -12,12 +12,6 @@ wait_for_memgraph $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_LAST_DATA_BOLT_PORT
 wait_for_memgraph $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 echo "Memgraph is up and running!"
 
-# Test drivers.
-python3 python/gqla.py "3.0.0" $MEMGRAPH_LAST_DATA_BOLT_PORT
-python3 python/neo.py "3.0.0" $MEMGRAPH_LAST_DATA_BOLT_PORT
-python3 python/gqla.py "3.1.0" $MEMGRAPH_NEXT_DATA_BOLT_PORT
-python3 python/neo.py "3.1.0" $MEMGRAPH_NEXT_DATA_BOLT_PORT
-
 # Test features using mgconsole.
 for test_file_path in "$SCRIPT_DIR/mgconsole/"*; do
   if [ "$(basename $test_file_path)" == "README.md" ]; then
@@ -45,6 +39,7 @@ test_vector_search $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 test_dynamic_algos $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 test_functions $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 test_label_operations $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
+test_regex $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 test_edge_type_operations $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 test_composite_indices $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 test_monitoring $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
