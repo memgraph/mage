@@ -1,0 +1,178 @@
+name: Reusable Smoke Test
+
+on:
+  workflow_call:
+    inputs:
+      arch:
+        type: string
+        description: "Architecture to build the image for (amd64/arm64)"
+        required: true
+      next_version:
+        type: string
+        required: false
+        description: "Version (x.y.z), daily build date (YYYYMMDD), or URL to Docker image: Default - latest daily build"
+      last_version:
+        type: string
+        required: false
+        description: "Version (x.y.z), daily build date (YYYYMMDD), or URL to Docker image: Default - latest release"
+      malloc:
+        type: boolean
+        default: false
+        description: "Used if next_type or last_type is of 'date'"
+
+env:
+  MEMGRAPH_ENTERPRISE_LICENSE: ${{ secrets.MEMGRAPH_ENTERPRISE_LICENSE }}
+  MEMGRAPH_ORGANIZATION_NAME: ${{ secrets.MEMGRAPH_ORGANIZATION_NAME }}
+
+jobs:
+  smoke-test-image:
+    runs-on: ${{ (inputs.arch == 'arm64') && fromJSON('["self-hosted", "ARM64"]') || fromJSON('["self-hosted", "X64"]') }}
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Determine Input Types
+        run: |
+          read next_type next_image < <(python3 smoke-release-testing/workflow_image_setup.py "${{ inputs.next_version }}" "${{ inputs.arch }}" "${{ inputs.malloc }}")
+          echo "NEXT_IMAGE=${next_image}" >> $GITHUB_ENV
+          echo "NEXT_TYPE=${next_type}" >> $GITHUB_ENV
+          read last_type last_image < <(python3 smoke-release-testing/workflow_image_setup.py "${{ inputs.last_version }}" "${{ inputs.arch }}" "${{ inputs.malloc }}")
+          echo "LAST_IMAGE=${last_image}" >> $GITHUB_ENV
+          echo "LAST_TYPE=${last_type}" >> $GITHUB_ENV
+
+      - name: Build Test Image
+        run: |
+          docker build -t ubuntu:24.04-dind --file Dockerfile.smoke .
+
+      - name: Run Test Image Container
+        run: |
+          CONTAINER_NAME="smoketester"
+          docker run -d --rm  --privileged \
+            --name $CONTAINER_NAME \
+            -e container=docker \
+            -p 2375:2375 \
+            --tmpfs /run \
+            --tmpfs /run/lock \
+            --tmpfs /tmp \
+            -v u24-data:/var/lib/docker \
+            -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+            --cgroupns=host \
+            ubuntu:24.04-dind
+          echo "CONTAINER_NAME=$CONTAINER_NAME" >> $GITHUB_ENV
+
+      - name: Load Next Image (Docker)
+        if: ${{ env.NEXT_TYPE == 'docker' }}
+        run: |
+          docker exec -i \
+            -e NEXT_IMAGE="${{ env.NEXT_IMAGE }}" \
+            "$CONTAINER_NAME" \
+            bash -c 'docker pull "$NEXT_IMAGE"'
+          echo "MEMGRAPH_NEXT_DOCKERHUB_IMAGE=${{ env.NEXT_IMAGE }}" >> $GITHUB_ENV
+
+      - name: Load Next Image (URL)
+        if: ${{ env.NEXT_TYPE == 'url' }}
+        run: |
+          #curl -L ${{ env.NEXT_IMAGE }} > next.tar.gz
+          #load_output=$(docker load -i next.tar.gz)
+          
+          docker exec -i \
+            -e NEXT_IMAGE="${{ env.NEXT_IMAGE }}" \
+            "$CONTAINER_NAME" \
+            bash -c 'curl -L "$NEXT_IMAGE" > next.tar.gz'
+          
+          load_output=$(docker exec -i $CONTAINER_NAME bash -c "docker load -i next.tar.gz")
+
+          # grab each repo:tag, drop the ":latest" one, pick the first real tag
+          repo_tag=$(echo "$load_output" \
+            | awk -F': ' '/Loaded image:/ {print $2}' \
+            | grep -v ':latest$' \
+            | head -n1)
+
+          echo "MEMGRAPH_NEXT_DOCKERHUB_IMAGE=${repo_tag}" >> $GITHUB_ENV
+
+      - name: Load Last Image (Docker)
+        if: ${{ env.LAST_TYPE == 'docker' }}
+        run: |
+          docker exec -i \
+            -e LAST_IMAGE="${{ env.LAST_IMAGE }}" \
+            "$CONTAINER_NAME" \
+            bash -c 'docker pull "$LAST_IMAGE"'
+          echo "MEMGRAPH_LAST_DOCKERHUB_IMAGE=${{ env.LAST_IMAGE }}" >> $GITHUB_ENV
+
+
+      - name: Load Last Image (URL)
+        if: ${{ env.LAST_TYPE == 'url' }}
+        run: |
+          #curl -L ${{ env.LAST_IMAGE }} > last.tar.gz
+          #load_output=$(docker load -i last.tar.gz)
+
+          docker exec -i \
+            -e LAST_IMAGE="${{ env.LAST_IMAGE }}" \
+            "$CONTAINER_NAME" \
+            bash -c 'curl -L "$LAST_IMAGE" > last.tar.gz'
+          
+          load_output=$(docker exec -i $CONTAINER_NAME bash -c "docker load -i last.tar.gz")
+          
+          # grab each repo:tag, drop the ":latest" one, pick the first real tag
+          repo_tag=$(echo "$load_output" \
+            | awk -F': ' '/Loaded image:/ {print $2}' \
+            | grep -v ':latest$' \
+            | head -n1)
+
+          echo "MEMGRAPH_LAST_DOCKERHUB_IMAGE=${repo_tag}" >> $GITHUB_ENV
+
+
+      - name: Init Tests
+        run: |
+          # cd smoke-release-testing
+          # ./init_workflow.bash
+          docker exec -i $CONTAINER_NAME \
+            bash -c "cd /mage/smoke-release-testing && ./init_workflow.bash"
+
+      - name: Install Python Dependencies
+        run: |
+          docker exec -i $CONTAINER_NAME \
+            bash -c "pip install -r /mage/smoke-release-testing/requirements.txt --break-system-packages"
+      
+      - name: Run Tests
+        run: |
+          # cd smoke-release-testing
+          # ./test.bash
+          docker exec -i -u root \
+            -e MEMGRAPH_ENTERPRISE_LICENSE="${{ secrets.MEMGRAPH_ENTERPRISE_LICENSE }}" \
+            -e MEMGRAPH_ORGANIZATION_NAME="${{ secrets.MEMGRAPH_ORGANIZATION_NAME }}" \
+            -e MEMGRAPH_LAST_DOCKERHUB_IMAGE="$MEMGRAPH_LAST_DOCKERHUB_IMAGE" \
+            -e MEMGRAPH_NEXT_DOCKERHUB_IMAGE="$MEMGRAPH_NEXT_DOCKERHUB_IMAGE" \
+            "$CONTAINER_NAME" \
+            bash -c "cd /mage/smoke-release-testing && ./test.bash"
+      
+      - name: Stop Container
+        if: always()
+        run: |
+          echo "📢 Stopping $CONTAINER_NAME…"
+          docker stop "$CONTAINER_NAME" || true
+
+          echo "⏳ Waiting on $CONTAINER_NAME to fully exit…"
+          docker wait "$CONTAINER_NAME" || true
+          echo "$CONTAINER_NAME has exited."
+
+      - name: Remove Docker Volume
+        if: always()
+        run: |
+          echo "🗑️ Removing Docker volume 'u24-data'…"
+          docker volume rm u24-data || echo "Volume 'u24-data' not found or already removed."
+    
+      - name: Remove Image
+        if: always()
+        run: |
+          docker rmi ubuntu:24.04-dind --force
+
