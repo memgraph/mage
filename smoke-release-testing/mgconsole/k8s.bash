@@ -25,4 +25,6 @@ if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
   # kubectl delete pvc --all
   # NOTE: it take some time to delete all PVs, check with
   # kubectl get pv
+  #### DEBUGGING
+  # kubectl exec -it memgraph-coordinator-3-0 -- bash
 fi
