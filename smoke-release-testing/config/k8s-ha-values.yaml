@@ -38,11 +38,13 @@ ports:
 externalAccessConfig:
   dataInstance:
     # Empty = no external access service will be created
-    serviceType: "NodePort"
+    # NodePort, LoadBalancer, IngressNginx
+    serviceType: ""
     annotations: {}
   coordinator:
     # Empty = no external access service will be created
-    serviceType: "NodePort"
+    # NodePort, LoadBalancer, IngressNginx
+    serviceType: ""
     annotations: {}
 
 headlessService:
