@@ -29,6 +29,10 @@ on:
         type: boolean
         description: "Run mock artifact creation for testing (ends up in 'mage-test/vX.Y.Z')"
         default: false
+      run_smoke_tests:
+        type: boolean
+        description: "Run smoke tests on images after building (tests against previous tagged image)"
+        default: false
 
 jobs:
   SetupNames:
@@ -80,4 +84,5 @@ jobs:
       s3_dest_bucket: "deps.memgraph.io"
       s3_dest_dir: "${{ inputs.test && 'mage-test/v' || 'mage/v'}}${{ github.event.inputs.mage_version}}"
       malloc: ${{ matrix.malloc }}
+      run_smoke_tests: ${{ inputs.run_smoke_tests }}
     secrets: inherit
