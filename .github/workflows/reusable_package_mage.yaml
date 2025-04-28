@@ -54,6 +54,10 @@ on:
         type: boolean
         description: "Use malloc build of memgraph (no jemalloc)"
         default: false
+      run_smoke_tests:
+        type: boolean
+        description: "Run smoke tests on images after building (tests against previous tagged image)"
+        default: false
 
 env:
   OS: "${{ inputs.arch == 'arm64' && 'ubuntu-24.04-aarch64' || 'ubuntu-24.04' }}${{ inputs.malloc && '-malloc' || '' }}"
@@ -62,6 +66,8 @@ env:
 jobs:
   BuildAndPush:
     runs-on: ${{ (inputs.arch == 'arm64') && fromJSON('["self-hosted", "DockerMgBuild","ARM64"]') || fromJSON('["self-hosted", "DockerMgBuild", "X64"]') }}
+    outputs:
+      s3_package_url: ${{ steps.output-url.outputs.s3_url }}
     steps:            
       - name: Checkout repository and submodules
         uses: actions/checkout@v4
@@ -292,3 +298,43 @@ jobs:
               attempt_num=$((attempt_num+1))
             }
           done
+
+      - name: Construct Output URL
+        id: output-url
+        if: ${{ inputs.push_to_s3 == 'true' && inputs.run_smoke_tests }}
+        run: |
+          filename="${{ env.ARTIFACT_NAME }}.tar.gz"
+          output_url="https://s3.eu-west-1.amazonaws.com/${{ inputs.s3_dest_bucket }}/${{ inputs.s3_dest_dir }}/$filename"
+          echo "s3_url=$output_url" >> $GITHUB_OUTPUT            
+
+  SetupSmokeTest:
+    runs-on: [self-hosted]
+    needs: [BuildAndPush]
+    if: ${{ inputs.run_smoke_tests && inputs.push_to_s3 }}
+    outputs:
+      last_version: ${{ steps.get-latest-tag.outputs.clean_tag }}
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Get Latest MAGE Tag
+        id: get-latest-tag
+        run: |
+          tag="$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)"
+          clean_tag="${tag#v}"
+          echo "Found latest tag: ${clean_tag}"
+          echo "clean_tag=$clean_tag" >> $GITHUB_OUTPUT
+
+  RunSmokeTests:
+    needs: [BuildAndPush, SetupSmokeTest]
+    uses: ./.github/workflows/reusable_smoke_tests.yml
+    with:
+      arch: "${{ inputs.arch }}"
+      next_version: "${{ needs.BuildAndPush.outputs.s3_package_url }}"
+      last_version: "${{ needs.SetupSmokeTest.outputs.last_version }}"
+      malloc: ${{ inputs.malloc }}
+    secrets: inherit

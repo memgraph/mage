@@ -1,33 +1,48 @@
 #!/bin/bash -e
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/utils.bash"
+apt-get update
 
 if [ ! -x "$(command -v jq)" ]; then
- sudo apt-get install -y jq
+  apt-get install -y jq
 fi
 
 if [ ! -x "$(command -v go)" ]; then
-  sudo apt install -y golang-go
+  apt install -y golang-go
   # or, https://go.dev/doc/install
 fi
 
 go install sigs.k8s.io/kind@v0.24.0
 echo "kind installed under $(go env GOPATH)/bin"
-export PATH="$(go env GOPATH)/bin:$PATH"
+goenvpath="$(go env GOPATH)"
+export PATH="$goenvpath/bin:$PATH"
 kind --version
 
+if [ "$(arch)" == "x86_64" ]; then
+  ARCH="amd64"
+else
+  ARCH="arm64"
+fi
+
 if [ ! -f "/usr/local/bin/kubectl" ]; then
-  curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-  curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl.sha256"
+  curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/$ARCH/kubectl"
+  curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/$ARCH/kubectl.sha256"
   echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
-  sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+  install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 fi
 kubectl version --client
 
-# TODO(gitbuda): Something is broken here -> properly check for cluster status.
-if ! kubectl cluster-info --context kind-kind-kind; then
-  kind create cluster --name kind-kind
-fi
+# delete any leftover cluster
+kind delete cluster --name kind-kind || true
+
+# Create cluster and wait for it to be ready
+kubectl cluster-info --context kind-kind-kind > /dev/null 2>&1 \
+  || {
+       echo "Creating cluster..."
+       kind create cluster --name kind-kind --wait 120s 
+       echo "...done"
+     }
+
 kubectl get all -A
 
 if [ ! -f "/usr/local/bin/helm" ]; then
@@ -43,7 +58,7 @@ helm repo list
 # Last mgconsole.
 # rm -rf $SCRIPT_DIR/mgconsole.build # To download and rebuild everything.
 if [ ! -d "$SCRIPT_DIR/mgconsole.build" ]; then
-  git clone git@github.com:memgraph/mgconsole.git "$SCRIPT_DIR/mgconsole.build"
+  git clone https://github.com/memgraph/mgconsole.git "$SCRIPT_DIR/mgconsole.build"
 fi
 MG_CONSOLE_TAG="master"
 MG_CONSOLE_BINARY="$SCRIPT_DIR/mgconsole.build/build/src/mgconsole"
@@ -60,10 +75,10 @@ else
   echo "failed to build mgconsole"
 fi
 
-cd $SCRIPT_DIR/query_modules
+cd "$SCRIPT_DIR/query_modules"
 mkdir -p dist
-g++ -std=c++20 -fPIC -shared -I$SCRIPT_DIR/../cpp/memgraph/include -o dist/basic_cpp.so basic.cpp
+g++ -std=c++20 -fPIC -shared -I"$SCRIPT_DIR/../cpp/memgraph/include" -o dist/basic_cpp.so basic.cpp
 
-rm $SCRIPT_DIR/get_helm.sh || true
-rm $SCRIPT_DIR/kubectl || true
-rm $SCRIPT_DIR/kubectl.sha256 || true
+rm "$SCRIPT_DIR/get_helm.sh" || true
+rm "$SCRIPT_DIR/kubectl" || true
+rm "$SCRIPT_DIR/kubectl.sha256" || true

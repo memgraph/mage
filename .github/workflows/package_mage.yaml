@@ -43,6 +43,11 @@ on:
         type: boolean
         description: "Use malloc build of memgraph (no jemalloc)"
         default: false
+      run_smoke_tests:
+        type: boolean
+        description: "Run smoke tests on images after building (tests against previous tagged image)"
+        default: false
+  
 jobs:
   BuildMage:
     if: ${{ github.event.inputs.matrix_build != 'true' }}
@@ -58,6 +63,7 @@ jobs:
       push_to_dockerhub: ${{ github.event.inputs.push_to_dockerhub || 'false' }}
       push_to_s3: ${{ github.event.inputs.push_to_s3 || 'false' }}
       malloc: ${{ github.event.inputs.malloc == 'true' }}
+      run_smoke_tests: ${{ inputs.run_smoke_tests }}
     secrets: inherit
 
   # New matrix build job, runs only when matrix_build is true
@@ -86,4 +92,5 @@ jobs:
       push_to_dockerhub: ${{ github.event.inputs.push_to_dockerhub || 'false' }}
       push_to_s3: ${{ github.event.inputs.push_to_s3 || 'false' }}
       malloc: ${{ matrix.malloc }}
+      run_smoke_tests: ${{ inputs.run_smoke_tests }}
     secrets: inherit
