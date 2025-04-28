@@ -1,47 +1,146 @@
-memgraph:
-  image:
-    repository: memgraph/memgraph
-    tag: 2.18.1
-    pullPolicy: IfNotPresent
-  env:
-    MEMGRAPH_ENTERPRISE_LICENSE: "<your-license>"
-    MEMGRAPH_ORGANIZATION_NAME: "<your-organization-name>"
-  probes:
-    startup:
-      failureThreshold: 30
-      periodSeconds: 10
-    readiness:
-      initialDelaySeconds: 5
-      periodSeconds: 5
-    liveness:
-      initialDelaySeconds: 30
-      periodSeconds: 10
-  data:
-    volumeClaim:
-      storagePVCClassName: ""
-      storagePVC: true
-      storagePVCSize: "1Gi"
-      logPVCClassName: ""
-      logPVC: true
-      logPVCSize: "256Mi"
-  coordinators:
-    volumeClaim:
-      storagePVCClassName: ""
-      storagePVC: true
-      storagePVCSize: "1Gi"
-      logPVCClassName: ""
-      logPVC: true
-      logPVCSize: "256Mi"
-  affinity:
-    enabled: false
+image:
+  repository: memgraph/memgraph
+  # It is a bad practice to set the image tag name to latest as it can trigger automatic upgrade of the charts
+  # With some of the pullPolicy values. Please consider fixing the tag to a specific Memgraph version
+  tag: 3.2.0
+  pullPolicy: IfNotPresent
 
-data:
-- id: "0"
-  boltPort: 7687
+env:
+  MEMGRAPH_ENTERPRISE_LICENSE: "<your-license>"
+  MEMGRAPH_ORGANIZATION_NAME: "<your-organization-name>"
+
+storage:
+  data:
+    libPVCSize: "1Gi"
+    libStorageAccessMode: "ReadWriteOnce"
+    # By default the name of the storage class isn't set which means that the default storage class will be used.
+    # If you set any name, such storage class must exist.
+    libStorageClassName:
+    logPVCSize: "1Gi"
+    logStorageAccessMode: "ReadWriteOnce"
+    logStorageClassName:
+  coordinators:
+    libPVCSize: "1Gi"
+    libStorageAccessMode: "ReadWriteOnce"
+    # By default the name of the storage class isn't set which means that the default storage class will be used.
+    # If you set any name, such storage class must exist.
+    libStorageClassName:
+    logPVCSize: "1Gi"
+    logStorageAccessMode: "ReadWriteOnce"
+    logStorageClassName:
+
+ports:
+  boltPort: 7687   # If you change this value, change it also in probes definition
   managementPort: 10000
   replicationPort: 20000
+  coordinatorPort: 12000  # If you change this value, change it also in probes definition
+
+externalAccessConfig:
+  dataInstance:
+    # Empty = no external access service will be created
+    # NodePort, LoadBalancer, IngressNginx
+    serviceType: ""
+    annotations: {}
+  coordinator:
+    # Empty = no external access service will be created
+    # NodePort, LoadBalancer, IngressNginx
+    serviceType: ""
+    annotations: {}
+
+headlessService:
+  enabled: false  # If set to true, each data and coordinator instance will use headless service
+
+# Affinity controls the scheduling of the memgraph-high-availability pods.
+# By default data pods will avoid being scheduled on the same node as other data pods,
+# and coordinator pods will avoid being scheduled on the same node as other coordinator pods.
+# Deployment won't fail if there is no sufficient nodes.
+affinity:
+  # The unique affinity, will schedule the pods on different nodes in the cluster.
+  # This means coordinators and data nodes will not be scheduled on the same node. If there are more pods than nodes, deployment will fail.
+  unique: false
+  # The parity affinity, will enable scheduling of the pods on the same node, but with the rule that one node can host pair made of coordinator and data node.
+  # This means each node can have max two pods, one coordinator and one data node. If not sufficient nodes, deployment will fail.
+  parity: false
+  # The nodeSelection affinity, will enable scheduling of the pods on the nodes with specific labels. So the coordinators will be scheduled on the nodes with label coordinator-node and data nodes will be scheduled on the nodes with label data-node. If not sufficient nodes, deployment will fail.
+  nodeSelection: false
+  roleLabelKey: "role"
+  dataNodeLabelValue: "data-node"
+  coordinatorNodeLabelValue: "coordinator-node"
+
+# If you are experiencing issues with the sysctlInitContainer, you can disable it here.
+# This is made to increase the max_map_count, necessary for high memory loads in Memgraph
+# If you are experiencing crashing pod with the: Max virtual memory areas vm.max_map_count is too low
+# you can increase the maxMapCount value.
+sysctlInitContainer:
+  enabled: true
+  maxMapCount: 262144
+
+secrets:
+  enabled: false
+  name: memgraph-secrets
+  userKey: USER
+  passwordKey: PASSWORD
+
+container:
+  data:
+    readinessProbe:
+      tcpSocket:
+        port: 7687  # If you change bolt port, change this also
+      failureThreshold: 20
+      timeoutSeconds: 10
+      periodSeconds: 5
+    livenessProbe:
+      tcpSocket:
+        port: 7687  # If you change bolt port, change this also
+      failureThreshold: 20
+      timeoutSeconds: 10
+      periodSeconds: 5
+    # When restoring Memgraph from a backup, it is important to give enough time app to start. Here, we set it to 2h by default.
+    startupProbe:
+      tcpSocket:
+        port: 7687  # If you change bolt port, change this also
+      failureThreshold: 1440
+      timeoutSeconds: 10
+      periodSeconds: 5
+  coordinators:
+    readinessProbe:
+      tcpSocket:
+        port: 12000  # If you change coordinator port, change this also
+      failureThreshold: 20
+      timeoutSeconds: 10
+      periodSeconds: 5
+    livenessProbe:
+      tcpSocket:
+        port: 12000  # If you change coordinator port, change this also
+      failureThreshold: 20
+      timeoutSeconds: 10
+      periodSeconds: 5
+    startupProbe:
+      tcpSocket:
+        port: 12000
+      failureThreshold: 20
+      timeoutSeconds: 10
+      periodSeconds: 5
+
+resources:
+  data: {}
+  coordinators: {}
+
+prometheus:
+  enabled: false
+  server:
+    service:
+      type: LoadBalancer
+
+# If setting the --memory-limit flag under data instances, check that the
+# amount of resources that a pod has been given is more than the actual memory
+# limit you give to Memgraph Setting the Memgraph's memory limit to more than
+# the available resources can trigger pod eviction and restarts before Memgraph
+# can make a query exception and continue running
+# the pod.
+data:
+- id: "0"
   args:
-  - "--experimental-enabled=high-availability"
   - "--management-port=10000"
   - "--bolt-port=7687"
   - "--also-log-to-stderr"
@@ -50,11 +149,7 @@ data:
   - "--telemetry-enabled=False"
 
 - id: "1"
-  boltPort: 7687
-  managementPort: 10000
-  replicationPort: 20000
   args:
-  - "--experimental-enabled=high-availability"
   - "--management-port=10000"
   - "--bolt-port=7687"
   - "--also-log-to-stderr"
@@ -64,11 +159,7 @@ data:
 
 coordinators:
 - id: "1"
-  boltPort: 7687
-  managementPort: 10000
-  coordinatorPort: 12000
   args:
-  - "--experimental-enabled=high-availability"
   - "--coordinator-id=1"
   - "--coordinator-port=12000"
   - "--management-port=10000"
@@ -81,11 +172,7 @@ coordinators:
   - "--telemetry-enabled=False"
 
 - id: "2"
-  boltPort: 7687
-  managementPort: 10000
-  coordinatorPort: 12000
   args:
-  - "--experimental-enabled=high-availability"
   - "--coordinator-id=2"
   - "--coordinator-port=12000"
   - "--management-port=10000"
@@ -98,11 +185,7 @@ coordinators:
   - "--telemetry-enabled=False"
 
 - id: "3"
-  boltPort: 7687
-  managementPort: 10000
-  coordinatorPort: 12000
   args:
-  - "--experimental-enabled=high-availability"
   - "--coordinator-id=3"
   - "--coordinator-port=12000"
   - "--management-port=10000"
