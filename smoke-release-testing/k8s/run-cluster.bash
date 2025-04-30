@@ -10,7 +10,7 @@ if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
   # inject latest template that might not be compatible.
   helm install myhadb memgraph/memgraph-high-availability \
     --set env.MEMGRAPH_ENTERPRISE_LICENSE=$MEMGRAPH_ENTERPRISE_LICENSE,env.MEMGRAPH_ORGANIZATION_NAME=$MEMGRAPH_ORGANIZATION_NAME \
-    -f $SCRIPT_DIR/config/k8s-ha-values.yaml
+    -f $SCRIPT_DIR/ha-values.yaml
   sleep 1000
   # helm list
   # kubectl get pods
