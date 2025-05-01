@@ -5,9 +5,9 @@ metadata:
 spec:
   containers:
   - name: my-container
-    image: memgraph/memgraph:3.2.0-relwithdebinfo
+    image: memgraph/memgraph:3.2.0-relwithdebinfo # Update to the latest.
     securityContext:
-      runAsUser: 0  # Runs the container as root
+      runAsUser: 0  # Runs the container as the root user.
       privileged: true
       capabilities:
         add: ["SYS_PTRACE"]
