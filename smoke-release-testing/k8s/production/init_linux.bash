@@ -22,12 +22,20 @@ sudo apt update
 sudo apt install -y kubelet kubeadm kubectl
 sudo apt-mark hold kubelet kubeadm kubectl
 
-exit 0
+## master
 
-sudo kubeadm init --pod-network-cidr=10.244.0.0/16
-
+sudo kubeadm init --apiserver-advertise-address=100.x.x.x --pod-network-cidr=10.244.0.0/16
 mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
+# NOTE: The latest version of flannel doesn't work.
+# kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+curl -O https://raw.githubusercontent.com/flannel-io/flannel/v0.25.6/Documentation/kube-flannel.yml
+kubectl apply -f kube-flannel.yml
+kubeadm token create --print-join-command
 
-kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+## worker
+
+sudo sysctl -w net.ipv4.ip_forward=1
+sudo kubectl join ...
+# TODO(gitbuda): Config on the worker is also wrong -> local ip address is used.
