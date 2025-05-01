@@ -1,6 +1,7 @@
 #!/bin/bash
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/../utils.bash"
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
   # NOTE: In the custom values file telemetry was disabled and NodePort was set
