@@ -13,6 +13,7 @@ nodes:
         kubeletConfiguration:
           extraArgs:
             allow-privileged: "true"
+# NOTE: The above configuration only works under Linux.
 # To inspect the cluster run `kubectl get pods -n kube-system`.
 # If some of the pods is in the CrashLoopBackOff status, try runnig `kubectl
 # logs <pod-name> -n kube-system` to get the error message.
