@@ -10,14 +10,9 @@ nodes:
     kubeadmConfigPatches:
       - |
         kind: ClusterConfiguration
-        apiServer:
-          extraArgs:
-            allow-privileged: "true"
-        controllerManager:
-          extraArgs:
-            allow-privileged: "true"
-        scheduler:
+        kubeletConfiguration:
           extraArgs:
             allow-privileged: "true"
 # To inspect the cluster run `kubectl get pods -n kube-system`.
-# TODO(gitbuda): The above config still fails at least on mac...
+# If some of the pods is in the CrashLoopBackOff status, try runnig `kubectl
+# logs <pod-name> -n kube-system` to get the error message.

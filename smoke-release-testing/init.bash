@@ -25,8 +25,8 @@ fi
 kubectl version --client
 
 # TODO(gitbuda): Something is broken here -> properly check for cluster status.
-if ! kubectl cluster-info --context kind-kind-kind; then
-  kind create cluster --name kind-kind
+if ! kubectl cluster-info --context kind-experiment; then
+  kind create cluster --name experiment
 fi
 kubectl get all -A
 
