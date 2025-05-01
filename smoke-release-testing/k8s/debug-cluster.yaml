@@ -1,0 +1,23 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.31.0
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 8080
+        protocol: TCP
+    kubeadmConfigPatches:
+      - |
+        kind: ClusterConfiguration
+        apiServer:
+          extraArgs:
+            allow-privileged: "true"
+        controllerManager:
+          extraArgs:
+            allow-privileged: "true"
+        scheduler:
+          extraArgs:
+            allow-privileged: "true"
+# To inspect the cluster run `kubectl get pods -n kube-system`.
+# TODO(gitbuda): The above config still fails at least on mac...
