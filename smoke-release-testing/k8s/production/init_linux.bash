@@ -4,6 +4,7 @@
 #   * https://medium.com/@subhampradhan966/kubeadm-setup-for-ubuntu-24-04-lts-f6a5fc67f0df
 #   * https://chatgpt.com/share/6812882c-f450-800a-b13c-04eefccc0880
 
+# This is super important, kubelet doesn't want to get started.
 sudo swapoff -a
 # sudo sed -i '/ swap / s/^/#/' /etc/fstab
 
@@ -36,6 +37,16 @@ kubeadm token create --print-join-command
 
 ## worker
 
+# sudo kubeadm reset -f
 sudo sysctl -w net.ipv4.ip_forward=1
+
+# Changing the node IP address from the control plane perspective -> doesn't actually work..
+sudo mkdir -p /etc/systemd/system/kubelet.service.d
+sudo vim /etc/systemd/system/kubelet.service.d/20-node-ip.conf
+# [Service]
+# Environment="KUBELET_EXTRA_ARGS=--node-ip=<your-desired-ip>"
+sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+
 sudo kubectl join ...
-# TODO(gitbuda): Config on the worker is also wrong -> local ip address is used.
