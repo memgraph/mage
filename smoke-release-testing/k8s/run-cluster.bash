@@ -14,9 +14,6 @@ if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
     -f $SCRIPT_DIR/ha-values.yaml
   sleep 1000
   # helm list
-  # kubectl cluster-info dump
-  ## https://komodor.com/learn/kubectl-port-forwarding-how-it-works-use-cases-examples
-  # kubectl port-forward $pod_name 17687:7687
   helm uninstall myhadb
   # NOTE: helm uninstall is not deleting PVCs
   # kubectl delete pvc --all
