@@ -12,7 +12,7 @@ install_requirements() {
   # sudo sed -i '/ swap / s/^/#/' /etc/fstab
   ## BASICS
   sudo apt update -y
-  sudo apt install -y apt-transport-https ca-certificates curl
+  sudo apt install -y apt-transport-https ca-certificates curl bridge-utils
   ## CONTAINERD
   sudo apt install -y containerd
   sudo mkdir -p /etc/containerd
@@ -29,7 +29,7 @@ install_requirements() {
 
 case $1 in
   master)
-    sudo kubeadm reset
+    sudo kubeadm reset -f
     rm -rf $HOME/.kube
     echo "Configuring master..."
     sudo kubeadm init --apiserver-advertise-address=100.94.19.81 --pod-network-cidr=10.244.0.0/16
@@ -45,7 +45,7 @@ case $1 in
 
   worker)
     echo "Configuring worker..."
-    # sudo kubeadm reset -f
+    sudo kubeadm reset -f
     # # Changing the node IP address from the control plane perspective -> doesn't actually work..
     # sudo mkdir -p /etc/systemd/system/kubelet.service.d
     # sudo vim /etc/systemd/system/kubelet.service.d/20-node-ip.conf
@@ -55,7 +55,10 @@ case $1 in
     # sudo systemctl daemon-reload
     # sudo systemctl restart kubelet
     sudo sysctl -w net.ipv4.ip_forward=1
-    sudo kubectl join --config
+    sudo kubeadm join --config $SCRIPT_DIR/worker-config.yaml
+    # # To fix the "failed to set bridge addr cni0 alreadh has an ip addres"
+    # ip link set cni0 down
+    # brctl delbr cni0
   ;;
 
   *)

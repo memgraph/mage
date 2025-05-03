@@ -14,10 +14,6 @@ if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
     -f $SCRIPT_DIR/ha-values.yaml
   sleep 1000
   # helm list
-  # kubectl get pods
-  # kubectl get pod $pod_name -o yaml
-  # kubectl logs $pod_name
-  # kubectl describe pods $pod_name
   # kubectl cluster-info dump
   ## https://komodor.com/learn/kubectl-port-forwarding-how-it-works-use-cases-examples
   # kubectl port-forward $pod_name 17687:7687
@@ -26,6 +22,4 @@ if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
   # kubectl delete pvc --all
   # NOTE: it take some time to delete all PVs, check with
   # kubectl get pv
-  #### DEBUGGING
-  # kubectl exec -it memgraph-coordinator-3-0 -- bash
 fi
