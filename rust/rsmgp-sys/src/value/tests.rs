@@ -51,6 +51,40 @@ fn test_make_false_bool_mgp_value() {
 
 #[test]
 #[serial]
+fn test_convert_false_bool_mgp_value() {
+    mock_mgp_once!(mgp_value_get_bool_context, |_, out| {
+        unsafe {
+            *out = 0;
+        }
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
+    mock_mgp_once!(mgp_value_get_type_context, |_, out| {
+        unsafe {
+            *out = mgp_value_type::MGP_VALUE_TYPE_BOOL;
+        }
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
+
+    with_dummy!(|memgraph: &Memgraph| {
+        unsafe {
+            let res = mgp_raw_value_to_value(null_mut(), &memgraph);
+            match res {
+                Ok(value) => match value {
+                    Value::Bool(value) => assert!(value == false, "Wrong boolean value"),
+                    _ => {
+                        assert!(false, "Value is not a Bool")
+                    }
+                },
+                _ => {
+                    assert!(false, "Failed to convert raw value")
+                }
+            }
+        }
+    });
+}
+
+#[test]
+#[serial]
 fn test_make_true_bool_mgp_value() {
     mock_mgp_once!(mgp_value_make_bool_context, |value, _, _| {
         assert_eq!(value, 1);
@@ -60,6 +94,40 @@ fn test_make_true_bool_mgp_value() {
     with_dummy!(|memgraph: &Memgraph| {
         let value = MgpValue::make_bool(true, &memgraph);
         assert!(value.is_err());
+    });
+}
+
+#[test]
+#[serial]
+fn test_convert_true_bool_mgp_value() {
+    mock_mgp_once!(mgp_value_get_bool_context, |_, out| {
+        unsafe {
+            *out = 1;
+        }
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
+    mock_mgp_once!(mgp_value_get_type_context, |_, out| {
+        unsafe {
+            *out = mgp_value_type::MGP_VALUE_TYPE_BOOL;
+        }
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
+
+    with_dummy!(|memgraph: &Memgraph| {
+        unsafe {
+            let res = mgp_raw_value_to_value(null_mut(), &memgraph);
+            match res {
+                Ok(value) => match value {
+                    Value::Bool(value) => assert!(value == true, "Wrong boolean value"),
+                    _ => {
+                        assert!(false, "Value is not a Bool")
+                    }
+                },
+                _ => {
+                    assert!(false, "Failed to convert raw value")
+                }
+            }
+        }
     });
 }
 
@@ -79,6 +147,40 @@ fn test_make_int_mgp_value() {
 
 #[test]
 #[serial]
+fn test_convert_int_mgp_value() {
+    mock_mgp_once!(mgp_value_get_int_context, |_, out| {
+        unsafe {
+            *out = 123;
+        }
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
+    mock_mgp_once!(mgp_value_get_type_context, |_, out| {
+        unsafe {
+            *out = mgp_value_type::MGP_VALUE_TYPE_INT;
+        }
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
+
+    with_dummy!(|memgraph: &Memgraph| {
+        unsafe {
+            let res = mgp_raw_value_to_value(null_mut(), &memgraph);
+            match res {
+                Ok(value) => match value {
+                    Value::Int(value) => assert!(value == 123, "Wrong integer value"),
+                    _ => {
+                        assert!(false, "Value is not an Int")
+                    }
+                },
+                _ => {
+                    assert!(false, "Failed to convert raw value")
+                }
+            }
+        }
+    });
+}
+
+#[test]
+#[serial]
 fn test_make_double_mgp_value() {
     mock_mgp_once!(mgp_value_make_double_context, |value, _, _| {
         assert_eq!(value, 0.0);
@@ -93,6 +195,40 @@ fn test_make_double_mgp_value() {
 
 #[test]
 #[serial]
+fn test_convert_double_mgp_value() {
+    mock_mgp_once!(mgp_value_get_double_context, |_, out| {
+        unsafe {
+            *out = 1.23;
+        }
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
+    mock_mgp_once!(mgp_value_get_type_context, |_, out| {
+        unsafe {
+            *out = mgp_value_type::MGP_VALUE_TYPE_DOUBLE;
+        }
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
+
+    with_dummy!(|memgraph: &Memgraph| {
+        unsafe {
+            let res = mgp_raw_value_to_value(null_mut(), &memgraph);
+            match res {
+                Ok(value) => match value {
+                    Value::Float(value) => assert!(value == 1.23, "Wrong double value"),
+                    _ => {
+                        assert!(false, "Value is not a Double")
+                    }
+                },
+                _ => {
+                    assert!(false, "Failed to convert raw value")
+                }
+            }
+        }
+    });
+}
+
+#[test]
+#[serial]
 fn test_make_string_mgp_value() {
     mock_mgp_once!(mgp_value_make_string_context, |value, _, _| unsafe {
         assert_eq!(CStr::from_ptr(value), c_str!("test"));
@@ -102,6 +238,49 @@ fn test_make_string_mgp_value() {
     with_dummy!(|memgraph: &Memgraph| {
         let value = MgpValue::make_string(c_str!("test"), &memgraph);
         assert!(value.is_err());
+    });
+}
+
+#[test]
+#[serial]
+fn test_convert_string_mgp_value() {
+    let cstr = CString::new("a string").expect("CString::new failed");
+    mock_mgp_once!(mgp_value_get_string_context, move |_, out| {
+        unsafe {
+            *out = cstr.as_ptr() as *const i8;
+        }
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
+    mock_mgp_once!(mgp_value_get_type_context, |_, out| {
+        unsafe {
+            *out = mgp_value_type::MGP_VALUE_TYPE_STRING;
+        }
+        mgp_error::MGP_ERROR_NO_ERROR
+    });
+
+    with_dummy!(|memgraph: &Memgraph| {
+        unsafe {
+            let res = mgp_raw_value_to_value(null_mut(), &memgraph);
+            match res {
+                Ok(value) => match value {
+                    Value::String(value) => match value.to_str() {
+                        Ok(vs) => match vs {
+                            "a string" => {}
+                            _ => assert!(false, "Wrong string value"),
+                        },
+                        _ => {
+                            assert!(false, "Value is not a String")
+                        }
+                    },
+                    _ => {
+                        assert!(false, "Value is not a String")
+                    }
+                },
+                _ => {
+                    assert!(false, "Failed to convert raw value")
+                }
+            }
+        }
     });
 }
 
