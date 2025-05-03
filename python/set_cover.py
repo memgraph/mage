@@ -138,7 +138,7 @@ class GekkoMatchingProblemCreator(MatchingProblemCreator):
         self, element_vertexes: List[mgp.Vertex], set_vertexes: List[mgp.Vertex]
     ):
         """
-        Creates a matching problem to be solved with gekko constraing programming method
+        Creates a matching problem to be solved with gekko constraint programming method
         :param element_vertexes: Element vertexes pair component list
         :param set_vertexes: Set vertexes pair component list
         :return: matching problem

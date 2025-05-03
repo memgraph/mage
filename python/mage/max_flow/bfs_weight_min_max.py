@@ -8,7 +8,7 @@ def BFS_find_weight_min_max(start_v: mgp.Vertex, edge_property: str) -> mgp.Numb
     largest being used for capacity scaling, and smallest for lower bound
 
     :param start_v: starting vertex
-    :param edge_propery: str denoting the edge property used as weight
+    :param edge_property: str denoting the edge property used as weight
 
     :return: Number, the largest value of edge_property in graph
     """
