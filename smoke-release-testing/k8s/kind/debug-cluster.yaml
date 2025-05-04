@@ -5,7 +5,7 @@ nodes:
     image: kindest/node:v1.31.0
     extraPortMappings:
       - containerPort: 80
-        hostPort: 8080
+        hostPort: 8080 # NOTE: This is in conflict with running memgraph k8s operator `make run`.
         protocol: TCP
     kubeadmConfigPatches:
       - |
