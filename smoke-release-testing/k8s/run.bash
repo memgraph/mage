@@ -10,10 +10,17 @@ if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
   # NOTE: It's critical to run `helm repo update` because otherwise you'll
   # inject latest template that might not be compatible.
 
-  helm install myhadb memgraph/memgraph-high-availability \
-    --set env.MEMGRAPH_ENTERPRISE_LICENSE=$MEMGRAPH_ENTERPRISE_LICENSE,env.MEMGRAPH_ORGANIZATION_NAME=$MEMGRAPH_ORGANIZATION_NAME \
-    -f $SCRIPT_DIR/ha-values.yaml
+  # helm install myhadb memgraph/memgraph-high-availability \
+  #   --set env.MEMGRAPH_ENTERPRISE_LICENSE=$MEMGRAPH_ENTERPRISE_LICENSE,env.MEMGRAPH_ORGANIZATION_NAME=$MEMGRAPH_ORGANIZATION_NAME \
+  #   -f $SCRIPT_DIR/values-ha.yaml
+  # sleep 1000
+
+  # helm install mydb memgraph/memgraph
+
+  helm install mydb-core memgraph/memgraph \
+    -f $SCRIPT_DIR/values-core.yaml --debug # --dry-run
   sleep 1000
+  # NOTE: helm uninstall has to be used otherwise on `kubectl delete pod <pod-name>` the pod gets restarted.
 
   # helm list
   # helm uninstall myhadb
@@ -22,5 +29,4 @@ if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
   # NOTE: it take some time to delete all PVs, check with
   # kubectl get pv
 
-  # helm install mydb memgraph/memgraph
 fi
