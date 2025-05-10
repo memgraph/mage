@@ -1,9 +1,9 @@
 image:
-  repository: memgraph/memgraph
+  repository: memgraph/memgraph-mage
   # Overrides the image tag whose default is v{{ .Chart.AppVersion }}
   # It is a bad practice to set the image tag name to latest as it can trigger automatic upgrade of the charts
   # With some of the pullPolicy values. Please consider fixing the tag to a specific Memgraph version
-  tag: 3.2.0-relwithdebinfo
+  tag: 3.2.0
   pullPolicy: IfNotPresent
 
 ## Override the default imagePullSecrets
