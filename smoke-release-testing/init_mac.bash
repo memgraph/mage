@@ -29,8 +29,8 @@ helm version
 
 # kubectl config get-clusters
 # TODO(gitbuda): kind requires docker to be installed.
-if ! kubectl cluster-info --context kind-experiment; then
-  kind create cluster --name experiment
+if ! kubectl cluster-info --context kind-smoke-release-testing; then
+  kind create cluster --name smoke-release-testing
 fi
 kubectl get all -A
 

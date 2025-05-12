@@ -3,7 +3,7 @@ image:
   # Overrides the image tag whose default is v{{ .Chart.AppVersion }}
   # It is a bad practice to set the image tag name to latest as it can trigger automatic upgrade of the charts
   # With some of the pullPolicy values. Please consider fixing the tag to a specific Memgraph version
-  tag: 3.2.0-relwithdebinfo
+  tag: 3.2.1-relwithdebinfo
   pullPolicy: IfNotPresent
 
 ## Override the default imagePullSecrets
@@ -103,6 +103,12 @@ memgraphConfig:
 # the pod. For further information, check the `resources` section in this file about setting pod memory and cpu limits.
 - "--also-log-to-stderr=true"
 - "--telemetry-enabled=False"
+
+# The explicit user and group setup is required because at the init container
+# time, there is not yet a user created. This seems fine because under both
+# Memgraph and Mage images we actually hard-code the user and group id. The
+# config is used to chown user storage and core dumps claims' month paths.
+memgraphUserGroupId: "101:103"
 
 secrets:
   enabled: false
