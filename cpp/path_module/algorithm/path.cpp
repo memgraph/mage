@@ -29,11 +29,17 @@ Path::PathHelper::PathHelper(const mgp::Map &config) {
 
   auto value = config.At("maxHops");
   if (!value.IsNull()) {
-    config_.max_hops = value.ValueInt();
+    int64_t max_hops = value.ValueInt();
+    if (max_hops >= 0) {
+      config_.max_hops = max_hops;
+    }
   }
   value = config.At("minHops");
   if (!value.IsNull()) {
-    config_.min_hops = value.ValueInt();
+    int64_t min_hops = value.ValueInt();
+    if (min_hops >= 0) {
+      config_.min_hops = min_hops;
+    }
   }
 
   value = config.At("relationshipFilter");
