@@ -213,7 +213,7 @@ jobs:
             mg_url=${{ inputs.memgraph_download_link }}
           fi
 
-          ./scripts/verify_download_link "$mg_url"
+          ./scripts/verify_download_url.sh "$mg_url"
           echo "MEMGRAPH_DOWNLOAD_LINK=${mg_url}" >> $GITHUB_ENV
 
 
