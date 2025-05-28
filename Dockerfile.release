@@ -72,7 +72,7 @@ RUN python3 -m pip install --no-cache-dir -r /mage/python/requirements.txt --bre
         else \
             python3 -m pip install --no-cache-dir torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.6.0+cpu.html --break-system-packages; \
         fi && \
-        curl -o dgl-2.5.0-cp312-cp312-linux_aarch64.whl https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/memgraph-unofficial/dgl-2.6.0-cp312-cp312-linux_aarch64.whl && \
+        curl -o dgl-2.5.0-cp312-cp312-linux_aarch64.whl https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/wheels/arm64/dgl-2.5.0-cp312-cp312-linux_aarch64.whl && \
         python3 -m pip install --no-cache-dir dgl-2.5.0-cp312-cp312-linux_aarch64.whl --break-system-packages; \
     else \
         if [ "$CACHE_PRESENT" = "true" ]; then \
