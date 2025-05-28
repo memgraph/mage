@@ -155,11 +155,28 @@ jobs:
             echo "MEMGRAPH_S3_URI=${mg_url}" >> $GITHUB_ENV
           elif [[ $url_protocol == "https" ]]; then
             echo "Checking if the https link is valid"
-            if curl --output /dev/null --silent --head --fail $mg_url; then
-              echo "Memgraph download link is valid"
-              echo "MEMGRAPH_OBJECT_URL=${mg_url}" >> $GITHUB_ENV 
-            else
-              echo "Memgraph download link is not valid"
+            # retry loop
+            max_attempts=3
+            attempt=1
+
+            while (( attempt <= max_attempts )); do
+              echo "Attempt #${attempt}: checking ${mg_url}"
+              if curl --silent --head --fail --max-time 60 "$mg_url" >/dev/null; then
+                echo "Memgraph download link is valid on attempt #${attempt}"
+                echo "MEMGRAPH_OBJECT_URL=${mg_url}" >> $GITHUB_ENV
+                break
+              else
+                echo "Attempt #${attempt} failed."
+                if (( attempt < max_attempts )); then
+                  echo "waiting 20s before retry..."
+                  sleep 20
+                fi
+                (( attempt++ ))
+              fi
+            done
+
+            if (( attempt > max_attempts )); then
+              echo "Memgraph download link is not valid after ${max_attempts} attempts — exiting."
               exit 1
             fi
           else
