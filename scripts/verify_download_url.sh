@@ -6,7 +6,7 @@ usage() {
   exit 1
 }
 
-if [[ $# -lt 4 ]]; then
+if [[ $# -lt 1 ]]; then
   usage
 fi
 
