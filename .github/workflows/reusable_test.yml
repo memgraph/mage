@@ -154,14 +154,8 @@ jobs:
           if [[ $url_protocol == "s3" ]]; then
             echo "MEMGRAPH_S3_URI=${mg_url}" >> $GITHUB_ENV
           elif [[ $url_protocol == "https" ]]; then
-            echo "Checking if the https link is valid"
-            if curl --output /dev/null --silent --head --fail $mg_url; then
-              echo "Memgraph download link is valid"
-              echo "MEMGRAPH_OBJECT_URL=${mg_url}" >> $GITHUB_ENV 
-            else
-              echo "Memgraph download link is not valid"
-              exit 1
-            fi
+            ./scripts/verify_download_url.sh "$mg_url"
+            echo "MEMGRAPH_OBJECT_URL=${mg_url}" >> $GITHUB_ENV
           else
             echo "Invalid download link protocol, only supporting s3:// and https://"
             exit 1

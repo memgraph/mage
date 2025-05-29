@@ -212,13 +212,10 @@ jobs:
             echo "Using custom download link"
             mg_url=${{ inputs.memgraph_download_link }}
           fi
-          if curl --output /dev/null --silent --head --fail $mg_url; then
-            echo "Memgraph download link is valid"
-            echo "MEMGRAPH_DOWNLOAD_LINK=${mg_url}" >> $GITHUB_ENV 
-          else
-            echo "Memgraph download link is not valid"
-            exit 1
-          fi
+
+          ./scripts/verify_download_url.sh "$mg_url"
+          echo "MEMGRAPH_DOWNLOAD_LINK=${mg_url}" >> $GITHUB_ENV
+
 
       - name: Download memgraph binary
         run: curl -L ${{ env.MEMGRAPH_DOWNLOAD_LINK }} > memgraph-${{ inputs.arch }}.deb
