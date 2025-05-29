@@ -4,8 +4,14 @@ ENV container=docker
 # This modifies the apt configuration to rety 3 times
 RUN echo 'Acquire::Retries "3";' > /etc/apt/apt.conf.d/80-retries
 
-# this will add fallback mirrors
-RUN sed -E -i '/^URIs:/ s#$# mirror://mirrors.ubuntu.com/mirrors.txt#' /etc/apt/sources.list.d/ubuntu.sources
+# If CUSTOM_MIRROR is set, replace the default archive.ubuntu.com
+# and security.ubuntu.com URIs in your .sources file
+RUN if [ -n "$CUSTOM_MIRROR" ]; then \
+      sed -E -i \
+        -e '/^URIs:/ s#https?://[^ ]*archive\.ubuntu\.com#'"$CUSTOM_MIRROR"'#g' \
+        -e '/^URIs:/ s#https?://security\.ubuntu\.com#'"$CUSTOM_MIRROR"'#g' \
+        /etc/apt/sources.list.d/ubuntu.sources; \
+    fi
 
 # 1. Install prerequisites required for building dependencies
 RUN apt-get update \
