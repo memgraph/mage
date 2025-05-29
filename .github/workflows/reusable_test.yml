@@ -183,6 +183,11 @@ jobs:
         if: env.MEMGRAPH_S3_URI
         run: aws s3 cp ${{ env.MEMGRAPH_S3_URI }} memgraph-${{ inputs.arch }}.deb
 
+      - name: Probe fastest mirror
+        run: |
+          FASTEST=$(bash scripts/test-mirrors.sh)
+          echo "CUSTOM_MIRROR=${FASTEST}" >> $GITHUB_ENV
+
       - name: Build and run Memgraph MAGE
         run: |
           if [[ "${{ inputs.arch }}" == "arm64" ]]; then
@@ -200,6 +205,7 @@ jobs:
           --build-arg MGBUILD_IMAGE=$MGBUILD_IMAGE \
           --build-arg MAGE_COMMIT="${{ env.MAGE_COMMIT }}" \
           --build-arg CACHE_PRESENT=${{ env.CACHE_PRESENT }} \
+          --build-arg CUSTOM_MIRROR=${{ env.CUSTOM_MIRROR }} \
           --load .
 
           docker network create ${{ env.MEMGRAPH_NETWORK }} || true

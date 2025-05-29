@@ -1,6 +1,6 @@
 ARG PY_VERSION_DEFAULT=3.12
 ARG MGBUILD_IMAGE
-
+ARG CUSTOM_MIRROR
 FROM $MGBUILD_IMAGE as builder
 
 USER root
@@ -17,7 +17,16 @@ ENV TORCH_VERSION=2.4.0
 RUN echo 'Acquire::Retries "3";' > /etc/apt/apt.conf.d/80-retries
 
 # this will add fallback mirrors
-RUN sed -E -i '/^URIs:/ s#$# mirror://mirrors.ubuntu.com/mirrors.txt#' /etc/apt/sources.list.d/ubuntu.sources
+# RUN sed -E -i '/^URIs:/ s#$# mirror://mirrors.ubuntu.com/mirrors.txt#' /etc/apt/sources.list.d/ubuntu.sources
+
+# If CUSTOM_MIRROR is set, replace the default archive.ubuntu.com
+# and security.ubuntu.com URIs in your .sources file
+RUN if [ -n "$CUSTOM_MIRROR" ]; then \
+      sed -E -i \
+        -e '/^URIs:/ s#https?://[^ ]*archive\.ubuntu\.com#'"$CUSTOM_MIRROR"'#g' \
+        -e '/^URIs:/ s#https?://security\.ubuntu\.com#'"$CUSTOM_MIRROR"'#g' \
+        /etc/apt/sources.list.d/ubuntu.sources; \
+    fi
 
 # Essentials for production/dev
 RUN apt-get update && apt-get install -y \
@@ -117,12 +126,22 @@ ARG BUILD_TYPE
 ENV BUILD_TYPE=${BUILD_TYPE}
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
 ENV MAGE_COMMIT=${MAGE_COMMIT}
+ARG CUSTOM_MIRROR
 
 # This modifies the apt configuration to rety 3 times
 RUN echo 'Acquire::Retries "3";' > /etc/apt/apt.conf.d/80-retries
 
 # this will add fallback mirrors
-RUN sed -E -i '/^URIs:/ s#$# mirror://mirrors.ubuntu.com/mirrors.txt#' /etc/apt/sources.list.d/ubuntu.sources
+#RUN sed -E -i '/^URIs:/ s#$# mirror://mirrors.ubuntu.com/mirrors.txt#' /etc/apt/sources.list.d/ubuntu.sources
+
+# If CUSTOM_MIRROR is set, replace the default archive.ubuntu.com
+# and security.ubuntu.com URIs in your .sources file
+RUN if [ -n "$CUSTOM_MIRROR" ]; then \
+      sed -E -i \
+        -e '/^URIs:/ s#https?://[^ ]*archive\.ubuntu\.com#'"$CUSTOM_MIRROR"'#g' \
+        -e '/^URIs:/ s#https?://security\.ubuntu\.com#'"$CUSTOM_MIRROR"'#g' \
+        /etc/apt/sources.list.d/ubuntu.sources; \
+    fi
 
 # Essentials for production/dev
 RUN apt-get update && \
