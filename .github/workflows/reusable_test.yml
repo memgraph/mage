@@ -183,10 +183,10 @@ jobs:
         if: env.MEMGRAPH_S3_URI
         run: aws s3 cp ${{ env.MEMGRAPH_S3_URI }} memgraph-${{ inputs.arch }}.deb
 
-      - name: Probe fastest mirror
-        run: |
-          FASTEST=$(bash scripts/test-mirrors.sh)
-          echo "CUSTOM_MIRROR=${FASTEST}" >> $GITHUB_ENV
+      # - name: Probe fastest mirror
+      #   run: |
+      #     FASTEST=$(bash scripts/test-mirrors.sh)
+      #     echo "CUSTOM_MIRROR=${FASTEST}" >> $GITHUB_ENV
 
       - name: Build and run Memgraph MAGE
         run: |
