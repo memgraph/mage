@@ -183,6 +183,11 @@ jobs:
         if: env.MEMGRAPH_S3_URI
         run: aws s3 cp ${{ env.MEMGRAPH_S3_URI }} memgraph-${{ inputs.arch }}.deb
 
+      - name: Probe fastest mirror
+        run: |
+          FASTEST=$(bash scripts/test-mirrors.sh)
+          echo "CUSTOM_MIRROR=${FASTEST}" >> $GITHUB_ENV
+
       - name: Build and run Memgraph MAGE
         run: |
           if [[ "${{ inputs.arch }}" == "arm64" ]]; then
@@ -200,6 +205,7 @@ jobs:
           --build-arg MGBUILD_IMAGE=$MGBUILD_IMAGE \
           --build-arg MAGE_COMMIT="${{ env.MAGE_COMMIT }}" \
           --build-arg CACHE_PRESENT=${{ env.CACHE_PRESENT }} \
+          --build-arg CUSTOM_MIRROR=${{ env.CUSTOM_MIRROR }} \
           --load .
 
           docker network create ${{ env.MEMGRAPH_NETWORK }} || true
@@ -216,6 +222,20 @@ jobs:
           # print the image size in both SI and IEC units
           ./print_image_size.sh memgraph-mage prod
 
+      - name: Set custom mirror within container
+        run: |
+          docker exec -i -u root \
+            -e CUSTOM_MIRROR=${{ env.CUSTOM_MIRROR }} \
+            ${{ env.MAGE_CONTAINER }} \
+          bash -c '
+            if [ -n "$CUSTOM_MIRROR" ]; then
+              sed -E -i \
+                -e "/^URIs:/ s#https?://[^ ]*archive\.ubuntu\.com#${CUSTOM_MIRROR}#g" \
+                -e "/^URIs:/ s#https?://security\.ubuntu\.com#${CUSTOM_MIRROR}#g" \
+                /etc/apt/sources.list.d/ubuntu.sources
+              apt-get update -qq
+            fi
+          '
 
       - name: Convert to "dev" Container
         run: |
