@@ -4,6 +4,9 @@ ENV container=docker
 # This modifies the apt configuration to rety 3 times
 RUN echo 'Acquire::Retries "3";' > /etc/apt/apt.conf.d/80-retries
 
+# this will add fallback mirrors
+RUN sed -E -i '/^URIs:/ s#$# mirror://mirrors.ubuntu.com/mirrors.txt#' /etc/apt/sources.list.d/ubuntu.sources
+
 # 1. Install prerequisites required for building dependencies
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
