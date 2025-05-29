@@ -49,9 +49,16 @@ jobs:
           echo "LAST_IMAGE=${last_image}" >> $GITHUB_ENV
           echo "LAST_TYPE=${last_type}" >> $GITHUB_ENV
 
+      - name: Probe fastest mirror
+        run: |
+          FASTEST=$(bash scripts/test-mirrors.sh)
+          echo "CUSTOM_MIRROR=${FASTEST}" >> $GITHUB_ENV
+
       - name: Build Test Image
         run: |
-          docker build -t ubuntu:24.04-dind --file Dockerfile.smoke .
+          docker build -t ubuntu:24.04-dind \
+            --build-arg CUSTOM_MIRROR=${{ env.CUSTOM_MIRROR }} \
+            --file Dockerfile.smoke .
 
       - name: Run Test Image Container
         run: |

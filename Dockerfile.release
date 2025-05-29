@@ -12,6 +12,20 @@ ARG CACHE_PRESENT
 ENV BUILD_TYPE=${BUILD_TYPE}
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
 ENV TORCH_VERSION=2.4.0
+ARG CUSTOM_MIRROR
+
+
+# This modifies the apt configuration to rety 3 times
+RUN echo 'Acquire::Retries "3";' > /etc/apt/apt.conf.d/80-retries
+
+# If CUSTOM_MIRROR is set, replace the default archive.ubuntu.com
+# and security.ubuntu.com URIs in your .sources file
+RUN if [ -n "$CUSTOM_MIRROR" ]; then \
+      sed -E -i \
+        -e '/^URIs:/ s#https?://[^ ]*archive\.ubuntu\.com#'"$CUSTOM_MIRROR"'#g' \
+        -e '/^URIs:/ s#https?://security\.ubuntu\.com#'"$CUSTOM_MIRROR"'#g' \
+        /etc/apt/sources.list.d/ubuntu.sources; \
+    fi
 
 # Essentials for production/dev
 RUN apt-get update && apt-get install -y \
@@ -111,7 +125,19 @@ ARG BUILD_TYPE
 ENV BUILD_TYPE=${BUILD_TYPE}
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
 ENV MAGE_COMMIT=${MAGE_COMMIT}
+ARG CUSTOM_MIRROR
 
+# This modifies the apt configuration to rety 3 times
+RUN echo 'Acquire::Retries "3";' > /etc/apt/apt.conf.d/80-retries
+
+# If CUSTOM_MIRROR is set, replace the default archive.ubuntu.com
+# and security.ubuntu.com URIs in your .sources file
+RUN if [ -n "$CUSTOM_MIRROR" ]; then \
+      sed -E -i \
+        -e '/^URIs:/ s#https?://[^ ]*archive\.ubuntu\.com#'"$CUSTOM_MIRROR"'#g' \
+        -e '/^URIs:/ s#https?://security\.ubuntu\.com#'"$CUSTOM_MIRROR"'#g' \
+        /etc/apt/sources.list.d/ubuntu.sources; \
+    fi
 
 # Essentials for production/dev
 RUN apt-get update && \
@@ -176,6 +202,7 @@ ARG BUILD_TYPE
 ENV BUILD_TYPE=${BUILD_TYPE}
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
 ENV MAGE_COMMIT=${MAGE_COMMIT}
+ARG CUSTOM_MIRROR
 
 # Copy e2e tests
 COPY --from=builder --chown=memgraph:memgraph /mage/e2e/ /mage/e2e/
@@ -186,6 +213,13 @@ COPY --from=builder --chown=memgraph:memgraph /mage/run_e2e_correctness_tests.sh
 # Copy requirements
 COPY --from=builder --chown=memgraph:memgraph /mage/python/requirements.txt /mage/python/requirements.txt
 COPY --from=builder --chown=memgraph:memgraph /mage/python/tests/requirements.txt /mage/python/tests/requirements.txt 
+
+RUN if [ -n "$CUSTOM_MIRROR" ]; then \
+      sed -E -i \
+        -e "/^URIs:/ s#${CUSTOM_MIRROR}/ubuntu/#https://archive.ubuntu.com/ubuntu/#g" \
+        -e "/^URIs:/ s#${CUSTOM_MIRROR}/ubuntu/#https://security.ubuntu.com/ubuntu/#g" \
+        /etc/apt/sources.list.d/ubuntu.sources; \
+    fi
 
 USER memgraph
 EXPOSE 7687
@@ -205,7 +239,7 @@ ARG BUILD_TYPE
 ENV BUILD_TYPE=${BUILD_TYPE}
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
 ENV MAGE_COMMIT=${MAGE_COMMIT}
-
+ARG CUSTOM_MIRROR
 
 # Add gdb
 RUN apt-get update && apt-get install -y \
@@ -215,6 +249,13 @@ RUN apt-get update && apt-get install -y \
 
 # Copy entire mage repo
 COPY --from=builder --chown=memgraph:memgraph /mage/ /mage/
+
+RUN if [ -n "$CUSTOM_MIRROR" ]; then \
+      sed -E -i \
+        -e "/^URIs:/ s#${CUSTOM_MIRROR}/ubuntu/#https://archive.ubuntu.com/ubuntu/#g" \
+        -e "/^URIs:/ s#${CUSTOM_MIRROR}/ubuntu/#https://security.ubuntu.com/ubuntu/#g" \
+        /etc/apt/sources.list.d/ubuntu.sources; \
+    fi
 
 USER memgraph
 EXPOSE 7687
