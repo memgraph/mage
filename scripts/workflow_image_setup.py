@@ -1,15 +1,6 @@
-import sys
-import os
 import re
 import argparse
-# add mage root dir to python path to find other functions
-# TODO(matt): refactor workflow helper scripts like this into subdirectory
-sys.path.append(
-    os.path.dirname(
-        os.path.dirname(__file__)
-    )
-)
-from aggregate_build_tests import list_daily_release_packages  # noqa: E402
+from aggregate_build_tests import list_daily_release_packages
 
 # Compile regex patterns
 URL_PATTERN = re.compile(
