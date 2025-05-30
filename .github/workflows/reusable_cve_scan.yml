@@ -11,6 +11,18 @@ on:
         type: string
         description: "URL of docker image to scan"
         required: true
+      run_trivy:
+        type: boolean
+        description: "Scan with Trivy"
+        default: true
+      run_grype:
+        type: boolean
+        description: "Scan with Grype"
+        default: true
+      run_cbt:
+        type: boolean
+        description: "Scan with CVE-bin-tool"
+        default: true
 
 jobs:
   scan-image:
@@ -32,47 +44,61 @@ jobs:
         run: |
           image_tag="$(docker load -i image.tar.gz)"
           echo "IMAGE_TAG=$image_tag" >> $GITHUB_ENV
+
+      - name: Create Python Environment
+        run: |
+          python3 -m venv env 
+          source env/bin/activate
+          pip install requests
           
       - name: Install Trivy
+        if: ${{ inputs.run_trivy }}
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b $(pwd)/trivy latest
 
       - name: Install Grype
+        if: ${{ inputs.run_grype }}
         run: |
           curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b $(pwd)/grype
           
       - name: Install cve-bin-tool
+        if: ${{ inputs.run_cbt }}
         run: |
-          python3 -m venv env
           source env/bin/activate
-          pip install cve-bin-tool requests
+          pip install cve-bin-tool
 
       - name: Scan with Trivy
+        if: ${{ inputs.run_trivy }}
         run: |
           trivy/trivy image "${{ env.IMAGE_TAG }}" > trivy-summary.txt
         
       - name: Upload Trivy Report Summary Artifact
+        if: ${{ inputs.run_trivy }}
         uses: actions/upload-artifact@v4
         with:
           name: trivy-summary-${{ inputs.arch }}
           path: trivy-summary.txt        
 
       - name: Scan with Grype
+        if: ${{ inputs.run_grype }}
         run: |
           grype/grype "docker:${{ env.IMAGE_TAG }}" > grype-summary.txt
 
       - name: Upload Grype Report Summary Artifact
+        if: ${{ inputs.run_grype }}
         uses: actions/upload-artifact@v4
         with:
           name: grype-summary-${{ inputs.arch }}
           path: grype-summary.md        
           
       - name: Scan with cve-bin-tool
+        if: ${{ inputs.run_cbt }}
         run: |
           source env/bin/activate
           cve-bin-tool image.tar.gz > cve-bin-tool-summary.txt
 
       - name: Upload cve-bin-tool Report Summary Artifact
+        if: ${{ inputs.run_cbt }}
         uses: actions/upload-artifact@v4
         with:
           name: cve-bin-tool-summary-${{ inputs.arch }}
@@ -88,10 +114,10 @@ jobs:
       - name: Cleanup
         run: |
           rm -rf env
-          rm -rf trivy
-          rm -rf grype
-          rm trivy-summary.txt
-          rm grype-summary.txt
-          rm cve-bin-tool-summary.txt
+          rm -rf trivy || true
+          rm -rf grype || true
+          rm trivy-summary.txt || true
+          rm grype-summary.txt || true
+          rm cve-bin-tool-summary.txt || true
           docker rmi ${{ env.IMAGE_TAG }} || true
           rm image.tar.gz
