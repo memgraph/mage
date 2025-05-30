@@ -71,6 +71,7 @@ jobs:
         if: ${{ inputs.run_trivy }}
         run: |
           trivy/trivy image "${{ env.IMAGE_TAG }}" > trivy-summary.txt
+          trivy/trivy image "${{ env.IMAGE_TAG }}" -f json > trivy-summary.json
         
       - name: Upload Trivy Report Summary Artifact
         if: ${{ inputs.run_trivy }}
@@ -83,6 +84,7 @@ jobs:
         if: ${{ inputs.run_grype }}
         run: |
           grype/grype "docker:${{ env.IMAGE_TAG }}" > grype-summary.txt
+          grype/grype "docker:${{ env.IMAGE_TAG }}" -o json > grype-summary.json
 
       - name: Upload Grype Report Summary Artifact
         if: ${{ inputs.run_grype }}
@@ -109,7 +111,7 @@ jobs:
           INFRA_WEBHOOK_URL: ${{ secrets.INFRA_WEBHOOK_URL }}
         run: |
           source env/bin/activate
-          python3 scripts/cve-scanner-message.py
+          python3 scripts/cve_message.py
 
       - name: Cleanup
         if: always()
@@ -118,7 +120,9 @@ jobs:
           rm -rf trivy || true
           rm -rf grype || true
           rm trivy-summary.txt || true
+          rm trivy-summary.json || true
           rm grype-summary.txt || true
+          rm grype-summary.json || true
           rm cve-bin-tool-summary.txt || true
           docker rmi ${{ env.IMAGE_TAG }} || true
           rm image.tar.gz || true
