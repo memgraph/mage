@@ -42,7 +42,8 @@ jobs:
 
       - name: Load into Docker
         run: |
-          image_tag="$(docker load -i image.tar.gz)"
+          output="$(docker load -i image.tar.gz)"
+          image_tag=${output#Loaded image: }
           echo "IMAGE_TAG=$image_tag" >> $GITHUB_ENV
 
       - name: Create Python Environment
