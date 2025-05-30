@@ -1,0 +1,97 @@
+name: Reusable Vulnerability Scan
+
+on:
+  workflow_call:
+    inputs:
+      arch: 
+        type: string
+        description: "Image architecture (amd64|arm64)"
+        required: true
+      image_url:
+        type: string
+        description: "URL of docker image to scan"
+        required: true
+
+jobs:
+  scan-image:
+    name: Scan Docker Image for Vulnerabilities
+    runs-on: ${{ (inputs.arch == 'arm64') && fromJSON('["self-hosted", "Linux", "Docker", "ARM64"]') || fromJSON('["self-hosted", "Linux", "Docker", "X64"]') }}
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download Docker Image
+        run: |
+          curl -L "${{ inputs.image_url }}" -o image.tar.gz
+
+      - name: Load into Docker
+        run: |
+          image_tag="$(docker load -i image.tar.gz)"
+          echo "IMAGE_TAG=$image_tag" >> $GITHUB_ENV
+          
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b $(pwd)/trivy latest
+
+      - name: Install Grype
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b $(pwd)/grype
+          
+      - name: Install cve-bin-tool
+        run: |
+          python3 -m venv env
+          source env/bin/activate
+          pip install cve-bin-tool requests
+
+      - name: Scan with Trivy
+        run: |
+          trivy/trivy image "${{ env.IMAGE_TAG }}" > trivy-summary.txt
+        
+      - name: Upload Trivy Report Summary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-summary-${{ inputs.arch }}
+          path: trivy-summary.txt        
+
+      - name: Scan with Grype
+        run: |
+          grype/grype "docker:${{ env.IMAGE_TAG }}" > grype-summary.txt
+
+      - name: Upload Grype Report Summary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: grype-summary-${{ inputs.arch }}
+          path: grype-summary.md        
+          
+      - name: Scan with cve-bin-tool
+        run: |
+          source env/bin/activate
+          cve-bin-tool image.tar.gz > cve-bin-tool-summary.txt
+
+      - name: Upload cve-bin-tool Report Summary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cve-bin-tool-summary-${{ inputs.arch }}
+          path: cve-bin-tool-summary.md        
+
+      - name: Send Slack Message
+        env:
+          INFRA_WEBHOOK_URL: ${{ secrets.INFRA_WEBHOOK_URL }}
+        run: |
+          source env/bin/activate
+          python3 scripts/cve-scanner-message.py
+
+      - name: Cleanup
+        run: |
+          rm -rf env
+          rm -rf trivy
+          rm -rf grype
+          rm trivy-summary.txt
+          rm grype-summary.txt
+          rm cve-bin-tool-summary.txt
+          docker rmi ${{ env.IMAGE_TAG }} || true
+          rm image.tar.gz
