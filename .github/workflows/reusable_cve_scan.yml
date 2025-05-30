@@ -29,6 +29,11 @@ jobs:
     name: Scan Docker Image for Vulnerabilities
     runs-on: ${{ (inputs.arch == 'arm64') && fromJSON('["self-hosted", "Linux", "Docker", "ARM64"]') || fromJSON('["self-hosted", "Linux", "Docker", "X64"]') }}
     steps:
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Checkout repository and submodules
         uses: actions/checkout@v4
         with:
