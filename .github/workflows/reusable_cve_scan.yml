@@ -71,8 +71,8 @@ jobs:
       - name: Scan with Trivy
         if: ${{ inputs.run_trivy }}
         run: |
-          trivy/trivy image "${{ env.IMAGE_TAG }}" > trivy-summary.txt
-          trivy/trivy image "${{ env.IMAGE_TAG }}" -f json > trivy-summary.json
+          trivy/trivy image --scanners vuln "${{ env.IMAGE_TAG }}" > trivy-summary.txt
+          trivy/trivy image --scanners vuln "${{ env.IMAGE_TAG }}" -f json > trivy-summary.json
         
       - name: Upload Trivy Report Summary Artifact
         if: ${{ inputs.run_trivy }}
@@ -92,7 +92,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: grype-summary-${{ inputs.arch }}
-          path: grype-summary.md        
+          path: grype-summary.txt
           
       - name: Scan with cve-bin-tool
         if: ${{ inputs.run_cbt }}
