@@ -29,7 +29,7 @@ jobs:
   manual-cve-scan:
     name: Manual CVE Scan
     if: ${{ github.event_name == 'workflow_dispatch' }}
-    uses: ./.github/workflows/reusable_cve_scan.yml
+    uses: ./.github/workflows/reusable_vulnerability_scan.yml
     with:
       arch: ${{ inputs.arch }}
       image_url: ${{ inputs.image_url }}
@@ -42,7 +42,7 @@ jobs:
   push-cve-scan:
     name: Manual CVE Scan
     if: ${{ github.event_name == 'push' }}
-    uses: ./.github/workflows/reusable_cve_scan.yml
+    uses: ./.github/workflows/reusable_vulnerability_scan.yml
     with:
       arch: "amd64"
       image_url: "https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/daily-build/mage/20250529/mage-3.2.1_pr614_e23ca9d-memgraph-3.2.1_pr2992_b3001424ecb4.tar.gz"
