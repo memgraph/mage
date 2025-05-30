@@ -112,12 +112,13 @@ jobs:
           python3 scripts/cve-scanner-message.py
 
       - name: Cleanup
+        if: always()
         run: |
-          rm -rf env
+          rm -rf env || true
           rm -rf trivy || true
           rm -rf grype || true
           rm trivy-summary.txt || true
           rm grype-summary.txt || true
           rm cve-bin-tool-summary.txt || true
           docker rmi ${{ env.IMAGE_TAG }} || true
-          rm image.tar.gz
+          rm image.tar.gz || true
