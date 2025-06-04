@@ -4,7 +4,7 @@ from typing import List, Tuple
 import re
 from collections import defaultdict
 import json
-
+import argparse
 
 def read_summary_file(filename: str) -> List[str] | dict:
 
@@ -21,135 +21,32 @@ def read_summary_file(filename: str) -> List[str] | dict:
         return data
 
 
-def _cbt_read_cve_summary(lines: List[str]) -> dict:
-    """
-    Fetches the vulnerability summary
-    """
-    result = {}
-    in_table = False
+def severity_summary(data: List[dict]) -> dict:
 
-    for line in lines:
-        # Start parsing after encountering the CVE SUMMARY header
-        if 'CVE SUMMARY' in line:
-            in_table = True
-            continue
+    summary = {}
+    for cve in data:
+        severity = cve["severity"]
+        if severity not in summary:
+            summary[severity] = 0
+        summary[severity] += 1
 
-        if in_table:
-            # End parsing when the bottom border is reached
-            if line.strip().startswith('└'):
-                break
-
-            # Process only data rows
-            if line.strip().startswith('│'):
-                # Skip the header row
-                if 'Severity' in line:
-                    continue
-
-                match = re.match(r'│\s*(\w+)\s*│\s*(\d+)\s*│', line)
-                if match:
-                    severity = match.group(1)
-                    count = int(match.group(2))
-                    result[severity] = count
-
-    return result
+    return summary
 
 
-def _cbt_read_cpe_summary(lines: List[str]) -> dict:
-    """
-    Parses a list of strings containing a CPE Summary ASCII table and returns
-    a dictionary keyed by product, where each value is a dict of the other fields.
-    """
-    # Define the columns in the order they appear in the table
-    cols = [
-        'Vendor',
-        'Product',
-        'Version',
-        'Latest Upstream Stable Version',
-        'CRITICAL CVEs Count',
-        'HIGH CVEs Count',
-        'MEDIUM CVEs Count',
-        'LOW CVEs Count',
-        'UNKNOWN CVEs Count',
-        'TOTAL CVEs Count'
-    ]
+def reformat_cbt_data(data):
 
-    result = {}
-    in_table = False
-
-    for line in lines:
-        # Start parsing once we see the CPE SUMMARY header
-        if 'CPE SUMMARY' in line:
-            in_table = True
-            continue
-
-        if not in_table:
-            continue
-
-        # Stop when we hit the bottom border of the table
-        if line.strip().startswith('└'):
-            break
-
-        # Only process data rows (which start with '│')
-        if line.strip().startswith('│'):
-            # Use split on '│' to grab all cell contents
-            cells = line.split('│')[1:-1]
-            # Strip whitespace from each cell
-            cells = [c.strip() for c in cells]
-            # If the row has exactly the right number of columns, map them
-            if len(cells) == len(cols):
-                row = dict(zip(cols, cells))
-                product = row.pop('Product')
-                # Convert numeric fields from strings to int when possible
-                for key in row:
-                    # only convert the CVE counts and version stays string
-                    if key.endswith('Count'):
-                        row[key] = int(row[key])
-                result[product] = row
-
-    return result
-
-
-def _cbt_newfound_cves(lines: List[str]) -> dict:
-    """
-    Parses a list of strings containing a NewFound CVEs ASCII table and returns
-    a dict keyed by product, where each value is a list of dicts with the fields:
-      Vendor, Version, CVE Number, Source, Severity, Score (CVSS Version)
-    """
-    cols = [
-        'Vendor',
-        'Product',
-        'Version',
-        'CVE Number',
-        'Source',
-        'Severity',
-        'Score (CVSS Version)'
-    ]
-
-    result = defaultdict(list)
-    in_table = False
-
-    for line in lines:
-        # start when we see the header
-        if 'NewFound CVEs' in line:
-            in_table = True
-            continue
-        if not in_table:
-            continue
-
-        # stop at bottom border
-        if line.strip().startswith('└'):
-            break
-
-        # only process rows beginning with '│'
-        if line.strip().startswith('│'):
-            cells = [c.strip() for c in line.split('│')[1:-1]]
-            if len(cells) == len(cols):
-                row = dict(zip(cols, cells))
-                # group by product
-                prod = row.pop('Product')
-                result[prod].append(row)
-
-    return dict(result)
+    out = []
+    for item in data:
+        new = {
+            "id": item["cve_number"],
+            "product": item["product"],
+            "severity": item["severity"].upper(),
+            "fixed": None,
+            "version": item["version"]
+        }
+        if new not in out:
+            out.append(new)
+    return out
 
 
 def parse_cbt_summary() -> dict:
@@ -158,19 +55,43 @@ def parse_cbt_summary() -> dict:
     vulnerabilities.
     """
 
-    lines = read_summary_file("cve-bin-tool-summary.txt")
-    if not lines:
-        return {}
+    parts = ["memgraph", "lang", "apt"]
+    out = {}
+    for part in parts:
+        fname = f"cve-bin-tool-{part}-summary.json"
+        print(fname)
+        if os.path.isfile(fname):
+            print("here")
+            data = read_summary_file(fname)
+            data = reformat_cbt_data(data)
+            out[part] = {
+                "summary": severity_summary(data),
+                "cve": data
+            }
 
-    cve_summary = _cbt_read_cve_summary(lines)
-    cpe_summary = _cbt_read_cpe_summary(lines)
-    newfound_cve = _cbt_newfound_cves(lines)
+    return out
 
-    return {
-        "summary": cve_summary,
-        "cpe": cpe_summary,
-        "cve": newfound_cve
-    }
+
+def reformat_grype_data(data):
+
+    out = []
+    for item in data:
+        fixed_versions = item["vulnerability"]["fix"]
+        if len(fixed_versions) > 0:
+            fixed = ",".join(fixed_versions)
+        else:
+            fixed = "unfixed"
+        new = {
+            "id": item["vulnerability"]["id"],
+            "product": item["artifact"]["name"],
+            "status": item["vulnerability"]["fix"]["state"],
+            "severity": item["vulnerability"]["severity"].upper(),
+            "version": item["artifact"]["version"],
+            "fixed": item
+        }
+        if new not in out:
+            out.append(new)
+    return out
 
 
 def parse_grype_summary() -> dict:
@@ -183,32 +104,32 @@ def parse_grype_summary() -> dict:
         return {}
 
     results = data["matches"]
-    cves = {}
-    for result in results:
-        fixed_versions = result["vulnerability"]["fix"]
-        if len(fixed_versions) > 0:
-            fixed = ",".join(fixed_versions)
-        else:
-            fixed = "unfixed"
-        cves[result["artifact"]["name"]] = {
-            "id": result["vulnerability"]["id"],
-            "status": result["vulnerability"]["fix"]["state"],
-            "severity": result["vulnerability"]["severity"],
-            "version": result["artifact"]["version"],
-            "fixed": fixed
-        }
-
-    summary = {}
-    for _, cve in cves.items():
-        severity = cve["severity"]
-        if severity not in summary:
-            summary[severity] = 0
-        summary[severity] += 1
+    cves = reformat_grype_data(results)
+    summary = severity_summary(cves)
 
     return {
         "summary": summary,
         "cve": cves
     }
+
+
+def reformat_trivy_data(data):
+
+    out = []
+    for item in data:
+        if item["Class"] in ["os-pkgs", "lang-pkgs"]:
+            for vuln in item["Vulnerabilities"]:
+                new = {
+                    "id": vuln["VulnerabilityID"],
+                    "product": vuln["PkgName"],
+                    "status": vuln["Status"],
+                    "severity": vuln["Severity"].upper(),
+                    "version": vuln["InstalledVersion"],
+                    "fixed": vuln.get("FixedVersion", "unfixed")
+                }
+                if new not in out:
+                    out.append(new)
+    return out
 
 
 def parse_trivy_summary() -> dict:
@@ -221,24 +142,8 @@ def parse_trivy_summary() -> dict:
         return {}
 
     results = data["Results"]
-    cves = {}
-    for result in results:
-        if result["Class"] in ["os-pkgs", "lang-pkgs"]:
-            for vuln in result["Vulnerabilities"]:
-                cves[vuln["PkgName"]] = {
-                    "id": vuln["VulnerabilityID"],
-                    "status": vuln["Status"],
-                    "severity": vuln["Severity"],
-                    "version": vuln["InstalledVersion"],
-                    "fixed": vuln.get("FixedVersion", "unfixed")
-                }
-
-    summary = {}
-    for _, cve in cves.items():
-        severity = cve["severity"]
-        if severity not in summary:
-            summary[severity] = 0
-        summary[severity] += 1
+    cves = reformat_trivy_data(results)
+    summary = severity_summary(cves)
 
     return {
         "summary": summary,
@@ -246,23 +151,26 @@ def parse_trivy_summary() -> dict:
     }
 
 
-def combine_summaries(cbt: dict, grype: dict, trivy: dict) -> Tuple[dict, str]:
-
-    cbt = {k.lower(): v for k, v in cbt.items() if v > 0}
-    grype = {k.lower(): v for k, v in grype.items() if v > 0}
-    trivy = {k.lower(): v for k, v in trivy.items() if v > 0}
+def combine_summaries(summary_list: List[dict]) -> Tuple[dict, str]:
 
     summary = {}
-    for dct in [cbt, grype, trivy]:
-        dct = {k.lower(): v for k, v in dct.items() if v > 0}
-
+    for dct in summary_list:
+        dct = {k: v for k, v in dct.items() if v > 0}
+        print(dct)
         for k, v in dct.items():
             if k not in summary:
                 summary[k] = 0
             summary[k] += v
 
-    keys = ["negligible", "low", "medium", "high", "critical"]
-    emojis = [":grinning_face_with_star_eyes:", ":grinning:", ":sweat_smile:", ":melting_face:", ":mushroom_cloud:"]
+    keys = ["UNKNOWN", "NEGLIGIBLE", "LOW", "MEDIUM", "HIGH", "CRITICAL"]
+    emojis = [
+        ":interrobang:",
+        ":grinning_face_with_star_eyes:"*2,
+        ":grinning:"*3,
+        ":sweat_smile:"*4,
+        ":melting_face:"*5,
+        ":mushroom_cloud:"*6
+    ]
 
     # build a little table
     msg = "```\n"
@@ -292,7 +200,7 @@ def format_slack_table(items):
         return "```Nothing to see here...```"
 
     # 1) Define your columns and compute the max width for each
-    headers = ["Package", "Version", "Severity", "CVE"]
+    headers = ["Product", "Version", "Severity", "CVE"]
     widths = {}
     for h in headers:
         widths[h] = max(
@@ -320,21 +228,31 @@ def cbt_message(cbt):
     if not cbt:
         return ""
 
+    key_map = {
+        "memgraph": "\nMemgraph Binaries\n------------------\n",
+        "lang": "\nLanguage Packages\n------------------\n",
+        "apt": "\nAPT Packages\n------------------\n"
+    }
+
+
     msg = "CVE-bin-tool Summary:\n"
     msg += "============================"
-    items = []
-    for package in cbt["cve"]:
-        for item in cbt["cve"][package]:
-            if item["Severity"] in ["MEDIUM", "HIGH", "CRITICAL"]:
+    
+    for key, val in cbt.items():
+        msg += key_map[key]
+        items = []
+        for item in val["cve"]:
+            if item["severity"] in ["MEDIUM", "HIGH", "CRITICAL"]:  # should we show everything?
                 items.append({
-                    "Package": package,
-                    "Version": item["Version"],
-                    "Severity": item["Severity"],
-                    "CVE": item["CVE Number"]
+                    "Product": item["product"],
+                    "Version": item["version"],
+                    "Severity": item["severity"],
+                    "CVE": item["id"],
                 })
 
-    table = format_slack_table(items)
-    return msg + f"\n{table}\n"
+        table = format_slack_table(items)
+        msg += f"\n{table}\n"
+    return msg
 
 
 def grype_trivy_message(cves, name):
@@ -345,35 +263,73 @@ def grype_trivy_message(cves, name):
     msg = f"{name} Summary:\n"
     msg += "============================"
     items = []
-    for package, item in cves["cve"].items():
+    for item in cves["cve"]:
         if item["severity"].upper() in ["MEDIUM", "HIGH", "CRITICAL"]:
             items.append({
-                "Package": package,
+                "Product": item["product"],
                 "Version": item["version"],
                 "Severity": item["severity"],
                 "CVE": item["id"]
+            })
+
+    if name == "Trivy":
+        cve_severity_score = {
+            "CRITICAL": 4,
+            "HIGH": 3,
+            "MEDIUM": 2,
+            "LOW": 1,
+            "NEGLIGIBLE": 0,
+            "UNKNOWN": -1,
+        }
+
+        # trivy picks up lots of CVEs for linux-libc-dev, so let's summarize
+        libc_cves =  [item for item in items if item["Product"] == "linux-libc-dev"]
+        print(len(libc_cves))
+        if len(libc_cves) > 10:
+            items = [item for item in items if item["Product"] != "linux-libc-dev"]
+            version = list(set([item["Version"] for item in libc_cves]))
+            if len(version) == 1:
+                version = version[0]
+            else:
+                version = "Multiple"
+
+            scores = [cve_severity_score[item["Severity"]] for item in libc_cves]
+            severity = {v:k for k,v in cve_severity_score.items()}.get(max(scores), "????")
+
+            items.append({
+                "Product": "linux-libc-dev",
+                "Version": version,
+                "Severity": severity,
+                "CVE": "Too Many CVEs",
             })
 
     table = format_slack_table(items)
     return msg + f"\n{table}\n"
 
 
-def create_slack_message(cbt, grype, trivy) -> str:
+def create_slack_message(arch, image_type, cbt, grype, trivy) -> str:
 
-    msg_start = "Vulnerability Scan Results...\n\n"
+    arch_str = "x86_64" if arch == "amd" else "aarch64"
+    name = "Memgraph" if image_type == "memgraph" else "MAGE"
+
+    msg_start = f"Vulnerability Scan Results for *{name}* (Docker {arch_str})...\n\n"
+
+    summary_list = [
+        v["summary"] for _, v in cbt.items()
+    ] + [
+        grype["summary"] if grype else {},
+        trivy["summary"] if trivy else {}
+    ]
 
     # combine summaries
-    _, summary_msg = combine_summaries(
-        cbt.get("summary", {}),
-        grype.get("summary", {}),
-        trivy.get("summary", {}),
-    )
+    _, summary_msg = combine_summaries(summary_list)
 
     cbt_msg = cbt_message(cbt)
     grype_msg = grype_trivy_message(grype, "Grype")
     trivy_msg = grype_trivy_message(trivy, "Trivy")
 
     msg = "\n".join([msg_start, summary_msg, grype_msg, trivy_msg, cbt_msg])
+
     return msg
 
 
@@ -389,18 +345,24 @@ def post_message(msg):
         print(f"Response: {response.status_code}")
 
 
-def main():
+def main(arch, image_type):
 
     # collect results
     cbt = parse_cbt_summary()
     grype = parse_grype_summary()
     trivy = parse_trivy_summary()
 
-    msg = create_slack_message(cbt, grype, trivy)
+    msg = create_slack_message(arch, image_type, cbt, grype, trivy)
     post_message(msg)
     print(msg)
 
 
 if __name__ == "__main__":
-    main()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("arch", type=str, default="amd")
+    parser.add_argument('image_type', type=str, choices=['memgraph', 'mage'], default='mage')
+    args = parser.parse_args()
+    
+    main(args.arch, args)
 
