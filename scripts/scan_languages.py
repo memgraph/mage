@@ -3,6 +3,7 @@ from cve_bin_tool.cvedb import CVEDB
 from cve_bin_tool.parsers.parse import valid_files
 import os
 import subprocess
+import argparse
 
 
 def find_files(root_dir):
@@ -21,11 +22,11 @@ def find_files(root_dir):
     return matches
 
 
-def write_package_csv():
+def write_package_csv(rootfs):
     cve_db = CVEDB()
     logger = LOGGER.getChild("Fuzz")
 
-    files = find_files("rootfs")
+    files = find_files(rootfs)
     print(f"Found {len(files)} Language Files")
 
     with open("lang-packages.csv", "w") as f:
@@ -66,11 +67,16 @@ def run_scan():
     )
 
 
-def main():
+def main(rootfs):
 
-    write_package_csv()
+    write_package_csv(rootfs)
     run_scan()
 
 
 if __name__ == "__main__":
-    main()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("rootfs", type=str)
+    args = parser.parse_args()
+
+    main(args.rootfs)

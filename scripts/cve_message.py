@@ -354,7 +354,6 @@ def main(arch, image_type):
 
     msg = create_slack_message(arch, image_type, cbt, grype, trivy)
     post_message(msg)
-    print(msg)
 
 
 if __name__ == "__main__":
@@ -364,5 +363,5 @@ if __name__ == "__main__":
     parser.add_argument('image_type', type=str, choices=['memgraph', 'mage'], default='mage')
     args = parser.parse_args()
     
-    main(args.arch, args)
+    main(args.arch, args.image_type)
 

@@ -5,6 +5,7 @@ import json
 from cve_bin_tool.log import LOGGER
 from cve_bin_tool.cvedb import CVEDB
 import subprocess
+import argparse
 
 
 def get_apt_packages(container="memgraph"):
@@ -82,10 +83,10 @@ def run_scan():
     )
 
 
-def main():
+def main(container):
     cve_db = CVEDB()
 
-    packages = get_apt_packages()
+    packages = get_apt_packages(container)
     pairs = get_package_vendor_pairs(cve_db, packages)
     package_info = combine_vendor_product_version(packages, pairs)
     save_apt_package_csv(package_info)
@@ -100,5 +101,10 @@ def main():
 
     
 if __name__ == "__main__":
-    main()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("container", type=str)
+    args = parser.parse_args()
+
+    main(args.container)
     

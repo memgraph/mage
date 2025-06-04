@@ -11,6 +11,10 @@ on:
         type: string
         description: "URL of docker image to scan"
         required: true
+      image_type:
+        type: string
+        description: "Image type (memgraph|mage)"
+        required: true
       run_trivy:
         type: boolean
         description: "Scan with Trivy"
@@ -83,7 +87,7 @@ jobs:
         if: ${{ inputs.run_trivy }}
         uses: actions/upload-artifact@v4
         with:
-          name: trivy-summary-${{ inputs.arch }}
+          name: ${{ inputs.image_type }}-${{ inputs.arch }}-trivy-summary
           path: trivy-summary.txt        
 
       - name: Scan with Grype
@@ -96,28 +100,72 @@ jobs:
         if: ${{ inputs.run_grype }}
         uses: actions/upload-artifact@v4
         with:
-          name: grype-summary-${{ inputs.arch }}
+          name: ${{ inputs.image_type }}-${{ inputs.arch }}-grype-summary
           path: grype-summary.txt
           
-      - name: Scan with cve-bin-tool
+      - name: Launch Docker Container
+        if: ${{ inputs.run_cbt }}
+        run: |
+          docker run --rm -d --name memgraph "${{ env.IMAGE_TAG }}" --telemetry-enabled=False
+      
+      - name: Update CVE Database
         if: ${{ inputs.run_cbt }}
         run: |
           source env/bin/activate
-          cve-bin-tool image.tar.gz > cve-bin-tool-summary.txt
+          python3 scripts/update_cve_db.py
+      
+      - name: Extract Container Root Filesystem
+        if: ${{ inputs.run_cbt }}
+        run: |
+          ./scripts/extract-image-filesystem.sh "${{ env.IMAGE_TAG }}" "rootfs"
+      
+      - name: Scan /usr/lib/memgraph
+        if: ${{ inputs.run_cbt }}
+        run: |
+          source env/bin/activate
+          python3 scripts/scan_memgraph.py "rootfs"
 
-      - name: Upload cve-bin-tool Report Summary Artifact
+      - name: Scan Languages
+        if: ${{ inputs.run_cbt }}
+        run: |
+          source env/bin/activate
+          python3 scripts/scan_languages.py "rootfs"
+
+      - name: Scan APT Packages
+        if: ${{ inputs.run_cbt }}
+        run: |
+          source env/bin/activate
+          python3 scripts/scan_apt.py "${{ env.IMAGE_TAG }}"
+
+      - name: Upload cve-bin-tool Binary Scan Artifact
         if: ${{ inputs.run_cbt }}
         uses: actions/upload-artifact@v4
         with:
-          name: cve-bin-tool-summary-${{ inputs.arch }}
-          path: cve-bin-tool-summary.md        
+          name: ${{ inputs.image_type }}-${{ inputs.arch }}-cve-bin-tool-memgraph-summary
+          path: cve-bin-tool-memgraph-summary.json        
+
+      - name: Upload cve-bin-tool Language Scan Artifact
+        if: ${{ inputs.run_cbt }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.image_type }}-${{ inputs.arch }}-cve-bin-tool-language-summary
+          path: cve-bin-tool-lang-summary.json
+          
+      - name: Upload cve-bin-tool APT Package Scan Artifact
+        if: ${{ inputs.run_cbt }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.image_type }}-${{ inputs.arch }}-cve-bin-tool-apt-summary
+          path: cve-bin-tool-apt-summary.json
 
       - name: Send Slack Message
         env:
           INFRA_WEBHOOK_URL: ${{ secrets.INFRA_WEBHOOK_URL }}
         run: |
+          # TODO(matt): add check here to see if any of the files exist and
+          # then always() just in case CVE bin tool crashes
           source env/bin/activate
-          python3 scripts/cve_message.py
+          python3 scripts/cve_message.py "${{ inputs.arch }}" "${{ inputs.image_type }}"
 
       - name: Cleanup
         if: always()
@@ -125,10 +173,15 @@ jobs:
           rm -rf env || true
           rm -rf trivy || true
           rm -rf grype || true
+          rm -rf rootfs || true
           rm trivy-summary.txt || true
           rm trivy-summary.json || true
           rm grype-summary.txt || true
           rm grype-summary.json || true
-          rm cve-bin-tool-summary.txt || true
+          rm cve-bin-tool-apt-summary.json || true
+          rm cve-bin-tool-lang-summary.json || true
+          rm cve-bin-tool-memgraph-summary.json || true
+          docker stop memgraph || true
+          docker wait memgraph || true
           docker rmi ${{ env.IMAGE_TAG }} || true
           rm image.tar.gz || true

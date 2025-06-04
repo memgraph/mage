@@ -7,6 +7,7 @@ import json
 import hashlib
 import random
 import time
+import argparse
 
 
 def file_hash(output_dir):
@@ -125,8 +126,6 @@ def scan_directories_with_progress(dirs_to_scan, output_dir="tmp", max_workers=2
     with open("cve-bin-tool-memgraph-summary.json", "w") as f:
         json.dump(results, f, indent=2)
 
-    return results, times, outdir
-
 
 def place_slowest_first(rootfs, directories):
 
@@ -153,9 +152,16 @@ def place_slowest_first(rootfs, directories):
     return outdirs
 
 
-if __name__ == "__main__":
-    # Example usage:
+def main(rootfs):
+    files = find_memgraph_files(f"{rootfs}/usr/lib/memgraph")
+    files = place_slowest_first(rootfs, files)
+    scan_directories_with_progress(files)
 
-    files = find_memgraph_files("rootfs/usr/lib/memgraph")
-    files = place_slowest_first("rootfs", files)
-    results, times, outdir = scan_directories_with_progress(files)
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("rootfs", type=str)
+    args = parser.parse_args()
+
+    main(args.rootfs)
