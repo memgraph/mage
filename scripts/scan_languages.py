@@ -8,7 +8,7 @@ import argparse
 
 def find_files(root_dir):
     """
-    Find all language files that CVE-bin-tool scans    
+    Find all language files that CVE-bin-tool scans
     """
     global valid_files
     valid_files["METADATA"] = valid_files["METADATA: "]
@@ -18,7 +18,7 @@ def find_files(root_dir):
     for dirpath, dirnames, filenames in os.walk(root_dir):
         for filename in filenames:
             if filename in valid_files and filename != "requirements.txt":
-                matches.append((f"{dirpath}/{filename}",valid_files[filename]))
+                matches.append((f"{dirpath}/{filename}", valid_files[filename]))
     return matches
 
 

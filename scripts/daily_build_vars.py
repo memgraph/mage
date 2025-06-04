@@ -5,6 +5,7 @@ import os
 import urllib.request
 import re
 
+
 def get_latest_build() -> int:
 
     p = subprocess.run(
@@ -27,6 +28,7 @@ def get_latest_build() -> int:
 
     return max(dates)
 
+
 def extract_commit_hash(filename):
     """
     Attempts to extract a commit hash from the given filename.
@@ -41,6 +43,7 @@ def extract_commit_hash(filename):
     if match:
         return match.group("hash")
     return None
+
 
 def get_memgraph_version(date):
 
@@ -59,7 +62,7 @@ def get_memgraph_version(date):
     version = basename[9:-12]
     hash = extract_commit_hash(file)
 
-    return version,hash
+    return version, hash
 
 
 def daily_build_vars(payload):

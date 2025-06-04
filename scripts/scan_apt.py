@@ -1,10 +1,6 @@
-import numpy as np
 import subprocess
-import os
 import json
-from cve_bin_tool.log import LOGGER
 from cve_bin_tool.cvedb import CVEDB
-import subprocess
 import argparse
 
 
@@ -31,7 +27,7 @@ def get_apt_packages(container="memgraph"):
 
 
 def get_package_vendor_pairs(cve_db, packages):
-    
+
     return cve_db.get_vendor_product_pairs(packages)
 
 
@@ -41,7 +37,7 @@ def combine_vendor_product_version(packages, pairs):
     for pair in pairs:
         prod = pair["product"]
         vend = pair["vendor"]
-        if not prod in prod_vends:
+        if prod not in prod_vends:
             prod_vends[prod] = []
         prod_vends[prod].append(vend)
 
@@ -99,7 +95,7 @@ def main(container):
     except Exception:
         pass
 
-    
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -107,4 +103,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main(args.container)
-    

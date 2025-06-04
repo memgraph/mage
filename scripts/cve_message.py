@@ -1,10 +1,9 @@
 import requests
 import os
 from typing import List, Tuple
-import re
-from collections import defaultdict
 import json
 import argparse
+
 
 def read_summary_file(filename: str) -> List[str] | dict:
 
@@ -87,7 +86,7 @@ def reformat_grype_data(data):
             "status": item["vulnerability"]["fix"]["state"],
             "severity": item["vulnerability"]["severity"].upper(),
             "version": item["artifact"]["version"],
-            "fixed": item
+            "fixed": fixed
         }
         if new not in out:
             out.append(new)
@@ -234,10 +233,9 @@ def cbt_message(cbt):
         "apt": "\nAPT Packages\n------------------\n"
     }
 
-
     msg = "CVE-bin-tool Summary:\n"
     msg += "============================"
-    
+
     for key, val in cbt.items():
         msg += key_map[key]
         items = []
@@ -283,7 +281,7 @@ def grype_trivy_message(cves, name):
         }
 
         # trivy picks up lots of CVEs for linux-libc-dev, so let's summarize
-        libc_cves =  [item for item in items if item["Product"] == "linux-libc-dev"]
+        libc_cves = [item for item in items if item["Product"] == "linux-libc-dev"]
         print(len(libc_cves))
         if len(libc_cves) > 10:
             items = [item for item in items if item["Product"] != "linux-libc-dev"]
@@ -294,7 +292,7 @@ def grype_trivy_message(cves, name):
                 version = "Multiple"
 
             scores = [cve_severity_score[item["Severity"]] for item in libc_cves]
-            severity = {v:k for k,v in cve_severity_score.items()}.get(max(scores), "????")
+            severity = {v: k for k, v in cve_severity_score.items()}.get(max(scores), "????")
 
             items.append({
                 "Product": "linux-libc-dev",
@@ -362,6 +360,5 @@ if __name__ == "__main__":
     parser.add_argument("arch", type=str, default="amd")
     parser.add_argument('image_type', type=str, choices=['memgraph', 'mage'], default='mage')
     args = parser.parse_args()
-    
-    main(args.arch, args.image_type)
 
+    main(args.arch, args.image_type)

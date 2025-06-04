@@ -5,6 +5,7 @@ import os
 from urllib.parse import quote
 import argparse
 
+
 def list_build_files(date: int, image_type: str = "mage") -> List[str]:
     """
     Lists the files in s3 for the current build date
@@ -29,7 +30,6 @@ def list_build_files(date: int, image_type: str = "mage") -> List[str]:
         text=True
     )
 
-
     # extract the file keys found
     files = [line.split()[3] for line in p.stdout.splitlines()]
 
@@ -49,7 +49,7 @@ def parse_file_os_arch(file, image_type):
     os, arch: strings
         OS and CPU architecture, respectively, respectively
     """
-    # extract OS and CPU architecture from file name    
+    # extract OS and CPU architecture from file name
 
     if image_type == "mage":
 

@@ -1,5 +1,6 @@
 from cve_bin_tool.cvedb import CVEDB
 
+
 def main():
     print("Updating CVE Database (this can take ages!)")
     cve_db = CVEDB()

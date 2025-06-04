@@ -97,6 +97,10 @@ def scan_directories_with_progress(dirs_to_scan, output_dir="tmp", max_workers=2
     results = []
     times = []
     outdir = []
+
+    if not os.path.isdir(output_dir):
+        os.makedirs(output_dir)
+
     # Submit one task per directory
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_dir = {
