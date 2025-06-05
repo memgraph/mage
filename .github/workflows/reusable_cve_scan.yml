@@ -128,7 +128,7 @@ jobs:
         if: ${{ inputs.run_cbt }}
         run: |
           source env/bin/activate
-          python3 scripts/scan_memgraph.py "rootfs"
+          python3 scripts/scan_memgraph.py "rootfs" "$(nproc)"
 
       - name: Scan Languages
         if: ${{ inputs.run_cbt }}
