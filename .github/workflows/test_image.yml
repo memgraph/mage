@@ -1,0 +1,19 @@
+name: Test Docker Image
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+    inputs:
+      arch: 
+        type: string
+        description: "Image architecture (amd64|arm64)"
+        required: true
+      image:
+        type: string
+        description: "URL or repo:tag of docker image to scan"
+        required: true
+
+jobs:
+
