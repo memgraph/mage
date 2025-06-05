@@ -14,6 +14,8 @@ def list_build_files(date: int, image_type: str = "mage") -> List[str]:
     =====
     date: int
         Date in the format yyyymmdd
+    image_type: str
+        `memgraph` or `mage`
 
     Returns
     =======
@@ -43,13 +45,14 @@ def parse_file_os_arch(file, image_type):
     ======
     file: str
         s3 key of the package file name
-    image_type: str       image type, either mage or memgraph
+    image_type: str
+        `memgraph` or `mage`
+
     Returns
     =======
     os, arch: strings
         OS and CPU architecture, respectively, respectively
     """
-    # extract OS and CPU architecture from file name
 
     if image_type == "mage":
 
@@ -100,6 +103,8 @@ def build_package_json(files: List[str], return_url: bool = True, image_type: st
         list of s3 keys
     return_url: bool
         If True, the URL is returned, otherwise the s3 key
+    image_type: str
+        `memgraph` or `mage`
 
     Returns
     =======
@@ -142,6 +147,8 @@ def list_daily_release_packages(date: int, return_url: bool = True, image_type: 
         Date in the format yyyymmdd
     return_url: bool
         If True, the URL is returned, otherwise the s3 key
+    image_type: str
+        `memgraph` or `mage`
 
     Returns
     =======
@@ -205,6 +212,7 @@ def main(image_type: str) -> None:
         }
     }
     payload = json.dumps(payload)
+    print(payload)
 
 
 if __name__ == "__main__":

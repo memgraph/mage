@@ -5,7 +5,15 @@ import argparse
 
 def main(arch: str, image_type: str) -> None:
     """
-    return the relevant image URL to be scanned for CVEs
+    print the relevant image URL to be scanned for CVEs
+
+    Inputs
+    ======
+    arch: str
+        the architecture of the image to be scanned for CVEs
+    image_type: str
+        the type of image to be scanned for CVEs, either 'memgraph' or 'mage'
+
     """
     date = int(os.getenv("CURRENT_BUILD_DATE"))
 

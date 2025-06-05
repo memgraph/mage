@@ -6,11 +6,24 @@ from tqdm import tqdm
 import json
 import hashlib
 import random
-import time
 import argparse
+from typing import List
 
 
-def file_hash(output_dir):
+def file_hash(output_dir: str) -> str:
+    """
+    generate a random temporary filename
+
+    Inputs
+    ======
+    output_dir: str
+       The directory to save the hash file in.
+
+    Returns
+    =======
+    hash: str
+       The temporary file name.
+    """
 
     hash = hashlib.sha256(
         str(random.random()).encode("utf-8")
@@ -19,9 +32,18 @@ def file_hash(output_dir):
     return f"{output_dir}/{hash}.json"
 
 
-def find_memgraph_files(start_dir):
+def find_memgraph_files(start_dir: str) -> list:
     """
+    Walk a directory and return a list of all the files in it.
 
+    Inputs
+    ======
+    start_dir: str
+        The directory to start the search from.
+
+    Returns
+    =======
+    list: A list of all the files in the directory.
     """
     matches = []
     for dirpath, _, filenames in os.walk(start_dir):
@@ -43,11 +65,23 @@ def find_memgraph_files(start_dir):
     return matches
 
 
-def run_cve_scan(directory, output_dir):
+def run_cve_scan(directory: str, output_dir: str) -> dict:
     """
-    Run cve-bin-tool on a single directory with JSON output to a file,
+    Run cve-bin-tool on a single file/directory with JSON output to a file,
     using '-u never' and '-f json'. Returns the JSON string read from the file.
     Captures stdout/stderr so as not to interfere with the progress bar.
+
+    Inputs
+    ======
+    directory: str
+        The directory or file that is to be scanned.
+    output_dir: str
+        The directory where the JSON output will be written.
+
+    Returns
+    =======
+    str:
+        The JSON string read from the file.
     """
     # Ensure the output directory exists
     os.makedirs(output_dir, exist_ok=True)
@@ -64,7 +98,6 @@ def run_cve_scan(directory, output_dir):
         directory            # Directory to scan
     ]
 
-    t0 = time.time()
     # Run the command, capturing stdout/stderr
     _ = subprocess.run(
         cmd,
@@ -72,7 +105,6 @@ def run_cve_scan(directory, output_dir):
         stderr=subprocess.PIPE,
         text=True
     )
-    t1 = time.time()
 
     # Read and return the JSON contents from the output file
     try:
@@ -81,10 +113,10 @@ def run_cve_scan(directory, output_dir):
     except OSError as e:
         raise RuntimeError(f"Could not read JSON output for {directory!r}: {e}")
 
-    return data, t1-t0
+    return data
 
 
-def scan_directories_with_progress(dirs_to_scan, output_dir="tmp", max_workers=20):
+def scan_directories_with_progress(dirs_to_scan: List[str], output_dir: str = "tmp", max_workers: int = 20) -> None:
     """
     Given a list of directories, scan each one in parallel using cve-bin-tool.
     - Uses '-u never' and '-f json'.
@@ -92,6 +124,15 @@ def scan_directories_with_progress(dirs_to_scan, output_dir="tmp", max_workers=2
     - Shows a tqdm progress bar that advances as each scan completes.
     - Returns a dict mapping directory → (json_str or None, output_file_path).
       If a scan fails, json_str will be None, and the exception is printed.
+
+    Inputs
+    ======
+    dirs_to_scan: List[str]
+      A list of directories to scan.
+    output_dir: str
+      The directory to write the JSON results into.
+    max_workers: int
+      The maximum number of threads to use. Defaults to 20.
     """
     # Prepare the results dictionary
     results = []
@@ -131,12 +172,27 @@ def scan_directories_with_progress(dirs_to_scan, output_dir="tmp", max_workers=2
         json.dump(results, f, indent=2)
 
 
-def place_slowest_first(rootfs, directories):
+def place_slowest_first(rootfs: str, directories: List[str]) -> List[str]:
+    """
+    Move the slowest binaries to be scanned to be first in the list, so that
+    quicker ones can be scanned in parallel.
+
+    Inputs
+    ======
+    rootfs: str
+        The rootfs directory to scan.
+    directories: List[str]
+        The directories/files to scan.
+
+    Returns
+    =======
+    List[str]
+        The directories/files to scan, with the slowest ones first.
+    """
 
     # these directories are the slowest to scan, so to speed things up a tiny bit,
     # let's scan them first so they are being done while other threads deal with
     # the quick ones (assumes that we have more threads than slow ones!)
-
     slow_dirs = [
         "usr/lib/memgraph/memgraph",
         "usr/bin/mg_import_csv",
@@ -156,16 +212,27 @@ def place_slowest_first(rootfs, directories):
     return outdirs
 
 
-def main(rootfs):
+def main(rootfs: str, max_workers: int) -> None:
+    """
+    Scan for CVEs in memgraph-specific directories/files.
+
+    Inputs
+    ======
+    rootfs: str
+        The directory where the container root filesystem was extracted to
+    max_workers: int
+        The maximum number of workers to use
+    """
     files = find_memgraph_files(f"{rootfs}/usr/lib/memgraph")
     files = place_slowest_first(rootfs, files)
-    scan_directories_with_progress(files)
+    scan_directories_with_progress(files, max_workers=max_workers)
 
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("rootfs", type=str)
+    parser.add_argument("max_workers", type=int, default=10, help="maximum number of workers to use")
     args = parser.parse_args()
 
-    main(args.rootfs)
+    main(args.rootfs, args.max_workers)

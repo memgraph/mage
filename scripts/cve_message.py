@@ -6,6 +6,9 @@ import argparse
 
 
 def read_summary_file(filename: str) -> List[str] | dict:
+    """
+    Read the contents of a file and return it as a list or dict.
+    """
 
     found = os.path.isfile(filename)
     if not found:
@@ -21,7 +24,9 @@ def read_summary_file(filename: str) -> List[str] | dict:
 
 
 def severity_summary(data: List[dict]) -> dict:
-
+    """
+    count the total number of CVEs per severity level
+    """
     summary = {}
     for cve in data:
         severity = cve["severity"]
@@ -32,7 +37,10 @@ def severity_summary(data: List[dict]) -> dict:
     return summary
 
 
-def reformat_cbt_data(data):
+def reformat_cbt_data(data: List[dict]) -> List[dict]:
+    """
+    reformats the cve-bin-tool data to a common format
+    """
 
     out = []
     for item in data:
@@ -50,8 +58,7 @@ def reformat_cbt_data(data):
 
 def parse_cbt_summary() -> dict:
     """
-    This will read in the `cve-bin-tool-summary.txt` and scan for detected
-    vulnerabilities.
+    Reads cve-bin-tool summaries
     """
 
     parts = ["memgraph", "lang", "apt"]
@@ -71,7 +78,10 @@ def parse_cbt_summary() -> dict:
     return out
 
 
-def reformat_grype_data(data):
+def reformat_grype_data(data: List[dict]) -> List[dict]:
+    """
+    reformats the data from grype to a common format
+    """
 
     out = []
     for item in data:
@@ -112,7 +122,10 @@ def parse_grype_summary() -> dict:
     }
 
 
-def reformat_trivy_data(data):
+def reformat_trivy_data(data: List[dict]) -> List[dict]:
+    """
+    reformat the trivy JSON to a common format.
+    """
 
     out = []
     for item in data:
@@ -151,6 +164,20 @@ def parse_trivy_summary() -> dict:
 
 
 def combine_summaries(summary_list: List[dict]) -> Tuple[dict, str]:
+    """
+    This will combine the summaries from all of the tests into one.
+
+    Inputs
+    ======
+    summary_list: List[dict]
+        A list of dictionaries, each containing a summary for one test.
+
+    Returns
+    =======
+    Tuple[dict, str]
+        A tuple containing the counts of each vulnerability severity.
+
+    """
 
     summary = {}
     for dct in summary_list:
@@ -190,10 +217,19 @@ def combine_summaries(summary_list: List[dict]) -> Tuple[dict, str]:
     return summary, msg
 
 
-def format_slack_table(items):
+def format_slack_table(items: List[dict]) -> str:
     """
-    Given a list of dicts with keys: Package, Version, Severity, CVE,
+    Given a list of dicts with keys: Product, Version, Severity, CVE,
     return a string containing a code-block table with evenly padded columns.
+
+    Inputs
+    ======
+    items: List[dict]
+        A list of dicts with keys Product, Version, Severity, CVE
+
+    Returns
+    =======
+    str: A string containing a code-block table with evenly padded columns
     """
     if not items:
         return "```Nothing to see here...```"
@@ -222,7 +258,19 @@ def format_slack_table(items):
     return f"```\n{table}\n```"
 
 
-def cbt_message(cbt):
+def cbt_message(cbt: dict) -> str:
+    """
+    Convert list of cve-bin-tool CVEs to a table for Slack.
+
+    Inputs
+    ======
+    cbt: dict
+        Dictionary of cve-bin-tool CVEs
+
+    Returns
+    =======
+    str: string with table of CVEs
+    """
 
     if not cbt:
         return ""
@@ -240,7 +288,7 @@ def cbt_message(cbt):
         msg += key_map[key]
         items = []
         for item in val["cve"]:
-            if item["severity"] in ["HIGH", "CRITICAL"]:  # should we show everything?
+            if item["severity"] in ["CRITICAL"]:  # only showing critical for now
                 items.append({
                     "Product": item["product"],
                     "Version": item["version"],
@@ -248,12 +296,27 @@ def cbt_message(cbt):
                     "CVE": item["id"],
                 })
 
-        table = format_slack_table(items)
-        msg += f"\n{table}\n"
+        if len(items) > 0:
+            table = format_slack_table(items)
+            msg += f"\n{table}\n"
     return msg
 
 
-def grype_trivy_message(cves, name):
+def grype_trivy_message(cves: dict, name: str) -> str:
+    """
+    Convert list of Grype CVEs to a part of the Slack message.
+
+    Inputs
+    ======
+    cves: dict
+        Grype CVEs to be converted.
+    name: str
+        Name of the tool that generated the CVEs.
+
+    Returns
+    =======
+    str: string contaiing table of CVEs
+    """
 
     if not cves:
         return ""
@@ -262,13 +325,16 @@ def grype_trivy_message(cves, name):
     msg += "============================"
     items = []
     for item in cves["cve"]:
-        if item["severity"].upper() in ["HIGH", "CRITICAL"]:
+        if item["severity"].upper() in ["CRITICAL"]:
             items.append({
                 "Product": item["product"],
                 "Version": item["version"],
                 "Severity": item["severity"],
                 "CVE": item["id"]
             })
+
+    if len(items) == 0:
+        return ""
 
     if name == "Trivy":
         cve_severity_score = {
@@ -305,9 +371,29 @@ def grype_trivy_message(cves, name):
     return msg + f"\n{table}\n"
 
 
-def create_slack_message(arch, image_type, cbt, grype, trivy) -> str:
+def create_slack_message(arch: str, image_type: str, cbt: dict, grype: dict, trivy: dict) -> str:
+    """
+    Formats the Slack message to be sent.
 
-    arch_str = "x86_64" if arch == "amd" else "aarch64"
+    Inputs
+    ======
+    arch: str
+        The architecture of the image to be scanned.
+    image_type: str, choices=["memgraph", "mage"]
+        The type of image to be scanned.
+    cbt: dict
+        The CVEs from cve-bin-tool.
+    grype: dict, optional
+        The CVEs from Grype. Defaults to None.
+    trivy: dict, optional
+        The CVEs from Trivy. Defaults to None.
+
+    Returns
+    =======
+    str: The formatted Slack message.
+    """
+
+    arch_str = "x86_64" if arch == "amd64" else "aarch64"
     name = "Memgraph" if image_type == "memgraph" else "MAGE"
 
     msg_start = f"Vulnerability Scan Results for *{name}* (Docker {arch_str})...\n\n"
@@ -331,7 +417,15 @@ def create_slack_message(arch, image_type, cbt, grype, trivy) -> str:
     return msg
 
 
-def post_message(msg):
+def post_message(msg: str) -> None:
+    """
+    Post message to Slack webhook.
+
+    Inputs
+    ======
+    msg: str
+        Message containing vulnerability summary.
+    """
 
     url = os.getenv("INFRA_WEBHOOK_URL")
     try:
@@ -343,7 +437,15 @@ def post_message(msg):
         print(f"Response: {response.status_code}")
 
 
-def save_full_vulnerability_list(summary_list):
+def save_full_vulnerability_list(summary_list: List[list]) -> None:
+    """
+    Save full vulnerability list in a file for further processing.
+
+    Inputs
+    ======
+    summary_list: List[list]
+        A list containing vulnerability information for each CVE.
+    """
 
     cves = []
     for item in summary_list:
@@ -355,7 +457,18 @@ def save_full_vulnerability_list(summary_list):
         f.write(table)
 
 
-def main(arch, image_type):
+def main(arch: str, image_type: str) -> None:
+    """
+    Collect vulnerability results and send a Slack message.
+
+    Inputs
+    ======
+    arch: str
+        The architecture of the image to be scanned.
+    image_type: str
+        The type of image to be scanned.
+
+    """
 
     # collect results
     cbt = parse_cbt_summary()
@@ -369,7 +482,7 @@ def main(arch, image_type):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("arch", type=str, default="amd")
+    parser.add_argument("arch", type=str, default="amd64")
     parser.add_argument('image_type', type=str, choices=['memgraph', 'mage'], default='mage')
     args = parser.parse_args()
 

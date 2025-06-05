@@ -6,9 +6,19 @@ import subprocess
 import argparse
 
 
-def find_files(root_dir):
+def find_files(root_dir: str) -> list[str]:
     """
     Find all language files that CVE-bin-tool scans
+
+    Inputs
+    ======
+    root_dir: str
+        The root directory to search for language files
+
+    Returns
+    =======
+    matches: list[str]
+        A list of paths to metadata files for language packages
     """
     global valid_files
     valid_files["METADATA"] = valid_files["METADATA: "]
@@ -22,7 +32,15 @@ def find_files(root_dir):
     return matches
 
 
-def write_package_csv(rootfs):
+def write_package_csv(rootfs: str) -> None:
+    """
+    Write a CSV file of all language packages found
+
+    Inputs
+    ======
+    rootfs: str
+        The path to the root filesystem of a container
+    """
     cve_db = CVEDB()
     logger = LOGGER.getChild("Fuzz")
 
@@ -49,7 +67,11 @@ def write_package_csv(rootfs):
         pass
 
 
-def run_scan():
+def run_scan() -> None:
+    """
+    Scan the CVE database using the list of language packages found and save the
+    results to a JSON file.
+    """
 
     print("Scanning Language Packages")
     cmd = [
@@ -67,7 +89,10 @@ def run_scan():
     )
 
 
-def main(rootfs):
+def main(rootfs: str) -> None:
+    """
+    Scan the root filesystem for CVEs in the language packages.
+    """
 
     write_package_csv(rootfs)
     run_scan()

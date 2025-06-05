@@ -2,9 +2,22 @@ import subprocess
 import json
 from cve_bin_tool.cvedb import CVEDB
 import argparse
+from typing import List, Tuple
 
 
-def get_apt_packages(container="memgraph"):
+def get_apt_packages(container: str = "memgraph") -> List[dict]:
+    """
+    Collect the list of installed apt packages within the container.
+
+    Inputs
+    ======
+    container: str
+       Name of the container to scan
+
+    Returns
+    =======
+    packages: list of installed packages
+    """
 
     cmd = [
         "docker", "exec", container,
@@ -26,13 +39,41 @@ def get_apt_packages(container="memgraph"):
     return packages
 
 
-def get_package_vendor_pairs(cve_db, packages):
+def get_package_vendor_pairs(cve_db: CVEDB, packages: List[dict]) -> List[dict]:
+    """
+    return the list of vendors for a package
+
+    Inputs
+    ======
+    cve_db: CVEDB
+      CVEDB object to use
+    packages: List[str]
+      list of installed packages
+
+    Returns
+    =======
+    pairs: list of vendor/product/version dicts
+    """
 
     return cve_db.get_vendor_product_pairs(packages)
 
 
-def combine_vendor_product_version(packages, pairs):
+def combine_vendor_product_version(packages: List[dict], pairs: List[dict]) -> List[Tuple[str]]:
+    """
+    create the full list of vendor, product and version for each package
 
+    Inputs
+    ======
+    packages: List[str]
+      list of installed packages
+    pairs: List[str]
+      list of vendor/product dicts
+
+    Returns
+    =======
+    out: List[Tuple[str]]
+        list of tuples (vendor, product, version)
+    """
     prod_vends = {}
     for pair in pairs:
         prod = pair["product"]
@@ -55,6 +96,13 @@ def combine_vendor_product_version(packages, pairs):
 
 
 def save_apt_package_csv(packages):
+    """
+    Save CSV of package vendors, products and versions
+
+    Inputs:
+      packages: List[str]
+        list of installed packages
+    """
 
     with open("apt-packages.csv", "w") as f:
         f.write("vendor,product,version\n")
@@ -62,7 +110,10 @@ def save_apt_package_csv(packages):
             f.write(f"{','.join(package)}\n")
 
 
-def run_scan():
+def run_scan() -> None:
+    """
+    Run scan of apt packages and save results to JSON file.
+    """
 
     cmd = [
         "cve-bin-tool",
@@ -80,6 +131,14 @@ def run_scan():
 
 
 def main(container):
+    """
+    Scan container packages for CVEs
+
+    Inputs
+    ======
+    container: str
+        container name or ID
+    """
     cve_db = CVEDB()
 
     packages = get_apt_packages(container)
