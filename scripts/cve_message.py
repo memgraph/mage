@@ -240,7 +240,7 @@ def cbt_message(cbt):
         msg += key_map[key]
         items = []
         for item in val["cve"]:
-            if item["severity"] in ["MEDIUM", "HIGH", "CRITICAL"]:  # should we show everything?
+            if item["severity"] in ["HIGH", "CRITICAL"]:  # should we show everything?
                 items.append({
                     "Product": item["product"],
                     "Version": item["version"],
@@ -262,7 +262,7 @@ def grype_trivy_message(cves, name):
     msg += "============================"
     items = []
     for item in cves["cve"]:
-        if item["severity"].upper() in ["MEDIUM", "HIGH", "CRITICAL"]:
+        if item["severity"].upper() in ["HIGH", "CRITICAL"]:
             items.append({
                 "Product": item["product"],
                 "Version": item["version"],
@@ -341,6 +341,18 @@ def post_message(msg):
         )
     except Exception:
         print(f"Response: {response.status_code}")
+
+
+def save_full_vulnerability_list(summary_list):
+
+    cves = []
+    for item in summary_list:
+        cves.extend(item)
+
+    table = format_slack_table(cves)
+
+    with open("full-cve-list.txt", "w") as f:
+        f.write(table)
 
 
 def main(arch, image_type):

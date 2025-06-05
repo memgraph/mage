@@ -31,7 +31,7 @@ on:
 jobs:
   scan-image:
     name: Scan Docker Image for Vulnerabilities
-    runs-on: ${{ (inputs.arch == 'arm64') && fromJSON('["self-hosted", "Linux", "Docker", "ARM64"]') || fromJSON('["self-hosted", "Linux", "Docker", "X64"]') }}
+    runs-on: ${{ (inputs.arch == 'arm64') && fromJSON('["self-hosted", "Linux", "Docker", "ARM64", "Ubuntu24.04"]') || fromJSON('["self-hosted", "Linux", "Docker", "X64", "Ubuntu24.04"]') }}
     steps:
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
