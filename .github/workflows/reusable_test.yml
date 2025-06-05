@@ -64,6 +64,7 @@ jobs:
           fi
 
       - name: Create wheels directory and fetch wheels if available
+        if: ${{ inputs.mage_image == '' }}
         run: |
           mkdir -p wheels
           if [ "$CACHE_PRESENT" = "true" ]; then
@@ -75,7 +76,7 @@ jobs:
       
 
       - name: Checkout specific branch in submodule
-        if: ${{ !inputs.memgraph_version }}
+        if: ${{ inputs.mage_image == '' }}
         run: |
           cd cpp/memgraph
           # If no ref is provided, just checkout master.
@@ -99,12 +100,12 @@ jobs:
           fi
 
       - name: Set up Docker Buildx
-        if: ${{ !inputs.memgraph_version }}
+        if: ${{ inputs.mage_image == '' }}
         id: buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Get Latest Tag
-        if: ${{ !inputs.memgraph_version }}
+        if: ${{ inputs.mage_image == '' }}
         run: |
           if [[ -z "${{ inputs.memgraph_version }}" ]]; then
             latest=$(./get_memgraph_tag.sh)
@@ -120,12 +121,12 @@ jobs:
           fi
 
       - name: Set CI branch name for PR events
-        if: ${{ github.event_name == 'pull_request' && ! inputs.memgraph_version }}
+        if: ${{ github.event_name == 'pull_request' && inputs.mage_image == '' }}
         run: echo "CI_BRANCH=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
       
 
       - name: Get Current MAGE Tag
-        if: ${{ !inputs.memgraph_version }}
+        if: ${{ inputs.mage_image == '' }}
         run: |
           # Get the current tag, or branch if a tag doesn't exist
           # This is used later in image creation, so that the exact version of 
@@ -149,7 +150,7 @@ jobs:
 
 
       - name: Set up and check memgraph download link
-        if: ${{ !inputs.memgraph_version }}
+        if: ${{ inputs.mage_image == '' }}
         run: |
           mg_url=${{ inputs.memgraph_download_link }}
           if [[ -z "${{ inputs.memgraph_download_link }}" ]]; then
@@ -172,7 +173,7 @@ jobs:
           fi
 
       - name: Download memgraph binary (Object URL)
-        if: env.MEMGRAPH_OBJECT_URL
+        if: ${{ inputs.mage_image == '' && env.MEMGRAPH_OBJECT_URL != '' }}
         run: curl -L ${{ env.MEMGRAPH_OBJECT_URL }} > memgraph-${{ inputs.arch }}.deb
       
       - name: Setup AWS credentials
@@ -184,7 +185,7 @@ jobs:
           aws-region: ${{ env.s3_region }}
 
       - name: Download memgraph binary (S3 URI)
-        if: env.MEMGRAPH_S3_URI
+        if: ${{ inputs.mage_image == '' && env.MEMGRAPH_S3_URI != ''}}
         run: aws s3 cp ${{ env.MEMGRAPH_S3_URI }} memgraph-${{ inputs.arch }}.deb
 
       - name: Probe fastest mirror
@@ -193,7 +194,7 @@ jobs:
           echo "CUSTOM_MIRROR=${FASTEST}" >> $GITHUB_ENV
 
       - name: Build and run Memgraph MAGE
-        if: ${{ !inputs.memgraph_version }}
+        if: ${{ inputs.mage_image == '' }}
         run: |
           if [[ "${{ inputs.arch }}" == "arm64" ]]; then
             MGBUILD_IMAGE=memgraph/mgbuild:v6_ubuntu-24.04-arm
@@ -226,6 +227,45 @@ jobs:
 
           # print the image size in both SI and IEC units
           ./print_image_size.sh memgraph-mage prod
+
+      - name: Determine Image Type
+        if: ${{ inputs.mage_image != '' }}
+        run: |
+          read image_type image < <(python3 smoke-release-testing/workflow_image_setup.py "${{ inputs.next_version }}" "${{ inputs.arch }}" "false")
+          echo "IMAGE=${image}" >> $GITHUB_ENV
+          echo "IMAGE_TYPE=${image_type}" >> $GITHUB_ENV
+
+      - name: Pull Docker Image
+        if: ${{ inputs.mage_image != '' && env.IMAGE_TYPE == 'docker' }}
+        run: |
+          docker pull "${{ env.IMAGE }}"
+          echo "IMAGE_TAG=${{ env.IMAGE }}" >> $GITHUB_ENV
+
+      - name: Download Docker Image
+        if: ${{ inputs.mage_image != '' && env.IMAGE_TYPE != 'docker' }}
+        run: |
+          curl -L "${{ env.IMAGE }}" -o memgraph-mage.tar.gz
+          load_output="$(docker load -i memgraph-mage.tar.gz)"
+          repo_tag=$(echo "$load_output" \
+            | awk -F': ' '/Loaded image:/ {print $2}' \
+            | grep -v ':latest$' \
+            | head -n1)
+          
+          echo "IMAGE_TAG=${repo_tag}" >> $GITHUB_ENV
+
+      - name: Run Docker Container
+        if: ${{ inputs.mage_image != '' }}
+        run: |
+          docker network create ${{ env.MEMGRAPH_NETWORK }} || true
+
+          docker run -d \
+            --rm \
+            --network ${{ env.MEMGRAPH_NETWORK }} \
+            --name ${{ env.MAGE_CONTAINER }} \
+            -e MEMGRAPH_ENTERPRISE_LICENSE=${{ env.MEMGRAPH_ENTERPRISE_LICENSE }} \
+            -e MEMGRAPH_ORGANIZATION_NAME=${{ env.MEMGRAPH_ORGANIZATION_NAME }} \
+            ${{ env.IMAGE_TAG }} \
+            --telemetry-enabled=False
 
       - name: Set custom mirror within container
         run: |
@@ -284,5 +324,6 @@ jobs:
           docker stop ${{ env.MAGE_CONTAINER }} || true
           docker rm ${{ env.MAGE_CONTAINER }} || true
           docker rmi memgraph-mage:prod || true
+          docker rmi ${{ env.IMAGE_TAG }} || true
           docker network rm ${{ env.MEMGRAPH_NETWORK }} || true
           docker stop ${{ env.NEO4J_CONTAINER }} || true

@@ -4,6 +4,7 @@ concurrency:
   cancel-in-progress: true
 
 on:
+  push:
   workflow_dispatch:
     inputs:
       arch: 
@@ -16,4 +17,23 @@ on:
         required: true
 
 jobs:
+  test_mage_image:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    name: Manual MAGE Image Test
+    uses: ./.github/workflows/reusable_test.yml
+    with:
+      arch: ${{ inputs.arch }}
+      mage_image: ${{ inputs.image }}
+    secrets: inherit
+
+  test_mage_image_push:
+    if: ${{ github.event_name == 'push' }}
+    name: Manual MAGE Image Test
+    uses: ./.github/workflows/reusable_test.yml
+    with:
+      arch: "arm64"
+      mage_image: "memgraph/memgraph-mage:3.3.0"
+    secrets: inherit
+    
+
 
