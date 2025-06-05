@@ -231,7 +231,7 @@ jobs:
       - name: Determine Image Type
         if: ${{ inputs.mage_image != '' }}
         run: |
-          read image_type image < <(python3 smoke-release-testing/workflow_image_setup.py "${{ inputs.next_version }}" "${{ inputs.arch }}" "false")
+          read image_type image < <(python3 smoke-release-testing/workflow_image_setup.py "${{ inputs.mage_image }}" "${{ inputs.arch }}" "false")
           echo "IMAGE=${image}" >> $GITHUB_ENV
           echo "IMAGE_TYPE=${image_type}" >> $GITHUB_ENV
 
