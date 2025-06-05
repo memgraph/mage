@@ -65,5 +65,5 @@ jobs:
       run_trivy: true
       run_grype: true
       run_cbt: true
-      send_slack_message: true
+      send_slack_message: false
     secrets: inherit

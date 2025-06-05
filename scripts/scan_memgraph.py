@@ -65,16 +65,16 @@ def find_memgraph_files(start_dir: str) -> list:
     return matches
 
 
-def run_cve_scan(directory: str, output_dir: str) -> dict:
+def run_cve_scan(target: str, output_dir: str) -> dict:
     """
-    Run cve-bin-tool on a single file/directory with JSON output to a file,
+    Run cve-bin-tool on a single target with JSON output to a file,
     using '-u never' and '-f json'. Returns the JSON string read from the file.
     Captures stdout/stderr so as not to interfere with the progress bar.
 
     Inputs
     ======
-    directory: str
-        The directory or file that is to be scanned.
+    target: str
+        The target that is to be scanned.
     output_dir: str
         The directory where the JSON output will be written.
 
@@ -95,23 +95,35 @@ def run_cve_scan(directory: str, output_dir: str) -> dict:
         "-u", "never",       # Never update the local CVE database
         "-f", "json",        # Output format: JSON
         "-o", output_path,   # Write JSON results to this file
-        directory            # Directory to scan
+        target               # target to scan
     ]
 
     # Run the command, capturing stdout/stderr
-    _ = subprocess.run(
+    proc = subprocess.run(
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True
     )
 
-    # Read and return the JSON contents from the output file
+    if proc.returncode != 0:
+        # Log stderr in your logfile or raise
+        raise RuntimeError(
+            f"cve-bin-tool failed on {target!r} (exit {proc.returncode}).\n"
+            f"stderr: {proc.stderr.strip()}"
+        )
+
+    # Some targets produce no JSON at all; check before opening.
+    if not os.path.isfile(output_path):
+        raise RuntimeError(
+            f"Expected JSON not found for {target!r}; no file at {output_path}"
+        )
+
     try:
-        with open(output_path, 'r', encoding='utf-8') as f:
+        with open(output_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-    except OSError as e:
-        raise RuntimeError(f"Could not read JSON output for {directory!r}: {e}")
+    except (OSError, json.JSONDecodeError) as e:
+        raise RuntimeError(f"Could not read JSON for {target!r}: {e}")
 
     return data
 
@@ -136,8 +148,6 @@ def scan_directories_with_progress(dirs_to_scan: List[str], output_dir: str = "t
     """
     # Prepare the results dictionary
     results = []
-    times = []
-    outdir = []
 
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
@@ -158,13 +168,11 @@ def scan_directories_with_progress(dirs_to_scan: List[str], output_dir: str = "t
         ):
             directory = future_to_dir[future]
             try:
-                json_data, dt = future.result()
+                json_data = future.result()
                 if isinstance(json_data, list):
                     results.extend(json_data)
                 else:
                     results.append(json_data)
-                times.append(dt)
-                outdir.append(directory)
             except Exception as exc:
                 print(f"Error scanning {directory!r}: {exc}")
 
