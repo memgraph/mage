@@ -27,10 +27,14 @@ on:
         type: boolean
         description: "Scan with CVE-bin-tool"
         default: true
+      send_slack_message:
+        type: boolean
+        description: "Send a Slack message"
+        default: true
 
 jobs:
   scan-image:
-    name: Scan Docker Image for Vulnerabilities
+    name: Scan Docker Image for Vulnerabilities (${{ inputs.image_type }}, ${{ inputs.arch }})
     runs-on: ${{ (inputs.arch == 'arm64') && fromJSON('["self-hosted", "Linux", "Docker", "ARM64", "Ubuntu24.04"]') || fromJSON('["self-hosted", "Linux", "Docker", "X64", "Ubuntu24.04"]') }}
     steps:
       - name: Set up Python 3.12
@@ -110,6 +114,7 @@ jobs:
       
       - name: Update CVE Database
         if: ${{ inputs.run_cbt }}
+        continue-on-error: true  # this can be flaky
         run: |
           source env/bin/activate
           python3 scripts/update_cve_db.py
@@ -159,13 +164,31 @@ jobs:
           path: cve-bin-tool-apt-summary.json
 
       - name: Send Slack Message
+        if: ${{ inputs.send_slack_message && always() }}
+        id: slack-message
         env:
           INFRA_WEBHOOK_URL: ${{ secrets.INFRA_WEBHOOK_URL }}
         run: |
-          # TODO(matt): add check here to see if any of the files exist and
-          # then always() just in case CVE bin tool crashes
-          source env/bin/activate
-          python3 scripts/cve_message.py "${{ inputs.arch }}" "${{ inputs.image_type }}"
+          files=(
+            trivy-summary.json
+            grype-summary.json
+            cve-bin-tool-memgraph-summary.json
+            cve-bin-tool-lang-summary.json
+            cve-bin-tool-apt-summary.json
+          )
+          if [ -n "$(ls "${files[@]}" 2>/dev/null | grep -v '^\.$')" ]; then
+            source env/bin/activate
+            python3 scripts/cve_message.py "${{ inputs.arch }}" "${{ inputs.image_type }}"
+          else
+            echo "No summary files found. Skipping Slack message"
+          fi
+
+      - name: Upload Full CVE List artifact
+        if: ${{ steps.slack-message.outputs.success }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-cve-list-artifact
+          path: full-cve-list.txt
 
       - name: Cleanup
         if: always()
@@ -181,6 +204,7 @@ jobs:
           rm cve-bin-tool-apt-summary.json || true
           rm cve-bin-tool-lang-summary.json || true
           rm cve-bin-tool-memgraph-summary.json || true
+          rm full-cve-list.txt || true
           docker stop memgraph || true
           docker wait memgraph || true
           docker rmi ${{ env.IMAGE_TAG }} || true

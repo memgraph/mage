@@ -33,6 +33,10 @@ on:
         type: boolean
         description: "Scan with CVE-bin-tool"
         default: true
+      send_slack_message:
+        type: boolean
+        description: "Send a Slack message"
+        default: true
 
 jobs:
   manual-cve-scan:
@@ -46,6 +50,7 @@ jobs:
       run_trivy: ${{ github.event.inputs.run_trivy == 'true' }}
       run_grype: ${{ github.event.inputs.run_grype == 'true' }}
       run_cbt: ${{ github.event.inputs.run_cbt == 'true' }}
+      send_slack_message: ${{ github.event.inputs.send_slack_message == 'true' }}
     secrets: inherit
 
   # REMOVE ME BEFORE MERGING!!!!
@@ -60,4 +65,5 @@ jobs:
       run_trivy: true
       run_grype: true
       run_cbt: true
+      send_slack_message: true
     secrets: inherit
