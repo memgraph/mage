@@ -284,6 +284,8 @@ def cbt_message(cbt: dict) -> str:
     msg = "CVE-bin-tool Summary:\n"
     msg += "============================"
 
+    total_items = 0
+
     for key, val in cbt.items():
         msg += key_map[key]
         items = []
@@ -297,8 +299,13 @@ def cbt_message(cbt: dict) -> str:
                 })
 
         if len(items) > 0:
+            total_items += len(items)
             table = format_slack_table(items)
             msg += f"\n{table}\n"
+    
+    if total_items == 0:
+        return ""
+
     return msg
 
 
