@@ -32,7 +32,7 @@ jobs:
     uses: ./.github/workflows/reusable_test.yml
     with:
       arch: "arm64"
-      mage_image: "memgraph/memgraph-mage:3.3.0"
+      mage_image: "memgraph/memgraph-mage:3.3"
     secrets: inherit
     
 
