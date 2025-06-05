@@ -37,4 +37,3 @@ Delete if this PR doesn't resolve any issues. Link the issue if it does.
     - **[Release note text]**
 - [ ] Link the documentation PR here
     - **[Documentation PR link]**
-- [ ] Tag someone from docs team in the comments
