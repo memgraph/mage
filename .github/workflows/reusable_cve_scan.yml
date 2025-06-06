@@ -68,12 +68,12 @@ jobs:
       - name: Install Trivy
         if: ${{ inputs.run_trivy }}
         run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b $(pwd)/trivy latest
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b "$(pwd)/trivy" latest
 
       - name: Install Grype
         if: ${{ inputs.run_grype }}
         run: |
-          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b $(pwd)/grype
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b "$(pwd)/grype"
           
       - name: Install cve-bin-tool
         if: ${{ inputs.run_cbt }}
