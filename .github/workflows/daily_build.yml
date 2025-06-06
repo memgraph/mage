@@ -215,16 +215,16 @@ jobs:
       matrix:
         include:
           - arch: arm64
-            image_url: needs.SetupCVEScan.outputs.mage_arm_url
+            image_url: ${{ needs.SetupCVEScan.outputs.mage_arm_url }}
             image_type: mage
           - arch: amd64
-            image_url: needs.SetupCVEScan.outputs.mage_amd_url
+            image_url: ${{ needs.SetupCVEScan.outputs.mage_amd_url }}
             image_type: mage
           - arch: arm64
-            image_url: needs.SetupCVEScan.outputs.memgraph_arm_amd_url
+            image_url: ${{ needs.SetupCVEScan.outputs.memgraph_arm_url }}
             image_type: memgraph
           - arch: amd64
-            image_url: needs.SetupCVEScan.outputs.memgraph_amd_amd_url
+            image_url: ${{ needs.SetupCVEScan.outputs.memgraph_amd_url }}
             image_type: memgraph
     uses: ./.github/workflows/reusable_cve_scan.yml
     with:
