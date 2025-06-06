@@ -88,6 +88,8 @@ def parse_file_os_arch(file, image_type):
             "-relwithdebinfo",
             ""
         )
+    else:
+        raise ValueError(f"Unsupported image_type: {image_type}")
 
     return os, arch
 
