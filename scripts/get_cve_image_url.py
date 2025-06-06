@@ -15,7 +15,10 @@ def main(arch: str, image_type: str) -> None:
         the type of image to be scanned for CVEs, either 'memgraph' or 'mage'
 
     """
-    date = int(os.getenv("CURRENT_BUILD_DATE"))
+    date_str = os.getenv("CURRENT_BUILD_DATE")
+    if not date_str:
+        raise ValueError("CURRENT_BUILD_DATE environment variable is required")
+    date = int(date_str)
 
     packages = list_daily_release_packages(date, image_type=image_type)
 
