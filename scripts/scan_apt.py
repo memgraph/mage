@@ -55,8 +55,8 @@ def get_apt_packages(container: str = "memgraph") -> List[dict]:
         stderr=subprocess.PIPE,
         text=True,        # so that stdout/stderr come back as Python strings
     )
-    if result.returncode != 0:
-        raise RuntimeError(f"dpkg-query failed with exit code {result.returncode}: {result.stderr}")
+    # do not try to do anything clever with the result.returncode here, because
+    # it onle ever returns 0 if there are 0 vulnerabilities!
 
     output = result.stdout.strip()
     if not output:

@@ -124,13 +124,8 @@ def run_cve_scan(target: str, output_dir: str) -> dict:
         stderr=subprocess.PIPE,
         text=True
     )
-
-    if proc.returncode != 0:
-        # Log stderr in your logfile or raise
-        raise RuntimeError(
-            f"cve-bin-tool failed on {target!r} (exit {proc.returncode}).\n"
-            f"stderr: {proc.stderr.strip()}"
-        )
+    # do not try to do anything clever with the proc.returncode here, because
+    # it onle ever returns 0 if there are 0 vulnerabilities!
 
     # Some targets produce no JSON at all; check before opening.
     if not os.path.isfile(output_path):
