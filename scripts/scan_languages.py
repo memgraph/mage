@@ -1,6 +1,6 @@
 from cve_bin_tool.log import LOGGER
 from cve_bin_tool.cvedb import CVEDB
-from cve_bin_tool.parsers.parse import valid_files
+from cve_bin_tool.parsers.parse import valid_files as cbt_valid_files
 import os
 import subprocess
 import argparse
@@ -20,7 +20,7 @@ def find_files(root_dir: str) -> list[str]:
     matches: list[str]
         A list of paths to metadata files for language packages
     """
-    global valid_files
+    valid_files = cbt_valid_files.copy()
     valid_files["METADATA"] = valid_files["METADATA: "]
     valid_files["PKG-INFO"] = valid_files["PKG-INFO: "]
 
