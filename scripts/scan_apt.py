@@ -4,6 +4,26 @@ from cve_bin_tool.cvedb import CVEDB
 import argparse
 from typing import List, Tuple
 
+"""
+This script is used for scanning a Docker container's installed APT packages, as
+part of an effort to speed up the usage of `cve-bin-tool`.
+
+This script does the following:
+1. Executes a command within the container to list all installed packages in a
+JSON format. This format only includes the `product` and `version`. We also need
+`vendor`, which is less easy to fetch.
+
+2. It then imports the CVE database object directly from cve_bin_tool to map 
+each of the installed packages to a `vendor` (or multiple in some cases).
+
+3. Saves a CSV with columns: vendor, product, version.
+
+4. Calls cve-bin-tool with the `--input-file` (`-i`) argument pointing to the
+CSV file. This will do a direct database lookup for each product, vendor and
+version, rather than scanning the iamge itself. The output is a JSON file
+containing all CVEs for those installed packages.
+"""
+
 
 def get_apt_packages(container: str = "memgraph") -> List[dict]:
     """
