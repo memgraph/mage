@@ -4,7 +4,6 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  push:
   workflow_dispatch:
     inputs:
       arch: 
@@ -51,19 +50,4 @@ jobs:
       run_grype: ${{ github.event.inputs.run_grype == 'true' }}
       run_cbt: ${{ github.event.inputs.run_cbt == 'true' }}
       send_slack_message: ${{ github.event.inputs.send_slack_message == 'true' }}
-    secrets: inherit
-  
-  # REMOVE ME BEFORE MERGING!!!!
-  push-cve-scan:
-    name: Manual CVE Scan
-    if: ${{ github.event_name == 'push' }}
-    uses: ./.github/workflows/reusable_cve_scan.yml
-    with:
-      arch: "amd64"
-      image_url: https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/mage/v3.3.0-rc2/mage-3.3.tar.gz
-      image_type: mage
-      run_trivy: true
-      run_grype: true
-      run_cbt: true
-      send_slack_message: false
     secrets: inherit
