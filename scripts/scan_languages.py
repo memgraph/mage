@@ -5,6 +5,25 @@ import os
 import subprocess
 import argparse
 
+"""
+This script should speed up the scanning for specific programming-language
+package vulnerabilities with cve-bin-tool.
+
+This script doe the following:
+1. Walks the extracted root filesystem of the container searching for package
+metadata files which cve-bin-tool would normally look for (`valid_files`).
+
+2. Uses cve-bin-tool's language parsing functions to extract the `vendor`, 
+`product` and `version` from the metadata files for each installed package.
+
+3. Saves a CSV with the columns `vendor`, `product` and `version`.
+
+4. Calls cve-bin-tool with the `--input-file` (`-i`) argument pointing to the
+CSV file. This will do a direct database lookup for each product, vendor and
+version, rather than scanning the iamge itself. The output is a JSON file
+containing all CVEs for those installed packages.
+"""
+
 CVE_DIR = os.getenv("CVE_DIR", os.getcwd())
 
 

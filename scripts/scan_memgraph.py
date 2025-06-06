@@ -9,6 +9,23 @@ import random
 import argparse
 from typing import List
 
+"""
+This script helps to parallelize the binary scanning using cve-bin-tool.
+
+1. Collect binaries to be scanned by `cve-bin-tool` - mostly within 
+`/usr/lib/memgraph` but also included a few specific files in `/usr/bin`.
+
+2. Reorder the list of files such that a few binaries known to be slowest to 
+scan are started first (so the quicker ones are done in parallel, assuming we
+assign enough threads). The `memgraph` and `mg_import_csv` binaries are by far
+the slowest to scan (~20 minutes on Ryzen 9 3900, perhaps a little longer in CI)
+
+3. Run a scan on each file in it's own thread using `ThreadPoolExecutor`, where
+each scan will produce a temporary JSON file containing results.
+
+4. Aggregate temporary files into a single JSON file.
+"""
+
 CVE_DIR = os.getenv("CVE_DIR", os.getcwd())
 
 
