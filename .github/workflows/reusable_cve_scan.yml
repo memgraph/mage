@@ -169,6 +169,7 @@ jobs:
         env:
           INFRA_WEBHOOK_URL: ${{ secrets.INFRA_WEBHOOK_URL }}
         run: |
+          # Check if any summary files exist
           files=(
             trivy-summary.json
             grype-summary.json
@@ -176,7 +177,16 @@ jobs:
             cve-bin-tool-lang-summary.json
             cve-bin-tool-apt-summary.json
           )
-          if [ -n "$(ls "${files[@]}" 2>/dev/null | grep -v '^\.$')" ]; then
+          
+          summary_files_exist=false
+          for file in "${files[@]}"; do
+            if [ -f "$file" ]; then
+              summary_files_exist=true
+              break
+            fi
+          done
+
+          if [ "$summary_files_exist" = true ]; then
             source env/bin/activate
             python3 scripts/cve_message.py "${{ inputs.arch }}" "${{ inputs.image_type }}"
           else
