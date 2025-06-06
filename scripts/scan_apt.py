@@ -52,8 +52,16 @@ def get_apt_packages(container: str = "memgraph") -> List[dict]:
         stderr=subprocess.PIPE,
         text=True,        # so that stdout/stderr come back as Python strings
     )
-    result = result.stdout
-    packages = json.loads(f"[{result[:result.rfind(',')]}]")
+    if result.returncode != 0:
+        raise RuntimeError(f"dpkg-query failed with exit code {result.returncode}: {result.stderr}")
+
+    output = result.stdout.strip()
+    if not output:
+        return []
+
+    # Remove trailing comma and wrap in array brackets
+    output = output.rstrip(', ')
+    packages = json.loads(f"[{output}]")
 
     print(f"Found {len(packages)} installed DEB packages")
     return packages
