@@ -79,7 +79,7 @@ jobs:
         if: ${{ inputs.run_cbt }}
         run: |
           source env/bin/activate
-          pip install cve-bin-tool
+          pip install cve-bin-tool==3.4
 
       - name: Scan with Trivy
         if: ${{ inputs.run_trivy }}
