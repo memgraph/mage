@@ -80,6 +80,7 @@ jobs:
         if: ${{ inputs.run_grype }}
         run: |
           curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b "${{ env.CVE_DIR }}/grype"
+          "${{ env.CVE_DIR }}/grype" db update
           
       - name: Install cve-bin-tool
         if: ${{ inputs.run_cbt }}
