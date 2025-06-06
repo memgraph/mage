@@ -9,6 +9,8 @@ import random
 import argparse
 from typing import List
 
+CVE_DIR = os.getenv("CVE_DIR", os.getcwd())
+
 
 def file_hash(output_dir: str) -> str:
     """
@@ -128,7 +130,11 @@ def run_cve_scan(target: str, output_dir: str) -> dict:
     return data
 
 
-def scan_directories_with_progress(dirs_to_scan: List[str], output_dir: str = "tmp", max_workers: int = 20) -> None:
+def scan_directories_with_progress(
+    dirs_to_scan: List[str],
+    output_dir: str = f"{CVE_DIR}/tmp",
+    max_workers: int = 20
+) -> None:
     """
     Given a list of directories, scan each one in parallel using cve-bin-tool.
     - Uses '-u never' and '-f json'.
@@ -176,7 +182,7 @@ def scan_directories_with_progress(dirs_to_scan: List[str], output_dir: str = "t
             except Exception as exc:
                 print(f"Error scanning {directory!r}: {exc}")
 
-    with open("cve-bin-tool-memgraph-summary.json", "w") as f:
+    with open(f"{CVE_DIR}/cve-bin-tool-memgraph-summary.json", "w") as f:
         json.dump(results, f, indent=2)
 
 

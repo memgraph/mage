@@ -4,6 +4,8 @@ from typing import List, Tuple
 import json
 import argparse
 
+CVE_DIR = os.getenv("CVE_DIR", os.getcwd())
+
 
 def read_summary_file(filename: str) -> List[str] | dict:
     """
@@ -64,7 +66,7 @@ def parse_cbt_summary() -> dict:
     parts = ["memgraph", "lang", "apt"]
     out = {}
     for part in parts:
-        fname = f"cve-bin-tool-{part}-summary.json"
+        fname = f"{CVE_DIR}/cve-bin-tool-{part}-summary.json"
         print(fname)
         if os.path.isfile(fname):
             print("here")
@@ -105,10 +107,10 @@ def reformat_grype_data(data: List[dict]) -> List[dict]:
 
 def parse_grype_summary() -> dict:
     """
-    This will read in the `grype-summary.txt`
+    This will read in the `grype-summary.json`
     """
 
-    data = read_summary_file("grype-summary.json")
+    data = read_summary_file(f"{CVE_DIR}/grype-summary.json")
     if not data:
         return {}
 
@@ -149,7 +151,7 @@ def parse_trivy_summary() -> dict:
     This will read in the `trivy-summary.json`
     """
 
-    data = read_summary_file("trivy-summary.json")
+    data = read_summary_file(f"{CVE_DIR}/trivy-summary.json")
     if not data:
         return {}
 
@@ -355,7 +357,7 @@ def grype_trivy_message(cves: dict, name: str) -> str:
 
         # trivy picks up lots of CVEs for linux-libc-dev, so let's summarize
         libc_cves = [item for item in items if item["Product"] == "linux-libc-dev"]
-        print(len(libc_cves))
+
         if len(libc_cves) > 10:
             items = [item for item in items if item["Product"] != "linux-libc-dev"]
             version = list(set([item["Version"] for item in libc_cves]))
@@ -460,7 +462,7 @@ def save_full_vulnerability_list(summary_list: List[list]) -> None:
 
     table = format_slack_table(cves)
 
-    with open("full-cve-list.txt", "w") as f:
+    with open(f"{CVE_DIR}/full-cve-list.txt", "w") as f:
         f.write(table)
 
 

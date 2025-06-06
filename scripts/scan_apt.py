@@ -3,6 +3,7 @@ import json
 from cve_bin_tool.cvedb import CVEDB
 import argparse
 from typing import List, Tuple
+import os
 
 """
 This script is used for scanning a Docker container's installed APT packages, as
@@ -23,6 +24,8 @@ CSV file. This will do a direct database lookup for each product, vendor and
 version, rather than scanning the iamge itself. The output is a JSON file
 containing all CVEs for those installed packages.
 """
+
+CVE_DIR = os.getenv("CVE_DIR", os.getcwd())
 
 
 def get_apt_packages(container: str = "memgraph") -> List[dict]:
@@ -132,7 +135,7 @@ def save_apt_package_csv(packages):
         list of installed packages
     """
 
-    with open("apt-packages.csv", "w") as f:
+    with open(f"{CVE_DIR}/apt-packages.csv", "w") as f:
         f.write("vendor,product,version\n")
         for package in packages:
             f.write(f"{','.join(package)}\n")
@@ -147,8 +150,8 @@ def run_scan() -> None:
         "cve-bin-tool",
         "-u", "never",       # Never update the local CVE database
         "-f", "json",        # Output format: JSON
-        "-o", "cve-bin-tool-apt-summary.json",   # Write JSON results to this file
-        "-i", "apt-packages.csv"
+        "-o", f"{CVE_DIR}/cve-bin-tool-apt-summary.json",   # Write JSON results to this file
+        "-i", f"{CVE_DIR}/apt-packages.csv"
     ]
     result = subprocess.run(
         cmd,

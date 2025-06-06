@@ -5,6 +5,8 @@ import os
 import subprocess
 import argparse
 
+CVE_DIR = os.getenv("CVE_DIR", os.getcwd())
+
 
 def find_files(root_dir: str) -> list[str]:
     """
@@ -47,7 +49,7 @@ def write_package_csv(rootfs: str) -> None:
     files = find_files(rootfs)
     print(f"Found {len(files)} Language Files")
 
-    with open("lang-packages.csv", "w") as f:
+    with open(f"{CVE_DIR}/lang-packages.csv", "w") as f:
         f.write("vendor,product,version\n")
         for file, parserclslist in files:
             for parsercls in parserclslist:
@@ -78,8 +80,8 @@ def run_scan() -> None:
         "cve-bin-tool",
         "-u", "never",       # Never update the local CVE database
         "-f", "json",        # Output format: JSON
-        "-o", "cve-bin-tool-lang-summary.json",   # Write JSON results to this file
-        "-i", "lang-packages.csv"
+        "-o", f"{CVE_DIR}/cve-bin-tool-lang-summary.json",   # Write JSON results to this file
+        "-i", f"{CVE_DIR}/lang-packages.csv"
     ]
     result = subprocess.run(
         cmd,
