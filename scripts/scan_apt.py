@@ -13,7 +13,7 @@ This script does the following:
 JSON format. This format only includes the `product` and `version`. We also need
 `vendor`, which is less easy to fetch.
 
-2. It then imports the CVE database object directly from cve_bin_tool to map 
+2. It then imports the CVE database object directly from cve_bin_tool to map
 each of the installed packages to a `vendor` (or multiple in some cases).
 
 3. Saves a CSV with columns: vendor, product, version.
@@ -150,12 +150,14 @@ def run_scan() -> None:
         "-o", "cve-bin-tool-apt-summary.json",   # Write JSON results to this file
         "-i", "apt-packages.csv"
     ]
-    _ = subprocess.run(
+    result = subprocess.run(
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True
     )
+    if result.returncode != 0:
+        raise RuntimeError(f"cve-bin-tool failed with exit code {result.returncode}: {result.stderr}")
 
 
 def main(container):
