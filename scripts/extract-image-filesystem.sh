@@ -1,4 +1,11 @@
 #!/bin/bash
+set -euo pipefail
+
+if [[ $# -ne 2 ]]; then
+    echo "Missing argument(s)"
+    echo "Usage: ./extract-image-filesystem.sh <docker/repo:tag> </output/directory>"
+    exit 1
+fi
 
 # this is the tag of the image to get the filesystem from
 DOCKER_TAG=$1
