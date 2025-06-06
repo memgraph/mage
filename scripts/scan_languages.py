@@ -81,12 +81,14 @@ def run_scan() -> None:
         "-o", "cve-bin-tool-lang-summary.json",   # Write JSON results to this file
         "-i", "lang-packages.csv"
     ]
-    _ = subprocess.run(
+    result = subprocess.run(
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True
     )
+    if result.returncode != 0:
+        raise RuntimeError(f"cve-bin-tool failed with exit code {result.returncode}: {result.stderr}")
 
 
 def main(rootfs: str) -> None:

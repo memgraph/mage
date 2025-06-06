@@ -239,8 +239,8 @@ def main(rootfs: str, max_workers: int) -> None:
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("rootfs", type=str)
-    parser.add_argument("max_workers", type=int, default=10, help="maximum number of workers to use")
+    parser.add_argument("rootfs", type=str, help="docker container root path to scan")
+    parser.add_argument("max_workers", type=int, help="maximum number of workers to use")
     args = parser.parse_args()
 
     main(args.rootfs, args.max_workers)
