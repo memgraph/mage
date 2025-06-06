@@ -66,7 +66,7 @@ jobs:
       - name: Compute variables using Python script
         id: compute
         run: |
-          read mage_version memgraph_version memgraph_commit build_date < <(python3 scripts/daily_build_vars.py)
+          read memgraph_version mage_version memgraph_commit build_date < <(python3 scripts/daily_build_vars.py)
           echo "mage_version=${mage_version}" >> $GITHUB_OUTPUT
           echo "memgraph_version=${memgraph_version}" >> $GITHUB_OUTPUT
           echo "memgraph_commit=${memgraph_commit}" >> $GITHUB_OUTPUT
