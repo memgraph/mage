@@ -109,7 +109,7 @@ def run_scan() -> None:
         text=True
     )
     # do not try to do anything clever with the result.returncode here, because
-    # it onle ever returns 0 if there are 0 vulnerabilities!
+    # it only ever returns 0 if there are 0 vulnerabilities!
 
 
 def main(rootfs: str) -> None:

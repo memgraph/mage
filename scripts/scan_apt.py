@@ -56,7 +56,7 @@ def get_apt_packages(container: str = "memgraph") -> List[dict]:
         text=True,        # so that stdout/stderr come back as Python strings
     )
     # do not try to do anything clever with the result.returncode here, because
-    # it onle ever returns 0 if there are 0 vulnerabilities!
+    # it only ever returns 0 if there are 0 vulnerabilities!
 
     output = result.stdout.strip()
     if not output:
