@@ -146,8 +146,8 @@ def main() -> None:
     else:
         payload = {}
 
-    memgraph_version, mage_version, memgraph_commit, date = daily_build_vars(payload)
-    print(f"{memgraph_version} {mage_version} {memgraph_commit} {date}")
+    mage_version, memgraph_version, memgraph_commit, date = daily_build_vars(payload)
+    print(f"{mage_version} {memgraph_version} {memgraph_commit} {date}")
 
 
 if __name__ == "__main__":
