@@ -42,10 +42,10 @@ jobs:
 
       - name: Determine Input Types
         run: |
-          read next_type next_image < <(python3 smoke-release-testing/workflow_image_setup.py "${{ inputs.next_version }}" "${{ inputs.arch }}" "${{ inputs.malloc }}")
+          read next_type next_image < <(python3 scripts/workflow_image_setup.py "${{ inputs.next_version }}" "${{ inputs.arch }}" "${{ inputs.malloc }}")
           echo "NEXT_IMAGE=${next_image}" >> $GITHUB_ENV
           echo "NEXT_TYPE=${next_type}" >> $GITHUB_ENV
-          read last_type last_image < <(python3 smoke-release-testing/workflow_image_setup.py "${{ inputs.last_version }}" "${{ inputs.arch }}" "${{ inputs.malloc }}")
+          read last_type last_image < <(python3 scripts/workflow_image_setup.py "${{ inputs.last_version }}" "${{ inputs.arch }}" "${{ inputs.malloc }}")
           echo "LAST_IMAGE=${last_image}" >> $GITHUB_ENV
           echo "LAST_TYPE=${last_type}" >> $GITHUB_ENV
 

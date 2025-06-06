@@ -3,9 +3,10 @@ import json
 from typing import List
 import os
 from urllib.parse import quote
+import argparse
 
 
-def list_build_files(date: int) -> List[str]:
+def list_build_files(date: int, image_type: str = "mage") -> List[str]:
     """
     Lists the files in s3 for the current build date
 
@@ -13,6 +14,8 @@ def list_build_files(date: int) -> List[str]:
     =====
     date: int
         Date in the format yyyymmdd
+    image_type: str
+        `memgraph` or `mage`
 
     Returns
     =======
@@ -22,7 +25,7 @@ def list_build_files(date: int) -> List[str]:
     p = subprocess.run(
         [
             "aws", "s3", "ls",
-            f"s3://deps.memgraph.io/daily-build/mage/{date}/",
+            f"s3://deps.memgraph.io/daily-build/{image_type}/{date}/",
             "--recursive"
         ],
         capture_output=True,
@@ -35,7 +38,63 @@ def list_build_files(date: int) -> List[str]:
     return files
 
 
-def build_package_json(files: List[str], return_url: bool = True) -> dict:
+def parse_file_os_arch(file, image_type):
+    """
+    Extracts the OS and CPU architecture from a file name
+    Inputs
+    ======
+    file: str
+        s3 key of the package file name
+    image_type: str
+        `memgraph` or `mage`
+
+    Returns
+    =======
+    os, arch: strings
+        OS and CPU architecture, respectively, respectively
+    """
+
+    if image_type == "mage":
+
+        if "arm64" in file:
+            arch = "arm64"
+            os = "Docker (arm64)"
+        else:
+            arch = "x86_64"
+            os = "Docker (x86_64)"
+
+        if "relwithdebinfo" in file:
+            arch = f"{arch}-debug"
+
+        if "malloc" in file:
+            arch = f"{arch}-malloc"
+    elif image_type == "memgraph":
+        if "aarch64" in file:
+            arch = "arm64"
+        else:
+            arch = "x86_64"
+
+        if "relwithdebinfo" in file:
+            arch = f"{arch}-debug"
+
+        if "malloc" in file:
+            arch = f"{arch}-malloc"
+
+        os = file.split("/")[3].replace(
+            "-malloc", ""
+        ).replace(
+            "-aarch64", ""
+        ).replace(
+            "-relwithdebinfo",
+            ""
+        )
+    else:
+        raise ValueError(f"Unsupported image_type: {image_type}")
+
+    return os, arch
+
+
+def build_package_json(files: List[str], return_url: bool = True, image_type: str = "mage") -> dict:
     """
     Extracts the OS and CPU architecture and builds the dict/json used by the
     daily-builds workflow
@@ -46,6 +105,8 @@ def build_package_json(files: List[str], return_url: bool = True) -> dict:
         list of s3 keys
     return_url: bool
         If True, the URL is returned, otherwise the s3 key
+    image_type: str
+        `memgraph` or `mage`
 
     Returns
     =======
@@ -68,20 +129,7 @@ def build_package_json(files: List[str], return_url: bool = True) -> dict:
         else:
             url = file
 
-        if "arm64" in file:
-            arch = "arm64"
-            os = "Docker (arm64)"
-        else:
-            arch = "x86_64"
-            os = "Docker (x86_64)"
-
-        if "relwithdebinfo" in file:
-            arch = f"{arch}-debug"
-
-        if "malloc" in file:
-            arch = f"{arch}-malloc"
-
-        
+        os, arch = parse_file_os_arch(file, image_type)
 
         if os not in out:
             out[os] = {}
@@ -91,7 +139,7 @@ def build_package_json(files: List[str], return_url: bool = True) -> dict:
     return out
 
 
-def list_daily_release_packages(date: int, return_url: bool = True) -> dict:
+def list_daily_release_packages(date: int, return_url: bool = True, image_type: str = "mage") -> dict:
     """
     returns dict containing all packages for a specific date
 
@@ -101,6 +149,8 @@ def list_daily_release_packages(date: int, return_url: bool = True) -> dict:
         Date in the format yyyymmdd
     return_url: bool
         If True, the URL is returned, otherwise the s3 key
+    image_type: str
+        `memgraph` or `mage`
 
     Returns
     =======
@@ -114,13 +164,14 @@ def list_daily_release_packages(date: int, return_url: bool = True) -> dict:
         }
     """
 
-    files = list_build_files(date)
-    packages = build_package_json(files, return_url)
+    files = list_build_files(date, image_type)
+
+    packages = build_package_json(files, return_url, image_type)
 
     return packages
 
 
-def main() -> None:
+def main(image_type: str) -> None:
     """
     Collect BUILD_TEST_RESULTS, CURRENT_BUILD_DATE, s3 keys of packages and
     build a JSON payload to be sent to the daily build repo workflow
@@ -140,13 +191,14 @@ def main() -> None:
         }
     }
     """
+
     date = int(os.getenv("CURRENT_BUILD_DATE"))
 
     # TODO: add individual test results and URL to each one
     tests = os.getenv("TEST_RESULT")
 
     # collect packages part of the payload
-    packages = list_daily_release_packages(date)
+    packages = list_daily_release_packages(date, image_type=image_type)
 
     # build the payload dict, print the JSON dump
     payload = {
@@ -166,4 +218,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('image_type', type=str, choices=['memgraph', 'mage'], default='mage')
+    args = parser.parse_args()
+
+    main(args.image_type)
