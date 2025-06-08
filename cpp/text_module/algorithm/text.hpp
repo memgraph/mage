@@ -31,10 +31,15 @@ constexpr std::string_view kResultReplace = "result";
 /* regreplace constants */
 constexpr std::string_view kProcedureRegReplace = "regreplace";
 constexpr std::string_view kResultRegReplace = "result";
+/* distance constants */
+constexpr std::string_view kProcedureDistance = "distance";
+constexpr std::string_view kText1 = "text1";
+constexpr std::string_view kText2 = "text2";
 
 void Join(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 void Format(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 void RegexGroups(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 void Replace(mgp_list *args, mgp_func_context *ctx, mgp_func_result *result, mgp_memory *memory);
 void RegReplace(mgp_list *args, mgp_func_context *ctx, mgp_func_result *result, mgp_memory *memory);
+void Distance(mgp_list *args, mgp_func_context *ctx, mgp_func_result *result, mgp_memory *memory);
 }  // namespace Text
