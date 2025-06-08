@@ -18,15 +18,17 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 #   `--dry-run`.
 
 test_k8s_single() {
+  echo "Test k8s single memgraph instance using image: $MEMGRAPH_NEXT_DOCKERHUB_IMAGE"
   kind load docker-image $MEMGRAPH_NEXT_DOCKERHUB_IMAGE -n smoke-release-testing
   MEMGRAPH_NEXT_DOCKERHUB_TAG="${MEMGRAPH_NEXT_DOCKERHUB_IMAGE##*:}"
   helm install memgraph-single-smoke memgraph/memgraph \
-    -f $SCRIPT_DIR/values-single.yaml --set image.tag=$MEMGRAPH_NEXT_DOCKERHUB_TAG
-  kubectl wait --for=condition=Ready pod/memgraph-single-smoke-0 --timeout=60s
+    -f "$SCRIPT_DIR/values-single.yaml" --set "image.tag=$MEMGRAPH_NEXT_DOCKERHUB_TAG"
+  kubectl wait --for=condition=Ready pod/memgraph-single-smoke-0 --timeout=120s
   kubectl port-forward memgraph-single-smoke-0 17687:7687 &
   PF_PID=$!
-  sleep 2
-  echo "RETURN 1;" | $MEMGRAPH_CONSOLE_BINARY --port 17687
+  wait_for_memgraph localhost 17687
+  echo "CREATE ();" | $MEMGRAPH_CONSOLE_BINARY --port 17687
+  echo "MATCH (n) RETURN n;" | $MEMGRAPH_CONSOLE_BINARY --port 17687
   kill $PF_PID
   wait $PF_PID 2>/dev/null
   helm uninstall memgraph-single-smoke
