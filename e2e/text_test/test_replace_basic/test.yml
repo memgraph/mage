@@ -2,4 +2,4 @@ query: >
     RETURN text.replace("Hello World!", "World", "Memgraph") AS output;
 
 output:
-  - output: "Hello Memgraph!" 
+  - output: "Hello Memgraph!"
