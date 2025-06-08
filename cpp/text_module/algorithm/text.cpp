@@ -101,3 +101,47 @@ void Text::RegexGroups(mgp_list *args, mgp_graph * /*memgraph_graph*/, mgp_resul
     record_factory.SetErrorMessage(e.what());
   }
 }
+
+void Text::Replace(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  mgp::Result result_obj(result);
+
+  try {
+    const auto text = std::string(arguments[0].ValueString());
+    const auto regex = std::string(arguments[1].ValueString());
+    const auto replacement = std::string(arguments[2].ValueString());
+
+    std::string result_str = text;
+    size_t pos = 0;
+    while ((pos = result_str.find(regex, pos)) != std::string::npos) {
+      result_str.replace(pos, regex.length(), replacement);
+      pos += replacement.length();
+    }
+
+    result_obj.SetValue(result_str);
+  } catch (const std::exception &e) {
+    result_obj.SetErrorMessage(e.what());
+    return;
+  }
+}
+
+void Text::RegReplace(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  mgp::Result result_obj(result);
+
+  try {
+    const auto text = std::string(arguments[0].ValueString());
+    const auto regex = std::string(arguments[1].ValueString());
+    const auto replacement = std::string(arguments[2].ValueString());
+
+    std::regex pattern(regex);
+    std::string result_str = std::regex_replace(text, pattern, replacement);
+
+    result_obj.SetValue(result_str);
+  } catch (const std::exception &e) {
+    result_obj.SetErrorMessage(e.what());
+    return;
+  }
+}
