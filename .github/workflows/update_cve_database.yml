@@ -1,6 +1,5 @@
 name: Update CVE Database
 on:
-  push:
   schedule:
     # Run at 1 AM UTC on Saturday
     - cron: '0 1 * * 6'
