@@ -1,4 +1,4 @@
 query: |
   RETURN text.distance("Hello", "World") AS output;
-output: |
+output:
   - output: 4

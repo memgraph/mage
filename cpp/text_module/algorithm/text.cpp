@@ -1,8 +1,8 @@
 #include "text.hpp"
 
+#include <algorithm>
 #include <regex>
 #include <vector>
-#include <algorithm>
 
 #include <fmt/args.h>
 #include <fmt/format.h>
@@ -113,6 +113,11 @@ void Text::Replace(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_result *
     const auto regex = std::string(arguments[1].ValueString());
     const auto replacement = std::string(arguments[2].ValueString());
 
+    if (regex.size() == 0) {
+      result_obj.SetValue(text);
+      return;
+    }
+
     std::string result_str = text;
     size_t pos = 0;
     while ((pos = result_str.find(regex, pos)) != std::string::npos) {
@@ -136,6 +141,11 @@ void Text::RegReplace(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_resul
     const auto text = std::string(arguments[0].ValueString());
     const auto regex = std::string(arguments[1].ValueString());
     const auto replacement = std::string(arguments[2].ValueString());
+
+    if (regex.size() == 0) {
+      result_obj.SetValue(text);
+      return;
+    }
 
     std::regex pattern(regex);
     std::string result_str = std::regex_replace(text, pattern, replacement);

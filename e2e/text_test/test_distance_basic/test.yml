@@ -1,4 +1,4 @@
 query: |
   RETURN text.distance("Levenshtein", "Levenstein") AS output;
-output: |
+output:
   - output: 1
