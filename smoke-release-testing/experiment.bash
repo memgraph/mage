@@ -10,7 +10,7 @@ echo "Waiting for memgraph to initialize..."
 wait_for_memgraph $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 echo "Memgraph is up and running!"
 
-source ./mgconsole/multi_tenancy.bash
+source ./mgconsole/indices.bash
 test_nested_indices $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 
 # NOTE: Test what's the exit status of the script by using `echo $?`:
