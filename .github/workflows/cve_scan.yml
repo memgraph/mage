@@ -40,7 +40,7 @@ jobs:
       - name: Fetch URLS
         id: image_urls
         env:
-          CURRENT_BUILD_DATE: ${{ inputs.date || '20250608' }}
+          CURRENT_BUILD_DATE: ${{ inputs.date || '20250605' }}
         run: |
           mage_arm_url="$(python3 scripts/get_cve_image_url.py 'arm64' 'mage')"
           mage_amd_url="$(python3 scripts/get_cve_image_url.py 'amd64' 'mage')"          
