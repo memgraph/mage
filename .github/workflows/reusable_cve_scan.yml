@@ -62,7 +62,13 @@ jobs:
       - name: Load into Docker
         run: |
           output="$(docker load -i '${{ env.CVE_DIR }}/image.tar.gz')"
-          image_tag="${output#Loaded image: }"
+
+          # grab each repo:tag, drop the ":latest" one, pick the first real tag
+          image_tag=$(echo "$load_output" \
+            | awk -F': ' '/Loaded image:/ {print $2}' \
+            | grep -v ':latest$' \
+            | head -n1)
+
           echo "IMAGE_TAG=$image_tag" >> $GITHUB_ENV
 
       - name: Create Python Environment
