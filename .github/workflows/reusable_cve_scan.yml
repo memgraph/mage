@@ -138,7 +138,12 @@ jobs:
       - name: Download CVE Database
         if: ${{ inputs.run_cbt }}
         run: |
-          curl -L https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/CVE-database/cve-bin-tool-cve.db.tar.gz -o "${{ env.CVE_DIR }}/cve-bin-tool-cve.db.tar.gz"
+          curl --fail --silent --show-error -L https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/CVE-database/cve-bin-tool-cve.db.tar.gz \
+            -o "${{ env.CVE_DIR }}/cve-bin-tool-cve.db.tar.gz"
+          if [ ! -s "${{ env.CVE_DIR }}/cve-bin-tool-cve.db.tar.gz" ]; then
+            echo "CVE database download failed or empty" >&2
+            exit 1
+          fi
 
       - name: Extract CVE Database
         if: ${{ inputs.run_cbt }}
