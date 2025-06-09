@@ -4,8 +4,6 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  push:
-
   workflow_call:
     inputs:
       date:
@@ -47,7 +45,7 @@ jobs:
       - name: Fetch URLS
         id: image_urls
         env:
-          CURRENT_BUILD_DATE: ${{ inputs.date || '20250605' }}
+          CURRENT_BUILD_DATE: ${{ inputs.date }}
         run: |
           mage_arm_url="$(python3 scripts/get_cve_image_url.py 'arm64' 'mage')"
           mage_amd_url="$(python3 scripts/get_cve_image_url.py 'amd64' 'mage')"          
