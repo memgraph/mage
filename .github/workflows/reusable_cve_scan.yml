@@ -64,7 +64,7 @@ jobs:
           output="$(docker load -i '${{ env.CVE_DIR }}/image.tar.gz')"
 
           # grab each repo:tag, drop the ":latest" one, pick the first real tag
-          image_tag=$(echo "$load_output" \
+          image_tag=$(echo "$output" \
             | awk -F': ' '/Loaded image:/ {print $2}' \
             | grep -v ':latest$' \
             | head -n1)
