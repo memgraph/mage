@@ -151,8 +151,9 @@ jobs:
       - name: Extract CVE Database
         if: ${{ inputs.run_cbt }}
         run: |
-          tar -xzf "${{ env.CVE_DIR }}/cve-bin-tool-cve.db.tar.gz" -C "${{ env.CVE_DIR }}/cve.db"
-          mv -v "${{ env.CVE_DIR }}/cve.db/cve.db" "$HOME/.cache/cve-bin-tool/cve.db"
+          tar -xzf "${{ env.CVE_DIR }}/cve-bin-tool-cve.db.tar.gz" -C "${{ env.CVE_DIR }}/"
+          mkdir -pv "$HOME/.cache/cve-bin-tool"
+          mv -v "${{ env.CVE_DIR }}/cve.db" "$HOME/.cache/cve-bin-tool/cve.db"
 
       - name: Scan /usr/lib/memgraph
         if: ${{ inputs.run_cbt  }}
