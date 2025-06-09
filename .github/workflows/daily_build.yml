@@ -142,7 +142,7 @@ jobs:
         run: |
           echo "TEST_RESULT: $TEST_RESULT"
           echo "Package Date: $CURRENT_BUILD_DATE"
-          echo "BUILD_TEST_RESULTS=$(python3 scripts/aggregate_build_tests.py)" >> $GITHUB_ENV
+          echo "BUILD_TEST_RESULTS=$(python3 scripts/aggregate_build_tests.py 'mage')" >> $GITHUB_ENV
 
       - name: Trigger Daily Builds Page Update
         env: 
