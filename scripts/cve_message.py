@@ -289,7 +289,7 @@ def cbt_message(cbt: dict) -> str:
     total_items = 0
 
     for key, val in cbt.items():
-        msg += key_map[key]
+        
         items = []
         for item in val["cve"]:
             if item["severity"] in ["CRITICAL"]:  # only showing critical for now
@@ -301,6 +301,7 @@ def cbt_message(cbt: dict) -> str:
                 })
 
         if len(items) > 0:
+            msg += key_map[key]
             total_items += len(items)
             table = format_slack_table(items)
             msg += f"\n{table}\n"

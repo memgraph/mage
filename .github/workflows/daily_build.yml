@@ -8,15 +8,15 @@ on:
     types: [trigger_daily_build]
 
   workflow_dispatch:
-      inputs:
-          date:
-            type: string
-            description: "Date to build packages for (YYYYMMDD)"
-            required: false
+    inputs:
+      date:
+        type: string
+        description: "Date to build packages for (YYYYMMDD)"
+        required: false
 
 jobs:
   DailyBuildVariables:
-    runs-on: ["self-hosted"]
+    runs-on: ubuntu-latest
     outputs:
       mage_version: ${{ steps.compute.outputs.mage_version }}
       memgraph_version: ${{ steps.compute.outputs.memgraph_version }}
@@ -142,7 +142,7 @@ jobs:
         run: |
           echo "TEST_RESULT: $TEST_RESULT"
           echo "Package Date: $CURRENT_BUILD_DATE"
-          echo "BUILD_TEST_RESULTS=$(python3 scripts/aggregate_build_tests.py)" >> $GITHUB_ENV
+          echo "BUILD_TEST_RESULTS=$(python3 scripts/aggregate_build_tests.py 'mage')" >> $GITHUB_ENV
 
       - name: Trigger Daily Builds Page Update
         env: 
@@ -157,24 +157,13 @@ jobs:
             https://api.github.com/repos/memgraph/daily-builds/dispatches \
             -d "$payload"    
 
-  SetupCVEScan:
-    name: Setup CVE Scan
+  SetupCVEScanTrigger:
+    name: Setup CVE Scan Trigger
     runs-on: ubuntu-latest
     needs: [DailyBuildVariables, DailyBuildArtifact]
     outputs: 
-      mage_amd_url: ${{ steps.image_urls.outputs.MAGE_AMD_URL }}
-      mage_arm_url: ${{ steps.image_urls.outputs.MAGE_ARM_URL }}
-      memgraph_amd_url: ${{ steps.image_urls.outputs.MEMGRAPH_AMD_URL }}
-      memgraph_arm_url: ${{ steps.image_urls.outputs.MEMGRAPH_ARM_URL }}
       run_scan: ${{ steps.sunday.outputs.RUN_SCAN }}
     steps:
-      - name: Checkout repository and submodules
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          submodules: recursive
-          token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Is today Sunday? 🤔
         id: sunday
         run: |
@@ -184,54 +173,12 @@ jobs:
           else
             echo "RUN_SCAN=false" >> $GITHUB_OUTPUT
           fi
-          
-
-      - name: Fetch URLS
-        id: image_urls
-        env:
-          CURRENT_BUILD_DATE: ${{ needs.DailyBuildVariables.outputs.build_date }}
-        run: |
-          mage_arm_url="$(python3 scripts/get_cve_image_url 'arm64' 'mage')"
-          mage_amd_url="$(python3 scripts/get_cve_image_url 'amd64' 'mage')"          
-          memgraph_arm_url="$(python3 scripts/get_cve_image_url 'arm64' 'memgraph')"
-          memgraph_amd_url="$(python3 scripts/get_cve_image_url 'amd64' 'memgraph')"
-          
-          echo "MAGE arm64 URL: $mage_arm_url"
-          echo "MAGE amd64 URL: $mage_amd_url"
-          echo "Memgraph arm64 URL: $memgraph_arm_url"
-          echo "Memgraph amd64 URL: $memgraph_amd_url"
-
-          echo "MAGE_ARM_URL=$mage_arm_url" >> $GITHUB_OUTPUT
-          echo "MAGE_AMD_URL=$mage_amd_url" >> $GITHUB_OUTPUT
-          echo "MEMGRAPH_ARM_URL=$memgraph_arm_url" >> $GITHUB_OUTPUT
-          echo "MEMGRAPH_AMD_URL=$memgraph_amd_url" >> $GITHUB_OUTPUT
-
-  RunCVEScan:
-    name: Run CVE Scan
-    needs: [SetupCVEScan]
-    if: ${{ needs.SetupCVEScan.outputs.run_scan == 'true' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: arm64
-            image_url: ${{ needs.SetupCVEScan.outputs.mage_arm_url }}
-            image_type: mage
-          - arch: amd64
-            image_url: ${{ needs.SetupCVEScan.outputs.mage_amd_url }}
-            image_type: mage
-          - arch: arm64
-            image_url: ${{ needs.SetupCVEScan.outputs.memgraph_arm_url }}
-            image_type: memgraph
-          - arch: amd64
-            image_url: ${{ needs.SetupCVEScan.outputs.memgraph_amd_url }}
-            image_type: memgraph
-    uses: ./.github/workflows/reusable_cve_scan.yml
+         
+  TriggerCVEScan:
+    name: Trigger CVE Scan
+    needs: [SetupCVEScanTrigger, DailyBuildVariables]
+    if: ${{ needs.SetupCVEScanTrigger.outputs.run_scan == 'true' }}
+    uses: ./.github/workflows/cve_scan.yml
     with:
-      arch: ${{ matrix.arch }}
-      image_url: ${{ matrix.image_url }}
-      image_type: ${{ matrix.image_type }}
-      run_trivy: true
-      run_grype: true
-      run_cbt: true
+      date: "${{ needs.DailyBuildVariables.outputs.build_date }}"
     secrets: inherit
