@@ -58,4 +58,4 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          rm -rf ${{ env.CVE_DIR }} 
+          rm -rf ${{ env.CVE_DIR }}
