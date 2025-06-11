@@ -540,3 +540,63 @@ void Collections::Partition(mgp_list *args, mgp_graph *memgraph_graph, mgp_resul
     return;
   }
 }
+
+namespace {
+
+// Helper function to recursively flatten a list
+void FlattenHelper(const mgp::Value &value, mgp::List &result) {
+    if (value.IsNull()) {
+        // Skip null values
+        return;
+    }
+
+    if (value.IsList()) {
+        const auto &list = value.ValueList();
+        for (const auto &item : list) {
+            FlattenHelper(item, result);
+        }
+    } else {
+        result.AppendExtend(value);
+    }
+}
+
+}  // namespace
+
+void Collections::Flatten(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
+    mgp::MemoryDispatcherGuard guard{memory};
+    const auto arguments = mgp::List(args);
+    auto result = mgp::Result(res);
+
+    try {
+        if (arguments.Size() != 1) {
+            throw mgp::ValueException("The procedure expects 1 argument, got " + std::to_string(arguments.Size()));
+        }
+
+        const auto &input = arguments[0];
+        if (!input.IsList()) {
+            throw mgp::ValueException("The argument must be a list");
+        }
+
+        // Create result list
+        mgp::List flattened;
+        
+        // Handle the case where the input list itself is null
+        if (input.IsNull()) {
+            // Skip null input
+            result.SetValue(flattened);
+            return;
+        }
+
+        // Process the input list
+        const auto &inputList = input.ValueList();
+        for (const auto &item : inputList) {
+            FlattenHelper(item, flattened);
+        }
+
+        result.SetValue(flattened);
+
+    } catch (const std::exception &e) {
+        result.SetErrorMessage(e.what());
+        return;
+    }
+}

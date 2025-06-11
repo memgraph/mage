@@ -1,6 +1,9 @@
 from io import TextIOWrapper
 import json
-import mgp
+try:
+    import mgp
+except ImportError:
+    from . import mock_mgp as mgp
 from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.error import URLError
@@ -23,7 +26,7 @@ def _convert_value_to_json_compatible(value: Any) -> Any:
             "id": value.id,
             "start": value.from_vertex.id,
             "end": value.to_vertex.id,
-            "type": value.type.name,
+            "relationship_type": value.type.name,
             "properties": {k: _convert_value_to_json_compatible(v) for k, v in value.properties.items()}
         }
     elif isinstance(value, mgp.Path):
@@ -153,4 +156,4 @@ def from_json_list(ctx: mgp.ProcCtx, json_str: str) -> mgp.Record(value=mgp.List
     value = json.loads(json_str)
     if not isinstance(value, list):
         raise ValueError("Input JSON must represent a list")
-    return mgp.Record(value=value)
+    return mgp.Record(value=value) 
