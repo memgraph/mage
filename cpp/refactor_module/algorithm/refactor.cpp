@@ -863,3 +863,114 @@ void Refactor::RenameType(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
     return;
   }
 }
+
+void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  auto graph = mgp::Graph(memgraph_graph);
+  const auto record_factory = mgp::RecordFactory(result);
+
+  try {
+    const auto nodes = arguments[0].ValueList();
+    const auto config = arguments[1].ValueMap();
+
+    if (nodes.Empty()) {
+      throw mgp::ValueException(std::string(kMergeNodesEmptyListError).c_str());
+    }
+
+    // Verify all elements are nodes
+    for (const auto &node_value : nodes) {
+      if (!node_value.IsNode()) {
+        throw mgp::ValueException(std::string(kMergeNodesInvalidTypeError).c_str());
+      }
+    }
+
+    // Get the first node as the target node
+    auto target_node = nodes[0].ValueNode();
+    
+    // Process remaining nodes
+    for (size_t i = 1; i < nodes.Size(); ++i) {
+      auto source_node = nodes[i].ValueNode();
+      
+      // Get properties strategy from config
+      std::string prop_strategy = std::string(kMergeNodesPropertiesCombine);
+      if (config.KeyExists(kMergeNodesPropertiesStrategy)) {
+        prop_strategy = config.At(kMergeNodesPropertiesStrategy).ValueString();
+        // Convert to lowercase for case-insensitive comparison
+        std::transform(prop_strategy.begin(), prop_strategy.end(), prop_strategy.begin(), ::tolower);
+        
+        // Validate property strategy
+        if (prop_strategy != std::string(kMergeNodesPropertiesCombine) && 
+            prop_strategy != std::string(kMergeNodesPropertiesDiscard) && 
+            prop_strategy != std::string(kMergeNodesPropertiesOverride) &&
+            prop_strategy != std::string(kMergeNodesPropertiesOverwrite)) {
+          throw mgp::ValueException(std::string(kMergeNodesInvalidPropertyStrategyError).c_str());
+        }
+      }
+
+      // Handle properties based on strategy
+      if (prop_strategy == std::string(kMergeNodesPropertiesCombine)) {
+        // Combine properties from both nodes
+        auto source_props = source_node.Properties();
+        for (const auto &[key, value] : source_props) {
+          if (!target_node.GetProperty(key).IsNull()) {
+            // If property exists in target, keep the target's value
+            continue;
+          }
+          target_node.SetProperty(key, value);
+        }
+      } else if (prop_strategy == std::string(kMergeNodesPropertiesDiscard)) {
+        // Keep only target node properties
+        // No action needed
+      } else if (prop_strategy == std::string(kMergeNodesPropertiesOverride) || 
+                 prop_strategy == std::string(kMergeNodesPropertiesOverwrite)) {
+        // Override/overwrite target properties with source properties
+        auto source_props = source_node.Properties();
+        for (const auto &[key, value] : source_props) {
+          target_node.SetProperty(key, value);
+        }
+      }
+
+      // Copy labels from source to target
+      auto source_labels = source_node.Labels();
+      for (size_t j = 0; j < source_labels.Size(); ++j) {
+        target_node.AddLabel(source_labels[j]);
+      }
+
+      // Handle relationships
+      // Get relationships strategy from config
+      std::string rel_strategy = std::string(kMergeNodesRelationshipsMerge);
+      if (config.KeyExists(kMergeNodesRelationshipsStrategy)) {
+        rel_strategy = config.At(kMergeNodesRelationshipsStrategy).ValueString();
+      }
+
+      if (rel_strategy == std::string(kMergeNodesRelationshipsMerge)) {
+        // Copy all relationships from source to target
+        auto in_rels = source_node.InRelationships();
+        for (const auto &rel : in_rels) {
+          if (rel.From().Id() != target_node.Id()) {
+            graph.CreateRelationship(rel.From(), target_node, rel.Type());
+          }
+        }
+
+        auto out_rels = source_node.OutRelationships();
+        for (const auto &rel : out_rels) {
+          if (rel.To().Id() != target_node.Id()) {
+            graph.CreateRelationship(target_node, rel.To(), rel.Type());
+          }
+        }
+      }
+
+      // Delete the source node
+      graph.DetachDeleteNode(source_node);
+    }
+
+    // Return the merged node
+    auto record = record_factory.NewRecord();
+    record.Insert(std::string(kMergeNodesResult).c_str(), target_node);
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}

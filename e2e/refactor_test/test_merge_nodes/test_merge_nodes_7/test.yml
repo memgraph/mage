@@ -1,0 +1,4 @@
+- query: >
+    CALL refactor.merge_nodes([], {properties: 'combine'}) YIELD node
+    RETURN node;
+  error: "List of nodes cannot be empty" 
