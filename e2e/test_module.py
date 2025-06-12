@@ -299,14 +299,5 @@ def test_end2end(test_dir: Path, db: Memgraph):
 
     # Clean database once testing module is finished
     db.drop_database()
-
-    # TODO (matt): this should be removed once gqlalchemy has been updated
-    indexes = db.execute_and_fetch("SHOW INDEX INFO")
-    for index in indexes:
-        if index["index type"] == "label+property":
-            for property in index["property"]:
-                db.execute(f"DROP INDEX ON :{index['label']}({property})")
-
     db.drop_indexes()
     db.ensure_constraints([])
-   
