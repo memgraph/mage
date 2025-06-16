@@ -885,6 +885,15 @@ void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
       }
     }
 
+    bool mergeRels = false;
+    if (config.KeyExists(kMergeNodesRelationshipsStrategy)) {
+      if (!config.At(kMergeNodesRelationshipsStrategy).IsBool()) {
+        throw mgp::ValueException(std::string(kMergeRelationshipsInvalidValueError).c_str());
+      }
+
+      mergeRels = config.At(kMergeNodesRelationshipsStrategy).ValueBool();
+    }
+
     // Get the first node as the target node
     auto target_node = nodes[0].ValueNode();
 

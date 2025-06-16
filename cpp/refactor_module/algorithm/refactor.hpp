@@ -131,18 +131,19 @@ constexpr std::string_view kRenameTypePropertyResult = "relationships_changed";
 
 /* merge_nodes constants */
 constexpr std::string_view kProcedureMergeNodes = "merge_nodes";
-constexpr std::string_view kMergeNodesArg1 = "nodes";
-constexpr std::string_view kMergeNodesArg2 = "config";
+constexpr std::string_view kMergeNodesArgNodes = "nodes";
+constexpr std::string_view kMergeNodesArgConfig = "config";
 constexpr std::string_view kMergeNodesResult = "node";
 constexpr std::string_view kMergeNodesPropertiesStrategy = "properties";
 constexpr std::string_view kMergeNodesPropertiesStrategyAlternative = ".*";
-constexpr std::string_view kMergeNodesRelationshipsStrategy = "relationships";
+constexpr std::string_view kMergeNodesRelationshipsStrategy = "mergeRels";
 constexpr std::string_view kMergeNodesPropertiesCombine = "combine";
 constexpr std::string_view kMergeNodesPropertiesDiscard = "discard";
 constexpr std::string_view kMergeNodesPropertiesOverride = "override";
 constexpr std::string_view kMergeNodesPropertiesOverwrite = "overwrite";
 constexpr std::string_view kMergeNodesEmptyListError = "The nodes list cannot be empty";
 constexpr std::string_view kMergeNodesInvalidTypeError = "All elements in the nodes list must be of type Node";
+constexpr std::string_view kMergeRelationshipsInvalidValueError = "mergeRels parameter must either be true or false";
 constexpr std::string_view kMergeNodesInvalidPropertyStrategyError = "Property strategy must be one of: combine, discard, override/overwrite";
 
 void From(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
