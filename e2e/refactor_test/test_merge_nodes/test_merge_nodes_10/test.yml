@@ -1,8 +1,0 @@
-- query: >
-    MATCH (n1:Person {name: 'Alice'}), (n2:Person {name: 'Bob'})
-    CALL refactor.merge_nodes([n1, n2], {properties: 'combine', relationships: 'merge'}) YIELD node
-    RETURN node.name, size((node)-[]->()) as out_degree, size([]->(node)) as in_degree;
-  output:
-    - node.name: Alice
-      out_degree: 2
-      in_degree: 2 

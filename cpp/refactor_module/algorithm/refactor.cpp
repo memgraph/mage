@@ -887,21 +887,21 @@ void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
 
     // Get the first node as the target node
     auto target_node = nodes[0].ValueNode();
-    
+
     // Process remaining nodes
     for (size_t i = 1; i < nodes.Size(); ++i) {
       auto source_node = nodes[i].ValueNode();
-      
+
       // Get properties strategy from config
       std::string prop_strategy = std::string(kMergeNodesPropertiesCombine);
       if (config.KeyExists(kMergeNodesPropertiesStrategy)) {
         prop_strategy = config.At(kMergeNodesPropertiesStrategy).ValueString();
         // Convert to lowercase for case-insensitive comparison
         std::transform(prop_strategy.begin(), prop_strategy.end(), prop_strategy.begin(), ::tolower);
-        
+
         // Validate property strategy
-        if (prop_strategy != std::string(kMergeNodesPropertiesCombine) && 
-            prop_strategy != std::string(kMergeNodesPropertiesDiscard) && 
+        if (prop_strategy != std::string(kMergeNodesPropertiesCombine) &&
+            prop_strategy != std::string(kMergeNodesPropertiesDiscard) &&
             prop_strategy != std::string(kMergeNodesPropertiesOverride) &&
             prop_strategy != std::string(kMergeNodesPropertiesOverwrite)) {
           throw mgp::ValueException(std::string(kMergeNodesInvalidPropertyStrategyError).c_str());
@@ -913,16 +913,29 @@ void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
         // Combine properties from both nodes
         auto source_props = source_node.Properties();
         for (const auto &[key, value] : source_props) {
-          if (!target_node.GetProperty(key).IsNull()) {
-            // If property exists in target, keep the target's value
+          if (!source_props.contains(key)) {
+            // nothing to combine
             continue;
           }
-          target_node.SetProperty(key, value);
+
+          auto target_property = target_node.GetProperty(key);
+          if (target_property.IsList()) {
+            auto target_list = target_property.ValueList();
+            target_list.AppendExtend(source_props[key]);
+            target_node.SetProperty(key, mgp::Value(std::move(target_list)));
+          } else if (!target_property.IsNull()) {
+            auto combined_properties = mgp::List();
+            combined_properties.AppendExtend(target_property);
+            combined_properties.AppendExtend(source_props[key]);
+            target_node.SetProperty(key, mgp::Value(std::move(combined_properties)));
+          } else {
+            target_node.SetProperty(key, source_props[key]);
+          }
         }
       } else if (prop_strategy == std::string(kMergeNodesPropertiesDiscard)) {
         // Keep only target node properties
         // No action needed
-      } else if (prop_strategy == std::string(kMergeNodesPropertiesOverride) || 
+      } else if (prop_strategy == std::string(kMergeNodesPropertiesOverride) ||
                  prop_strategy == std::string(kMergeNodesPropertiesOverwrite)) {
         // Override/overwrite target properties with source properties
         auto source_props = source_node.Properties();
@@ -938,27 +951,15 @@ void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
       }
 
       // Handle relationships
-      // Get relationships strategy from config
-      std::string rel_strategy = std::string(kMergeNodesRelationshipsMerge);
-      if (config.KeyExists(kMergeNodesRelationshipsStrategy)) {
-        rel_strategy = config.At(kMergeNodesRelationshipsStrategy).ValueString();
+      // Copy all relationships from source to target
+      auto in_rels = source_node.InRelationships();
+      for (const auto &rel : in_rels) {
+        graph.CreateRelationship(rel.From(), target_node, rel.Type());
       }
 
-      if (rel_strategy == std::string(kMergeNodesRelationshipsMerge)) {
-        // Copy all relationships from source to target
-        auto in_rels = source_node.InRelationships();
-        for (const auto &rel : in_rels) {
-          if (rel.From().Id() != target_node.Id()) {
-            graph.CreateRelationship(rel.From(), target_node, rel.Type());
-          }
-        }
-
-        auto out_rels = source_node.OutRelationships();
-        for (const auto &rel : out_rels) {
-          if (rel.To().Id() != target_node.Id()) {
-            graph.CreateRelationship(target_node, rel.To(), rel.Type());
-          }
-        }
+      auto out_rels = source_node.OutRelationships();
+      for (const auto &rel : out_rels) {
+        graph.CreateRelationship(target_node, rel.To(), rel.Type());
       }
 
       // Delete the source node

@@ -140,7 +140,6 @@ constexpr std::string_view kMergeNodesPropertiesCombine = "combine";
 constexpr std::string_view kMergeNodesPropertiesDiscard = "discard";
 constexpr std::string_view kMergeNodesPropertiesOverride = "override";
 constexpr std::string_view kMergeNodesPropertiesOverwrite = "overwrite";
-constexpr std::string_view kMergeNodesRelationshipsMerge = "merge";
 constexpr std::string_view kMergeNodesEmptyListError = "The nodes list cannot be empty";
 constexpr std::string_view kMergeNodesInvalidTypeError = "All elements in the nodes list must be of type Node";
 constexpr std::string_view kMergeNodesInvalidPropertyStrategyError = "Property strategy must be one of: combine, discard, override/overwrite";
