@@ -872,8 +872,6 @@ void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
 
   try {
     const auto nodes = arguments[0].ValueList();
-    const auto config = arguments[1].ValueMap();
-
     if (nodes.Empty()) {
       throw mgp::ValueException(std::string(kMergeNodesEmptyListError).c_str());
     }
@@ -885,6 +883,7 @@ void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
       }
     }
 
+    const auto config = arguments[1].ValueMap();
     bool mergeRels = false;
     if (config.KeyExists(kMergeNodesRelationshipsStrategy)) {
       if (!config.At(kMergeNodesRelationshipsStrategy).IsBool()) {
@@ -894,6 +893,30 @@ void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
       mergeRels = config.At(kMergeNodesRelationshipsStrategy).ValueBool();
     }
 
+    // Get properties strategy from config
+    std::string prop_strategy = std::string(kMergeNodesPropertiesCombine);
+    if (config.KeyExists(kMergeNodesPropertiesStrategy)) {
+      prop_strategy = config.At(kMergeNodesPropertiesStrategy).ValueString();
+    }
+    if (config.KeyExists(kMergeNodesPropertiesStrategyAlternative)) {
+      prop_strategy = config.At(kMergeNodesPropertiesStrategyAlternative).ValueString();
+    }
+
+    auto mergeNodesPropertiesCombineString = std::string(kMergeNodesPropertiesCombine);
+    auto mergeNodesPropertiesDiscardString = std::string(kMergeNodesPropertiesDiscard);
+    auto mergeNodesPropertiesOverrideString = std::string(kMergeNodesPropertiesOverride);
+    auto mergeNodesPropertiesOverwriteString = std::string(kMergeNodesPropertiesOverwrite);
+
+    // Convert to lowercase for case-insensitive comparison
+    std::transform(prop_strategy.begin(), prop_strategy.end(), prop_strategy.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+
+    // Validate property strategy
+    if (prop_strategy != mergeNodesPropertiesCombineString && prop_strategy != mergeNodesPropertiesDiscardString &&
+        prop_strategy != mergeNodesPropertiesOverrideString && prop_strategy != mergeNodesPropertiesOverwriteString) {
+      throw mgp::ValueException(std::string(kMergeNodesInvalidPropertyStrategyError).c_str());
+    }
+
     // Get the first node as the target node
     auto target_node = nodes[0].ValueNode();
 
@@ -901,27 +924,8 @@ void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
     for (size_t i = 1; i < nodes.Size(); ++i) {
       auto source_node = nodes[i].ValueNode();
 
-      // Get properties strategy from config
-      std::string prop_strategy = std::string(kMergeNodesPropertiesCombine);
-      if (config.KeyExists(kMergeNodesPropertiesStrategy)) {
-        prop_strategy = config.At(kMergeNodesPropertiesStrategy).ValueString();
-      }
-      if (config.KeyExists(kMergeNodesPropertiesStrategyAlternative)) {
-        prop_strategy = config.At(kMergeNodesPropertiesStrategyAlternative).ValueString();
-      }
-
-      // Convert to lowercase for case-insensitive comparison
-      std::transform(prop_strategy.begin(), prop_strategy.end(), prop_strategy.begin(), ::tolower);
-      // Validate property strategy
-      if (prop_strategy != std::string(kMergeNodesPropertiesCombine) &&
-          prop_strategy != std::string(kMergeNodesPropertiesDiscard) &&
-          prop_strategy != std::string(kMergeNodesPropertiesOverride) &&
-          prop_strategy != std::string(kMergeNodesPropertiesOverwrite)) {
-        throw mgp::ValueException(std::string(kMergeNodesInvalidPropertyStrategyError).c_str());
-      }
-
       // Handle properties based on strategy
-      if (prop_strategy == std::string(kMergeNodesPropertiesCombine)) {
+      if (prop_strategy == mergeNodesPropertiesCombineString) {
         // Combine properties from both nodes
         auto source_props = source_node.Properties();
         for (const auto &[key, value] : source_props) {
@@ -944,11 +948,11 @@ void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
             target_node.SetProperty(key, source_props[key]);
           }
         }
-      } else if (prop_strategy == std::string(kMergeNodesPropertiesDiscard)) {
+      } else if (prop_strategy == mergeNodesPropertiesDiscardString) {
         // Keep only target node properties
         // No action needed
-      } else if (prop_strategy == std::string(kMergeNodesPropertiesOverride) ||
-                 prop_strategy == std::string(kMergeNodesPropertiesOverwrite)) {
+      } else if (prop_strategy == mergeNodesPropertiesOverrideString ||
+                 prop_strategy == mergeNodesPropertiesOverwriteString) {
         // Override/overwrite target properties with source properties
         auto source_props = source_node.Properties();
         for (const auto &[key, value] : source_props) {
