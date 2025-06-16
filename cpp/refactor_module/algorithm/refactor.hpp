@@ -135,6 +135,7 @@ constexpr std::string_view kMergeNodesArg1 = "nodes";
 constexpr std::string_view kMergeNodesArg2 = "config";
 constexpr std::string_view kMergeNodesResult = "node";
 constexpr std::string_view kMergeNodesPropertiesStrategy = "properties";
+constexpr std::string_view kMergeNodesPropertiesStrategyAlternative = ".*";
 constexpr std::string_view kMergeNodesRelationshipsStrategy = "relationships";
 constexpr std::string_view kMergeNodesPropertiesCombine = "combine";
 constexpr std::string_view kMergeNodesPropertiesDiscard = "discard";
