@@ -964,14 +964,16 @@ void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
 
       // Handle relationships
       // Copy all relationships from source to target
-      auto in_rels = source_node.InRelationships();
-      for (const auto &rel : in_rels) {
-        graph.CreateRelationship(rel.From(), target_node, rel.Type());
-      }
+      if (mergeRels) {
+        auto in_rels = source_node.InRelationships();
+        for (const auto &rel : in_rels) {
+          graph.CreateRelationship(rel.From(), target_node, rel.Type());
+        }
 
-      auto out_rels = source_node.OutRelationships();
-      for (const auto &rel : out_rels) {
-        graph.CreateRelationship(target_node, rel.To(), rel.Type());
+        auto out_rels = source_node.OutRelationships();
+        for (const auto &rel : out_rels) {
+          graph.CreateRelationship(target_node, rel.To(), rel.Type());
+        }
       }
 
       // Delete the source node
