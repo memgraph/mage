@@ -23,7 +23,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
 
     mgp::AddFunction(Text::Replace, Text::kProcedureReplace,
                 {mgp::Parameter(Text::kText, mgp::Type::String),
-                 mgp::Parameter(Text::kRegexReplace, mgp::Type::String),
+                 mgp::Parameter(Text::kRegex, mgp::Type::String),
                  mgp::Parameter(Text::kReplacement, mgp::Type::String)},
                 module, memory);
 
