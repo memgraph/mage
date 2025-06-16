@@ -902,10 +902,10 @@ void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
       prop_strategy = config.At(kMergeNodesPropertiesStrategyAlternative).ValueString();
     }
 
-    auto mergeNodesPropertiesCombineString = std::string(kMergeNodesPropertiesCombine);
-    auto mergeNodesPropertiesDiscardString = std::string(kMergeNodesPropertiesDiscard);
-    auto mergeNodesPropertiesOverrideString = std::string(kMergeNodesPropertiesOverride);
-    auto mergeNodesPropertiesOverwriteString = std::string(kMergeNodesPropertiesOverwrite);
+    const auto mergeNodesPropertiesCombineString = std::string(kMergeNodesPropertiesCombine);
+    const auto mergeNodesPropertiesDiscardString = std::string(kMergeNodesPropertiesDiscard);
+    const auto mergeNodesPropertiesOverrideString = std::string(kMergeNodesPropertiesOverride);
+    const auto mergeNodesPropertiesOverwriteString = std::string(kMergeNodesPropertiesOverwrite);
 
     // Convert to lowercase for case-insensitive comparison
     std::transform(prop_strategy.begin(), prop_strategy.end(), prop_strategy.begin(),
