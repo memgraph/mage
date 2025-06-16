@@ -109,7 +109,7 @@ void Text::Replace(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_result *
   mgp::Result result_obj(result);
 
   try {
-    const auto text = std::string(arguments[0].ValueString());
+    auto text = std::string(arguments[0].ValueString());
     const auto regex = std::string(arguments[1].ValueString());
     const auto replacement = std::string(arguments[2].ValueString());
 
@@ -118,14 +118,13 @@ void Text::Replace(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_result *
       return;
     }
 
-    std::string result_str = text;
     size_t pos = 0;
-    while ((pos = result_str.find(regex, pos)) != std::string::npos) {
-      result_str.replace(pos, regex.length(), replacement);
+    while ((pos = text.find(regex, pos)) != std::string::npos) {
+      text.replace(pos, regex.length(), replacement);
       pos += replacement.length();
     }
 
-    result_obj.SetValue(result_str);
+    result_obj.SetValue(std::move(text));
   } catch (const std::exception &e) {
     result_obj.SetErrorMessage(e.what());
     return;
@@ -150,7 +149,7 @@ void Text::RegReplace(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_resul
     std::regex pattern(regex);
     std::string result_str = std::regex_replace(text, pattern, replacement);
 
-    result_obj.SetValue(result_str);
+    result_obj.SetValue(std::move(result_str));
   } catch (const std::exception &e) {
     result_obj.SetErrorMessage(e.what());
     return;
