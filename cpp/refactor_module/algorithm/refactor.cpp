@@ -926,15 +926,11 @@ void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
       auto source_node = nodes[i].ValueNode();
 
       // Handle properties based on strategy
+      // Discard properties keeps the target properties so it's not handled in if-else
       if (prop_strategy == mergeNodesPropertiesCombineString) {
         // Combine properties from both nodes
         auto source_props = source_node.Properties();
         for (const auto &[key, value] : source_props) {
-          if (!source_props.contains(key)) {
-            // nothing to combine
-            continue;
-          }
-
           auto target_property = target_node.GetProperty(key);
           if (target_property.IsList()) {
             auto target_list = target_property.ValueList();
@@ -949,9 +945,6 @@ void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
             target_node.SetProperty(key, source_props[key]);
           }
         }
-      } else if (prop_strategy == mergeNodesPropertiesDiscardString) {
-        // Keep only target node properties
-        // No action needed
       } else if (prop_strategy == mergeNodesPropertiesOverrideString ||
                  prop_strategy == mergeNodesPropertiesOverwriteString) {
         // Override/overwrite target properties with source properties
