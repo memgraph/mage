@@ -884,14 +884,15 @@ void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
     }
 
     const auto config = arguments[1].ValueMap();
-    bool mergeRels = false;
-    if (config.KeyExists(kMergeNodesRelationshipsStrategy)) {
-      if (!config.At(kMergeNodesRelationshipsStrategy).IsBool()) {
-        throw mgp::ValueException(std::string(kMergeRelationshipsInvalidValueError).c_str());
-      }
+    const bool mergeRels = [&config, &kMergeNodesRelationshipsStrategy]() -> bool {
+      if (config.KeyExists(kMergeNodesRelationshipsStrategy)) {
+        if (!config.At(kMergeNodesRelationshipsStrategy).IsBool()) {
+          throw mgp::ValueException(std::string(kMergeRelationshipsInvalidValueError).c_str());
+        }
 
-      mergeRels = config.At(kMergeNodesRelationshipsStrategy).ValueBool();
-    }
+        return config.At(kMergeNodesRelationshipsStrategy).ValueBool();
+      }
+    }();
 
     // Get properties strategy from config
     std::string prop_strategy = std::string(kMergeNodesPropertiesCombine);
