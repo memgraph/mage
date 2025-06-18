@@ -959,7 +959,7 @@ void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
       // Copy labels from source to target
       auto source_labels = source_node.Labels();
       for (size_t j = 0; j < source_labels.Size(); ++j) {
-        target_node.AddLabel(source_labels[j]);
+        target_node.AddLabel(std::move(source_labels[j]));
       }
 
       // Handle relationships
