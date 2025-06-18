@@ -892,6 +892,8 @@ void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
 
         return config.At(kMergeNodesRelationshipsStrategy).ValueBool();
       }
+
+      return false;
     }();
 
     // Get properties strategy from config
