@@ -124,6 +124,11 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
                  {mgp::Return(std::string(Refactor::kRenameTypePropertyResult).c_str(), mgp::Type::Int)}, module,
                  memory);
 
+    AddProcedure(Refactor::MergeNodes, Refactor::kProcedureMergeNodes, mgp::ProcedureType::Write,
+                 {mgp::Parameter(Refactor::kMergeNodesArgNodes, {mgp::Type::List, mgp::Type::Node}),
+                  mgp::Parameter(Refactor::kMergeNodesArgConfig, mgp::Type::Map, mgp::Value(mgp::Map{}))},
+                 {mgp::Return(Refactor::kMergeNodesResult, mgp::Type::Node)}, module, memory);
+
   } catch (const std::exception &e) {
     return 1;
   }
