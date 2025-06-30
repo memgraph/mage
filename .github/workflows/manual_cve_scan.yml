@@ -1,6 +1,6 @@
 name: Manual Vulnerability Scan
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}
+  group: manual-cve-scan-${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
 
 on:
