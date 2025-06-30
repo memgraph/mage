@@ -1,6 +1,6 @@
 name: 'Create release artifacts'
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}
+  group: release-artifacts-${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
 
 on:
