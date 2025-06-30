@@ -873,13 +873,13 @@ void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
   try {
     const auto nodes = arguments[0].ValueList();
     if (nodes.Empty()) {
-      throw mgp::ValueException(std::string(kMergeNodesEmptyListError).c_str());
+      throw mgp::ValueException(kMergeNodesEmptyListError.data());
     }
 
     // Verify all elements are nodes
     for (const auto &node_value : nodes) {
       if (!node_value.IsNode()) {
-        throw mgp::ValueException(std::string(kMergeNodesInvalidTypeError).c_str());
+        throw mgp::ValueException(kMergeNodesInvalidTypeError.data());
       }
     }
 
@@ -887,7 +887,7 @@ void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
     const bool mergeRels = [&config, &kMergeNodesRelationshipsStrategy]() -> bool {
       if (config.KeyExists(kMergeNodesRelationshipsStrategy)) {
         if (!config.At(kMergeNodesRelationshipsStrategy).IsBool()) {
-          throw mgp::ValueException(std::string(kMergeRelationshipsInvalidValueError).c_str());
+          throw mgp::ValueException(kMergeRelationshipsInvalidValueError.data());
         }
 
         return config.At(kMergeNodesRelationshipsStrategy).ValueBool();
@@ -897,13 +897,16 @@ void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
     }();
 
     // Get properties strategy from config
-    std::string prop_strategy = std::string(kMergeNodesPropertiesCombine);
-    if (config.KeyExists(kMergeNodesPropertiesStrategy)) {
-      prop_strategy = config.At(kMergeNodesPropertiesStrategy).ValueString();
-    }
-    if (config.KeyExists(kMergeNodesPropertiesStrategyAlternative)) {
-      prop_strategy = config.At(kMergeNodesPropertiesStrategyAlternative).ValueString();
-    }
+    std::string prop_strategy = [&config, &kMergeNodesPropertiesStrategy, &kMergeNodesPropertiesStrategyAlternative,
+                                 &kMergeNodesPropertiesCombine]() -> std::string {
+      if (config.KeyExists(kMergeNodesPropertiesStrategy)) {
+        return std::string(config.At(kMergeNodesPropertiesStrategy).ValueString());
+      }
+      if (config.KeyExists(kMergeNodesPropertiesStrategyAlternative)) {
+        return std::string(config.At(kMergeNodesPropertiesStrategyAlternative).ValueString());
+      }
+      return std::string(kMergeNodesPropertiesCombine);
+    }();
 
     const auto mergeNodesPropertiesCombineString = std::string(kMergeNodesPropertiesCombine);
     const auto mergeNodesPropertiesDiscardString = std::string(kMergeNodesPropertiesDiscard);
