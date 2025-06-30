@@ -908,19 +908,14 @@ void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
       return std::string(kMergeNodesPropertiesCombine);
     }();
 
-    const auto mergeNodesPropertiesCombineString = std::string(kMergeNodesPropertiesCombine);
-    const auto mergeNodesPropertiesDiscardString = std::string(kMergeNodesPropertiesDiscard);
-    const auto mergeNodesPropertiesOverrideString = std::string(kMergeNodesPropertiesOverride);
-    const auto mergeNodesPropertiesOverwriteString = std::string(kMergeNodesPropertiesOverwrite);
-
     // Convert to lowercase for case-insensitive comparison
     std::transform(prop_strategy.begin(), prop_strategy.end(), prop_strategy.begin(),
                    [](unsigned char c) { return std::tolower(c); });
 
     // Validate property strategy
-    if (prop_strategy != mergeNodesPropertiesCombineString && prop_strategy != mergeNodesPropertiesDiscardString &&
-        prop_strategy != mergeNodesPropertiesOverrideString && prop_strategy != mergeNodesPropertiesOverwriteString) {
-      throw mgp::ValueException(std::string(kMergeNodesInvalidPropertyStrategyError).c_str());
+    if (prop_strategy != kMergeNodesPropertiesCombine && prop_strategy != kMergeNodesPropertiesDiscard &&
+        prop_strategy != kMergeNodesPropertiesOverride && prop_strategy != kMergeNodesPropertiesOverwrite) {
+      throw mgp::ValueException(kMergeNodesInvalidPropertyStrategyError.data());
     }
 
     // Get the first node as the target node
@@ -932,7 +927,7 @@ void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
 
       // Handle properties based on strategy
       // Discard properties keeps the target properties so it's not handled in if-else
-      if (prop_strategy == mergeNodesPropertiesCombineString) {
+      if (prop_strategy == kMergeNodesPropertiesCombine) {
         // Combine properties from both nodes
         auto source_props = source_node.Properties();
         for (const auto &[key, value] : source_props) {
@@ -950,8 +945,8 @@ void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
             target_node.SetProperty(key, source_props[key]);
           }
         }
-      } else if (prop_strategy == mergeNodesPropertiesOverrideString ||
-                 prop_strategy == mergeNodesPropertiesOverwriteString) {
+      } else if (prop_strategy == kMergeNodesPropertiesOverride ||
+                 prop_strategy == kMergeNodesPropertiesOverwrite) {
         // Override/overwrite target properties with source properties
         auto source_props = source_node.Properties();
         for (const auto &[key, value] : source_props) {
@@ -985,7 +980,7 @@ void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
 
     // Return the merged node
     auto record = record_factory.NewRecord();
-    record.Insert(std::string(kMergeNodesResult).c_str(), target_node);
+    record.Insert(kMergeNodesResult.data(), target_node);
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
