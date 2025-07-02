@@ -2,4 +2,4 @@ query: >
   RETURN collections.frequencies_as_map([]) AS result;
 
 output:
-  - result: {} 
+  - result: {}
