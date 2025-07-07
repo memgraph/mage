@@ -1,0 +1,149 @@
+name: Build Release Candidate
+concurrency:
+  group: Build-Release-Candidate-${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+on:
+  repository_dispatch:
+    types: [trigger_rc_build]
+
+  workflow_dispatch:
+    inputs:
+      version:
+        type: string
+        description: "Version of the release candidate (X.Y.Z)."
+        required: true
+      rc_number:
+        type: string
+        description: "Release candidate number (e.g., rc1, rc2, etc.)."
+        required: true
+      overwrite_tag:
+        type: boolean
+        description: "Overwrite the existing tag if it exists."
+        default: false
+
+jobs:
+  ParseInputs:
+    name: Parse Inputs
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.set-outputs.outputs.version }}
+      rc_number: ${{ steps.set-outputs.outputs.rc_number }}
+      overwrite_tag: ${{ steps.set-outputs.outputs.overwrite_tag }}
+    steps:
+      - name: Determine version, rc_number, overwrite_tag
+        id: set-outputs
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            version="${{ github.event.inputs.version }}"
+            rc_number="${{ github.event.inputs.rc_number }}"
+            overwrite_tag="${{ github.event.inputs.overwrite_tag }}"
+          elif [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            version="${{ github.event.client_payload.version }}"
+            rc_number="${{ github.event.client_payload.rc_number }}"
+            overwrite_tag="${{ github.event.client_payload.overwrite_tag }}"
+          else
+            echo "❌ Unsupported event: $GITHUB_EVENT_NAME" >&2
+            exit 1
+          fi
+          echo "version=$version"      >> $GITHUB_OUTPUT
+          echo "rc_number=$rc_number"  >> $GITHUB_OUTPUT
+          echo "overwrite_tag=$overwrite_tag" >> $GITHUB_OUTPUT
+
+  PrepareReleaseBranch:
+    name: Prepare Release Branch
+    needs: ParseInputs
+    runs-on: ubuntu-24.04
+    outputs:
+      branch_name: ${{ steps.check_branch.outputs.branch_name }}
+      tag_name: ${{ steps.check_branch.outputs.tag_name }}
+    env:
+      VERSION:       ${{ needs.ParseInputs.outputs.version }}
+      RC_NUMBER:     ${{ needs.ParseInputs.outputs.rc_number }}
+      OVERWRITE_TAG: ${{ needs.ParseInputs.outputs.overwrite_tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          recursive-submodules: true
+
+      - name: Set up Git user
+        run: |
+          git config user.name github-actions
+          git config user.email actions@github.com
+
+      - name: Check if release branch exists and checkout
+        id: check_branch
+        run: |
+          branch_name="release/v${VERSION}"
+          if git ls-remote --exit-code --heads origin "$branch_name"; then
+            echo "Branch $branch_name exists. Checking out."
+            git checkout "$branch_name"
+          else
+            echo "Branch $branch_name does not exist. Creating a new branch."
+            git checkout -b "$branch_name"
+          fi
+          echo "branch_name=$branch_name" >> $GITHUB_OUTPUT
+
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          tag_name="v${VERSION}-${RC_NUMBER}"
+          if git ls-remote --exit-code --tags origin "$tag_name"; then
+            echo "Tag $tag_name exists."
+            if [ "${OVERWRITE_TAG}" == "true" ]; then
+              echo "Overwriting existing tag."
+              git tag -d "$tag_name"
+              git push origin ":refs/tags/$tag_name"
+            else
+              echo "Skipping tag creation as it already exists."
+              exit 1
+            fi
+          else
+            echo "Tag $tag_name does not exist. Proceeding to create a new tag."
+          fi
+          echo "tag_name=$tag_name" >> $GITHUB_OUTPUT
+
+      - name: Update Memgraph submodule
+        run: |
+          cd cpp/memgraph
+          git fetch origin
+          git checkout "${{ steps.check_tag.outputs.tag_name }}"
+          cd ../..
+          git add .
+          git commit -m "Update Memgraph submodule to tag ${{ steps.check_tag.outputs.tag_name }} [skip tests]"
+
+      - name: Create and push tag
+        run: |
+          git push --set-upstream origin "${{ steps.check_branch.outputs.branch_name }}"
+          git tag "${{ steps.check_tag.outputs.tag_name }}"
+          git push origin "${{ steps.check_tag.outputs.tag_name }}"
+
+  TestReleaseCandidates:
+    name: Test Release Candidates
+    needs: [ParseInputs, PrepareReleaseBranch]
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ["amd64", "arm64"]
+    uses: ./.github/workflows/reusable_test.yml
+    with:
+      arch: "${{ matrix.arch }}"
+      memgraph_ref: "v${{ needs.ParseInputs.outputs.version }}-${{ needs.ParseInputs.outputs.rc_number }}"
+      memgraph_ref_update: "false"
+      memgraph_download_link: "s3://deps.memgraph.io/memgraph/v${{ needs.ParseInputs.outputs.version }}-${{ needs.ParseInputs.outputs.rc_number }}/ubuntu-24.04${{ matrix.arch == 'arm64' && '-aarch64' || '' }}/memgraph_${{ needs.ParseInputs.outputs.version }}-1_${{ matrix.arch }}.deb"
+      ref: "${{ needs.PrepareReleaseBranch.outputs.tag_name }}"
+    secrets: inherit
+
+  CreateReleaseArtifacts:
+    name: Create Release Artifacts
+    needs: [ParseInputs, PrepareReleaseBranch]
+    uses: ./.github/workflows/release_artifacts.yaml
+    with:
+      os: "ubuntu-24.04"
+      mage_version: "${{ needs.ParseInputs.outputs.version }}"
+      memgraph_version: "${{ needs.ParseInputs.outputs.version }}"
+      run_smoke_tests: true
+      ref: "${{ needs.PrepareReleaseBranch.outputs.tag_name }}"
+    secrets: inherit

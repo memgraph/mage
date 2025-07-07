@@ -4,6 +4,38 @@ concurrency:
   cancel-in-progress: true
 
 on:
+  workflow_call:
+    inputs:
+      os:
+        type: string
+        default: 'ubuntu-24.04'
+        description: "Operating system to build the image for"
+        required: true
+      mage_version:
+        type: string
+        description: "Mage version built into this image (format: X.Y.Z)"
+        required: true
+      memgraph_version:
+        type: string
+        description: "Memgraph version built into this image (format: X.Y.Z)"
+        required: true
+      official_memgraph:
+        type: boolean
+        description: "Use the official Memgraph bucket?"
+        default: false
+      test:
+        type: boolean
+        description: "Run mock artifact creation for testing (ends up in 'mage-test/vX.Y.Z')"
+        default: false
+      run_smoke_tests:
+        type: boolean
+        description: "Run smoke tests on images after building (tests against previous tagged image)"
+        default: false
+      ref:
+        type: string
+        description: "MAGE branch or tag to build"
+        default: ''
+
   workflow_dispatch:
     inputs:
       os:
@@ -85,4 +117,5 @@ jobs:
       s3_dest_dir: "${{ inputs.test && 'mage-test/v' || 'mage/v'}}${{ github.event.inputs.mage_version}}"
       malloc: ${{ matrix.malloc }}
       run_smoke_tests: ${{ inputs.run_smoke_tests }}
+      ref: "${{ github.event.inputs.ref }}"
     secrets: inherit
