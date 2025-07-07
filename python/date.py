@@ -1,6 +1,8 @@
 import mgp
 import pytz
 import datetime
+from enum import IntEnum
+from zoneinfo import ZoneInfo
 
 from mage.date.constants import Conversion, Epoch
 from mage.date.unit_conversion import to_int, to_timedelta
@@ -138,16 +140,14 @@ def add(
         unit=unit,
     )
 
-# TODO(colinbarry) Code below is a copy and paste from `date.py` in the Memgraph
+# TODO(colinbarry) Code below is a copy and paste from `date.py` in the Memgraph
 # repo. This is a temporary fix to make it possible to use `date.convert_format`
 # from the Memgraph+MAGE image; otherwise, MAGE's `date.py` will overwrite the
 # Memgraph one, and users would lose the function. As the function is needed
-# by GraphQL, and it seems some users are wanting to use GraphQL + MAGE, this 
+# by GraphQL, and it seems some users are wanting to use GraphQL + MAGE, this
 # seems the best approach for now. At some point, we will be moving to a
 # monorepo, and the code below and tests in `date_test/test_convert_format` can
 # be removed in favour of the copy in the Memgraph repo.
-from enum import IntEnum
-from zoneinfo import ZoneInfo
 
 
 class FormatLength(IntEnum):
@@ -188,7 +188,7 @@ class DateFormatUtil:
 
 
 @mgp.function
-def convert_format(temporal: str, current_format: str, convert_to: str) -> mgp.Nullable[str]:
+def convert_format(temporal: str, current_format: str, convert_to: str) -> mgp.Nullable[str]:  # noqa: C901
     """
     Converts between specified ISO date formats using Python strftime and strptime.
     Supports zoned to offset conversion by removing zone part in '[]'.
