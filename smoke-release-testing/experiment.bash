@@ -12,6 +12,8 @@ echo "Memgraph is up and running!"
 
 source ./mgconsole/indices.bash
 test_nested_indices $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
+source ./mgconsole/regex.bash
+test_regex $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 
 # NOTE: Test what's the exit status of the script by using `echo $?`:
 #   * if it's == 0 -> all good

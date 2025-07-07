@@ -1,23 +1,22 @@
 name: 'Create Daily Build'
-# concurrency:
-#   group: ${{ github.workflow }}-${{ github.ref_name }}
-#   cancel-in-progress: true
+concurrency:
+  group: daily-build-${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
 
 on:
   repository_dispatch:
     types: [trigger_daily_build]
 
   workflow_dispatch:
-      inputs:
-          date:
-            type: string
-            description: "Date to build packages for (YYYYMMDD)"
-            required: false
-
+    inputs:
+      date:
+        type: string
+        description: "Date to build packages for (YYYYMMDD)"
+        required: false
 
 jobs:
   DailyBuildVariables:
-    runs-on: ["self-hosted"]
+    runs-on: ubuntu-latest
     outputs:
       mage_version: ${{ steps.compute.outputs.mage_version }}
       memgraph_version: ${{ steps.compute.outputs.memgraph_version }}
@@ -56,7 +55,7 @@ jobs:
             payload="{\"date\": ${build_date}}"
           fi
           echo "Received payload: $payload"
-          read mage_version memgraph_version memgraph_commit build_date < <(python3 daily_build_vars.py "$payload")
+          read mage_version memgraph_version memgraph_commit build_date < <(python3 scripts/daily_build_vars.py "$payload")
           echo "mage_version=${mage_version}" >> $GITHUB_OUTPUT
           echo "memgraph_version=${memgraph_version}" >> $GITHUB_OUTPUT
           echo "memgraph_commit=${memgraph_commit}" >> $GITHUB_OUTPUT
@@ -143,7 +142,7 @@ jobs:
         run: |
           echo "TEST_RESULT: $TEST_RESULT"
           echo "Package Date: $CURRENT_BUILD_DATE"
-          echo "BUILD_TEST_RESULTS=$(python3 aggregate_build_tests.py)" >> $GITHUB_ENV
+          echo "BUILD_TEST_RESULTS=$(python3 scripts/aggregate_build_tests.py 'mage')" >> $GITHUB_ENV
 
       - name: Trigger Daily Builds Page Update
         env: 
@@ -157,4 +156,29 @@ jobs:
             -H "Authorization: token $GITHUB_TOKEN" \
             https://api.github.com/repos/memgraph/daily-builds/dispatches \
             -d "$payload"    
-  
+
+  SetupCVEScanTrigger:
+    name: Setup CVE Scan Trigger
+    runs-on: ubuntu-latest
+    needs: [DailyBuildVariables, DailyBuildArtifact]
+    outputs: 
+      run_scan: ${{ steps.sunday.outputs.RUN_SCAN }}
+    steps:
+      - name: Is today Sunday? 🤔
+        id: sunday
+        run: |
+          day="$(date -u +%A)"
+          if [[ "$day" == "Sunday" ]]; then
+            echo "RUN_SCAN=true" >> $GITHUB_OUTPUT
+          else
+            echo "RUN_SCAN=false" >> $GITHUB_OUTPUT
+          fi
+         
+  TriggerCVEScan:
+    name: Trigger CVE Scan
+    needs: [SetupCVEScanTrigger, DailyBuildVariables]
+    if: ${{ needs.SetupCVEScanTrigger.outputs.run_scan == 'true' }}
+    uses: ./.github/workflows/cve_scan.yml
+    with:
+      date: "${{ needs.DailyBuildVariables.outputs.build_date }}"
+    secrets: inherit

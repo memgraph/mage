@@ -212,16 +212,18 @@ jobs:
             echo "Using custom download link"
             mg_url=${{ inputs.memgraph_download_link }}
           fi
-          if curl --output /dev/null --silent --head --fail $mg_url; then
-            echo "Memgraph download link is valid"
-            echo "MEMGRAPH_DOWNLOAD_LINK=${mg_url}" >> $GITHUB_ENV 
-          else
-            echo "Memgraph download link is not valid"
-            exit 1
-          fi
+
+          ./scripts/verify_download_url.sh "$mg_url"
+          echo "MEMGRAPH_DOWNLOAD_LINK=${mg_url}" >> $GITHUB_ENV
+
 
       - name: Download memgraph binary
         run: curl -L ${{ env.MEMGRAPH_DOWNLOAD_LINK }} > memgraph-${{ inputs.arch }}.deb
+
+      - name: Probe fastest mirror
+        run: |
+          FASTEST=$(bash scripts/test-mirrors.sh)
+          echo "CUSTOM_MIRROR=${FASTEST}" >> $GITHUB_ENV
 
       # Add ability to add additional tag after the image has been built
       # --tag ${DOCKER_REPOSITORY_NAME}:${{ inputs.additional_tag }} \
@@ -253,6 +255,7 @@ jobs:
           --build-arg MGBUILD_IMAGE=$MGBUILD_IMAGE \
           --build-arg MAGE_COMMIT="${{ env.MAGE_COMMIT }}" \
           --build-arg CACHE_PRESENT=${{ env.CACHE_PRESENT }} \
+          --build-arg CUSTOM_MIRROR=${{ env.CUSTOM_MIRROR }} \
           --load .
 
           # print the image size in both SI and IEC units

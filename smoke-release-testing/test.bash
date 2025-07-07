@@ -12,12 +12,6 @@ wait_for_memgraph $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_LAST_DATA_BOLT_PORT
 wait_for_memgraph $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 echo "Memgraph is up and running!"
 
-# Test drivers.
-python3 python/gqla.py "3.0.0" $MEMGRAPH_LAST_DATA_BOLT_PORT
-python3 python/neo.py "3.0.0" $MEMGRAPH_LAST_DATA_BOLT_PORT
-python3 python/gqla.py "3.1.0" $MEMGRAPH_NEXT_DATA_BOLT_PORT
-python3 python/neo.py "3.1.0" $MEMGRAPH_NEXT_DATA_BOLT_PORT
-
 # Test features using mgconsole.
 for test_file_path in "$SCRIPT_DIR/mgconsole/"*; do
   if [ "$(basename $test_file_path)" == "README.md" ]; then
@@ -45,11 +39,17 @@ test_vector_search $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 test_dynamic_algos $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 test_functions $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 test_label_operations $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
+test_regex $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 test_edge_type_operations $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 test_composite_indices $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 test_monitoring $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 test_multi_tenancy $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 test_nested_indices $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
+test_or_expression_for_labels $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 # NOTE: If the testing container is NOT restarted, all the auth test have to
 # come after all tests that assume there are no users.
 test_impersonate_user $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
+
+# k8s is a special case, because it requires extra setup.
+source $SCRIPT_DIR/k8s/run.bash
+test_k8s_single
