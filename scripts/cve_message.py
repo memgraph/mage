@@ -17,6 +17,7 @@ def read_summary_file(filename: str) -> List[str] | dict:
         print(f"{filename} summary not found")
         return None
 
+    print(f"Found {filename}")
     with open(filename, "r") as f:
         if filename.endswith(".json"):
             data = json.load(f)
@@ -67,9 +68,8 @@ def parse_cbt_summary() -> dict:
     out = {}
     for part in parts:
         fname = f"{CVE_DIR}/cve-bin-tool-{part}-summary.json"
-        print(fname)
         if os.path.isfile(fname):
-            print("here")
+            print(f"Found {fname}")
             data = read_summary_file(fname)
             data = reformat_cbt_data(data)
             out[part] = {
@@ -184,7 +184,6 @@ def combine_summaries(summary_list: List[dict]) -> Tuple[dict, str]:
     summary = {}
     for dct in summary_list:
         dct = {k: v for k, v in dct.items() if v > 0}
-        print(dct)
         for k, v in dct.items():
             if k not in summary:
                 summary[k] = 0

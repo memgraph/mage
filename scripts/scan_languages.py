@@ -91,7 +91,7 @@ def run_language_scan(langfs: str) -> str:
         "-f", "json",        # Output format: JSON
         "-o", outfile,       # Write JSON results to this file
         f"{langfs}/",
-        "--vex-file", "triage.json", "--filter-triage"  # Use the triage file to filter false positives
+        "--vex-file", "scripts/triage.json", "--filter-triage"  # Use the triage file to filter false positives
     ]
     _ = subprocess.run(
         cmd,
