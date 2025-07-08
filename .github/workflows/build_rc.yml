@@ -21,6 +21,10 @@ on:
         type: boolean
         description: "Overwrite the existing tag if it exists."
         default: false
+      initial_branch:
+        type: string
+        description: "Branch to start build from"
+        default: ''
 
 jobs:
   ParseInputs:
@@ -67,6 +71,7 @@ jobs:
         with:
           fetch-depth: 0
           recursive-submodules: true
+          ref: ${{ inputs.initial_branch != '' && inputs.initial_branch || github.ref }}
 
       - name: Set up Git user
         run: |
