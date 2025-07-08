@@ -118,7 +118,7 @@ jobs:
       - name: Update Memgraph submodule
         run: |
           cd cpp/memgraph
-          git fetch origin
+          git fetch --all
           git checkout "${{ steps.check_tag.outputs.tag_name }}"
           cd ../..
           git add .
