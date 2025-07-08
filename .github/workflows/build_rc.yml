@@ -123,7 +123,7 @@ jobs:
           git checkout "${{ steps.check_tag.outputs.tag_name }}"
           cd ../..
           git add .
-          git commit -m "Update Memgraph submodule to tag ${{ steps.check_tag.outputs.tag_name }} [skip tests]"
+          git commit -m "Update Memgraph submodule to tag ${{ steps.check_tag.outputs.tag_name }} [skip tests]" || true
 
       - name: Create and push tag
         run: |
