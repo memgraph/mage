@@ -19,10 +19,6 @@ on:
         type: string
         description: "Memgraph version built into this image (format: X.Y.Z)"
         required: true
-      official_memgraph:
-        type: boolean
-        description: "Use the official Memgraph bucket?"
-        default: false
       test:
         type: boolean
         description: "Run mock artifact creation for testing (ends up in 'mage-test/vX.Y.Z')"
@@ -53,10 +49,6 @@ on:
         type: string
         description: "Memgraph version built into this image (format: X.Y.Z)"
         required: true
-      official_memgraph:
-        type: boolean
-        description: "Use the official Memgraph bucket?"
-        default: false
       test:
         type: boolean
         description: "Run mock artifact creation for testing (ends up in 'mage-test/vX.Y.Z')"
@@ -68,23 +60,26 @@ on:
 
 jobs:
   SetupNames:
-    runs-on: ["self-hosted", "X64"]
+    runs-on: ubuntu-24.04
     outputs:
       download_link_base: ${{ steps.base_link.outputs.link }}
       download_binary_name_base: ${{ steps.binary_name.outputs.name }}
     env:
-      s3_link_base: ${{ github.event.inputs.official_memgraph == 'true' && 'https://' || 'https://s3.eu-west-1.amazonaws.com' }}
-      s3_bucket: ${{ github.event.inputs.official_memgraph == 'true' && 'download.memgraph.com' || 'deps.memgraph.io' }}
+      s3_link_base: https://s3.eu-west-1.amazonaws.com
+      s3_bucket: deps.memgraph.io
     steps:
       - name: Set base memgraph download link
         id: base_link
         run: |
           echo "link=${{ env.s3_link_base }}/${{ env.s3_bucket }}/memgraph/v${{ github.event.inputs.memgraph_version }}/${{ github.event.inputs.os }}" >> $GITHUB_OUTPUT
+          echo "link: ${link}"
       - name: Set binary name base
         id: binary_name
         run: |
           version=${{ github.event.inputs.memgraph_version }}
           echo "name=memgraph_${version%%-*}-1" >> $GITHUB_OUTPUT
+          echo "version: ${version}"
+          echo "name: ${name}"
 
   Artifact:
     needs: [SetupNames]

@@ -30,7 +30,7 @@ on:
 jobs:
   ParseInputs:
     name: Parse Inputs
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.set-outputs.outputs.version }}
       rc_number: ${{ steps.set-outputs.outputs.rc_number }}
@@ -65,7 +65,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       branch_name: ${{ steps.check_branch.outputs.branch_name }}
-      tag_name: ${{ steps.check_branch.outputs.tag_name }}
+      tag_name: ${{ steps.check_tag.outputs.tag_name }}
     env:
       VERSION:       ${{ needs.ParseInputs.outputs.version }}
       RC_NUMBER:     ${{ needs.ParseInputs.outputs.rc_number }}
