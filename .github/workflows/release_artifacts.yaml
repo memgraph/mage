@@ -79,7 +79,6 @@ jobs:
           version=${{ inputs.memgraph_version }}
           echo "name=memgraph_${version%%-*}-1" >> $GITHUB_OUTPUT
           echo "version: ${version}"
-          echo "name: ${name}"
 
   Artifact:
     needs: [SetupNames]
