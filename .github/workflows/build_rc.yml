@@ -132,7 +132,7 @@ jobs:
           git push origin "${{ steps.check_tag.outputs.tag_name }}"
 
   TestReleaseCandidates:
-    if: ${{ github.ref_type != 'push'}}
+    if: ${{ github.event_name != 'push'}}
     name: Test Release Candidates
     needs: [ParseInputs, PrepareReleaseBranch]
     strategy:
@@ -154,8 +154,8 @@ jobs:
     uses: ./.github/workflows/release_artifacts.yaml
     with:
       os: "ubuntu-24.04"
-      mage_version: "${{ needs.ParseInputs.outputs.version }}"
-      memgraph_version: "${{ needs.ParseInputs.outputs.version }}"
+      mage_version: "${{ needs.ParseInputs.outputs.version }}-${{ needs.ParseInputs.outputs.rc_number }}"
+      memgraph_version: "${{ needs.ParseInputs.outputs.version }}-${{ needs.ParseInputs.outputs.rc_number }}"
       run_smoke_tests: true
       ref: "${{ needs.PrepareReleaseBranch.outputs.tag_name }}"
     secrets: inherit
