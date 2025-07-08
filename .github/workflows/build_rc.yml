@@ -4,6 +4,7 @@ concurrency:
   cancel-in-progress: true
 
 on:
+  push:
   repository_dispatch:
     types: [trigger_rc_build]
 
@@ -46,6 +47,10 @@ jobs:
             version="${{ github.event.client_payload.version }}"
             rc_number="${{ github.event.client_payload.rc_number }}"
             overwrite_tag="${{ github.event.client_payload.overwrite_tag }}"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            version="0.0.0"
+            rc_number="rc1"
+            overwrite_tag="true"
           else
             echo "❌ Unsupported event: $GITHUB_EVENT_NAME" >&2
             exit 1
