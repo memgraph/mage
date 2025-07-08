@@ -75,7 +75,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          recursive-submodules: true
+          submodules: recursive
+          fetch-tags: true
           ref: ${{ inputs.initial_branch != '' && inputs.initial_branch || github.ref }}
 
       - name: Set up Git user
@@ -118,7 +119,7 @@ jobs:
       - name: Update Memgraph submodule
         run: |
           cd cpp/memgraph
-          git fetch --all
+          git fetch origin
           git checkout "${{ steps.check_tag.outputs.tag_name }}"
           cd ../..
           git add .
