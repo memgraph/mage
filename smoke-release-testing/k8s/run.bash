@@ -2,7 +2,7 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/../utils.bash"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
+export PATH="$(go env GOPATH)/bin:$PATH"
 # NOTES:
 #   * In the custom values file telemetry was disabled and NodePort was set
 #   as the serviceType. The values file was copied from
