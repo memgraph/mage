@@ -32,6 +32,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.set-outputs.outputs.version }}
+      short_version: ${{ steps.set-outputs.outputs.short_version }}
       rc_number: ${{ steps.set-outputs.outputs.rc_number }}
       overwrite_tag: ${{ steps.set-outputs.outputs.overwrite_tag }}
     steps:
@@ -39,11 +40,13 @@ jobs:
         id: set-outputs
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            version="${{ github.event.inputs.version }}"
+            version="${{ github.event.inputs.version }}"  
+            short_version=$(echo "${{ inputs.version }}" | sed -E 's/^([0-9]+\.[0-9]+)\.0$/\1/')
             rc_number="${{ github.event.inputs.rc_number }}"
             overwrite_tag="${{ github.event.inputs.overwrite_tag }}"
           elif [ "${{ github.event_name }}" = "repository_dispatch" ]; then
             version="${{ github.event.client_payload.version }}"
+            short_version="${{ github.event.client_payload.short_version }}"
             rc_number="${{ github.event.client_payload.rc_number }}"
             overwrite_tag="${{ github.event.client_payload.overwrite_tag }}"
           else
@@ -51,6 +54,7 @@ jobs:
             exit 1
           fi
           echo "version=$version"      >> $GITHUB_OUTPUT
+          echo "short_version=$short_version" >> $GITHUB_OUTPUT
           echo "rc_number=$rc_number"  >> $GITHUB_OUTPUT
           echo "overwrite_tag=$overwrite_tag" >> $GITHUB_OUTPUT
 
@@ -63,6 +67,7 @@ jobs:
       tag_name: ${{ steps.check_tag.outputs.tag_name }}
     env:
       VERSION:       ${{ needs.ParseInputs.outputs.version }}
+      SHORT_VERSION: ${{ needs.ParseInputs.outputs.short_version }}
       RC_NUMBER:     ${{ needs.ParseInputs.outputs.rc_number }}
       OVERWRITE_TAG: ${{ needs.ParseInputs.outputs.overwrite_tag }}
     steps:
@@ -82,7 +87,7 @@ jobs:
       - name: Check if release branch exists and checkout
         id: check_branch
         run: |
-          branch_name="release/v${VERSION}"
+          branch_name="release/v${SHORT_VERSION}"
           if git ls-remote --exit-code --heads origin "$branch_name"; then
             echo "Branch $branch_name exists. Checking out."
             git checkout "$branch_name"
