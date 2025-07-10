@@ -123,7 +123,7 @@ def load_from_path(ctx: mgp.ProcCtx, path: str) -> mgp.Record:
     Parameters
     ----------
     path : str
-        Path to the JSON that is being loaded.
+        Path to the JSON that is now being loaded.
     """
     file = Path(path)
     if file.exists():
