@@ -1,6 +1,9 @@
 from io import TextIOWrapper
 import json
-import mgp
+try:
+    import mgp
+except ImportError:
+    from . import mock_mgp as mgp
 from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.error import URLError
@@ -15,7 +18,8 @@ def _convert_value_to_json_compatible(value: Any) -> Any:
             "type": "node",
             "id": value.id,
             "labels": [label.name for label in value.labels],
-            "properties": {k: _convert_value_to_json_compatible(v) for k, v in value.properties.items()}
+            "properties": {k: _convert_value_to_json_compatible(v) 
+                          for k, v in value.properties.items()}
         }
     elif isinstance(value, mgp.Edge):
         return {
@@ -24,7 +28,8 @@ def _convert_value_to_json_compatible(value: Any) -> Any:
             "start": value.from_vertex.id,
             "end": value.to_vertex.id,
             "relationship_type": value.type.name,
-            "properties": {k: _convert_value_to_json_compatible(v) for k, v in value.properties.items()}
+            "properties": {k: _convert_value_to_json_compatible(v) 
+                          for k, v in value.properties.items()}
         }
     elif isinstance(value, mgp.Path):
         return {
@@ -55,102 +60,21 @@ def _convert_value_to_json_compatible(value: Any) -> Any:
         return str(value)
 
 
-def extract_objects(file: TextIOWrapper):
-    objects = json.load(file)
-    if type(objects) is dict:
-        objects = [objects]
-    return objects
-
-
-@mgp.read_proc
-def load_from_path(ctx: mgp.ProcCtx, path: str) -> mgp.Record(objects=mgp.List[object]):
-    """
-    Procedure to load JSON from a local file.
-
-    Parameters
-    ----------
-    path : str
-        Path to the JSON that is being loaded.
-    """
-    file = Path(path)
-    if file.exists():
-        opened_file = open(file)
-        objects = extract_objects(opened_file)
-    else:
-        raise FileNotFoundError("There is no file " + path)
-
-    opened_file.close()
-
-    return mgp.Record(objects=objects)
-
-
-@mgp.read_proc
-def load_from_url(ctx: mgp.ProcCtx, url: str) -> mgp.Record(objects=mgp.List[object]):
-    """
-    Procedure to load JSON from a remote address.
-
-    Parameters
-    ----------
-    url : str
-        URL to the JSON that is being loaded.
-    """
-    request = Request(url)
-    request.add_header("User-Agent", "MAGE module")
-    try:
-        content = urlopen(request)
-    except URLError as url_error:
-        raise url_error
-    else:
-        objects = extract_objects(content)
-
-    return mgp.Record(objects=objects)
-
-
-@mgp.read_proc
-def to_json(ctx: mgp.ProcCtx, value: Any) -> mgp.Record(json=str):
+def to_json(ctx: mgp.ProcCtx, value: Any) -> mgp.Record:
     """
     Converts any value to its JSON string representation.
     Similar to Neo4j's apoc.convert.toJson().
-
-    Parameters
-    ----------
-    value : Any
-        The value to convert to JSON. Can be a node, relationship, path,
-        or any primitive type.
-
-    Returns
-    -------
-    mgp.Record
-        A record containing the JSON string representation of the value.
     """
     converted = _convert_value_to_json_compatible(value)
     return mgp.Record(json=json.dumps(converted, ensure_ascii=False))
 
 
-@mgp.read_proc
-def from_json_list(ctx: mgp.ProcCtx, json_str: str) -> mgp.Record(value=mgp.List[Any]):
+def from_json_list(ctx: mgp.ProcCtx, json_str: str) -> mgp.Record:
     """
     Converts a JSON string representing a list to a Python list.
     Similar to Neo4j's apoc.convert.fromJsonList().
-
-    Parameters
-    ----------
-    json_str : str
-        The JSON string to convert. Must represent a valid JSON array.
-
-    Returns
-    -------
-    mgp.Record
-        A record containing the Python list converted from JSON.
-
-    Raises
-    ------
-    json.JSONDecodeError
-        If the input string is not valid JSON.
-    ValueError
-        If the input JSON does not represent a list.
     """
     value = json.loads(json_str)
     if not isinstance(value, list):
         raise ValueError("Input JSON must represent a list")
-    return mgp.Record(value=value)
+    return mgp.Record(value=value) 
