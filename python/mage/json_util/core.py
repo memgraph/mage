@@ -60,10 +60,29 @@ def _convert_value_to_json_compatible(value: Any) -> Any:
         return str(value)
 
 
+def extract_objects(file: TextIOWrapper):
+    """Helper function to extract objects from a JSON file."""
+    objects = json.load(file)
+    if type(objects) is dict:
+        objects = [objects]
+    return objects
+
+
 def to_json(ctx: mgp.ProcCtx, value: Any) -> mgp.Record:
     """
     Converts any value to its JSON string representation.
     Similar to Neo4j's apoc.convert.toJson().
+
+    Parameters
+    ----------
+    value : Any
+        The value to convert to JSON. Can be a node, relationship, path,
+        or any primitive type.
+
+    Returns
+    -------
+    mgp.Record
+        A record containing the JSON string representation of the value.
     """
     converted = _convert_value_to_json_compatible(value)
     return mgp.Record(json=json.dumps(converted, ensure_ascii=False))
@@ -73,8 +92,67 @@ def from_json_list(ctx: mgp.ProcCtx, json_str: str) -> mgp.Record:
     """
     Converts a JSON string representing a list to a Python list.
     Similar to Neo4j's apoc.convert.fromJsonList().
+
+    Parameters
+    ----------
+    json_str : str
+        The JSON string to convert. Must represent a valid JSON array.
+
+    Returns
+    -------
+    mgp.Record
+        A record containing the Python list converted from JSON.
+
+    Raises
+    ------
+    json.JSONDecodeError
+        If the input string is not valid JSON.
+    ValueError
+        If the input JSON does not represent a list.
     """
     value = json.loads(json_str)
     if not isinstance(value, list):
         raise ValueError("Input JSON must represent a list")
-    return mgp.Record(value=value) 
+    return mgp.Record(value=value)
+
+
+def load_from_path(ctx: mgp.ProcCtx, path: str) -> mgp.Record:
+    """
+    Procedure to load JSON from a local file.
+
+    Parameters
+    ----------
+    path : str
+        Path to the JSON that is being loaded.
+    """
+    file = Path(path)
+    if file.exists():
+        opened_file = open(file)
+        objects = extract_objects(opened_file)
+    else:
+        raise FileNotFoundError("There is no file " + path)
+
+    opened_file.close()
+
+    return mgp.Record(objects=objects)
+
+
+def load_from_url(ctx: mgp.ProcCtx, url: str) -> mgp.Record:
+    """
+    Procedure to load JSON from a remote address.
+
+    Parameters
+    ----------
+    url : str
+        URL to the JSON that is being loaded.
+    """
+    request = Request(url)
+    request.add_header("User-Agent", "MAGE module")
+    try:
+        content = urlopen(request)
+    except URLError as url_error:
+        raise url_error
+    else:
+        objects = extract_objects(content)
+
+    return mgp.Record(objects=objects) 
