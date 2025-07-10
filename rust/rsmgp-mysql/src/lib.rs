@@ -5,6 +5,7 @@ use rsmgp_sys::map::*;
 use rsmgp_sys::memgraph::*;
 use rsmgp_sys::mgp::*;
 use rsmgp_sys::result::Result;
+use rsmgp_sys::result::Error;
 use rsmgp_sys::rsmgp::*;
 use rsmgp_sys::value::Value;
 use rsmgp_sys::{close_module, define_procedure, define_type, init_module};
@@ -13,20 +14,49 @@ use std::os::raw::c_int;
 use std::panic;
 
 const AURORA_HOST: &str = "localhost";
-const AURORA_PORT: u16 = 3306;
-const AURORA_USER: &str = "testuser";
-const AURORA_PASSWORD: &str = "testpass";
-const AURORA_DATABASE: &str = "testdb";
+const AURORA_PORT: i64 = 3306;
+const AURORA_USER: &str = "username";
+const AURORA_PASSWORD: &str = "password";
+const AURORA_DATABASE: &str = "database";
 
-fn get_aurora_url() -> String {
+fn get_aurora_url(config: &Map) -> String {
+    use std::ffi::CString;
+
+    // Helper to extract a string from the map, or fallback
+    fn get_str(config: &Map, key: &str, default: &str) -> String {
+        let ckey = CString::new(key).unwrap();
+        match config.at(&ckey) {
+            Ok(Value::String(s)) => s.to_str().ok().map(|s| s.to_string()).unwrap_or_else(|| default.to_string()),
+            _ => default.to_string(),
+        }
+    }
+    // Helper to extract a u16 from the map, or fallback
+    fn get_port(config: &Map, key: &str, default: i64) -> i64 {
+        let ckey = CString::new(key).unwrap();
+        match config.at(&ckey) {
+            Ok(Value::Int(i)) => i,
+            _ => default,
+        }
+    }
+
+    let user = get_str(config, "user", AURORA_USER);
+    let pass = get_str(config, "password", AURORA_PASSWORD);
+    let host = get_str(config, "host", AURORA_HOST);
+    let db = get_str(config, "database", AURORA_DATABASE);
+    let port = get_port(config, "port", AURORA_PORT);
+
     format!(
         "mysql://{user}:{pass}@{host}:{port}/{db}",
-        user = AURORA_USER,
-        pass = AURORA_PASSWORD,
-        host = AURORA_HOST,
-        port = AURORA_PORT,
-        db = AURORA_DATABASE
+        user = user,
+        pass = pass,
+        host = host,
+        port = port,
+        db = db
     )
+}
+
+fn query_is_table(table_or_sql: &str) -> bool {
+    table_or_sql.split_whitespace().count() == 1
 }
 
 init_module!(|memgraph: &Memgraph| -> Result<()> {
@@ -44,35 +74,72 @@ init_module!(|memgraph: &Memgraph| -> Result<()> {
 
 define_procedure!(migrate, |memgraph: &Memgraph| -> Result<()> {
     let args = memgraph.args()?;
-    let sql_or_table = args.value_at(0)?;
-    let config = args.value_at(1)?;
+    let query = match args.value_at(0)? {
+        Value::String(ref cstr) => {
+            let s = cstr.to_str().expect("CString is not valid UTF-8");
+            if query_is_table(s) {
+                format!("SELECT * FROM `{}`;", s)
+            } else {
+                s.to_string()
+            }
+        }
+        _ => panic!("Expected String value in place of sql_or_table parameter!"),
+    };
+    println!("query: {}", query);
 
-    let url = get_aurora_url();
+    let config_arg = args.value_at(1)?;
+    let config = match config_arg {
+        Value::Map(ref map) => map,
+        _ => panic!("Expected Map value in place of config parameter!"),
+    };
+
+    let url = get_aurora_url(config);
+    println!("url: {}", url);
     let opts = Opts::from_url(&url).expect("Invalid MySQL URL");
     let pool = Pool::new(opts).expect("Failed to create pool");
     let mut conn = pool.get_conn().expect("Failed to get connection");
-    let query_result: Vec<Row> = conn.query("SELECT * FROM `Table`").expect("Query failed");
+    let query_result: Vec<Row> = match conn.query(query) {
+        Ok(rows) => rows,
+        Err(e) => {
+            println!("Error: {}", e);
+            return Err(Error::UnableToExecuteMySQLQuery);
+        }
+    };
+
     for row in query_result.iter() {
         let result = memgraph.result_record()?;
-        let mut row_map = Map::make_empty(&memgraph)?;
-        let columns = row.columns_ref();
-        for (i, col) in columns.iter().enumerate() {
-            let col_name = CString::new(col.name_str().as_bytes()).unwrap();
-            let val = row.as_ref(i).unwrap_or(&mysql::Value::NULL);
-            let mg_val = match val {
+        let row_map = Map::make_empty(&memgraph)?;
+        for column in row.columns_ref() {
+            let col_name = CString::new(column.name_str().as_bytes()).unwrap();
+            let column_value = &row[column.name_str().as_ref()];
+            let mg_val = match column_value {
                 mysql::Value::NULL => Value::Null,
                 mysql::Value::Int(i) => Value::Int(*i),
-                mysql::Value::UInt(u) => Value::Int(*u as i64),
+                mysql::Value::UInt(u) => {
+                    if *u <= i64::MAX as u64 {
+                        Value::Int(*u as i64)
+                    } else {
+                        eprintln!("Warning: MySQL unsigned integer {} exceeds i64::MAX, storing as string", u);
+                        Value::String(CString::new(u.to_string()).unwrap())
+                    }
+                },
                 mysql::Value::Float(f) => Value::Float(*f as f64),
                 mysql::Value::Double(d) => Value::Float(*d),
                 mysql::Value::Bytes(b) => {
-                    // Convert bytes to CString safely, fallback to hex if not valid UTF-8
-                    match CString::new(b.clone()) {
-                        Ok(s) => Value::String(s),
-                        Err(_) => Value::String(CString::new(hex::encode(b)).unwrap()),
+                    // Try to interpret as UTF-8 string, fallback to hex if not valid
+                    match String::from_utf8(b.clone()) {
+                        Ok(s) => Value::String(CString::new(s).unwrap()),
+                        Err(_) => {
+                            eprintln!("Warning: MySQL bytes column is not valid UTF-8, storing as hex string");
+                            Value::String(CString::new(hex::encode(b)).unwrap())
+                        }
                     }
                 },
-                _ => Value::Null,
+                // Optionally handle more types (date/time/decimal) here if needed
+                other => {
+                    eprintln!("Unhandled MySQL value type: {:?}, mapping to Null", other);
+                    Value::Null
+                }
             };
             row_map.insert(col_name.as_c_str(), &mg_val)?;
         }

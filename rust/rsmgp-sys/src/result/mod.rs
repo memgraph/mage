@@ -320,6 +320,9 @@ pub enum Error {
 
     #[snafu(display("Unable to check if vertex has a label."))]
     UnableToCheckVertexHasLabel,
+
+    #[snafu(display("Unable to execute MySQL query."))]
+    UnableToExecuteMySQLQuery,
 }
 
 /// A result type holding [Error] by default.
