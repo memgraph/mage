@@ -1,0 +1,15 @@
+[package]
+name = "rsmgp-mysql"
+version = "0.1.0"
+authors = ["Your Name <your.email@example.com>"]
+edition = "2018"
+
+[dependencies]
+mysql = "24"
+c_str_macro = "1.0.2"
+rsmgp-sys = { path = "../rsmgp-sys" }
+hex = "0.4.3"
+
+[lib]
+name = "rsmgp_mysql"
+crate-type = ["cdylib"]
