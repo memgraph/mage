@@ -89,7 +89,7 @@ jobs:
 
 
   RC_test:
-    if: github.ref_type == 'tag'
+    if: ${{ github.ref_type == 'tag' && !contains(github.event.head_commit.message, '[skip tests]') }}
     strategy:
       fail-fast: false
       matrix:
