@@ -72,6 +72,7 @@ def extract_objects(file: TextIOWrapper):
     return objects
 
 
+@mgp.function
 def to_json(value: Any) -> mgp.Record:
     """
     Converts any value to its JSON string representation.
@@ -92,6 +93,7 @@ def to_json(value: Any) -> mgp.Record:
     return mgp.Record(json=json.dumps(converted, ensure_ascii=False))
 
 
+@mgp.function
 def from_json_list(json_str: str) -> mgp.Record:
     """
     Converts a JSON string representing a list to a Python list.
@@ -120,6 +122,7 @@ def from_json_list(json_str: str) -> mgp.Record:
     return mgp.Record(value=value)
 
 
+@mgp.read_proc
 def load_from_path(path: str) -> mgp.Record:
     """
     Procedure to load JSON from a local file.
@@ -141,6 +144,7 @@ def load_from_path(path: str) -> mgp.Record:
     return mgp.Record(objects=objects)
 
 
+@mgp.read_proc
 def load_from_url(url: str) -> mgp.Record:
     """
     Procedure to load JSON from a remote address.
