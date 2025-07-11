@@ -1,15 +1,15 @@
 use c_str_macro::c_str;
-use mysql::*;
 use mysql::prelude::*;
+use mysql::*;
 use rsmgp_sys::map::*;
 use rsmgp_sys::memgraph::*;
 use rsmgp_sys::mgp::*;
-use rsmgp_sys::result::Result;
 use rsmgp_sys::result::Error;
+use rsmgp_sys::result::Result;
 use rsmgp_sys::rsmgp::*;
 use rsmgp_sys::value::MgpValue;
 use rsmgp_sys::value::Value;
-use rsmgp_sys::{close_module, define_procedure, define_type, define_optional_type, init_module};
+use rsmgp_sys::{close_module, define_optional_type, define_procedure, define_type, init_module};
 use std::ffi::CString;
 use std::os::raw::c_int;
 use std::panic;
@@ -27,7 +27,11 @@ fn get_aurora_url(config: &Map) -> String {
     fn get_str(config: &Map, key: &str, default: &str) -> String {
         let ckey = CString::new(key).unwrap();
         match config.at(&ckey) {
-            Ok(Value::String(s)) => s.to_str().ok().map(|s| s.to_string()).unwrap_or_else(|| default.to_string()),
+            Ok(Value::String(s)) => s
+                .to_str()
+                .ok()
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| default.to_string()),
             _ => default.to_string(),
         }
     }
@@ -64,9 +68,20 @@ init_module!(|memgraph: &Memgraph| -> Result<()> {
     memgraph.add_read_procedure(
         migrate,
         c_str!("migrate"),
-        &[define_type!("table_or_sql", Type::String),],
-        &[define_optional_type!("config", &MgpValue::make_map(&Map::make_empty(&memgraph)?, &memgraph)?, Type::Map), define_optional_type!("config_path", &MgpValue::make_string(c_str!(""), &memgraph)?, Type::String)],
-        &[define_type!("row", Type::Map),],
+        &[define_type!("table_or_sql", Type::String)],
+        &[
+            define_optional_type!(
+                "config",
+                &MgpValue::make_map(&Map::make_empty(&memgraph)?, &memgraph)?,
+                Type::Map
+            ),
+            define_optional_type!(
+                "config_path",
+                &MgpValue::make_string(c_str!(""), &memgraph)?,
+                Type::String
+            ),
+        ],
+        &[define_type!("row", Type::Map)],
     )?;
 
     Ok(())
@@ -122,7 +137,7 @@ define_procedure!(migrate, |memgraph: &Memgraph| -> Result<()> {
                         eprintln!("Warning: MySQL unsigned integer {} exceeds i64::MAX, storing as string", u);
                         Value::String(CString::new(u.to_string()).unwrap())
                     }
-                },
+                }
                 mysql::Value::Float(f) => Value::Float(*f as f64),
                 mysql::Value::Double(d) => Value::Float(*d),
                 mysql::Value::Bytes(b) => {
@@ -134,7 +149,7 @@ define_procedure!(migrate, |memgraph: &Memgraph| -> Result<()> {
                             Value::String(CString::new(hex::encode(b)).unwrap())
                         }
                     }
-                },
+                }
                 // Optionally handle more types (date/time/decimal) here if needed
                 other => {
                     eprintln!("Unhandled MySQL value type: {:?}, mapping to Null", other);
