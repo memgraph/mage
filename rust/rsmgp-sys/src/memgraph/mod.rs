@@ -444,6 +444,76 @@ impl Memgraph {
         }
     }
 
+    pub fn add_batch_read_procedure(
+        &self,
+        proc_ptr: extern "C" fn(*mut mgp_list, *mut mgp_graph, *mut mgp_result, *mut mgp_memory),
+        name: &CStr,
+        init_ptr: extern "C" fn(*mut mgp_list, *mut mgp_graph, *mut mgp_memory),
+        cleanup_ptr: extern "C" fn(),
+        required_arg_types: &[NamedType],
+        optional_arg_types: &[OptionalNamedType],
+        result_field_types: &[NamedType],
+    ) -> Result<()> {
+        unsafe {
+            let maybe_procedure = invoke_mgp_func!(
+                *mut mgp_proc,
+                ffi::mgp_module_add_batch_read_procedure,
+                self.module_ptr(),
+                name.as_ptr(),
+                Some(proc_ptr),
+                Some(init_ptr),
+                Some(cleanup_ptr)
+            );
+            if maybe_procedure.is_err() {
+                return Err(Error::UnableToRegisterReadProcedure);
+            }
+            let procedure = maybe_procedure.unwrap();
+
+            for required_type in required_arg_types {
+                let mgp_type = resolve_mgp_type(&required_type.types);
+                if ffi::mgp_proc_add_arg(procedure, required_type.name.as_ptr(), mgp_type)
+                    != mgp_error::MGP_ERROR_NO_ERROR
+                {
+                    return Err(Error::UnableToAddRequiredArguments);
+                }
+            }
+
+            for optional_input in optional_arg_types {
+                let mgp_type = resolve_mgp_type(&optional_input.types);
+
+                if ffi::mgp_proc_add_opt_arg(
+                    procedure,
+                    optional_input.name.as_ptr(),
+                    mgp_type,
+                    optional_input.default.mgp_ptr(),
+                ) != mgp_error::MGP_ERROR_NO_ERROR
+                {
+                    return Err(Error::UnableToAddOptionalArguments);
+                }
+            }
+
+            for result_field in result_field_types {
+                let mgp_type = resolve_mgp_type(&result_field.types);
+                if result_field.deprecated {
+                    if ffi::mgp_proc_add_deprecated_result(
+                        procedure,
+                        result_field.name.as_ptr(),
+                        mgp_type,
+                    ) != mgp_error::MGP_ERROR_NO_ERROR
+                    {
+                        return Err(Error::UnableToAddDeprecatedReturnType);
+                    }
+                } else if ffi::mgp_proc_add_result(procedure, result_field.name.as_ptr(), mgp_type)
+                    != mgp_error::MGP_ERROR_NO_ERROR
+                {
+                    return Err(Error::UnableToAddReturnType);
+                }
+            }
+
+            Ok(())
+        }
+    }
+
     /// Return `true` if the currently executing procedure should abort as soon as possible.
     ///
     /// Procedures which perform heavyweight processing run the risk of running too long and going

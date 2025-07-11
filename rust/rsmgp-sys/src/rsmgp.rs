@@ -99,6 +99,152 @@ macro_rules! define_procedure {
     };
 }
 
+/// Defines a new procedure callable by Memgraph engine.
+///
+/// Wraps call to the Rust function provided as a second argument. In addition to the function
+/// call, it also sets the catch_unwind hook and properly handles execution errors. The first macro
+/// argument is the exact name of the C procedure Memgraph will be able to run (the exact same name
+/// has to be registered inside [init_module] phase. The second argument has to be a function
+/// accepting reference [Memgraph]. The [Memgraph] object could be used to interact with Memgraph
+/// instance.
+///
+/// Example
+///
+/// ```no run
+/// define_procedure!(procedure_name, |memgraph: &Memgraph| -> Result<()> {
+///     // Implementation
+/// }
+/// ```
+#[macro_export]
+macro_rules! define_batch_procedure_init {
+    ($c_name:ident, $rs_func:expr) => {
+        #[no_mangle]
+        extern "C" fn $c_name(args: *mut mgp_list, graph: *mut mgp_graph, memory: *mut mgp_memory) {
+            let prev_hook = panic::take_hook();
+            panic::set_hook(Box::new(|_| { /* Do nothing. */ }));
+
+            let procedure_result = panic::catch_unwind(|| {
+                let memgraph = Memgraph::new(
+                    args,
+                    graph,
+                    std::ptr::null_mut(),
+                    memory,
+                    std::ptr::null_mut(),
+                );
+                match $rs_func(&memgraph) {
+                    Ok(_) => (),
+                    Err(e) => {
+                        let msg = e.to_string();
+                        println!("{}", msg);
+                        let c_msg =
+                            CString::new(msg).expect("Unable to create Memgraph error message!");
+                        set_memgraph_error_msg(&c_msg, &memgraph);
+                    }
+                }
+            });
+
+            panic::set_hook(prev_hook);
+            match procedure_result {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("Procedure panic!");
+                    let memgraph = Memgraph::new(
+                        args,
+                        graph,
+                        std::ptr::null_mut(),
+                        memory,
+                        std::ptr::null_mut(),
+                    );
+                    match e.downcast::<&str>() {
+                        Ok(msg) => {
+                            println!("{}", msg);
+                            let c_msg = CString::new(msg.as_bytes())
+                                .expect("Unable to create Memgraph PANIC error message!");
+                            set_memgraph_error_msg(&c_msg, &memgraph);
+                        }
+                        Err(_) => {
+                            println!("Unknown type of panic!.");
+                        }
+                    }
+                }
+            }
+        }
+    };
+}
+
+/// Defines a new procedure callable by Memgraph engine.
+///
+/// Wraps call to the Rust function provided as a second argument. In addition to the function
+/// call, it also sets the catch_unwind hook and properly handles execution errors. The first macro
+/// argument is the exact name of the C procedure Memgraph will be able to run (the exact same name
+/// has to be registered inside [init_module] phase. The second argument has to be a function
+/// accepting reference [Memgraph]. The [Memgraph] object could be used to interact with Memgraph
+/// instance.
+///
+/// Example
+///
+/// ```no run
+/// define_procedure!(procedure_name, |memgraph: &Memgraph| -> Result<()> {
+///     // Implementation
+/// }
+/// ```
+#[macro_export]
+macro_rules! define_batch_procedure_cleanup {
+    ($c_name:ident, $rs_func:expr) => {
+        #[no_mangle]
+        extern "C" fn $c_name() {
+            let prev_hook = panic::take_hook();
+            panic::set_hook(Box::new(|_| { /* Do nothing. */ }));
+
+            let procedure_result = panic::catch_unwind(|| {
+                let memgraph = Memgraph::new(
+                    std::ptr::null_mut(),
+                    std::ptr::null_mut(),
+                    std::ptr::null_mut(),
+                    std::ptr::null_mut(),
+                    std::ptr::null_mut(),
+                );
+                match $rs_func(&memgraph) {
+                    Ok(_) => (),
+                    Err(e) => {
+                        let msg = e.to_string();
+                        println!("{}", msg);
+                        let c_msg =
+                            CString::new(msg).expect("Unable to create Memgraph error message!");
+                        set_memgraph_error_msg(&c_msg, &memgraph);
+                    }
+                }
+            });
+
+            panic::set_hook(prev_hook);
+            match procedure_result {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("Procedure panic!");
+                    let memgraph = Memgraph::new(
+                        std::ptr::null_mut(),
+                        std::ptr::null_mut(),
+                        std::ptr::null_mut(),
+                        std::ptr::null_mut(),
+                        std::ptr::null_mut(),
+                    );
+                    match e.downcast::<&str>() {
+                        Ok(msg) => {
+                            println!("{}", msg);
+                            let c_msg = CString::new(msg.as_bytes())
+                                .expect("Unable to create Memgraph PANIC error message!");
+                            set_memgraph_error_msg(&c_msg, &memgraph);
+                        }
+                        Err(_) => {
+                            println!("Unknown type of panic!.");
+                        }
+                    }
+                }
+            }
+        }
+    };
+}
+
 /// Initializes Memgraph query module.
 ///
 /// Example
