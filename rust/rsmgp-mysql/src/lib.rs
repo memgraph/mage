@@ -100,7 +100,6 @@ define_procedure!(migrate, |memgraph: &Memgraph| -> Result<()> {
         }
         _ => panic!("Expected String value in place of sql_or_table parameter!"),
     };
-    println!("query: {}", query);
 
     let config_arg = args.value_at(1)?;
     let config = match config_arg {
@@ -109,10 +108,28 @@ define_procedure!(migrate, |memgraph: &Memgraph| -> Result<()> {
     };
 
     let url = get_aurora_url(config);
-    println!("url: {}", url);
-    let opts = Opts::from_url(&url).expect("Invalid MySQL URL");
-    let pool = Pool::new(opts).expect("Failed to create pool");
-    let mut conn = pool.get_conn().expect("Failed to get connection");
+    let opts: Opts = match Opts::from_url(&url) {
+        Ok(opts) => opts,
+        Err(e) => {
+            println!("Error: {}", e);
+            return Err(Error::InvalidMySQLURL);
+        }
+    };
+    let pool: Pool = match Pool::new(opts) {
+        Ok(pool) => pool,
+        Err(e) => {
+            println!("Error: {}", e);
+            return Err(Error::UnableToCreateMySQLPool);
+        }
+    };
+
+    let mut conn: PooledConn = match pool.get_conn() {
+        Ok(conn) => conn,
+        Err(e) => {
+            println!("Error: {}", e);
+            return Err(Error::UnableToGetMySQLConnection);
+        }
+    };
     let query_result: Vec<Row> = match conn.query(query) {
         Ok(rows) => rows,
         Err(e) => {

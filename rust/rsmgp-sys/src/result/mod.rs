@@ -321,6 +321,15 @@ pub enum Error {
     #[snafu(display("Unable to check if vertex has a label."))]
     UnableToCheckVertexHasLabel,
 
+    #[snafu(display("Invalid MySQL URL."))]
+    InvalidMySQLURL,
+
+    #[snafu(display("Unable to create MySQL pool."))]
+    UnableToCreateMySQLPool,
+
+    #[snafu(display("Unable to get MySQL connection."))]
+    UnableToGetMySQLConnection,
+
     #[snafu(display("Unable to execute MySQL query."))]
     UnableToExecuteMySQLQuery,
 }
