@@ -21,7 +21,7 @@ from .conftest import MockMgp
 )
 def test_primitive_types(value: Any, expected: Any) -> None:
     """Test conversion of primitive data types"""
-    result = json.loads(to_json(None, value).json)
+    result = json.loads(to_json(value).json)
     assert result == expected
 
 
@@ -39,7 +39,7 @@ def test_primitive_types(value: Any, expected: Any) -> None:
 )
 def test_datetime_types(dt: Any, expected: str) -> None:
     """Test conversion of datetime-related types"""
-    result = json.loads(to_json(None, dt).json)
+    result = json.loads(to_json(dt).json)
     assert result == expected
 
 
@@ -51,7 +51,7 @@ def test_vertex_conversion() -> None:
         properties={"name": "John Doe", "age": 30, "active": True},
     )
 
-    result = json.loads(to_json(None, vertex).json)
+    result = json.loads(to_json(vertex).json)
 
     assert result["type"] == "node"
     assert result["id"] == 1
@@ -76,7 +76,7 @@ def test_edge_conversion() -> None:
         properties={"since": 2020, "strength": 0.8},
     )
 
-    result = json.loads(to_json(None, edge).json)
+    result = json.loads(to_json(edge).json)
 
     assert result["type"] == "relationship"
     assert result["id"] == 100
@@ -97,7 +97,7 @@ def test_path_conversion() -> None:
 
     path = MockMgp.Path(vertices=[v1, v2, v3], edges=[e1, e2])
 
-    result = json.loads(to_json(None, path).json)
+    result = json.loads(to_json(path).json)
 
     assert result["type"] == "path"
     assert len(result["nodes"]) == 3
@@ -121,7 +121,7 @@ def test_complex_nested_structure() -> None:
         },
     }
 
-    result = json.loads(to_json(None, complex_obj).json)
+    result = json.loads(to_json(complex_obj).json)
 
     assert result["id"] == 123
     assert result["data"]["vertex"]["type"] == "node"
@@ -147,7 +147,7 @@ def test_complex_nested_structure() -> None:
 )
 def test_edge_cases(value: Any, expected: Any) -> None:
     """Test edge cases and special values"""
-    result = json.loads(to_json(None, value).json)
+    result = json.loads(to_json(value).json)
     assert str(result) == str(expected)
 
 
@@ -164,7 +164,7 @@ def test_edge_cases(value: Any, expected: Any) -> None:
 )
 def test_from_json_list_valid(json_str: str, expected: list) -> None:
     """Test valid JSON list conversions"""
-    result = from_json_list(None, json_str).value
+    result = from_json_list(json_str).value
     assert result == expected
 
 
@@ -181,4 +181,4 @@ def test_from_json_list_valid(json_str: str, expected: list) -> None:
 def test_from_json_list_invalid(invalid_input: str) -> None:
     """Test invalid inputs for JSON list conversion"""
     with pytest.raises((ValueError, json.JSONDecodeError)):
-        from_json_list(None, invalid_input)
+        from_json_list(invalid_input)
