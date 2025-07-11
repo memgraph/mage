@@ -18,7 +18,7 @@ class List(Generic[T]):
 
 class Vertex:
     """Mock Vertex class."""
-    def __init__(self, id: int, labels: List[str], 
+    def __init__(self, id: int, labels: List[str],
                  properties: Dict[str, Any]):
         self.id = id
         self.labels = labels
@@ -27,7 +27,7 @@ class Vertex:
 
 class Edge:
     """Mock Edge class."""
-    def __init__(self, id: int, from_vertex: Vertex, to_vertex: Vertex, 
+    def __init__(self, id: int, from_vertex: Vertex, to_vertex: Vertex,
                  type: str, properties: Dict[str, Any]):
         self.id = id
         self.from_vertex = from_vertex
@@ -65,4 +65,4 @@ def read_proc(func):
 
 def write_proc(func):
     """Mock write_proc decorator."""
-    return func 
+    return func
