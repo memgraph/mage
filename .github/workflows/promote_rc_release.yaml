@@ -1,6 +1,6 @@
 name: Promote RC to Release
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}
+  group: promote-rc-${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
 
 on:

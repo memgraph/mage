@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+#include <string_view>
+
 #include <mgp.hpp>
 
 namespace Text {
@@ -19,8 +22,21 @@ constexpr std::string_view kProcedureRegexGroups = "regexGroups";
 constexpr std::string_view kInput = "input";
 constexpr std::string_view kRegex = "regex";
 constexpr std::string_view kResultRegexGroups = "results";
+/* replace constants */
+constexpr std::string_view kProcedureReplace = "replace";
+constexpr std::string_view kText = "text";
+constexpr std::string_view kReplacement = "replacement";
+/* regreplace constants */
+constexpr std::string_view kProcedureRegReplace = "regreplace";
+/* distance constants */
+constexpr std::string_view kProcedureDistance = "distance";
+constexpr std::string_view kText1 = "text1";
+constexpr std::string_view kText2 = "text2";
 
 void Join(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 void Format(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 void RegexGroups(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void Replace(mgp_list *args, mgp_func_context *ctx, mgp_func_result *result, mgp_memory *memory);
+void RegReplace(mgp_list *args, mgp_func_context *ctx, mgp_func_result *result, mgp_memory *memory);
+void Distance(mgp_list *args, mgp_func_context *ctx, mgp_func_result *result, mgp_memory *memory);
 }  // namespace Text

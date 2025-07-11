@@ -33,13 +33,13 @@ fi
 kubectl version --client
 
 # delete any leftover cluster
-kind delete cluster --name kind-kind || true
+kind delete cluster --name smoke-release-testing || true
 
 # Create cluster and wait for it to be ready
-kubectl cluster-info --context kind-kind-kind > /dev/null 2>&1 \
+kubectl cluster-info --context kind-smoke-release-testing > /dev/null 2>&1 \
   || {
        echo "Creating cluster..."
-       kind create cluster --name kind-kind --wait 120s 
+       kind create cluster --name smoke-release-testing --wait 120s 
        echo "...done"
      }
 

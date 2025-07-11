@@ -1,5 +1,6 @@
 #include "text.hpp"
 
+#include <algorithm>
 #include <regex>
 #include <vector>
 
@@ -99,5 +100,95 @@ void Text::RegexGroups(mgp_list *args, mgp_graph * /*memgraph_graph*/, mgp_resul
 
   } catch (const std::exception &e) {
     record_factory.SetErrorMessage(e.what());
+  }
+}
+
+void Text::Replace(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  mgp::Result result_obj(result);
+
+  try {
+    auto text = std::string(arguments[0].ValueString());
+    const auto regex = std::string(arguments[1].ValueString());
+    const auto replacement = std::string(arguments[2].ValueString());
+
+    if (regex.size() == 0) {
+      result_obj.SetValue(text);
+      return;
+    }
+
+    size_t pos = 0;
+    while ((pos = text.find(regex, pos)) != std::string::npos) {
+      text.replace(pos, regex.length(), replacement);
+      pos += replacement.length();
+    }
+
+    result_obj.SetValue(std::move(text));
+  } catch (const std::exception &e) {
+    result_obj.SetErrorMessage(e.what());
+    return;
+  }
+}
+
+void Text::RegReplace(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  mgp::Result result_obj(result);
+
+  try {
+    const auto text = std::string(arguments[0].ValueString());
+    const auto regex = std::string(arguments[1].ValueString());
+    const auto replacement = std::string(arguments[2].ValueString());
+
+    if (regex.size() == 0) {
+      result_obj.SetValue(text);
+      return;
+    }
+
+    std::regex pattern(regex);
+    std::string result_str = std::regex_replace(text, pattern, replacement);
+
+    result_obj.SetValue(std::move(result_str));
+  } catch (const std::exception &e) {
+    result_obj.SetErrorMessage(e.what());
+    return;
+  }
+}
+
+void Text::Distance(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  mgp::Result result_obj(result);
+
+  try {
+    const auto text1 = std::string(arguments[0].ValueString());
+    const auto text2 = std::string(arguments[1].ValueString());
+
+    const size_t m = text1.length();
+    const size_t n = text2.length();
+    std::vector<std::vector<int>> dp(m + 1, std::vector<int>(n + 1));
+
+    for (size_t i = 0; i <= m; i++) {
+      dp[i][0] = i;
+    }
+    for (size_t j = 0; j <= n; j++) {
+      dp[0][j] = j;
+    }
+
+    for (size_t i = 1; i <= m; i++) {
+      for (size_t j = 1; j <= n; j++) {
+        if (text1[i - 1] == text2[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1];
+        } else {
+          dp[i][j] = 1 + std::min({dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]});
+        }
+      }
+    }
+
+    result_obj.SetValue(static_cast<int64_t>(dp[m][n]));
+  } catch (const std::exception &e) {
+    result_obj.SetErrorMessage(e.what());
+    return;
   }
 }
