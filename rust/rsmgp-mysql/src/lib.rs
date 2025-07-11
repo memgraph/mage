@@ -144,6 +144,7 @@ define_procedure!(migrate, |memgraph: &Memgraph| -> Result<()> {
         for column in row.columns_ref() {
             let col_name = CString::new(column.name_str().as_bytes()).unwrap();
             let column_value = &row[column.name_str().as_ref()];
+            println!("column_value: {:?}", column_value);
             let mg_val = match column_value {
                 mysql::Value::NULL => Value::Null,
                 mysql::Value::Int(i) => Value::Int(*i),

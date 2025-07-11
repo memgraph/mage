@@ -39,6 +39,8 @@ pub enum MgpError {
     ImmutableObject,
     ValueConversion,
     SerializationError,
+    AuthorizationError,
+    NotYetImplemented,
 }
 
 pub(crate) trait MgpDefault {
@@ -156,6 +158,8 @@ pub(crate) fn to_rust_mgp_error(error: mgp_error) -> Option<MgpError> {
         mgp_error::MGP_ERROR_IMMUTABLE_OBJECT => Some(MgpError::ImmutableObject),
         mgp_error::MGP_ERROR_VALUE_CONVERSION => Some(MgpError::ValueConversion),
         mgp_error::MGP_ERROR_SERIALIZATION_ERROR => Some(MgpError::SerializationError),
+        mgp_error::MGP_ERROR_AUTHORIZATION_ERROR => Some(MgpError::AuthorizationError),
+        mgp_error::MGP_ERROR_NOT_YET_IMPLEMENTED => Some(MgpError::NotYetImplemented),
     }
 }
 
