@@ -7,8 +7,9 @@ use rsmgp_sys::mgp::*;
 use rsmgp_sys::result::Result;
 use rsmgp_sys::result::Error;
 use rsmgp_sys::rsmgp::*;
+use rsmgp_sys::value::MgpValue;
 use rsmgp_sys::value::Value;
-use rsmgp_sys::{close_module, define_procedure, define_type, init_module};
+use rsmgp_sys::{close_module, define_procedure, define_type, define_optional_type, init_module};
 use std::ffi::CString;
 use std::os::raw::c_int;
 use std::panic;
@@ -63,9 +64,8 @@ init_module!(|memgraph: &Memgraph| -> Result<()> {
     memgraph.add_read_procedure(
         migrate,
         c_str!("migrate"),
-        &[define_type!("table_or_sql", Type::String),
-        define_type!("config", Type::Map)],
-        &[],
+        &[define_type!("table_or_sql", Type::String),],
+        &[define_optional_type!("config", &MgpValue::make_map(&Map::make_empty(&memgraph)?, &memgraph)?, Type::Map), define_optional_type!("config_path", &MgpValue::make_string(c_str!(""), &memgraph)?, Type::String)],
         &[define_type!("row", Type::Map),],
     )?;
 
