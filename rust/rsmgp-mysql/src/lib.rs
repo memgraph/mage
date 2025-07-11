@@ -1,5 +1,5 @@
-use chrono::{NaiveDate, NaiveDateTime};
 use c_str_macro::c_str;
+use chrono::{NaiveDate, NaiveDateTime};
 use mysql::prelude::*;
 use mysql::*;
 use rsmgp_sys::map::*;
@@ -174,14 +174,10 @@ define_procedure!(migrate, |memgraph: &Memgraph| -> Result<()> {
                                 Value::String(CString::new(s).unwrap())
                             }
                         }
-                        Err(_) => {
-                            Value::String(CString::new(hex::encode(b)).unwrap())
-                        }
+                        Err(_) => Value::String(CString::new(hex::encode(b)).unwrap()),
                     }
-                },
-                _ => {
-                    Value::Null
                 }
+                _ => Value::Null,
             };
             row_map.insert(col_name.as_c_str(), &mg_val)?;
         }
