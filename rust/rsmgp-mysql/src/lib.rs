@@ -1,3 +1,4 @@
+use chrono::{NaiveDate, NaiveDateTime};
 use c_str_macro::c_str;
 use mysql::prelude::*;
 use mysql::*;
@@ -130,7 +131,14 @@ define_procedure!(migrate, |memgraph: &Memgraph| -> Result<()> {
             return Err(Error::UnableToGetMySQLConnection);
         }
     };
-    let query_result: Vec<Row> = match conn.query(query) {
+    let prepared_statement = match conn.prep(&query) {
+        Ok(stmt) => stmt,
+        Err(e) => {
+            println!("Error: {}", e);
+            return Err(Error::UnableToPrepareMySQLStatement);
+        }
+    };
+    let query_result: Vec<Row> = match conn.exec(prepared_statement, ()) {
         Ok(rows) => rows,
         Err(e) => {
             println!("Error: {}", e);
@@ -144,7 +152,6 @@ define_procedure!(migrate, |memgraph: &Memgraph| -> Result<()> {
         for column in row.columns_ref() {
             let col_name = CString::new(column.name_str().as_bytes()).unwrap();
             let column_value = &row[column.name_str().as_ref()];
-            println!("column_value: {:?}", column_value);
             let mg_val = match column_value {
                 mysql::Value::NULL => Value::Null,
                 mysql::Value::Int(i) => Value::Int(*i),
@@ -152,25 +159,27 @@ define_procedure!(migrate, |memgraph: &Memgraph| -> Result<()> {
                     if *u <= i64::MAX as u64 {
                         Value::Int(*u as i64)
                     } else {
-                        eprintln!("Warning: MySQL unsigned integer {} exceeds i64::MAX, storing as string", u);
                         Value::String(CString::new(u.to_string()).unwrap())
                     }
                 }
                 mysql::Value::Float(f) => Value::Float(*f as f64),
-                mysql::Value::Double(d) => Value::Float(*d),
+                mysql::Value::Double(d) => Value::Float(*d as f64),
                 mysql::Value::Bytes(b) => {
                     // Try to interpret as UTF-8 string, fallback to hex if not valid
                     match String::from_utf8(b.clone()) {
-                        Ok(s) => Value::String(CString::new(s).unwrap()),
+                        Ok(s) => {
+                            if let Ok(d) = s.parse::<f64>() {
+                                Value::Float(d as f64)
+                            } else {
+                                Value::String(CString::new(s).unwrap())
+                            }
+                        }
                         Err(_) => {
-                            eprintln!("Warning: MySQL bytes column is not valid UTF-8, storing as hex string");
                             Value::String(CString::new(hex::encode(b)).unwrap())
                         }
                     }
-                }
-                // Optionally handle more types (date/time/decimal) here if needed
-                other => {
-                    eprintln!("Unhandled MySQL value type: {:?}, mapping to Null", other);
+                },
+                _ => {
                     Value::Null
                 }
             };

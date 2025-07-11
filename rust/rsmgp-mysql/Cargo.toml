@@ -1,14 +1,15 @@
 [package]
 name = "rsmgp-mysql"
 version = "0.1.0"
-authors = ["Your Name <your.email@example.com>"]
-edition = "2018"
+authors = ["Josip Mrden <josip.mrden@memgraph.io>"]
+edition = "2024"
 
 [dependencies]
-mysql = "24"
+mysql = "26"
 c_str_macro = "1.0.2"
 rsmgp-sys = { path = "../rsmgp-sys" }
 hex = "0.4.3"
+chrono = { version = "0.4.41", features = ["serde"] }
 
 [lib]
 name = "rsmgp_mysql"
