@@ -66,3 +66,8 @@ def read_proc(func):
 def write_proc(func):
     """Mock write_proc decorator."""
     return func
+
+
+def function(func):
+    """Mock function decorator."""
+    return func

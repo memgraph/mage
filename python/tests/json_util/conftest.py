@@ -93,6 +93,10 @@ class MockMgp:
     def read_proc(f):
         return f
 
+    @staticmethod
+    def function(f):
+        return f
+
     # Mock List type
     List = list
 
