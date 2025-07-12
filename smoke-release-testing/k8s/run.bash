@@ -2,7 +2,7 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/../utils.bash"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
+export PATH="$(go env GOPATH)/bin:$PATH"
 # NOTES:
 #   * In the custom values file telemetry was disabled and NodePort was set
 #   as the serviceType. The values file was copied from
@@ -38,7 +38,7 @@ test_k8s_single() {
   echo "CREATE ();" | $MEMGRAPH_CONSOLE_BINARY --port 17687
   echo "MATCH (n) RETURN n;" | $MEMGRAPH_CONSOLE_BINARY --port 17687
   kill $PF_PID
-  wait $PF_PID 2>/dev/null
+  wait $PF_PID 2>/dev/null || true
   helm uninstall memgraph-single-smoke
 }
 
