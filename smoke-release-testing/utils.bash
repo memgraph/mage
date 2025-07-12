@@ -1,8 +1,6 @@
 #!/bin/bash
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# TODO(gitbuda): Write the helper to fail with a nice error message in the case required env variables are not set.
-
 MEMGRAPH_BUILD_PATH="${MEMGRAPH_BUILD_PATH:-/tmp/memgraph/build}"
 MEMGRAPH_CONSOLE_BINARY="${MEMGRAPH_CONSOLE_BINARY:-$SCRIPT_DIR/mgconsole.build/build/src/mgconsole}"
 # Required env vars to define.
@@ -14,6 +12,38 @@ MEMGRAPH_LAST_RC_DIRECT_DOCKER_IMAGE_X86="${MEMGRAPH_LAST_RC_DIRECT_DOCKER_IMAGE
 MEMGRAPH_NEXT_RC_DIRECT_DOCKER_IMAGE_X86="${MEMGRAPH_NEXT_RC_DIRECT_DOCKER_IMAGE_X86:-provide_https_donwload_link}"
 MEMGRAPH_LAST_DOCKERHUB_IMAGE="${MEMGRAPH_LAST_DOCKERHUB_IMAGE:-provide_dockerhub_image_name}"
 MEMGRAPH_NEXT_DOCKERHUB_IMAGE="${MEMGRAPH_NEXT_DOCKERHUB_IMAGE:-provide_dockerhub_image_name}"
+
+print_help_and_exit_unsuccessfully() {
+  echo "It's required to define the following environment variables:"
+  echo "  MEMGRAPH_ENTERPRISE_LICENSE"
+  echo "  MEMGRAPH_ORGANIZATION_NAME"
+  echo "  MEMGRAPH_LAST_DOCKERHUB_IMAGE"
+  echo "  MEMGRAPH_NEXT_DOCKERHUB_IMAGE"
+  echo "Optionally if you want to test daily or RC builds you can define the following environment variables:"
+  echo "  MEMGRAPH_LAST_RC_DIRECT_DOCKER_IMAGE_ARM"
+  echo "  MEMGRAPH_NEXT_RC_DIRECT_DOCKER_IMAGE_ARM"
+  echo "  MEMGRAPH_LAST_RC_DIRECT_DOCKER_IMAGE_X86"
+  echo "  MEMGRAPH_NEXT_RC_DIRECT_DOCKER_IMAGE_X86"
+  exit 1
+}
+check_dockerhub_images() {
+  if [ "$MEMGRAPH_ENTERPRISE_LICENSE" = "provide_licanse_string" ]; then
+    print_help_and_exit_unsuccessfully
+  fi
+  if [ "$MEMGRAPH_ORGANIZATION_NAME" = "provide_organization_name_string" ]; then
+    print_help_and_exit_unsuccessfully
+  fi
+  if [ "$MEMGRAPH_LAST_DOCKERHUB_IMAGE" = "provide_dockerhub_image_name" ]; then
+    print_help_and_exit_unsuccessfully
+  fi
+  if [ "$MEMGRAPH_NEXT_DOCKERHUB_IMAGE" = "provide_dockerhub_image_name" ]; then
+    print_help_and_exit_unsuccessfully
+  fi
+  echo "License and Docker images validation passed:"
+  echo "  LAST: $MEMGRAPH_LAST_DOCKERHUB_IMAGE"
+  echo "  NEXT: $MEMGRAPH_NEXT_DOCKERHUB_IMAGE"
+}
+check_dockerhub_images
 
 MEMGRAPH_GENERAL_FLAGS="--telemetry-enabled=false --log-level=TRACE --also-log-to-stderr"
 MEMGRAPH_ENTERPRISE_DOCKER_ENVS="-e MEMGRAPH_ENTERPRISE_LICENSE=$MEMGRAPH_ENTERPRISE_LICENSE -e MEMGRAPH_ORGANIZATION_NAME=$MEMGRAPH_ORGANIZATION_NAME"
