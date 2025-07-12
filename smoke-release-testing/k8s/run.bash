@@ -42,15 +42,21 @@ test_k8s_single() {
   helm uninstall memgraph-single-smoke
 }
 
+# TODO(gitbuda): Here we need memgraph/memgraph because that's what's used under the helm chart...
 test_k8s_ha() {
-  echo "Test k8s HA memgraph cluster using image: $MEMGRAPH_NEXT_DOCKERHUB_IMAGE"
-  kind load docker-image $MEMGRAPH_NEXT_DOCKERHUB_IMAGE -n smoke-release-testing
-  MEMGRAPH_NEXT_DOCKERHUB_TAG="${MEMGRAPH_NEXT_DOCKERHUB_IMAGE##*:}"
+  WHICH="$1"
+  WHICH_TMP="MEMGRAPH_${WHICH}_DOCKERHUB_IMAGE"
+  WHICH_IMAGE="${!WHICH_TMP}"
+  echo "Test k8s HA memgraph cluster using image: $WHICH_IMAGE"
+  kind load docker-image $WHICH_IMAGE -n smoke-release-testing
+  MEMGRAPH_DOCKERHUB_TAG="${WHICH_IMAGE##*:}"
+  echo $MEMGRAPH_DOCKERHUB_TAG
   helm install myhadb memgraph/memgraph-high-availability \
     --set env.MEMGRAPH_ENTERPRISE_LICENSE=$MEMGRAPH_ENTERPRISE_LICENSE,env.MEMGRAPH_ORGANIZATION_NAME=$MEMGRAPH_ORGANIZATION_NAME \
     -f "$SCRIPT_DIR/values-ha.yaml" \
-    --set "image.tag=$MEMGRAPH_NEXT_DOCKERHUB_TAG"
+    --set "image.tag=$MEMGRAPH_DOCKERHUB_TAG"
   # TODO(gitbuda): Setup cluster commands + routing + test query.
+  helm uninstall myhadb
 }
 
 if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
