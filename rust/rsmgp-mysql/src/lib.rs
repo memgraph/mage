@@ -69,11 +69,49 @@ init_module!(|memgraph: &Memgraph| -> Result<()> {
         &[define_type!("table_name", Type::String)],
     )?;
 
+    memgraph.add_read_procedure(
+        describe_table,
+        c_str!("describe_table"),
+        &[define_type!("table", Type::String)],
+        &[
+            define_optional_type!(
+                "config",
+                &MgpValue::make_map(&Map::make_empty(&memgraph)?, &memgraph)?,
+                Type::Map
+            ),
+            define_optional_type!(
+                "config_path",
+                &MgpValue::make_string(c_str!(""), &memgraph)?,
+                Type::String
+            ),
+        ],
+        &[define_type!("row", Type::Map)],
+    )?;
+
+    memgraph.add_read_procedure(
+        execute,
+        c_str!("execute"),
+        &[define_type!("table_or_sql", Type::String)],
+        &[
+            define_optional_type!(
+                "config",
+                &MgpValue::make_map(&Map::make_empty(&memgraph)?, &memgraph)?,
+                Type::Map
+            ),
+            define_optional_type!(
+                "config_path",
+                &MgpValue::make_string(c_str!(""), &memgraph)?,
+                Type::String
+            ),
+        ],
+        &[define_type!("row", Type::Map)],
+    )?;
+
     memgraph.add_batch_read_procedure(
-        migrate,
-        c_str!("migrate"),
-        init_migrate,
-        cleanup_migrate,
+        batch,
+        c_str!("batch"),
+        init_batch,
+        cleanup_batch,
         &[define_type!("table_or_sql", Type::String)],
         &[
             define_optional_type!(
@@ -154,7 +192,105 @@ define_procedure!(show_tables, |memgraph: &Memgraph| -> Result<()> {
     Ok(())
 });
 
-define_batch_procedure_init!(init_migrate, |memgraph: &Memgraph| -> Result<()> {
+define_procedure!(describe_table, |memgraph: &Memgraph| -> Result<()> {
+    let args = memgraph.args()?;
+    let query = match args.value_at(0)? {
+        Value::String(ref cstr) => format!("DESCRIBE `{}`", cstr.to_str().unwrap()),
+        _ => panic!("Expected String value in place of table parameter!"),
+    };
+
+    let config_arg = args.value_at(1)?;
+    let config = match config_arg {
+        Value::Map(ref map) => map,
+        _ => panic!("Expected Map value in place of config parameter!"),
+    };
+
+    let url = get_aurora_url(config);
+    let mut conn: PooledConn = get_connection(&url)?;
+
+    let prepared_statement = match conn.prep(&query) {
+        Ok(stmt) => stmt,
+        Err(e) => {
+            println!("Error: {}", e);
+            return Err(Error::UnableToPrepareMySQLStatement);
+        }
+    };
+    let result = match conn.exec_iter(prepared_statement, ()) {
+        Ok(result) => result,
+        Err(e) => {
+            println!("Error: {}", e);
+            return Err(Error::UnableToExecuteMySQLQuery);
+        }
+    };
+
+    for row_result in result {
+        let row = match row_result {
+            Ok(row) => row,
+            Err(e) => {
+                println!("Error fetching row: {}", e);
+                continue;
+            }
+        };
+
+        insert_row_into_memgraph(&row, &memgraph)?;
+    }
+
+    Ok(())
+});
+
+define_procedure!(execute, |memgraph: &Memgraph| -> Result<()> {
+    let args = memgraph.args()?;
+    let query = match args.value_at(0)? {
+        Value::String(ref cstr) => {
+            let s = cstr.to_str().expect("CString is not valid UTF-8");
+            if query_is_table(s) {
+                format!("SELECT * FROM `{}`;", s)
+            } else {
+                s.to_string()
+            }
+        }
+        _ => panic!("Expected String value in place of sql_or_table parameter!"),
+    };
+    let config_arg = args.value_at(1)?;
+    let config = match config_arg {
+        Value::Map(ref map) => map,
+        _ => panic!("Expected Map value in place of config parameter!"),
+    };
+
+    let url = get_aurora_url(config);
+    let mut conn: PooledConn = get_connection(&url)?;
+
+    let prepared_statement = match conn.prep(&query) {
+        Ok(stmt) => stmt,
+        Err(e) => {
+            println!("Error: {}", e);
+            return Err(Error::UnableToPrepareMySQLStatement);
+        }
+    };
+    let result = match conn.exec_iter(prepared_statement, ()) {
+        Ok(result) => result,
+        Err(e) => {
+            println!("Error: {}", e);
+            return Err(Error::UnableToExecuteMySQLQuery);
+        }
+    };
+
+    for row_result in result {
+        let row = match row_result {
+            Ok(row) => row,
+            Err(e) => {
+                println!("Error fetching row: {}", e);
+                continue;
+            }
+        };
+
+        insert_row_into_memgraph(&row, &memgraph)?;
+    }
+
+    Ok(())
+});
+
+define_batch_procedure_init!(init_batch, |memgraph: &Memgraph| -> Result<()> {
     let args = memgraph.args()?;
     let query = match args.value_at(0)? {
         Value::String(ref cstr) => {
@@ -193,7 +329,7 @@ define_batch_procedure_init!(init_migrate, |memgraph: &Memgraph| -> Result<()> {
     Ok(())
 });
 
-define_procedure!(migrate, |memgraph: &Memgraph| -> Result<()> {
+define_procedure!(batch, |memgraph: &Memgraph| -> Result<()> {
     let base_query = MYSQL_BASE_QUERY.with(|cell| cell.borrow().clone());
     let offset = MYSQL_OFFSET.with(|cell| *cell.borrow());
     let batch_size = 100_000;
@@ -244,7 +380,7 @@ define_procedure!(migrate, |memgraph: &Memgraph| -> Result<()> {
     Ok(())
 });
 
-define_batch_procedure_cleanup!(cleanup_migrate, |_memgraph: &Memgraph| -> Result<()> {
+define_batch_procedure_cleanup!(cleanup_batch, |_memgraph: &Memgraph| -> Result<()> {
     MYSQL_CONN.with(|conn_cell| {
         *conn_cell.borrow_mut() = None;
     });
