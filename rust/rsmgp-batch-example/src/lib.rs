@@ -1,5 +1,4 @@
 use c_str_macro::c_str;
-use rand::Rng;
 use rsmgp_sys::memgraph::*;
 use rsmgp_sys::mgp::*;
 use rsmgp_sys::result::*;
@@ -12,6 +11,11 @@ use rsmgp_sys::{
 use std::ffi::CString;
 use std::os::raw::c_int;
 use std::panic;
+use std::cell::RefCell;
+
+thread_local! {
+    static COUNTER: RefCell<i32> = RefCell::new(0);
+}
 
 init_module!(|memgraph: &Memgraph| -> Result<()> {
     memgraph.add_batch_read_procedure(
@@ -29,15 +33,19 @@ init_module!(|memgraph: &Memgraph| -> Result<()> {
 
 define_procedure!(test_procedure, |memgraph: &Memgraph| -> Result<()> {
     println!("Entered test procedure!");
-    let mut rng = rand::rng();
-    let n = rng.random_range(1..=5);
-    println!("n: {}", n);
-    if n != 2 {
+    let value: i32 = COUNTER.with(|counter| {
+        let mut val = counter.borrow_mut();
+        *val += 1;
+        *val
+    });
+
+    if value != 10 {
         let result = memgraph.result_record()?;
-        result.insert_mgp_value(c_str!("value"), &MgpValue::make_int(1, memgraph)?)?;
+        result.insert_mgp_value(c_str!("value"), &MgpValue::make_int(value as i64, memgraph)?)?;
+        std::thread::sleep(std::time::Duration::from_secs(1));
     }
-    std::thread::sleep(std::time::Duration::from_secs(5));
-    println!("Exiting test procedure!");
+
+    println!("Exiting test procedure! Value: {}", value);
     Ok(())
 });
 
