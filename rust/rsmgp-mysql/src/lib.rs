@@ -1,5 +1,4 @@
 use c_str_macro::c_str;
-use chrono::{NaiveDate, NaiveDateTime};
 use mysql::prelude::*;
 use mysql::*;
 use rsmgp_sys::map::*;
@@ -10,7 +9,10 @@ use rsmgp_sys::result::Result;
 use rsmgp_sys::rsmgp::*;
 use rsmgp_sys::value::MgpValue;
 use rsmgp_sys::value::Value;
-use rsmgp_sys::{close_module, define_optional_type, define_procedure, define_type, init_module};
+use rsmgp_sys::{
+    close_module, define_batch_procedure_cleanup, define_batch_procedure_init,
+    define_optional_type, define_procedure, define_type, init_module,
+};
 use std::ffi::CString;
 use std::os::raw::c_int;
 use std::panic;
@@ -66,9 +68,11 @@ fn query_is_table(table_or_sql: &str) -> bool {
 }
 
 init_module!(|memgraph: &Memgraph| -> Result<()> {
-    memgraph.add_read_procedure(
+    memgraph.add_batch_read_procedure(
         migrate,
         c_str!("migrate"),
+        init_procedure,
+        cleanup_procedure,
         &[define_type!("table_or_sql", Type::String)],
         &[
             define_optional_type!(
@@ -138,15 +142,22 @@ define_procedure!(migrate, |memgraph: &Memgraph| -> Result<()> {
             return Err(Error::UnableToPrepareMySQLStatement);
         }
     };
-    let query_result: Vec<Row> = match conn.exec(prepared_statement, ()) {
-        Ok(rows) => rows,
+    let result = match conn.exec_iter(prepared_statement, ()) {
+        Ok(result) => result,
         Err(e) => {
             println!("Error: {}", e);
             return Err(Error::UnableToExecuteMySQLQuery);
         }
     };
 
-    for row in query_result.iter() {
+    for row_result in result {
+        let row = match row_result {
+            Ok(row) => row,
+            Err(e) => {
+                println!("Error fetching row: {}", e);
+                continue; // or return Err(Error::UnableToExecuteMySQLQuery);
+            }
+        };
         let result = memgraph.result_record()?;
         let row_map = Map::make_empty(&memgraph)?;
         for column in row.columns_ref() {
@@ -165,7 +176,6 @@ define_procedure!(migrate, |memgraph: &Memgraph| -> Result<()> {
                 mysql::Value::Float(f) => Value::Float(*f as f64),
                 mysql::Value::Double(d) => Value::Float(*d as f64),
                 mysql::Value::Bytes(b) => {
-                    // Try to interpret as UTF-8 string, fallback to hex if not valid
                     match String::from_utf8(b.clone()) {
                         Ok(s) => {
                             if let Ok(d) = s.parse::<f64>() {
@@ -184,6 +194,14 @@ define_procedure!(migrate, |memgraph: &Memgraph| -> Result<()> {
         result.insert_map(c_str!("row"), &row_map)?;
     }
 
+    Ok(())
+});
+
+define_batch_procedure_init!(init_procedure, |_memgraph: &Memgraph| -> Result<()> {
+    Ok(())
+});
+
+define_batch_procedure_cleanup!(cleanup_procedure, |_memgraph: &Memgraph| -> Result<()> {
     Ok(())
 });
 

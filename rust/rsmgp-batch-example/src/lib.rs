@@ -8,10 +8,10 @@ use rsmgp_sys::{
     close_module, define_batch_procedure_cleanup, define_batch_procedure_init, define_procedure,
     define_type, init_module,
 };
+use std::cell::RefCell;
 use std::ffi::CString;
 use std::os::raw::c_int;
 use std::panic;
-use std::cell::RefCell;
 
 thread_local! {
     static COUNTER: RefCell<i32> = RefCell::new(0);
@@ -41,7 +41,10 @@ define_procedure!(test_procedure, |memgraph: &Memgraph| -> Result<()> {
 
     if value != 10 {
         let result = memgraph.result_record()?;
-        result.insert_mgp_value(c_str!("value"), &MgpValue::make_int(value as i64, memgraph)?)?;
+        result.insert_mgp_value(
+            c_str!("value"),
+            &MgpValue::make_int(value as i64, memgraph)?,
+        )?;
         std::thread::sleep(std::time::Duration::from_secs(1));
     }
 
