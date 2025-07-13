@@ -32,7 +32,7 @@ const AURORA_DATABASE: &str = "database";
 
 init_module!(|memgraph: &Memgraph| -> Result<()> {
     memgraph.add_read_procedure(
-        migrate,
+        test_connection,
         c_str!("test_connection"),
         &[],
         &[
@@ -48,6 +48,25 @@ init_module!(|memgraph: &Memgraph| -> Result<()> {
             ),
         ],
         &[define_type!("success", Type::Bool)],
+    )?;
+
+    memgraph.add_read_procedure(
+        show_tables,
+        c_str!("show_tables"),
+        &[],
+        &[
+            define_optional_type!(
+                "config",
+                &MgpValue::make_map(&Map::make_empty(&memgraph)?, &memgraph)?,
+                Type::Map
+            ),
+            define_optional_type!(
+                "config_path",
+                &MgpValue::make_string(c_str!(""), &memgraph)?,
+                Type::String
+            ),
+        ],
+        &[define_type!("table_name", Type::String)],
     )?;
 
     memgraph.add_batch_read_procedure(
@@ -76,7 +95,7 @@ init_module!(|memgraph: &Memgraph| -> Result<()> {
 
 define_procedure!(test_connection, |memgraph: &Memgraph| -> Result<()> {
     let args = memgraph.args()?;
-    let config_arg = args.value_at(1)?;
+    let config_arg = args.value_at(0)?;
     let config = match config_arg {
         Value::Map(ref map) => map,
         _ => panic!("Expected Map value in place of config parameter!"),
@@ -85,13 +104,49 @@ define_procedure!(test_connection, |memgraph: &Memgraph| -> Result<()> {
     let url = get_aurora_url(config);
     let mut conn: PooledConn = get_connection(&url)?;
 
-    let _: Vec<Row> = match conn.exec("SELECT 1 as result".to_string(), ()) {
+    let _: Vec<Row> = match conn.exec("SELECT 1 AS result".to_string(), ()) {
         Ok(result) => result,
         Err(e) => {
             println!("Error: {}", e);
             return Err(Error::UnableToExecuteMySQLQuery);
         }
     };
+
+    let result = memgraph.result_record()?;
+    result.insert_bool(c_str!("success"), true)?;
+
+    Ok(())
+});
+
+define_procedure!(show_tables, |memgraph: &Memgraph| -> Result<()> {
+    let args = memgraph.args()?;
+    let config_arg = args.value_at(0)?;
+    let config = match config_arg {
+        Value::Map(ref map) => map,
+        _ => panic!("Expected Map value in place of config parameter!"),
+    };
+
+    let url = get_aurora_url(config);
+    let mut conn: PooledConn = get_connection(&url)?;
+
+    let rows: Vec<Row> = match conn.exec("SHOW TABLES".to_string(), ()) {
+        Ok(result) => result,
+        Err(e) => {
+            println!("Error: {}", e);
+            return Err(Error::UnableToExecuteMySQLQuery);
+        }
+    };
+
+    for row in rows {
+        // The table name is the first column in the row
+        let table_name: String = row.get(0).and_then(|val| match val {
+            mysql::Value::Bytes(bytes) => String::from_utf8(bytes.clone()).ok(),
+            _ => None,
+        }).unwrap_or_else(|| "<unknown>".to_string());
+
+        let result = memgraph.result_record()?;
+        result.insert_string(c_str!("table_name"), &CString::new(table_name).unwrap())?;
+    }
 
     Ok(())
 });
