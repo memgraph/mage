@@ -13,15 +13,47 @@ use rsmgp_sys::{
     close_module, define_batch_procedure_cleanup, define_batch_procedure_init,
     define_optional_type, define_procedure, define_type, init_module,
 };
+use std::cell::RefCell;
 use std::ffi::CString;
 use std::os::raw::c_int;
 use std::panic;
+
+thread_local! {
+    static MYSQL_BASE_QUERY: RefCell<String> = RefCell::new("".to_string());
+    static MYSQL_CONN: RefCell<Option<PooledConn>> = RefCell::new(None);
+    static MYSQL_OFFSET: RefCell<usize> = RefCell::new(0);
+}
 
 const AURORA_HOST: &str = "localhost";
 const AURORA_PORT: i64 = 3306;
 const AURORA_USER: &str = "username";
 const AURORA_PASSWORD: &str = "password";
 const AURORA_DATABASE: &str = "database";
+
+init_module!(|memgraph: &Memgraph| -> Result<()> {
+    memgraph.add_batch_read_procedure(
+        migrate,
+        c_str!("migrate"),
+        init_migrate,
+        cleanup_migrate,
+        &[define_type!("table_or_sql", Type::String)],
+        &[
+            define_optional_type!(
+                "config",
+                &MgpValue::make_map(&Map::make_empty(&memgraph)?, &memgraph)?,
+                Type::Map
+            ),
+            define_optional_type!(
+                "config_path",
+                &MgpValue::make_string(c_str!(""), &memgraph)?,
+                Type::String
+            ),
+        ],
+        &[define_type!("row", Type::Map)],
+    )?;
+
+    Ok(())
+});
 
 fn get_aurora_url(config: &Map) -> String {
     use std::ffi::CString;
@@ -67,32 +99,88 @@ fn query_is_table(table_or_sql: &str) -> bool {
     table_or_sql.split_whitespace().count() == 1
 }
 
-init_module!(|memgraph: &Memgraph| -> Result<()> {
-    memgraph.add_batch_read_procedure(
-        migrate,
-        c_str!("migrate"),
-        init_procedure,
-        cleanup_procedure,
-        &[define_type!("table_or_sql", Type::String)],
-        &[
-            define_optional_type!(
-                "config",
-                &MgpValue::make_map(&Map::make_empty(&memgraph)?, &memgraph)?,
-                Type::Map
-            ),
-            define_optional_type!(
-                "config_path",
-                &MgpValue::make_string(c_str!(""), &memgraph)?,
-                Type::String
-            ),
-        ],
-        &[define_type!("row", Type::Map)],
-    )?;
+define_procedure!(migrate, |memgraph: &Memgraph| -> Result<()> {
+    let base_query = MYSQL_BASE_QUERY.with(|cell| cell.borrow().clone());
+    let offset = MYSQL_OFFSET.with(|cell| *cell.borrow());
+    let batch_size = 100_000;
+    let query = format!("{} LIMIT {} OFFSET {}", base_query, batch_size, offset);
+
+    MYSQL_CONN.with(|conn_cell| {
+        let mut conn_opt = conn_cell.borrow_mut();
+        let conn = match conn_opt.as_mut() {
+            Some(c) => c,
+            None => {
+                println!("No MySQL connection available");
+                return Err(Error::UnableToGetMySQLConnection);
+            }
+        };
+        let prepared_statement = match conn.prep(&query) {
+            Ok(stmt) => stmt,
+            Err(e) => {
+                println!("Error: {}", e);
+                return Err(Error::UnableToPrepareMySQLStatement);
+            }
+        };
+        let result = match conn.exec_iter(prepared_statement, ()) {
+            Ok(result) => result,
+            Err(e) => {
+                println!("Error: {}", e);
+                return Err(Error::UnableToExecuteMySQLQuery);
+            }
+        };
+
+        for row_result in result {
+            let row = match row_result {
+                Ok(row) => row,
+                Err(e) => {
+                    println!("Error fetching row: {}", e);
+                    continue;
+                }
+            };
+            let result = memgraph.result_record()?;
+            let row_map = Map::make_empty(&memgraph)?;
+            for column in row.columns_ref() {
+                let col_name = CString::new(column.name_str().as_bytes()).unwrap();
+                let column_value = &row[column.name_str().as_ref()];
+                let mg_val = match column_value {
+                    mysql::Value::NULL => Value::Null,
+                    mysql::Value::Int(i) => Value::Int(*i),
+                    mysql::Value::UInt(u) => {
+                        if *u <= i64::MAX as u64 {
+                            Value::Int(*u as i64)
+                        } else {
+                            Value::String(CString::new(u.to_string()).unwrap())
+                        }
+                    }
+                    mysql::Value::Float(f) => Value::Float(*f as f64),
+                    mysql::Value::Double(d) => Value::Float(*d as f64),
+                    mysql::Value::Bytes(b) => match String::from_utf8(b.clone()) {
+                        Ok(s) => {
+                            if let Ok(d) = s.parse::<f64>() {
+                                Value::Float(d as f64)
+                            } else {
+                                Value::String(CString::new(s).unwrap())
+                            }
+                        }
+                        Err(_) => Value::String(CString::new(hex::encode(b)).unwrap()),
+                    },
+                    _ => Value::Null,
+                };
+                row_map.insert(col_name.as_c_str(), &mg_val)?;
+            }
+            result.insert_map(c_str!("row"), &row_map)?;
+        }
+        Ok(())
+    })?;
+
+    MYSQL_OFFSET.with(|cell| {
+        *cell.borrow_mut() += batch_size;
+    });
 
     Ok(())
 });
 
-define_procedure!(migrate, |memgraph: &Memgraph| -> Result<()> {
+define_batch_procedure_init!(init_migrate, |memgraph: &Memgraph| -> Result<()> {
     let args = memgraph.args()?;
     let query = match args.value_at(0)? {
         Value::String(ref cstr) => {
@@ -127,79 +215,41 @@ define_procedure!(migrate, |memgraph: &Memgraph| -> Result<()> {
             return Err(Error::UnableToCreateMySQLPool);
         }
     };
-
-    let mut conn: PooledConn = match pool.get_conn() {
+    let conn: PooledConn = match pool.get_conn() {
         Ok(conn) => conn,
         Err(e) => {
             println!("Error: {}", e);
             return Err(Error::UnableToGetMySQLConnection);
         }
     };
-    let prepared_statement = match conn.prep(&query) {
-        Ok(stmt) => stmt,
-        Err(e) => {
-            println!("Error: {}", e);
-            return Err(Error::UnableToPrepareMySQLStatement);
-        }
-    };
-    let result = match conn.exec_iter(prepared_statement, ()) {
-        Ok(result) => result,
-        Err(e) => {
-            println!("Error: {}", e);
-            return Err(Error::UnableToExecuteMySQLQuery);
-        }
-    };
 
-    for row_result in result {
-        let row = match row_result {
-            Ok(row) => row,
-            Err(e) => {
-                println!("Error fetching row: {}", e);
-                continue; // or return Err(Error::UnableToExecuteMySQLQuery);
-            }
-        };
-        let result = memgraph.result_record()?;
-        let row_map = Map::make_empty(&memgraph)?;
-        for column in row.columns_ref() {
-            let col_name = CString::new(column.name_str().as_bytes()).unwrap();
-            let column_value = &row[column.name_str().as_ref()];
-            let mg_val = match column_value {
-                mysql::Value::NULL => Value::Null,
-                mysql::Value::Int(i) => Value::Int(*i),
-                mysql::Value::UInt(u) => {
-                    if *u <= i64::MAX as u64 {
-                        Value::Int(*u as i64)
-                    } else {
-                        Value::String(CString::new(u.to_string()).unwrap())
-                    }
-                }
-                mysql::Value::Float(f) => Value::Float(*f as f64),
-                mysql::Value::Double(d) => Value::Float(*d as f64),
-                mysql::Value::Bytes(b) => match String::from_utf8(b.clone()) {
-                    Ok(s) => {
-                        if let Ok(d) = s.parse::<f64>() {
-                            Value::Float(d as f64)
-                        } else {
-                            Value::String(CString::new(s).unwrap())
-                        }
-                    }
-                    Err(_) => Value::String(CString::new(hex::encode(b)).unwrap()),
-                },
-                _ => Value::Null,
-            };
-            row_map.insert(col_name.as_c_str(), &mg_val)?;
-        }
-        result.insert_map(c_str!("row"), &row_map)?;
-    }
+    // Store the connection in thread-local
+    MYSQL_CONN.with(|conn_cell| {
+        *conn_cell.borrow_mut() = Some(conn);
+    });
+    // Store the base query in thread-local
+    MYSQL_BASE_QUERY.with(|base_query| {
+        *base_query.borrow_mut() = query;
+    });
+    // Reset the offset counter to 0
+    MYSQL_OFFSET.with(|counter| {
+        *counter.borrow_mut() = 0;
+    });
 
     Ok(())
 });
 
-define_batch_procedure_init!(init_procedure, |_memgraph: &Memgraph| -> Result<()> {
-    Ok(())
-});
+define_batch_procedure_cleanup!(cleanup_migrate, |_memgraph: &Memgraph| -> Result<()> {
+    MYSQL_CONN.with(|conn_cell| {
+        *conn_cell.borrow_mut() = None;
+    });
+    MYSQL_BASE_QUERY.with(|base_query| {
+        *base_query.borrow_mut() = String::new();
+    });
+    MYSQL_OFFSET.with(|counter| {
+        *counter.borrow_mut() = 0;
+    });
 
-define_batch_procedure_cleanup!(cleanup_procedure, |_memgraph: &Memgraph| -> Result<()> {
     Ok(())
 });
 
