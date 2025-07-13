@@ -31,6 +31,25 @@ const AURORA_PASSWORD: &str = "password";
 const AURORA_DATABASE: &str = "database";
 
 init_module!(|memgraph: &Memgraph| -> Result<()> {
+    memgraph.add_read_procedure(
+        migrate,
+        c_str!("test_connection"),
+        &[],
+        &[
+            define_optional_type!(
+                "config",
+                &MgpValue::make_map(&Map::make_empty(&memgraph)?, &memgraph)?,
+                Type::Map
+            ),
+            define_optional_type!(
+                "config_path",
+                &MgpValue::make_string(c_str!(""), &memgraph)?,
+                Type::String
+            ),
+        ],
+        &[define_type!("success", Type::Bool)],
+    )?;
+
     memgraph.add_batch_read_procedure(
         migrate,
         c_str!("migrate"),
@@ -54,6 +73,134 @@ init_module!(|memgraph: &Memgraph| -> Result<()> {
 
     Ok(())
 });
+
+define_procedure!(test_connection, |memgraph: &Memgraph| -> Result<()> {
+    let args = memgraph.args()?;
+    let config_arg = args.value_at(1)?;
+    let config = match config_arg {
+        Value::Map(ref map) => map,
+        _ => panic!("Expected Map value in place of config parameter!"),
+    };
+
+    let url = get_aurora_url(config);
+    let mut conn: PooledConn = get_connection(&url)?;
+
+    let _: Vec<Row> = match conn.exec("SELECT 1 as result".to_string(), ()) {
+        Ok(result) => result,
+        Err(e) => {
+            println!("Error: {}", e);
+            return Err(Error::UnableToExecuteMySQLQuery);
+        }
+    };
+
+    Ok(())
+});
+
+define_batch_procedure_init!(init_migrate, |memgraph: &Memgraph| -> Result<()> {
+    let args = memgraph.args()?;
+    let query = match args.value_at(0)? {
+        Value::String(ref cstr) => {
+            let s = cstr.to_str().expect("CString is not valid UTF-8");
+            if query_is_table(s) {
+                format!("SELECT * FROM `{}`;", s)
+            } else {
+                s.to_string()
+            }
+        }
+        _ => panic!("Expected String value in place of sql_or_table parameter!"),
+    };
+
+    let config_arg = args.value_at(1)?;
+    let config = match config_arg {
+        Value::Map(ref map) => map,
+        _ => panic!("Expected Map value in place of config parameter!"),
+    };
+
+    let url = get_aurora_url(config);
+    let conn: PooledConn = get_connection(&url)?;
+
+    // Store the connection in thread-local
+    MYSQL_CONN.with(|conn_cell| {
+        *conn_cell.borrow_mut() = Some(conn);
+    });
+    // Store the base query in thread-local
+    MYSQL_BASE_QUERY.with(|base_query| {
+        *base_query.borrow_mut() = query;
+    });
+    // Reset the offset counter to 0
+    MYSQL_OFFSET.with(|counter| {
+        *counter.borrow_mut() = 0;
+    });
+
+    Ok(())
+});
+
+define_procedure!(migrate, |memgraph: &Memgraph| -> Result<()> {
+    let base_query = MYSQL_BASE_QUERY.with(|cell| cell.borrow().clone());
+    let offset = MYSQL_OFFSET.with(|cell| *cell.borrow());
+    let batch_size = 100_000;
+    let query = format!("{} LIMIT {} OFFSET {}", base_query, batch_size, offset);
+
+    MYSQL_CONN.with(|conn_cell| {
+        let mut conn_opt = conn_cell.borrow_mut();
+        let conn = match conn_opt.as_mut() {
+            Some(c) => c,
+            None => {
+                println!("No MySQL connection available");
+                return Err(Error::UnableToGetMySQLConnection);
+            }
+        };
+        let prepared_statement = match conn.prep(&query) {
+            Ok(stmt) => stmt,
+            Err(e) => {
+                println!("Error: {}", e);
+                return Err(Error::UnableToPrepareMySQLStatement);
+            }
+        };
+        let result = match conn.exec_iter(prepared_statement, ()) {
+            Ok(result) => result,
+            Err(e) => {
+                println!("Error: {}", e);
+                return Err(Error::UnableToExecuteMySQLQuery);
+            }
+        };
+
+        for row_result in result {
+            let row = match row_result {
+                Ok(row) => row,
+                Err(e) => {
+                    println!("Error fetching row: {}", e);
+                    continue;
+                }
+            };
+
+            insert_row_into_memgraph(&row, &memgraph)?;
+        }
+        Ok(())
+    })?;
+
+    MYSQL_OFFSET.with(|cell| {
+        *cell.borrow_mut() += batch_size;
+    });
+
+    Ok(())
+});
+
+define_batch_procedure_cleanup!(cleanup_migrate, |_memgraph: &Memgraph| -> Result<()> {
+    MYSQL_CONN.with(|conn_cell| {
+        *conn_cell.borrow_mut() = None;
+    });
+    MYSQL_BASE_QUERY.with(|base_query| {
+        *base_query.borrow_mut() = String::new();
+    });
+    MYSQL_OFFSET.with(|counter| {
+        *counter.borrow_mut() = 0;
+    });
+
+    Ok(())
+});
+
+close_module!(|| -> Result<()> { Ok(()) });
 
 fn get_aurora_url(config: &Map) -> String {
     use std::ffi::CString;
@@ -95,112 +242,7 @@ fn get_aurora_url(config: &Map) -> String {
     )
 }
 
-fn query_is_table(table_or_sql: &str) -> bool {
-    table_or_sql.split_whitespace().count() == 1
-}
-
-define_procedure!(migrate, |memgraph: &Memgraph| -> Result<()> {
-    let base_query = MYSQL_BASE_QUERY.with(|cell| cell.borrow().clone());
-    let offset = MYSQL_OFFSET.with(|cell| *cell.borrow());
-    let batch_size = 100_000;
-    let query = format!("{} LIMIT {} OFFSET {}", base_query, batch_size, offset);
-
-    MYSQL_CONN.with(|conn_cell| {
-        let mut conn_opt = conn_cell.borrow_mut();
-        let conn = match conn_opt.as_mut() {
-            Some(c) => c,
-            None => {
-                println!("No MySQL connection available");
-                return Err(Error::UnableToGetMySQLConnection);
-            }
-        };
-        let prepared_statement = match conn.prep(&query) {
-            Ok(stmt) => stmt,
-            Err(e) => {
-                println!("Error: {}", e);
-                return Err(Error::UnableToPrepareMySQLStatement);
-            }
-        };
-        let result = match conn.exec_iter(prepared_statement, ()) {
-            Ok(result) => result,
-            Err(e) => {
-                println!("Error: {}", e);
-                return Err(Error::UnableToExecuteMySQLQuery);
-            }
-        };
-
-        for row_result in result {
-            let row = match row_result {
-                Ok(row) => row,
-                Err(e) => {
-                    println!("Error fetching row: {}", e);
-                    continue;
-                }
-            };
-            let result = memgraph.result_record()?;
-            let row_map = Map::make_empty(&memgraph)?;
-            for column in row.columns_ref() {
-                let col_name = CString::new(column.name_str().as_bytes()).unwrap();
-                let column_value = &row[column.name_str().as_ref()];
-                let mg_val = match column_value {
-                    mysql::Value::NULL => Value::Null,
-                    mysql::Value::Int(i) => Value::Int(*i),
-                    mysql::Value::UInt(u) => {
-                        if *u <= i64::MAX as u64 {
-                            Value::Int(*u as i64)
-                        } else {
-                            Value::String(CString::new(u.to_string()).unwrap())
-                        }
-                    }
-                    mysql::Value::Float(f) => Value::Float(*f as f64),
-                    mysql::Value::Double(d) => Value::Float(*d as f64),
-                    mysql::Value::Bytes(b) => match String::from_utf8(b.clone()) {
-                        Ok(s) => {
-                            if let Ok(d) = s.parse::<f64>() {
-                                Value::Float(d as f64)
-                            } else {
-                                Value::String(CString::new(s).unwrap())
-                            }
-                        }
-                        Err(_) => Value::String(CString::new(hex::encode(b)).unwrap()),
-                    },
-                    _ => Value::Null,
-                };
-                row_map.insert(col_name.as_c_str(), &mg_val)?;
-            }
-            result.insert_map(c_str!("row"), &row_map)?;
-        }
-        Ok(())
-    })?;
-
-    MYSQL_OFFSET.with(|cell| {
-        *cell.borrow_mut() += batch_size;
-    });
-
-    Ok(())
-});
-
-define_batch_procedure_init!(init_migrate, |memgraph: &Memgraph| -> Result<()> {
-    let args = memgraph.args()?;
-    let query = match args.value_at(0)? {
-        Value::String(ref cstr) => {
-            let s = cstr.to_str().expect("CString is not valid UTF-8");
-            if query_is_table(s) {
-                format!("SELECT * FROM `{}`;", s)
-            } else {
-                s.to_string()
-            }
-        }
-        _ => panic!("Expected String value in place of sql_or_table parameter!"),
-    };
-
-    let config_arg = args.value_at(1)?;
-    let config = match config_arg {
-        Value::Map(ref map) => map,
-        _ => panic!("Expected Map value in place of config parameter!"),
-    };
-
-    let url = get_aurora_url(config);
+fn get_connection(url: &str) -> Result<PooledConn, Error> {
     let opts: Opts = match Opts::from_url(&url) {
         Ok(opts) => opts,
         Err(e) => {
@@ -223,34 +265,46 @@ define_batch_procedure_init!(init_migrate, |memgraph: &Memgraph| -> Result<()> {
         }
     };
 
-    // Store the connection in thread-local
-    MYSQL_CONN.with(|conn_cell| {
-        *conn_cell.borrow_mut() = Some(conn);
-    });
-    // Store the base query in thread-local
-    MYSQL_BASE_QUERY.with(|base_query| {
-        *base_query.borrow_mut() = query;
-    });
-    // Reset the offset counter to 0
-    MYSQL_OFFSET.with(|counter| {
-        *counter.borrow_mut() = 0;
-    });
+    Ok(conn)
+}
+
+fn query_is_table(table_or_sql: &str) -> bool {
+    table_or_sql.split_whitespace().count() == 1
+}
+
+fn insert_row_into_memgraph(row: &Row, memgraph: &Memgraph) -> Result<()> {
+    let result = memgraph.result_record()?;
+    let row_map = Map::make_empty(&memgraph)?;
+    for column in row.columns_ref() {
+        let col_name = CString::new(column.name_str().as_bytes()).unwrap();
+        let column_value = &row[column.name_str().as_ref()];
+        let mg_val = match column_value {
+            mysql::Value::NULL => Value::Null,
+            mysql::Value::Int(i) => Value::Int(*i),
+            mysql::Value::UInt(u) => {
+                if *u <= i64::MAX as u64 {
+                    Value::Int(*u as i64)
+                } else {
+                    Value::String(CString::new(u.to_string()).unwrap())
+                }
+            }
+            mysql::Value::Float(f) => Value::Float(*f as f64),
+            mysql::Value::Double(d) => Value::Float(*d as f64),
+            mysql::Value::Bytes(b) => match String::from_utf8(b.clone()) {
+                Ok(s) => {
+                    if let Ok(d) = s.parse::<f64>() {
+                        Value::Float(d as f64)
+                    } else {
+                        Value::String(CString::new(s).unwrap())
+                    }
+                }
+                Err(_) => Value::String(CString::new(hex::encode(b)).unwrap()),
+            },
+            _ => Value::Null,
+        };
+        row_map.insert(col_name.as_c_str(), &mg_val)?;
+    }
+    result.insert_map(c_str!("row"), &row_map)?;
 
     Ok(())
-});
-
-define_batch_procedure_cleanup!(cleanup_migrate, |_memgraph: &Memgraph| -> Result<()> {
-    MYSQL_CONN.with(|conn_cell| {
-        *conn_cell.borrow_mut() = None;
-    });
-    MYSQL_BASE_QUERY.with(|base_query| {
-        *base_query.borrow_mut() = String::new();
-    });
-    MYSQL_OFFSET.with(|counter| {
-        *counter.borrow_mut() = 0;
-    });
-
-    Ok(())
-});
-
-close_module!(|| -> Result<()> { Ok(()) });
+}
