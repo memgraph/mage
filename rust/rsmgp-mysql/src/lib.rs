@@ -139,10 +139,13 @@ define_procedure!(show_tables, |memgraph: &Memgraph| -> Result<()> {
 
     for row in rows {
         // The table name is the first column in the row
-        let table_name: String = row.get(0).and_then(|val| match val {
-            mysql::Value::Bytes(bytes) => String::from_utf8(bytes.clone()).ok(),
-            _ => None,
-        }).unwrap_or_else(|| "<unknown>".to_string());
+        let table_name: String = row
+            .get(0)
+            .and_then(|val| match val {
+                mysql::Value::Bytes(bytes) => String::from_utf8(bytes.clone()).ok(),
+                _ => None,
+            })
+            .unwrap_or_else(|| "<unknown>".to_string());
 
         let result = memgraph.result_record()?;
         result.insert_string(c_str!("table_name"), &CString::new(table_name).unwrap())?;
