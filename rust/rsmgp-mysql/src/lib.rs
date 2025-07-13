@@ -175,18 +175,16 @@ define_procedure!(migrate, |memgraph: &Memgraph| -> Result<()> {
                 }
                 mysql::Value::Float(f) => Value::Float(*f as f64),
                 mysql::Value::Double(d) => Value::Float(*d as f64),
-                mysql::Value::Bytes(b) => {
-                    match String::from_utf8(b.clone()) {
-                        Ok(s) => {
-                            if let Ok(d) = s.parse::<f64>() {
-                                Value::Float(d as f64)
-                            } else {
-                                Value::String(CString::new(s).unwrap())
-                            }
+                mysql::Value::Bytes(b) => match String::from_utf8(b.clone()) {
+                    Ok(s) => {
+                        if let Ok(d) = s.parse::<f64>() {
+                            Value::Float(d as f64)
+                        } else {
+                            Value::String(CString::new(s).unwrap())
                         }
-                        Err(_) => Value::String(CString::new(hex::encode(b)).unwrap()),
                     }
-                }
+                    Err(_) => Value::String(CString::new(hex::encode(b)).unwrap()),
+                },
                 _ => Value::Null,
             };
             row_map.insert(col_name.as_c_str(), &mg_val)?;
