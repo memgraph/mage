@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/../utils.bash"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -16,11 +16,59 @@ export PATH="$(go env GOPATH)/bin:$PATH"
 #   * It takes some time to delete all PVs, check with `kubectl get pv`.
 #   * If you want more details or helm dry run just append `--debug` of
 #   `--dry-run`.
+BOLT_SERVER="localhost:10000" # Just tmp value -> each coordinator should have a different value.
+# E.g. if kubectl port-foward is used, the configured host values should be passed as `bolt_server`.
 
 # TODO(gitbuda): Move under utils.
 load_next_image_into_kind() {
   kind load docker-image $MEMGRAPH_NEXT_DOCKERHUB_IMAGE -n smoke-release-testing
   MEMGRAPH_NEXT_DOCKERHUB_TAG="${MEMGRAPH_NEXT_DOCKERHUB_IMAGE##*:}"
+}
+
+setup_coordinator_1_query() {
+  echo "ADD COORDINATOR 1 WITH CONFIG {\"bolt_server\": \"$BOLT_SERVER\", \"management_server\":  \"memgraph-coordinator-1.default.svc.cluster.local:10000\", \"coordinator_server\":  \"memgraph-coordinator-1.default.svc.cluster.local:12000\"};" | $MEMGRAPH_CONSOLE_BINARY --port 17687
+}
+setup_coordinator_2_query() {
+  echo "ADD COORDINATOR 2 WITH CONFIG {\"bolt_server\": \"$BOLT_SERVER\", \"management_server\":  \"memgraph-coordinator-2.default.svc.cluster.local:10000\", \"coordinator_server\":  \"memgraph-coordinator-2.default.svc.cluster.local:12000\"};" | $MEMGRAPH_CONSOLE_BINARY --port 17687
+}
+setup_coordinator_3_query() {
+  echo "ADD COORDINATOR 3 WITH CONFIG {\"bolt_server\": \"$BOLT_SERVER\", \"management_server\":  \"memgraph-coordinator-3.default.svc.cluster.local:10000\", \"coordinator_server\":  \"memgraph-coordinator-3.default.svc.cluster.local:12000\"};" | $MEMGRAPH_CONSOLE_BINARY --port 17687
+}
+setup_replica_0() {
+  echo "REGISTER INSTANCE instance_0 WITH CONFIG {\"bolt_server\": \"$BOLT_SERVER\", \"management_server\": \"memgraph-data-0.default.svc.cluster.local:10000\", \"replication_server\": \"memgraph-data-0.default.svc.cluster.local:20000\"};" | $MEMGRAPH_CONSOLE_BINARY --port 17687
+}
+setup_replica_1() {
+  echo "REGISTER INSTANCE instance_1 WITH CONFIG {\"bolt_server\": \"$BOLT_SERVER\", \"management_server\": \"memgraph-data-1.default.svc.cluster.local:10000\", \"replication_server\": \"memgraph-data-1.default.svc.cluster.local:20000\"};" | $MEMGRAPH_CONSOLE_BINARY --port 17687
+}
+setup_main() {
+  echo "SET INSTANCE instance_0 TO MAIN;" | $MEMGRAPH_CONSOLE_BINARY --port 17687
+}
+
+setup_cluster() {
+  kubectl wait --for=condition=Ready pod/memgraph-coordinator-1-0 --timeout=120s
+  kubectl port-forward memgraph-coordinator-1-0 17687:7687 &
+  PF_PID=$!
+  # TODO(gitbuda): wait + memgraph check.
+  sleep 3
+  setup_coordinator_1_query
+  setup_coordinator_2_query
+  setup_coordinator_3_query
+  setup_replica_0
+  setup_replica_1
+  setup_main
+  # TODO(gitbuda): make sure this is always executed because the above lines have high chance of failing.
+  kill $PF_PID
+  wait $PF_PID 2>/dev/null
+}
+
+execute_query_against_main() {
+  query="$1"
+  kubectl port-forward memgraph-data-0-0 17687:7687 &
+  PF_PID=$!
+  wait_for_memgraph localhost 17687
+  echo "$query" | $MEMGRAPH_CONSOLE_BINARY --port 17687
+  kill $PF_PID
+  wait $PF_PID 2>/dev/null || true
 }
 
 # TODO(gitbuda): Setup memgraph HA cluster.
@@ -55,11 +103,25 @@ test_k8s_ha() {
     --set env.MEMGRAPH_ENTERPRISE_LICENSE=$MEMGRAPH_ENTERPRISE_LICENSE,env.MEMGRAPH_ORGANIZATION_NAME=$MEMGRAPH_ORGANIZATION_NAME \
     -f "$SCRIPT_DIR/values-ha.yaml" \
     --set "image.tag=$MEMGRAPH_DOCKERHUB_TAG"
-  # TODO(gitbuda): Setup cluster commands + routing + test query.
+  setup_cluster
+  execute_query_against_main "CREATE ();"
+  execute_query_against_main "MATCH (n) RETURN n;"
   helm uninstall myhadb
 }
 
 if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
+  echo "running $0 directly"
   # NOTE: Developing workflow: download+load required images and define MEMGRAPH_NEXT_DOCKERHUB_IMAGE.
-  test_k8s_ha
+  # test_k8s_ha
+
+  # kubectl wait --for=condition=Ready pod/memgraph-coordinator-1-0 --timeout=120s
+  # kubectl port-forward memgraph-coordinator-1-0 17687:7687 &
+  # PF_PID=$!
+  # sleep 2
+  # setup_main
+  # kill $PF_PID
+  # wait $PF_PID 2>/dev/null
+
+  # execute_query_against_main "CREATE ();"
+  # execute_query_against_main "MATCH (n) RETURN n;"
 fi

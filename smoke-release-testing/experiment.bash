@@ -16,7 +16,7 @@ source "$SCRIPT_DIR/utils.bash"
 
 source ./k8s/run.bash
 # test_k8s_single
-test_k8s_ha LAST
+# test_k8s_ha LAST
 test_k8s_ha NEXT
 
 # NOTE: Test what's the exit status of the script by using `echo $?`:
