@@ -6,6 +6,8 @@
 
 #include <fmt/args.h>
 #include <fmt/format.h>
+#include <unicode/normalizer2.h>
+#include <unicode/unistr.h>
 
 void Text::Join(mgp_list *args, mgp_graph * /*memgraph_graph*/, mgp_result *result, mgp_memory *memory) {
   mgp::MemoryDispatcherGuard guard{memory};
@@ -161,9 +163,43 @@ void Text::Distance(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_result 
   const auto arguments = mgp::List(args);
   mgp::Result result_obj(result);
 
+  const auto normalize = [](const std::string &input) -> std::string {
+    UErrorCode error = U_ZERO_ERROR;
+
+    // Get the NFD normalizer (decomposes é → e + ́)
+    const icu::Normalizer2 *normalizer = icu::Normalizer2::getNFDInstance(error);
+    if (U_FAILURE(error)) return input;
+
+    // Convert UTF-8 input to UnicodeString
+    icu::UnicodeString unicode_input = icu::UnicodeString::fromUTF8(input);
+    icu::UnicodeString normalized;
+    normalizer->normalize(unicode_input, normalized, error);
+    if (U_FAILURE(error)) return input;
+
+    // Create UnicodeSet for non-spacing marks (diacritics)
+    icu::UnicodeSet diacritics;
+    diacritics.applyPattern(icu::UnicodeString::fromUTF8("[:Nonspacing Mark:]"), error);
+    if (U_FAILURE(error)) return input;
+
+    // Build result string by skipping characters in diacritics set
+    icu::UnicodeString cleaned;
+    for (int32_t i = 0; i < normalized.length();) {
+      UChar32 c = normalized.char32At(i);
+      if (!diacritics.contains(c)) {
+        cleaned.append(c);
+      }
+      i += U16_LENGTH(c);
+    }
+
+    // Convert back to UTF-8
+    std::string result;
+    cleaned.toUTF8String(result);
+    return result;
+  };
+
   try {
-    const auto text1 = std::string(arguments[0].ValueString());
-    const auto text2 = std::string(arguments[1].ValueString());
+    const auto text1 = normalize(std::string(arguments[0].ValueString()));
+    const auto text2 = normalize(std::string(arguments[1].ValueString()));
 
     const size_t m = text1.length();
     const size_t n = text2.length();
