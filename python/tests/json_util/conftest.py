@@ -7,7 +7,7 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                             "../.."))
 sys.path.insert(0, project_root)
 
-# Add any fixtures here if needed in the future
+# Add any fixtures here if needed in the future 
 
 
 # Mock classes to simulate Memgraph objects for testing
@@ -102,4 +102,4 @@ class MockMgp:
 
 
 # Mock the mgp module
-sys.modules['mgp'] = MockMgp
+sys.modules['mgp'] = MockMgp 

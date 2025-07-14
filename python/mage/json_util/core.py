@@ -1,9 +1,6 @@
 from io import TextIOWrapper
 import json
-try:
-    import mgp
-except ImportError:
-    from . import mock_mgp as mgp
+import mgp
 from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.error import URLError
@@ -74,48 +71,12 @@ def extract_objects(file: TextIOWrapper):
 
 @mgp.function
 def to_json(value: Any) -> mgp.Record:
-    """
-    Converts any value to its JSON string representation.
-    Similar to Neo4j's apoc.convert.toJson().
-
-    Parameters
-    ----------
-    value : Any
-        The value to convert to JSON. Can be a node, relationship, path,
-        or any primitive type.
-
-    Returns
-    -------
-    mgp.Record
-        A record containing the JSON string representation of the value.
-    """
     converted = _convert_value_to_json_compatible(value)
     return mgp.Record(json=json.dumps(converted, ensure_ascii=False))
 
 
 @mgp.function
 def from_json_list(json_str: str) -> mgp.Record:
-    """
-    Converts a JSON string representing a list to a Python list.
-    Similar to Neo4j's apoc.convert.fromJsonList().
-
-    Parameters
-    ----------
-    json_str : str
-        The JSON string to convert. Must represent a valid JSON array.
-
-    Returns
-    -------
-    mgp.Record
-        A record containing the Python list converted from JSON.
-
-    Raises
-    ------
-    json.JSONDecodeError
-        If the input string is not valid JSON.
-    ValueError
-        If the input JSON does not represent a list.
-    """
     value = json.loads(json_str)
     if not isinstance(value, list):
         raise ValueError("Input JSON must represent a list")
@@ -123,15 +84,7 @@ def from_json_list(json_str: str) -> mgp.Record:
 
 
 @mgp.read_proc
-def load_from_path(path: str) -> mgp.Record:
-    """
-    Procedure to load JSON from a local file.
-
-    Parameters
-    ----------
-    path : str
-        Path to the JSON that is being loaded.
-    """
+def load_from_path(ctx: mgp.ProcCtx, path: str) -> mgp.Record(objects=mgp.List[object]):
     file = Path(path)
     if file.exists():
         opened_file = open(file)
@@ -145,15 +98,7 @@ def load_from_path(path: str) -> mgp.Record:
 
 
 @mgp.read_proc
-def load_from_url(url: str) -> mgp.Record:
-    """
-    Procedure to load JSON from a remote address.
-
-    Parameters
-    ----------
-    url : str
-        URL to the JSON that is being loaded.
-    """
+def load_from_url(ctx: mgp.ProcCtx, url: str) -> mgp.Record(objects=mgp.List[object]):
     request = Request(url)
     request.add_header("User-Agent", "MAGE module")
     try:
@@ -164,3 +109,4 @@ def load_from_url(url: str) -> mgp.Record:
         objects = extract_objects(content)
 
     return mgp.Record(objects=objects)
+ 
