@@ -109,4 +109,3 @@ def load_from_url(ctx: mgp.ProcCtx, url: str) -> mgp.Record(objects=mgp.List[obj
         objects = extract_objects(content)
 
     return mgp.Record(objects=objects)
- 
