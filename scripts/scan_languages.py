@@ -1,9 +1,8 @@
-from cve_bin_tool.log import LOGGER
-from cve_bin_tool.cvedb import CVEDB
 from cve_bin_tool.parsers.parse import valid_files as cbt_valid_files
 import os
 import subprocess
 import argparse
+
 
 """
 This script should speed up the scanning for specific programming-language
@@ -13,27 +12,23 @@ This script doe the following:
 1. Walks the extracted root filesystem of the container searching for package
 metadata files which cve-bin-tool would normally look for (`valid_files`).
 
-2. Uses cve-bin-tool's language parsing functions to extract the `vendor`, 
-`product` and `version` from the metadata files for each installed package.
+2. Copies these files to a separate directory structure so that cve-bin-tool
+   does not have to scan the entire root filesystem, which can be very slow.
 
-3. Saves a CSV with the columns `vendor`, `product` and `version`.
-
-4. Calls cve-bin-tool with the `--input-file` (`-i`) argument pointing to the
-CSV file. This will do a direct database lookup for each product, vendor and
-version, rather than scanning the iamge itself. The output is a JSON file
-containing all CVEs for those installed packages.
+3. Runs cve-bin-tool on the copied files, using a triage file to filter out
+   false positives, and outputs the results to a JSON file.
 """
 
 CVE_DIR = os.getenv("CVE_DIR", os.getcwd())
 
 
-def find_files(root_dir: str) -> list[str]:
+def find_files(rootfs: str) -> list[str]:
     """
     Find all language files that CVE-bin-tool scans
 
     Inputs
     ======
-    root_dir: str
+    rootfs: str
         The root directory to search for language files
 
     Returns
@@ -41,66 +36,62 @@ def find_files(root_dir: str) -> list[str]:
     matches: list[str]
         A list of paths to metadata files for language packages
     """
-    valid_files = cbt_valid_files.copy()
-    valid_files["METADATA"] = valid_files["METADATA: "]
-    valid_files["PKG-INFO"] = valid_files["PKG-INFO: "]
+
+    file_checkers = cbt_valid_files.copy()
+    file_checkers["METADATA"] = file_checkers["METADATA: "]
+    file_checkers["PKG-INFO"] = file_checkers["PKG-INFO: "]
+    language_files = list(file_checkers.keys())
 
     matches = []
-    for dirpath, dirnames, filenames in os.walk(root_dir):
+    for dirpath, _, filenames in os.walk(rootfs):
         for filename in filenames:
-            if filename in valid_files and filename != "requirements.txt":
-                matches.append((f"{dirpath}/{filename}", valid_files[filename]))
+            if filename in language_files and filename != "requirements.txt":
+                matches.append(f"{dirpath}/{filename}")
     return matches
 
 
-def write_package_csv(rootfs: str) -> None:
+def copy_language_files(rootfs: str, langfs: str):
     """
-    Write a CSV file of all language packages found
-
-    Inputs
-    ======
-    rootfs: str
-        The path to the root filesystem of a container
+    Copy language files from the root filesystem to a language-specific
+    directory structure to avoid scanning everything in the rootfs.
     """
-    cve_db = CVEDB()
-    logger = LOGGER.getChild("Fuzz")
 
-    files = find_files(rootfs)
-    print(f"Found {len(files)} Language Files")
+    language_files = find_files(rootfs)
 
-    with open(f"{CVE_DIR}/lang-packages.csv", "w") as f:
-        f.write("vendor,product,version\n")
-        for file, parserclslist in files:
-            for parsercls in parserclslist:
-                parser = parsercls(cve_db, logger)
-
-                output = parser.run_checker(file)
-                for out in output:
-                    items = (out.product_info.vendor, out.product_info.product, out.product_info.version)
-                    f.write(f"{','.join(items)}\n")
-
-    print("Saved lang-packages.csv")
-
-    # cve_db does unusual things when it exists, so let's catch it
-    try:
-        del cve_db
-    except Exception:
-        pass
+    for file in language_files:
+        dir = os.path.dirname(file).replace(rootfs, langfs)
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        os.system(f"cp {file} -v {dir}")
 
 
-def run_scan() -> None:
+def run_language_scan(langfs: str) -> str:
     """
     Scan the CVE database using the list of language packages found and save the
     results to a JSON file.
+
+    Inputs
+    =======
+    langfs: str
+        The directory containing the language package metadata files.
+
+    Returns
+    =======
+    str
+        The path to the JSON file containing the CVE scan results for the language packages.
+        If the file does not exist, an empty string is returned.
     """
 
-    print("Scanning Language Packages")
+    print("Scanning Language Packages...")
+    outfile = f"{CVE_DIR}/cve-bin-tool-lang-summary.json"
+
     cmd = [
         "cve-bin-tool",
         "-u", "never",       # Never update the local CVE database
         "-f", "json",        # Output format: JSON
-        "-o", f"{CVE_DIR}/cve-bin-tool-lang-summary.json",   # Write JSON results to this file
-        "-i", f"{CVE_DIR}/lang-packages.csv"
+        "-o", outfile,       # Write JSON results to this file
+        f"{langfs}/",
+        "--vex-file", "scripts/triage.json", "--filter-triage"  # Use the triage file to filter false positives
     ]
     _ = subprocess.run(
         cmd,
@@ -110,15 +101,15 @@ def run_scan() -> None:
     )
     # do not try to do anything clever with the result.returncode here, because
     # it only ever returns 0 if there are 0 vulnerabilities!
+    return outfile
 
 
 def main(rootfs: str) -> None:
     """
     Scan the root filesystem for CVEs in the language packages.
     """
-
-    write_package_csv(rootfs)
-    run_scan()
+    copy_language_files(rootfs, f"{CVE_DIR}/langfs")
+    run_language_scan(f"{CVE_DIR}/langfs")
 
 
 if __name__ == "__main__":

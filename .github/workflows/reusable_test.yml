@@ -23,6 +23,11 @@ on:
         type: string
         description: "Update Memgraph submodule to the latest commit"
         default: 'true'
+      ref:
+        type: string
+        description: "MAGE branch or tag to build"
+        default: ''
+      
 
 env:
   PY_VERSION: "3.12"
@@ -47,6 +52,7 @@ jobs:
           fetch-depth: 0
           submodules: recursive
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
 
       - name: Check mgdeps-cache availability
         run: |
@@ -122,7 +128,14 @@ jobs:
           # This is used later in image creation, so that the exact version of 
           # the MAGE git repository can be checked out within the container, 
           # when we run the script to convert to "dev" container
-          tag=$(./get_tag.sh)
+          if [ -z "${{ inputs.ref }}" ]; then
+            echo "No specific ref provided, using current branch/tag."
+            # If no ref is provided, use the current branch or tag
+            tag=$(./get_tag.sh)
+          else
+            echo "Using provided ref: ${{ inputs.ref }}"
+            tag="${{ inputs.ref }}"
+          fi
 
           # If tag is empty, fallback to the branch name
           if [ -z "$tag" ]; then

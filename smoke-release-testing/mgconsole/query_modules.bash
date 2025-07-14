@@ -8,7 +8,7 @@ test_query_modules() {
   echo "FEATURE: All MAGE query modules"
 
   # TODO(gitbuda): What are the 3 added modules? -> Probably the migration modules.
-  echo "CALL mg.procedures() YIELD * RETURN count(*) AS cnt;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port --output-format=csv | python3 $SCRIPT_DIR/validator.py first_as_int -f cnt -e 309
+  echo "CALL mg.procedures() YIELD * RETURN count(*) AS cnt;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port --output-format=csv | python3 $SCRIPT_DIR/validator.py first_as_int -f cnt -e 312
 
   echo "CREATE (a), (b), (c), (d), (a)-[:ET]->(b), (c)-[:ET]->(d);" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
   echo "CALL leiden_community_detection.get() YIELD * RETURN communities, community_id, node;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
