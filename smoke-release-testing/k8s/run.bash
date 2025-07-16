@@ -46,10 +46,12 @@ setup_main() {
 
 setup_cluster() {
   kubectl wait --for=condition=Ready pod/memgraph-coordinator-1-0 --timeout=120s
+  kubectl wait --for=condition=Ready pod/memgraph-coordinator-2-0 --timeout=120s
+  kubectl wait --for=condition=Ready pod/memgraph-coordinator-3-0 --timeout=120s
   kubectl port-forward memgraph-coordinator-1-0 17687:7687 &
   PF_PID=$!
   # TODO(gitbuda): wait + memgraph check.
-  sleep 3
+  sleep 5
   setup_coordinator_1_query
   setup_coordinator_2_query
   setup_coordinator_3_query
@@ -63,15 +65,15 @@ setup_cluster() {
 
 execute_query_against_main() {
   query="$1"
+  kubectl wait --for=condition=Ready pod/memgraph-data-0-0 --timeout=120s
   kubectl port-forward memgraph-data-0-0 17687:7687 &
   PF_PID=$!
   wait_for_memgraph localhost 17687
+  # TODO: Wait for coordinator OR execute query with timeout (while success loop).
   echo "$query" | $MEMGRAPH_CONSOLE_BINARY --port 17687
   kill $PF_PID
   wait $PF_PID 2>/dev/null || true
 }
-
-# TODO(gitbuda): Setup memgraph HA cluster.
 
 test_k8s_single() {
   echo "Test k8s single memgraph instance using image: $MEMGRAPH_NEXT_DOCKERHUB_IMAGE"
@@ -95,26 +97,42 @@ test_k8s_ha() {
   WHICH="$1"
   WHICH_TMP="MEMGRAPH_${WHICH}_DOCKERHUB_IMAGE"
   WHICH_IMAGE="${!WHICH_TMP}"
-  echo "Test k8s HA memgraph cluster using image: $WHICH_IMAGE"
-  kind load docker-image $WHICH_IMAGE -n smoke-release-testing
   MEMGRAPH_DOCKERHUB_TAG="${WHICH_IMAGE##*:}"
-  echo $MEMGRAPH_DOCKERHUB_TAG
-  helm install myhadb memgraph/memgraph-high-availability \
+  CHART_PATH="${2:-memgraph/memgraph-high-availability}"
+  echo "Test k8s HA memgraph cluster using image:"
+  echo "  * image: $WHICH_IMAGE"
+  echo "  * tag: $MEMGRAPH_DOCKERHUB_TAG"
+  echo "  * chart: $CHART_PATH"
+
+  kind load docker-image $WHICH_IMAGE -n smoke-release-testing
+  helm install myhadb $CHART_PATH \
     --set env.MEMGRAPH_ENTERPRISE_LICENSE=$MEMGRAPH_ENTERPRISE_LICENSE,env.MEMGRAPH_ORGANIZATION_NAME=$MEMGRAPH_ORGANIZATION_NAME \
     -f "$SCRIPT_DIR/values-ha.yaml" \
     --set "image.tag=$MEMGRAPH_DOCKERHUB_TAG"
+  # TODO(gitbuda): On recovery, this is not required -> skip.
   setup_cluster
+  # TODO: The sleep here was because it takes some time to init main -> figure that out.
+  sleep 5
+  # TODO(gitbuda): After recovery, it's uncretain what instance will be MAIN -> figure that out using the query.
+  # execute_query_against_main "SHOW REPLICATION ROLE;" OR pull from coordinator "SHOW INSTANCES;"
+  execute_query_against_main "SHOW VERSION;"
   execute_query_against_main "CREATE ();"
   execute_query_against_main "MATCH (n) RETURN n;"
+  # TODO(gitbuda): flag also for this because we want to debug cluster after something fails.
   helm uninstall myhadb
 }
 
 if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
-  echo "running $0 directly"
+  echo "Running $0 directly..."
   # NOTE: Developing workflow: download+load required images and define MEMGRAPH_NEXT_DOCKERHUB_IMAGE.
-  # test_k8s_ha
+
+  # Inject local version of the helm chart because we want to test any local fixes upfront.
+  # test_k8s_ha LAST
+  # test_k8s_ha NEXT ~/Workspace/code/memgraph/helm-charts/charts/memgraph-high-availability
+  test_k8s_ha NEXT
 
   # kubectl wait --for=condition=Ready pod/memgraph-coordinator-1-0 --timeout=120s
+  # kubectl wait --for=condition=Ready pod/memgraph-data-0-0 --timeout=120s
   # kubectl port-forward memgraph-coordinator-1-0 17687:7687 &
   # PF_PID=$!
   # sleep 2
