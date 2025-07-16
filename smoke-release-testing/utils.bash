@@ -72,7 +72,15 @@ wait_port() {
 wait_for_memgraph() {
   __host=$1
   __port=$2
-  while ! echo "return 1;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port > /dev/null 2>&1; do
+  while ! echo "RETURN 1;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port > /dev/null 2>&1; do
+    sleep 0.1
+  done
+}
+
+wait_for_memgraph_coordinator() {
+  __host=$1
+  __port=$2
+  while ! echo "SHOW INSTANCE;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port > /dev/null 2>&1; do
     sleep 0.1
   done
 }

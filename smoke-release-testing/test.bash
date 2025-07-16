@@ -53,3 +53,5 @@ test_impersonate_user $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 # k8s is a special case, because it requires extra setup.
 source $SCRIPT_DIR/k8s/run.bash
 test_k8s_single
+test_k8s_ha LAST
+test_k8s_ha NEXT
