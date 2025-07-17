@@ -231,3 +231,41 @@ spinup_and_cleanup_memgraph_dockers() {
   run_memgraph_docker_containers "$__how_to_pull_last" "$__how_to_pull_next"
   trap cleanup_docker_exit EXIT
 }
+
+with_kubectl_portforward() (
+    # --- 1. peel off first two required arguments --------------------------
+    local target=$1           # svc/foo, pod/bar, deployment/baz, …
+    local map=$2              # 8080:80 or 8443 or 0.0.0.0:8080:80
+    shift 3                   # “--” + user commands remain
+
+    # --- 2. launch port-forward in background ------------------------------
+    # Send its output to a temp file so we can inspect errors if it dies early
+    local log
+    log=$(mktemp)
+    kubectl port-forward "$target" "$map" >/dev/null 2>>"$log" &
+    local pf_pid=$!
+
+    # Clean up on normal exit or on signals
+    cleanup() {
+        echo "calling port forward cleanup"
+        kill "$pf_pid" 2>/dev/null || true
+        wait "$pf_pid" 2>/dev/null || true   # reap the child
+        rm -f "$log"
+    }
+    trap cleanup EXIT INT TERM
+
+    # --- 3. wait until the local port is actually open ---------------------
+    local lport=${map%%:*}              # leftmost number before the first ':'
+    for _ in {1..50}; do                # ~10 s max (50×0.2 s)
+        if nc -z 127.0.0.1 "$lport" 2>/dev/null; then break; fi
+        if ! kill -0 "$pf_pid" 2>/dev/null; then
+            echo "port-forward crashed — see $log" >&2
+            exit 1
+        fi
+        sleep 0.2
+    done
+
+    # --- 4. hand control to the caller’s command list ----------------------
+    "$@"
+    # cleanup() runs automatically thanks to the trap
+)

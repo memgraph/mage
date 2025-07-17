@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/../utils.bash"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -19,50 +19,64 @@ export PATH="$(go env GOPATH)/bin:$PATH"
 BOLT_SERVER="localhost:10000" # Just tmp value -> each coordinator should have a different value.
 # E.g. if kubectl port-foward is used, the configured host values should be passed as `bolt_server`.
 
-setup_coordinator_1_query() {
-  echo "ADD COORDINATOR 1 WITH CONFIG {\"bolt_server\": \"$BOLT_SERVER\", \"management_server\":  \"memgraph-coordinator-1.default.svc.cluster.local:10000\", \"coordinator_server\":  \"memgraph-coordinator-1.default.svc.cluster.local:12000\"};" | $MEMGRAPH_CONSOLE_BINARY --port 17687
+setup_coordinator() {
+  local i=$1
+  echo "ADD COORDINATOR $i WITH CONFIG {\"bolt_server\": \"$BOLT_SERVER\", \"management_server\":  \"memgraph-coordinator-$i.default.svc.cluster.local:10000\", \"coordinator_server\":  \"memgraph-coordinator-$i.default.svc.cluster.local:12000\"};" | $MEMGRAPH_CONSOLE_BINARY --port 17687
+  echo "coordinator $i DONE"
 }
-setup_coordinator_2_query() {
-  echo "ADD COORDINATOR 2 WITH CONFIG {\"bolt_server\": \"$BOLT_SERVER\", \"management_server\":  \"memgraph-coordinator-2.default.svc.cluster.local:10000\", \"coordinator_server\":  \"memgraph-coordinator-2.default.svc.cluster.local:12000\"};" | $MEMGRAPH_CONSOLE_BINARY --port 17687
-}
-setup_coordinator_3_query() {
-  echo "ADD COORDINATOR 3 WITH CONFIG {\"bolt_server\": \"$BOLT_SERVER\", \"management_server\":  \"memgraph-coordinator-3.default.svc.cluster.local:10000\", \"coordinator_server\":  \"memgraph-coordinator-3.default.svc.cluster.local:12000\"};" | $MEMGRAPH_CONSOLE_BINARY --port 17687
-}
-setup_replica_0() {
-  echo "REGISTER INSTANCE instance_0 WITH CONFIG {\"bolt_server\": \"$BOLT_SERVER\", \"management_server\": \"memgraph-data-0.default.svc.cluster.local:10000\", \"replication_server\": \"memgraph-data-0.default.svc.cluster.local:20000\"};" | $MEMGRAPH_CONSOLE_BINARY --port 17687
-}
-setup_replica_1() {
-  echo "REGISTER INSTANCE instance_1 WITH CONFIG {\"bolt_server\": \"$BOLT_SERVER\", \"management_server\": \"memgraph-data-1.default.svc.cluster.local:10000\", \"replication_server\": \"memgraph-data-1.default.svc.cluster.local:20000\"};" | $MEMGRAPH_CONSOLE_BINARY --port 17687
+setup_replica() {
+  local i=$1
+  echo "REGISTER INSTANCE instance_$i WITH CONFIG {\"bolt_server\": \"$BOLT_SERVER\", \"management_server\": \"memgraph-data-$i.default.svc.cluster.local:10000\", \"replication_server\": \"memgraph-data-$i.default.svc.cluster.local:20000\"};" | $MEMGRAPH_CONSOLE_BINARY --port 17687
+  echo "replica $i DONE"
 }
 setup_main() {
-  echo "SET INSTANCE instance_0 TO MAIN;" | $MEMGRAPH_CONSOLE_BINARY --port 17687
+  local i=$1
+  echo "SET INSTANCE instance_$i TO MAIN;" | $MEMGRAPH_CONSOLE_BINARY --port 17687
+  echo "main DONE"
 }
 
 setup_cluster() {
-  kubectl wait --for=condition=Ready pod -l role=data --timeout=120s
   kubectl wait --for=condition=Ready pod -l role=coordinator --timeout=120s
-  # TODO(gitbuda): The port forward seems flaky -> rerun a few times and make sure it's robust... -> make sure that it's not because of Memgraph failing...
+  kubectl wait --for=condition=Ready pod -l role=data --timeout=120s
+
   kubectl port-forward memgraph-coordinator-1-0 17687:7687 &
   PF_PID=$!
   wait_for_memgraph_coordinator localhost 17687
-  setup_coordinator_1_query
-  setup_coordinator_2_query
-  setup_coordinator_3_query
-  setup_replica_0
-  setup_replica_1
-  setup_main
+  setup_coordinator 1
+  setup_coordinator 2
+  setup_coordinator 3
+  setup_replica 0
+  setup_replica 1
+  setup_main 0
   kill $PF_PID
-  wait $PF_PID 2>/dev/null
+  wait $PF_PID 2>/dev/null || true
+
+  # # TODO(gitbuda): The reason for the abstracted code is also that sometimes port-foward fails (again some sync issue).
+  # # TODO(gitbuda): An attempt to make the code nicer but it still doesn't work -> not all gets executed + there is an infinitely loop.
+  # with_kubectl_portforward memgraph-coordinator-1-0 17687:7687 -- \
+  #   wait_for_memgraph_coordinator localhost 17687 && \
+  #   setup_coordinator 1 && \
+  #   setup_coordinator 2 && \
+  #   setup_coordinator 3 && \
+  #   setup_replica 0 && \
+  #   setup_main 0
 }
 
 execute_query_against_main() {
   query="$1"
-  # TODO(gitbuda): Derive what's the main instance.
-  # TODO: Wait for coordinator OR execute query with timeout (while success loop).
-  # TODO(gitbuda): After recovery, it's uncretain what instance will be MAIN -> figure that out using the query.
-  # execute_query_against_main "SHOW REPLICATION ROLE;" OR pull from coordinator "SHOW INSTANCES;"
-  kubectl wait --for=condition=Ready pod/memgraph-data-0-0 --timeout=120s
-  kubectl port-forward memgraph-data-0-0 17687:7687 &
+
+  # Derive what's the main instance (it's not deterministic where is MAIN after recovery).
+  kubectl wait --for=condition=Ready pod/memgraph-coordinator-1-0 --timeout=120s
+  kubectl port-forward memgraph-coordinator-1-0 17687:7687 &
+  PF_PID=$!
+  wait_for_memgraph_coordinator localhost 17687
+  main_instance=$(echo "SHOW INSTANCES;" | $MEMGRAPH_CONSOLE_BINARY --port 17687 --output-format=csv | python3 $SCRIPT_DIR/../reader.py get_main_parser)
+  echo "NOTE: MAIN instance is $main_instance"
+  kill $PF_PID
+  wait $PF_PID 2>/dev/null || true
+
+  kubectl wait --for=condition=Ready pod/${main_instance}-0 --timeout=120s
+  kubectl port-forward ${main_instance}-0 17687:7687 &
   PF_PID=$!
   wait_for_memgraph localhost 17687
   echo "$query" | $MEMGRAPH_CONSOLE_BINARY --port 17687
@@ -89,38 +103,64 @@ test_k8s_single() {
   helm uninstall memgraph-single-smoke
 }
 
+test_k8s_help() {
+  echo "usage: test_k8s_ha LAST|NEXT [-p|--chart-path PATH] [-s|--skip-cluster-setup] [-c|--skip-cleanup] [-h|--help]"
+  exit 1
+}
+
 test_k8s_ha() {
+  if [ "$#" -lt 1 ]; then
+    test_k8s_help
+  fi
   WHICH="$1"
   WHICH_TMP="MEMGRAPH_${WHICH}_DOCKERHUB_IMAGE"
   WHICH_IMAGE="${!WHICH_TMP}"
   MEMGRAPH_DOCKERHUB_TAG="${WHICH_IMAGE##*:}"
-  CHART_PATH="${2:-memgraph/memgraph-high-availability}"
+  shift
+  CHART_PATH="memgraph/memgraph-high-availability"
+  SKIP_CLUSTER_SETUP=false
+  SKIP_CLEANUP=false
+  while true; do
+    case $1 in
+      -p|--chart-path)         CHART_PATH="$2";         shift 2 ;;
+      -s|--skip-cluster-setup) SKIP_CLUSTER_SETUP=true; shift ;;
+      -c|--skip-cleanup)       SKIP_CLEANUP=true;       shift ;;
+      -h|--help)               test_k8s_help;           ;;
+      *)                       shift;                   break ;;
+    esac
+  done
   echo "Test k8s HA memgraph cluster using image:"
   echo "  * image: $WHICH_IMAGE"
   echo "  * tag: $MEMGRAPH_DOCKERHUB_TAG"
   echo "  * chart: $CHART_PATH"
+  echo "  * skip cluster setup: $SKIP_CLUSTER_SETUP"
+  echo "  * skip cleanup: $SKIP_CLEANUP"
 
   kind load docker-image $WHICH_IMAGE -n smoke-release-testing
   helm install myhadb $CHART_PATH \
     --set env.MEMGRAPH_ENTERPRISE_LICENSE=$MEMGRAPH_ENTERPRISE_LICENSE,env.MEMGRAPH_ORGANIZATION_NAME=$MEMGRAPH_ORGANIZATION_NAME \
     -f "$SCRIPT_DIR/values-ha.yaml" \
     --set "image.tag=$MEMGRAPH_DOCKERHUB_TAG"
-  # TODO(gitbuda): On recovery, this is not required -> skip.
-  setup_cluster
+  if [ "$SKIP_CLUSTER_SETUP" = false ]; then
+    setup_cluster
+  fi
   execute_query_against_main "SHOW VERSION;"
   execute_query_against_main "CREATE ();"
   execute_query_against_main "MATCH (n) RETURN n;"
-  # TODO(gitbuda): flag also for this because we want to debug cluster after something fails. -> abstract into 2 operations (app & data) and make it optional.
+  # TODO(gitbuda): Add additional flag for this.
   helm uninstall myhadb
-  kubectl delete pvc --all
+  if [ "$SKIP_CLEANUP" = false ]; then
+    kubectl delete pvc --all
+  fi
 }
 
 if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
   echo "Running $0 directly..."
   # NOTE: Developing workflow: download+load required images and define MEMGRAPH_NEXT_DOCKERHUB_IMAGE.
 
-  # Inject local version of the helm chart because we want to test any local fixes upfront.
-  # test_k8s_ha LAST
+  test_k8s_ha LAST -c # Skip cleanup because we want to recover from existing PVCs.
+  test_k8s_ha NEXT -s # Skip cluster setup because that should be recovered from PVCs.
+
+  # How to inject local version of the helm chart because we want to test any local fixes upfront.
   # test_k8s_ha NEXT ~/Workspace/code/memgraph/helm-charts/charts/memgraph-high-availability
-  test_k8s_ha NEXT
 fi
