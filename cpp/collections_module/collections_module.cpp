@@ -82,6 +82,10 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
         {mgp::Return(std::string(Collections::kReturnValuePartition).c_str(), {mgp::Type::List, mgp::Type::Any})},
         module, memory);
 
+    mgp::AddFunction(Collections::Flatten, Collections::kProcedureFlatten,
+                     {mgp::Parameter(Collections::kArgumentListFlatten, {mgp::Type::List, mgp::Type::Any}, mgp::Value(mgp::List{}))}, module,
+                     memory);
+
   } catch (const std::exception &e) {
     return 1;
   }
