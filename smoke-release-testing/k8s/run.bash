@@ -39,52 +39,45 @@ setup_cluster() {
   kubectl wait --for=condition=Ready pod -l role=coordinator --timeout=120s
   kubectl wait --for=condition=Ready pod -l role=data --timeout=120s
 
-  kubectl port-forward memgraph-coordinator-1-0 17687:7687 &
-  PF_PID=$!
-  wait_for_memgraph_coordinator localhost 17687
-  setup_coordinator 1
-  setup_coordinator 2
-  setup_coordinator 3
-  setup_replica 0
-  setup_replica 1
-  setup_main 0
-  kill $PF_PID
-  wait $PF_PID 2>/dev/null || true
-
-  # # TODO(gitbuda): The reason for the abstracted code is also that sometimes port-foward fails (again some sync issue).
-  # # TODO(gitbuda): An attempt to make the code nicer but it still doesn't work -> not all gets executed + there is an infinitely loop.
-  # with_kubectl_portforward memgraph-coordinator-1-0 17687:7687 -- \
-  #   wait_for_memgraph_coordinator localhost 17687 && \
-  #   setup_coordinator 1 && \
-  #   setup_coordinator 2 && \
-  #   setup_coordinator 3 && \
-  #   setup_replica 0 && \
-  #   setup_main 0
+  # TODO(gitbuda): The reason for the abstracted code is also that sometimes port-foward fails (again some sync issue).
+  # TODO(gitbuda): An attempt to make the code nicer but it still doesn't work -> not all gets executed + there is an infinitely loop.
+  with_kubectl_portforward memgraph-coordinator-1-0 17687:7687 -- \
+    'wait_for_memgraph_coordinator localhost 17687' \
+    'setup_coordinator 1' \
+    'setup_coordinator 2' \
+    'setup_coordinator 3' \
+    'setup_replica 0' \
+    'setup_main 0'
 }
 
 execute_query_against_main() {
   query="$1"
 
   # Derive what's the main instance (it's not deterministic where is MAIN after recovery).
-  kubectl wait --for=condition=Ready pod/memgraph-coordinator-1-0 --timeout=120s
-  kubectl port-forward memgraph-coordinator-1-0 17687:7687 &
-  PF_PID=$!
-  wait_for_memgraph_coordinator localhost 17687
-  main_instance=$(echo "SHOW INSTANCES;" | $MEMGRAPH_CONSOLE_BINARY --port 17687 --output-format=csv | python3 $SCRIPT_DIR/../reader.py get_main_parser)
-  echo "NOTE: MAIN instance is $main_instance"
-  kill $PF_PID
-  wait $PF_PID 2>/dev/null || true
+  # kubectl wait --for=condition=Ready pod/memgraph-coordinator-1-0 --timeout=120s
+  # kubectl port-forward memgraph-coordinator-1-0 17687:7687 &
+  # PF_PID=$!
+  # kill $PF_PID
+  # wait $PF_PID 2>/dev/null || true
 
-  kubectl wait --for=condition=Ready pod/${main_instance}-0 --timeout=120s
-  kubectl port-forward ${main_instance}-0 17687:7687 &
-  PF_PID=$!
-  wait_for_memgraph localhost 17687
-  echo "$query" | $MEMGRAPH_CONSOLE_BINARY --port 17687
-  kill $PF_PID
-  wait $PF_PID 2>/dev/null || true
+  # kubectl wait --for=condition=Ready pod/${main_instance}-0 --timeout=120s
+  # kubectl port-forward ${main_instance}-0 17687:7687 &
+  # PF_PID=$!
+  # kill $PF_PID
+  # wait $PF_PID 2>/dev/null || true
+
+  with_kubectl_portforward memgraph-coordinator-1-0 17687:7687 -- \
+    "wait_for_memgraph_coordinator localhost 17687" \
+    "export MAIN_INSTANCE=\$(echo \"SHOW INSTANCES;\" | $MEMGRAPH_CONSOLE_BINARY --port 17687 --output-format=csv | python3 $SCRIPT_DIR/../reader.py get_main_parser)" \
+    "echo \"NOTE: MAIN instance is \$MAIN_INSTANCE\""
+  # TODO(gitbuda): MAIN_INSTANCE variable here is lost -> FIX
+  with_kubectl_portforward $MAIN_INSTANCE 17687:7687 -- \
+    "wait_for_memgraph localhost 17687" \
+    "echo \"$query\" | $MEMGRAPH_CONSOLE_BINARY --port 17687"
 }
 
 test_k8s_single() {
+  # TODO(gitbuda): Refactor test_k8s_single to also use with_kubectl_portforward
   echo "Test k8s single memgraph instance using image: $MEMGRAPH_NEXT_DOCKERHUB_IMAGE"
   kind load docker-image $MEMGRAPH_NEXT_DOCKERHUB_IMAGE -n smoke-release-testing
   MEMGRAPH_NEXT_DOCKERHUB_TAG="${MEMGRAPH_NEXT_DOCKERHUB_IMAGE##*:}"
@@ -120,13 +113,15 @@ test_k8s_ha() {
   CHART_PATH="memgraph/memgraph-high-availability"
   SKIP_CLUSTER_SETUP=false
   SKIP_CLEANUP=false
+  SKIP_HELM_UNINSTALL=false
   while true; do
     case $1 in
-      -p|--chart-path)         CHART_PATH="$2";         shift 2 ;;
-      -s|--skip-cluster-setup) SKIP_CLUSTER_SETUP=true; shift ;;
-      -c|--skip-cleanup)       SKIP_CLEANUP=true;       shift ;;
-      -h|--help)               test_k8s_help;           ;;
-      *)                       shift;                   break ;;
+      -p|--chart-path)          CHART_PATH="$2";          shift 2 ;;
+      -s|--skip-cluster-setup)  SKIP_CLUSTER_SETUP=true;  shift ;;
+      -u|--skip-helm-uninstall) SKIP_HELM_UNINSTALL=true; shift ;;
+      -c|--skip-cleanup)        SKIP_CLEANUP=true;        shift ;;
+      -h|--help)                test_k8s_help;            ;;
+      *)                        shift;                    break ;;
     esac
   done
   echo "Test k8s HA memgraph cluster using image:"
@@ -147,20 +142,33 @@ test_k8s_ha() {
   execute_query_against_main "SHOW VERSION;"
   execute_query_against_main "CREATE ();"
   execute_query_against_main "MATCH (n) RETURN n;"
-  # TODO(gitbuda): Add additional flag for this.
-  helm uninstall myhadb
+  if [ "$SKIP_HELM_UNINSTALL" = false ]; then
+    helm uninstall myhadb
+  fi
   if [ "$SKIP_CLEANUP" = false ]; then
     kubectl delete pvc --all
   fi
 }
 
+call_me() {
+  echo "x"
+}
 if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
   echo "Running $0 directly..."
   # NOTE: Developing workflow: download+load required images and define MEMGRAPH_NEXT_DOCKERHUB_IMAGE.
 
-  test_k8s_ha LAST -c # Skip cleanup because we want to recover from existing PVCs.
-  test_k8s_ha NEXT -s # Skip cluster setup because that should be recovered from PVCs.
+  # test_k8s_ha LAST -c # Skip cleanup because we want to recover from existing PVCs.
+  # test_k8s_ha NEXT -s # Skip cluster setup because that should be recovered from PVCs.
 
   # How to inject local version of the helm chart because we want to test any local fixes upfront.
   # test_k8s_ha NEXT ~/Workspace/code/memgraph/helm-charts/charts/memgraph-high-availability
+
+  # TODO(gitbuda): At the moment, it can happen that exit code is 0 while there is a failure -> FIX.
+  # test_k8s_ha NEXT -u -c
+
+  with_kubectl_portforward memgraph-coordinator-1-0 17687:7687 -- \
+    'export EXP_VAR="foo"'
+    "echo \"MG_MAIN=\"data0\" > $SCRIPT_DIR/mg_main.out"
+  source $SCRIPT_DIR/mg_main.out
+  echo "$MG_MAIN"
 fi

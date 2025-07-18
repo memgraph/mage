@@ -72,16 +72,30 @@ wait_port() {
 wait_for_memgraph() {
   __host=$1
   __port=$2
+  __max_retries=${3:-50}
+  __retries=0
   while ! echo "RETURN 1;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port > /dev/null 2>&1; do
     sleep 0.1
+    __retries=$((__retries+1))
+    if [ "$__retries" -ge "$__max_retries" ]; then
+      echo "wait_for_memgraph: Reached max retries ($__max_retries) for $__host:$__port"
+      return 1
+    fi
   done
 }
 
 wait_for_memgraph_coordinator() {
   __host=$1
   __port=$2
+  __max_retries=${3:-50}
+  __retries=0
   while ! echo "SHOW INSTANCE;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port > /dev/null 2>&1; do
     sleep 0.1
+    __retries=$((__retries+1))
+    if [ "$__retries" -ge "$__max_retries" ]; then
+      echo "wait_for_memgraph_coordinator: Reached max retries ($__max_retries) for $__host:$__port"
+      return 1
+    fi
   done
 }
 
@@ -233,19 +247,26 @@ spinup_and_cleanup_memgraph_dockers() {
 }
 
 with_kubectl_portforward() (
-    # --- 1. peel off first two required arguments --------------------------
-    local target=$1           # svc/foo, pod/bar, deployment/baz, …
-    local map=$2              # 8080:80 or 8443 or 0.0.0.0:8080:80
-    shift 3                   # “--” + user commands remain
+    # --- 1. peel off first two required arguments ---------------------------
+    local target=$1 # svc/foo, pod/bar, deployment/baz, …
+    local map=$2    # 8080:80 or 8443 or 0.0.0.0:8080:80
+    shift 3         # “--” + user commands; NOTE: Use an array of commands
+                    #     inside a string:
+                    #     -- 'cmd1' 'cmd2' ...
+                    #     because if you use ; or && to separate
+                    #     commands, bash will treat that as one
+                    #     command + cleanup + the rest.
 
-    # --- 2. launch port-forward in background ------------------------------
+    # --- 2. launch port-forward in background -------------------------------
     # Send its output to a temp file so we can inspect errors if it dies early
     local log
     log=$(mktemp)
+    # TODO(gitbuda): port-forward sometimes failes (something is flaky) -> FIX
     kubectl port-forward "$target" "$map" >/dev/null 2>>"$log" &
+    pf_status=$?
+    echo "$pf_status"
     local pf_pid=$!
 
-    # Clean up on normal exit or on signals
     cleanup() {
         echo "calling port forward cleanup"
         kill "$pf_pid" 2>/dev/null || true
@@ -266,6 +287,8 @@ with_kubectl_portforward() (
     done
 
     # --- 4. hand control to the caller’s command list ----------------------
-    "$@"
+    for cmd in "$@"; do
+      eval "$cmd"
+    done
     # cleanup() runs automatically thanks to the trap
 )
