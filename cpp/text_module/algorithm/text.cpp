@@ -2,8 +2,8 @@
 
 #include <algorithm>
 #include <regex>
+#include <unordered_map>
 #include <vector>
-
 #include <fmt/args.h>
 #include <fmt/format.h>
 
@@ -146,7 +146,13 @@ void Text::RegReplace(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_resul
       return;
     }
 
-    std::regex pattern(regex);
+    // Thread-local cache for regex objects
+    thread_local std::unordered_map<std::string, std::regex> regex_cache;
+    auto it = regex_cache.find(regex);
+    if (it == regex_cache.end()) {
+      it = regex_cache.emplace(regex, std::regex(regex)).first;
+    }
+    const std::regex &pattern = it->second;
     std::string result_str = std::regex_replace(text, pattern, replacement);
 
     result_obj.SetValue(std::move(result_str));
