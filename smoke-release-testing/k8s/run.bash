@@ -34,13 +34,7 @@ setup_main() {
   echo "SET INSTANCE instance_$i TO MAIN;" | $MEMGRAPH_CONSOLE_BINARY --port 17687
   echo "main DONE"
 }
-
 setup_cluster() {
-  kubectl wait --for=condition=Ready pod -l role=coordinator --timeout=120s
-  kubectl wait --for=condition=Ready pod -l role=data --timeout=120s
-
-  # TODO(gitbuda): The reason for the abstracted code is also that sometimes port-foward fails (again some sync issue).
-  # TODO(gitbuda): An attempt to make the code nicer but it still doesn't work -> not all gets executed + there is an infinitely loop.
   with_kubectl_portforward memgraph-coordinator-1-0 17687:7687 -- \
     'wait_for_memgraph_coordinator localhost 17687' \
     'setup_coordinator 1' \
@@ -52,48 +46,33 @@ setup_cluster() {
 
 execute_query_against_main() {
   query="$1"
-
-  # Derive what's the main instance (it's not deterministic where is MAIN after recovery).
-  # kubectl wait --for=condition=Ready pod/memgraph-coordinator-1-0 --timeout=120s
-  # kubectl port-forward memgraph-coordinator-1-0 17687:7687 &
-  # PF_PID=$!
-  # kill $PF_PID
-  # wait $PF_PID 2>/dev/null || true
-
-  # kubectl wait --for=condition=Ready pod/${main_instance}-0 --timeout=120s
-  # kubectl port-forward ${main_instance}-0 17687:7687 &
-  # PF_PID=$!
-  # kill $PF_PID
-  # wait $PF_PID 2>/dev/null || true
-
   with_kubectl_portforward memgraph-coordinator-1-0 17687:7687 -- \
     "wait_for_memgraph_coordinator localhost 17687" \
-    "export MAIN_INSTANCE=\$(echo \"SHOW INSTANCES;\" | $MEMGRAPH_CONSOLE_BINARY --port 17687 --output-format=csv | python3 $SCRIPT_DIR/../reader.py get_main_parser)" \
-    "echo \"NOTE: MAIN instance is \$MAIN_INSTANCE\""
-  # TODO(gitbuda): MAIN_INSTANCE variable here is lost -> FIX
-  with_kubectl_portforward $MAIN_INSTANCE 17687:7687 -- \
+    "MAIN_INSTANCE=\$(echo \"SHOW INSTANCES;\" | $MEMGRAPH_CONSOLE_BINARY --port 17687 --output-format=csv | python3 $SCRIPT_DIR/../reader.py get_main_parser)" \
+    "echo \"NOTE: MAIN instance is \$MAIN_INSTANCE\"" \
+    "echo \"MG_MAIN=\$MAIN_INSTANCE\" > $SCRIPT_DIR/mg_main.out" # Couldn't get export to move the info -> used file instead.
+  source $SCRIPT_DIR/mg_main.out
+  with_kubectl_portforward "$MG_MAIN-0" 17687:7687 -- \
     "wait_for_memgraph localhost 17687" \
     "echo \"$query\" | $MEMGRAPH_CONSOLE_BINARY --port 17687"
 }
 
 test_k8s_single() {
-  # TODO(gitbuda): Refactor test_k8s_single to also use with_kubectl_portforward
   echo "Test k8s single memgraph instance using image: $MEMGRAPH_NEXT_DOCKERHUB_IMAGE"
   kind load docker-image $MEMGRAPH_NEXT_DOCKERHUB_IMAGE -n smoke-release-testing
   MEMGRAPH_NEXT_DOCKERHUB_TAG="${MEMGRAPH_NEXT_DOCKERHUB_IMAGE##*:}"
-  load_next_image_into_kind
   helm install memgraph-single-smoke memgraph/memgraph \
     -f "$SCRIPT_DIR/values-single.yaml" \
     --set "image.tag=$MEMGRAPH_NEXT_DOCKERHUB_TAG"
   kubectl wait --for=condition=Ready pod/memgraph-single-smoke-0 --timeout=120s
-  kubectl port-forward memgraph-single-smoke-0 17687:7687 &
-  PF_PID=$!
-  wait_for_memgraph localhost 17687
-  echo "CREATE ();" | $MEMGRAPH_CONSOLE_BINARY --port 17687
-  echo "MATCH (n) RETURN n;" | $MEMGRAPH_CONSOLE_BINARY --port 17687
-  kill $PF_PID
-  wait $PF_PID 2>/dev/null || true
+
+  with_kubectl_portforward memgraph-single-smoke-0 17687:7687 -- \
+    "wait_for_memgraph localhost 17687" \
+    "echo \"CREATE ();\" | $MEMGRAPH_CONSOLE_BINARY --port 17687" \
+    "echo \"MATCH (n) RETURN n;\" | $MEMGRAPH_CONSOLE_BINARY --port 17687"
+
   helm uninstall memgraph-single-smoke
+  kubectl delete pvc --all
 }
 
 test_k8s_help() {
@@ -136,6 +115,9 @@ test_k8s_ha() {
     --set env.MEMGRAPH_ENTERPRISE_LICENSE=$MEMGRAPH_ENTERPRISE_LICENSE,env.MEMGRAPH_ORGANIZATION_NAME=$MEMGRAPH_ORGANIZATION_NAME \
     -f "$SCRIPT_DIR/values-ha.yaml" \
     --set "image.tag=$MEMGRAPH_DOCKERHUB_TAG"
+  kubectl wait --for=condition=Ready pod -l role=coordinator --timeout=120s
+  kubectl wait --for=condition=Ready pod -l role=data --timeout=120s
+
   if [ "$SKIP_CLUSTER_SETUP" = false ]; then
     setup_cluster
   fi
@@ -150,25 +132,17 @@ test_k8s_ha() {
   fi
 }
 
-call_me() {
-  echo "x"
-}
 if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
+  # NOTE: Developing workflow: download+load required images and defined MEMGRAPH_NEXT_DOCKERHUB_IMAGE.
   echo "Running $0 directly..."
-  # NOTE: Developing workflow: download+load required images and define MEMGRAPH_NEXT_DOCKERHUB_IMAGE.
 
-  # test_k8s_ha LAST -c # Skip cleanup because we want to recover from existing PVCs.
-  # test_k8s_ha NEXT -s # Skip cluster setup because that should be recovered from PVCs.
+  # TODO(gitbuda): Exit on failures.
+  # TODO(gitbuda): Check the results.
+
+  test_k8s_single
+  test_k8s_ha LAST -c # Skip cleanup because we want to recover from existing PVCs.
+  test_k8s_ha NEXT -s # Skip cluster setup because that should be recovered from PVCs.
 
   # How to inject local version of the helm chart because we want to test any local fixes upfront.
   # test_k8s_ha NEXT ~/Workspace/code/memgraph/helm-charts/charts/memgraph-high-availability
-
-  # TODO(gitbuda): At the moment, it can happen that exit code is 0 while there is a failure -> FIX.
-  # test_k8s_ha NEXT -u -c
-
-  with_kubectl_portforward memgraph-coordinator-1-0 17687:7687 -- \
-    'export EXP_VAR="foo"'
-    "echo \"MG_MAIN=\"data0\" > $SCRIPT_DIR/mg_main.out"
-  source $SCRIPT_DIR/mg_main.out
-  echo "$MG_MAIN"
 fi

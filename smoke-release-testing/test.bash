@@ -4,6 +4,7 @@ source "$SCRIPT_DIR/utils.bash"
 
 # TODO(gitbuda): Measure the total execution time, it should be under ~10s.
 # TODO(gitbuda): Test docker compose.
+# TODO(gitbuda): memgraph vs mage -> docker tests assume mage while helm is memgraph -> RESOLVE.
 
 # NOTE: 1st arg is how to pull LAST image, 2nd arg is how to pull NEXT image.
 spinup_and_cleanup_memgraph_dockers DockerHub RC
@@ -53,5 +54,5 @@ test_impersonate_user $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 # k8s is a special case, because it requires extra setup.
 source $SCRIPT_DIR/k8s/run.bash
 test_k8s_single
-test_k8s_ha LAST
-test_k8s_ha NEXT
+test_k8s_ha LAST -c # Skip cleanup because we want to recover from existing PVCs.
+test_k8s_ha NEXT -s # Skip cluster setup because that should be recovered from PVCs.
