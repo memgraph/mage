@@ -2,10 +2,8 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/utils.bash"
 
-# TODO(gitbuda): Measure the total execution time, it should be under ~10s.
-
 # NOTE: 1st arg is how to pull LAST image, 2nd arg is how to pull NEXT image.
-spinup_and_cleanup_memgraph_dockers DockerHub DockerHub
+spinup_and_cleanup_memgraph_dockers Dockerhub RC
 echo "Waiting for memgraph to initialize..."
 wait_for_memgraph $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_LAST_DATA_BOLT_PORT
 wait_for_memgraph $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
