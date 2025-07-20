@@ -35,8 +35,7 @@ setup_main() {
   echo "main DONE"
 }
 setup_cluster() {
-  with_kubectl_portforward memgraph-coordinator-1-0 17687:7687 -- \
-    'wait_for_memgraph_coordinator localhost 17687' \
+  with_kubectl_portforward memgraph-coordinator-1-0 17687:7687 'wait_for_memgraph_coordinator localhost 17687 5' -- \
     'setup_coordinator 1' \
     'setup_coordinator 2' \
     'setup_coordinator 3' \
@@ -46,15 +45,25 @@ setup_cluster() {
 
 execute_query_against_main() {
   query="$1"
-  with_kubectl_portforward memgraph-coordinator-1-0 17687:7687 -- \
-    "wait_for_memgraph_coordinator localhost 17687" \
-    "MAIN_INSTANCE=\$(echo \"SHOW INSTANCES;\" | $MEMGRAPH_CONSOLE_BINARY --port 17687 --output-format=csv | python3 $SCRIPT_DIR/../reader.py get_main_parser)" \
+  with_kubectl_portforward memgraph-coordinator-1-0 17687:7687 'wait_for_memgraph_coordinator localhost 17687 5' -- \
+    "MAIN_INSTANCE=\$(echo \"SHOW INSTANCES;\" | $MEMGRAPH_CONSOLE_BINARY --port 17687 --output-format=csv | python3 $SCRIPT_DIR/../validator.py get_main_parser)" \
     "echo \"NOTE: MAIN instance is \$MAIN_INSTANCE\"" \
     "echo \"MG_MAIN=\$MAIN_INSTANCE\" > $SCRIPT_DIR/mg_main.out" # Couldn't get export to move the info -> used file instead.
   source $SCRIPT_DIR/mg_main.out
-  with_kubectl_portforward "$MG_MAIN-0" 17687:7687 -- \
-    "wait_for_memgraph localhost 17687" \
+  with_kubectl_portforward "$MG_MAIN-0" 17687:7687 'wait_for_memgraph localhost 17687 5' -- \
     "echo \"$query\" | $MEMGRAPH_CONSOLE_BINARY --port 17687"
+}
+
+validate_nodes_against_main() {
+  expected=$1
+  with_kubectl_portforward memgraph-coordinator-1-0 17687:7687 'wait_for_memgraph_coordinator localhost 17687 5' -- \
+    "MAIN_INSTANCE=\$(echo \"SHOW INSTANCES;\" | $MEMGRAPH_CONSOLE_BINARY --port 17687 --output-format=csv | python3 $SCRIPT_DIR/../validator.py get_main_parser)" \
+    "echo \"NOTE: MAIN instance is \$MAIN_INSTANCE\"" \
+    "echo \"MG_MAIN=\$MAIN_INSTANCE\" > $SCRIPT_DIR/mg_main.out" # Couldn't get export to move the info -> used file instead.
+  source $SCRIPT_DIR/mg_main.out
+  with_kubectl_portforward "$MG_MAIN-0" 17687:7687 'wait_for_memgraph localhost 17687 5' -- \
+    "echo \"MATCH (n) RETURN n;\" | $MEMGRAPH_CONSOLE_BINARY --port 17687 --output-format=csv | python3 $SCRIPT_DIR/../validator.py validate_number_of_results -e $expected"
+
 }
 
 test_k8s_single() {
@@ -66,18 +75,28 @@ test_k8s_single() {
     --set "image.tag=$MEMGRAPH_NEXT_DOCKERHUB_TAG"
   kubectl wait --for=condition=Ready pod/memgraph-single-smoke-0 --timeout=120s
 
-  with_kubectl_portforward memgraph-single-smoke-0 17687:7687 -- \
-    "wait_for_memgraph localhost 17687" \
+  with_kubectl_portforward memgraph-single-smoke-0 17687:7687 "wait_for_memgraph localhost 17687 5" -- \
     "echo \"CREATE ();\" | $MEMGRAPH_CONSOLE_BINARY --port 17687" \
     "echo \"MATCH (n) RETURN n;\" | $MEMGRAPH_CONSOLE_BINARY --port 17687"
 
   helm uninstall memgraph-single-smoke
-  kubectl delete pvc --all
 }
 
 test_k8s_help() {
   echo "usage: test_k8s_ha LAST|NEXT [-p|--chart-path PATH] [-s|--skip-cluster-setup] [-c|--skip-cleanup] [-h|--help]"
   exit 1
+}
+
+cleanup_k8s_all() {
+  # NOTE: An attempt to cleanup any leftovers from kubectl port-forward...
+  kill -9 $(pgrep kubectl) || true
+  if helm status myhadb > /dev/null 2>&1; then
+    helm uninstall myhadb
+  fi
+  if helm status myhadb > /dev/null 2>&1; then
+    helm uninstall memgraph-single-smoke
+  fi
+  kubectl delete pvc --all
 }
 
 test_k8s_ha() {
@@ -93,21 +112,25 @@ test_k8s_ha() {
   SKIP_CLUSTER_SETUP=false
   SKIP_CLEANUP=false
   SKIP_HELM_UNINSTALL=false
-  while true; do
+  EXPECTED_NODES_COUNT=1
+  while [ "$#" -gt 0 ]; do
     case $1 in
-      -p|--chart-path)          CHART_PATH="$2";          shift 2 ;;
-      -s|--skip-cluster-setup)  SKIP_CLUSTER_SETUP=true;  shift ;;
-      -u|--skip-helm-uninstall) SKIP_HELM_UNINSTALL=true; shift ;;
-      -c|--skip-cleanup)        SKIP_CLEANUP=true;        shift ;;
-      -h|--help)                test_k8s_help;            ;;
-      *)                        shift;                    break ;;
+      -p|--chart-path)          CHART_PATH="$2";           shift 2 ;;
+      -s|--skip-cluster-setup)  SKIP_CLUSTER_SETUP=true;   shift ;;
+      -u|--skip-helm-uninstall) SKIP_HELM_UNINSTALL=true;  shift ;;
+      -c|--skip-cleanup)        SKIP_CLEANUP=true;         shift ;;
+      -n|--expected-nodes-no)   EXPECTED_NODES_COUNT="$2"; shift 2 ;;
+      -h|--help)                test_k8s_help;             ;;
+      *)                        shift;                     break ;;
     esac
   done
   echo "Test k8s HA memgraph cluster using image:"
   echo "  * image: $WHICH_IMAGE"
   echo "  * tag: $MEMGRAPH_DOCKERHUB_TAG"
   echo "  * chart: $CHART_PATH"
+  echo "  * expected nodes number: $EXPECTED_NODES_COUNT"
   echo "  * skip cluster setup: $SKIP_CLUSTER_SETUP"
+  echo "  * skip helm uninstall: $SKIP_HELM_UNINSTALL"
   echo "  * skip cleanup: $SKIP_CLEANUP"
 
   kind load docker-image $WHICH_IMAGE -n smoke-release-testing
@@ -115,6 +138,7 @@ test_k8s_ha() {
     --set env.MEMGRAPH_ENTERPRISE_LICENSE=$MEMGRAPH_ENTERPRISE_LICENSE,env.MEMGRAPH_ORGANIZATION_NAME=$MEMGRAPH_ORGANIZATION_NAME \
     -f "$SCRIPT_DIR/values-ha.yaml" \
     --set "image.tag=$MEMGRAPH_DOCKERHUB_TAG"
+  sleep 1 # NOTE: Sometimes there is an Error from Server -> pod XYZ not found...
   kubectl wait --for=condition=Ready pod -l role=coordinator --timeout=120s
   kubectl wait --for=condition=Ready pod -l role=data --timeout=120s
 
@@ -123,7 +147,7 @@ test_k8s_ha() {
   fi
   execute_query_against_main "SHOW VERSION;"
   execute_query_against_main "CREATE ();"
-  execute_query_against_main "MATCH (n) RETURN n;"
+  validate_nodes_against_main $EXPECTED_NODES_COUNT
   if [ "$SKIP_HELM_UNINSTALL" = false ]; then
     helm uninstall myhadb
   fi
@@ -136,12 +160,9 @@ if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
   # NOTE: Developing workflow: download+load required images and defined MEMGRAPH_NEXT_DOCKERHUB_IMAGE.
   echo "Running $0 directly..."
 
-  # TODO(gitbuda): Exit on failures.
-  # TODO(gitbuda): Check the results.
-
-  test_k8s_single
-  test_k8s_ha LAST -c # Skip cleanup because we want to recover from existing PVCs.
-  test_k8s_ha NEXT -s # Skip cluster setup because that should be recovered from PVCs.
+  # test_k8s_single
+  # test_k8s_ha LAST -c # Skip cleanup because we want to recover from existing PVCs.
+  # test_k8s_ha NEXT -s # Skip cluster setup because that should be recovered from PVCs.
 
   # How to inject local version of the helm chart because we want to test any local fixes upfront.
   # test_k8s_ha NEXT ~/Workspace/code/memgraph/helm-charts/charts/memgraph-high-availability
