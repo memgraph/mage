@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/../utils.bash"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -50,7 +50,9 @@ execute_query_against_main() {
     "echo \"NOTE: MAIN instance is \$MAIN_INSTANCE\"" \
     "echo \"MG_MAIN=\$MAIN_INSTANCE\" > $SCRIPT_DIR/mg_main.out" # Couldn't get export to move the info -> used file instead.
   source $SCRIPT_DIR/mg_main.out
+  # NOTE: Waiting for MAIN is required because sometimes all instances are up, but MAIN is not yet fully configured.
   with_kubectl_portforward "$MG_MAIN-0" 17687:7687 'wait_for_memgraph localhost 17687 5' -- \
+    "wait_for_memgraph_main localhost 17687 10" \
     "echo \"$query\" | $MEMGRAPH_CONSOLE_BINARY --port 17687"
 }
 
@@ -82,8 +84,20 @@ test_k8s_single() {
   helm uninstall memgraph-single-smoke
 }
 
+helm_install_myhadb() {
+  chart_path="$1"
+  image_tag="$2"
+  helm install myhadb $chart_path \
+    --set env.MEMGRAPH_ENTERPRISE_LICENSE=$MEMGRAPH_ENTERPRISE_LICENSE,env.MEMGRAPH_ORGANIZATION_NAME=$MEMGRAPH_ORGANIZATION_NAME \
+    -f "$SCRIPT_DIR/values-ha.yaml" \
+    --set "image.tag=$image_tag"
+}
+
 test_k8s_help() {
-  echo "usage: test_k8s_ha LAST|NEXT [-p|--chart-path PATH] [-s|--skip-cluster-setup] [-c|--skip-cleanup] [-h|--help]"
+  echo "usage: test_k8s_ha LAST|NEXT [-p|--chart-path PATH]"
+  echo "                             [-s|--skip-cluster-setup] [-u|--skip-helm-uninstall] [-c|--skip-cleanup]"
+  echo "                             [-n|--expected-nodes-no]"
+  echo "                             [-h|--help]"
   exit 1
 }
 
@@ -134,10 +148,7 @@ test_k8s_ha() {
   echo "  * skip cleanup: $SKIP_CLEANUP"
 
   kind load docker-image $WHICH_IMAGE -n smoke-release-testing
-  helm install myhadb $CHART_PATH \
-    --set env.MEMGRAPH_ENTERPRISE_LICENSE=$MEMGRAPH_ENTERPRISE_LICENSE,env.MEMGRAPH_ORGANIZATION_NAME=$MEMGRAPH_ORGANIZATION_NAME \
-    -f "$SCRIPT_DIR/values-ha.yaml" \
-    --set "image.tag=$MEMGRAPH_DOCKERHUB_TAG"
+  helm_install_myhadb $CHART_PATH $MEMGRAPH_DOCKERHUB_TAG
   sleep 1 # NOTE: Sometimes there is an Error from Server -> pod XYZ not found...
   kubectl wait --for=condition=Ready pod -l role=coordinator --timeout=120s
   kubectl wait --for=condition=Ready pod -l role=data --timeout=120s
@@ -166,4 +177,7 @@ if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
 
   # How to inject local version of the helm chart because we want to test any local fixes upfront.
   # test_k8s_ha NEXT ~/Workspace/code/memgraph/helm-charts/charts/memgraph-high-availability
+
+  # helm_install_myhadb "memgraph/memgraph-high-availability" "3.4.0"
+  # wait_for_memgraph_main localhost 17687 5
 fi

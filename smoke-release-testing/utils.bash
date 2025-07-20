@@ -3,15 +3,14 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 MEMGRAPH_BUILD_PATH="${MEMGRAPH_BUILD_PATH:-/tmp/memgraph/build}"
 MEMGRAPH_CONSOLE_BINARY="${MEMGRAPH_CONSOLE_BINARY:-$SCRIPT_DIR/mgconsole.build/build/src/mgconsole}"
-# Required env vars to define.
 MEMGRAPH_ENTERPRISE_LICENSE="${MEMGRAPH_ENTERPRISE_LICENSE:-provide_licanse_string}"
 MEMGRAPH_ORGANIZATION_NAME="${MEMGRAPH_ORGANIZATION_NAME:-provide_organization_name_string}"
+MEMGRAPH_LAST_DOCKERHUB_IMAGE="${MEMGRAPH_LAST_DOCKERHUB_IMAGE:-provide_dockerhub_image_name}"
+MEMGRAPH_NEXT_DOCKERHUB_IMAGE="${MEMGRAPH_NEXT_DOCKERHUB_IMAGE:-provide_dockerhub_image_name}"
 MEMGRAPH_LAST_RC_DIRECT_DOCKER_IMAGE_ARM="${MEMGRAPH_LAST_RC_DIRECT_DOCKER_IMAGE_ARM:-provide_https_download_link}"
 MEMGRAPH_NEXT_RC_DIRECT_DOCKER_IMAGE_ARM="${MEMGRAPH_NEXT_RC_DIRECT_DOCKER_IMAGE_ARM:-provide_https_download_link}"
 MEMGRAPH_LAST_RC_DIRECT_DOCKER_IMAGE_X86="${MEMGRAPH_LAST_RC_DIRECT_DOCKER_IMAGE_X86:-provide_https_download_link}"
 MEMGRAPH_NEXT_RC_DIRECT_DOCKER_IMAGE_X86="${MEMGRAPH_NEXT_RC_DIRECT_DOCKER_IMAGE_X86:-provide_https_donwload_link}"
-MEMGRAPH_LAST_DOCKERHUB_IMAGE="${MEMGRAPH_LAST_DOCKERHUB_IMAGE:-provide_dockerhub_image_name}"
-MEMGRAPH_NEXT_DOCKERHUB_IMAGE="${MEMGRAPH_NEXT_DOCKERHUB_IMAGE:-provide_dockerhub_image_name}"
 
 print_help_and_exit_unsuccessfully() {
   echo "It's required to define the following environment variables:"
@@ -75,7 +74,7 @@ wait_for_memgraph() {
   __max_retries=${3:-100}
   __retries=0
   while ! echo "RETURN 1;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port > /dev/null 2>&1; do
-    sleep 0.2
+    sleep 0.3
     __retries=$((__retries+1))
     if [ "$__retries" -ge "$__max_retries" ]; then
       echo "wait_for_memgraph: Reached max retries ($__max_retries) for $__host:$__port"
@@ -91,10 +90,26 @@ wait_for_memgraph_coordinator() {
   __max_retries=${3:-100}
   __retries=0
   while ! echo "SHOW INSTANCE;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port > /dev/null 2>&1; do
-    sleep 0.2
+    sleep 0.3
     __retries=$((__retries+1))
     if [ "$__retries" -ge "$__max_retries" ]; then
       echo "wait_for_memgraph_coordinator: Reached max retries ($__max_retries) for $__host:$__port"
+      return 1
+    fi
+  done
+  return 0
+}
+
+wait_for_memgraph_main() {
+  __host=$1
+  __port=$2
+  __max_retries=${3:-20}
+  __retries=0
+  while ! echo "SHOW REPLICATION ROLE;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port --output-format=csv | python3 $SCRIPT_DIR/../validator.py validate_is_main > /dev/null 2>&1; do
+    sleep 0.3
+    __retries=$((__retries+1))
+    if [ "$__retries" -ge "$__max_retries" ]; then
+      echo "wait_for_memgraph_main: Reached max retries ($__max_retries) for $__host:$__port"
       return 1
     fi
   done
@@ -266,12 +281,11 @@ with_kubectl_portforward() (
         log=$(mktemp)
         kubectl port-forward "$target" "$map" >/dev/null 2>>"$log" &
         pf_pid=$!
-        # NOTE: port-forward doesn't have built-in timeout. The target process
+        # NOTE: port-forward doesn't have built-in timeout + the target process
         # might take arbitrary time to initialize. -> The only way to know if
         # everything is right in the shortest amount of time is to inject the
-        # probe as one of the required params.
-        # TODO(gitbuda): If this is lower (depending how much), wait_for_coordinator fails or MAIN is not elected in the cluster yet... -> FIX
-        sleep 1
+        # target process probe as one of the required params.
+        sleep 0.3
         if ! eval "$probe"; then
           kill -9 "$pf_pid" 2>/dev/null || true
           wait "$pf_pid" 2>/dev/null || true
