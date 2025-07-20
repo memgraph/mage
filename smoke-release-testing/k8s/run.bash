@@ -65,7 +65,7 @@ validate_nodes_against_main() {
   source $SCRIPT_DIR/mg_main.out
   with_kubectl_portforward "$MG_MAIN-0" 17687:7687 'wait_for_memgraph localhost 17687 5' -- \
     "echo \"MATCH (n) RETURN n;\" | $MEMGRAPH_CONSOLE_BINARY --port 17687 --output-format=csv | python3 $SCRIPT_DIR/../validator.py validate_number_of_results -e $expected"
-
+  echo "validate_nodes_against_main PASSED"
 }
 
 test_k8s_single() {
@@ -177,7 +177,4 @@ if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
 
   # How to inject local version of the helm chart because we want to test any local fixes upfront.
   # test_k8s_ha NEXT ~/Workspace/code/memgraph/helm-charts/charts/memgraph-high-availability
-
-  # helm_install_myhadb "memgraph/memgraph-high-availability" "3.4.0"
-  # wait_for_memgraph_main localhost 17687 5
 fi
