@@ -51,11 +51,15 @@ started, Memgraph will automatically attempt to load the query modules from all
 ### Daily builds
 
 Stay on the cutting edge with the latest features and improvements by using
-[Memgraph Daily Builds](https://memgraph.github.io/daily-builds/). Daily builds
-are updated frequently and allow you to test new capabilities before they reach
-stable releases.
+[Memgraph Daily Builds](https://memgraph.github.io/daily-builds/#mage). Daily
+builds are updated frequently and allow you to test new capabilities before they
+reach stable releases.
 
-<p align="left"> <a href="https://memgraph.github.io/daily-builds/"> <img src="https://img.shields.io/badge/Daily%20Builds-latest-blue?style=for-the-badge" alt="Daily Builds" /> </a> </p>
+<p align="left"> 
+<a href="https://memgraph.github.io/daily-builds/#mage"> 
+  <img src="https://img.shields.io/badge/Daily%20Builds-latest-blue?style=for-the-badge" alt="Daily Builds" /> 
+</a> 
+</p>
 
 ### Further reading
 
