@@ -161,7 +161,14 @@ jobs:
             -e MEMGRAPH_NEXT_DOCKERHUB_IMAGE="$MEMGRAPH_NEXT_DOCKERHUB_IMAGE" \
             "$CONTAINER_NAME" \
             bash -c "cd /mage/smoke-release-testing && ./test.bash"
-      
+
+      - name: Clean up inner Docker state
+        if: always()
+        run: |
+          # remove all stopped containers, unused images, networks and volumes
+          echo "🧹 Pruning everything inside the Docker-in-Docker container…"
+          docker exec -i $CONTAINER_NAME bash -c 'docker system prune -a --volumes -f'
+
       - name: Stop Container
         if: always()
         run: |

@@ -55,16 +55,6 @@ jobs:
           mkdir -p "$CVE_DIR"
           echo "CVE_DIR=$CVE_DIR" >> $GITHUB_ENV  
 
-      - name: Download Docker Image
-        run: |
-          curl -L "${{ inputs.image_url }}" -o "${{ env.CVE_DIR }}/image.tar.gz"
-
-      - name: Load into Docker
-        run: |
-          output="$(docker load -i '${{ env.CVE_DIR }}/image.tar.gz')"
-          image_tag="${output#Loaded image: }"
-          echo "IMAGE_TAG=$image_tag" >> $GITHUB_ENV
-
       - name: Create Python Environment
         run: |
           python3 -m venv "${{ env.CVE_DIR }}/env" 
@@ -88,11 +78,37 @@ jobs:
           source "${{ env.CVE_DIR }}/env/bin/activate"
           pip install cve-bin-tool==3.4
 
+      - name: Download Docker Image
+        run: |
+          curl -L "${{ inputs.image_url }}" -o "${{ env.CVE_DIR }}/image.tar.gz"
+
+      - name: Load into Docker
+        run: |
+          output="$(docker load -i '${{ env.CVE_DIR }}/image.tar.gz')"
+
+          # grab each repo:tag, drop the ":latest" one, pick the first real tag
+          image_tag=$(echo "$output" \
+            | awk -F': ' '/Loaded image:/ {print $2}' \
+            | grep -v ':latest$' \
+            | head -n1)
+
+          echo "IMAGE_TAG=$image_tag" >> $GITHUB_ENV
+
+      - name: Decompress Image
+        run: |
+          # this is needed because grype annot scan the compressed image, however trivy can
+          gunzip "${{ env.CVE_DIR }}/image.tar.gz"
+
+      - name: Extract Container Root Filesystem
+        if: ${{ inputs.run_cbt }}
+        run: |
+          ./scripts/extract-image-filesystem.sh "${{ env.IMAGE_TAG }}" "${{ env.CVE_DIR }}/rootfs"
+
       - name: Scan with Trivy
         if: ${{ inputs.run_trivy }}
         run: |
-          "${{ env.CVE_DIR }}/trivy/trivy" image --scanners vuln "${{ env.IMAGE_TAG }}" > "${{ env.CVE_DIR }}/trivy-summary.txt"
-          "${{ env.CVE_DIR }}/trivy/trivy" image --scanners vuln "${{ env.IMAGE_TAG }}" -f json > "${{ env.CVE_DIR }}/trivy-summary.json"
+          "${{ env.CVE_DIR }}/trivy/trivy" image --scanners vuln --input "${{ env.CVE_DIR }}/image.tar" > "${{ env.CVE_DIR }}/trivy-summary.txt"
+          "${{ env.CVE_DIR }}/trivy/trivy" image --scanners vuln --input "${{ env.CVE_DIR }}/image.tar" -f json > "${{ env.CVE_DIR }}/trivy-summary.json"
         
       - name: Upload Trivy Report Summary Artifact
         if: ${{ inputs.run_trivy }}
@@ -104,8 +120,8 @@ jobs:
       - name: Scan with Grype
         if: ${{ inputs.run_grype }}
         run: |
-          "${{ env.CVE_DIR }}/grype/grype" "docker:${{ env.IMAGE_TAG }}" > "${{ env.CVE_DIR }}/grype-summary.txt"
-          "${{ env.CVE_DIR }}/grype/grype" "docker:${{ env.IMAGE_TAG }}" -o json > "${{ env.CVE_DIR }}/grype-summary.json"
+          "${{ env.CVE_DIR }}/grype/grype" "docker-archive:${{ env.CVE_DIR }}/image.tar" > "${{ env.CVE_DIR }}/grype-summary.txt"
+          "${{ env.CVE_DIR }}/grype/grype" "docker-archive:${{ env.CVE_DIR }}/image.tar" -o json > "${{ env.CVE_DIR }}/grype-summary.json"
 
       - name: Upload Grype Report Summary Artifact
         if: ${{ inputs.run_grype }}
@@ -118,21 +134,26 @@ jobs:
         if: ${{ inputs.run_cbt }}
         run: |
           docker run --rm -d --name memgraph "${{ env.IMAGE_TAG }}" --telemetry-enabled=False
-      
-      - name: Update CVE Database
-        if: ${{ inputs.run_cbt }}
-        continue-on-error: true  # this can be flaky
-        run: |
-          source "${{ env.CVE_DIR }}/env/bin/activate"
-          python3 scripts/update_cve_db.py
-      
-      - name: Extract Container Root Filesystem
+
+      - name: Download CVE Database
         if: ${{ inputs.run_cbt }}
         run: |
-          ./scripts/extract-image-filesystem.sh "${{ env.IMAGE_TAG }}" "${{ env.CVE_DIR }}/rootfs"
-      
+          curl --fail --silent --show-error -L https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/CVE-database/cve-bin-tool-cve.db.tar.gz \
+            -o "${{ env.CVE_DIR }}/cve-bin-tool-cve.db.tar.gz"
+          if [ ! -s "${{ env.CVE_DIR }}/cve-bin-tool-cve.db.tar.gz" ]; then
+            echo "CVE database download failed or empty" >&2
+            exit 1
+          fi
+
+      - name: Extract CVE Database
+        if: ${{ inputs.run_cbt }}
+        run: |
+          tar -xzf "${{ env.CVE_DIR }}/cve-bin-tool-cve.db.tar.gz" -C "${{ env.CVE_DIR }}/"
+          mkdir -pv "$HOME/.cache/cve-bin-tool"
+          mv -v "${{ env.CVE_DIR }}/cve.db" "$HOME/.cache/cve-bin-tool/cve.db"
+
       - name: Scan /usr/lib/memgraph
-        if: ${{ inputs.run_cbt }}
+        if: ${{ inputs.run_cbt  }}
         run: |
           source "${{ env.CVE_DIR }}/env/bin/activate"
           python3 scripts/scan_memgraph.py "${{ env.CVE_DIR }}/rootfs" "$(nproc)"
@@ -157,7 +178,7 @@ jobs:
           path: "${{ env.CVE_DIR }}/cve-bin-tool-memgraph-summary.json"
 
       - name: Upload cve-bin-tool Language Scan Artifact
-        if: ${{ inputs.run_cbt }}
+        if: ${{ inputs.run_cbt  }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.image_type }}-${{ inputs.arch }}-cve-bin-tool-language-summary
@@ -211,6 +232,7 @@ jobs:
         if: always()
         run: |
           rm -rf ${{ env.CVE_DIR }}
+          rm -v "$HOME/.cache/cve-bin-tool/cve.db" || true
           docker stop memgraph || true
           docker wait memgraph || true
           docker rmi ${{ env.IMAGE_TAG }} || true

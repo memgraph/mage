@@ -1,9 +1,37 @@
 name: 'Create release artifacts'
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}
+  group: release-artifacts-${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
 
 on:
+  workflow_call:
+    inputs:
+      os:
+        type: string
+        default: 'ubuntu-24.04'
+        description: "Operating system to build the image for"
+        required: true
+      mage_version:
+        type: string
+        description: "Mage version built into this image (format: X.Y.Z)"
+        required: true
+      memgraph_version:
+        type: string
+        description: "Memgraph version built into this image (format: X.Y.Z)"
+        required: true
+      test:
+        type: boolean
+        description: "Run mock artifact creation for testing (ends up in 'mage-test/vX.Y.Z')"
+        default: false
+      run_smoke_tests:
+        type: boolean
+        description: "Run smoke tests on images after building (tests against previous tagged image)"
+        default: false
+      ref:
+        type: string
+        description: "MAGE branch or tag to build"
+        default: ''
+
   workflow_dispatch:
     inputs:
       os:
@@ -21,10 +49,6 @@ on:
         type: string
         description: "Memgraph version built into this image (format: X.Y.Z)"
         required: true
-      official_memgraph:
-        type: boolean
-        description: "Use the official Memgraph bucket?"
-        default: false
       test:
         type: boolean
         description: "Run mock artifact creation for testing (ends up in 'mage-test/vX.Y.Z')"
@@ -36,23 +60,25 @@ on:
 
 jobs:
   SetupNames:
-    runs-on: ["self-hosted", "X64"]
+    runs-on: ubuntu-24.04
     outputs:
       download_link_base: ${{ steps.base_link.outputs.link }}
       download_binary_name_base: ${{ steps.binary_name.outputs.name }}
     env:
-      s3_link_base: ${{ github.event.inputs.official_memgraph == 'true' && 'https://' || 'https://s3.eu-west-1.amazonaws.com' }}
-      s3_bucket: ${{ github.event.inputs.official_memgraph == 'true' && 'download.memgraph.com' || 'deps.memgraph.io' }}
+      s3_link_base: https://s3.eu-west-1.amazonaws.com
+      s3_bucket: deps.memgraph.io
     steps:
       - name: Set base memgraph download link
         id: base_link
         run: |
-          echo "link=${{ env.s3_link_base }}/${{ env.s3_bucket }}/memgraph/v${{ github.event.inputs.memgraph_version }}/${{ github.event.inputs.os }}" >> $GITHUB_OUTPUT
+          echo "link=${{ env.s3_link_base }}/${{ env.s3_bucket }}/memgraph/v${{ inputs.memgraph_version }}/${{ inputs.os }}" >> $GITHUB_OUTPUT
+          echo "link: ${link}"
       - name: Set binary name base
         id: binary_name
         run: |
-          version=${{ github.event.inputs.memgraph_version }}
+          version=${{ inputs.memgraph_version }}
           echo "name=memgraph_${version%%-*}-1" >> $GITHUB_OUTPUT
+          echo "version: ${version}"
 
   Artifact:
     needs: [SetupNames]
@@ -73,16 +99,17 @@ jobs:
     uses: ./.github/workflows/reusable_package_mage.yaml
     with:
       arch: "${{ matrix.build_arch }}"
-      mage_version: "${{ github.event.inputs.mage_version }}"
+      mage_version: "${{ inputs.mage_version }}"
       mage_build_type: "${{ matrix.build_type }}"
-      memgraph_version: "${{ github.event.inputs.memgraph_version }}"
+      memgraph_version: "${{ inputs.memgraph_version }}"
       memgraph_download_link: "${{ needs.SetupNames.outputs.download_link_base }}${{ matrix.arm_ext }}${{ matrix.rwid_ext }}${{ matrix.malloc && '-malloc' || '' }}/${{ needs.SetupNames.outputs.download_binary_name_base }}_${{ matrix.build_arch }}.deb"
       shorten_tag: "true"
       force_release: "true"
       push_to_dockerhub: "false"
       push_to_s3: "true"
       s3_dest_bucket: "deps.memgraph.io"
-      s3_dest_dir: "${{ inputs.test && 'mage-test/v' || 'mage/v'}}${{ github.event.inputs.mage_version}}"
+      s3_dest_dir: "${{ inputs.test && 'mage-test/v' || 'mage/v'}}${{ inputs.mage_version}}"
       malloc: ${{ matrix.malloc }}
       run_smoke_tests: ${{ inputs.run_smoke_tests }}
+      ref: "${{ inputs.ref }}"
     secrets: inherit
