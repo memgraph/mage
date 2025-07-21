@@ -551,7 +551,7 @@ void FlattenHelper(const mgp::Value &value, mgp::List &result) {
     }
 
     if (value.IsList()) {
-        const auto &list = value.ValueList();
+        auto list = value.ValueList();
         for (const auto &item : list) {
             FlattenHelper(item, result);
         }
@@ -579,19 +579,9 @@ void Collections::Flatten(mgp_list *args, mgp_func_context *ctx, mgp_func_result
 
         // Create result list
         mgp::List flattened;
-        
-        // Handle the case where the input list itself is null
-        if (input.IsNull()) {
-            // Skip null input
-            result.SetValue(flattened);
-            return;
-        }
 
-        // Process the input list
-        const auto &inputList = input.ValueList();
-        for (const auto &item : inputList) {
-            FlattenHelper(item, flattened);
-        }
+        // Directly flatten the input (handles null and lists recursively)
+        FlattenHelper(input, flattened);
 
         result.SetValue(flattened);
 
