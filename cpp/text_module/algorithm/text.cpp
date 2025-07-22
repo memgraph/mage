@@ -6,6 +6,7 @@
 #include <regex>
 #include <unordered_map>
 #include <vector>
+#include <utf8.h>
 
 static std::unordered_map<std::string, std::regex> global_regex_cache;
 static std::mutex global_regex_cache_mutex;
@@ -174,25 +175,29 @@ void Text::RegReplace(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_resul
   }
 }
 
+
 void Text::Distance(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_result *result, mgp_memory *memory) {
   mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   mgp::Result result_obj(result);
 
   try {
-    const auto text1 = std::string(arguments[0].ValueString());
-    const auto text2 = std::string(arguments[1].ValueString());
+    // Normalize UTF-8 input and convert to sequences of Unicode code points
+    std::string text1_raw = std::string(arguments[0].ValueString());
+    std::string text2_raw = std::string(arguments[1].ValueString());
 
-    const size_t m = text1.length();
-    const size_t n = text2.length();
+    std::vector<char32_t> text1;
+    std::vector<char32_t> text2;
+
+    utf8::utf8to32(text1_raw.begin(), text1_raw.end(), std::back_inserter(text1));
+    utf8::utf8to32(text2_raw.begin(), text2_raw.end(), std::back_inserter(text2));
+
+    const size_t m = text1.size();
+    const size_t n = text2.size();
     std::vector<std::vector<int>> dp(m + 1, std::vector<int>(n + 1));
 
-    for (size_t i = 0; i <= m; i++) {
-      dp[i][0] = i;
-    }
-    for (size_t j = 0; j <= n; j++) {
-      dp[0][j] = j;
-    }
+    for (size_t i = 0; i <= m; i++) dp[i][0] = i;
+    for (size_t j = 0; j <= n; j++) dp[0][j] = j;
 
     for (size_t i = 1; i <= m; i++) {
       for (size_t j = 1; j <= n; j++) {
@@ -207,6 +212,5 @@ void Text::Distance(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_result 
     result_obj.SetValue(static_cast<int64_t>(dp[m][n]));
   } catch (const std::exception &e) {
     result_obj.SetErrorMessage(e.what());
-    return;
   }
 }
