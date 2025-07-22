@@ -28,6 +28,7 @@ constexpr std::string_view kText = "text";
 constexpr std::string_view kReplacement = "replacement";
 /* regreplace constants */
 constexpr std::string_view kProcedureRegReplace = "regreplace";
+constexpr size_t kMaxRegexCacheSize = 1000;
 /* distance constants */
 constexpr std::string_view kProcedureDistance = "distance";
 constexpr std::string_view kText1 = "text1";
