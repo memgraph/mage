@@ -1,12 +1,15 @@
 #include "text.hpp"
 
+#include <fmt/args.h>
+#include <fmt/format.h>
 #include <algorithm>
 #include <regex>
+#include <unordered_map>
 #include <vector>
 #include <utf8.h>
 
-#include <fmt/args.h>
-#include <fmt/format.h>
+static std::unordered_map<std::string, std::regex> global_regex_cache;
+static std::mutex global_regex_cache_mutex;
 
 void Text::Join(mgp_list *args, mgp_graph * /*memgraph_graph*/, mgp_result *result, mgp_memory *memory) {
   mgp::MemoryDispatcherGuard guard{memory};
@@ -147,8 +150,23 @@ void Text::RegReplace(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_resul
       return;
     }
 
-    std::regex pattern(regex);
-    std::string result_str = std::regex_replace(text, pattern, replacement);
+    // Look up or insert regex into global cache with thread safety
+    const std::regex *pattern_ptr = nullptr;
+    {
+      std::lock_guard<std::mutex> lock(global_regex_cache_mutex);
+
+      if (global_regex_cache.size() > kMaxRegexCacheSize) {
+        global_regex_cache.clear();  // Avoid unbounded growth
+      }
+
+      auto it = global_regex_cache.find(regex);
+      if (it == global_regex_cache.end()) {
+        it = global_regex_cache.emplace(regex, std::regex(regex)).first;
+      }
+      pattern_ptr = &it->second;
+    }
+
+    std::string result_str = std::regex_replace(text, *pattern_ptr, replacement);
 
     result_obj.SetValue(std::move(result_str));
   } catch (const std::exception &e) {
