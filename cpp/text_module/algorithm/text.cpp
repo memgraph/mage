@@ -214,3 +214,47 @@ void Text::Distance(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_result 
     result_obj.SetErrorMessage(e.what());
   }
 }
+
+void Text::IndexOf(mgp_list *args, mgp_graph * /*memgraph_graph*/, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  const auto record_factory = mgp::RecordFactory(result);
+
+  try {
+    // Handle nulls
+    if (arguments[0].IsNull() || arguments[1].IsNull()) {
+      auto record = record_factory.NewRecord();
+      record.Insert(std::string(kResultIndexOf).c_str(), mgp::Value());
+      return;
+    }
+    const std::string_view text = arguments[0].ValueString();
+    const std::string_view lookup = arguments[1].ValueString();
+    int from = 0;
+    int to = -1;
+    if (arguments.Size() > 2 && !arguments[2].IsNull()) {
+      from = static_cast<int>(arguments[2].ValueInt());
+    }
+    if (arguments.Size() > 3 && !arguments[3].IsNull()) {
+      to = static_cast<int>(arguments[3].ValueInt());
+    }
+    // Adjust 'to' if -1 or out of bounds
+    if (to == -1 || to > static_cast<int>(text.size())) {
+      to = static_cast<int>(text.size());
+    }
+    // Bounds check
+    if (from < 0) from = 0;
+    if (from > to) from = to;
+    // Substring search
+    int result_index = -1;
+    if (from < to && !lookup.empty()) {
+      auto pos = text.find(lookup, from);
+      if (pos != std::string::npos && static_cast<int>(pos) < to) {
+        result_index = static_cast<int>(pos);
+      }
+    }
+    auto record = record_factory.NewRecord();
+    record.Insert(std::string(kResultIndexOf).c_str(), static_cast<int64_t>(result_index));
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+  }
+}
