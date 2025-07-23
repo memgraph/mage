@@ -37,6 +37,13 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
                 {mgp::Parameter(Text::kText1, mgp::Type::String),
                  mgp::Parameter(Text::kText2, mgp::Type::String)},
                 module, memory);
+
+    AddProcedure(Text::IndexOf, Text::kProcedureIndexOf, mgp::ProcedureType::Read,
+                 {mgp::Parameter(Text::kIndexOfText, mgp::Type::String),
+                  mgp::Parameter(Text::kIndexOfLookup, mgp::Type::String),
+                  mgp::Parameter(Text::kIndexOfFrom, mgp::Type::Int, int64_t(0)),
+                  mgp::Parameter(Text::kIndexOfTo, mgp::Type::Int, int64_t(-1))},
+                 {mgp::Return(Text::kResultIndexOf, mgp::Type::Int)}, module, memory);
   } catch (const std::exception &e) {
     return 1;
   }
