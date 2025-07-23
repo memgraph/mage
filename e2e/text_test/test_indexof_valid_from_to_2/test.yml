@@ -1,4 +1,4 @@
 query: |
   CALL text.indexOf("abcdefabcdef", "c", 4) YIELD output RETURN output;
 output:
-  - output: 8 
+  - output: 8
