@@ -41,7 +41,9 @@ jobs:
           retry_wait_seconds: 300
           command: |
             source "${{ env.CVE_DIR }}/env/bin/activate"
-            python3 scripts/update_cve_db.py
+
+            # cve-bin-tool returns a non-zero exit code if it is not given anything to scan
+            cve-bin-tool -u now || true
             
             # Wait for the update to complete and compress the database
             cd ~/.cache/cve-bin-tool
