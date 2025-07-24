@@ -7,6 +7,32 @@ import argparse
 CVE_DIR = os.getenv("CVE_DIR", os.getcwd())
 
 
+def read_ignore_list() -> List[str]:
+    """
+    Reads the `cve-ignore-list` file from this directory and returns a list of CVEs to ignore.
+    """
+    fname = f"{os.path.dirname(__file__)}/cve-ignore-list"
+
+    with open(fname, "r") as f:
+        lines = f.readlines()
+    
+    out = []
+    for line in lines:
+        line = line.strip().upper()
+        if "#" in line:
+            line = line.split("#")[0].strip()
+        if line.startswith("CVE-"):
+            out.append(line)
+    return out
+
+
+def filter_cves(cves: List[dict], ignore_list: List[str]) -> List[dict]:
+    """
+    Filter out CVEs from the list that are in the ignore list.
+    """
+    return [cve for cve in cves if cve["id"] not in ignore_list]
+
+
 def read_summary_file(filename: str) -> List[str] | dict:
     """
     Read the contents of a file and return it as a list or dict.
@@ -40,7 +66,7 @@ def severity_summary(data: List[dict]) -> dict:
     return summary
 
 
-def reformat_cbt_data(data: List[dict]) -> List[dict]:
+def reformat_cbt_data(data: List[dict], ignore_list: List[str]) -> List[dict]:
     """
     reformats the cve-bin-tool data to a common format
     """
@@ -56,10 +82,10 @@ def reformat_cbt_data(data: List[dict]) -> List[dict]:
         }
         if new not in out:
             out.append(new)
-    return out
+    return filter_cves(out, ignore_list)
 
 
-def parse_cbt_summary() -> dict:
+def parse_cbt_summary(ignore_list: List[str]) -> dict:
     """
     Reads cve-bin-tool summaries
     """
@@ -71,7 +97,7 @@ def parse_cbt_summary() -> dict:
         if os.path.isfile(fname):
             print(f"Found {fname}")
             data = read_summary_file(fname)
-            data = reformat_cbt_data(data)
+            data = reformat_cbt_data(data, ignore_list)
             out[part] = {
                 "summary": severity_summary(data),
                 "cve": data
@@ -80,7 +106,7 @@ def parse_cbt_summary() -> dict:
     return out
 
 
-def reformat_grype_data(data: List[dict]) -> List[dict]:
+def reformat_grype_data(data: List[dict], ignore_list: List[str]) -> List[dict]:
     """
     reformats the data from grype to a common format
     """
@@ -102,10 +128,10 @@ def reformat_grype_data(data: List[dict]) -> List[dict]:
         }
         if new not in out:
             out.append(new)
-    return out
+    return filter_cves(out, ignore_list)
 
 
-def parse_grype_summary() -> dict:
+def parse_grype_summary(ignore_list: List[str]) -> dict:
     """
     This will read in the `grype-summary.json`
     """
@@ -115,7 +141,7 @@ def parse_grype_summary() -> dict:
         return {}
 
     results = data["matches"]
-    cves = reformat_grype_data(results)
+    cves = reformat_grype_data(results, ignore_list)
     summary = severity_summary(cves)
 
     return {
@@ -124,7 +150,7 @@ def parse_grype_summary() -> dict:
     }
 
 
-def reformat_trivy_data(data: List[dict]) -> List[dict]:
+def reformat_trivy_data(data: List[dict], ignore_list: List[str]) -> List[dict]:
     """
     reformat the trivy JSON to a common format.
     """
@@ -143,10 +169,10 @@ def reformat_trivy_data(data: List[dict]) -> List[dict]:
                 }
                 if new not in out:
                     out.append(new)
-    return out
+    return filter_cves(out, ignore_list)
 
 
-def parse_trivy_summary() -> dict:
+def parse_trivy_summary(ignore_list: List[str]) -> dict:
     """
     This will read in the `trivy-summary.json`
     """
@@ -156,7 +182,7 @@ def parse_trivy_summary() -> dict:
         return {}
 
     results = data["Results"]
-    cves = reformat_trivy_data(results)
+    cves = reformat_trivy_data(results, ignore_list)
     summary = severity_summary(cves)
 
     return {
@@ -480,9 +506,10 @@ def main(arch: str, image_type: str) -> None:
     """
 
     # collect results
-    cbt = parse_cbt_summary()
-    grype = parse_grype_summary()
-    trivy = parse_trivy_summary()
+    ignore_list = read_ignore_list()
+    cbt = parse_cbt_summary(ignore_list)
+    grype = parse_grype_summary(ignore_list)
+    trivy = parse_trivy_summary(ignore_list)
 
     msg = create_slack_message(arch, image_type, cbt, grype, trivy)
     post_message(msg)
