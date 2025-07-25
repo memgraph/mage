@@ -1,19 +1,48 @@
 #!/bin/bash
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# TODO(gitbuda): Write the helper to fail with a nice error message in the case required env variables are not set.
-
 MEMGRAPH_BUILD_PATH="${MEMGRAPH_BUILD_PATH:-/tmp/memgraph/build}"
 MEMGRAPH_CONSOLE_BINARY="${MEMGRAPH_CONSOLE_BINARY:-$SCRIPT_DIR/mgconsole.build/build/src/mgconsole}"
-# Required env vars to define.
 MEMGRAPH_ENTERPRISE_LICENSE="${MEMGRAPH_ENTERPRISE_LICENSE:-provide_licanse_string}"
 MEMGRAPH_ORGANIZATION_NAME="${MEMGRAPH_ORGANIZATION_NAME:-provide_organization_name_string}"
+MEMGRAPH_LAST_DOCKERHUB_IMAGE="${MEMGRAPH_LAST_DOCKERHUB_IMAGE:-provide_dockerhub_image_name}"
+MEMGRAPH_NEXT_DOCKERHUB_IMAGE="${MEMGRAPH_NEXT_DOCKERHUB_IMAGE:-provide_dockerhub_image_name}"
 MEMGRAPH_LAST_RC_DIRECT_DOCKER_IMAGE_ARM="${MEMGRAPH_LAST_RC_DIRECT_DOCKER_IMAGE_ARM:-provide_https_download_link}"
 MEMGRAPH_NEXT_RC_DIRECT_DOCKER_IMAGE_ARM="${MEMGRAPH_NEXT_RC_DIRECT_DOCKER_IMAGE_ARM:-provide_https_download_link}"
 MEMGRAPH_LAST_RC_DIRECT_DOCKER_IMAGE_X86="${MEMGRAPH_LAST_RC_DIRECT_DOCKER_IMAGE_X86:-provide_https_download_link}"
 MEMGRAPH_NEXT_RC_DIRECT_DOCKER_IMAGE_X86="${MEMGRAPH_NEXT_RC_DIRECT_DOCKER_IMAGE_X86:-provide_https_donwload_link}"
-MEMGRAPH_LAST_DOCKERHUB_IMAGE="${MEMGRAPH_LAST_DOCKERHUB_IMAGE:-provide_dockerhub_image_name}"
-MEMGRAPH_NEXT_DOCKERHUB_IMAGE="${MEMGRAPH_NEXT_DOCKERHUB_IMAGE:-provide_dockerhub_image_name}"
+
+print_help_and_exit_unsuccessfully() {
+  echo "It's required to define the following environment variables:"
+  echo "  MEMGRAPH_ENTERPRISE_LICENSE"
+  echo "  MEMGRAPH_ORGANIZATION_NAME"
+  echo "  MEMGRAPH_LAST_DOCKERHUB_IMAGE"
+  echo "  MEMGRAPH_NEXT_DOCKERHUB_IMAGE"
+  echo "Optionally if you want to test daily or RC builds you can define the following environment variables:"
+  echo "  MEMGRAPH_LAST_RC_DIRECT_DOCKER_IMAGE_ARM"
+  echo "  MEMGRAPH_NEXT_RC_DIRECT_DOCKER_IMAGE_ARM"
+  echo "  MEMGRAPH_LAST_RC_DIRECT_DOCKER_IMAGE_X86"
+  echo "  MEMGRAPH_NEXT_RC_DIRECT_DOCKER_IMAGE_X86"
+  exit 1
+}
+check_dockerhub_images() {
+  if [ "$MEMGRAPH_ENTERPRISE_LICENSE" = "provide_licanse_string" ]; then
+    print_help_and_exit_unsuccessfully
+  fi
+  if [ "$MEMGRAPH_ORGANIZATION_NAME" = "provide_organization_name_string" ]; then
+    print_help_and_exit_unsuccessfully
+  fi
+  if [ "$MEMGRAPH_LAST_DOCKERHUB_IMAGE" = "provide_dockerhub_image_name" ]; then
+    print_help_and_exit_unsuccessfully
+  fi
+  if [ "$MEMGRAPH_NEXT_DOCKERHUB_IMAGE" = "provide_dockerhub_image_name" ]; then
+    print_help_and_exit_unsuccessfully
+  fi
+  echo "License and Docker images validation passed:"
+  echo "  LAST: $MEMGRAPH_LAST_DOCKERHUB_IMAGE"
+  echo "  NEXT: $MEMGRAPH_NEXT_DOCKERHUB_IMAGE"
+}
+check_dockerhub_images
 
 MEMGRAPH_GENERAL_FLAGS="--telemetry-enabled=false --log-level=TRACE --also-log-to-stderr"
 MEMGRAPH_ENTERPRISE_DOCKER_ENVS="-e MEMGRAPH_ENTERPRISE_LICENSE=$MEMGRAPH_ENTERPRISE_LICENSE -e MEMGRAPH_ORGANIZATION_NAME=$MEMGRAPH_ORGANIZATION_NAME"
@@ -42,9 +71,49 @@ wait_port() {
 wait_for_memgraph() {
   __host=$1
   __port=$2
-  while ! echo "return 1;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port > /dev/null 2>&1; do
-    sleep 0.1
+  __max_retries=${3:-100}
+  __retries=0
+  while ! echo "RETURN 1;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port > /dev/null 2>&1; do
+    sleep 0.3
+    __retries=$((__retries+1))
+    if [ "$__retries" -ge "$__max_retries" ]; then
+      echo "wait_for_memgraph: Reached max retries ($__max_retries) for $__host:$__port"
+      return 1
+    fi
   done
+  return 0
+}
+
+wait_for_memgraph_coordinator() {
+  __host=$1
+  __port=$2
+  __max_retries=${3:-100}
+  __retries=0
+  while ! echo "SHOW INSTANCE;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port > /dev/null 2>&1; do
+    sleep 0.3
+    __retries=$((__retries+1))
+    if [ "$__retries" -ge "$__max_retries" ]; then
+      echo "wait_for_memgraph_coordinator: Reached max retries ($__max_retries) for $__host:$__port"
+      return 1
+    fi
+  done
+  return 0
+}
+
+wait_for_memgraph_main() {
+  __host=$1
+  __port=$2
+  __max_retries=${3:-20}
+  __retries=0
+  while ! echo "SHOW REPLICATION ROLE;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port --output-format=csv | python3 $SCRIPT_DIR/../validator.py validate_is_main > /dev/null 2>&1; do
+    sleep 0.3
+    __retries=$((__retries+1))
+    if [ "$__retries" -ge "$__max_retries" ]; then
+      echo "wait_for_memgraph_main: Reached max retries ($__max_retries) for $__host:$__port"
+      return 1
+    fi
+  done
+  return 0
 }
 
 run_memgraph_binary() {
@@ -193,3 +262,61 @@ spinup_and_cleanup_memgraph_dockers() {
   run_memgraph_docker_containers "$__how_to_pull_last" "$__how_to_pull_next"
   trap cleanup_docker_exit EXIT
 }
+
+with_kubectl_portforward() (
+    local target=$1  # svc/foo, pod/bar, deployment/baz, …
+    local map=$2     # 8080:80 or 8443 or 0.0.0.0:8080:80
+    local probe="$3" # probe to test the target process, e.g. wait_for_xyz
+    shift 4          # “--” + user commands; NOTE: Use an array of commands
+                     #     inside a string: -- 'cmd1' 'cmd2' ...
+                     #     because if you use ; or && to separate commands,
+                     #     bash will treat that as one command + cleanup + the
+                     #     rest.
+
+    local log
+    local pf_pid
+    local retries=0
+    local max_retries=5
+    while true; do
+        log=$(mktemp)
+        kubectl port-forward "$target" "$map" >/dev/null 2>>"$log" &
+        pf_pid=$!
+        # NOTE: port-forward doesn't have built-in timeout + the target process
+        # might take arbitrary time to initialize. -> The only way to know if
+        # everything is right in the shortest amount of time is to inject the
+        # target process probe as one of the required params.
+        sleep 0.3
+        if ! eval "$probe"; then
+          kill -9 "$pf_pid" 2>/dev/null || true
+          wait "$pf_pid" 2>/dev/null || true
+          retries=$((retries+1))
+          if [ $retries -ge $max_retries ]; then
+            echo "kubectl port-forward failed after $max_retries attempts — see $log and inspect the target process" >&2
+            exit 1
+          fi
+        else
+          break
+        fi
+    done
+
+    cleanup() {
+        echo "calling port forward cleanup"
+        kill -9 "$pf_pid" 2>/dev/null || true
+        wait "$pf_pid" 2>/dev/null || true
+    }
+    trap cleanup EXIT INT TERM
+
+    local lport=${map%%:*}              # leftmost number before the first ':'
+    for _ in {1..50}; do                # ~10 s max (50×0.2 s)
+        if nc -z 127.0.0.1 "$lport" 2>/dev/null; then break; fi
+        if ! kill -0 "$pf_pid" 2>/dev/null; then
+            echo "port-forward crashed — see $log" >&2
+            exit 1
+        fi
+        sleep 0.2
+    done
+
+    for cmd in "$@"; do
+      eval "$cmd"
+    done
+)
