@@ -90,8 +90,7 @@ def run_language_scan(langfs: str) -> str:
         "-u", "never",       # Never update the local CVE database
         "-f", "json",        # Output format: JSON
         "-o", outfile,       # Write JSON results to this file
-        f"{langfs}/",
-        "--vex-file", "scripts/triage.json", "--filter-triage"  # Use the triage file to filter false positives
+        f"{langfs}/"
     ]
     _ = subprocess.run(
         cmd,
