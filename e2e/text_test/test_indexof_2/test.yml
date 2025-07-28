@@ -1,4 +1,4 @@
 query: >
-  CALL text.indexOf("Hello World, Hello", "Hello", 3) YIELD output RETURN output;
+  RETURN text.indexOf("Hello World, Hello", "Hello", 3) AS output;
 output:
   - output: 13
