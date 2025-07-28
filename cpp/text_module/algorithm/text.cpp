@@ -215,16 +215,15 @@ void Text::Distance(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_result 
   }
 }
 
-void Text::IndexOf(mgp_list *args, mgp_graph * /*memgraph_graph*/, mgp_result *result, mgp_memory *memory) {
+void Text::IndexOf(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_result *result, mgp_memory *memory) {
   mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
-  const auto record_factory = mgp::RecordFactory(result);
+  mgp::Result result_obj(result);
 
   try {
     // Handle nulls
     if (arguments[0].IsNull() || arguments[1].IsNull()) {
-      auto record = record_factory.NewRecord();
-      record.Insert(std::string(kResultIndexOf).c_str(), mgp::Value());
+      result_obj.SetValue();
       return;
     }
     const std::string_view text = arguments[0].ValueString();
@@ -252,9 +251,8 @@ void Text::IndexOf(mgp_list *args, mgp_graph * /*memgraph_graph*/, mgp_result *r
         result_index = static_cast<int>(pos);
       }
     }
-    auto record = record_factory.NewRecord();
-    record.Insert(std::string(kResultIndexOf).c_str(), static_cast<int64_t>(result_index));
+    result_obj.SetValue(static_cast<int64_t>(result_index));
   } catch (const std::exception &e) {
-    record_factory.SetErrorMessage(e.what());
+    result_obj.SetErrorMessage(e.what());
   }
 }

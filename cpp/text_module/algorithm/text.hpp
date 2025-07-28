@@ -46,5 +46,5 @@ void RegexGroups(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, 
 void Replace(mgp_list *args, mgp_func_context *ctx, mgp_func_result *result, mgp_memory *memory);
 void RegReplace(mgp_list *args, mgp_func_context *ctx, mgp_func_result *result, mgp_memory *memory);
 void Distance(mgp_list *args, mgp_func_context *ctx, mgp_func_result *result, mgp_memory *memory);
-void IndexOf(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
+void IndexOf(mgp_list *args, mgp_func_context *ctx, mgp_func_result *result, mgp_memory *memory);
 }  // namespace Text
