@@ -1,8 +1,9 @@
 name: Update CVE Database
 on:
-  schedule:
-    # Run at 1 AM UTC on Saturday
-    - cron: '0 1 * * 6'
+  # NOTE: disabled for now, will be re-enabled when cve-bin-tool is re-enabled by default
+  # schedule:
+  #   # Run at 1 AM UTC on Saturday
+  #   - cron: '0 1 * * 6'
   workflow_dispatch:  # Allow manual triggering
 
 jobs:
