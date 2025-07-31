@@ -13,6 +13,8 @@ echo "Memgraph is up and running!"
 source ./mgconsole/regex.bash
 test_regex $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 
+# TODO(gitbuda): Test v3.5 it's going to be amazing!
+
 # NOTE: Test what's the exit status of the script by using `echo $?`:
 #   * if it's == 0 -> all good
 #   * if it's != 0 -> something went wrong.
