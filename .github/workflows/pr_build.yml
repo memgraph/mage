@@ -1,0 +1,92 @@
+name: 'Create PR Build'
+concurrency:
+  group: pr-build-${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+on:
+  repository_dispatch:
+    types: [trigger_pr_build]
+
+  workflow_dispatch:
+    inputs:
+      pr:
+        type: string
+        description: "PR number to build packages for"
+        required: false
+
+jobs:
+  PRBuildVariables:
+    runs-on: ubuntu-latest
+    outputs:
+      mage_version: ${{ steps.compute.outputs.mage_version }}
+      memgraph_version: ${{ steps.compute.outputs.memgraph_version }}
+      memgraph_commit: ${{ steps.compute.outputs.memgraph_commit }}
+      pr: ${{ steps.compute.outputs.pr }}
+      binary_name_base: ${{ steps.compute.outputs.binary_name_base }}
+    steps:
+      - name: Set up repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+
+      - name: Compute variables using Python script
+        id: compute
+        run: |
+          # Pass the client payload (as JSON) to the Python script.
+          if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+            payload='${{ toJson(github.event.client_payload) }}'
+          else
+            # Check if the 'pr' input is empty; if so, get PR from git
+            if [ -z "${{ github.event.inputs.pr }}" ]; then
+              pr=$(python3 -c "import subprocess; print(subprocess.run(['git', 'log', '--pretty=%B'], capture_output=True, text=True).stdout.split('\n')[0].split('(#')[1].split(')')[0] if '(#' in subprocess.run(['git', 'log', '--pretty=%B'], capture_output=True, text=True).stdout.split('\n')[0] else '0')")
+            else
+              pr="${{ github.event.inputs.pr }}"
+            fi
+
+            # now reformat it as JSON
+            payload="{\"pr\": ${pr}}"
+          fi
+          echo "Received payload: $payload"
+          read mage_version memgraph_version memgraph_commit pr < <(python3 scripts/pr_build_vars.py "$payload")
+          echo "mage_version=${mage_version}" >> $GITHUB_OUTPUT
+          echo "memgraph_version=${memgraph_version}" >> $GITHUB_OUTPUT
+          echo "memgraph_commit=${memgraph_commit}" >> $GITHUB_OUTPUT
+          echo "pr=${pr}" >> $GITHUB_OUTPUT
+          binary_name_base=$(python3 -c "import urllib.parse; print(urllib.parse.quote('memgraph_' + '$memgraph_version' + '-1'))")
+          echo "binary_name_base=${binary_name_base}" >> $GITHUB_OUTPUT
+      
+          # Print to console for debugging:
+          echo "DEBUG: mage_version=${mage_version}"
+          echo "DEBUG: memgraph_version=${memgraph_version}"
+          echo "DEBUG: memgraph_commit=${memgraph_commit}"
+          echo "DEBUG: pr=${pr}"
+          echo "DEBUG: binary_name_base=memgraph_${memgraph_version}-1"
+
+          
+  PRBuildArtifact:
+    needs: [PRBuildVariables]
+    strategy:
+      fail-fast: false
+      matrix:
+        build_arch: ["amd64", "arm64"]
+    uses: ./.github/workflows/reusable_package_mage.yaml
+    with:
+      arch: "${{ matrix.build_arch }}"
+      mage_version: "${{ needs.PRBuildVariables.outputs.mage_version }}"
+      mage_build_type: "RelWithDebInfo"
+      memgraph_version: "${{ needs.PRBuildVariables.outputs.memgraph_version }}"
+      memgraph_download_link: "https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/pr-build/pr${{ needs.PRBuildVariables.outputs.pr }}/ubuntu-24.04-relwithdebinfo${{ matrix.build_arch == 'arm64' && '-aarch64' || '' }}/${{ needs.PRBuildVariables.outputs.binary_name_base }}_${{ matrix.build_arch }}.deb"
+      shorten_tag: "false"
+      push_to_dockerhub: "false"
+      push_to_s3: "true"
+      s3_dest_bucket: "deps.memgraph.io"
+      s3_dest_dir: "pr-build/mage/pr${{ needs.PRBuildVariables.outputs.pr }}"
+      malloc: false
+    secrets: inherit 
