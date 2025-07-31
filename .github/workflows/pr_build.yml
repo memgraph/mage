@@ -94,4 +94,5 @@ jobs:
       s3_dest_bucket: "deps.memgraph.io"
       s3_dest_dir: "pr-build/mage/pr${{ needs.PRBuildVariables.outputs.pr }}"
       malloc: false
+      print_output_url: true
     secrets: inherit 
