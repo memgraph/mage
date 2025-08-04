@@ -70,17 +70,17 @@ def extract_objects(file: TextIOWrapper):
 
 
 @mgp.function
-def to_json(value: Any) -> mgp.Record:
+def to_json(value: Any):
     converted = _convert_value_to_json_compatible(value)
-    return mgp.Record(json=json.dumps(converted, ensure_ascii=False))
+    return json.dumps(converted, ensure_ascii=False)
 
 
 @mgp.function
-def from_json_list(json_str: str) -> mgp.Record:
+def from_json_list(json_str: str):
     value = json.loads(json_str)
     if not isinstance(value, list):
         raise ValueError("Input JSON must represent a list")
-    return mgp.Record(value=value)
+    return value
 
 
 @mgp.read_proc
