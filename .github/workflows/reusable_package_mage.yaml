@@ -231,7 +231,7 @@ jobs:
 
 
       - name: Download memgraph binary
-        run: curl -L ${{ env.MEMGRAPH_DOWNLOAD_LINK }} > memgraph-${{ inputs.arch }}.deb
+        run: curl -L --retry 5 --retry-delay 20 --retry-max-time 120 ${{ env.MEMGRAPH_DOWNLOAD_LINK }} > memgraph-${{ inputs.arch }}.deb
 
       - name: Probe fastest mirror
         run: |
