@@ -28,10 +28,17 @@ constexpr std::string_view kText = "text";
 constexpr std::string_view kReplacement = "replacement";
 /* regreplace constants */
 constexpr std::string_view kProcedureRegReplace = "regreplace";
+constexpr size_t kMaxRegexCacheSize = 1000;
 /* distance constants */
 constexpr std::string_view kProcedureDistance = "distance";
 constexpr std::string_view kText1 = "text1";
 constexpr std::string_view kText2 = "text2";
+constexpr std::string_view kProcedureIndexOf = "indexOf";
+constexpr std::string_view kIndexOfText = "text";
+constexpr std::string_view kIndexOfLookup = "lookup";
+constexpr std::string_view kIndexOfFrom = "from";
+constexpr std::string_view kIndexOfTo = "to";
+constexpr std::string_view kResultIndexOf = "output";
 
 void Join(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 void Format(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
@@ -39,4 +46,5 @@ void RegexGroups(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, 
 void Replace(mgp_list *args, mgp_func_context *ctx, mgp_func_result *result, mgp_memory *memory);
 void RegReplace(mgp_list *args, mgp_func_context *ctx, mgp_func_result *result, mgp_memory *memory);
 void Distance(mgp_list *args, mgp_func_context *ctx, mgp_func_result *result, mgp_memory *memory);
+void IndexOf(mgp_list *args, mgp_func_context *ctx, mgp_func_result *result, mgp_memory *memory);
 }  // namespace Text

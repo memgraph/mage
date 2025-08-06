@@ -190,7 +190,7 @@ class DateFormatUtil:
 
 
 @mgp.function
-def convert_format(temporal: str, current_format: str, convert_to: str) -> mgp.Nullable[str]:  # noqa: C901
+def convert_format(temporal: mgp.Nullable[str], current_format: str, convert_to: str) -> mgp.Nullable[str]:  # noqa: C901
     """
     Converts between specified ISO date formats using Python strftime and strptime.
     Supports zoned to offset conversion by removing zone part in '[]'.
