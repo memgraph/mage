@@ -76,7 +76,10 @@ def to_json(value: Any):
 
 
 @mgp.function
-def from_json_list(json_str: str):
+def from_json_list(json_str: mgp.Nullable[str]):
+    if json_str is None:
+        return None
+
     value = json.loads(json_str)
     if not isinstance(value, list):
         raise ValueError("Input JSON must represent a list")
