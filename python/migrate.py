@@ -17,6 +17,7 @@ import re
 import requests
 import threading
 from typing import Any, Dict, List
+import datetime
 
 
 class Constants:
@@ -97,7 +98,7 @@ def mysql(
 
     rows = cursor.fetchmany(Constants.BATCH_SIZE)
 
-    return [mgp.Record(row=_name_row_cells(row, column_names)) for row in rows]
+    return [mgp.Record(row=_name_row_cells_mysql(row, column_names)) for row in rows]
 
 
 def cleanup_migrate_mysql():
@@ -921,6 +922,82 @@ def _name_row_cells(row_cells, column_names) -> Dict[str, Any]:
         column: (value if not isinstance(value, Decimal) else float(value))
         for column, value in zip(column_names, row_cells)
     }
+
+
+def _name_row_cells_mysql(row_cells, column_names) -> Dict[str, Any]:
+    """
+    Convert MySQL row cells to Memgraph-compatible types.
+    Handles MySQL-specific types that might cause PyObject conversion errors.
+    """
+    return {
+        column: _convert_mysql_value(value)
+        for column, value in zip(column_names, row_cells)
+    }
+
+
+def _convert_mysql_value(value: Any) -> Any:
+    """
+    Convert a MySQL value to a Memgraph-compatible type.
+    Returns None for unsupported types and logs a warning.
+    """
+    if value is None:
+        return None
+    
+    # Handle Decimal types
+    if isinstance(value, Decimal):
+        return float(value)
+    
+    # Handle datetime types
+    if isinstance(value, (datetime.datetime, datetime.date, datetime.time)):
+        return str(value)
+    
+    # Handle timedelta
+    if isinstance(value, datetime.timedelta):
+        return str(value)
+    
+    # Handle binary data (BLOB, BINARY, VARBINARY)
+    if isinstance(value, (bytes, bytearray)):
+        try:
+            # Try to decode as UTF-8 string first
+            return value.decode('utf-8')
+        except UnicodeDecodeError:
+            # If not valid UTF-8, convert to base64 string
+            return base64.b64encode(value).decode('ascii')
+    
+    # Handle geometry types (convert to string representation)
+    if (hasattr(value, '__class__') and
+            'geometry' in str(value.__class__).lower()):
+        return str(value) if value else None
+    
+    # Handle MySQL-specific numeric types
+    if isinstance(value, (int, float, bool)):
+        return value
+    
+    # Handle string types
+    if isinstance(value, str):
+        return value
+    
+    # Handle list/array types
+    if isinstance(value, (list, tuple)):
+        return [_convert_mysql_value(item) for item in value]
+    
+    # Handle dictionary/map types
+    if isinstance(value, dict):
+        return {k: _convert_mysql_value(v) for k, v in value.items()}
+    
+    # For any other unsupported types, convert to string or return None
+    try:
+        # Try to convert to string
+        str_value = str(value)
+        # Log that we're converting an unsupported type
+        print(f"Warning: Converting unsupported MySQL type {type(value)} "
+              f"to string: {str_value[:100]}...")
+        return str_value
+    except (ValueError, TypeError):
+        # If string conversion fails, return None and log
+        print(f"Warning: Unsupported MySQL type {type(value)} "
+              f"converted to NULL")
+        return None
 
 
 def _convert_row_types(row_cells) -> Dict[str, Any]:
