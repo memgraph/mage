@@ -1,23 +1,24 @@
 import base64
-from decimal import Decimal
-import boto3
 import csv
-import duckdb as duckDB
+import datetime
 import io
-from gqlalchemy import Memgraph, Neo4j
 import json
+import os
+import re
+import threading
+from decimal import Decimal
+from typing import Any, Dict, List
+
+import boto3
+import duckdb as duckDB
 import mgp
 import mysql.connector as mysql_connector
 import oracledb
-import os
-import pyodbc
 import psycopg2
 import pyarrow.flight as flight
-import re
+import pyodbc
 import requests
-import threading
-from typing import Any, Dict, List
-import datetime
+from gqlalchemy import Memgraph, Neo4j
 
 
 class Constants:
@@ -946,11 +947,13 @@ def _convert_mysql_value(value: Any) -> Any:
     # Handle Decimal types
     if isinstance(value, Decimal):
         return float(value)
-    
     # Handle datetime types
     if isinstance(value, (datetime.datetime, datetime.date, datetime.time)):
-        return str(value)
-    
+        # Use ISO 8601 format for consistency
+        try:
+            return value.isoformat()
+        except Exception:
+            return str(value)
     # Handle timedelta
     if isinstance(value, datetime.timedelta):
         return str(value)
@@ -989,14 +992,9 @@ def _convert_mysql_value(value: Any) -> Any:
     try:
         # Try to convert to string
         str_value = str(value)
-        # Log that we're converting an unsupported type
-        print(f"Warning: Converting unsupported MySQL type {type(value)} "
-              f"to string: {str_value[:100]}...")
         return str_value
     except (ValueError, TypeError):
-        # If string conversion fails, return None and log
-        print(f"Warning: Unsupported MySQL type {type(value)} "
-              f"converted to NULL")
+        # If string conversion fails, return None 
         return None
 
 
