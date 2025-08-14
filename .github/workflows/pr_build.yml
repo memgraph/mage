@@ -4,8 +4,6 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  push:
-
   repository_dispatch:
     types: [trigger_pr_build]
 
@@ -44,9 +42,6 @@ jobs:
           # Pass the client payload (as JSON) to the Python script.
           if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
             payload='${{ toJson(github.event.client_payload) }}'
-          elif [ "${{ github.event_name }}" == "push" ]; then
-            # Use PR 1234 for testing on push
-            payload="{\"pr\": 1234}"
           else
             # Check if the 'pr' input is empty; if so, get PR from git
             if [ -z "${{ github.event.inputs.pr }}" ]; then
