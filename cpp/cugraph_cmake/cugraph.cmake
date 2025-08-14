@@ -14,7 +14,7 @@
 
 # NOTES:
 #
-# Install Cuda manually from from https://developer.nvidia.com/cuda-downloads
+# Install Cuda manually from https://developer.nvidia.com/cuda-downloads
 # because cugraph requires Cuda 11+. In fact, don't use system Cuda because
 # CMake easily detects that one. export PATH="/usr/local/cuda/bin:$PATH" is
 # your friend.

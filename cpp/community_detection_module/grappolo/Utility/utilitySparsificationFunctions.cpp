@@ -202,7 +202,7 @@ double* computeEdgeSimilarityMetrics(graph *G) {
             }//End of while(c1,c2)
             //Now compute the similarity score:
             double similarity = 0;
-            if (setUnion > 0) //Avoind division by zero
+            if (setUnion > 0) //Avoid division by zero
                 similarity = setIntersect / setUnion;
             simWeights[i] = similarity;
             //Find the position for edge (w --> v)
@@ -257,7 +257,7 @@ graph* buildSparifiedGraph(graph *Gin, double alpha) {
         //Process all the neighbors of v:
         for(long i = adj1+1; i < adj2; i++ ) {
             //Always maintain the least weighted neighbor for each vertex;
-            //... this neigbor will get bounced if there is no space
+            //... this neighbor will get bounced if there is no space
             if(edgesAddedSoFar < numTopEdges) {
                 //Add the current edge to the list of top-k edges:
                 isEdgePresent[i] = true;   //Mark this edge as true
