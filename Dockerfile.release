@@ -50,6 +50,7 @@ RUN apt-get update && apt-get install -y \
     procps \
     libc6-dbg \
     libxmlsec1-dev xmlsec1 \
+    libatomic1 \
     --no-install-recommends \
     && ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -160,6 +161,7 @@ RUN apt-get update && \
     adduser \
     libgomp1 \
     libaio1t64 \
+    libatomic1 \
     --no-install-recommends \
     && ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \

@@ -51,7 +51,7 @@ jobs:
             fi
 
             # now reformat it as JSON
-            payload="{\"pr\": ${pr}}"
+            payload="{\"pr\": \"${pr}\"}"
           fi
           echo "Received payload: $payload"
           read mage_version memgraph_version memgraph_commit pr < <(python3 scripts/pr_build_vars.py "$payload")
