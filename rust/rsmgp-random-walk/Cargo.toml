@@ -1,0 +1,13 @@
+[package]
+name = "rsmgp-random-walk"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+c_str_macro = "1.0.2"
+rsmgp-sys = { path = "../rsmgp-sys" }
+rand = "0.8.4"
+
+[lib]
+name = "rust_random_walk"
+crate-type = ["cdylib"]
