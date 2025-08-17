@@ -62,6 +62,10 @@ on:
         type: string
         description: "MAGE branch or tag to build"
         default: ''
+      print_output_url:
+        type: boolean
+        description: "Print the output URL at the end of the workflow"
+        default: false
 
 env:
   OS: "${{ inputs.arch == 'arm64' && 'ubuntu-24.04-aarch64' || 'ubuntu-24.04' }}${{ inputs.malloc && '-malloc' || '' }}"
@@ -231,7 +235,7 @@ jobs:
 
 
       - name: Download memgraph binary
-        run: curl -L ${{ env.MEMGRAPH_DOWNLOAD_LINK }} > memgraph-${{ inputs.arch }}.deb
+        run: curl -L --retry 5 --retry-delay 20 --retry-max-time 120 ${{ env.MEMGRAPH_DOWNLOAD_LINK }} > memgraph-${{ inputs.arch }}.deb
 
       - name: Probe fastest mirror
         run: |
@@ -317,11 +321,17 @@ jobs:
 
       - name: Construct Output URL
         id: output-url
-        if: ${{ inputs.push_to_s3 == 'true' && inputs.run_smoke_tests }}
+        if: ${{ inputs.push_to_s3 == 'true' && (inputs.run_smoke_tests || inputs.print_output_url) }}
         run: |
           filename="${{ env.ARTIFACT_NAME }}.tar.gz"
           output_url="https://s3.eu-west-1.amazonaws.com/${{ inputs.s3_dest_bucket }}/${{ inputs.s3_dest_dir }}/$filename"
           echo "s3_url=$output_url" >> $GITHUB_OUTPUT            
+
+      - name: Print Output URL
+        if: ${{ inputs.print_output_url && inputs.push_to_s3 }}
+        run: |
+          echo "::notice::Output URL: ${{ steps.output-url.outputs.s3_url }}"
+
 
   SetupSmokeTest:
     runs-on: [self-hosted]

@@ -10,8 +10,8 @@ echo "Waiting for memgraph to initialize..."
 wait_for_memgraph $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 echo "Memgraph is up and running!"
 
-source ./mgconsole/regex.bash
-test_regex $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
+source ./mgconsole/vector_search.bash
+test_vector_search $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 
 # TODO(gitbuda): Test v3.5 it's going to be amazing!
 
