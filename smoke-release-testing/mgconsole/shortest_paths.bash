@@ -31,13 +31,11 @@ test_shortest_paths() {
   echo "$create_graph_query" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
 
   echo "SUBFEATURE: Test KShortest paths - find top 3 shortest paths from A to E"
-  echo "MATCH (n1:Node {id: 'A'}), (n2:Node {id: 'E'}) WITH n1, n2 MATCH p=(n1)-[*KShortest]->(n2) RETURN p;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  echo "MATCH (n1:Node {id: 'A'}), (n2:Node {id: 'E'}) WITH n1, n2 MATCH p=(n1)-[*KShortest | 3]->(n2) RETURN p;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
   echo "SUBFEATURE: Test KShortest paths with path length bounds"
   echo "MATCH (n1:Node {id: 'A'}), (n2:Node {id: 'E'}) WITH n1, n2 MATCH p=(n1)-[*KShortest 2..4]->(n2) RETURN p;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "SUBFEATURE: Test KShortest paths with limit"
+  echo "SUBFEATURE: Test KShortest paths with the bounds and limit"
   echo "MATCH (n1:Node {id: 'A'}), (n2:Node {id: 'E'}) WITH n1, n2 MATCH p=(n1)-[*KShortest 2..4 | 5]->(n2) RETURN p;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "SUBFEATURE: Test KShortest paths with hops limit"
-  echo "MATCH (n1:Node {id: 'A'}), (n2:Node {id: 'E'}) WITH n1, n2 MATCH p=(n1)-[*KShortest 1..3]->(n2) RETURN p;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
   echo "SUBFEATURE: Test KShortest paths with node filtering"
   echo "MATCH (n1:Node {id: 'A'}), (n2:Node {id: 'E'}) WITH n1, n2 MATCH p=(n1)-[*KShortest]->(n2) WHERE ALL(n IN nodes(p) WHERE n.id IN ['A', 'B', 'C', 'E']) RETURN p;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
   echo "SUBFEATURE: Test KShortest paths with edge filtering"
