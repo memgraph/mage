@@ -10,8 +10,8 @@ echo "Waiting for memgraph to initialize..."
 wait_for_memgraph $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 echo "Memgraph is up and running!"
 
-source ./mgconsole/shortest_paths.bash
-test_shortest_paths $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
+source ./mgconsole/text_search.bash
+test_text_search $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 
 # NOTE: Test what's the exit status of the script by using `echo $?`:
 #   * if it's == 0 -> all good

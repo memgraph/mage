@@ -44,7 +44,7 @@ check_dockerhub_images() {
 }
 check_dockerhub_images
 
-MEMGRAPH_GENERAL_FLAGS="--telemetry-enabled=false --log-level=TRACE --also-log-to-stderr"
+MEMGRAPH_GENERAL_FLAGS="--telemetry-enabled=false --log-level=TRACE --also-log-to-stderr --experimental-enabled=text-search"
 MEMGRAPH_ENTERPRISE_DOCKER_ENVS="-e MEMGRAPH_ENTERPRISE_LICENSE=$MEMGRAPH_ENTERPRISE_LICENSE -e MEMGRAPH_ORGANIZATION_NAME=$MEMGRAPH_ORGANIZATION_NAME"
 MEMGRAPH_DOCKER_MOUNT_VOLUME_FLAGS="-v mg_lib:/var/lib/memgraph"
 MEMGRAPH_FULL_PROPERTIES_SET="{id:0, name:\"tester\", age:37, height:175.0, merried:true}"
