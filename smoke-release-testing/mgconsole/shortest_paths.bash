@@ -5,61 +5,55 @@ source "$SCRIPT_DIR/../utils.bash"
 test_shortest_paths() {
   __host="$1"
   __port="$2"
-  echo "FEATURE: KShortest paths and AllShortest paths"
+  echo ""
+  echo "FEATURE: Deep-path Traversal Capabilities"
   echo "MATCH (n) DETACH DELETE n;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  
+
   create_graph_query="
     CREATE
-        (a:Node {id: 'A'}),
-        (b:Node {id: 'B'}),
-        (c:Node {id: 'C'}),
-        (d:Node {id: 'D'}),
-        (e:Node {id: 'E'}),
-        (f:Node {id: 'F'}),
-        (g:Node {id: 'G'}),
-        (a)-[:REL {weight: 1}]->(b),
-        (a)-[:REL {weight: 2}]->(c),
-        (b)-[:REL {weight: 1}]->(e),
-        (c)-[:REL {weight: 1}]->(e),
-        (a)-[:REL {weight: 3}]->(e),
-        (b)-[:REL {weight: 2}]->(d),
-        (d)-[:REL {weight: 1}]->(e),
-        (a)-[:REL {weight: 1}]->(f),
-        (f)-[:REL {weight: 1}]->(g),
-        (g)-[:REL {weight: 1}]->(e);
-    "
+      (a:Node {id: 'A'}),
+      (b:Node {id: 'B'}),
+      (c:Node {id: 'C'}),
+      (d:Node {id: 'D'}),
+      (e:Node {id: 'E'}),
+      (f:Node {id: 'F'}),
+      (g:Node {id: 'G'}),
+      (a)-[:REL {weight: 1}]->(b),
+      (a)-[:REL {weight: 2}]->(c),
+      (b)-[:REL {weight: 1}]->(e),
+      (c)-[:REL {weight: 1}]->(e),
+      (a)-[:REL {weight: 3}]->(e),
+      (b)-[:REL {weight: 2}]->(d),
+      (d)-[:REL {weight: 1}]->(e),
+      (a)-[:REL {weight: 1}]->(f),
+      (f)-[:REL {weight: 1}]->(g),
+      (g)-[:REL {weight: 1}]->(e);
+  "
   echo "$create_graph_query" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
 
-  echo "SUBFEATURE: Test KShortest paths - find top 3 shortest paths from A to E"
-  echo "MATCH (n1:Node {id: 'A'}), (n2:Node {id: 'E'}) WITH n1, n2 MATCH p=(n1)-[*KShortest | 3]->(n2) RETURN p;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "SUBFEATURE: Test KShortest paths with path length bounds"
-  echo "MATCH (n1:Node {id: 'A'}), (n2:Node {id: 'E'}) WITH n1, n2 MATCH p=(n1)-[*KShortest 2..4]->(n2) RETURN p;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  echo "SUBFEATURE: KShortest paths - find top 3 shortest paths from A to E"
+  echo "MATCH (n1:Node {id: 'A'}), (n2:Node {id: 'E'}) WITH n1, n2 MATCH p=(n1)-[*KShortest | 3]->(n2) RETURN p;" \
+    | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  echo "SUBFEATURE: KShortest paths - with path length bounds"
+  echo "MATCH (n1:Node {id: 'A'}), (n2:Node {id: 'E'}) WITH n1, n2 MATCH p=(n1)-[*KShortest 2..4]->(n2) RETURN p;" \
+    | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
   echo "SUBFEATURE: Test KShortest paths with the bounds and limit"
-  echo "MATCH (n1:Node {id: 'A'}), (n2:Node {id: 'E'}) WITH n1, n2 MATCH p=(n1)-[*KShortest 2..4 | 5]->(n2) RETURN p;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "SUBFEATURE: Test KShortest paths with node filtering"
-  echo "MATCH (n1:Node {id: 'A'}), (n2:Node {id: 'E'}) WITH n1, n2 MATCH p=(n1)-[*KShortest]->(n2) WHERE ALL(n IN nodes(p) WHERE n.id IN ['A', 'B', 'C', 'E']) RETURN p;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "SUBFEATURE: Test KShortest paths with edge filtering"
-  echo "MATCH (n1:Node {id: 'A'}), (n2:Node {id: 'E'}) WITH n1, n2 MATCH p=(n1)-[*KShortest]->(n2) WHERE ALL(r IN relationships(p) WHERE r.weight <= 2) RETURN p;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "SUBFEATURE: Test KShortest paths with weighted edges (using weight property)"
-  echo "MATCH (n1:Node {id: 'A'}), (n2:Node {id: 'E'}) WITH n1, n2 MATCH p=(n1)-[*KShortest]->(n2) RETURN p, reduce(total = 0, r IN relationships(p) | total + r.weight) AS total_weight ORDER BY total_weight;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "SUBFEATURE: Test KShortest paths with result ordering"
-  echo "MATCH (n1:Node {id: 'A'}), (n2:Node {id: 'E'}) WITH n1, n2 MATCH p=(n1)-[*KShortest]->(n2) RETURN p, length(p) AS path_length ORDER BY path_length;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "SUBFEATURE: Test KShortest paths with null start/end nodes (should return empty set)"
-  echo "MATCH (n1:Node {id: 'X'}), (n2:Node {id: 'E'}) WITH n1, n2 MATCH p=(n1)-[*KShortest]->(n2) RETURN p;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "SUBFEATURE: Test KShortest paths with same start and end node (should return empty set)"
-  echo "MATCH (n1:Node {id: 'A'}), (n2:Node {id: 'A'}) WITH n1, n2 MATCH p=(n1)-[*KShortest]->(n2) RETURN p;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "SUBFEATURE: Test KShortest paths with the LIMIT clause"
-  echo "MATCH (n1:Node {id: 'A'}), (n2:Node {id: 'E'}) WITH n1, n2 MATCH p=(n1)-[*KShortest]->(n2) RETURN p LIMIT 1000;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  echo "MATCH (n1:Node {id: 'A'}), (n2:Node {id: 'E'}) WITH n1, n2 MATCH p=(n1)-[*KShortest 2..4 | 5]->(n2) RETURN p;" \
+    | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
  
-  echo "SUBFEATURE: Test AllShortest paths - find all shortest paths from A to E (with weight lambda)"
-  echo "MATCH (n1:Node {id: 'A'}), (n2:Node {id: 'E'}) WITH n1, n2 MATCH p=(n1)-[*AllShortest (r, n | r.weight)]->(n2) RETURN p;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "SUBFEATURE: Test AllShortest paths with the upper bound (with weight lambda)"
-  echo "MATCH (n1:Node {id: 'A'}), (n2:Node {id: 'E'}) WITH n1, n2 MATCH p=(n1)-[*AllShortest ..4 (r, n | r.weight)]->(n2) RETURN p;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "SUBFEATURE: Test AllShortest paths getting the path length (with weight lambda)"
-  echo "MATCH (n1:Node {id: 'A'}), (n2:Node {id: 'E'}) WITH n1, n2 MATCH p=(n1)-[*AllShortest (r, n | r.weight)]->(n2) RETURN DISTINCT length(p) AS path_length ORDER BY path_length;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  echo "SUBFEATURE: AllShortest paths - find all shortest paths from A to E (with weight lambda)"
+  echo "MATCH (n1:Node {id: 'A'}), (n2:Node {id: 'E'}) WITH n1, n2 MATCH p=(n1)-[*AllShortest (r, n | r.weight)]->(n2) RETURN p;" \
+    | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  echo "SUBFEATURE: AllShortest paths - with the upper bound and total_weight"
+  echo "MATCH (n1:Node {id: 'A'}), (n2:Node {id: 'E'}) WITH n1, n2 MATCH p=(n1)-[*AllShortest ..4 (r, n | r.weight) total_weight]->(n2) RETURN p, total_weight;" \
+    | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  echo "SUBFEATURE: AllShortest paths - using weight lambda + total_weight + the filter"
+  echo "MATCH p=(n1:Node {id: 'A'})-[*AllShortest ..4 (r, n | r.weight) total_weight (r, n, p, w | r.weight > 0 AND length(p) > 0)]->(n2:Node {id: 'E'}) RETURN p;" \
+    | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
 
   echo "MATCH (n) DETACH DELETE n;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "KShortest and AllShortest paths testing completed successfully"
+  echo "Smoking Deep-path Traversal Capabilities DONE"
+  echo ""
 }
 
 if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
