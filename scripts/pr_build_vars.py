@@ -45,6 +45,8 @@ def get_memgraph_version(pr):
 def pr_build_vars(payload):
 
     pr = payload["pr"]
+    if pr.startswith("pr"):
+        pr = pr[2:]
 
     memgraph_version, memgraph_commit = get_memgraph_version(pr)
 
