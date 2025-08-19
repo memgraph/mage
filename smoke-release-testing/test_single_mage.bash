@@ -50,3 +50,4 @@ test_durability $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 # NOTE: If the testing container is NOT restarted, all the auth test have to
 # come after all tests that assume there are no users.
 test_impersonate_user $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
+test_user_profiles $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
