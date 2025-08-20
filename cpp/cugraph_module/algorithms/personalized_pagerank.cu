@@ -77,7 +77,7 @@ void PersonalizedPagerankProc(mgp_list *args, mgp_graph *graph, mgp_result *resu
     // IMPORTANT: store_transposed has to be true because cugraph::pagerank
     // only accepts true. It's hard to detect/debug problem because nvcc error
     // messages contain only the top call details + graph_view has many
-    // template paremeters.
+    // template parameters.
     std::vector<result_t> v_personalization_values(mgp::list_size(l_personalization_values));
     for (std::size_t i = 0; i < mgp::list_size(l_personalization_values); i++) {
       v_personalization_values.at(i) = mgp::value_get_double(mgp::list_at(l_personalization_values, i));
