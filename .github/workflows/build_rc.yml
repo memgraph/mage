@@ -87,7 +87,7 @@ jobs:
       - name: Check if release branch exists and checkout
         id: check_branch
         run: |
-          branch_name="release/v${SHORT_VERSION}"
+          branch_name="release/${SHORT_VERSION}"
           if git ls-remote --exit-code --heads origin "$branch_name"; then
             echo "Branch $branch_name exists. Checking out."
             git checkout "$branch_name"
