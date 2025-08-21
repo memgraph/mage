@@ -3,18 +3,20 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/../utils.bash"
 
 test_show_database_settings() {
+  # TODO(gitbuda): args became useless
   __host="$1"
   __port="$2"
-  echo "SHOW DATABASE SETTINGS;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  echo "SHOW DATABASE SETTINGS;" | $__mgconsole_admin
 }
 
 test_auth_roles() {
+  # TODO(gitbuda): args became useless
   __host="$1"
   __port="$2"
   echo "FEATURE: Auth Roles"
 
-  echo "CREATE ROLE IF NOT EXISTS test_reader;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "SHOW ROLES;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  echo "CREATE ROLE IF NOT EXISTS test_reader;" | $__mgconsole_admin
+  echo "SHOW ROLES;" | $__mgconsole_admin
 }
 
 if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then

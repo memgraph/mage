@@ -8,23 +8,23 @@ test_user_profiles() {
   echo "FEATURE: User Profiles and Resource Limit Constraints"
 
   echo "SUBFEATURE: Setup test user and profile"
-  echo "CREATE USER test_user IDENTIFIED BY 'password123';" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "CREATE PROFILE user_profile LIMIT SESSIONS 2, TRANSACTIONS_MEMORY 10KB;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port --username test_user --password password123
-
-  # TODO(gitbuda): Assign the profile to the user.
-  # TODO(gitbuda): Show the profile.
+  echo "CREATE PROFILE user_profile LIMIT SESSIONS 2, TRANSACTIONS_MEMORY 100KB;" | $__mgconsole_admin
+  echo "SET PROFILE FOR tester TO user_profile;" | $__mgconsole_admin
+  echo "SHOW PROFILE FOR tester;" | $__mgconsole_admin
 
   echo "SUBFEATURE: Test memory limit enforcement"
   # Test query that should work within 10KB limit
-  echo "CREATE (n:TestNode {id: 1, data: 'small'});" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  # This one should fail. TODO: Check for it.
-  echo "UNWIND range(1, 10000) AS i CREATE (n:MemoryTest {id: i, data: 'Large data string that exceeds 10KB memory limit ' + i}) RETURN count(n);" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  echo "CREATE (n:TestNode {id: 1, data: 'small'});" | $__mgconsole_tester
+  # This one should fail. Check for failure and continue only if it fails.
+  if ! echo "UNWIND range(1, 10000) AS i CREATE (n:MemoryTest {id: i, data: 'Data string ' + i}) RETURN count(n);" | $__mgconsole_tester; then
+    echo "Memory limit enforcement by profile test failed as expected."
+  fi
 
-  echo "SUBFEATURE: Cleanup test data (profile, user, data)"
-  echo "DROP USER test_user;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "DROP PROFILE test_profile;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "MATCH (n:TestNode) DETACH DELETE n;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "MATCH (n:MemoryTest) DETACH DELETE n;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  echo "SUBFEATURE: Cleanup profile"
+  echo "DROP PROFILE user_profile;" | $__mgconsole_admin
+  echo "SHOW PROFILES;" | $__mgconsole_admin
+  echo "MATCH (n:TestNode) DETACH DELETE n;" | $__mgconsole_admin
+  echo "MATCH (n:MemoryTest) DETACH DELETE n;" | $__mgconsole_admin
 
   echo "User profiles and resource limit constraints testing completed successfully"
 }

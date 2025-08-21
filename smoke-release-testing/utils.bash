@@ -61,6 +61,10 @@ MEMGRAPH_NEXT_COORDINATOR_BOLT_PORT="8003"
 MEMGRAPH_LAST_MONITORING_PORT="9001"
 MEMGRAPH_NEXT_MONITORING_PORT="9002"
 
+__mgconsole_default="$MEMGRAPH_CONSOLE_BINARY --host $MEMGRAPH_DEFAULT_HOST --port $MEMGRAPH_NEXT_DATA_BOLT_PORT"
+__mgconsole_admin="$MEMGRAPH_CONSOLE_BINARY --host $MEMGRAPH_DEFAULT_HOST --port $MEMGRAPH_NEXT_DATA_BOLT_PORT --username admin --password admin1234"
+__mgconsole_tester="$MEMGRAPH_CONSOLE_BINARY --host $MEMGRAPH_DEFAULT_HOST --port $MEMGRAPH_NEXT_DATA_BOLT_PORT --username tester --password tester1234"
+
 wait_port() {
   __port="$1"
   while ! nc -z localhost $__port; do

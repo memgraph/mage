@@ -43,11 +43,24 @@ test_monitoring $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 test_multi_tenancy $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 test_nested_indices $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 test_or_expression_for_labels $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
+
 # v3.5 testing.
 test_shortest_paths $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 test_text_search $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 test_durability $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
+
 # NOTE: If the testing container is NOT restarted, all the auth test have to
 # come after all tests that assume there are no users.
+
+# TODO(gitbuda): Probably more to the utils somewhere.
+echo "CREATE USER admin IDENTIFIED BY 'admin1234'; GRANT ALL PRIVILEGES TO admin;" | $__mgconsole_default
+echo "CREATE USER tester IDENTIFIED BY 'tester1234'; GRANT CREATE TO tester; GRANT CREATE_DELETE ON LABELS * TO tester; GRANT DATABASE memgraph TO tester;" | $__mgconsole_admin
+
+# TODO(gitbuda): Ask Andreja why the below doesn't work :thinking:
+# echo "CREATE USER tester IDENTIFIED BY 'tester1234';" $__mgconsole_admin
+# echo "GRANT CREATE TO tester; GRANT CREATE_DELETE ON LABELS * TO tester; GRANT DATABASE memgraph TO tester;" | $__mgconsole_admin
+
+test_show_database_settings $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
+test_auth_roles $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 test_impersonate_user $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 test_user_profiles $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
