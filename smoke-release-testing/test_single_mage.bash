@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -ex
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/utils.bash"
 
@@ -52,15 +52,13 @@ test_durability $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
 # NOTE: If the testing container is NOT restarted, all the auth test have to
 # come after all tests that assume there are no users.
 
-# TODO(gitbuda): Probably more to the utils somewhere.
-echo "CREATE USER admin IDENTIFIED BY 'admin1234'; GRANT ALL PRIVILEGES TO admin;" | $__mgconsole_default
-echo "CREATE USER tester IDENTIFIED BY 'tester1234'; GRANT CREATE TO tester; GRANT CREATE_DELETE ON LABELS * TO tester; GRANT DATABASE memgraph TO tester;" | $__mgconsole_admin
+echo "CREATE USER admin IDENTIFIED BY 'admin1234'; GRANT ALL PRIVILEGES TO admin;" | $MGCONSOLE_NEXT_DEFAULT
+echo "CREATE USER tester IDENTIFIED BY 'tester1234'; GRANT CREATE TO tester; GRANT CREATE_DELETE ON LABELS * TO tester; GRANT DATABASE memgraph TO tester;" | $MGCONSOLE_NEXT_ADMIN
+echo "SHOW USERS;" | $MGCONSOLE_NEXT_ADMIN
+echo "SHOW ACTIVE USERS;" | $MGCONSOLE_NEXT_ADMIN
+echo "NOTE: admin and tester users are created for testing purposes."
 
-# TODO(gitbuda): Ask Andreja why the below doesn't work :thinking:
-# echo "CREATE USER tester IDENTIFIED BY 'tester1234';" $__mgconsole_admin
-# echo "GRANT CREATE TO tester; GRANT CREATE_DELETE ON LABELS * TO tester; GRANT DATABASE memgraph TO tester;" | $__mgconsole_admin
-
-test_show_database_settings $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-test_auth_roles $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-test_impersonate_user $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
+test_show_database_settings
+test_auth_roles
+test_impersonate_user
 test_user_profiles $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
