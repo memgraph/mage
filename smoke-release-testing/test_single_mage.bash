@@ -27,10 +27,7 @@ test_auth_roles
 test_basic_auth
 test_query
 test_query_modules
-# set +e # NOTE: At the time of writing this failed becuase of a bug but the test/config is legit.
-#        # Remove set +e after fix.
 test_session_trace
-# set -e
 test_show_schema_info
 test_spatial
 test_storage
