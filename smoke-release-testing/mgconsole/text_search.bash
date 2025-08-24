@@ -3,13 +3,10 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/../utils.bash"
 
 test_text_search() {
-  __host="$1"
-  __port="$2"
-  echo ""
-  echo "FEATURE: Text Search"
+  echo "FEATURE: Indexing: Text Search"
 
-  echo "CREATE TEXT INDEX index_name ON :Label(prop1, prop2, prop3);" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "SHOW INDEX INFO;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  run_next "CREATE TEXT INDEX index_name ON :Label(prop1, prop2, prop3);"
+  run_next "SHOW INDEX INFO;"
 
   echo "Text search and text property indices testing completed successfully"
 }

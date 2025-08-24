@@ -3,16 +3,12 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/../utils.bash"
 
 test_spatial() {
-  __host="$1"
-  __port="$2"
   echo "FEATURE: Spatial data types and functionalities"
-
-  echo "MATCH (n) DETACH DELETE n;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "CREATE (n {xy: point({x:1, y:2})}) RETURN n.xy.x;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "CREATE (n {xy: point({x:1, y:2})}) RETURN n;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-
-  echo "CREATE POINT INDEX ON :School(location);" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "SHOW INDEX INFO;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  run_next "MATCH (n) DETACH DELETE n;"
+  run_next "CREATE (n {xy: point({x:1, y:2})}) RETURN n.xy.x;"
+  run_next "CREATE (n {xy: point({x:1, y:2})}) RETURN n;"
+  run_next "CREATE POINT INDEX ON :School(location);"
+  run_next "SHOW INDEX INFO;"
 }
 
 if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then

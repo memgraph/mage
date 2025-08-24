@@ -3,12 +3,10 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/../utils.bash"
 
 test_durability() {
-  __host="$1"
-  __port="$2"
   echo "FEATURE: Durability and Persistence"
 
   echo "SUBFEATURE: Create snapshot query"
-  echo "CREATE SNAPSHOT;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  run_next "CREATE SNAPSHOT;"
 
   echo "Durability testing completed successfully"
 }

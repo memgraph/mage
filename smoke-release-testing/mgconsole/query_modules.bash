@@ -3,15 +3,10 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/../utils.bash"
 
 test_query_modules() {
-  __host="$1"
-  __port="$2"
   echo "FEATURE: All MAGE query modules"
-
-  # TODO(gitbuda): What are the 3 added modules? -> Probably the migration modules.
-  echo "CALL mg.procedures() YIELD * RETURN count(*) AS cnt;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port --output-format=csv | python3 $SCRIPT_DIR/validator.py first_as_int -f cnt -e 313
-
-  echo "CREATE (a), (b), (c), (d), (a)-[:ET]->(b), (c)-[:ET]->(d);" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "CALL leiden_community_detection.get() YIELD * RETURN communities, community_id, node;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  run_next_csv "CALL mg.procedures() YIELD * RETURN count(*) AS cnt;" | python3 $SCRIPT_DIR/validator.py first_as_int -f cnt -e 313
+  run_next "CREATE (a), (b), (c), (d), (a)-[:ET]->(b), (c)-[:ET]->(d);"
+  run_next "CALL leiden_community_detection.get() YIELD * RETURN communities, community_id, node;"
 }
 
 if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
