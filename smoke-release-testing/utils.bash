@@ -44,12 +44,12 @@ check_dockerhub_images() {
 }
 check_dockerhub_images
 
-MEMGRAPH_GENERAL_FLAGS="--telemetry-enabled=false --log-level=TRACE --also-log-to-stderr"
+MEMGRAPH_GENERAL_FLAGS="--telemetry-enabled=false --log-level=TRACE --also-log-to-stderr --experimental-enabled=text-search"
 MEMGRAPH_ENTERPRISE_DOCKER_ENVS="-e MEMGRAPH_ENTERPRISE_LICENSE=$MEMGRAPH_ENTERPRISE_LICENSE -e MEMGRAPH_ORGANIZATION_NAME=$MEMGRAPH_ORGANIZATION_NAME"
 MEMGRAPH_DOCKER_MOUNT_VOLUME_FLAGS="-v mg_lib:/var/lib/memgraph"
 MEMGRAPH_FULL_PROPERTIES_SET="{id:0, name:\"tester\", age:37, height:175.0, merried:true}"
-MEMGRAPH_PROPERTY_COMPRESSION_FALGS="--storage-property-store-compression-enabled=true --storage-property-store-compression-level=mid"
-MEMGRAPH_HA_COORDINATOR_FALGS="--coordinator-port=10001 --bolt-port=7687 --coordinator-id=1 --experimental-enabled=high-availability --coordinator-hostname=localhost --management-port=11001"
+MEMGRAPH_PROPERTY_COMPRESSION_FLAGS="--storage-property-store-compression-enabled=true --storage-property-store-compression-level=mid"
+MEMGRAPH_HA_COORDINATOR_FLAGS="--coordinator-port=10001 --bolt-port=7687 --coordinator-id=1 --experimental-enabled=high-availability --coordinator-hostname=localhost --management-port=11001"
 MEMGRAPH_SHOW_SCHEMA_INFO_FLAG="--schema-info-enabled=true"
 MEMGRAPH_SESSION_TRACE_FLAG="--query-log-directory=/var/log/memgraph/session_traces"
 MEMGRAPH_DEFAULT_HOST="localhost"
@@ -60,6 +60,26 @@ MEMGRAPH_NEXT_DATA_BOLT_PORT="8002"
 MEMGRAPH_NEXT_COORDINATOR_BOLT_PORT="8003"
 MEMGRAPH_LAST_MONITORING_PORT="9001"
 MEMGRAPH_NEXT_MONITORING_PORT="9002"
+
+MGCONSOLE_NEXT_DEFAULT="$MEMGRAPH_CONSOLE_BINARY --host $MEMGRAPH_DEFAULT_HOST --port $MEMGRAPH_NEXT_DATA_BOLT_PORT"
+MGCONSOLE_NEXT_ADMIN="$MEMGRAPH_CONSOLE_BINARY --host $MEMGRAPH_DEFAULT_HOST --port $MEMGRAPH_NEXT_DATA_BOLT_PORT --username admin --password admin1234"
+MGCONSOLE_NEXT_TESTER="$MEMGRAPH_CONSOLE_BINARY --host $MEMGRAPH_DEFAULT_HOST --port $MEMGRAPH_NEXT_DATA_BOLT_PORT --username tester --password tester1234"
+run_next() {
+  __query="$1"
+  echo "$__query" | $MGCONSOLE_NEXT_DEFAULT
+}
+run_next_admin() {
+  __query="$1"
+  echo "$__query" | $MGCONSOLE_NEXT_ADMIN
+}
+run_next_tester() {
+  __query="$1"
+  echo "$__query" | $MGCONSOLE_NEXT_TESTER
+}
+run_next_csv() {
+  __query="$1"
+  echo "$__query" | $MGCONSOLE_NEXT_DEFAULT --output-format=csv
+}
 
 wait_port() {
   __port="$1"
@@ -126,11 +146,13 @@ run_memgraph_binary() {
 }
 
 run_memgraph_binary_and_test() {
+  # NOTE: This function runs memgraph on the NEXT_DATA_BOLT_PORT because all
+  # tests are mostly executed against that (a convention to shorten the code).
   __args="$1"
   __test_func_name=$2
-  __mg_pid=$(run_memgraph_binary "$__args")
-  wait_port $MEMGRAPH_DEFAULT_PORT
-  $__test_func_name $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_DEFAULT_PORT
+  __mg_pid=$(run_memgraph_binary "--bolt-port $MEMGRAPH_NEXT_DATA_BOLT_PORT $__args")
+  # wait_port $MEMGRAPH_NEXT_DATA_BOLT_PORT
+  $__test_func_name
   kill -15 $__mg_pid
 }
 
@@ -207,7 +229,7 @@ run_memgraph_next_dockerhub_container() {
     docker run -d --rm -p $MEMGRAPH_NEXT_DATA_BOLT_PORT:7687 -p $MEMGRAPH_NEXT_MONITORING_PORT:9091 \
       --name memgraph_next_data \
       $MEMGRAPH_ENTERPRISE_DOCKER_ENVS $MEMGRAPH_NEXT_DOCKERHUB_IMAGE $MEMGRAPH_GENERAL_FLAGS \
-      $MEMGRAPH_PROPERTY_COMPRESSION_FALGS $MEMGRAPH_SHOW_SCHEMA_INFO_FLAG
+      $MEMGRAPH_PROPERTY_COMPRESSION_FLAGS $MEMGRAPH_SHOW_SCHEMA_INFO_FLAG
   fi
 }
 
@@ -218,13 +240,13 @@ run_memgraph_last_dockerhub_container_with_volume() {
 
 run_memgraph_next_dockerhub_container_with_volume() {
   docker run -d --rm -p $MEMGRAPH_NEXT_DATA_BOLT_PORT:7687 $MEMGRAPH_DOCKER_MOUNT_VOLUME_FLAGS \
-    --name memgraph_next_data $ENTERPRISE_DOCKER_ENVS_UNLIMITED $MEMGRAPH_NEXT_DOCKERHUB_IMAGE $MEMGRAPH_GENERAL_FLAGS $MEMGRAPH_PROPERTY_COMPRESSION_FALGS
+    --name memgraph_next_data $ENTERPRISE_DOCKER_ENVS_UNLIMITED $MEMGRAPH_NEXT_DOCKERHUB_IMAGE $MEMGRAPH_GENERAL_FLAGS $MEMGRAPH_PROPERTY_COMPRESSION_FLAGS
 }
 
 run_memgraph_coordinator_next_dockerhub_container() {
   docker run -d --rm -p $MEMGRAPH_NEXT_COORDINATOR_BOLT_PORT:7687 --name memgraph_next_coordinator \
     $MEMGRAPH_ENTERPRISE_DOCKER_ENVS $MEMGRAPH_NEXT_DOCKERHUB_IMAGE $MEMGRAPH_GENERAL_FLAGS \
-    $MEMGRAPH_PROPERTY_COMPRESSION_FALGS $MEMGRAPH_HA_COORDINATOR_FALGS
+    $MEMGRAPH_PROPERTY_COMPRESSION_FLAGS $MEMGRAPH_HA_COORDINATOR_FLAGS
 }
 
 run_memgraph_docker_containers() {

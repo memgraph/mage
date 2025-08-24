@@ -2,6 +2,8 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/utils.bash"
 
+pull_docker_images none none
+
 source $SCRIPT_DIR/k8s/run.bash
 cleanup_k8s_all
 
