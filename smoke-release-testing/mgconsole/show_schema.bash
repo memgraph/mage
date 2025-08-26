@@ -3,12 +3,9 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/../utils.bash"
 
 test_show_schema_info() {
-  __host="$1"
-  __port="$2"
-  echo "FEATURE: Show schema info"
-
-  echo "CREATE (:Node {prop: 1});" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  data=$(echo "SHOW SCHEMA INFO;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port --output-format=csv --csv-doublequote=true)
+  echo "FEATURE: Fast Graph Schema"
+  run_next "CREATE (:Node {prop: 1});"
+  data=$(echo "SHOW SCHEMA INFO;" | $MGCONSOLE_NEXT_DEFAULT --output-format=csv --csv-doublequote=true)
   schema=$(echo "$data" | sed 1d)
   echo $schema
 
