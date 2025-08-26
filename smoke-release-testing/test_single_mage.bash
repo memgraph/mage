@@ -2,6 +2,11 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/utils.bash"
 
+# Start timing the script execution
+START_TIME=$(date +%s)
+START_TIME_READABLE=$(date)
+echo "Script execution started at: $START_TIME_READABLE"
+
 # NOTE: 1st arg is how to pull LAST image, 2nd arg is how to pull NEXT image.
 spinup_and_cleanup_memgraph_dockers Dockerhub RC
 echo "Waiting for memgraph to initialize..."
@@ -18,31 +23,55 @@ for test_file_path in "$SCRIPT_DIR/mgconsole/"*; do
   echo "Loaded $test_file_path..."
 done
 
-test_auth_roles $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-test_basic_auth $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-test_query $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-test_query_modules $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-set +e # NOTE: At the time of writing this failed becuase of a bug but the test/config is legit.
-       # Remove set +e after fix.
-test_session_trace $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-set -e
-test_show_schema_info $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-test_spatial $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-test_storage $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-test_streams $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-test_ttl $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-test_type_constraints $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-test_vector_search $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-test_dynamic_algos $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-test_functions $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-test_label_operations $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-test_regex $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-test_edge_type_operations $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-test_composite_indices $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-test_monitoring $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-test_multi_tenancy $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-test_nested_indices $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-test_or_expression_for_labels $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
-# NOTE: If the testing container is NOT restarted, all the auth test have to
-# come after all tests that assume there are no users.
-test_impersonate_user $MEMGRAPH_DEFAULT_HOST $MEMGRAPH_NEXT_DATA_BOLT_PORT
+test_auth_roles
+test_basic_auth
+test_query
+test_query_modules
+test_session_trace
+test_show_schema_info
+test_spatial
+test_storage
+test_streams
+test_ttl
+test_type_constraints
+test_vector_search
+test_dynamic_algos
+test_functions
+test_label_operations
+test_regex
+test_edge_type_operations
+test_composite_indices
+test_monitoring
+test_multi_tenancy
+test_nested_indices
+test_or_expression_for_labels
+test_shortest_paths
+test_text_search
+test_durability
+
+# NOTE: If the testing container is NOT restarted (each test having their own
+# container), all the auth test have to come after all tests that assume there
+# are no users.
+# Add all the users to be able to perform the tests.
+echo "CREATE USER admin IDENTIFIED BY 'admin1234'; GRANT ALL PRIVILEGES TO admin;" | $MGCONSOLE_NEXT_DEFAULT
+echo "CREATE USER tester IDENTIFIED BY 'tester1234'; GRANT CREATE TO tester; GRANT CREATE_DELETE ON LABELS * TO tester; GRANT DATABASE memgraph TO tester;" | $MGCONSOLE_NEXT_ADMIN
+echo "SHOW USERS;" | $MGCONSOLE_NEXT_ADMIN
+echo "SHOW ACTIVE USERS;" | $MGCONSOLE_NEXT_ADMIN
+echo "NOTE: admin and tester users are created for testing purposes."
+
+test_show_database_settings
+test_auth_roles
+test_impersonate_user
+test_user_profiles
+
+# End timing and calculate execution time
+END_TIME=$(date +%s)
+END_TIME_READABLE=$(date)
+EXECUTION_TIME=$((END_TIME - START_TIME))
+EXECUTION_TIME_MINUTES=$((EXECUTION_TIME / 60))
+EXECUTION_TIME_SECONDS=$((EXECUTION_TIME % 60))
+
+echo ""
+echo "Script execution completed at: $END_TIME_READABLE"
+echo "Total execution time: ${EXECUTION_TIME_MINUTES}m ${EXECUTION_TIME_SECONDS}s (${EXECUTION_TIME} seconds)"
+echo ""

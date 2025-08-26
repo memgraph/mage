@@ -2,15 +2,11 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/../utils.bash"
 
-# TODO(gitbuda): Introduce default __host and __port values.
 test_regex() {
-  __host="$1"
-  __port="$2"
   echo "FEATURE: Regex"
-
-  echo "CREATE (:Hero {name: 'xSPIDERy'});" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "CREATE (:Hero {name: 'test'});" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "MATCH (h:Hero) WHERE h.name =~ \".*SPIDER.+\" RETURN h.name as PotentialSpiderDude ORDER BY PotentialSpiderDude;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  run_next "CREATE (:Hero {name: 'xSPIDERy'});"
+  run_next "CREATE (:Hero {name: 'test'});"
+  run_next "MATCH (h:Hero) WHERE h.name =~ \".*SPIDER.+\" RETURN h.name as PotentialSpiderDude ORDER BY PotentialSpiderDude;"
 }
 
 if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
