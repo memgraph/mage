@@ -279,6 +279,13 @@ jobs:
           PYTHONPATH: "$PWD/e2e"
         run: |
           ./run_e2e_correctness_tests.sh ${{ env.MEMGRAPH_PORT }} ${{ env.NEO4J_PORT }} ${{ env.NEO4J_CONTAINER }} ${{ env.MAGE_CONTAINER }} ${{ env.MEMGRAPH_NETWORK }}
+
+      - name: Run End-to-end migration tests
+        env:
+          PYTHONPATH: "$PWD/e2e_migration"
+        run: |
+          docker exec -i -u memgraph ${{ env.MAGE_CONTAINER }} bash -c \
+          "cd /mage/ && python3 test_e2e_migration.py"
       
       - name: Cleanup
         if: always()
