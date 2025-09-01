@@ -22,29 +22,81 @@ e2e_migration/
 ├── test_mysql/                # MySQL-specific test directory
 │   ├── docker-compose.yml     # MySQL service orchestration (official mysql:8.0 image)
 │   ├── data/                  # Database initialization scripts
-│   │   ├── init.sql           # Schema creation
+│   │   ├── init.sql           # Schema creation (all types)
 │   │   └── sample_data.sql    # Test data insertion
 │   └── test/                  # MySQL test cases
-│       └── test_migration.yml # MySQL migration query and expected output
+│       ├── successful/        # Tests that should pass (one per data type)
+│       │   ├── tinyint_test.yml, smallint_test.yml, bigint_test.yml, etc.
+│       │   ├── char_test.yml, varchar_test.yml, text_test.yml, etc.
+│       │   ├── date_test.yml, datetime_test.yml, boolean_test.yml, etc.
+│       └── unsuccessful/      # Tests that should fail
+│           └── geometry_failure.yml, point_failure.yml, etc.
 └── test_postgresql/           # PostgreSQL-specific test directory
     ├── docker-compose.yml     # PostgreSQL service orchestration (official postgres:15 image)
     ├── data/                  # Database initialization scripts
-    │   ├── init.sql           # Schema creation
+    │   ├── init.sql           # Schema creation (all types)
     │   └── sample_data.sql    # Test data insertion
     └── test/                  # PostgreSQL test cases
-        └── test_migration.yml # PostgreSQL migration query and expected output
+        ├── successful/        # Tests that should pass (one per data type)
+        │   ├── integer_test.yml, smallint_test.yml, bigint_test.yml, etc.
+        │   ├── decimal_test.yml, numeric_test.yml, real_test.yml, etc.
+        │   ├── char_test.yml, varchar_test.yml, text_test.yml, etc.
+        │   ├── date_test.yml, time_test.yml, timestamp_test.yml, etc.
+        │   ├── boolean_test.yml, uuid_test.yml, xml_test.yml, etc.
+        │   └── json_test.yml, jsonb_test.yml, bytea_test.yml, etc.
+        └── unsuccessful/      # Tests that should fail
+            ├── point_failure.yml, line_failure.yml, polygon_failure.yml, etc.
+            ├── cidr_failure.yml, inet_failure.yml, macaddr_failure.yml, etc.
+            ├── array_failure.yml, range_failure.yml, composite_failure.yml, etc.
+            └── hstore_failure.yml, tsvector_failure.yml, etc.
 ```
 
 ## Test Structure
 
-The migration tests follow the same pattern as the existing e2e tests:
+The migration tests use a **per-data-type approach** where each test focuses on migrating a single specific data type. This approach provides:
 
-### Test Configuration Format
-Each `test_migration.yml` file contains:
-- **query**: The migration procedure call that returns data (e.g., `CALL migrate.mysql(...) YIELD row RETURN row.*`)
+- **Granular Testing**: Each data type is tested individually
+- **Clear Failure Identification**: Easy to identify which specific data types fail
+- **Focused Debugging**: Problems can be isolated to specific data types
+- **Comprehensive Coverage**: Every data type gets its own test
+
+The tests are organized into two categories:
+
+### Successful Tests (`test/successful/`)
+Tests that verify successful migration of individual data types:
+- **`tinyint_test.yml`**: Tests TINYINT migration
+- **`smallint_test.yml`**: Tests SMALLINT migration
+- **`mediumint_test.yml`**: Tests MEDIUMINT migration
+- **`bigint_test.yml`**: Tests BIGINT migration
+- **`decimal_test.yml`**: Tests DECIMAL migration
+- **`float_test.yml`**: Tests FLOAT migration
+- **`double_test.yml`**: Tests DOUBLE migration
+- **`char_test.yml`**: Tests CHAR migration
+- **`varchar_test.yml`**: Tests VARCHAR migration
+- **`text_test.yml`**: Tests TEXT migration
+- **`date_test.yml`**: Tests DATE migration
+- **`datetime_test.yml`**: Tests DATETIME migration
+- **`boolean_test.yml`**: Tests BOOLEAN migration
+- **`json_test.yml`**: Tests JSON migration
+
+### Unsuccessful Tests (`test/unsuccessful/`)
+Tests that verify proper failure handling for unsupported data types:
+- **`geometry_failure.yml`**: Tests that GEOMETRY type fails gracefully
+- **`point_failure.yml`**: Tests that POINT type fails gracefully
+- **`generated_column_failure.yml`**: Tests that generated columns fail gracefully
+
+### Test File Format
+
+Each test file contains:
+
+**For All Tests:**
+- **query**: The migration procedure call (e.g., `CALL migrate.mysql(...) YIELD row RETURN row.*`)
 - **output**: Expected results for validation (list of dictionaries with field names and expected values)
+- **exception**: `true` if the test should fail with an exception, `false` if it should succeed
 
 ### Example Test Configuration
+
+**Successful Test:**
 ```yaml
 query: |
   CALL migrate.mysql('dummy_table', {...}) YIELD row
@@ -55,6 +107,20 @@ output:
   - id: 1
     name: "test"
     value: 42
+
+exception: false
+```
+
+**Exception Test:**
+```yaml
+query: |
+  CALL migrate.mysql('dummy_table', {...}) YIELD row
+  RETURN row.id, row.unsupported_col
+  ORDER BY row.id
+
+output: []
+
+exception: true
 ```
 
 ### Validation Process
@@ -208,11 +274,22 @@ The `test_e2e_migration.py` script supports various options:
 # Run all migration tests
 ./test_e2e_migration.py
 
-# Run only MySQL tests
+# Run only MySQL tests (17 total: 14 successful + 3 unsuccessful)
 ./test_e2e_migration.py -k mysql
 
-# Run only PostgreSQL tests
+# Run only PostgreSQL tests (34 total: 22 successful + 12 unsuccessful)
 ./test_e2e_migration.py -k postgresql
+```
+
+### Test Coverage Summary
+
+**MySQL Tests (17 total):**
+- **Successful (14)**: TINYINT, SMALLINT, MEDIUMINT, BIGINT, DECIMAL, FLOAT, DOUBLE, CHAR, VARCHAR, TEXT, DATE, DATETIME, BOOLEAN, JSON
+- **Unsuccessful (3)**: GEOMETRY, POINT, Generated Columns
+
+**PostgreSQL Tests (34 total):**
+- **Successful (22)**: SMALLINT, INTEGER, BIGINT, DECIMAL, NUMERIC, REAL, DOUBLE PRECISION, MONEY, CHAR, VARCHAR, TEXT, BYTEA, TIMESTAMP, DATE, TIME, INTERVAL, BOOLEAN, BIT, UUID, XML, JSON, JSONB
+- **Unsuccessful (12)**: POINT, LINE, POLYGON, CIRCLE, CIDR, INET, MACADDR, ARRAY, RANGE, COMPOSITE, HSTORE, TSVECTOR
 
 # Show help
 ./test_e2e_migration.py --help

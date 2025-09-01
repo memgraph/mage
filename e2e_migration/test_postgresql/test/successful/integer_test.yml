@@ -1,0 +1,17 @@
+query: |
+  CALL migrate.postgresql('dummy_table', {
+      host: 'localhost',
+      port: 5432,
+      user: 'memgraph',
+      password: 'memgraph_password',
+      database: 'test_db'
+  })
+  YIELD row
+  RETURN row.id AS id, row.integer_col AS integer_col
+  ORDER BY row.id
+
+output:
+  - id: 1
+    integer_col: 2147483647
+
+exception: false

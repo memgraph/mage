@@ -40,7 +40,11 @@ INSERT INTO dummy_table (
     
     -- Boolean types
     boolean_col,
-    bool_col
+    bool_col,
+    
+    -- Spatial types (should fail)
+    geometry_col,
+    point_col
 ) VALUES (
     -- Numeric values
     127,                    -- tinyint_col
@@ -79,5 +83,9 @@ INSERT INTO dummy_table (
     
     -- Boolean values
     TRUE,                   -- boolean_col
-    FALSE                   -- bool_col
+    FALSE,                  -- bool_col
+    
+    -- Spatial values (should fail)
+    ST_GeomFromText('POINT(1 1)'),  -- geometry_col
+    ST_GeomFromText('POINT(2 2)')   -- point_col
 );

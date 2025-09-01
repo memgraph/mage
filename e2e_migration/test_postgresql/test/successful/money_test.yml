@@ -1,0 +1,17 @@
+query: |
+  CALL migrate.postgresql('dummy_table', {
+      host: 'localhost',
+      port: 5432,
+      user: 'memgraph',
+      password: 'memgraph_password',
+      database: 'test_db'
+  })
+  YIELD row
+  RETURN row.id AS id, row.money_col AS money_col
+  ORDER BY row.id
+
+output:
+  - id: 1
+    money_col: "$100.50"
+
+exception: false

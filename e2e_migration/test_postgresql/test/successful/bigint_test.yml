@@ -1,0 +1,17 @@
+query: |
+  CALL migrate.postgresql('dummy_table', {
+      host: 'localhost',
+      port: 5432,
+      user: 'memgraph',
+      password: 'memgraph_password',
+      database: 'test_db'
+  })
+  YIELD row
+  RETURN row.id AS id, row.bigint_col AS bigint_col
+  ORDER BY row.id
+
+output:
+  - id: 1
+    bigint_col: 9223372036854775807
+
+exception: false

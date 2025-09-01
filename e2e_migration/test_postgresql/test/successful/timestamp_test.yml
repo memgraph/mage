@@ -1,0 +1,17 @@
+query: |
+  CALL migrate.postgresql('dummy_table', {
+      host: 'localhost',
+      port: 5432,
+      user: 'memgraph',
+      password: 'memgraph_password',
+      database: 'test_db'
+  })
+  YIELD row
+  RETURN row.id AS id, row.timestamp_col AS timestamp_col
+  ORDER BY row.id
+
+output:
+  - id: 1
+    timestamp_col: "2023-12-25 10:30:45"
+
+exception: false

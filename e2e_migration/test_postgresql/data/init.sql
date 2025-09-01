@@ -44,5 +44,10 @@ CREATE TABLE IF NOT EXISTS dummy_table (
     jsonb_col JSONB,
     array_col INTEGER[],
     enum_col TEXT, -- PostgreSQL doesn't have ENUM in this context, using TEXT
-    range_col INT4RANGE
+    range_col INT4RANGE,
+    
+    -- Advanced types (should fail)
+    hstore_col HSTORE,
+    tsvector_col TSVECTOR,
+    composite_col RECORD
 );

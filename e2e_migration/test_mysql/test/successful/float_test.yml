@@ -1,0 +1,17 @@
+query: |
+  CALL migrate.mysql('dummy_table', {
+      host: 'localhost',
+      port: 3306,
+      user: 'memgraph',
+      password: 'memgraph_password',
+      database: 'test_db'
+  })
+  YIELD row
+  RETURN row.id AS id, row.float_col AS float_col
+  ORDER BY row.id
+
+output:
+  - id: 1
+    float_col: 1.23
+
+exception: false

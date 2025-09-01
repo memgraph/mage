@@ -1,0 +1,15 @@
+query: |
+  CALL migrate.mysql('dummy_table', {
+      host: 'localhost',
+      port: 3306,
+      user: 'memgraph',
+      password: 'memgraph_password',
+      database: 'test_db'
+  })
+  YIELD row
+  RETURN row.id AS id, row.point_col AS point_col
+  ORDER BY row.id
+
+output: []
+
+exception: true

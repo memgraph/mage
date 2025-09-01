@@ -42,5 +42,12 @@ CREATE TABLE dummy_table (
     
     -- Boolean type
     boolean_col BOOLEAN,
-    bool_col BOOL
+    bool_col BOOL,
+    
+    -- Spatial types (should fail)
+    geometry_col GEOMETRY,
+    point_col POINT,
+    
+    -- Generated columns (should fail)
+    generated_col INT GENERATED ALWAYS AS (id * 2) STORED
 );

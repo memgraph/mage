@@ -1,0 +1,17 @@
+query: |
+  CALL migrate.postgresql('dummy_table', {
+      host: 'localhost',
+      port: 5432,
+      user: 'memgraph',
+      password: 'memgraph_password',
+      database: 'test_db'
+  })
+  YIELD row
+  RETURN row.id AS id, row.json_col AS json_col
+  ORDER BY row.id
+
+output:
+  - id: 1
+    json_col: {"key": "value", "number": 42}
+
+exception: false
