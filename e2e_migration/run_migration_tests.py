@@ -45,7 +45,7 @@ def run_tests_for_directory(test_dir):
     os.chdir(test_dir)
     try:
         # Start services
-        subprocess.run(["docker-compose", "up", "-d"], check=True)
+        subprocess.run(["docker", "compose", "up", "-d"], check=True)
         
         # Wait for services
         print("Waiting for services to be ready...")
@@ -53,7 +53,7 @@ def run_tests_for_directory(test_dir):
         time.sleep(30)
         
         # Check service health
-        subprocess.run(["docker-compose", "ps"], check=True)
+        subprocess.run(["docker", "compose", "ps"], check=True)
         
         # Run tests from parent directory
         os.chdir("..")
@@ -68,7 +68,7 @@ def run_tests_for_directory(test_dir):
         
         # Cleanup
         os.chdir(test_dir)
-        subprocess.run(["docker-compose", "down", "-v"], check=True)
+        subprocess.run(["docker", "compose", "down", "-v"], check=True)
         os.chdir("..")
         
         return result.returncode
@@ -77,7 +77,7 @@ def run_tests_for_directory(test_dir):
         print(f"Error running tests for {test_dir.name}: {e}")
         # Try to cleanup even if tests failed
         try:
-            subprocess.run(["docker-compose", "down", "-v"])
+            subprocess.run(["docker", "compose", "down", "-v"])
         except:
             pass
         return e.returncode
