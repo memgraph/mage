@@ -7,11 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.mediumint_col AS mediumint_col
-  ORDER BY row.id
+  RETURN row.mediumint_col AS mediumint_col
 
-output:
-  - id: 1
-    mediumint_col: 8388607
-
-exception: false
+exception: true

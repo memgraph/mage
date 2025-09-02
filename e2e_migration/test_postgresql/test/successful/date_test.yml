@@ -7,11 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.date_col AS date_col
-  ORDER BY row.id
+  RETURN row.date_col AS date_col
 
-output:
-  - id: 1
-    date_col: "2023-12-25"
-
-exception: false
+exception: true

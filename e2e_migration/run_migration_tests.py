@@ -35,38 +35,11 @@ def filter_test_directories(test_dirs, filter_pattern):
     return filtered_dirs
 
 
-def find_test_files(test_dir):
-    """Find all test.yml files in the test directory."""
-    test_files = []
-    test_path = test_dir / "test"
-    
-    if not test_path.exists():
-        return test_files
-    
-    # Find all .yml files in test subdirectories
-    for subdir in test_path.iterdir():
-        if subdir.is_dir():
-            for yml_file in subdir.glob("*.yml"):
-                test_files.append(yml_file)
-    
-    return sorted(test_files)
-
-
 def run_tests_for_directory(test_dir):
     """Run tests for a specific test directory."""
     print(f"\n{'='*50}")
     print(f"Running tests for {test_dir.name}")
     print(f"{'='*50}")
-    
-    # Find all test files
-    test_files = find_test_files(test_dir)
-    if not test_files:
-        print(f"No test files found in {test_dir.name}/test/")
-        return 1
-    
-    print(f"Found {len(test_files)} test files:")
-    for test_file in test_files:
-        print(f"  - {test_file.relative_to(test_dir)}")
     
     # Use docker-compose to start services and run tests
     os.chdir(test_dir)
@@ -85,33 +58,20 @@ def run_tests_for_directory(test_dir):
         # Run tests from parent directory
         os.chdir("..")
         
-        overall_exit_code = 0
+        # Run pytest with filter for this specific test directory
+        pytest_cmd = [
+            "python3", "-m", "pytest", "test_migration.py", "-v", "--tb=short",
+            f"-k", f"{test_dir.name}"
+        ]
         
-        # Run each test file
-        for test_file in test_files:
-            test_name = test_file.stem
-            print(f"\n--- Running test: {test_name} ---")
-            
-            # Build pytest command with test directory context
-            pytest_cmd = [
-                "python3", "-m", "pytest", "test_migration.py", "-v", "--tb=short",
-                f"--test-dir={test_dir.name}",
-                f"--test-file={test_file.relative_to(test_dir)}"
-            ]
-            
-            result = subprocess.run(pytest_cmd)
-            if result.returncode != 0:
-                overall_exit_code = result.returncode
-                print(f"Test {test_name} failed (exit code: {result.returncode})")
-            else:
-                print(f"Test {test_name} passed")
+        result = subprocess.run(pytest_cmd)
         
         # Cleanup
         os.chdir(test_dir)
         subprocess.run(["docker-compose", "down", "-v"], check=True)
         os.chdir("..")
         
-        return overall_exit_code
+        return result.returncode
         
     except subprocess.CalledProcessError as e:
         print(f"Error running tests for {test_dir.name}: {e}")

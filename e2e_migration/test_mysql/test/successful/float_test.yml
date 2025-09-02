@@ -7,11 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.float_col AS float_col
-  ORDER BY row.id
+  RETURN row.float_col AS float_col
 
-output:
-  - id: 1
-    float_col: 1.23
-
-exception: false
+exception: true

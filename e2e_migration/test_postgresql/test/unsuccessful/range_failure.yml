@@ -7,9 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.range_col AS range_col
-  ORDER BY row.id
-
-output: []
+  RETURN row.range_col AS range_col
 
 exception: true

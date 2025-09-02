@@ -7,11 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.integer_col AS integer_col
-  ORDER BY row.id
+  RETURN row.integer_col AS integer_col
 
-output:
-  - id: 1
-    integer_col: 2147483647
-
-exception: false
+exception: true

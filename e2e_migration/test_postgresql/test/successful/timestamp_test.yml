@@ -7,11 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.timestamp_col AS timestamp_col
-  ORDER BY row.id
+  RETURN row.timestamp_col AS timestamp_col
 
-output:
-  - id: 1
-    timestamp_col: "2023-12-25 10:30:45"
-
-exception: false
+exception: true

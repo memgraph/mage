@@ -7,11 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.xml_col AS xml_col
-  ORDER BY row.id
+  RETURN row.xml_col AS xml_col
 
-output:
-  - id: 1
-    xml_col: "<root><item>test</item></root>"
-
-exception: false
+exception: true

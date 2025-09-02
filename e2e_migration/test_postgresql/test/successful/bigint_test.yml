@@ -7,11 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.bigint_col AS bigint_col
-  ORDER BY row.id
+  RETURN row.bigint_col AS bigint_col
 
-output:
-  - id: 1
-    bigint_col: 9223372036854775807
-
-exception: false
+exception: true

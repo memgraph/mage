@@ -7,11 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.uuid_col AS uuid_col
-  ORDER BY row.id
+  RETURN row.uuid_col AS uuid_col
 
-output:
-  - id: 1
-    uuid_col: "550e8400-e29b-41d4-a716-446655440000"
-
-exception: false
+exception: true

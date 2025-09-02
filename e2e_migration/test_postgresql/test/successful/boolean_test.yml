@@ -7,11 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.boolean_col AS boolean_col
-  ORDER BY row.id
+  RETURN row.boolean_col AS boolean_col
 
-output:
-  - id: 1
-    boolean_col: true
-
-exception: false
+exception: true

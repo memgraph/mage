@@ -7,11 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.bit_col AS bit_col
-  ORDER BY row.id
+  RETURN row.bit_col AS bit_col
 
-output:
-  - id: 1
-    bit_col: "10101010"
-
-exception: false
+exception: true

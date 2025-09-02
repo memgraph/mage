@@ -7,9 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.circle_col AS circle_col
-  ORDER BY row.id
-
-output: []
+  RETURN row.circle_col AS circle_col
 
 exception: true

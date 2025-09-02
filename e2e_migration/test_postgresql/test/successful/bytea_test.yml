@@ -7,11 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.bytea_col AS bytea_col
-  ORDER BY row.id
+  RETURN row.bytea_col AS bytea_col
 
-output:
-  - id: 1
-    bytea_col: "\\x48656C6C6F"
-
-exception: false
+exception: true

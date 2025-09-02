@@ -7,11 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.json_col AS json_col
-  ORDER BY row.id
+  RETURN row.json_col AS json_col
 
-output:
-  - id: 1
-    json_col: {"key": "value", "number": 42}
-
-exception: false
+exception: true

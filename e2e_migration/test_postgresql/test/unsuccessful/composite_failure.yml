@@ -7,9 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.composite_col AS composite_col
-  ORDER BY row.id
-
-output: []
+  RETURN row.composite_col AS composite_col
 
 exception: true

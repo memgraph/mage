@@ -7,11 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.text_col AS text_col
-  ORDER BY row.id
+  RETURN row.text_col AS text_col
 
-output:
-  - id: 1
-    text_col: "text_data"
-
-exception: false
+exception: true

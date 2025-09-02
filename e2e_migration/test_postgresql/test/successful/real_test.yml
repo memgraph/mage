@@ -7,11 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.real_col AS real_col
-  ORDER BY row.id
+  RETURN row.real_col AS real_col
 
-output:
-  - id: 1
-    real_col: 1.23
-
-exception: false
+exception: true

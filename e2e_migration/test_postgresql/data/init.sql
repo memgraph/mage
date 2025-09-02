@@ -27,7 +27,6 @@ CREATE TABLE IF NOT EXISTS dummy_table (
     interval_col INTERVAL,
     boolean_col BOOLEAN,
     point_col POINT,
-    line_col LINE,
     lseg_col LSEG,
     box_col BOX,
     path_col PATH,
@@ -44,10 +43,5 @@ CREATE TABLE IF NOT EXISTS dummy_table (
     jsonb_col JSONB,
     array_col INTEGER[],
     enum_col TEXT, -- PostgreSQL doesn't have ENUM in this context, using TEXT
-    range_col INT4RANGE,
-    
-    -- Advanced types (should fail)
-    hstore_col HSTORE,
-    tsvector_col TSVECTOR,
-    composite_col RECORD
+    range_col INT4RANGE
 );

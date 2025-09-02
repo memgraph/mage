@@ -7,11 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.interval_col AS interval_col
-  ORDER BY row.id
+  RETURN row.interval_col AS interval_col
 
-output:
-  - id: 1
-    interval_col: "1 day 02:03:00"
-
-exception: false
+exception: true

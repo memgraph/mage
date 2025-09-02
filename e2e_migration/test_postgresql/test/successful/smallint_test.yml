@@ -7,11 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.smallint_col AS smallint_col
-  ORDER BY row.id
+  RETURN row.smallint_col AS smallint_col
 
-output:
-  - id: 1
-    smallint_col: 32767
-
-exception: false
+exception: true

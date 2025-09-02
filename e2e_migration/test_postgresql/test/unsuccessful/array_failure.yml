@@ -7,9 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.array_col AS array_col
-  ORDER BY row.id
-
-output: []
+  RETURN row.array_col AS array_col
 
 exception: true

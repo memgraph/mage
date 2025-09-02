@@ -7,9 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.point_col AS point_col
-  ORDER BY row.id
-
-output: []
+  RETURN row.point_col AS point_col
 
 exception: true

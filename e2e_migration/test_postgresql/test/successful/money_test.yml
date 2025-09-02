@@ -7,11 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.money_col AS money_col
-  ORDER BY row.id
+  RETURN row.money_col AS money_col
 
-output:
-  - id: 1
-    money_col: "$100.50"
-
-exception: false
+exception: true

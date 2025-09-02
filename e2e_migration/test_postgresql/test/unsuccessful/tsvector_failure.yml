@@ -7,9 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.tsvector_col AS tsvector_col
-  ORDER BY row.id
-
-output: []
+  RETURN row.tsvector_col AS tsvector_col
 
 exception: true

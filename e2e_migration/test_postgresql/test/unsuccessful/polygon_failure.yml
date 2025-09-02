@@ -7,9 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.polygon_col AS polygon_col
-  ORDER BY row.id
-
-output: []
+  RETURN row.polygon_col AS polygon_col
 
 exception: true

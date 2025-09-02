@@ -7,9 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.geometry_col AS geometry_col
-  ORDER BY row.id
-
-output: []
+  RETURN row.geometry_col AS geometry_col
 
 exception: true

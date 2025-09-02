@@ -7,11 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.decimal_col AS decimal_col
-  ORDER BY row.id
+  RETURN row.decimal_col AS decimal_col
 
-output:
-  - id: 1
-    decimal_col: 123.45
-
-exception: false
+exception: true

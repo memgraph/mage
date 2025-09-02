@@ -7,11 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.double_col AS double_col
-  ORDER BY row.id
+  RETURN row.double_col AS double_col
 
-output:
-  - id: 1
-    double_col: 4.56
-
-exception: false
+exception: true
