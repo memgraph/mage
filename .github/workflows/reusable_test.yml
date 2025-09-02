@@ -282,7 +282,7 @@ jobs:
 
       - name: Run End-to-end migration tests
         env:
-          PYTHONPATH: "$PWD/e2e_migration"
+          PYTHONPATH: "$PWD/e2e"
         run: |
           cd e2e_migration
           python3 run_migration_tests.py
