@@ -7,6 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.composite_col AS composite_col
+  RETURN valueType(row.composite_col) AS composite_col_type, toString(row.composite_col) AS composite_col
 
 exception: true

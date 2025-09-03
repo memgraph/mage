@@ -7,6 +7,9 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.boolean_col AS boolean_col
+  RETURN valueType(row.boolean_col) AS boolean_col_type, row.boolean_col AS boolean_col
 
-exception: true
+output:
+    # This is wrong, and should be a boolean value
+  - boolean_col_type: 'INTEGER'
+    boolean_col: 1

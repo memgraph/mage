@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.smallint_col AS smallint_col
+  RETURN valueType(row.smallint_col) AS smallint_col_type, row.smallint_col AS smallint_col
 
-exception: true
+output:
+  - smallint_col_type: 'INTEGER'
+    smallint_col: 32767

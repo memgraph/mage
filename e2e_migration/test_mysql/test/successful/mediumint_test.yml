@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.mediumint_col AS mediumint_col
+  RETURN valueType(row.mediumint_col) AS mediumint_col_type, row.mediumint_col AS mediumint_col
 
-exception: true
+output:
+  - mediumint_col_type: 'INTEGER'
+    mediumint_col: 8388607

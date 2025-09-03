@@ -7,7 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.id AS id, row.point_col AS point_col
-  ORDER BY row.id
+  RETURN valueType(row.point_col) AS point_col_type, toString(row.point_col) AS point_col
 
-exception: true
+output:
+  - point_col_type: 'STRING'
+    point_col: '(1,2)'

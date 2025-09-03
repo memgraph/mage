@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.varchar_col AS varchar_col
+  RETURN valueType(row.varchar_col) AS varchar_col_type, row.varchar_col AS varchar_col
 
-exception: true
+output:
+  - varchar_col_type: 'STRING'
+    varchar_col: 'varchar_test'

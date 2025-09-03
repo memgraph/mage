@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.bigint_col AS bigint_col
+  RETURN valueType(row.bigint_col) AS bigint_col_type, row.bigint_col AS bigint_col
 
-exception: true
+output:
+  - bigint_col_type: 'INTEGER'
+    bigint_col: 9223372036854775807

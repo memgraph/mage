@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.macaddr_col AS macaddr_col
+  RETURN valueType(row.macaddr_col) AS macaddr_col_type, toString(row.macaddr_col) AS macaddr_col
 
-exception: true
+output:
+  - macaddr_col_type: 'STRING'
+    macaddr_col: '08:00:2b:01:02:03'

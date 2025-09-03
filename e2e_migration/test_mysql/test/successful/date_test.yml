@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.date_col AS date_col
+  RETURN valueType(row.date_col) AS date_col_type, toString(row.date_col) AS date_col
 
-exception: true
+output:
+  - date_col_type: 'DATE'
+    date_col: '2023-12-25'

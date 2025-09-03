@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.text_col AS text_col
+  RETURN valueType(row.text_col) AS text_col_type, row.text_col AS text_col
 
-exception: true
+output:
+  - text_col_type: 'STRING'
+    text_col: 'This is a longer text field that can contain more data'

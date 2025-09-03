@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.circle_col AS circle_col
+  RETURN valueType(row.circle_col) AS circle_col_type, toString(row.circle_col) AS circle_col
 
-exception: true
+output:
+  - circle_col_type: 'STRING'
+    circle_col: '<(1,2),3>'

@@ -7,6 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.bytea_col AS bytea_col
+  RETURN valueType(row.bytea_col) AS bytea_col_type, row.bytea_col AS bytea_col
 
 exception: true

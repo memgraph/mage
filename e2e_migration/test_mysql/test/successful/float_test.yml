@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.float_col AS float_col
+  RETURN valueType(row.float_col) AS float_col_type, row.float_col AS float_col
 
-exception: true
+output:
+  - float_col_type: 'FLOAT'
+    float_col: 3.14159

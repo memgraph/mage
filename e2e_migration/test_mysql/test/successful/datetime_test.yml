@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.datetime_col AS datetime_col
+  RETURN valueType(row.datetime_col) AS datetime_col_type, toString(row.datetime_col) AS datetime_col
 
-exception: true
+output:
+  - datetime_col_type: 'LOCAL_DATE_TIME'
+    datetime_col: '2023-12-25T14:30:45.000000'

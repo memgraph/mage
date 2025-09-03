@@ -7,6 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.geometry_col AS geometry_col
+  RETURN valueType(row.geometry_col) AS geometry_col_type, row.geometry_col AS geometry_col
 
 exception: true

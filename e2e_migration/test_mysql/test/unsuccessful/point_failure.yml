@@ -7,6 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.point_col AS point_col
+  RETURN valueType(row.point_col) AS point_col_type, row.point_col AS point_col
 
 exception: true

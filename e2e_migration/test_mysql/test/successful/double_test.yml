@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.double_col AS double_col
+  RETURN valueType(row.double_col) AS double_col_type, row.double_col AS double_col
 
-exception: true
+output:
+  - double_col_type: 'FLOAT'
+    double_col: 2.718281828

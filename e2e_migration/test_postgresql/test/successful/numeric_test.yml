@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.numeric_col AS numeric_col
+  RETURN valueType(row.numeric_col) AS numeric_col_type, toString(row.numeric_col) AS numeric_col
 
-exception: true
+output:
+  - numeric_col_type: 'FLOAT'
+    numeric_col: '678.899999999999977'

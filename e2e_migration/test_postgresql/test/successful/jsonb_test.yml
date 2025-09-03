@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.jsonb_col AS jsonb_col
+  RETURN valueType(row.jsonb_col) AS jsonb_col_type, row.jsonb_col AS jsonb_col
 
-exception: true
+output:
+  - jsonb_col_type: 'MAP'
+    jsonb_col: {'key': 'value', 'number': 42}

@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.polygon_col AS polygon_col
+  RETURN valueType(row.polygon_col) AS polygon_col_type, toString(row.polygon_col) AS polygon_col
 
-exception: true
+output:
+  - polygon_col_type: 'STRING'
+    polygon_col: '((1,2),(3,4),(5,6),(1,2))'

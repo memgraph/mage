@@ -7,6 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.line_col AS line_col
+  RETURN valueType(row.line_col) AS line_col_type, toString(row.line_col) AS line_col
 
 exception: true

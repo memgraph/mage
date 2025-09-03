@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.timestamp_col AS timestamp_col
+  RETURN valueType(row.timestamp_col) AS timestamp_col_type, toString(row.timestamp_col) AS timestamp_col
 
-exception: true
+output:
+  - timestamp_col_type: 'LOCAL_DATE_TIME'
+    timestamp_col: '2023-12-25T10:30:45.000000'

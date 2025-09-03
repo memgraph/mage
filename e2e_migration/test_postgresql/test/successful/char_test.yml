@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.char_col AS char_col
+  RETURN valueType(row.char_col) AS char_col_type, row.char_col AS char_col
 
-exception: true
+output:
+  - char_col_type: 'STRING'
+    char_col: 'char_test '

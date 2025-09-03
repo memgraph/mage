@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.bit_col AS bit_col
+  RETURN valueType(row.bit_col) AS bit_col_type, toString(row.bit_col) AS bit_col
 
-exception: true
+output:
+  - bit_col_type: 'STRING'
+    bit_col: '10101010'

@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.money_col AS money_col
+  RETURN valueType(row.money_col) AS money_col_type, toString(row.money_col) AS money_col
 
-exception: true
+output:
+  - money_col_type: 'STRING'
+    money_col: '$100.50'

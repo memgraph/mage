@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.tinyint_col AS tinyint_col
+  RETURN valueType(row.tinyint_col) AS tinyint_col_type, row.tinyint_col AS tinyint_col
 
-exception: true
+output:
+  - tinyint_col_type: 'INTEGER'
+    tinyint_col: 127

@@ -7,6 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.range_col AS range_col
+  RETURN valueType(row.range_col) AS range_col_type, toString(row.range_col) AS range_col
 
 exception: true

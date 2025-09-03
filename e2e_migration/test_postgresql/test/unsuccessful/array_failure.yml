@@ -7,6 +7,6 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.array_col AS array_col
+  RETURN valueType(row.array_col) AS array_col_type, toString(row.array_col) AS array_col
 
 exception: true

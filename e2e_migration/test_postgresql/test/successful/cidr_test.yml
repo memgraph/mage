@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.cidr_col AS cidr_col
+  RETURN valueType(row.cidr_col) AS cidr_col_type, row.cidr_col AS cidr_col
 
-exception: true
+output:
+  - cidr_col_type: 'STRING'
+    cidr_col: '192.168.1.0/24'

@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.uuid_col AS uuid_col
+  RETURN valueType(row.uuid_col) AS uuid_col_type, row.uuid_col AS uuid_col
 
-exception: true
+output:
+  - uuid_col_type: 'STRING'
+    uuid_col: '550e8400-e29b-41d4-a716-446655440000'

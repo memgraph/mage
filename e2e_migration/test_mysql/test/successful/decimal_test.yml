@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.decimal_col AS decimal_col
+  RETURN valueType(row.decimal_col) AS decimal_col_type, row.decimal_col AS decimal_col
 
-exception: true
+output:
+  - decimal_col_type: 'FLOAT'
+    decimal_col: 123.45

@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.interval_col AS interval_col
+  RETURN valueType(row.interval_col) AS interval_col_type, toString(row.interval_col) AS interval_col
 
-exception: true
+output:
+  - interval_col_type: 'DURATION'
+    interval_col: 'P0DT23H39M50.065408S'

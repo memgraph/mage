@@ -7,6 +7,8 @@ query: |
       database: 'test_db'
   })
   YIELD row
-  RETURN row.real_col AS real_col
+  RETURN valueType(row.real_col) AS real_col_type, row.real_col AS real_col
 
-exception: true
+output:
+  - real_col_type: 'FLOAT'
+    real_col: 1.23
