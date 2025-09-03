@@ -1,5 +1,5 @@
 query: |
-  CALL migrate.mysql('dummy_table', {
+  CALL migrate.mysql('SELECT boolean_col FROM dummy_table', {
       host: 'localhost',
       port: 3306,
       user: 'memgraph',
