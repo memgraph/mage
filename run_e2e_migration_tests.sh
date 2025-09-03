@@ -53,12 +53,12 @@ wait_for_service() {
 run_mysql_tests() {
     echo "Starting MySQL..."
     
-    # Start MySQL using docker-compose
+    # Start MySQL using docker compose
     cd e2e_migration/test_mysql
-    docker-compose up -d
+    docker compose up -d
     
     if ! wait_for_service "localhost" 3306 "MySQL"; then
-        docker-compose down -v 2>/dev/null || true
+        docker compose down -v 2>/dev/null || true
         cd ../..
         return 1
     fi
@@ -69,19 +69,19 @@ run_mysql_tests() {
     
     echo "Stopping MySQL..."
     cd e2e_migration/test_mysql
-    docker-compose down -v
+    docker compose down -v
     cd ../..
 }
 
 run_postgresql_tests() {
     echo "Starting PostgreSQL..."
     
-    # Start PostgreSQL using docker-compose
+    # Start PostgreSQL using docker compose
     cd e2e_migration/test_postgresql
-    docker-compose up -d
+    docker compose up -d
     
     if ! wait_for_service "localhost" 5432 "PostgreSQL"; then
-        docker-compose down -v 2>/dev/null || true
+        docker compose down -v 2>/dev/null || true
         cd ../..
         return 1
     fi
@@ -92,7 +92,7 @@ run_postgresql_tests() {
     
     echo "Stopping PostgreSQL..."
     cd e2e_migration/test_postgresql
-    docker-compose down -v
+    docker compose down -v
     cd ../..
 }
 
