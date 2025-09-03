@@ -76,8 +76,9 @@ def db():
 @pytest.mark.parametrize("test_dir,test_file", migration_tests)
 def test_migration(test_dir: str, test_file: str, db: Memgraph):    
     # Load test configuration
-    test_config_path = f"{test_dir}/{test_file}"
-    test_config = load_test_config(test_config_path)
+    script_dir = Path(__file__).parent
+    test_config_path = script_dir / test_dir / test_file
+    test_config = load_test_config(str(test_config_path))
     
     # Check if this test expects an exception
     expect_exception = test_config.get("exception", False)
