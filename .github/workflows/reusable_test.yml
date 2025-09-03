@@ -284,8 +284,7 @@ jobs:
         env:
           PYTHONPATH: "$PWD/e2e"
         run: |
-          cd e2e_migration
-          python3 run_migration_tests.py
+          ./run_e2e_migration_tests.sh --mage-container ${{ env.MAGE_CONTAINER }}
       
       - name: Cleanup
         if: always()

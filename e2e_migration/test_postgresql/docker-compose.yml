@@ -6,6 +6,8 @@ services:
     container_name: e2e_migration_postgresql
     ports:
       - "5432:5432"
+    networks:
+      - memgraph_test_network
     environment:
       POSTGRES_DB: test_db
       POSTGRES_USER: memgraph
@@ -18,3 +20,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+
+networks:
+  memgraph_test_network:
+    external: true

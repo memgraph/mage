@@ -6,6 +6,8 @@ services:
     container_name: e2e_migration_mysql
     ports:
       - "3306:3306"
+    networks:
+      - memgraph_test_network
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: test_db
@@ -19,3 +21,7 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+
+networks:
+  memgraph_test_network:
+    external: true

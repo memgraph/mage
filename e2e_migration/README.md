@@ -19,12 +19,12 @@ End-to-end tests for migrating data from MySQL and PostgreSQL to Memgraph using 
 
 **All tests (recommended):**
 ```bash
-./test_e2e_migration.py
+./test_e2e_migration.sh
 ```
 
 **Run specific tests, i.e. MySQL tests only:**
 ```bash
-./test_e2e_migration.py -k mysql
+./test_e2e_migration.sh -k mysql
 ```
 
 **Using pytest directly:**
@@ -34,5 +34,5 @@ python3 -m pytest e2e_migration/ -v
 
 **Show help:**
 ```bash
-./test_e2e_migration.py --help
+./test_e2e_migration.sh --help
 ```
