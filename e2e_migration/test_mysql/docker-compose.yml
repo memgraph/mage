@@ -2,8 +2,8 @@ version: '3.8'
 
 services:
   mysql:
-    image: mysql:8.0
-    container_name: e2e_migration_mysql
+    image: ${MYSQL_IMAGE}
+    container_name: ${MYSQL_CONTAINER}
     ports:
       - "3306:3306"
     networks:

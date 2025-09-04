@@ -1,7 +1,11 @@
 #!/bin/bash -e
 
-# Default MAGE container name
-MAGE_CONTAINER=${MAGE_CONTAINER:-"mage"}
+# Container names and images (set via command line arguments)
+MAGE_CONTAINER=""
+MYSQL_CONTAINER=""
+POSTGRESQL_CONTAINER=""
+MYSQL_IMAGE=""
+POSTGRESQL_IMAGE=""
 
 # Parse command line arguments
 TEST_FILTER=""
@@ -15,10 +19,30 @@ while [[ $# -gt 0 ]]; do
             MAGE_CONTAINER="$2"
             shift 2
             ;;
+        --mysql-container)
+            MYSQL_CONTAINER="$2"
+            shift 2
+            ;;
+        --postgresql-container)
+            POSTGRESQL_CONTAINER="$2"
+            shift 2
+            ;;
+        --mysql-image)
+            MYSQL_IMAGE="$2"
+            shift 2
+            ;;
+        --postgresql-image)
+            POSTGRESQL_IMAGE="$2"
+            shift 2
+            ;;
         --help)
-            echo "Usage: $0 [-k FILTER] [--mage-container CONTAINER]"
-            echo "  -k FILTER              Filter tests by database type (e.g., 'mysql', 'postgresql')"
-            echo "  --mage-container NAME  MAGE container name (default: mage)"
+            echo "Usage: $0 [-k FILTER] --mage-container CONTAINER --mysql-container CONTAINER --postgresql-container CONTAINER [--mysql-image IMAGE] [--postgresql-image IMAGE]"
+            echo "  -k FILTER                    Filter tests by database type (e.g., 'mysql', 'postgresql')"
+            echo "  --mage-container NAME        MAGE container name (required)"
+            echo "  --mysql-container NAME       MySQL container name (required if mysql tests are run)"
+            echo "  --mysql-image IMAGE          MySQL image (required if mysql tests are run)"
+            echo "  --postgresql-container NAME  PostgreSQL container name (required if postgresql tests are run)"
+            echo "  --postgresql-image IMAGE     PostgreSQL image (required if postgresql tests are run)"
             exit 0
             ;;
         *)
@@ -28,6 +52,12 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Validate required arguments
+if [ -z "$MAGE_CONTAINER" ] || [ -z "$MYSQL_CONTAINER" ] || [ -z "$POSTGRESQL_CONTAINER" ]; then
+    echo "Error: All container names are required"
+    echo "Usage: $0 --mage-container CONTAINER --mysql-container CONTAINER --postgresql-container CONTAINER"
+    exit 1
+fi
 
 wait_for_service() {
     local host=$1
@@ -53,9 +83,9 @@ wait_for_service() {
 run_mysql_tests() {
     echo "Starting MySQL..."
     
-    # Start MySQL using docker compose
+    # Start MySQL using docker compose with inline environment variables
     cd e2e_migration/test_mysql
-    docker compose up -d
+    MYSQL_CONTAINER="$MYSQL_CONTAINER" MYSQL_IMAGE="$MYSQL_IMAGE" docker compose up -d
     
     if ! wait_for_service "localhost" 3306 "MySQL"; then
         docker compose down -v 2>/dev/null || true
@@ -76,9 +106,9 @@ run_mysql_tests() {
 run_postgresql_tests() {
     echo "Starting PostgreSQL..."
     
-    # Start PostgreSQL using docker compose
+    # Start PostgreSQL using docker compose with inline environment variables
     cd e2e_migration/test_postgresql
-    docker compose up -d
+    POSTGRESQL_CONTAINER="$POSTGRESQL_CONTAINER" POSTGRESQL_IMAGE="$POSTGRESQL_IMAGE" docker compose up -d
     
     if ! wait_for_service "localhost" 5432 "PostgreSQL"; then
         docker compose down -v 2>/dev/null || true

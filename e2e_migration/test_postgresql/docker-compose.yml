@@ -2,8 +2,8 @@ version: '3.8'
 
 services:
   postgresql:
-    image: postgres:15
-    container_name: e2e_migration_postgresql
+    image: ${POSTGRESQL_IMAGE}
+    container_name: ${POSTGRESQL_CONTAINER}
     ports:
       - "5432:5432"
     networks:

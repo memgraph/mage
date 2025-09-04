@@ -38,7 +38,9 @@ env:
   NEO4J_CONTAINER: "neo4j_test"
   MEMGRAPH_NETWORK: "memgraph_test_network"
   MYSQL_CONTAINER: "e2e_migration_mysql"
+  MYSQL_IMAGE: "mysql:8.0"
   POSTGRESQL_CONTAINER: "e2e_migration_postgresql"
+  POSTGRESQL_IMAGE: "postgres:15"
   OS: "ubuntu-24.04"
   s3_region: "eu-west-1"
   MEMGRAPH_ENTERPRISE_LICENSE: ${{ secrets.MEMGRAPH_ENTERPRISE_LICENSE }}
@@ -286,7 +288,7 @@ jobs:
         env:
           PYTHONPATH: "$PWD/e2e"
         run: |
-          ./run_e2e_migration_tests.sh --mage-container ${{ env.MAGE_CONTAINER }}
+          ./run_e2e_migration_tests.sh --mage-container ${{ env.MAGE_CONTAINER }} --mysql-container ${{ env.MYSQL_CONTAINER }} --postgresql-container ${{ env.POSTGRESQL_CONTAINER }} --mysql-image ${{ env.MYSQL_IMAGE }} --postgresql-image ${{ env.POSTGRESQL_IMAGE }}
       
       - name: Cleanup
         if: always()
@@ -296,9 +298,9 @@ jobs:
           docker rmi memgraph-mage:prod || true
           docker stop ${{ env.MYSQL_CONTAINER }} || true
           docker rm ${{ env.MYSQL_CONTAINER }} || true
-          docker rmi mysql:8.0 || true
+          docker rmi ${{ env.MYSQL_IMAGE }} || true
           docker stop ${{ env.POSTGRESQL_CONTAINER }} || true
           docker rm ${{ env.POSTGRESQL_CONTAINER }} || true
-          docker rmi postgres:15 || true
+          docker rmi ${{ env.POSTGRESQL_IMAGE }} || true
           docker network rm ${{ env.MEMGRAPH_NETWORK }} || true
           docker stop ${{ env.NEO4J_CONTAINER }} || true
