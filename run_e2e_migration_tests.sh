@@ -106,7 +106,7 @@ run_mysql_tests() {
     MYSQL_CONTAINER="$MYSQL_CONTAINER" MYSQL_IMAGE="$MYSQL_IMAGE" docker compose up -d
     
     if ! wait_for_service "localhost" 3306 "MySQL"; then
-        docker compose down -v 2>/dev/null || true
+        MYSQL_CONTAINER="$MYSQL_CONTAINER" MYSQL_IMAGE="$MYSQL_IMAGE" docker compose down -v 2>/dev/null || true
         cd ../..
         return 1
     fi
@@ -117,7 +117,7 @@ run_mysql_tests() {
     
     echo "Stopping MySQL..."
     cd e2e_migration/test_mysql
-    docker compose down -v
+    MYSQL_CONTAINER="$MYSQL_CONTAINER" MYSQL_IMAGE="$MYSQL_IMAGE" docker compose down -v
     cd ../..
 }
 
@@ -129,7 +129,7 @@ run_postgresql_tests() {
     POSTGRESQL_CONTAINER="$POSTGRESQL_CONTAINER" POSTGRESQL_IMAGE="$POSTGRESQL_IMAGE" docker compose up -d
     
     if ! wait_for_service "localhost" 5432 "PostgreSQL"; then
-        docker compose down -v 2>/dev/null || true
+        POSTGRESQL_CONTAINER="$POSTGRESQL_CONTAINER" POSTGRESQL_IMAGE="$POSTGRESQL_IMAGE" docker compose down -v 2>/dev/null || true
         cd ../..
         return 1
     fi
@@ -140,7 +140,7 @@ run_postgresql_tests() {
     
     echo "Stopping PostgreSQL..."
     cd e2e_migration/test_postgresql
-    docker compose down -v
+    POSTGRESQL_CONTAINER="$POSTGRESQL_CONTAINER" POSTGRESQL_IMAGE="$POSTGRESQL_IMAGE" docker compose down -v
     cd ../..
 }
 
