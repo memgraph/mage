@@ -52,18 +52,36 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Validate required arguments
-if [ -z "$MAGE_CONTAINER" ] || [ -z "$MYSQL_CONTAINER" ] || [ -z "$POSTGRESQL_CONTAINER" ]; then
-    echo "Error: All container names are required"
-    echo "Usage: $0 --mage-container CONTAINER --mysql-container CONTAINER --postgresql-container CONTAINER"
+# Validate required arguments based on test filter
+if [ -z "$MAGE_CONTAINER" ]; then
+    echo "Error: MAGE container name is required"
+    echo "Usage: $0 --mage-container CONTAINER [other options]"
     exit 1
+fi
+
+# Check if MySQL tests will be run
+if [ -z "$TEST_FILTER" ] || [ "$TEST_FILTER" = "mysql" ]; then
+    if [ -z "$MYSQL_CONTAINER" ] || [ -z "$MYSQL_IMAGE" ]; then
+        echo "Error: MySQL container name and image are required for MySQL tests"
+        echo "Usage: $0 --mage-container CONTAINER --mysql-container CONTAINER --mysql-image IMAGE [other options]"
+        exit 1
+    fi
+fi
+
+# Check if PostgreSQL tests will be run
+if [ -z "$TEST_FILTER" ] || [ "$TEST_FILTER" = "postgresql" ]; then
+    if [ -z "$POSTGRESQL_CONTAINER" ] || [ -z "$POSTGRESQL_IMAGE" ]; then
+        echo "Error: PostgreSQL container name and image are required for PostgreSQL tests"
+        echo "Usage: $0 --mage-container CONTAINER --postgresql-container CONTAINER --postgresql-image IMAGE [other options]"
+        exit 1
+    fi
 fi
 
 wait_for_service() {
     local host=$1
     local port=$2
     local service_name=$3
-    local timeout=${4:-30}
+    local timeout=30
     
     echo "Waiting for $service_name to start..."
     counter=0
