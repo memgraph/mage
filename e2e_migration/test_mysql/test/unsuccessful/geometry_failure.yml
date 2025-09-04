@@ -1,0 +1,12 @@
+query: |
+  CALL migrate.mysql('SELECT geometry_col FROM dummy_table', {
+      host: 'localhost',
+      port: 3306,
+      user: 'memgraph',
+      password: 'memgraph_password',
+      database: 'test_db'
+  })
+  YIELD row
+  RETURN valueType(row.geometry_col) AS geometry_col_type, row.geometry_col AS geometry_col
+
+exception: true

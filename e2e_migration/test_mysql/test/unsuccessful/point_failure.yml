@@ -1,0 +1,12 @@
+query: |
+  CALL migrate.mysql('SELECT point_col FROM dummy_table', {
+      host: 'localhost',
+      port: 3306,
+      user: 'memgraph',
+      password: 'memgraph_password',
+      database: 'test_db'
+  })
+  YIELD row
+  RETURN valueType(row.point_col) AS point_col_type, row.point_col AS point_col
+
+exception: true
