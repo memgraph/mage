@@ -104,7 +104,7 @@ run_mysql_tests() {
     # Start MySQL using docker compose with inline environment variables
     cd e2e_migration/test_mysql
     MYSQL_CONTAINER="$MYSQL_CONTAINER" MYSQL_IMAGE="$MYSQL_IMAGE" docker compose up -d
-    
+    sleep 30
     if ! wait_for_service "localhost" 3306 "MySQL"; then
         MYSQL_CONTAINER="$MYSQL_CONTAINER" MYSQL_IMAGE="$MYSQL_IMAGE" docker compose down -v 2>/dev/null || true
         cd ../..
@@ -127,7 +127,7 @@ run_postgresql_tests() {
     # Start PostgreSQL using docker compose with inline environment variables
     cd e2e_migration/test_postgresql
     POSTGRESQL_CONTAINER="$POSTGRESQL_CONTAINER" POSTGRESQL_IMAGE="$POSTGRESQL_IMAGE" docker compose up -d
-    
+    sleep 30
     if ! wait_for_service "localhost" 5432 "PostgreSQL"; then
         POSTGRESQL_CONTAINER="$POSTGRESQL_CONTAINER" POSTGRESQL_IMAGE="$POSTGRESQL_IMAGE" docker compose down -v 2>/dev/null || true
         cd ../..
