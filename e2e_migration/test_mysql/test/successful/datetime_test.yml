@@ -10,5 +10,5 @@ query: |
   RETURN valueType(row.datetime_col) AS datetime_col_type, toString(row.datetime_col) AS datetime_col
 
 output:
-  - datetime_col_type: 'LOCAL_DATE_TIME'
+  - datetime_col_type: 'STRING'
     datetime_col: '2023-12-25T14:30:45.000000'

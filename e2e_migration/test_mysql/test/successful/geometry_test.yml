@@ -9,4 +9,6 @@ query: |
   YIELD row
   RETURN valueType(row.geometry_col) AS geometry_col_type, row.geometry_col AS geometry_col
 
-exception: true
+- output:
+  - geometry_col_type: 'STRING'
+    geometry_col: 'AAAAAAEBAAAAAAAAAAAA8D8AAAAAAADwPw=='
