@@ -1,6 +1,6 @@
 query: |
   CALL migrate.postgresql('SELECT interval_col FROM dummy_table', {
-      host: 'localhost',
+      host: 'e2e_migration_postgresql',
       port: 5432,
       user: 'memgraph',
       password: 'memgraph_password',
