@@ -79,9 +79,20 @@ USER memgraph
 # First install requirements
 RUN python3 -m pip install --no-cache-dir -r /mage/python/requirements.txt --break-system-packages && \
     python3 -m pip install --no-cache-dir -r /mage/python/tests/requirements.txt --break-system-packages && \
-    python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages && \
-    python3 -m pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cu124 --break-system-packages && \
+    python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages
+
+# RUN python3 -m pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cu124 --break-system-packages && \
+#     python3 -m pip install --no-cache-dir "transformers>=4.43.0" "sentence-transformers>=3,<5" "filelock" "huggingface_hub>=0.23.0" --break-system-packages && \
+#     rm -fr /home/memgraph/.cache/pip
+
+# RUN python3 -m pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cu129 --break-system-packages && \
+#     python3 -m pip install --no-cache-dir "transformers" "sentence-transformers" "filelock" "huggingface_hub" --break-system-packages && \
+#     rm -fr /home/memgraph/.cache/pip
+
+RUN python3 -m pip install --no-cache-dir torch==2.4.1 torchvision==0.19.1 --index-url https://download.pytorch.org/whl/cu124 --break-system-packages && \
+    python3 -m pip install --no-cache-dir "transformers" "sentence-transformers" "filelock" "huggingface_hub" --break-system-packages && \
     rm -fr /home/memgraph/.cache/pip
+
 
 # Build query modules
 SHELL ["/bin/bash", "-c"]
