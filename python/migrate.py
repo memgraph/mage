@@ -797,8 +797,8 @@ def cleanup_migrate_memgraph():
 
     thread_id = threading.get_native_id()
     if Constants.CONNECTION in memgraph_dict[thread_id]:
-        memgraph_dict[threading.get_native_id][Constants.CONNECTION].close()
-    memgraph_dict.pop(threading.get_native_id, None)
+        memgraph_dict[thread_id][Constants.CONNECTION].close()
+    memgraph_dict.pop(thread_id, None)
 
 
 mgp.add_batch_read_proc(memgraph, init_migrate_memgraph, cleanup_migrate_memgraph)
