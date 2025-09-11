@@ -89,6 +89,7 @@ RUN python3 -m pip install --no-cache-dir -r /mage/python/requirements.txt --bre
 #     python3 -m pip install --no-cache-dir "transformers" "sentence-transformers" "filelock" "huggingface_hub" --break-system-packages && \
 #     rm -fr /home/memgraph/.cache/pip
 
+# TODO: embedding works witho those versions, but pytorch 2.4 has vulnerabilities...
 RUN python3 -m pip install --no-cache-dir torch==2.4.1 torchvision==0.19.1 --index-url https://download.pytorch.org/whl/cu124 --break-system-packages && \
     python3 -m pip install --no-cache-dir "transformers" "sentence-transformers" "filelock" "huggingface_hub" --break-system-packages && \
     rm -fr /home/memgraph/.cache/pip
