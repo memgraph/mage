@@ -9,6 +9,6 @@ query: |
   YIELD row
   RETURN valueType(row.point_col) AS point_col_type, row.point_col AS point_col
 
-- output:
+output:
   - point_col_type: 'STRING'
     point_col: ''
