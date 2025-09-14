@@ -3,11 +3,8 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/../utils.bash"
 
 test_streams() {
-  __host="$1"
-  __port="$2"
-  echo "FEATURE: ABC"
-
-  echo "SHOW STREAMS;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  echo "FEATURE: Graph streams"
+  run_next "SHOW STREAMS;"
 }
 
 if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then

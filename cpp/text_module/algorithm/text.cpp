@@ -1,11 +1,15 @@
 #include "text.hpp"
 
-#include <algorithm>
-#include <regex>
-#include <vector>
-
 #include <fmt/args.h>
 #include <fmt/format.h>
+#include <algorithm>
+#include <regex>
+#include <unordered_map>
+#include <vector>
+#include <utf8.h>
+
+static std::unordered_map<std::string, std::regex> global_regex_cache;
+static std::mutex global_regex_cache_mutex;
 
 void Text::Join(mgp_list *args, mgp_graph * /*memgraph_graph*/, mgp_result *result, mgp_memory *memory) {
   mgp::MemoryDispatcherGuard guard{memory};
@@ -146,8 +150,23 @@ void Text::RegReplace(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_resul
       return;
     }
 
-    std::regex pattern(regex);
-    std::string result_str = std::regex_replace(text, pattern, replacement);
+    // Look up or insert regex into global cache with thread safety
+    const std::regex *pattern_ptr = nullptr;
+    {
+      std::lock_guard<std::mutex> lock(global_regex_cache_mutex);
+
+      if (global_regex_cache.size() > kMaxRegexCacheSize) {
+        global_regex_cache.clear();  // Avoid unbounded growth
+      }
+
+      auto it = global_regex_cache.find(regex);
+      if (it == global_regex_cache.end()) {
+        it = global_regex_cache.emplace(regex, std::regex(regex)).first;
+      }
+      pattern_ptr = &it->second;
+    }
+
+    std::string result_str = std::regex_replace(text, *pattern_ptr, replacement);
 
     result_obj.SetValue(std::move(result_str));
   } catch (const std::exception &e) {
@@ -156,25 +175,29 @@ void Text::RegReplace(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_resul
   }
 }
 
+
 void Text::Distance(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_result *result, mgp_memory *memory) {
   mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   mgp::Result result_obj(result);
 
   try {
-    const auto text1 = std::string(arguments[0].ValueString());
-    const auto text2 = std::string(arguments[1].ValueString());
+    // Normalize UTF-8 input and convert to sequences of Unicode code points
+    std::string text1_raw = std::string(arguments[0].ValueString());
+    std::string text2_raw = std::string(arguments[1].ValueString());
 
-    const size_t m = text1.length();
-    const size_t n = text2.length();
+    std::vector<char32_t> text1;
+    std::vector<char32_t> text2;
+
+    utf8::utf8to32(text1_raw.begin(), text1_raw.end(), std::back_inserter(text1));
+    utf8::utf8to32(text2_raw.begin(), text2_raw.end(), std::back_inserter(text2));
+
+    const size_t m = text1.size();
+    const size_t n = text2.size();
     std::vector<std::vector<int>> dp(m + 1, std::vector<int>(n + 1));
 
-    for (size_t i = 0; i <= m; i++) {
-      dp[i][0] = i;
-    }
-    for (size_t j = 0; j <= n; j++) {
-      dp[0][j] = j;
-    }
+    for (size_t i = 0; i <= m; i++) dp[i][0] = i;
+    for (size_t j = 0; j <= n; j++) dp[0][j] = j;
 
     for (size_t i = 1; i <= m; i++) {
       for (size_t j = 1; j <= n; j++) {
@@ -189,6 +212,47 @@ void Text::Distance(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_result 
     result_obj.SetValue(static_cast<int64_t>(dp[m][n]));
   } catch (const std::exception &e) {
     result_obj.SetErrorMessage(e.what());
-    return;
+  }
+}
+
+void Text::IndexOf(mgp_list *args, mgp_func_context * /*ctx*/, mgp_func_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  mgp::Result result_obj(result);
+
+  try {
+    // Handle nulls
+    if (arguments[0].IsNull() || arguments[1].IsNull()) {
+      result_obj.SetValue();
+      return;
+    }
+    const std::string_view text = arguments[0].ValueString();
+    const std::string_view lookup = arguments[1].ValueString();
+    int from = 0;
+    int to = -1;
+    if (arguments.Size() > 2 && !arguments[2].IsNull()) {
+      from = static_cast<int>(arguments[2].ValueInt());
+    }
+    if (arguments.Size() > 3 && !arguments[3].IsNull()) {
+      to = static_cast<int>(arguments[3].ValueInt());
+    }
+    // Adjust 'to' if -1 or out of bounds
+    if (to == -1 || to > static_cast<int>(text.size())) {
+      to = static_cast<int>(text.size());
+    }
+    // Bounds check
+    if (from < 0) from = 0;
+    if (from > to) from = to;
+    // Substring search
+    int result_index = -1;
+    if (from < to && !lookup.empty()) {
+      auto pos = text.find(lookup, from);
+      if (pos != std::string::npos && static_cast<int>(pos) < to) {
+        result_index = static_cast<int>(pos);
+      }
+    }
+    result_obj.SetValue(static_cast<int64_t>(result_index));
+  } catch (const std::exception &e) {
+    result_obj.SetErrorMessage(e.what());
   }
 }

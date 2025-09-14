@@ -142,7 +142,12 @@ jobs:
         run: |
           # cd smoke-release-testing
           # ./init_workflow.bash
-          docker exec -i $CONTAINER_NAME \
+          docker exec -i  \
+            -e MEMGRAPH_ENTERPRISE_LICENSE="${{ secrets.MEMGRAPH_ENTERPRISE_LICENSE }}" \
+            -e MEMGRAPH_ORGANIZATION_NAME="${{ secrets.MEMGRAPH_ORGANIZATION_NAME }}" \
+            -e MEMGRAPH_LAST_DOCKERHUB_IMAGE="$MEMGRAPH_LAST_DOCKERHUB_IMAGE" \
+            -e MEMGRAPH_NEXT_DOCKERHUB_IMAGE="$MEMGRAPH_NEXT_DOCKERHUB_IMAGE" \
+            $CONTAINER_NAME \
             bash -c "cd /mage/smoke-release-testing && ./init_workflow.bash"
 
       - name: Install Python Dependencies
@@ -160,8 +165,15 @@ jobs:
             -e MEMGRAPH_LAST_DOCKERHUB_IMAGE="$MEMGRAPH_LAST_DOCKERHUB_IMAGE" \
             -e MEMGRAPH_NEXT_DOCKERHUB_IMAGE="$MEMGRAPH_NEXT_DOCKERHUB_IMAGE" \
             "$CONTAINER_NAME" \
-            bash -c "cd /mage/smoke-release-testing && ./test.bash"
-      
+            bash -c "cd /mage/smoke-release-testing && ./test_single_mage.bash"
+
+      - name: Clean up inner Docker state
+        if: always()
+        run: |
+          # remove all stopped containers, unused images, networks and volumes
+          echo "🧹 Pruning everything inside the Docker-in-Docker container…"
+          docker exec -i $CONTAINER_NAME bash -c 'docker system prune -a --volumes -f'
+
       - name: Stop Container
         if: always()
         run: |

@@ -88,5 +88,5 @@ jobs:
       image_type: ${{ matrix.image_type }}
       run_trivy: true
       run_grype: true
-      run_cbt: true
+      run_cbt: false  # TODO: enable cve-bin-tool database update job if re-enabled by default
     secrets: inherit

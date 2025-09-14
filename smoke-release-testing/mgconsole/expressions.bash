@@ -3,11 +3,8 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/../utils.bash"
 
 test_or_expression_for_labels() {
-  __host="$1"
-  __port="$2"
   echo "FEATURE: OR expression for labels"
-
-  echo "EXPLAIN MATCH (n:Label1|Label2) RETURN n;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  run_next "EXPLAIN MATCH (n:Label1|Label2) RETURN n;"
 }
 
 if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then

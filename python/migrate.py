@@ -1,22 +1,24 @@
 import base64
-from decimal import Decimal
-import boto3
 import csv
-import duckdb as duckDB
+import datetime
 import io
-from gqlalchemy import Memgraph, Neo4j
 import json
+import os
+import re
+import threading
+from decimal import Decimal
+from typing import Any, Dict, List
+
+import boto3
+import duckdb as duckDB
 import mgp
 import mysql.connector as mysql_connector
 import oracledb
-import os
-import pyodbc
 import psycopg2
 import pyarrow.flight as flight
-import re
+import pyodbc
 import requests
-import threading
-from typing import Any, Dict, List
+from gqlalchemy import Memgraph, Neo4j
 
 
 class Constants:
@@ -32,7 +34,7 @@ class Constants:
     USERNAME = "username"
 
 
-##### MYSQL
+# MYSQL
 
 mysql_dict = {}
 
@@ -79,14 +81,19 @@ def mysql(
     params: mgp.Nullable[mgp.Any] = None,
 ) -> mgp.Record(row=mgp.Map):
     """
-    With migrate.mysql you can access MySQL and execute queries. The result table is converted into a stream,
-    and returned rows can be used to create or create graph structures. Config must be at least empty map.
-    If config_path is passed, every key,value pair from JSON file will overwrite any values in config file.
+    With migrate.mysql you can access MySQL and execute queries.
+    The result table is converted into a stream, and returned rows can be
+    used to create graph structures. Config must be at least empty map.
+    If config_path is passed, every key,value pair from JSON file will
+    overwrite any values in config file.
 
     :param table_or_sql: Table name or an SQL query
-    :param config: Connection configuration parameters (as in mysql.connector.connect),
-    :param config_path: Path to the JSON file containing configuration parameters (as in mysql.connector.connect)
-    :param params: Optionally, queries may be parameterized. In that case, `params` provides parameter values
+    :param config: Connection configuration parameters
+                   (as in mysql.connector.connect)
+    :param config_path: Path to the JSON file containing configuration
+                        parameters (as in mysql.connector.connect)
+    :param params: Optionally, queries may be parameterized. In that case,
+                   `params` provides parameter values
     :return: The result table as a stream of rows
     """
     global mysql_dict
@@ -97,7 +104,7 @@ def mysql(
 
     rows = cursor.fetchmany(Constants.BATCH_SIZE)
 
-    return [mgp.Record(row=_name_row_cells(row, column_names)) for row in rows]
+    return [mgp.Record(row=_name_row_cells_mysql(row, column_names)) for row in rows]
 
 
 def cleanup_migrate_mysql():
@@ -113,7 +120,7 @@ def cleanup_migrate_mysql():
 
 mgp.add_batch_read_proc(mysql, init_migrate_mysql, cleanup_migrate_mysql)
 
-### SQL SERVER
+# SQL SERVER
 
 sql_server_dict = {}
 
@@ -163,14 +170,18 @@ def sql_server(
     params: mgp.Nullable[mgp.Any] = None,
 ) -> mgp.Record(row=mgp.Map):
     """
-    With migrate.sql_server you can access SQL Server and execute queries. The result table is converted into a stream,
-    and returned rows can be used to create or create graph structures. Config must be at least empty map.
-    If config_path is passed, every key,value pair from JSON file will overwrite any values in config file.
+    With migrate.sql_server you can access SQL Server and execute queries.
+    The result table is converted into a stream, and returned rows can be
+    used to create graph structures. Config must be at least empty map.
+    If config_path is passed, every key,value pair from JSON file will
+    overwrite any values in config file.
 
     :param table_or_sql: Table name or an SQL query
-    :param config: Connection configuration parameters (as in pyodbc.connect),
-    :param config_path: Path to the JSON file containing configuration parameters (as in pyodbc.connect)
-    :param params: Optionally, queries may be parameterized. In that case, `params` provides parameter values
+    :param config: Connection configuration parameters (as in pyodbc.connect)
+    :param config_path: Path to the JSON file containing configuration
+                        parameters (as in pyodbc.connect)
+    :param params: Optionally, queries may be parameterized. In that case,
+                   `params` provides parameter values
     :return: The result table as a stream of rows
     """
     global sql_server_dict
@@ -196,7 +207,7 @@ def cleanup_migrate_sql_server():
 
 mgp.add_batch_read_proc(sql_server, init_migrate_sql_server, cleanup_migrate_sql_server)
 
-### Oracle DB
+# Oracle DB
 
 oracle_db_dict = {}
 
@@ -256,14 +267,18 @@ def oracle_db(
     params: mgp.Nullable[mgp.Any] = None,
 ) -> mgp.Record(row=mgp.Map):
     """
-    With migrate.oracle_db you can access Oracle DB and execute queries. The result table is converted into a stream,
-    and returned rows can be used to create or create graph structures. Config must be at least empty map.
-    If config_path is passed, every key,value pair from JSON file will overwrite any values in config file.
+    With migrate.oracle_db you can access Oracle DB and execute queries.
+    The result table is converted into a stream, and returned rows can be
+    used to create graph structures. Config must be at least empty map.
+    If config_path is passed, every key,value pair from JSON file will
+    overwrite any values in config file.
 
     :param table_or_sql: Table name or an SQL query
-    :param config: Connection configuration parameters (as in oracledb.connect),
-    :param config_path: Path to the JSON file containing configuration parameters (as in oracledb.connect)
-    :param params: Optionally, queries may be parameterized. In that case, `params` provides parameter values
+    :param config: Connection configuration parameters (as in oracledb.connect)
+    :param config_path: Path to the JSON file containing configuration
+                        parameters (as in oracledb.connect)
+    :param params: Optionally, queries may be parameterized. In that case,
+                   `params` provides parameter values
     :return: The result table as a stream of rows
     """
 
@@ -340,14 +355,18 @@ def postgresql(
     params: mgp.Nullable[mgp.Any] = None,
 ) -> mgp.Record(row=mgp.Map):
     """
-    With migrate.postgresql you can access PostgreSQL and execute queries. The result table is converted into a stream,
-    and returned rows can be used to create or create graph structures. Config must be at least empty map.
-    If config_path is passed, every key,value pair from JSON file will overwrite any values in config file.
+    With migrate.postgresql you can access PostgreSQL and execute queries.
+    The result table is converted into a stream, and returned rows can be
+    used to create graph structures. Config must be at least empty map.
+    If config_path is passed, every key,value pair from JSON file will
+    overwrite any values in config file.
 
     :param table_or_sql: Table name or an SQL query
-    :param config: Connection configuration parameters (as in psycopg2.connect),
-    :param config_path: Path to the JSON file containing configuration parameters (as in psycopg2.connect)
-    :param params: Optionally, queries may be parameterized. In that case, `params` provides parameter values
+    :param config: Connection configuration parameters (as in psycopg2.connect)
+    :param config_path: Path to the JSON file containing configuration
+                        parameters (as in psycopg2.connect)
+    :param params: Optionally, queries may be parameterized. In that case,
+                   `params` provides parameter values
     :return: The result table as a stream of rows
     """
     global postgres_dict
@@ -375,7 +394,7 @@ def cleanup_migrate_postgresql():
 mgp.add_batch_read_proc(postgresql, init_migrate_postgresql, cleanup_migrate_postgresql)
 
 
-##### S3
+# S3
 s3_dict = {}
 
 
@@ -387,8 +406,10 @@ def init_migrate_s3(
     """
     Initialize an S3 connection and prepare to stream a CSV file.
 
-    :param file_path: S3 file path in the format 's3://bucket-name/path/to/file.csv'
-    :param config: Configuration map containing AWS credentials (access_key, secret_key, region, etc.)
+    :param file_path: S3 file path in the format
+                      's3://bucket-name/path/to/file.csv'
+    :param config: Configuration map containing AWS credentials
+                   (access_key, secret_key, region, etc.)
     :param config_path: Path to a JSON file containing configuration parameters
     """
     global s3_dict
@@ -398,7 +419,7 @@ def init_migrate_s3(
 
     # Extract S3 bucket and key
     if not file_path.startswith("s3://"):
-        raise ValueError("Invalid S3 path format. Expected 's3://bucket-name/path'.")
+        raise ValueError("Invalid S3 path format. " "Expected 's3://bucket-name/path'.")
 
     file_path_no_protocol = file_path[5:]
     bucket_name, *key_parts = file_path_no_protocol.split("/")
@@ -444,7 +465,8 @@ def s3(
     """
     Fetch rows from an S3 CSV file in batches.
 
-    :param file_path: S3 file path in the format 's3://bucket-name/path/to/file.csv'
+    :param file_path: S3 file path in the format
+                      's3://bucket-name/path/to/file.csv'
     :param config: AWS S3 connection parameters (AWS credentials, region, etc.)
     :param config_path: Optional path to a JSON file containing AWS credentials
     :return: The result table as a stream of rows
@@ -775,8 +797,8 @@ def cleanup_migrate_memgraph():
 
     thread_id = threading.get_native_id()
     if Constants.CONNECTION in memgraph_dict[thread_id]:
-        memgraph_dict[threading.get_native_id][Constants.CONNECTION].close()
-    memgraph_dict.pop(threading.get_native_id, None)
+        memgraph_dict[thread_id][Constants.CONNECTION].close()
+    memgraph_dict.pop(thread_id, None)
 
 
 mgp.add_batch_read_proc(memgraph, init_migrate_memgraph, cleanup_migrate_memgraph)
@@ -921,6 +943,78 @@ def _name_row_cells(row_cells, column_names) -> Dict[str, Any]:
         column: (value if not isinstance(value, Decimal) else float(value))
         for column, value in zip(column_names, row_cells)
     }
+
+
+def _name_row_cells_mysql(row_cells, column_names) -> Dict[str, Any]:
+    """
+    Convert MySQL row cells to Memgraph-compatible types.
+    Handles MySQL-specific types that might cause PyObject conversion errors.
+    """
+    return {
+        column: _convert_mysql_value(value)
+        for column, value in zip(column_names, row_cells)
+    }
+
+
+def _convert_mysql_value(value: Any) -> Any:
+    """
+    Convert a MySQL value to a Memgraph-compatible type.
+    Returns None for unsupported types and logs a warning.
+    """
+    if value is None:
+        return None
+
+    # Handle Decimal types
+    if isinstance(value, Decimal):
+        return float(value)
+    # Handle datetime types
+    if isinstance(value, (datetime.datetime, datetime.date, datetime.time)):
+        # Use ISO 8601 format for consistency
+        try:
+            return value.isoformat()
+        except Exception:
+            return str(value)
+    # Handle timedelta
+    if isinstance(value, datetime.timedelta):
+        return str(value)
+
+    # Handle binary data (BLOB, BINARY, VARBINARY)
+    if isinstance(value, (bytes, bytearray)):
+        try:
+            # Try to decode as UTF-8 string first
+            return value.decode("utf-8")
+        except UnicodeDecodeError:
+            # If not valid UTF-8, convert to base64 string
+            return base64.b64encode(value).decode("ascii")
+
+    # Handle geometry types (convert to string representation)
+    if hasattr(value, "__class__") and "geometry" in str(value.__class__).lower():
+        return str(value) if value else None
+
+    # Handle MySQL-specific numeric types
+    if isinstance(value, (int, float, bool)):
+        return value
+
+    # Handle string types
+    if isinstance(value, str):
+        return value
+
+    # Handle list/array types
+    if isinstance(value, (list, tuple)):
+        return [_convert_mysql_value(item) for item in value]
+
+    # Handle dictionary/map types
+    if isinstance(value, dict):
+        return {k: _convert_mysql_value(v) for k, v in value.items()}
+
+    # For any other unsupported types, convert to string or return None
+    try:
+        # Try to convert to string
+        str_value = str(value)
+        return str_value
+    except (ValueError, TypeError):
+        # If string conversion fails, return None
+        return None
 
 
 def _convert_row_types(row_cells) -> Dict[str, Any]:

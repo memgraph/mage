@@ -1,8 +1,9 @@
 name: Update CVE Database
 on:
-  schedule:
-    # Run at 1 AM UTC on Saturday
-    - cron: '0 1 * * 6'
+  # NOTE: disabled for now, will be re-enabled when cve-bin-tool is re-enabled by default
+  # schedule:
+  #   # Run at 1 AM UTC on Saturday
+  #   - cron: '0 1 * * 6'
   workflow_dispatch:  # Allow manual triggering
 
 jobs:
@@ -27,7 +28,11 @@ jobs:
           python3 -m venv "${{ env.CVE_DIR }}/env"
           source "${{ env.CVE_DIR }}/env/bin/activate"
           python -m pip install --upgrade pip
-          pip install cve-bin-tool==3.4
+          
+          # pip install cve-bin-tool==3.4
+          # Install my personal fork of cve-bin-tool with fix to the OSV issue
+          # TODO: Once version 3.4.1 is released, check if https://github.com/intel/cve-bin-tool/pull/5240 is merged
+          pip install git+https://github.com/mattkjames7/cve-bin-tool.git@fix-osv-update
 
       - name: Update CVE database
         uses: nick-fields/retry@v3
@@ -37,7 +42,9 @@ jobs:
           retry_wait_seconds: 300
           command: |
             source "${{ env.CVE_DIR }}/env/bin/activate"
-            python3 scripts/update_cve_db.py
+
+            # cve-bin-tool returns a non-zero exit code if it is not given anything to scan
+            cve-bin-tool -u now || true
             
             # Wait for the update to complete and compress the database
             cd ~/.cache/cve-bin-tool
