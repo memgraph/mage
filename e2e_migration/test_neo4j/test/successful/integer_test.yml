@@ -1,0 +1,27 @@
+query: |
+  CALL migrate.neo4j('RETURN 42 AS integer_prop, 0 AS zero_prop, -42 AS negative_prop, 9223372036854775807 AS large_number_prop', {
+      host: 'neo4j_test',
+      port: 7687,
+      user: '',
+      password: '',
+      database: 'neo4j'
+  })
+  YIELD row
+  RETURN valueType(row.integer_prop) AS integer_prop_type,
+         row.integer_prop AS integer_prop,
+         valueType(row.zero_prop) AS zero_prop_type,
+         row.zero_prop AS zero_prop,
+         valueType(row.negative_prop) AS negative_prop_type,
+         row.negative_prop AS negative_prop,
+         valueType(row.large_number_prop) AS large_number_prop_type,
+         row.large_number_prop AS large_number_prop
+
+output:
+  - integer_prop_type: 'INTEGER'
+    integer_prop: 42
+    zero_prop_type: 'INTEGER'
+    zero_prop: 0
+    negative_prop_type: 'INTEGER'
+    negative_prop: -42
+    large_number_prop_type: 'INTEGER'
+    large_number_prop: 9223372036854775807

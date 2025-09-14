@@ -1,0 +1,19 @@
+query: |
+  CALL migrate.neo4j('RETURN 3.14159 AS float_prop, 2.718281828459045 AS double_prop', {
+      host: 'neo4j_test',
+      port: 7687,
+      user: '',
+      password: '',
+      database: 'neo4j'
+  })
+  YIELD row
+  RETURN valueType(row.float_prop) AS float_prop_type,
+         row.float_prop AS float_prop,
+         valueType(row.double_prop) AS double_prop_type,
+         row.double_prop AS double_prop
+
+output:
+  - float_prop_type: 'FLOAT'
+    float_prop: 3.14159
+    double_prop_type: 'FLOAT'
+    double_prop: 2.718281828459045

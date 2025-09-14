@@ -1,0 +1,23 @@
+query: |
+  CALL migrate.neo4j('RETURN "Hello World" AS string_prop, "A" AS char_prop, "" AS empty_string_prop', {
+      host: 'neo4j_test',
+      port: 7687,
+      user: '',
+      password: '',
+      database: 'neo4j'
+  })
+  YIELD row
+  RETURN valueType(row.string_prop) AS string_prop_type,
+         row.string_prop AS string_prop,
+         valueType(row.char_prop) AS char_prop_type,
+         row.char_prop AS char_prop,
+         valueType(row.empty_string_prop) AS empty_string_prop_type,
+         row.empty_string_prop AS empty_string_prop
+
+output:
+  - string_prop_type: 'STRING'
+    string_prop: "Hello World"
+    char_prop_type: 'STRING'
+    char_prop: "A"
+    empty_string_prop_type: 'STRING'
+    empty_string_prop: ""

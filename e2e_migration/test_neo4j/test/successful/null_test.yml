@@ -1,0 +1,15 @@
+query: |
+  CALL migrate.neo4j('RETURN null AS null_prop', {
+      host: 'neo4j_test',
+      port: 7687,
+      user: '',
+      password: '',
+      database: 'neo4j'
+  })
+  YIELD row
+  RETURN valueType(row.null_prop) AS null_prop_type,
+         row.null_prop AS null_prop
+
+output:
+  - null_prop_type: 'NULL'
+    null_prop: null

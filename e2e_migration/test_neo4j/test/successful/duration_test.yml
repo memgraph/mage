@@ -1,0 +1,13 @@
+query: |
+  CALL migrate.neo4j('RETURN duration("P1Y2M3DT4H5M6S") AS duration_prop', {
+      host: 'neo4j_test',
+      port: 7687,
+      user: '',
+      password: '',
+      database: 'neo4j'
+  })
+  YIELD row
+  RETURN valueType(row.duration_prop) AS duration_prop_type,
+         row.duration_prop AS duration_prop
+
+exception: true

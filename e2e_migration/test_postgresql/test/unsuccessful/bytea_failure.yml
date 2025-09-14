@@ -1,6 +1,6 @@
 query: |
   CALL migrate.postgresql('SELECT bytea_col FROM dummy_table', {
-      host: 'e2e_migration_postgresql',
+      host: 'postgresql_test',
       port: 5432,
       user: 'memgraph',
       password: 'memgraph_password',

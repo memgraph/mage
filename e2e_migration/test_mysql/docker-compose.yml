@@ -1,6 +1,6 @@
 services:
   mysql:
-    image: ${MYSQL_IMAGE}
+    image: mysql:8.0
     container_name: ${MYSQL_CONTAINER}
     ports:
       - "3306:3306"

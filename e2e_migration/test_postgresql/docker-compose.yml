@@ -1,6 +1,6 @@
 services:
   postgresql:
-    image: ${POSTGRESQL_IMAGE}
+    image: postgres:15
     container_name: ${POSTGRESQL_CONTAINER}
     ports:
       - "5432:5432"

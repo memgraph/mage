@@ -1,6 +1,6 @@
 query: |
   CALL migrate.mysql('SELECT bit_col FROM dummy_table', {
-      host: 'e2e_migration_mysql',
+      host: 'mysql_test',
       port: 3306,
       user: 'memgraph',
       password: 'memgraph_password',

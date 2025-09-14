@@ -1,0 +1,19 @@
+query: |
+  CALL migrate.neo4j('RETURN datetime("2023-12-25T14:30:00") AS datetime_prop, localdatetime("2023-12-25T14:30:00") AS localdatetime_prop', {
+      host: 'neo4j_test',
+      port: 7687,
+      user: '',
+      password: '',
+      database: 'neo4j'
+  })
+  YIELD row
+  RETURN valueType(row.datetime_prop) AS datetime_prop_type,
+         row.datetime_prop AS datetime_prop,
+         valueType(row.localdatetime_prop) AS localdatetime_prop_type,
+         row.localdatetime_prop AS localdatetime_prop
+
+output:
+  - datetime_prop_type: 'DATETIME'
+    datetime_prop: "2023-12-25T14:30:00"
+    localdatetime_prop_type: 'DATETIME'
+    localdatetime_prop: "2023-12-25T14:30:00"

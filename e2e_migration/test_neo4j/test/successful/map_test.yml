@@ -1,0 +1,19 @@
+query: |
+  CALL migrate.neo4j('RETURN {name: "John", age: 30, active: true} AS map_prop, {person: {name: "Jane", age: 25}, scores: [85, 90, 78]} AS nested_map_prop', {
+      host: 'neo4j_test',
+      port: 7687,
+      user: '',
+      password: '',
+      database: 'neo4j'
+  })
+  YIELD row
+  RETURN valueType(row.map_prop) AS map_prop_type,
+         row.map_prop AS map_prop,
+         valueType(row.nested_map_prop) AS nested_map_prop_type,
+         row.nested_map_prop AS nested_map_prop
+
+output:
+  - map_prop_type: 'MAP'
+    map_prop: {name: "John", age: 30, active: true}
+    nested_map_prop_type: 'MAP'
+    nested_map_prop: {person: {name: "Jane", age: 25}, scores: [85, 90, 78]}

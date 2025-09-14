@@ -1,0 +1,27 @@
+query: |
+  CALL migrate.neo4j('RETURN [1, 2, 3, "four", true] AS list_prop, ["apple", "banana", "cherry"] AS string_list_prop, [1.1, 2.2, 3.3] AS number_list_prop, [true, false, true] AS boolean_list_prop', {
+      host: 'neo4j_test',
+      port: 7687,
+      user: '',
+      password: '',
+      database: 'neo4j'
+  })
+  YIELD row
+  RETURN valueType(row.list_prop) AS list_prop_type,
+         row.list_prop AS list_prop,
+         valueType(row.string_list_prop) AS string_list_prop_type,
+         row.string_list_prop AS string_list_prop,
+         valueType(row.number_list_prop) AS number_list_prop_type,
+         row.number_list_prop AS number_list_prop,
+         valueType(row.boolean_list_prop) AS boolean_list_prop_type,
+         row.boolean_list_prop AS boolean_list_prop
+
+output:
+  - list_prop_type: 'LIST'
+    list_prop: [1, 2, 3, "four", true]
+    string_list_prop_type: 'LIST'
+    string_list_prop: ["apple", "banana", "cherry"]
+    number_list_prop_type: 'LIST'
+    number_list_prop: [1.1, 2.2, 3.3]
+    boolean_list_prop_type: 'LIST'
+    boolean_list_prop: [true, false, true]

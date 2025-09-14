@@ -1,0 +1,15 @@
+query: |
+  CALL migrate.neo4j('RETURN date("2023-12-25") AS date_prop', {
+      host: 'neo4j_test',
+      port: 7687,
+      user: '',
+      password: '',
+      database: 'neo4j'
+  })
+  YIELD row
+  RETURN valueType(row.date_prop) AS date_prop_type,
+         row.date_prop AS date_prop
+
+output:
+  - date_prop_type: 'DATE'
+    date_prop: "2023-12-25"

@@ -1,0 +1,13 @@
+query: |
+  CALL migrate.neo4j('RETURN point({x: 40.7128, y: -74.0060}) AS point_prop', {
+      host: 'neo4j_test',
+      port: 7687,
+      user: '',
+      password: '',
+      database: 'neo4j'
+  })
+  YIELD row
+  RETURN valueType(row.point_prop) AS point_prop_type,
+         row.point_prop AS point_prop
+
+exception: true

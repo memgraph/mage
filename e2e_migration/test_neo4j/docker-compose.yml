@@ -1,0 +1,25 @@
+services:
+  neo4j:
+    image: neo4j:5.10.0
+    container_name: ${NEO4J_CONTAINER}
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    networks:
+      - memgraph_test_network
+    environment:
+      NEO4J_AUTH: none
+      NEO4J_apoc_export_file_enabled: true
+      NEO4J_apoc_import_file_enabled: true
+      NEO4J_apoc_import_file_use__neo4j__config: true
+      NEO4J_PLUGINS: '["apoc"]'
+    healthcheck:
+      test: ["CMD", "curl", "--silent", "--fail", "http://localhost:7474"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+networks:
+  memgraph_test_network:
+    external: true

@@ -1,0 +1,19 @@
+query: |
+  CALL migrate.neo4j('RETURN true AS boolean_prop, false AS bool_prop', {
+      host: 'neo4j_test',
+      port: 7687,
+      user: '',
+      password: '',
+      database: 'neo4j'
+  })
+  YIELD row
+  RETURN valueType(row.boolean_prop) AS boolean_prop_type, 
+         row.boolean_prop AS boolean_prop,
+         valueType(row.bool_prop) AS bool_prop_type,
+         row.bool_prop AS bool_prop
+
+output:
+  - boolean_prop_type: 'BOOLEAN'
+    boolean_prop: true
+    bool_prop_type: 'BOOLEAN'
+    bool_prop: false
