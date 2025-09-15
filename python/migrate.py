@@ -20,6 +20,8 @@ import pyodbc
 import requests
 from gqlalchemy import Memgraph
 from neo4j import GraphDatabase
+from neo4j.time import DateTime as Neo4jDateTime
+from neo4j.time import Date as Neo4jDate
 
 
 class Constants:
@@ -35,6 +37,7 @@ class Constants:
     PORT = "port"
     RESULT = "result"
     SESSION = "session"
+    URI_SCHEME = "uri_scheme"
     USERNAME = "username"
 
 
@@ -1090,4 +1093,5 @@ def _convert_neo4j_record(record):
 def _build_neo4j_uri(config: mgp.Map) -> str:
     host = config.get(Constants.HOST, "localhost")
     port = config.get(Constants.PORT, 7687)
-    return f"bolt://{host}:{port}"
+    uri_scheme = config.get(Constants.URI_SCHEME, "bolt")
+    return f"{uri_scheme}://{host}:{port}"
