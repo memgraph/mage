@@ -530,15 +530,15 @@ def init_migrate_neo4j(
     username = config.get(Constants.USERNAME, "neo4j")
     password = config.get(Constants.PASSWORD, "password")
     database = config.get(Constants.DATABASE, None)  # None means default database
-    
+
     driver = GraphDatabase.driver(uri, auth=(username, password))
-    
+
     # Create session with optional database parameter
     if database:
         session = driver.session(database=database)
     else:
         session = driver.session()
-        
+
     query = _formulate_cypher_query(label_or_rel_or_query)
     # Neo4j expects params to be a dict or None
     cypher_params = params if params is not None else {}
@@ -574,11 +574,11 @@ def neo4j(
     for record in result:
         # Convert neo4j.Record to dict with proper type conversion
         batch.append(mgp.Record(row=_convert_neo4j_record(record)))
-        
+
         # Check if we've reached the batch size limit
         if len(batch) >= Constants.BATCH_SIZE:
             break
-    
+
     return batch
 
 
@@ -1062,25 +1062,26 @@ def _check_params_type(params: Any, types=(dict, list, tuple)) -> None:
             "Database query parameter values must be passed in a container of type List[Any] (or Map, if migrating from MySQL or Oracle DB)"
         )
 
+
 def _convert_neo4j_value(value):
     """Convert Neo4j values to Python-compatible formats."""
     if value is None:
         return None
-    
+
     # Handle Neo4j DateTime objects
     try:
         if isinstance(value, Neo4jDateTime) or isinstance(value, Neo4jDate):
             return value.to_native()
     except ImportError:
         pass
-    
+
     # Handle lists and dicts recursively
     if isinstance(value, list):
         return [_convert_neo4j_value(item) for item in value]
-    
+
     if isinstance(value, dict):
         return {key: _convert_neo4j_value(val) for key, val in value.items()}
-    
+
     # For other types, return as is
     return value
 
