@@ -70,33 +70,33 @@ bool IsValidInitialSampler(const std::string& sampler_str) {
 void ValidateParameterRanges(const knn_util::KNNConfig& config) {
     // Validate range [0, 1] parameters
     if (config.sample_rate < 0.0 || config.sample_rate > 1.0) {
-        throw mgp::ValueException(fmt::format("knn: sampleRate must be between 0 and 1, got {}", config.sample_rate));
+        throw mgp::ValueException(fmt::format("sampleRate must be between 0 and 1, got {}", config.sample_rate));
     }
     
     if (config.delta_threshold < 0.0 || config.delta_threshold > 1.0) {
-        throw mgp::ValueException(fmt::format("knn: deltaThreshold must be between 0 and 1, got {}", config.delta_threshold));
+        throw mgp::ValueException(fmt::format("deltaThreshold must be between 0 and 1, got {}", config.delta_threshold));
     }
     
     if (config.similarity_cutoff < 0.0 || config.similarity_cutoff > 1.0) {
-        throw mgp::ValueException(fmt::format("knn: similarityCutoff must be between 0 and 1, got {}", config.similarity_cutoff));
+        throw mgp::ValueException(fmt::format("similarityCutoff must be between 0 and 1, got {}", config.similarity_cutoff));
     }
     
     // Validate positive integer parameters
     if (config.top_k <= 0) {
-        throw mgp::ValueException(fmt::format("knn: topK must be a positive integer, got {}", config.top_k));
+        throw mgp::ValueException(fmt::format("topK must be a positive integer, got {}", config.top_k));
     }
     
     if (config.concurrency <= 0) {
-        throw mgp::ValueException(fmt::format("knn: concurrency must be a positive integer, got {}", config.concurrency));
+        throw mgp::ValueException(fmt::format("concurrency must be a positive integer, got {}", config.concurrency));
     }
     
     if (config.max_iterations <= 0) {
-        throw mgp::ValueException(fmt::format("knn: maxIterations must be a positive integer, got {}", config.max_iterations));
+        throw mgp::ValueException(fmt::format("maxIterations must be a positive integer, got {}", config.max_iterations));
     }
     
     // randomSeed can be negative, so we only check it's not zero
     if (config.random_seed == 0) {
-        throw mgp::ValueException("knn: randomSeed cannot be 0");
+        throw mgp::ValueException("randomSeed cannot be 0");
     }
 }
 
@@ -127,35 +127,35 @@ std::vector<knn_util::PropertyConfig> ParseNodeProperties(const mgp::Value& node
         // Single property name - use default similarity function
         std::string prop_name = std::string(node_props_value.ValueString());
         if (prop_name.empty()) {
-            throw mgp::ValueException("knn: Property name cannot be empty");
+            throw mgp::ValueException("Property name cannot be empty");
         }
         properties.emplace_back(prop_name, knn_util::SimilarityFunction::DEFAULT);
     } else if (node_props_value.IsMap()) {
         // Map of property names to metrics
         mgp::Map prop_map = node_props_value.ValueMap();
         if (prop_map.Size() == 0) {
-            throw mgp::ValueException("knn: Property map cannot be empty");
+            throw mgp::ValueException("Property map cannot be empty");
         }
         
         for (const auto& entry : prop_map) {
             // Validate property name
             std::string prop_name = std::string(entry.key);
             if (prop_name.empty()) {
-                throw mgp::ValueException("knn: Property name cannot be empty");
+                throw mgp::ValueException("Property name cannot be empty");
             }
             
             // Validate metric value
             if (!entry.value.IsString()) {
-                throw mgp::ValueException(fmt::format("knn: Metric value must be a string for property '{}'", prop_name));
+                throw mgp::ValueException(fmt::format("Metric value must be a string for property '{}'", prop_name));
             }
             
             std::string metric_str = std::string(entry.value.ValueString());
             if (metric_str.empty()) {
-                throw mgp::ValueException(fmt::format("knn: Metric value cannot be empty for property '{}'", prop_name));
+                throw mgp::ValueException(fmt::format("Metric value cannot be empty for property '{}'", prop_name));
             }
             
             if (!IsValidSimilarityFunction(metric_str)) {
-                throw mgp::ValueException(fmt::format("knn: Invalid metric '{}' for property '{}'. Valid metrics are: COSINE, EUCLIDEAN, PEARSON, OVERLAP, JACCARD, DEFAULT", metric_str, prop_name));
+                throw mgp::ValueException(fmt::format("Invalid metric '{}' for property '{}'. Valid metrics are: COSINE, EUCLIDEAN, PEARSON, OVERLAP, JACCARD, DEFAULT", metric_str, prop_name));
             }
             
             knn_util::SimilarityFunction metric = ParseSimilarityFunction(metric_str);
@@ -165,7 +165,7 @@ std::vector<knn_util::PropertyConfig> ParseNodeProperties(const mgp::Value& node
         // List of strings and/or maps
         mgp::List prop_list = node_props_value.ValueList();
         if (prop_list.Size() == 0) {
-            throw mgp::ValueException("knn: Property list cannot be empty");
+            throw mgp::ValueException("Property list cannot be empty");
         }
         
         for (size_t i = 0; i < prop_list.Size(); ++i) {
@@ -173,50 +173,50 @@ std::vector<knn_util::PropertyConfig> ParseNodeProperties(const mgp::Value& node
                 // String property name - use default similarity function
                 std::string prop_name = std::string(prop_list[i].ValueString());
                 if (prop_name.empty()) {
-                    throw mgp::ValueException(fmt::format("knn: Property name at index {} cannot be empty", i));
+                    throw mgp::ValueException(fmt::format("Property name at index {} cannot be empty", i));
                 }
                 properties.emplace_back(prop_name, knn_util::SimilarityFunction::DEFAULT);
             } else if (prop_list[i].IsMap()) {
                 // Map entry
                 mgp::Map prop_map = prop_list[i].ValueMap();
                 if (prop_map.Size() == 0) {
-                    throw mgp::ValueException(fmt::format("knn: Property map at index {} cannot be empty", i));
+                    throw mgp::ValueException(fmt::format("Property map at index {} cannot be empty", i));
                 }
                 
                 for (const auto& entry : prop_map) {
                     // Validate property name
                     std::string prop_name = std::string(entry.key);
                     if (prop_name.empty()) {
-                        throw mgp::ValueException(fmt::format("knn: Property name cannot be empty in map at index {}", i));
+                        throw mgp::ValueException(fmt::format("Property name cannot be empty in map at index {}", i));
                     }
                     
                     // Validate metric value
                     if (!entry.value.IsString()) {
-                        throw mgp::ValueException(fmt::format("knn: Metric value must be a string for property '{}' in map at index {}", prop_name, i));
+                        throw mgp::ValueException(fmt::format("Metric value must be a string for property '{}' in map at index {}", prop_name, i));
                     }
                     
                     std::string metric_str = std::string(entry.value.ValueString());
                     if (metric_str.empty()) {
-                        throw mgp::ValueException(fmt::format("knn: Metric value cannot be empty for property '{}' in map at index {}", prop_name, i));
+                        throw mgp::ValueException(fmt::format("Metric value cannot be empty for property '{}' in map at index {}", prop_name, i));
                     }
                     
                     if (!IsValidSimilarityFunction(metric_str)) {
-                        throw mgp::ValueException(fmt::format("knn: Invalid metric '{}' for property '{}' in map at index {}. Valid metrics are: COSINE, EUCLIDEAN, PEARSON, OVERLAP, JACCARD, DEFAULT", metric_str, prop_name, i));
+                        throw mgp::ValueException(fmt::format("Invalid metric '{}' for property '{}' in map at index {}. Valid metrics are: COSINE, EUCLIDEAN, PEARSON, OVERLAP, JACCARD, DEFAULT", metric_str, prop_name, i));
                     }
                     
                     knn_util::SimilarityFunction metric = ParseSimilarityFunction(metric_str);
                     properties.emplace_back(prop_name, metric);
                 }
             } else {
-                throw mgp::ValueException(fmt::format("knn: Property list element at index {} must be a string or map", i));
+                throw mgp::ValueException(fmt::format("Property list element at index {} must be a string or map", i));
             }
         }
     } else {
-        throw mgp::ValueException("knn: nodeProperties must be a string, map, or list");
+        throw mgp::ValueException("nodeProperties must be a string, map, or list");
     }
     
     if (properties.empty()) {
-        throw mgp::ValueException("knn: No valid properties found in nodeProperties configuration");
+        throw mgp::ValueException("No valid properties found in nodeProperties configuration");
     }
     
     return properties;
@@ -244,7 +244,7 @@ void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memo
         
         // Parse node properties - required parameter
         if (!config_map.KeyExists(kConfigNodeProperties)) {
-            throw mgp::ValueException("knn: Required parameter 'nodeProperties' is missing from config");
+            throw mgp::ValueException("Required parameter 'nodeProperties' is missing from config");
         }
         
         config.node_properties = ParseNodeProperties(config_map[kConfigNodeProperties]);
@@ -267,7 +267,7 @@ void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memo
             config.random_seed = static_cast<int>(config_map[kConfigRandomSeed].ValueInt());
             // If seed is provided, concurrency must be 1 for deterministic results
             if (config.concurrency != 1) {
-                throw mgp::ValueException("knn: When 'randomSeed' is specified, 'concurrency' must be set to 1 for deterministic results");
+                throw mgp::ValueException("When 'randomSeed' is specified, 'concurrency' must be set to 1 for deterministic results");
             }
         } else {
             // Generate completely random seed
@@ -282,7 +282,7 @@ void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memo
         if (config_map.KeyExists(kConfigInitialSampler)) {
             std::string sampler_str = std::string(config_map[kConfigInitialSampler].ValueString());
             if (!IsValidInitialSampler(sampler_str)) {
-                throw mgp::ValueException(fmt::format("knn: Invalid initialSampler '{}'. Valid values are: uniform, randomWalk", sampler_str));
+                throw mgp::ValueException(fmt::format("Invalid initialSampler '{}'. Valid values are: uniform, randomWalk", sampler_str));
             }
             // Convert to lowercase for consistency
             std::transform(sampler_str.begin(), sampler_str.end(), sampler_str.begin(), ::tolower);
@@ -295,7 +295,7 @@ void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memo
         if (config_map.KeyExists(kConfigSimilarityFunction)) {
             std::string func_str = std::string(config_map[kConfigSimilarityFunction].ValueString());
             if (!IsValidSimilarityFunction(func_str)) {
-                throw mgp::ValueException(fmt::format("knn: Invalid similarityFunction '{}'. Valid metrics are: COSINE, EUCLIDEAN, PEARSON, OVERLAP, JACCARD, DEFAULT", func_str));
+                throw mgp::ValueException(fmt::format("Invalid similarityFunction '{}'. Valid metrics are: COSINE, EUCLIDEAN, PEARSON, OVERLAP, JACCARD, DEFAULT", func_str));
             }
             config.default_similarity_function = ParseSimilarityFunction(func_str);
         } else {
