@@ -2,7 +2,7 @@ query: |
   CALL migrate.neo4j('RETURN null AS null_prop', {
       host: 'neo4j_test',
       port: 7687,
-      user: '',
+      username: '',
       password: '',
       database: 'neo4j'
   })

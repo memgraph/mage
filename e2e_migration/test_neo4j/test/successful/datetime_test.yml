@@ -2,7 +2,7 @@ query: |
   CALL migrate.neo4j('RETURN datetime("2023-12-25T14:30:00") AS datetime_prop, localdatetime("2023-12-25T14:30:00") AS localdatetime_prop', {
       host: 'neo4j_test',
       port: 7687,
-      user: '',
+      username: '',
       password: '',
       database: 'neo4j'
   })

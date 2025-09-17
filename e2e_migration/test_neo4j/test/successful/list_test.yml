@@ -2,7 +2,7 @@ query: |
   CALL migrate.neo4j('RETURN [1, 2, 3, "four", true] AS list_prop, ["apple", "banana", "cherry"] AS string_list_prop, [1.1, 2.2, 3.3] AS number_list_prop, [true, false, true] AS boolean_list_prop', {
       host: 'neo4j_test',
       port: 7687,
-      user: '',
+      username: '',
       password: '',
       database: 'neo4j'
   })

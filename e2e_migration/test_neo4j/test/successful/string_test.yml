@@ -2,7 +2,7 @@ query: |
   CALL migrate.neo4j('RETURN "Hello World" AS string_prop, "A" AS char_prop, "" AS empty_string_prop', {
       host: 'neo4j_test',
       port: 7687,
-      user: '',
+      username: '',
       password: '',
       database: 'neo4j'
   })

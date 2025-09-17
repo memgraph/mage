@@ -2,7 +2,7 @@ query: |
   CALL migrate.neo4j('RETURN 42 AS integer_prop, 0 AS zero_prop, -42 AS negative_prop, 9223372036854775807 AS large_number_prop', {
       host: 'neo4j_test',
       port: 7687,
-      user: '',
+      username: '',
       password: '',
       database: 'neo4j'
   })
