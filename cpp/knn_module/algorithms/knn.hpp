@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <numeric>
 #include <random>
 #include <string_view>
 #include <vector>
@@ -63,6 +64,7 @@ struct KNNResult {
 
 namespace knn_algs {
 
+
 // Extract property values from a node
 std::vector<double> ExtractPropertyValues(const mgp::Node &node, const std::vector<std::string> &properties) {
   std::vector<double> values;
@@ -98,24 +100,13 @@ std::vector<double> ExtractPropertyValues(const mgp::Node &node, const std::vect
   return values;
 }
 
-// Cosine similarity between two vectors
-double CosineSimilarity(const std::vector<double> &vec1, const std::vector<double> &vec2, double norm1, double norm2) {
-  const size_t n = vec1.size();
-  const double *a = vec1.data();
-  const double *b = vec2.data();
+inline double CosineSimilarity(const std::vector<double> &vec1, const std::vector<double> &vec2, double norm1, double norm2) {
+  const double dot =
+      std::transform_reduce(vec1.begin(), vec1.end(), vec2.begin(), 0.0, std::plus<>(), std::multiplies<>());
 
-  double dot_product = 0.0;
-
-  for (size_t i = 0; i < n; ++i) {
-    dot_product += a[i] * b[i];
-  }
-
-  double denominator = norm1 * norm2;
-  if (denominator < 1e-9) {
-    return 0.0;
-  }
-
-  return dot_product / denominator;
+  const double denom = norm1 * norm2;
+  if (denom < 1e-9) return 0.0;
+  return dot / denom;
 }
 
 // Euclidean similarity (1 / (1 + distance))
@@ -250,7 +241,7 @@ knn_util::SimilarityFunction GetDefaultSimilarityFunction(const mgp::Value &prop
 // Structure to hold pre-loaded node data for efficient comparison
 struct NodeData {
   mgp::Node node;
-  std::vector<std::vector<double>> property_values;            // One vector per property
+  std::vector<std::vector<double>> property_values;  // One vector per property
   std::vector<double> norms;
   std::vector<knn_util::SimilarityFunction> resolved_metrics;  // Resolved metrics per property
 
@@ -354,8 +345,8 @@ std::vector<NodeData> PreloadNodeData(const std::vector<mgp::Node> &nodes, const
     node_data.push_back(node_info);
   }
 
-  for (auto i = 1; i < node_data.size(); i++) {
-    for (auto j = 0; j < node_data[i].property_values.size(); j++) {
+  for (size_t i = 1; i < node_data.size(); i++) {
+    for (size_t j = 0; j < node_data[i].property_values.size(); j++) {
       if (node_data[i].property_values[j].size() != node_data[0].property_values[j].size()) {
         throw mgp::ValueException("Vectors must have the same size for similarity calculation");
       }
@@ -366,12 +357,14 @@ std::vector<NodeData> PreloadNodeData(const std::vector<mgp::Node> &nodes, const
 }
 
 void PreloadNorms(std::vector<NodeData> &node_data, const knn_util::KNNConfig &config) {
-  for (auto &node : node_data) {
-    for (auto i = 0; i < node.property_values.size(); i++) {
-      if (config.node_properties[i].metric == knn_util::SimilarityFunction::COSINE) {
-        node.norms.push_back(std::sqrt(std::inner_product(node.property_values[i].begin(), node.property_values[i].end(), node.property_values[i].begin(), 0.0)));
-      } else {
-        node.norms.push_back(0.0);
+  #pragma omp parallel for
+  for (size_t ni = 0; ni < node_data.size(); ++ni) {
+    auto &node = node_data[ni];
+    node.norms.resize(node.property_values.size(), 0.0);
+    for (size_t i = 0; i < node.property_values.size(); ++i) {
+      if (node.resolved_metrics[i] == knn_util::SimilarityFunction::COSINE) {
+        const auto &v = node.property_values[i];
+        node.norms[i] = std::sqrt(std::inner_product(v.begin(), v.end(), v.begin(), 0.0));
       }
     }
   }
@@ -400,7 +393,8 @@ double CalculateNodeSimilarity(const NodeData &node1_data, const NodeData &node2
       // For vectors, use the pre-resolved similarity function
       switch (metric) {
         case knn_util::SimilarityFunction::COSINE:
-          property_similarity = CosineSimilarity(values1, values2, node1_data.norms[prop_idx], node2_data.norms[prop_idx]);
+          property_similarity =
+              CosineSimilarity(values1, values2, node1_data.norms[prop_idx], node2_data.norms[prop_idx]);
           break;
         case knn_util::SimilarityFunction::EUCLIDEAN:
           property_similarity = EuclideanSimilarity(values1, values2);
@@ -415,7 +409,8 @@ double CalculateNodeSimilarity(const NodeData &node1_data, const NodeData &node2
           property_similarity = JaccardSimilarity(values1, values2);
           break;
         default:
-          property_similarity = CosineSimilarity(values1, values2, node1_data.norms[prop_idx], node2_data.norms[prop_idx]);
+          property_similarity =
+              CosineSimilarity(values1, values2, node1_data.norms[prop_idx], node2_data.norms[prop_idx]);
           break;
       }
     }
@@ -502,9 +497,11 @@ std::vector<knn_util::KNNResult> CalculateSimilarityForNode(size_t node_idx, con
   for (size_t i = 0; i < array_size; ++i) {
     size_t idx = comparison_indices_array[i];
     const auto &node2_data = node_data[idx];
+    
+    // Calculate similarity directly
     double similarity = CalculateNodeSimilarity(node1_data, node2_data, config);
 
-    // Store result (will be filtered later)
+    // Store result
     parallel_results[i] = knn_util::KNNResult(node1_data.node.Id(), node2_data.node.Id(), similarity);
   }
 
@@ -515,19 +512,27 @@ std::vector<knn_util::KNNResult> CalculateSimilarityForNode(size_t node_idx, con
     }
   }
 
+  const size_t k = std::min(results.size(), static_cast<size_t>(config.top_k));
+  auto cmp = [](const knn_util::KNNResult &a, const knn_util::KNNResult &b) {
+    return a.similarity > b.similarity;  // descending
+  };
+
+  if (k > 0 && results.size() > k) {
+    std::nth_element(results.begin(), results.begin() + k, results.end(), cmp);
+    results.resize(k);
+    std::sort(results.begin(), results.end(), cmp);  // sort only top-k
+  } else {
+    std::sort(results.begin(), results.end(), cmp);  // small n or k >= n
+  }
+
   return results;
 }
 
-// Sort and insert top-k results into final results
+// Insert top-k results into final results
 void InsertTopKResults(const std::vector<knn_util::KNNResult> &top_k_results, const mgp::Graph &graph,
                        std::vector<std::tuple<mgp::Node, mgp::Node, double>> &final_results) {
-  // Sort by similarity (descending)
-  std::vector<knn_util::KNNResult> sorted_results = top_k_results;
-  std::sort(sorted_results.begin(), sorted_results.end(),
-            [](const knn_util::KNNResult &a, const knn_util::KNNResult &b) { return a.similarity > b.similarity; });
-
-  // Convert to final results with actual nodes
-  for (const auto &result : sorted_results) {
+  // Convert to final results with actual nodes (results are already sorted)
+  for (const auto &result : top_k_results) {
     try {
       auto node1 = graph.GetNodeById(result.node1_id);
       auto node2 = graph.GetNodeById(result.node2_id);
@@ -569,11 +574,6 @@ std::vector<std::tuple<mgp::Node, mgp::Node, double>> CalculateKNN(const mgp::Gr
     // 2. Calculate similarity for one node
     std::vector<knn_util::KNNResult> top_k_results =
         CalculateSimilarityForNode(i, node_data, comparison_indices, config);
-
-    // Take only top-k results
-    if (top_k_results.size() > static_cast<size_t>(config.top_k)) {
-      top_k_results.erase(top_k_results.begin() + config.top_k, top_k_results.end());
-    }
 
     // 3. Insert sorted top-k results
     InsertTopKResults(top_k_results, graph, results);

@@ -28,7 +28,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall \
 
 # Don't omit frame pointer in RelWithDebInfo, for additional callchain debug.
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
-  "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -O3 -march=x86-64-v3 -ffast-math -fopt-info-vec-optimized -fno-omit-frame-pointer")
+  "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -O3 -march=x86-64-v3 -ffast-math -fopenmp -fopt-info-vec-optimized -fno-omit-frame-pointer")
 
 # Release flags.
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=x86-64-v3 -ffast-math -DNDEBUG")
