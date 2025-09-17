@@ -10,4 +10,4 @@ query: |
   RETURN valueType(row.duration_prop) AS duration_prop_type,
          row.duration_prop AS duration_prop
 
-exception: true
+output: []

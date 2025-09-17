@@ -12,4 +12,4 @@ query: |
 
 output:
   - date_prop_type: 'DATE'
-    date_prop: "2023-12-25"
+    date_prop: datetime.date(2023, 12, 25)

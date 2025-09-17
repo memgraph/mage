@@ -12,4 +12,4 @@ query: |
          valueType(row.localtime_prop) AS localtime_prop_type,
          row.localtime_prop AS localtime_prop
 
-exception: true
+output: []
