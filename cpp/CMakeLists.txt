@@ -149,5 +149,6 @@ add_subdirectory(algo_module)
 add_subdirectory(set_property_module)
 add_subdirectory(leiden_community_detection_module)
 add_subdirectory(math_module)
+add_subdirectory(knn_module)
 
 add_cugraph_subdirectory(cugraph_module)
