@@ -1,5 +1,6 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 boto3==1.36.23
+bson==0.5.10
 defusedxml==0.7.1
 duckdb==1.2.1
 elasticsearch==8.17.0
@@ -14,6 +15,7 @@ oracledb==2.5.1
 pandas==2.2.3
 platformdirs==4.3.6
 pyarrow==19.0.1
+pymongo==4.15.1
 psycopg2-binary==2.9.10
 pyodbc==5.2.0
 python-Levenshtein==0.26.1

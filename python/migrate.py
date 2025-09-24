@@ -10,18 +10,22 @@ from decimal import Decimal
 from typing import Any, Dict, List
 
 import boto3
+from bson import ObjectId, Decimal128, Binary
+from bson.timestamp import Timestamp as BsonTimestamp
 import duckdb as duckDB
 import mgp
 import mysql.connector as mysql_connector
 import oracledb
 import psycopg2
 import pyarrow.flight as flight
+from pymongo import MongoClient
 import pyodbc
 import requests
 from gqlalchemy import Memgraph
 from neo4j import GraphDatabase
 from neo4j.time import DateTime as Neo4jDateTime
 from neo4j.time import Date as Neo4jDate
+
 
 
 class Constants:
@@ -919,6 +923,104 @@ def cleanup_migrate_servicenow():
 mgp.add_batch_read_proc(servicenow, init_migrate_servicenow, cleanup_migrate_servicenow)
 
 
+mongodb_dict = {}
+
+
+def init_migrate_mongodb(
+    query_json: str,
+    query_config: mgp.Map,
+    driver_config: mgp.Map,
+    config_path: str = "",
+):
+    """
+    Prepare MongoDB cursor for batch streaming.
+    - query_json: JSON string (object -> find, array -> aggregate)
+    - query_config: { database, collection, projection?, sort?, limit?, batch_size? }
+    - driver_config: { uri? OR host?, port?, user?, password?, auth_source?, tls?, replica_set? }
+    - config_path: optional file path merged into BOTH configs via _combine_config
+    """
+    global mongodb_dict
+    thread_id = threading.get_native_id()
+    if thread_id not in mongodb_dict:
+        mongodb_dict[thread_id] = {}
+
+    # Merge external config file, if provided, into BOTH maps
+    qcfg = dict(query_config)
+    dcfg = dict(driver_config)
+    if len(config_path) > 0:
+        qcfg = _combine_config(config=qcfg, config_path=config_path)
+        dcfg = _combine_config(config=dcfg, config_path=config_path)
+
+    # Parse query JSON
+    try:
+        q_ast = json.loads(query_json) if query_json and query_json.strip() else {}
+    except Exception as e:
+        raise mgp.Error(f"Failed to parse Mongo query JSON: {e}")
+
+    database = qcfg.get("database")
+    collection = qcfg.get("collection")
+    if not database or not collection:
+        raise mgp.Error("query_config must include 'database' and 'collection'.")
+
+    # Open client & cursor
+    client = _get_mongo_client(dcfg)
+    db = client[database]
+    cursor = _start_mongo_cursor(db, collection, q_ast, qcfg)
+
+    # Stash per-thread
+    mongodb_dict[thread_id][Constants.DRIVER] = client  # reuse key name
+    mongodb_dict[thread_id][Constants.SESSION] = db  # reuse key name
+    mongodb_dict[thread_id][Constants.RESULT] = cursor  # reuse key name
+
+
+def mongodb(
+    query_json: str,
+    query_config: mgp.Map,
+    driver_config: mgp.Map,
+    config_path: str = "",
+) -> mgp.Record(row=mgp.Map):
+    """
+    Stream up to BATCH_SIZE documents as rows (per call).
+    """
+    global mongodb_dict
+    thread_id = threading.get_native_id()
+    cursor = mongodb_dict[thread_id][Constants.RESULT]
+
+    batch = []
+    # Pull up to BATCH_SIZE docs
+    for doc in cursor:
+        batch.append(mgp.Record(row=_mongo_to_primitive(doc)))
+        if len(batch) >= Constants.BATCH_SIZE:
+            break
+
+    return batch
+
+
+def cleanup_migrate_mongodb():
+    global mongodb_dict
+    thread_id = threading.get_native_id()
+
+    cursor = mongodb_dict[thread_id].get(Constants.RESULT)
+    if cursor:
+        try:
+            cursor.close()
+        except Exception:
+            pass
+
+    client = mongodb_dict[thread_id].get(Constants.DRIVER)
+    if client:
+        try:
+            client.close()
+        except Exception:
+            pass
+
+    mongodb_dict.pop(thread_id, None)
+
+
+# Register as batch read proc inside the "migrate" module (same style as neo4j)
+mgp.add_batch_read_proc(mongodb, init_migrate_mongodb, cleanup_migrate_mongodb)
+
+
 def _formulate_cypher_query(label_or_rel_or_query: str) -> str:
     words = label_or_rel_or_query.split()
     if len(words) > 1:
@@ -1096,3 +1198,75 @@ def _build_neo4j_uri(config: mgp.Map) -> str:
     port = config.get(Constants.PORT, 7687)
     uri_scheme = config.get(Constants.URI_SCHEME, "bolt")
     return f"{uri_scheme}://{host}:{port}"
+
+
+def _mongo_to_primitive(value):
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+    if isinstance(value, ObjectId):
+        return str(value)
+    if isinstance(value, Decimal128):
+        return str(value)
+    if isinstance(value, (bytes, bytearray, Binary)):
+        return value.hex() if hasattr(value, "hex") else bytes(value).hex()
+    if hasattr(value, "isoformat"):
+        try:
+            return value.isoformat()
+        except Exception:
+            pass
+    if isinstance(value, BsonTimestamp):
+        return {"ts_time": value.time, "ts_inc": value.inc}
+    if isinstance(value, dict):
+        return {str(k): _mongo_to_primitive(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_mongo_to_primitive(v) for v in value]
+    return str(value)
+
+
+def _get_mongo_client(driver_cfg: dict) -> MongoClient:
+    if MongoClient is None:
+        raise RuntimeError(f"pymongo not available: {_mongo_import_error}")
+
+    uri = driver_cfg.get("uri")
+    if uri:
+        return MongoClient(uri)
+
+    kwargs = {}
+    if "user" in driver_cfg:
+        kwargs["username"] = driver_cfg.get("user")
+    if "password" in driver_cfg:
+        kwargs["password"] = driver_cfg.get("password")
+    if "auth_source" in driver_cfg:
+        kwargs["authSource"] = driver_cfg.get("auth_source")
+    if "tls" in driver_cfg:
+        kwargs["tls"] = bool(driver_cfg.get("tls"))
+    if "replica_set" in driver_cfg:
+        kwargs["replicaSet"] = driver_cfg.get("replica_set")
+
+    host = driver_cfg.get("host", "localhost")
+    port = int(driver_cfg.get("port", 27017))
+    return MongoClient(host=host, port=port, **kwargs)
+
+
+def _start_mongo_cursor(db, collection: str, q_ast, qcfg: dict):
+    coll = db[collection]
+    projection = qcfg.get("projection")
+    limit = qcfg.get("limit")
+    batch_size = qcfg.get("batch_size")
+    sort = qcfg.get("sort")  # list of [field, dir], dir in {1,-1}
+
+    if isinstance(q_ast, list):
+        # aggregation pipeline
+        cursor = coll.aggregate(q_ast, batchSize=batch_size)
+    else:
+        # find
+        q = q_ast if isinstance(q_ast, dict) else {}
+        cursor = coll.find(filter=q, projection=projection, batch_size=batch_size)
+        if sort:
+            try:
+                cursor = cursor.sort([(f, int(d)) for f, d in sort])
+            except Exception:
+                pass
+        if limit:
+            cursor = cursor.limit(int(limit))
+    return cursor
