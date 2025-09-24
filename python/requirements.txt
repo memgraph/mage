@@ -1,6 +1,5 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 boto3==1.36.23
-bson==0.5.10
 defusedxml==0.7.1
 duckdb==1.2.1
 elasticsearch==8.17.0
