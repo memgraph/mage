@@ -1,4 +1,3 @@
-import json
 import threading
 import yaml
 import os
@@ -71,7 +70,7 @@ def init_find(
     # database lives in driver_config
     database = dcfg.get(Constants.DATABASE)
     if not database:
-        raise mgp.Error("driver_config must include 'database'.")
+        raise Exception("driver_config must include 'database'.")
 
     # Setup database and cursor
     db = client[database]
@@ -110,15 +109,15 @@ def cleanup_find():
     if cursor:
         try:
             cursor.close()
-        except Exception:
-            pass
+        except Exception as e:
+            raise Exception(f"Failed to close cursor: {str(e)}")
 
     client = mongodb_dict[thread_id].get(Constants.DRIVER)
     if client:
         try:
             client.close()
-        except Exception:
-            pass
+        except Exception as e:
+            raise Exception(f"Failed to close client: {str(e)}")
 
     mongodb_dict.pop(thread_id, None)
 
@@ -129,7 +128,7 @@ mgp.add_batch_read_proc(find, init_find, cleanup_find)
 @mgp.read_proc
 def test_connection(
     driver_config: mgp.Any,  # Driver config (map) or config name (string)
-) -> mgp.Record(status=str, message=str):
+) -> mgp.Record(message=str):
     """
     Test MongoDB connection using configuration.
 
@@ -139,23 +138,16 @@ def test_connection(
     Returns:
         Record with connection test results
     """
-    try:
-        # Resolve driver configuration
-        resolved_config = _resolve_driver_config(driver_config)
+    # Resolve driver configuration
+    resolved_config = _resolve_driver_config(driver_config)
 
-        # Get MongoDB client
-        client = _get_mongo_client(resolved_config)
+    # Get MongoDB client
+    client = _get_mongo_client(resolved_config)
 
-        # Test MongoDB connection
-        result = _test_mongodb_connection(client, resolved_config)
+    # Test MongoDB connection
+    result = _test_mongodb_connection(client, resolved_config)
 
-        return mgp.Record(
-            status=result[Constants.STATUS], message=result[Constants.MESSAGE]
-        )
-    except Exception as e:
-        return mgp.Record(
-            status="error", message=f"Failed to test connection: {str(e)}"
-        )
+    return mgp.Record(message=result)
 
 
 @mgp.read_proc
@@ -180,7 +172,7 @@ def list_collections(
     # Get database name
     database = resolved_config.get(Constants.DATABASE)
     if not database:
-        raise mgp.Error("Driver config must include 'database'.")
+        raise Exception("Driver config must include 'database'.")
 
     # Get database and list collection names
     db = client[database]
@@ -215,7 +207,7 @@ def find_one(
     # Get database name
     database = resolved_config.get(Constants.DATABASE)
     if not database:
-        raise mgp.Error("Driver config must include 'database'.")
+        raise Exception("Driver config must include 'database'.")
 
     # Get database and collection
     db = client[database]
@@ -258,7 +250,7 @@ def get_configurations() -> mgp.Record(name=str, config=mgp.Map):
 def add_configuration(
     configuration_name: str,  # Name of the configuration
     driver_config: mgp.Map,  # Driver configuration to save
-) -> mgp.Record(status=str, message=str):
+) -> mgp.Record(success=bool, message=str):
     """
     Add or update MongoDB configuration in YAML file.
 
@@ -276,21 +268,30 @@ def add_configuration(
         # Load existing configurations
         configs = _load_configurations()
 
+        # Check if configuration already exists
+        was_overridden = configuration_name in configs
+
         # Add or update the configuration
         configs[configuration_name] = config_dict
 
         # Save configurations back to file
         _save_configurations(configs)
 
+        # Determine message based on whether it was overridden
+        if was_overridden:
+            message = (
+                f"Configuration '{configuration_name}' was overridden successfully"
+            )
+        else:
+            message = f"Configuration '{configuration_name}' was added successfully"
+
         return mgp.Record(
-            status="success",
-            message=f"Configuration '{configuration_name}' saved successfully",
+            success=True,
+            message=message,
         )
 
     except Exception as e:
-        return mgp.Record(
-            status="error", message=f"Failed to save configuration: {str(e)}"
-        )
+        raise Exception(f"Failed to save configuration: {str(e)}")
 
 
 def _resolve_driver_config(driver_config: mgp.Any) -> Dict[str, Any]:
@@ -299,7 +300,7 @@ def _resolve_driver_config(driver_config: mgp.Any) -> Dict[str, Any]:
         # Load from YAML file by name
         config = _load_configuration_by_name(driver_config)
         if config is None:
-            raise mgp.Error(
+            raise Exception(
                 f"Configuration '{driver_config}' not found in YAML file. Please use the add_configuration procedure to add a new configuration."
             )
         return config
@@ -307,7 +308,7 @@ def _resolve_driver_config(driver_config: mgp.Any) -> Dict[str, Any]:
         # Use the map directly
         return dict(driver_config)
     else:
-        raise mgp.Error(
+        raise Exception(
             f"Invalid driver_config type: {type(driver_config)}. Expected a map object with the exact configuration parameters or a string name of the configuration."
         )
 
@@ -330,22 +331,21 @@ def _load_configurations() -> Dict[str, Any]:
         config_dir = os.path.dirname(config_file)
         try:
             os.makedirs(config_dir, exist_ok=True)
-        except Exception:
-            pass  # If we can't create the directory, continue anyway
+        except Exception as e:
+            raise Exception(f"Failed to create directory {config_dir}: {str(e)}")
 
         # Create empty YAML file
         try:
             with open(config_file, "w") as file:
                 yaml.dump({}, file, default_flow_style=False, indent=2)
-        except Exception:
-            pass  # If we can't create the file, return empty dict
-        return {}
+        except Exception as e:
+            raise Exception(f"Failed to create file {config_file}: {str(e)}")
 
     try:
         with open(config_file, "r") as file:
             return yaml.safe_load(file) or {}
-    except Exception:
-        return {}
+    except Exception as e:
+        raise Exception(f"Failed to load file {config_file}: {str(e)}")
 
 
 def _save_configurations(configs: Dict[str, Any]) -> None:
@@ -378,8 +378,8 @@ def _mongo_to_primitive(value):
     if hasattr(value, "isoformat"):
         try:
             return value.isoformat()
-        except Exception:
-            pass
+        except Exception as e:
+            raise Exception(f"Failed to convert value {value} to isoformat: {str(e)}")
     if isinstance(value, BsonTimestamp):
         return {"ts_time": value.time, "ts_inc": value.inc}
     if isinstance(value, dict):
@@ -436,13 +436,13 @@ def _start_mongo_cursor(db, collection: str, q_ast: dict, qcfg: dict):
     try:
         limit_val = int(limit_val) if limit_val is not None else None
     except Exception:
-        raise mgp.Error(f"Invalid 'limit' value: {limit_val}")
+        raise Exception(f"Invalid 'limit' value: {limit_val}")
 
     batch_size_val = qcfg.get("batch_size")
     try:
         batch_size_val = int(batch_size_val) if batch_size_val is not None else None
     except Exception:
-        raise mgp.Error(f"Invalid 'batch_size' value: {batch_size_val}")
+        raise Exception(f"Invalid 'batch_size' value: {batch_size_val}")
 
     sort_spec = qcfg.get("sort")  # expected like: [["age", -1], ["name", 1]]
     if sort_spec is not None:
@@ -450,7 +450,7 @@ def _start_mongo_cursor(db, collection: str, q_ast: dict, qcfg: dict):
         try:
             sort_pairs = [(str(f), int(d)) for f, d in list(sort_spec)]
         except Exception:
-            raise mgp.Error(f"Invalid 'sort' value: {sort_spec}")
+            raise Exception(f"Invalid 'sort' value: {sort_spec}")
     else:
         sort_pairs = None
 
@@ -471,31 +471,19 @@ def _test_mongodb_connection(
     client: MongoClient, driver_config: mgp.Map
 ) -> Dict[str, Any]:
     """Test MongoDB connection."""
-    try:
-        # First test with ping
-        client.admin.command("ping")
+    # First test with ping
+    client.admin.command("ping")
 
-        # Test connection with a dummy query
-        dcfg = dict(driver_config)
+    # Test connection with a dummy query
+    dcfg = dict(driver_config)
 
-        database = dcfg.get(Constants.DATABASE)
-        if not database:
-            return {
-                Constants.STATUS: "error",
-                Constants.MESSAGE: "Driver config must include 'database'.",
-            }
+    database = dcfg.get(Constants.DATABASE)
+    if not database:
+        raise Exception("Driver config must include 'database'.")
 
-        db = client[database]
-        # Execute a simple query to test the connection
-        db.list_collection_names()
-        client.close()
+    db = client[database]
+    # Execute a simple query to test the connection
+    db.list_collection_names()
+    client.close()
 
-        return {
-            Constants.STATUS: "success",
-            Constants.MESSAGE: "MongoDB connection successful",
-        }
-    except Exception as e:
-        return {
-            Constants.STATUS: "error",
-            Constants.MESSAGE: f"MongoDB connection failed: {str(e)}",
-        }
+    return "MongoDB connection successful"
