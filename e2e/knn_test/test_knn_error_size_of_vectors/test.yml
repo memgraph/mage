@@ -1,0 +1,5 @@
+query: >
+  CALL knn.get({nodeProperties: ["embedding", "embedding2"], aggregateMethod: "AVG"}) YIELD node, neighbour, similarity
+  RETURN node.id as node_id, neighbour.id as neighbour_id, similarity
+
+exception: "All property vectors must have the same size for aggregation. Expected size: 3, but vector has size: 2"
