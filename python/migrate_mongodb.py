@@ -38,9 +38,9 @@ mongodb_dict = {}
 
 def init_find(
     collection_name: str,  # 1) collection
-    find_query: mgp.Map,  # 2) filter as MAP (find only)
-    query_config: mgp.Map,  # 3) query config (NO collection here)
-    driver_config: mgp.Any,  # 4) driver config (map) or config name (string)
+    find_query: mgp.Nullable[mgp.Map] = None,  # 2) filter as MAP (find only)
+    query_config: mgp.Nullable[mgp.Map] = None,  # 3) query config (NO collection here)
+    driver_config: mgp.Nullable[mgp.Any] = None,  # 4) driver config (map) or config name (string)
 ):
     """
     Prepare MongoDB cursor for batch streaming.
@@ -60,11 +60,11 @@ def init_find(
     # Get MongoDB client
     client = _get_mongo_client(resolved_config)
 
-    # Convert configs to dict
-    qcfg = dict(query_config)
+    # Convert configs to dict, use empty map if None
+    qcfg = dict(query_config) if query_config is not None else {}
     dcfg = dict(resolved_config)
 
-    # Filter is already a map
+    # Filter is already a map, use empty map if None
     q_ast = dict(find_query) if find_query is not None else {}
 
     # database lives in driver_config
@@ -84,9 +84,9 @@ def init_find(
 
 def find(
     collection_name: str,
-    find_query: mgp.Map,
-    query_config: mgp.Map,
-    driver_config: mgp.Any,
+    find_query: mgp.Nullable[mgp.Map] = None,
+    query_config: mgp.Nullable[mgp.Map] = None,
+    driver_config: mgp.Nullable[mgp.Any] = None,
 ) -> mgp.Record(row=mgp.Map):
     """Stream up to BATCH_SIZE documents as rows (per call)."""
     global mongodb_dict
@@ -127,7 +127,7 @@ mgp.add_batch_read_proc(find, init_find, cleanup_find)
 
 @mgp.read_proc
 def test_connection(
-    driver_config: mgp.Any,  # Driver config (map) or config name (string)
+    driver_config: mgp.Nullable[mgp.Any] = None,  # Driver config (map) or config name (string)
 ) -> mgp.Record(message=str):
     """
     Test MongoDB connection using configuration.
@@ -152,7 +152,7 @@ def test_connection(
 
 @mgp.read_proc
 def list_collections(
-    driver_config: mgp.Any,  # Driver config (map) or config name (string)
+    driver_config: mgp.Nullable[mgp.Any] = None,  # Driver config (map) or config name (string)
 ) -> mgp.Record(name=str):
     """
     List all collection names in the MongoDB database.
@@ -187,7 +187,7 @@ def list_collections(
 @mgp.read_proc
 def find_one(
     collection_name: str,  # Name of the collection
-    driver_config: mgp.Any,  # Driver config (map) or config name (string)
+    driver_config: mgp.Nullable[mgp.Any] = None,  # Driver config (map) or config name (string)
 ) -> mgp.Record(document=mgp.Map):
     """
     Find one document from the specified collection.
@@ -294,9 +294,19 @@ def add_configuration(
         raise Exception(f"Failed to save configuration: {str(e)}")
 
 
-def _resolve_driver_config(driver_config: mgp.Any) -> Dict[str, Any]:
-    """Resolve driver configuration from either map or string name."""
-    if isinstance(driver_config, str):
+def _resolve_driver_config(driver_config: mgp.Nullable[mgp.Any]) -> Dict[str, Any]:
+    """Resolve driver configuration from either map, string name, or None (auto-load single config)."""
+    if driver_config is None:
+        # Auto-load single configuration from file
+        configs = _load_configurations()
+        if len(configs) == 0:
+            raise Exception("No configurations found in YAML file. Please use add_configuration to add a configuration.")
+        elif len(configs) == 1:
+            # Use the single configuration
+            return list(configs.values())[0]
+        else:
+            raise Exception(f"Multiple configurations found ({len(configs)}). Please specify which configuration to use by name or provide a map.")
+    elif isinstance(driver_config, str):
         # Load from YAML file by name
         config = _load_configuration_by_name(driver_config)
         if config is None:
@@ -309,7 +319,7 @@ def _resolve_driver_config(driver_config: mgp.Any) -> Dict[str, Any]:
         return dict(driver_config)
     else:
         raise Exception(
-            f"Invalid driver_config type: {type(driver_config)}. Expected a map object with the exact configuration parameters or a string name of the configuration."
+            f"Invalid driver_config type: {type(driver_config)}. Expected a map object with the exact configuration parameters, a string name of the configuration, or None to auto-load single config."
         )
 
 
