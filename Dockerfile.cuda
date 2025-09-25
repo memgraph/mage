@@ -79,7 +79,7 @@ USER memgraph
 RUN python3 -m pip install --no-cache-dir -r /mage/python/requirements-gpu.txt --break-system-packages && \
     python3 -m pip install --no-cache-dir -r /mage/python/tests/requirements.txt --break-system-packages && \
     python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages && \
-    python3 -m pip install --no-cache-dir torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter --break-system-packages; \
+    python3 -m pip install --no-cache-dir torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter --break-system-packages -f https://data.pyg.org/whl/torch-2.6.0+cu126.html; \
     python3 -m pip install --no-cache-dir dgl==2.5.0 -f https://data.dgl.ai/wheels/torch-2.6/repo.html --break-system-packages; \
     rm -fr /home/memgraph/.cache/pip
 
