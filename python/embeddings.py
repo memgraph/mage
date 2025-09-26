@@ -2,6 +2,8 @@ import os, sys, multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import mgp
 
+sys.path.append(os.path.join(os.path.dirname(__file__), "embed_worker"))
+
 logger: mgp.Logger = mgp.Logger()
 
 EXCLUDE_PROPERTIES = {"embedding"}
