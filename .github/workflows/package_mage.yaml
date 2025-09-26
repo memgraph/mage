@@ -60,10 +60,10 @@ jobs:
       memgraph_download_link: ${{ github.event.inputs.memgraph_download_link || '' }}
       shorten_tag: 'true'
       force_release: 'true'
-      cuda: ${{ github.event.inputs.cuda || 'false' }}
+      cuda: ${{ github.event.inputs.cuda == 'true' }}
       push_to_s3: ${{ github.event.inputs.push_to_s3 || 'false' }}
       malloc: ${{ github.event.inputs.malloc == 'true' }}
-      run_smoke_tests: ${{ inputs.run_smoke_tests == 'true' }}
+      run_smoke_tests: ${{ inputs.run_smoke_tests }}
     secrets: inherit
 
   # New matrix build job, runs only when matrix_build is true
@@ -89,7 +89,7 @@ jobs:
       memgraph_download_link: ${{ github.event.inputs.memgraph_download_link || '' }}
       shorten_tag: 'true'
       force_release: 'true'
-      cuda: ${{ github.event.inputs.cuda || 'false' }}
+      cuda: ${{ github.event.inputs.cuda == 'true' }}
       push_to_s3: ${{ github.event.inputs.push_to_s3 || 'false' }}
       malloc: ${{ matrix.malloc }}
       run_smoke_tests: ${{ inputs.run_smoke_tests }}
