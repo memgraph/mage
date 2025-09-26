@@ -1,97 +1,132 @@
+import os, sys, multiprocessing as mp
+from concurrent.futures import ProcessPoolExecutor, as_completed
 import mgp
-import subprocess
-import sys
-import os
 
-# os.environ["TRANSFORMERS_NO_TORCHVISION"] = "1"
-# os.environ["HF_HUB_OFFLINE"] = "1" # NOTE: With this HB can't download the model...
-# os.environ["PYTHONNOUSERSITE"] = "1"
-# sys.path.append("/home/memgraph/.local/lib/python3.12/site-packages")
-
-# NOTE: Dirty fix for the issue of failed HB logger...
-os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
-os.environ["TRANSFORMERS_NO_TORCHVISION"] = "1"
-try:
-    from huggingface_hub.utils import _logging
-except ImportError:
-    # Fallback if _logging is unavailable
-    import logging
-    _logging = logging
+logger: mgp.Logger = mgp.Logger()
 
 EXCLUDE_PROPERTIES = {"embedding"}
 BATCH_SIZE = 2000
-# Memory usage examples:
-#  * 1k batch on https://github.com/datacharmer/test_db uses 4.6GB vRAM peak.
-logger: mgp.Logger = mgp.Logger()
-
-# TODO(gitbuda): Parametrize the number of devices used.
-# os.environ["CUDA_VISIBLE_DEVICES"]="0,1" # NOTE: This seems to no be working...
-import torch
-device = "cuda" if torch.cuda.is_available() else "cpu"
-logger.info(f"---- DEVICE: {device}")
+MODEL_ID = "all-MiniLM-L6-v2"
 
 
-# TODO(gitbuda): The input should be a list of vertices because we could select + batch.
+def build_texts(vertices):
+    out = []
+    for v in vertices:
+        txt = " ".join(lbl.name for lbl in v.labels) + " " + " ".join(
+            f"{k}: {val}" for k, val in v.properties.items() if k not in EXCLUDE_PROPERTIES
+        )
+        out.append(txt)
+    return out
+
+
+def split_slices(n_items: int, n_parts: int):
+    base, rem = divmod(n_items, n_parts)
+    start = 0
+    slices = []
+    for i in range(n_parts):
+        end = start + base + (1 if i < rem else 0)
+        slices.append((start, end))
+        start = end
+    return slices
+
+
+def get_visible_gpus():
+    # Avoid creating a CUDA context in the parent if possible
+    try:
+        import subprocess
+        out = subprocess.check_output(
+            ["nvidia-smi", "--query-gpu=index", "--format=csv,noheader"], text=True
+        )
+        return [int(x) for x in out.strip().splitlines() if x.strip()]
+    except Exception:
+        try:
+            import torch
+            return list(range(torch.cuda.device_count())) if torch.cuda.is_available() else []
+        except Exception:
+            return []
+
+
 @mgp.write_proc
 def compute_embeddings(ctx: mgp.ProcCtx) -> mgp.Record(success=bool):
     logger.info(
-        f"compute_embeddings: starting (device={device}, py_exec={sys.executable}, py_ver={sys.version.split()[0]})"
+        f"compute_embeddings: starting (py_exec={sys.executable}, py_ver={sys.version.split()[0]})"
     )
     try:
-        from sentence_transformers import SentenceTransformer
-    except ImportError as e:
-        logger.error(f"sentence-transformers not available: {e}")
-        return mgp.Record(success=False)
-    try: 
-        model = SentenceTransformer("all-MiniLM-L6-v2", device=device)
+        # Parent imports are okay; workers import only embed_worker
+        import embed_worker  # <-- our pure worker module
     except Exception as e:
-        logger.warning(f"Failed to load model: {e}")
+        logger.error(f"Failed to import worker module: {e}")
         return mgp.Record(success=False)
 
     try:
-        batch_vertices = []
-        batch_data = []
-        for vertex in ctx.graph.vertices:
-            # TODO: parametrize the excluded properties
-            node_data = " ".join(label.name for label in vertex.labels) + " " + " ".join(
-                f"{key}: {value}"
-                for key, value in vertex.properties.items()
-                if key not in EXCLUDE_PROPERTIES
-            )
-            batch_vertices.append(vertex)
-            batch_data.append(node_data)
-            # Process batch when it reaches BATCH_SIZE
-            if len(batch_vertices) == BATCH_SIZE:
-                # Compute embeddings for the batch
-                # TODO(gitbuda): Use pytorch data loader with prefetching.
-                batch_embeddings = model.encode(
-                    batch_data,
-                    batch_size=BATCH_SIZE,
+        vertices = list(ctx.graph.vertices)
+        texts = build_texts(vertices)
+        n = len(texts)
+        if n == 0:
+            logger.info("No vertices to process.")
+            return mgp.Record(success=True)
+
+        gpus = get_visible_gpus()
+        logger.info(f"Found {len(gpus)} GPU(s): {gpus}")
+
+        # CPU fallback (single process in parent)
+        if not gpus:
+            try:
+                from sentence_transformers import SentenceTransformer
+                model = SentenceTransformer(MODEL_ID, device="cpu")
+                embs = model.encode(
+                    texts,
+                    batch_size=min(BATCH_SIZE, n),
                     convert_to_numpy=True,
-                    normalize_embeddings=True
+                    normalize_embeddings=True,
+                    show_progress_bar=False,
                 )
-                # Update vertex properties with computed embeddings
-                for vertex, embedding in zip(batch_vertices, batch_embeddings):
-                    # TODO: parametrize the property name
-                    vertex.properties["embedding"] = embedding.tolist()
-                # Clear the batch lists for next iteration
-                batch_vertices.clear()
-                batch_data.clear()
+                for v, e in zip(vertices, embs.tolist()):
+                    v.properties["embedding"] = e
+                logger.info(f"Processed {n} vertices on CPU.")
+                return mgp.Record(success=True)
+            except Exception as e:
+                logger.error(f"CPU path failed: {e}")
+                return mgp.Record(success=False)
 
-        # Process remaining vertices in the last batch
-        if batch_vertices:
-            batch_embeddings = model.encode(
-                batch_data,
-                batch_size=BATCH_SIZE,
-                convert_to_numpy=True,
-                normalize_embeddings=True
-            )
-            for vertex, embedding in zip(batch_vertices, batch_embeddings):
-                # TODO: parametrize the property name
-                vertex.properties["embedding"] = embedding.tolist()
+        # Multi-GPU via spawn
+        slices = split_slices(n, len(gpus))
+        tasks = []
+        for gpu, (a, b) in zip(gpus, slices):
+            if a < b:
+                tasks.append((gpu, MODEL_ID, texts[a:b], BATCH_SIZE, a, b))
 
-        return mgp.Record(success=True)
+        results = []
+        total = 0
+
+        mp.set_executable("/usr/bin/python3")
+        ctx_spawn = mp.get_context("spawn")
+        with ProcessPoolExecutor(max_workers=len(tasks), mp_context=ctx_spawn) as ex:
+            fut2info = {
+                ex.submit(embed_worker.encode_chunk, t[0], t[1], t[2], t[3]): (t[0], t[4], t[5])
+                for t in tasks
+            }
+            for fut in as_completed(fut2info):
+                gpu, a, b = fut2info[fut]
+                try:
+                    count, embs = fut.result()
+                    if count != (b - a) or len(embs) != (b - a):
+                        logger.error(f"GPU {gpu} returned mismatched count {count} for slice [{a}:{b})")
+                        continue
+                    results.append((a, b, embs))
+                    total += count
+                    logger.info(f"GPU {gpu} returned {count} embeddings for slice [{a}:{b}).")
+                except Exception as e:
+                    logger.error(f"Worker on GPU {gpu} failed: {e}")
+
+        # Write back
+        for a, b, embs in results:
+            for i, e in enumerate(embs, start=a):
+                vertices[i].properties["embedding"] = e
+
+        logger.info(f"Successfully processed {total}/{n} vertices across {len(gpus)} GPU(s).")
+        return mgp.Record(success=(total == n))
+
     except Exception as e:
-        # Handle exceptions by returning failure status
-        logger.error(f"Failed to compute embedding for node: {e}")
+        logger.error(f"Failed to compute embeddings: {e}")
         return mgp.Record(success=False)
