@@ -1,4 +1,6 @@
-import os, sys, multiprocessing as mp
+import os
+import sys
+import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import mgp
 
