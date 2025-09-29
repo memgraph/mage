@@ -19,7 +19,6 @@ constexpr std::string_view kConfigMaxIterations = "maxIterations";
 constexpr std::string_view kConfigRandomSeed = "randomSeed";
 constexpr std::string_view kConfigSampleRate = "sampleRate";
 constexpr std::string_view kConfigConcurrency = "concurrency";
-constexpr std::string_view kConfigAggregateMethod = "aggregateMethod";
 
 // Return field names
 constexpr std::string_view kFieldNode = "node";
@@ -33,39 +32,6 @@ constexpr double kDefaultDeltaThreshold = 0.001;
 constexpr int kDefaultMaxIterations = 100;
 constexpr int kDefaultConcurrency = 1;
 constexpr double kDefaultSampleRate = 0.5;
-
-// Aggregate method values
-constexpr std::string_view kAggregateNone = "NONE";
-constexpr std::string_view kAggregateAppend = "APPEND";
-constexpr std::string_view kAggregateMin = "MIN";
-constexpr std::string_view kAggregateMax = "MAX";
-constexpr std::string_view kAggregateAvg = "AVG";
-constexpr std::string_view kAggregateSum = "SUM";
-
-// Helper function to validate if a string is a valid aggregate method
-bool IsValidAggregateMethod(const std::string &method_str) {
-  return method_str == kAggregateNone || method_str == kAggregateAppend || method_str == kAggregateMin ||
-         method_str == kAggregateMax || method_str == kAggregateAvg || method_str == kAggregateSum;
-}
-
-// Helper function to parse aggregate method from string
-knn_util::AggregateMethod ParseAggregateMethod(const std::string &method_str) {
-  if (method_str == kAggregateNone) {
-    return knn_util::AggregateMethod::NONE;
-  } else if (method_str == kAggregateAppend) {
-    return knn_util::AggregateMethod::APPEND;
-  } else if (method_str == kAggregateMin) {
-    return knn_util::AggregateMethod::MIN;
-  } else if (method_str == kAggregateMax) {
-    return knn_util::AggregateMethod::MAX;
-  } else if (method_str == kAggregateAvg) {
-    return knn_util::AggregateMethod::AVG;
-  } else if (method_str == kAggregateSum) {
-    return knn_util::AggregateMethod::SUM;
-  } else {
-    return knn_util::AggregateMethod::NONE;  // Default fallback
-  }
-}
 
 // Helper function to validate parameter ranges
 void ValidateParameterRanges(const knn_util::KNNConfig &config) {
@@ -205,21 +171,6 @@ void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memo
 
     config.sample_rate =
         config_map.KeyExists(kConfigSampleRate) ? config_map[kConfigSampleRate].ValueDouble() : kDefaultSampleRate;
-
-    // Parse aggregate method
-    if (config_map.KeyExists(kConfigAggregateMethod)) {
-      const std::string method_str = std::string(config_map[kConfigAggregateMethod].ValueString());
-      if (!IsValidAggregateMethod(method_str)) {
-        throw mgp::ValueException(fmt::format(
-            "Invalid aggregateMethod '{}'. Valid methods are: NONE, APPEND, MIN, MAX, AVG, SUM", method_str));
-      }
-      if (config.node_properties.size() < 2) {
-        throw mgp::ValueException("aggregateMethod can only be used when nodeProperties has at least two properties");
-      }
-      config.aggregate_method = ParseAggregateMethod(method_str);
-    } else {
-      config.aggregate_method = knn_util::AggregateMethod::NONE;  // Default
-    }
 
     // Validate all parameter ranges
     ValidateParameterRanges(config);

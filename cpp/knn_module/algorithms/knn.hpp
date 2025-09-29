@@ -11,9 +11,6 @@
 
 namespace knn_util {
 
-// Aggregate methods for merging property values
-enum class AggregateMethod { NONE, APPEND, MIN, MAX, AVG, SUM };
-
 // Configuration for KNN algorithm
 struct KNNConfig {
   int top_k = 1;
@@ -24,7 +21,6 @@ struct KNNConfig {
   double sample_rate = 0.5;
   int concurrency = 1;
   std::vector<std::string> node_properties;
-  AggregateMethod aggregate_method = AggregateMethod::NONE;
 };
 
 // Result structure for KNN
@@ -60,103 +56,11 @@ inline double CosineSimilarity(const std::vector<double> &vec1, const std::vecto
   return dot / denom;
 }
 
-// Helper function to aggregate property values based on the specified method
-std::vector<double> AggregatePropertyValues(const std::vector<std::vector<double>> &property_vectors,
-                                            knn_util::AggregateMethod method) {
-  if (property_vectors.empty()) {
-    throw mgp::ValueException("Properties of the nodes for aggregation cannot be empty!");
-  }
-
-  // Validate vector sizes for methods that require same-sized vectors
-  bool requires_same_size = (method == knn_util::AggregateMethod::MIN || method == knn_util::AggregateMethod::MAX ||
-                             method == knn_util::AggregateMethod::AVG || method == knn_util::AggregateMethod::SUM);
-
-  if (requires_same_size) {
-    size_t expected_size = property_vectors[0].size();
-    for (size_t i = 1; i < property_vectors.size(); ++i) {
-      if (property_vectors[i].size() != expected_size) {
-        throw mgp::ValueException(fmt::format(
-            "All property vectors must have the same size for aggregation. Expected size: {}, but vector has size: {}",
-            expected_size, property_vectors[i].size()));
-      }
-    }
-  }
-
-  std::vector<double> result;
-
-  switch (method) {
-    case knn_util::AggregateMethod::NONE: {
-      throw mgp::ValueException(
-          "Unexpected error: aggregation of property values happened without aggregation method specified! Please "
-          "contact Memgraph support.");
-    }
-    case knn_util::AggregateMethod::APPEND: {
-      // Concatenate all property vectors
-      for (const auto &vec : property_vectors) {
-        result.insert(result.end(), vec.begin(), vec.end());
-      }
-      break;
-    }
-    case knn_util::AggregateMethod::MIN: {
-      // Take minimum value from each position across all vectors
-      size_t vector_size = property_vectors[0].size();
-      result.resize(vector_size);
-      for (size_t i = 0; i < vector_size; ++i) {
-        result[i] = property_vectors[0][i];
-        for (size_t j = 1; j < property_vectors.size(); ++j) {
-          result[i] = std::min(result[i], property_vectors[j][i]);
-        }
-      }
-      break;
-    }
-    case knn_util::AggregateMethod::MAX: {
-      // Take maximum value from each position across all vectors
-      size_t vector_size = property_vectors[0].size();
-      result.resize(vector_size);
-      for (size_t i = 0; i < vector_size; ++i) {
-        result[i] = property_vectors[0][i];
-        for (size_t j = 1; j < property_vectors.size(); ++j) {
-          result[i] = std::max(result[i], property_vectors[j][i]);
-        }
-      }
-      break;
-    }
-    case knn_util::AggregateMethod::AVG: {
-      // Take average value from each position across all vectors
-      size_t vector_size = property_vectors[0].size();
-      result.resize(vector_size);
-      for (size_t i = 0; i < vector_size; ++i) {
-        double sum = 0.0;
-        for (const auto &vec : property_vectors) {
-          sum += vec[i];
-        }
-        result[i] = sum / property_vectors.size();
-      }
-      break;
-    }
-    case knn_util::AggregateMethod::SUM: {
-      // Take sum value from each position across all vectors
-      size_t vector_size = property_vectors[0].size();
-      result.resize(vector_size);
-      for (size_t i = 0; i < vector_size; ++i) {
-        result[i] = 0.0;
-        for (const auto &vec : property_vectors) {
-          result[i] += vec[i];
-        }
-      }
-      break;
-    }
-  }
-
-  return result;
-}
-
 // Structure to hold pre-loaded node data for efficient comparison
 struct NodeData {
   mgp::Id node_id;
-  std::vector<std::vector<double>>
-      property_values;        // One vector per property (for NONE) or single aggregated vector (for aggregation)
-  std::vector<double> norms;  // Norms for each property
+  std::vector<std::vector<double>> property_values;  // One vector per property
+  std::vector<double> norms;                         // Norms for each property
 
   NodeData(const mgp::Node &n, const std::vector<std::vector<double>> &prop_values)
       : node_id(n.Id()), property_values(prop_values) {}
@@ -182,8 +86,11 @@ std::vector<NodeData> PreloadNodeData(const std::vector<mgp::Node> &nodes, const
             fmt::format("Property {} must be a list of doubles for similarity calculation", prop_name));
       }
 
-      mgp::List list = prop_value.ValueList();
-      for (size_t i = 0; i < list.Size(); ++i) {
+      const auto &list = prop_value.ValueList();
+      const auto size = list.Size();
+      values.reserve(size);
+
+      for (size_t i = 0; i < size; ++i) {
         if (!list[i].IsDouble()) {
           throw mgp::ValueException(
               fmt::format("Property {} must be a list of doubles for similarity calculation", prop_name));
@@ -198,18 +105,8 @@ std::vector<NodeData> PreloadNodeData(const std::vector<mgp::Node> &nodes, const
       property_values[prop_idx] = values;
     }
 
-    // Handle aggregation if needed
-    const bool is_aggregated = (config.aggregate_method != knn_util::AggregateMethod::NONE);
-    if (is_aggregated) {
-      // Aggregate the property values
-      std::vector<double> aggregated = AggregatePropertyValues(property_values, config.aggregate_method);
-      property_values.clear();
-      property_values.push_back(aggregated);
-    }
-
     // Create node_info at the end with the final property_values
-    NodeData node_info(node, property_values);
-    node_data.push_back(node_info);
+    node_data.emplace_back(node, std::move(property_values));
   }
 
   // Validate vector sizes
@@ -264,39 +161,19 @@ double CalculateNodeSimilarity(const NodeData &node1_data, const NodeData &node2
 }
 
 // Get candidate indices for comparison, excluding self
-std::vector<size_t> GetCandidateIndices(const size_t node_idx, const size_t total_nodes,
+std::vector<size_t> GetCandidateIndices(const size_t node_idx, std::vector<size_t> &all_indices,
                                         const knn_util::KNNConfig &config) {
+  // Shuffle indices for uniform sampling
+  std::mt19937 rng(config.random_seed);
+  std::shuffle(all_indices.begin(), all_indices.end(), rng);
+
+  const size_t sample_size = static_cast<size_t>(all_indices.size() * config.sample_rate);
+
   std::vector<size_t> comparison_indices;
-
-  if (config.sample_rate < 1.0) {
-    // Create indices for all nodes except self
-    std::vector<size_t> all_indices;
-    all_indices.reserve(total_nodes - 1);
-    for (size_t i = 0; i < total_nodes; ++i) {
-      if (i != node_idx) {  // Skip self
-        all_indices.push_back(i);
-      }
-    }
-
-    // Shuffle indices for uniform sampling
-    std::mt19937 rng(config.random_seed);
-    std::shuffle(all_indices.begin(), all_indices.end(), rng);
-
-    // Calculate sample size
-    const size_t sample_size = static_cast<size_t>(all_indices.size() * config.sample_rate);
-    comparison_indices.reserve(sample_size);
-
-    // Take the first sample_size indices
-    for (size_t i = 0; i < sample_size; ++i) {
+  comparison_indices.reserve(sample_size);
+  for (size_t i = 0; i < sample_size; ++i) {
+    if (all_indices[i] != node_idx) {
       comparison_indices.push_back(all_indices[i]);
-    }
-  } else {
-    // Compare against all other nodes
-    comparison_indices.reserve(total_nodes - 1);
-    for (size_t j = 0; j < total_nodes; ++j) {
-      if (j != node_idx) {  // Skip self-comparison
-        comparison_indices.push_back(j);
-      }
     }
   }
 
@@ -309,18 +186,14 @@ std::vector<knn_util::KNNResult> CalculateSimilarityForNode(const size_t node_id
                                                             const std::vector<size_t> &comparison_indices,
                                                             const knn_util::KNNConfig &config) {
   const auto &node1_data = node_data[node_idx];
+  const auto num_of_similarities = comparison_indices.size();
 
   // Pre-allocate results vector
   std::vector<knn_util::KNNResult> results;
-  results.reserve(comparison_indices.size());
-
-  // Convert comparison_indices to array for OpenMP (similar to betweenness_centrality_online.cpp)
-  const auto array_size = comparison_indices.size();
-  std::vector<size_t> comparison_indices_array(array_size);
-  std::copy(comparison_indices.begin(), comparison_indices.end(), comparison_indices_array.begin());
+  results.reserve(num_of_similarities);
 
   // Pre-allocate parallel results vector
-  std::vector<knn_util::KNNResult> parallel_results(array_size);
+  std::vector<knn_util::KNNResult> parallel_results(num_of_similarities);
 
   // Set OpenMP parameters
   omp_set_dynamic(0);
@@ -328,8 +201,8 @@ std::vector<knn_util::KNNResult> CalculateSimilarityForNode(const size_t node_id
 
   // Parallel similarity calculation using OpenMP
 #pragma omp parallel for
-  for (size_t i = 0; i < array_size; ++i) {
-    const size_t idx = comparison_indices_array[i];
+  for (size_t i = 0; i < num_of_similarities; ++i) {
+    const size_t idx = comparison_indices[i];
     const auto &node2_data = node_data[idx];
 
     // Calculate similarity directly
@@ -382,6 +255,8 @@ void InsertTopKResults(const std::vector<knn_util::KNNResult> &top_k_results, co
 std::vector<std::tuple<mgp::Node, mgp::Node, double>> CalculateKNN(const mgp::Graph &graph,
                                                                    const knn_util::KNNConfig &config) {
   std::vector<std::tuple<mgp::Node, mgp::Node, double>> results;
+
+  // we can't reserve here because it's an iterator
   std::vector<mgp::Node> nodes;
 
   // Collect all nodes
@@ -390,17 +265,26 @@ std::vector<std::tuple<mgp::Node, mgp::Node, double>> CalculateKNN(const mgp::Gr
   }
 
   if (nodes.size() < 2) {
-    return results;  // Need at least 2 nodes for similarity
+    // Need at least 2 nodes for similarity
+    return results;
   }
 
   // Pre-load node properties into memory for efficient comparison
   std::vector<NodeData> node_data = PreloadNodeData(nodes, config);
   PreloadNorms(node_data, config);
 
+  const auto num_nodes = nodes.size();
+
+  std::vector<size_t> all_indices;
+  all_indices.reserve(num_nodes);
+  for (size_t i = 0; i < num_nodes; ++i) {
+    all_indices[i] = i;
+  }
+
   // For each node, find its top-k most similar nodes
-  for (size_t i = 0; i < node_data.size(); ++i) {
+  for (size_t i = 0; i < num_nodes; ++i) {
     // Get candidate indices for comparison
-    const std::vector<size_t> comparison_indices = GetCandidateIndices(i, node_data.size(), config);
+    const std::vector<size_t> comparison_indices = GetCandidateIndices(i, all_indices, config);
 
     // 2. Calculate similarity for one node
     const std::vector<knn_util::KNNResult> top_k_results =
