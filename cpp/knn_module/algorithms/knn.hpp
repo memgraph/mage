@@ -278,7 +278,7 @@ std::vector<std::tuple<mgp::Node, mgp::Node, double>> CalculateKNN(const mgp::Gr
   std::vector<size_t> all_indices;
   all_indices.reserve(num_nodes);
   for (size_t i = 0; i < num_nodes; ++i) {
-    all_indices[i] = i;
+    all_indices.push_back(i);
   }
 
   // For each node, find its top-k most similar nodes
