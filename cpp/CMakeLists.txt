@@ -28,10 +28,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall \
 
 # Don't omit frame pointer in RelWithDebInfo, for additional callchain debug.
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
-  "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -O3 -fno-omit-frame-pointer")
+  "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -O2 -funsafe-math-optimizations -fvect-cost-model=dynamic -fno-omit-frame-pointer")
 
 # Release flags.
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -funsafe-math-optimizations -fvect-cost-model=dynamic -DNDEBUG")
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
 
 find_package(Threads REQUIRED)
