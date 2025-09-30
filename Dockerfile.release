@@ -151,13 +151,10 @@ RUN apt-get update && \
     apt-get install -y \
     libcurl4        `memgraph` \
     libpython${PY_VERSION}   `memgraph` \
-    libssl-dev       `memgraph` \
     openssl         `memgraph` \
     python3         `mage-memgraph` \
     python3-pip     `mage-memgraph` \
     python3-setuptools     `mage-memgraph` \
-    python3-dev     `mage-memgraph` \
-    libc6-dbg \
     adduser \
     libgomp1 \
     libaio1t64 \
@@ -245,7 +242,7 @@ ARG CUSTOM_MIRROR
 
 # Add gdb
 RUN apt-get update && apt-get install -y \
-    gdb \
+    gdb libc6-dbg \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* 
 

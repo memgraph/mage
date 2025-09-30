@@ -176,9 +176,10 @@ void Map::Merge(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp
   mgp::MemoryDispatcherGuard guard{memory};
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
+
   try {
-    const auto map1 = arguments[0].ValueMap();
-    const auto map2 = arguments[1].ValueMap();
+    const auto map1 = arguments[0].IsMap() ? arguments[0].ValueMap() : mgp::Map();
+    const auto map2 = arguments[1].IsMap() ? arguments[1].ValueMap() : mgp::Map();
 
     mgp::Map merged_map = mgp::Map(std::move(map2));
     for (const auto element : map1) {

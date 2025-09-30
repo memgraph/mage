@@ -37,6 +37,8 @@ env:
   NEO4J_PORT: 7687
   NEO4J_CONTAINER: "neo4j_test"
   MEMGRAPH_NETWORK: "memgraph_test_network"
+  MYSQL_CONTAINER: "mysql_test"
+  POSTGRESQL_CONTAINER: "postgresql_test"
   OS: "ubuntu-24.04"
   s3_region: "eu-west-1"
   MEMGRAPH_ENTERPRISE_LICENSE: ${{ secrets.MEMGRAPH_ENTERPRISE_LICENSE }}
@@ -56,7 +58,10 @@ jobs:
 
       - name: Check mgdeps-cache availability
         run: |
-          if curl --silent --fail "http://mgdeps-cache:8000/wheels/" -o /dev/null; then
+          if [ "${{ inputs.arch }}" == "amd64" ]; then
+            echo "mgdeps-cache is temporary disabled for amd64"
+            echo "CACHE_PRESENT=false" >> $GITHUB_ENV
+          elif curl --silent --fail "http://mgdeps-cache:8000/wheels/" -o /dev/null; then
             echo "mgdeps-cache is reachable :D"
             echo "CACHE_PRESENT=true" >> $GITHUB_ENV
           else
@@ -279,12 +284,29 @@ jobs:
           PYTHONPATH: "$PWD/e2e"
         run: |
           ./run_e2e_correctness_tests.sh ${{ env.MEMGRAPH_PORT }} ${{ env.NEO4J_PORT }} ${{ env.NEO4J_CONTAINER }} ${{ env.MAGE_CONTAINER }} ${{ env.MEMGRAPH_NETWORK }}
+
+      - name: Cleanup after correctness tests
+        if: always()
+        run: |
+          docker stop ${{ env.NEO4J_CONTAINER }} || true
+          docker rm ${{ env.NEO4J_CONTAINER }} || true
+
+      - name: Run End-to-end migration tests
+        env:
+          PYTHONPATH: "$PWD/e2e"
+        run: |
+          ./run_e2e_migration_tests.sh --mage-container ${{ env.MAGE_CONTAINER }} --mysql-container ${{ env.MYSQL_CONTAINER }} --postgresql-container ${{ env.POSTGRESQL_CONTAINER }}
       
-      - name: Cleanup
+      - name: Cleanup after migration tests
         if: always()
         run: |
           docker stop ${{ env.MAGE_CONTAINER }} || true
           docker rm ${{ env.MAGE_CONTAINER }} || true
           docker rmi memgraph-mage:prod || true
-          docker network rm ${{ env.MEMGRAPH_NETWORK }} || true
+          docker stop ${{ env.MYSQL_CONTAINER }} || true
+          docker rm ${{ env.MYSQL_CONTAINER }} || true
+          docker stop ${{ env.POSTGRESQL_CONTAINER }} || true
+          docker rm ${{ env.POSTGRESQL_CONTAINER }} || true
           docker stop ${{ env.NEO4J_CONTAINER }} || true
+          docker rm ${{ env.NEO4J_CONTAINER }} || true
+          docker network rm ${{ env.MEMGRAPH_NETWORK }} || true
