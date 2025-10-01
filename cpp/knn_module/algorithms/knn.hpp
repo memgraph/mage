@@ -17,7 +17,7 @@ struct KNNConfig {
   double similarity_cutoff = 0.0;
   double delta_threshold = 0.001;
   int max_iterations = 100;
-  int random_seed = 42;
+  int random_seed = 42;  // the value is being set from the knn_module.cpp file
   double sample_rate = 0.5;
   int concurrency = 1;
   std::vector<std::string> node_properties;
@@ -227,10 +227,8 @@ std::vector<knn_util::KNNResult> CalculateSimilarityForNode(const size_t node_id
   if (k > 0 && results.size() > k) {
     std::nth_element(results.begin(), results.begin() + k, results.end(), cmp);
     results.resize(k);
-    std::sort(results.begin(), results.end(), cmp);  // sort only top-k
-  } else {
-    std::sort(results.begin(), results.end(), cmp);  // small n or k >= n
   }
+  std::sort(results.begin(), results.end(), cmp);
 
   return results;
 }
@@ -240,14 +238,9 @@ void InsertTopKResults(const std::vector<knn_util::KNNResult> &top_k_results, co
                        std::vector<std::tuple<mgp::Node, mgp::Node, double>> &final_results) {
   // Convert to final results with actual nodes (results are already sorted)
   for (const auto &result : top_k_results) {
-    try {
-      const auto node1 = graph.GetNodeById(result.node1_id);
-      const auto node2 = graph.GetNodeById(result.node2_id);
-      final_results.push_back(std::make_tuple(node1, node2, result.similarity));
-    } catch (const std::exception &e) {
-      // Skip if node not found
-      continue;
-    }
+    const auto node1 = graph.GetNodeById(result.node1_id);
+    const auto node2 = graph.GetNodeById(result.node2_id);
+    final_results.emplace_back(node1, node2, result.similarity);
   }
 }
 

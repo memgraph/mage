@@ -157,12 +157,10 @@ void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memo
 
     // Parse random seed with validation
     if (config_map.KeyExists(kConfigRandomSeed)) {
-      config.random_seed = static_cast<int>(config_map[kConfigRandomSeed].ValueInt());
-      // If seed is provided, concurrency must be 1 for deterministic results
-      if (config.concurrency != 1) {
-        throw mgp::ValueException(
-            "When 'randomSeed' is specified, 'concurrency' must be set to 1 for deterministic results");
+      if (!config_map[kConfigRandomSeed].IsInt()) {
+        throw mgp::ValueException("randomSeed must be an integer");
       }
+      config.random_seed = static_cast<int>(config_map[kConfigRandomSeed].ValueInt());
     } else {
       // Generate completely random seed
       std::random_device rd;
