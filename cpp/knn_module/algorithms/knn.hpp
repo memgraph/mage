@@ -163,7 +163,7 @@ double CalculateNodeSimilarity(const NodeData &node1_data, const NodeData &node2
 // Get candidate indices for comparison, excluding self
 std::vector<size_t> GetCandidateIndices(const size_t node_idx, std::vector<size_t> &all_indices,
                                         const knn_util::KNNConfig &config) {
-  // Shuffle indices for uniform sampling
+  // Safe: std::mt19937 is used for reproducible simulations, not cryptography
   std::mt19937 rng(config.random_seed);
   std::shuffle(all_indices.begin(), all_indices.end(), rng);
 
