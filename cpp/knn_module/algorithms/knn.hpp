@@ -164,8 +164,8 @@ double CalculateNodeSimilarity(const NodeData &node1_data, const NodeData &node2
 std::vector<size_t> GetCandidateIndices(const size_t node_idx, std::vector<size_t> &all_indices,
                                         const knn_util::KNNConfig &config) {
   // Safe: std::mt19937 is used for reproducible simulations, not cryptography
-  std::mt19937 rng(config.random_seed);
-  std::shuffle(all_indices.begin(), all_indices.end(), rng);
+  std::mt19937 rng(config.random_seed); // NOSONAR
+  std::shuffle(all_indices.begin(), all_indices.end(), rng); // NOSONAR
 
   const size_t sample_size = static_cast<size_t>(all_indices.size() * config.sample_rate);
 
