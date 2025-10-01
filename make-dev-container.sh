@@ -48,7 +48,7 @@ get_toolchain_url() {
 }
 
 
-toolchain_version=6
+toolchain_version=7
 TOOLCHAIN_URL=$(get_toolchain_url "$toolchain_version")
 echo "Downloading toolchain from: $TOOLCHAIN_URL"
 # Download the toolchain using curl
