@@ -5,7 +5,7 @@ query: >
 output:
   - node_id: 1
     neighbour_id: 2
-    similarity: 0.6
+    similarity: 0.8
   - node_id: 2
     neighbour_id: 1
-    similarity: 0.6
+    similarity: 0.8
