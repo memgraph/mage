@@ -5,15 +5,17 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <limits>
 #include <numeric>
 #include <random>
+#include <unordered_set>
 #include <vector>
 
 namespace knn_util {
 
 // Configuration for KNN algorithm
 struct KNNConfig {
-  int top_k = 1;
+  uint64_t top_k = 1;
   double similarity_cutoff = 0.0;
   double delta_threshold = 0.001;
   int max_iterations = 100;
@@ -23,23 +25,16 @@ struct KNNConfig {
   std::vector<std::string> node_properties;
 };
 
-// Result structure for KNN
-struct KNNResult {
-  mgp::Id node1_id;
-  mgp::Id node2_id;
-  double similarity;
+struct KNNNeighbour {
+  uint64_t neighbour_id;
+  double similarity{0.0};
+  bool is_new_neighbour{true};
 
-  // Default constructor for std::vector compatibility
-  KNNResult() : similarity(0.0) {
-    // Initialize with default constructed Ids
-    node1_id = mgp::Id();
-    node2_id = mgp::Id();
-  }
+  KNNNeighbour(const uint64_t id, double sim) : neighbour_id(id), similarity(sim) {}
+};
 
-  KNNResult(const mgp::Node &n1, const mgp::Node &n2, double sim)
-      : node1_id(n1.Id()), node2_id(n2.Id()), similarity(sim) {}
-
-  KNNResult(mgp::Id id1, mgp::Id id2, double sim) : node1_id(id1), node2_id(id2), similarity(sim) {}
+struct WorseNeighbour {
+  bool operator()(const KNNNeighbour &a, const KNNNeighbour &b) const { return a.similarity > b.similarity; }
 };
 
 }  // namespace knn_util
@@ -53,7 +48,8 @@ inline double CosineSimilarity(const std::vector<double> &vec1, const std::vecto
 
   const double denom = norm1 * norm2;
   if (denom < 1e-9) return 0.0;
-  return dot / denom;
+  const auto cosine_distance = dot / denom;
+  return (cosine_distance + 1) / 2.0;
 }
 
 // Structure to hold pre-loaded node data for efficient comparison
@@ -70,13 +66,14 @@ struct NodeData {
 std::vector<NodeData> PreloadNodeData(const std::vector<mgp::Node> &nodes, const knn_util::KNNConfig &config) {
   std::vector<NodeData> node_data;
   node_data.reserve(nodes.size());
+  const auto properties_size = config.node_properties.size();
 
   for (const auto &node : nodes) {
     // Collect all property values first
-    std::vector<std::vector<double>> property_values(config.node_properties.size());
+    std::vector<std::vector<double>> property_values(properties_size);
 
     // Load all properties into temporary vectors
-    for (size_t prop_idx = 0; prop_idx < config.node_properties.size(); ++prop_idx) {
+    for (size_t prop_idx = 0; prop_idx < properties_size; ++prop_idx) {
       const std::string &prop_name = config.node_properties[prop_idx];
       mgp::Value prop_value = node.GetProperty(prop_name);
       std::vector<double> values;
@@ -140,8 +137,7 @@ void PreloadNorms(std::vector<NodeData> &node_data, const knn_util::KNNConfig &c
 }
 
 // Calculate similarity between pre-loaded node data
-double CalculateNodeSimilarity(const NodeData &node1_data, const NodeData &node2_data,
-                               const knn_util::KNNConfig &config) {
+double CalculateNodeSimilarity(const NodeData &node1_data, const NodeData &node2_data) {
   double total_similarity = 0.0;
   const size_t num_properties = node1_data.property_values.size();
 
@@ -160,131 +156,228 @@ double CalculateNodeSimilarity(const NodeData &node1_data, const NodeData &node2
   return total_similarity / num_properties;
 }
 
-// Get candidate indices for comparison, excluding self
-std::vector<size_t> GetCandidateIndices(const size_t node_idx, std::vector<size_t> &all_indices,
-                                        const knn_util::KNNConfig &config) {
-  // Safe: std::mt19937 is used for reproducible simulations, not cryptography
-  std::mt19937 rng(config.random_seed); // NOSONAR
-  std::shuffle(all_indices.begin(), all_indices.end(), rng); // NOSONAR
+std::vector<uint64_t> Sample(uint64_t max_index, uint64_t sample_size, uint64_t for_node, std::mt19937 &rng) {
+  std::vector<uint64_t> result;
+  result.reserve(sample_size);
 
-  const size_t sample_size = static_cast<size_t>(all_indices.size() * config.sample_rate);
-
-  std::vector<size_t> comparison_indices;
-  comparison_indices.reserve(sample_size);
-  for (size_t i = 0; i < sample_size; ++i) {
-    if (all_indices[i] != node_idx) {
-      comparison_indices.push_back(all_indices[i]);
-    }
+  if (sample_size >= max_index + 1) {
+    result.resize(max_index + 1);
+    // fill the vector from 0 to max_index
+    std::iota(result.begin(), result.end(), 1ULL);
+    return result;
   }
 
-  return comparison_indices;
+  std::uniform_int_distribution<uint64_t> dist(0, max_index);
+  std::unordered_set<uint64_t> chosen;
+  while (result.size() < sample_size) {
+    uint64_t pos = dist(rng);
+    if (pos == for_node) continue;
+    if (chosen.insert(pos).second) {
+      result.push_back(pos);
+    }
+  }
+  return result;
 }
 
-// Calculate similarity for one node against all candidates (parallel implementation)
-std::vector<knn_util::KNNResult> CalculateSimilarityForNode(const size_t node_idx,
-                                                            const std::vector<NodeData> &node_data,
-                                                            const std::vector<size_t> &comparison_indices,
-                                                            const knn_util::KNNConfig &config) {
-  const auto &node1_data = node_data[node_idx];
-  const auto num_of_similarities = comparison_indices.size();
+std::vector<uint64_t> SampleFromVector(const std::vector<uint64_t> &indices, uint64_t sample_size, std::mt19937 &rng) {
+  if (sample_size >= indices.size()) {
+    return indices;
+  }
 
-  // Pre-allocate results vector
-  std::vector<knn_util::KNNResult> results;
-  results.reserve(num_of_similarities);
+  std::vector<uint64_t> result;
+  result.reserve(sample_size);
 
-  // Pre-allocate parallel results vector
-  std::vector<knn_util::KNNResult> parallel_results(num_of_similarities);
+  std::uniform_int_distribution<uint64_t> dist(0, indices.size() - 1);
+  std::unordered_set<uint64_t> chosen;
+  while (result.size() < sample_size) {
+    uint64_t pos = dist(rng);
+    if (chosen.insert(indices[pos]).second) {
+      result.push_back(indices[pos]);
+    }
+  }
+  return result;
+}
 
-  // Set OpenMP parameters
-  omp_set_dynamic(0);
-  omp_set_num_threads(config.concurrency);
+std::vector<std::vector<knn_util::KNNNeighbour>> InitializeNeighborhoodLists(const std::vector<NodeData> &node_data,
+                                                                             const knn_util::KNNConfig &config,
+                                                                             size_t num_nodes, std::mt19937 &rng) {
+  std::vector<std::vector<knn_util::KNNNeighbour>> neighbour_list(num_nodes);
 
-  // Parallel similarity calculation using OpenMP
 #pragma omp parallel for
-  for (size_t i = 0; i < num_of_similarities; ++i) {
-    const size_t idx = comparison_indices[i];
-    const auto &node2_data = node_data[idx];
+  for (size_t node_id = 0; node_id < num_nodes; node_id++) {
+    std::vector<knn_util::KNNNeighbour> heap;
+    // Sample K random neighbors for this node
+    std::vector<uint64_t> sampled_neighbours = Sample(num_nodes - 1, config.top_k, node_id, rng);
+    for (auto sample : sampled_neighbours) {
+      double similarity = CalculateNodeSimilarity(node_data[node_id], node_data[sample]);
+      heap.emplace_back(sample, similarity);
+    }
 
-    // Calculate similarity directly
-    const double similarity = CalculateNodeSimilarity(node1_data, node2_data, config);
+    std::make_heap(heap.begin(), heap.end(), knn_util::WorseNeighbour{});
 
-    // Store result
-    parallel_results[i] = knn_util::KNNResult(node1_data.node_id, node2_data.node_id, similarity);
+    // trick to ensure parallelization for OpenMP
+    neighbour_list[node_id] = std::move(heap);
   }
 
-  // Filter results based on similarity cutoff and add to final results
-  for (const auto &result : parallel_results) {
-    if (result.similarity >= config.similarity_cutoff) {
-      results.push_back(result);
+  return neighbour_list;
+}
+
+std::vector<uint64_t> Union(const std::vector<uint64_t> &first, const std::vector<uint64_t> &second) {
+  std::unordered_set<uint64_t> seen;
+  seen.reserve(first.size() + second.size());
+
+  // Insert all from first
+  for (auto val : first) {
+    seen.insert(val);
+  }
+
+  // Insert all from second
+  for (auto val : second) {
+    seen.insert(val);
+  }
+
+  // Copy into result
+  std::vector<uint64_t> result;
+  result.reserve(seen.size());
+  for (auto val : seen) {
+    result.push_back(val);
+  }
+
+  return result;
+}
+
+uint64_t UpdateNN(std::vector<knn_util::KNNNeighbour> &neighborhood, uint64_t new_neighbour, double sim) {
+  for (const auto &nb : neighborhood) {
+    if (nb.neighbour_id == new_neighbour) {
+      return 0;
     }
   }
 
-  const size_t k = std::min(results.size(), static_cast<size_t>(config.top_k));
-  auto cmp = [](const knn_util::KNNResult &a, const knn_util::KNNResult &b) {
-    return a.similarity > b.similarity;  // descending
-  };
-
-  if (k > 0 && results.size() > k) {
-    std::nth_element(results.begin(), results.begin() + k, results.end(), cmp);
-    results.resize(k);
+  if (sim > neighborhood.front().similarity) {  // higher = better
+    std::pop_heap(neighborhood.begin(), neighborhood.end(), knn_util::WorseNeighbour{});
+    neighborhood.pop_back();
+    neighborhood.emplace_back(new_neighbour, sim);
+    std::push_heap(neighborhood.begin(), neighborhood.end(), knn_util::WorseNeighbour{});
+    return 1;
   }
-  std::sort(results.begin(), results.end(), cmp);
-
-  return results;
-}
-
-// Insert top-k results into final results
-void InsertTopKResults(const std::vector<knn_util::KNNResult> &top_k_results, const mgp::Graph &graph,
-                       std::vector<std::tuple<mgp::Node, mgp::Node, double>> &final_results) {
-  // Convert to final results with actual nodes (results are already sorted)
-  for (const auto &result : top_k_results) {
-    const auto node1 = graph.GetNodeById(result.node1_id);
-    const auto node2 = graph.GetNodeById(result.node2_id);
-    final_results.emplace_back(node1, node2, result.similarity);
-  }
+  return 0;  // no update
 }
 
 // Main KNN algorithm implementation
 std::vector<std::tuple<mgp::Node, mgp::Node, double>> CalculateKNN(const mgp::Graph &graph,
                                                                    const knn_util::KNNConfig &config) {
-  std::vector<std::tuple<mgp::Node, mgp::Node, double>> results;
-
   // we can't reserve here because it's an iterator
   std::vector<mgp::Node> nodes;
-
-  // Collect all nodes
   for (const auto &node : graph.Nodes()) {
     nodes.push_back(node);
   }
 
   if (nodes.size() < 2) {
     // Need at least 2 nodes for similarity
-    return results;
+    return {};
   }
+
+  omp_set_dynamic(0);
+  omp_set_num_threads(config.concurrency);
 
   // Pre-load node properties into memory for efficient comparison
   std::vector<NodeData> node_data = PreloadNodeData(nodes, config);
   PreloadNorms(node_data, config);
 
   const auto num_nodes = nodes.size();
+  uint64_t sample_rate_size =
+      std::max<uint64_t>(1ULL, static_cast<uint64_t>(config.sample_rate * static_cast<double>(config.top_k)));
+  double update_termination_convergence = config.delta_threshold * num_nodes * config.top_k;
+  std::mt19937 rng{config.random_seed};
 
-  std::vector<size_t> all_indices;
-  all_indices.reserve(num_nodes);
-  for (size_t i = 0; i < num_nodes; ++i) {
-    all_indices.push_back(i);
+  std::vector<std::vector<knn_util::KNNNeighbour>> B = InitializeNeighborhoodLists(node_data, config, num_nodes, rng);
+
+  std::vector<std::vector<uint64_t>> olds(num_nodes);
+  std::vector<std::vector<uint64_t>> news(num_nodes);
+  std::vector<std::vector<uint64_t>> olds_rev(num_nodes);
+  std::vector<std::vector<uint64_t>> news_rev(num_nodes);
+  for (size_t v = 0; v < num_nodes; v++) {
+    olds[v].reserve(config.top_k);
+    news[v].reserve(config.top_k);
+    olds_rev[v].reserve(config.top_k);
+    news_rev[v].reserve(config.top_k);
   }
 
-  // For each node, find its top-k most similar nodes
-  for (size_t i = 0; i < num_nodes; ++i) {
-    // Get candidate indices for comparison
-    const std::vector<size_t> comparison_indices = GetCandidateIndices(i, all_indices, config);
+  for (auto iter = 0; iter < config.max_iterations; iter++) {
+    for (size_t v = 0; v < num_nodes; v++) {
+      olds[v].clear();
+      news[v].clear();
 
-    // 2. Calculate similarity for one node
-    const std::vector<knn_util::KNNResult> top_k_results =
-        CalculateSimilarityForNode(i, node_data, comparison_indices, config);
+      std::vector<uint64_t> new_neighbour_idx;
+      new_neighbour_idx.reserve(config.top_k);
+      for (size_t i = 0; i < B[v].size(); i++) {
+        const auto &nb = B[v][i];
+        if (!nb.is_new_neighbour) {
+          // Collect all old items
+          // Construct the reverse neighborhood as well for olds
+          olds[v].push_back(nb.neighbour_id);
+          olds_rev[nb.neighbour_id].push_back(v);
+        } else {
+          new_neighbour_idx.push_back(i);
+        }
+      }
 
-    // 3. Insert sorted top-k results
-    InsertTopKResults(top_k_results, graph, results);
+      // For the new items, sample rho * K which are going to new, and mark them as old
+      // Construct the reverse neighborhood as well for news
+      std::vector<uint64_t> sampled_news = SampleFromVector(new_neighbour_idx, sample_rate_size, rng);
+      for (const auto sampled_idx : sampled_news) {
+        auto &sampled_new_neighbour = B[v][sampled_idx];
+        news[v].push_back(sampled_new_neighbour.neighbour_id);
+        news_rev[sampled_new_neighbour.neighbour_id].push_back(v);
+        sampled_new_neighbour.is_new_neighbour = false;
+      }
+    }
+
+    // logic after updates
+    uint64_t updates = 0;
+
+#pragma omp parallel for reduction(+ : updates) schedule(dynamic)
+    for (size_t v = 0; v < num_nodes; v++) {
+      const auto sampled_old_rev = SampleFromVector(olds_rev[v], sample_rate_size, rng);
+      olds[v] = Union(olds[v], sampled_old_rev);
+      const auto sampled_new_rev = SampleFromVector(news_rev[v], sample_rate_size, rng);
+      news[v] = Union(news[v], sampled_new_rev);
+
+      const auto news_size = news[v].size();
+      for (size_t u1 = 0; u1 + 1 < news_size; u1++) {
+        for (size_t u2 = u1 + 1; u2 < news_size; u2++) {
+          double sim = CalculateNodeSimilarity(node_data[news[v][u1]], node_data[news[v][u2]]);
+#pragma omp critical
+          {
+            updates += UpdateNN(B[news[v][u1]], news[v][u2], sim);
+            updates += UpdateNN(B[news[v][u2]], news[v][u1], sim);
+          }
+        }
+      }
+      for (auto new_el : news[v]) {
+        for (auto old_el : olds[v]) {
+          double sim = CalculateNodeSimilarity(node_data[new_el], node_data[old_el]);
+#pragma omp critical
+          {
+            updates += UpdateNN(B[new_el], old_el, sim);
+            updates += UpdateNN(B[old_el], new_el, sim);
+          }
+        }
+      }
+    }
+
+    if (updates < update_termination_convergence) {
+      break;
+    }
+  }
+
+  double cutoff = config.similarity_cutoff;
+  std::vector<std::tuple<mgp::Node, mgp::Node, double>> results;
+  for (size_t v = 0; v < num_nodes; v++) {
+    for (const auto &nb : B[v]) {
+      if (nb.similarity < cutoff) continue;
+      results.emplace_back(nodes[v], nodes[nb.neighbour_id], nb.similarity);
+    }
   }
 
   return results;
