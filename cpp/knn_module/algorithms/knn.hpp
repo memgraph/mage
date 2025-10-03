@@ -58,19 +58,27 @@ struct NodeData {
   std::vector<std::vector<double>> property_values;  // One vector per property
   std::vector<double> norms;                         // Norms for each property
 
+  NodeData() : node_id(mgp::Id::FromUint(0)), property_values({}), norms({}) {}
+
   NodeData(const mgp::Node &n, const std::vector<std::vector<double>> &prop_values)
       : node_id(n.Id()), property_values(prop_values) {}
 };
 
 // Pre-load node properties into memory for efficient comparison
 std::vector<NodeData> PreloadNodeData(const std::vector<mgp::Node> &nodes, const knn_util::KNNConfig &config) {
-  std::vector<NodeData> node_data;
-  node_data.reserve(nodes.size());
+  std::vector<NodeData> node_data(nodes.size());
+  const size_t nodes_size = nodes.size();
+
   const auto properties_size = config.node_properties.size();
 
-  for (const auto &node : nodes) {
+  std::string error_message;
+
+#pragma omp parallel for
+  for (size_t node_idx = 0; node_idx < nodes_size; node_idx++) {
+    const auto &node = nodes[node_idx];
     // Collect all property values first
     std::vector<std::vector<double>> property_values(properties_size);
+    bool error_happened = false;
 
     // Load all properties into temporary vectors
     for (size_t prop_idx = 0; prop_idx < properties_size; ++prop_idx) {
@@ -79,8 +87,13 @@ std::vector<NodeData> PreloadNodeData(const std::vector<mgp::Node> &nodes, const
       std::vector<double> values;
 
       if (!prop_value.IsList()) {
-        throw mgp::ValueException(
-            fmt::format("Property {} must be a list of doubles for similarity calculation", prop_name));
+#pragma omp critical
+        {
+          error_happened = true;
+          error_message.append(
+              fmt::format("Property {} must be a list of doubles for similarity calculation.\n", prop_name));
+        }
+        break;
       }
 
       const auto &list = prop_value.ValueList();
@@ -89,21 +102,37 @@ std::vector<NodeData> PreloadNodeData(const std::vector<mgp::Node> &nodes, const
 
       for (size_t i = 0; i < size; ++i) {
         if (!list[i].IsDouble()) {
-          throw mgp::ValueException(
-              fmt::format("Property {} must be a list of doubles for similarity calculation", prop_name));
+#pragma omp critical
+          {
+            error_happened = true;
+            error_message.append(
+                fmt::format("Property {} must be a list of doubles for similarity calculation.\n", prop_name));
+          }
+          break;
         }
         values.push_back(list[i].ValueDouble());
       }
 
+      if (error_happened) break;
+
       if (values.empty()) {
-        throw mgp::ValueException(fmt::format("Invalid property values: empty lists for property {}", prop_name));
+#pragma omp critical
+        {
+          error_happened = true;
+          error_message.append(fmt::format("Invalid property values: empty lists for property {}.\n", prop_name));
+        }
+        break;
       }
 
       property_values[prop_idx] = values;
     }
 
-    // Create node_info at the end with the final property_values
-    node_data.emplace_back(node, std::move(property_values));
+    if (error_happened) continue;
+    node_data[node_idx] = NodeData(node, std::move(property_values));
+  }
+
+  if (!error_message.empty()) {
+    throw mgp::ValueException(fmt::format("Error happened when preloading data: {}", error_message));
   }
 
   // Validate vector sizes
