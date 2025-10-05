@@ -51,7 +51,7 @@ def get_visible_gpus():
 
 
 @mgp.write_proc
-def compute_embeddings(ctx: mgp.ProcCtx) -> mgp.Record(success=bool):
+def compute_embeddings(ctx: mgp.ProcCtx, input_vertices: mgp.Nullable[mgp.List[mgp.Vertex]] = None) -> mgp.Record(success=bool):
     logger.info(
         f"compute_embeddings: starting (py_exec={sys.executable}, py_ver={sys.version.split()[0]})"
     )
@@ -63,7 +63,10 @@ def compute_embeddings(ctx: mgp.ProcCtx) -> mgp.Record(success=bool):
         return mgp.Record(success=False)
 
     try:
-        vertices = list(ctx.graph.vertices)
+        if input_vertices:
+            vertices = input_vertices
+        else:
+            vertices = list(ctx.graph.vertices)
         texts = build_texts(vertices)
         n = len(texts)
         if n == 0:
