@@ -27,9 +27,9 @@ on:
         description: "Memgraph package download link. Leave empty to use the official download link."
         default: ""
         type: string
-      push_to_dockerhub:
+      cuda:
         type: boolean
-        description: "Push the image to DockerHub?"
+        description: "Build the image for CUDA"
         default: false
       push_to_s3:
         type: boolean
@@ -60,7 +60,7 @@ jobs:
       memgraph_download_link: ${{ github.event.inputs.memgraph_download_link || '' }}
       shorten_tag: 'true'
       force_release: 'true'
-      push_to_dockerhub: ${{ github.event.inputs.push_to_dockerhub || 'false' }}
+      cuda: ${{ inputs.cuda }}
       push_to_s3: ${{ github.event.inputs.push_to_s3 || 'false' }}
       malloc: ${{ github.event.inputs.malloc == 'true' }}
       run_smoke_tests: ${{ inputs.run_smoke_tests }}
@@ -89,7 +89,7 @@ jobs:
       memgraph_download_link: ${{ github.event.inputs.memgraph_download_link || '' }}
       shorten_tag: 'true'
       force_release: 'true'
-      push_to_dockerhub: ${{ github.event.inputs.push_to_dockerhub || 'false' }}
+      cuda: ${{ inputs.cuda }}
       push_to_s3: ${{ github.event.inputs.push_to_s3 || 'false' }}
       malloc: ${{ matrix.malloc }}
       run_smoke_tests: ${{ inputs.run_smoke_tests }}
