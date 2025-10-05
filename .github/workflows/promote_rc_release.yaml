@@ -47,7 +47,7 @@ jobs:
           - build_target: "prod"
             build_type: "Release"
             image_ext: "-malloc"
-    runs-on: ["self-hosted", "DockerMgBuild", "X64"]
+    runs-on: ubuntu-latest
     steps:
       - name: Validate “use_test_rc” only with test
         if: inputs.use_test_rc && ! inputs.test

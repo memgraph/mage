@@ -28,10 +28,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall \
 
 # Don't omit frame pointer in RelWithDebInfo, for additional callchain debug.
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
-  "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer")
+  "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -O2 -funsafe-math-optimizations -fvect-cost-model=dynamic -fno-omit-frame-pointer")
 
 # Release flags.
-set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -funsafe-math-optimizations -fvect-cost-model=dynamic -DNDEBUG")
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
 
 find_package(Threads REQUIRED)
@@ -149,5 +149,6 @@ add_subdirectory(algo_module)
 add_subdirectory(set_property_module)
 add_subdirectory(leiden_community_detection_module)
 add_subdirectory(math_module)
+add_subdirectory(knn_module)
 
 add_cugraph_subdirectory(cugraph_module)
