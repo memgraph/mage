@@ -165,8 +165,8 @@ std::vector<uint64_t> Sample(uint64_t max_index, uint64_t sample_size, uint64_t 
     result.resize(max_index + 1);
     // fill the vector from 0 to max_index
     std::iota(result.begin(), result.end(), 1ULL);
-  return result;
-}
+    return result;
+  }
 
   std::uniform_int_distribution<uint64_t> dist(0, max_index);
   std::unordered_set<uint64_t> chosen;
@@ -226,25 +226,10 @@ std::vector<std::vector<knn_util::KNNNeighbour>> InitializeNeighborhoodLists(con
 std::vector<uint64_t> Union(const std::vector<uint64_t> &first, const std::vector<uint64_t> &second) {
   std::unordered_set<uint64_t> seen;
   seen.reserve(first.size() + second.size());
+  seen.insert(first.begin(), first.end());
+  seen.insert(second.begin(), second.end());
 
-  // Insert all from first
-  for (auto val : first) {
-    seen.insert(val);
-  }
-
-  // Insert all from second
-  for (auto val : second) {
-    seen.insert(val);
-  }
-
-  // Copy into result
-  std::vector<uint64_t> result;
-  result.reserve(seen.size());
-  for (auto val : seen) {
-    result.push_back(val);
-  }
-
-  return result;
+  return {seen.begin(), seen.end()};
 }
 
 uint64_t UpdateNN(std::vector<knn_util::KNNNeighbour> &neighborhood, uint64_t new_neighbour, double sim) {
