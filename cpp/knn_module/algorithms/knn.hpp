@@ -181,7 +181,8 @@ std::vector<uint64_t> SampleKDistinct(uint64_t n, uint64_t k, std::mt19937 &rng)
   return result;
 }
 
-std::vector<uint64_t> SampleFromVector(const std::vector<uint64_t> &indices, uint64_t k, std::mt19937 &rng) { //NOSONAR
+std::vector<uint64_t> SampleFromVector(const std::vector<uint64_t> &indices, uint64_t k,
+                                       std::mt19937 &rng) {  // NOSONAR
   auto sample = SampleKDistinct(indices.size(), k, rng);
 
   std::vector<uint64_t> result;
@@ -317,7 +318,7 @@ std::vector<std::tuple<mgp::Node, mgp::Node, double>> CalculateKNN(const mgp::Gr
     // logic after updates
     uint64_t updates = 0;
 
-    // #pragma omp parallel for reduction(+ : updates) schedule(dynamic)
+#pragma omp parallel for reduction(+ : updates) schedule(dynamic)
     for (size_t v = 0; v < num_nodes; v++) {
       const auto sampled_old_rev = SampleFromVector(olds_rev[v], sample_rate_size, rng);
       olds[v] = Union(olds[v], sampled_old_rev);
@@ -328,7 +329,7 @@ std::vector<std::tuple<mgp::Node, mgp::Node, double>> CalculateKNN(const mgp::Gr
       for (size_t u1 = 0; u1 + 1 < news_size; u1++) {
         for (size_t u2 = u1 + 1; u2 < news_size; u2++) {
           double sim = CalculateNodeSimilarity(node_data[news[v][u1]], node_data[news[v][u2]]);
-          // #pragma omp critical
+#pragma omp critical
           {
             updates += UpdateNN(B[news[v][u1]], news[v][u2], sim);
             updates += UpdateNN(B[news[v][u2]], news[v][u1], sim);
@@ -339,7 +340,7 @@ std::vector<std::tuple<mgp::Node, mgp::Node, double>> CalculateKNN(const mgp::Gr
         for (auto old_el : olds[v]) {
           if (new_el == old_el) continue;
           double sim = CalculateNodeSimilarity(node_data[new_el], node_data[old_el]);
-          // #pragma omp critical
+#pragma omp critical
           {
             updates += UpdateNN(B[new_el], old_el, sim);
             updates += UpdateNN(B[old_el], new_el, sim);
