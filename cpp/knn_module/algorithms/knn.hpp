@@ -162,7 +162,6 @@ std::vector<uint64_t> SampleKDistinctWithOmitted(uint64_t n, uint64_t k, uint64_
   auto filtered = std::views::iota(uint64_t{0}, n) | std::views::filter([omit](uint64_t x) { return x != omit; });
   std::vector<uint64_t> population(filtered.begin(), filtered.end());
 
-  // 3. Sample from the concrete vector
   std::vector<uint64_t> result;
   result.reserve(k);
   std::ranges::sample(population, std::back_inserter(result), k, rng);
@@ -170,22 +169,28 @@ std::vector<uint64_t> SampleKDistinctWithOmitted(uint64_t n, uint64_t k, uint64_
   return result;
 }
 
-std::vector<uint64_t> SampleFromVector(const std::vector<uint64_t> &indices, uint64_t sample_size, std::mt19937 &rng) {
-  if (sample_size >= indices.size()) {
-    return indices;
-  }
+std::vector<uint64_t> SampleKDistinct(uint64_t n, uint64_t k, std::mt19937 &rng) {  // NOSONAR
+  // [0, n)
+  auto filtered = std::views::iota(uint64_t{0}, n);
+  std::vector<uint64_t> population(filtered.begin(), filtered.end());
 
   std::vector<uint64_t> result;
-  result.reserve(sample_size);
+  result.reserve(k);
+  std::ranges::sample(population, std::back_inserter(result), k, rng);
 
-  std::uniform_int_distribution<uint64_t> dist(0, indices.size() - 1);
-  std::unordered_set<uint64_t> chosen;
-  while (result.size() < sample_size) {
-    uint64_t pos = dist(rng);
-    if (chosen.insert(indices[pos]).second) {
-      result.push_back(indices[pos]);
-    }
+  return result;
+}
+
+std::vector<uint64_t> SampleFromVector(const std::vector<uint64_t> &indices, uint64_t k, std::mt19937 &rng) { //NOSONAR
+  auto sample = SampleKDistinct(indices.size(), k, rng);
+
+  std::vector<uint64_t> result;
+  result.reserve(sample.size());
+
+  for (auto idx : sample) {
+    result.push_back(indices[idx]);
   }
+
   return result;
 }
 
