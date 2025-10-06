@@ -79,6 +79,9 @@ def select_device(device: mgp.Any):
     """
     # Get available GPUs
     available_gpus = get_visible_gpus()
+
+    if isinstance(device, tuple):
+        device = list(device)
     
     # Check if input is "cpu" when no CUDA devices are available
     if not available_gpus:
@@ -101,6 +104,9 @@ def select_device(device: mgp.Any):
         # String input - could be "cpu" or "cuda:X"
         if device.lower() == "cpu":
             return None
+
+        if device.lower() == "all":
+            return available_gpus
         
         if device.startswith("cuda:"):
             try:
@@ -370,7 +376,7 @@ def compute(
     logger.info(
         f"compute_embeddings: starting (py_exec={sys.executable}, py_ver={sys.version.split()[0]})"
     )
-
+    logger.info(f"device: {device}")
 
     if not excluded_properties:
         excluded_properties = {"embedding"}
