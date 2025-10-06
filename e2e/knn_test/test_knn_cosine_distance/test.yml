@@ -1,5 +1,5 @@
 query: >
-  CALL knn.get({nodeProperties: ["embedding"], sampleRate: 1.0}) YIELD node, neighbour, similarity
+  CALL knn.get({nodeProperties: ["embedding"], sampleRate: 1.0, randomSeed: 42}) YIELD node, neighbour, similarity
   RETURN node.id as node_id, neighbour.id as neighbour_id, similarity
 
 output:

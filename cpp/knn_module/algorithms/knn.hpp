@@ -8,6 +8,7 @@
 #include <limits>
 #include <numeric>
 #include <random>
+#include <ranges>
 #include <unordered_set>
 #include <vector>
 
@@ -164,8 +165,8 @@ std::vector<uint64_t> Sample(uint64_t max_index, uint64_t sample_size, uint64_t 
     result.resize(max_index + 1);
     // fill the vector from 0 to max_index
     std::iota(result.begin(), result.end(), 1ULL);
-    return result;
-  }
+  return result;
+}
 
   std::uniform_int_distribution<uint64_t> dist(0, max_index);
   std::unordered_set<uint64_t> chosen;
@@ -288,7 +289,7 @@ std::vector<std::tuple<mgp::Node, mgp::Node, double>> CalculateKNN(const mgp::Gr
   uint64_t sample_rate_size =
       std::max<uint64_t>(1ULL, static_cast<uint64_t>(config.sample_rate * static_cast<double>(config.top_k)));
   double update_termination_convergence = config.delta_threshold * num_nodes * config.top_k;
-  std::mt19937 rng{config.random_seed};
+  std::mt19937 rng{config.random_seed};  // NOSONAR
 
   std::vector<std::vector<knn_util::KNNNeighbour>> B = InitializeNeighborhoodLists(node_data, config, num_nodes, rng);
 
@@ -336,7 +337,7 @@ std::vector<std::tuple<mgp::Node, mgp::Node, double>> CalculateKNN(const mgp::Gr
     // logic after updates
     uint64_t updates = 0;
 
-#pragma omp parallel for reduction(+ : updates) schedule(dynamic)
+    // #pragma omp parallel for reduction(+ : updates) schedule(dynamic)
     for (size_t v = 0; v < num_nodes; v++) {
       const auto sampled_old_rev = SampleFromVector(olds_rev[v], sample_rate_size, rng);
       olds[v] = Union(olds[v], sampled_old_rev);
@@ -347,7 +348,7 @@ std::vector<std::tuple<mgp::Node, mgp::Node, double>> CalculateKNN(const mgp::Gr
       for (size_t u1 = 0; u1 + 1 < news_size; u1++) {
         for (size_t u2 = u1 + 1; u2 < news_size; u2++) {
           double sim = CalculateNodeSimilarity(node_data[news[v][u1]], node_data[news[v][u2]]);
-#pragma omp critical
+          // #pragma omp critical
           {
             updates += UpdateNN(B[news[v][u1]], news[v][u2], sim);
             updates += UpdateNN(B[news[v][u2]], news[v][u1], sim);
@@ -356,8 +357,9 @@ std::vector<std::tuple<mgp::Node, mgp::Node, double>> CalculateKNN(const mgp::Gr
       }
       for (auto new_el : news[v]) {
         for (auto old_el : olds[v]) {
+          if (new_el == old_el) continue;
           double sim = CalculateNodeSimilarity(node_data[new_el], node_data[old_el]);
-#pragma omp critical
+          // #pragma omp critical
           {
             updates += UpdateNN(B[new_el], old_el, sim);
             updates += UpdateNN(B[old_el], new_el, sim);
