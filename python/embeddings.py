@@ -60,7 +60,7 @@ def get_visible_gpus():
 
 
 @mgp.write_proc
-def compute_embeddings(
+def compute(
     ctx: mgp.ProcCtx,
     input_vertices: mgp.Nullable[mgp.List[mgp.Vertex]] = None,
     embedding_property: str = "embedding",
