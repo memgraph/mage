@@ -229,20 +229,21 @@ std::vector<uint64_t> Union(const std::vector<uint64_t> &first, const std::vecto
 }
 
 uint64_t UpdateNN(std::vector<knn_util::KNNNeighbour> &neighborhood, uint64_t new_neighbour, double sim) {
+  if (sim < neighborhood.front().similarity) {
+    return 0;
+  }
+
   for (const auto &nb : neighborhood) {
     if (nb.neighbour_id == new_neighbour) {
       return 0;
     }
   }
 
-  if (sim > neighborhood.front().similarity) {  // higher = better
-    std::pop_heap(neighborhood.begin(), neighborhood.end(), knn_util::WorseNeighbour{});
-    neighborhood.pop_back();
-    neighborhood.emplace_back(new_neighbour, sim);
-    std::push_heap(neighborhood.begin(), neighborhood.end(), knn_util::WorseNeighbour{});
-    return 1;
-  }
-  return 0;  // no update
+  std::pop_heap(neighborhood.begin(), neighborhood.end(), knn_util::WorseNeighbour{});
+  neighborhood.pop_back();
+  neighborhood.emplace_back(new_neighbour, sim);
+  std::push_heap(neighborhood.begin(), neighborhood.end(), knn_util::WorseNeighbour{});
+  return 1;
 }
 
 // Main KNN algorithm implementation
