@@ -157,26 +157,16 @@ double CalculateNodeSimilarity(const NodeData &node1_data, const NodeData &node2
   return total_similarity / num_properties;
 }
 
-std::vector<uint64_t> Sample(uint64_t max_index, uint64_t sample_size, uint64_t for_node, std::mt19937 &rng) {
+std::vector<uint64_t> SampleKDistinctWithOmitted(uint64_t n, uint64_t k, uint64_t omit, std::mt19937 &rng) {  // NOSONAR
+  // [0, n) with ommited index
+  auto filtered = std::views::iota(uint64_t{0}, n) | std::views::filter([omit](uint64_t x) { return x != omit; });
+  std::vector<uint64_t> population(filtered.begin(), filtered.end());
+
+  // 3. Sample from the concrete vector
   std::vector<uint64_t> result;
-  result.reserve(sample_size);
+  result.reserve(k);
+  std::ranges::sample(population, std::back_inserter(result), k, rng);
 
-  if (sample_size >= max_index + 1) {
-    result.resize(max_index + 1);
-    // fill the vector from 0 to max_index
-    std::iota(result.begin(), result.end(), 1ULL);
-    return result;
-  }
-
-  std::uniform_int_distribution<uint64_t> dist(0, max_index);
-  std::unordered_set<uint64_t> chosen;
-  while (result.size() < sample_size) {
-    uint64_t pos = dist(rng);
-    if (pos == for_node) continue;
-    if (chosen.insert(pos).second) {
-      result.push_back(pos);
-    }
-  }
   return result;
 }
 
@@ -208,7 +198,7 @@ std::vector<std::vector<knn_util::KNNNeighbour>> InitializeNeighborhoodLists(con
   for (size_t node_id = 0; node_id < num_nodes; node_id++) {
     std::vector<knn_util::KNNNeighbour> heap;
     // Sample K random neighbors for this node
-    std::vector<uint64_t> sampled_neighbours = Sample(num_nodes - 1, config.top_k, node_id, rng);
+    std::vector<uint64_t> sampled_neighbours = SampleKDistinctWithOmitted(num_nodes, config.top_k, node_id, rng);
     for (auto sample : sampled_neighbours) {
       double similarity = CalculateNodeSimilarity(node_data[node_id], node_data[sample]);
       heap.emplace_back(sample, similarity);

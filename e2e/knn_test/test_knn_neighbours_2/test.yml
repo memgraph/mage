@@ -7,13 +7,13 @@ output:
     neighbour_id: 2
     similarity: 1
   - node_id: 1
-    neighbour_id: 4
+    neighbour_id: 3
     similarity: 0.8
   - node_id: 2
     neighbour_id: 1
     similarity: 1
   - node_id: 2
-    neighbour_id: 4
+    neighbour_id: 3
     similarity: 0.8
   - node_id: 3
     neighbour_id: 4
