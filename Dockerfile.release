@@ -1,120 +1,3 @@
-ARG PY_VERSION_DEFAULT=3.12
-ARG MGBUILD_IMAGE
-
-FROM $MGBUILD_IMAGE as builder
-
-USER root
-
-ARG TARGETARCH
-ARG PY_VERSION_DEFAULT
-ARG BUILD_TYPE
-ARG CACHE_PRESENT
-ENV BUILD_TYPE=${BUILD_TYPE}
-ENV PY_VERSION ${PY_VERSION_DEFAULT}
-ENV TORCH_VERSION=2.4.0
-ARG CUSTOM_MIRROR
-
-
-# This modifies the apt configuration to rety 3 times
-RUN echo 'Acquire::Retries "3";' > /etc/apt/apt.conf.d/80-retries
-
-# If CUSTOM_MIRROR is set, replace the default archive.ubuntu.com
-# and security.ubuntu.com URIs in your .sources file
-RUN if [ -n "$CUSTOM_MIRROR" ]; then \
-      sed -E -i \
-        -e '/^URIs:/ s#https?://[^ ]*archive\.ubuntu\.com#'"$CUSTOM_MIRROR"'#g' \
-        -e '/^URIs:/ s#https?://security\.ubuntu\.com#'"$CUSTOM_MIRROR"'#g' \
-        /etc/apt/sources.list.d/ubuntu.sources; \
-    fi
-
-# Essentials for production/dev
-RUN apt-get update && apt-get install -y \
-    libcurl4        `memgraph` \
-    libpython${PY_VERSION}   `memgraph` \
-    libssl-dev       `memgraph` \
-    openssl         `memgraph` \
-    build-essential `mage-memgraph` \
-    cmake           `mage-memgraph` \
-    curl            `mage-memgraph` \
-    g++             `mage-memgraph` \
-    python3         `mage-memgraph` \
-    python3-pip     `mage-memgraph` \
-    python3-setuptools     `mage-memgraph` \
-    python3-dev     `mage-memgraph` \
-    clang           `mage-memgraph` \
-    git             `mage-memgraph` \
-    unixodbc-dev        `mage-memgraph` \
-    libboost-all-dev `mage-memgraph` \
-    uuid-dev \
-    gdb \
-    procps \
-    libc6-dbg \
-    libxmlsec1-dev xmlsec1 \
-    libatomic1 \
-    --no-install-recommends \
-    && ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-COPY memgraph-${TARGETARCH}.deb .
-
-RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb
-
-# move memgraph HOME so that mounting /var/lib/memgraph as a volume doesn't break Python
-RUN mkdir -pv /home/memgraph && \
-    usermod -d /home/memgraph memgraph && \
-    chown -R memgraph:memgraph /home/memgraph
-
-ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
-
-
-WORKDIR /mage
-COPY . /mage
-
-#hacks so we can do everything under the `memgraph` user
-RUN chown -R memgraph: /mage && \
-    mkdir -pv /usr/lib/memgraph/query_modules && \
-    chown -R memgraph: /usr/lib/memgraph/query_modules
-USER memgraph
-
-# First install requirements
-RUN python3 -m pip install --no-cache-dir -r /mage/python/requirements.txt --break-system-packages && \
-    python3 -m pip install --no-cache-dir -r /mage/python/tests/requirements.txt --break-system-packages && \
-    python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages && \
-    if [ "$TARGETARCH" = "arm64" ]; then \
-        if [ "$CACHE_PRESENT" = "true" ]; then \
-            echo "Using cached torch packages"; \
-            python3 -m pip install --no-index --find-links=/mage/wheels/ torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter --break-system-packages; \
-        else \
-            python3 -m pip install --no-cache-dir torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.6.0+cpu.html --break-system-packages; \
-        fi && \
-        curl -o dgl-2.5.0-cp312-cp312-linux_aarch64.whl https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/wheels/arm64/dgl-2.5.0-cp312-cp312-linux_aarch64.whl && \
-        python3 -m pip install --no-cache-dir dgl-2.5.0-cp312-cp312-linux_aarch64.whl --break-system-packages; \
-    else \
-        if [ "$CACHE_PRESENT" = "true" ]; then \
-            echo "Using cached torch packages"; \
-            python3 -m pip install --no-index --find-links=/mage/wheels/ torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter --break-system-packages; \
-        else \
-            python3 -m pip install --no-cache-dir torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.6.0+cpu.html --break-system-packages; \
-        fi && \
-        python3 -m pip install --no-cache-dir dgl==2.5.0 -f https://data.dgl.ai/wheels/torch-2.6/repo.html --break-system-packages; \
-    fi && \
-    rm -fr /home/memgraph/.cache/pip
-
-# Build query modules
-SHELL ["/bin/bash", "-c"]
-RUN source /opt/toolchain-v6/activate && curl https://sh.rustup.rs -sSf | sh -s -- -y \
-    && export PATH="$HOME/.cargo/bin:${PATH}" \
-    && rustup toolchain install 1.85 \
-    && rustup default 1.85 \
-    && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/ --cpp-build-flags CMAKE_BUILD_TYPE=${BUILD_TYPE} \
-    && chown -R memgraph: /mage
-
-
-# Memgraph listens for Bolt Protocol on this port by default.
-EXPOSE 7687
-
-
-
 FROM ubuntu:24.04 as base
 
 USER root
@@ -180,15 +63,16 @@ RUN groupadd -g 103 memgraph && \
 ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
 
 # Copy modules
-COPY --from=builder /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
-COPY --from=builder /usr/lib/memgraph/auth_module/ /usr/lib/memgraph/auth_module/
-
-# Copy Python build
-COPY --from=builder /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
-COPY --from=builder --chown=memgraph:memgraph /home/memgraph/.local/ /home/memgraph/.local/ 
+COPY mage.tar.gz . && tar -xzvf mage.tar.gz -C /usr/lib/memgraph/query_modules/ && rm mage.tar.gz
 
 # copy script to convert to dev container
-COPY --from=builder /mage/make-dev-container.sh /make-dev-container.sh
+COPY make-dev-container.sh /make-dev-container.sh
+
+USER memgraph
+COPY --chown=memgraph:memgraph ./scripts/install_requirements.sh /home/memgraph/install_requirements.sh
+RUN chmod +x /home/memgraph/install_requirements.sh && \
+    ./home/memgraph/install_requirements.sh && \
+    rm /home/memgraph/install_requirements.sh
 
 FROM base as prod
 
@@ -202,16 +86,6 @@ ENV BUILD_TYPE=${BUILD_TYPE}
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
 ENV MAGE_COMMIT=${MAGE_COMMIT}
 ARG CUSTOM_MIRROR
-
-# Copy e2e tests
-COPY --from=builder --chown=memgraph:memgraph /mage/e2e/ /mage/e2e/
-COPY --from=builder --chown=memgraph:memgraph /mage/e2e_correctness/ /mage/e2e_correctness/
-COPY --from=builder --chown=memgraph:memgraph /mage/test_e2e_correctness.py /mage/test_e2e_correctness.py
-COPY --from=builder --chown=memgraph:memgraph /mage/run_e2e_correctness_tests.sh /mage/run_e2e_correctness_tests.sh
-
-# Copy requirements
-COPY --from=builder --chown=memgraph:memgraph /mage/python/requirements.txt /mage/python/requirements.txt
-COPY --from=builder --chown=memgraph:memgraph /mage/python/tests/requirements.txt /mage/python/tests/requirements.txt 
 
 RUN if [ -n "$CUSTOM_MIRROR" ]; then \
       sed -E -i \
@@ -247,7 +121,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* 
 
 # Copy entire mage repo
-COPY --from=builder --chown=memgraph:memgraph /mage/ /mage/
+COPY --chown=memgraph:memgraph ./ /mage/
 
 RUN if [ -n "$CUSTOM_MIRROR" ]; then \
       sed -E -i \

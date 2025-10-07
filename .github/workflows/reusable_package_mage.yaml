@@ -108,10 +108,6 @@ jobs:
             echo "Cache is not present. Skipping wheel fetch."
           fi
 
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -247,7 +243,7 @@ jobs:
 
       # Add ability to add additional tag after the image has been built
       # --tag ${DOCKER_REPOSITORY_NAME}:${{ inputs.additional_tag }} \
-      - name: Build docker image
+      - name: Set up MGBUILD image
         run: |
           if [[ "${{ inputs.arch }}" == "arm64" ]]; then
             MGBUILD_IMAGE=memgraph/mgbuild:v6_ubuntu-24.04-arm
@@ -257,29 +253,67 @@ jobs:
 
           echo "Using base image: $MGBUILD_IMAGE"
           echo "Image Tag: ${{ env.IMAGE_TAG }}"
+          echo "$MGBUILD_IMAGE" >>$GITHUB_ENV
 
-          # target is "prod" for Release and "debug" for RelWithDebInfo
-          if [ "${{ env.MAGE_BUILD_TYPE }}" = "RelWithDebInfo" ]; then
-            DOCKER_TARGET=debug
-          else
-            DOCKER_TARGET=prod
-          fi
-          echo "Using target: $DOCKER_TARGET"
+      - name: Start container
+        run: |
+          docker run -d --rm --name mgbuild $MGBUILD_IMAGE
 
+      - name: Build inside container
+        run: |
+          docker exec -i mgbuild bash -c "cd /home/mg/mage && ./scripts/build.sh ${{ env.MAGE_BUILD_TYPE }}"
+
+      - name: Compress query modules
+        run: |
+          docker exec -i mgbuild bash -c "cd /home/mg/mage && ./scripts/compress.sh"
+
+      - name: Copy compressed query modules
+        run: |
+          docker cp mgbuild:/home/mg/mage.tar.gz .
+
+      - name: Stop container
+        run: |
+          docker stop mgbuild
+
+      - name: Remove container
+        run: |
+          docker rm mgbuild
+
+      - name: Build image
+        run: |
           docker buildx build \
-          --target $DOCKER_TARGET \
+          --target prod \
           --platform linux/${{ inputs.arch }} \
           --tag ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} \
-          --file ${{ env.DOCKERFILE }} \
-          --build-arg BUILD_TYPE=${{ env.MAGE_BUILD_TYPE }} \
+          --file Dockerfile.release \
           --build-arg MGBUILD_IMAGE=$MGBUILD_IMAGE \
           --build-arg MAGE_COMMIT="${{ env.MAGE_COMMIT }}" \
           --build-arg CACHE_PRESENT=${{ env.CACHE_PRESENT }} \
           --build-arg CUSTOM_MIRROR=${{ env.CUSTOM_MIRROR }} \
           --load .
 
-          # print the image size in both SI and IEC units
-          ./print_image_size.sh ${DOCKER_REPOSITORY_NAME} ${{ env.IMAGE_TAG }}
+      #     # target is "prod" for Release and "debug" for RelWithDebInfo
+      #     if [ "${{ env.MAGE_BUILD_TYPE }}" = "RelWithDebInfo" ]; then
+      #       DOCKER_TARGET=debug
+      #     else
+      #       DOCKER_TARGET=prod
+      #     fi
+      #     echo "Using target: $DOCKER_TARGET"
+
+      #     docker buildx build \
+      #     --target $DOCKER_TARGET \
+      #     --platform linux/${{ inputs.arch }} \
+      #     --tag ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} \
+      #     --file ${{ env.DOCKERFILE }} \
+      #     --build-arg BUILD_TYPE=${{ env.MAGE_BUILD_TYPE }} \
+      #     --build-arg MGBUILD_IMAGE=$MGBUILD_IMAGE \
+      #     --build-arg MAGE_COMMIT="${{ env.MAGE_COMMIT }}" \
+      #     --build-arg CACHE_PRESENT=${{ env.CACHE_PRESENT }} \
+      #     --build-arg CUSTOM_MIRROR=${{ env.CUSTOM_MIRROR }} \
+      #     --load .
+
+      #     # print the image size in both SI and IEC units
+      #     ./print_image_size.sh ${DOCKER_REPOSITORY_NAME} ${{ env.IMAGE_TAG }}
 
 
       - name: Save docker image
@@ -292,8 +326,8 @@ jobs:
         if: ${{ inputs.push_to_github == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ env.ARTIFACT_NAME }}"
-          path: "output/${{ env.ARTIFACT_NAME }}.tar.gz"
+          name: "${{ env.ARTIFACT_NAME }}-query-modules"
+          path: "mage.tar.gz"
 
       - name: Push to DockerHub
         if: ${{ inputs.push_to_dockerhub == 'true' }}
