@@ -282,11 +282,6 @@ jobs:
         run: |
           docker stop mgbuild
 
-      - name: Remove container
-        if: always()
-        run: |
-          docker rm mgbuild
-
       - name: Build image
         run: |
           docker buildx build \
