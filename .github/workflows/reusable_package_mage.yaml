@@ -259,6 +259,11 @@ jobs:
         run: |
           docker run -d --rm --name mgbuild $MGBUILD_IMAGE
 
+      - name: Copy repo into container
+        run: |
+          docker exec -it -u mg mgbuild mkdir -p /home/mg/mage
+          docker cp . mgbuild:/home/mg/mage
+
       - name: Build inside container
         run: |
           docker exec -i mgbuild bash -c "cd /home/mg/mage && ./scripts/build.sh ${{ env.MAGE_BUILD_TYPE }}"
