@@ -261,7 +261,7 @@ jobs:
 
       - name: Copy repo into container
         run: |
-          docker exec -it -u mg mgbuild mkdir -p /home/mg/mage
+          docker exec -i -u mg mgbuild mkdir -p /home/mg/mage
           docker cp . mgbuild:/home/mg/mage
 
       - name: Build inside container
