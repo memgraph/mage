@@ -326,7 +326,6 @@ jobs:
           du -h output/${{ env.ARTIFACT_NAME }}.tar.gz
 
       - name: Push to GitHub
-        if: ${{ inputs.push_to_github == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: "${{ env.ARTIFACT_NAME }}-query-modules"
