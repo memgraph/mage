@@ -277,10 +277,12 @@ jobs:
           docker cp mgbuild:/home/mg/mage.tar.gz .
 
       - name: Stop container
+        if: always()
         run: |
           docker stop mgbuild
 
       - name: Remove container
+        if: always()
         run: |
           docker rm mgbuild
 
