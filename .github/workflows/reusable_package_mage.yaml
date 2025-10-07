@@ -253,7 +253,7 @@ jobs:
 
           echo "Using base image: $MGBUILD_IMAGE"
           echo "Image Tag: ${{ env.IMAGE_TAG }}"
-          echo "$MGBUILD_IMAGE" >>$GITHUB_ENV
+          echo "MGBUILD_IMAGE=$MGBUILD_IMAGE" >> $GITHUB_ENV
 
       - name: Start container
         run: |
