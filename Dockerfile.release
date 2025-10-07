@@ -63,6 +63,7 @@ RUN groupadd -g 103 memgraph && \
 ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
 
 # Copy modules
+RUN mkdir -p /usr/lib/memgraph/query_modules/
 COPY mage.tar.gz . && tar -xzvf mage.tar.gz -C /usr/lib/memgraph/query_modules/ && rm mage.tar.gz
 
 # copy script to convert to dev container
