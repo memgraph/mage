@@ -1,0 +1,14 @@
+[package]
+name = "rsmgp-batch-example"
+version = "0.1.0"
+authors = ["Josip Mrden <josip.mrden@memgraph.com>"]
+edition = "2024"
+
+[dependencies]
+c_str_macro = "1.0.2"
+rand = "0.9.1"
+rsmgp-sys = { path = "../rsmgp-sys" }
+
+[lib]
+name = "rust_batch_example"
+crate-type = ["cdylib"]
