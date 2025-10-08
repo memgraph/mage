@@ -69,6 +69,8 @@ RUN tar -xzvf /tmp/mage.tar.gz -C /usr/lib/memgraph/query_modules/ && rm /tmp/ma
 
 # copy script to convert to dev container
 COPY make-dev-container.sh /make-dev-container.sh
+COPY python/requirements.txt /tmp/python-requirements.txt
+COPY auth_module/requirements.txt /tmp/auth_module-requirements.txt
 
 USER memgraph
 COPY --chown=memgraph:memgraph ./scripts/install_requirements.sh /home/memgraph/install_requirements.sh

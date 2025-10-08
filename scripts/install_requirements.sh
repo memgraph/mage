@@ -1,8 +1,21 @@
 #!/bin/bash
 
-python3 -m pip install --no-cache-dir -r /mage/python/requirements.txt --break-system-packages
-python3 -m pip install --no-cache-dir -r /mage/python/tests/requirements.txt --break-system-packages
-python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages
+# check for --ci flag
+if [ "$1" = "--ci" ]; then
+  ci=true
+else
+  ci=false
+fi
+
+if [ "$ci" = true ]; then
+    python3 -m pip install --no-cache-dir -r /tmp/python-requirements.txt --break-system-packages
+    python3 -m pip install --no-cache-dir -r /tmp/auth_module-requirements.txt --break-system-packages
+else
+    python3 -m pip install --no-cache-dir -r /mage/python/requirements.txt --break-system-packages
+    python3 -m pip install --no-cache-dir -r /mage/python/tests/requirements.txt --break-system-packages
+    python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages
+fi
+
 if [ "$TARGETARCH" = "arm64" ]; then
     if [ "$CACHE_PRESENT" = "true" ]; then
         echo "Using cached torch packages"
