@@ -75,7 +75,7 @@ COPY cpp/memgraph/src/auth/reference_modules/requirements.txt /tmp/auth_module-r
 USER memgraph
 COPY --chown=memgraph:memgraph ./scripts/install_requirements.sh /home/memgraph/install_requirements.sh
 RUN chmod +x /home/memgraph/install_requirements.sh && \
-    ./home/memgraph/install_requirements.sh && \
+    ./home/memgraph/install_requirements.sh --ci && \
     rm /home/memgraph/install_requirements.sh
 
 FROM base as prod
