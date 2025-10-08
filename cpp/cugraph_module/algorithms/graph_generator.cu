@@ -92,7 +92,7 @@ void GenerateRMAT(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memo
       mgp_edge_destroy(new_edge);
     }
 
-    InsertMessageRecord(result, memory, "Graph created sucessfully!");
+    InsertMessageRecord(result, memory, "Graph created successfully!");
   } catch (const std::exception &e) {
     // We must not let any exceptions out of our module.
     mgp::result_set_error_msg(result, e.what());

@@ -29,7 +29,7 @@ use mockall_double::double;
 ///   * return Property from [PropertiesIterator]
 ///   * return Property directly from [crate::vertex::Vertex] or [crate::edge::Edge].
 ///
-/// Property owns [CString] and [Value] bacause the underlying C string or value could be deleted
+/// Property owns [CString] and [Value] because the underlying C string or value could be deleted
 /// during the lifetime of the property. In other words, Property stores copies of underlying name
 /// and value.
 pub struct Property {

@@ -63,14 +63,14 @@ double algoLouvainWithDistOneColoring(graph* G, mgp_graph *mg_graph, long *C, in
 
     double time1, time2, time3, time4; //For timing purposes
     double total = 0, totItr = 0;
-    /* Indexs are vertex */
+    /* Indexes are vertex */
     long* pastCommAss;	//Store previous iteration's community assignment
     long* currCommAss;	//Store current community assignment
     //long* targetCommAss;	//Store the target of community assignment
     double* vDegree;	//Store each vertex's degree
     double* clusterWeightInternal;//use for Modularity calculation (eii)
 
-    /* Indexs are community */
+    /* Indexes are community */
     Comm* cInfo;	 //Community info. (ai and size)
     Comm* cUpdate; //use for updating Community
 

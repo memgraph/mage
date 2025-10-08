@@ -1134,7 +1134,7 @@ def validate_user_parameters(parameters: mgp.Map) -> None:  # noqa: C901
         type_checker(checkpoint_freq, "checkpoint_freq must be an int. ", int)
 
         if checkpoint_freq <= 0:
-            raise Exception("Checkpoint frequency must be greter than 0. ")
+            raise Exception("Checkpoint frequency must be greater than 0. ")
 
     # aggregator check
     if Parameters.AGGREGATOR in parameters.keys():

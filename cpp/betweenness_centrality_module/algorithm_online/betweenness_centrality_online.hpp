@@ -188,7 +188,7 @@ class OnlineBC {
   ///
   inline bool Initialized() const { return this->initialized; };
 
-  ///@brief Computes initial betweennness centrality scores with Brandes’ algorithm.
+  ///@brief Computes initial betweenness centrality scores with Brandes’ algorithm.
   ///
   ///@param graph Current graph
   ///@param normalize If true, normalizes each node’s betweenness centrality score by the number of node pairs not
@@ -200,8 +200,8 @@ class OnlineBC {
   std::unordered_map<std::uint64_t, double> Set(const mg_graph::GraphView<> &graph, const bool normalize = true,
                                                 const std::uint64_t threads = std::thread::hardware_concurrency());
 
-  ///@brief Returns previously computed betweennness centrality scores.
-  /// If this->computed flag is set to false, computes betweennness centrality scores with default parameter values.
+  ///@brief Returns previously computed betweenness centrality scores.
+  /// If this->computed flag is set to false, computes betweenness centrality scores with default parameter values.
   ///
   ///@param graph Current graph
   ///@param normalize If true, normalizes each node’s betweenness centrality score by the number of node pairs not
@@ -211,7 +211,7 @@ class OnlineBC {
   ///@return {node ID, BC score} pairs
   std::unordered_map<std::uint64_t, double> Get(const mg_graph::GraphView<> &graph, const bool normalize = true) const;
 
-  ///@brief Uses iCentral to recompute betweennness centrality scores after edge updates.
+  ///@brief Uses iCentral to recompute betweenness centrality scores after edge updates.
   ///
   ///@param prior_graph Graph as before the last update
   ///@param current_graph Current graph
@@ -228,7 +228,7 @@ class OnlineBC {
       const std::pair<std::uint64_t, std::uint64_t> updated_edge, const bool normalize = true,
       const std::uint64_t threads = std::thread::hardware_concurrency());
 
-  ///@brief Uses a single iteration of Brandes’ algorithm to recompute betweennness centrality scores after updates
+  ///@brief Uses a single iteration of Brandes’ algorithm to recompute betweenness centrality scores after updates
   /// consisting of an edge and a node solely connected to it.
   ///
   ///@param current_graph Current graph
