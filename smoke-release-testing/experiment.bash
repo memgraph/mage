@@ -2,6 +2,8 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/utils.bash"
 
+# TODO(gitbuda): Add v3.7 tests.
+
 # NOTE: Use the below line if you just want to spin up the containers and leave them running.
 # run_memgraph_docker_containers RC RC
 # NOTE: Use the below line if you want to cleanup the containers after run of this script.
