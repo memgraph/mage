@@ -222,9 +222,12 @@ def single_gpu_compute(
     import gc
 
     model = None
+    allocated_memory = 0
     try:
         try:
             model = SentenceTransformer(model_name, device=f"cuda:{device}")
+            allocated_memory = torch.cuda.memory_allocated()
+            logger.info(f"Allocated memory: {allocated_memory/1024/1024:.2f} MB")
         except Exception as e:
             logger.error(f"Failed to load model {model_name}: {e}")
             return mgp.Record(success=False)
@@ -257,13 +260,15 @@ def single_gpu_compute(
         if model is not None:
             model.to("cpu")
             del model
-        
+            freed_memory = allocated_memory - torch.cuda.memory_allocated()
+        # Force garbage collection
+        gc.collect()
+
         # Clear PyTorch cache
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
         
-        # Force garbage collection
-        gc.collect()
+        logger.info(f"GPU {device} Freed memory: {freed_memory/1024/1024:.2f} MB")
 
 
 def multi_gpu_compute(
