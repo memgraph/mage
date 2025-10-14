@@ -4,6 +4,8 @@ import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import mgp
 from typing import List, Union, Sequence
+import huggingface_hub  # noqa: F401
+# We need to import huggingface_hub, otherwise sentenc transformer will fail to load the model.
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "embed_worker"))
 logger: mgp.Logger = mgp.Logger()
@@ -71,7 +73,7 @@ def select_device(device: mgp.Any):
     - int: a single GPU index
     - list[int]: a list of GPU indices
     - list[str]: a list of GPU names
-    - str: a single GPU name (e.g. "cuda:0", "cuda:1", "cuda:2", etc.) or "cpu"
+    - str: a single GPU name (e.g. "cuda:0", "cuda:1", "cuda:2", etc.), "cuda", "all" or "cpu"
     
     Returns:
     - list[int]: List of valid GPU indices to use
@@ -105,7 +107,7 @@ def select_device(device: mgp.Any):
         if device.lower() == "cpu":
             return None
 
-        if device.lower() == "all":
+        if device.lower() in ["all", "cuda"]:
             return available_gpus
         
         if device.startswith("cuda:"):
@@ -182,6 +184,7 @@ def cpu_compute(
 ) -> mgp.Record(success=bool):
 
     from sentence_transformers import SentenceTransformer
+    import transformers  # noqa: F401
 
     model = SentenceTransformer(model_name, device="cpu")
     texts = build_texts(vertices, excluded_properties)
@@ -215,17 +218,19 @@ def single_gpu_compute(
 
     os.environ["CUDA_VISIBLE_DEVICES"] = str(device)
     from sentence_transformers import SentenceTransformer
+    import transformers  # noqa: F401
     import torch
     import gc
 
-    
-
     model = None
     try:
-        model = SentenceTransformer(model_name, device="cuda")
+        try:
+            model = SentenceTransformer(model_name, device="cuda")
+        except Exception as e:
+            logger.error(f"Failed to load model {model_name}: {e}")
+            return mgp.Record(success=False)
         vertex_iter = iter(vertices)
         n = len(vertices)
-        print(model, flush=True)
         for i in range(0, n, batch_size):
             batch = []
             for _ in range(batch_size):
@@ -248,8 +253,10 @@ def single_gpu_compute(
         return mgp.Record(success=True)
         
     finally:
-        # Explicitly free GPU memory
+        # TODO(matt): figure out why destructor for the model is not called...
+        logger.info("Freeing GPU memory...")
         if model is not None:
+            model.to("cpu")
             del model
         
         # Clear PyTorch cache
@@ -337,7 +344,7 @@ def multi_gpu_compute(
                     count, embs = fut.result()
                     if count != (b - a) or len(embs) != (b - a):
                         logger.error(
-                            f"GPU {gpu} returned mismatched count {count} for slice [{a}:{b})"
+                            f"GPU {gpu} returned mismatched count {count} for slice [{a}:{b}]"
                         )
                         continue
                     chunk_results.append((a, b, embs))
