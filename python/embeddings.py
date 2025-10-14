@@ -3,7 +3,7 @@ import sys
 import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import mgp
-from typing import List, Union, Sequence
+from typing import List
 import huggingface_hub  # noqa: F401
 # We need to import huggingface_hub, otherwise sentence_transformers will fail to load the model.
 
@@ -13,6 +13,7 @@ logger: mgp.Logger = mgp.Logger()
 os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
 os.environ.setdefault("TRANSFORMERS_NO_TORCHVISION", "1")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
 
 def build_texts(vertices, excluded_properties):
     logger.debug(f"excluded_properties: {excluded_properties}")
@@ -65,7 +66,7 @@ def get_visible_gpus():
             return []
 
 
-def select_device(device: mgp.Any):
+def select_device(device: mgp.Any):  # noqa: C901
     """
     Determine and validate which CUDA device(s) can be used for the given target.
 
@@ -74,7 +75,7 @@ def select_device(device: mgp.Any):
     - list[int]: a list of GPU indices
     - list[str]: a list of GPU names
     - str: a single GPU name (e.g. "cuda:0", "cuda:1", "cuda:2", etc.), "cuda", "all" or "cpu"
-    
+
     Returns:
     - list[int]: List of valid GPU indices to use
     - None: If "cpu" is specified or no valid GPUs found
@@ -84,7 +85,7 @@ def select_device(device: mgp.Any):
 
     if isinstance(device, tuple):
         device = list(device)
-    
+
     # Check if input is "cpu" when no CUDA devices are available
     if not available_gpus:
         if isinstance(device, str) and device.lower() == "cpu":
@@ -92,7 +93,7 @@ def select_device(device: mgp.Any):
             return None
         else:
             raise RuntimeError("No CUDA devices available and device is not 'cpu'")
-    
+
     # Handle different input types
     if isinstance(device, int):
         # Single GPU index
@@ -101,7 +102,7 @@ def select_device(device: mgp.Any):
         if device not in available_gpus:
             raise ValueError(f"GPU {device} not available. Available GPUs: {available_gpus}")
         return [device]
-    
+
     elif isinstance(device, str):
         # String input - could be "cpu" or "cuda:X"
         if device.lower() == "cpu":
@@ -109,7 +110,7 @@ def select_device(device: mgp.Any):
 
         if device.lower() in ["all", "cuda"]:
             return available_gpus
-        
+
         if device.startswith("cuda:"):
             try:
                 gpu_index = int(device.split(":")[1])
@@ -122,11 +123,11 @@ def select_device(device: mgp.Any):
                 raise ValueError(f"Invalid CUDA device format '{device}'. Expected format: 'cuda:X' where X is a number") from e
         else:
             raise ValueError(f"Invalid device string '{device}'. Expected 'cpu' or 'cuda:X'")
-    
+
     elif isinstance(device, list):
         if not device:
             raise ValueError("Empty device list provided")
-        
+
         # Check if it's a list of integers or strings
         if all(isinstance(x, int) for x in device):
             # List of GPU indices
@@ -136,7 +137,7 @@ def select_device(device: mgp.Any):
                 if gpu_idx not in available_gpus:
                     raise ValueError(f"GPU {gpu_idx} not available. Available GPUs: {available_gpus}")
             return device.copy()
-        
+
         elif all(isinstance(x, str) for x in device):
             # List of GPU names/strings
             gpu_indices = []
@@ -144,7 +145,7 @@ def select_device(device: mgp.Any):
                 if device_str.lower() == "cpu":
                     logger.warning("'cpu' found in device list, ignoring")
                     continue
-                
+
                 if device_str.startswith("cuda:"):
                     try:
                         gpu_index = int(device_str.split(":")[1])
@@ -157,16 +158,14 @@ def select_device(device: mgp.Any):
                         raise ValueError(f"Invalid CUDA device format '{device_str}'. Expected format: 'cuda:X' where X is a number") from e
                 else:
                     raise ValueError(f"Invalid device string '{device_str}'. Expected 'cpu' or 'cuda:X'")
-            
+
             if not gpu_indices:
                 logger.warning("No valid GPU devices found in list, falling back to CPU")
                 return None
-            
+
             return gpu_indices
-        
         else:
             raise ValueError("Device list must contain only integers or strings, not mixed types")
-    
     else:
         raise TypeError(f"Invalid device type {type(device)}. Expected int, str, or list of int/str")
 
@@ -215,7 +214,6 @@ def single_gpu_compute(
     device: int = 0,
 ) -> mgp.Record(success=bool):
 
-
     from sentence_transformers import SentenceTransformer
     import transformers  # noqa: F401
     import torch
@@ -227,7 +225,7 @@ def single_gpu_compute(
         try:
             model = SentenceTransformer(model_name, device=f"cuda:{device}")
             allocated_memory = torch.cuda.memory_allocated()
-            logger.info(f"Allocated memory: {allocated_memory/1024/1024:.2f} MB")
+            logger.info(f"Allocated memory: {allocated_memory / 1024 / 1024:.2f} MB")
         except Exception as e:
             logger.error(f"Failed to load model {model_name}: {e}")
             return mgp.Record(success=False)
@@ -250,10 +248,10 @@ def single_gpu_compute(
             )
             for v, e in zip(batch, embs.tolist()):
                 v.properties[embedding_property] = e
-                
+
         logger.info(f"Processed {len(vertices)} vertices on GPU {device}.")
         return mgp.Record(success=True)
-        
+
     finally:
         # TODO(matt): figure out why destructor for the model is not called...
         logger.info("Freeing GPU memory...")
@@ -267,8 +265,8 @@ def single_gpu_compute(
         # Clear PyTorch cache
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
-        
-        logger.info(f"GPU {device} Freed memory: {freed_memory/1024/1024:.2f} MB")
+
+        logger.info(f"GPU {device} Freed memory: {freed_memory / 1024 / 1024:.2f} MB")
 
 
 def multi_gpu_compute(
@@ -300,13 +298,13 @@ def multi_gpu_compute(
     # while avoiding OOM.
     chunk_size = min(batch_size * chunk_size, n)
     total_processed = 0
-    
+
     # Create an iterator from the vertices
     vertex_iter = iter(vertices)
-    
+
     for chunk_start in range(0, n, chunk_size):
         chunk_end = min(chunk_start + chunk_size, n)
-        
+
         # Collect only the vertices for this chunk
         chunk_vertices = []
         for _ in range(chunk_end - chunk_start):
@@ -314,23 +312,23 @@ def multi_gpu_compute(
                 chunk_vertices.append(next(vertex_iter))
             except StopIteration:
                 break
-        
+
         if not chunk_vertices:
             break
-            
+
         chunk_texts = build_texts(chunk_vertices, excluded_properties)
-        
+
         # Split this chunk across GPUs
         chunk_slices = split_slices(len(chunk_texts), len(gpus))
         tasks = []
         for gpu, (a, b) in zip(gpus, chunk_slices):
             if a < b:
                 tasks.append((gpu, model_name, chunk_texts[a:b], batch_size, chunk_start + a, chunk_start + b))
-        
+
         # Process this chunk
         chunk_results = []
         chunk_total = 0
-        
+
         mp.set_executable("/usr/bin/python3")
         ctx_spawn = mp.get_context("spawn")
         with ProcessPoolExecutor(max_workers=len(tasks), mp_context=ctx_spawn) as ex:
@@ -355,12 +353,11 @@ def multi_gpu_compute(
                     chunk_total += count
                 except Exception as e:
                     logger.error(f"Worker on GPU {gpu} failed: {e}")
-        
+
         # Write back results for this chunk
         for a, b, embs in chunk_results:
             for i, e in enumerate(embs, start=a):
                 chunk_vertices[i - chunk_start].properties[embedding_property] = e
-        
         total_processed += chunk_total
 
     logger.info(
@@ -397,7 +394,7 @@ def compute(
             vertices = input_vertices
         else:
             vertices = ctx.graph.vertices
-        
+
         n = len(vertices)
         if n == 0:
             logger.info("No vertices to process.")
@@ -409,7 +406,7 @@ def compute(
         except (ValueError, TypeError, RuntimeError) as e:
             logger.error(f"Invalid device parameter: {e}")
             return mgp.Record(success=False)
-        
+
         logger.info(f"Selected {len(gpus) if gpus else 0} GPU(s): {gpus}")
 
         if not gpus:
@@ -436,12 +433,12 @@ def compute(
         if len(gpus) > 1:
             try:
                 return multi_gpu_compute(
-                    vertices, 
-                    embedding_property, 
-                    excluded_properties, 
-                    model_name, 
-                    batch_size, 
-                    chunk_size, 
+                    vertices,
+                    embedding_property,
+                    excluded_properties,
+                    model_name,
+                    batch_size,
+                    chunk_size,
                     gpus,
                 )
             except Exception as e:
