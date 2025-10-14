@@ -5,7 +5,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import mgp
 from typing import List, Union, Sequence
 import huggingface_hub  # noqa: F401
-# We need to import huggingface_hub, otherwise sentenc transformer will fail to load the model.
+# We need to import huggingface_hub, otherwise sentence_transformers will fail to load the model.
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "embed_worker"))
 logger: mgp.Logger = mgp.Logger()
@@ -216,7 +216,6 @@ def single_gpu_compute(
 ) -> mgp.Record(success=bool):
 
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(device)
     from sentence_transformers import SentenceTransformer
     import transformers  # noqa: F401
     import torch
@@ -225,7 +224,7 @@ def single_gpu_compute(
     model = None
     try:
         try:
-            model = SentenceTransformer(model_name, device="cuda")
+            model = SentenceTransformer(model_name, device=f"cuda:{device}")
         except Exception as e:
             logger.error(f"Failed to load model {model_name}: {e}")
             return mgp.Record(success=False)
