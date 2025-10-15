@@ -11,7 +11,6 @@ ARG BUILD_TYPE
 ARG CACHE_PRESENT
 ENV BUILD_TYPE=${BUILD_TYPE}
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
-ENV TORCH_VERSION=2.4.0
 ARG CUSTOM_MIRROR
 
 
@@ -77,27 +76,11 @@ RUN chown -R memgraph: /mage && \
 USER memgraph
 
 # First install requirements
-RUN python3 -m pip install --no-cache-dir -r /mage/python/requirements.txt --break-system-packages && \
+RUN python3 -m pip install --no-cache-dir -r /mage/python/requirements-gpu.txt --break-system-packages && \
     python3 -m pip install --no-cache-dir -r /mage/python/tests/requirements.txt --break-system-packages && \
     python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt --break-system-packages && \
-    if [ "$TARGETARCH" = "arm64" ]; then \
-        if [ "$CACHE_PRESENT" = "true" ]; then \
-            echo "Using cached torch packages"; \
-            python3 -m pip install --no-index --find-links=/mage/wheels/ torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter --break-system-packages; \
-        else \
-            python3 -m pip install --no-cache-dir torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.6.0+cpu.html --break-system-packages; \
-        fi && \
-        curl -o dgl-2.5.0-cp312-cp312-linux_aarch64.whl https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/wheels/arm64/dgl-2.5.0-cp312-cp312-linux_aarch64.whl && \
-        python3 -m pip install --no-cache-dir dgl-2.5.0-cp312-cp312-linux_aarch64.whl --break-system-packages; \
-    else \
-        if [ "$CACHE_PRESENT" = "true" ]; then \
-            echo "Using cached torch packages"; \
-            python3 -m pip install --no-index --find-links=/mage/wheels/ torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter --break-system-packages; \
-        else \
-            python3 -m pip install --no-cache-dir torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.6.0+cpu.html --break-system-packages; \
-        fi && \
-        python3 -m pip install --no-cache-dir dgl==2.5.0 -f https://data.dgl.ai/wheels/torch-2.6/repo.html --break-system-packages; \
-    fi && \
+    python3 -m pip install --no-cache-dir torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter --break-system-packages -f https://data.pyg.org/whl/torch-2.6.0+cu126.html; \
+    python3 -m pip install --no-cache-dir dgl==2.5.0 -f https://data.dgl.ai/wheels/torch-2.6/repo.html --break-system-packages; \
     rm -fr /home/memgraph/.cache/pip
 
 # Build query modules
@@ -151,10 +134,13 @@ RUN apt-get update && \
     apt-get install -y \
     libcurl4        `memgraph` \
     libpython${PY_VERSION}   `memgraph` \
+    libssl-dev       `memgraph` \
     openssl         `memgraph` \
     python3         `mage-memgraph` \
     python3-pip     `mage-memgraph` \
     python3-setuptools     `mage-memgraph` \
+    python3-dev     `mage-memgraph` \
+    libc6-dbg \
     adduser \
     libgomp1 \
     libaio1t64 \
@@ -242,7 +228,7 @@ ARG CUSTOM_MIRROR
 
 # Add gdb
 RUN apt-get update && apt-get install -y \
-    gdb libc6-dbg \
+    gdb \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* 
 

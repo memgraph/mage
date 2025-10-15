@@ -1,0 +1,7 @@
+query: >
+    CALL embeddings.compute(NULL, "embeddings", NULL, "all-MiniLM-L6-v2", 2000, 48, "cpu") 
+    YIELD success
+    RETURN success;
+
+output:
+    - success: true

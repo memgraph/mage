@@ -277,7 +277,7 @@ jobs:
         run: |
           cd e2e
           docker exec -i -u memgraph ${{ env.MAGE_CONTAINER }} bash -c \
-          "cd /mage/e2e/ && python3 -m pytest . -k 'not cugraph'"
+          "cd /mage/e2e/ && python3 -m pytest . -k 'not cugraph and not embeddings_test-test_cuda_compute'"
 
       - name: Run End-to-end correctness tests
         env:

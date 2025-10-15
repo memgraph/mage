@@ -66,6 +66,10 @@ on:
         type: boolean
         description: "Print the output URL at the end of the workflow"
         default: false
+      cuda:
+        type: boolean
+        description: "Build the image for CUDA"
+        default: false
 
 env:
   OS: "${{ inputs.arch == 'arm64' && 'ubuntu-24.04-aarch64' || 'ubuntu-24.04' }}${{ inputs.malloc && '-malloc' || '' }}"
@@ -203,7 +207,11 @@ jobs:
 
       - name: Set target dockerfile
         run: |
-          DOCKERFILE="Dockerfile.release"
+          if [[ "${{ inputs.cuda }}" == true ]]; then
+            DOCKERFILE="Dockerfile.cuda"
+          else
+            DOCKERFILE="Dockerfile.release"
+          fi
           echo "DOCKERFILE=${DOCKERFILE}" >> $GITHUB_ENV
 
       - name: Check if specified version tag is already pushed
