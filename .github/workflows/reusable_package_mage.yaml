@@ -166,6 +166,10 @@ jobs:
             ARTIFACT_NAME="${ARTIFACT_NAME}-malloc"
             IMAGE_TAG="${IMAGE_TAG}-malloc"          
           fi
+          if [[ "${{ inputs.cuda }}" == true ]]; then
+            ARTIFACT_NAME="${ARTIFACT_NAME}-cuda"
+            IMAGE_TAG="${IMAGE_TAG}-cuda"
+          fi
           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
           echo "ARTIFACT_NAME=${ARTIFACT_NAME}" >> $GITHUB_ENV
 
