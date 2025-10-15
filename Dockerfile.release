@@ -102,7 +102,7 @@ RUN python3 -m pip install --no-cache-dir -r /mage/python/requirements.txt --bre
 
 # Build query modules
 SHELL ["/bin/bash", "-c"]
-RUN source /opt/toolchain-v6/activate && curl https://sh.rustup.rs -sSf | sh -s -- -y \
+RUN source /opt/toolchain-v7/activate && curl https://sh.rustup.rs -sSf | sh -s -- -y \
     && export PATH="$HOME/.cargo/bin:${PATH}" \
     && rustup toolchain install 1.85 \
     && rustup default 1.85 \

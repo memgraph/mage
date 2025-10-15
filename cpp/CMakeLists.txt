@@ -46,7 +46,7 @@ ExternalProject_Add(gtest-proj
   PREFIX ${GTEST_ROOT}
   INSTALL_DIR ${GTEST_ROOT}
   GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG release-1.11.0
+  GIT_TAG v1.16.0
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
   "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
   "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
@@ -78,7 +78,7 @@ ExternalProject_Add(mgclient-proj
   PREFIX ${MGCLIENT_ROOT}
   INSTALL_DIR ${MGCLIENT_ROOT}
   GIT_REPOSITORY https://github.com/memgraph/mgclient.git
-  GIT_TAG v1.4.2
+  GIT_TAG v1.4.3
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
   "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
   "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
@@ -102,7 +102,7 @@ target_include_directories(mg_utility INTERFACE ${CMAKE_SOURCE_DIR}/memgraph/inc
 
 FetchContent_Declare(fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 9.1.0
+  GIT_TAG 11.2.0
 )
 FetchContent_MakeAvailable(fmt)
 
