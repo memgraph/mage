@@ -157,6 +157,7 @@ RUN apt-get update && \
     libgomp1 \
     libaio1t64 \
     libatomic1 \
+    libdw-dev \
     --no-install-recommends \
     && ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \

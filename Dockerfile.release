@@ -51,6 +51,7 @@ RUN apt-get update && apt-get install -y \
     libc6-dbg \
     libxmlsec1-dev xmlsec1 \
     libatomic1 \
+    libdw-dev \
     --no-install-recommends \
     && ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
