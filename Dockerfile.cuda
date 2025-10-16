@@ -101,7 +101,7 @@ RUN if [ "$BUILD_TYPE" = "Release" ]; then \
         mkdir -p /tmp/heaptrack && \
         mkdir -p /tmp/heaptrack-build && \
         cd /tmp/heaptrack-build && \
-        cp scripts/build-heaptrack.sh . && \
+        cp /mage/scripts/build-heaptrack.sh . && \
         bash build-heaptrack.sh; \
     fi
 
