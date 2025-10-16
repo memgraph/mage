@@ -92,6 +92,18 @@ RUN source /opt/toolchain-v6/activate && curl https://sh.rustup.rs -sSf | sh -s 
     && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/ --cpp-build-flags CMAKE_BUILD_TYPE=${BUILD_TYPE} \
     && chown -R memgraph: /mage
 
+# Build heaptrack
+RUN if [ "$BUILD_TYPE" = "Release" ]; then \
+        echo "Skipping heaptrack build" && \
+        mkdir -p /tmp/heaptrack; \
+    else \
+        source /opt/toolchain-v6/activate && \
+        mkdir -p /tmp/heaptrack && \
+        mkdir -p /tmp/heaptrack-build && \
+        cd /tmp/heaptrack-build && \
+        cp scripts/build-heaptrack.sh . && \
+        bash build-heaptrack.sh; \
+    fi
 
 # Memgraph listens for Bolt Protocol on this port by default.
 EXPOSE 7687
@@ -234,6 +246,10 @@ RUN apt-get update && apt-get install -y \
 
 # Copy entire mage repo
 COPY --from=builder --chown=memgraph:memgraph /mage/ /mage/
+
+# Copy heaptrack and install it properly
+COPY --from=builder /tmp/heaptrack /tmp/heaptrack
+RUN cp -vr /tmp/heaptrack/* /usr/ && rm -rf /tmp/heaptrack
 
 RUN if [ -n "$CUSTOM_MIRROR" ]; then \
       sed -E -i \
