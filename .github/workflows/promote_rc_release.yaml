@@ -49,7 +49,7 @@ jobs:
             image_ext: "-malloc"
           - build_target: "prod"
             build_type: "RelWithDebInfo"
-            image_ext: "-cuda"
+            image_ext: "-relwithdebinfo-cuda"
     runs-on: ubuntu-latest
     steps:
       - name: Validate “use_test_rc” only with test
