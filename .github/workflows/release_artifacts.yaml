@@ -90,23 +90,29 @@ jobs:
         malloc: [false]
         cuda: [false]
         include:
-          - build_type: "RelWithDebInfo"
-            rwid_ext: "-relwithdebinfo"
-          - build_arch: "arm64"
-            arm_ext: "-aarch64"
           - build_type: "Release"
             build_arch: "amd64"
             malloc: true
+            cuda: false
           - build_type: "RelWithDebInfo"
             build_arch: "amd64"
             cuda: true
+            malloc: false
+          - build_type: "RelWithDebInfo"
+            build_arch: "amd64"
+            cuda: false
+            malloc: true
+          - build_type: "RelWithDebInfo"
+            build_arch: "arm64"
+            cuda: false
+            malloc: true
     uses: ./.github/workflows/reusable_package_mage.yaml
     with:
       arch: "${{ matrix.build_arch }}"
       mage_version: "${{ inputs.mage_version }}"
       mage_build_type: "${{ matrix.build_type }}"
       memgraph_version: "${{ inputs.memgraph_version }}"
-      memgraph_download_link: "${{ needs.SetupNames.outputs.download_link_base }}${{ matrix.arm_ext }}${{ matrix.rwid_ext }}${{ matrix.malloc && '-malloc' || '' }}/${{ needs.SetupNames.outputs.download_binary_name_base }}_${{ matrix.build_arch }}.deb"
+      memgraph_download_link: "${{ needs.SetupNames.outputs.download_link_base }}${{ matrix.build_arch == 'arm64' && '-aarch64' || '' }}${{ matrix.build_type == 'RelWithDebInfo' && '-relwithdebinfo' || '' }}${{ matrix.malloc && '-malloc' || '' }}/${{ needs.SetupNames.outputs.download_binary_name_base }}_${{ matrix.build_arch }}.deb"
       shorten_tag: "true"
       force_release: "true"
       push_to_dockerhub: "false"
