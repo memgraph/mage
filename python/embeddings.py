@@ -369,7 +369,7 @@ def multi_gpu_compute(
 @mgp.write_proc
 def compute(
     ctx: mgp.ProcCtx,
-    input_vertices: mgp.Nullable[mgp.List[mgp.Vertex]] = None,
+    input_nodes: mgp.Nullable[mgp.List[mgp.Vertex]] = None,
     embedding_property: str = "embedding",
     excluded_properties: mgp.Nullable[
         mgp.List[
@@ -390,8 +390,8 @@ def compute(
         excluded_properties = {"embedding"}
 
     try:
-        if input_vertices:
-            vertices = input_vertices
+        if input_nodes:
+            vertices = input_nodes
         else:
             vertices = ctx.graph.vertices
 

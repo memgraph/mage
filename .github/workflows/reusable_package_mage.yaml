@@ -166,6 +166,10 @@ jobs:
             ARTIFACT_NAME="${ARTIFACT_NAME}-malloc"
             IMAGE_TAG="${IMAGE_TAG}-malloc"          
           fi
+          if [[ "${{ inputs.cuda }}" == true ]]; then
+            ARTIFACT_NAME="${ARTIFACT_NAME}-cuda"
+            IMAGE_TAG="${IMAGE_TAG}-cuda"
+          fi
           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
           echo "ARTIFACT_NAME=${ARTIFACT_NAME}" >> $GITHUB_ENV
 
@@ -258,9 +262,9 @@ jobs:
       - name: Build docker image
         run: |
           if [[ "${{ inputs.arch }}" == "arm64" ]]; then
-            MGBUILD_IMAGE=memgraph/mgbuild:v6_ubuntu-24.04-arm
+            MGBUILD_IMAGE=memgraph/mgbuild:v7_ubuntu-24.04-arm
           else
-            MGBUILD_IMAGE=memgraph/mgbuild:v6_ubuntu-24.04
+            MGBUILD_IMAGE=memgraph/mgbuild:v7_ubuntu-24.04
           fi
 
           echo "Using base image: $MGBUILD_IMAGE"
