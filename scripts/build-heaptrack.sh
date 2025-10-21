@@ -35,9 +35,9 @@ cmake .. \
     -DHEAPTRACK_USE_LIBUNWIND=OFF \
     -DCMAKE_INSTALL_PREFIX="/tmp/heaptrack" \
     -DCMAKE_PREFIX_PATH="/usr" \
-    -DCMAKE_LIBRARY_PATH="/usr/lib/$(ARCH)-linux-gnu" \
+    -DCMAKE_LIBRARY_PATH="/usr/lib/$ARCH-linux-gnu" \
     -DCMAKE_INCLUDE_PATH="/usr/include" \
-    -DLIBDW_LIBRARIES="/usr/lib/$(ARCH)-linux-gnu/libdw.so" \
+    -DLIBDW_LIBRARIES="/usr/lib/$ARCH-linux-gnu/libdw.so" \
     -DLIBDW_INCLUDE_DIR="/usr/include" \
     -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
     -Wno-dev
