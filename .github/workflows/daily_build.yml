@@ -81,16 +81,14 @@ jobs:
         malloc: [false]
         cuda: [false]
         include:
-          - build_type: "RelWithDebInfo"
-            rwid_ext: "-relwithdebinfo"
-          - build_arch: "arm64"
-            arm_ext: "-aarch64"
           - build_type: "Release"
             build_arch: "amd64"
             malloc: true
+            cuda: false
           - build_type: "RelWithDebInfo"
             build_arch: "amd64"
             cuda: true
+            malloc: false
     uses: ./.github/workflows/reusable_package_mage.yaml
     with:
       arch: "${{ matrix.build_arch }}"
