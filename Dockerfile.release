@@ -115,7 +115,7 @@ RUN if [ "$BUILD_TYPE" = "Release" ]; then \
         echo "Skipping heaptrack build" && \
         mkdir -p /tmp/heaptrack; \
     else \
-        source /opt/toolchain-v6/activate && \
+        source /opt/toolchain-v7/activate && \
         mkdir -p /tmp/heaptrack && \
         mkdir -p /tmp/heaptrack-build && \
         cd /tmp/heaptrack-build && \

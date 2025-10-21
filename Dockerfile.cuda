@@ -85,7 +85,7 @@ RUN python3 -m pip install --no-cache-dir -r /mage/python/requirements-gpu.txt -
 
 # Build query modules
 SHELL ["/bin/bash", "-c"]
-RUN source /opt/toolchain-v6/activate && curl https://sh.rustup.rs -sSf | sh -s -- -y \
+RUN source /opt/toolchain-v7/activate && curl https://sh.rustup.rs -sSf | sh -s -- -y \
     && export PATH="$HOME/.cargo/bin:${PATH}" \
     && rustup toolchain install 1.85 \
     && rustup default 1.85 \
@@ -97,7 +97,7 @@ RUN if [ "$BUILD_TYPE" = "Release" ]; then \
         echo "Skipping heaptrack build" && \
         mkdir -p /tmp/heaptrack; \
     else \
-        source /opt/toolchain-v6/activate && \
+        source /opt/toolchain-v7/activate && \
         mkdir -p /tmp/heaptrack && \
         mkdir -p /tmp/heaptrack-build && \
         cd /tmp/heaptrack-build && \
