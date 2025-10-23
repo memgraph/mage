@@ -95,7 +95,7 @@ jobs:
       mage_version: "${{ needs.DailyBuildVariables.outputs.mage_version }}"
       mage_build_type: "${{ matrix.build_type }}"
       memgraph_version: "${{ needs.DailyBuildVariables.outputs.memgraph_version }}"
-      memgraph_download_link: "https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/daily-build/memgraph/${{ needs.DailyBuildVariables.outputs.build_date }}/ubuntu-24.04${{ matrix.build_arch == 'arm64' && '-aarch64' || '' }}${{ matrix.build_type == 'RelWithDebInfo' && '-relwithdebinfo' || '' }}${{ matrix.malloc && '-malloc' || '' }}/${{ needs.DailyBuildVariables.outputs.binary_name_base }}_${{ matrix.build_arch }}.deb"
+      memgraph_download_link: "https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/daily-build/memgraph/${{ needs.DailyBuildVariables.outputs.build_date }}/ubuntu-24.04${{ matrix.malloc && '-malloc' || '' }}${{ matrix.build_arch == 'arm64' && '-aarch64' || '' }}${{ matrix.build_type == 'RelWithDebInfo' && '-relwithdebinfo' || '' }}/${{ needs.DailyBuildVariables.outputs.binary_name_base }}_${{ matrix.build_arch }}.deb"
       shorten_tag: "false"
       force_release: "true"
       push_to_dockerhub: "false"
