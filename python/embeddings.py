@@ -446,7 +446,6 @@ def return_data(
     if embedding_property_name is None:
         if success:
             embeddings = input_items
-        return embeddings
 
     # Case 2: Extract embeddings from vertex properties
     elif return_embeddings and success:
@@ -564,77 +563,13 @@ def compute(
 
     return compute_embeddings(vertices, configuration)
 
-    # try:
-    #     n = len(vertices)
-    #     if n == 0:
-    #         logger.info("No vertices to process.")
-    #         return return_data(vertices, configuration["embedding_property"], configuration["return_embeddings"], True)
 
-    #     # Validate and select target GPU(s)
-    #     try:
-    #         gpus = select_device(configuration["device"])
-    #     except (ValueError, TypeError, RuntimeError) as e:
-    #         logger.error(f"Invalid device parameter: {e}")
-    #         return return_data(vertices, configuration["embedding_property"], configuration["return_embeddings"], False)
-
-    #     logger.info(f"Selected {len(gpus) if gpus else 0} GPU(s): {gpus}")
-
-    #     if not gpus:
-    #         try:
-    #             return cpu_compute(
-    #                 vertices,
-    #                 configuration["embedding_property"],
-    #                 configuration["excluded_properties"],
-    #                 configuration["model_name"],
-    #                 configuration["batch_size"],
-    #                 configuration["return_embeddings"],
-    #             )
-    #         except Exception as e:
-    #             logger.error(f"CPU path failed: {e}")
-    #             return return_data(vertices, configuration["embedding_property"], configuration["return_embeddings"], False)
-
-    #     if len(gpus) == 1:
-    #         try:
-    #             return single_gpu_compute(
-    #                 vertices,
-    #                 configuration["embedding_property"],
-    #                 configuration["excluded_properties"],
-    #                 configuration["model_name"],
-    #                 configuration["batch_size"],
-    #                 gpus[0],
-    #                 configuration["return_embeddings"],
-    #             )
-    #         except Exception as e:
-    #             logger.error(f"Single GPU path failed: {e}")
-    #             return return_data(vertices, configuration["embedding_property"], configuration["return_embeddings"], False)
-
-    #     if len(gpus) > 1:
-    #         try:
-    #             return multi_gpu_compute(
-    #                 vertices,
-    #                 configuration["embedding_property"],
-    #                 configuration["excluded_properties"],
-    #                 configuration["model_name"],
-    #                 configuration["batch_size"],
-    #                 configuration["chunk_size"],
-    #                 gpus,
-    #                 configuration["return_embeddings"],
-    #             )
-    #         except Exception as e:
-    #             logger.error(f"Multi GPU path failed: {e}")
-    #             return return_data(vertices, configuration["embedding_property"], configuration["return_embeddings"], False)
-
-    # except Exception as e:
-    #     logger.error(f"Failed to compute embeddings: {e}")
-    #     return return_data(vertices, configuration["embedding_property"], configuration["return_embeddings"], False)
-
-
-@mgp.function
+@mgp.read_proc
 def embed(
-    ctx: mgp.FuncCtx,
+    ctx: mgp.ProcCtx,
     input_strings: mgp.List[mgp.Any],
     configuration: mgp.Map = {},
-) -> mgp.Any:
+) -> mgp.Record(success=bool, embeddings=mgp.Nullable[mgp.List[list]]):
     logger.info(f"embed: starting (py_exec={sys.executable}, py_ver={sys.version.split()[0]})")
 
     # hard code embedding_property to None for string input
@@ -642,67 +577,3 @@ def embed(
     configuration = validate_configuration(configuration)
 
     return compute_embeddings(input_strings, configuration)
-
-    # try:
-    #     n = len(input_strings)
-    #     if n == 0:
-    #         logger.info("No strings to process.")
-    #         return return_data(None, None, True, True)
-
-    #     # Validate and select target GPU(s)
-    #     try:
-    #         gpus = select_device(configuration["device"])
-    #     except (ValueError, TypeError, RuntimeError) as e:
-    #         logger.error(f"Invalid device parameter: {e}")
-    #         return return_data(input_strings, configuration["embedding_property"], configuration["return_embeddings"], False)
-
-    #     logger.info(f"Selected {len(gpus) if gpus else 0} GPU(s): {gpus}")
-
-    #     if not gpus:
-    #         try:
-    #             return cpu_compute(
-    #                 input_strings,
-    #                 configuration["embedding_property"],
-    #                 configuration["excluded_properties"],
-    #                 configuration["model_name"],
-    #                 configuration["batch_size"],
-    #                 configuration["return_embeddings"],
-    #             )
-    #         except Exception as e:
-    #             logger.error(f"CPU path failed: {e}")
-    #             return return_data(input_strings, configuration["embedding_property"], configuration["return_embeddings"], False)
-
-    #     if len(gpus) == 1:
-    #         try:
-    #             return single_gpu_compute(
-    #                 input_strings,
-    #                 configuration["embedding_property"],
-    #                 configuration["excluded_properties"],
-    #                 configuration["model_name"],
-    #                 configuration["batch_size"],
-    #                 gpus[0],
-    #                 configuration["return_embeddings"],
-    #             )
-    #         except Exception as e:
-    #             logger.error(f"Single GPU path failed: {e}")
-    #             return return_data(input_strings, configuration["embedding_property"], configuration["return_embeddings"], False)
-
-    #     if len(gpus) > 1:
-    #         try:
-    #             return multi_gpu_compute(
-    #                 input_strings,
-    #                 configuration["embedding_property"],
-    #                 configuration["excluded_properties"],
-    #                 configuration["model_name"],
-    #                 configuration["batch_size"],
-    #                 configuration["chunk_size"],
-    #                 gpus,
-    #                 configuration["return_embeddings"],
-    #             )
-    #         except Exception as e:
-    #             logger.error(f"Multi GPU path failed: {e}")
-    #             return return_data(input_strings, configuration["embedding_property"], configuration["return_embeddings"], False)
-
-    # except Exception as e:
-    #     logger.error(f"Failed to compute embeddings: {e}")
-    #     return return_data(input_strings, configuration["embedding_property"], configuration["return_embeddings"], False)
