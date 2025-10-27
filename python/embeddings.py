@@ -88,11 +88,14 @@ def select_device(device: mgp.Any):  # noqa: C901
 
     # Check if input is "cpu" when no CUDA devices are available
     if not available_gpus:
-        if isinstance(device, str) and device.lower() == "cpu":
+        if (isinstance(device, str) and device.lower() == "cpu") or device is None:
             logger.info("No CUDA devices available, using CPU")
             return None
         else:
             raise RuntimeError("No CUDA devices available and device is not 'cpu'")
+    elif device is None:
+        # If GPU is available but not explicitly requested, use the first available one
+        return [available_gpus[0]]
 
     # Handle different input types
     if isinstance(device, int):
@@ -370,24 +373,27 @@ def multi_gpu_compute(
 def compute(
     ctx: mgp.ProcCtx,
     input_nodes: mgp.Nullable[mgp.List[mgp.Vertex]] = None,
-    embedding_property: str = "embedding",
-    excluded_properties: mgp.Nullable[
-        mgp.List[
-            str
-        ]  # NOTE: It's a list because Memgraph query modules do NOT support sets yet.
-    ] = None,  # https://dev.to/ytskk/dont-use-mutable-default-arguments-in-python-56f4
-    model_name: str = "all-MiniLM-L6-v2",
-    batch_size: int = 2000,
-    chunk_size: int = 48,  # NOTE: this is the number of batches per chunk, later to be translated to number of vertices per chunk
-    device: mgp.Any = 0,
+    configuration: mgp.Map = {},
 ) -> mgp.Record(success=bool):
     logger.info(
         f"compute_embeddings: starting (py_exec={sys.executable}, py_ver={sys.version.split()[0]})"
     )
-    logger.info(f"device: {device}")
 
-    if not excluded_properties:
-        excluded_properties = {"embedding"}
+    default_configuration = {
+        "embedding_property": "embedding",
+        "excluded_properties": ["embedding"],
+        "model_name": "all-MiniLM-L6-v2",
+        "batch_size": 2000,
+        "chunk_size": 48,
+        "device": None,
+        "return_embeddings": False,
+    }
+    # NOTE: chunk_size is the number of batches per chunk, later to be translated to number of vertices per chunk
+
+    configuration = {**default_configuration, **configuration}
+
+    if not configuration.get("excluded_properties"):
+        configuration["excluded_properties"] = configuration["embedding_property"]
 
     try:
         if input_nodes:
@@ -402,7 +408,7 @@ def compute(
 
         # Validate and select target GPU(s)
         try:
-            gpus = select_device(device)
+            gpus = select_device(configuration["device"])
         except (ValueError, TypeError, RuntimeError) as e:
             logger.error(f"Invalid device parameter: {e}")
             return mgp.Record(success=False)
@@ -411,7 +417,13 @@ def compute(
 
         if not gpus:
             try:
-                return cpu_compute(vertices, embedding_property, excluded_properties, model_name, batch_size)
+                return cpu_compute(
+                    vertices,
+                    configuration["embedding_property"],
+                    configuration["excluded_properties"],
+                    configuration["model_name"],
+                    configuration["batch_size"],
+                )
             except Exception as e:
                 logger.error(f"CPU path failed: {e}")
                 return mgp.Record(success=False)
@@ -420,10 +432,10 @@ def compute(
             try:
                 return single_gpu_compute(
                     vertices,
-                    embedding_property,
-                    excluded_properties,
-                    model_name,
-                    batch_size,
+                    configuration["embedding_property"],
+                    configuration["excluded_properties"],
+                    configuration["model_name"],
+                    configuration["batch_size"],
                     gpus[0],
                 )
             except Exception as e:
@@ -434,11 +446,11 @@ def compute(
             try:
                 return multi_gpu_compute(
                     vertices,
-                    embedding_property,
-                    excluded_properties,
-                    model_name,
-                    batch_size,
-                    chunk_size,
+                    configuration["embedding_property"],
+                    configuration["excluded_properties"],
+                    configuration["model_name"],
+                    configuration["batch_size"],
+                    configuration["chunk_size"],
                     gpus,
                 )
             except Exception as e:
