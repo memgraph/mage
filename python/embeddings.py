@@ -195,7 +195,7 @@ def cpu_compute(
         texts = build_texts(input_items, excluded_properties)
     else:
         texts = input_items
-    
+
     n = len(input_items)
     embs = model.encode(
         texts,
@@ -211,7 +211,7 @@ def cpu_compute(
 
     logger.info(f"Processed {n} items on CPU.")
     return return_data(
-        input_items if vertex_input else embeddings_list, 
+        input_items if vertex_input else embeddings_list,
         embedding_property_name=embedding_property if vertex_input else None,
         return_embeddings=return_embeddings,
         success=True
@@ -248,9 +248,9 @@ def single_gpu_compute(
         except Exception as e:
             logger.error(f"Failed to load model {model_name}: {e}")
             return return_data(
-                input_items if vertex_input else None, 
-                embedding_property_name=embedding_property if vertex_input else None, 
-                return_embeddings=return_embeddings, 
+                input_items if vertex_input else None,
+                embedding_property_name=embedding_property if vertex_input else None,
+                return_embeddings=return_embeddings,
                 success=False
             )
         item_iter = iter(input_items)
@@ -283,9 +283,9 @@ def single_gpu_compute(
 
         logger.info(f"Processed {len(input_items)} items on GPU {device}.")
         return return_data(
-            input_items if vertex_input else all_embeddings, 
-            embedding_property_name=embedding_property if vertex_input else None, 
-            return_embeddings=return_embeddings, 
+            input_items if vertex_input else all_embeddings,
+            embedding_property_name=embedding_property if vertex_input else None,
+            return_embeddings=return_embeddings,
             success=True
         )
 
@@ -328,9 +328,9 @@ def multi_gpu_compute(
     except Exception as e:
         logger.error(f"Failed to import worker module: {e}")
         return return_data(
-            input_items if vertex_input else None, 
-            embedding_property_name=embedding_property, 
-            return_embeddings=return_embeddings, 
+            input_items if vertex_input else None,
+            embedding_property_name=embedding_property,
+            return_embeddings=return_embeddings,
             success=False
         )
 
@@ -417,9 +417,9 @@ def multi_gpu_compute(
     )
     success_flag = (total_processed == n)
     return return_data(
-        input_items if vertex_input else all_embeddings, 
-        embedding_property_name=embedding_property, 
-        return_embeddings=return_embeddings, 
+        input_items if vertex_input else all_embeddings,
+        embedding_property_name=embedding_property,
+        return_embeddings=return_embeddings,
         success=success_flag
     )
 
