@@ -183,7 +183,8 @@ def cpu_compute(
     ] = None,  # https://dev.to/ytskk/dont-use-mutable-default-arguments-in-python-56f4
     model_name: str = "all-MiniLM-L6-v2",
     batch_size: int = 2000,
-) -> mgp.Record(success=bool):
+    return_embeddings: bool = False,
+) -> mgp.Record(success=bool, embeddings=mgp.Nullable[mgp.List[list]]):
 
     from sentence_transformers import SentenceTransformer
     import transformers  # noqa: F401
@@ -198,10 +199,11 @@ def cpu_compute(
         normalize_embeddings=True,
         show_progress_bar=False,
     )
-    for v, e in zip(vertices, embs.tolist()):
+    embeddings_list = embs.tolist()
+    for v, e in zip(vertices, embeddings_list):
         v.properties[embedding_property] = e
     logger.info(f"Processed {n} vertices on CPU.")
-    return mgp.Record(success=True)
+    return return_data(vertices, embedding_property, return_embeddings, True)
 
 
 def single_gpu_compute(
@@ -215,7 +217,8 @@ def single_gpu_compute(
     model_name: str = "all-MiniLM-L6-v2",
     batch_size: int = 2000,
     device: int = 0,
-) -> mgp.Record(success=bool):
+    return_embeddings: bool = False,
+) -> mgp.Record(success=bool, embeddings=mgp.Nullable[mgp.List[list]]):
 
     from sentence_transformers import SentenceTransformer
     import transformers  # noqa: F401
@@ -231,7 +234,7 @@ def single_gpu_compute(
             logger.info(f"Allocated memory: {allocated_memory / 1024 / 1024:.2f} MB")
         except Exception as e:
             logger.error(f"Failed to load model {model_name}: {e}")
-            return mgp.Record(success=False)
+            return return_data(vertices, embedding_property, return_embeddings, False)
         vertex_iter = iter(vertices)
         n = len(vertices)
         for i in range(0, n, batch_size):
@@ -253,7 +256,7 @@ def single_gpu_compute(
                 v.properties[embedding_property] = e
 
         logger.info(f"Processed {len(vertices)} vertices on GPU {device}.")
-        return mgp.Record(success=True)
+        return return_data(vertices, embedding_property, return_embeddings, True)
 
     finally:
         # TODO(matt): figure out why destructor for the model is not called...
@@ -284,13 +287,14 @@ def multi_gpu_compute(
     batch_size: int = 2000,
     chunk_size: int = 48,
     gpus: List[int] = [0],
-) -> mgp.Record(success=bool):
+    return_embeddings: bool = False,
+) -> mgp.Record(success=bool, embeddings=mgp.Nullable[mgp.List[list]]):
 
     try:
         import embed_worker
     except Exception as e:
         logger.error(f"Failed to import worker module: {e}")
-        return mgp.Record(success=False)
+        return return_data(vertices, embedding_property, return_embeddings, False)
 
     n = len(vertices)
 
@@ -366,7 +370,21 @@ def multi_gpu_compute(
     logger.info(
         f"Successfully processed {total_processed}/{n} vertices across {len(gpus)} GPU(s)."
     )
-    return mgp.Record(success=(total_processed == n))
+    success_flag = (total_processed == n)
+    return return_data(vertices, embedding_property, return_embeddings, success_flag)
+
+
+def return_data(
+    vertices: mgp.Nullable[mgp.List[mgp.Vertex]],
+    embedding_property: str = "embedding",
+    return_embeddings: bool = False,
+    success: bool = True,
+) -> mgp.Record(success=bool, embeddings=mgp.Nullable[mgp.List[list]]):
+
+    embeddings = None
+    if success and return_embeddings:
+        embeddings = [v.properties[embedding_property] for v in vertices]
+    return mgp.Record(success=success, embeddings=embeddings)
 
 
 @mgp.write_proc
@@ -374,7 +392,7 @@ def compute(
     ctx: mgp.ProcCtx,
     input_nodes: mgp.Nullable[mgp.List[mgp.Vertex]] = None,
     configuration: mgp.Map = {},
-) -> mgp.Record(success=bool):
+) -> mgp.Record(success=bool, embeddings=mgp.Nullable[mgp.List[list]]):
     logger.info(
         f"compute_embeddings: starting (py_exec={sys.executable}, py_ver={sys.version.split()[0]})"
     )
@@ -394,6 +412,10 @@ def compute(
 
     if not configuration.get("excluded_properties"):
         configuration["excluded_properties"] = configuration["embedding_property"]
+    if not configuration["embedding_property"] in configuration["excluded_properties"]:
+        configuration["excluded_properties"].append(configuration["embedding_property"])
+
+    logger.debug(f"Using embedding configuration: {configuration}")
 
     try:
         if input_nodes:
@@ -404,14 +426,14 @@ def compute(
         n = len(vertices)
         if n == 0:
             logger.info("No vertices to process.")
-            return mgp.Record(success=True)
+            return return_data(vertices, configuration["embedding_property"], configuration["return_embeddings"], True)
 
         # Validate and select target GPU(s)
         try:
             gpus = select_device(configuration["device"])
         except (ValueError, TypeError, RuntimeError) as e:
             logger.error(f"Invalid device parameter: {e}")
-            return mgp.Record(success=False)
+            return return_data(vertices, configuration["embedding_property"], configuration["return_embeddings"], False)
 
         logger.info(f"Selected {len(gpus) if gpus else 0} GPU(s): {gpus}")
 
@@ -423,10 +445,11 @@ def compute(
                     configuration["excluded_properties"],
                     configuration["model_name"],
                     configuration["batch_size"],
+                    configuration["return_embeddings"],
                 )
             except Exception as e:
                 logger.error(f"CPU path failed: {e}")
-                return mgp.Record(success=False)
+                return return_data(vertices, configuration["embedding_property"], configuration["return_embeddings"], False)
 
         if len(gpus) == 1:
             try:
@@ -437,10 +460,11 @@ def compute(
                     configuration["model_name"],
                     configuration["batch_size"],
                     gpus[0],
+                    configuration["return_embeddings"],
                 )
             except Exception as e:
                 logger.error(f"Single GPU path failed: {e}")
-                return mgp.Record(success=False)
+                return return_data(vertices, configuration["embedding_property"], configuration["return_embeddings"], False)
 
         if len(gpus) > 1:
             try:
@@ -452,11 +476,12 @@ def compute(
                     configuration["batch_size"],
                     configuration["chunk_size"],
                     gpus,
+                    configuration["return_embeddings"],
                 )
             except Exception as e:
                 logger.error(f"Multi GPU path failed: {e}")
-                return mgp.Record(success=False)
+                return return_data(vertices, configuration["embedding_property"], configuration["return_embeddings"], False)
 
     except Exception as e:
         logger.error(f"Failed to compute embeddings: {e}")
-        return mgp.Record(success=False)
+        return return_data(vertices, configuration["embedding_property"], configuration["return_embeddings"], False)
