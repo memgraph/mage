@@ -1,5 +1,6 @@
 query: >
-    CALL embeddings.compute(NULL, "embeddings", NULL, "all-MiniLM-L6-v2", 2000, 48, "cpu") 
+    WITH {device: "cpu"} AS configuration
+    CALL embeddings.compute(NULL, configuration) 
     YIELD success
     RETURN success;
 
