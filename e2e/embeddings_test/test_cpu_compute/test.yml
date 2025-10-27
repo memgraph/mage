@@ -1,6 +1,6 @@
 query: >
     WITH {device: "cpu"} AS configuration
-    CALL embeddings.compute(NULL, configuration) 
+    CALL embeddings.compute_node_sentence(NULL, configuration) 
     YIELD success
     RETURN success;
 

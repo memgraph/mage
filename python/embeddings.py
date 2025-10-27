@@ -546,7 +546,7 @@ def compute_embeddings(
 
 
 @mgp.write_proc
-def compute(
+def compute_node_sentence(
     ctx: mgp.ProcCtx,
     input_nodes: mgp.Nullable[mgp.List[mgp.Vertex]] = None,
     configuration: mgp.Map = {},
@@ -565,9 +565,9 @@ def compute(
 
 
 @mgp.read_proc
-def embed(
+def compute_text(
     ctx: mgp.ProcCtx,
-    input_strings: mgp.List[mgp.Any],
+    input_strings: mgp.List[str],
     configuration: mgp.Map = {},
 ) -> mgp.Record(success=bool, embeddings=mgp.Nullable[mgp.List[list]]):
     logger.info(f"embed: starting (py_exec={sys.executable}, py_ver={sys.version.split()[0]})")
