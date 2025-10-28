@@ -184,7 +184,8 @@ def cpu_compute(
     model_name: str = "all-MiniLM-L6-v2",
     batch_size: int = 2000,
     return_embeddings: bool = False,
-) -> mgp.Record(success=bool, embeddings=mgp.Nullable[mgp.List[list]]):
+    dimension: int = None,
+) -> mgp.Record(success=bool, embeddings=mgp.Nullable[mgp.List[list]], dimension=int):
 
     from sentence_transformers import SentenceTransformer
     import transformers  # noqa: F401
@@ -214,7 +215,8 @@ def cpu_compute(
         input_items if vertex_input else embeddings_list,
         embedding_property_name=embedding_property if vertex_input else None,
         return_embeddings=return_embeddings,
-        success=True
+        success=True,
+        dimension=dimension,
     )
 
 
@@ -230,7 +232,8 @@ def single_gpu_compute(
     batch_size: int = 2000,
     device: int = 0,
     return_embeddings: bool = False,
-) -> mgp.Record(success=bool, embeddings=mgp.Nullable[mgp.List[list]]):
+    dimension: int = None,
+) -> mgp.Record(success=bool, embeddings=mgp.Nullable[mgp.List[list]], dimension=int):
 
     from sentence_transformers import SentenceTransformer
     import transformers  # noqa: F401
@@ -251,7 +254,8 @@ def single_gpu_compute(
                 input_items if vertex_input else None,
                 embedding_property_name=embedding_property if vertex_input else None,
                 return_embeddings=return_embeddings,
-                success=False
+                success=False,
+                dimension=dimension,
             )
         item_iter = iter(input_items)
         n = len(input_items)
@@ -286,7 +290,8 @@ def single_gpu_compute(
             input_items if vertex_input else all_embeddings,
             embedding_property_name=embedding_property if vertex_input else None,
             return_embeddings=return_embeddings,
-            success=True
+            success=True,
+            dimension=dimension,
         )
 
     finally:
@@ -319,7 +324,8 @@ def multi_gpu_compute(
     chunk_size: int = 48,
     gpus: List[int] = [0],
     return_embeddings: bool = False,
-) -> mgp.Record(success=bool, embeddings=mgp.Nullable[mgp.List[list]]):
+    dimension: int = None,
+) -> mgp.Record(success=bool, embeddings=mgp.Nullable[mgp.List[list]], dimension=int):
 
     vertex_input = isinstance(embedding_property, str)
 
@@ -331,7 +337,8 @@ def multi_gpu_compute(
             input_items if vertex_input else None,
             embedding_property_name=embedding_property,
             return_embeddings=return_embeddings,
-            success=False
+            success=False,
+            dimension=dimension,
         )
 
     n = len(input_items)
@@ -420,7 +427,8 @@ def multi_gpu_compute(
         input_items if vertex_input else all_embeddings,
         embedding_property_name=embedding_property,
         return_embeddings=return_embeddings,
-        success=success_flag
+        success=success_flag,
+        dimension=dimension,
     )
 
 
@@ -429,6 +437,7 @@ def return_data(
     embedding_property_name: mgp.Nullable[str] = "embedding",
     return_embeddings: bool = False,
     success: bool = True,
+    dimension: int = None,
 ) -> mgp.Any:
     """
     Return embeddings and success status.
@@ -451,7 +460,7 @@ def return_data(
     elif return_embeddings and success:
         embeddings = [v.properties[embedding_property_name] for v in input_items]
 
-    return mgp.Record(success=success, embeddings=embeddings)
+    return mgp.Record(success=success, embeddings=embeddings, dimension=dimension)
 
 
 def validate_configuration(configuration: mgp.Map):
@@ -468,7 +477,10 @@ def validate_configuration(configuration: mgp.Map):
 
     if not configuration.get("excluded_properties"):
         configuration["excluded_properties"] = configuration["embedding_property"]
-    if configuration["embedding_property"] is not None and not configuration["embedding_property"] in configuration["excluded_properties"]:
+    if (
+        configuration["embedding_property"] is not None
+        and not configuration["embedding_property"] in configuration["excluded_properties"]
+    ):
         configuration["excluded_properties"].append(configuration["embedding_property"])
 
     logger.debug(f"Using embedding configuration: {configuration}")
@@ -481,18 +493,34 @@ def compute_embeddings(
     configuration: mgp.Map,
 ) -> mgp.Any:
 
+    dimension = get_model_info(configuration).get("dimension", None)
+    if dimension is None:
+        logger.warning("Failed to get model dimension.")
+
     try:
         n = len(input_items)
         if n == 0:
             logger.info("No vertices to process.")
-            return return_data(input_items, configuration["embedding_property"], configuration["return_embeddings"], True)
+            return return_data(
+                input_items,
+                configuration["embedding_property"],
+                configuration["return_embeddings"],
+                True,
+                dimension=dimension,
+            )
 
         # Validate and select target GPU(s)
         try:
             gpus = select_device(configuration["device"])
         except (ValueError, TypeError, RuntimeError) as e:
             logger.error(f"Invalid device parameter: {e}")
-            return return_data(input_items, configuration["embedding_property"], configuration["return_embeddings"], False)
+            return return_data(
+                input_items,
+                configuration["embedding_property"],
+                configuration["return_embeddings"],
+                False,
+                dimension=dimension,
+            )
 
         logger.info(f"Selected {len(gpus) if gpus else 0} GPU(s): {gpus}")
 
@@ -505,10 +533,17 @@ def compute_embeddings(
                     configuration["model_name"],
                     configuration["batch_size"],
                     configuration["return_embeddings"],
+                    dimension=dimension,
                 )
             except Exception as e:
                 logger.error(f"CPU path failed: {e}")
-                return return_data(input_items, configuration["embedding_property"], configuration["return_embeddings"], False)
+                return return_data(
+                    input_items,
+                    configuration["embedding_property"],
+                    configuration["return_embeddings"],
+                    False,
+                    dimension=dimension,
+                )
 
         if len(gpus) == 1:
             try:
@@ -520,10 +555,17 @@ def compute_embeddings(
                     configuration["batch_size"],
                     gpus[0],
                     configuration["return_embeddings"],
+                    dimension=dimension,
                 )
             except Exception as e:
                 logger.error(f"Single GPU path failed: {e}")
-                return return_data(input_items, configuration["embedding_property"], configuration["return_embeddings"], False)
+                return return_data(
+                    input_items,
+                    configuration["embedding_property"],
+                    configuration["return_embeddings"],
+                    False,
+                    dimension=dimension,
+                )
 
         if len(gpus) > 1:
             try:
@@ -536,13 +578,53 @@ def compute_embeddings(
                     configuration["chunk_size"],
                     gpus,
                     configuration["return_embeddings"],
+                    dimension=dimension,
                 )
             except Exception as e:
                 logger.error(f"Multi GPU path failed: {e}")
-                return return_data(input_items, configuration["embedding_property"], configuration["return_embeddings"], False)
+                return return_data(
+                    input_items,
+                    configuration["embedding_property"],
+                    configuration["return_embeddings"],
+                    False,
+                    dimension=dimension,
+                )
     except Exception as e:
         logger.error(f"Failed to compute embeddings: {e}")
-        return return_data(input_items, configuration["embedding_property"], configuration["return_embeddings"], False)
+        return return_data(
+            input_items,
+            configuration["embedding_property"],
+            configuration["return_embeddings"],
+            False,
+            dimension=dimension,
+        )
+
+
+def get_model_info(configuration: mgp.Map):
+
+    from sentence_transformers import SentenceTransformer
+    import transformers  # noqa: F401
+
+    model = SentenceTransformer(configuration["model_name"], device="cpu")
+
+    info = {
+        "model_name": configuration["model_name"],
+        "dimension": model.get_sentence_embedding_dimension(),
+        "max_sequence_length": model.get_max_seq_length(),
+    }
+
+    return info
+
+
+@mgp.read_proc
+def model_info(
+    configuration: mgp.Map,
+) -> mgp.Record(info=mgp.Map):
+
+    configuration = validate_configuration(configuration)
+
+    info = get_model_info(configuration)
+    return mgp.Record(info=info)
 
 
 @mgp.write_proc
@@ -550,7 +632,7 @@ def node_sentence(
     ctx: mgp.ProcCtx,
     input_nodes: mgp.Nullable[mgp.List[mgp.Vertex]] = None,
     configuration: mgp.Map = {},
-) -> mgp.Record(success=bool, embeddings=mgp.Nullable[mgp.List[list]]):
+) -> mgp.Record(success=bool, embeddings=mgp.Nullable[mgp.List[list]], dimension=int):
     logger.info(
         f"compute_embeddings: starting (py_exec={sys.executable}, py_ver={sys.version.split()[0]})"
     )
@@ -569,7 +651,7 @@ def text(
     ctx: mgp.ProcCtx,
     input_strings: mgp.List[str],
     configuration: mgp.Map = {},
-) -> mgp.Record(success=bool, embeddings=mgp.Nullable[mgp.List[list]]):
+) -> mgp.Record(success=bool, embeddings=mgp.Nullable[mgp.List[list]], dimension=int):
     logger.info(f"embed: starting (py_exec={sys.executable}, py_ver={sys.version.split()[0]})")
 
     # hard code embedding_property to None for string input
