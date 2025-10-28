@@ -1,6 +1,6 @@
 query: >
     WITH {device: "cuda:0"} AS configuration
-    CALL embeddings.compute_node_sentence(NULL, configuration) 
+    CALL embeddings.node_sentence(NULL, configuration) 
     YIELD success
     RETURN success;
 

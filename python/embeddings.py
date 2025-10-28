@@ -546,7 +546,7 @@ def compute_embeddings(
 
 
 @mgp.write_proc
-def compute_node_sentence(
+def node_sentence(
     ctx: mgp.ProcCtx,
     input_nodes: mgp.Nullable[mgp.List[mgp.Vertex]] = None,
     configuration: mgp.Map = {},
@@ -565,7 +565,7 @@ def compute_node_sentence(
 
 
 @mgp.read_proc
-def compute_text(
+def text(
     ctx: mgp.ProcCtx,
     input_strings: mgp.List[str],
     configuration: mgp.Map = {},
