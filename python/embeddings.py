@@ -618,7 +618,7 @@ def get_model_info(configuration: mgp.Map):
 
 @mgp.read_proc
 def model_info(
-    configuration: mgp.Map,
+    configuration: mgp.Map = {},
 ) -> mgp.Record(info=mgp.Map):
 
     configuration = validate_configuration(configuration)
