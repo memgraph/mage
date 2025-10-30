@@ -37,6 +37,9 @@ kubectl cluster-info --context kind-smoke-release-testing > /dev/null 2>&1 \
        echo "...done"
      }
 
+# Set kubectl context to use the kind cluster
+kubectl config use-context kind-smoke-release-testing
+
 kubectl get all -A
 
 if !command -v helm > /dev/null 2>&1; then
