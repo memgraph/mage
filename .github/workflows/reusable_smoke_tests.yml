@@ -126,7 +126,7 @@ jobs:
       - name: Clean up Go environment
         if: always()
         run: |
-          rm -rf $HOME/go || true
+          rm -rf $HOME/go-install || true
 
       - name: Clean up Docker images
         if: always()
