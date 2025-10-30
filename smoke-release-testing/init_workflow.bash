@@ -9,8 +9,9 @@ else
 fi
 
 curl -L "https://go.dev/dl/go1.25.3.linux-$ARCH.tar.gz" -o go.tar.gz
-tar -xzf go.tar.gz -C $HOME
-export PATH="$HOME/go/bin:$PATH"
+mkdir -p $HOME/go-install
+tar -xzf go.tar.gz -C $HOME/go-install
+export PATH="$HOME/go-install/go/bin:$PATH"
 go version
 
 go install sigs.k8s.io/kind@v0.24.0
