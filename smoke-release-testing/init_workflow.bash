@@ -1,16 +1,6 @@
 #!/bin/bash -e
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/utils.bash"
-apt-get update
-
-if [ ! -x "$(command -v jq)" ]; then
-  apt-get install -y jq
-fi
-
-if [ ! -x "$(command -v go)" ]; then
-  apt install -y golang-go
-  # or, https://go.dev/doc/install
-fi
 
 go install sigs.k8s.io/kind@v0.24.0
 echo "kind installed under $(go env GOPATH)/bin"
@@ -24,7 +14,7 @@ else
   ARCH="arm64"
 fi
 
-if [ ! -f "/usr/local/bin/kubectl" ]; then
+if !command -v kubectl > /dev/null 2>&1; then
   curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/$ARCH/kubectl"
   curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/$ARCH/kubectl.sha256"
   echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
@@ -45,7 +35,7 @@ kubectl cluster-info --context kind-smoke-release-testing > /dev/null 2>&1 \
 
 kubectl get all -A
 
-if [ ! -f "/usr/local/bin/helm" ]; then
+if !command -v helm > /dev/null 2>&1; then
   curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
   chmod 700 get_helm.sh
   ./get_helm.sh
