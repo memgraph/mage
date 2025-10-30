@@ -121,9 +121,16 @@ jobs:
           ./test_single_mage.bash
 
       - name: clean up Python environment
+        if: always()
         run: |
-          rm -rf env
+          rm -rf env || true
+
+      - name: Clean up Go environment
+        if: always()
+        run: |
+          rm -rf $HOME/go || true
 
       - name: Clean up Docker images
+        if: always()
         run: |
           ./cpp/memgraph/tools/docker_cleanup.sh
