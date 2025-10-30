@@ -49,10 +49,25 @@ jobs:
 
       - name: Determine Input Types
         run: |
-          read next_type next_image < <(python3 scripts/workflow_image_setup.py "${{ inputs.next_version }}" "${{ inputs.arch }}" "${{ inputs.malloc }}")
+          # default to latest daily build (from the previous day)
+          if [ -z "${{ inputs.next_version }}" ]; then
+            next_version="$(date -d "yesterday" +%Y%m%d)"
+          else
+            next_version="${{ inputs.next_version }}"
+          fi
+
+          # default to latest release version
+          if [ -z "${{ inputs.last_version }}" ]; then
+            tag="$( git tag | grep -v rc | tail -n 1)"
+            last_version="${tag#v}"
+          else
+            last_version="${{ inputs.last_version }}"
+          fi
+
+          read next_type next_image < <(python3 scripts/workflow_image_setup.py "${next_version}" "${{ inputs.arch }}" "${{ inputs.malloc }}")
           echo "NEXT_IMAGE=${next_image}" >> $GITHUB_ENV
           echo "NEXT_TYPE=${next_type}" >> $GITHUB_ENV
-          read last_type last_image < <(python3 scripts/workflow_image_setup.py "${{ inputs.last_version }}" "${{ inputs.arch }}" "${{ inputs.malloc }}")
+          read last_type last_image < <(python3 scripts/workflow_image_setup.py "${last_version}" "${{ inputs.arch }}" "${{ inputs.malloc }}")
           echo "LAST_IMAGE=${last_image}" >> $GITHUB_ENV
           echo "LAST_TYPE=${last_type}" >> $GITHUB_ENV
 
