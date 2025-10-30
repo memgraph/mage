@@ -2,17 +2,16 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/utils.bash"
 
-go install sigs.k8s.io/kind@v0.24.0
-echo "kind installed under $(go env GOPATH)/bin"
-goenvpath="$(go env GOPATH)"
-export PATH="$goenvpath/bin:$PATH"
-kind --version
-
 if [ "$(arch)" == "x86_64" ]; then
   ARCH="amd64"
 else
   ARCH="arm64"
 fi
+
+curl -L "https://go.dev/dl/go1.25.3.linux-$ARCH.tar.gz" -O go.tar.gz
+tar -xzf go.tar.gz -C $HOME
+export PATH="$HOME/go/bin:$PATH"
+go version
 
 if !command -v kubectl > /dev/null 2>&1; then
   curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/$ARCH/kubectl"
