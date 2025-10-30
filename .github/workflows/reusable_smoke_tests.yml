@@ -113,8 +113,6 @@ jobs:
         env:
           MEMGRAPH_ENTERPRISE_LICENSE: ${{ secrets.MEMGRAPH_ENTERPRISE_LICENSE }}
           MEMGRAPH_ORGANIZATION_NAME: ${{ secrets.MEMGRAPH_ORGANIZATION_NAME }}
-          MEMGRAPH_LAST_DOCKERHUB_IMAGE: $MEMGRAPH_LAST_DOCKERHUB_IMAGE
-          MEMGRAPH_NEXT_DOCKERHUB_IMAGE: $MEMGRAPH_NEXT_DOCKERHUB_IMAGE
         run: |
           source env/bin/activate
           cd smoke-release-testing
