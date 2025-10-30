@@ -40,6 +40,13 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Log into AWS
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+
       - name: Determine Input Types
         run: |
           read next_type next_image < <(python3 scripts/workflow_image_setup.py "${{ inputs.next_version }}" "${{ inputs.arch }}" "${{ inputs.malloc }}")
