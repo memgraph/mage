@@ -13,6 +13,11 @@ tar -xzf go.tar.gz -C $HOME
 export PATH="$HOME/go/bin:$PATH"
 go version
 
+go install sigs.k8s.io/kind@v0.24.0
+echo "kind installed under $(go env GOPATH)/bin"
+export PATH="$(go env GOPATH)/bin:$PATH"
+kind --version
+
 if !command -v kubectl > /dev/null 2>&1; then
   curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/$ARCH/kubectl"
   curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/$ARCH/kubectl.sha256"
