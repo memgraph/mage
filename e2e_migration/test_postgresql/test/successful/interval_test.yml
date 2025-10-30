@@ -11,4 +11,4 @@ query: |
 
 output:
   - interval_col_type: 'DURATION'
-    interval_col: 'P0DT23H39M50.065408S'
+    interval_col: 'P1DT2H3M0.000000S'

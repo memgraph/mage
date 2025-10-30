@@ -127,6 +127,10 @@ RUN apt-get update && apt-get install -y \
 # Copy entire mage repo
 COPY --chown=memgraph:memgraph ./ /mage/
 
+# Copy heaptrack and install it properly
+COPY --from=builder /tmp/heaptrack /tmp/heaptrack
+RUN cp -vr /tmp/heaptrack/* /usr/ && rm -rf /tmp/heaptrack
+
 RUN if [ -n "$CUSTOM_MIRROR" ]; then \
       sed -E -i \
         -e "/^URIs:/ s#${CUSTOM_MIRROR}/ubuntu/#https://archive.ubuntu.com/ubuntu/#g" \

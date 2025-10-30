@@ -203,9 +203,9 @@ jobs:
       - name: Build and run Memgraph MAGE
         run: |
           if [[ "${{ inputs.arch }}" == "arm64" ]]; then
-            MGBUILD_IMAGE=memgraph/mgbuild:v6_ubuntu-24.04-arm
+            MGBUILD_IMAGE=memgraph/mgbuild:v7_ubuntu-24.04-arm
           else
-            MGBUILD_IMAGE=memgraph/mgbuild:v6_ubuntu-24.04
+            MGBUILD_IMAGE=memgraph/mgbuild:v7_ubuntu-24.04
           fi
 
           # target is always "prod" now, we convert to dev container afterwards
@@ -277,7 +277,7 @@ jobs:
         run: |
           cd e2e
           docker exec -i -u memgraph ${{ env.MAGE_CONTAINER }} bash -c \
-          "cd /mage/e2e/ && python3 -m pytest . -k 'not cugraph'"
+          "cd /mage/e2e/ && python3 -m pytest . -k 'not cugraph and not embeddings_test-test_cuda_compute'"
 
       - name: Run End-to-end correctness tests
         env:

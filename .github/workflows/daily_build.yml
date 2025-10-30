@@ -79,13 +79,23 @@ jobs:
         build_type: ["Release", "RelWithDebInfo"]
         build_arch: ["amd64", "arm64"]
         malloc: [false]
+        cuda: [false]
         include:
-          - build_type: "RelWithDebInfo"
-            rwid_ext: "-relwithdebinfo"
-          - build_arch: "arm64"
-            arm_ext: "-aarch64"
           - build_type: "Release"
             build_arch: "amd64"
+            malloc: true
+            cuda: false
+          - build_type: "RelWithDebInfo"
+            build_arch: "amd64"
+            cuda: true
+            malloc: false
+          - build_type: "RelWithDebInfo"
+            build_arch: "amd64"
+            cuda: false
+            malloc: true
+          - build_type: "RelWithDebInfo"
+            build_arch: "arm64"
+            cuda: false
             malloc: true
     uses: ./.github/workflows/reusable_package_mage.yaml
     with:
@@ -93,7 +103,7 @@ jobs:
       mage_version: "${{ needs.DailyBuildVariables.outputs.mage_version }}"
       mage_build_type: "${{ matrix.build_type }}"
       memgraph_version: "${{ needs.DailyBuildVariables.outputs.memgraph_version }}"
-      memgraph_download_link: "https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/daily-build/memgraph/${{ needs.DailyBuildVariables.outputs.build_date }}/ubuntu-24.04${{ matrix.arm_ext }}${{ matrix.rwid_ext }}${{ matrix.malloc && '-malloc' || '' }}/${{ needs.DailyBuildVariables.outputs.binary_name_base }}_${{ matrix.build_arch }}.deb"
+      memgraph_download_link: "https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/daily-build/memgraph/${{ needs.DailyBuildVariables.outputs.build_date }}/ubuntu-24.04${{ matrix.malloc && '-malloc' || '' }}${{ matrix.build_arch == 'arm64' && '-aarch64' || '' }}${{ matrix.build_type == 'RelWithDebInfo' && '-relwithdebinfo' || '' }}/${{ needs.DailyBuildVariables.outputs.binary_name_base }}_${{ matrix.build_arch }}.deb"
       shorten_tag: "false"
       force_release: "true"
       push_to_dockerhub: "false"
@@ -101,6 +111,7 @@ jobs:
       s3_dest_bucket: "deps.memgraph.io"
       s3_dest_dir: "daily-build/mage/${{ needs.DailyBuildVariables.outputs.build_date }}"
       malloc: ${{ matrix.malloc }}
+      cuda: ${{ matrix.cuda }}
     secrets: inherit
 
   TestMAGE:

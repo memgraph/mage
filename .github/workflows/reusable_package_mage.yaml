@@ -66,9 +66,13 @@ on:
         type: boolean
         description: "Print the output URL at the end of the workflow"
         default: false
+      cuda:
+        type: boolean
+        description: "Build the image for CUDA"
+        default: false
 
 env:
-  OS: "${{ inputs.arch == 'arm64' && 'ubuntu-24.04-aarch64' || 'ubuntu-24.04' }}${{ inputs.malloc && '-malloc' || '' }}"
+  OS: "${{ inputs.arch == 'arm64' && 'ubuntu-24.04-aarch64' || 'ubuntu-24.04' }}${{ inputs.malloc && '-malloc' || '' }}${{ inputs.mage_build_type == 'RelWithDebInfo' && '-relwithdebinfo' || '' }}"
   DOCKER_REPOSITORY_NAME: memgraph/memgraph-mage
 
 jobs:
@@ -158,6 +162,10 @@ jobs:
             ARTIFACT_NAME="${ARTIFACT_NAME}-malloc"
             IMAGE_TAG="${IMAGE_TAG}-malloc"          
           fi
+          if [[ "${{ inputs.cuda }}" == true ]]; then
+            ARTIFACT_NAME="${ARTIFACT_NAME}-cuda"
+            IMAGE_TAG="${IMAGE_TAG}-cuda"
+          fi
           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
           echo "ARTIFACT_NAME=${ARTIFACT_NAME}" >> $GITHUB_ENV
 
@@ -199,7 +207,11 @@ jobs:
 
       - name: Set target dockerfile
         run: |
-          DOCKERFILE="Dockerfile.release"
+          if [[ "${{ inputs.cuda }}" == true ]]; then
+            DOCKERFILE="Dockerfile.cuda"
+          else
+            DOCKERFILE="Dockerfile.release"
+          fi
           echo "DOCKERFILE=${DOCKERFILE}" >> $GITHUB_ENV
 
       - name: Check if specified version tag is already pushed
@@ -246,9 +258,9 @@ jobs:
       - name: Set up MGBUILD image
         run: |
           if [[ "${{ inputs.arch }}" == "arm64" ]]; then
-            MGBUILD_IMAGE=memgraph/mgbuild:v6_ubuntu-24.04-arm
+            MGBUILD_IMAGE=memgraph/mgbuild:v7_ubuntu-24.04-arm
           else
-            MGBUILD_IMAGE=memgraph/mgbuild:v6_ubuntu-24.04
+            MGBUILD_IMAGE=memgraph/mgbuild:v7_ubuntu-24.04
           fi
 
           echo "Using base image: $MGBUILD_IMAGE"
