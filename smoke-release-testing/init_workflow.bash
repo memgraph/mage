@@ -29,9 +29,14 @@ kubectl version --client
 # delete any leftover cluster
 kind delete cluster --name smoke-release-testing || true
 
-# Clean up any stale context references
+# Clean up any stale context and cluster references (including minikube if it's referenced by our context)
 kubectl config delete-context kind-smoke-release-testing 2>/dev/null || true
 kubectl config delete-cluster kind-smoke-release-testing 2>/dev/null || true
+# Check if the context exists and points to minikube, if so remove it
+CLUSTER_NAME=$(kubectl config view --minify --output jsonpath='{.contexts[?(@.name=="kind-smoke-release-testing")].context.cluster}' 2>/dev/null || echo "")
+if [ "$CLUSTER_NAME" = "minikube" ] || [ -n "$CLUSTER_NAME" ]; then
+  kubectl config unset contexts.kind-smoke-release-testing 2>/dev/null || true
+fi
 
 # Create cluster and wait for it to be ready
 echo "Creating cluster..."
@@ -39,10 +44,34 @@ kind create cluster --name smoke-release-testing --wait 120s
 echo "...done"
 
 # Ensure kubeconfig is properly set up
-kind export kubeconfig --name smoke-release-testing
+# Get the kubeconfig from kind and merge it with existing config
+kind get kubeconfig --name smoke-release-testing > /tmp/kind-kubeconfig.yaml
+
+# Remove the context one more time before merging (in case kind create added it back incorrectly)
+kubectl config delete-context kind-smoke-release-testing 2>/dev/null || true
+kubectl config delete-cluster kind-smoke-release-testing 2>/dev/null || true
+
+# Merge with existing kubeconfig if it exists (kind kubeconfig takes precedence)
+if [ -f "${KUBECONFIG:-$HOME/.kube/config}" ]; then
+  # Put kind kubeconfig first so it takes precedence
+  KUBECONFIG=/tmp/kind-kubeconfig.yaml:${KUBECONFIG:-$HOME/.kube/config} kubectl config view --flatten > /tmp/merged-kubeconfig.yaml
+  mv /tmp/merged-kubeconfig.yaml ${KUBECONFIG:-$HOME/.kube/config}
+else
+  mkdir -p "$(dirname ${KUBECONFIG:-$HOME/.kube/config})"
+  cp /tmp/kind-kubeconfig.yaml ${KUBECONFIG:-$HOME/.kube/config}
+fi
 
 # Set kubectl context to use the kind cluster
 kubectl config use-context kind-smoke-release-testing
+
+# Verify the context points to the correct cluster
+CURRENT_CLUSTER=$(kubectl config view --context kind-smoke-release-testing --minify --output jsonpath='{.contexts[0].context.cluster}' 2>/dev/null || echo "")
+if [ "$CURRENT_CLUSTER" != "kind-smoke-release-testing" ]; then
+  echo "Error: Context 'kind-smoke-release-testing' is pointing to cluster '$CURRENT_CLUSTER' instead of 'kind-smoke-release-testing'"
+  echo "Debugging kubeconfig..."
+  kubectl config get-contexts
+  exit 1
+fi
 
 # Verify we can connect to the cluster
 kubectl cluster-info
