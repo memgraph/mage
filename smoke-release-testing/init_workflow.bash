@@ -8,7 +8,7 @@ else
   ARCH="arm64"
 fi
 
-curl -L "https://go.dev/dl/go1.25.3.linux-$ARCH.tar.gz" -O go.tar.gz
+curl -L "https://go.dev/dl/go1.25.3.linux-$ARCH.tar.gz" -o go.tar.gz
 tar -xzf go.tar.gz -C $HOME
 export PATH="$HOME/go/bin:$PATH"
 go version
