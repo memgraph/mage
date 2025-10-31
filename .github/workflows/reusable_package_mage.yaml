@@ -126,35 +126,11 @@ jobs:
         run: echo "CI_BRANCH=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
       
 
-      - name: Get Current MAGE Tag
+      - name: Get Current MAGE Commit/Tag
+        env:
+          INPUT_REF: "${{ inputs.ref }}"
         run: |
-          # Get the current tag, or branch if a tag doesn't exist
-          # This is used later in image creation, so that the exact version of 
-          # the MAGE git repository can be checked out within the container, 
-          # when we run the script to convert to "dev" container
-          if [ -z "${{ inputs.ref }}" ]; then
-            echo "No specific ref provided, using current branch/tag."
-            # If no ref is provided, use the current branch or tag
-            tag=$(./get_tag.sh)
-          else
-            echo "Using provided ref: ${{ inputs.ref }}"
-            tag="${{ inputs.ref }}"
-          fi
-          
-
-          # If tag is empty, fallback to the branch name
-          if [ -z "$tag" ]; then
-            echo "No valid tag found; using branch name."
-            # If CI_BRANCH is set (for PR events), use it; otherwise, use GITHUB_REF
-            if [ -n "$CI_BRANCH" ]; then
-              tag="$CI_BRANCH"
-            else
-              tag="${GITHUB_REF#refs/heads/}"
-            fi
-          fi
-
-          echo "Using tag/branch: $tag"
-          echo "MAGE_COMMIT=${tag}" >> $GITHUB_ENV
+          ./scripts/get_mage_commit.sh "$INPUT_REF" "$CI_BRANCH" "$GITHUB_REF"
 
       - name: Set up and check memgraph download link
         run: |
@@ -180,7 +156,11 @@ jobs:
 
       - name: Build Query Modules in MGBUILD container
         run: |
-          ./scripts/container-build.sh --arch $ARCH --build-type $BUILD_TYPE
+          ./scripts/container-build.sh \
+            --arch $ARCH \
+            --build-type $BUILD_TYPE \
+            --container-name $CONTAINER_NAME \
+            --stop-container true
 
       - name: Build image
         run: |

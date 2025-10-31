@@ -42,11 +42,11 @@ if [[ "$BUILD_TYPE" == 'RelWithDebInfo' ]]; then
     ARTIFACT_NAME="${ARTIFACT_NAME}-relwithdebinfo"
     IMAGE_TAG="${IMAGE_TAG}-relwithdebinfo"
 fi
-if [[ "${{ inputs.malloc }}" == true ]]; then
+if [[ "$MALLOC" == true ]]; then
     ARTIFACT_NAME="${ARTIFACT_NAME}-malloc"
     IMAGE_TAG="${IMAGE_TAG}-malloc"          
 fi
-if [[ "${{ inputs.cuda }}" == true ]]; then
+if [[ "$CUDA" == true ]]; then
     ARTIFACT_NAME="${ARTIFACT_NAME}-cuda"
     IMAGE_TAG="${IMAGE_TAG}-cuda"
 fi
