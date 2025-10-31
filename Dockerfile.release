@@ -10,46 +10,16 @@ ENV BUILD_TYPE=${BUILD_TYPE}
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
 ENV MAGE_COMMIT=${MAGE_COMMIT}
 ARG CUSTOM_MIRROR
+ARG CUDA=false
+ARG CACHE_PRESENT=false
 
-# This modifies the apt configuration to rety 3 times
-RUN echo 'Acquire::Retries "3";' > /etc/apt/apt.conf.d/80-retries
-
-# If CUSTOM_MIRROR is set, replace the default archive.ubuntu.com
-# and security.ubuntu.com URIs in your .sources file
-RUN if [ -n "$CUSTOM_MIRROR" ]; then \
-      sed -E -i \
-        -e '/^URIs:/ s#https?://[^ ]*archive\.ubuntu\.com#'"$CUSTOM_MIRROR"'#g' \
-        -e '/^URIs:/ s#https?://security\.ubuntu\.com#'"$CUSTOM_MIRROR"'#g' \
-        /etc/apt/sources.list.d/ubuntu.sources; \
-    fi
-
-# Essentials for production/dev
-RUN apt-get update && \
-    apt-get install -y curl && \
-    curl -sSL -O https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb && \
-    dpkg -i packages-microsoft-prod.deb && \
-    rm packages-microsoft-prod.deb && \
-    apt-get update && \
-    ACCEPT_EULA=Y apt-get install -y msodbcsql18 unixodbc-dev && \
-    apt-get install -y \
-    libcurl4        `memgraph` \
-    libpython${PY_VERSION}   `memgraph` \
-    openssl         `memgraph` \
-    python3         `mage-memgraph` \
-    python3-pip     `mage-memgraph` \
-    python3-setuptools     `mage-memgraph` \
-    adduser \
-    libgomp1 \
-    libaio1t64 \
-    libatomic1 \
-    --no-install-recommends \
-    && ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
-    if [ "${TARGETARCH}" = "arm64" ]; then \
-      ln -s /usr/lib/aarch64-linux-gnu/libaio.so.1t64 /usr/lib/aarch64-linux-gnu/libaio.so.1; \
-    else \
-      ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 /usr/lib/x86_64-linux-gnu/libaio.so.1; \
-    fi
+# Install runtime requirements for MAGE
+COPY scripts/install_runtime_requirements.sh /install_runtime_requirements.sh
+RUN chmod +x /install_runtime_requirements.sh && \
+    /install_runtime_requirements.sh --ci --target-arch ${TARGETARCH} \
+      --py-version ${PY_VERSION} --custom-mirror ${CUSTOM_MIRROR} \
+      --cuda ${CUDA} ${BUILD_TYPE} && \
+    rm /install_runtime_requirements.sh
 
 # install memgraph
 COPY memgraph-${TARGETARCH}.deb .
@@ -73,10 +43,10 @@ COPY python/requirements.txt /tmp/python-requirements.txt
 COPY cpp/memgraph/src/auth/reference_modules/requirements.txt /tmp/auth_module-requirements.txt
 
 USER memgraph
-COPY --chown=memgraph:memgraph ./scripts/install_requirements.sh /home/memgraph/install_requirements.sh
-RUN chmod +x /home/memgraph/install_requirements.sh && \
-    ./home/memgraph/install_requirements.sh --ci && \
-    rm /home/memgraph/install_requirements.sh
+COPY --chown=memgraph:memgraph ./scripts/install_python_requirements.sh /home/memgraph/install_python_requirements.sh
+RUN chmod +x /home/memgraph/install_python_requirements.sh && \
+    ./home/memgraph/install_python_requirements.sh --arch ${TARGETARCH} --ci --cuda ${CUDA} --cache-present ${CACHE_PRESENT} && \
+    rm /home/memgraph/install_python_requirements.sh
 
 FROM base as prod
 
@@ -105,7 +75,7 @@ ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
 CMD [""]
 
 
-FROM base as debug
+FROM base as relwithdebinfo
 
 USER root
 
