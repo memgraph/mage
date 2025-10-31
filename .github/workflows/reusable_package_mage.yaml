@@ -159,8 +159,7 @@ jobs:
           ./scripts/container-build.sh \
             --arch $ARCH \
             --build-type $BUILD_TYPE \
-            --container-name $CONTAINER_NAME \
-            --stop-container true
+            --container-name $CONTAINER_NAME
 
       - name: Build image
         run: |
