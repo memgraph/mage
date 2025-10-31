@@ -1,8 +1,9 @@
 #!/bin/bash
+set -euo pipefail
 
 BUILD_TYPE="${1:-Release}"
 
-source /opt/toolchain-v6/activate
+source /opt/toolchain-v7/activate
 curl https://sh.rustup.rs -sSf | sh -s -- -y
 export PATH="$HOME/.cargo/bin:${PATH}"
 rustup toolchain install 1.85

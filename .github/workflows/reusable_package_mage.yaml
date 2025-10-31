@@ -26,17 +26,9 @@ on:
         type: string
         description: "Make the final tag as short as possible, shortest format is X.Y-memgraph-X.Y"
         default: true
-      force_release:
-        type: string
-        description: "Overwrite existing image on dockerhub"
-        default: true
       push_to_github:
         type: string
         description: "Push the image to GitHub?"
-        default: false
-      push_to_dockerhub:
-        type: string
-        description: "Push the image to DockerHub?"
         default: false
       push_to_s3:
         type: string
