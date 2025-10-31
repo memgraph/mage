@@ -205,15 +205,6 @@ jobs:
           echo "MAGE_COMMIT=${tag}" >> $GITHUB_ENV
 
 
-      - name: Set target dockerfile
-        run: |
-          if [[ "${{ inputs.cuda }}" == true ]]; then
-            DOCKERFILE="Dockerfile.cuda"
-          else
-            DOCKERFILE="Dockerfile.release"
-          fi
-          echo "DOCKERFILE=${DOCKERFILE}" >> $GITHUB_ENV
-
       - name: Check if specified version tag is already pushed
         if: ${{ inputs.push_to_dockerhub == 'true' }}
         run: |
@@ -296,40 +287,22 @@ jobs:
 
       - name: Build image
         run: |
+          if [[ "${{ env.MAGE_BUILD_TYPE }}" = "RelWithDebInfo" ]]; then
+            DOCKER_TARGET=relwithdebinfo
+          else
+            DOCKER_TARGET=prod
+          fi
           docker buildx build \
-          --target prod \
+          --target $DOCKER_TARGET \
           --platform linux/${{ inputs.arch }} \
           --tag ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} \
           --file Dockerfile.release \
+          --build-arg BUILD_TYPE=${{ env.MAGE_BUILD_TYPE }} \
           --build-arg MGBUILD_IMAGE=$MGBUILD_IMAGE \
           --build-arg MAGE_COMMIT="${{ env.MAGE_COMMIT }}" \
           --build-arg CACHE_PRESENT=${{ env.CACHE_PRESENT }} \
           --build-arg CUSTOM_MIRROR=${{ env.CUSTOM_MIRROR }} \
           --load .
-
-      #     # target is "prod" for Release and "debug" for RelWithDebInfo
-      #     if [ "${{ env.MAGE_BUILD_TYPE }}" = "RelWithDebInfo" ]; then
-      #       DOCKER_TARGET=debug
-      #     else
-      #       DOCKER_TARGET=prod
-      #     fi
-      #     echo "Using target: $DOCKER_TARGET"
-
-      #     docker buildx build \
-      #     --target $DOCKER_TARGET \
-      #     --platform linux/${{ inputs.arch }} \
-      #     --tag ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} \
-      #     --file ${{ env.DOCKERFILE }} \
-      #     --build-arg BUILD_TYPE=${{ env.MAGE_BUILD_TYPE }} \
-      #     --build-arg MGBUILD_IMAGE=$MGBUILD_IMAGE \
-      #     --build-arg MAGE_COMMIT="${{ env.MAGE_COMMIT }}" \
-      #     --build-arg CACHE_PRESENT=${{ env.CACHE_PRESENT }} \
-      #     --build-arg CUSTOM_MIRROR=${{ env.CUSTOM_MIRROR }} \
-      #     --load .
-
-      #     # print the image size in both SI and IEC units
-      #     ./print_image_size.sh ${DOCKER_REPOSITORY_NAME} ${{ env.IMAGE_TAG }}
-
 
       - name: Save docker image
         run: |
