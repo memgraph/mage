@@ -10,18 +10,23 @@ while [[ $# -gt 0 ]]; do
     --arch)
       ARCH=$2
       shift 2
+    ;;  
     --build-type)
       BUILD_TYPE=$2
       shift 2
+    ;;  
     --container-name)
       CONTAINER_NAME=$2
       shift 2
+    ;;  
     --stop-container)
       STOP_CONTAINER=$2
       shift 2
+    ;;  
     *)
       echo "Unknown option: $1"
       exit 1
+    ;;  
   esac
 done
 

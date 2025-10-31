@@ -17,27 +17,35 @@ while [[ $# -gt 0 ]]; do
     --container-name)
       CONTAINER_NAME=$2
       shift 2
+    ;;  
     --skip-rust-tests)
       RUN_RUST_TESTS=false
       shift 1
+    ;;  
     --skip-cpp-tests)
       RUN_CPP_TESTS=false
       shift 1
+    ;;  
     --skip-python-tests)
       RUN_PYTHON_TESTS=false
       shift 1
+    ;;  
     --skip-e2e-tests)
       RUN_E2E_TESTS=false
       shift 1
+    ;;  
     --skip-e2e-correctness-tests)
       RUN_E2E_CORRECTNESS_TESTS=false
       shift 1
+    ;;  
     --skip-e2e-migration-tests)
       RUN_E2E_MIGRATION_TESTS=false
       shift 1
+    ;;  
     *)
       echo "Unknown option: $1"
       exit 1
+    ;;  
   esac
 done
 
