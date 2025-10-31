@@ -42,10 +42,6 @@ on:
         type: string
         description: "Push the image to S3?"
         default: false
-      s3_dest_bucket:
-        type: string
-        description: "Destination bucket in S3"
-        default: "deps.memgraph.io"
       s3_dest_dir:
         type: string
         description: "Destination directory in S3 bucket"
@@ -73,11 +69,14 @@ on:
 
 env:
   OS: "${{ inputs.arch == 'arm64' && 'ubuntu-24.04-aarch64' || 'ubuntu-24.04' }}${{ inputs.malloc && '-malloc' || '' }}${{ inputs.mage_build_type == 'RelWithDebInfo' && '-relwithdebinfo' || '' }}"
+  ARCH: "${{ inputs.arch }}"
   DOCKER_REPOSITORY_NAME: memgraph/memgraph-mage
-
+  BUILD_TYPE: "${{ inputs.mage_build_type }}"
+  MALLOC: "${{ inputs.malloc }}"
+  CUDA: "${{ inputs.cuda }}"
 jobs:
   BuildAndPush:
-    runs-on: ${{ (inputs.arch == 'arm64') && fromJSON('["self-hosted", "DockerMgBuild","ARM64"]') || fromJSON('["self-hosted", "DockerMgBuild", "X64"]') }}
+    runs-on: [self-hosted, DockerMgBuild, Linux, "${{ inputs.arch == 'arm64' && 'ARM64' || 'X64' }}"]
     outputs:
       s3_package_url: ${{ steps.output-url.outputs.s3_url }}
     steps:            
@@ -91,7 +90,7 @@ jobs:
 
       - name: Check mgdeps-cache availability
         run: |
-          if [ "${{ inputs.arch }}" == "amd64" ]; then
+          if [ "$ARCH" == "amd64" ]; then
             echo "mgdeps-cache is temporary disabled for amd64"
             echo "CACHE_PRESENT=false" >> $GITHUB_ENV
           elif curl --silent --fail "http://mgdeps-cache:8000/wheels/" -o /dev/null; then
@@ -112,60 +111,13 @@ jobs:
             echo "Cache is not present. Skipping wheel fetch."
           fi
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Set build type
-        run: |
-          BUILD_TYPE="${{ inputs.mage_build_type }}"
-          echo "MAGE_BUILD_TYPE=$BUILD_TYPE" >> $GITHUB_ENV
-
       - name: Set image tag and artifact name
+        env:
+          MEMGRAPH_VERSION: "${{ inputs.memgraph_version }}"
+          MAGE_VERSION: "${{ inputs.mage_version }}"
+          SHORTEN_TAG: "${{ inputs.shorten_tag }}"
         run: |
-          MEMGRAPH_VERSION=${{ inputs.memgraph_version }}
-          MAGE_VERSION=${{ inputs.mage_version }}
-          if [[ ${{ inputs.shorten_tag }} == true ]]; then
-            MEMGRAPH_VERSION=${MEMGRAPH_VERSION%%-*}
-            memgraph_patch_version=${MEMGRAPH_VERSION##*.}
-            MAGE_VERSION=${MAGE_VERSION%%-*}
-            mage_patch_version=${MAGE_VERSION##*.}
-            if [[ "$memgraph_patch_version" -eq 0 ]]; then
-              MEMGRAPH_VERSION=${MEMGRAPH_VERSION%.*}
-            fi
-            if [[ "$mage_patch_version" -eq 0 ]]; then
-              MAGE_VERSION=${MAGE_VERSION%.*}
-            fi
-          fi
-
-          # if these match, then tag the image with the shortest vesion, e.g. 3.1.1
-          # rather than 3.1.1-memgraph-3.1.1, hopefully this won't affect the
-          # daily build versioning, which will still be massive
-          if [[ "$MAGE_VERSION" == "$MEMGRAPH_VERSION" ]]; then
-            IMAGE_TAG="${MAGE_VERSION}"
-          else
-            IMAGE_TAG="${MAGE_VERSION}-memgraph-${MEMGRAPH_VERSION}"
-          fi
-          IMAGE_TAG="${IMAGE_TAG//+/_}"
-          IMAGE_TAG="${IMAGE_TAG//\~/_}"
-          ARTIFACT_NAME="mage-${IMAGE_TAG}"
-          if [[ "${{ inputs.arch }}" == 'arm64' ]]; then
-            ARTIFACT_NAME="${ARTIFACT_NAME}-arm64"
-          fi
-          if [[ "${{ env.MAGE_BUILD_TYPE }}" == 'RelWithDebInfo' ]]; then
-            ARTIFACT_NAME="${ARTIFACT_NAME}-relwithdebinfo"
-            IMAGE_TAG="${IMAGE_TAG}-relwithdebinfo"
-          fi
-          if [[ "${{ inputs.malloc }}" == true ]]; then
-            ARTIFACT_NAME="${ARTIFACT_NAME}-malloc"
-            IMAGE_TAG="${IMAGE_TAG}-malloc"          
-          fi
-          if [[ "${{ inputs.cuda }}" == true ]]; then
-            ARTIFACT_NAME="${ARTIFACT_NAME}-cuda"
-            IMAGE_TAG="${IMAGE_TAG}-cuda"
-          fi
+          read IMAGE_TAG ARTIFACT_NAME < <(scripts/artifact-name-tag.sh "$MEMGRAPH_VERSION" "$MAGE_VERSION" "$SHORTEN_TAG" "$ARCH" "$BUILD_TYPE" "$MALLOC" "$CUDA")
           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
           echo "ARTIFACT_NAME=${ARTIFACT_NAME}" >> $GITHUB_ENV
 
@@ -204,29 +156,11 @@ jobs:
           echo "Using tag/branch: $tag"
           echo "MAGE_COMMIT=${tag}" >> $GITHUB_ENV
 
-
-      - name: Check if specified version tag is already pushed
-        if: ${{ inputs.push_to_dockerhub == 'true' }}
-        run: |
-          EXISTS=$(docker manifest inspect $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.IMAGE_TAG }} > /dev/null; echo $?)
-          echo $EXISTS
-          if [[ ${EXISTS} -eq 0 ]]; then
-              echo The specified version has been already released to DockerHub!
-              if [[ ${{ inputs.force_release }} = true ]]; then
-                echo Forcing the release
-              else
-                echo Stopping the release
-                exit 1
-              fi
-          else
-              echo All good the specified version has not been release to DockerHub
-          fi
-
       - name: Set up and check memgraph download link
         run: |
           if [[ -z "${{ inputs.memgraph_download_link }}" ]]; then
             echo "Using official download link"
-            mg_url="https://download.memgraph.com/memgraph/v${{ inputs.memgraph_version }}/$OS/memgraph_${{ inputs.memgraph_version }}-1_${{ inputs.arch }}.deb"
+            mg_url="https://download.memgraph.com/memgraph/v${{ inputs.memgraph_version }}/$OS/memgraph_${{ inputs.memgraph_version }}-1_$ARCH.deb"
           else
             echo "Using custom download link"
             mg_url=${{ inputs.memgraph_download_link }}
@@ -237,67 +171,30 @@ jobs:
 
 
       - name: Download memgraph binary
-        run: curl -L --retry 5 --retry-delay 20 --retry-max-time 120 ${{ env.MEMGRAPH_DOWNLOAD_LINK }} > memgraph-${{ inputs.arch }}.deb
+        run: curl -L --retry 5 --retry-delay 20 --retry-max-time 120 ${{ env.MEMGRAPH_DOWNLOAD_LINK }} > memgraph-$ARCH.deb
 
       - name: Probe fastest mirror
         run: |
           FASTEST=$(bash scripts/test-mirrors.sh)
           echo "CUSTOM_MIRROR=${FASTEST}" >> $GITHUB_ENV
 
-      # Add ability to add additional tag after the image has been built
-      # --tag ${DOCKER_REPOSITORY_NAME}:${{ inputs.additional_tag }} \
-      - name: Set up MGBUILD image
+      - name: Build Query Modules in MGBUILD container
         run: |
-          if [[ "${{ inputs.arch }}" == "arm64" ]]; then
-            MGBUILD_IMAGE=memgraph/mgbuild:v7_ubuntu-24.04-arm
-          else
-            MGBUILD_IMAGE=memgraph/mgbuild:v7_ubuntu-24.04
-          fi
-
-          echo "Using base image: $MGBUILD_IMAGE"
-          echo "Image Tag: ${{ env.IMAGE_TAG }}"
-          echo "MGBUILD_IMAGE=$MGBUILD_IMAGE" >> $GITHUB_ENV
-
-      - name: Start container
-        run: |
-          docker run -d --rm --name mgbuild $MGBUILD_IMAGE
-
-      - name: Copy repo into container
-        run: |
-          docker exec -i -u mg mgbuild mkdir -p /home/mg/mage
-          docker cp . mgbuild:/home/mg/mage
-          docker exec -i -u root mgbuild bash -c "chown -R mg:mg /home/mg/mage"
-
-      - name: Build inside container
-        run: |
-          docker exec -i mgbuild bash -c "cd /home/mg/mage && ./scripts/build.sh ${{ env.MAGE_BUILD_TYPE }}"
-
-      - name: Compress query modules
-        run: |
-          docker exec -i mgbuild bash -c "cd /home/mg/mage && ./scripts/compress.sh"
-
-      - name: Copy compressed query modules
-        run: |
-          docker cp mgbuild:/home/mg/mage.tar.gz .
-
-      - name: Stop container
-        if: always()
-        run: |
-          docker stop mgbuild
+          ./scripts/container-build.sh --arch $ARCH --build-type $BUILD_TYPE
 
       - name: Build image
         run: |
-          if [[ "${{ env.MAGE_BUILD_TYPE }}" = "RelWithDebInfo" ]]; then
+          if [[ "$BUILD_TYPE" = "RelWithDebInfo" ]]; then
             DOCKER_TARGET=relwithdebinfo
           else
             DOCKER_TARGET=prod
           fi
           docker buildx build \
           --target $DOCKER_TARGET \
-          --platform linux/${{ inputs.arch }} \
+          --platform linux/$ARCH \
           --tag ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} \
           --file Dockerfile.release \
-          --build-arg BUILD_TYPE=${{ env.MAGE_BUILD_TYPE }} \
+          --build-arg BUILD_TYPE=$BUILD_TYPE \
           --build-arg MGBUILD_IMAGE=$MGBUILD_IMAGE \
           --build-arg MAGE_COMMIT="${{ env.MAGE_COMMIT }}" \
           --build-arg CACHE_PRESENT=${{ env.CACHE_PRESENT }} \
@@ -323,7 +220,7 @@ jobs:
       - name: Push to S3 with retry
         if: ${{ inputs.push_to_s3 == 'true' }}
         env:
-          AWS_S3_BUCKET: ${{ inputs.s3_dest_bucket }}
+          AWS_S3_BUCKET: deps.memgraph.io
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: "eu-west-1"
