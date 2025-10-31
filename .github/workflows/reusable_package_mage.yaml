@@ -74,6 +74,7 @@ env:
   BUILD_TYPE: "${{ inputs.mage_build_type }}"
   MALLOC: "${{ inputs.malloc }}"
   CUDA: "${{ inputs.cuda }}"
+  CONTAINER_NAME: "mgbuild"
 jobs:
   BuildAndPush:
     runs-on: [self-hosted, DockerMgBuild, Linux, "${{ inputs.arch == 'arm64' && 'ARM64' || 'X64' }}"]
