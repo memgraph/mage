@@ -59,7 +59,6 @@ jobs:
       memgraph_version: ${{ github.event.inputs.memgraph_version }}
       memgraph_download_link: ${{ github.event.inputs.memgraph_download_link || '' }}
       shorten_tag: 'true'
-      force_release: 'true'
       cuda: ${{ inputs.cuda }}
       push_to_s3: ${{ github.event.inputs.push_to_s3 || 'false' }}
       malloc: ${{ github.event.inputs.malloc == 'true' }}
@@ -88,7 +87,6 @@ jobs:
       memgraph_version: ${{ github.event.inputs.memgraph_version }}
       memgraph_download_link: ${{ github.event.inputs.memgraph_download_link || '' }}
       shorten_tag: 'true'
-      force_release: 'true'
       cuda: ${{ inputs.cuda }}
       push_to_s3: ${{ github.event.inputs.push_to_s3 || 'false' }}
       malloc: ${{ matrix.malloc }}
