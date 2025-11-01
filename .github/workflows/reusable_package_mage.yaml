@@ -58,6 +58,18 @@ on:
         type: boolean
         description: "Build the image for CUDA"
         default: false
+      run_tests:
+        type: boolean
+        description: "Run tests"
+        default: false
+      memgraph_ref:
+        type: string
+        description: "Memgraph submodule branch to build query modules from"
+        default: 'master'
+      memgraph_ref_update:
+        type: string
+        description: "Update Memgraph submodule to the latest commit"
+        default: 'true'
 
 env:
   OS: "${{ inputs.arch == 'arm64' && 'ubuntu-24.04-aarch64' || 'ubuntu-24.04' }}${{ inputs.malloc && '-malloc' || '' }}${{ inputs.mage_build_type == 'RelWithDebInfo' && '-relwithdebinfo' || '' }}"
@@ -102,6 +114,33 @@ jobs:
             wget -r -np -nH --cut-dirs=1 -P wheels "http://mgdeps-cache:8000/wheels/"
           else
             echo "Cache is not present. Skipping wheel fetch."
+          fi
+
+      # TODO(matt): check this with daily/RC build workflows
+      - name: Checkout specific branch in submodule
+        env:
+          MEMGRAPH_REF: "${{ inputs.memgraph_ref }}"
+          MEMGRAPH_REF_UPDATE: "${{ inputs.memgraph_ref_update }}"
+        run: |
+          cd cpp/memgraph
+          # If no ref is provided, just checkout master.
+          if [ -z "$MEMGRAPH_REF" ]; then
+            echo "No memgraph_ref provided, checking out master."
+            git checkout master || true
+          else
+            git fetch --all
+            git checkout "$MEMGRAPH_REF" || true
+          fi
+          
+          # Only pull if we are on a branch.
+          current_branch=$(git symbolic-ref --short -q HEAD) || true
+          echo "Current branch: $current_branch"
+          if [ -n "$current_branch" ]; then
+            if [[ "$MEMGRAPH_REF_UPDATE" == "true" ]]; then
+              git pull
+            fi
+          else
+            echo "Detached HEAD state detected; skipping git pull."
           fi
 
       - name: Set image tag and artifact name
@@ -152,6 +191,12 @@ jobs:
           ./scripts/container-build.sh \
             --arch $ARCH \
             --build-type $BUILD_TYPE \
+            --container-name $CONTAINER_NAME
+
+      - name: Run tests
+        if: ${{ inputs.run_tests == true }}
+        run: |
+          ./scripts/container-test.sh \
             --container-name $CONTAINER_NAME
 
       - name: Build image

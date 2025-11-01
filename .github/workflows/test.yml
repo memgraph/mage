@@ -86,24 +86,6 @@ jobs:
           echo "DEBUG: build_date=${build_date}"
           echo "DEBUG: binary_name_base=memgraph_${memgraph_version}-1"
 
-
-
-  RC_test:
-    if: ${{ github.ref_type == 'tag' && !contains(github.event.head_commit.message, '[skip tests]') }}
-    strategy:
-      fail-fast: false
-      matrix:
-        mg_version: ["3.6.1"]
-        mg_rc_version: ["rc2"]
-        arch: ["amd64", "arm64"]
-    uses: ./.github/workflows/reusable_test.yml
-    with:
-      arch: "${{ matrix.arch }}"
-      memgraph_ref: "v${{ matrix.mg_version }}-${{ matrix.mg_rc_version }}"
-      memgraph_ref_update: "false"
-      memgraph_download_link: "s3://deps.memgraph.io/memgraph/v${{ matrix.mg_version }}-${{ matrix.mg_rc_version }}/ubuntu-24.04${{ matrix.arch == 'arm64' && '-aarch64' || '' }}/memgraph_${{ matrix.mg_version }}-1_${{ matrix.arch }}.deb"
-    secrets: inherit
-
   PR_test:
     if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
     needs: [TestVariables]
@@ -111,7 +93,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: ["amd64","arm64"]
-    uses: ./.github/workflows/reusable_test.yml
+    uses: ./.github/workflows/reusable_package_mage.yml
     with:
       arch: "${{ matrix.arch }}"
       memgraph_version: ${{ needs.TestVariables.outputs.memgraph_version }}
@@ -123,7 +105,7 @@ jobs:
   Manual_test:
     if: github.event_name == 'workflow_dispatch'
     needs: [TestVariables]
-    uses: ./.github/workflows/reusable_test.yml
+    uses: ./.github/workflows/reusable_package_mage.yml
     with:
       arch: "${{ github.event.inputs.arch }}"
       memgraph_version: "${{ github.event.inputs.memgraph_version || needs.TestVariables.outputs.memgraph_version }}"
