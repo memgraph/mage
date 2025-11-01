@@ -14,11 +14,12 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --cache-present)
-      CACHE_PRESENT=true
+      CACHE_PRESENT=$2
+      shift 2
       ;;
     --cuda)
-      CUDA=true
-      shift
+      CUDA=$2
+      shift 2
       ;;
     --arch)
       ARCH="$2"
