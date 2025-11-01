@@ -18,7 +18,7 @@ COPY scripts/install_runtime_requirements.sh /install_runtime_requirements.sh
 RUN chmod +x /install_runtime_requirements.sh && \
     /install_runtime_requirements.sh --ci --target-arch ${TARGETARCH} \
       --py-version ${PY_VERSION} --custom-mirror ${CUSTOM_MIRROR} \
-      --cuda ${CUDA} ${BUILD_TYPE} && \
+      --cuda ${CUDA} && \
     rm /install_runtime_requirements.sh
 
 # install memgraph
