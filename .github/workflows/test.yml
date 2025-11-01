@@ -101,6 +101,7 @@ jobs:
       memgraph_download_link: ${{ matrix.arch == 'arm64' && needs.TestVariables.outputs.arm_binary_url || needs.TestVariables.outputs.x86_binary_url }}
       memgraph_ref: ${{ needs.TestVariables.outputs.memgraph_commit }}
       memgraph_ref_update: "true"
+      shorten_tag: "false"
     secrets: inherit
 
   Manual_test:
@@ -114,4 +115,5 @@ jobs:
       memgraph_download_link:  ${{ github.event.inputs.memgraph_download_link || ( github.event.inputs.arch == 'arm64' && needs.TestVariables.outputs.arm_binary_url || needs.TestVariables.outputs.x86_binary_url ) }}
       memgraph_ref: "${{ github.event.inputs.memgraph_ref || needs.TestVariables.outputs.memgraph_commit }}"
       memgraph_ref_update: "${{ github.event.inputs.memgraph_ref_update }}"
+      shorten_tag: "false"
     secrets: inherit
