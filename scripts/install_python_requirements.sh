@@ -32,7 +32,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ "$CUDA" == true && "$ARCH" ! "amd64" ]]; then
+if [[ "$CUDA" == true && "$ARCH" != "amd64" ]]; then
     echo "CUDA is only supported on amd64 architecture."
     exit 1
 fi
