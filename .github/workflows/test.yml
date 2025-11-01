@@ -96,6 +96,7 @@ jobs:
     uses: ./.github/workflows/reusable_package_mage.yaml
     with:
       arch: "${{ matrix.arch }}"
+      mage_version: ${{ needs.TestVariables.outputs.mage_version }}
       memgraph_version: ${{ needs.TestVariables.outputs.memgraph_version }}
       memgraph_download_link: ${{ matrix.arch == 'arm64' && needs.TestVariables.outputs.arm_binary_url || needs.TestVariables.outputs.x86_binary_url }}
       memgraph_ref: ${{ needs.TestVariables.outputs.memgraph_commit }}
@@ -108,6 +109,7 @@ jobs:
     uses: ./.github/workflows/reusable_package_mage.yaml
     with:
       arch: "${{ github.event.inputs.arch }}"
+      mage_version: ${{ needs.TestVariables.outputs.mage_version }}
       memgraph_version: "${{ github.event.inputs.memgraph_version || needs.TestVariables.outputs.memgraph_version }}"
       memgraph_download_link:  ${{ github.event.inputs.memgraph_download_link || ( github.event.inputs.arch == 'arm64' && needs.TestVariables.outputs.arm_binary_url || needs.TestVariables.outputs.x86_binary_url ) }}
       memgraph_ref: "${{ github.event.inputs.memgraph_ref || needs.TestVariables.outputs.memgraph_commit }}"
