@@ -93,7 +93,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: ["amd64","arm64"]
-    uses: ./.github/workflows/reusable_package_mage.yml
+    uses: ./.github/workflows/reusable_package_mage.yaml
     with:
       arch: "${{ matrix.arch }}"
       memgraph_version: ${{ needs.TestVariables.outputs.memgraph_version }}
@@ -105,7 +105,7 @@ jobs:
   Manual_test:
     if: github.event_name == 'workflow_dispatch'
     needs: [TestVariables]
-    uses: ./.github/workflows/reusable_package_mage.yml
+    uses: ./.github/workflows/reusable_package_mage.yaml
     with:
       arch: "${{ github.event.inputs.arch }}"
       memgraph_version: "${{ github.event.inputs.memgraph_version || needs.TestVariables.outputs.memgraph_version }}"
