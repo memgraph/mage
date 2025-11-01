@@ -102,6 +102,7 @@ jobs:
       memgraph_ref: ${{ needs.TestVariables.outputs.memgraph_commit }}
       memgraph_ref_update: "true"
       shorten_tag: "false"
+      run_tests: true
     secrets: inherit
 
   Manual_test:
@@ -116,4 +117,5 @@ jobs:
       memgraph_ref: "${{ github.event.inputs.memgraph_ref || needs.TestVariables.outputs.memgraph_commit }}"
       memgraph_ref_update: "${{ github.event.inputs.memgraph_ref_update }}"
       shorten_tag: "false"
+      run_tests: true
     secrets: inherit
