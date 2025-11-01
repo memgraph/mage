@@ -1,4 +1,4 @@
-FROM ubuntu:24.04 as base
+FROM ubuntu:24.04 AS base
 
 USER root
 
@@ -7,7 +7,7 @@ ARG PY_VERSION_DEFAULT=3.12
 ARG MAGE_COMMIT
 ARG BUILD_TYPE
 ENV BUILD_TYPE=${BUILD_TYPE}
-ENV PY_VERSION ${PY_VERSION_DEFAULT}
+ENV PY_VERSION=${PY_VERSION_DEFAULT}
 ENV MAGE_COMMIT=${MAGE_COMMIT}
 ARG CUSTOM_MIRROR
 ARG CUDA=false
@@ -30,7 +30,7 @@ RUN groupadd -g 103 memgraph && \
     dpkg -i memgraph-${TARGETARCH}.deb && \
     rm memgraph-${TARGETARCH}.deb 
 
-ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
+ENV LD_LIBRARY_PATH=/usr/lib/memgraph/query_modules
 
 # Copy modules
 RUN mkdir -p /usr/lib/memgraph/query_modules/
@@ -48,7 +48,7 @@ RUN chmod +x /home/memgraph/install_python_requirements.sh && \
     ./home/memgraph/install_python_requirements.sh --arch ${TARGETARCH} --ci --cuda ${CUDA} --cache-present ${CACHE_PRESENT} && \
     rm /home/memgraph/install_python_requirements.sh
 
-FROM base as prod
+FROM base AS prod
 
 USER root
 
@@ -57,7 +57,7 @@ ARG PY_VERSION_DEFAULT=3.12
 ARG MAGE_COMMIT
 ARG BUILD_TYPE
 ENV BUILD_TYPE=${BUILD_TYPE}
-ENV PY_VERSION ${PY_VERSION_DEFAULT}
+ENV PY_VERSION=${PY_VERSION_DEFAULT}
 ENV MAGE_COMMIT=${MAGE_COMMIT}
 ARG CUSTOM_MIRROR
 
@@ -75,7 +75,7 @@ ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
 CMD [""]
 
 
-FROM base as relwithdebinfo
+FROM base AS relwithdebinfo
 
 USER root
 
@@ -84,7 +84,7 @@ ARG PY_VERSION_DEFAULT=3.12
 ARG MAGE_COMMIT
 ARG BUILD_TYPE
 ENV BUILD_TYPE=${BUILD_TYPE}
-ENV PY_VERSION ${PY_VERSION_DEFAULT}
+ENV PY_VERSION=${PY_VERSION_DEFAULT}
 ENV MAGE_COMMIT=${MAGE_COMMIT}
 ARG CUSTOM_MIRROR
 
