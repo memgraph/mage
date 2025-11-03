@@ -9,21 +9,12 @@ BUILD_TYPE=$5
 MALLOC=$6
 CUDA=$7
 
-echo "MEMGRAPH_VERSION: $MEMGRAPH_VERSION"
-echo "MAGE_VERSION: $MAGE_VERSION"
-echo "SHORTEN_TAG: $SHORTEN_TAG"
-echo "ARCH: $ARCH"
-echo "BUILD_TYPE: $BUILD_TYPE"
-echo "MALLOC: $MALLOC"
-echo "CUDA: $CUDA"
-
 # remove patch version if it's 0
 if [[ $SHORTEN_TAG == true ]]; then
     MEMGRAPH_VERSION=${MEMGRAPH_VERSION%%-*}
     memgraph_patch_version=${MEMGRAPH_VERSION##*.}
     MAGE_VERSION=${MAGE_VERSION%%-*}
     mage_patch_version=${MAGE_VERSION##*.}
-    echo "memgraph_patch_version: $memgraph_patch_version"
     if [[ "$memgraph_patch_version" -eq 0 ]]; then
         MEMGRAPH_VERSION=${MEMGRAPH_VERSION%.*}
     fi
