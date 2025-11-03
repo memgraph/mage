@@ -191,7 +191,8 @@ jobs:
           ./scripts/container-build.sh \
             --arch $ARCH \
             --build-type $BUILD_TYPE \
-            --container-name $CONTAINER_NAME
+            --container-name $CONTAINER_NAME \
+            --stop-container ${{ !inputs.run_tests }}
 
       - name: Run tests
         if: ${{ inputs.run_tests == true }}
