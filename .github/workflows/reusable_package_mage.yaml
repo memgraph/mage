@@ -286,6 +286,7 @@ jobs:
           docker rm ${{ env.NEO4J_CONTAINER }} || true
 
       - name: Run End-to-end migration tests
+        if: ${{ inputs.run_tests == true }}
         env:
           PYTHONPATH: "$PWD/e2e"
         run: |
