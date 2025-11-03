@@ -88,7 +88,7 @@ fi
 
 if [[ "$RUN_CPP_TESTS" == true ]]; then
   echo -e "\033[1;32mRunning C++ tests\033[0m"
-  docker exec -i -u mg $CONTAINER_NAME bash -c "cd \$HOME/mage/cpp/build/ && ctest --output-on-failure -j$CORE_COUNT"
+  docker exec -i -u mg $CONTAINER_NAME bash -c "cd \$HOME/mage/cpp/build/ && ctest --output-on-failure -j\$(nproc)"
 fi
 
 if [[ "$RUN_PYTHON_TESTS" == true ]]; then
