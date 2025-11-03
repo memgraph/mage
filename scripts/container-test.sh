@@ -113,7 +113,7 @@ fi
 
 if [[ "$RUN_PYTHON_TESTS" == true ]]; then
   echo -e "\033[1;32mRunning Python tests\033[0m"
-  docker exec -i -u mg $CONTAINER_NAME bash -c "cd \$HOME/mage/python/ && ./scripts/install_python_requirements.sh --ci --cache-present $CACHE_PRESENT --cuda $CUDA --arch $ARCH"
+  docker exec -i -u mg $CONTAINER_NAME bash -c "cd \$HOME/mage/ && ./scripts/install_python_requirements.sh --ci --cache-present $CACHE_PRESENT --cuda $CUDA --arch $ARCH"
   docker exec -i -u mg $CONTAINER_NAME bash -c "cd \$HOME/mage/python/ && python3 -m pytest ."
 fi
 
