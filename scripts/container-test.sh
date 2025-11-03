@@ -78,7 +78,7 @@ echo -e "\033[1;32mRunning tests in container: $CONTAINER_NAME\033[0m"
 if [[ "$RUN_RUST_TESTS" == true ]]; then
   echo -e "\033[1;32mRunning Rust tests\033[0m"
   docker exec -i -u root $CONTAINER_NAME bash -c "apt-get update \
-  && apt-get install -y libpython${PY_VERSION:-$(python3 --version | sed 's/Python //')} \
+  && apt-get install -y libpython3.12 \
   libcurl4 libssl-dev openssl build-essential cmake curl g++ python3  \
   python3-pip python3-setuptools python3-dev clang git unixodbc-dev \
   libboost-all-dev uuid-dev gdb procps libc6-dbg libxmlsec1-dev xmlsec1 \
