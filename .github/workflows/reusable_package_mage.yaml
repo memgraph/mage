@@ -360,6 +360,7 @@ jobs:
           echo "::notice::Output URL: ${{ steps.output-url.outputs.s3_url }}"
 
       - name: Memgraph Docker Cleanup
+        if: always()
         run: |
           ./cpp/memgraph/tools/docker_cleanup.sh
 
