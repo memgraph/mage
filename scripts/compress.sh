@@ -1,3 +1,3 @@
 #!/bin/bash
-
-tar -czvf $HOME/mage.tar.gz $HOME/query_modules
+cd $HOME
+tar -czvf $HOME/mage.tar.gz query_modules
