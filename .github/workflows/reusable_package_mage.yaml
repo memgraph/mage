@@ -310,6 +310,7 @@ jobs:
           docker network rm ${{ env.MEMGRAPH_NETWORK }} || true
 
       - name: Save docker image
+        if: ${{ inputs.push_to_github || inputs.push_to_s3 }}
         run: |
           mkdir output
           docker save ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} | gzip > output/${{ env.ARTIFACT_NAME }}.tar.gz
