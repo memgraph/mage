@@ -77,17 +77,17 @@ echo -e "\033[1;32mRunning tests in container: $CONTAINER_NAME\033[0m"
 
 if [[ "$RUN_RUST_TESTS" == true ]]; then
   echo -e "\033[1;32mRunning Rust tests\033[0m"
-  docker exec -i -u memgraph $CONTAINER_NAME bash -c "source \$HOME/.cargo/env && cd \$HOME/mage/rust/rsmgp-sys && cargo fmt -- --check && RUST_BACKTRACE=1 cargo test"
+  docker exec -i -u mg $CONTAINER_NAME bash -c "source \$HOME/.cargo/env && cd \$HOME/mage/rust/rsmgp-sys && cargo fmt -- --check && RUST_BACKTRACE=1 cargo test"
 fi
 
 if [[ "$RUN_CPP_TESTS" == true ]]; then
   echo -e "\033[1;32mRunning C++ tests\033[0m"
-  docker exec -i -u memgraph $CONTAINER_NAME bash -c "cd \$HOME/mage/cpp/build/ && ctest --output-on-failure -j$CORE_COUNT"
+  docker exec -i -u mg $CONTAINER_NAME bash -c "cd \$HOME/mage/cpp/build/ && ctest --output-on-failure -j$CORE_COUNT"
 fi
 
 if [[ "$RUN_PYTHON_TESTS" == true ]]; then
   echo -e "\033[1;32mRunning Python tests\033[0m"
-  docker exec -i -u memgraph $CONTAINER_NAME bash -c "cd \$HOME/mage/python/ && python3 -m pytest ."
+  docker exec -i -u mg $CONTAINER_NAME bash -c "cd \$HOME/mage/python/ && python3 -m pytest ."
 fi
 
 # if [[ "$RUN_E2E_TESTS" == true ]]; then
