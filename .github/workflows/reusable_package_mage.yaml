@@ -219,6 +219,23 @@ jobs:
           --build-arg CUSTOM_MIRROR=${{ env.CUSTOM_MIRROR }} \
           --load .
 
+          # print the image size in both SI and IEC units
+          ./print_image_size.sh ${DOCKER_REPOSITORY_NAME} ${{ env.IMAGE_TAG }}
+
+      - name: Start container for e2e tests
+        if: ${{ inputs.run_tests == true }}
+        run: |
+          docker network create ${{ env.MEMGRAPH_NETWORK }} || true
+
+          docker run -d \
+            --rm \
+            --network ${{ env.MEMGRAPH_NETWORK }} \
+            --name ${{ env.MAGE_CONTAINER }} \
+            -e MEMGRAPH_ENTERPRISE_LICENSE=${{ env.MEMGRAPH_ENTERPRISE_LICENSE }} \
+            -e MEMGRAPH_ORGANIZATION_NAME=${{ env.MEMGRAPH_ORGANIZATION_NAME }} \
+            ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} \
+            --telemetry-enabled=False
+
       - name: Save docker image
         run: |
           mkdir output
