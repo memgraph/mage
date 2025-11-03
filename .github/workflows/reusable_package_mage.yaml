@@ -203,6 +203,14 @@ jobs:
             --container-name $CONTAINER_NAME \
             --stop-container ${{ !inputs.run_tests }}
 
+      - name: Build pymgclient in MGBUILD container
+        if: ${{ inputs.arch == 'arm64' }}
+        run: |
+          # This has to be done here, otherwise we will need to build pymgclient from source within 
+          # docker image build because we currently do not provide an arm64 wheel for Linux.
+          docker exec -i -u memgraph $CONTAINER_NAME bash -c "cd /home/memgraph/mage/scripts && ./build-pymgclient.sh"
+          docker cp $CONTAINER_NAME:/home/memgraph/mage/pymgclient/dist wheels/
+
       - name: Run tests
         if: ${{ inputs.run_tests == true }}
         run: |
