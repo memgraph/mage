@@ -252,10 +252,49 @@ jobs:
             --rm \
             --network ${{ env.MEMGRAPH_NETWORK }} \
             --name ${{ env.MAGE_CONTAINER }} \
+            -p ${{ env.MEMGRAPH_PORT }}:{{ env.MEMGRAPH_PORT }} \
             -e MEMGRAPH_ENTERPRISE_LICENSE=${{ env.MEMGRAPH_ENTERPRISE_LICENSE }} \
             -e MEMGRAPH_ORGANIZATION_NAME=${{ env.MEMGRAPH_ORGANIZATION_NAME }} \
             ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} \
             --telemetry-enabled=False
+
+
+      - name: Run end-to-end tests
+        if: ${{ inputs.run_tests == true }}
+        run: |
+          cd e2e/ && python3 -m pytest . -k "not cugraph and not embeddings_test-test_cuda_compute"
+
+      - name: Run End-to-end correctness tests
+        if: ${{ inputs.run_tests == true }}
+        env:
+          PYTHONPATH: "$PWD/e2e"
+        run: |
+          ./run_e2e_correctness_tests.sh ${{ env.MEMGRAPH_PORT }} ${{ env.NEO4J_PORT }} ${{ env.NEO4J_CONTAINER }} ${{ env.MAGE_CONTAINER }} ${{ env.MEMGRAPH_NETWORK }}
+
+      - name: Cleanup after correctness tests
+        if: ${{ inputs.run_tests == true && always() }}
+        run: |
+          docker stop ${{ env.NEO4J_CONTAINER }} || true
+          docker rm ${{ env.NEO4J_CONTAINER }} || true
+
+      - name: Run End-to-end migration tests
+        env:
+          PYTHONPATH: "$PWD/e2e"
+        run: |
+          ./run_e2e_migration_tests.sh --mage-container ${{ env.MAGE_CONTAINER }} --mysql-container ${{ env.MYSQL_CONTAINER }} --postgresql-container ${{ env.POSTGRESQL_CONTAINER }}
+      
+      - name: Cleanup after migration tests
+        if: ${{ inputs.run_tests == true && always() }}
+        run: |
+          docker stop ${{ env.MAGE_CONTAINER }} || true
+          docker rm ${{ env.MAGE_CONTAINER }} || true
+          docker stop ${{ env.MYSQL_CONTAINER }} || true
+          docker rm ${{ env.MYSQL_CONTAINER }} || true
+          docker stop ${{ env.POSTGRESQL_CONTAINER }} || true
+          docker rm ${{ env.POSTGRESQL_CONTAINER }} || true
+          docker stop ${{ env.NEO4J_CONTAINER }} || true
+          docker rm ${{ env.NEO4J_CONTAINER }} || true
+          docker network rm ${{ env.MEMGRAPH_NETWORK }} || true
 
       - name: Save docker image
         run: |
