@@ -46,8 +46,9 @@ COPY cpp/memgraph/src/auth/reference_modules/requirements.txt /tmp/auth_module-r
 USER memgraph
 COPY --chown=memgraph:memgraph ./scripts/install_python_requirements.sh /home/memgraph/install_python_requirements.sh
 COPY --chown=memgraph:memgraph ./wheels /tmp/wheels
-RUN if [ "$TARGETARCH" = "arm64" ]; then \
-      pip install /tmp/wheels/pymgclient-*.whl --break-system-packages; \
+RUN cd $HOME && \
+    if [ "$TARGETARCH" = "arm64" ]; then \
+      pip install --no-cache-dir /tmp/wheels/pymgclient-*.whl --break-system-packages; \
     fi && \
     chmod +x /home/memgraph/install_python_requirements.sh && \
     ./home/memgraph/install_python_requirements.sh --arch ${TARGETARCH} --ci --cuda ${CUDA} --cache-present ${CACHE_PRESENT} --wheel-cache-dir /tmp/wheels && \

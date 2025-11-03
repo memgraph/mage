@@ -65,6 +65,7 @@ if [ "$ARCH" = "arm64" ]; then
     fi
     curl -o dgl-2.5.0-cp312-cp312-linux_aarch64.whl https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/wheels/arm64/dgl-2.5.0-cp312-cp312-linux_aarch64.whl
     python3 -m pip install --no-cache-dir dgl-2.5.0-cp312-cp312-linux_aarch64.whl
+    rm dgl-2.5.0-cp312-cp312-linux_aarch64.whl
 else
     if [[ "$CUDA" == true ]]; then
       python3 -m pip install --no-cache-dir torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.6.0+cu126.html
