@@ -198,7 +198,11 @@ jobs:
         if: ${{ inputs.run_tests == true }}
         run: |
           ./scripts/container-test.sh \
-            --container-name $CONTAINER_NAME
+            --container-name $CONTAINER_NAME \
+            --ci \
+            --cache-present ${{ env.CACHE_PRESENT }} \
+            --cuda ${{ env.CUDA }} \
+            --arch $ARCH
 
       - name: Build image
         run: |

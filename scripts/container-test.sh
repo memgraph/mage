@@ -5,6 +5,10 @@ CONTAINER_NAME=mgbuild
 RUN_RUST_TESTS=true
 RUN_CPP_TESTS=true
 RUN_PYTHON_TESTS=true
+CI=false
+CACHE_PRESENT=false
+CUDA=false
+ARCH=amd64
 # RUN_E2E_TESTS=true
 # RUN_E2E_CORRECTNESS_TESTS=true
 # RUN_E2E_MIGRATION_TESTS=true
@@ -30,6 +34,22 @@ while [[ $# -gt 0 ]]; do
       RUN_PYTHON_TESTS=false
       shift 1
     ;;  
+    --ci)
+      CI=true
+      shift
+      ;;
+    --cache-present)
+      CACHE_PRESENT=$2
+      shift 2
+      ;;
+    --cuda)
+      CUDA=$2
+      shift 2
+      ;;
+    --arch)
+      ARCH="$2"
+      shift 2
+      ;;
     # --skip-e2e-tests)
     #   RUN_E2E_TESTS=false
     #   shift 1
@@ -93,7 +113,7 @@ fi
 
 if [[ "$RUN_PYTHON_TESTS" == true ]]; then
   echo -e "\033[1;32mRunning Python tests\033[0m"
-  docker exec -i -u mg $CONTAINER_NAME bash -c "pip install -r \$HOME/mage/python/tests/requirements.txt --break-system-packages"
+  docker exec -i -u mg $CONTAINER_NAME bash -c "cd \$HOME/mage/python/ && ./scripts/install_python_requirements.sh --ci --cache-present $CACHE_PRESENT --cuda $CUDA --arch $ARCH"
   docker exec -i -u mg $CONTAINER_NAME bash -c "cd \$HOME/mage/python/ && python3 -m pytest ."
 fi
 
