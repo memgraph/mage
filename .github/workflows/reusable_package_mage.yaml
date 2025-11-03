@@ -201,6 +201,19 @@ jobs:
             --container-name $CONTAINER_NAME \
             --stop-container ${{ !inputs.run_tests }}
 
+      - name: Build DEB package in MGBUILD container
+        run: |
+          ./scripts/container-package-deb.sh \
+            --arch $ARCH \
+            --build-type $BUILD_TYPE \
+            --container-name $CONTAINER_NAME \
+            --version ${{ inputs.mage_version }} \
+            --malloc ${{ inputs.malloc }} \
+            --cuda ${{ inputs.cuda }}
+          
+          DEB_PACKAGE="$(ls memgraph-mage*.deb)"
+          echo "DEB_PACKAGE=${DEB_PACKAGE}" >> $GITHUB_ENV
+
       - name: Build pymgclient in MGBUILD container
         if: ${{ inputs.arch == 'arm64' }}
         run: |
@@ -313,15 +326,26 @@ jobs:
           docker save ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} | gzip > output/${{ env.ARTIFACT_NAME }}.tar.gz
           du -h output/${{ env.ARTIFACT_NAME }}.tar.gz
 
-      - name: Push to GitHub
+      - name: Push query module archive to GitHub
+        if: ${{ inputs.push_to_github == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: "${{ env.ARTIFACT_NAME }}-query-modules"
           path: "mage.tar.gz"
 
-      - name: Push to DockerHub
-        if: ${{ inputs.push_to_dockerhub == 'true' }}
-        run: docker push ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }}
+      - name: Push DEB package to GitHub
+        if: ${{ inputs.push_to_github == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${{ env.ARTIFACT_NAME }}-deb"
+          path: "${{ env.DEB_PACKAGE }}"
+
+      - name: Push docker image to GitHub
+        if: ${{ inputs.push_to_github == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${{ env.IMAGE_TAG }}-docker"
+          path: "output/${{ env.ARTIFACT_NAME }}.tar.gz"
 
       - name: Push to S3 with retry
         if: ${{ inputs.push_to_s3 == 'true' }}
