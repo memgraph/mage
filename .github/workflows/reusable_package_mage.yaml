@@ -208,8 +208,9 @@ jobs:
         run: |
           # This has to be done here, otherwise we will need to build pymgclient from source within 
           # docker image build because we currently do not provide an arm64 wheel for Linux.
-          docker exec -i -u memgraph $CONTAINER_NAME bash -c "cd /home/memgraph/mage/scripts && ./build-pymgclient.sh"
-          docker cp $CONTAINER_NAME:/home/memgraph/mage/pymgclient/dist wheels/
+          docker exec -i -u mg $CONTAINER_NAME bash -c "cd /home/mg/mage/scripts && ./build-pymgclient.sh"
+          package_name=$(docker exec -i -u mg $CONTAINER_NAME bash -c "ls /home/mg/mage/scripts/pymgclient/dist/")
+          docker cp $CONTAINER_NAME:/home/mg/mage/scripts/pymgclient/dist/$package_name wheels/
 
       - name: Run tests
         if: ${{ inputs.run_tests == true }}
@@ -252,7 +253,7 @@ jobs:
             --rm \
             --network ${{ env.MEMGRAPH_NETWORK }} \
             --name ${{ env.MAGE_CONTAINER }} \
-            -p ${{ env.MEMGRAPH_PORT }}:{{ env.MEMGRAPH_PORT }} \
+            -p ${{ env.MEMGRAPH_PORT }}:${{ env.MEMGRAPH_PORT }} \
             -e MEMGRAPH_ENTERPRISE_LICENSE=${{ env.MEMGRAPH_ENTERPRISE_LICENSE }} \
             -e MEMGRAPH_ORGANIZATION_NAME=${{ env.MEMGRAPH_ORGANIZATION_NAME }} \
             ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} \
