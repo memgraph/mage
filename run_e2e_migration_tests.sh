@@ -101,7 +101,7 @@ run_mysql_tests() {
     
     echo "Running MySQL migration tests..."
     cd ../..
-    docker exec -i -u memgraph "$MAGE_CONTAINER" bash -c "cd /mage && python3 -m pytest e2e_migration/test_migration.py -v -k mysql"
+    python3 -m pytest e2e_migration/test_migration.py -v -k mysql
     
     echo "Stopping MySQL..."
     cd e2e_migration/test_mysql
@@ -124,7 +124,7 @@ run_postgresql_tests() {
     
     echo "Running PostgreSQL migration tests..."
     cd ../..
-    docker exec -i -u memgraph "$MAGE_CONTAINER" bash -c "cd /mage && python3 -m pytest e2e_migration/test_migration.py -v -k postgresql"
+    python3 -m pytest e2e_migration/test_migration.py -v -k postgresql
     
     echo "Stopping PostgreSQL..."
     cd e2e_migration/test_postgresql
