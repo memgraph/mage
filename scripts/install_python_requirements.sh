@@ -6,7 +6,7 @@ CI=false
 CACHE_PRESENT=false
 CUDA=false
 ARCH=amd64
-
+WHEEL_CACHE_DIR="$(pwd)/wheels"
 while [[ $# -gt 0 ]]; do
   case $1 in
     --ci)
@@ -23,6 +23,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --arch)
       ARCH="$2"
+      shift 2
+      ;;
+    --wheel-cache-dir)
+      WHEEL_CACHE_DIR=$2
       shift 2
       ;;
     *)
@@ -48,14 +52,14 @@ if [ "$CI" = true ]; then
     python3 -m pip install --no-cache-dir -r "/tmp/${requirements_file}"
     python3 -m pip install --no-cache-dir -r /tmp/auth_module-requirements.txt
 else
-    python3 -m pip install --no-cache-dir -r "/mage/python/${requirements_file}"
-    python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt
+    python3 -m pip install --no-cache-dir -r "$(pwd)/python/${requirements_file}"
+    python3 -m pip install --no-cache-dir -r "$(pwd)/cpp/memgraph/src/auth/reference_modules/requirements.txt"
 fi
 
 if [ "$ARCH" = "arm64" ]; then
     if [ "$CACHE_PRESENT" = "true" ]; then
         echo "Using cached torch packages"
-        python3 -m pip install --no-index --find-links=/mage/wheels/ torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter
+        python3 -m pip install --no-index --find-links=$WHEEL_CACHE_DIR torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter
     else
         python3 -m pip install --no-cache-dir torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.6.0+cpu.html
     fi
@@ -66,7 +70,7 @@ else
       python3 -m pip install --no-cache-dir torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.6.0+cu126.html
     elif [ "$CACHE_PRESENT" = "true" ]; then
         echo "Using cached torch packages"
-        python3 -m pip install --no-index --find-links=/mage/wheels/ torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter
+        python3 -m pip install --no-index --find-links=$WHEEL_CACHE_DIR torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter
     else
         python3 -m pip install --no-cache-dir torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-2.6.0+cpu.html
     fi
