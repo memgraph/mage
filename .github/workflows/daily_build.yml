@@ -112,26 +112,27 @@ jobs:
       s3_dest_dir: "daily-build/mage/${{ needs.DailyBuildVariables.outputs.build_date }}"
       malloc: ${{ matrix.malloc }}
       cuda: ${{ matrix.cuda }}
+      run_tests: true
     secrets: inherit
 
-  TestMAGE:
-    needs: [DailyBuildVariables]
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: ["amd64","arm64"]
-    uses: ./.github/workflows/reusable_test.yml
-    with:
-      arch: "${{ matrix.arch }}"
-      memgraph_version: "${{ needs.DailyBuildVariables.outputs.memgraph_version }}"
-      memgraph_download_link: "https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/daily-build/memgraph/${{ needs.DailyBuildVariables.outputs.build_date }}/ubuntu-24.04${{ matrix.arch == 'arm64' && '-aarch64' || '' }}/${{ needs.DailyBuildVariables.outputs.binary_name_base }}_${{ matrix.arch }}.deb"
-      memgraph_ref: "${{ needs.DailyBuildVariables.outputs.memgraph_commit }}"
-      memgraph_ref_update: "true"
-    secrets: inherit
+  # TestMAGE:
+  #   needs: [DailyBuildVariables]
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       arch: ["amd64","arm64"]
+  #   uses: ./.github/workflows/reusable_test.yml
+  #   with:
+  #     arch: "${{ matrix.arch }}"
+  #     memgraph_version: "${{ needs.DailyBuildVariables.outputs.memgraph_version }}"
+  #     memgraph_download_link: "https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/daily-build/memgraph/${{ needs.DailyBuildVariables.outputs.build_date }}/ubuntu-24.04${{ matrix.arch == 'arm64' && '-aarch64' || '' }}/${{ needs.DailyBuildVariables.outputs.binary_name_base }}_${{ matrix.arch }}.deb"
+  #     memgraph_ref: "${{ needs.DailyBuildVariables.outputs.memgraph_commit }}"
+  #     memgraph_ref_update: "true"
+  #   secrets: inherit
 
   AggregateBuildTests:
     if: always()
-    needs: [DailyBuildVariables,DailyBuildArtifact,TestMAGE]
+    needs: [DailyBuildVariables,DailyBuildArtifact]
     runs-on: [self-hosted]
     steps:
       - name: Set up repository
@@ -148,7 +149,7 @@ jobs:
         
       - name: Aggregate Test Results and Builds
         env:
-          TEST_RESULT: ${{ needs.TestMAGE.result == 'success' && 'pass' || 'fail' }}
+          TEST_RESULT: ${{ needs.DailyBuildArtifact.result == 'success' && 'pass' || 'fail' }}
           CURRENT_BUILD_DATE: ${{ needs.DailyBuildVariables.outputs.build_date }}
         run: |
           echo "TEST_RESULT: $TEST_RESULT"

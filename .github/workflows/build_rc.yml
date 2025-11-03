@@ -131,21 +131,21 @@ jobs:
           git tag "${{ steps.check_tag.outputs.tag_name }}"
           git push origin "${{ steps.check_tag.outputs.tag_name }}"
 
-  TestReleaseCandidates:
-    name: Test Release Candidates
-    needs: [ParseInputs, PrepareReleaseBranch]
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: ["amd64", "arm64"]
-    uses: ./.github/workflows/reusable_test.yml
-    with:
-      arch: "${{ matrix.arch }}"
-      memgraph_ref: "v${{ needs.ParseInputs.outputs.version }}-${{ needs.ParseInputs.outputs.rc_number }}"
-      memgraph_ref_update: "false"
-      memgraph_download_link: "s3://deps.memgraph.io/memgraph/v${{ needs.ParseInputs.outputs.version }}-${{ needs.ParseInputs.outputs.rc_number }}/ubuntu-24.04${{ matrix.arch == 'arm64' && '-aarch64' || '' }}/memgraph_${{ needs.ParseInputs.outputs.version }}-1_${{ matrix.arch }}.deb"
-      ref: "${{ needs.PrepareReleaseBranch.outputs.tag_name }}"
-    secrets: inherit
+  # TestReleaseCandidates:
+  #   name: Test Release Candidates
+  #   needs: [ParseInputs, PrepareReleaseBranch]
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       arch: ["amd64", "arm64"]
+  #   uses: ./.github/workflows/reusable_test.yml
+  #   with:
+  #     arch: "${{ matrix.arch }}"
+  #     memgraph_ref: "v${{ needs.ParseInputs.outputs.version }}-${{ needs.ParseInputs.outputs.rc_number }}"
+  #     memgraph_ref_update: "false"
+  #     memgraph_download_link: "s3://deps.memgraph.io/memgraph/v${{ needs.ParseInputs.outputs.version }}-${{ needs.ParseInputs.outputs.rc_number }}/ubuntu-24.04${{ matrix.arch == 'arm64' && '-aarch64' || '' }}/memgraph_${{ needs.ParseInputs.outputs.version }}-1_${{ matrix.arch }}.deb"
+  #     ref: "${{ needs.PrepareReleaseBranch.outputs.tag_name }}"
+  #   secrets: inherit
 
   CreateReleaseArtifacts:
     name: Create Release Artifacts
@@ -157,4 +157,5 @@ jobs:
       memgraph_version: "${{ needs.ParseInputs.outputs.version }}-${{ needs.ParseInputs.outputs.rc_number }}"
       run_smoke_tests: true
       ref: "${{ needs.PrepareReleaseBranch.outputs.tag_name }}"
+      run_tests: true
     secrets: inherit

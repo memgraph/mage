@@ -31,6 +31,10 @@ on:
         type: string
         description: "MAGE branch or tag to build"
         default: ''
+      run_tests:
+        type: boolean
+        description: "Run tests"
+        default: false
 
   workflow_dispatch:
     inputs:
@@ -56,6 +60,10 @@ on:
       run_smoke_tests:
         type: boolean
         description: "Run smoke tests on images after building (tests against previous tagged image)"
+        default: false
+      run_tests:
+        type: boolean
+        description: "Run tests"
         default: false
 
 jobs:
@@ -123,4 +131,5 @@ jobs:
       cuda: ${{ matrix.cuda }}
       run_smoke_tests: ${{ inputs.run_smoke_tests }}
       ref: "${{ inputs.ref }}"
+      run_tests: ${{ inputs.run_tests }}
     secrets: inherit
