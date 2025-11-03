@@ -195,6 +195,9 @@ def _test_export(test_dir: Path, db: Memgraph):
     Testing export modules.
     """
 
+    test_name = test_dir.name
+    output_file = f"{TestConstants.EXPORT_TEST_E2E_OUTPUT_FILE}_{test_name}"
+
     input_dict = _load_yaml(test_dir.joinpath(TestConstants.INPUT_FILE))
 
     queries = input_dict.get(TestConstants.EXPORT_TEST_E2E_INPUT_QUERIES, None)
@@ -212,21 +215,21 @@ def _test_export(test_dir: Path, db: Memgraph):
     test_dict = _load_yaml(test_dir.joinpath(TestConstants.TEST_FILE))
     export_query = test_dict[TestConstants.EXPORT_TEST_E2E_EXPORT_QUERY].replace(
         TestConstants.EXPORT_TEST_E2E_PLACEHOLDER_FILENAME,
-        "".join(["'", TestConstants.EXPORT_TEST_E2E_OUTPUT_FILE, "'"]),
+        "".join(["'", output_file, "'"]),
     )
     import_query = test_dict[TestConstants.EXPORT_TEST_E2E_IMPORT_QUERY].replace(
         TestConstants.EXPORT_TEST_E2E_PLACEHOLDER_FILENAME,
-        "".join(["'", TestConstants.EXPORT_TEST_E2E_OUTPUT_FILE, "'"]),
+        "".join(["'", output_file, "'"]),
     )
 
     db.execute(export_query)
     db.execute("MATCH (n) DETACH DELETE n;")
     db.execute(import_query)
 
-    try:
-        os.remove(TestConstants.EXPORT_TEST_E2E_OUTPUT_FILE)
-    except Exception:
-        raise OSError("Could not delete file.")
+    # try:
+    #     os.remove(TestConstants.EXPORT_TEST_E2E_OUTPUT_FILE)
+    # except Exception:
+    #     raise OSError("Could not delete file.")
 
     new_nodes, new_relationships = _get_nodes_and_relationships(
         nodes_query, relationships_query, db
