@@ -37,7 +37,7 @@ class TestConstants:
     EXPORT_TEST_E2E_EXPORT_QUERY = "export"
     EXPORT_TEST_E2E_IMPORT_QUERY = "import"
     EXPORT_TEST_E2E_PLACEHOLDER_FILENAME = "_exportfile"
-    EXPORT_TEST_E2E_OUTPUT_FILE = "/".join([os.getcwd(), "_exported_data"])
+    EXPORT_TEST_E2E_OUTPUT_FILE = "/home/memgraph/_exported_data"
     EXPORT_TEST_SUBDIR_PREFIX = "test_export"
 
 
