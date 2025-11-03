@@ -359,6 +359,9 @@ jobs:
         run: |
           echo "::notice::Output URL: ${{ steps.output-url.outputs.s3_url }}"
 
+      - name: Memgraph Docker Cleanup
+        run: |
+          ./cpp/memgraph/tools/docker_cleanup.sh
 
   SetupSmokeTest:
     runs-on: [self-hosted]
