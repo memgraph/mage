@@ -49,11 +49,10 @@ if [ "$CI" = true ]; then
     python3 -m pip install --no-cache-dir -r /tmp/auth_module-requirements.txt
 else
     python3 -m pip install --no-cache-dir -r "/mage/python/${requirements_file}"
-    python3 -m pip install --no-cache-dir -r /mage/python/tests/requirements.txt
     python3 -m pip install --no-cache-dir -r /usr/lib/memgraph/auth_module/requirements.txt
 fi
 
-if [ "$TARGETARCH" = "arm64" ]; then
+if [ "$ARCH" = "arm64" ]; then
     if [ "$CACHE_PRESENT" = "true" ]; then
         echo "Using cached torch packages"
         python3 -m pip install --no-index --find-links=/mage/wheels/ torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter
