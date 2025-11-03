@@ -93,6 +93,7 @@ fi
 
 if [[ "$RUN_PYTHON_TESTS" == true ]]; then
   echo -e "\033[1;32mRunning Python tests\033[0m"
+  docker exec -i -u mg $CONTAINER_NAME bash -c "pip install -r \$HOME/mage/python/tests/requirements.txt --break-system-packages"
   docker exec -i -u mg $CONTAINER_NAME bash -c "cd \$HOME/mage/python/ && python3 -m pytest ."
 fi
 
