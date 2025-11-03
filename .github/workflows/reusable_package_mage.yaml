@@ -166,7 +166,6 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         run: echo "CI_BRANCH=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
       
-
       - name: Get Current MAGE Commit/Tag
         env:
           INPUT_REF: "${{ inputs.ref }}"
@@ -185,7 +184,6 @@ jobs:
 
           ./scripts/verify_download_url.sh "$mg_url"
           echo "MEMGRAPH_DOWNLOAD_LINK=${mg_url}" >> $GITHUB_ENV
-
 
       - name: Download memgraph binary
         run: curl -L --retry 5 --retry-delay 20 --retry-max-time 120 ${{ env.MEMGRAPH_DOWNLOAD_LINK }} > memgraph-$ARCH.deb
@@ -242,7 +240,6 @@ jobs:
           --tag ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} \
           --file Dockerfile.release \
           --build-arg BUILD_TYPE=$BUILD_TYPE \
-          --build-arg MGBUILD_IMAGE=$MGBUILD_IMAGE \
           --build-arg MAGE_COMMIT="${{ env.MAGE_COMMIT }}" \
           --build-arg CACHE_PRESENT=${{ env.CACHE_PRESENT }} \
           --build-arg CUSTOM_MIRROR=${{ env.CUSTOM_MIRROR }} \
@@ -265,7 +262,6 @@ jobs:
             -e MEMGRAPH_ORGANIZATION_NAME=${{ env.MEMGRAPH_ORGANIZATION_NAME }} \
             ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} \
             --telemetry-enabled=False
-
 
       - name: Run end-to-end tests
         if: ${{ inputs.run_tests == true }}

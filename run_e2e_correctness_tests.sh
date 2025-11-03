@@ -11,6 +11,7 @@ docker run --rm \
     --name "$NEO4J_CONTAINER"  \
     --network "$MEMGRAPH_NETWORK" \
     -p 7474:7474 \
+    -p $NEO4J_PORT:7687 \
     -d \
     -v "$HOME/neo4j/plugins:/plugins" \
     --env NEO4J_AUTH=none  \
