@@ -222,6 +222,13 @@ jobs:
             --cuda ${{ env.CUDA }} \
             --arch $ARCH
 
+      - name: Remove mgbbuild container
+        if: ${{ inputs.run_tests == true && always() }}
+        run: |
+          docker stop $CONTAINER_NAME || true
+          docker rm $CONTAINER_NAME || true
+
+
       - name: Build image
         run: |
           if [[ "$BUILD_TYPE" = "RelWithDebInfo" ]]; then
@@ -263,6 +270,9 @@ jobs:
       - name: Run end-to-end tests
         if: ${{ inputs.run_tests == true }}
         run: |
+          python3 -m venv env
+          source env/bin/activate
+          pip install -r python/tests/requirements.txt --break-system-packages
           cd e2e/ && python3 -m pytest . -k "not cugraph and not embeddings_test-test_cuda_compute"
 
       - name: Run End-to-end correctness tests
