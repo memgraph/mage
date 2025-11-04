@@ -239,7 +239,7 @@ jobs:
             --arch $ARCH
 
       - name: Remove mgbbuild container
-        if: ${{ inputs.run_tests == true && always() }}
+        if: always()
         run: |
           docker stop $CONTAINER_NAME || true
 
