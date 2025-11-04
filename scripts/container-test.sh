@@ -35,18 +35,15 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-cleanup() {
+exit_handler() {
   local exit_code=${1:-$?}
   if [[ $exit_code -ne 0 ]]; then
     echo -e "\033[1;31mFailed to run tests\033[0m"
   fi
-  echo -e "\033[1;32mStopping containers and network\033[0m"
-  docker stop $CONTAINER_NAME || true
-  docker rm $CONTAINER_NAME || true
   exit $exit_code
 }
 
-trap cleanup ERR EXIT
+trap exit_handler ERR EXIT
 
 echo -e "\033[1;32mRunning tests in container: $CONTAINER_NAME\033[0m"
 

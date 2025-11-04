@@ -203,8 +203,7 @@ jobs:
           ./scripts/container-build.sh \
             --arch $ARCH \
             --build-type $BUILD_TYPE \
-            --container-name $CONTAINER_NAME \
-            --stop-container ${{ !inputs.run_tests }}
+            --container-name $CONTAINER_NAME
 
       - name: Build DEB package in MGBUILD container
         if: ${{ inputs.push_to_github || inputs.push_to_s3 }}
@@ -243,8 +242,6 @@ jobs:
         if: ${{ inputs.run_tests == true && always() }}
         run: |
           docker stop $CONTAINER_NAME || true
-          docker rm $CONTAINER_NAME || true
-
 
       - name: Build image
         run: |

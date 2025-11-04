@@ -4,7 +4,6 @@ set -euo pipefail
 ARCH=amd64
 BUILD_TYPE=Release
 CONTAINER_NAME=mgbuild
-STOP_CONTAINER=true
 while [[ $# -gt 0 ]]; do
   case $1 in
     --arch)
@@ -19,10 +18,6 @@ while [[ $# -gt 0 ]]; do
       CONTAINER_NAME=$2
       shift 2
     ;;  
-    --stop-container)
-      STOP_CONTAINER=$2
-      shift 2
-    ;;  
     *)
       echo "Unknown option: $1"
       exit 1
@@ -30,13 +25,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-cleanup() {
+exit_handler() {
     local exit_code=${1:-$?}
-    # Always clean up on error, or if STOP_CONTAINER is true on normal exit
-    if [[ $exit_code -ne 0 ]] || [[ "$STOP_CONTAINER" == true ]]; then
-        docker stop $CONTAINER_NAME || true
-        docker rm $CONTAINER_NAME || true
-    fi
     if [[ $exit_code -ne 0 ]]; then
         # in red bold text
         echo -e "\033[1;31mFailed to build MAGE\033[0m"
@@ -44,7 +34,7 @@ cleanup() {
     exit $exit_code
 }
 
-trap 'cleanup $?' ERR EXIT
+trap 'exit_handler $?' ERR EXIT
 
 
 if [[ "$ARCH" == "arm64" ]]; then
