@@ -266,6 +266,11 @@ jobs:
           # print the image size in both SI and IEC units
           ./print_image_size.sh ${DOCKER_REPOSITORY_NAME} ${{ env.IMAGE_TAG }}
 
+      - name: Wait for e2e Docker images to be available
+        if: ${{ inputs.run_tests == true }}
+        run: |
+          ./scripts/wait-for-docker-images.sh
+
       - name: Start container for e2e tests
         if: ${{ inputs.run_tests == true }}
         run: |
