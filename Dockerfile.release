@@ -105,7 +105,7 @@ RUN apt-get update && apt-get install -y \
 COPY --chown=memgraph:memgraph ./ /mage/
 
 # Copy heaptrack and install it properly
-COPY --from=builder /tmp/heaptrack /tmp/heaptrack
+COPY heaptrack /tmp/heaptrack
 RUN cp -vr /tmp/heaptrack/* /usr/ && rm -rf /tmp/heaptrack
 
 RUN if [ -n "$CUSTOM_MIRROR" ]; then \

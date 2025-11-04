@@ -228,6 +228,11 @@ jobs:
           package_name=$(docker exec -i -u mg $CONTAINER_NAME bash -c "ls /home/mg/mage/scripts/pymgclient/dist/")
           docker cp $CONTAINER_NAME:/home/mg/mage/scripts/pymgclient/dist/$package_name wheels/
 
+      - name: Build heaptrack
+        if: ${{ inputs.mage_build_type == 'RelWithDebInfo' }}
+        run: |
+          ./scripts/container-build-heaptrack.sh $CONTAINER_NAME
+
       - name: Run tests
         if: ${{ inputs.run_tests == true }}
         run: |
