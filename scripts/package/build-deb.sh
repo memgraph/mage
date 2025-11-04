@@ -11,7 +11,7 @@ CUDA=$5
 PACKAGE_DIR=${6:-$HOME/mage.tar.gz}
 
 # replace illegal characters in version string for packager:
-CLEAN_VERSION=$(echo $VERSION | sed 's/-/_/g')
+CLEAN_VERSION=$(echo $VERSION | sed 's/_/+/g')
 
 PACKAGE_NAME="memgraph-mage_${VERSION}-1_${ARCH}"
 if [[ "$BUILD_TYPE" == "RelWithDebInfo" ]]; then
