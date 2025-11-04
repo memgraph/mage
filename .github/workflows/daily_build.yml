@@ -13,6 +13,11 @@ on:
         type: string
         description: "Date to build packages for (YYYYMMDD)"
         required: false
+      dry-run:
+        type: boolean
+        description: "Dry run the build (don't push to S3 or GitHub)"
+        required: false
+        default: false
 
 jobs:
   DailyBuildVariables:
@@ -104,10 +109,8 @@ jobs:
       mage_build_type: "${{ matrix.build_type }}"
       memgraph_version: "${{ needs.DailyBuildVariables.outputs.memgraph_version }}"
       memgraph_download_link: "https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/daily-build/memgraph/${{ needs.DailyBuildVariables.outputs.build_date }}/ubuntu-24.04${{ matrix.malloc && '-malloc' || '' }}${{ matrix.build_arch == 'arm64' && '-aarch64' || '' }}${{ matrix.build_type == 'RelWithDebInfo' && '-relwithdebinfo' || '' }}/${{ needs.DailyBuildVariables.outputs.binary_name_base }}_${{ matrix.build_arch }}.deb"
-      shorten_tag: "false"
-      force_release: "true"
-      push_to_dockerhub: "false"
-      push_to_s3: "true"
+      shorten_tag: false
+      push_to_s3: ${{ !inputs.dry-run }}
       s3_dest_bucket: "deps.memgraph.io"
       s3_dest_dir: "daily-build/mage/${{ needs.DailyBuildVariables.outputs.build_date }}"
       malloc: ${{ matrix.malloc }}
@@ -157,6 +160,7 @@ jobs:
           echo "BUILD_TEST_RESULTS=$(python3 scripts/aggregate_build_tests.py 'mage')" >> $GITHUB_ENV
 
       - name: Trigger Daily Builds Page Update
+        if: ${{ !inputs.dry-run }}
         env: 
           GITHUB_TOKEN: ${{ secrets.REPO_PAT }}
         run: |
