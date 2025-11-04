@@ -28,7 +28,7 @@ on:
         default: true
       push_to_github:
         type: string
-        description: "Push the image to GitHub?"
+        description: "Push the image, DEB and tar.gz to GitHub?"
         default: false
       push_to_s3:
         type: string
@@ -101,6 +101,11 @@ jobs:
           submodules: recursive
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
+
+      - name: Pull e2e Docker images in background
+        if: ${{ inputs.run_tests == true }}
+        run: |
+          ./scripts/pull-e2e-docker-images.sh &
 
       - name: Check mgdeps-cache availability
         run: |
