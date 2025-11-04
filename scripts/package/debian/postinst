@@ -4,7 +4,8 @@ set -e
 case "$1" in
     configure)
         # install requirements as user memgraph
-        su - memgraph -c "pip install --no-cache-dir -r /usr/lib/memgraph/mage-requirements.txt --break-system-packages"
+        CUDA=@CUDA@
+        su - memgraph -c "/usr/lib/memgraph/install_python_requirements.sh --deb-package --cuda $CUDA"
         systemctl restart memgraph.service
     ;;
 esac

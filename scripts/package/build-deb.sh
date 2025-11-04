@@ -35,12 +35,16 @@ if [[ "$CUDA" == true ]]; then
 else
     cp -v ../../python/requirements.txt $SCRIPT_DIR/build/usr/lib/memgraph/mage-requirements.txt
 fi
+cp ../install_python_requirements.sh $SCRIPT_DIR/build/usr/lib/memgraph/install_python_requirements.sh
 
 tar -xvzf $PACKAGE_DIR -C $SCRIPT_DIR/build/usr/lib/memgraph/
 
 # Replace template variables in Debian control files
 sed -i "s/@ARCH@/$ARCH/g" $SCRIPT_DIR/debian/control
 sed -i "s/@VERSION@/$CLEAN_VERSION/g" $SCRIPT_DIR/debian/changelog
+
+# set cuda in postinst
+sed -i "s/@CUDA@/$CUDA/g" $SCRIPT_DIR/debian/postinst
 
 dpkg-buildpackage -us -uc -b
 
