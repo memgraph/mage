@@ -10,6 +10,9 @@ MALLOC=$4
 CUDA=$5
 PACKAGE_DIR=${6:-$HOME/mage.tar.gz}
 
+# replace illegal characters in version string for packager:
+CLEAN_VERSION=$(echo $VERSION | sed 's/-/_/g')
+
 PACKAGE_NAME="memgraph-mage_${VERSION}-1_${ARCH}"
 if [[ "$BUILD_TYPE" == "RelWithDebInfo" ]]; then
     PACKAGE_NAME="${PACKAGE_NAME}-relwithdebinfo"
@@ -35,7 +38,7 @@ tar -xvzf $PACKAGE_DIR -C $SCRIPT_DIR/build/usr/lib/memgraph/
 
 # Replace template variables in Debian control files
 sed -i "s/@ARCH@/$ARCH/g" $SCRIPT_DIR/debian/control
-sed -i "s/@VERSION@/$VERSION/g" $SCRIPT_DIR/debian/changelog
+sed -i "s/@VERSION@/$CLEAN_VERSION/g" $SCRIPT_DIR/debian/changelog
 
 dpkg-buildpackage -us -uc -b
 
