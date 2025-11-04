@@ -383,7 +383,7 @@ jobs:
         if: ${{ inputs.push_to_s3 && (inputs.run_smoke_tests || inputs.print_output_url) }}
         run: |
           filename="${{ env.ARTIFACT_NAME }}.tar.gz"
-          output_url="https://s3.eu-west-1.amazonaws.com/${{ inputs.s3_dest_bucket }}/${{ inputs.s3_dest_dir }}/$filename"
+          output_url="https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/${{ inputs.s3_dest_dir }}/$filename"
           echo "s3_url=$output_url" >> $GITHUB_OUTPUT            
 
       - name: Print Output URL
