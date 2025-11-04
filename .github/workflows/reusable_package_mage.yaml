@@ -78,6 +78,8 @@ env:
   BUILD_TYPE: "${{ inputs.mage_build_type }}"
   MALLOC: "${{ inputs.malloc }}"
   CUDA: "${{ inputs.cuda }}"
+  MAGE_VERSION: "${{ inputs.mage_version }}"
+  MEMGRAPH_VERSION: "${{ inputs.memgraph_version }}"
   CONTAINER_NAME: "mgbuild"
   MAGE_CONTAINER: "mage"
   MEMGRAPH_PORT: 7687
@@ -88,6 +90,8 @@ env:
   POSTGRESQL_CONTAINER: "postgresql_test"
   MEMGRAPH_ENTERPRISE_LICENSE: ${{ secrets.MEMGRAPH_ENTERPRISE_LICENSE }}
   MEMGRAPH_ORGANIZATION_NAME: ${{ secrets.MEMGRAPH_ORGANIZATION_NAME }}
+  MEMGRAPH_DOWNLOAD_LINK: "${{ inputs.memgraph_download_link }}"
+
 jobs:
   BuildAndPush:
     runs-on: [self-hosted, DockerMgBuild, Linux, "${{ inputs.arch == 'arm64' && 'ARM64' || 'X64' }}"]
@@ -159,8 +163,6 @@ jobs:
 
       - name: Set image tag and artifact name
         env:
-          MEMGRAPH_VERSION: "${{ inputs.memgraph_version }}"
-          MAGE_VERSION: "${{ inputs.mage_version }}"
           SHORTEN_TAG: "${{ inputs.shorten_tag }}"
         run: |
           read IMAGE_TAG ARTIFACT_NAME < <(scripts/artifact-name-tag.sh "$MEMGRAPH_VERSION" "$MAGE_VERSION" "$SHORTEN_TAG" "$ARCH" "$BUILD_TYPE" "$MALLOC" "$CUDA")
@@ -179,19 +181,19 @@ jobs:
 
       - name: Set up and check memgraph download link
         run: |
-          if [[ -z "${{ inputs.memgraph_download_link }}" ]]; then
+          if [[ -z "$MEMGRAPH_DOWNLOAD_LINK" ]]; then
             echo "Using official download link"
-            mg_url="https://download.memgraph.com/memgraph/v${{ inputs.memgraph_version }}/$OS/memgraph_${{ inputs.memgraph_version }}-1_$ARCH.deb"
+            mg_url="https://download.memgraph.com/memgraph/v$MEMGRAPH_VERSION/$OS/memgraph_$MEMGRAPH_VERSION-1_$ARCH.deb"
           else
             echo "Using custom download link"
-            mg_url=${{ inputs.memgraph_download_link }}
+            mg_url=$MEMGRAPH_DOWNLOAD_LINK
           fi
 
           ./scripts/verify_download_url.sh "$mg_url"
           echo "MEMGRAPH_DOWNLOAD_LINK=${mg_url}" >> $GITHUB_ENV
 
       - name: Download memgraph binary
-        run: curl -L --retry 5 --retry-delay 20 --retry-max-time 120 ${{ env.MEMGRAPH_DOWNLOAD_LINK }} > memgraph-$ARCH.deb
+        run: curl -L --retry 5 --retry-delay 20 --retry-max-time 120 $MEMGRAPH_DOWNLOAD_LINK > memgraph-$ARCH.deb
 
       - name: Probe fastest mirror
         run: |
@@ -212,9 +214,9 @@ jobs:
             --arch $ARCH \
             --build-type $BUILD_TYPE \
             --container-name $CONTAINER_NAME \
-            --version ${{ inputs.mage_version }} \
-            --malloc ${{ inputs.malloc }} \
-            --cuda ${{ inputs.cuda }}
+            --version $MAGE_VERSION \
+            --malloc $MALLOC \
+            --cuda $CUDA
           
           DEB_PACKAGE="$(ls output/memgraph-mage*.deb)"
           echo "DEB_PACKAGE=${DEB_PACKAGE}" >> $GITHUB_ENV
@@ -239,8 +241,8 @@ jobs:
           ./scripts/container-test.sh \
             --container-name $CONTAINER_NAME \
             --ci \
-            --cache-present ${{ env.CACHE_PRESENT }} \
-            --cuda ${{ env.CUDA }} \
+            --cache-present $CACHE_PRESENT \
+            --cuda $CUDA \
             --arch $ARCH
 
       - name: Remove mgbbuild container
@@ -258,30 +260,30 @@ jobs:
           docker buildx build \
           --target $DOCKER_TARGET \
           --platform linux/$ARCH \
-          --tag ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} \
+          --tag ${DOCKER_REPOSITORY_NAME}:$IMAGE_TAG \
           --file Dockerfile.release \
           --build-arg BUILD_TYPE=$BUILD_TYPE \
-          --build-arg MAGE_COMMIT="${{ env.MAGE_COMMIT }}" \
-          --build-arg CACHE_PRESENT=${{ env.CACHE_PRESENT }} \
-          --build-arg CUSTOM_MIRROR=${{ env.CUSTOM_MIRROR }} \
+          --build-arg MAGE_COMMIT=$MAGE_COMMIT \
+          --build-arg CACHE_PRESENT=$CACHE_PRESENT \
+          --build-arg CUSTOM_MIRROR=$CUSTOM_MIRROR \
           --load .
 
           # print the image size in both SI and IEC units
-          ./print_image_size.sh ${DOCKER_REPOSITORY_NAME} ${{ env.IMAGE_TAG }}
+          ./scripts/print_image_size.sh ${DOCKER_REPOSITORY_NAME} $IMAGE_TAG
 
       - name: Start container for e2e tests
         if: ${{ inputs.run_tests == true }}
         run: |
-          docker network create ${{ env.MEMGRAPH_NETWORK }} || true
+          docker network create $MEMGRAPH_NETWORK || true
 
           docker run -d \
             --rm \
-            --network ${{ env.MEMGRAPH_NETWORK }} \
-            --name ${{ env.MAGE_CONTAINER }} \
-            -p ${{ env.MEMGRAPH_PORT }}:${{ env.MEMGRAPH_PORT }} \
-            -e MEMGRAPH_ENTERPRISE_LICENSE=${{ env.MEMGRAPH_ENTERPRISE_LICENSE }} \
-            -e MEMGRAPH_ORGANIZATION_NAME=${{ env.MEMGRAPH_ORGANIZATION_NAME }} \
-            ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} \
+            --network $MEMGRAPH_NETWORK \
+            --name $MAGE_CONTAINER \
+            -p $MEMGRAPH_PORT:$MEMGRAPH_PORT \
+            -e MEMGRAPH_ENTERPRISE_LICENSE=$MEMGRAPH_ENTERPRISE_LICENSE \
+            -e MEMGRAPH_ORGANIZATION_NAME=$MEMGRAPH_ORGANIZATION_NAME \
+            ${DOCKER_REPOSITORY_NAME}:$IMAGE_TAG \
             --telemetry-enabled=False
 
       - name: Run end-to-end tests
@@ -303,13 +305,13 @@ jobs:
           PYTHONPATH: "$PWD/e2e"
         run: |
           source env/bin/activate
-          ./run_e2e_correctness_tests.sh ${{ env.MEMGRAPH_PORT }} ${{ env.NEO4J_PORT }} ${{ env.NEO4J_CONTAINER }} ${{ env.MAGE_CONTAINER }} ${{ env.MEMGRAPH_NETWORK }}
+          ./run_e2e_correctness_tests.sh $MEMGRAPH_PORT $NEO4J_PORT $NEO4J_CONTAINER $MAGE_CONTAINER $MEMGRAPH_NETWORK
 
       - name: Cleanup after correctness tests
         if: ${{ inputs.run_tests == true && always() }}
         run: |
-          docker stop ${{ env.NEO4J_CONTAINER }} || true
-          docker rm ${{ env.NEO4J_CONTAINER }} || true
+          docker stop $NEO4J_CONTAINER || true
+          docker rm $NEO4J_CONTAINER || true
 
       - name: Run End-to-end migration tests
         if: ${{ inputs.run_tests == true }}
@@ -317,48 +319,48 @@ jobs:
           PYTHONPATH: "$PWD/e2e"
         run: |
           source env/bin/activate
-          ./run_e2e_migration_tests.sh --mage-container ${{ env.MAGE_CONTAINER }} --mysql-container ${{ env.MYSQL_CONTAINER }} --postgresql-container ${{ env.POSTGRESQL_CONTAINER }}
+          ./run_e2e_migration_tests.sh --mage-container $MAGE_CONTAINER --mysql-container $MYSQL_CONTAINER --postgresql-container $POSTGRESQL_CONTAINER
       
       - name: Cleanup after migration tests
         if: ${{ inputs.run_tests == true && always() }}
         run: |
-          docker stop ${{ env.MAGE_CONTAINER }} || true
-          docker rm ${{ env.MAGE_CONTAINER }} || true
-          docker stop ${{ env.MYSQL_CONTAINER }} || true
-          docker rm ${{ env.MYSQL_CONTAINER }} || true
-          docker stop ${{ env.POSTGRESQL_CONTAINER }} || true
-          docker rm ${{ env.POSTGRESQL_CONTAINER }} || true
-          docker stop ${{ env.NEO4J_CONTAINER }} || true
-          docker rm ${{ env.NEO4J_CONTAINER }} || true
-          docker network rm ${{ env.MEMGRAPH_NETWORK }} || true
+          docker stop $MAGE_CONTAINER || true
+          docker rm $MAGE_CONTAINER || true
+          docker stop $MYSQL_CONTAINER || true
+          docker rm $MYSQL_CONTAINER || true
+          docker stop $POSTGRESQL_CONTAINER || true
+          docker rm $POSTGRESQL_CONTAINER || true
+          docker stop $NEO4J_CONTAINER || true
+          docker rm $NEO4J_CONTAINER || true
+          docker network rm $MEMGRAPH_NETWORK || true
 
       - name: Save docker image
         if: ${{ inputs.push_to_github || inputs.push_to_s3 }}
         run: |
           mkdir -p output
-          docker save ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} | gzip > output/${{ env.ARTIFACT_NAME }}.tar.gz
-          du -h output/${{ env.ARTIFACT_NAME }}.tar.gz
+          docker save ${DOCKER_REPOSITORY_NAME}:$IMAGE_TAG | gzip > output/${ARTIFACT_NAME}.tar.gz
+          du -h output/${ARTIFACT_NAME}.tar.gz
 
       - name: Push query module archive to GitHub
         if: ${{ inputs.push_to_github }}
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ env.ARTIFACT_NAME }}-query-modules"
+          name: "${ARTIFACT_NAME}-query-modules"
           path: "mage.tar.gz"
 
       - name: Push DEB package to GitHub
         if: ${{ inputs.push_to_github }}
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ env.ARTIFACT_NAME }}-deb"
-          path: "${{ env.DEB_PACKAGE }}"
+          name: "${ARTIFACT_NAME}-deb"
+          path: "${DEB_PACKAGE}"
 
       - name: Push docker image to GitHub
         if: ${{ inputs.push_to_github }}
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ env.IMAGE_TAG }}-docker"
-          path: "output/${{ env.ARTIFACT_NAME }}.tar.gz"
+          name: "${IMAGE_TAG}-docker"
+          path: "output/${ARTIFACT_NAME}.tar.gz"
 
       - name: Push to S3 with retry
         if: ${{ inputs.push_to_s3 }}
@@ -386,9 +388,11 @@ jobs:
       - name: Construct Output URL
         id: output-url
         if: ${{ inputs.push_to_s3 && (inputs.run_smoke_tests || inputs.print_output_url) }}
+        env:
+          DEST_DIR: "${{ inputs.s3_dest_dir }}"
         run: |
-          filename="${{ env.ARTIFACT_NAME }}.tar.gz"
-          output_url="https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/${{ inputs.s3_dest_dir }}/$filename"
+          filename="${ARTIFACT_NAME}.tar.gz"
+          output_url="https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/$DEST_DIR/$filename"
           echo "s3_url=$output_url" >> $GITHUB_OUTPUT            
 
       - name: Print Output URL
