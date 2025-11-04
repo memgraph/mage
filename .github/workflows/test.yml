@@ -4,10 +4,6 @@ concurrency:
   cancel-in-progress: true
 
 on: 
-  push:
-    tags:
-      - "v*.*.*-rc*"
-      - "v*.*-rc*"
   pull_request:
   merge_group:
   workflow_dispatch:
@@ -39,7 +35,6 @@ on:
 jobs:
   # setup some variables for the default memgraph download link/version
   TestVariables:
-    if: github.ref_type != 'tag'
     runs-on: ["self-hosted"]
     outputs:
       mage_version: ${{ steps.compute.outputs.mage_version }}
