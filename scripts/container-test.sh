@@ -51,9 +51,9 @@ trap cleanup ERR EXIT
 echo -e "\033[1;32mRunning tests in container: $CONTAINER_NAME\033[0m"
 
 echo -e "\033[1;32mRunning Rust tests\033[0m"
-docker exec -i -u root $CONTAINER_NAME bash -c "apt-get update \
-&& apt-get install -y clang --no-install-recommends"
-docker exec -i -u mg $CONTAINER_NAME bash -c "source \$HOME/.cargo/env && cd \$HOME/mage/rust/rsmgp-sys && cargo fmt -- --check && RUST_BACKTRACE=1 cargo test"
+# docker exec -i -u root $CONTAINER_NAME bash -c "apt-get update \
+# && apt-get install -y clang --no-install-recommends"
+docker exec -i -u mg $CONTAINER_NAME bash -c "source /opt/toolchain-v7/activate && source \$HOME/.cargo/env && cd \$HOME/mage/rust/rsmgp-sys && cargo fmt -- --check && RUST_BACKTRACE=1 cargo test"
 
 
 echo -e "\033[1;32mRunning C++ tests\033[0m"
