@@ -12,6 +12,8 @@ PACKAGE_DIR=${6:-$HOME/mage.tar.gz}
 
 # replace illegal characters in version string for packager:
 CLEAN_VERSION=$(echo $VERSION | sed 's/_/+/g')
+# and replace anythin preceding the version number
+CLEAN_VERSION=$(echo $CLEAN_VERSION | sed 's/^[^0-9]*//')
 
 PACKAGE_NAME="memgraph-mage_${VERSION}-1_${ARCH}"
 if [[ "$BUILD_TYPE" == "RelWithDebInfo" ]]; then
