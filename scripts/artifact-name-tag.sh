@@ -10,15 +10,14 @@ MALLOC=$6
 CUDA=$7
 
 # remove patch version if it's 0
-if [[ $SHORTEN_TAG == true ]]; then
+if [[ $SHORTEN_TAG == "true" ]]; then
     MEMGRAPH_VERSION=${MEMGRAPH_VERSION%%-*}
     memgraph_patch_version=${MEMGRAPH_VERSION##*.}
-    MAGE_VERSION=${MAGE_VERSION%%-*}
     mage_patch_version=${MAGE_VERSION##*.}
-    if [[ "$memgraph_patch_version" -eq 0 ]]; then
+    if [[ "$memgraph_patch_version" == "0" ]]; then
         MEMGRAPH_VERSION=${MEMGRAPH_VERSION%.*}
     fi
-    if [[ "$mage_patch_version" -eq 0 ]]; then
+    if [[ "$mage_patch_version" == "0" ]]; then
         MAGE_VERSION=${MAGE_VERSION%.*}
     fi
 fi
@@ -42,11 +41,11 @@ if [[ "$BUILD_TYPE" == 'RelWithDebInfo' ]]; then
     ARTIFACT_NAME="${ARTIFACT_NAME}-relwithdebinfo"
     IMAGE_TAG="${IMAGE_TAG}-relwithdebinfo"
 fi
-if [[ "$MALLOC" == true ]]; then
+if [[ "$MALLOC" == "true" ]]; then
     ARTIFACT_NAME="${ARTIFACT_NAME}-malloc"
     IMAGE_TAG="${IMAGE_TAG}-malloc"          
 fi
-if [[ "$CUDA" == true ]]; then
+if [[ "$CUDA" == "true" ]]; then
     ARTIFACT_NAME="${ARTIFACT_NAME}-cuda"
     IMAGE_TAG="${IMAGE_TAG}-cuda"
 fi
