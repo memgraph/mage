@@ -216,7 +216,7 @@ jobs:
             --malloc ${{ inputs.malloc }} \
             --cuda ${{ inputs.cuda }}
           
-          DEB_PACKAGE="$(ls memgraph-mage*.deb)"
+          DEB_PACKAGE="$(ls output/memgraph-mage*.deb)"
           echo "DEB_PACKAGE=${DEB_PACKAGE}" >> $GITHUB_ENV
 
       - name: Build pymgclient in MGBUILD container
