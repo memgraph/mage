@@ -11,7 +11,7 @@ GITHUB_REF=$3
 if [ -z "$INPUT_REF" ]; then
     echo "No specific ref provided, using current branch/tag."
     # If no ref is provided, use the current branch or tag
-    tag=$(./get_tag.sh)
+    tag=$(./scripts/get_tag.sh)
 else
     echo "Using provided ref: $INPUT_REF"
     tag="$INPUT_REF"
