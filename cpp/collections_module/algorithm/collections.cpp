@@ -593,27 +593,26 @@ void Collections::Flatten(mgp_list *args, mgp_func_context *ctx, mgp_func_result
 
 void Collections::FrequenciesAsMap(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::MemoryDispatcherGuard guard{memory};
-  const auto arguments = mgp::List(args);
+  auto const arguments = mgp::List(args);
   auto result = mgp::Result(res);
 
   try {
-    const auto input_list = arguments[0].ValueList();
+    auto const input_list = arguments[0].ValueList();
     std::unordered_map<mgp::Value, int64_t> frequency_map;
 
-    for (const auto &element : input_list) {
+    for (auto &&element : input_list) {
       frequency_map[element]++;
     }
 
     mgp::Map result_map;
-    for (const auto &[element, count] : frequency_map) {
-      const auto key = element.ToString();
+    for (auto &&[element, count] : frequency_map) {
+      auto const key = element.ToString();
       result_map.Insert(key, mgp::Value(count));
     }
 
     result.SetValue(std::move(result_map));
 
-  } catch (const std::exception &e) {
+  } catch (std::exception const &e) {
     result.SetErrorMessage(e.what());
-    return;
   }
 }
