@@ -4,10 +4,6 @@ concurrency:
   cancel-in-progress: true
 
 on: 
-  push:
-    tags:
-      - "v*.*.*-rc*"
-      - "v*.*-rc*"
   pull_request:
   merge_group:
   workflow_dispatch:
@@ -39,7 +35,6 @@ on:
 jobs:
   # setup some variables for the default memgraph download link/version
   TestVariables:
-    if: github.ref_type != 'tag'
     runs-on: ["self-hosted"]
     outputs:
       mage_version: ${{ steps.compute.outputs.mage_version }}
@@ -86,24 +81,6 @@ jobs:
           echo "DEBUG: build_date=${build_date}"
           echo "DEBUG: binary_name_base=memgraph_${memgraph_version}-1"
 
-
-
-  RC_test:
-    if: ${{ github.ref_type == 'tag' && !contains(github.event.head_commit.message, '[skip tests]') }}
-    strategy:
-      fail-fast: false
-      matrix:
-        mg_version: ["3.6.2"]
-        mg_rc_version: ["rc1"]
-        arch: ["amd64", "arm64"]
-    uses: ./.github/workflows/reusable_test.yml
-    with:
-      arch: "${{ matrix.arch }}"
-      memgraph_ref: "v${{ matrix.mg_version }}-${{ matrix.mg_rc_version }}"
-      memgraph_ref_update: "false"
-      memgraph_download_link: "s3://deps.memgraph.io/memgraph/v${{ matrix.mg_version }}-${{ matrix.mg_rc_version }}/ubuntu-24.04${{ matrix.arch == 'arm64' && '-aarch64' || '' }}/memgraph_${{ matrix.mg_version }}-1_${{ matrix.arch }}.deb"
-    secrets: inherit
-
   PR_test:
     if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
     needs: [TestVariables]
@@ -111,41 +88,29 @@ jobs:
       fail-fast: false
       matrix:
         arch: ["amd64","arm64"]
-    uses: ./.github/workflows/reusable_test.yml
+    uses: ./.github/workflows/reusable_package_mage.yaml
     with:
       arch: "${{ matrix.arch }}"
+      mage_version: ${{ needs.TestVariables.outputs.mage_version }}
       memgraph_version: ${{ needs.TestVariables.outputs.memgraph_version }}
       memgraph_download_link: ${{ matrix.arch == 'arm64' && needs.TestVariables.outputs.arm_binary_url || needs.TestVariables.outputs.x86_binary_url }}
       memgraph_ref: ${{ needs.TestVariables.outputs.memgraph_commit }}
-      memgraph_ref_update: "true"
+      memgraph_ref_update: true
+      shorten_tag: false
+      run_tests: true
     secrets: inherit
 
   Manual_test:
     if: github.event_name == 'workflow_dispatch'
     needs: [TestVariables]
-    uses: ./.github/workflows/reusable_test.yml
+    uses: ./.github/workflows/reusable_package_mage.yaml
     with:
       arch: "${{ github.event.inputs.arch }}"
+      mage_version: ${{ needs.TestVariables.outputs.mage_version }}
       memgraph_version: "${{ github.event.inputs.memgraph_version || needs.TestVariables.outputs.memgraph_version }}"
       memgraph_download_link:  ${{ github.event.inputs.memgraph_download_link || ( github.event.inputs.arch == 'arm64' && needs.TestVariables.outputs.arm_binary_url || needs.TestVariables.outputs.x86_binary_url ) }}
       memgraph_ref: "${{ github.event.inputs.memgraph_ref || needs.TestVariables.outputs.memgraph_commit }}"
-      memgraph_ref_update: "${{ github.event.inputs.memgraph_ref_update }}"
+      memgraph_ref_update: ${{ inputs.memgraph_ref_update }}
+      shorten_tag: false
+      run_tests: true
     secrets: inherit
-
-  Nightly_test:
-    if: github.event_name == 'schedule'
-    needs: [TestVariables]
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: ["amd64", "arm64"]
-    uses: ./.github/workflows/reusable_test.yml
-    with:
-      arch: "${{ matrix.arch }}"
-      memgraph_version: ${{ needs.TestVariables.outputs.memgraph_version }}
-      memgraph_download_link: ${{ matrix.arch == 'arm64' && needs.TestVariables.outputs.arm_binary_url || needs.TestVariables.outputs.x86_binary_url }}
-      memgraph_ref: ${{ needs.TestVariables.outputs.memgraph_commit }}
-      memgraph_ref_update: "true"
-    secrets: inherit
-
-  

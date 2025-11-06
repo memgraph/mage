@@ -55,19 +55,24 @@ def parse_file_os_arch(file, image_type):
     """
 
     if image_type == "mage":
+        is_deb = file.endswith(".deb")
 
         if "arm64" in file:
             arch = "arm64"
-            os = "Docker (arm64)"
+            os = "Docker (arm64)" if not is_deb else "ubuntu-24.04"
         else:
             arch = "x86_64"
-            os = "Docker (x86_64)"
+            os = "Docker (x86_64)" if not is_deb else "ubuntu-24.04"
 
         if "relwithdebinfo" in file:
-            arch = f"{arch}-debug"
+            arch = f"{arch}-relwithdebinfo"
 
         if "malloc" in file:
             arch = f"{arch}-malloc"
+
+        if "cuda" in file:
+            arch = f"{arch}-cuda"
+            
     elif image_type == "memgraph":
         if "aarch64" in file:
             arch = "arm64"
@@ -75,7 +80,7 @@ def parse_file_os_arch(file, image_type):
             arch = "x86_64"
 
         if "relwithdebinfo" in file:
-            arch = f"{arch}-debug"
+            arch = f"{arch}-relwithdebinfo"
 
         if "malloc" in file:
             arch = f"{arch}-malloc"

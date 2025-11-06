@@ -13,6 +13,16 @@ on:
         type: string
         description: "Date to build packages for (YYYYMMDD)"
         required: false
+      dry-run:
+        type: boolean
+        description: "Dry run the build (don't push to S3 or GitHub)"
+        required: false
+        default: false
+      update-page:
+        type: boolean
+        description: "Update the daily builds page"
+        required: false
+        default: true
 
 jobs:
   DailyBuildVariables:
@@ -35,7 +45,6 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-west-1
-
 
       - name: Compute variables using Python script
         id: compute
@@ -104,34 +113,18 @@ jobs:
       mage_build_type: "${{ matrix.build_type }}"
       memgraph_version: "${{ needs.DailyBuildVariables.outputs.memgraph_version }}"
       memgraph_download_link: "https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/daily-build/memgraph/${{ needs.DailyBuildVariables.outputs.build_date }}/ubuntu-24.04${{ matrix.malloc && '-malloc' || '' }}${{ matrix.build_arch == 'arm64' && '-aarch64' || '' }}${{ matrix.build_type == 'RelWithDebInfo' && '-relwithdebinfo' || '' }}/${{ needs.DailyBuildVariables.outputs.binary_name_base }}_${{ matrix.build_arch }}.deb"
-      shorten_tag: "false"
-      force_release: "true"
-      push_to_dockerhub: "false"
-      push_to_s3: "true"
-      s3_dest_bucket: "deps.memgraph.io"
+      shorten_tag: false
+      push_to_s3: ${{ github.event_name == 'repository_dispatch' || !inputs.dry-run }}
       s3_dest_dir: "daily-build/mage/${{ needs.DailyBuildVariables.outputs.build_date }}"
       malloc: ${{ matrix.malloc }}
       cuda: ${{ matrix.cuda }}
+      run_tests: true
     secrets: inherit
 
-  TestMAGE:
-    needs: [DailyBuildVariables]
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: ["amd64","arm64"]
-    uses: ./.github/workflows/reusable_test.yml
-    with:
-      arch: "${{ matrix.arch }}"
-      memgraph_version: "${{ needs.DailyBuildVariables.outputs.memgraph_version }}"
-      memgraph_download_link: "https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/daily-build/memgraph/${{ needs.DailyBuildVariables.outputs.build_date }}/ubuntu-24.04${{ matrix.arch == 'arm64' && '-aarch64' || '' }}/${{ needs.DailyBuildVariables.outputs.binary_name_base }}_${{ matrix.arch }}.deb"
-      memgraph_ref: "${{ needs.DailyBuildVariables.outputs.memgraph_commit }}"
-      memgraph_ref_update: "true"
-    secrets: inherit
 
   AggregateBuildTests:
     if: always()
-    needs: [DailyBuildVariables,DailyBuildArtifact,TestMAGE]
+    needs: [DailyBuildVariables,DailyBuildArtifact]
     runs-on: [self-hosted]
     steps:
       - name: Set up repository
@@ -148,7 +141,7 @@ jobs:
         
       - name: Aggregate Test Results and Builds
         env:
-          TEST_RESULT: ${{ needs.TestMAGE.result == 'success' && 'pass' || 'fail' }}
+          TEST_RESULT: ${{ needs.DailyBuildArtifact.result == 'success' && 'pass' || 'fail' }}
           CURRENT_BUILD_DATE: ${{ needs.DailyBuildVariables.outputs.build_date }}
         run: |
           echo "TEST_RESULT: $TEST_RESULT"
@@ -156,6 +149,7 @@ jobs:
           echo "BUILD_TEST_RESULTS=$(python3 scripts/aggregate_build_tests.py 'mage')" >> $GITHUB_ENV
 
       - name: Trigger Daily Builds Page Update
+        if: ${{ github.event_name == 'repository_dispatch' || (inputs.update-page && !inputs.dry-run) }}
         env: 
           GITHUB_TOKEN: ${{ secrets.REPO_PAT }}
         run: |
@@ -167,6 +161,7 @@ jobs:
             -H "Authorization: token $GITHUB_TOKEN" \
             https://api.github.com/repos/memgraph/daily-builds/dispatches \
             -d "$payload"    
+
 
   SetupCVEScanTrigger:
     name: Setup CVE Scan Trigger
@@ -184,7 +179,8 @@ jobs:
           else
             echo "RUN_SCAN=false" >> $GITHUB_OUTPUT
           fi
-         
+
+
   TriggerCVEScan:
     name: Trigger CVE Scan
     needs: [SetupCVEScanTrigger, DailyBuildVariables]
