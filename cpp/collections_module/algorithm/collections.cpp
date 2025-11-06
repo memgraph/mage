@@ -590,3 +590,29 @@ void Collections::Flatten(mgp_list *args, mgp_func_context *ctx, mgp_func_result
         return;
     }
 }
+
+void Collections::FrequenciesAsMap(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  auto const arguments = mgp::List(args);
+  auto result = mgp::Result(res);
+
+  try {
+    auto const input_list = arguments[0].ValueList();
+    std::unordered_map<mgp::Value, int64_t> frequency_map;
+
+    for (auto &&element : input_list) {
+      frequency_map[element]++;
+    }
+
+    mgp::Map result_map;
+    for (auto &&[element, count] : frequency_map) {
+      auto const key = element.ToString();
+      result_map.Insert(key, mgp::Value(count));
+    }
+
+    result.SetValue(std::move(result_map));
+
+  } catch (std::exception const &e) {
+    result.SetErrorMessage(e.what());
+  }
+}
