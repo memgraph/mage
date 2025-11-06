@@ -1,6 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
+# Color codes
+RED_BOLD='\033[1;31m'
+GREEN_BOLD='\033[1;32m'
+RESET='\033[0m'
+
 ARCH=amd64
 BUILD_TYPE=Release
 CONTAINER_NAME=mgbuild
@@ -29,7 +34,7 @@ exit_handler() {
     local exit_code=${1:-$?}
     if [[ $exit_code -ne 0 ]]; then
         # in red bold text
-        echo -e "\033[1;31mFailed to build MAGE\033[0m"
+        echo -e "${RED_BOLD}Failed to build MAGE${RESET}"
     fi
     exit $exit_code
 }
@@ -43,23 +48,22 @@ else
     MGBUILD_IMAGE=memgraph/mgbuild:v7_ubuntu-24.04
 fi
 
-# in bold green
-echo -e "\033[1;32mBuilding MAGE - build type: $BUILD_TYPE, arch: $ARCH\033[0m"
-echo -e "\033[1;32mUsing base image: $MGBUILD_IMAGE\033[0m"
+echo -e "${GREEN_BOLD}Building MAGE - build type: $BUILD_TYPE, arch: $ARCH${RESET}"
+echo -e "${GREEN_BOLD}Using base image: $MGBUILD_IMAGE${RESET}"
 
-echo -e "\033[1;32mStarting container\033[0m"
+echo -e "${GREEN_BOLD}Starting container${RESET}"
 docker run -d --rm --name $CONTAINER_NAME $MGBUILD_IMAGE
 
-echo -e "\033[1;32mCopying repo into container\033[0m"
+echo -e "${GREEN_BOLD}Copying repo into container${RESET}"
 docker exec -i -u mg $CONTAINER_NAME mkdir -p /home/mg/mage
 docker cp . $CONTAINER_NAME:/home/mg/mage
 docker exec -i -u root $CONTAINER_NAME bash -c "chown -R mg:mg /home/mg/mage"
 
-echo -e "\033[1;32mBuilding inside container\033[0m"
+echo -e "${GREEN_BOLD}Building inside container${RESET}"
 docker exec -i $CONTAINER_NAME bash -c "cd /home/mg/mage && ./scripts/build.sh $BUILD_TYPE"
 
-echo -e "\033[1;32mCompressing query modules\033[0m"
+echo -e "${GREEN_BOLD}Compressing query modules${RESET}"
 docker exec -i $CONTAINER_NAME bash -c "cd /home/mg/mage && ./scripts/compress.sh"
 
-echo -e "\033[1;32mCopying compressed query modules\033[0m"
+echo -e "${GREEN_BOLD}Copying compressed query modules${RESET}"
 docker cp $CONTAINER_NAME:/home/mg/mage.tar.gz .

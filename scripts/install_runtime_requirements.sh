@@ -60,11 +60,11 @@ apt-get install -y libcurl4 libpython${PY_VERSION} openssl python3 python3-pip p
 ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf
 
 # In CI, we clean up the apt cache to save space in the Docker container.
-if [ "$CI" = true ]; then
+if [[ "$CI" == true ]]; then
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 fi
 
-if [ "${TARGET_ARCH}" = "arm64" ]; then
+if [[ "${TARGET_ARCH}" == "arm64" ]]; then
     ln -s /usr/lib/aarch64-linux-gnu/libaio.so.1t64 /usr/lib/aarch64-linux-gnu/libaio.so.1;
 else
     ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 /usr/lib/x86_64-linux-gnu/libaio.so.1;

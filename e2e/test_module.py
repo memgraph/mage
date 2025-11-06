@@ -226,11 +226,6 @@ def _test_export(test_dir: Path, db: Memgraph):
     db.execute("MATCH (n) DETACH DELETE n;")
     db.execute(import_query)
 
-    # try:
-    #     os.remove(TestConstants.EXPORT_TEST_E2E_OUTPUT_FILE)
-    # except Exception:
-    #     raise OSError("Could not delete file.")
-
     new_nodes, new_relationships = _get_nodes_and_relationships(
         nodes_query, relationships_query, db
     )
