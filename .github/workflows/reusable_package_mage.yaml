@@ -126,7 +126,7 @@ jobs:
           elif [[ "$INPUT_PACKAGE_DEB" == "false" ]]; then
             package_deb=false
           else
-            if [[ "$CUDA" == true || "$MALLOC" == true ]]; then
+            if [[ "$MALLOC" == true ]]; then
               package_deb=false
             else
               package_deb=true
