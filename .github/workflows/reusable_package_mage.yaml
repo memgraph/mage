@@ -70,6 +70,11 @@ on:
         type: boolean
         description: "Update Memgraph submodule to the latest commit"
         default: true
+      package_deb:
+        type: string
+        description: "Build deb package (true|false|default)"  
+        # default is build only for Release/RelWithDebInfo + amd64/arm64 (other combinations are not actually different)
+        default: default
 
 env:
   OS: "${{ inputs.arch == 'arm64' && 'ubuntu-24.04-aarch64' || 'ubuntu-24.04' }}${{ inputs.malloc && '-malloc' || '' }}${{ inputs.mage_build_type == 'RelWithDebInfo' && '-relwithdebinfo' || '' }}"
@@ -110,6 +115,29 @@ jobs:
         if: ${{ inputs.run_tests == true }}
         run: |
           ./scripts/pull-e2e-docker-images.sh &
+
+
+      - name: Check package deb build
+        env:
+          INPUT_PACKAGE_DEB: "${{ inputs.package_deb }}"
+        run: |
+          if [[ "$INPUT_PACKAGE_DEB" == "true" ]]; then
+            package_deb=true
+          elif [[ "$INPUT_PACKAGE_DEB" == "false" ]]; then
+            package_deb=false
+          else
+            if [[ "$CUDA" == true || "$MALLOC" == true ]]; then
+              package_deb=false
+            else
+              package_deb=true
+            fi
+          fi
+          if [[ "$package_deb" == true ]]; then
+            echo "Building deb package"
+          else
+            echo "Not building deb package"
+          fi
+          echo "PACKAGE_DEB=${package_deb}" >> $GITHUB_ENV
 
       - name: Check mgdeps-cache availability
         run: |
@@ -208,7 +236,7 @@ jobs:
             --container-name $CONTAINER_NAME
 
       - name: Build DEB package in MGBUILD container
-        if: ${{ inputs.push_to_github || inputs.push_to_s3 }}
+        if: ${{ (inputs.push_to_github || inputs.push_to_s3) && env.PACKAGE_DEB == 'true' }}
         run: |
           ./scripts/container-package-deb.sh \
             --arch $ARCH \
@@ -349,7 +377,7 @@ jobs:
           path: "mage.tar.gz"
 
       - name: Push DEB package to GitHub
-        if: ${{ inputs.push_to_github }}
+        if: ${{ inputs.push_to_github && env.PACKAGE_DEB == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: "${ARTIFACT_NAME}-deb"
