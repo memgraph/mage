@@ -39,8 +39,9 @@ Regarding licensing, at the time of the merge, merged repositories will be archi
 
 From a usage perspective, Memgraph packages and Docker images will remain unchanged. A separate Docker image will still be available, including all Mage modules. mgcxx is already statically linked (it’s included in all Memgraph packages). Over the long run, we plan to introduce a package manager for all Memgraph modules.
 
-I hope all the above makes sense. We'll keep you posted about the progress.
-Marko ([gitbuda](http://github.com/gitbuda)), CTO @ Memgraph
+I hope all the above makes sense. We'll keep you posted about the progress. To give feedback, please visit [the discussion](https://github.com/memgraph/memgraph/discussions/3413).
+
+Best, Marko ([gitbuda](http://github.com/gitbuda)), CTO @ Memgraph
 
 --------
 
