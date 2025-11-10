@@ -56,7 +56,7 @@ rm packages-microsoft-prod.deb
 apt-get update
 ACCEPT_EULA=Y apt-get install -y msodbcsql18 unixodbc-dev
 apt-get install -y libcurl4 libpython${PY_VERSION} openssl python3 python3-pip python3-setuptools \
-    adduser libgomp1 libaio1t64 libatomic1 libdw-dev --no-install-recommends
+    adduser libgomp1 libaio1t64 libatomic1 --no-install-recommends
 ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf
 
 # In CI, we clean up the apt cache to save space in the Docker container.
