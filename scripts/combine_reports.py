@@ -2,7 +2,6 @@ import json
 from io import StringIO
 from rich.table import Table
 from rich.console import Console
-from rich import print
 import argparse
 import os
 
@@ -71,8 +70,6 @@ def combine_reports(grype_data, trivy_data):
     for key, item in zip(trivy_keys, trivy_data):
         if key not in grype_keys:
             out.append(item)
-        else:
-            print(f"Found duplicate: {key}")
 
     # sort by package name
     out.sort(key=lambda x: x["package"])

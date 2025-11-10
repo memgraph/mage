@@ -195,7 +195,7 @@ jobs:
         if: ${{ inputs.run_trivy || inputs.run_grype }}
         run: |
           source "${{ env.CVE_DIR }}/env/bin/activate"
-          python3 scripts/combine_reports.py "${{ env.CVE_DIR }}/trivy-summary.json" "${{ env.CVE_DIR }}/grype-summary.json"
+          python3 scripts/combine_reports.py "${{ env.CVE_DIR }}/grype-summary.json" "${{ env.CVE_DIR }}/trivy-summary.json" 
 
       - name: Upload Combined Report Artifact
         if: ${{ inputs.run_trivy || inputs.run_grype }}
