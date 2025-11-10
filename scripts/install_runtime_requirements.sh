@@ -54,7 +54,7 @@ curl -sSL -O https://packages.microsoft.com/config/ubuntu/24.04/packages-microso
 dpkg -i packages-microsoft-prod.deb
 rm packages-microsoft-prod.deb
 apt-get update
-ACCEPT_EULA=Y apt-get install -y msodbcsql18 unixodbc-dev
+ACCEPT_EULA=Y apt-get install -y msodbcsql18
 apt-get install -y libcurl4 libpython${PY_VERSION} openssl python3 python3-pip python3-setuptools \
     adduser libgomp1 libaio1t64 libatomic1 --no-install-recommends
 ln -s /usr/bin/$(ls /usr/bin | grep perf) /usr/bin/perf
