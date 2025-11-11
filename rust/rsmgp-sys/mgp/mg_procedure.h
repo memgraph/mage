@@ -63,7 +63,7 @@ enum MGP_NODISCARD mgp_error {
 /// more efficient as explained before.
 ///@{
 
-/// Provides memory managament access and state.
+/// Provides memory management access and state.
 struct mgp_memory;
 
 /// Allocate a block of memory with given size in bytes.
@@ -1074,7 +1074,7 @@ enum mgp_error mgp_local_date_time_get_minute(struct mgp_local_date_time *local_
 /// Get the second property of the local date-time.
 enum mgp_error mgp_local_date_time_get_second(struct mgp_local_date_time *local_date_time, int *second);
 
-/// Get the milisecond property of the local date-time.
+/// Get the millisecond property of the local date-time.
 enum mgp_error mgp_local_date_time_get_millisecond(struct mgp_local_date_time *local_date_time, int *millisecond);
 
 /// Get the microsecond property of the local date-time.

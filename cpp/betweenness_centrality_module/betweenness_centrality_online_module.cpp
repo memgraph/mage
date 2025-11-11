@@ -137,7 +137,7 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
 
       // Check if online update can be used
       if (created_nodes.size() == 0 && deleted_nodes.size() == 0) {  // Edge update
-        // Get edges as before before the update
+        // Get edges as before the update
         std::vector<std::pair<std::uint64_t, std::uint64_t>> prior_edges_ids;
         for (const auto edge_inner_ids : graph->Edges()) {
           const std::pair<std::uint64_t, std::uint64_t> edge{graph->GetMemgraphNodeId(edge_inner_ids.from),

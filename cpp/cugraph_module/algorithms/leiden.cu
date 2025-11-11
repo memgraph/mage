@@ -48,7 +48,7 @@ void InsertLeidenRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory
 void LeidenProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *memory) {
   try {
     auto max_iterations = mgp::value_get_int(mgp::list_at(args, 0));
-    auto resulution = mgp::value_get_double(mgp::list_at(args, 1));
+    auto resolution = mgp::value_get_double(mgp::list_at(args, 1));
 
     auto mg_graph = mg_utility::GetGraphView(graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
     if (mg_graph->Empty()) return;
@@ -66,7 +66,7 @@ void LeidenProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory
     cu_graph_view.prop.directed = false;
 
     rmm::device_uvector<vertex_t> clustering_result(n_vertices, stream);
-    cugraph::leiden<vertex_t, edge_t, weight_t>(handle, cu_graph_view, clustering_result.data(), max_iterations, resulution);
+    cugraph::leiden<vertex_t, edge_t, weight_t>(handle, cu_graph_view, clustering_result.data(), max_iterations, resolution);
 
     for (vertex_t node_id = 0; node_id < clustering_result.size(); ++node_id) {
       auto partition = clustering_result.element(node_id, stream);

@@ -181,7 +181,7 @@ double parallelLouvianMethodEarlyTerminate(graph *G, long *C, int nThreads, doub
             //totalUniqueComm += numUniqueClusters;
 
             if((numItrs > 1) && (targetCommAss[i] == pastCommAss[i]) && (targetCommAss[i]==currCommAss[i]) ){
-                verT[i] = true; //Commuity assignment has not changed
+                verT[i] = true; //Community assignment has not changed
                 __sync_fetch_and_add(&termNodes, 1); //Update the number of terminated nodes
             }
 

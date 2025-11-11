@@ -119,7 +119,7 @@ std::set<uint64_t> GetNeighbors(std::unordered_map<uint64_t, std::set<uint64_t>>
 
 
 /*
-Calculates similiraty between pairs of nodes given by src_nodes and dst_nodes.
+Calculates similarity between pairs of nodes given by src_nodes and dst_nodes.
 */
 std::vector<std::tuple<mgp::Node, mgp::Node, double>> CalculateSimilarityPairwise(const mgp::List &src_nodes, const mgp::List &dst_nodes, node_similarity_util::Similarity similarity_mode, const std::string &property = "") {
     if (src_nodes.Size() != dst_nodes.Size()) {

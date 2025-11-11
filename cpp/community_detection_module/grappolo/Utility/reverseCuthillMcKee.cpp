@@ -97,7 +97,7 @@ void algoReverseCuthillMcKee(graph *G, long *pOrder, int nThreads )
 
 
     //The Queue Data Structure for the Dominating Set:
-    //The Queues are important for synchornizing the concurrency:
+    //The Queues are important for synchronizing the concurrency:
     //Have two queues - read from one, write into another
     // at the end, swap the two.
     long *Q    = (long *) malloc (NV * sizeof(long)); assert(Q != 0);
@@ -303,7 +303,7 @@ void algoReverseCuthillMcKeeStrict( graph *G, long *pOrder, int nThreads )
 
 
     //The Queue Data Structure for the Dominating Set:
-    //The Queues are important for synchornizing the concurrency:
+    //The Queues are important for synchronizing the concurrency:
     //Have two queues - read from one, write into another
     // at the end, swap the two.
     long *Q    = (long *) malloc (NV * sizeof(long)); assert(Q != 0);

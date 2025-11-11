@@ -34,7 +34,7 @@ def chain_population(graph):
     return population
 
 
-def test_convergance_callback(graph, chain_population):
+def test_convergence_callback(graph, chain_population):
     conv_callback = ConvergenceCallback()
     params = {
         Parameter.ERROR: ConflictError(),

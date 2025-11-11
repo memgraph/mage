@@ -27,7 +27,7 @@ directly manipulated in the procedure call. The whole point of this library is
 to hide that complexity as much as possible.
 
 Memgraph Rust Query Modules API uses
-[CStr](https://doc.rust-lang.org/std/ffi/struct.CStr.html) (`&CStr`) becuase
+[CStr](https://doc.rust-lang.org/std/ffi/struct.CStr.html) (`&CStr`) because
 that's the most compatible type between Rust and Memgraph engine. [Rust
 String](https://doc.rust-lang.org/std/string/struct.String.html) can validly
 contain a null-byte in the middle of the string (0 is a valid Unicode
