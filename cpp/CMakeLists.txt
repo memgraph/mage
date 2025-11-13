@@ -41,26 +41,16 @@ include(ExternalProject)
 include(cugraph)
 
 # Install testing dependencies (gtest)
-set(GTEST_ROOT ${PROJECT_BINARY_DIR}/gtest)
-ExternalProject_Add(gtest-proj
-  PREFIX ${GTEST_ROOT}
-  INSTALL_DIR ${GTEST_ROOT}
+FetchContent_Declare(googletest
   GIT_REPOSITORY https://github.com/google/googletest.git
   GIT_TAG v1.16.0
-  CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
-  "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
-  "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
-  "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
-set(GTEST_INCLUDE_DIR ${GTEST_ROOT}/include)
-set(GTEST_LIBRARY_PATH ${GTEST_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
-set(GTEST_DEBUG_LIBRARY_PATH ${GTEST_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtestd.a)
-add_library(mage_gtest STATIC IMPORTED)
-set_target_properties(mage_gtest PROPERTIES
-  IMPORTED_LOCATION "${GTEST_LIBRARY_PATH}"
-  IMPORTED_LOCATION_DEBUG "${GTEST_DEBUG_LIBRARY_PATH}"
-  INTERFACE_LINK_LIBRARIES "${CMAKE_THREAD_LIBS_INIT}")
-include_directories("${GTEST_INCLUDE_DIR}")
-add_dependencies(mage_gtest gtest-proj)
+)
+# For Windows: Prevent overriding the parent project's compiler/linker settings
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+
+# Create an alias for consistency with existing code
+add_library(mage_gtest ALIAS gtest)
 
 # Add OpenMP compiling option
 find_package(OpenMP)
