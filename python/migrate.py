@@ -10,12 +10,15 @@ from decimal import Decimal
 from typing import Any, Dict, List
 
 import boto3
+from bson import ObjectId, Decimal128, Binary
+from bson.timestamp import Timestamp as BsonTimestamp
 import duckdb as duckDB
 import mgp
 import mysql.connector as mysql_connector
 import oracledb
 import psycopg2
 import pyarrow.flight as flight
+from pymongo import MongoClient
 import pyodbc
 import requests
 from gqlalchemy import Memgraph
@@ -919,6 +922,100 @@ def cleanup_migrate_servicenow():
 mgp.add_batch_read_proc(servicenow, init_migrate_servicenow, cleanup_migrate_servicenow)
 
 
+mongodb_dict = {}
+
+
+def init_migrate_mongodb(
+    collection_name: str,  # 1) collection
+    find_query: mgp.Map,  # 2) filter as MAP (find only)
+    query_config: mgp.Map,  # 3) query config (NO collection here)
+    driver_config: mgp.Map,  # 4) driver config (unchanged)
+    config_path: str = "",  # optional, merged into BOTH configs
+):
+    """
+    Prepare MongoDB cursor for batch streaming.
+    - collection_name: target collection (or view) within the database
+    - find_query: MAP used as the filter for find()
+    - query_config: { projection?, sort?, limit?, batch_size? }
+    - driver_config: { database, uri? OR host?, port?, username?, password?, auth_source?, tls?, replica_set? }
+    - config_path: optional file path merged into BOTH configs via _combine_config
+    """
+    global mongodb_dict
+    thread_id = threading.get_native_id()
+    if thread_id not in mongodb_dict:
+        mongodb_dict[thread_id] = {}
+
+    # Merge external config file, if provided, into BOTH maps
+    qcfg = dict(query_config)
+    dcfg = dict(driver_config)
+    if len(config_path) > 0:
+        qcfg = _combine_config(config=qcfg, config_path=config_path)
+        dcfg = _combine_config(config=dcfg, config_path=config_path)
+
+    # Filter is already a map
+    q_ast = dict(find_query) if find_query is not None else {}
+
+    # database lives in query_config
+    database = dcfg.get(Constants.DATABASE)
+    if not database:
+        raise mgp.Error("query_config must include 'database'.")
+
+    # Open client & cursor
+    client = _get_mongo_client(dcfg)
+    db = client[database]
+    cursor = _start_mongo_cursor(db, collection_name, q_ast, qcfg)
+
+    # Stash per-thread
+    mongodb_dict[thread_id][Constants.DRIVER] = client
+    mongodb_dict[thread_id][Constants.SESSION] = db
+    mongodb_dict[thread_id][Constants.RESULT] = cursor
+
+
+def mongodb(
+    collection_name: str,
+    find_query: mgp.Map,
+    query_config: mgp.Map,
+    driver_config: mgp.Map,
+    config_path: str = "",
+) -> mgp.Record(row=mgp.Map):
+    """Stream up to BATCH_SIZE documents as rows (per call)."""
+    global mongodb_dict
+    thread_id = threading.get_native_id()
+    cursor = mongodb_dict[thread_id][Constants.RESULT]
+
+    batch = []
+    for doc in cursor:
+        batch.append(mgp.Record(row=_mongo_to_primitive(doc)))
+        if len(batch) >= Constants.BATCH_SIZE:
+            break
+    return batch
+
+
+def cleanup_migrate_mongodb():
+    global mongodb_dict
+    thread_id = threading.get_native_id()
+
+    cursor = mongodb_dict[thread_id].get(Constants.RESULT)
+    if cursor:
+        try:
+            cursor.close()
+        except Exception:
+            pass
+
+    client = mongodb_dict[thread_id].get(Constants.DRIVER)
+    if client:
+        try:
+            client.close()
+        except Exception:
+            pass
+
+    mongodb_dict.pop(thread_id, None)
+
+
+# Register as batch read proc inside the "migrate" module
+mgp.add_batch_read_proc(mongodb, init_migrate_mongodb, cleanup_migrate_mongodb)
+
+
 def _formulate_cypher_query(label_or_rel_or_query: str) -> str:
     words = label_or_rel_or_query.split()
     if len(words) > 1:
@@ -1096,3 +1193,91 @@ def _build_neo4j_uri(config: mgp.Map) -> str:
     port = config.get(Constants.PORT, 7687)
     uri_scheme = config.get(Constants.URI_SCHEME, "bolt")
     return f"{uri_scheme}://{host}:{port}"
+
+
+def _mongo_to_primitive(value):
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+    if isinstance(value, ObjectId):
+        return str(value)
+    if isinstance(value, Decimal128):
+        return str(value)
+    if isinstance(value, (bytes, bytearray, Binary)):
+        return value.hex() if hasattr(value, "hex") else bytes(value).hex()
+    if hasattr(value, "isoformat"):
+        try:
+            return value.isoformat()
+        except Exception:
+            pass
+    if isinstance(value, BsonTimestamp):
+        return {"ts_time": value.time, "ts_inc": value.inc}
+    if isinstance(value, dict):
+        return {str(k): _mongo_to_primitive(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_mongo_to_primitive(v) for v in value]
+    return str(value)
+
+
+def _get_mongo_client(driver_cfg: dict) -> MongoClient:
+    uri = driver_cfg.get("uri")
+    if uri:
+        return MongoClient(uri)
+
+    kwargs = {}
+    if Constants.USERNAME in driver_cfg:
+        kwargs[Constants.USERNAME] = driver_cfg.get(Constants.USERNAME)
+    if Constants.PASSWORD in driver_cfg:
+        kwargs[Constants.PASSWORD] = driver_cfg.get(Constants.PASSWORD)
+    if "auth_source" in driver_cfg:
+        kwargs["authSource"] = driver_cfg.get("auth_source")
+    if "tls" in driver_cfg:
+        kwargs["tls"] = bool(driver_cfg.get("tls"))
+    if "replica_set" in driver_cfg:
+        kwargs["replicaSet"] = driver_cfg.get("replica_set")
+
+    host = driver_cfg.get(Constants.HOST, "localhost")
+    port = int(driver_cfg.get(Constants.PORT, 27017))
+    return MongoClient(host=host, port=port, **kwargs)
+
+
+def _start_mongo_cursor(db, collection: str, q_ast: dict, qcfg: dict):
+    """
+    Map-only => always find(). Optional projection/sort/limit/batch_size from qcfg.
+    """
+    coll = db[collection]
+
+    # Normalize options
+    projection = dict(qcfg.get("projection")) if qcfg.get("projection") else None
+    limit_val = qcfg.get("limit")
+    try:
+        limit_val = int(limit_val) if limit_val is not None else None
+    except Exception:
+        raise mgp.Error(f"Invalid 'limit' value: {limit_val}")
+
+    batch_size_val = qcfg.get("batch_size")
+    try:
+        batch_size_val = int(batch_size_val) if batch_size_val is not None else None
+    except Exception:
+        raise mgp.Error(f"Invalid 'batch_size' value: {batch_size_val}")
+
+    sort_spec = qcfg.get("sort")  # expected like: [["age", -1], ["name", 1]]
+    if sort_spec is not None:
+        # Coerce to list of (field, dir) tuples with int dir
+        try:
+            sort_pairs = [(str(f), int(d)) for f, d in list(sort_spec)]
+        except Exception:
+            raise mgp.Error(f"Invalid 'sort' value: {sort_spec}")
+    else:
+        sort_pairs = None
+
+    # Build cursor without None-valued args
+    cursor = coll.find(filter=q_ast or {}, projection=projection)
+
+    if sort_pairs:
+        cursor = cursor.sort(sort_pairs)
+    if limit_val is not None:
+        cursor = cursor.limit(limit_val)
+    if batch_size_val is not None:
+        cursor = cursor.batch_size(batch_size_val)
+
+    return cursor
