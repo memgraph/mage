@@ -1,7 +1,6 @@
 name: Post-Release Updates
 
 on:
-  push:
   workflow_dispatch:
     inputs:
       version:
@@ -18,7 +17,7 @@ on:
 run-name: Post-Release Updates
 
 env:
-  VERSION: ${{ inputs.version || '3.7.0' }}
+  VERSION: ${{ inputs.version }}
 
 jobs:
   PostReleaseUpdates:
