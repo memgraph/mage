@@ -26,6 +26,11 @@ on:
         description: "Use RC from 'mage-test/' (cannot be used for official release)"
         default: false
         type: boolean
+      post_release_updates:
+        description: "Post-release updates to be run after promotion"
+        required: false
+        type: boolean
+        default: true
 
 env:
   s3_region: eu-west-1
@@ -229,3 +234,10 @@ jobs:
             echo "Skipping deletion for arm64: image not promoted."
           fi
           
+  PostReleaseUpdates:
+    needs: PromoteDocker
+    if: inputs.post_release_updates == true
+    runs-on: ubuntu-latest
+    uses: ./.github/workflows/post-release.yml
+    with:
+      version: ${{ needs.PromoteDocker.outputs.mage_version }}
