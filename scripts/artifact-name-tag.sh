@@ -12,6 +12,7 @@ CUDA=$7
 # remove patch version if it's 0
 if [[ $SHORTEN_TAG == "true" ]]; then
     MEMGRAPH_VERSION=${MEMGRAPH_VERSION%%-*}
+    MAGE_VERSION=${MAGE_VERSION%%-*}
     memgraph_patch_version=${MEMGRAPH_VERSION##*.}
     mage_patch_version=${MAGE_VERSION##*.}
     if [[ "$memgraph_patch_version" == "0" ]]; then
