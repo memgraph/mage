@@ -236,8 +236,7 @@ jobs:
           
   PostReleaseUpdates:
     needs: PromoteDocker
-    if: inputs.post_release_updates == true
-    runs-on: ubuntu-latest
+    if: ${{ inputs.post_release_updates == 'true' }}
     uses: ./.github/workflows/post-release.yml
     with:
-      version: ${{ needs.PromoteDocker.outputs.mage_version }}
+      version: ${{ inputs.mage_version }}

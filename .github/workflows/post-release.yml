@@ -18,7 +18,7 @@ on:
 run-name: Post-Release Updates for {{ inputs.version }}
 
 env:
-  VERSION: ${{ inputs.version }}
+  VERSION: ${{ inputs.version || '3.7.0' }}
 
 jobs:
   PostReleaseUpdates:
