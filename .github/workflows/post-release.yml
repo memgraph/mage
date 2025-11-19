@@ -15,7 +15,7 @@ on:
         description: "Version to post-release updates for (X.Y.Z)"
         required: true
 
-run-name: Post-Release Updates for {{ inputs.version }}
+run-name: Post-Release Updates
 
 env:
   VERSION: ${{ inputs.version || '3.7.0' }}
@@ -36,11 +36,11 @@ jobs:
         run: |
           cd cpp/memgraph
           git fetch origin
-          git checkout "v${{ inputs.version }}"
+          git checkout "v${VERSION}"
 
       - name: Update Dockerfile
         run: |
-          sed -i "s/ARG MG_VERSION=.*/ARG MG_VERSION=${{ env.VERSION }}/" Dockerfile.cugraph
+          sed -i "s/ARG MG_VERSION=.*/ARG MG_VERSION=${VERSION}/" Dockerfile.cugraph
       
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
