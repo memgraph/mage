@@ -45,6 +45,7 @@ chmod +x cyclonedx
   --output-format json \
   --output-file sbom/mage-sbom.json
 echo "Generated SBOM file: sbom/mage-sbom.json"
+rm sbom/memgraph-build-sbom.json
 
 python3 -m venv sbom/env
 source sbom/env/bin/activate
