@@ -51,11 +51,5 @@ python3 -m venv sbom/env
 source sbom/env/bin/activate
 pip install rich==13.9.4
 
-# temporary hack until branch sbom is merged
-cd cpp/memgraph
-git fetch origin sbom
-git checkout sbom
-cd ../..
-
 python3 cpp/memgraph/tools/sbom/sbom-formatter.py sbom/mage-sbom.json
 echo "Generated SBOM file: sbom/mage-sbom.txt"

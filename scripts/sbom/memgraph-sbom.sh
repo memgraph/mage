@@ -18,10 +18,6 @@ function cleanup() {
 
 trap cleanup ERR EXIT
 
-# temporary hack until branch sbom is merged
-git fetch origin sbom
-git checkout sbom
-
 python3 -m venv env
 source env/bin/activate
 pip install conan
