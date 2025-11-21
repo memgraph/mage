@@ -41,7 +41,7 @@ chmod +x cyclonedx
 
 ./cyclonedx merge --input-files \
   sbom/docker-sbom.json \
-  sbom/memgraph-sbom.json \
+  sbom/memgraph-build-sbom.json \
   --output-format json \
   --output-file sbom/mage-sbom.json
 echo "Generated SBOM file: sbom/mage-sbom.json"
