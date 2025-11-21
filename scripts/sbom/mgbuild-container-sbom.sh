@@ -1,0 +1,12 @@
+#!/bin/bash
+# This script will build the SBOM within the mgbuild container and copy it back
+# to the host machine. Assumes that the container is already running.
+
+set -euo pipefail
+
+CONTAINER_NAME=mgbuild
+
+docker exec -i -u mg $CONTAINER_NAME bash -c "cd /home/mg/mage && ./scripts/sbom/memgraph-sbom.sh"
+
+mkdir -p sbom
+docker cp $CONTAINER_NAME:/home/mg/mage/cpp/memgraph/memgraph-build-sbom.json sbom/

@@ -63,6 +63,7 @@ jobs:
       push_to_s3: ${{ inputs.push_to_s3 }}
       malloc: ${{ inputs.malloc }}
       run_smoke_tests: ${{ inputs.run_smoke_tests }}
+      generate_sbom: ${{ inputs.mage_build_arch == 'amd64' && inputs.mage_build_type == 'Release' }}
     secrets: inherit
 
   # New matrix build job, runs only when matrix_build is true
@@ -97,4 +98,5 @@ jobs:
       push_to_s3: ${{ inputs.push_to_s3 }}
       malloc: ${{ matrix.malloc }}
       run_smoke_tests: ${{ inputs.run_smoke_tests }}
+      generate_sbom: ${{ matrix.build_arch == 'amd64' && matrix.build_type == 'Release' }}
     secrets: inherit

@@ -75,6 +75,10 @@ on:
         description: "Build deb package (true|false|default)"  
         # default is build only for Release/RelWithDebInfo + amd64/arm64 (other combinations are not actually different)
         default: default
+      generate_sbom:
+        type: boolean
+        description: "Generate SBOM"
+        default: false
 
 env:
   OS: "${{ inputs.arch == 'arm64' && 'ubuntu-24.04-aarch64' || 'ubuntu-24.04' }}${{ inputs.malloc && '-malloc' || '' }}${{ inputs.mage_build_type == 'RelWithDebInfo' && '-relwithdebinfo' || '' }}"
@@ -96,6 +100,7 @@ env:
   MEMGRAPH_ENTERPRISE_LICENSE: ${{ secrets.MEMGRAPH_ENTERPRISE_LICENSE }}
   MEMGRAPH_ORGANIZATION_NAME: ${{ secrets.MEMGRAPH_ORGANIZATION_NAME }}
   MEMGRAPH_DOWNLOAD_LINK: "${{ inputs.memgraph_download_link }}"
+  GENERATE_SBOM: "${{ inputs.generate_sbom }}"
 
 jobs:
   BuildAndPush:
@@ -273,6 +278,11 @@ jobs:
             --cuda $CUDA \
             --arch $ARCH
 
+      - name: Generate SBOM
+        if: ${{ inputs.generate_sbom == true }}
+        run: |
+          ./scripts/container-sbom.sh $CONTAINER_NAME
+
       - name: Remove mgbbuild container
         if: always()
         run: |
@@ -298,6 +308,18 @@ jobs:
 
           # print the image size in both SI and IEC units
           ./scripts/print_image_size.sh ${DOCKER_REPOSITORY_NAME} $IMAGE_TAG
+
+      - name: Generate SBOM
+        if: ${{ inputs.generate_sbom == true }}
+        run: |
+          ./scripts/sbom/mage-sbom.sh "${DOCKER_REPOSITORY_NAME}:$IMAGE_TAG"
+      
+      - name: Upload SBOM to GitHub
+        if: ${{ inputs.generate_sbom == true }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: "mage-sbom"
+          path: "sbom/"
 
       - name: Start container for e2e tests
         if: ${{ inputs.run_tests == true }}
