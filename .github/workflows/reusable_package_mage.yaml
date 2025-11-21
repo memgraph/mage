@@ -281,7 +281,7 @@ jobs:
       - name: Generate SBOM
         if: ${{ inputs.generate_sbom == true }}
         run: |
-          ./scripts/container-sbom.sh $CONTAINER_NAME
+          ./scripts/sbom/mgbuild-container-sbom.sh $CONTAINER_NAME
 
       - name: Remove mgbbuild container
         if: always()
