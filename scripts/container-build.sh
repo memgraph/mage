@@ -41,6 +41,14 @@ exit_handler() {
 
 trap 'exit_handler $?' ERR EXIT
 
+# get conan cache directory
+if [[ "$ARCH" == "arm64" ]]; then
+    CONAN_CACHE_DIR="$HOME/.conan-ubuntu24.04-arm"
+else
+    CONAN_CACHE_DIR="$HOME/.conan-ubuntu24.04-amd"
+fi
+
+echo -e "${GREEN_BOLD}Using conan cache directory: $CONAN_CACHE_DIR${RESET}"
 
 if [[ "$ARCH" == "arm64" ]]; then
     MGBUILD_IMAGE="memgraph/mgbuild:v7_ubuntu-24.04-arm"
@@ -52,7 +60,7 @@ echo -e "${GREEN_BOLD}Building MAGE - build type: $BUILD_TYPE, arch: $ARCH${RESE
 echo -e "${GREEN_BOLD}Using base image: $MGBUILD_IMAGE${RESET}"
 
 echo -e "${GREEN_BOLD}Starting container${RESET}"
-docker run -d --rm --name $CONTAINER_NAME $MGBUILD_IMAGE
+docker run -d --rm -v $CONAN_CACHE_DIR:/home/mg/.conan2 --name $CONTAINER_NAME $MGBUILD_IMAGE
 
 echo -e "${GREEN_BOLD}Copying repo into container${RESET}"
 docker exec -i -u mg $CONTAINER_NAME mkdir -p /home/mg/mage
