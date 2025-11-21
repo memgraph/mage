@@ -6,6 +6,8 @@ set -euo pipefail
 
 CONTAINER_NAME=mgbuild
 
+docker exec -i -u root $CONTAINER_NAME bash -c "chmod -R a+rwX /home/mg/.conan2 2>/dev/null || true"
+
 docker exec -i -u mg $CONTAINER_NAME bash -c "cd /home/mg/mage && ./scripts/sbom/memgraph-sbom.sh"
 
 mkdir -p sbom
