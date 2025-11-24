@@ -22,7 +22,7 @@ python3 -m venv env
 source env/bin/activate
 pip install conan
 
-if [ ! -f "$HOME/.conan2/profiles/default" ]; then
+if [[ ! -f "$HOME/.conan2/profiles/default" ]]; then
   conan profile detect
 fi
 
