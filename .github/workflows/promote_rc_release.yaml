@@ -236,7 +236,7 @@ jobs:
           
   PostReleaseUpdates:
     needs: PromoteDocker
-    if: ${{ inputs.post_release_updates == 'true' }}
+    if: ${{ inputs.post_release_updates }}
     uses: ./.github/workflows/post-release.yml
     with:
       version: ${{ inputs.mage_version }}
