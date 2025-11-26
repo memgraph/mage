@@ -472,27 +472,7 @@ def post_message(msg: str) -> None:
         print(f"Response: {response.status_code}")
 
 
-def save_full_vulnerability_list(summary_list: List[list]) -> None:
-    """
-    Save full vulnerability list in a file for further processing.
-
-    Inputs
-    ======
-    summary_list: List[list]
-        A list containing vulnerability information for each CVE.
-    """
-
-    cves = []
-    for item in summary_list:
-        cves.extend(item)
-
-    table = format_slack_table(cves)
-
-    with open(f"{CVE_DIR}/full-cve-list.txt", "w") as f:
-        f.write(table)
-
-
-def main(arch: str, image_type: str) -> None:
+def main(arch: str, image_type: str, send_slack_message: bool) -> None:
     """
     Collect vulnerability results and send a Slack message.
 
@@ -512,7 +492,10 @@ def main(arch: str, image_type: str) -> None:
     trivy = parse_trivy_summary(ignore_list)
 
     msg = create_slack_message(arch, image_type, cbt, grype, trivy)
-    post_message(msg)
+    if send_slack_message:
+        post_message(msg)
+    else:
+        print(msg)
 
 
 if __name__ == "__main__":
@@ -520,6 +503,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("arch", type=str, default="amd64")
     parser.add_argument('image_type', type=str, choices=['memgraph', 'mage'], default='mage')
+    parser.add_argument("send_message", type=str, default="true")
     args = parser.parse_args()
 
-    main(args.arch, args.image_type)
+    main(args.arch, args.image_type, args.send_message == "true")
