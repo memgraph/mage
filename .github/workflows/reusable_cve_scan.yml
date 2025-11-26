@@ -202,6 +202,7 @@ jobs:
             --output-file "${{ env.CVE_DIR }}/combined_report.json"
           
           rm -v cyclonedx
+          source "${{ env.CVE_DIR }}/env/bin/activate"
           python3 scripts/format_cve_table.py "${{ env.CVE_DIR }}/combined_report.json"
 
       - name: Upload Combined Report Artifact
