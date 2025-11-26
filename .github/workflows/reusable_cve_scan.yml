@@ -26,7 +26,7 @@ on:
       run_cbt:
         type: boolean
         description: "Scan with CVE-bin-tool"
-        default: true
+        default: false
       send_slack_message:
         type: boolean
         description: "Send a Slack message"
@@ -107,29 +107,13 @@ jobs:
       - name: Scan with Trivy
         if: ${{ inputs.run_trivy }}
         run: |
-          "${{ env.CVE_DIR }}/trivy/trivy" image --scanners vuln --input "${{ env.CVE_DIR }}/image.tar" > "${{ env.CVE_DIR }}/trivy-summary.txt"
-          "${{ env.CVE_DIR }}/trivy/trivy" image --scanners vuln --input "${{ env.CVE_DIR }}/image.tar" -f json > "${{ env.CVE_DIR }}/trivy-summary.json"
+          "${{ env.CVE_DIR }}/trivy/trivy" image --scanners vuln --input "${{ env.CVE_DIR }}/image.tar" -f cyclonedx > "${{ env.CVE_DIR }}/trivy-summary.json"
         
-      - name: Upload Trivy Report Summary Artifact
-        if: ${{ inputs.run_trivy }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ inputs.image_type }}-${{ inputs.arch }}-trivy-summary
-          path: "${{ env.CVE_DIR }}/trivy-summary.txt"        
-
       - name: Scan with Grype
         if: ${{ inputs.run_grype }}
         run: |
-          "${{ env.CVE_DIR }}/grype/grype" "docker-archive:${{ env.CVE_DIR }}/image.tar" > "${{ env.CVE_DIR }}/grype-summary.txt"
-          "${{ env.CVE_DIR }}/grype/grype" "docker-archive:${{ env.CVE_DIR }}/image.tar" -o json > "${{ env.CVE_DIR }}/grype-summary.json"
+          "${{ env.CVE_DIR }}/grype/grype" "docker-archive:${{ env.CVE_DIR }}/image.tar" -o cyclonedx > "${{ env.CVE_DIR }}/grype-summary.json"
 
-      - name: Upload Grype Report Summary Artifact
-        if: ${{ inputs.run_grype }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ inputs.image_type }}-${{ inputs.arch }}-grype-summary
-          path: "${{ env.CVE_DIR }}/grype-summary.txt"
-          
       - name: Launch Docker Container
         if: ${{ inputs.run_cbt }}
         run: |
