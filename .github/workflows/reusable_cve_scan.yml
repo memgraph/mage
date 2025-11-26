@@ -35,6 +35,8 @@ on:
 
 env:
   ARCH: ${{ inputs.arch }}
+  IMAGE_URL: ${{ inputs.image_url }}
+  IMAGE_TYPE: ${{ inputs.image_type }}
 
 jobs:
   scan-image:
@@ -84,7 +86,7 @@ jobs:
 
       - name: Download Docker Image
         run: |
-          curl -L "${{ inputs.image_url }}" -o "${{ env.CVE_DIR }}/image.tar.gz"
+          curl -L "$IMAGE_URL" -o "${{ env.CVE_DIR }}/image.tar.gz"
 
       - name: Load into Docker
         if: ${{ inputs.run_cbt }}
@@ -190,7 +192,7 @@ jobs:
         env:
           COLUMNS: 200
         run: |
-          if [[ "${{ env.ARCH }}" == "amd64" ]]; then
+          if [[ "$ARCH" == "amd64" ]]; then
               CYCLONEDXURL="https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.29.1/cyclonedx-linux-x64"
           else
               CYCLONEDXURL="https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.29.1/cyclonedx-linux-arm64"
@@ -231,7 +233,7 @@ jobs:
         run: |
           if [[ -f "${{ env.CVE_DIR }}/combined_report.json" ]]; then
             source "${{ env.CVE_DIR }}/env/bin/activate"
-            python3 scripts/cve_message.py "${{ inputs.arch }}" "${{ inputs.image_type }}" "${{ env.SEND_MESSAGE }}"
+            python3 scripts/cve_message.py "$ARCH" "$IMAGE_TYPE" "${{ env.SEND_MESSAGE }}"
           else
             echo "No combined report found. Skipping Slack message"
           fi
