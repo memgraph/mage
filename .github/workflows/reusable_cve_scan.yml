@@ -204,6 +204,7 @@ jobs:
           rm -v cyclonedx
           source "${{ env.CVE_DIR }}/env/bin/activate"
           python3 scripts/format_cve_table.py "${{ env.CVE_DIR }}/combined_report.json"
+          cat "${{ env.CVE_DIR }}/combined_report.txt"
 
       - name: Upload Combined Report Artifact
         if: ${{ inputs.run_trivy || inputs.run_grype }}
@@ -213,6 +214,8 @@ jobs:
           path: |
             "${{ env.CVE_DIR }}/combined_report.json"
             "${{ env.CVE_DIR }}/combined_report.txt"
+            "${{ env.CVE_DIR }}/trivy-summary.json"
+            "${{ env.CVE_DIR }}/grype-summary.json"
 
       - name: Send Slack Message
         if: always()
