@@ -87,6 +87,7 @@ jobs:
           curl -L "${{ inputs.image_url }}" -o "${{ env.CVE_DIR }}/image.tar.gz"
 
       - name: Load into Docker
+        if: ${{ inputs.run_cbt }}
         run: |
           output="$(docker load -i '${{ env.CVE_DIR }}/image.tar.gz')"
 

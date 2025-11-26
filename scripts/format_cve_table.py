@@ -127,6 +127,16 @@ def format_cyclonedx_data(vulnerabilities, components):
                         "purl": component["purl"],
                     })
 
+    # deduplicate by package, version and vulnerabilityID
+    keep_inds = []
+    keys = []
+    for i, item in enumerate(out):
+        key = (item["package"], item["version"], item["vulnerabilityID"])
+        if key not in keys:
+            keys.append(key)
+            keep_inds.append(i)
+    out = [out[i] for i in keep_inds]
+
     # sort items by type, then package name
     out.sort(key=lambda x: (x["type"], x["package"]))
     return out
