@@ -117,7 +117,7 @@ jobs:
       - name: Scan with Grype
         if: ${{ inputs.run_grype }}
         run: |
-          "${{ env.CVE_DIR }}/grype/grype" "docker-archive:${{ env.CVE_DIR }}/image.tar" -o cyclonedx > "${{ env.CVE_DIR }}/grype-summary.json"
+          "${{ env.CVE_DIR }}/grype/grype" "docker-archive:${{ env.CVE_DIR }}/image.tar" -o cyclonedx-json > "${{ env.CVE_DIR }}/grype-summary.json"
 
       - name: Launch Docker Container
         if: ${{ inputs.run_cbt }}
