@@ -112,11 +112,13 @@ jobs:
       - name: Scan with Trivy
         if: ${{ inputs.run_trivy }}
         run: |
+          "${{ env.CVE_DIR }}/trivy/trivy" image --scanners vuln --input "${{ env.CVE_DIR }}/image.tar" > "${{ env.CVE_DIR }}/trivy-summary.txt"
           "${{ env.CVE_DIR }}/trivy/trivy" image --scanners vuln --input "${{ env.CVE_DIR }}/image.tar" -f cyclonedx > "${{ env.CVE_DIR }}/trivy-summary.json"
         
       - name: Scan with Grype
         if: ${{ inputs.run_grype }}
         run: |
+          "${{ env.CVE_DIR }}/grype/grype" "docker-archive:${{ env.CVE_DIR }}/image.tar" > "${{ env.CVE_DIR }}/grype-summary.txt"
           "${{ env.CVE_DIR }}/grype/grype" "docker-archive:${{ env.CVE_DIR }}/image.tar" -o cyclonedx-json > "${{ env.CVE_DIR }}/grype-summary.json"
 
       - name: Launch Docker Container
@@ -214,7 +216,9 @@ jobs:
           path: |
             ${{ env.CVE_DIR }}/combined_report.json
             ${{ env.CVE_DIR }}/combined_report.txt
+            ${{ env.CVE_DIR }}/trivy-summary.txt
             ${{ env.CVE_DIR }}/trivy-summary.json
+            ${{ env.CVE_DIR }}/grype-summary.txt
             ${{ env.CVE_DIR }}/grype-summary.json
 
       - name: Send Slack Message
