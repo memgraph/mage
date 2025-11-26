@@ -212,10 +212,10 @@ jobs:
         with:
           name: ${{ inputs.image_type }}-${{ inputs.arch }}-cve-report
           path: |
-            "${{ env.CVE_DIR }}/combined_report.json"
-            "${{ env.CVE_DIR }}/combined_report.txt"
-            "${{ env.CVE_DIR }}/trivy-summary.json"
-            "${{ env.CVE_DIR }}/grype-summary.json"
+            ${{ env.CVE_DIR }}/combined_report.json
+            ${{ env.CVE_DIR }}/combined_report.txt
+            ${{ env.CVE_DIR }}/trivy-summary.json
+            ${{ env.CVE_DIR }}/grype-summary.json
 
       - name: Send Slack Message
         if: always()
