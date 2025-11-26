@@ -187,6 +187,8 @@ jobs:
       # the JSON output from cve-bin-tool.
       - name: Combine Reports
         if: ${{ inputs.run_trivy || inputs.run_grype }}
+        env:
+          COLUMNS: 200
         run: |
           if [[ "${{ env.ARCH }}" == "amd64" ]]; then
               CYCLONEDXURL="https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.29.1/cyclonedx-linux-x64"
