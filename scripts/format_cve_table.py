@@ -55,14 +55,9 @@ def choose_severity(
         fallback_severity: Optional general severity to return when nothing else matches.
     """
     def normalize(entry: Mapping) -> Optional[tuple[str, str]]:
-        src = entry.get("source")
-        if not isinstance(src, Mapping):
-            return None
-        name = src.get("name")
-        severity = entry.get("severity")
-        if not isinstance(name, str) or not isinstance(severity, str):
-            return None
-        return name.lower(), severity.upper()
+        src = entry.get("source",{}).get("name","").lower()
+        severity = entry.get("severity","").upper()
+        return src, severity.upper()
 
     entries = [normalize(entry) for entry in vendor_ratings]
     entries = [entry for entry in entries if entry is not None]  # type: ignore[misc]
@@ -117,7 +112,8 @@ def format_cyclonedx_data(vulnerabilities, components):
     for cve in cves:
         for affect in cve["affects"]:
             for component in components:
-                if affect == component.get("purl",component.get("bom-ref")):
+                
+                if affect in [component.get("purl"),component.get("bom-ref")]:
                     out.append({
                         "type": component["type"],
                         "vulnerabilityID": cve["cve"],
@@ -126,6 +122,7 @@ def format_cyclonedx_data(vulnerabilities, components):
                         "version": component["version"],
                         "purl": component["purl"],
                     })
+
 
     # deduplicate by package, version and vulnerabilityID
     keep_inds = []
