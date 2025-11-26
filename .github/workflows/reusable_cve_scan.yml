@@ -26,11 +26,17 @@ on:
       run_cbt:
         type: boolean
         description: "Scan with CVE-bin-tool"
-        default: true
+        default: false
       send_slack_message:
         type: boolean
         description: "Send a Slack message"
         default: true
+
+
+env:
+  ARCH: ${{ inputs.arch }}
+  IMAGE_URL: ${{ inputs.image_url }}
+  IMAGE_TYPE: ${{ inputs.image_type }}
 
 jobs:
   scan-image:
@@ -80,9 +86,10 @@ jobs:
 
       - name: Download Docker Image
         run: |
-          curl -L "${{ inputs.image_url }}" -o "${{ env.CVE_DIR }}/image.tar.gz"
+          curl -L "$IMAGE_URL" -o "${{ env.CVE_DIR }}/image.tar.gz"
 
       - name: Load into Docker
+        if: ${{ inputs.run_cbt }}
         run: |
           output="$(docker load -i '${{ env.CVE_DIR }}/image.tar.gz')"
 
@@ -108,28 +115,14 @@ jobs:
         if: ${{ inputs.run_trivy }}
         run: |
           "${{ env.CVE_DIR }}/trivy/trivy" image --scanners vuln --input "${{ env.CVE_DIR }}/image.tar" > "${{ env.CVE_DIR }}/trivy-summary.txt"
-          "${{ env.CVE_DIR }}/trivy/trivy" image --scanners vuln --input "${{ env.CVE_DIR }}/image.tar" -f json > "${{ env.CVE_DIR }}/trivy-summary.json"
+          "${{ env.CVE_DIR }}/trivy/trivy" image --scanners vuln --input "${{ env.CVE_DIR }}/image.tar" -f cyclonedx > "${{ env.CVE_DIR }}/trivy-summary.json"
         
-      - name: Upload Trivy Report Summary Artifact
-        if: ${{ inputs.run_trivy }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ inputs.image_type }}-${{ inputs.arch }}-trivy-summary
-          path: "${{ env.CVE_DIR }}/trivy-summary.txt"        
-
       - name: Scan with Grype
         if: ${{ inputs.run_grype }}
         run: |
           "${{ env.CVE_DIR }}/grype/grype" "docker-archive:${{ env.CVE_DIR }}/image.tar" > "${{ env.CVE_DIR }}/grype-summary.txt"
-          "${{ env.CVE_DIR }}/grype/grype" "docker-archive:${{ env.CVE_DIR }}/image.tar" -o json > "${{ env.CVE_DIR }}/grype-summary.json"
+          "${{ env.CVE_DIR }}/grype/grype" "docker-archive:${{ env.CVE_DIR }}/image.tar" -o cyclonedx-json > "${{ env.CVE_DIR }}/grype-summary.json"
 
-      - name: Upload Grype Report Summary Artifact
-        if: ${{ inputs.run_grype }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ inputs.image_type }}-${{ inputs.arch }}-grype-summary
-          path: "${{ env.CVE_DIR }}/grype-summary.txt"
-          
       - name: Launch Docker Container
         if: ${{ inputs.run_cbt }}
         run: |
@@ -172,74 +165,78 @@ jobs:
 
       - name: Upload cve-bin-tool Binary Scan Artifact
         if: ${{ inputs.run_cbt }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: ${{ inputs.image_type }}-${{ inputs.arch }}-cve-bin-tool-memgraph-summary
           path: "${{ env.CVE_DIR }}/cve-bin-tool-memgraph-summary.json"
 
       - name: Upload cve-bin-tool Language Scan Artifact
         if: ${{ inputs.run_cbt  }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: ${{ inputs.image_type }}-${{ inputs.arch }}-cve-bin-tool-language-summary
           path: "${{ env.CVE_DIR }}/cve-bin-tool-lang-summary.json"
           
       - name: Upload cve-bin-tool APT Package Scan Artifact
         if: ${{ inputs.run_cbt }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: ${{ inputs.image_type }}-${{ inputs.arch }}-cve-bin-tool-apt-summary
           path: "${{ env.CVE_DIR }}/cve-bin-tool-apt-summary.json"
 
+      # TODO(matt): cve-bin-tool is pretty broken, so we will not use it at 
+      # least until the next minor version release, after which we can handle 
+      # the JSON output from cve-bin-tool.
       - name: Combine Reports
         if: ${{ inputs.run_trivy || inputs.run_grype }}
+        env:
+          COLUMNS: 200
         run: |
+          if [[ "$ARCH" == "amd64" ]]; then
+              CYCLONEDXURL="https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.29.1/cyclonedx-linux-x64"
+          else
+              CYCLONEDXURL="https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.29.1/cyclonedx-linux-arm64"
+          fi
+
+          curl -L -o cyclonedx "$CYCLONEDXURL"
+          chmod +x cyclonedx
+
+          ./cyclonedx merge --input-files \
+            "${{ env.CVE_DIR }}/trivy-summary.json" \
+            "${{ env.CVE_DIR }}/grype-summary.json" \
+            --output-format json \
+            --output-file "${{ env.CVE_DIR }}/combined_report.json"
+          
+          rm -v cyclonedx
           source "${{ env.CVE_DIR }}/env/bin/activate"
-          python3 scripts/combine_reports.py "${{ env.CVE_DIR }}/grype-summary.json" "${{ env.CVE_DIR }}/trivy-summary.json" 
+          python3 scripts/format_cve_table.py "${{ env.CVE_DIR }}/combined_report.json"
 
       - name: Upload Combined Report Artifact
         if: ${{ inputs.run_trivy || inputs.run_grype }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
-          name: ${{ inputs.image_type }}-${{ inputs.arch }}-combined-report
-          path: "${{ env.CVE_DIR }}/combined_report.txt"
+          name: ${{ inputs.image_type }}-${{ inputs.arch }}-cve-report
+          path: |
+            ${{ env.CVE_DIR }}/combined_report.json
+            ${{ env.CVE_DIR }}/combined_report.txt
+            ${{ env.CVE_DIR }}/trivy-summary.txt
+            ${{ env.CVE_DIR }}/trivy-summary.json
+            ${{ env.CVE_DIR }}/grype-summary.txt
+            ${{ env.CVE_DIR }}/grype-summary.json
 
       - name: Send Slack Message
-        if: ${{ inputs.send_slack_message && always() }}
+        if: always()
         id: slack-message
         env:
           INFRA_WEBHOOK_URL: ${{ secrets.INFRA_WEBHOOK_URL }}
+          SEND_MESSAGE: ${{ inputs.send_slack_message }}
         run: |
-          # Check if any summary files exist
-          files=(
-            trivy-summary.json
-            grype-summary.json
-            cve-bin-tool-memgraph-summary.json
-            cve-bin-tool-lang-summary.json
-            cve-bin-tool-apt-summary.json
-          )
-          
-          summary_files_exist=false
-          for file in "${files[@]}"; do
-            if [ -f "${{ env.CVE_DIR }}/$file" ]; then
-              summary_files_exist=true
-              break
-            fi
-          done
-
-          if [ "$summary_files_exist" = true ]; then
+          if [[ -f "${{ env.CVE_DIR }}/combined_report.json" ]]; then
             source "${{ env.CVE_DIR }}/env/bin/activate"
-            python3 scripts/cve_message.py "${{ inputs.arch }}" "${{ inputs.image_type }}"
+            python3 scripts/cve_message.py "$ARCH" "$IMAGE_TYPE" "${{ env.SEND_MESSAGE }}"
           else
-            echo "No summary files found. Skipping Slack message"
+            echo "No combined report found. Skipping Slack message"
           fi
-
-      - name: Upload Full CVE List artifact
-        if: ${{ steps.slack-message.outputs.success }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: full-cve-list-artifact
-          path: "${{ env.CVE_DIR }}/full-cve-list.txt"
 
       - name: Cleanup
         if: always()

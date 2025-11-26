@@ -31,11 +31,11 @@ on:
       run_cbt:
         type: boolean
         description: "Scan with CVE-bin-tool"
-        default: true
+        default: false
       send_slack_message:
         type: boolean
         description: "Send a Slack message"
-        default: true
+        default: false
 
 jobs:
   manual-cve-scan:

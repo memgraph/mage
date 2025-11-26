@@ -98,5 +98,5 @@ jobs:
       push_to_s3: ${{ inputs.push_to_s3 }}
       malloc: ${{ matrix.malloc }}
       run_smoke_tests: ${{ inputs.run_smoke_tests }}
-      generate_sbom: ${{ matrix.build_arch == 'amd64' && matrix.build_type == 'Release' }}
+      generate_sbom: ${{ matrix.build_arch == 'amd64' && matrix.build_type == 'Release' && !matrix.malloc }}
     secrets: inherit
