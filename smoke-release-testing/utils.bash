@@ -47,6 +47,7 @@ check_dockerhub_images
 MEMGRAPH_GENERAL_FLAGS="--telemetry-enabled=false --log-level=TRACE --also-log-to-stderr"
 MEMGRAPH_ENTERPRISE_DOCKER_ENVS="-e MEMGRAPH_ENTERPRISE_LICENSE=$MEMGRAPH_ENTERPRISE_LICENSE -e MEMGRAPH_ORGANIZATION_NAME=$MEMGRAPH_ORGANIZATION_NAME"
 MEMGRAPH_DOCKER_MOUNT_VOLUME_FLAGS="-v mg_lib:/var/lib/memgraph"
+MEMGRAPH_DOCKER_LOCAL_DATA_MOUNT_VOLUME_FLAGS="-v $SCRIPT_DIR/data:/data"
 MEMGRAPH_FULL_PROPERTIES_SET="{id:0, name:\"tester\", age:37, height:175.0, merried:true}"
 MEMGRAPH_PROPERTY_COMPRESSION_FLAGS="--storage-property-store-compression-enabled=true --storage-property-store-compression-level=mid"
 MEMGRAPH_HA_COORDINATOR_FLAGS="--coordinator-port=10001 --bolt-port=7687 --coordinator-id=1 --experimental-enabled=high-availability --coordinator-hostname=localhost --management-port=11001"
@@ -219,6 +220,7 @@ pull_docker_images() {
 run_memgraph_last_dockerhub_container() {
   if [ ! "$(docker ps -q -f name=memgraph_last_data)" ]; then
     docker run -d --rm -p $MEMGRAPH_LAST_DATA_BOLT_PORT:7687 -p $MEMGRAPH_LAST_MONITORING_PORT:9091 \
+      $MEMGRAPH_DOCKER_LOCAL_DATA_MOUNT_VOLUME_FLAGS \
       --name memgraph_last_data \
       $MEMGRAPH_LAST_DOCKERHUB_IMAGE $MEMGRAPH_GENERAL_FLAGS
   fi
@@ -227,6 +229,7 @@ run_memgraph_last_dockerhub_container() {
 run_memgraph_next_dockerhub_container() {
   if [ ! "$(docker ps -q -f name=memgraph_next_data)" ]; then
     docker run -d --rm -p $MEMGRAPH_NEXT_DATA_BOLT_PORT:7687 -p $MEMGRAPH_NEXT_MONITORING_PORT:9091 \
+      $MEMGRAPH_DOCKER_LOCAL_DATA_MOUNT_VOLUME_FLAGS \
       --name memgraph_next_data \
       $MEMGRAPH_ENTERPRISE_DOCKER_ENVS $MEMGRAPH_NEXT_DOCKERHUB_IMAGE $MEMGRAPH_GENERAL_FLAGS \
       $MEMGRAPH_PROPERTY_COMPRESSION_FLAGS $MEMGRAPH_SHOW_SCHEMA_INFO_FLAG
