@@ -7,4 +7,5 @@ test_load_xyz() {
   # Added in v3.7.
   # TODO(gitbuda): Create test files and mount them when starting containers.
   run_next "LOAD PARQUET FROM '/data/nodes.parquet' AS row CREATE (n:Node {id: row.id});"
+  run_next "MATCH (n) RETURN n;"
 }
