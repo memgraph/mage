@@ -26,14 +26,16 @@ if [[ ! -f "$HOME/.conan2/profiles/default" ]]; then
   conan profile detect
 fi
 
+conan config install conan_config
+
 # This is not ideal, because it means that we need to have the cache populated with all the dependencies
 # or build the dependencies before generating the SBOM.
 BUILD_TYPE=Release
 MG_TOOLCHAIN_ROOT=/opt/toolchain-v7 conan install \
   . \
   --build=missing \
-  -pr:h ./memgraph_template_profile \
-  -pr:b ./memgraph_build_profile \
+  -pr:h memgraph_template_profile \
+  -pr:b memgraph_build_profile \
   -s build_type="$BUILD_TYPE"
 
 ./tools/sbom/build-sbom.sh
