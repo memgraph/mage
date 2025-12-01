@@ -26,6 +26,8 @@ on:
         description: "Branch to start build from"
         default: ''
 
+run-name: Build Release Candidate
+
 jobs:
   ParseInputs:
     name: Parse Inputs

@@ -24,6 +24,8 @@ on:
         required: false
         default: true
 
+run-name: Daily Build and Test
+
 jobs:
   DailyBuildVariables:
     runs-on: ubuntu-latest
@@ -119,7 +121,7 @@ jobs:
       malloc: ${{ matrix.malloc }}
       cuda: ${{ matrix.cuda }}
       run_tests: true
-      generate_sbom: ${{ matrix.build_arch == 'amd64' && matrix.build_type == 'Release' }}
+      generate_sbom: ${{ matrix.build_arch == 'amd64' && matrix.build_type == 'Release' && !matrix.malloc }}
     secrets: inherit
 
 
