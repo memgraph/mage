@@ -48,6 +48,7 @@ test_or_expression_for_labels
 test_shortest_paths
 test_text_search
 test_durability
+test_load_parquet
 
 # NOTE: If the testing container is NOT restarted (each test having their own
 # container), all the auth test have to come after all tests that assume there
