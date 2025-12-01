@@ -280,6 +280,8 @@ jobs:
 
       - name: Generate SBOM
         if: ${{ inputs.generate_sbom == true }}
+        env:
+          CONAN_REMOTE: "${{ secrets.CONAN_REMOTE }}"
         run: |
           ./scripts/sbom/mgbuild-container-sbom.sh $CONTAINER_NAME
 
