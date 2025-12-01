@@ -24,6 +24,8 @@ on:
         required: false
         default: true
 
+run-name: Daily Build and Test
+
 jobs:
   DailyBuildVariables:
     runs-on: ubuntu-latest
