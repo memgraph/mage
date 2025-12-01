@@ -23,29 +23,17 @@ on:
         description: "Memgraph package download link. Leave empty to use the official download link."
         default: ""
       shorten_tag:
-        type: string
+        type: boolean
         description: "Make the final tag as short as possible, shortest format is X.Y-memgraph-X.Y"
         default: true
-      force_release:
-        type: string
-        description: "Overwrite existing image on dockerhub"
-        default: true
       push_to_github:
-        type: string
-        description: "Push the image to GitHub?"
-        default: false
-      push_to_dockerhub:
-        type: string
-        description: "Push the image to DockerHub?"
+        type: boolean
+        description: "Push the image, DEB and tar.gz to GitHub?"
         default: false
       push_to_s3:
-        type: string
+        type: boolean
         description: "Push the image to S3?"
         default: false
-      s3_dest_bucket:
-        type: string
-        description: "Destination bucket in S3"
-        default: "deps.memgraph.io"
       s3_dest_dir:
         type: string
         description: "Destination directory in S3 bucket"
@@ -66,14 +54,57 @@ on:
         type: boolean
         description: "Print the output URL at the end of the workflow"
         default: false
+      cuda:
+        type: boolean
+        description: "Build the image for CUDA"
+        default: false
+      run_tests:
+        type: boolean
+        description: "Run tests"
+        default: false
+      memgraph_ref:
+        type: string
+        description: "Memgraph submodule branch to build query modules from"
+        default: 'master'
+      memgraph_ref_update:
+        type: boolean
+        description: "Update Memgraph submodule to the latest commit"
+        default: true
+      package_deb:
+        type: string
+        description: "Build deb package (true|false|default)"  
+        # default is build only for Release/RelWithDebInfo + amd64/arm64 (other combinations are not actually different)
+        default: default
+      generate_sbom:
+        type: boolean
+        description: "Generate SBOM"
+        default: false
 
 env:
-  OS: "${{ inputs.arch == 'arm64' && 'ubuntu-24.04-aarch64' || 'ubuntu-24.04' }}${{ inputs.malloc && '-malloc' || '' }}"
+  OS: "${{ inputs.arch == 'arm64' && 'ubuntu-24.04-aarch64' || 'ubuntu-24.04' }}${{ inputs.malloc && '-malloc' || '' }}${{ inputs.mage_build_type == 'RelWithDebInfo' && '-relwithdebinfo' || '' }}"
+  ARCH: "${{ inputs.arch }}"
   DOCKER_REPOSITORY_NAME: memgraph/memgraph-mage
+  BUILD_TYPE: "${{ inputs.mage_build_type }}"
+  MALLOC: "${{ inputs.malloc }}"
+  CUDA: "${{ inputs.cuda }}"
+  MAGE_VERSION: "${{ inputs.mage_version }}"
+  MEMGRAPH_VERSION: "${{ inputs.memgraph_version }}"
+  CONTAINER_NAME: "mgbuild"
+  MAGE_CONTAINER: "mage"
+  MEMGRAPH_PORT: 7687
+  NEO4J_PORT: 7688
+  NEO4J_CONTAINER: "neo4j_test"
+  MEMGRAPH_NETWORK: "memgraph_test_network"
+  MYSQL_CONTAINER: "mysql_test"
+  POSTGRESQL_CONTAINER: "postgresql_test"
+  MEMGRAPH_ENTERPRISE_LICENSE: ${{ secrets.MEMGRAPH_ENTERPRISE_LICENSE }}
+  MEMGRAPH_ORGANIZATION_NAME: ${{ secrets.MEMGRAPH_ORGANIZATION_NAME }}
+  MEMGRAPH_DOWNLOAD_LINK: "${{ inputs.memgraph_download_link }}"
+  GENERATE_SBOM: "${{ inputs.generate_sbom }}"
 
 jobs:
   BuildAndPush:
-    runs-on: ${{ (inputs.arch == 'arm64') && fromJSON('["self-hosted", "DockerMgBuild","ARM64"]') || fromJSON('["self-hosted", "DockerMgBuild", "X64"]') }}
+    runs-on: [self-hosted, DockerMgBuild, Linux, "${{ inputs.arch == 'arm64' && 'ARM64' || 'X64' }}"]
     outputs:
       s3_package_url: ${{ steps.output-url.outputs.s3_url }}
     steps:            
@@ -85,9 +116,37 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
 
+      - name: Pull e2e Docker images in background
+        if: ${{ inputs.run_tests == true }}
+        run: |
+          ./scripts/pull-e2e-docker-images.sh &
+
+
+      - name: Check package deb build
+        env:
+          INPUT_PACKAGE_DEB: "${{ inputs.package_deb }}"
+        run: |
+          if [[ "$INPUT_PACKAGE_DEB" == "true" ]]; then
+            package_deb=true
+          elif [[ "$INPUT_PACKAGE_DEB" == "false" ]]; then
+            package_deb=false
+          else
+            if [[ "$MALLOC" == true ]]; then
+              package_deb=false
+            else
+              package_deb=true
+            fi
+          fi
+          if [[ "$package_deb" == true ]]; then
+            echo "Building deb package"
+          else
+            echo "Not building deb package"
+          fi
+          echo "PACKAGE_DEB=${package_deb}" >> $GITHUB_ENV
+
       - name: Check mgdeps-cache availability
         run: |
-          if [ "${{ inputs.arch }}" == "amd64" ]; then
+          if [ "$ARCH" == "amd64" ]; then
             echo "mgdeps-cache is temporary disabled for amd64"
             echo "CACHE_PRESENT=false" >> $GITHUB_ENV
           elif curl --silent --fail "http://mgdeps-cache:8000/wheels/" -o /dev/null; then
@@ -108,60 +167,38 @@ jobs:
             echo "Cache is not present. Skipping wheel fetch."
           fi
 
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Set build type
+      # TODO(matt): check this with daily/RC build workflows
+      - name: Checkout specific branch in submodule
+        env:
+          MEMGRAPH_REF: "${{ inputs.memgraph_ref }}"
+          MEMGRAPH_REF_UPDATE: "${{ inputs.memgraph_ref_update }}"
         run: |
-          BUILD_TYPE="${{ inputs.mage_build_type }}"
-          echo "MAGE_BUILD_TYPE=$BUILD_TYPE" >> $GITHUB_ENV
+          cd cpp/memgraph
+          # If no ref is provided, just checkout master.
+          if [ -z "$MEMGRAPH_REF" ]; then
+            echo "No memgraph_ref provided, checking out master."
+            git checkout master || true
+          else
+            git fetch --all
+            git checkout "$MEMGRAPH_REF" || true
+          fi
+          
+          # Only pull if we are on a branch.
+          current_branch=$(git symbolic-ref --short -q HEAD) || true
+          echo "Current branch: $current_branch"
+          if [ -n "$current_branch" ]; then
+            if [[ "$MEMGRAPH_REF_UPDATE" == "true" ]]; then
+              git pull
+            fi
+          else
+            echo "Detached HEAD state detected; skipping git pull."
+          fi
 
       - name: Set image tag and artifact name
+        env:
+          SHORTEN_TAG: "${{ inputs.shorten_tag }}"
         run: |
-          MEMGRAPH_VERSION=${{ inputs.memgraph_version }}
-          MAGE_VERSION=${{ inputs.mage_version }}
-          if [[ ${{ inputs.shorten_tag }} == true ]]; then
-            MEMGRAPH_VERSION=${MEMGRAPH_VERSION%%-*}
-            memgraph_patch_version=${MEMGRAPH_VERSION##*.}
-            MAGE_VERSION=${MAGE_VERSION%%-*}
-            mage_patch_version=${MAGE_VERSION##*.}
-            if [[ "$memgraph_patch_version" -eq 0 ]]; then
-              MEMGRAPH_VERSION=${MEMGRAPH_VERSION%.*}
-            fi
-            if [[ "$mage_patch_version" -eq 0 ]]; then
-              MAGE_VERSION=${MAGE_VERSION%.*}
-            fi
-          fi
-
-          # if these match, then tag the image with the shortest vesion, e.g. 3.1.1
-          # rather than 3.1.1-memgraph-3.1.1, hopefully this won't affect the
-          # daily build versioning, which will still be massive
-          if [[ "$MAGE_VERSION" == "$MEMGRAPH_VERSION" ]]; then
-            IMAGE_TAG="${MAGE_VERSION}"
-          else
-            IMAGE_TAG="${MAGE_VERSION}-memgraph-${MEMGRAPH_VERSION}"
-          fi
-          IMAGE_TAG="${IMAGE_TAG//+/_}"
-          IMAGE_TAG="${IMAGE_TAG//\~/_}"
-          ARTIFACT_NAME="mage-${IMAGE_TAG}"
-          if [[ "${{ inputs.arch }}" == 'arm64' ]]; then
-            ARTIFACT_NAME="${ARTIFACT_NAME}-arm64"
-          fi
-          if [[ "${{ env.MAGE_BUILD_TYPE }}" == 'RelWithDebInfo' ]]; then
-            ARTIFACT_NAME="${ARTIFACT_NAME}-relwithdebinfo"
-            IMAGE_TAG="${IMAGE_TAG}-relwithdebinfo"
-          fi
-          if [[ "${{ inputs.malloc }}" == true ]]; then
-            ARTIFACT_NAME="${ARTIFACT_NAME}-malloc"
-            IMAGE_TAG="${IMAGE_TAG}-malloc"          
-          fi
+          read IMAGE_TAG ARTIFACT_NAME < <(scripts/artifact-name-tag.sh "$MEMGRAPH_VERSION" "$MAGE_VERSION" "$SHORTEN_TAG" "$ARCH" "$BUILD_TYPE" "$MALLOC" "$CUDA")
           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
           echo "ARTIFACT_NAME=${ARTIFACT_NAME}" >> $GITHUB_ENV
 
@@ -169,140 +206,216 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         run: echo "CI_BRANCH=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
       
-
-      - name: Get Current MAGE Tag
+      - name: Get Current MAGE Commit/Tag
+        env:
+          INPUT_REF: "${{ inputs.ref }}"
         run: |
-          # Get the current tag, or branch if a tag doesn't exist
-          # This is used later in image creation, so that the exact version of 
-          # the MAGE git repository can be checked out within the container, 
-          # when we run the script to convert to "dev" container
-          if [ -z "${{ inputs.ref }}" ]; then
-            echo "No specific ref provided, using current branch/tag."
-            # If no ref is provided, use the current branch or tag
-            tag=$(./get_tag.sh)
-          else
-            echo "Using provided ref: ${{ inputs.ref }}"
-            tag="${{ inputs.ref }}"
-          fi
-          
-
-          # If tag is empty, fallback to the branch name
-          if [ -z "$tag" ]; then
-            echo "No valid tag found; using branch name."
-            # If CI_BRANCH is set (for PR events), use it; otherwise, use GITHUB_REF
-            if [ -n "$CI_BRANCH" ]; then
-              tag="$CI_BRANCH"
-            else
-              tag="${GITHUB_REF#refs/heads/}"
-            fi
-          fi
-
-          echo "Using tag/branch: $tag"
-          echo "MAGE_COMMIT=${tag}" >> $GITHUB_ENV
-
-
-      - name: Set target dockerfile
-        run: |
-          DOCKERFILE="Dockerfile.release"
-          echo "DOCKERFILE=${DOCKERFILE}" >> $GITHUB_ENV
-
-      - name: Check if specified version tag is already pushed
-        if: ${{ inputs.push_to_dockerhub == 'true' }}
-        run: |
-          EXISTS=$(docker manifest inspect $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.IMAGE_TAG }} > /dev/null; echo $?)
-          echo $EXISTS
-          if [[ ${EXISTS} -eq 0 ]]; then
-              echo The specified version has been already released to DockerHub!
-              if [[ ${{ inputs.force_release }} = true ]]; then
-                echo Forcing the release
-              else
-                echo Stopping the release
-                exit 1
-              fi
-          else
-              echo All good the specified version has not been release to DockerHub
-          fi
+          ./scripts/get_mage_commit.sh "$INPUT_REF" "$CI_BRANCH" "$GITHUB_REF"
 
       - name: Set up and check memgraph download link
         run: |
-          if [[ -z "${{ inputs.memgraph_download_link }}" ]]; then
+          if [[ -z "$MEMGRAPH_DOWNLOAD_LINK" ]]; then
             echo "Using official download link"
-            mg_url="https://download.memgraph.com/memgraph/v${{ inputs.memgraph_version }}/$OS/memgraph_${{ inputs.memgraph_version }}-1_${{ inputs.arch }}.deb"
+            mg_url="https://download.memgraph.com/memgraph/v$MEMGRAPH_VERSION/$OS/memgraph_$MEMGRAPH_VERSION-1_$ARCH.deb"
           else
             echo "Using custom download link"
-            mg_url=${{ inputs.memgraph_download_link }}
+            mg_url=$MEMGRAPH_DOWNLOAD_LINK
           fi
 
           ./scripts/verify_download_url.sh "$mg_url"
           echo "MEMGRAPH_DOWNLOAD_LINK=${mg_url}" >> $GITHUB_ENV
 
-
       - name: Download memgraph binary
-        run: curl -L --retry 5 --retry-delay 20 --retry-max-time 120 ${{ env.MEMGRAPH_DOWNLOAD_LINK }} > memgraph-${{ inputs.arch }}.deb
+        run: curl -L --retry 5 --retry-delay 20 --retry-max-time 120 $MEMGRAPH_DOWNLOAD_LINK > memgraph-$ARCH.deb
 
       - name: Probe fastest mirror
         run: |
           FASTEST=$(bash scripts/test-mirrors.sh)
           echo "CUSTOM_MIRROR=${FASTEST}" >> $GITHUB_ENV
 
-      # Add ability to add additional tag after the image has been built
-      # --tag ${DOCKER_REPOSITORY_NAME}:${{ inputs.additional_tag }} \
-      - name: Build docker image
+      - name: Build Query Modules in MGBUILD container
         run: |
-          if [[ "${{ inputs.arch }}" == "arm64" ]]; then
-            MGBUILD_IMAGE=memgraph/mgbuild:v6_ubuntu-24.04-arm
-          else
-            MGBUILD_IMAGE=memgraph/mgbuild:v6_ubuntu-24.04
-          fi
+          ./scripts/container-build.sh \
+            --arch $ARCH \
+            --build-type $BUILD_TYPE \
+            --container-name $CONTAINER_NAME
 
-          echo "Using base image: $MGBUILD_IMAGE"
-          echo "Image Tag: ${{ env.IMAGE_TAG }}"
+      - name: Build DEB package in MGBUILD container
+        if: ${{ (inputs.push_to_github || inputs.push_to_s3) && env.PACKAGE_DEB == 'true' }}
+        run: |
+          ./scripts/container-package-deb.sh \
+            --arch $ARCH \
+            --build-type $BUILD_TYPE \
+            --container-name $CONTAINER_NAME \
+            --version $MAGE_VERSION \
+            --malloc $MALLOC \
+            --cuda $CUDA
+          
+          DEB_PACKAGE="$(ls output/memgraph-mage*.deb)"
+          echo "DEB_PACKAGE=${DEB_PACKAGE}" >> $GITHUB_ENV
 
-          # target is "prod" for Release and "debug" for RelWithDebInfo
-          if [ "${{ env.MAGE_BUILD_TYPE }}" = "RelWithDebInfo" ]; then
-            DOCKER_TARGET=debug
+      - name: Build pymgclient in MGBUILD container
+        if: ${{ inputs.arch == 'arm64' }}
+        run: |
+          # This has to be done here, otherwise we will need to build pymgclient from source within 
+          # docker image build because we currently do not provide an arm64 wheel for Linux.
+          docker exec -i -u mg $CONTAINER_NAME bash -c "cd /home/mg/mage/scripts && ./build-pymgclient.sh"
+          package_name=$(docker exec -i -u mg $CONTAINER_NAME bash -c "ls /home/mg/mage/scripts/pymgclient/dist/")
+          docker cp $CONTAINER_NAME:/home/mg/mage/scripts/pymgclient/dist/$package_name wheels/
+
+      - name: Build heaptrack
+        if: ${{ inputs.mage_build_type == 'RelWithDebInfo' }}
+        run: |
+          ./scripts/container-build-heaptrack.sh $CONTAINER_NAME
+
+      - name: Run tests
+        if: ${{ inputs.run_tests == true }}
+        run: |
+          ./scripts/container-test.sh \
+            --container-name $CONTAINER_NAME \
+            --ci \
+            --cache-present $CACHE_PRESENT \
+            --cuda $CUDA \
+            --arch $ARCH
+
+      - name: Generate SBOM
+        if: ${{ inputs.generate_sbom == true }}
+        run: |
+          ./scripts/sbom/mgbuild-container-sbom.sh $CONTAINER_NAME
+
+      - name: Remove mgbbuild container
+        if: always()
+        run: |
+          docker stop $CONTAINER_NAME || true
+
+      - name: Build image
+        run: |
+          if [[ "$BUILD_TYPE" = "RelWithDebInfo" ]]; then
+            DOCKER_TARGET=relwithdebinfo
           else
             DOCKER_TARGET=prod
           fi
-          echo "Using target: $DOCKER_TARGET"
-
           docker buildx build \
           --target $DOCKER_TARGET \
-          --platform linux/${{ inputs.arch }} \
-          --tag ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} \
-          --file ${{ env.DOCKERFILE }} \
-          --build-arg BUILD_TYPE=${{ env.MAGE_BUILD_TYPE }} \
-          --build-arg MGBUILD_IMAGE=$MGBUILD_IMAGE \
-          --build-arg MAGE_COMMIT="${{ env.MAGE_COMMIT }}" \
-          --build-arg CACHE_PRESENT=${{ env.CACHE_PRESENT }} \
-          --build-arg CUSTOM_MIRROR=${{ env.CUSTOM_MIRROR }} \
+          --platform linux/$ARCH \
+          --tag ${DOCKER_REPOSITORY_NAME}:$IMAGE_TAG \
+          --file Dockerfile.release \
+          --build-arg BUILD_TYPE=$BUILD_TYPE \
+          --build-arg MAGE_COMMIT=$MAGE_COMMIT \
+          --build-arg CACHE_PRESENT=$CACHE_PRESENT \
+          --build-arg CUSTOM_MIRROR=$CUSTOM_MIRROR \
           --load .
 
           # print the image size in both SI and IEC units
-          ./print_image_size.sh ${DOCKER_REPOSITORY_NAME} ${{ env.IMAGE_TAG }}
+          ./scripts/print_image_size.sh ${DOCKER_REPOSITORY_NAME} $IMAGE_TAG
 
+      - name: Generate SBOM
+        if: ${{ inputs.generate_sbom == true }}
+        run: |
+          ./scripts/sbom/mage-sbom.sh "${DOCKER_REPOSITORY_NAME}:$IMAGE_TAG"
+      
+      - name: Upload SBOM to GitHub
+        if: ${{ inputs.generate_sbom == true }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: "mage-sbom"
+          path: "sbom/"
+
+      - name: Start container for e2e tests
+        if: ${{ inputs.run_tests == true }}
+        run: |
+          docker network create $MEMGRAPH_NETWORK || true
+
+          docker run -d \
+            --rm \
+            --network $MEMGRAPH_NETWORK \
+            --name $MAGE_CONTAINER \
+            -p $MEMGRAPH_PORT:$MEMGRAPH_PORT \
+            -e MEMGRAPH_ENTERPRISE_LICENSE=$MEMGRAPH_ENTERPRISE_LICENSE \
+            -e MEMGRAPH_ORGANIZATION_NAME=$MEMGRAPH_ORGANIZATION_NAME \
+            ${DOCKER_REPOSITORY_NAME}:$IMAGE_TAG \
+            --telemetry-enabled=False
+
+      - name: Run end-to-end tests
+        if: ${{ inputs.run_tests == true }}
+        run: |
+          python3 -m venv env
+          source env/bin/activate
+          pip install -r python/tests/requirements.txt --break-system-packages
+          cd e2e/ && python3 -m pytest . -k "not cugraph and not embeddings_test-test_cuda_compute"
+
+      - name: Wait for e2e Docker images to be available
+        if: ${{ inputs.run_tests == true }}
+        run: |
+          ./scripts/wait-for-docker-images.sh
+
+      - name: Run End-to-end correctness tests
+        if: ${{ inputs.run_tests == true }}
+        env:
+          PYTHONPATH: "$PWD/e2e"
+        run: |
+          source env/bin/activate
+          ./run_e2e_correctness_tests.sh $MEMGRAPH_PORT $NEO4J_PORT $NEO4J_CONTAINER $MAGE_CONTAINER $MEMGRAPH_NETWORK
+
+      - name: Cleanup after correctness tests
+        if: ${{ inputs.run_tests == true && always() }}
+        run: |
+          docker stop $NEO4J_CONTAINER || true
+          docker rm $NEO4J_CONTAINER || true
+
+      - name: Run End-to-end migration tests
+        if: ${{ inputs.run_tests == true }}
+        env:
+          PYTHONPATH: "$PWD/e2e"
+        run: |
+          source env/bin/activate
+          ./run_e2e_migration_tests.sh --mage-container $MAGE_CONTAINER --mysql-container $MYSQL_CONTAINER --postgresql-container $POSTGRESQL_CONTAINER
+      
+      - name: Cleanup after migration tests
+        if: ${{ inputs.run_tests == true && always() }}
+        run: |
+          docker stop $MAGE_CONTAINER || true
+          docker rm $MAGE_CONTAINER || true
+          docker stop $MYSQL_CONTAINER || true
+          docker rm $MYSQL_CONTAINER || true
+          docker stop $POSTGRESQL_CONTAINER || true
+          docker rm $POSTGRESQL_CONTAINER || true
+          docker stop $NEO4J_CONTAINER || true
+          docker rm $NEO4J_CONTAINER || true
+          docker network rm $MEMGRAPH_NETWORK || true
 
       - name: Save docker image
+        if: ${{ inputs.push_to_github || inputs.push_to_s3 }}
         run: |
-          mkdir output
-          docker save ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }} | gzip > output/${{ env.ARTIFACT_NAME }}.tar.gz
-          du -h output/${{ env.ARTIFACT_NAME }}.tar.gz
+          mkdir -p output
+          docker save ${DOCKER_REPOSITORY_NAME}:$IMAGE_TAG | gzip > output/${ARTIFACT_NAME}.tar.gz
+          du -h output/${ARTIFACT_NAME}.tar.gz
 
-      - name: Push to GitHub
-        if: ${{ inputs.push_to_github == 'true' }}
+      - name: Push query module archive to GitHub
+        if: ${{ inputs.push_to_github }}
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ env.ARTIFACT_NAME }}"
-          path: "output/${{ env.ARTIFACT_NAME }}.tar.gz"
+          name: "${ARTIFACT_NAME}-query-modules"
+          path: "mage.tar.gz"
 
-      - name: Push to DockerHub
-        if: ${{ inputs.push_to_dockerhub == 'true' }}
-        run: docker push ${DOCKER_REPOSITORY_NAME}:${{ env.IMAGE_TAG }}
+      - name: Push DEB package to GitHub
+        if: ${{ inputs.push_to_github && env.PACKAGE_DEB == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${ARTIFACT_NAME}-deb"
+          path: "${DEB_PACKAGE}"
+
+      - name: Push docker image to GitHub
+        if: ${{ inputs.push_to_github }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${IMAGE_TAG}-docker"
+          path: "output/${ARTIFACT_NAME}.tar.gz"
 
       - name: Push to S3 with retry
-        if: ${{ inputs.push_to_s3 == 'true' }}
+        if: ${{ inputs.push_to_s3 }}
         env:
-          AWS_S3_BUCKET: ${{ inputs.s3_dest_bucket }}
+          AWS_S3_BUCKET: deps.memgraph.io
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: "eu-west-1"
@@ -324,10 +437,12 @@ jobs:
 
       - name: Construct Output URL
         id: output-url
-        if: ${{ inputs.push_to_s3 == 'true' && (inputs.run_smoke_tests || inputs.print_output_url) }}
+        if: ${{ inputs.push_to_s3 && (inputs.run_smoke_tests || inputs.print_output_url) }}
+        env:
+          DEST_DIR: "${{ inputs.s3_dest_dir }}"
         run: |
-          filename="${{ env.ARTIFACT_NAME }}.tar.gz"
-          output_url="https://s3.eu-west-1.amazonaws.com/${{ inputs.s3_dest_bucket }}/${{ inputs.s3_dest_dir }}/$filename"
+          filename="${ARTIFACT_NAME}.tar.gz"
+          output_url="https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/$DEST_DIR/$filename"
           echo "s3_url=$output_url" >> $GITHUB_OUTPUT            
 
       - name: Print Output URL
@@ -335,6 +450,10 @@ jobs:
         run: |
           echo "::notice::Output URL: ${{ steps.output-url.outputs.s3_url }}"
 
+      - name: Memgraph Docker Cleanup
+        if: always()
+        run: |
+          ./cpp/memgraph/tools/docker_cleanup.sh
 
   SetupSmokeTest:
     runs-on: [self-hosted]

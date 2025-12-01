@@ -90,6 +90,10 @@ constexpr std::string_view kArgumentSizePartition = "partition_size";
 constexpr std::string_view kProcedureFlatten = "flatten";
 constexpr std::string_view kArgumentListFlatten = "list";
 
+/* frequencies_as_map constants */
+constexpr std::string_view kProcedureFrequenciesAsMap = "frequencies_as_map";
+constexpr std::string_view kArgumentListFrequenciesAsMap = "coll";
+
 void SetResult(mgp::Result &result, const mgp::Value &value);
 
 void SumLongs(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
@@ -127,5 +131,7 @@ void ToSet(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memo
 void Partition(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory);
 
 void Flatten(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
+
+void FrequenciesAsMap(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory);
 
 }  // namespace Collections

@@ -31,6 +31,10 @@ on:
         type: string
         description: "MAGE branch or tag to build"
         default: ''
+      run_tests:
+        type: boolean
+        description: "Run tests"
+        default: false
 
   workflow_dispatch:
     inputs:
@@ -56,6 +60,10 @@ on:
       run_smoke_tests:
         type: boolean
         description: "Run smoke tests on images after building (tests against previous tagged image)"
+        default: false
+      run_tests:
+        type: boolean
+        description: "Run tests"
         default: false
 
 jobs:
@@ -88,13 +96,23 @@ jobs:
         build_type: ["Release", "RelWithDebInfo"]
         build_arch: ["amd64", "arm64"]
         malloc: [false]
+        cuda: [false]
         include:
-          - build_type: "RelWithDebInfo"
-            rwid_ext: "-relwithdebinfo"
-          - build_arch: "arm64"
-            arm_ext: "-aarch64"
           - build_type: "Release"
             build_arch: "amd64"
+            malloc: true
+            cuda: false
+          - build_type: "RelWithDebInfo"
+            build_arch: "amd64"
+            cuda: true
+            malloc: false
+          - build_type: "RelWithDebInfo"
+            build_arch: "amd64"
+            cuda: false
+            malloc: true
+          - build_type: "RelWithDebInfo"
+            build_arch: "arm64"
+            cuda: false
             malloc: true
     uses: ./.github/workflows/reusable_package_mage.yaml
     with:
@@ -102,14 +120,14 @@ jobs:
       mage_version: "${{ inputs.mage_version }}"
       mage_build_type: "${{ matrix.build_type }}"
       memgraph_version: "${{ inputs.memgraph_version }}"
-      memgraph_download_link: "${{ needs.SetupNames.outputs.download_link_base }}${{ matrix.arm_ext }}${{ matrix.rwid_ext }}${{ matrix.malloc && '-malloc' || '' }}/${{ needs.SetupNames.outputs.download_binary_name_base }}_${{ matrix.build_arch }}.deb"
-      shorten_tag: "true"
-      force_release: "true"
-      push_to_dockerhub: "false"
-      push_to_s3: "true"
-      s3_dest_bucket: "deps.memgraph.io"
+      memgraph_download_link: "${{ needs.SetupNames.outputs.download_link_base }}${{ matrix.malloc && '-malloc' || '' }}${{ matrix.build_arch == 'arm64' && '-aarch64' || '' }}${{ matrix.build_type == 'RelWithDebInfo' && '-relwithdebinfo' || '' }}/${{ needs.SetupNames.outputs.download_binary_name_base }}_${{ matrix.build_arch }}.deb"
+      shorten_tag: true
+      push_to_s3: true
       s3_dest_dir: "${{ inputs.test && 'mage-test/v' || 'mage/v'}}${{ inputs.mage_version}}"
       malloc: ${{ matrix.malloc }}
+      cuda: ${{ matrix.cuda }}
       run_smoke_tests: ${{ inputs.run_smoke_tests }}
       ref: "${{ inputs.ref }}"
+      run_tests: ${{ inputs.run_tests }}
+      generate_sbom: ${{ matrix.build_arch == 'amd64' && matrix.build_type == 'Release' }}
     secrets: inherit

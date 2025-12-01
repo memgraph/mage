@@ -75,6 +75,11 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
                      {mgp::Parameter(Collections::kArgumentListToSet, {mgp::Type::List, mgp::Type::Any})}, module,
                      memory);
 
+    mgp::AddFunction(Collections::FrequenciesAsMap, Collections::kProcedureFrequenciesAsMap,
+                     {mgp::Parameter(Collections::kArgumentListFrequenciesAsMap, {mgp::Type::List, mgp::Type::Any})},
+                     module, memory);
+
+
     AddProcedure(
         Collections::Partition, std::string(Collections::kProcedurePartition).c_str(), mgp::ProcedureType::Read,
         {mgp::Parameter(std::string(Collections::kArgumentListPartition).c_str(), {mgp::Type::List, mgp::Type::Any}),
