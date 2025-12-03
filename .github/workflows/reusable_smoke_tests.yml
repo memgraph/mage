@@ -28,6 +28,13 @@ jobs:
   smoke-test-image:
     runs-on: ${{ (inputs.arch == 'arm64') && fromJSON('["self-hosted", "ARM64"]') || fromJSON('["self-hosted", "X64"]') }}
     steps:
+      - name: Show disk space
+        run: |
+          echo -e "\033[1;31mDisk space:\033[0m"
+          df -h
+          echo -e "\033[1;31mDocker system df:\033[0m"
+          docker system df -v
+
       - name: Checkout repository and submodules
         uses: actions/checkout@v4
         with:
@@ -143,7 +150,22 @@ jobs:
         run: |
           rm -rf $HOME/go-install || true
 
+      - name: Show disk space
+        run: |
+          echo -e "\033[1;31mDisk space:\033[0m"
+          df -h
+          echo -e "\033[1;31mDocker system df:\033[0m"
+          docker system df -v
+
+
       - name: Clean up Docker images
         if: always()
         run: |
           ./cpp/memgraph/tools/docker_cleanup.sh
+
+      - name: Show disk space
+        run: |
+          echo -e "\033[1;31mDisk space:\033[0m"
+          df -h
+          echo -e "\033[1;31mDocker system df:\033[0m"
+          docker system df -v
