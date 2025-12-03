@@ -107,7 +107,14 @@ jobs:
     runs-on: [self-hosted, DockerMgBuild, Linux, "${{ inputs.arch == 'arm64' && 'ARM64' || 'X64' }}"]
     outputs:
       s3_package_url: ${{ steps.output-url.outputs.s3_url }}
-    steps:            
+    steps:       
+      - name: Show disk space
+        run: |
+          echo -e "\033[1;31mDisk space:\033[0m"
+          df -h
+          echo -e "\033[1;31mDocker system df:\033[0m"
+          docker system df -v
+
       - name: Checkout repository and submodules
         uses: actions/checkout@v4
         with:
@@ -454,6 +461,13 @@ jobs:
         if: always()
         run: |
           ./cpp/memgraph/tools/docker_cleanup.sh
+
+      - name: Show disk space
+        run: |
+          echo -e "\033[1;31mDisk space:\033[0m"
+          df -h
+          echo -e "\033[1;31mDocker system df:\033[0m"
+          docker system df -v
 
   SetupSmokeTest:
     runs-on: [self-hosted]
