@@ -43,6 +43,13 @@ jobs:
     name: Scan Docker Image for Vulnerabilities (${{ inputs.image_type }}, ${{ inputs.arch }})
     runs-on: ${{ (inputs.arch == 'arm64') && fromJSON('["self-hosted", "Linux", "Docker", "ARM64", "Ubuntu24.04"]') || fromJSON('["self-hosted", "Linux", "Docker", "X64", "Ubuntu24.04"]') }}
     steps:
+      - name: Show disk space
+        run: |
+          echo -e "\033[1;31mDisk space:\033[0m"
+          df -h
+          echo -e "\033[1;31mDocker system df:\033[0m"
+          docker system df -v
+
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
@@ -246,3 +253,10 @@ jobs:
           docker stop memgraph || true
           docker wait memgraph || true
           docker rmi ${{ env.IMAGE_TAG }} || true
+
+      - name: Show disk space
+        run: |
+          echo -e "\033[1;31mDisk space:\033[0m"
+          df -h
+          echo -e "\033[1;31mDocker system df:\033[0m"
+          docker system df -v
