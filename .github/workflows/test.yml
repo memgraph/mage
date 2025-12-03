@@ -35,7 +35,7 @@ on:
 jobs:
   # setup some variables for the default memgraph download link/version
   TestVariables:
-    runs-on: ["self-hosted"]
+    runs-on: ubuntu-latest
     outputs:
       mage_version: ${{ steps.compute.outputs.mage_version }}
       memgraph_version: ${{ steps.compute.outputs.memgraph_version }}
