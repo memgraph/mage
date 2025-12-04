@@ -43,7 +43,7 @@ MG_TOOLCHAIN_ROOT=/opt/toolchain-v7 conan install \
   -pr:b memgraph_build_profile \
   -s build_type="$BUILD_TYPE" \
   -s:a os=Linux \
-  -s:a distro="ubuntu-24.04"
+  -s:a os.distro="ubuntu-24.04"
 
 ./tools/sbom/build-sbom.sh
 
