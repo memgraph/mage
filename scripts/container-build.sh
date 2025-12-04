@@ -42,11 +42,7 @@ exit_handler() {
 trap 'exit_handler $?' ERR EXIT
 
 # get conan cache directory
-if [[ "$ARCH" == "arm64" ]]; then
-    CONAN_CACHE_DIR="$HOME/.conan2-ubuntu-24.04-arm"
-else
-    CONAN_CACHE_DIR="$HOME/.conan2-ubuntu-24.04-amd"
-fi
+CONAN_CACHE_DIR="$HOME/.conan2-ci"
 
 echo -e "${GREEN_BOLD}Using conan cache directory: $CONAN_CACHE_DIR${RESET}"
 
