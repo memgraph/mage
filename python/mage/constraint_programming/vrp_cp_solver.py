@@ -171,12 +171,12 @@ class VRPConstraintProgrammingSolver(VRPSolver):
             constraint.apply_constraint()
 
     def _add_objective(self):
-        intermedias_sum = 0
+        intermediate_sum = 0
         for edge, variable in self._edge_chosen_vars.items():
             duration = self.get_distance(edge)
-            intermedias_sum += self._model.Intermediate(duration * variable)
+            intermediate_sum += self._model.Intermediate(duration * variable)
 
-        self._model.Obj(intermedias_sum)
+        self._model.Obj(intermediate_sum)
 
     def _add_options(self):
         # The SOLVER option specifies the type of solver that solves the
