@@ -172,11 +172,21 @@ def copytree(src, dst, ignore_patterns=[]) -> None:
 
 def run_command(command: List[str]) -> bool:
     logger.debug(f"[Terminal] Running command `{command}`.")
-    try:
-        subprocess.check_output(command)
-    except subprocess.CalledProcessError as e:
-        logger.error(f"[Terminal] Running command {command} failed.")
+    result = subprocess.run(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True
+    )
+    
+    # Print output after command completes
+    if result.stdout:
+        print(result.stdout)
+    
+    if result.returncode != 0:
+        logger.error(f"[Terminal] Running command {command} failed with return code {result.returncode}.")
         return False
+    
     return True
 
 
