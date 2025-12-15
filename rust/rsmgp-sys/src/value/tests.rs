@@ -15,6 +15,7 @@
 use c_str_macro::c_str;
 use serial_test::serial;
 use std::ffi::CStr;
+use std::os::raw::c_char;
 use std::ptr::null_mut;
 
 use super::*;
@@ -247,7 +248,7 @@ fn test_convert_string_mgp_value() {
     let cstr = CString::new("a string").expect("CString::new failed");
     mock_mgp_once!(mgp_value_get_string_context, move |_, out| {
         unsafe {
-            *out = cstr.as_ptr() as *const i8;
+            *out = cstr.as_ptr() as *const c_char;
         }
         mgp_error::MGP_ERROR_NO_ERROR
     });
