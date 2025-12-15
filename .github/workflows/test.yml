@@ -102,7 +102,7 @@ jobs:
           echo "DEBUG: binary_name_base=memgraph_${memgraph_version}-1"
 
   PR_test:
-    if: ${{ (github.event_name == 'pull_request' || github.event_name == 'merge_group') && needs.TestVariables.outputs.run_tests == 'true' }}
+    if: ${{ (github.event_name == 'pull_request' && needs.TestVariables.outputs.run_tests == 'true') || github.event_name == 'merge_group' }}
     needs: [TestVariables]
     strategy:
       fail-fast: false
