@@ -9,24 +9,10 @@ on:
       mage_build_arch:
         type: choice
         description: "Mage build architecture"
-        default: 'amd'
+        default: 'amd64'
         options:
-          - "amd"
-          - "arm"
-      mage_build_scope:
-        type: choice
-        description: "Mage build scope"
-        default: 'with ML'
-        options:
-          - "with ML"
-          - "without ML"
-      mage_build_target:
-        type: choice
-        description: "Mage image target. By default 'dev' uses 'RelWithDebInfo' and 'with ML'."
-        default: 'prod'
-        options:
-          - "prod"
-          - "dev"
+          - "amd64"
+          - "arm64"
       mage_build_type:
         type: choice
         description: "Mage build type"
@@ -41,29 +27,76 @@ on:
         description: "Memgraph package download link. Leave empty to use the official download link."
         default: ""
         type: string
-      push_to_dockerhub:
+      cuda:
         type: boolean
-        description: "Push the image to DockerHub?"
+        description: "Build the image for CUDA"
         default: false
       push_to_s3:
         type: boolean
         description: "Push the image to S3?"
         default: false
-
+      matrix_build:
+        type: boolean
+        description: "Enable multiple builds via a matrix configuration?"
+        default: false
+      malloc:
+        type: boolean
+        description: "Use malloc build of memgraph (no jemalloc)"
+        default: false
+      run_smoke_tests:
+        type: boolean
+        description: "Run smoke tests on images after building (tests against previous tagged image)"
+        default: false
+  
 jobs:
   BuildMage:
+    if: ${{ !inputs.matrix_build }}
     uses: ./.github/workflows/reusable_package_mage.yaml
     with:
-      arch: ${{ github.event.inputs.mage_build_arch || 'amd' }}
-      mage_build_scope: ${{ github.event.inputs.mage_build_scope || 'all' }}
-      mage_build_target: ${{ github.event.inputs.mage_build_target || 'prod' }}
+      arch: ${{ github.event.inputs.mage_build_arch || 'amd64' }}
       mage_build_type: ${{ github.event.inputs.mage_build_type || 'Release' }}
       mage_version: ${{ github.event.inputs.mage_version }}
       memgraph_version: ${{ github.event.inputs.memgraph_version }}
       memgraph_download_link: ${{ github.event.inputs.memgraph_download_link || '' }}
-      shorten_tag: 'true'
-      force_release: 'true'
-      push_to_dockerhub: ${{ github.event.inputs.push_to_dockerhub || 'false' }}
-      push_to_s3: ${{ github.event.inputs.push_to_s3 || 'false' }}
-      large_runner: ${{ github.event.inputs.mage_build_target == 'dev' && 'true' || 'false' }}
+      shorten_tag: true
+      cuda: ${{ inputs.cuda }}
+      push_to_s3: ${{ inputs.push_to_s3 }}
+      malloc: ${{ inputs.malloc }}
+      run_smoke_tests: ${{ inputs.run_smoke_tests }}
+      generate_sbom: ${{ inputs.mage_build_arch == 'amd64' && inputs.mage_build_type == 'Release' }}
+    secrets: inherit
+
+  # New matrix build job, runs only when matrix_build is true
+  BuildMageMatrix:
+    if: ${{ inputs.matrix_build }}
+    uses: ./.github/workflows/reusable_package_mage.yaml
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: ["Release", "RelWithDebInfo"]
+        build_arch: ["amd64", "arm64"]
+        malloc: [false]
+        cuda: [false]
+        include:
+          - build_type: "Release"
+            build_arch: "amd64"
+            malloc: true
+            cuda: false
+          - build_type: "RelWithDebInfo"
+            build_arch: "amd64"
+            cuda: true
+            malloc: false
+
+    with:
+      arch: ${{ matrix.build_arch }}
+      mage_build_type: ${{ matrix.build_type }}
+      mage_version: ${{ github.event.inputs.mage_version }}
+      memgraph_version: ${{ github.event.inputs.memgraph_version }}
+      memgraph_download_link: ${{ github.event.inputs.memgraph_download_link || '' }}
+      shorten_tag: true
+      cuda: ${{ matrix.cuda }}
+      push_to_s3: ${{ inputs.push_to_s3 }}
+      malloc: ${{ matrix.malloc }}
+      run_smoke_tests: ${{ inputs.run_smoke_tests }}
+      generate_sbom: ${{ matrix.build_arch == 'amd64' && matrix.build_type == 'Release' && !matrix.malloc }}
     secrets: inherit

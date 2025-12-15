@@ -1,0 +1,194 @@
+name: 'Create Daily Build'
+concurrency:
+  group: daily-build-${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+on:
+  repository_dispatch:
+    types: [trigger_daily_build]
+
+  workflow_dispatch:
+    inputs:
+      date:
+        type: string
+        description: "Date to build packages for (YYYYMMDD)"
+        required: false
+      dry-run:
+        type: boolean
+        description: "Dry run the build (don't push to S3 or GitHub)"
+        required: false
+        default: false
+      update-page:
+        type: boolean
+        description: "Update the daily builds page"
+        required: false
+        default: true
+
+run-name: Daily Build and Test
+
+jobs:
+  DailyBuildVariables:
+    runs-on: ubuntu-latest
+    outputs:
+      mage_version: ${{ steps.compute.outputs.mage_version }}
+      memgraph_version: ${{ steps.compute.outputs.memgraph_version }}
+      memgraph_commit: ${{ steps.compute.outputs.memgraph_commit }}
+      build_date: ${{ steps.compute.outputs.build_date }}
+      binary_name_base: ${{ steps.compute.outputs.binary_name_base }}
+    steps:
+      - name: Set up repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+
+      - name: Compute variables using Python script
+        id: compute
+        run: |
+          # Pass the client payload (as JSON) to the Python script.
+          if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+            payload='${{ toJson(github.event.client_payload) }}'
+          else
+            # Check if the 'date' input is empty; if so, compute today's date in YYYYMMDD format.
+            if [ -z "${{ github.event.inputs.date }}" ]; then
+              build_date=$(date +'%Y%m%d')
+            else
+              build_date="${{ github.event.inputs.date }}"
+            fi
+
+            # now reformat it as JSON
+            payload="{\"date\": ${build_date}}"
+          fi
+          echo "Received payload: $payload"
+          read mage_version memgraph_version memgraph_commit build_date < <(python3 scripts/daily_build_vars.py "$payload")
+          echo "mage_version=${mage_version}" >> $GITHUB_OUTPUT
+          echo "memgraph_version=${memgraph_version}" >> $GITHUB_OUTPUT
+          echo "memgraph_commit=${memgraph_commit}" >> $GITHUB_OUTPUT
+          echo "build_date=${build_date}" >> $GITHUB_OUTPUT
+          binary_name_base=$(python3 -c "import urllib.parse; print(urllib.parse.quote('memgraph_' + '$memgraph_version' + '-1'))")
+          echo "binary_name_base=${binary_name_base}" >> $GITHUB_OUTPUT
+      
+          # Print to console for debugging:
+          echo "DEBUG: mage_version=${mage_version}"
+          echo "DEBUG: memgraph_version=${memgraph_version}"
+          echo "DEBUG: memgraph_commit=${memgraph_commit}"
+          echo "DEBUG: build_date=${build_date}"
+          echo "DEBUG: binary_name_base=memgraph_${memgraph_version}-1"
+
+          
+  DailyBuildArtifact:
+    needs: [DailyBuildVariables]
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: ["Release", "RelWithDebInfo"]
+        build_arch: ["amd64", "arm64"]
+        malloc: [false]
+        cuda: [false]
+        include:
+          - build_type: "Release"
+            build_arch: "amd64"
+            malloc: true
+            cuda: false
+          - build_type: "RelWithDebInfo"
+            build_arch: "amd64"
+            cuda: true
+            malloc: false
+          - build_type: "RelWithDebInfo"
+            build_arch: "amd64"
+            cuda: false
+            malloc: true
+          - build_type: "RelWithDebInfo"
+            build_arch: "arm64"
+            cuda: false
+            malloc: true
+    uses: ./.github/workflows/reusable_package_mage.yaml
+    with:
+      arch: "${{ matrix.build_arch }}"
+      mage_version: "${{ needs.DailyBuildVariables.outputs.mage_version }}"
+      mage_build_type: "${{ matrix.build_type }}"
+      memgraph_version: "${{ needs.DailyBuildVariables.outputs.memgraph_version }}"
+      memgraph_download_link: "https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/daily-build/memgraph/${{ needs.DailyBuildVariables.outputs.build_date }}/ubuntu-24.04${{ matrix.malloc && '-malloc' || '' }}${{ matrix.build_arch == 'arm64' && '-aarch64' || '' }}${{ matrix.build_type == 'RelWithDebInfo' && '-relwithdebinfo' || '' }}/${{ needs.DailyBuildVariables.outputs.binary_name_base }}_${{ matrix.build_arch }}.deb"
+      shorten_tag: false
+      push_to_s3: ${{ github.event_name == 'repository_dispatch' || !inputs.dry-run }}
+      s3_dest_dir: "daily-build/mage/${{ needs.DailyBuildVariables.outputs.build_date }}"
+      malloc: ${{ matrix.malloc }}
+      cuda: ${{ matrix.cuda }}
+      run_tests: true
+      generate_sbom: ${{ matrix.build_arch == 'amd64' && matrix.build_type == 'Release' && !matrix.malloc }}
+    secrets: inherit
+
+
+  AggregateBuildTests:
+    if: always()
+    needs: [DailyBuildVariables,DailyBuildArtifact]
+    runs-on: [self-hosted]
+    steps:
+      - name: Set up repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+        
+      - name: Aggregate Test Results and Builds
+        env:
+          TEST_RESULT: ${{ needs.DailyBuildArtifact.result == 'success' && 'pass' || 'fail' }}
+          CURRENT_BUILD_DATE: ${{ needs.DailyBuildVariables.outputs.build_date }}
+        run: |
+          echo "TEST_RESULT: $TEST_RESULT"
+          echo "Package Date: $CURRENT_BUILD_DATE"
+          echo "BUILD_TEST_RESULTS=$(python3 scripts/aggregate_build_tests.py 'mage')" >> $GITHUB_ENV
+
+      - name: Trigger Daily Builds Page Update
+        if: ${{ github.event_name == 'repository_dispatch' || (inputs.update-page && !inputs.dry-run) }}
+        env: 
+          GITHUB_TOKEN: ${{ secrets.REPO_PAT }}
+        run: |
+          payload="${BUILD_TEST_RESULTS}"
+          echo "Payload: $payload"
+          # Send the dispatch request
+          curl -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/repos/memgraph/daily-builds/dispatches \
+            -d "$payload"    
+
+
+  SetupCVEScanTrigger:
+    name: Setup CVE Scan Trigger
+    runs-on: ubuntu-latest
+    needs: [DailyBuildVariables, DailyBuildArtifact]
+    outputs: 
+      run_scan: ${{ steps.sunday.outputs.RUN_SCAN }}
+    steps:
+      - name: Is today Sunday? 🤔
+        id: sunday
+        run: |
+          day="$(date -u +%A)"
+          if [[ "$day" == "Sunday" ]]; then
+            echo "RUN_SCAN=true" >> $GITHUB_OUTPUT
+          else
+            echo "RUN_SCAN=false" >> $GITHUB_OUTPUT
+          fi
+
+
+  TriggerCVEScan:
+    name: Trigger CVE Scan
+    needs: [SetupCVEScanTrigger, DailyBuildVariables]
+    if: ${{ needs.SetupCVEScanTrigger.outputs.run_scan == 'true' }}
+    uses: ./.github/workflows/cve_scan.yml
+    with:
+      date: "${{ needs.DailyBuildVariables.outputs.build_date }}"
+    secrets: inherit

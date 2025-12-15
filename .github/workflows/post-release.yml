@@ -1,0 +1,55 @@
+name: Post-Release Updates
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        type: string
+        description: "Version to post-release updates for (X.Y.Z)"
+        required: true
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        description: "Version to post-release updates for (X.Y.Z)"
+        required: true
+
+run-name: Post-Release Updates
+
+env:
+  VERSION: ${{ inputs.version }}
+
+jobs:
+  PostReleaseUpdates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          fetch-tags: true
+          ref: main
+
+      - name: Update Memgraph submodule
+        run: |
+          cd cpp/memgraph
+          git fetch origin
+          git checkout "v${VERSION}"
+
+      - name: Update Dockerfile
+        run: |
+          sed -i "s/ARG MG_VERSION=.*/ARG MG_VERSION=${VERSION}/" Dockerfile.cugraph
+      
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          title: "Update Memgraph submodule to ${{ env.VERSION }}"
+          body: "Update Memgraph submodule to ${{ env.VERSION }}"
+          branch: "post-release-updates-${{ env.VERSION }}"
+          base: "main"
+          draft: false
+          labels: |
+            infrastructure
+            Docs unnecessary
+          maintainer-can-modify: true
