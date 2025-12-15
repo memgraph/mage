@@ -796,7 +796,7 @@ def header_path(path: str):
 
 
 def write_file(path: str, delimiter: str, quoting_type: str, data: mgp.Any) -> None:
-    with open(path, "w") as file:
+    with open(path, "w", encoding="utf-8") as file:
         writer = csv.writer(
             file, delimiter=delimiter, quoting=quoting_type, escapechar="\\"
         )

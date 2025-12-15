@@ -1,5 +1,6 @@
 #include <mgp.hpp>
 
+#include "_mgp.hpp"
 #include "algorithm/map.hpp"
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
@@ -18,14 +19,6 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
         module, memory);
 
     mgp::AddFunction(
-        Map::RemoveKeys, std::string(Map::kProcedureRemoveKeys).c_str(),
-        {mgp::Parameter(std::string(Map::kArgumentsInputMapRemoveKeys).c_str(), mgp::Type::Map),
-         mgp::Parameter(std::string(Map::kArgumentsKeysListRemoveKeys).c_str(), {mgp::Type::List, mgp::Type::String}),
-         mgp::Parameter(std::string(Map::kArgumentsRecursiveRemoveKeys).c_str(), mgp::Type::Map,
-                        mgp::Value(mgp::Map()))},
-        module, memory);
-
-    mgp::AddFunction(
         Map::RemoveKey, Map::kProcedureRemoveKey,
         {mgp::Parameter(Map::kArgumentsInputMap, mgp::Type::Map), mgp::Parameter(Map::kArgumentsKey, mgp::Type::String),
          mgp::Parameter(Map::kArgumentsIsRecursive, mgp::Type::Map, mgp::Value(mgp::Map()))},
@@ -34,10 +27,24 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     mgp::AddFunction(Map::FromPairs, Map::kProcedureFromPairs,
                      {mgp::Parameter(Map::kArgumentsInputList, {mgp::Type::List, mgp::Type::List})}, module, memory);
 
-    mgp::AddFunction(Map::Merge, Map::kProcedureMerge,
-                     {mgp::Parameter(Map::kArgumentsInputMap1, mgp::Type::Map),
-                      mgp::Parameter(Map::kArgumentsInputMap2, mgp::Type::Map)},
-                     module, memory);
+    {
+      // mgp::AddFunction(Map::Merge, Map::kProcedureMerge,
+      //                  {mgp::Parameter(Map::kArgumentsInputMap1, mgp::Type::Any, mgp::Value(mgp::Map())),
+      //                   mgp::Parameter(Map::kArgumentsInputMap2, mgp::Type::Any, mgp::Value(mgp::Map()))},
+      //                  module, memory);
+
+      auto *func = mgp::module_add_function(module, Map::kProcedureMerge.data(), Map::Merge);
+      mgp::func_add_arg(func, Map::kArgumentsInputMap1.data(), mgp::type_nullable(mgp::type_map()));
+      mgp::func_add_arg(func, Map::kArgumentsInputMap2.data(), mgp::type_nullable(mgp::type_map()));
+    }
+
+    mgp::AddFunction(
+        Map::RemoveKeys, std::string(Map::kProcedureRemoveKeys).c_str(),
+        {mgp::Parameter(std::string(Map::kArgumentsInputMapRemoveKeys).c_str(), mgp::Type::Map),
+         mgp::Parameter(std::string(Map::kArgumentsKeysListRemoveKeys).c_str(), {mgp::Type::List, mgp::Type::String}),
+         mgp::Parameter(std::string(Map::kArgumentsRecursiveRemoveKeys).c_str(), mgp::Type::Map,
+                        mgp::Value(mgp::Map()))},
+        module, memory);
 
     AddProcedure(Map::FromNodes, Map::kProcedureFromNodes, mgp::ProcedureType::Read,
                  {mgp::Parameter(Map::kFromNodesArg1, mgp::Type::String),

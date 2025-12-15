@@ -3,8 +3,6 @@
 #include <fmt/core.h>
 #include <mgp.hpp>
 
-#include "mgclient.hpp"
-
 constexpr std::string_view kProcedureCase = "case";
 constexpr std::string_view kArgumentConditionals = "conditionals";
 constexpr std::string_view kArgumentElseQuery = "else_query";
@@ -15,14 +13,6 @@ constexpr std::string_view kArgumentCondition = "condition";
 constexpr std::string_view kArgumentIfQuery = "if_query";
 
 constexpr std::string_view kReturnValue = "value";
-
-constexpr std::string_view kMgHost = "MG_HOST";
-constexpr std::string_view kMgPort = "MG_PORT";
-constexpr std::string_view kMgUsername = "MG_USERNAME";
-constexpr std::string_view kMgPassword = "MG_PASSWORD";
-
-constexpr std::string_view kDefaultHost = "localhost";
-constexpr uint16_t kDefaultPort = 7687;
 
 const std::vector<std::string_view> kGlobalOperations = {"CREATE INDEX ON",
                                                          "DROP INDEX ON",
@@ -39,8 +29,8 @@ struct ParamNames {
 };
 
 struct QueryResults {
-  std::vector<std::string> columns;
-  std::vector<std::vector<mg::Value>> results;
+  mgp::ExecutionHeaders columns;
+  mgp::List results;
 };
 
 ParamNames ExtractParamNames(const mgp::Map &parameters) {
@@ -152,150 +142,33 @@ std::string ConstructFinalQuery(const std::string &running_query, const std::str
   return fmt::format("{} {}", preffix_query, running_query);
 }
 
-mg::Map ConstructParams(const ParamNames &param_names, const mgp::Map &parameters) {
-  mg::Map new_params{parameters.Size()};
-
-  for (const auto &map_item : parameters) {
-    switch (map_item.value.Type()) {
-      case mgp::Type::Node:
-        new_params.Insert(map_item.key, mg::Value(static_cast<int64_t>(map_item.value.ValueNode().Id().AsInt())));
-        break;
-      case mgp::Type::Relationship:
-        new_params.Insert(map_item.key,
-                          mg::Value(static_cast<int64_t>(map_item.value.ValueRelationship().Id().AsInt())));
-        break;
-      case mgp::Type::Bool:
-        new_params.Insert(map_item.key, mg::Value(map_item.value.ValueBool()));
-        break;
-      case mgp::Type::String:
-        new_params.Insert(map_item.key, mg::Value(map_item.value.ValueString()));
-        break;
-      case mgp::Type::Int:
-        new_params.Insert(map_item.key, mg::Value(map_item.value.ValueInt()));
-        break;
-      case mgp::Type::Double:
-        new_params.Insert(map_item.key, mg::Value(map_item.value.ValueDouble()));
-        break;
-      default:
-        // Temporal types and paths not yet supported
-        throw std::runtime_error("Can't parse some of the arguments!");
-        break;
-    }
-  }
-
-  return new_params;
-}
-
-mg::Client::Params GetClientParams() {
-  auto host = std::string(kDefaultHost);
-  auto port = kDefaultPort;
-  auto *username = "";
-  auto *password = "";
-
-  auto *maybe_host = std::getenv(std::string(kMgHost).c_str());
-  if (maybe_host) {
-    host = std::move(maybe_host);
-  }
-
-  const auto *maybe_port = std::getenv(std::string(kMgPort).c_str());
-  if (maybe_port) {
-    port = static_cast<uint16_t>(std::move(*maybe_port));
-  }
-
-  const auto *maybe_username = std::getenv(std::string(kMgUsername).c_str());
-  if (maybe_username) {
-    username = std::move(maybe_username);
-  }
-
-  const auto *maybe_password = std::getenv(std::string(kMgPassword).c_str());
-  if (maybe_password) {
-    password = std::move(maybe_password);
-  }
-
-  return mg::Client::Params{.host = std::move(host),
-                            .port = std::move(port),
-                            .username = std::move(username),
-                            .password = std::move(password)};
-}
-
-QueryResults ExecuteQuery(const std::string &query, const mgp::Map &query_parameters) {
-  mg::Client::Init();
-
-  auto client = mg::Client::Connect(GetClientParams());
-
-  if (!client) {
-    throw std::runtime_error("Unable to connect to client!");
-  }
-
+QueryResults ExecuteQuery(const mgp::QueryExecution &query_execution, const std::string &query,
+                          const mgp::Map &query_parameters) {
   auto param_names = ExtractParamNames(query_parameters);
   auto preffix_query = ConstructQueryPreffix(param_names);
   auto final_query = ConstructFinalQuery(query, preffix_query);
 
-  const auto final_parameters = ConstructParams(param_names, query_parameters);
+  auto results = query_execution.ExecuteQuery(final_query, query_parameters);
 
-  if (!client->Execute(final_query, final_parameters.AsConstMap())) {
-    throw std::runtime_error("Error while executing do module!");
-  }
+  auto headers = results.Headers();
 
-  auto columns = client->GetColumns();
-
-  std::vector<std::vector<mg::Value>> results;
-  while (const auto maybe_result = client->FetchOne()) {
-    if ((*maybe_result).size() == 0) {
+  mgp::List result_list;
+  while (const auto maybe_result = results.PullOne()) {
+    if ((*maybe_result).Size() == 0) {
       break;
     }
 
     auto result = *maybe_result;
-    results.push_back(std::move(result));
+    result_list.AppendExtend(mgp::Value(result.Values()));
   }
 
-  client->DiscardAll();
-
-  mg::Client::Finalize();
-
-  return QueryResults{.columns = std::move(columns), .results = std::move(results)};
+  return QueryResults{.columns = std::move(headers), .results = std::move(result_list)};
 }
 
 void InsertConditionalResults(const mgp::RecordFactory &record_factory, const QueryResults &query_results) {
-  for (const auto &row : query_results.results) {
-    auto result_map = mgp::Map();
-
-    for (size_t i = 0; i < query_results.columns.size(); i++) {
-      const auto &result = row[i];
-      const auto &column = query_results.columns[i];
-
-      switch (result.type()) {
-        case mg::Value::Type::Bool:
-          result_map.Insert(column, mgp::Value(result.ValueBool()));
-          break;
-        case mg::Value::Type::String: {
-          auto string_value = mgp::Value(std::string(result.ValueString()));
-          result_map.Insert(column, string_value);
-          break;
-        }
-        case mg::Value::Type::Int:
-          result_map.Insert(column, mgp::Value(result.ValueInt()));
-          break;
-        case mg::Value::Type::Double:
-          result_map.Insert(column, mgp::Value(result.ValueDouble()));
-          break;
-        case mg::Value::Type::Node:
-          throw std::runtime_error("Returning nodes in do procedures not yet supported.");
-          break;
-        case mg::Value::Type::Relationship:
-          throw std::runtime_error("Returning relationships in do procedures not yet supported.");
-          break;
-        case mg::Value::Type::Path:
-          throw std::runtime_error("Returning paths in do procedures not yet supported.");
-          break;
-        default:
-          throw std::runtime_error(
-              fmt::format("Returning type in column {} in do procedures not yet supported!", column));
-      }
-    }
-
+  for (const auto &result : query_results.results) {
     auto record = record_factory.NewRecord();
-    record.Insert(std::string(kReturnValue).c_str(), result_map);
+    record.Insert(std::string(kReturnValue).c_str(), mgp::Value(result.ValueMap()));
   }
 }
 
@@ -325,7 +198,8 @@ void When(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_mem
           "The query {} isn’t supported by `do.when` because it would execute a global operation.", query_to_execute));
     }
 
-    const auto query_results = ExecuteQuery(query_to_execute, params);
+    const auto query_execution = mgp::QueryExecution(memgraph_graph);
+    const auto query_results = ExecuteQuery(query_execution, query_to_execute, params);
     InsertConditionalResults(record_factory, query_results);
     return;
   } catch (const std::exception &e) {
@@ -380,7 +254,8 @@ void Case(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_mem
           "The query {} isn’t supported by `do.case` because it would execute a global operation.", query_to_execute));
     }
 
-    const auto query_results = ExecuteQuery(query_to_execute, params);
+    const auto query_execution = mgp::QueryExecution(memgraph_graph);
+    const auto query_results = ExecuteQuery(query_execution, query_to_execute, params);
     InsertConditionalResults(record_factory, query_results);
     return;
   } catch (const std::exception &e) {

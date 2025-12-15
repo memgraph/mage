@@ -3,6 +3,7 @@
 import os
 import subprocess
 import argparse
+import sys
 
 WORK_DIRECTORY = os.getcwd()
 E2E_CORRECTNESS_DIRECTORY = f"{WORK_DIRECTORY}/e2e_correctness"
@@ -11,6 +12,7 @@ E2E_CORRECTNESS_DIRECTORY = f"{WORK_DIRECTORY}/e2e_correctness"
 class ConfigConstants:
     NEO4J_PORT = 7688
     MEMGRAPH_PORT = 7687
+    NEO4J_CONTAINER_NAME = "neo4j"
 
 
 def parse_arguments():
@@ -33,6 +35,12 @@ def parse_arguments():
         type=int,
         required=False,
     )
+    parser.add_argument(
+        "--neo4j-container",
+        help="Set the Neo4j container name",
+        type=str,
+        required=False,
+    )
     args = parser.parse_args()
     return args
 
@@ -46,6 +54,7 @@ def main(
     test_filter: str = None,
     memgraph_port: str = str(ConfigConstants.MEMGRAPH_PORT),
     neo4j_port: str = str(ConfigConstants.NEO4J_PORT),
+    neo4j_container: str = ConfigConstants.NEO4J_CONTAINER_NAME,
 ):
     os.environ["PYTHONPATH"] = E2E_CORRECTNESS_DIRECTORY
     os.chdir(E2E_CORRECTNESS_DIRECTORY)
@@ -55,9 +64,13 @@ def main(
 
     command.extend(["--memgraph-port", memgraph_port])
     command.extend(["--neo4j-port", neo4j_port])
+    command.extend(["--neo4j-container", neo4j_container])
 
-
-    subprocess.run(command)
+    try:
+        subprocess.run(command, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error: {e}")
+        sys.exit(e.returncode)
 
 
 if __name__ == "__main__":
@@ -65,14 +78,18 @@ if __name__ == "__main__":
     test_filter = args.k
     memgraph_port = args.memgraph_port
     neo4j_port = args.neo4j_port
+    neo4j_container = args.neo4j_container
 
     if memgraph_port:
         memgraph_port = str(memgraph_port)
     if neo4j_port:
         neo4j_port = str(neo4j_port)
+    if args.neo4j_container:
+        neo4j_container = args.neo4j_container
 
     main(
         test_filter=test_filter,
         memgraph_port=memgraph_port,
         neo4j_port=neo4j_port,
+        neo4j_container=neo4j_container,
     )

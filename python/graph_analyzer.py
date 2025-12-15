@@ -145,7 +145,6 @@ def _get_analysis_funcs():
 def _analyze_graph(
     context: mgp.ProcCtx, g: nx.MultiDiGraph, analyses: List[str]
 ) -> List[Tuple[str, str]]:
-
     functions = (
         _get_analysis_funcs()
         if analyses is None

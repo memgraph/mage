@@ -1,3 +1,9 @@
+// Copyright 2025 Memgraph Ltd.
+//
+// Licensed as a Memgraph Enterprise file under the Memgraph Enterprise
+// License (the "License"); by using this file, you agree to be bound by the terms of the License, and you may not use
+// this file except in compliance with the License. You may obtain a copy of the License at https://memgraph.com/legal.
+
 #include <gtest/gtest.h>
 
 #include <mg_generate.hpp>
@@ -469,7 +475,7 @@ TEST(OnlineBC, NonParallel) {
       mg_graph::GraphType::kUndirectedGraph);
 
   auto algorithm = online_bc::OnlineBC();
-  const auto computed_BC = algorithm.Set(*example_graph, false, false);
+  const auto computed_BC = algorithm.Set(*example_graph, false, 1);
 
   const std::unordered_map<std::uint64_t, double> correct_BC = {{0, 51.33333333333333},
                                                                 {1, 17.333333333333336},

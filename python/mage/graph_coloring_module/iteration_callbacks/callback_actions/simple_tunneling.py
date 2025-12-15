@@ -35,7 +35,6 @@ class SimpleTunneling(Action):
         population: Population,
         parameters: Dict[str, Any] = None,
     ) -> None:
-
         simple_tunneling_max_attempts = param_value(
             graph, parameters, Parameter.SIMPLE_TUNNELING_MAX_ATTEMPTS
         )

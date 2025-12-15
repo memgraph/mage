@@ -1,5 +1,8 @@
 #include <mgp.hpp>
-#include <math.h>
+
+#include <set>
+#include <unordered_set>
+#include <cmath>
 
 
 namespace node_similarity_util {

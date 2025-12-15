@@ -1,6 +1,6 @@
-#include <mg_utils.hpp>
-
 #include "algorithm/katz.hpp"
+
+#include <mg_utils.hpp>
 
 namespace {
 

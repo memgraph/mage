@@ -1,5 +1,5 @@
 import json
-from typing import Any, List, Dict, Tuple
+from typing import Any, List, Dict, Tuple, Union
 from datetime import datetime
 
 import elasticsearch
@@ -226,7 +226,10 @@ def elastic_search_parallel_bulk(
 
 @mgp.read_proc
 def connect(
-    elastic_url: str, ca_certs: str, elastic_user: str, elastic_password
+    elastic_url: str,
+    ca_certs: Union[str, None] = None,
+    elastic_user: str = "",
+    elastic_password: str = "",
 ) -> mgp.Record(connection_status=mgp.Map):
     """Establishes connection with the Elasticsearch. This configuration needs to be specific to the Elasticsearch deployment. Uses basic authentication
     Args:
@@ -570,8 +573,9 @@ def scan(
     )
     items = []
     for item in response:
-        item[ID] = item[_SOURCE][INDEX][ID]
-        item[_SOURCE].pop(INDEX, None)
+        if _SOURCE in item and INDEX in item[_SOURCE]:
+            item[ID] = item[_SOURCE][INDEX][ID]
+            item[_SOURCE].pop(INDEX, None)
         items.append(item)
 
     return mgp.Record(items=items)
@@ -608,8 +612,9 @@ def search(
     )
     hits = []
     for hit in response[HITS][HITS]:
-        hit[ID] = hit[_SOURCE][INDEX][ID]
-        hit[_SOURCE].pop(INDEX, None)
+        if _SOURCE in hit and INDEX in hit[_SOURCE]:
+            hit[ID] = hit[_SOURCE][INDEX][ID]
+            hit[_SOURCE].pop(INDEX, None)
         hits.append(hit)
 
     result = {}

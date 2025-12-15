@@ -4,5 +4,4 @@ set(do_module_src
 
 add_query_module(do 1 "${do_module_src}")
 
-target_include_directories(do PRIVATE ${MGCLIENT_INCLUDE_DIRS})
-target_link_libraries(do PRIVATE mgclient fmt::fmt)
+target_link_libraries(do PRIVATE fmt::fmt)

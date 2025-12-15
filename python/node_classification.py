@@ -22,6 +22,7 @@ from mage.node_classification.models.train_model import train_epoch
 # constants
 ##############################
 
+
 # parameters for the model
 class ModelParams:
     IN_CHANNELS = "in_channels"
@@ -360,14 +361,14 @@ def set_model_parameters(
     # which are not hashable, but conversion to lists makes them hashable
     if (
         ModelParams.HIDDEN_FEATURES_SIZE in params.keys()
-        and type(params[ModelParams.HIDDEN_FEATURES_SIZE]) == tuple
+        and isinstance(params[ModelParams.HIDDEN_FEATURES_SIZE], tuple)
     ):
         params[ModelParams.HIDDEN_FEATURES_SIZE] = list(
             params[ModelParams.HIDDEN_FEATURES_SIZE]
         )
     if (
         DataParams.METRICS in params.keys()
-        and type(params[DataParams.METRICS]) == tuple
+        and isinstance(params[DataParams.METRICS], tuple)
     ):
         params[DataParams.METRICS] = list(params[DataParams.METRICS])
 
@@ -597,8 +598,10 @@ def train(
 
 
 @mgp.read_proc
-def get_training_data() -> mgp.Record(
-    epoch=int, loss=float, val_loss=float, train_log=mgp.Any, val_log=mgp.Any
+def get_training_data() -> (
+    mgp.Record(
+        epoch=int, loss=float, val_loss=float, train_log=mgp.Any, val_log=mgp.Any
+    )
 ):
     """This function is used so user can see what is logged data from training.
 

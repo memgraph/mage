@@ -3,5 +3,4 @@ set(uuid_module_src
 
 add_query_module(uuid_generator 1 ${uuid_module_src})
 
-# Link external libraries
-target_link_libraries(uuid_generator PRIVATE mg_utility mage_uuid)
+target_link_libraries(uuid_generator PRIVATE uuid)

@@ -53,13 +53,13 @@ class MLPPredictor(torch.nn.Module):
             g.apply_edges(self.apply_edges, etype=target_relation)
             scores = g.edata[Predictors.EDGE_SCORE]
 
-            if type(scores) != dict:
+            if not isinstance(scores, dict):
                 return scores.view(-1)
 
-            if type(target_relation) == tuple:  # Tuple[str, str, str] identification
+            if isinstance(target_relation, tuple):  # Tuple[str, str, str] identification
                 return scores[target_relation].view(-1)
 
-            if type(target_relation) == str:  # edge type identification
+            if isinstance(target_relation, str):
                 for key, val in scores.items():
                     if key[1] == target_relation:
                         return val.view(-1)

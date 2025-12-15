@@ -1,3 +1,9 @@
+// Copyright 2025 Memgraph Ltd.
+//
+// Licensed as a Memgraph Enterprise file under the Memgraph Enterprise
+// License (the "License"); by using this file, you agree to be bound by the terms of the License, and you may not use
+// this file except in compliance with the License. You may obtain a copy of the License at https://memgraph.com/legal.
+
 #include <algorithm>
 #include <string>
 #include <thread>
@@ -7,6 +13,7 @@
 #include <mg_utils.hpp>
 
 #include "algorithm_online/betweenness_centrality_online.hpp"
+#include "mg_procedure.h"
 
 namespace {
 constexpr char const *kProcedureSet = "set";
@@ -53,6 +60,12 @@ void InsertMessageRecord(mgp_result *result, mgp_memory *memory, const char *mes
 
 void Set(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
+    if (!mgp_is_enterprise_valid()) {
+      mgp::result_set_error_msg(result,
+                                "To use betweenness centrality online module you need a valid enterprise license.");
+      return;
+    }
+
     const auto normalize = mgp::value_get_bool(mgp::list_at(args, 0));
     auto threads = mgp::value_get_int(mgp::list_at(args, 1));
 
@@ -72,6 +85,11 @@ void Set(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memo
 
 void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
+    if (!mgp_is_enterprise_valid()) {
+      mgp::result_set_error_msg(result,
+                                "To use betweenness centrality online module you need a valid enterprise license.");
+      return;
+    }
     const auto normalize = mgp::value_get_bool(mgp::list_at(args, 0));
 
     auto graph = mg_utility::GetGraphView(memgraph_graph, result, memory, mg_graph::GraphType::kUndirectedGraph);
@@ -93,6 +111,11 @@ void Get(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memo
 
 void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
+    if (!mgp_is_enterprise_valid()) {
+      mgp::result_set_error_msg(result,
+                                "To use betweenness centrality online module you need a valid enterprise license.");
+      return;
+    }
     const auto normalize = mgp::value_get_bool(mgp::list_at(args, 4));
     const auto threads = mgp::value_get_int(mgp::list_at(args, 5));
 
@@ -178,6 +201,11 @@ void Update(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_m
 
 void Reset(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
+    if (!mgp_is_enterprise_valid()) {
+      mgp::result_set_error_msg(result,
+                                "To use betweenness centrality online module you need a valid enterprise license.");
+      return;
+    }
     algorithm = online_bc::OnlineBC();
     InsertMessageRecord(result, memory, "The algorithm has been successfully reset!");
   } catch (const std::exception &e) {
