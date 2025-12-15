@@ -1,11 +1,6 @@
 #pragma once
-
-#include <memory>
-#include <vector>
-
+#include <unordered_map>    
 #include <mg_procedure.h>
-#include <mg_exceptions.hpp>
-#include <mg_graph.hpp>
 
 // This import should go before below imports since it is a dependency for the subsequent ones
 #include "defs.h"
@@ -19,7 +14,10 @@ namespace louvain_alg {
 // Used for removing the ambiguity of existing graph instances
 using GrappoloGraph = graph;
 
-namespace {
+struct LouvainGraph {
+    std::vector<std::tuple<uint64_t, uint64_t, double>> edges;
+    std::unordered_map<uint64_t, uint64_t> memgraph_id_to_id;
+};
 
 /**
  * Grappolo community detection algorithm. Implementation by: https://github.com/Exa-Graph/grappolo
@@ -39,22 +37,11 @@ namespace {
  * gain in modularity is less than `coloringThreshold`
  * @return Vector of community indices
  */
-std::vector<std::int64_t> GrappoloCommunityDetection(GrappoloGraph &grappolo_graph, mgp_graph *graph, bool coloring,
-                                                     std::uint64_t min_graph_size, double threshold,
-                                                     double coloring_threshold);
+std::vector<int64_t> GrappoloCommunityDetection(GrappoloGraph &grappolo_graph, mgp_graph *graph, bool coloring,
+                                                     uint64_t min_graph_size, double threshold,
+                                                     double coloring_threshold, int num_threads);
 
-/**
- * Method for loading Grappolo graph from the instance of Memgraph graph.
- *
- * @param memgraph_graph Memgraph graph instance
- * @param grappolo_graph Grappolo graph instance
- */
-void LoadUndirectedEdges(const mg_graph::GraphView<> &memgraph_graph, GrappoloGraph &grappolo_graph);
-
-}  // namespace
-
-std::vector<std::int64_t> GetCommunities(const mg_graph::GraphView<> &memgraph_graph, mgp_graph *graph, bool coloring = false,
-                                         std::uint64_t min_graph_shrink = 100000, double threshold = 0.000001,
-                                         double coloring_threshold = 0.01);
-
+LouvainGraph GetLouvainGraph(mgp_graph *memgraph_graph, mgp_memory *memory, const char *weight_property, double default_weight = 1.0);
+LouvainGraph GetLouvainSubgraph(mgp_memory *memory, mgp_graph *memgraph_graph, mgp_list *subgraph_nodes, mgp_list *subgraph_edges, const char *weight_property, double default_weight = 1.0);
+void GetGrappoloSuitableGraph(GrappoloGraph &grappolo_graph, int num_threads, const LouvainGraph &edges);
 }  // namespace louvain_alg

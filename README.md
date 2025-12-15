@@ -27,6 +27,24 @@
     </a>
 </p>
 
+## Merging Mage and mgcxx into memgraph/memgraph repo (November 7th, 2025)
+
+Hi Memgraph Community!
+
+Quick heads up / announcement. We have decided to merge the [memgraph/mage](http://github.com/memgraph/mage) and [memgraph/mgcxx](http://github.com/memgraph/mgcxx) repositories into [memgraph/memgraph](http://github.com/memgraph/memgraph) at some point in the near future (within the next few months).
+
+Let me outline the reasoning. Despite Memgraph's usage growing in the last few years, we have encouraged the community to make external open source contributions, but the impact of these contributions has remained relatively insignificant. On the other hand, we see huge potential in the merger because it will allow us to have more efficient and faster release cycles. A better release cycle means more and improved capabilities from Memgraph.
+
+Regarding licensing, at the time of the merge, merged repositories will be archived under the existing license. In contrast, the merged code will be released under the existing Memgraph Community BSL license. Effectively integrating the merged code into the Memgraph Community. The merged code, as well as existing Memgraph Community code, will be available under the BSL license, offering the most important open source benefits: right to inspect, right to repair, and right to improve. The external contributions are always welcome. In fact, we'll also make the process of contributing easier.
+
+From a usage perspective, Memgraph packages and Docker images will remain unchanged. A separate Docker image will still be available, including all Mage modules. mgcxx is already statically linked (it’s included in all Memgraph packages). Over the long run, we plan to introduce a package manager for all Memgraph modules.
+
+I hope all the above makes sense. We'll keep you posted about the progress. To give feedback, please visit [the discussion](https://github.com/memgraph/memgraph/discussions/3413).
+
+Best, Marko ([gitbuda](http://github.com/gitbuda)), CTO @ Memgraph
+
+--------
+
 ## Memgraph Advanced Graph Extensions :crystal_ball:
 
 This open-source repository contains all available user-defined graph analytics
@@ -47,6 +65,19 @@ be seen on their official
 started, Memgraph will automatically attempt to load the query modules from all
 `*.so` and `*.py` files it finds in the default directory defined with flag
 [--query-modules-directory](https://docs.memgraph.com/memgraph/reference-guide/configuration/).
+
+### Daily builds
+
+Stay on the cutting edge with the latest features and improvements by using
+[Memgraph Daily Builds](https://memgraph.github.io/daily-builds/#mage). Daily
+builds are updated frequently and allow you to test new capabilities before they
+reach stable releases.
+
+<p align="left"> 
+<a href="https://memgraph.github.io/daily-builds/#mage"> 
+  <img src="https://img.shields.io/badge/Daily%20Builds-latest-blue?style=for-the-badge" alt="Daily Builds" /> 
+</a> 
+</p>
 
 ### Further reading
 
@@ -74,7 +105,7 @@ streaming graph algorithms! Drop us a message on the channels below:
     <img src="https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"/>
 </a>
 <a href="https://github.com/memgraph">
-    <img src="https://img.shields.io/badge/Memgraph_GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="Memgraph Github"/>
+    <img src="https://img.shields.io/badge/Memgraph_GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="Memgraph GitHub"/>
 </a>
 <a href="https://www.youtube.com/channel/UCZ3HOJvHGxtQ_JHxOselBYg">
     <img src="https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Memgraph YouTube"/>
@@ -146,7 +177,7 @@ docker run -p 7687:7687 -p 7444:7444 memgraph/memgraph-mage
 
 #### 2 Install MAGE with Docker build of the repository
 
-**0. a** Make sure that you have cloned the MAGE Github repository and positioned
+**0. a** Make sure that you have cloned the MAGE GitHub repository and positioned
 yourself inside the repo in your terminal:
 
 ```bash
@@ -158,14 +189,14 @@ git clone --recurse-submodules https://github.com/memgraph/mage.git && cd mage
 
 ```bash
 
-curl -L "https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11/memgraph_${MEMGRAPH_VERSION}-1_${ARCHITECTURE}.deb" > memgraph-${ARCHITECTURE}.deb
+curl -L "https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/ubuntu-24.04/memgraph_${MEMGRAPH_VERSION}-1_${ARCHITECTURE}.deb" > memgraph-${ARCHITECTURE}.deb
 
 ```
 
 or this one if you are on `arm64`:
 
 ```bash
-curl -L "https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb" > memgraph-arm64.deb
+curl -L "https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/ubuntu-24.04-aarch64/memgraph_${MEMGRAPH_VERSION}-1_arm64.deb" > memgraph-arm64.deb
 ```
 
 **1.** To build the **MAGE** image run the following command where you set `${architecture}` to your system architecture (`amd64` or `arm64`):
@@ -207,7 +238,7 @@ To learn more about development with MAGE and Docker, visit the
   [site](https://memgraph.com/docs/memgraph/installation).
 - To build and install MAGE query modules you will need:
   - libcurl4
-  - libpython3.9
+  - libpython3.12
   - libssl-dev
   - libboost-all-dev
   - openssl 
@@ -222,6 +253,7 @@ To learn more about development with MAGE and Docker, visit the
   - python3-dev     
   - clang
   - unixodbc  
+  - uuid-dev
 
 
 Since Memgraph needs to load MAGE's modules, there is the `setup` script to help you. With it, you can build the modules so that Memgraph

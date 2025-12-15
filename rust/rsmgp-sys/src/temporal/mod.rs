@@ -76,7 +76,8 @@ impl Date {
     }
 
     pub fn to_naive_date(&self) -> NaiveDate {
-        NaiveDate::from_ymd(self.year(), self.month(), self.day())
+        NaiveDate::from_ymd_opt(self.year(), self.month(), self.day())
+            .expect("Invalid date parameters from Memgraph")
     }
 
     pub fn mgp_ptr(&self) -> *mut mgp_date {
@@ -106,12 +107,13 @@ fn create_naive_time(
     millisecond: u32,
     microsecond: u32,
 ) -> NaiveTime {
-    NaiveTime::from_hms_micro(
+    NaiveTime::from_hms_micro_opt(
         hour,
         minute,
         second,
         millisecond * MICROS_PER_MILLIS + microsecond,
     )
+    .expect("Invalid time parameters from Memgraph")
 }
 
 fn create_mgp_local_time_parameters(from: &NaiveTime) -> mgp_local_time_parameters {
@@ -177,7 +179,8 @@ impl LocalTime {
         let timestamp = self.timestamp();
         let seconds = (timestamp / MICROS_PER_SECOND) as u32;
         let micros = (timestamp % MICROS_PER_SECOND) as u32;
-        NaiveTime::from_num_seconds_from_midnight(seconds, micros * NANOS_PER_MICROS)
+        NaiveTime::from_num_seconds_from_midnight_opt(seconds, micros * NANOS_PER_MICROS)
+            .expect("Invalid time parameters from Memgraph")
     }
 
     pub fn mgp_ptr(&self) -> *mut mgp_local_time {
@@ -272,13 +275,15 @@ impl LocalDateTime {
     }
 
     pub fn to_naive_date_time(&self) -> NaiveDateTime {
-        NaiveDate::from_ymd(self.year(), self.month(), self.day()).and_time(create_naive_time(
-            self.hour(),
-            self.minute(),
-            self.second(),
-            self.millisecond(),
-            self.microsecond(),
-        ))
+        NaiveDate::from_ymd_opt(self.year(), self.month(), self.day())
+            .expect("Invalid date parameters from Memgraph")
+            .and_time(create_naive_time(
+                self.hour(),
+                self.minute(),
+                self.second(),
+                self.millisecond(),
+                self.microsecond(),
+            ))
     }
 
     pub fn mgp_ptr(&self) -> *mut mgp_local_date_time {

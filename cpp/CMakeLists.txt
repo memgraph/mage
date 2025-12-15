@@ -28,10 +28,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall \
 
 # Don't omit frame pointer in RelWithDebInfo, for additional callchain debug.
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
-  "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer")
+  "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -O2 -funsafe-math-optimizations -fvect-cost-model=dynamic -fno-omit-frame-pointer")
 
 # Release flags.
-set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -funsafe-math-optimizations -fvect-cost-model=dynamic -DNDEBUG")
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
 
 find_package(Threads REQUIRED)
@@ -41,26 +41,16 @@ include(ExternalProject)
 include(cugraph)
 
 # Install testing dependencies (gtest)
-set(GTEST_ROOT ${PROJECT_BINARY_DIR}/gtest)
-ExternalProject_Add(gtest-proj
-  PREFIX ${GTEST_ROOT}
-  INSTALL_DIR ${GTEST_ROOT}
+FetchContent_Declare(googletest
   GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG release-1.11.0
-  CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
-  "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
-  "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
-  "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
-set(GTEST_INCLUDE_DIR ${GTEST_ROOT}/include)
-set(GTEST_LIBRARY_PATH ${GTEST_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
-set(GTEST_DEBUG_LIBRARY_PATH ${GTEST_ROOT}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtestd.a)
-add_library(mage_gtest STATIC IMPORTED)
-set_target_properties(mage_gtest PROPERTIES
-  IMPORTED_LOCATION "${GTEST_LIBRARY_PATH}"
-  IMPORTED_LOCATION_DEBUG "${GTEST_DEBUG_LIBRARY_PATH}"
-  INTERFACE_LINK_LIBRARIES "${CMAKE_THREAD_LIBS_INIT}")
-include_directories("${GTEST_INCLUDE_DIR}")
-add_dependencies(mage_gtest gtest-proj)
+  GIT_TAG v1.16.0
+)
+# For Windows: Prevent overriding the parent project's compiler/linker settings
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+
+# Create an alias for consistency with existing code
+add_library(mage_gtest ALIAS gtest)
 
 # Add OpenMP compiling option
 find_package(OpenMP)
@@ -71,21 +61,6 @@ if(OPENMP_FOUND)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 
-# Add stduuid - cross-platform UUID implementation
-set(UUID_ROOT ${PROJECT_BINARY_DIR}/uuid)
-ExternalProject_Add(uuid-proj
-  PREFIX ${UUID_ROOT}
-  INSTALL_DIR ${UUID_ROOT}
-  GIT_REPOSITORY https://github.com/mariusbancila/stduuid.git
-  GIT_TAG v1.2.2
-  CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
-  "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
-  "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
-set(UUID_INCLUDE_DIR ${UUID_ROOT}/include)
-add_library(mage_uuid INTERFACE)
-target_include_directories(mage_uuid INTERFACE ${UUID_INCLUDE_DIR}/gsl)
-target_include_directories(mage_uuid INTERFACE ${UUID_INCLUDE_DIR})
-add_dependencies(mage_uuid uuid-proj)
 
 # Add mgclient
 set(MGCLIENT_ROOT ${PROJECT_BINARY_DIR}/mgclient)
@@ -93,7 +68,7 @@ ExternalProject_Add(mgclient-proj
   PREFIX ${MGCLIENT_ROOT}
   INSTALL_DIR ${MGCLIENT_ROOT}
   GIT_REPOSITORY https://github.com/memgraph/mgclient.git
-  GIT_TAG v1.4.2
+  GIT_TAG v1.4.3
   CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
   "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
   "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
@@ -112,11 +87,12 @@ set_target_properties(mgclient PROPERTIES
 add_dependencies(mgclient mgclient-proj)
 
 # mg_utility library
-add_subdirectory(mg_utility)
+add_library(mg_utility INTERFACE)
+target_include_directories(mg_utility INTERFACE ${CMAKE_SOURCE_DIR}/memgraph/include)
 
 FetchContent_Declare(fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 9.1.0
+  GIT_TAG 11.2.0
 )
 FetchContent_MakeAvailable(fmt)
 
@@ -162,5 +138,7 @@ add_subdirectory(csv_utils_module)
 add_subdirectory(algo_module)
 add_subdirectory(set_property_module)
 add_subdirectory(leiden_community_detection_module)
+add_subdirectory(math_module)
+add_subdirectory(knn_module)
 
 add_cugraph_subdirectory(cugraph_module)

@@ -53,7 +53,7 @@ def get_clusters(
     n_init: mgp.Number = 10,
     max_iter: mgp.Number = 10,
     tol: mgp.Number = 1e-4,
-    algorithm: str = "auto",
+    algorithm: str = "lloyd",
     random_state: int = 1998,
 ) -> mgp.Record(node=mgp.Vertex, cluster_id=mgp.Number):
     nodes, embeddings = extract_nodes_embeddings(ctx, embedding_property)
@@ -85,7 +85,7 @@ def set_clusters(
     n_init: mgp.Number = 10,
     max_iter: mgp.Number = 10,
     tol: mgp.Number = 1e-4,
-    algorithm: str = "auto",
+    algorithm: str = "lloyd",
     random_state=1998,
 ) -> mgp.Record(node=mgp.Vertex, cluster_id=mgp.Number):
     nodes, embeddings = extract_nodes_embeddings(ctx, embedding_property)

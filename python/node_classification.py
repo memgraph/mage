@@ -310,7 +310,7 @@ def set_model_parameters(
     """The purpose of this function is to initialize all global variables.
     _You_ can change those via **params** dictionary.
     It checks if variables in **params** are defined appropriately. If so,
-    map of default global parameters is overriden with user defined dictionary params.
+    map of default global parameters is overridden with user defined dictionary params.
     After that it executes previously defined functions declare_globals and
     declare_model_and_data and sets each global variable to some value.
 
@@ -361,14 +361,14 @@ def set_model_parameters(
     # which are not hashable, but conversion to lists makes them hashable
     if (
         ModelParams.HIDDEN_FEATURES_SIZE in params.keys()
-        and type(params[ModelParams.HIDDEN_FEATURES_SIZE]) == tuple
+        and isinstance(params[ModelParams.HIDDEN_FEATURES_SIZE], tuple)
     ):
         params[ModelParams.HIDDEN_FEATURES_SIZE] = list(
             params[ModelParams.HIDDEN_FEATURES_SIZE]
         )
     if (
         DataParams.METRICS in params.keys()
-        and type(params[DataParams.METRICS]) == tuple
+        and isinstance(params[DataParams.METRICS], tuple)
     ):
         params[DataParams.METRICS] = list(params[DataParams.METRICS])
 
