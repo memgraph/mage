@@ -3,7 +3,7 @@
 #include <numeric>
 #include <queue>
 
-# include "personalised_pagerank.hpp"
+#include "personalised_pagerank.hpp"
 
 
 namespace personalised_pagerank_alg {
@@ -179,7 +179,7 @@ namespace personalised_pagerank_alg {
                 ordered_edges_.emplace_back(adjacent_node, node_id);
             }
         }
-    }
+    }-
 
     std::uint64_t PageRankGraph::GetNodeCount() const { return node_count_; }
 
@@ -191,8 +191,8 @@ namespace personalised_pagerank_alg {
 
     std::vector<std::uint64_t> PageRankGraph::GetDangleNodes() const {
         std::vector<std::uint64_t> DangleNodes;
-        if(out_degree_.size()!=0){
-            for (std::size_t node_id = 0; node_id <= node_count_; node_id++) {
+        if (!out_degree_.empty()) {
+            for (std::size_t node_id = 0; node_id < node_count_; node_id++) {
             if (out_degree_[node_id] == 0) { DangleNodes.emplace_back(node_id); }
         }}
         return DangleNodes;

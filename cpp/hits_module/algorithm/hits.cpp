@@ -147,7 +147,11 @@ namespace {
 /// @param score -- hub scores or auth scores
     void Normalise(std::vector<double> &scores) {
         const double sum = std::accumulate(scores.begin(), scores.end(), 0.0);
-        if (sum!=0){for (double &value: scores) { value /= sum; }}
+        if (sum != 0) {
+            for (double &value: scores) {
+                value /= sum; 
+            }
+        }
     }
 } // namespace
 

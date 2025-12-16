@@ -25,10 +25,10 @@ namespace personalised_pagerank_alg {
         /// @return -- number of nodes in graph
         std::uint64_t GetNodeCount() const;
 
-        /// @return -- nubmer of edges in graph
+        /// @return -- number of edges in graph
         std::uint64_t GetEdgeCount() const;
 
-        /// @return -- a reference to ordered ordered vector of edges
+        /// @return -- a reference to ordered vector of edges
         const std::vector<EdgePair> &GetOrderedEdges() const;
 
         /// Returns out degree of node node_id
@@ -62,8 +62,8 @@ namespace personalised_pagerank_alg {
 /// person will continue randomly clicking on links is called a damping factor,
 /// otherwise next page is chosen randomly among all pages.
 
-////The calculation start with initial rank of 1/N fo each node,
-/// However, if a personalization vector is exist,  a weight to each assigns node that
+////The calculation start with initial rank of 1/N for each node,
+/// However, if a personalization vector exists, a weight is assigned to each node that
 /// influences the random walk restart.It biases the walk towards specific nodes.
 
 /// PageRank is computed iteratively using following formula:

@@ -5,8 +5,8 @@ namespace {
     constexpr char const *kProcedureGet = "get";
 
     constexpr char const *kFieldNode = "node";
-    constexpr char const *kFieldHub = "rank";
-    constexpr char const *kFieldAuth = "rank";
+    constexpr char const *kFieldHub = "hub";
+    constexpr char const *kFieldAuth = "auth";
 
     constexpr char const *kArgumentMaxIterations = "max_iterations";
     constexpr char const *kArgumentStopEpsilon = "stop_epsilon";
