@@ -1,5 +1,5 @@
-#include "../mg_utility/mg_utils.hpp"
-#include "hits.hpp"
+#include <mg_utils.hpp>
+#include "algorithm/hits.hpp"
 
 namespace {
     constexpr char const *kProcedureGet = "get";
