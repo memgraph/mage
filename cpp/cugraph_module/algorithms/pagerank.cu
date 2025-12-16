@@ -35,8 +35,18 @@ constexpr char const *kDefaultWeightProperty = "weight";
 
 void InsertPagerankRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
                           double rank) {
+  auto *node = mgp::graph_get_vertex_by_id(graph, mgp_vertex_id{.as_int = static_cast<int64_t>(node_id)}, memory);
+  if (!node) {
+    if (mgp::graph_is_transactional(graph)) {
+      throw mg_exception::InvalidIDException();
+    }
+    return;
+  }
+
   auto *record = mgp::result_new_record(result);
-  mg_utility::InsertNodeValueResult(graph, record, kResultFieldNode, node_id, memory);
+  if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
+
+  mg_utility::InsertNodeValueResult(record, kResultFieldNode, node, memory);
   mg_utility::InsertDoubleValueResult(record, kResultFieldPageRank, rank, memory);
 }
 
@@ -63,7 +73,7 @@ void PagerankProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memo
     // IMPORTANT: store_transposed has to be true because cugraph::pagerank
     // only accepts true. It's hard to detect/debug problem because nvcc error
     // messages contain only the top call details + graph_view has many
-    // template paremeters.
+    // template parameters.
     cugraph::pagerank<vertex_t, edge_t, weight_t, result_t, false>(handle, cu_graph_view, std::nullopt, std::nullopt,
                                                                    std::nullopt, std::nullopt, pagerank_results.data(),
                                                                    damping_factor, stop_epsilon, max_iterations);

@@ -13,10 +13,15 @@ const char *k_field_node_to = "node_to";
 
 void InsertBridgeRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_from_id,
                         const std::uint64_t node_to_id) {
-  auto *record = mgp::result_new_record(result);
+  auto *node_from = mg_utility::GetNodeForInsertion(node_from_id, graph, memory);
+  auto *node_to = mg_utility::GetNodeForInsertion(node_to_id, graph, memory);
+  if (!node_from || !node_to) return;
 
-  mg_utility::InsertNodeValueResult(graph, record, k_field_node_from, node_from_id, memory);
-  mg_utility::InsertNodeValueResult(graph, record, k_field_node_to, node_to_id, memory);
+  auto *record = mgp::result_new_record(result);
+  if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
+
+  mg_utility::InsertNodeValueResult(record, k_field_node_from, node_from, memory);
+  mg_utility::InsertNodeValueResult(record, k_field_node_to, node_to, memory);
 }
 
 void GetBridges(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {

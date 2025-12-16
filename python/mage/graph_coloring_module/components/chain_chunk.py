@@ -66,7 +66,6 @@ class ChainChunk(CorrelationPopulation):
         prev_indv: Individual,
         next_indv: Individual,
     ):
-
         super().__init__(graph, individuals)
         self._prev_indv = prev_indv
         self._next_indv = next_indv

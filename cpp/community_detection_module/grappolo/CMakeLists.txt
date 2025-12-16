@@ -1,7 +1,7 @@
 # Nitin A. Gawande, PNNL
 # Oct 19, 2018
 
-# set varaibles using nomenclature used in Makefile
+# set variables using nomenclature used in Makefile
 set(MODULE_DIR community_detection_module/grappolo)
 set(COFOLDER BasicCommunitiesDetection)
 set(UTFOLDER Utility)

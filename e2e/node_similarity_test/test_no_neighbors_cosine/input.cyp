@@ -1,3 +1,10 @@
+CREATE (b:Node {id: 1, score: [1.0, 1.0, 1.0]});
+CREATE (b:Node {id: 2, score: [1.0, 1.0, 1.0]});
+CREATE (b:Node {id: 3, score: [1.0, 1.0, 0.0]});
+CREATE (b:Node {id: 4, score: [0.0, 1.0, 0.0]});
+CREATE (b:Node {id: 5, score: [1.0, 0.0, 1.0]});
+CREATE (b:Node {id: 6, score: [1.0, 0.0, 1.0]});
+CREATE (b:Node {id: 7, score: [1.0, 0.0, 1.0]});
 MERGE (a:Node {id: 0}) MERGE (b:Node {id: 1}) CREATE (a)-[:RELATION]->(b);
 MERGE (a:Node {id: 0}) MERGE (b:Node {id: 2}) CREATE (a)-[:RELATION]->(b);
 MERGE (a:Node {id: 0}) MERGE (b:Node {id: 3}) CREATE (a)-[:RELATION]->(b);
@@ -19,5 +26,3 @@ MERGE (a:Node {id: 4}) MERGE (b:Node {id: 2}) CREATE (a)-[:RELATION]->(b);
 MERGE (a:Node {id: 5}) MERGE (b:Node {id: 0}) CREATE (a)-[:RELATION]->(b);
 MERGE (a:Node {id: 5}) MERGE (b:Node {id: 2}) CREATE (a)-[:RELATION]->(b);
 MERGE (a:Node {id: 5}) MERGE (b:Node {id: 3}) CREATE (a)-[:RELATION]->(b);
-CREATE (a:Node {id: 6});
-CREATE (a:Node {id: 7});

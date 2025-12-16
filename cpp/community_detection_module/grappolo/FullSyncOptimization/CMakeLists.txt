@@ -1,4 +1,4 @@
-# grappolo 
+# grappolo
 
 set( FSFOLDER_SRC
      ${CMAKE_SOURCE_DIR}/${MODULE_DIR}/${FSFOLDER}/fullSyncUtility.cpp
@@ -9,12 +9,12 @@ set( FSFOLDER_SRC
    )
 
 add_library( full_syn_opt STATIC
-  ${FSFOLDER_SRC} 
+  ${FSFOLDER_SRC}
 )
 
 target_include_directories( full_syn_opt PUBLIC ${IO_HEADERS} )
 
-target_link_libraries( full_syn_opt )
+target_link_libraries( full_syn_opt PRIVATE mg_utility)
 
 install( TARGETS
   full_syn_opt

@@ -1,4 +1,5 @@
-#include <omp.h>
+#include <atomic>
+#include <future>
 #include <queue>
 #include <stack>
 #include <vector>
@@ -7,12 +8,8 @@
 
 namespace betweenness_centrality_util {
 
-void BFS(const std::uint64_t source_node, const mg_graph::GraphView<> &graph, std::stack<std::uint64_t> &visited,
-         std::vector<std::vector<std::uint64_t>> &predecessors, std::vector<std::uint64_t> &shortest_paths_counter) {
-  auto number_of_nodes = graph.Nodes().size();
-
-  // -1 to indicate that node is not visited
-  std::vector<int> distance(number_of_nodes, -1);
+void BFS(std::uint64_t source_node, const mg_graph::GraphView<> &graph, std::stack<std::uint64_t> &visited,
+         std::vector<std::vector<std::uint64_t>> &predecessors, std::vector<std::uint64_t> &shortest_paths_counter, std::vector<int> &distance) {
 
   shortest_paths_counter[source_node] = 1;
   distance[source_node] = 0;
@@ -58,57 +55,79 @@ void Normalize(std::vector<double> &vec, double constant) {
 
 namespace betweenness_centrality_alg {
 
-std::vector<double> BetweennessCentrality(const mg_graph::GraphView<> &graph, bool directed, bool normalize,
-                                          int threads) {
-  auto number_of_nodes = graph.Nodes().size();
-  std::vector<double> betweenness_centrality(number_of_nodes, 0);
-
-  // perform bfs for every node in the graph
-  omp_set_dynamic(0);
-  omp_set_num_threads(threads);
-#pragma omp parallel for
-  for (std::uint64_t node_id = 0; node_id < number_of_nodes; node_id++) {
-    // data structures used in BFS
-    std::stack<std::uint64_t> visited;
-    std::vector<std::vector<std::uint64_t>> predecessors(number_of_nodes, std::vector<std::uint64_t>());
-    std::vector<std::uint64_t> shortest_paths_counter(number_of_nodes, 0);
-    betweenness_centrality_util::BFS(node_id, graph, visited, predecessors, shortest_paths_counter);
-
-    std::vector<double> dependency(number_of_nodes, 0);
-
-    while (!visited.empty()) {
-      auto current_node = visited.top();
-      visited.pop();
-
-      for (auto p : predecessors[current_node]) {
-        double fraction = static_cast<double>(shortest_paths_counter[p]) / shortest_paths_counter[current_node];
-        dependency[p] += fraction * (1 + dependency[current_node]);
-      }
-
-      if (current_node != node_id) {
-        if (directed) {
-#pragma omp atomic update
-          betweenness_centrality[current_node] += dependency[current_node];
+  std::vector<double> BetweennessCentrality(const mg_graph::GraphView<>& graph, bool directed, bool normalize, int threads) {
+    const auto number_of_nodes = graph.Nodes().size();
+    std::vector<std::atomic<double>> betweenness_centrality(number_of_nodes);
+    for (auto& bc : betweenness_centrality) bc.store(0.0, std::memory_order_relaxed);
+  
+    auto process_nodes = [&](std::uint64_t start, std::uint64_t end) {
+      // Thread-local BFS resources
+      thread_local std::vector<std::uint64_t> shortest_paths_counter(number_of_nodes, 0);
+      thread_local std::vector<int> distance(number_of_nodes, -1);
+      thread_local std::vector<std::vector<std::uint64_t>> predecessors(number_of_nodes, std::vector<std::uint64_t>{});
+      thread_local std::vector<double> dependency(number_of_nodes, 0.0);
+      thread_local std::stack<std::uint64_t> visited;
+  
+      for (auto node_id = start; node_id < end; ++node_id) {  
+        shortest_paths_counter[node_id] = 1;
+        distance[node_id] = 0;
+        betweenness_centrality_util::BFS(node_id, graph, visited, predecessors, shortest_paths_counter, distance);
+  
+        // Calculate dependencies
+        while (!visited.empty()) {
+          const auto current_node = visited.top();
+          visited.pop();
+  
+          for (const auto predecessor : predecessors[current_node]) {
+            const double fraction = static_cast<double>(shortest_paths_counter[predecessor]) / 
+                                  static_cast<double>(shortest_paths_counter[current_node]);
+            dependency[predecessor] += fraction * (1 + dependency[current_node]);
+          }
+  
+          if (current_node != node_id) {
+            const double value = directed ? dependency[current_node] : dependency[current_node] / 2.0;
+            betweenness_centrality[current_node].fetch_add(value, std::memory_order_relaxed);
+          }
         }
-        // centrality scores need to be divided by two since all shortest paths are considered twice
-        else {
-#pragma omp atomic update
-          betweenness_centrality[current_node] += dependency[current_node] / 2.0;
-        }
+
+        // Reset BFS resources
+        std::fill(shortest_paths_counter.begin(), shortest_paths_counter.end(), 0);
+        std::fill(distance.begin(), distance.end(), -1);
+        std::fill(dependency.begin(), dependency.end(), 0.0);
+        for (auto& preds : predecessors) preds.clear();
       }
+    };
+  
+    const auto nodes_per_thread = (number_of_nodes + threads - 1) / threads;
+    std::vector<std::future<void>> futures;
+    futures.reserve(threads);
+    
+    for (int i = 0; i < threads; ++i) {
+      const auto start = i * nodes_per_thread;
+      const auto end = std::min((i + 1) * nodes_per_thread, number_of_nodes);
+      if (start >= number_of_nodes) break;
+      
+      futures.emplace_back(std::async(std::launch::async, process_nodes, start, end));
     }
+  
+    // Wait for completion
+    for (auto& future : futures) future.wait();
+  
+    // Convert to the result vector
+    std::vector<double> result;
+    result.reserve(number_of_nodes);
+    for (const auto& bc : betweenness_centrality) {
+      result.push_back(bc.load(std::memory_order_relaxed));
+    }
+  
+    if (normalize) {
+      const auto number_of_pairs = (number_of_nodes - 1) * (number_of_nodes - 2);
+      const auto numerator = directed ? 1.0 : 2.0;
+      const double constant = number_of_nodes > 2 ? numerator / static_cast<double>(number_of_pairs) : 1.0;
+      Normalize(result, constant);
+    }
+  
+    return result;
   }
-
-  if (normalize) {
-    // normalized by dividing the value by the number of pairs of nodes
-    // not including the node whose value we normalize
-    auto number_of_pairs = (number_of_nodes - 1) * (number_of_nodes - 2);
-    const auto numerator = directed ? 1.0 : 2.0;
-    double constant = number_of_nodes > 2 ? numerator / number_of_pairs : 1.0;
-    Normalize(betweenness_centrality, constant);
-  }
-
-  return betweenness_centrality;
-}
 
 }  // namespace betweenness_centrality_alg

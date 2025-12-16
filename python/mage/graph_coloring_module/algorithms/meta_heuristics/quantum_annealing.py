@@ -121,7 +121,6 @@ class QA(ParallelAlgorithm):
         index: int,
         parameters: Dict[str, Any],
     ) -> None:
-
         temperature = param_value(graph, parameters, Parameter.QA_TEMPERATURE)
         max_steps = param_value(graph, parameters, Parameter.QA_MAX_STEPS)
         mutation = param_value(graph, parameters, Parameter.MUTATION)

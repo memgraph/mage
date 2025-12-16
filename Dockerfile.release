@@ -1,81 +1,125 @@
-ARG PY_VERSION_DEFAULT=3.9
-
-FROM debian:bullseye as base
+FROM ubuntu:24.04 AS base
 
 USER root
 
 ARG TARGETARCH
-ARG PY_VERSION_DEFAULT
-ENV PY_VERSION ${PY_VERSION_DEFAULT}
+ARG PY_VERSION_DEFAULT=3.12
+ARG MAGE_COMMIT
+ARG BUILD_TYPE
+ENV BUILD_TYPE=${BUILD_TYPE}
+ENV PY_VERSION=${PY_VERSION_DEFAULT}
+ENV MAGE_COMMIT=${MAGE_COMMIT}
+ARG CUSTOM_MIRROR="https://archive.ubuntu.com/ubuntu"
+ARG CUDA=false
+ARG CACHE_PRESENT=false
 
-#essentials for production/dev
-RUN apt-get update && apt-get install -y \
-    libcurl4        `memgraph` \
-    libpython${PY_VERSION}   `memgraph` \
-    libssl1.1       `memgraph` \
-    openssl         `memgraph` \
-    build-essential `mage-memgraph` \
-    cmake           `mage-memgraph` \
-    curl            `mage-memgraph` \
-    g++             `mage-memgraph` \
-    python3         `mage-memgraph` \
-    python3-pip     `mage-memgraph` \
-    python3-setuptools     `mage-memgraph` \
-    python3-dev     `mage-memgraph` \
-    uuid-dev        `mage-memgraph` \
-    clang           `mage-memgraph` \
-    git             `mage-memgraph` \
-    --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+# Install runtime requirements for MAGE
+COPY scripts/install_runtime_requirements.sh /install_runtime_requirements.sh
+RUN chmod +x /install_runtime_requirements.sh && \
+    /install_runtime_requirements.sh --ci --target-arch ${TARGETARCH} \
+      --py-version ${PY_VERSION} --custom-mirror ${CUSTOM_MIRROR} \
+      --cuda ${CUDA} && \
+    rm /install_runtime_requirements.sh
 
+# install memgraph
 COPY memgraph-${TARGETARCH}.deb .
 
-RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb
+# fix `memgraph` UID and GID for compatibility with previous Debian releases
+RUN groupadd -g 103 memgraph && \
+    useradd -u 101 -g memgraph -m -d /home/memgraph -s /bin/bash memgraph && \
+    dpkg -i memgraph-${TARGETARCH}.deb && \
+    rm memgraph-${TARGETARCH}.deb 
 
-ENV LD_LIBRARY_PATH /usr/lib/memgraph/query_modules
+ENV LD_LIBRARY_PATH=/usr/lib/memgraph/query_modules
 
-# Memgraph listens for Bolt Protocol on this port by default.
-EXPOSE 7687
+# Copy modules
+RUN mkdir -p /usr/lib/memgraph/query_modules/
+COPY mage.tar.gz /tmp/mage.tar.gz
+RUN tar -xzvf /tmp/mage.tar.gz -C /usr/lib/memgraph/ && rm /tmp/mage.tar.gz
 
-FROM base as dev
-
-WORKDIR /mage
-COPY . /mage
-
-
-
-#MAGE
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
-    && export PATH="/root/.cargo/bin:${PATH}" \
-    && python3 -m  pip install -r /mage/python/requirements.txt \
-    && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/
-
+# copy script to convert to dev container
+COPY make-dev-container.sh /make-dev-container.sh
+COPY python/requirements.txt /tmp/requirements.txt
+COPY python/requirements-gpu.txt /tmp/requirements-gpu.txt
+COPY cpp/memgraph/src/auth/reference_modules/requirements.txt /tmp/auth_module-requirements.txt
 
 USER memgraph
+COPY --chown=memgraph:memgraph ./scripts/install_python_requirements.sh /home/memgraph/install_python_requirements.sh
+COPY --chown=memgraph:memgraph ./wheels /tmp/wheels
+RUN cd $HOME && \
+    if [ "$TARGETARCH" = "arm64" ]; then \
+      pip install --no-cache-dir /tmp/wheels/pymgclient-*.whl --break-system-packages; \
+    fi && \
+    chmod +x /home/memgraph/install_python_requirements.sh && \
+    ./install_python_requirements.sh --arch ${TARGETARCH} --ci --cuda ${CUDA} --cache-present ${CACHE_PRESENT} --wheel-cache-dir /tmp/wheels && \
+    rm /home/memgraph/install_python_requirements.sh && \
+    rm -rf /tmp/wheels
+
+FROM base AS prod
+
+USER root
+
+ARG TARGETARCH
+ARG PY_VERSION_DEFAULT=3.12
+ARG MAGE_COMMIT
+ARG BUILD_TYPE
+ENV BUILD_TYPE=${BUILD_TYPE}
+ENV PY_VERSION=${PY_VERSION_DEFAULT}
+ENV MAGE_COMMIT=${MAGE_COMMIT}
+ARG CUSTOM_MIRROR
+
+RUN if [ -n "$CUSTOM_MIRROR" ]; then \
+      sed -E -i \
+        -e "/^URIs:/ s#${CUSTOM_MIRROR}/ubuntu/#https://archive.ubuntu.com/ubuntu/#g" \
+        -e "/^URIs:/ s#${CUSTOM_MIRROR}/ubuntu/#https://security.ubuntu.com/ubuntu/#g" \
+        /etc/apt/sources.list.d/ubuntu.sources; \
+    fi
+
+USER memgraph
+EXPOSE 7687
+
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
 CMD [""]
 
 
-
-FROM base as prod
+FROM base AS relwithdebinfo
 
 USER root
-ENTRYPOINT []
-ARG PY_VERSION_DEFAULT
-ENV PY_VERSION ${PY_VERSION_DEFAULT}
 
-#copy modules
-COPY --from=dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
+ARG TARGETARCH
+ARG PY_VERSION_DEFAULT=3.12
+ARG MAGE_COMMIT
+ARG BUILD_TYPE
+ENV BUILD_TYPE=${BUILD_TYPE}
+ENV PY_VERSION=${PY_VERSION_DEFAULT}
+ENV MAGE_COMMIT=${MAGE_COMMIT}
+ARG CUSTOM_MIRROR
 
-#copy python build
-COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
+# Add gdb
+RUN apt-get update && apt-get install -y \
+    gdb libc6-dbg \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* 
 
+# Copy entire mage repo
+COPY --chown=memgraph:memgraph ./ /mage/
 
-RUN rm -rf /mage \
-    && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
-    && apt-get -y --purge autoremove clang git curl python3-pip python3-dev cmake build-essential \
-    && apt-get clean
+# Copy heaptrack and install it properly
+COPY heaptrack /tmp/heaptrack
+RUN cp -vr /tmp/heaptrack/* /usr/ && rm -rf /tmp/heaptrack
+
+RUN if [ -n "$CUSTOM_MIRROR" ]; then \
+      sed -E -i \
+        -e "/^URIs:/ s#${CUSTOM_MIRROR}/ubuntu/#https://archive.ubuntu.com/ubuntu/#g" \
+        -e "/^URIs:/ s#${CUSTOM_MIRROR}/ubuntu/#https://security.ubuntu.com/ubuntu/#g" \
+        /etc/apt/sources.list.d/ubuntu.sources; \
+    fi
+
+# Copy script from Memgraph repo to run Memgraph with GDB - override the entrypoint to use it
+COPY cpp/memgraph/release/docker/run_with_gdb.sh /usr/lib/memgraph/run_with_gdb.sh
 
 USER memgraph
+EXPOSE 7687
+
 ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
 CMD [""]

@@ -1,6 +1,6 @@
 """
 This module represents entry point to temporal graph networks Python implementation of Temporal graph networks for
-deep learning on dynamic graps paper https://arxiv.org/pdf/2006.10637.pdf introduced by E.Rossi [erossi@twitter.com]
+deep learning on dynamic graphs paper https://arxiv.org/pdf/2006.10637.pdf introduced by E.Rossi [erossi@twitter.com]
 during his work in Twitter.
 
 Temporal graph networks(TGNs) is a graph neural network method on dynamic graphs. In the recent years,
@@ -93,6 +93,7 @@ from mage.tgn.definitions.instances import (
 ###################
 # params and classes
 ##################
+
 
 # params TGN must receive
 class TGNParameters:
@@ -820,7 +821,6 @@ def train_eval_epochs(
     assert batch_size > 0
 
     for epoch in range(num_epochs):
-
         # update global epoch counter
         update_epoch_counter()
 
@@ -886,6 +886,7 @@ def train_eval_epochs(
 
 # all available read_procs
 
+
 #####################################################
 @mgp.read_proc
 def predict_link_score(
@@ -938,7 +939,7 @@ def train_and_eval(
     :train_eval_percent_split: dataset split ratio on train and eval
 
 
-    :return: mgp.Record(): emtpy record if everything was fine
+    :return: mgp.Record(): empty record if everything was fine
     """
 
     global query_module_tgn
@@ -1003,7 +1004,7 @@ def set_eval(ctx: mgp.ProcCtx) -> mgp.Record(message=str):
     At that point, we will save current edge count, and this information will later be used in function
     `train_and_eval` to split edges from Memgraph in train and eval set
 
-    :return: mgp.Record(): emtpy record if everything was fine
+    :return: mgp.Record(): empty record if everything was fine
     """
     global query_module_tgn
 
@@ -1056,12 +1057,12 @@ def get(ctx: mgp.ProcCtx) -> mgp.Record(node=mgp.Vertex, embedding=mgp.List[floa
     t1 and current timestamp can be tn, where t1<tn
 
     We can't update embedding of node if it doesn't have any interactions, but we can update node's memory, so next
-    time it appears in some interaction event, it won't suffer from memory staleness problem as mentioned in orginal
+    time it appears in some interaction event, it won't suffer from memory staleness problem as mentioned in original
     paper
 
     :param edges: list of edges to preprocess, and if current batch size is big enough use for training or evaluation
 
-    :return: mgp.Record(): emtpy record if everything was fine
+    :return: mgp.Record(): empty record if everything was fine
     """
     global query_module_tgn
 
@@ -1117,7 +1118,7 @@ def update(ctx: mgp.ProcCtx, edges: mgp.List[mgp.Edge]) -> mgp.Record():
 
     :param edges: list of edges to preprocess, and if current batch size is big enough use for training or evaluation
 
-    :return: mgp.Record(): emtpy record if everything was fine
+    :return: mgp.Record(): empty record if everything was fine
     """
     global query_module_tgn_batch, query_module_tgn
 
@@ -1194,7 +1195,7 @@ def set_params(
         [optional] edge_features_property: name of features property on edges from which we read features
         [optional] node_label_property: name of label property on nodes from which we read features
 
-    :return: mgp.Record(): emtpy record if everything was fine
+    :return: mgp.Record(): empty record if everything was fine
     """
     global query_module_tgn_batch, DEFINED_INPUT_TYPES, DEFAULT_VALUES
 
@@ -1286,6 +1287,7 @@ def set_params(
 #####################################
 
 # helper functions
+
 
 #####################################
 def get_tgn_layer_enum(layer_type: str) -> TGNLayerType:

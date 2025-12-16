@@ -59,7 +59,11 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-
+scripts/package/debian/.debhelper/
+scripts/package/debian/memgraph-mage/
+scripts/package/debian/memgraph-mage.substvars
+scripts/package/debian/files
+scripts/package/debian/debhelper-build-stamp
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
@@ -195,3 +199,13 @@ dist/
 **/build
 *htmlcov
 *.coverage
+
+python/mage/link_prediction/context/*
+mg_data/
+python/mage/link_prediction/hyperparameter_tuning.py
+python/mage/link_prediction/results.txt
+python/mage/link_prediction/random_customer_results.txt
+python/mage/link_prediction/cora_results.txt
+python/mage/link_prediction/random_features_services_results.txt
+python/mage/link_prediction/issue.py
+python/mage/link_prediction/issue2.py

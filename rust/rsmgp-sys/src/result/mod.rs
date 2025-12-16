@@ -312,10 +312,10 @@ pub enum Error {
     #[snafu(display("Unable to return vertex out_edges iterator."))]
     UnableToReturnVertexOutEdgesIterator,
 
-    #[snafu(display("Unable to return vertex labels count becuase the vertex is deleted."))]
+    #[snafu(display("Unable to return vertex labels count because the vertex is deleted."))]
     UnableToReturnVertexLabelsCountDeletedObjectError,
 
-    #[snafu(display("Unable to return vertex labels count becuase the vertex is deleted."))]
+    #[snafu(display("Unable to return vertex labels count because the vertex is deleted."))]
     UnableToReturnVertexLabelDeletedObjectError,
 
     #[snafu(display("Unable to check if vertex has a label."))]

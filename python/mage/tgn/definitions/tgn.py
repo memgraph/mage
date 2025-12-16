@@ -100,7 +100,7 @@ class TGN(nn.Module):
         MessageFunctionEdge = get_message_function_type(edge_message_function_type)
 
         # if edge function is identity, when identity function is applied, it will result with
-        # vector of greater dimension then when identity is applied to node raw messsage, so node function must be MLP
+        # vector of greater dimension then when identity is applied to node raw message, so node function must be MLP
         # if edge is MLP, node also will be MLP
         MessageFunctionNode = MessageFunctionMLP
 
@@ -179,7 +179,6 @@ class TGN(nn.Module):
         edge_idxs: np.array,
         timestamps: np.array,
     ) -> None:
-
         self._update_raw_message_store_current_batch(
             sources=sources,
             destinations=destinations,
@@ -203,7 +202,6 @@ class TGN(nn.Module):
             self.node_features[node_id] = node_feature
 
     def _process_previous_batches(self) -> None:
-
         # dict nodeid -> List[event]
         raw_messages = self.raw_message_store.get_messages()
 
@@ -226,7 +224,6 @@ class TGN(nn.Module):
         edge_features: Dict[int, torch.Tensor],
         node_features: Dict[int, torch.Tensor],
     ) -> None:
-
         interaction_events: Dict[int, List[Event]] = create_interaction_events(
             sources=sources,
             destinations=destinations,
@@ -269,7 +266,6 @@ class TGN(nn.Module):
                         )
                     )
                 elif type(message) is InteractionRawMessage:
-
                     interaction_raw_message = message
 
                     processed_messages_dict[node].append(
@@ -391,7 +387,7 @@ class TGN(nn.Module):
                 timestamp for which we will need to calculate embedding. We return all of this info as list of lists.
                 At node_layers[0] there are all the nodes at fixed timestamp needed to calculate embeddings.
             mappings: List[Dict[Tuple[int, int], int]] - we build this list of dictionaries  from node_layers. Every
-                (node,timestamp) tupple is mapped to index so we can reference it later in embedding calculation
+                (node,timestamp) tuple is mapped to index so we can reference it later in embedding calculation
                 when building temporal neighborhood concatenated embeddings for graph_attn or for doing summation for
                 graph_sum
             global_edge_indexes: List[List[int]] - node_layers[0] contains all nodes at fixed timestamp
@@ -424,7 +420,7 @@ class TGN(nn.Module):
             cur_arr = [(n, v) for (n, v) in prev]
 
             node_arr = []
-            for (v, t) in cur_arr:
+            for v, t in cur_arr:
                 (neighbors, edge_idxs, timestamps,) = (
                     self.temporal_neighborhood.get_neighborhood(
                         v, t, self.num_neighbors
@@ -447,7 +443,7 @@ class TGN(nn.Module):
 
         global_edge_indexes = []
         global_timestamps = []
-        for (v, t) in node_layers[0]:
+        for v, t in node_layers[0]:
             (neighbors, edge_idxs, timestamps,) = (
                 self.temporal_neighborhood.get_neighborhood(v, t, self.num_neighbors)
                 if (v, t) not in sampled_neighborhood

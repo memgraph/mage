@@ -25,7 +25,6 @@ class Individual:
         conflict_nodes: Set[int] = None,
         conflicts_counter: List[int] = None,
     ):
-
         self._graph = graph
         self._no_of_units = len(graph)
         self._no_of_colors = no_of_colors
@@ -115,7 +114,7 @@ class Individual:
         conflict_nodes = self._conflict_nodes.copy()
         conflict_edges = self.conflicts_weight
 
-        for (index, color) in zip(indices, colors):
+        for index, color in zip(indices, colors):
             if not (0 <= color < self._no_of_colors):
                 raise IllegalColorException(
                     "The given color is not in the range of allowed colors!"
@@ -152,7 +151,6 @@ class Individual:
         conflicts_counter: List[int],
         conflict_nodes: Set[int],
     ) -> Tuple[int, List[int], Set[int]]:
-
         diff = 0
         for neigh, weight in self.graph.weighted_neighbors(node):
             if chromosome[node] == chromosome[neigh]:

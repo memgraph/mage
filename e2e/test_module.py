@@ -1,9 +1,12 @@
 from typing import Dict, List
 import pytest
 import yaml
+import os
 
 from pathlib import Path
-from gqlalchemy import Memgraph, Node
+from gqlalchemy import Memgraph, Node, Relationship, Path as path_gql
+from mgclient import Node as node_mgclient
+from mgclient import Relationship as relationship_mgclient
 
 
 @pytest.fixture
@@ -19,6 +22,7 @@ class TestConstants:
     OUTPUT = "output"
     QUERY = "query"
     TEST_FILE = "test.yml"
+    FILENAME_PLACEHOLDER = "_file"
     TEST_MODULE_DIR_SUFFIX = "_test"
     TEST_GROUP_DIR_SUFFIX = "_group"
 
@@ -27,11 +31,47 @@ class TestConstants:
     ONLINE_TEST_E2E_INPUT_QUERIES = "queries"
     ONLINE_TEST_SUBDIR_PREFIX = "test_online"
 
+    EXPORT_TEST_E2E_NODES = "nodes"
+    EXPORT_TEST_E2E_RELATIONSHIPS = "relationships"
+    EXPORT_TEST_E2E_INPUT_QUERIES = "queries"
+    EXPORT_TEST_E2E_EXPORT_QUERY = "export"
+    EXPORT_TEST_E2E_IMPORT_QUERY = "import"
+    EXPORT_TEST_E2E_PLACEHOLDER_FILENAME = "_exportfile"
+    EXPORT_TEST_E2E_OUTPUT_FILE = "/home/memgraph/_exported_data"
+    EXPORT_TEST_SUBDIR_PREFIX = "test_export"
+
 
 def _node_to_dict(data):
-    labels = data.labels if hasattr(data, "labels") else data._labels
+    labels = (
+        data.labels
+        if hasattr(data, "labels")
+        else (data._labels if isinstance(data, Node) else [])
+    )
     properties = data.properties if hasattr(data, "properties") else data._properties
     return {"labels": list(labels), "properties": properties}
+
+
+def _relationship_to_dict(data):
+    label = (
+        data.type
+        if hasattr(data, "type")
+        else (data._type if isinstance(data, Relationship) else "")
+    )
+    properties = data.properties if hasattr(data, "properties") else data._properties
+    return {"label": label, "properties": properties}
+
+
+def _path_to_dict(data):
+    nodes = data.nodes if hasattr(data, "nodes") else data._nodes
+    relationships = (
+        data.relationships if hasattr(data, "relationships") else data._relationships
+    )
+    return {
+        "nodes": [_node_to_dict(node) for node in nodes],
+        "relationships": [
+            _relationship_to_dict(relationship) for relationship in relationships
+        ],
+    }
 
 
 def _replace(data, match_classes):
@@ -41,8 +81,20 @@ def _replace(data, match_classes):
         return [_replace(i, match_classes) for i in data]
     elif isinstance(data, float):
         return pytest.approx(data, abs=TestConstants.ABSOLUTE_TOLERANCE)
+    elif isinstance(data, node_mgclient) or isinstance(data, Node):
+        return _node_to_dict(data)
+    elif isinstance(data, relationship_mgclient) or isinstance(data, Relationship):
+        return _relationship_to_dict(data)
+    elif isinstance(data, path_gql):
+        return _path_to_dict(data)
     else:
         return _node_to_dict(data) if isinstance(data, match_classes) else data
+
+
+def _replace_filename(query: str, dir: Path):
+    return query.replace(
+        TestConstants.FILENAME_PLACEHOLDER, "/".join([str(dir), "file"])
+    )
 
 
 def prepare_tests():
@@ -69,11 +121,17 @@ def prepare_tests():
                         continue
 
                     tests.append(
-                        pytest.param(test_dir, id=f"{module_test_dir.stem}-{test_or_group_dir.stem}-{test_dir.stem}")
+                        pytest.param(
+                            test_dir,
+                            id=f"{module_test_dir.stem}-{test_or_group_dir.stem}-{test_dir.stem}",
+                        )
                     )
             else:
                 tests.append(
-                    pytest.param(test_or_group_dir, id=f"{module_test_dir.stem}-{test_or_group_dir.stem}")
+                    pytest.param(
+                        test_or_group_dir,
+                        id=f"{module_test_dir.stem}-{test_or_group_dir.stem}",
+                    )
                 )
     return tests
 
@@ -110,9 +168,11 @@ def _run_test(test_dict: Dict, db: Memgraph):
 
     if output_test:
         result_query = list(db.execute_and_fetch(test_query))
+
         result = _replace(result_query, Node)
 
         expected = test_dict[TestConstants.OUTPUT]
+
         assert result == expected
 
     if exception_test:
@@ -121,14 +181,75 @@ def _run_test(test_dict: Dict, db: Memgraph):
             db.execute(test_query)
 
 
+def _get_nodes_and_relationships(
+    nodes_query: str, relationships_query: str, db: Memgraph
+):
+    return (
+        list(db.execute_and_fetch(nodes_query)),
+        list(db.execute_and_fetch(relationships_query)),
+    )
+
+
+def _test_export(test_dir: Path, db: Memgraph):
+    """
+    Testing export modules.
+    """
+
+    test_name = test_dir.name
+    output_file = f"{TestConstants.EXPORT_TEST_E2E_OUTPUT_FILE}_{test_name}"
+
+    input_dict = _load_yaml(test_dir.joinpath(TestConstants.INPUT_FILE))
+
+    queries = input_dict.get(TestConstants.EXPORT_TEST_E2E_INPUT_QUERIES, None)
+    db.execute(queries)
+
+    nodes_query = input_dict.get(TestConstants.EXPORT_TEST_E2E_NODES, None)
+    relationships_query = input_dict.get(
+        TestConstants.EXPORT_TEST_E2E_RELATIONSHIPS, None
+    )
+
+    old_nodes, old_relationships = _get_nodes_and_relationships(
+        nodes_query, relationships_query, db
+    )
+
+    test_dict = _load_yaml(test_dir.joinpath(TestConstants.TEST_FILE))
+    export_query = test_dict[TestConstants.EXPORT_TEST_E2E_EXPORT_QUERY].replace(
+        TestConstants.EXPORT_TEST_E2E_PLACEHOLDER_FILENAME,
+        "".join(["'", output_file, "'"]),
+    )
+    import_query = test_dict[TestConstants.EXPORT_TEST_E2E_IMPORT_QUERY].replace(
+        TestConstants.EXPORT_TEST_E2E_PLACEHOLDER_FILENAME,
+        "".join(["'", output_file, "'"]),
+    )
+
+    db.execute(export_query)
+    db.execute("MATCH (n) DETACH DELETE n;")
+    db.execute(import_query)
+
+    new_nodes, new_relationships = _get_nodes_and_relationships(
+        nodes_query, relationships_query, db
+    )
+
+    assert _replace(old_nodes, Node) == _replace(new_nodes, Node)
+    assert _replace(old_relationships, Relationship) == _replace(
+        new_relationships, Relationship
+    )
+
+
 def _test_static(test_dir: Path, db: Memgraph):
     """
     Testing static modules.
     """
-    input_cyphers = test_dir.joinpath(TestConstants.INPUT_FILE).open("r").readlines()
+    input_cyphers = [
+        _replace_filename(query, test_dir)
+        for query in test_dir.joinpath(TestConstants.INPUT_FILE).open("r").readlines()
+    ]
     _execute_cyphers(input_cyphers, db)
 
     test_dict = _load_yaml(test_dir.joinpath(TestConstants.TEST_FILE))
+    test_dict[TestConstants.QUERY] = _replace_filename(
+        test_dict[TestConstants.QUERY], test_dir
+    )
     _run_test(test_dict, db)
 
 
@@ -152,7 +273,7 @@ def _test_online(test_dir: Path, db: Memgraph):
     try:
         # Execute cypher queries and compare them with results
         for input_cyphers_raw, test_dict in zip(
-                checkpoint_input_cyphers, checkpoint_test_dicts
+            checkpoint_input_cyphers, checkpoint_test_dicts
         ):
             input_cyphers = input_cyphers_raw.splitlines()
             _execute_cyphers(input_cyphers, db)
@@ -167,10 +288,14 @@ def _test_online(test_dir: Path, db: Memgraph):
 def test_end2end(test_dir: Path, db: Memgraph):
     db.drop_database()
 
-    if not test_dir.name.startswith(TestConstants.ONLINE_TEST_SUBDIR_PREFIX):
-        _test_static(test_dir, db)
-    else:
+    if test_dir.name.startswith(TestConstants.EXPORT_TEST_SUBDIR_PREFIX):
+        _test_export(test_dir, db)
+    elif test_dir.name.startswith(TestConstants.ONLINE_TEST_SUBDIR_PREFIX):
         _test_online(test_dir, db)
+    else:
+        _test_static(test_dir, db)
 
     # Clean database once testing module is finished
     db.drop_database()
+    db.drop_indexes()
+    db.ensure_constraints([])

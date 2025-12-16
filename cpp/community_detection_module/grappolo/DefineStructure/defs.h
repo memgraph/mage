@@ -56,6 +56,7 @@
 #include <map>
 #include <vector>
 #include <unistd.h> //For getopts()
+#include <mg_procedure.h>
 
 #define MilanRealMax HUGE_VAL       // +INFINITY
 #define MilanRealMin -MilanRealMax  // -INFINITY

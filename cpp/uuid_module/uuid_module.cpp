@@ -1,5 +1,4 @@
 #include <uuid/uuid.h>
-
 #include <mg_exceptions.hpp>
 #include <mg_utils.hpp>
 
@@ -9,18 +8,25 @@ constexpr char const *kProcedureGenerate = "get";
 
 constexpr char const *kFieldUuid = "uuid";
 
+namespace {
+
+// This way of generating UUID is also used in Memgraph repo
+std::string GenerateUUID() {
+  uuid_t uuid;
+  char decoded[37];  // 36 bytes for UUID + 1 for null-terminator
+  uuid_generate(uuid);
+  uuid_unparse(uuid, decoded);
+  return {decoded};
+}
+
+}  // namespace
+
 void Generate(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
   try {
-    uuid_t id;
-    uuid_generate(id);
-    char *string = new char[100];
-    uuid_unparse(id, string);
-
+    auto const uuid = GenerateUUID();
     auto *record = mgp::result_new_record(result);
-
-    mg_utility::InsertStringValueResult(record, kFieldUuid, string, memory);
+    mg_utility::InsertStringValueResult(record, kFieldUuid, uuid.c_str(), memory);
   } catch (const std::exception &e) {
-    // We must not let any exceptions out of our module.
     mgp::result_set_error_msg(result, e.what());
     return;
   }
