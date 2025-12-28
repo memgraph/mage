@@ -38,12 +38,10 @@ EXPOSE 7687
 RUN curl https://download.memgraph.com/memgraph/v${MG_VERSION}/ubuntu-24.04/memgraph_${MG_VERSION}-1_amd64.deb --output memgraph.deb \
     && dpkg -i memgraph.deb && rm memgraph.deb
 
-RUN git clone --recurse-submodules https://github.com/memgraph/mage.git /mage
-
 WORKDIR /mage
 
-# Copy patched cuGraph files for modern RAPIDS 25.x API compatibility
-COPY mage-patches/cpp/cugraph_module/ /mage/cpp/cugraph_module/
+# Copy local source (includes updated cuGraph files for RAPIDS 25.x)
+COPY . /mage
 
 ENV CXXFLAGS="-DLIBCUDACXX_ENABLE_EXPERIMENTAL_MEMORY_RESOURCE"
 ENV CUDAFLAGS="-DLIBCUDACXX_ENABLE_EXPERIMENTAL_MEMORY_RESOURCE"
