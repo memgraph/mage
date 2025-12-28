@@ -14,6 +14,8 @@
 // limitations under the License.
 
 #include "mg_cugraph_utility.hpp"
+#include <random>
+#include <algorithm>
 
 namespace {
 using vertex_t = int64_t;
@@ -25,6 +27,7 @@ constexpr char const *kProcedureBetweennessCentrality = "get";
 
 constexpr char const *kArgumentNormalized = "normalized";
 constexpr char const *kArgumentDirected = "directed";
+constexpr char const *kArgumentK = "k";
 
 constexpr char const *kResultFieldNode = "node";
 constexpr char const *kResultFieldBetweenness = "betweenness";
@@ -50,6 +53,7 @@ void BetweennessCentralityProc(mgp_list *args, mgp_graph *graph, mgp_result *res
   try {
     auto normalized = mgp::value_get_bool(mgp::list_at(args, 0));
     auto directed = mgp::value_get_bool(mgp::list_at(args, 1));
+    auto k = mgp::value_get_int(mgp::list_at(args, 2));
 
     auto graph_type = directed ? mg_graph::GraphType::kDirectedGraph : mg_graph::GraphType::kUndirectedGraph;
     auto mg_graph = mg_utility::GetGraphView(graph, result, memory, graph_type);
@@ -69,15 +73,48 @@ void BetweennessCentralityProc(mgp_list *args, mgp_graph *graph, mgp_result *res
     // Get edge weight view from edge properties
     auto edge_weight_view = mg_cugraph::GetEdgeWeightView<edge_t>(edge_props);
 
-    // Modern cuGraph 25.x Betweenness Centrality API - returns device_uvector
-    auto betweenness = cugraph::betweenness_centrality<vertex_t, edge_t, weight_t, false>(
-        handle,
-        cu_graph_view,
-        edge_weight_view,
-        std::nullopt,  // vertices (use all)
-        normalized,
-        false,  // include_endpoints
-        false); // do_expensive_check
+    rmm::device_uvector<result_t> betweenness(0, stream);
+
+    if (k > 0 && static_cast<size_t>(k) < n_vertices) {
+      // Sampled betweenness: randomly select k source vertices
+      std::vector<vertex_t> all_vertices(n_vertices);
+      std::iota(all_vertices.begin(), all_vertices.end(), 0);
+
+      // Shuffle and take first k
+      std::random_device rd;
+      std::mt19937 gen(rd());
+      std::shuffle(all_vertices.begin(), all_vertices.end(), gen);
+
+      std::vector<vertex_t> sampled_vertices(all_vertices.begin(), all_vertices.begin() + k);
+
+      // Copy sampled vertices to device
+      rmm::device_uvector<vertex_t> d_vertices(k, stream);
+      raft::update_device(d_vertices.data(), sampled_vertices.data(), k, stream);
+      handle.sync_stream();
+
+      // Create device span for the sampled vertices
+      auto vertices_span = std::make_optional(raft::device_span<vertex_t const>(d_vertices.data(), k));
+
+      // Run betweenness with sampled sources
+      betweenness = cugraph::betweenness_centrality<vertex_t, edge_t, weight_t, false>(
+          handle,
+          cu_graph_view,
+          edge_weight_view,
+          vertices_span,
+          normalized,
+          false,  // include_endpoints
+          false); // do_expensive_check
+    } else {
+      // Full betweenness: use all vertices as sources
+      betweenness = cugraph::betweenness_centrality<vertex_t, edge_t, weight_t, false>(
+          handle,
+          cu_graph_view,
+          edge_weight_view,
+          std::nullopt,  // vertices (use all)
+          normalized,
+          false,  // include_endpoints
+          false); // do_expensive_check
+    }
 
     // Copy results to host and output
     std::vector<result_t> h_betweenness(n_vertices);
@@ -99,26 +136,31 @@ void BetweennessCentralityProc(mgp_list *args, mgp_graph *graph, mgp_result *res
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   mgp_value *default_normalized;
   mgp_value *default_directed;
+  mgp_value *default_k;
   try {
     auto *betweenness_proc =
         mgp::module_add_read_procedure(module, kProcedureBetweennessCentrality, BetweennessCentralityProc);
 
     default_normalized = mgp::value_make_bool(true, memory);
     default_directed = mgp::value_make_bool(true, memory);
+    default_k = mgp::value_make_int(0, memory);  // 0 = use all vertices (original behavior)
 
     mgp::proc_add_opt_arg(betweenness_proc, kArgumentNormalized, mgp::type_bool(), default_normalized);
     mgp::proc_add_opt_arg(betweenness_proc, kArgumentDirected, mgp::type_bool(), default_directed);
+    mgp::proc_add_opt_arg(betweenness_proc, kArgumentK, mgp::type_int(), default_k);
 
     mgp::proc_add_result(betweenness_proc, kResultFieldNode, mgp::type_node());
     mgp::proc_add_result(betweenness_proc, kResultFieldBetweenness, mgp::type_float());
   } catch (const std::exception &e) {
     mgp_value_destroy(default_normalized);
     mgp_value_destroy(default_directed);
+    mgp_value_destroy(default_k);
     return 1;
   }
 
   mgp_value_destroy(default_normalized);
   mgp_value_destroy(default_directed);
+  mgp_value_destroy(default_k);
   return 0;
 }
 
