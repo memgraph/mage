@@ -17,20 +17,29 @@
 #include <raft/random/rng_state.hpp>
 #include <rmm/device_uvector.hpp>
 #include <rmm/mr/device/device_memory_resource.hpp>
+#include <rmm/mr/device/cuda_async_memory_resource.hpp>
 #include <cuda_runtime.h>
 
 #include <mg_exceptions.hpp>
 
-// Static initialization: Configure CUDA's device default memory pool.
-// Uses shared device pool (not per-module) with release_threshold=0.
-// Memory returns to OS after stream sync - no growth between algorithms.
+// Static initialization: Configure CUDA's device default memory pool
+// and set RMM to use async memory resource.
+// - Shared device pool (not per-module) with release_threshold=0
+// - Memory returns to OS after stream sync - no growth between algorithms
+// - RMM uses cudaMallocAsync via the configured pool
 namespace {
 struct CudaPoolInitializer {
+    rmm::mr::cuda_async_memory_resource async_mr;
+
     CudaPoolInitializer() {
+        // Configure CUDA's default pool
         cudaMemPool_t pool;
         cudaDeviceGetDefaultMemPool(&pool, 0);
         uint64_t threshold = 0;
         cudaMemPoolSetAttribute(pool, cudaMemPoolAttrReleaseThreshold, &threshold);
+
+        // Tell RMM to use async memory resource
+        rmm::mr::set_current_device_resource(&async_mr);
     }
 };
 static CudaPoolInitializer cuda_pool_init;
