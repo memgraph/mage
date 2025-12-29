@@ -17,8 +17,22 @@
 #include <raft/random/rng_state.hpp>
 #include <rmm/device_uvector.hpp>
 #include <rmm/mr/device/device_memory_resource.hpp>
+#include <rmm/mr/device/cuda_async_memory_resource.hpp>
 
 #include <mg_exceptions.hpp>
+
+// Static initialization: Set CUDA async memory resource as default.
+// CUDA manages the memory pool automatically - no fragmentation issues.
+// This runs once per module load, before any algorithm execution.
+namespace {
+struct CudaAsyncMRInitializer {
+    rmm::mr::cuda_async_memory_resource async_mr;
+    CudaAsyncMRInitializer() {
+        rmm::mr::set_current_device_resource(&async_mr);
+    }
+};
+static CudaAsyncMRInitializer cuda_async_mr_init;
+}
 #include <mg_utils.hpp>
 
 namespace mg_cugraph {
