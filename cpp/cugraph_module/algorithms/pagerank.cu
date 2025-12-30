@@ -61,7 +61,7 @@ void PagerankProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memo
     auto stream = handle.get_stream();
 
     // PageRank requires store_transposed = true
-    auto [cu_graph, edge_props] = mg_cugraph::CreateCugraphFromMemgraph<vertex_t, edge_t, weight_t, true, false>(
+    auto [cu_graph, edge_props, renumber_map] = mg_cugraph::CreateCugraphFromMemgraph<vertex_t, edge_t, weight_t, true, false>(
         *mg_graph.get(), mg_graph::GraphType::kDirectedGraph, handle);
 
     auto cu_graph_view = cu_graph.view();
@@ -88,8 +88,10 @@ void PagerankProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memo
     raft::update_host(h_pageranks.data(), pageranks.data(), n_vertices, stream);
     handle.sync_stream();
 
+    // Use renumber_map to translate cuGraph indices back to original GraphView indices
     for (vertex_t node_id = 0; node_id < static_cast<vertex_t>(n_vertices); ++node_id) {
-      InsertPagerankRecord(graph, result, memory, mg_graph->GetMemgraphNodeId(node_id), h_pageranks[node_id]);
+      auto original_id = renumber_map[node_id];
+      InsertPagerankRecord(graph, result, memory, mg_graph->GetMemgraphNodeId(original_id), h_pageranks[node_id]);
     }
   } catch (const std::exception &e) {
     mgp::result_set_error_msg(result, e.what());

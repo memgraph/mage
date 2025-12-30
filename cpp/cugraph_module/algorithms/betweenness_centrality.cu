@@ -30,7 +30,7 @@ constexpr char const *kArgumentDirected = "directed";
 constexpr char const *kArgumentK = "k";
 
 constexpr char const *kResultFieldNode = "node";
-constexpr char const *kResultFieldBetweenness = "betweenness";
+constexpr char const *kResultFieldBetweennessCentrality = "betweenness_centrality";
 
 void InsertBetweennessRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
                              double betweenness) {
@@ -46,7 +46,7 @@ void InsertBetweennessRecord(mgp_graph *graph, mgp_result *result, mgp_memory *m
   if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
 
   mg_utility::InsertNodeValueResult(record, kResultFieldNode, node, memory);
-  mg_utility::InsertDoubleValueResult(record, kResultFieldBetweenness, betweenness, memory);
+  mg_utility::InsertDoubleValueResult(record, kResultFieldBetweennessCentrality, betweenness, memory);
 }
 
 void BetweennessCentralityProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *memory) {
@@ -64,7 +64,7 @@ void BetweennessCentralityProc(mgp_list *args, mgp_graph *graph, mgp_result *res
     auto stream = handle.get_stream();
 
     // Betweenness centrality uses store_transposed = false
-    auto [cu_graph, edge_props] = mg_cugraph::CreateCugraphFromMemgraph<vertex_t, edge_t, weight_t, false, false>(
+    auto [cu_graph, edge_props, renumber_map] = mg_cugraph::CreateCugraphFromMemgraph<vertex_t, edge_t, weight_t, false, false>(
         *mg_graph.get(), graph_type, handle);
 
     auto cu_graph_view = cu_graph.view();
@@ -121,8 +121,10 @@ void BetweennessCentralityProc(mgp_list *args, mgp_graph *graph, mgp_result *res
     raft::update_host(h_betweenness.data(), betweenness.data(), n_vertices, stream);
     handle.sync_stream();
 
+    // Use renumber_map to translate cuGraph indices back to original GraphView indices
     for (vertex_t node_id = 0; node_id < static_cast<vertex_t>(n_vertices); ++node_id) {
-      InsertBetweennessRecord(graph, result, memory, mg_graph->GetMemgraphNodeId(node_id), h_betweenness[node_id]);
+      auto original_id = renumber_map[node_id];
+      InsertBetweennessRecord(graph, result, memory, mg_graph->GetMemgraphNodeId(original_id), h_betweenness[node_id]);
     }
   } catch (const std::exception &e) {
     // We must not let any exceptions out of our module.
@@ -150,7 +152,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     mgp::proc_add_opt_arg(betweenness_proc, kArgumentK, mgp::type_int(), default_k);
 
     mgp::proc_add_result(betweenness_proc, kResultFieldNode, mgp::type_node());
-    mgp::proc_add_result(betweenness_proc, kResultFieldBetweenness, mgp::type_float());
+    mgp::proc_add_result(betweenness_proc, kResultFieldBetweennessCentrality, mgp::type_float());
   } catch (const std::exception &e) {
     mgp_value_destroy(default_normalized);
     mgp_value_destroy(default_directed);

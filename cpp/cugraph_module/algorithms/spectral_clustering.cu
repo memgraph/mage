@@ -31,10 +31,10 @@ constexpr char const *kProcedureSpectralClustering = "get";
 
 constexpr char const *kArgumentNumClusters = "num_clusters";
 constexpr char const *kArgumentNumEigenvectors = "num_eigenvectors";
-constexpr char const *kArgumentEvsTolerance = "evs_tolerance";
-constexpr char const *kArgumentEvsMaxIterations = "evs_max_iterations";
-constexpr char const *kArgumentKmeansTolerance = "kmeans_tolerance";
-constexpr char const *kArgumentKmeansMaxIterations = "kmeans_max_iterations";
+constexpr char const *kArgumentEvTolerance = "ev_tolerance";
+constexpr char const *kArgumentEvMaxIter = "ev_max_iter";
+constexpr char const *kArgumentKmeanTolerance = "kmean_tolerance";
+constexpr char const *kArgumentKmeanMaxIter = "kmean_max_iter";
 constexpr char const *kArgumentWeightProperty = "weight_property";
 
 constexpr char const *kResultFieldNode = "node";
@@ -64,10 +64,10 @@ void SpectralClusteringProc(mgp_list *args, mgp_graph *graph, mgp_result *result
   try {
     int num_clusters = mgp::value_get_int(mgp::list_at(args, 0));
     int num_eigenvectors = mgp::value_get_int(mgp::list_at(args, 1));
-    double evs_tolerance = mgp::value_get_double(mgp::list_at(args, 2));
-    int evs_max_iterations = mgp::value_get_int(mgp::list_at(args, 3));
-    double kmeans_tolerance = mgp::value_get_double(mgp::list_at(args, 4));
-    int kmeans_max_iterations = mgp::value_get_int(mgp::list_at(args, 5));
+    double ev_tolerance = mgp::value_get_double(mgp::list_at(args, 2));
+    int ev_maxiter = mgp::value_get_int(mgp::list_at(args, 3));
+    double kmean_tolerance = mgp::value_get_double(mgp::list_at(args, 4));
+    int kmean_maxiter = mgp::value_get_int(mgp::list_at(args, 5));
     auto weight_property = mgp::value_get_string(mgp::list_at(args, 6));
 
     auto mg_graph = mg_utility::GetWeightedGraphView(graph, result, memory, mg_graph::GraphType::kUndirectedGraph,
@@ -93,8 +93,8 @@ void SpectralClusteringProc(mgp_list *args, mgp_graph *graph, mgp_result *result
 
     // Call spectralModularityMaximization API - cuGraph 25.x requires handle and rng_state
     cugraph::ext_raft::spectralModularityMaximization(handle, rng_state, cu_graph_view, num_clusters, num_eigenvectors,
-                                            static_cast<weight_t>(evs_tolerance), evs_max_iterations,
-                                            static_cast<weight_t>(kmeans_tolerance), kmeans_max_iterations,
+                                            static_cast<weight_t>(ev_tolerance), ev_maxiter,
+                                            static_cast<weight_t>(kmean_tolerance), kmean_maxiter,
                                             clustering_result.data());
 
     // Copy results to host and output
@@ -116,47 +116,47 @@ void SpectralClusteringProc(mgp_list *args, mgp_graph *graph, mgp_result *result
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   mgp_value *default_num_eigenvectors;
-  mgp_value *default_evs_tolerance;
-  mgp_value *default_evs_max_iterations;
-  mgp_value *default_kmeans_tolerance;
-  mgp_value *default_kmeans_max_iterations;
+  mgp_value *default_ev_tolerance;
+  mgp_value *default_ev_maxiter;
+  mgp_value *default_kmean_tolerance;
+  mgp_value *default_kmean_maxiter;
   mgp_value *default_weight_property;
   try {
     auto *spectral_proc =
         mgp::module_add_read_procedure(module, kProcedureSpectralClustering, SpectralClusteringProc);
 
     default_num_eigenvectors = mgp::value_make_int(2, memory);
-    default_evs_tolerance = mgp::value_make_double(0.00001, memory);
-    default_evs_max_iterations = mgp::value_make_int(100, memory);
-    default_kmeans_tolerance = mgp::value_make_double(0.00001, memory);
-    default_kmeans_max_iterations = mgp::value_make_int(20, memory);
+    default_ev_tolerance = mgp::value_make_double(0.00001, memory);
+    default_ev_maxiter = mgp::value_make_int(100, memory);
+    default_kmean_tolerance = mgp::value_make_double(0.00001, memory);
+    default_kmean_maxiter = mgp::value_make_int(20, memory);
     default_weight_property = mgp::value_make_string(kDefaultWeightProperty, memory);
 
     mgp::proc_add_arg(spectral_proc, kArgumentNumClusters, mgp::type_int());
     mgp::proc_add_opt_arg(spectral_proc, kArgumentNumEigenvectors, mgp::type_int(), default_num_eigenvectors);
-    mgp::proc_add_opt_arg(spectral_proc, kArgumentEvsTolerance, mgp::type_float(), default_evs_tolerance);
-    mgp::proc_add_opt_arg(spectral_proc, kArgumentEvsMaxIterations, mgp::type_int(), default_evs_max_iterations);
-    mgp::proc_add_opt_arg(spectral_proc, kArgumentKmeansTolerance, mgp::type_float(), default_kmeans_tolerance);
-    mgp::proc_add_opt_arg(spectral_proc, kArgumentKmeansMaxIterations, mgp::type_int(), default_kmeans_max_iterations);
+    mgp::proc_add_opt_arg(spectral_proc, kArgumentEvTolerance, mgp::type_float(), default_ev_tolerance);
+    mgp::proc_add_opt_arg(spectral_proc, kArgumentEvMaxIter, mgp::type_int(), default_ev_maxiter);
+    mgp::proc_add_opt_arg(spectral_proc, kArgumentKmeanTolerance, mgp::type_float(), default_kmean_tolerance);
+    mgp::proc_add_opt_arg(spectral_proc, kArgumentKmeanMaxIter, mgp::type_int(), default_kmean_maxiter);
     mgp::proc_add_opt_arg(spectral_proc, kArgumentWeightProperty, mgp::type_string(), default_weight_property);
 
     mgp::proc_add_result(spectral_proc, kResultFieldNode, mgp::type_node());
     mgp::proc_add_result(spectral_proc, kResultFieldCluster, mgp::type_int());
   } catch (const std::exception &e) {
     mgp_value_destroy(default_num_eigenvectors);
-    mgp_value_destroy(default_evs_tolerance);
-    mgp_value_destroy(default_evs_max_iterations);
-    mgp_value_destroy(default_kmeans_tolerance);
-    mgp_value_destroy(default_kmeans_max_iterations);
+    mgp_value_destroy(default_ev_tolerance);
+    mgp_value_destroy(default_ev_maxiter);
+    mgp_value_destroy(default_kmean_tolerance);
+    mgp_value_destroy(default_kmean_maxiter);
     mgp_value_destroy(default_weight_property);
     return 1;
   }
 
   mgp_value_destroy(default_num_eigenvectors);
-  mgp_value_destroy(default_evs_tolerance);
-  mgp_value_destroy(default_evs_max_iterations);
-  mgp_value_destroy(default_kmeans_tolerance);
-  mgp_value_destroy(default_kmeans_max_iterations);
+  mgp_value_destroy(default_ev_tolerance);
+  mgp_value_destroy(default_ev_maxiter);
+  mgp_value_destroy(default_kmean_tolerance);
+  mgp_value_destroy(default_kmean_maxiter);
   mgp_value_destroy(default_weight_property);
   return 0;
 }

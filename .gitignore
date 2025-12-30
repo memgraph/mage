@@ -208,4 +208,5 @@ python/mage/link_prediction/random_customer_results.txt
 python/mage/link_prediction/cora_results.txt
 python/mage/link_prediction/random_features_services_results.txt
 python/mage/link_prediction/issue.py
-python/mage/link_prediction/issue2.py
+python/mage/link_prediction/issue2.py.build-staging/
+rebuild-cugraph.sh

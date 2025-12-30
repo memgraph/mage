@@ -25,11 +25,11 @@ constexpr char const *kProcedureHits = "get";
 
 constexpr char const *kArgumentMaxIterations = "max_iterations";
 constexpr char const *kArgumentTolerance = "tolerance";
-constexpr char const *kArgumentNormalize = "normalize";
+constexpr char const *kArgumentNormalized = "normalized";
 
 constexpr char const *kResultFieldNode = "node";
-constexpr char const *kResultFieldHub = "hub";
-constexpr char const *kResultFieldAuthority = "authority";
+constexpr char const *kResultFieldHubScore = "hubs";
+constexpr char const *kResultFieldAuthoritiesScore = "authorities";
 
 void InsertHitsRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, const std::uint64_t node_id,
                       double hub, double authority) {
@@ -45,8 +45,8 @@ void InsertHitsRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory, 
   if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
 
   mg_utility::InsertNodeValueResult(record, kResultFieldNode, node, memory);
-  mg_utility::InsertDoubleValueResult(record, kResultFieldHub, hub, memory);
-  mg_utility::InsertDoubleValueResult(record, kResultFieldAuthority, authority, memory);
+  mg_utility::InsertDoubleValueResult(record, kResultFieldHubScore, hub, memory);
+  mg_utility::InsertDoubleValueResult(record, kResultFieldAuthoritiesScore, authority, memory);
 }
 
 void HitsProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *memory) {
@@ -63,7 +63,7 @@ void HitsProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *
     auto stream = handle.get_stream();
 
     // HITS requires store_transposed = true
-    auto [cu_graph, edge_props] = mg_cugraph::CreateCugraphFromMemgraph<vertex_t, edge_t, weight_t, true, false>(
+    auto [cu_graph, edge_props, renumber_map] = mg_cugraph::CreateCugraphFromMemgraph<vertex_t, edge_t, weight_t, true, false>(
         *mg_graph.get(), mg_graph::GraphType::kDirectedGraph, handle);
 
     auto cu_graph_view = cu_graph.view();
@@ -92,8 +92,10 @@ void HitsProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *
     raft::update_host(h_authorities.data(), authorities.data(), n_vertices, stream);
     handle.sync_stream();
 
+    // Use renumber_map to translate cuGraph indices back to original GraphView indices
     for (vertex_t node_id = 0; node_id < static_cast<vertex_t>(n_vertices); ++node_id) {
-      InsertHitsRecord(graph, result, memory, mg_graph->GetMemgraphNodeId(node_id), h_hubs[node_id],
+      auto original_id = renumber_map[node_id];
+      InsertHitsRecord(graph, result, memory, mg_graph->GetMemgraphNodeId(original_id), h_hubs[node_id],
                        h_authorities[node_id]);
     }
   } catch (const std::exception &e) {
@@ -117,11 +119,11 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
 
     mgp::proc_add_opt_arg(hits_proc, kArgumentMaxIterations, mgp::type_int(), default_max_iterations);
     mgp::proc_add_opt_arg(hits_proc, kArgumentTolerance, mgp::type_float(), default_tolerance);
-    mgp::proc_add_opt_arg(hits_proc, kArgumentNormalize, mgp::type_bool(), default_normalize);
+    mgp::proc_add_opt_arg(hits_proc, kArgumentNormalized, mgp::type_bool(), default_normalize);
 
     mgp::proc_add_result(hits_proc, kResultFieldNode, mgp::type_node());
-    mgp::proc_add_result(hits_proc, kResultFieldHub, mgp::type_float());
-    mgp::proc_add_result(hits_proc, kResultFieldAuthority, mgp::type_float());
+    mgp::proc_add_result(hits_proc, kResultFieldHubScore, mgp::type_float());
+    mgp::proc_add_result(hits_proc, kResultFieldAuthoritiesScore, mgp::type_float());
   } catch (const std::exception &e) {
     mgp_value_destroy(default_max_iterations);
     mgp_value_destroy(default_tolerance);

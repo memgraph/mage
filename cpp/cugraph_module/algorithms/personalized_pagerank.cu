@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "mg_cugraph_utility.hpp"
+#include <unordered_map>
 
 namespace {
 using vertex_t = int64_t;
@@ -29,7 +30,7 @@ constexpr char const *kArgumentDampingFactor = "damping_factor";
 constexpr char const *kArgumentStopEpsilon = "stop_epsilon";
 
 constexpr char const *kResultFieldNode = "node";
-constexpr char const *kResultFieldPagerank = "pagerank";
+constexpr char const *kResultFieldPageRank = "pagerank";
 
 void InsertPersonalizedPagerankRecord(mgp_graph *graph, mgp_result *result, mgp_memory *memory,
                                       const std::uint64_t node_id, double pagerank) {
@@ -45,7 +46,7 @@ void InsertPersonalizedPagerankRecord(mgp_graph *graph, mgp_result *result, mgp_
   if (record == nullptr) throw mg_exception::NotEnoughMemoryException();
 
   mg_utility::InsertNodeValueResult(record, kResultFieldNode, node, memory);
-  mg_utility::InsertDoubleValueResult(record, kResultFieldPagerank, pagerank, memory);
+  mg_utility::InsertDoubleValueResult(record, kResultFieldPageRank, pagerank, memory);
 }
 
 void PersonalizedPagerankProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memory *memory) {
@@ -64,8 +65,14 @@ void PersonalizedPagerankProc(mgp_list *args, mgp_graph *graph, mgp_result *resu
     auto stream = handle.get_stream();
 
     // PageRank requires store_transposed = true
-    auto [cu_graph, edge_props] = mg_cugraph::CreateCugraphFromMemgraph<vertex_t, edge_t, weight_t, true, false>(
+    auto [cu_graph, edge_props, renumber_map] = mg_cugraph::CreateCugraphFromMemgraph<vertex_t, edge_t, weight_t, true, false>(
         *mg_graph.get(), mg_graph::GraphType::kDirectedGraph, handle);
+
+    // Build reverse mapping: original GraphView index -> cuGraph index
+    std::unordered_map<vertex_t, vertex_t> old_to_new;
+    for (size_t i = 0; i < renumber_map.size(); i++) {
+      old_to_new[renumber_map[i]] = static_cast<vertex_t>(i);
+    }
 
     auto cu_graph_view = cu_graph.view();
     auto n_vertices = cu_graph_view.number_of_vertices();
@@ -76,10 +83,17 @@ void PersonalizedPagerankProc(mgp_list *args, mgp_graph *graph, mgp_result *resu
     // Setup personalization - need to map source_id to cuGraph internal ID
     auto internal_source_id = mg_graph->GetInnerNodeId(source_id);
 
+    // After isolated node filtering, we need to remap to new cuGraph index
+    auto it = old_to_new.find(static_cast<vertex_t>(internal_source_id));
+    if (it == old_to_new.end()) {
+      // Source node is isolated (no edges) - return empty results
+      return;
+    }
+    vertex_t remapped_source_id = it->second;
+
     rmm::device_uvector<vertex_t> personalization_vertices(1, stream);
     rmm::device_uvector<result_t> personalization_values(1, stream);
-    vertex_t internal_id = static_cast<vertex_t>(internal_source_id);
-    raft::update_device(personalization_vertices.data(), &internal_id, 1, stream);
+    raft::update_device(personalization_vertices.data(), &remapped_source_id, 1, stream);
     result_t one = 1.0;
     raft::update_device(personalization_values.data(), &one, 1, stream);
 
@@ -106,8 +120,10 @@ void PersonalizedPagerankProc(mgp_list *args, mgp_graph *graph, mgp_result *resu
     raft::update_host(h_pageranks.data(), pageranks.data(), n_vertices, stream);
     handle.sync_stream();
 
+    // Use renumber_map to translate cuGraph indices back to original GraphView indices
     for (vertex_t node_id = 0; node_id < static_cast<vertex_t>(n_vertices); ++node_id) {
-      InsertPersonalizedPagerankRecord(graph, result, memory, mg_graph->GetMemgraphNodeId(node_id), h_pageranks[node_id]);
+      auto original_id = renumber_map[node_id];
+      InsertPersonalizedPagerankRecord(graph, result, memory, mg_graph->GetMemgraphNodeId(original_id), h_pageranks[node_id]);
     }
   } catch (const std::exception &e) {
     // We must not let any exceptions out of our module.
@@ -134,7 +150,7 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
     mgp::proc_add_opt_arg(ppr_proc, kArgumentStopEpsilon, mgp::type_float(), default_stop_epsilon);
 
     mgp::proc_add_result(ppr_proc, kResultFieldNode, mgp::type_node());
-    mgp::proc_add_result(ppr_proc, kResultFieldPagerank, mgp::type_float());
+    mgp::proc_add_result(ppr_proc, kResultFieldPageRank, mgp::type_float());
   } catch (const std::exception &e) {
     mgp_value_destroy(default_max_iterations);
     mgp_value_destroy(default_damping_factor);

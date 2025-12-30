@@ -58,7 +58,7 @@ void LouvainProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memor
     auto stream = handle.get_stream();
 
     // Louvain requires store_transposed = false
-    auto [cu_graph, edge_props] = mg_cugraph::CreateCugraphFromMemgraph<vertex_t, edge_t, weight_t, false, false>(
+    auto [cu_graph, edge_props, renumber_map] = mg_cugraph::CreateCugraphFromMemgraph<vertex_t, edge_t, weight_t, false, false>(
         *mg_graph.get(), mg_graph::GraphType::kUndirectedGraph, handle);
 
     auto cu_graph_view = cu_graph.view();
@@ -90,8 +90,10 @@ void LouvainProc(mgp_list *args, mgp_graph *graph, mgp_result *result, mgp_memor
     raft::update_host(h_clustering.data(), clustering_result.data(), n_vertices, stream);
     handle.sync_stream();
 
+    // Use renumber_map to translate cuGraph indices back to original GraphView indices
     for (vertex_t node_id = 0; node_id < static_cast<vertex_t>(n_vertices); ++node_id) {
-      InsertLouvainRecord(graph, result, memory, mg_graph->GetMemgraphNodeId(node_id), h_clustering[node_id]);
+      auto original_id = renumber_map[node_id];
+      InsertLouvainRecord(graph, result, memory, mg_graph->GetMemgraphNodeId(original_id), h_clustering[node_id]);
     }
   } catch (const std::exception &e) {
     mgp::result_set_error_msg(result, e.what());
