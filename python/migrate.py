@@ -42,10 +42,12 @@ class Constants:
     USERNAME = "username"
 
 
-def _get_query_hash(query: str, config: mgp.Map, params: mgp.Nullable[mgp.Any] = None) -> str:
+def _get_query_hash(
+    query: str, config: mgp.Map, params: mgp.Nullable[mgp.Any] = None
+) -> str:
     """
     Create a hash from query, config, and params to use as a cache key.
-    
+
     :param query: The query string (or table name, endpoint, file path, etc.)
     :param config: Configuration map
     :param params: Optional query parameters
@@ -61,9 +63,9 @@ def _get_query_hash(query: str, config: mgp.Map, params: mgp.Nullable[mgp.Any] =
             params_str = json.dumps(list(params), sort_keys=False, default=str)
         else:
             params_str = str(params)
-    
+
     hash_input = f"{query}|{config_str}|{params_str}"
-    return hashlib.sha256(hash_input.encode('utf-8')).hexdigest()
+    return hashlib.sha256(hash_input.encode("utf-8")).hexdigest()
 
 
 # MYSQL
@@ -91,7 +93,9 @@ def init_migrate_mysql(
 
     # check if query is already running
     if query_hash in mysql_dict:
-        raise RuntimeError(f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one.")
+        raise RuntimeError(
+            f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one."
+        )
 
     if query_hash not in mysql_dict:
         mysql_dict[query_hash] = {}
@@ -144,18 +148,18 @@ def mysql(
     rows = cursor.fetchmany(Constants.BATCH_SIZE)
 
     result = [mgp.Record(row=_name_row_cells_mysql(row, column_names)) for row in rows]
-    
+
     # if results are empty, cleanup the query since cleanup doesn't accept any parameters
     if not result:
         _cleanup_mysql_by_hash(query_hash)
-    
+
     return result
 
 
 def _cleanup_mysql_by_hash(query_hash: str):
     """Internal cleanup function that takes a query hash."""
     global mysql_dict
-    
+
     if query_hash in mysql_dict:
         mysql_dict[query_hash][Constants.CURSOR] = None
         mysql_dict[query_hash][Constants.CONNECTION].commit()
@@ -200,7 +204,9 @@ def init_migrate_sql_server(
 
     # check if query is already running
     if query_hash in sql_server_dict:
-        raise RuntimeError(f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one.")
+        raise RuntimeError(
+            f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one."
+        )
 
     if query_hash not in sql_server_dict:
         sql_server_dict[query_hash] = {}
@@ -256,18 +262,18 @@ def sql_server(
     rows = cursor.fetchmany(Constants.BATCH_SIZE)
 
     result = [mgp.Record(row=_name_row_cells(row, column_names)) for row in rows]
-    
+
     # if results are empty, cleanup the query since cleanup doesn't accept any parameters
     if not result:
         _cleanup_sql_server_by_hash(query_hash)
-    
+
     return result
 
 
 def _cleanup_sql_server_by_hash(query_hash: str):
     """Internal cleanup function that takes a query hash."""
     global sql_server_dict
-    
+
     if query_hash in sql_server_dict:
         sql_server_dict[query_hash][Constants.CURSOR] = None
         sql_server_dict[query_hash][Constants.CONNECTION].commit()
@@ -316,7 +322,9 @@ def init_migrate_oracle_db(
 
     # check if query is already running
     if query_hash in oracle_db_dict:
-        raise RuntimeError(f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one.")
+        raise RuntimeError(
+            f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one."
+        )
 
     if query_hash not in oracle_db_dict:
         oracle_db_dict[query_hash] = {}
@@ -378,18 +386,18 @@ def oracle_db(
     rows = cursor.fetchmany(Constants.BATCH_SIZE)
 
     result = [mgp.Record(row=_name_row_cells(row, column_names)) for row in rows]
-    
+
     # if results are empty, cleanup the query since cleanup doesn't accept any parameters
     if not result:
         _cleanup_oracle_db_by_hash(query_hash)
-    
+
     return result
 
 
 def _cleanup_oracle_db_by_hash(query_hash: str):
     """Internal cleanup function that takes a query hash."""
     global oracle_db_dict
-    
+
     if query_hash in oracle_db_dict:
         oracle_db_dict[query_hash][Constants.CURSOR] = None
         oracle_db_dict[query_hash][Constants.CONNECTION].commit()
@@ -434,7 +442,9 @@ def init_migrate_postgresql(
 
     # check if query is already running
     if query_hash in postgres_dict:
-        raise RuntimeError(f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one.")
+        raise RuntimeError(
+            f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one."
+        )
 
     if query_hash not in postgres_dict:
         postgres_dict[query_hash] = {}
@@ -491,18 +501,18 @@ def postgresql(
     rows = cursor.fetchmany(Constants.BATCH_SIZE)
 
     result = [mgp.Record(row=_name_row_cells(row, column_names)) for row in rows]
-    
+
     # if results are empty, cleanup the query since cleanup doesn't accept any parameters
     if not result:
         _cleanup_postgresql_by_hash(query_hash)
-    
+
     return result
 
 
 def _cleanup_postgresql_by_hash(query_hash: str):
     """Internal cleanup function that takes a query hash."""
     global postgres_dict
-    
+
     if query_hash in postgres_dict:
         postgres_dict[query_hash][Constants.CURSOR] = None
         postgres_dict[query_hash][Constants.CONNECTION].commit()
@@ -555,7 +565,9 @@ def init_migrate_s3(
 
     # check if query is already running
     if query_hash in s3_dict:
-        raise RuntimeError(f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one.")
+        raise RuntimeError(
+            f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one."
+        )
 
     # Initialize S3 client
     s3_client = boto3.client(
@@ -620,14 +632,14 @@ def s3(
     # if results are empty, cleanup the query since cleanup doesn't accept any parameters
     if not batch_rows:
         _cleanup_s3_by_hash(query_hash)
-    
+
     return batch_rows
 
 
 def _cleanup_s3_by_hash(query_hash: str):
     """Internal cleanup function that takes a query hash."""
     global s3_dict
-    
+
     if query_hash in s3_dict:
         s3_dict.pop(query_hash, None)
 
@@ -659,7 +671,9 @@ def init_migrate_neo4j(
 
     # check if query is already running
     if query_hash in neo4j_dict:
-        raise RuntimeError(f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one.")
+        raise RuntimeError(
+            f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one."
+        )
 
     uri = _build_neo4j_uri(config)
     username = config.get(Constants.USERNAME, "neo4j")
@@ -721,14 +735,14 @@ def neo4j(
     # if results are empty, cleanup the query since cleanup doesn't accept any parameters
     if not batch:
         _cleanup_neo4j_by_hash(query_hash)
-    
+
     return batch
 
 
 def _cleanup_neo4j_by_hash(query_hash: str):
     """Internal cleanup function that takes a query hash."""
     global neo4j_dict
-    
+
     if query_hash in neo4j_dict:
         session = neo4j_dict[query_hash].get(Constants.SESSION)
         driver = neo4j_dict[query_hash].get(Constants.DRIVER)
@@ -765,7 +779,9 @@ def init_migrate_arrow_flight(
 
     # check if query is already running
     if query_hash in flight_dict:
-        raise RuntimeError(f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one.")
+        raise RuntimeError(
+            f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one."
+        )
 
     host = config.get(Constants.HOST, None)
     port = config.get(Constants.PORT, None)
@@ -838,14 +854,14 @@ def arrow_flight(
     # if results are empty, cleanup the query since cleanup doesn't accept any parameters
     if not batch:
         _cleanup_arrow_flight_by_hash(query_hash)
-    
+
     return batch
 
 
 def _cleanup_arrow_flight_by_hash(query_hash: str):
     """Internal cleanup function that takes a query hash."""
     global flight_dict
-    
+
     if query_hash in flight_dict:
         flight_dict.pop(query_hash, None)
 
@@ -874,12 +890,18 @@ def init_migrate_duckdb(query: str, setup_queries: mgp.Nullable[List[str]] = Non
     global duckdb_dict
 
     # Create hash from query and setup_queries
-    setup_queries_str = json.dumps(setup_queries, sort_keys=False) if setup_queries else ""
-    query_hash = hashlib.sha256(f"{query}|{setup_queries_str}".encode('utf-8')).hexdigest()
+    setup_queries_str = (
+        json.dumps(setup_queries, sort_keys=False) if setup_queries else ""
+    )
+    query_hash = hashlib.sha256(
+        f"{query}|{setup_queries_str}".encode("utf-8")
+    ).hexdigest()
 
     # check if query is already running
     if query_hash in duckdb_dict:
-        raise RuntimeError(f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one.")
+        raise RuntimeError(
+            f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one."
+        )
 
     # Ensure a fresh in-memory DuckDB instance for each query
     connection = duckDB.connect()
@@ -910,25 +932,29 @@ def duckdb(
     """
     global duckdb_dict
 
-    setup_queries_str = json.dumps(setup_queries, sort_keys=False) if setup_queries else ""
-    query_hash = hashlib.sha256(f"{query}|{setup_queries_str}".encode('utf-8')).hexdigest()
+    setup_queries_str = (
+        json.dumps(setup_queries, sort_keys=False) if setup_queries else ""
+    )
+    query_hash = hashlib.sha256(
+        f"{query}|{setup_queries_str}".encode("utf-8")
+    ).hexdigest()
     cursor = duckdb_dict[query_hash][Constants.CURSOR]
     column_names = duckdb_dict[query_hash][Constants.COLUMN_NAMES]
 
     rows = cursor.fetchmany(Constants.BATCH_SIZE)
     result = [mgp.Record(row=_name_row_cells(row, column_names)) for row in rows]
-    
+
     # if results are empty, cleanup the query since cleanup doesn't accept any parameters
     if not result:
         _cleanup_duckdb_by_hash(query_hash)
-    
+
     return result
 
 
 def _cleanup_duckdb_by_hash(query_hash: str):
     """Internal cleanup function that takes a query hash."""
     global duckdb_dict
-    
+
     if query_hash in duckdb_dict:
         if Constants.CONNECTION in duckdb_dict[query_hash]:
             duckdb_dict[query_hash][Constants.CONNECTION].close()
@@ -962,7 +988,9 @@ def init_migrate_memgraph(
 
     # check if query is already running
     if query_hash in memgraph_dict:
-        raise RuntimeError(f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one.")
+        raise RuntimeError(
+            f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one."
+        )
 
     memgraph_db = Memgraph(**config)
     cursor = memgraph_db.execute_and_fetch(query, params)
@@ -1001,18 +1029,18 @@ def memgraph(
         for row in (next(cursor, None) for _ in range(Constants.BATCH_SIZE))
         if row is not None
     ]
-    
+
     # if results are empty, cleanup the query since cleanup doesn't accept any parameters
     if not result:
         _cleanup_memgraph_by_hash(query_hash)
-    
+
     return result
 
 
 def _cleanup_memgraph_by_hash(query_hash: str):
     """Internal cleanup function that takes a query hash."""
     global memgraph_dict
-    
+
     if query_hash in memgraph_dict:
         if Constants.CONNECTION in memgraph_dict[query_hash]:
             memgraph_dict[query_hash][Constants.CONNECTION].close()
@@ -1053,7 +1081,9 @@ def init_migrate_servicenow(
 
     # check if query is already running
     if query_hash in servicenow_dict:
-        raise RuntimeError(f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one.")
+        raise RuntimeError(
+            f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one."
+        )
 
     auth = (config.get(Constants.USERNAME), config.get(Constants.PASSWORD))
     headers = {"Accept": "application/json"}
@@ -1103,14 +1133,14 @@ def servicenow(
     # if results are empty, cleanup the query since cleanup doesn't accept any parameters
     if not batch_rows:
         _cleanup_servicenow_by_hash(query_hash)
-    
+
     return batch_rows
 
 
 def _cleanup_servicenow_by_hash(query_hash: str):
     """Internal cleanup function that takes a query hash."""
     global servicenow_dict
-    
+
     if query_hash in servicenow_dict:
         servicenow_dict.pop(query_hash, None)
 
