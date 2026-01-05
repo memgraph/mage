@@ -50,7 +50,7 @@ def _get_query_hash(query: str, config: mgp.Map, params: mgp.Nullable[mgp.Any] =
     :param config: Configuration map
     :param params: Optional query parameters
     """
-    config_dict = dict(config) if config else {}
+    config_dict = dict(config)
     config_str = json.dumps(config_dict, sort_keys=True, default=str)
 
     params_str = ""
