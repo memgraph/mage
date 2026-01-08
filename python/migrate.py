@@ -242,6 +242,9 @@ def sql_server(
     """
     global sql_server_dict
 
+    if not params:
+        params = []
+
     if len(config_path) > 0:
         config = _combine_config(config=config, config_path=config_path)
 
@@ -472,6 +475,9 @@ def postgresql(
     :return: The result table as a stream of rows
     """
     global postgres_dict
+
+    if not params:
+        params = []
 
     if len(config_path) > 0:
         config = _combine_config(config=config, config_path=config_path)
