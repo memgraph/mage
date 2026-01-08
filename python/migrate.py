@@ -96,8 +96,7 @@ def init_migrate_mysql(
             f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one."
         )
 
-    if query_hash not in mysql_dict:
-        mysql_dict[query_hash] = {}
+    mysql_dict[query_hash] = {}
 
     connection = mysql_connector.connect(**config)
     cursor = connection.cursor()
@@ -207,8 +206,7 @@ def init_migrate_sql_server(
             f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one."
         )
 
-    if query_hash not in sql_server_dict:
-        sql_server_dict[query_hash] = {}
+    sql_server_dict[query_hash] = {}
 
     connection = pyodbc.connect(**config)
     cursor = connection.cursor()
@@ -325,8 +323,7 @@ def init_migrate_oracle_db(
             f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one."
         )
 
-    if query_hash not in oracle_db_dict:
-        oracle_db_dict[query_hash] = {}
+    oracle_db_dict[query_hash] = {}
 
     connection = oracledb.connect(**config)
     cursor = connection.cursor()
@@ -445,8 +442,7 @@ def init_migrate_postgresql(
             f"Migrate module with these parameters is already running. Please wait for it to finish before starting a new one."
         )
 
-    if query_hash not in postgres_dict:
-        postgres_dict[query_hash] = {}
+    postgres_dict[query_hash] = {}
 
     connection = psycopg2.connect(**config)
     cursor = connection.cursor()
