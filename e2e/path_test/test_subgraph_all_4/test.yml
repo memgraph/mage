@@ -7,10 +7,10 @@ query: >
 output:
   - nodes:
       - labels:
-          - Mouse
+          - Dog
         properties: {}
       - labels:
-          - Dog
+          - Mouse
         properties: {}
     rels:
       - label: FRIENDS_WITH
