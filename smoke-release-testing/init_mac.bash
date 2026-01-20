@@ -15,8 +15,10 @@ export PATH="$(go env GOPATH)/bin:$PATH"
 kind --version
 
 if [ ! -f "/usr/local/bin/kubectl" ]; then
-  echo "TODO: install kubectl"
-  exit 1
+  curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/darwin/arm64/kubectl"
+  curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/darwin/arm64/kubectl.sha256"
+  echo "$(cat kubectl.sha256)  kubectl" | shasum -a 256 --check
+  sudo install -o root -m 0755 kubectl /usr/local/bin/kubectl
 fi
 kubectl version --client
 
@@ -27,10 +29,15 @@ if [ ! -f "/usr/local/bin/helm" ]; then
 fi
 helm version
 
-# kubectl config get-clusters
-if ! kubectl cluster-info --context kind-experiment; then
-  kind create cluster --name experiment
-fi
+# Delete any leftover cluster
+kind delete cluster --name smoke-release-testing || true
+# Create cluster and wait for it to be ready
+kubectl cluster-info --context kind-smoke-release-testing > /dev/null 2>&1 || \
+  {
+    echo "Creating cluster..."
+    kind create cluster --name smoke-release-testing --wait 120s
+    echo "...done"
+  }
 kubectl get all -A
 
 helm repo add memgraph https://memgraph.github.io/helm-charts

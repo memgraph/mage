@@ -11,6 +11,7 @@ docker run --rm \
     --name "$NEO4J_CONTAINER"  \
     --network "$MEMGRAPH_NETWORK" \
     -p 7474:7474 \
+    -p $NEO4J_PORT:7687 \
     -d \
     -v "$HOME/neo4j/plugins:/plugins" \
     --env NEO4J_AUTH=none  \
@@ -33,7 +34,7 @@ done
 echo "Neo4j is up and running."
 
 echo "Running e2e correctness tests..."
-docker exec -i -u memgraph "$MAGE_CONTAINER" bash -c "cd /mage && python3 test_e2e_correctness.py --memgraph-port $MEMGRAPH_PORT --neo4j-port $NEO4J_PORT --neo4j-container $NEO4J_CONTAINER"
+python3 test_e2e_correctness.py --memgraph-port $MEMGRAPH_PORT --neo4j-port $NEO4J_PORT --neo4j-container $NEO4J_CONTAINER
 
 echo "Stopping Neo4j..."
 docker stop "$NEO4J_CONTAINER"

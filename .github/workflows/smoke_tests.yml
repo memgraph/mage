@@ -1,6 +1,6 @@
 name: "Smoke Testing"
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}
+  group: smoke-tests-${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
 
 on:
@@ -74,7 +74,7 @@ jobs:
         malloc: [false]
         include:
         - arch: "amd64"
-        - malloc: true
+          malloc: true
     uses: ./.github/workflows/reusable_smoke_tests.yml
     with:
       arch: "${{ matrix.arch }}"

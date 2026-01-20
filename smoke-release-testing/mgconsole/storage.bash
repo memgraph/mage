@@ -3,13 +3,11 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/../utils.bash"
 
 test_storage() {
-  __host="$1"
-  __port="$2"
   echo "FEATURE: Storage: IN_MEMORY_TRANSACTIONAL"
-
   echo "SUBFEATURE: Property compression"
-  echo "CREATE (n:Label $MEMGRAPH_FULL_PROPERTIES_SET)-[:Edge $MEMGRAPH_FULL_PROPERTIES_SET]->(:Label);" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "MATCH (n) RETURN n;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  # TODO(gitbuda): Under the CI, under test_single_mage.bash, the property compression is not enabled.
+  run_next "CREATE (n:Label $MEMGRAPH_FULL_PROPERTIES_SET)-[:Edge $MEMGRAPH_FULL_PROPERTIES_SET]->(:Label);"
+  run_next "MATCH (n) RETURN n;"
 }
 
 if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then

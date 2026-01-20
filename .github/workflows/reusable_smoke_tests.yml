@@ -40,56 +40,48 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Log into AWS
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+
       - name: Determine Input Types
         run: |
-          read next_type next_image < <(python3 smoke-release-testing/workflow_image_setup.py "${{ inputs.next_version }}" "${{ inputs.arch }}" "${{ inputs.malloc }}")
+          # default to latest daily build (from the previous day)
+          if [ -z "${{ inputs.next_version }}" ]; then
+            next_version="$(date -d "yesterday" +%Y%m%d)"
+          else
+            next_version="${{ inputs.next_version }}"
+          fi
+
+          # default to latest release version
+          if [ -z "${{ inputs.last_version }}" ]; then
+            tag="$( git tag | grep -v rc | tail -n 1)"
+            last_version="${tag#v}"
+          else
+            last_version="${{ inputs.last_version }}"
+          fi
+
+          read next_type next_image < <(python3 scripts/workflow_image_setup.py "${next_version}" "${{ inputs.arch }}" "${{ inputs.malloc }}")
           echo "NEXT_IMAGE=${next_image}" >> $GITHUB_ENV
           echo "NEXT_TYPE=${next_type}" >> $GITHUB_ENV
-          read last_type last_image < <(python3 smoke-release-testing/workflow_image_setup.py "${{ inputs.last_version }}" "${{ inputs.arch }}" "${{ inputs.malloc }}")
+          read last_type last_image < <(python3 scripts/workflow_image_setup.py "${last_version}" "${{ inputs.arch }}" "${{ inputs.malloc }}")
           echo "LAST_IMAGE=${last_image}" >> $GITHUB_ENV
           echo "LAST_TYPE=${last_type}" >> $GITHUB_ENV
-
-      - name: Build Test Image
-        run: |
-          docker build -t ubuntu:24.04-dind --file Dockerfile.smoke .
-
-      - name: Run Test Image Container
-        run: |
-          CONTAINER_NAME="smoketester"
-          docker run -d --rm  --privileged \
-            --name $CONTAINER_NAME \
-            -e container=docker \
-            -p 2375:2375 \
-            --tmpfs /run \
-            --tmpfs /run/lock \
-            --tmpfs /tmp \
-            -v u24-data:/var/lib/docker \
-            -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-            --cgroupns=host \
-            ubuntu:24.04-dind
-          echo "CONTAINER_NAME=$CONTAINER_NAME" >> $GITHUB_ENV
 
       - name: Load Next Image (Docker)
         if: ${{ env.NEXT_TYPE == 'docker' }}
         run: |
-          docker exec -i \
-            -e NEXT_IMAGE="${{ env.NEXT_IMAGE }}" \
-            "$CONTAINER_NAME" \
-            bash -c 'docker pull "$NEXT_IMAGE"'
+          docker pull "$NEXT_IMAGE"
           echo "MEMGRAPH_NEXT_DOCKERHUB_IMAGE=${{ env.NEXT_IMAGE }}" >> $GITHUB_ENV
 
       - name: Load Next Image (URL)
         if: ${{ env.NEXT_TYPE == 'url' }}
         run: |
-          #curl -L ${{ env.NEXT_IMAGE }} > next.tar.gz
-          #load_output=$(docker load -i next.tar.gz)
-          
-          docker exec -i \
-            -e NEXT_IMAGE="${{ env.NEXT_IMAGE }}" \
-            "$CONTAINER_NAME" \
-            bash -c 'curl -L "$NEXT_IMAGE" > next.tar.gz'
-          
-          load_output=$(docker exec -i $CONTAINER_NAME bash -c "docker load -i next.tar.gz")
+          curl -L ${{ env.NEXT_IMAGE }} > next.tar.gz
+          load_output=$(docker load -i next.tar.gz)
 
           # grab each repo:tag, drop the ":latest" one, pick the first real tag
           repo_tag=$(echo "$load_output" \
@@ -98,29 +90,19 @@ jobs:
             | head -n1)
 
           echo "MEMGRAPH_NEXT_DOCKERHUB_IMAGE=${repo_tag}" >> $GITHUB_ENV
+          rm next.tar.gz
 
       - name: Load Last Image (Docker)
         if: ${{ env.LAST_TYPE == 'docker' }}
         run: |
-          docker exec -i \
-            -e LAST_IMAGE="${{ env.LAST_IMAGE }}" \
-            "$CONTAINER_NAME" \
-            bash -c 'docker pull "$LAST_IMAGE"'
+          docker pull "$LAST_IMAGE"
           echo "MEMGRAPH_LAST_DOCKERHUB_IMAGE=${{ env.LAST_IMAGE }}" >> $GITHUB_ENV
-
 
       - name: Load Last Image (URL)
         if: ${{ env.LAST_TYPE == 'url' }}
         run: |
-          #curl -L ${{ env.LAST_IMAGE }} > last.tar.gz
-          #load_output=$(docker load -i last.tar.gz)
-
-          docker exec -i \
-            -e LAST_IMAGE="${{ env.LAST_IMAGE }}" \
-            "$CONTAINER_NAME" \
-            bash -c 'curl -L "$LAST_IMAGE" > last.tar.gz'
-          
-          load_output=$(docker exec -i $CONTAINER_NAME bash -c "docker load -i last.tar.gz")
+          curl -L ${{ env.LAST_IMAGE }} > last.tar.gz
+          load_output=$(docker load -i last.tar.gz)
           
           # grab each repo:tag, drop the ":latest" one, pick the first real tag
           repo_tag=$(echo "$load_output" \
@@ -129,50 +111,39 @@ jobs:
             | head -n1)
 
           echo "MEMGRAPH_LAST_DOCKERHUB_IMAGE=${repo_tag}" >> $GITHUB_ENV
-
+          rm last.tar.gz
 
       - name: Init Tests
         run: |
-          # cd smoke-release-testing
-          # ./init_workflow.bash
-          docker exec -i $CONTAINER_NAME \
-            bash -c "cd /mage/smoke-release-testing && ./init_workflow.bash"
+          cd smoke-release-testing
+          ./init_workflow.bash
 
       - name: Install Python Dependencies
         run: |
-          docker exec -i $CONTAINER_NAME \
-            bash -c "pip install -r /mage/smoke-release-testing/requirements.txt --break-system-packages"
+          python3 -m venv env
+          source env/bin/activate
+          pip install -r smoke-release-testing/requirements.txt --break-system-packages
       
       - name: Run Tests
+        env:
+          MEMGRAPH_ENTERPRISE_LICENSE: ${{ secrets.MEMGRAPH_ENTERPRISE_LICENSE }}
+          MEMGRAPH_ORGANIZATION_NAME: ${{ secrets.MEMGRAPH_ORGANIZATION_NAME }}
         run: |
-          # cd smoke-release-testing
-          # ./test.bash
-          docker exec -i -u root \
-            -e MEMGRAPH_ENTERPRISE_LICENSE="${{ secrets.MEMGRAPH_ENTERPRISE_LICENSE }}" \
-            -e MEMGRAPH_ORGANIZATION_NAME="${{ secrets.MEMGRAPH_ORGANIZATION_NAME }}" \
-            -e MEMGRAPH_LAST_DOCKERHUB_IMAGE="$MEMGRAPH_LAST_DOCKERHUB_IMAGE" \
-            -e MEMGRAPH_NEXT_DOCKERHUB_IMAGE="$MEMGRAPH_NEXT_DOCKERHUB_IMAGE" \
-            "$CONTAINER_NAME" \
-            bash -c "cd /mage/smoke-release-testing && ./test.bash"
-      
-      - name: Stop Container
+          source env/bin/activate
+          cd smoke-release-testing
+          ./test_single_mage.bash
+
+      - name: clean up Python environment
         if: always()
         run: |
-          echo "📢 Stopping $CONTAINER_NAME…"
-          docker stop "$CONTAINER_NAME" || true
+          rm -rf env || true
 
-          echo "⏳ Waiting on $CONTAINER_NAME to fully exit…"
-          docker wait "$CONTAINER_NAME" || true
-          echo "$CONTAINER_NAME has exited."
-
-      - name: Remove Docker Volume
+      - name: Clean up Go environment
         if: always()
         run: |
-          echo "🗑️ Removing Docker volume 'u24-data'…"
-          docker volume rm u24-data || echo "Volume 'u24-data' not found or already removed."
-    
-      - name: Remove Image
+          rm -rf $HOME/go-install || true
+
+      - name: Clean up Docker images
         if: always()
         run: |
-          docker rmi ubuntu:24.04-dind --force
-
+          ./cpp/memgraph/tools/docker_cleanup.sh

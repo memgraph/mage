@@ -863,3 +863,127 @@ void Refactor::RenameType(mgp_list *args, mgp_graph *memgraph_graph, mgp_result 
     return;
   }
 }
+
+void Refactor::MergeNodes(mgp_list *args, mgp_graph *memgraph_graph, mgp_result *result, mgp_memory *memory) {
+  mgp::MemoryDispatcherGuard guard{memory};
+  const auto arguments = mgp::List(args);
+  auto graph = mgp::Graph(memgraph_graph);
+  const auto record_factory = mgp::RecordFactory(result);
+
+  try {
+    const auto nodes = arguments[0].ValueList();
+    if (nodes.Empty()) {
+      throw mgp::ValueException(kMergeNodesEmptyListError.data());
+    }
+
+    // Verify all elements are nodes
+    for (const auto &node_value : nodes) {
+      if (!node_value.IsNode()) {
+        throw mgp::ValueException(kMergeNodesInvalidTypeError.data());
+      }
+    }
+
+    const auto config = arguments[1].ValueMap();
+    const bool mergeRels = [&config, &kMergeNodesRelationshipsStrategy]() -> bool {
+      if (config.KeyExists(kMergeNodesRelationshipsStrategy)) {
+        if (!config.At(kMergeNodesRelationshipsStrategy).IsBool()) {
+          throw mgp::ValueException(kMergeRelationshipsInvalidValueError.data());
+        }
+
+        return config.At(kMergeNodesRelationshipsStrategy).ValueBool();
+      }
+
+      return false;
+    }();
+
+    // Get properties strategy from config
+    std::string prop_strategy = [&config, &kMergeNodesPropertiesStrategy, &kMergeNodesPropertiesStrategyAlternative,
+                                 &kMergeNodesPropertiesCombine]() -> std::string {
+      if (config.KeyExists(kMergeNodesPropertiesStrategy)) {
+        return std::string(config.At(kMergeNodesPropertiesStrategy).ValueString());
+      }
+      if (config.KeyExists(kMergeNodesPropertiesStrategyAlternative)) {
+        return std::string(config.At(kMergeNodesPropertiesStrategyAlternative).ValueString());
+      }
+      return std::string(kMergeNodesPropertiesCombine);
+    }();
+
+    // Convert to lowercase for case-insensitive comparison
+    std::transform(prop_strategy.begin(), prop_strategy.end(), prop_strategy.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+
+    // Validate property strategy
+    if (prop_strategy != kMergeNodesPropertiesCombine && prop_strategy != kMergeNodesPropertiesDiscard &&
+        prop_strategy != kMergeNodesPropertiesOverride && prop_strategy != kMergeNodesPropertiesOverwrite) {
+      throw mgp::ValueException(kMergeNodesInvalidPropertyStrategyError.data());
+    }
+
+    // Get the first node as the target node
+    auto target_node = nodes[0].ValueNode();
+
+    // Process remaining nodes
+    for (size_t i = 1; i < nodes.Size(); ++i) {
+      auto source_node = nodes[i].ValueNode();
+
+      // Handle properties based on strategy
+      // Discard properties keeps the target properties so it's not handled in if-else
+      if (prop_strategy == kMergeNodesPropertiesCombine) {
+        // Combine properties from both nodes
+        auto source_props = source_node.Properties();
+        for (const auto &[key, value] : source_props) {
+          auto target_property = target_node.GetProperty(key);
+          if (target_property.IsList()) {
+            auto target_list = target_property.ValueList();
+            target_list.AppendExtend(source_props[key]);
+            target_node.SetProperty(key, mgp::Value(std::move(target_list)));
+          } else if (!target_property.IsNull()) {
+            auto combined_properties = mgp::List();
+            combined_properties.AppendExtend(target_property);
+            combined_properties.AppendExtend(source_props[key]);
+            target_node.SetProperty(key, mgp::Value(std::move(combined_properties)));
+          } else {
+            target_node.SetProperty(key, source_props[key]);
+          }
+        }
+      } else if (prop_strategy == kMergeNodesPropertiesOverride ||
+                 prop_strategy == kMergeNodesPropertiesOverwrite) {
+        // Override/overwrite target properties with source properties
+        auto source_props = source_node.Properties();
+        for (const auto &[key, value] : source_props) {
+          target_node.SetProperty(key, value);
+        }
+      }
+
+      // Copy labels from source to target
+      auto source_labels = source_node.Labels();
+      for (size_t j = 0; j < source_labels.Size(); ++j) {
+        target_node.AddLabel(std::move(source_labels[j]));
+      }
+
+      // Handle relationships
+      // Copy all relationships from source to target
+      if (mergeRels) {
+        auto in_rels = source_node.InRelationships();
+        for (const auto &rel : in_rels) {
+          graph.CreateRelationship(rel.From(), target_node, rel.Type());
+        }
+
+        auto out_rels = source_node.OutRelationships();
+        for (const auto &rel : out_rels) {
+          graph.CreateRelationship(target_node, rel.To(), rel.Type());
+        }
+      }
+
+      // Delete the source node
+      graph.DetachDeleteNode(source_node);
+    }
+
+    // Return the merged node
+    auto record = record_factory.NewRecord();
+    record.Insert(kMergeNodesResult.data(), target_node);
+
+  } catch (const std::exception &e) {
+    record_factory.SetErrorMessage(e.what());
+    return;
+  }
+}

@@ -100,7 +100,8 @@ def test_check_coloring(no_of_colors, graph, chromosome, expected):
 
 
 @pytest.mark.parametrize(
-    "no_of_colors,graph,chromosome, inds, colors, is_none, expected_chromosome, expected_conflicts, expected_weights, expected_coloring",
+    "no_of_colors,graph,chromosome, inds, colors, is_none, expected_chromosome, "
+    "expected_conflicts, expected_weights, expected_coloring",
     [
         (
             3,

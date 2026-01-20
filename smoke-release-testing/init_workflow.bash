@@ -1,22 +1,6 @@
 #!/bin/bash -e
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/utils.bash"
-apt-get update
-
-if [ ! -x "$(command -v jq)" ]; then
-  apt-get install -y jq
-fi
-
-if [ ! -x "$(command -v go)" ]; then
-  apt install -y golang-go
-  # or, https://go.dev/doc/install
-fi
-
-go install sigs.k8s.io/kind@v0.24.0
-echo "kind installed under $(go env GOPATH)/bin"
-goenvpath="$(go env GOPATH)"
-export PATH="$goenvpath/bin:$PATH"
-kind --version
 
 if [ "$(arch)" == "x86_64" ]; then
   ARCH="amd64"
@@ -24,7 +8,18 @@ else
   ARCH="arm64"
 fi
 
-if [ ! -f "/usr/local/bin/kubectl" ]; then
+curl -L "https://go.dev/dl/go1.25.3.linux-$ARCH.tar.gz" -o go.tar.gz
+mkdir -p $HOME/go-install
+tar -xzf go.tar.gz -C $HOME/go-install
+export PATH="$HOME/go-install/go/bin:$PATH"
+go version
+
+go install sigs.k8s.io/kind@v0.24.0
+echo "kind installed under $(go env GOPATH)/bin"
+export PATH="$(go env GOPATH)/bin:$PATH"
+kind --version
+
+if !command -v kubectl > /dev/null 2>&1; then
   curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/$ARCH/kubectl"
   curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/$ARCH/kubectl.sha256"
   echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
@@ -33,19 +28,20 @@ fi
 kubectl version --client
 
 # delete any leftover cluster
-kind delete cluster --name kind-kind || true
+kind delete cluster --name smoke-release-testing || true
 
 # Create cluster and wait for it to be ready
-kubectl cluster-info --context kind-kind-kind > /dev/null 2>&1 \
+kubectl cluster-info --context kind-smoke-release-testing > /dev/null 2>&1 \
   || {
        echo "Creating cluster..."
-       kind create cluster --name kind-kind --wait 120s 
+       kind create cluster --name smoke-release-testing --wait 120s 
        echo "...done"
      }
 
-kubectl get all -A
+# Set kubectl context to use the kind cluster
+kubectl config use-context kind-smoke-release-testing
 
-if [ ! -f "/usr/local/bin/helm" ]; then
+if !command -v helm > /dev/null 2>&1; then
   curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
   chmod 700 get_helm.sh
   ./get_helm.sh

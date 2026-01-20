@@ -186,7 +186,7 @@ void MetisGraphPartitioner( graph *G, long *VertexPartitioning, int numParts ) {
      VertexPartitioning[i] = (long) part[i]; //Do explicit typecasts
   }
   
-  //Cleaup:
+  //Cleanup:
   free(xadj); free(adjncy); free(adjwgt);
   free(part);
 }

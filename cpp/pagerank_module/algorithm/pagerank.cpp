@@ -30,7 +30,7 @@ class AdjacencyList {
   /// vector because the referenced vector could be resized (moved) which means
   /// that the reference is going to become invalid.
   ///
-  /// @return A reference to std::vector of adjecent node ids.
+  /// @return A reference to std::vector of adjacent node ids.
   const auto &GetAdjacentNodes(T node_id) const { return list_[node_id]; }
 
  private:

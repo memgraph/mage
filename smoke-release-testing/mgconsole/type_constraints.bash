@@ -3,14 +3,12 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/../utils.bash"
 
 test_type_constraints() {
-  __host="$1"
-  __port="$2"
   echo "FEATURE: Constraints: Data type"
-  echo "MATCH (n) DETACH DELETE n;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
-  echo "CREATE CONSTRAINT ON (n:Node) ASSERT n.prop IS TYPED STRING;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  run_next "MATCH (n) DETACH DELETE n;"
+  run_next "CREATE CONSTRAINT ON (n:Node) ASSERT n.prop IS TYPED STRING;"
 
   set +e
-  echo "CREATE (n:Node {prop:23});" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  run_next "CREATE (n:Node {prop:23});"
   if [ $? -eq 0 ]; then
     echo "ERROR: Constraint violation not detected."
     exit 1

@@ -27,9 +27,9 @@ on:
         description: "Memgraph package download link. Leave empty to use the official download link."
         default: ""
         type: string
-      push_to_dockerhub:
+      cuda:
         type: boolean
-        description: "Push the image to DockerHub?"
+        description: "Build the image for CUDA"
         default: false
       push_to_s3:
         type: boolean
@@ -50,7 +50,7 @@ on:
   
 jobs:
   BuildMage:
-    if: ${{ github.event.inputs.matrix_build != 'true' }}
+    if: ${{ !inputs.matrix_build }}
     uses: ./.github/workflows/reusable_package_mage.yaml
     with:
       arch: ${{ github.event.inputs.mage_build_arch || 'amd64' }}
@@ -58,17 +58,17 @@ jobs:
       mage_version: ${{ github.event.inputs.mage_version }}
       memgraph_version: ${{ github.event.inputs.memgraph_version }}
       memgraph_download_link: ${{ github.event.inputs.memgraph_download_link || '' }}
-      shorten_tag: 'true'
-      force_release: 'true'
-      push_to_dockerhub: ${{ github.event.inputs.push_to_dockerhub || 'false' }}
-      push_to_s3: ${{ github.event.inputs.push_to_s3 || 'false' }}
-      malloc: ${{ github.event.inputs.malloc == 'true' }}
+      shorten_tag: true
+      cuda: ${{ inputs.cuda }}
+      push_to_s3: ${{ inputs.push_to_s3 }}
+      malloc: ${{ inputs.malloc }}
       run_smoke_tests: ${{ inputs.run_smoke_tests }}
+      generate_sbom: ${{ inputs.mage_build_arch == 'amd64' && inputs.mage_build_type == 'Release' }}
     secrets: inherit
 
   # New matrix build job, runs only when matrix_build is true
   BuildMageMatrix:
-    if: ${{ github.event.inputs.matrix_build == 'true' }}
+    if: ${{ inputs.matrix_build }}
     uses: ./.github/workflows/reusable_package_mage.yaml
     strategy:
       fail-fast: false
@@ -76,10 +76,16 @@ jobs:
         build_type: ["Release", "RelWithDebInfo"]
         build_arch: ["amd64", "arm64"]
         malloc: [false]
+        cuda: [false]
         include:
           - build_type: "Release"
             build_arch: "amd64"
             malloc: true
+            cuda: false
+          - build_type: "RelWithDebInfo"
+            build_arch: "amd64"
+            cuda: true
+            malloc: false
 
     with:
       arch: ${{ matrix.build_arch }}
@@ -87,10 +93,10 @@ jobs:
       mage_version: ${{ github.event.inputs.mage_version }}
       memgraph_version: ${{ github.event.inputs.memgraph_version }}
       memgraph_download_link: ${{ github.event.inputs.memgraph_download_link || '' }}
-      shorten_tag: 'true'
-      force_release: 'true'
-      push_to_dockerhub: ${{ github.event.inputs.push_to_dockerhub || 'false' }}
-      push_to_s3: ${{ github.event.inputs.push_to_s3 || 'false' }}
+      shorten_tag: true
+      cuda: ${{ matrix.cuda }}
+      push_to_s3: ${{ inputs.push_to_s3 }}
       malloc: ${{ matrix.malloc }}
       run_smoke_tests: ${{ inputs.run_smoke_tests }}
+      generate_sbom: ${{ matrix.build_arch == 'amd64' && matrix.build_type == 'Release' && !matrix.malloc }}
     secrets: inherit

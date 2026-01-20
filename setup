@@ -172,11 +172,21 @@ def copytree(src, dst, ignore_patterns=[]) -> None:
 
 def run_command(command: List[str]) -> bool:
     logger.debug(f"[Terminal] Running command `{command}`.")
-    try:
-        subprocess.check_output(command)
-    except subprocess.CalledProcessError as e:
-        logger.error(f"[Terminal] Running command {command} failed.")
+    result = subprocess.run(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True
+    )
+    
+    # Print output after command completes
+    if result.stdout:
+        print(result.stdout)
+    
+    if result.returncode != 0:
+        logger.error(f"[Terminal] Running command {command} failed with return code {result.returncode}.")
         return False
+    
     return True
 
 
@@ -191,8 +201,8 @@ def build_and_copy_cpp_modules(args: Dict[str, Any]) -> bool:
     os.makedirs(CPP_BUILD_DIRECTORY, exist_ok=True)
 
     # Prepare CMake flags
-    os.chdir(CPP_BUILD_DIRECTORY)
-    cmake_args = [".."]
+    os.chdir(CPP_DIRECTORY)
+    cmake_args = [".", "-B", CPP_BUILD_DIRECTORY]
     if args[Parameter.GPU.value]:
         cmake_args.append(f"-D{MAGE_GPU_BUILD}")
     if args[Parameter.CPP_BUILD_FLAGS.value] is not None:
@@ -200,15 +210,14 @@ def build_and_copy_cpp_modules(args: Dict[str, Any]) -> bool:
     else:
         cmake_args += [f"-DCMAKE_BUILD_TYPE={BuildType.RELEASE}"]
 
-    cmake_command = ["cmake"] + cmake_args
+    cmake_command = ["cmake"] + cmake_args + ["-GNinja"]
 
     cmake_status = run_command(cmake_command)
     if not cmake_status:
         logger.error("[Terminal] (1/7) Building C++ modules failed.")
         return False
 
-    core_count = mp.cpu_count()
-    make_command = ["make", f"-j{core_count}"]
+    make_command = ["cmake", "--build", CPP_BUILD_DIRECTORY]
 
     make_status = run_command(make_command)
     if not make_status:

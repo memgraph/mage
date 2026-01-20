@@ -1,6 +1,6 @@
 name: Promote RC to Release
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}
+  group: promote-rc-${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
 
 on:
@@ -26,6 +26,11 @@ on:
         description: "Use RC from 'mage-test/' (cannot be used for official release)"
         default: false
         type: boolean
+      post_release_updates:
+        description: "Post-release updates to be run after promotion"
+        required: false
+        type: boolean
+        default: true
 
 env:
   s3_region: eu-west-1
@@ -39,15 +44,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - build_target: "prod"
-            build_type: "Release"
-          - build_target: "prod"
-            build_type: "RelWithDebInfo"
+          - build_type: "Release"
+            image_ext: ""
+          - build_type: "RelWithDebInfo"
             image_ext: "-relwithdebinfo"
-          - build_target: "prod"
-            build_type: "Release"
+          - build_type: "Release"
             image_ext: "-malloc"
-    runs-on: ["self-hosted", "DockerMgBuild", "X64"]
+          - build_type: "RelWithDebInfo"
+            image_ext: "-relwithdebinfo-cuda"
+          - build_type: "RelWithDebInfo"
+            image_ext: "-relwithdebinfo-malloc"
+    runs-on: ubuntu-latest
     steps:
       - name: Validate “use_test_rc” only with test
         if: inputs.use_test_rc && ! inputs.test
@@ -212,6 +219,7 @@ jobs:
 
       - name: Clean up temporary images
         run: |
+          sleep 3
           if [ "${has_rc_package_amd}" = "true" ]; then
             echo "Deleting temporary image ${release_image_amd} ..."
             curl -i -n -X DELETE -H "Authorization: JWT ${dockerhub_token}" https://hub.docker.com/v2/repositories/${docker_repo_release}/tags/${release_image#*:}-amd64/
@@ -226,3 +234,9 @@ jobs:
             echo "Skipping deletion for arm64: image not promoted."
           fi
           
+  PostReleaseUpdates:
+    needs: PromoteDocker
+    if: ${{ inputs.post_release_updates }}
+    uses: ./.github/workflows/post-release.yml
+    with:
+      version: ${{ inputs.mage_version }}

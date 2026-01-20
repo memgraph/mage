@@ -2,13 +2,9 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/../utils.bash"
 
-# TODO(gitbuda): Introduce default __host and __port values.
 test_template() {
-  __host="$1"
-  __port="$2"
   echo "FEATURE: ABC"
-
-  echo "RETURN 1;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  run_next "RETURN 1;"
 }
 
 if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then

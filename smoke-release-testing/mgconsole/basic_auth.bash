@@ -3,11 +3,8 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/../utils.bash"
 
 test_basic_auth() {
-  __host="$1"
-  __port="$2"
   echo "FEATURE: Basic Authentication"
-
-  echo "SHOW ACTIVE USERS INFO;" | $MEMGRAPH_CONSOLE_BINARY --host $__host --port $__port
+  run_next "SHOW ACTIVE USERS INFO;"
 }
 
 if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
