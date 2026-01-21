@@ -6,20 +6,20 @@ query: >
 
 output:
   - node_id: 1
-    pagerank: 0.167
+    pagerank: 0.0716673
   - node_id: 2
-    pagerank: 0.064
+    pagerank: 0.129423
   - node_id: 3
-    pagerank: 0.091
+    pagerank: 0.121955
   - node_id: 4
-    pagerank: 0.122
+    pagerank: 0.118334
   - node_id: 5
-    pagerank: 0.167
+    pagerank: 0.0716673
   - node_id: 6
-    pagerank: 0.064
+    pagerank: 0.129423
   - node_id: 7
-    pagerank: 0.091
+    pagerank: 0.121955
   - node_id: 8
-    pagerank: 0.122
+    pagerank: 0.118334
   - node_id: 9
-    pagerank: 0.111
+    pagerank: 0.117242
