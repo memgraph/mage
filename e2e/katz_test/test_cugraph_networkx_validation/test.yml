@@ -1,25 +1,25 @@
 # Katz centrality values validated against NetworkX ground truth
 query: >
-  CALL cugraph.katz_centrality.get() YIELD node, katz
-  RETURN node.id AS node_id, katz
+  CALL cugraph.katz_centrality.get() YIELD node, katz_centrality
+  RETURN node.id AS node_id, katz_centrality
   ORDER BY node_id ASC;
 
 output:
   - node_id: 1
-    katz: 1.249
+    katz_centrality: 1.12372
   - node_id: 2
-    katz: 1.125
+    katz_centrality: 1.23724
   - node_id: 3
-    katz: 1.237
+    katz_centrality: 1.24871
   - node_id: 4
-    katz: 1.236
+    katz_centrality: 1.24987
   - node_id: 5
-    katz: 1.249
+    katz_centrality: 1.12372
   - node_id: 6
-    katz: 1.125
+    katz_centrality: 1.23724
   - node_id: 7
-    katz: 1.237
+    katz_centrality: 1.24871
   - node_id: 8
-    katz: 1.236
+    katz_centrality: 1.24987
   - node_id: 9
-    katz: 1.250
+    katz_centrality: 1.24997
