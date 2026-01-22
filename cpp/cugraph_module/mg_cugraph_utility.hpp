@@ -1,5 +1,4 @@
 // Copyright 2022 Memgraph Ltd.
-// Modified for cuGraph 25.x API compatibility
 //
 // Licensed under the Apache License, Version 2.0
 
