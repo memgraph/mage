@@ -6,11 +6,11 @@ query: >
 
 output:
   - node_id: 1
-    partition: 0
+    partition: 2
   - node_id: 2
-    partition: 0
+    partition: 2
   - node_id: 3
-    partition: 0
+    partition: 2
   - node_id: 4
     partition: 0
   - node_id: 5
