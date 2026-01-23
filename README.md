@@ -43,6 +43,10 @@ I hope all the above makes sense. We'll keep you posted about the progress. To g
 
 Best, Marko ([gitbuda](http://github.com/gitbuda)), CTO @ Memgraph
 
+## Merge Done on January 22nd, 2026
+
+The further development continues under https://github.com/memgraph/memgraph.
+
 --------
 
 ## Memgraph Advanced Graph Extensions :crystal_ball:
